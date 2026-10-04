@@ -10,20 +10,6 @@
 #include "project_editor.hpp"
 
 namespace edi_app {
-namespace {
-
-// A fresh name "<stem><n>" not among `taken`, for an appended row.
-template <typename Taken>
-std::string unused_name(const std::string& stem, Taken taken) {
-    for (int n = 1;; ++n) {
-        const std::string candidate = stem + std::to_string(n);
-        if (!taken(candidate)) {
-            return candidate;
-        }
-    }
-}
-
-}  // namespace
 
 // ---- SpaceGroupViewModel ------------------------------------------------------------------------
 

@@ -4,6 +4,7 @@
 
 #include <QObject>
 #include <QString>
+#include <QStringList>
 #include <QtQml/qqmlregistration.h>
 
 #include "block_text.hpp"
@@ -47,33 +48,60 @@ class SequentialExtractListModel : public RowTableModel {
     const edi::Project& project_;
 };
 
-// The declared parameter aliases (`_alias`, read-only: aliases are declared in the file or from Python):
-// `id` and `parameter`, the unique name of the parameter the alias stands for.
+// The declared parameter aliases (`_alias`): `id`, editable as text, and `parameter`, the unique name of
+// the parameter it stands for, chosen from `parameterNames`; append, duplicate and remove as the atom sites
+// do.
 class AliasListModel : public RowTableModel {
     Q_OBJECT
     QML_ELEMENT
     QML_UNCREATABLE("Belongs to the analysis")
+    // Every refinable parameter of the project, by unique name, in the slot walk's order.
+    Q_PROPERTY(QStringList parameterNames READ parameterNames NOTIFY parameterNamesChanged)
 
    public:
-    AliasListModel(const edi::Project& project, QObject* parent);
+    AliasListModel(edi::Project& project, ProjectEditor& editor, QObject* parent);
     void sync();
+    QStringList parameterNames() const { return parameter_names_; }
+    Q_INVOKABLE bool setText(int row, const QString& role, const QString& value);
+    Q_INVOKABLE void append();
+    Q_INVOKABLE void duplicate(int row);
+    Q_INVOKABLE void remove(int row);
+
+   signals:
+    void parameterNamesChanged();
+
+   protected:
+    bool setRole(int row, const QString& role, const QVariant& value) override { return setText(row, role, value.toString()); }
 
    private:
-    const edi::Project& project_;
+    edi::Project& project_;
+    ProjectEditor& editor_;
+    QStringList parameter_names_;
 };
 
-// The declared constraints (`_constraint`, read-only like the aliases): `id` and `expression`.
+// The declared constraints (`_constraint`): `id` and `expression`, editable as text, and `enabled` (a
+// disabled constraint stays in the project and is not applied); append, duplicate and remove as the
+// aliases.
 class ConstraintListModel : public RowTableModel {
     Q_OBJECT
     QML_ELEMENT
     QML_UNCREATABLE("Belongs to the analysis")
 
    public:
-    ConstraintListModel(const edi::Project& project, QObject* parent);
+    ConstraintListModel(edi::Project& project, ProjectEditor& editor, QObject* parent);
     void sync();
+    Q_INVOKABLE bool setText(int row, const QString& role, const QString& value);
+    Q_INVOKABLE bool setEnabled(int row, bool enabled);
+    Q_INVOKABLE void append();
+    Q_INVOKABLE void duplicate(int row);
+    Q_INVOKABLE void remove(int row);
+
+   protected:
+    bool setRole(int row, const QString& role, const QVariant& value) override;
 
    private:
-    const edi::Project& project_;
+    edi::Project& project_;
+    ProjectEditor& editor_;
 };
 
 // The persisted pre-fit start state (`_fit_parameter`, read-only: a fit writes it, undo restores it):

@@ -141,6 +141,19 @@ class Edit {
             row.structure_id = id;
         });
     }
+    // An alias's or a constraint's id, which keys it in the project's collection.
+    static Edit rename_alias(ParameterAlias& alias, std::string id) {
+        return Edit([&alias, id = std::move(id)] {
+            require_model_owner<ParameterAlias>(alias.id, "the alias");
+            alias.id = id;
+        });
+    }
+    static Edit rename_constraint(ParameterConstraint& constraint, std::string id) {
+        return Edit([&constraint, id = std::move(id)] {
+            require_model_owner<ParameterConstraint>(constraint.id, "the constraint");
+            constraint.id = id;
+        });
+    }
     static Edit rename_scattering_length(Structure& structure, std::string from, std::string to) {
         return Edit([&structure, from = std::move(from), to = std::move(to)] {
             edi::rename_scattering_length(structure, from, to);
@@ -149,14 +162,20 @@ class Edit {
 
     // --- Rows -------------------------------------------------------------------------------------
     // One row added to, or removed from, one of the model's collections, by its own row type: atom
-    // sites, background points and texture rows are added; those, structures and experiments are
-    // removed. `erase` refuses a row that is not there.
+    // sites, background points, texture rows, aliases and constraints are added; those, structures and
+    // experiments are removed. `erase` refuses a row that is not there.
     static Edit append(ItemVec<AtomSite>& rows, AtomSite row) { return appending(rows, std::move(row)); }
     static Edit append(ItemVec<LineSegment>& rows, LineSegment row) { return appending(rows, std::move(row)); }
     static Edit append(ItemVec<PrefOrient>& rows, PrefOrient row) { return appending(rows, std::move(row)); }
+    static Edit append(ItemVec<ParameterAlias>& rows, ParameterAlias row) { return appending(rows, std::move(row)); }
+    static Edit append(ItemVec<ParameterConstraint>& rows, ParameterConstraint row) {
+        return appending(rows, std::move(row));
+    }
     static Edit erase(ItemVec<AtomSite>& rows, std::size_t index) { return erasing(rows, index); }
     static Edit erase(ItemVec<LineSegment>& rows, std::size_t index) { return erasing(rows, index); }
     static Edit erase(ItemVec<PrefOrient>& rows, std::size_t index) { return erasing(rows, index); }
+    static Edit erase(ItemVec<ParameterAlias>& rows, std::size_t index) { return erasing(rows, index); }
+    static Edit erase(ItemVec<ParameterConstraint>& rows, std::size_t index) { return erasing(rows, index); }
     static Edit erase(ItemVec<Structure>& rows, std::size_t index) { return erasing(rows, index); }
     static Edit erase(ItemVec<BraggPdExperiment>& rows, std::size_t index) { return erasing(rows, index); }
     // An excluded region: its row added at the end, removed, or one of its two bounds assigned. The

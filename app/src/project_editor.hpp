@@ -28,6 +28,17 @@ class ProjectEditor {
 // the writer's refusal.
 using SavedFile = std::function<std::string(const std::string& relative)>;
 
+// A fresh name "<stem><n>" not among `taken`, for an appended or duplicated row.
+template <typename Taken>
+std::string unused_name(const std::string& stem, Taken taken) {
+    for (int n = 1;; ++n) {
+        const std::string candidate = stem + std::to_string(n);
+        if (!taken(candidate)) {
+            return candidate;
+        }
+    }
+}
+
 // The ParameterItem of a core parameter, as a model role value (null when the parameter is not
 // shown). Defined in parameter_registry.cpp.
 class ParameterRegistry;
