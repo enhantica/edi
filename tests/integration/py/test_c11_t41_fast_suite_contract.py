@@ -308,12 +308,18 @@ def test_c11_t41_edi_ci_tiers_name_pr_merge_and_local_surfaces() -> None:
     import yaml  # noqa: PLC0415 - defer cross-module test wiring
 
     from tests.integration.py.ci_runner_contract import (  # noqa: PLC0415 - avoid test-module import cycles
+        platform_job,
         self_hosted_runners,
     )
 
     jobs = yaml.safe_load(workflow)['jobs']
     for name in ('native', 'core', 'cli-python', 'app'):
-        runners = self_hosted_runners(jobs[name])
+        runners = [
+            runner
+            for platform in ('linux-64', 'osx-arm64')
+            for runner in self_hosted_runners(platform_job(jobs, name, platform))
+            if runner[1] == ('Linux' if platform == 'linux-64' else 'macOS')
+        ]
         assert {tuple(r[1:]) for r in runners} == {('Linux', 'X64'), ('macOS', 'ARM64')}, (
             'CI tiers must actually bind both prescribed operating systems and architectures'
         )

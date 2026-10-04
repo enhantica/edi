@@ -12,6 +12,7 @@ from pathlib import Path
 import pytest
 import yaml
 
+from tests.fixtures.e09_t75_workflow import active
 from tests.integration.py.ci_runner_contract import self_hosted_runners
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -178,9 +179,13 @@ def test_ci_routes_surfaces_and_uses_strict_self_hosted_jobs() -> None:
         if public:
             public_build_boundary(jobs, name)
         else:
-            assert 'if' not in jobs[name], (
-                f'E01/ required {name} must run on every changed surface'
-            )
+            for event in ('push', 'pull_request', 'workflow_dispatch'):
+                assert active(jobs[name], event), (
+                    f'required {name} runs on every changed surface in full CI'
+                )
+                assert active(jobs[name], event, core_only=True) == (name in {'native', 'core'}), (
+                    f'only explicit core-only repair skips downstream {name}'
+                )
     assert 'pixi run core-build' in job_body('native'), (
         'E01/ the native matrix produces the core once'
     )
@@ -196,7 +201,12 @@ def test_ci_routes_surfaces_and_uses_strict_self_hosted_jobs() -> None:
     )
 
     app_wasm = job_body('app-wasm')
-    assert "github.event_name == 'workflow_dispatch'" in app_wasm
+    assert all(
+        active(jobs['app-wasm'], event) for event in ('push', 'pull_request', 'workflow_dispatch')
+    ), 'the WebAssembly job runs on every full CI event'
+    assert 'wasm-build' in app_wasm and 'wasm-check' in app_wasm, (
+        'the WebAssembly job builds and checks the real site'
+    )
     assert 'agent-os-drift' not in workflow
     assert 'tools/agent-os/' not in json.dumps(jobs), (
         'E01/ executable passenger jobs must not run re\x6cay-owned machinery'

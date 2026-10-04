@@ -279,12 +279,16 @@ def assert_registry_wiring(manifest, workflow):
             continue
         if 'if' in job:
             condition = job['if']
-            if (
-                condition != 'github.event.pull_request.head.repo.fork == false'
-                or job.get('environment') != 'crysta-sdk'
-            ):
-                continue
-            if any(runner[0] != 'github-hosted' for runner in self_hosted_runners(job)):
+            runners = self_hosted_runners(job)
+            private_full = condition == '${{ !inputs.core_only }}' and all(
+                runner[0] == 'self-hosted' for runner in runners
+            )
+            trusted_public = (
+                condition == 'github.event.pull_request.head.repo.fork == false'
+                and job.get('environment') == 'crysta-sdk'
+                and all(runner[0] == 'github-hosted' for runner in runners)
+            )
+            if not (private_full or trusted_public):
                 continue
         for step in job.get('steps', []):
             if step.get('continue-on-error') or 'if' in step:
