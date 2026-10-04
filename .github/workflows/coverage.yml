@@ -1,4 +1,26 @@
-# Unit-tier coverage of both languages, by dispatch: the text reports are uploaded and summarised.
+# Edi's coverage surface, mirroring crysta's `coverage.yml` so the two repos report the same
+# way. Both languages are reported here, because a repo that measures one of them has not
+# measured its coverage.
+#
+# A SEPARATE workflow file, for crysta's reason verbatim: adding `push: branches: [main]` to
+# ci.yml would fire every job on every merge on the single serialized self-hosted runner, and
+# ci.yml's one-workflow-for-`needs:` rationale does not apply to a report-only job.
+#
+# GATED. The former REPORT-ONLY rationale ("a gate set from a guess either blocks legitimate work
+# or asserts nothing) is settled, not still pending: WAS the measurement (both numbers raised to
+# >=80 on stated denominators) and was absorbed into it and closed. Both steps below FAIL below
+# the declared thresholds — pyproject.toml [tool.edi.coverage] cpp_lines_min and
+# [tool.coverage.report] fail_under, both 80, both proven red-first in the cycle. WHAT IS GATED:
+# this workflow's two coverage steps. WHAT IS PROCEDURE, not a gate: the pre-PR rule — run
+# coverage just before opening a PR; if short, raise it, then open the PR; raising coverage to
+# meet the bar needs no extra review round. Not PR-triggered, because every PR would then pay a
+# full instrumented build on the single serialized self-hosted runner — dispatch + the pre-PR rule
+# puts the cost where the decision is.
+#
+# ⛔ Both tasks are invoked here because a ported script that no workflow calls is not a port.
+# edi carried `tools/ci/cpp-coverage-unit.sh` and the (since retired) `py-cov-report` task for this whole cycle
+# with nothing invoking either of them, which is this cycle's signature defect — a thing added,
+# the loop left open — in a CI costume.
 name: Coverage (C++ and Python)
 
 on:
@@ -11,9 +33,6 @@ concurrency:
 jobs:
   coverage:
     name: unit coverage, both languages (Linux)
-    if: github.event_name == 'workflow_dispatch'
-    environment: crysta-sdk
-    # Self-hosted while the repository is private, like ci.yml; the public flip changes this line.
     runs-on: [self-hosted, Linux, X64]
     defaults:
       run:
@@ -23,30 +42,19 @@ jobs:
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup-pixi
-      - name: Mint a crysta installation token
-        id: crysta-token
-        uses: actions/create-github-app-token@v2
-        with:
-          app-id: ${{ vars.ENHANTICA_APP_ID }}
-          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
-          owner: enhantica
-          repositories: crysta
-          permission-contents: read
-          permission-actions: read
       - name: C++ unit coverage (clang -O0 + LLVM source-based)
         run: pixi run cpp-coverage-unit
-        env:
-          GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
+      # Retired the all-tiers `py-cov-report` for the unit-tier gate `py-cov-unit`; this step still
+      # called the retired task (exit 127 on main).
       - name: Python coverage (pytest-cov over lib/edi, unit tier)
         run: pixi run py-cov-unit | tee build/py-coverage-report.txt
-        env:
-          GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
       - name: Upload both reports
         uses: actions/upload-artifact@v4
         with:
           name: unit-coverage
           path: |
             build/coverage-unit/coverage-report.txt
+            build/coverage-unit/coverage.lcov
             build/py-coverage-report.txt
           if-no-files-found: error
       - name: Job summary

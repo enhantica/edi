@@ -1,7 +1,7 @@
 # The documentation site on GitHub Pages, with an unlisted /webapp/ folder reserved for the web app.
-# When switched on, the site is built from main (or by dispatch) with the notebooks executed for
-# rendering, which needs crysta's SDK; /webapp/ carries a placeholder page marked noindex and is
-# disallowed in robots.txt, and nothing in the site links it.
+# The site is built from main (or by dispatch) with the notebooks executed for rendering, which needs
+# crysta's SDK; /webapp/ carries a placeholder page marked noindex and is disallowed in robots.txt,
+# and nothing in the site links it.
 name: Pages
 
 on:
@@ -17,14 +17,11 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Switched off until further notice by the owner: both jobs are kept with their steps and run on no
-  # event. Turning the site back on, by removing the two `if: false` lines, is the owner's decision.
   build:
     name: build the site
-    if: false
+    if: github.event.pull_request.head.repo.fork == false
     environment: crysta-sdk
-    # Self-hosted while the repository is private, like ci.yml; the public flip changes this anchor.
-    runs-on: &linux [self-hosted, Linux, X64]
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-pixi
@@ -63,17 +60,17 @@ jobs:
   deploy:
     name: deploy the site
     needs: build
-    # Off with the build. A Pages site can be publicly visible, so when the site is turned back on this
-    # becomes `if: ${{ !github.event.repository.private }}`: it deploys only once the repository is public
-    # (docs/dev/public-release-checklist.md).
-    if: false
+    # A Pages site can be publicly visible, so Pages is enabled only once the repository is public
+    # (docs/dev/public-release-checklist.md, after the swap); until then the site is built and checked,
+    # and the deploy skips.
+    if: ${{ !github.event.repository.private }}
     permissions:
       pages: write
       id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: *linux
+    runs-on: ubuntu-24.04
     steps:
       - name: Deploy to GitHub Pages
         id: deployment

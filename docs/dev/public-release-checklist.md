@@ -75,11 +75,12 @@ Run by the maintainer the owner authorized for the cut.
 - [ ] The content check (`content.yml`) runs on every push and pull request and is required by the
       ruleset. Commit messages, pull-request titles and bodies, branch names, review comments and CI
       logs are written for the public from the cut onward.
-- [ ] The self-hosted runners serve the repository while it is private: every workflow job runs on
-      them. Each workflow names its runners in one place (in `ci.yml` the `&linux` and `&macos`
-      anchors).
+- [ ] The self-hosted runners serve the repository while it is private, with the private workflows
+      in `.github/workflows`. The content check (`content.yml`) is the one public workflow installed
+      already; the others wait under `tools/public-release/github/workflows`.
 - [ ] **Pages** stays disabled while the repository is private, because a Pages site can be publicly
-      visible. Both `pages.yml` jobs are switched off (`if: false`) until the owner turns them back on.
+      visible. The private `ci.yml`'s `pages` job is switched off, and `pages.yml` is not installed
+      until the public workflows are swapped in.
 - [ ] The scheduled and writing workflows run only in the repository named `enhantica/edi`: the
       crysta SDK update (`crysta-sdk-update.yml`) and the latency bank (`bank-latency.yml`).
 
@@ -90,10 +91,8 @@ The owner makes the repository public personally; no script and no session does.
 - [ ] Before: the self-hosted runners leave the repository. A runner group that does not allow
       public repositories stops serving it by itself at the visibility change; confirm every group
       the repository uses is such a group, or that fork pull requests require approval.
-- [ ] Before: flip the runner switch to GitHub-hosted, before the visibility change. In `ci.yml` the
-      `&linux` anchor becomes `ubuntu-24.04` and `&macos` becomes `macos-15`; in `pages.yml` the
-      `&linux` anchor, and in `content.yml`, `coverage.yml` and `crysta-sdk-update.yml` the one
-      `runs-on` line, become `ubuntu-24.04`. `bank-latency.yml` stays on the self-hosted fleet. Then
+- [ ] Before the visibility change, by pull request: swap in the public workflows (prepared under
+      `tools/public-release/github/workflows`) and flip the runners to GitHub-hosted. Then
       GitHub-hosted runners run every job a pull request reaches, with no self-hosted job reachable
       from a fork's pull request.
 - [ ] Before: the logs of runs on self-hosted runners are deleted or have expired
