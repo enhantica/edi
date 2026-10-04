@@ -10,6 +10,12 @@
     the same `CategoryField::refinable` flag, and the pages and the Analysis table follow it without a second rule.
   - What is refinable is read from crysta's public API, never decided in edi.
 
+**Amended 2026-10-05 (ADR-0024):** a parameter a declared constraint sets is the first new kind of dependent. crysta's
+relation graph marks every parameter with its dependence (`Parameter::dependence`), and a category field is refinable
+only when its mark is independent, structure and experiment alike, so a constrained parameter is disabled on its page
+with its implied value and has no Analysis row, through the same flag. The completion the app runs after every edit is
+crysta's applier (`edi::apply_relations`), which replaced the cell and position helpers.
+
 ## Context
 
 The owner's feedback on the first GUI (2026-09-29): *"Symmetry fixed parameters should be disabled on
