@@ -152,6 +152,8 @@ if _importlib_util.find_spec('edi._edi') is None:
 from edi._edi import (  # noqa: E402 - the __path__ resolution above must run first
     AbsorptionBase,
     AbsorptionFactory,
+    Alias,
+    Aliases,
     AtomSite,
     AtomSites,
     AtomSitesCartnTransform,
@@ -159,6 +161,8 @@ from edi._edi import (  # noqa: E402 - the __path__ resolution above must run fi
     BeamModeEnum,
     BraggPdExperiment,
     Cell,
+    Constraint,
+    Constraints,
     CwlInstrumentBase,
     CwlPdInstrumentBase,
     CwlPdNeutronInstrument,
@@ -266,6 +270,8 @@ from edi._edi import (  # noqa: E402 - after the __path__ resolution
 __all__ = [
     'AbsorptionBase',
     'AbsorptionFactory',
+    'Alias',
+    'Aliases',
     'Analysis',
     'AtomSite',
     'AtomSites',
@@ -274,6 +280,8 @@ __all__ = [
     'BeamModeEnum',
     'BraggPdExperiment',
     'Cell',
+    'Constraint',
+    'Constraints',
     'CwlInstrumentBase',
     'CwlPdInstrumentBase',
     'CwlPdNeutronInstrument',
@@ -468,6 +476,16 @@ class Analysis:
         # The model is the single source of truth — no grid/bank/cutoff/scattering argument
         # exists; results land in each experiment's data.intensity_calc.
         self._project.calculate()
+
+    @property
+    def aliases(self) -> Aliases:
+        """The project's parameter aliases (diffraction-lib ``analysis.aliases``)."""
+        return self._project._aliases
+
+    @property
+    def constraints(self) -> Constraints:
+        """The project's constraints (diffraction-lib ``analysis.constraints``)."""
+        return self._project._constraints
 
 
 def _analysis(self: Project) -> Analysis:

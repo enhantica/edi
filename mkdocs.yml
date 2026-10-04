@@ -51,6 +51,7 @@ nav:
           - dev/adrs/0021-pattern-presentation.md
           - dev/adrs/0022-structure-scene.md
           - dev/adrs/0023-web-build.md
+          - dev/adrs/0024-parameter-aliases-and-constraints.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md

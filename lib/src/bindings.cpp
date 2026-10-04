@@ -5,6 +5,7 @@
 
 #include <nanobind/nanobind.h>
 #include <algorithm>
+#include <iostream>
 #include <nanobind/ndarray.h>
 #include <nanobind/stl/filesystem.h>
 #include <nanobind/stl/map.h>
@@ -24,6 +25,7 @@
 #include <variant>
 #include <vector>
 
+#include "edi/categories.hpp"
 #include "edi/io.hpp"
 #include "edi/model.hpp"
 #include "edi/parameter_spec.hpp"
@@ -755,6 +757,56 @@ static const std::string& validated_project_name(const std::string& value) {
 }
 
 
+// --- the declared relations (edi ADR-0024) --------------------------------------------------------
+
+// crysta's coded warnings, as Python warnings led by the code.
+static void warn_python(const std::string& message) {
+    if (PyErr_WarnEx(PyExc_UserWarning, message.c_str(), 1) < 0) {
+        throw nb::python_error();
+    }
+}
+
+// The project a relation row belongs to, once that project handed its collection out; else null.
+static edi::Project* host_of(const edi::ItemKey& key) {
+    const edi::detail::KeyedBase* owner = key.owner();
+    return owner != nullptr ? owner->host() : nullptr;
+}
+
+// After an edit of the relations: crysta re-marks every parameter and clears a newly dependent free
+// flag with its warning. A set that cannot hold yet stays as declared; the next calculation, fit or
+// save refuses it with crysta's code.
+static void relations_changed(edi::Project& project) {
+    try {
+        edi::refresh_relations(project, warn_python);
+    } catch (const edi::ValidationError&) {  // NOLINT(bugprone-empty-catch) — refused at use
+    }
+}
+
+static void relations_changed(const edi::ItemKey& key) {
+    if (edi::Project* project = host_of(key)) {
+        relations_changed(*project);
+    }
+}
+
+namespace edi::views {
+void after_change(const AliasesView& view) { relations_changed(*view.owner); }
+void after_change(const ConstraintsView& view) { relations_changed(*view.owner); }
+}  // namespace edi::views
+
+// The text either side of a constraint's first '=' (diffraction-lib Constraint._split_expression).
+static std::pair<std::string, std::string> split_constraint(const std::string& text) {
+    const auto trim = [](std::string value) {
+        value.erase(0, value.find_first_not_of(" \t"));
+        value.erase(value.find_last_not_of(" \t") + 1);
+        return value;
+    };
+    const std::size_t equals = text.find('=');
+    if (equals == std::string::npos) {
+        return {trim(text), std::string()};
+    }
+    return {trim(text.substr(0, equals)), trim(text.substr(equals + 1))};
+}
+
 // ---: the R15 collection protocol ---------------------------------------
 //
 // One registrar per keyed view + its lazy query iterator. Verb semantics are the accepted plan's
@@ -835,12 +887,14 @@ static void def_keyed_collection(nb::class_<View>& view_cls, nb::class_<Iter>& i
                      throw nb::key_error(name.c_str());
                  }
                  self.vec().erase_at(static_cast<std::size_t>(at));
+                 after_change(self);
              })
         .def(
             "add",
             [](View& self, std::shared_ptr<ItemT> item) {
                 const std::string name = self.key_of(*item);
                 self.set_item(name, std::move(item));
+                after_change(self);
             },
             "item"_a,
             "Insert or replace a pre-built item under its identity key (R15: replace acts on the "
@@ -853,12 +907,17 @@ static void def_keyed_collection(nb::class_<View>& view_cls, nb::class_<Iter>& i
                     throw nb::key_error(name.c_str());
                 }
                 self.vec().erase_at(static_cast<std::size_t>(at));
+                after_change(self);
             },
             "name"_a,
             "Remove an item by its key (R15: KeyError when absent; a held item survives, "
             "detached).")
         .def(
-            "clear", [](View& self) { self.vec().clear(); },
+            "clear",
+            [](View& self) {
+                self.vec().clear();
+                after_change(self);
+            },
             "Remove every item (R15; held items survive, detached).")
         // ADR-0016: the "these are the items" bulk path (StructureFactory.from_dict): the whole list
         // is admitted at once, so an internal duplicate id is refused by name rather than silently
@@ -873,6 +932,7 @@ static void def_keyed_collection(nb::class_<View>& view_cls, nb::class_<Iter>& i
                     validate_insert(self, *item);
                 }
                 self.vec().assign(std::move(items));
+                after_change(self);
             },
             "items"_a)
         .def(
@@ -1119,6 +1179,176 @@ static void def_collection_views(nb::module_& m) {
         "Create a preferred-orientation row from keyword attributes and add it (upstream "
         "CategoryCollection.create).");
 
+    // diffraction-lib's analysis aliases and constraints (R15; key: the id). Their rows are text;
+    // crysta resolves, parses, checks and applies them (edi ADR-0024).
+    nb::class_<edi::ParameterAlias>(m, "Alias",
+                                    "A name for one refinable parameter, used in constraints "
+                                    "(diffraction-lib Alias).")
+        .def_prop_rw(
+            "id", [](const edi::ParameterAlias& self) { return self.id.value(); },
+            [](edi::ParameterAlias& self, const std::string& id) {
+                self.id = id;
+                relations_changed(self.id);
+            })
+        .def_prop_ro("parameter_unique_name",
+                     [](const edi::ParameterAlias& self) { return self.parameter_unique_name.value(); })
+        .def_prop_ro(
+            "param",
+            [](const edi::ParameterAlias& self) -> nb::object {
+                edi::Project* project = host_of(self.id);
+                if (project == nullptr) {
+                    return nb::none();
+                }
+                for (const edi::NamedSlot& slot : edi::named_slots(*project)) {
+                    if (slot.unique_name == self.parameter_unique_name.value()) {
+                        return nb::cast(slot.parameter, nb::rv_policy::reference);
+                    }
+                }
+                return nb::none();
+            },
+            "The parameter this alias names, or None when it resolves to none.");
+    nb::class_<AliasesView> aliases_view(m, "Aliases",
+                                         "Live keyed collection of the project's aliases (R15; "
+                                         "key: the id).");
+    nb::class_<AliasesIter> aliases_iter(m, "_AliasesIterator");
+    def_keyed_collection<AliasesView, AliasesIter, edi::ParameterAlias>(aliases_view, aliases_iter);
+    aliases_view.def(
+        "create",
+        [](AliasesView& self, const std::string& id, const edi::Parameter& param) {
+            if (self.find_first(id) >= 0) {
+                throw nb::value_error(("an alias '" + id + "' already exists").c_str());
+            }
+            std::string name;
+            for (const edi::NamedSlot& slot : edi::named_slots(*self.owner)) {
+                if (slot.parameter == &param) {
+                    name = slot.unique_name;
+                    break;
+                }
+            }
+            if (name.empty()) {
+                throw nb::value_error(
+                    ("alias '" + id + "': the parameter is not a refinable parameter of this project")
+                        .c_str());
+            }
+            auto alias = std::make_shared<edi::ParameterAlias>();
+            alias->id = id;
+            alias->parameter_unique_name = name;
+            self.set_item(id, std::move(alias));
+            try {
+                edi::refresh_relations(*self.owner, warn_python);
+            } catch (const edi::ValidationError&) {
+                self.vec().erase_at(static_cast<std::size_t>(self.find_first(id)));
+                relations_changed(*self.owner);
+                throw;
+            }
+        },
+        nb::kw_only(), "id"_a, "param"_a,
+        "Create an alias naming one of this project's parameters (diffraction-lib Aliases.create). "
+        "A taken id, a parameter of another project or a name crysta reserves is refused.");
+
+    nb::class_<edi::ParameterConstraint>(m, "Constraint",
+                                         "One declared relation, `<alias> = <expression>` "
+                                         "(diffraction-lib Constraint).")
+        .def_prop_rw(
+            "id", [](const edi::ParameterConstraint& self) { return self.id.value(); },
+            [](edi::ParameterConstraint& self, const std::string& id) { self.id = id; })
+        .def_prop_rw(
+            "expression", [](const edi::ParameterConstraint& self) { return self.expression.value(); },
+            [](edi::ParameterConstraint& self, const std::string& expression) {
+                self.expression = expression;
+                relations_changed(self.id);
+            })
+        .def_prop_rw(
+            "enabled", [](const edi::ParameterConstraint& self) { return self.enabled.get(); },
+            [](edi::ParameterConstraint& self, bool enabled) {
+                self.enabled = enabled;
+                relations_changed(self.id);
+            },
+            "Whether the constraint applies; a disabled one stays declared (saved as "
+            "`_constraint.enabled false`).")
+        .def_prop_ro("lhs_alias",
+                     [](const edi::ParameterConstraint& self) {
+                         return split_constraint(self.expression.value()).first;
+                     })
+        .def_prop_ro("rhs_expr", [](const edi::ParameterConstraint& self) {
+            return split_constraint(self.expression.value()).second;
+        });
+    nb::class_<ConstraintsView> constraints_view(m, "Constraints",
+                                                 "Live keyed collection of the project's constraints "
+                                                 "(R15; key: the id).");
+    nb::class_<ConstraintsIter> constraints_iter(m, "_ConstraintsIterator");
+    def_keyed_collection<ConstraintsView, ConstraintsIter, edi::ParameterConstraint>(constraints_view,
+                                                                                     constraints_iter);
+    constraints_view
+        .def(
+            "create",
+            [](ConstraintsView& self, const std::string& expression, std::optional<std::string> id) {
+                const std::string key = id.value_or(split_constraint(expression).first);
+                if (key.empty()) {
+                    throw nb::value_error(("constraint '" + expression +
+                                           "' names no alias left of an '=', so it needs an id")
+                                              .c_str());
+                }
+                if (self.find_first(key) >= 0) {
+                    throw nb::value_error(("a constraint '" + key + "' already exists").c_str());
+                }
+                auto constraint = std::make_shared<edi::ParameterConstraint>();
+                constraint->id = key;
+                constraint->expression = expression;
+                self.set_item(key, std::move(constraint));
+                try {
+                    edi::refresh_relations(*self.owner, warn_python);
+                } catch (const edi::ValidationError&) {
+                    self.vec().erase_at(static_cast<std::size_t>(self.find_first(key)));
+                    relations_changed(*self.owner);
+                    throw;
+                }
+            },
+            nb::kw_only(), "expression"_a, "id"_a = nb::none(),
+            "Create a constraint from `<alias> = <expression>` (diffraction-lib "
+            "Constraints.create); the id defaults to the left-hand alias. crysta checks it "
+            "first: a refused constraint is not added.")
+        .def_prop_ro(
+            "enabled",
+            [](const ConstraintsView& self) {
+                return std::any_of(self.vec().begin(), self.vec().end(),
+                                   [](const auto& constraint) { return constraint->enabled.get(); });
+            },
+            "Whether any constraint applies (diffraction-lib Constraints.enabled).")
+        .def(
+            "enable",
+            [](ConstraintsView& self) {
+                for (const auto& constraint : self.vec()) {
+                    constraint->enabled = true;
+                }
+                relations_changed(*self.owner);
+            },
+            "Apply every constraint (diffraction-lib Constraints.enable).")
+        .def(
+            "disable",
+            [](ConstraintsView& self) {
+                for (const auto& constraint : self.vec()) {
+                    constraint->enabled = false;
+                }
+                relations_changed(*self.owner);
+            },
+            "Keep every constraint declared but apply none (diffraction-lib Constraints.disable).")
+        .def(
+            "show",
+            [](const ConstraintsView& self) {
+                const nb::object print = nb::module_::import_("builtins").attr("print");
+                if (self.vec().empty()) {
+                    print("No constraints defined.");
+                    return;
+                }
+                print("User defined constraints 🧷");
+                for (const auto& constraint : self.vec()) {
+                    print(constraint->id.value() + ": " + constraint->expression.value() +
+                          (constraint->enabled.get() ? "" : "  (disabled)"));
+                }
+            },
+            "Print the declared constraints (diffraction-lib Constraints.show).");
+
     nb::class_<BackgroundView> background_view(
         m, "_BackgroundView",
         "Live positional view over an experiment's background points (internal; R12 adapts the "
@@ -1303,8 +1533,28 @@ NB_MODULE(_edi, m) {
             "free", [](const edi::Parameter& p) { return p.free.get(); },
             [](edi::Parameter& p, bool free) {
                 refuse_detached(p);
-                p.free = free;
+                if (!edi::set_free(p, free)) {
+                    const std::string name = p.spec != nullptr ? p.spec->name : std::string("parameter");
+                    const std::string message =
+                        "crysta.domain.dependent_free_ignored: parameter '" + name + "' is " +
+                        (p.dependence == edi::Dependence::Constrained ? "set by a constraint"
+                         : p.dependence == edi::Dependence::SymmetryFixed ? "fixed by symmetry"
+                                                                          : "constrained by symmetry") +
+                        "; free = True is ignored and it stays dependent";
+                    if (PyErr_WarnEx(PyExc_UserWarning, message.c_str(), 1) < 0) {
+                        throw nb::python_error();
+                    }
+                }
             })
+        // Whether a declared constraint or the space group sets this parameter (diffraction-lib
+        // GenericParameter.user_constrained / .symmetry_constrained), from crysta's relation graph.
+        .def_prop_ro("user_constrained",
+                     [](const edi::Parameter& p) { return p.dependence == edi::Dependence::Constrained; })
+        .def_prop_ro("symmetry_constrained",
+                     [](const edi::Parameter& p) {
+                         return p.dependence == edi::Dependence::SymmetryFixed ||
+                                p.dependence == edi::Dependence::SymmetryTied;
+                     })
         // ADR-0012: whether a collection holds this parameter's row. A removed row's parameters
         // keep their last values and refuse writes.
         .def("is_attached", [](const edi::Parameter& p) { return p.is_attached(); })
@@ -2726,6 +2976,21 @@ NB_MODULE(_edi, m) {
             },
             nb::keep_alive<0, 1>())
         .def_prop_ro(
+            "_aliases",
+            [](edi::Project& p) {
+                p.adopt_relations();  // A held alias resolves its parameter through the project
+                return edi::views::AliasesView{&p, &edi::Project::aliases, &edi::ParameterAlias::id};
+            },
+            nb::keep_alive<0, 1>())
+        .def_prop_ro(
+            "_constraints",
+            [](edi::Project& p) {
+                p.adopt_relations();  // An edited constraint re-marks the project's parameters
+                return edi::views::ConstraintsView{&p, &edi::Project::constraints,
+                                                   &edi::ParameterConstraint::id};
+            },
+            nb::keep_alive<0, 1>())
+        .def_prop_ro(
             "experiments",
             [](edi::Project& p) {
                 p.adopt_experiments();  // A held experiment's value read calculates
@@ -2792,7 +3057,19 @@ NB_MODULE(_edi, m) {
             "Project metadata container (diffraction-lib Project.metadata).")
         .def_static(
             "load",
-            [](const std::filesystem::path& directory) { return edi::load_project(directory.string()); },
+            [](const std::filesystem::path& directory) {
+                // crysta's coded warnings reach Python as warnings led by the code; the loader's
+                // own notes keep their stderr line.
+                return edi::load_project(directory.string(), [](const std::string& message) {
+                    if (message.rfind("crysta.", 0) == 0) {
+                        if (PyErr_WarnEx(PyExc_UserWarning, message.c_str(), 1) < 0) {
+                            throw nb::python_error();
+                        }
+                        return;
+                    }
+                    std::cerr << "Warning: " << message << "\n";
+                });
+            },
             "directory"_a,
             "Load a COMPLETE declarative .edi project directory (structures/, experiments/, "
             "analysis/) — THE ONE LOADER.\n\n"
