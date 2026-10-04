@@ -167,7 +167,7 @@ disabled** rather than left out, so the layout is final:
   | TOF Jorgensen–Von Dreele | α₀ α₁ β₀ β₁ (`rise_*`, `decay_*`) | σ₀ σ₁ σ₂ size G strain G (`broad_gauss_*`) | γ₀ γ₁ γ₂ size L strain L (`broad_lorentz_*`) | — |
   | TOF Jorgensen | α₀ α₁ β₀ β₁ | σ₀ σ₁ σ₂ size G strain G | — | — |
   | TOF pseudo-Voigt | — | σ₀ σ₁ σ₂ size G strain G | γ₀ γ₁ γ₂ size L strain L | — |
-  | CW pseudo-Voigt, CW Thompson–Cox–Hastings, and any CW profile | — | U V W (`broad_gauss_u/v/w`) | X Y (`broad_lorentz_x/y`) | the declared `asym_*` fields, as now |
+  | CW pseudo-Voigt, CW Thompson–Cox–Hastings, and any CW profile | — | U V W X Y (`broad_gauss_u/v/w`, `broad_lorentz_x/y`) | — | the declared `asym_*` fields, as now |
 
   A fourth row takes any peak field of no family; the asymmetry fields keep their own row after them, five
   wide as the others.

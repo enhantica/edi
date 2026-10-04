@@ -14,13 +14,14 @@ namespace edi_app {
 
 namespace {
 // A peak field's family, its sidebar row (edi ADR-0017 §5): 0 the back-to-back exponentials, 1 the Gaussian
-// broadening, 2 the Lorentzian, 3 any other.
+// broadening, 2 the Lorentzian, 3 any other. The constant-wavelength X and Y join U, V and W, so the five
+// share one row (owner, 2026-10-04).
 int peak_family(const std::string& name) {
     const auto starts = [&name](const char* prefix) { return name.rfind(prefix, 0) == 0; };
     if (starts("rise_") || starts("decay_")) {
         return 0;
     }
-    if (starts("broad_gauss_")) {
+    if (starts("broad_gauss_") || name == "broad_lorentz_x" || name == "broad_lorentz_y") {
         return 1;
     }
     if (starts("broad_lorentz_")) {
