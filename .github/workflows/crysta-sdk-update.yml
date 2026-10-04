@@ -25,7 +25,8 @@ jobs:
     # is the guard every job using the crysta token carries.
     if: github.repository == 'enhantica/edi' && github.event.pull_request.head.repo.fork == false
     environment: crysta-sdk
-    runs-on: ubuntu-latest
+    # Self-hosted while the repository is private, like ci.yml; the public flip changes this line.
+    runs-on: [self-hosted, Linux, X64]
     steps:
       - uses: actions/checkout@v5
         with:

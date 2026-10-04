@@ -1,4 +1,7 @@
-# edi's CI for a public repository, on GitHub-hosted runners.
+# edi's CI, on the org's self-hosted runners while the repository is private (GitHub-hosted runners
+# are billed for a private repository). The runner of each platform is named once, as a YAML anchor:
+# `&linux` on the `changes` job and `&macos` in the native job's matrix. Moving to GitHub-hosted
+# runners is changing those two values.
 #
 # A job that builds against crysta needs a read token for crysta's prebuilt SDK, so it runs only for
 # events from this repository (never a fork's pull request) and in the reviewed `crysta-sdk`
@@ -15,6 +18,13 @@ on:
   pull_request:
     types: [ready_for_review]
   workflow_dispatch:
+    inputs:
+      # A repair round's fast signal: changes, pin currency, native and core (and the dispatch-only
+      # cli-native placeholder). It skips required jobs, so its head is not merge evidence.
+      core_only:
+        description: Run only the native builds and the core test jobs (not evidence)
+        type: boolean
+        default: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -27,7 +37,7 @@ permissions:
 jobs:
   changes:
     name: changes
-    runs-on: ubuntu-24.04
+    runs-on: &linux [self-hosted, Linux, X64]
     outputs:
       app_build: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.app_build == 'true' }}
       crysta_sha: ${{ steps.crysta-source.outputs.sha }}
@@ -48,7 +58,7 @@ jobs:
     # Unconditional on every event (a stale pin never passes by a skipped job); the two steps that use
     # the token are what a fork's pull request skips, so the token never reaches it.
     environment: crysta-sdk
-    runs-on: ubuntu-24.04
+    runs-on: *linux
     steps:
       - uses: actions/checkout@v5
       - name: Mint a crysta installation token
@@ -71,7 +81,8 @@ jobs:
 
   lint:
     name: lint
-    runs-on: ubuntu-24.04
+    if: ${{ !inputs.core_only }}
+    runs-on: *linux
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-pixi
@@ -99,10 +110,10 @@ jobs:
       matrix:
         include:
           - platform: Linux
-            runner: ubuntu-24.04
+            runner: *linux
             sdk: linux-64
           - platform: macOS
-            runner: macos-15
+            runner: &macos [self-hosted, macOS, ARM64]
             sdk: osx-arm64
     runs-on: ${{ matrix.runner }}
     steps:
@@ -128,10 +139,11 @@ jobs:
 
   audit:
     name: audit
-    if: github.event.pull_request.head.repo.fork == false
+    if: ${{ !inputs.core_only && github.event.pull_request.head.repo.fork == false }}
     environment: crysta-sdk
-    needs: changes
-    runs-on: ubuntu-24.04
+    # After the core tests, which take the runners first; a core failure cancels the run before these start.
+    needs: [changes, core]
+    runs-on: *linux
     env:
       CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
     steps:
@@ -168,12 +180,16 @@ jobs:
       matrix:
         include:
           - platform: Linux
-            runner: ubuntu-24.04
+            runner: *linux
             sdk: linux-64
           - platform: macOS
-            runner: macos-15
+            runner: *macos
             sdk: osx-arm64
     runs-on: ${{ matrix.runner }}
+    # `actions: write` for the cancel step at the end.
+    permissions:
+      contents: read
+      actions: write
     steps:
       - uses: actions/checkout@v5
         with:
@@ -216,19 +232,29 @@ jobs:
         run: pixi run --skip-deps tsan-worker
         env:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
+      # A core failure ends the run, so the red arrives in minutes and no runner spends time on a head
+      # that is already red. A cancelled run is never merge evidence.
+      - name: Cancel the run after a core failure
+        if: failure()
+        run: |
+          curl -fsS -X POST -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
 
   notebooks:
     name: notebooks
     # Runs for every result-changing surface, so no job condition: the steps that use the crysta
     # token, and the run that needs their build, carry the fork guard (a fork's pull request skips
     # this job anyway, through the native job it needs).
+    if: ${{ !inputs.core_only }}
     environment: crysta-sdk
-    # After the native build of this run: the notebooks wait for the shared pin to build, as the
-    # private CI's notebooks do. Each job still builds its own tree (no artifact carries crysta).
-    needs: [changes, native]
+    # After the native build and the core tests of this run, which take the runners first; a core failure
+    # cancels the run before these start. Each job still builds its own tree (no artifact carries crysta).
+    needs: [changes, native, core]
     env:
       CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
-    runs-on: ubuntu-24.04
+    runs-on: *linux
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-pixi
@@ -256,9 +282,10 @@ jobs:
 
   cli-python:
     name: cli-python · ${{ matrix.platform }}
-    if: github.event.pull_request.head.repo.fork == false
+    if: ${{ !inputs.core_only && github.event.pull_request.head.repo.fork == false }}
     environment: crysta-sdk
-    needs: changes
+    # After the core tests, which take the runners first; a core failure cancels the run before these start.
+    needs: [changes, core]
     env:
       CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
     strategy:
@@ -266,10 +293,10 @@ jobs:
       matrix:
         include:
           - platform: Linux
-            runner: ubuntu-24.04
+            runner: *linux
             sdk: linux-64
           - platform: macOS
-            runner: macos-15
+            runner: *macos
             sdk: osx-arm64
     runs-on: ${{ matrix.runner }}
     steps:
@@ -305,9 +332,9 @@ jobs:
       matrix:
         include:
           - platform: Linux
-            runner: ubuntu-24.04
+            runner: *linux
           - platform: macOS
-            runner: macos-15
+            runner: *macos
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Native CLI placeholder
@@ -315,12 +342,13 @@ jobs:
 
   docs:
     name: docs
-    if: github.event.pull_request.head.repo.fork == false
+    if: ${{ !inputs.core_only && github.event.pull_request.head.repo.fork == false }}
     environment: crysta-sdk
-    needs: changes
+    # After the core tests, which take the runners first; a core failure cancels the run before these start.
+    needs: [changes, core]
     env:
       CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
-    runs-on: ubuntu-24.04
+    runs-on: *linux
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-pixi
@@ -349,9 +377,10 @@ jobs:
 
   app:
     name: app · ${{ matrix.platform }}
-    if: github.event.pull_request.head.repo.fork == false
+    if: ${{ !inputs.core_only && github.event.pull_request.head.repo.fork == false }}
     environment: crysta-sdk
-    needs: changes
+    # After the core tests, which take the runners first; a core failure cancels the run before these start.
+    needs: [changes, core]
     env:
       CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
     strategy:
@@ -359,10 +388,10 @@ jobs:
       matrix:
         include:
           - platform: Linux
-            runner: ubuntu-24.04
+            runner: *linux
             sdk: linux-64
           - platform: macOS
-            runner: macos-15
+            runner: *macos
             sdk: osx-arm64
     runs-on: ${{ matrix.runner }}
     steps:
@@ -423,11 +452,62 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
 
+  # The app as a WebAssembly site (ADR-0023): both Qt wasm kits, the start page and the service-worker shim,
+  # packed as one site folder and uploaded as the `edi-webapp` artifact. The toolchain (Emscripten, Qt's wasm
+  # kits, Eigen, Chrome) installs once into the runner's ~/.cache/edi-wasm and is reused while its pins are
+  # unchanged. crysta is compiled for wasm from the pinned SDK's source, per kit.
   app-wasm:
     name: app · WebAssembly
-    if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-24.04
+    if: ${{ !inputs.core_only && github.event.pull_request.head.repo.fork == false }}
+    environment: crysta-sdk
+    # After the core tests, which take the runners first; a core failure cancels the run before these start.
+    needs: [changes, core]
+    runs-on: *linux
+    env:
+      CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
     steps:
       - uses: actions/checkout@v5
-      - name: WASM build placeholder
-        run: echo "WASM target activates after the gui-components Phase I (base G01/G02)."
+        with:
+          fetch-depth: 0  # the app's version line is `git describe`
+      - uses: ./.github/actions/setup-pixi
+      - name: Mint a crysta installation token
+        id: crysta-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.ENHANTICA_APP_ID }}
+          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          owner: enhantica
+          repositories: crysta
+          permission-contents: read
+          permission-actions: read
+      # The pinned crysta SDK and its source (the wasm builds compile that source), and the native build the
+      # checks' tests import.
+      - name: Build the native code
+        run: pixi run core-build
+        env:
+          GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
+      - name: Install the WebAssembly toolchain  # Emscripten, Qt's wasm kits, Eigen, Chrome; cached on the runner
+        run: pixi run -e app wasm-toolchain
+      - name: Build both kits and pack the site
+        run: pixi run -e app --skip-deps wasm-build
+      - name: Upload the site
+        uses: actions/upload-artifact@v4
+        with:
+          name: edi-webapp
+          path: build/wasm/site
+          if-no-files-found: error
+          # The repository's default retention: the site is downloaded by hand.
+      # The wasm crysta CLI's fit against the native reference, the zip's contents, and the app in headless
+      # Chrome for each build.
+      - name: Check the site in the browser
+        run: >-
+          pixi run --skip-deps wasm-check "$RUNNER_TEMP/edi-webapp-checks" tests/system/manual/e04_t11_browser.mjs
+          tests/system/py/test_e04_t11_wasm_fit.py tests/system/py/test_e04_t11_wasm_delivery.py
+      - name: Upload the browser checks' screenshots and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: edi-webapp-checks
+          path: ${{ runner.temp }}/edi-webapp-checks
+          retention-days: 7
+          if-no-files-found: ignore

@@ -13,7 +13,8 @@ jobs:
     name: unit coverage, both languages (Linux)
     if: github.event_name == 'workflow_dispatch'
     environment: crysta-sdk
-    runs-on: ubuntu-24.04
+    # Self-hosted while the repository is private, like ci.yml; the public flip changes this line.
+    runs-on: [self-hosted, Linux, X64]
     defaults:
       run:
         shell: bash
