@@ -113,8 +113,9 @@ The decisions it rests on, unchanged here:
 - **Order:** groups follow the core's page order of categories, except where the app lists a different one
   (`presentation_order` in `app/src/category_list_model.cpp`; presentation only — the Analysis table and the
   files keep the core's order): on Experiment → Basic **Background is shown directly above Instrument**
-  (the owner, 2026-09-29), giving block selector · Experiments · Experiment type · Background · Instrument ·
-  Peak profile · Linked structures.
+  (the owner, 2026-09-29) and **Linked structures last** (the owner, 2026-10-04, when Excluded regions moved to
+  Basic), giving block selector · Experiments · Experiment type · Background · Instrument · Peak profile ·
+  Excluded regions · Linked structures.
 - **Measured data is on Extras** (the owner, 2026-09-29), not Basic: its summary fields and data table are
   the first group of Experiment → Extras, above Peak profile's Extras part (the core's order among the Extras
   groups puts it first). Sidebar only: the core's category order, the files and the Analysis table are
