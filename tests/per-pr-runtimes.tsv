@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-04T19:08:00Z
+# measured_utc = 2026-10-04T21:37:33Z
 #
-# Recorded from: edi-corpus-durations.log (3 node(s) measured once, 5807 banked, 0 stale row(s) dropped)
-# Collected tests: 6237; with a reported duration: 3774
+# Recorded from: retained branch bank and inherited main bank; no new measurements
+# Collected tests: 6256; with a reported duration: 3785
 # Module-scoped fixture costs recorded: 10
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 6237
+# inventory_python = 6257
 # inventory_cpp = 242
-# inventory_measured = 5808
+# inventory_measured = 5828
 # inventory_unmeasured = 671
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
@@ -1458,6 +1458,16 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_fit.py::test_
 0.000	tests/integration/py/test_e01_scaffold.py::test_verify_requires_core_build
 0.080	tests/integration/py/test_e02_t2_io_parity_integration.py::test_e02_t2_edi_save_reload_preserves_semantics
 0.080	tests/integration/py/test_e02_t2_io_parity_integration.py::test_e02_t2_save_as_replaces_the_complete_destination_without_stale_files
+0.040	tests/integration/py/test_e04_t11_ci_order.py::test_full_ci_consumers_run_on_every_event_and_only_skip_core_only_repairs
+0.040	tests/integration/py/test_e04_t11_ci_order.py::test_pages_stays_disabled_and_webapp_keeps_default_retention
+0.040	tests/integration/py/test_e04_t11_ci_order.py::test_platform_cores_wait_only_for_their_own_native_build
+0.000	tests/integration/py/test_e04_t11_file_requests.py::test_every_browser_file_receiver_preserves_request_ownership[cancel-then-other-page]
+0.000	tests/integration/py/test_e04_t11_file_requests.py::test_every_browser_file_receiver_preserves_request_ownership[overlapping-folder-uploads]
+0.000	tests/integration/py/test_e04_t11_file_requests.py::test_every_browser_file_receiver_preserves_request_ownership[replacement-during-upload]
+0.000	tests/integration/py/test_e04_t11_file_requests.py::test_every_browser_file_receiver_preserves_request_ownership[structure-cardinality]
+0.010	tests/integration/py/test_e04_t11_wasm_pin.py::test_qt_recommendation_enforces_the_exact_packet_pin[-False]
+0.010	tests/integration/py/test_e04_t11_wasm_pin.py::test_qt_recommendation_enforces_the_exact_packet_pin[4.0.7-True]
+0.010	tests/integration/py/test_e04_t11_wasm_pin.py::test_qt_recommendation_enforces_the_exact_packet_pin[4.0.8-False]
 0.190	tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_check_only_cut_performs_no_mutation
 0.220	tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_environment_policy_matches_workflow_events[pull_request-False-refs/pull/17/merge]
 0.220	tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_environment_policy_matches_workflow_events[pull_request-True-refs/pull/23/merge]
@@ -4347,6 +4357,16 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_constraint_surfaces.py::test_
 0.000	tests/system/py/test_e04_t10_latency.py::test_real_structure_metric_statistics[V2-T1]
 0.090	tests/system/py/test_e04_t10_latency.py::test_real_structure_probe_reports_requested_state_and_measured_statistics
 0.010	tests/system/py/test_e04_t10_latency.py::test_structure_metrics_extend_the_existing_ratchet
+0.000	tests/system/py/test_e04_t11_wasm_delivery.py::test_each_build_has_browser_runtime_assets[multithread]
+0.000	tests/system/py/test_e04_t11_wasm_delivery.py::test_each_build_has_browser_runtime_assets[singlethread]
+0.000	tests/system/py/test_e04_t11_wasm_delivery.py::test_native_fixture_is_bound_to_the_committed_nontrivial_project
+0.000	tests/system/py/test_e04_t11_wasm_delivery.py::test_toolchain_tasks_declare_reproducible_pins
+0.020	tests/system/py/test_e04_t11_wasm_delivery.py::test_web_build_adr_explains_prior_host_threading_and_gpl
+0.090	tests/system/py/test_e04_t11_wasm_delivery.py::test_webassembly_ci_builds_uploads_and_runs_the_browser_gate
+0.660	tests/system/py/test_e04_t11_wasm_delivery.py::test_zip_contains_two_real_modules_loader_shim_and_licences
+0.000	tests/system/py/test_e04_t11_wasm_fit.py::test_numeric_gate_accepts_native_reference_and_rejects_every_perturbed_operand
+2.580	tests/system/py/test_e04_t11_wasm_fit.py::test_wasm_cli_fit_matches_the_native_cli[multithread]
+1.280	tests/system/py/test_e04_t11_wasm_fit.py::test_wasm_cli_fit_matches_the_native_cli[singlethread]
 0.000	tests/system/py/test_e04_t12_public_release.py::test_about_exposes_bundled_notices_and_named_copyright
 0.000	tests/system/py/test_e04_t12_public_release.py::test_archive_process_allowance_matches_ordinary_test_names[nested.zip]
 0.000	tests/system/py/test_e04_t12_public_release.py::test_archive_process_allowance_matches_ordinary_test_names[tar.gz]
