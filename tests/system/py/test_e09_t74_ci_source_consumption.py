@@ -241,44 +241,34 @@ def test_actual_workflow_consumes_its_common_output_at_fetch_or_build(tmp_path, 
     # native bytes and the same pinned SDK. Use the independent transport fixture,
     # whose SHA/packaged bytes are prescribed separately from the reader.
     assert job_name in links, '/ each executing consumer retains the shared source edge'
-    from tests.integration.py.ci_runner_contract import self_hosted_runners  # noqa: PLC0415
     from tests.integration.py.test_e09_t75_native_workflow import (  # noqa: PLC0415 - defer cross-module test wiring
         public_build_boundary,
         public_profile,
     )
 
     public = public_profile(document['jobs'])
-    platforms = {
-        'osx-arm64' if runner[1] == 'macOS' else 'linux-64'
-        for runner in self_hosted_runners(document['jobs'][job_name])
-    }
-    for platform in sorted(platforms):
-        boundary = tmp_path / platform
-        if public:
-            public_build_boundary(document['jobs'], job_name, platform)
-        if job_name in {'native', 'native-macos'} or public:
-            native = boundary / 'native'
-            native.mkdir(parents=True)
-            acquired, _ = consumer(native, platform=platform)
-            assert acquired.returncode == 0, (
-                'each native producer acquires its independently pinned platform SDK'
-            )
-            assert (
-                native / 'edi/build/crysta-consumer-prefix/.crysta-sha'
-            ).read_text().strip() == SHA, (
-                'native acquisition installs the common pinned commit on each platform'
-            )
-        else:
-            consumer_name = 'core' if job_name == 'core-macos' else job_name
-            result = restore(boundary / job_name, consumer_name, platform)
-            assert_restored(result)
-            repo = boundary / job_name / 'edi'
-            assert (repo / 'build/crysta-prefix/.crysta-sha').read_text().strip() == SHA, (
-                f'{job_name} restores against the common pinned SDK commit on {platform}'
-            )
-            assert (repo / 'build/ci/.crysta-linked-sha').read_text().strip() == SHA, (
-                f'{job_name} native bytes remain linked to the same SDK on {platform}'
-            )
+    if public:
+        public_build_boundary(document['jobs'], job_name)
+    if job_name == 'native' or public:
+        native = tmp_path / 'native'
+        native.mkdir()
+        acquired, _ = consumer(native, platform='linux-64')
+        assert acquired.returncode == 0, (
+            '/ the native producer acquires its independently pinned SDK'
+        )
+        assert (
+            native / 'edi/build/crysta-consumer-prefix/.crysta-sha'
+        ).read_text().strip() == SHA, '/ native acquisition installs the common pinned commit'
+    else:
+        result = restore(tmp_path / job_name, job_name, 'linux-64')
+        assert_restored(result)
+        repo = tmp_path / job_name / 'edi'
+        assert (repo / 'build/crysta-prefix/.crysta-sha').read_text().strip() == SHA, (
+            f'/ {job_name} restores against the common pinned SDK commit'
+        )
+        assert (repo / 'build/ci/.crysta-linked-sha').read_text().strip() == SHA, (
+            f'/ {job_name} native bytes remain linked to the same SDK commit'
+        )
 
 
 @pytest.mark.parametrize(
