@@ -417,6 +417,16 @@
           "storage": [
             "crysta::Column<std::string>"
           ]
+        },
+        {
+          "member": "ParameterConstraint::enabled",
+          "type": "detail::Written<bool>",
+          "items": [
+            "enabled"
+          ],
+          "storage": [
+            "crysta::Column<std::uint8_t>"
+          ]
         }
       ],
       "row": "ParameterConstraint"
@@ -3394,6 +3404,11 @@
     {
       "member": "ParameterConstraint::expression",
       "type": "detail::WrittenText",
+      "category": "_constraint"
+    },
+    {
+      "member": "ParameterConstraint::enabled",
+      "type": "detail::Written<bool>",
       "category": "_constraint"
     },
     {

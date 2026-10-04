@@ -248,6 +248,14 @@ struct FitStartRow {
 };
 std::vector<FitStartRow> fit_start_rows(const Project& project);
 
+// A refinable parameter by its diffraction-lib unique name (`<datablock>.<category>[.<entry>].<name>`,
+// the `_alias.parameter_unique_name` spelling), in the slot walk's order. Defined beside the walk (io.cpp).
+struct NamedParameter {
+    std::string unique_name;
+    const Parameter* parameter = nullptr;
+};
+std::vector<NamedParameter> named_parameters(const Project& project);
+
 // The analysis categories shown (D-i): the minimizer and the fitting mode always; the scan declaration
 // in a scan mode. Every loop the block writes is shown as its own category ("loop in .edi — table in
 // gui"): the joint weights always (the writer writes them in every mode; admitted in joint mode only),

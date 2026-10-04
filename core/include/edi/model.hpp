@@ -3566,10 +3566,11 @@ struct KeyTraits<ParameterAlias> {
 };
 
 // One `_constraint` row (diffraction-lib `Constraint`): `<alias> = <expression>`, kept as declared.
-// crysta parses it; edi never does.
+// crysta parses it; edi never does. A disabled constraint stays in the project and is not applied.
 struct ParameterConstraint {
     ItemKey id;
     detail::WrittenText expression;
+    detail::Written<bool> enabled{std::in_place, true};
 };
 
 template <>
@@ -3592,8 +3593,8 @@ struct RowSchema<edi::ParameterAlias> {
 template <>
 struct RowSchema<edi::ParameterConstraint> {
     static constexpr const char* name = "_constraint";
-    static constexpr auto fields = std::tuple{&edi::ParameterConstraint::id, &edi::ParameterConstraint::expression};
-    static constexpr std::array items{"id", "expression"};
+    static constexpr auto fields = std::tuple{&edi::ParameterConstraint::id, &edi::ParameterConstraint::expression, &edi::ParameterConstraint::enabled};
+    static constexpr std::array items{"id", "expression", "enabled"};
 };
 }  // namespace crysta
 
