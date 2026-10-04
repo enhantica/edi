@@ -6,6 +6,7 @@ import json
 import math
 import re
 import runpy
+import warnings
 from pathlib import Path
 
 import edi as engine
@@ -438,4 +439,109 @@ def test_space_group_edit_refreshes_dependence_and_clears_a_stale_free_flag(tmp_
     project.structure.cell.length_b.free = True
     assert project.structure.cell.length_b.free, (
         'the former symmetry follower must become independently selectable again'
+    )
+
+
+def test_disabled_relation_stays_declared_and_reenables_at_the_current_value(tmp_path):
+    project = model(tmp_path, ['b = 2*a + 1'])
+    relation = project.analysis.constraints['b']
+    relation.enabled = False
+    a, b = pair(project)
+    a.value = 0.47
+    b.value = 9
+    project.analysis.calculate()
+    assert len(project.analysis.constraints) == 1, (
+        'disabling must preserve the declared constraint row'
+    )
+    assert b.value == 9, 'a disabled constraint must not overwrite an ordinary parameter'
+    assert not b.user_constrained, 'a disabled relation must release its dependent mark'
+    b.free = True
+    assert b.free, 'a disabled target must be independently selectable'
+    b.free = False
+    relation.enabled = True
+    project.analysis.calculate()
+    assert b.value == pytest.approx(1.94), (
+        'reenabling must apply the retained expression at the current independent value'
+    )
+    assert b.user_constrained, 'reenabling must restore the dependent mark'
+
+
+def test_enabled_state_round_trips_and_all_enabled_keeps_the_reference_format(tmp_path):
+    project = model(tmp_path / 'input', ['b = 2*a + 1'])
+    relation = project.analysis.constraints['b']
+    assert relation.enabled, 'an omitted enabled column must default to true'
+    project.save_as(tmp_path / 'active')
+    assert '_constraint.enabled' not in (tmp_path / 'active/analysis/analysis.edi').read_text(), (
+        'an all-enabled project must retain the documented upstream loop format'
+    )
+    relation.enabled = False
+    pair(project)[1].value = 9
+    project.save_as(tmp_path / 'disabled')
+    text = (tmp_path / 'disabled/analysis/analysis.edi').read_text()
+    assert '_constraint.enabled' in text, 'a disabled row requires its state column'
+    assert re.search(r'\bfalse\b', text), (
+        'saving a disabled row must persist the explicit false state'
+    )
+    restored = engine.Project.load(tmp_path / 'disabled')
+    assert not restored.analysis.constraints['b'].enabled, (
+        'reopening must retain the disabled constraint instead of silently enabling it'
+    )
+    restored.analysis.calculate()
+    assert pair(restored)[1].value == 9, 'reopening a disabled row must not apply it'
+    restored.save_as(tmp_path / 'again')
+    assert (tmp_path / 'again/analysis/analysis.edi').read_text() == text, (
+        'disabled-state analysis serialization must be stable across another round trip'
+    )
+    restored.analysis.constraints['b'].enabled = True
+    restored.save_as(tmp_path / 'reenabled')
+    assert (
+        '_constraint.enabled' not in (tmp_path / 'reenabled/analysis/analysis.edi').read_text()
+    ), 'reenabling every row must return to the all-enabled reference format'
+
+
+def test_loaded_disabled_target_keeps_its_ordinary_free_flag_without_warning(tmp_path):
+    directory = MATERIALIZE(tmp_path, ALIASES, ['b = 2*a + 1'], dependent_free=True)
+    path = directory / 'analysis/analysis.edi'
+    path.write_text(
+        path
+        .read_text()
+        .replace('_constraint.expression\n', '_constraint.expression\n_constraint.enabled\n')
+        .replace('"b = 2*a + 1"\n', '"b = 2*a + 1" false\n')
+    )
+    with warnings.catch_warnings(record=True) as messages:
+        warnings.simplefilter('always')
+        project = engine.Project.load(directory)
+        project.analysis.calculate()
+    assert not any('dependent_free_ignored' in str(item.message) for item in messages), (
+        'an inactive relation must not warn about its independently free target'
+    )
+    assert not project.analysis.constraints['b'].enabled, (
+        'the core reader must preserve a disabled row from its boolean column'
+    )
+    assert pair(project)[1].free, 'an inactive target must retain its ordinary free flag'
+    assert len(project.free_parameters) == 1, (
+        'a disabled relation must leave its target in the independent free set'
+    )
+    assert pair(project)[1].value == pytest.approx(0.8), (
+        'a loaded disabled expression must not complete its target'
+    )
+
+
+def test_disabled_edge_is_excluded_from_cycle_detection(tmp_path):
+    directory = MATERIALIZE(tmp_path, ALIASES, ['a = b', 'b = a'])
+    path = directory / 'analysis/analysis.edi'
+    path.write_text(
+        path
+        .read_text()
+        .replace('_constraint.expression\n', '_constraint.expression\n_constraint.enabled\n')
+        .replace('"a = b"\n', '"a = b" true\n')
+        .replace('"b = a"\n', '"b = a" false\n')
+    )
+    project = engine.Project.load(directory)
+    project.analysis.calculate()
+    assert pair(project)[0].value == pytest.approx(0.8), (
+        'the active graph must omit disabled edges before sorting and detecting cycles'
+    )
+    assert len(project.analysis.constraints) == 2, (
+        'omitting a disabled edge from evaluation must not delete its saved declaration'
     )

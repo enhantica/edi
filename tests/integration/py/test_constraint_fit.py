@@ -6,6 +6,7 @@ import runpy
 from pathlib import Path
 
 import edi as engine
+import numpy as np
 import pytest
 
 from conftest import corpus_case_dir
@@ -83,4 +84,44 @@ def test_independent_covariance_generator_reproduces_the_committed_reference():
     actual = runpy.run_path(str(FIXTURE / 'generate.py'))['reference']()
     assert actual == REFERENCE, (
         'the covariance fixture must remain reproducible without either engine'
+    )
+
+
+def test_disabled_relation_stays_inactive_during_fit_and_can_be_reenabled():
+    project = coefficient_project()
+    relation = project.analysis.constraints['c']
+    relation.enabled = False
+    terms = project.experiment.background_terms
+    terms[2].coef.value = 4.25
+    t = np.asarray(REFERENCE['x']) / 40 - 1
+    expected = np.linalg.lstsq(
+        np.column_stack((np.ones_like(t), t)),
+        np.asarray(REFERENCE['observed']) - 4.25 * t * t,
+        rcond=None,
+    )[0]
+    project.analysis.fit()
+    assert terms[2].coef.value == pytest.approx(4.25, abs=0, rel=0), (
+        'a disabled relation must not be applied during trials or fit write-back'
+    )
+    assert np.allclose([terms[0].coef.value, terms[1].coef.value], expected, atol=2e-5), (
+        'disabled fitting must match the independent ordinary linear least-squares reference'
+    )
+    assert len(project.analysis.constraints) == 1, 'fitting must retain the disabled declaration'
+    project.undo_fit()
+    assert not project.analysis.constraints['c'].enabled, (
+        'fit undo must not reactivate a disabled relation'
+    )
+    assert [terms[0].coef.value, terms[1].coef.value] == [4, 1], (
+        'fit undo must restore the independent starts while the relation remains disabled'
+    )
+    assert terms[2].coef.value == pytest.approx(4.25, abs=0, rel=0), (
+        'fit undo must retain the ordinary fixed target of a disabled relation'
+    )
+    relation.enabled = True
+    project.analysis.fit()
+    assert terms[2].coef.value == terms[0].coef.value - terms[1].coef.value, (
+        'reenabling before a fit must restore the relation through all fit paths'
+    )
+    assert terms[2].coef.value == pytest.approx(3, abs=2e-5), (
+        'the reenabled fit must recover the independent constrained solution'
     )

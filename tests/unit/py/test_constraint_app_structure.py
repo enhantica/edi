@@ -92,6 +92,69 @@ def test_preview_projects_cannot_be_bundled_as_application_resources():
                 'temporary look-check projects must not enter shipped application resources'
             )
     cmake = (ROOT / 'app/CMakeLists.txt').read_text()
+    examples = re.search(r'set\(EDI_APP_OWN_EXAMPLES\s+([^)]*)\)', cmake)
+    assert examples, 'the app example packaging list must be inspectable'
+    assert not re.search(r'(?i)(?:look|preview|sample|demo)', examples.group(1)), (
+        'look-check and preview projects must not enter the shipped example resource list'
+    )
     assert 'constraint_samples' not in cmake, (
         'the application packaging list must exclude the temporary relation samples'
+    )
+
+
+@pytest.mark.parametrize('component', ['AliasesGroup', 'ConstraintsGroup'])
+def test_relation_tables_expose_live_append_duplicate_and_remove_actions(component):
+    group = source(f'qml/Pages/Analysis/{component}.qml')
+    for action in ('append', 'duplicate', 'remove'):
+        assert re.search(r'onClicked\s*:[^\n]*\.' + action + r'\(', group), (
+            'each relation table action must call its live model operation'
+        )
+    assert 'Append new' in group and 'Duplicate selected' in group, (
+        'relation editing must expose both requested footer actions'
+    )
+    if component == 'AliasesGroup':
+        assert 'ComboBox' in group, 'alias rows must provide a suitable-parameter combobox'
+    else:
+        assert re.search(r'onClicked[^\n]*(?:enable|toggle|Enabled)', group), (
+            'constraint rows must expose a live enable action before removal'
+        )
+        assert re.search(r'(?:enable|toggle|Enabled)[^}]*}.*\.remove\(', group, re.DOTALL), (
+            'the enable action must appear before the remove action in each constraint row'
+        )
+
+
+def test_linked_structures_are_explicitly_moved_to_the_end_of_presentation_order():
+    text = source('src/category_list_model.cpp')
+    body = text.split('presentation_order(', 1)[1].split(
+        'CategoryListModel::CategoryListModel', 1
+    )[0]
+    assert '"linked_structure"' in body, (
+        'presentation ordering must explicitly handle Linked structures after all other groups'
+    )
+    assert re.search(r'\{\s*"excluded_region"\s*,\s*"linked_structure"\s*}', body), (
+        'the final ordinary Basic group must precede Linked structures in presentation order'
+    )
+
+
+def test_alias_picker_uses_core_candidates_and_the_closed_edit_door():
+    text = source('src/analysis_view_model.cpp')
+    assert 'named_parameters(' in text, (
+        'the alias picker must enumerate core-owned suitable parameter identities'
+    )
+    assert 'edi::Edit::' in text and re.search(r'\.apply\(|->apply\(', text), (
+        'relation edits must enter the closed core edit door for publication and undo'
+    )
+
+
+def test_analysis_text_uses_the_saved_core_block_and_invalidates_after_edits():
+    analysis = source('src/analysis_view_model.cpp')
+    assert re.search(r'BlockText\([^;]*saved\("analysis/analysis\.edi"\)', analysis), (
+        'the Analysis Text tab must read the canonical saved analysis block'
+    )
+    project = source('src/project_view_model.cpp')
+    assert 'edi::project_edi_files(*project_)' in project, (
+        'the text provider must use the same core writer as a project save'
+    )
+    assert 'analysis_->text()->invalidate()' in project, (
+        'editing a relation must invalidate shown analysis text instead of displaying stale loops'
     )
