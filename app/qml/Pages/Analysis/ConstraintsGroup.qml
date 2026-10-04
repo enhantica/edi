@@ -11,7 +11,7 @@ import EasyApplication.Gui.Components as EaComponents
 import edi.app
 
 // `constraint`: each constraint as declared, `<alias> = <expression>`, editable as text; a disabled one
-// stays in the project and is not applied. Enable or disable, then remove, at the row's end; append and
+// stays in the project, is not applied, and shows its id and expression disabled. Enable or disable, then remove, at the row's end; append and
 // duplicate below, as the aliases. A loop in `.edi`, so a table.
 Column {
     id: group
@@ -66,6 +66,9 @@ Column {
                 objectName: `constraint.id.${row.index}`
                 width: EaStyle.Sizes.fontPixelSize * 7
                 horizontalAlignment: Text.AlignLeft
+                // A disabled constraint's id and expression cells are both disabled.
+                enabled: row.model.enabled
+                color: row.model.enabled ? EaStyle.Colors.themeForeground : EaStyle.Colors.themeForegroundMinor
                 value: row.model.id
                 onCommitted: text => group.constraints.setText(row.index, "id", text)
             }
@@ -73,7 +76,7 @@ Column {
                 objectName: `constraint.expression.${row.index}`
                 width: table.headerLabelItems.length > 2 ? table.headerLabelItems[2].width : 0
                 horizontalAlignment: Text.AlignLeft
-                // A disabled constraint's text is shown dimmed.
+                enabled: row.model.enabled
                 color: row.model.enabled ? EaStyle.Colors.themeForeground : EaStyle.Colors.themeForegroundMinor
                 value: row.model.expression
                 onCommitted: text => group.constraints.setText(row.index, "expression", text)
