@@ -4,6 +4,17 @@ _fitting_mode.type sequential
 
 _minimizer.max_iterations 1000
 
+loop_
+_alias.id
+_alias.parameter_unique_name
+biso_Co1 cosio.atom_site.Co1.adp_iso
+biso_Co2 cosio.atom_site.Co2.adp_iso
+
+loop_
+_constraint.id
+_constraint.expression
+biso_Co2 "biso_Co2 = biso_Co1"
+
 _sequential_fit.data_dir experiments/d20_scan
 _sequential_fit.file_pattern *.dat
 _sequential_fit.reverse false
@@ -30,7 +41,6 @@ structure.cell.length_b 6.029694577103228 0.0001744170106834152 .
 structure.cell.length_c 4.797569862624058 0.0001379223328960389 .
 structure.Co2.fract_x 0.2819835731463893 0.0008372117226318415 .
 structure.Co2.fract_z 0.9817650593105958 0.001875156407893872 .
-structure.Co2.adp_iso 0.9875914050405485 0.15304319471967498 .
 structure.Si.fract_x 0.09415503828013828 0.0004742095179167307 .
 structure.Si.fract_z 0.4297375075460596 0.00096810372451183 .
 structure.Si.adp_iso 0.6742357984836326 0.07805383919823917 .

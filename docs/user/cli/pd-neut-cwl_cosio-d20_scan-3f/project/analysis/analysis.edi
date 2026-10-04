@@ -7,6 +7,17 @@ _minimizer.max_iterations 1000
 _minimizer.descent fast_descent
 _minimizer.chi_square_tolerance 1e-4
 
+loop_
+_alias.id
+_alias.parameter_unique_name
+biso_Co1 cosio.atom_site.Co1.adp_iso
+biso_Co2 cosio.atom_site.Co2.adp_iso
+
+loop_
+_constraint.id
+_constraint.expression
+biso_Co2 "biso_Co2 = biso_Co1"
+
 _sequential_fit.data_dir experiments/d20_scan
 _sequential_fit.file_pattern *.dat
 _sequential_fit.reverse false
