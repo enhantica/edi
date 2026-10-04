@@ -73,3 +73,25 @@ def test_analysis_groups_read_core_rows_without_preview_data(category, component
     assert not re.search(r'rows\.append\(\s*\{\s*(?:nullptr|0)\s*,', adapter), (
         'sample rows must never be injected into shipped analysis models'
     )
+
+
+def test_load_warnings_reach_the_app_message_model():
+    session = source('src/session.cpp')
+    assert re.search(r'edi::load_project\([^;]*warnings\.append', session, re.DOTALL), (
+        'project loading must collect the core warning sink into app messages'
+    )
+    assert re.search(r'warnings_->setMessages\(warnings\)', session), (
+        'the replacement project must publish collected warnings to the Messages model'
+    )
+
+
+def test_preview_projects_cannot_be_bundled_as_application_resources():
+    for path in (ROOT / 'app').rglob('*'):
+        if path.is_file() and path.suffix in {'.qml', '.qrc', '.cmake'}:
+            assert 'constraint_samples' not in path.read_text(), (
+                'temporary look-check projects must not enter shipped application resources'
+            )
+    cmake = (ROOT / 'app/CMakeLists.txt').read_text()
+    assert 'constraint_samples' not in cmake, (
+        'the application packaging list must exclude the temporary relation samples'
+    )

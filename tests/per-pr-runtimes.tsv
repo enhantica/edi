@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-04T18:30:13Z
+# measured_utc = 2026-10-04T18:34:45Z
 #
-# Recorded from: edi-final-bank-durations.log; edi-native.xml (OMP_NUM_THREADS=1); failed native gates declared unmeasured
-# Collected tests: 6219; with a reported duration: 3774
+# Recorded from: edi-final-bank-durations.log (1 node(s) measured once, 5807 banked, 0 stale row(s) dropped)
+# Collected tests: 6226; with a reported duration: 3774
 # Module-scoped fixture costs recorded: 10
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 6219
+# inventory_python = 6226
 # inventory_cpp = 236
-# inventory_measured = 5805
-# inventory_unmeasured = 650
+# inventory_measured = 5807
+# inventory_unmeasured = 655
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_projects_open_and_populate_pages
@@ -1364,6 +1364,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t28_paired_cache.py:
 0.030	tests/integration/py/test_c34_t28_pr_artifact.py::test_artifact_substitutions_refuse_after_the_matching_control[tested-file]
 0.020	tests/integration/py/test_c34_t28_pr_artifact.py::test_matching_pr_artifact_is_usable_before_the_whole_run_finishes[linux-64]
 0.020	tests/integration/py/test_c34_t28_pr_artifact.py::test_matching_pr_artifact_is_usable_before_the_whole_run_finishes[osx-arm64]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_alias_creation_refuses_foreign_handles_and_duplicate_ids
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_angle_units_require_the_explicit_degree_conversion
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_background_address_uses_row_id_after_reordering
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_chain_is_topological_and_direct_target_writes_are_replaced
@@ -1402,6 +1403,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_interpreter_and_non_grammar_tokens_are_named_refusals[sin_a_1_]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_interpreter_and_non_grammar_tokens_are_named_refusals[tan_a_]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_interpreter_and_non_grammar_tokens_are_named_refusals[unknown]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_invalid_independent_edit_is_refused_at_every_strict_entry[calculate]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_invalid_independent_edit_is_refused_at_every_strict_entry[save]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_loaded_brackets_warn_and_save_dependents_bare[cell]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_loaded_brackets_warn_and_save_dependents_bare[position]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_loaded_brackets_warn_and_save_dependents_bare[user]
@@ -1435,6 +1438,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_quoted_loops_round_trip_and_default_id_is_written
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_reserved_alias_names_are_refused[pi]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_reserved_alias_names_are_refused[sin]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_space_group_edit_refreshes_dependence_and_clears_a_stale_free_flag
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_fit.py::test_full_covariance_reaches_dependent_writeback_and_undo
 0.000	tests/integration/py/test_constraint_fit.py::test_independent_covariance_generator_reproduces_the_committed_reference
 0.000	tests/integration/py/test_constraint_no_interpreter.py::test_interpreter_symbol_detector_reaches_each_escape
@@ -2475,6 +2479,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e05_t1_physical_domain.p
 0.060	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[background-cecoal]
 0.050	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[background-lab6]
 0.120	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[background-pearl]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[constraint-covariance]
 1.840	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[cosio-d20-scan-3f]
 1.530	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[ncaf-wish-3bank-s5::ladder]
 0.000	tests/system/py/test_c06_t6_fitting_corpus_consumer.py::test_c06_t6_case_resolver_fails_closed_for_an_invalid_override
@@ -5575,6 +5580,8 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_constraint_app_structure.py::te
 UNMEASURED:failed-in-this-run	tests/unit/py/test_constraint_app_structure.py::test_analysis_groups_read_core_rows_without_preview_data[constraint-ConstraintsGroup-constraints]
 0.000	tests/unit/py/test_constraint_app_structure.py::test_cwl_gaussian_and_lorentzian_coefficients_have_distinct_rows
 UNMEASURED:failed-in-this-run	tests/unit/py/test_constraint_app_structure.py::test_excluded_regions_are_in_the_basic_category_tier
+0.000	tests/unit/py/test_constraint_app_structure.py::test_load_warnings_reach_the_app_message_model
+0.000	tests/unit/py/test_constraint_app_structure.py::test_preview_projects_cannot_be_bundled_as_application_resources
 0.050	tests/unit/py/test_e02_t2_io_parity.py::test_e02_t2_cif_and_edi_structures_are_model_equivalent[from_cif_path]
 0.040	tests/unit/py/test_e02_t2_io_parity.py::test_e02_t2_cif_and_edi_structures_are_model_equivalent[from_cif_str]
 0.000	tests/unit/py/test_e02_t2_io_parity.py::test_e02_t2_format_discriminator_rejects_unsupported_selector_bodies[background-body-without-selector]

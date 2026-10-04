@@ -383,3 +383,59 @@ def test_projects_without_constraints_keep_the_pre_feature_writer_regression_pin
         'without relation loops saved files must retain their pre-feature regression bytes, '
         'normalizing only the two metadata clock fields'
     )
+
+
+@pytest.mark.parametrize('entry', ['calculate', 'save'])
+def test_invalid_independent_edit_is_refused_at_every_strict_entry(tmp_path, entry):
+    project = model(tmp_path / 'input', ['b = 1/a'])
+    pair(project)[0].value = 0
+    action = (
+        project.analysis.calculate
+        if entry == 'calculate'
+        else lambda: project.save_as(tmp_path / 'saved')
+    )
+    with pytest.raises(
+        (ValueError, RuntimeError), match=re.escape('crysta.domain.constraint_value')
+    ):
+        action()
+
+
+def test_alias_creation_refuses_foreign_handles_and_duplicate_ids(tmp_path):
+    project = engine.Project.load(MATERIALIZE(tmp_path / 'local'))
+    foreign = engine.Project.load(MATERIALIZE(tmp_path / 'foreign'))
+    aliases = project.analysis.aliases
+    aliases.create(id='a', param=pair(project)[0])
+    with pytest.raises((ValueError, RuntimeError)):
+        aliases.create(id='a', param=pair(project)[1])
+    assert len(aliases) == 1, 'duplicate creation must leave the original alias intact'
+    with pytest.raises((ValueError, RuntimeError)):
+        aliases.create(id='foreign', param=pair(foreign)[0])
+    assert len(aliases) == 1, 'a handle from another project must never bind by matching values'
+
+
+def test_space_group_edit_refreshes_dependence_and_clears_a_stale_free_flag(tmp_path):
+    project = engine.Project.load(MATERIALIZE(tmp_path / 'triclinic'))
+    cubic = engine.Project.load(MATERIALIZE(tmp_path / 'cubic', symmetry=True))
+    original = project.structure.space_group
+    project.structure.cell.length_b.free = True
+    project.structure.space_group = cubic.structure.space_group
+    with pytest.warns(UserWarning, match='crysta.domain.dependent_free_ignored'):
+        project.analysis.calculate()
+    assert project.structure.cell.length_b.symmetry_constrained, (
+        'changing symmetry must refresh dependence before building any solved columns'
+    )
+    assert not project.structure.cell.length_b.free, (
+        'a newly dependent field must lose its stale independent flag'
+    )
+    assert not project.structure.cell.length_a.free, (
+        'refreshing symmetry must never redirect the stale flag to its leader'
+    )
+    project.structure.space_group = original
+    project.analysis.calculate()
+    assert not project.structure.cell.length_b.symmetry_constrained, (
+        'removing the symmetry relation must clear its stale dependence mark'
+    )
+    project.structure.cell.length_b.free = True
+    assert project.structure.cell.length_b.free, (
+        'the former symmetry follower must become independently selectable again'
+    )
