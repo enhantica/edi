@@ -120,7 +120,7 @@ The decisions it rests on, unchanged here:
   the first group of Experiment → Extras, above Peak profile's Extras part (the core's order among the Extras
   groups puts it first). Sidebar only: the core's category order, the files and the Analysis table are
   unchanged. Calculation range (a calculation-only experiment's grid) stays on Basic.
-- **Background** shows at most five table rows, then scrolls (`maxRowCountShow`, as the other tables);
+- **Background** shows at most four table rows (the owner, 2026-10-04; five before), then scrolls (`maxRowCountShow`, as the other tables);
   Append new point and Reset to autodetected background stay below it.
 - **The last group a tab shows draws no bottom border** (idea 11). The base's `GroupBox` takes `last` from its
   parent's last child, which in a column with a `Repeater` is the last delegate whether it is shown or not
