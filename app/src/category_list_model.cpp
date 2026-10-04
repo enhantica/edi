@@ -25,7 +25,7 @@ CategoryPresentation category_presentation(const QString& id) {
         {QStringLiteral("peak"), {T::Basic, "Peak profile", "shapes", true}},
         {QStringLiteral("background"), {T::Basic, "Background", "wave-square"}},
         {QStringLiteral("linked_structure"), {T::Basic, "Linked structures", "layer-group"}},
-        {QStringLiteral("excluded_region"), {T::Extras, "Excluded regions", "eraser"}},
+        {QStringLiteral("excluded_region"), {T::Basic, "Excluded regions", "eraser"}},  // owner, 2026-10-04
         {QStringLiteral("absorption"), {T::Extras, "Absorption", "tint"}},
         {QStringLiteral("preferred_orientation"), {T::Extras, "Preferred orientations", "compass"}},
         {QStringLiteral("scattering_source"), {T::Extras, "Scattering source", "atom"}},
