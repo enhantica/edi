@@ -3550,6 +3550,55 @@ struct RowSchema<edi::SequentialExtractRule> {
 
 namespace edi {
 
+// One `_alias` row (diffraction-lib `Alias`): the short name an expression uses, and the unique name
+// (`<datablock>.<category>[.<entry>].<name>`) of the parameter it stands for.
+struct ParameterAlias {
+    ItemKey id;
+    detail::WrittenText parameter_unique_name;
+};
+
+template <>
+struct KeyTraits<ParameterAlias> {
+    static ItemKey& key(ParameterAlias& alias) { return alias.id; }
+    static const ItemKey& key(const ParameterAlias& alias) { return alias.id; }
+    static std::string canonical(const std::string& id) { return id; }
+    static const char* category() { return "alias"; }
+};
+
+// One `_constraint` row (diffraction-lib `Constraint`): `<alias> = <expression>`, kept as declared.
+// crysta parses it; edi never does.
+struct ParameterConstraint {
+    ItemKey id;
+    detail::WrittenText expression;
+};
+
+template <>
+struct KeyTraits<ParameterConstraint> {
+    static ItemKey& key(ParameterConstraint& constraint) { return constraint.id; }
+    static const ItemKey& key(const ParameterConstraint& constraint) { return constraint.id; }
+    static std::string canonical(const std::string& id) { return id; }
+    static const char* category() { return "constraint"; }
+};
+
+}  // namespace edi
+
+namespace crysta {
+template <>
+struct RowSchema<edi::ParameterAlias> {
+    static constexpr const char* name = "_alias";
+    static constexpr auto fields = std::tuple{&edi::ParameterAlias::id, &edi::ParameterAlias::parameter_unique_name};
+    static constexpr std::array items{"id", "parameter_unique_name"};
+};
+template <>
+struct RowSchema<edi::ParameterConstraint> {
+    static constexpr const char* name = "_constraint";
+    static constexpr auto fields = std::tuple{&edi::ParameterConstraint::id, &edi::ParameterConstraint::expression};
+    static constexpr std::array items{"id", "expression"};
+};
+}  // namespace crysta
+
+namespace edi {
+
 // The analysis.edi `_sequential_fit.*` declaration (mirrors crysta's SequentialFitConfig): a
 // directory of per-file scan data fitted one after another against the single template
 // experiment, by crysta's own sequential driver — edi carries the declaration across the
@@ -3847,6 +3896,9 @@ class Project {
     // like `fitting_mode`, consumed by fit_sequential's native delegation and round-tripped
     // by the delegated save.
     SequentialFitConfig sequential_fit;
+    // The declared parameter aliases and constraints (analysis.edi `_alias`, `_constraint`).
+    ItemVec<ParameterAlias> aliases;
+    ItemVec<ParameterConstraint> constraints;
     // The last fit's result (`_fit_result`; see FitResultRecord).
     FitResultRecord fit_result;
     // ADR-0018: the row of this object's non-loop categories.

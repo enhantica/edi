@@ -254,6 +254,13 @@ std::vector<FitStartRow> fit_start_rows(const Project& project);
 // the scan extraction rules and the fit start state when there are any.
 inline std::vector<Category> analysis_categories(const Project& project) {
     std::vector<Category> categories{{"minimizer"}, {"fitting_mode"}};
+    // The declared aliases and constraints, in diffraction-lib's analysis order.
+    if (!project.aliases.empty()) {
+        categories.push_back({"alias", true, project.aliases.size()});
+    }
+    if (!project.constraints.empty()) {
+        categories.push_back({"constraint", true, project.constraints.size()});
+    }
     Category joint{"joint_fit", true, project.experiments.size()};
     joint.admitted = project.fitting_mode == "joint";
     categories.push_back(joint);

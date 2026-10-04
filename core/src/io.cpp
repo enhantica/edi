@@ -2832,6 +2832,24 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
                 project.sequential_fit.extract.push_back(std::move(rule));
             }
         }
+        if (const Loop* aliases = block.loop_with("_alias.id")) {
+            for (const auto& row : aliases->rows) {
+                ParameterAlias alias;
+                alias.id = loop_cell(*aliases, row, "_alias.id", analysis_file.string());
+                alias.parameter_unique_name = loop_cell(*aliases, row, "_alias.parameter_unique_name",
+                                                        analysis_file.string());
+                project.aliases.push_back(std::move(alias));
+            }
+        }
+        if (const Loop* constraints = block.loop_with("_constraint.id")) {
+            for (const auto& row : constraints->rows) {
+                ParameterConstraint constraint;
+                constraint.id = loop_cell(*constraints, row, "_constraint.id", analysis_file.string());
+                constraint.expression =
+                    loop_cell(*constraints, row, "_constraint.expression", analysis_file.string());
+                project.constraints.push_back(std::move(constraint));
+            }
+        }
         if (is_scan_fitting_mode(project.fitting_mode) && !project.sequential_fit.declared()) {
             throw IoError("_fitting_mode.type is '" + project.fitting_mode +
                           "' but no _sequential_fit.data_dir is declared - a scan fit needs the "

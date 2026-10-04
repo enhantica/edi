@@ -368,6 +368,60 @@
       "row": "SequentialExtractRule"
     },
     {
+      "name": "_alias",
+      "form": "loop",
+      "columns": [
+        {
+          "member": "ParameterAlias::id",
+          "type": "ItemKey",
+          "items": [
+            "id"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
+        },
+        {
+          "member": "ParameterAlias::parameter_unique_name",
+          "type": "detail::WrittenText",
+          "items": [
+            "parameter_unique_name"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
+        }
+      ],
+      "row": "ParameterAlias"
+    },
+    {
+      "name": "_constraint",
+      "form": "loop",
+      "columns": [
+        {
+          "member": "ParameterConstraint::id",
+          "type": "ItemKey",
+          "items": [
+            "id"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
+        },
+        {
+          "member": "ParameterConstraint::expression",
+          "type": "detail::WrittenText",
+          "items": [
+            "expression"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
+        }
+      ],
+      "row": "ParameterConstraint"
+    },
+    {
       "name": "_cell",
       "form": "one row",
       "columns": [
@@ -3323,6 +3377,26 @@
       "category": "_sequential_fit_extract"
     },
     {
+      "member": "ParameterAlias::id",
+      "type": "ItemKey",
+      "category": "_alias"
+    },
+    {
+      "member": "ParameterAlias::parameter_unique_name",
+      "type": "detail::WrittenText",
+      "category": "_alias"
+    },
+    {
+      "member": "ParameterConstraint::id",
+      "type": "ItemKey",
+      "category": "_constraint"
+    },
+    {
+      "member": "ParameterConstraint::expression",
+      "type": "detail::WrittenText",
+      "category": "_constraint"
+    },
+    {
       "member": "SequentialFitConfig::data_dir",
       "type": "std::string",
       "category": "_sequential_fit"
@@ -3509,6 +3583,20 @@
       ]
     },
     {
+      "member": "Project::aliases",
+      "type": "ItemVec<ParameterAlias>",
+      "holds": [
+        "_alias"
+      ]
+    },
+    {
+      "member": "Project::constraints",
+      "type": "ItemVec<ParameterConstraint>",
+      "holds": [
+        "_constraint"
+      ]
+    },
+    {
       "member": "Project::fit_result",
       "type": "FitResultRecord",
       "holds": [
@@ -3530,6 +3618,9 @@
     "_absorption": [
       "_absorption"
     ],
+    "_alias": [
+      "_alias"
+    ],
     "_atom_site": [
       "_atom_site"
     ],
@@ -3544,6 +3635,9 @@
     ],
     "_cell": [
       "_cell"
+    ],
+    "_constraint": [
+      "_constraint"
     ],
     "_data": [
       "_data"
