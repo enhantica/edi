@@ -68,3 +68,6 @@ sites:
   # positive wavelength, numerical cell admission and all factory readers.
   - file: tests/integration/py/test_e05_t1_metric_admission.py
     case: lif-xray-s1
+
+  - file: tests/integration/py/test_constraint_fit.py
+    case: constraint-covariance

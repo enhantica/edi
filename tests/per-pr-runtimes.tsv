@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-04T17:05:08Z
+# measured_utc = 2026-10-04T18:30:13Z
 #
-# Recorded from: banked rows (nothing added; 29 stale row(s) dropped)
-# Collected tests: 6157; with a reported duration: 3792
+# Recorded from: edi-final-bank-durations.log; edi-native.xml (OMP_NUM_THREADS=1); failed native gates declared unmeasured
+# Collected tests: 6219; with a reported duration: 3774
 # Module-scoped fixture costs recorded: 10
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 6157
-# inventory_cpp = 232
-# inventory_measured = 5825
-# inventory_unmeasured = 564
+# inventory_python = 6219
+# inventory_cpp = 236
+# inventory_measured = 5805
+# inventory_unmeasured = 650
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_projects_open_and_populate_pages
@@ -92,7 +92,7 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_ui_compare.py::t
 0.030	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[None-100000000000000000000]
 0.030	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[None-100]
 0.030	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[None-383.2]
-0.100	tests/integration/py/test_c09_t16_verification_notebooks.py::test_ci_runs_notebooks_for_every_result_changing_surface
+0.000	tests/integration/py/test_c09_t16_verification_notebooks.py::test_ci_runs_notebooks_for_every_result_changing_surface
 0.040	tests/integration/py/test_c09_t16_verification_notebooks.py::test_fullprof_files_resolve_and_feed_every_page_comparison
 0.020	tests/integration/py/test_c09_t16_verification_notebooks.py::test_pixi_notebook_tasks_form_the_local_execution_gate
 0.170	tests/integration/py/test_c09_t16_verification_notebooks.py::test_verification_sources_generate_stripped_notebooks_on_demand
@@ -1092,7 +1092,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t23_cli_projects.py:
 0.260	tests/integration/py/test_c34_t23_cli_projects.py::test_loaded_settings_preserve_value_and_refined_state[5.0]
 0.270	tests/integration/py/test_c34_t23_cli_projects.py::test_loaded_settings_preserve_value_and_refined_state[7.25(1)]
 0.130	tests/integration/py/test_c34_t23_cli_projects.py::test_loaded_settings_reject_comment_and_ignored_metadata_tokens
-0.060	tests/integration/py/test_c34_t23_cli_projects.py::test_pull_request_ci_and_verify_execute_the_complete_registry
+0.020	tests/integration/py/test_c34_t23_cli_projects.py::test_pull_request_ci_and_verify_execute_the_complete_registry
 0.000	tests/integration/py/test_c34_t23_cli_projects.py::test_registry_executes_owner_declared_set_and_retains_every_seed
 0.000	tests/integration/py/test_c34_t23_cli_projects.py::test_seed_regression_pin_tree_is_byte_identical_to_crysta_main[cosio-d20-s1]
 0.000	tests/integration/py/test_c34_t23_cli_projects.py::test_seed_regression_pin_tree_is_byte_identical_to_crysta_main[cosio-d20-s4]
@@ -1364,9 +1364,84 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t28_paired_cache.py:
 0.030	tests/integration/py/test_c34_t28_pr_artifact.py::test_artifact_substitutions_refuse_after_the_matching_control[tested-file]
 0.020	tests/integration/py/test_c34_t28_pr_artifact.py::test_matching_pr_artifact_is_usable_before_the_whole_run_finishes[linux-64]
 0.020	tests/integration/py/test_c34_t28_pr_artifact.py::test_matching_pr_artifact_is_usable_before_the_whole_run_finishes[osx-arm64]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_angle_units_require_the_explicit_degree_conversion
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_background_address_uses_row_id_after_reordering
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_chain_is_topological_and_direct_target_writes_are_replaced
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_create_inspect_remove_and_default_id
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_graph_and_reference_refusals_identify_the_participants[___a____phase.atom_site.A.adp_iso______b____phase.atom_site.B.adp_iso___-__a___a__-constraint_cycle-__a___]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_graph_and_reference_refusals_identify_the_participants[___a____phase.atom_site.A.adp_iso______b____phase.atom_site.B.adp_iso___-__a___b____b___a__-constraint_cycle-__a____b__]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_graph_and_reference_refusals_identify_the_participants[___a____phase.atom_site.A.adp_iso______b____phase.atom_site.B.adp_iso___-__absent___a__-constraint_reference-__absent___]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_graph_and_reference_refusals_identify_the_participants[___a____phase.atom_site.A.adp_iso______b____phase.atom_site.B.adp_iso___-__b___a____b___2_a__-constraint_target-__b___]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_graph_and_reference_refusals_identify_the_participants[___a____phase.atom_site.A.type_symbol______b____phase.atom_site.B.adp_iso___-__b___a__-constraint_reference-__type_symbol___]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_graph_and_reference_refusals_identify_the_participants[___a____phase.atom_site.missing.adp_iso______b____phase.atom_site.B.adp_iso___-__b___a__-constraint_reference-__missing___]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_graph_and_reference_refusals_identify_the_participants[___a____phase.cell.length_a______b____phase.cell.length_b___-__b___a__-constraint_target-__b___]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_identical_site_ids_in_distinct_structures_do_not_alias
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_interpreter_and_non_grammar_tokens_are_named_refusals[0x1p3]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_interpreter_and_non_grammar_tokens_are_named_refusals[1_000]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_interpreter_and_non_grammar_tokens_are_named_refusals[]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_interpreter_and_non_grammar_tokens_are_named_refusals[__import____os__]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_interpreter_and_non_grammar_tokens_are_named_refusals[_a]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_interpreter_and_non_grammar_tokens_are_named_refusals[_text_]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_interpreter_and_non_grammar_tokens_are_named_refusals[a.__class__]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_interpreter_and_non_grammar_tokens_are_named_refusals[a_0_]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_interpreter_and_non_grammar_tokens_are_named_refusals[a_1]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_interpreter_and_non_grammar_tokens_are_named_refusals[a_]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_interpreter_and_non_grammar_tokens_are_named_refusals[a___1_0]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_interpreter_and_non_grammar_tokens_are_named_refusals[a___1_1]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_interpreter_and_non_grammar_tokens_are_named_refusals[a___1_2]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_interpreter_and_non_grammar_tokens_are_named_refusals[a___1_3]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_interpreter_and_non_grammar_tokens_are_named_refusals[a____1]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_interpreter_and_non_grammar_tokens_are_named_refusals[a__a]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_interpreter_and_non_grammar_tokens_are_named_refusals[a_and_1]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_interpreter_and_non_grammar_tokens_are_named_refusals[e]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_interpreter_and_non_grammar_tokens_are_named_refusals[exec_a_]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_interpreter_and_non_grammar_tokens_are_named_refusals[inf]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_interpreter_and_non_grammar_tokens_are_named_refusals[lambda]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_interpreter_and_non_grammar_tokens_are_named_refusals[nan]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_interpreter_and_non_grammar_tokens_are_named_refusals[sin__]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_interpreter_and_non_grammar_tokens_are_named_refusals[sin_a_1_]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_interpreter_and_non_grammar_tokens_are_named_refusals[tan_a_]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_interpreter_and_non_grammar_tokens_are_named_refusals[unknown]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_loaded_brackets_warn_and_save_dependents_bare[cell]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_loaded_brackets_warn_and_save_dependents_bare[position]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_loaded_brackets_warn_and_save_dependents_bare[user]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_loaded_expression_matches_closed_form[b___-_-a_____2.5e-1-0.55]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_loaded_expression_matches_closed_form[b___-a__2___1-0.91]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_loaded_expression_matches_closed_form[b___1-a-0.7]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_loaded_expression_matches_closed_form[b___1.2-1.2]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_loaded_expression_matches_closed_form[b___2____3____2-512.0]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_loaded_expression_matches_closed_form[b___2_a___1-1.6]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_loaded_expression_matches_closed_form[b___a___.5-0.6]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_loaded_expression_matches_closed_form[b___a___1_1_-0.09]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_loaded_expression_matches_closed_form[b___abs_-a_-0.3]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_loaded_expression_matches_closed_form[b___abs_0_-0.0]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_loaded_expression_matches_closed_form[b___acos_a_-1.2661036727794992]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_loaded_expression_matches_closed_form[b___cos_a_-0.955336489125606]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_loaded_expression_matches_closed_form[b___erfc_a_-0.6713732405408726]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_loaded_expression_matches_closed_form[b___exp_a_-1.3498588075760032]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_loaded_expression_matches_closed_form[b___log_a____2-0.7960271956740639]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_loaded_expression_matches_closed_form[b___sin_a_-0.29552020666133955]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_loaded_expression_matches_closed_form[b___sqrt_a_a___.16_-0.5]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_nonfinite_value_or_slope_refuses_the_strict_load[1_0]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_nonfinite_value_or_slope_refuses_the_strict_load[acos_1_]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_nonfinite_value_or_slope_refuses_the_strict_load[exp_1000_]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_nonfinite_value_or_slope_refuses_the_strict_load[log_0_]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_nonfinite_value_or_slope_refuses_the_strict_load[sqrt_-a_]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_nonfinite_value_or_slope_refuses_the_strict_load[sqrt_0_]
+0.000	tests/integration/py/test_constraint_contract.py::test_projects_without_constraints_keep_the_pre_feature_writer_regression_pin
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_python_free_flag_warns_without_redirecting_to_a_leader[cell]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_python_free_flag_warns_without_redirecting_to_a_leader[position]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_python_free_flag_warns_without_redirecting_to_a_leader[user]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_quoted_loops_round_trip_and_default_id_is_written
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_reserved_alias_names_are_refused[pi]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_reserved_alias_names_are_refused[sin]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_fit.py::test_full_covariance_reaches_dependent_writeback_and_undo
+0.000	tests/integration/py/test_constraint_fit.py::test_independent_covariance_generator_reproduces_the_committed_reference
+0.000	tests/integration/py/test_constraint_no_interpreter.py::test_interpreter_symbol_detector_reaches_each_escape
+0.060	tests/integration/py/test_constraint_no_interpreter.py::test_product_constraint_code_cannot_delegate_to_an_interpreter
 0.090	tests/integration/py/test_e01_scaffold.py::test_app_is_one_option_gated_cpp_qml_host
 0.140	tests/integration/py/test_e01_scaffold.py::test_checkout_imports_edi_without_path_injection
-0.050	tests/integration/py/test_e01_scaffold.py::test_ci_routes_surfaces_and_uses_strict_self_hosted_jobs
+0.030	tests/integration/py/test_e01_scaffold.py::test_ci_routes_surfaces_and_uses_strict_self_hosted_jobs
 0.030	tests/integration/py/test_e01_scaffold.py::test_core_and_lib_are_qt_free[core]
 0.020	tests/integration/py/test_e01_scaffold.py::test_core_and_lib_are_qt_free[lib]
 0.010	tests/integration/py/test_e01_scaffold.py::test_product_checkout_has_no_embedded_process_plane
@@ -1374,16 +1449,6 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t28_paired_cache.py:
 0.000	tests/integration/py/test_e01_scaffold.py::test_verify_requires_core_build
 0.080	tests/integration/py/test_e02_t2_io_parity_integration.py::test_e02_t2_edi_save_reload_preserves_semantics
 0.080	tests/integration/py/test_e02_t2_io_parity_integration.py::test_e02_t2_save_as_replaces_the_complete_destination_without_stale_files
-0.040	tests/integration/py/test_e04_t11_ci_order.py::test_full_ci_consumers_run_on_every_event_and_only_skip_core_only_repairs
-0.040	tests/integration/py/test_e04_t11_ci_order.py::test_pages_stays_disabled_and_webapp_keeps_default_retention
-0.040	tests/integration/py/test_e04_t11_ci_order.py::test_platform_cores_wait_only_for_their_own_native_build
-0.000	tests/integration/py/test_e04_t11_file_requests.py::test_every_browser_file_receiver_preserves_request_ownership[cancel-then-other-page]
-0.000	tests/integration/py/test_e04_t11_file_requests.py::test_every_browser_file_receiver_preserves_request_ownership[overlapping-folder-uploads]
-0.000	tests/integration/py/test_e04_t11_file_requests.py::test_every_browser_file_receiver_preserves_request_ownership[replacement-during-upload]
-0.000	tests/integration/py/test_e04_t11_file_requests.py::test_every_browser_file_receiver_preserves_request_ownership[structure-cardinality]
-0.010	tests/integration/py/test_e04_t11_wasm_pin.py::test_qt_recommendation_enforces_the_exact_packet_pin[-False]
-0.010	tests/integration/py/test_e04_t11_wasm_pin.py::test_qt_recommendation_enforces_the_exact_packet_pin[4.0.7-True]
-0.010	tests/integration/py/test_e04_t11_wasm_pin.py::test_qt_recommendation_enforces_the_exact_packet_pin[4.0.8-False]
 0.190	tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_check_only_cut_performs_no_mutation
 0.220	tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_environment_policy_matches_workflow_events[pull_request-False-refs/pull/17/merge]
 0.220	tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_environment_policy_matches_workflow_events[pull_request-True-refs/pull/23/merge]
@@ -1610,7 +1675,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e04_t1_app_contract.py::
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_analysis_inputs_have_no_calculator_category
 0.020	tests/integration/py/test_e04_t2_build_contract.py::test_app_run_launches_existing_binary_without_build_or_network
 0.020	tests/integration/py/test_e04_t2_build_contract.py::test_app_run_missing_binary_is_one_line_hint
-0.040	tests/integration/py/test_e04_t2_build_contract.py::test_ci_job_names_state_area_and_platform_and_share_matrices
+0.030	tests/integration/py/test_e04_t2_build_contract.py::test_ci_job_names_state_area_and_platform_and_share_matrices
 0.070	tests/integration/py/test_e04_t2_build_contract.py::test_crysta_build_and_prefix_are_isolated_by_environment
 0.030	tests/integration/py/test_e04_t2_build_contract.py::test_desktop_ci_builds_once_and_recovery_is_change_scoped
 0.610	tests/integration/py/test_e04_t2_build_contract.py::test_desktop_ci_sequence_builds_once_before_checks[Linux]
@@ -1691,7 +1756,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e04_t1_app_contract.py::
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[tests/fixtures/e04_t1/warning-project/structures/structure.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[tests/fixtures/e04_t1/xray-project/experiments/experiment.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[tests/fixtures/e04_t1/xray-project/structures/structure.edi]
-0.040	tests/integration/py/test_e04_t2_build_contract.py::test_native_cli_placeholder_is_dispatch_only_and_honest
+0.030	tests/integration/py/test_e04_t2_build_contract.py::test_native_cli_placeholder_is_dispatch_only_and_honest
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_owner_note_captures_are_registered_in_the_shared_image_set
 0.080	tests/integration/py/test_e04_t2_build_contract.py::test_qt_check_reads_committed_expectations_without_python_or_build
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_sequence_observer_rejects_wrong_order_or_cardinality[double-build]
@@ -2337,22 +2402,22 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e05_t1_physical_domain.p
 0.090	tests/integration/py/test_e09_t58_completed_controls.py::test_e09_t58_delegated_save_persists_crysta_resolved_identity
 0.060	tests/integration/py/test_e09_t58_project_only_fit_inputs.py::test_declared_exclusions_are_applied_without_a_regions_argument
 0.120	tests/integration/py/test_e09_t58_project_only_fit_inputs.py::test_public_fit_routes_reject_positional_and_keyword_data
-0.050	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_every_default_native_consumer_waits_downloads_and_selects_artifact_mode[app]
-0.050	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_every_default_native_consumer_waits_downloads_and_selects_artifact_mode[audit]
-0.040	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_every_default_native_consumer_waits_downloads_and_selects_artifact_mode[cli-python]
+0.030	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_every_default_native_consumer_waits_downloads_and_selects_artifact_mode[app]
+0.030	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_every_default_native_consumer_waits_downloads_and_selects_artifact_mode[audit]
+0.030	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_every_default_native_consumer_waits_downloads_and_selects_artifact_mode[cli-python]
 0.030	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_every_default_native_consumer_waits_downloads_and_selects_artifact_mode[core]
-0.050	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_every_default_native_consumer_waits_downloads_and_selects_artifact_mode[docs]
-0.040	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_every_default_native_consumer_waits_downloads_and_selects_artifact_mode[notebooks]
-0.040	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[app-linux-64]
+0.030	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_every_default_native_consumer_waits_downloads_and_selects_artifact_mode[docs]
+0.030	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_every_default_native_consumer_waits_downloads_and_selects_artifact_mode[notebooks]
+0.030	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[app-linux-64]
 0.030	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[app-osx-arm64]
 0.030	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[audit-linux-64]
 0.030	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[cli-python-linux-64]
 0.030	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[cli-python-osx-arm64]
 0.030	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[core-linux-64]
-0.040	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[core-osx-arm64]
+0.030	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[core-osx-arm64]
 0.030	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[docs-linux-64]
 0.030	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[notebooks-linux-64]
-0.040	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_one_unfiltered_native_matrix_uploads_the_prescribed_artifacts
+0.030	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_one_unfiltered_native_matrix_uploads_the_prescribed_artifacts
 0.000	tests/integration/py/test_e09_t75_native_workflow.py::test_native_producer_contract_refuses_missing_reordered_or_nonbuilding_work[build-if]
 0.000	tests/integration/py/test_e09_t75_native_workflow.py::test_native_producer_contract_refuses_missing_reordered_or_nonbuilding_work[job-if]
 0.000	tests/integration/py/test_e09_t75_native_workflow.py::test_native_producer_contract_refuses_missing_reordered_or_nonbuilding_work[missing-build]
@@ -3995,22 +4060,22 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.p
 1.190	tests/system/py/test_c34_t28_native_pairing.py::test_branch_native_handoff_retains_every_independent_binding[tar-bytes-osx-arm64]
 1.360	tests/system/py/test_c34_t28_native_pairing.py::test_branch_native_handoff_retains_every_independent_binding[workspace-linux-64]
 2.120	tests/system/py/test_c34_t28_native_pairing.py::test_branch_native_handoff_retains_every_independent_binding[workspace-osx-arm64]
-2.020	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[pull_request-app-linux-64]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[pull_request-app-linux-64]
 UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[pull_request-app-osx-arm64]
 UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[pull_request-audit-linux-64]
 UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[pull_request-cli-python-linux-64]
 UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[pull_request-cli-python-osx-arm64]
 UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[pull_request-core-linux-64]
-3.550	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[pull_request-core-osx-arm64]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[pull_request-core-osx-arm64]
 UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[pull_request-docs-linux-64]
 UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[pull_request-notebooks-linux-64]
-4.470	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-app-linux-64]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-app-linux-64]
 UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-app-osx-arm64]
 UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-audit-linux-64]
 UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-cli-python-linux-64]
 UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-cli-python-osx-arm64]
 UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-core-linux-64]
-3.700	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-core-osx-arm64]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-core-osx-arm64]
 UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-docs-linux-64]
 UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-notebooks-linux-64]
 1.210	tests/system/py/test_c34_t28_native_pairing.py::test_intermediate_native_producer_packs_the_branch_sdk_without_repinning[matching-pull_request-linux-64]
@@ -4253,6 +4318,12 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_value_expressions.py:
 2.360	tests/system/py/test_c34_t28_value_storage.py::test_every_loop_stores_all_schema_cells_in_typed_value_columns[SequentialExtractRule]
 2.400	tests/system/py/test_c34_t28_value_storage.py::test_every_loop_stores_all_schema_cells_in_typed_value_columns[Structure]
 0.000	tests/system/py/test_c34_t28_value_storage.py::test_physical_reader_distinguishes_values_from_stable_column_handles
+0.000	tests/system/py/test_constraint_surfaces.py::test_cli_refuses_an_invalid_loaded_relation[b = 1/0]
+0.000	tests/system/py/test_constraint_surfaces.py::test_cli_refuses_an_invalid_loaded_relation[b = a.__class__]
+UNMEASURED:failed-in-this-run	tests/system/py/test_constraint_surfaces.py::test_cli_warns_and_ignores_a_loaded_dependent_free_flag
+UNMEASURED:failed-in-this-run	tests/system/py/test_constraint_surfaces.py::test_cosio_scan_projects_restore_the_constraint_and_execute[pd-neut-cwl_cosio-d20_scan-324f]
+UNMEASURED:failed-in-this-run	tests/system/py/test_constraint_surfaces.py::test_cosio_scan_projects_restore_the_constraint_and_execute[pd-neut-cwl_cosio-d20_scan-3f]
+UNMEASURED:failed-in-this-run	tests/system/py/test_constraint_surfaces.py::test_tied_biso_notebook_executes_its_fullprof_comparison_and_fit
 0.000	tests/system/py/test_e02_fullprof_parity.py::test_corpus_fullprof_loader_follows_manifest_hash_not_directory_order
 1.520	tests/system/py/test_e02_fullprof_parity.py::test_e02_fitted_corpus_project_agrees_with_independent_fullprof_profile
 0.110	tests/system/py/test_e02_product_core.py::test_e02_cpp_adapter_conversion_probe
@@ -4265,16 +4336,6 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_value_expressions.py:
 0.000	tests/system/py/test_e04_t10_latency.py::test_real_structure_metric_statistics[V2-T1]
 0.090	tests/system/py/test_e04_t10_latency.py::test_real_structure_probe_reports_requested_state_and_measured_statistics
 0.010	tests/system/py/test_e04_t10_latency.py::test_structure_metrics_extend_the_existing_ratchet
-0.000	tests/system/py/test_e04_t11_wasm_delivery.py::test_each_build_has_browser_runtime_assets[multithread]
-0.000	tests/system/py/test_e04_t11_wasm_delivery.py::test_each_build_has_browser_runtime_assets[singlethread]
-0.000	tests/system/py/test_e04_t11_wasm_delivery.py::test_native_fixture_is_bound_to_the_committed_nontrivial_project
-0.000	tests/system/py/test_e04_t11_wasm_delivery.py::test_toolchain_tasks_declare_reproducible_pins
-0.020	tests/system/py/test_e04_t11_wasm_delivery.py::test_web_build_adr_explains_prior_host_threading_and_gpl
-0.090	tests/system/py/test_e04_t11_wasm_delivery.py::test_webassembly_ci_builds_uploads_and_runs_the_browser_gate
-0.660	tests/system/py/test_e04_t11_wasm_delivery.py::test_zip_contains_two_real_modules_loader_shim_and_licences
-0.000	tests/system/py/test_e04_t11_wasm_fit.py::test_numeric_gate_accepts_native_reference_and_rejects_every_perturbed_operand
-2.580	tests/system/py/test_e04_t11_wasm_fit.py::test_wasm_cli_fit_matches_the_native_cli[multithread]
-1.280	tests/system/py/test_e04_t11_wasm_fit.py::test_wasm_cli_fit_matches_the_native_cli[singlethread]
 0.000	tests/system/py/test_e04_t12_public_release.py::test_about_exposes_bundled_notices_and_named_copyright
 0.000	tests/system/py/test_e04_t12_public_release.py::test_archive_process_allowance_matches_ordinary_test_names[nested.zip]
 0.000	tests/system/py/test_e04_t12_public_release.py::test_archive_process_allowance_matches_ordinary_test_names[tar.gz]
@@ -4552,14 +4613,11 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t9_latency.py::test_real_
 0.180	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_sdk_token_grant_route_refuses_another_resource_or_operation[operation]
 0.170	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_sdk_token_grant_route_refuses_another_resource_or_operation[resource]
 0.180	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_sdk_token_grant_route_refuses_another_resource_or_operation[unknown-option]
-3.020	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[app-wasm]
-3.410	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[app]
+1.700	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[app]
 1.680	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[audit]
 1.710	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[cli-python]
-2.230	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[core-macos]
 1.600	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[core]
 1.650	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[docs]
-0.320	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[native-macos]
 0.250	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[native]
 1.580	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[notebooks]
 0.100	tests/system/py/test_e09_t74_ci_source_consumption.py::test_new_consumers_really_consuming_the_shared_sha_are_admitted[checkout]
@@ -4604,128 +4662,128 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t9_latency.py::test_real_
 0.210	tests/system/py/test_e09_t75_form_semantics.py::test_f1_updater_selection_and_representation_are_observed[search-extra]
 0.210	tests/system/py/test_e09_t75_form_semantics.py::test_f1_updater_selection_and_representation_are_observed[slurp]
 1.630	tests/system/py/test_e09_t75_native_boundaries.py::test_job_dependency_rechecks_emit_exactly_one_sdk_line[linux-64]
-1.720	tests/system/py/test_e09_t75_native_boundaries.py::test_job_dependency_rechecks_emit_exactly_one_sdk_line[osx-arm64]
+1.750	tests/system/py/test_e09_t75_native_boundaries.py::test_job_dependency_rechecks_emit_exactly_one_sdk_line[osx-arm64]
 2.640	tests/system/py/test_e09_t75_native_boundaries.py::test_native_restore_refuses_links_escaping_the_native_tree[hardlink-destination]
 2.590	tests/system/py/test_e09_t75_native_boundaries.py::test_native_restore_refuses_links_escaping_the_native_tree[symlink-destination]
 2.960	tests/system/py/test_e09_t75_native_execution.py::test_native_actual_producer_upload_preserves_the_addressed_package_operation[linux-64]
 3.670	tests/system/py/test_e09_t75_native_execution.py::test_native_actual_producer_upload_preserves_the_addressed_package_operation[osx-arm64]
 0.000	tests/system/py/test_e09_t75_native_execution.py::test_native_archive_prefix_conversion_refuses_a_second_address_for_one_member[./]
 0.010	tests/system/py/test_e09_t75_native_execution.py::test_native_archive_prefix_conversion_refuses_a_second_address_for_one_member[build/ci/]
-3.770	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[CRYSTA_SDK_SHA256-app-linux-64]
+0.900	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[CRYSTA_SDK_SHA256-app-linux-64]
 0.860	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[CRYSTA_SDK_SHA256-app-osx-arm64]
 0.900	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[CRYSTA_SDK_SHA256-audit-linux-64]
 0.900	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[CRYSTA_SDK_SHA256-cli-python-linux-64]
 0.890	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[CRYSTA_SDK_SHA256-cli-python-osx-arm64]
 0.910	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[CRYSTA_SDK_SHA256-core-linux-64]
-3.860	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[CRYSTA_SDK_SHA256-core-osx-arm64]
+0.890	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[CRYSTA_SDK_SHA256-core-osx-arm64]
 0.880	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[CRYSTA_SDK_SHA256-docs-linux-64]
 0.880	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[CRYSTA_SDK_SHA256-notebooks-linux-64]
-1.120	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[CRYSTA_SDK_TAG-app-linux-64]
+0.910	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[CRYSTA_SDK_TAG-app-linux-64]
 0.880	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[CRYSTA_SDK_TAG-app-osx-arm64]
 0.890	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[CRYSTA_SDK_TAG-audit-linux-64]
 0.890	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[CRYSTA_SDK_TAG-cli-python-linux-64]
 1.000	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[CRYSTA_SDK_TAG-cli-python-osx-arm64]
 0.970	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[CRYSTA_SDK_TAG-core-linux-64]
-0.980	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[CRYSTA_SDK_TAG-core-osx-arm64]
+0.920	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[CRYSTA_SDK_TAG-core-osx-arm64]
 0.880	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[CRYSTA_SDK_TAG-docs-linux-64]
 0.920	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[CRYSTA_SDK_TAG-notebooks-linux-64]
-1.070	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[archive-root-app-linux-64]
+0.950	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[archive-root-app-linux-64]
 0.970	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[archive-root-app-osx-arm64]
 0.950	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[archive-root-audit-linux-64]
 0.930	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[archive-root-cli-python-linux-64]
 0.950	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[archive-root-cli-python-osx-arm64]
 0.950	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[archive-root-core-linux-64]
-1.070	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[archive-root-core-osx-arm64]
+0.960	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[archive-root-core-osx-arm64]
 0.940	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[archive-root-docs-linux-64]
 0.950	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[archive-root-notebooks-linux-64]
-1.050	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[embedded-commit-app-linux-64]
+0.890	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[embedded-commit-app-linux-64]
 0.880	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[embedded-commit-app-osx-arm64]
 0.930	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[embedded-commit-audit-linux-64]
 0.860	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[embedded-commit-cli-python-linux-64]
 0.910	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[embedded-commit-cli-python-osx-arm64]
 0.890	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[embedded-commit-core-linux-64]
-1.010	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[embedded-commit-core-osx-arm64]
+0.910	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[embedded-commit-core-osx-arm64]
 0.890	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[embedded-commit-docs-linux-64]
 0.960	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[embedded-commit-notebooks-linux-64]
-0.790	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[missing-manifest-app-linux-64]
+0.740	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[missing-manifest-app-linux-64]
 0.830	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[missing-manifest-app-osx-arm64]
 0.760	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[missing-manifest-audit-linux-64]
 0.760	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[missing-manifest-cli-python-linux-64]
 0.730	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[missing-manifest-cli-python-osx-arm64]
 0.930	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[missing-manifest-core-linux-64]
-1.120	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[missing-manifest-core-osx-arm64]
+0.800	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[missing-manifest-core-osx-arm64]
 0.740	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[missing-manifest-docs-linux-64]
 0.760	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[missing-manifest-notebooks-linux-64]
-0.860	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[missing-tar-app-linux-64]
+3.260	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[missing-tar-app-linux-64]
 3.480	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[missing-tar-app-osx-arm64]
 3.240	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[missing-tar-audit-linux-64]
 3.180	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[missing-tar-cli-python-linux-64]
 3.210	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[missing-tar-cli-python-osx-arm64]
 3.180	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[missing-tar-core-linux-64]
-0.800	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[missing-tar-core-osx-arm64]
+3.220	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[missing-tar-core-osx-arm64]
 3.330	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[missing-tar-docs-linux-64]
 3.150	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[missing-tar-notebooks-linux-64]
-0.980	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[platform-app-linux-64]
+0.910	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[platform-app-linux-64]
 0.900	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[platform-app-osx-arm64]
 0.890	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[platform-audit-linux-64]
 0.890	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[platform-cli-python-linux-64]
 1.120	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[platform-cli-python-osx-arm64]
 0.870	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[platform-core-linux-64]
-0.950	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[platform-core-osx-arm64]
+0.870	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[platform-core-osx-arm64]
 0.880	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[platform-docs-linux-64]
 0.940	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[platform-notebooks-linux-64]
-1.030	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[run_id-app-linux-64]
+0.890	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[run_id-app-linux-64]
 0.890	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[run_id-app-osx-arm64]
 0.910	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[run_id-audit-linux-64]
 0.930	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[run_id-cli-python-linux-64]
 0.910	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[run_id-cli-python-osx-arm64]
 1.290	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[run_id-core-linux-64]
-0.980	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[run_id-core-osx-arm64]
+0.960	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[run_id-core-osx-arm64]
 0.920	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[run_id-docs-linux-64]
 0.880	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[run_id-notebooks-linux-64]
-1.230	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[sha256-app-linux-64]
+0.900	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[sha256-app-linux-64]
 0.900	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[sha256-app-osx-arm64]
 0.900	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[sha256-audit-linux-64]
 1.140	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[sha256-cli-python-linux-64]
 0.890	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[sha256-cli-python-osx-arm64]
 0.870	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[sha256-core-linux-64]
-0.980	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[sha256-core-osx-arm64]
+0.870	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[sha256-core-osx-arm64]
 0.890	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[sha256-docs-linux-64]
 0.900	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[sha256-notebooks-linux-64]
-1.010	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[source_sha-app-linux-64]
+0.890	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[source_sha-app-linux-64]
 0.930	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[source_sha-app-osx-arm64]
 0.980	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[source_sha-audit-linux-64]
 0.950	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[source_sha-cli-python-linux-64]
 0.980	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[source_sha-cli-python-osx-arm64]
 1.200	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[source_sha-core-linux-64]
-1.030	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[source_sha-core-osx-arm64]
+0.920	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[source_sha-core-osx-arm64]
 0.950	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[source_sha-docs-linux-64]
 0.900	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[source_sha-notebooks-linux-64]
-0.960	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[source_tree-app-linux-64]
+0.930	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[source_tree-app-linux-64]
 0.930	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[source_tree-app-osx-arm64]
 0.940	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[source_tree-audit-linux-64]
 0.930	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[source_tree-cli-python-linux-64]
 0.940	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[source_tree-cli-python-osx-arm64]
 0.970	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[source_tree-core-linux-64]
-0.910	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[source_tree-core-osx-arm64]
+0.970	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[source_tree-core-osx-arm64]
 0.980	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[source_tree-docs-linux-64]
 0.960	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[source_tree-notebooks-linux-64]
-0.970	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[tar-bytes-app-linux-64]
+0.950	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[tar-bytes-app-linux-64]
 0.880	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[tar-bytes-app-osx-arm64]
 0.970	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[tar-bytes-audit-linux-64]
 0.900	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[tar-bytes-cli-python-linux-64]
 0.920	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[tar-bytes-cli-python-osx-arm64]
 0.930	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[tar-bytes-core-linux-64]
-0.970	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[tar-bytes-core-osx-arm64]
+0.920	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[tar-bytes-core-osx-arm64]
 0.910	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[tar-bytes-docs-linux-64]
 0.930	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[tar-bytes-notebooks-linux-64]
-1.160	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[workspace-app-linux-64]
+0.930	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[workspace-app-linux-64]
 0.890	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[workspace-app-osx-arm64]
 0.880	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[workspace-audit-linux-64]
 0.880	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[workspace-cli-python-linux-64]
 0.910	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[workspace-cli-python-osx-arm64]
 0.850	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[workspace-core-linux-64]
-0.920	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[workspace-core-osx-arm64]
+1.190	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[workspace-core-osx-arm64]
 0.900	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[workspace-docs-linux-64]
 0.900	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[workspace-notebooks-linux-64]
 0.390	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[CRYSTA_SDK_SHA256-app-linux-64]
@@ -4850,14 +4908,14 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t9_latency.py::test_real_
 0.640	tests/system/py/test_e09_t75_pin_currency.py::test_public_currency_boundary_and_pin_reader_have_distinct_obligations[unpaired-main-pin]
 0.530	tests/system/py/test_e09_t75_pin_currency.py::test_public_currency_boundary_and_pin_reader_have_distinct_obligations[unpaired-squashed]
 0.640	tests/system/py/test_e09_t75_pin_currency.py::test_public_currency_boundary_and_pin_reader_have_distinct_obligations[unpaired-unlanded]
-0.080	tests/system/py/test_e09_t75_pin_currency.py::test_workflow_keeps_currency_required_without_blocking_build_selection
+0.050	tests/system/py/test_e09_t75_pin_currency.py::test_workflow_keeps_currency_required_without_blocking_build_selection
 0.000	tests/system/py/test_e09_t75_public_pin.py::test_pin_tag_accepts_effective_results_and_refuses_caller_selected_raw_tables[copied-table]
 0.000	tests/system/py/test_e09_t75_public_pin.py::test_pin_tag_accepts_effective_results_and_refuses_caller_selected_raw_tables[parsed-table]
 0.100	tests/system/py/test_e09_t75_relocated_cli.py::test_consumed_sdk_cli_runs_from_a_foreign_prefix_without_producer_libraries
 1.630	tests/system/py/test_e09_t75_round2_artifacts.py::test_native_cache_restoration_reproves_runnable_permissions[cli-linux-64]
-1.740	tests/system/py/test_e09_t75_round2_artifacts.py::test_native_cache_restoration_reproves_runnable_permissions[cli-osx-arm64]
+1.820	tests/system/py/test_e09_t75_round2_artifacts.py::test_native_cache_restoration_reproves_runnable_permissions[cli-osx-arm64]
 1.530	tests/system/py/test_e09_t75_round2_artifacts.py::test_native_cache_restoration_reproves_runnable_permissions[tests-linux-64]
-1.870	tests/system/py/test_e09_t75_round2_artifacts.py::test_native_cache_restoration_reproves_runnable_permissions[tests-osx-arm64]
+1.540	tests/system/py/test_e09_t75_round2_artifacts.py::test_native_cache_restoration_reproves_runnable_permissions[tests-osx-arm64]
 0.220	tests/system/py/test_e09_t75_round2_artifacts.py::test_required_sdk_bytes_and_recorded_digests_cannot_qualify_by_joint_absence[absent-bin/crysta-check]
 0.450	tests/system/py/test_e09_t75_round2_artifacts.py::test_required_sdk_bytes_and_recorded_digests_cannot_qualify_by_joint_absence[absent-bin/crysta-fetch]
 0.320	tests/system/py/test_e09_t75_round2_artifacts.py::test_required_sdk_bytes_and_recorded_digests_cannot_qualify_by_joint_absence[absent-bin/crysta-install-check]
@@ -5106,6 +5164,10 @@ UNMEASURED:failed-in-this-run	tests/unit/cpp/test_c34_t28_storage_lifetimes.cpp:
 UNMEASURED:failed-in-this-run	tests/unit/cpp/test_c34_t28_value_semantics.cpp::C34-T28 F20 preserved aggregate comparisons retain standard value order
 UNMEASURED:failed-in-this-run	tests/unit/cpp/test_c34_t28_value_semantics.cpp::C34-T28 F20 preserved measured expressions retain values and equality
 UNMEASURED:failed-in-this-run	tests/unit/cpp/test_c34_t28_value_semantics.cpp::C34-T28 F20 preserved plain string expressions retain reads and ordering
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_blocks.cpp::Core joint bank dependents can reach the shared structural prefix
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_blocks.cpp::Core joint fitting refuses unsupported relation directions
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_categories.cpp::Core dependent marks cover both Structure and Experiment fields
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_categories.cpp::New core projects contain no GUI preview declarations
 0.030	tests/unit/cpp/test_e05_t1_fit_job.cpp::E05-T1 gate 3 engine checkpoint cancel retains partial values and undo
 0.036	tests/unit/cpp/test_e05_t1_fit_job.cpp::E05-T1 gate 3 joint engine checkpoint cancel retains partial values and undo
 0.011	tests/unit/cpp/test_e05_t1_fit_job.cpp::E05-T1 gate 3 joint worker token cancellation reaches a running fit
@@ -5509,6 +5571,10 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_c34_t1c_construction_population
 0.000	tests/unit/py/test_c34_t1c_construction_population.py::test_c34_t1c_structure_factories_build_live_objects[from_cif_str]
 UNMEASURED:failed-in-this-run	tests/unit/py/test_c34_t1c_construction_population.py::test_c34_t1c_structure_factories_build_live_objects[from_scratch]
 UNMEASURED:failed-in-this-run	tests/unit/py/test_c34_t1c_construction_population.py::test_c34_t1c_tutorial_graph_constructs_and_populates_end_to_end
+UNMEASURED:failed-in-this-run	tests/unit/py/test_constraint_app_structure.py::test_analysis_groups_read_core_rows_without_preview_data[alias-AliasesGroup-aliases]
+UNMEASURED:failed-in-this-run	tests/unit/py/test_constraint_app_structure.py::test_analysis_groups_read_core_rows_without_preview_data[constraint-ConstraintsGroup-constraints]
+0.000	tests/unit/py/test_constraint_app_structure.py::test_cwl_gaussian_and_lorentzian_coefficients_have_distinct_rows
+UNMEASURED:failed-in-this-run	tests/unit/py/test_constraint_app_structure.py::test_excluded_regions_are_in_the_basic_category_tier
 0.050	tests/unit/py/test_e02_t2_io_parity.py::test_e02_t2_cif_and_edi_structures_are_model_equivalent[from_cif_path]
 0.040	tests/unit/py/test_e02_t2_io_parity.py::test_e02_t2_cif_and_edi_structures_are_model_equivalent[from_cif_str]
 0.000	tests/unit/py/test_e02_t2_io_parity.py::test_e02_t2_format_discriminator_rejects_unsupported_selector_bodies[background-body-without-selector]

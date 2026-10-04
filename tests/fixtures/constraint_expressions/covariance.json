@@ -1,0 +1,47 @@
+{
+  "provenance": "Exact rational normal equations for X=[1+t^2,t-t^2], unit weights; alternating noise projected into the orthogonal complement of X.",
+  "x": [
+    40.0,
+    44.0,
+    48.0,
+    52.0,
+    56.0,
+    60.0,
+    64.0,
+    68.0,
+    72.0
+  ],
+  "observed": [
+    5.041735982747998,
+    5.101953943314849,
+    5.614162045594578,
+    5.778360289587185,
+    6.3945486752926675,
+    6.662727202711029,
+    7.382895871842267,
+    7.755054682686383,
+    8.579203635243376
+  ],
+  "independent": [
+    5,
+    2
+  ],
+  "dependent": 3,
+  "covariance": [
+    [
+      0.006220182396086687,
+      -0.03784900653559759
+    ],
+    [
+      -0.03784900653559759,
+      0.26696288357521863
+    ]
+  ],
+  "dependent_variance": 0.34888107904250054,
+  "diagonal_only_variance": 0.2731830659713053,
+  "gradient": [
+    1,
+    -1
+  ],
+  "reduced_chi_square": 0.011920715606020597
+}
