@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include <algorithm>
 #include <array>
+#include <cctype>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
@@ -16,6 +17,7 @@
 #include <set>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -917,6 +919,102 @@ void fill_crysta_sequential(const SequentialFitConfig& config,
     }
 }
 
+namespace {
+
+// Until edi's crysta SDK carries the alias and constraint rows, edi puts the two loops into the
+// analysis.edi crysta wrote, spelled and placed exactly as crysta's writer does (each loop only with
+// rows, a cell bare when CIF allows it, else in double quotes, `enabled` only when a constraint is
+// disabled). Removed when the pin moves and the rows cross to crysta like the rest.
+bool bare_cell_is_legal(const std::string& value) {
+    if (value.empty() || value == "?" || value == "." ||
+        value.find_first_of(" \t") != std::string::npos ||
+        std::string_view("_#$'\"[];").find(value.front()) != std::string_view::npos) {
+        return false;
+    }
+    std::string lower = value.substr(0, 7);
+    std::transform(lower.begin(), lower.end(), lower.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    for (const char* word : {"data_", "loop_", "save_", "global_", "stop_"}) {
+        if (lower.rfind(word, 0) == 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+std::string encode_cell(const std::string& value) {
+    if (bare_cell_is_legal(value)) {
+        return value;
+    }
+    for (std::size_t index = 0; index + 1 < value.size(); ++index) {
+        if (value[index] == '"' && (value[index + 1] == ' ' || value[index + 1] == '\t')) {
+            return "'" + value + "'";
+        }
+    }
+    return "\"" + value + "\"";
+}
+
+std::string relation_loops(const Project& model) {
+    std::string text;
+    if (!model.aliases.empty()) {
+        text += "loop_\n_alias.id\n_alias.parameter_unique_name\n";
+        for (const auto& alias : model.aliases) {
+            text += encode_cell(alias->id.value()) + " " + encode_cell(alias->parameter_unique_name.value()) + "\n";
+        }
+        text += "\n";
+    }
+    if (!model.constraints.empty()) {
+        const bool any_disabled = std::any_of(model.constraints.begin(), model.constraints.end(),
+                                              [](const auto& constraint) { return !constraint->enabled.get(); });
+        text += "loop_\n_constraint.id\n_constraint.expression\n";
+        if (any_disabled) {
+            text += "_constraint.enabled\n";
+        }
+        for (const auto& constraint : model.constraints) {
+            text += encode_cell(constraint->id.value()) + " " + encode_cell(constraint->expression.value());
+            if (any_disabled) {
+                text += constraint->enabled.get() ? " true" : " false";
+            }
+            text += "\n";
+        }
+        text += "\n";
+    }
+    return text;
+}
+
+void insert_relation_loops(const Project& model, const std::filesystem::path& analysis_file) {
+    const std::string loops = relation_loops(model);
+    if (loops.empty()) {
+        return;
+    }
+    std::string text;
+    {
+        std::ifstream in(analysis_file, std::ios::binary);
+        std::ostringstream read;
+        read << in.rdbuf();
+        text = read.str();
+    }
+    std::size_t at = text.find("\n_sequential_fit.data_dir ");
+    if (at == std::string::npos) {
+        at = text.find("\nloop_\n_joint_fit.experiment_id\n");
+    }
+    if (at == std::string::npos) {
+        throw IoError("cannot place the alias and constraint loops in " + analysis_file.string());
+    }
+    text.insert(at + 1, loops);
+    const std::filesystem::path staged = analysis_file.string() + ".relations";
+    {
+        std::ofstream out(staged, std::ios::binary | std::ios::trunc);
+        out << text;
+        if (!out) {
+            throw IoError("cannot write " + staged.string());
+        }
+    }
+    std::filesystem::rename(staged, analysis_file);
+}
+
+}  // namespace
+
 void save_project_via_crysta(const Project& model, const std::string& directory) {
     // Edi does not write — it asks crysta to. Build the full engine project from the model
     // through the one conversion choke point (completed cell, start-carrying parameters),
@@ -1093,6 +1191,7 @@ void save_project_via_crysta(const Project& model, const std::string& directory)
         geom.bond_distance_inc = std::optional<double>(geom.bond_distance_inc.get());
     }
     crysta::save_project(cproject, directory);
+    insert_relation_loops(model, std::filesystem::path(directory) / "analysis" / "analysis.edi");
 }
 
 namespace detail {
