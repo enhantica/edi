@@ -47,6 +47,35 @@ class SequentialExtractListModel : public RowTableModel {
     const edi::Project& project_;
 };
 
+// The declared parameter aliases (`_alias`, read-only: aliases are declared in the file or from Python):
+// `id` and `parameter`, the unique name of the parameter the alias stands for.
+class AliasListModel : public RowTableModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to the analysis")
+
+   public:
+    AliasListModel(const edi::Project& project, QObject* parent);
+    void sync();
+
+   private:
+    const edi::Project& project_;
+};
+
+// The declared constraints (`_constraint`, read-only like the aliases): `id` and `expression`.
+class ConstraintListModel : public RowTableModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to the analysis")
+
+   public:
+    ConstraintListModel(const edi::Project& project, QObject* parent);
+    void sync();
+
+   private:
+    const edi::Project& project_;
+};
+
 // The persisted pre-fit start state (`_fit_parameter`, read-only: a fit writes it, undo restores it):
 // `id`, `startValue` and `startUncertainty` (undefined when the row has none) —.
 class FitStartListModel : public RowTableModel {
@@ -119,6 +148,8 @@ class AnalysisViewModel : public QObject {
     Q_PROPERTY(edi_app::SequentialFitViewModel* sequentialFit READ sequentialFit CONSTANT)
     Q_PROPERTY(edi_app::SequentialExtractListModel* sequentialExtract READ sequentialExtract CONSTANT)
     Q_PROPERTY(edi_app::FitStartListModel* fitStart READ fitStart CONSTANT)
+    Q_PROPERTY(edi_app::AliasListModel* aliases READ aliases CONSTANT)
+    Q_PROPERTY(edi_app::ConstraintListModel* constraints READ constraints CONSTANT)
     Q_PROPERTY(edi_app::CategoryListModel* categories READ categories CONSTANT)
     Q_PROPERTY(edi_app::BlockText* text READ text CONSTANT)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
@@ -146,6 +177,8 @@ class AnalysisViewModel : public QObject {
     SequentialFitViewModel* sequentialFit() const { return sequential_fit_; }
     SequentialExtractListModel* sequentialExtract() const { return sequential_extract_; }
     FitStartListModel* fitStart() const { return fit_start_; }
+    AliasListModel* aliases() const { return aliases_; }
+    ConstraintListModel* constraints() const { return constraints_; }
     CategoryListModel* categories() const { return categories_; }
     BlockText* text() const { return text_; }
     QString lastError() const { return last_error_; }
@@ -175,6 +208,8 @@ class AnalysisViewModel : public QObject {
     SequentialFitViewModel* sequential_fit_;
     SequentialExtractListModel* sequential_extract_;
     FitStartListModel* fit_start_;
+    AliasListModel* aliases_;
+    ConstraintListModel* constraints_;
     CategoryListModel* categories_;
     BlockText* text_;
 };

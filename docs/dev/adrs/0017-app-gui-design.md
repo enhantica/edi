@@ -95,6 +95,8 @@ The decisions it rests on, unchanged here:
   | `refln` | Reflections | ✓ | `list` |
   | `minimizer` | Minimizer | | `level-down-alt` |
   | `fitting_mode` | Fitting mode | | `sliders-h` |
+  | `alias` | Aliases | ✓ | `tag` |
+  | `constraint` | Constraints | ✓ | `equals` |
   | `joint_fit` | **Joint-fit weights** (was *Joint fit*) | ✓ | `link` |
   | `sequential_fit` | Sequential fit | | `list-ol` |
   | `sequential_fit_extract` | **Scan extraction rules** (was *Scan extraction*) | ✓ | `filter` |

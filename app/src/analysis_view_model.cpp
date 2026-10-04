@@ -44,6 +44,40 @@ void SequentialExtractListModel::sync() {
     setTableRows(rows);
 }
 
+// ---- AliasListModel -----------------------------------------------------------------------------
+
+AliasListModel::AliasListModel(const edi::Project& project, QObject* parent)
+    : RowTableModel({"id", "parameter"}, parent), project_(project) {
+    sync();
+}
+
+void AliasListModel::sync() {
+    QList<Row> rows;
+    for (const auto& alias : project_.aliases) {
+        rows.append({alias.get(),
+                     {QString::fromStdString(alias->id.value()),
+                      QString::fromStdString(alias->parameter_unique_name.value())}});
+    }
+    setTableRows(rows);
+}
+
+// ---- ConstraintListModel ------------------------------------------------------------------------
+
+ConstraintListModel::ConstraintListModel(const edi::Project& project, QObject* parent)
+    : RowTableModel({"id", "expression"}, parent), project_(project) {
+    sync();
+}
+
+void ConstraintListModel::sync() {
+    QList<Row> rows;
+    for (const auto& constraint : project_.constraints) {
+        rows.append({constraint.get(),
+                     {QString::fromStdString(constraint->id.value()),
+                      QString::fromStdString(constraint->expression.value())}});
+    }
+    setTableRows(rows);
+}
+
 // ---- FitStartListModel --------------------------------------------------------------------------
 
 FitStartListModel::FitStartListModel(const edi::Project& project, QObject* parent)
@@ -97,6 +131,8 @@ AnalysisViewModel::AnalysisViewModel(edi::Project& project, ProjectEditor& edito
       sequential_fit_(new SequentialFitViewModel(project, this)),
       sequential_extract_(new SequentialExtractListModel(project, this)),
       fit_start_(new FitStartListModel(project, this)),
+      aliases_(new AliasListModel(project, this)),
+      constraints_(new ConstraintListModel(project, this)),
       categories_(new CategoryListModel(this)),
       text_(new BlockText([saved] { return saved("analysis/analysis.edi"); }, this)) {
     fitting_mode_options_->setOptions(edi::supported_fitting_modes(), "single");
@@ -175,6 +211,8 @@ void AnalysisViewModel::sync() {
     sequential_fit_->sync();
     sequential_extract_->sync();
     fit_start_->sync();
+    aliases_->sync();
+    constraints_->sync();
     categories_->setCategories(edi::analysis_categories(project_));
 }
 

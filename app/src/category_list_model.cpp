@@ -32,6 +32,8 @@ CategoryPresentation category_presentation(const QString& id) {
         {QStringLiteral("refln"), {T::Extras, "Reflections", "list"}},
         {QStringLiteral("minimizer"), {T::Extras, "Minimizer", "level-down-alt"}},
         {QStringLiteral("fitting_mode"), {T::Extras, "Fitting mode", "sliders-h"}},
+        {QStringLiteral("alias"), {T::Extras, "Aliases", "tag"}},
+        {QStringLiteral("constraint"), {T::Extras, "Constraints", "equals"}},
         {QStringLiteral("joint_fit"), {T::Extras, "Joint-fit weights", "link"}},
         {QStringLiteral("sequential_fit"), {T::Extras, "Sequential fit", "list-ol"}},
         {QStringLiteral("sequential_fit_extract"), {T::Extras, "Scan extraction rules", "filter"}},
