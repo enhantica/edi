@@ -388,14 +388,7 @@ void ProjectViewModel::completeSymmetry() {
     // load and after every edit the model's dependents are re-derived from its independent values, through
     // the completion a fit itself applies. A structure crysta cannot resolve keeps what it holds — the
     // calculation says why.
-    for (const auto& structure : project_->structures) {
-        try {
-            edi::complete_model_cell(*structure);
-            edi::complete_model_positions(*structure);
-        } catch (const std::exception&) {
-            continue;
-        }
-    }
+    edi::apply_relations(*project_);
 }
 
 void ProjectViewModel::syncParameterTable(bool refresh_report) {

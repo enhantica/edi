@@ -1118,6 +1118,11 @@ class CategoryRef {
 
 }  // namespace detail
 
+// What a parameter's relation makes it (edi ADR-0024): free to vary, fixed or tied by symmetry, or set
+// by a declared constraint. Derived from crysta's relation graph (refresh_relations, io.hpp); never
+// saved.
+enum class Dependence : std::uint8_t { Independent, SymmetryFixed, SymmetryTied, Constrained };
+
 // A user-facing scalar with refinement state: value, standard uncertainty (absolute), and a
 // free/fit flag. Maps 1:1 onto the engine's ParameterState.
 struct Parameter {
@@ -1149,6 +1154,8 @@ struct Parameter {
     // write stales the computed categories it feeds. A write to the uncertainty, free flag or fit
     // start is not a write to an input and leaves it.
     detail::Epoch epoch;
+    // Set by refresh_relations and apply_relations; a dependent's free flag stays false.
+    Dependence dependence = Dependence::Independent;
 
     Parameter() = default;
     Parameter(double value_, std::optional<double> esd_ = 0.0, bool free_ = false)
@@ -1162,6 +1169,16 @@ struct Parameter {
     // ADR-0018: whether a table holds this parameter's row.
     bool bound() const noexcept { return value.bound(); }
 };
+
+// The free flag's rule (edi ADR-0024): a dependent stays dependent, so freeing one changes nothing and
+// answers false; the caller says so with crysta's `crysta.domain.dependent_free_ignored`.
+inline bool set_free(Parameter& parameter, bool free) {
+    if (free && parameter.dependence != Dependence::Independent) {
+        return false;
+    }
+    parameter.free = free;
+    return true;
+}
 
 // Set a parameter's value under its admissible range — the Python
 // `Parameter.value` setter's rule and message (check_admissible), for the app's writes.
@@ -3947,6 +3964,12 @@ class Project {
     // surface that hands an experiment out. The mark never travels: a copied or moved project's
     // collection starts without one (detail::KeyedBase).
     void adopt_experiments() noexcept { static_cast<detail::KeyedBase&>(experiments).host_ = this; }
+    // The same for `aliases` and `constraints`, so a row handed out reaches this project: an alias
+    // resolves its parameter, and an edited row re-marks the parameters (edi ADR-0024).
+    void adopt_relations() noexcept {
+        static_cast<detail::KeyedBase&>(aliases).host_ = this;
+        static_cast<detail::KeyedBase&>(constraints).host_ = this;
+    }
 
    private:
     // ADR-0020 §1: the transaction reads and compares the editor record.

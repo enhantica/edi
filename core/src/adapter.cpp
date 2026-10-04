@@ -45,6 +45,7 @@
 #include "crysta/symmetry.hpp"
 #include "crysta/threading.hpp"
 #include "crysta/tokens.hpp"
+#include "edi/categories.hpp"
 #include "edi/io.hpp"
 #include "edi/model.hpp"
 #include "edi/symmetry.hpp"
@@ -127,24 +128,6 @@ std::array<double, 6> completed_cell_values(const Cell& cell, const crysta::Cell
 
 }  // namespace
 
-// The completion contract is SYMMETRIC. The same map that completes the cell on the way INTO
-// crysta completes edi's own cell on the way back from a fit, so the model a refinement leaves
-// behind — and everything persisted from it — carries a consistent cell (a cubic fit of `a`
-// leaves b = c = a, never the pre-fit values). This assigns the values completed_cell_values
-// computes; it is not a second completion. Values only: edi's write-back lands the fitted
-// e.s.d. on the free parameter alone, so a tied sibling's own declared uncertainty is never
-// moved by a fit and needs no restoring. Exported (declared in io.hpp beside the delegated
-// save): undo_fit restores through the same helpers a refinement completes through.
-void complete_model_cell(Structure& s) {
-    const crysta::CellFreedom freedom = crysta::cell_freedom(resolve_group(s));
-    const std::array<double, 6> values = completed_cell_values(s.cell, freedom);
-    Parameter* const raw[6] = {&s.cell.length_a,    &s.cell.length_b,   &s.cell.length_c,
-                               &s.cell.angle_alpha, &s.cell.angle_beta, &s.cell.angle_gamma};
-    for (std::size_t i = 0; i < 6; ++i) {
-        raw[i]->value = values[i];
-    }
-}
-
 namespace {
 
 // The engine cell the boundary contract hands crysta: the user's cell parameters (esd + free flags
@@ -192,71 +175,8 @@ crysta::Structure to_crysta_structure(const Structure& s) {
 
 }  // namespace
 
-// Seq=51, the positional half of the symmetric completion: after a fit lands refined basics on
-// the representative axes, the FOLLOWER axes of a special position still hold pre-fit values
-// in edi's model — complete them from the basics through crysta's own constraints machinery
-// (PositionalConstraints / SpecialPosition, public API; edi acquires no crystallographic
-// knowledge). VALUES ONLY (mirroring crysta): uncertainty movement belongs to the landing pass
-// (rebalance_positional_fit_state — fitted e.s.d. onto the declared free axes) and the undo
-// pass (restore_positional_dependents), so completion can never invent or destroy an axis's
-// uncertainty presence. Exported (declared in io.hpp): undo_fit restores through the same
-// helper a refinement completes through.
-void complete_model_positions(Structure& s) {
-    const crysta::Structure engine = to_crysta_structure(s);
-    const crysta::PositionalConstraints constraints = engine.positional_constraints();
-    const auto& positions = constraints.sites();
-    std::vector<double> basics;
-    std::size_t offset = 0;
-    for (std::size_t i = 0; i < s.atom_sites.size(); ++i) {
-        const crysta::SpecialPosition& position = positions[i].second;
-        Parameter* const fract[3] = {&s.atom_sites[i]->fract_x, &s.atom_sites[i]->fract_y,
-                                     &s.atom_sites[i]->fract_z};
-        basics.resize(offset + position.n_basic(), 0.0);
-        bool seen[3] = {false, false, false};
-        for (std::size_t axis = 0; axis < 3; ++axis) {
-            if (!position.axis_is_basic(axis)) {
-                continue;
-            }
-            const std::size_t local = position.axis_basic_index(axis);
-            if (seen[local]) {
-                continue;  // the representative (first) axis carries the basic
-            }
-            seen[local] = true;
-            basics[offset + local] = fract[axis]->value;
-        }
-        offset += position.n_basic();
-    }
-    const std::map<std::string, std::tuple<double, double, double>> coords =
-        constraints.evaluate(basics);
-    for (std::size_t i = 0; i < s.atom_sites.size(); ++i) {
-        const crysta::SpecialPosition& position = positions[i].second;
-        const auto& [cx, cy, cz] = coords.at(positions[i].first);
-        Parameter* const fract[3] = {&s.atom_sites[i]->fract_x, &s.atom_sites[i]->fract_y,
-                                     &s.atom_sites[i]->fract_z};
-        const double values[3] = {cx, cy, cz};
-        // The representative axis's uncertainty per basic — the canonical slot.
-        std::optional<double> basic_esd[3];
-        bool seen[3] = {false, false, false};
-        for (std::size_t axis = 0; axis < 3; ++axis) {
-            if (!position.axis_is_basic(axis)) {
-                continue;
-            }
-            const std::size_t local = position.axis_basic_index(axis);
-            if (seen[local]) {
-                continue;
-            }
-            seen[local] = true;
-            basic_esd[local] = fract[axis]->uncertainty;
-        }
-        for (std::size_t axis = 0; axis < 3; ++axis) {
-            fract[axis]->value = values[axis];
-        }
-    }
-}
-
-// ADR-0019: the freedom the two completions above apply, reported per parameter. The cell rows
-// read the map complete_model_cell reads; the coordinate rows read the special positions
-// complete_model_positions reads, with its representative rule: the first axis that names a
+// ADR-0019: the freedom symmetry leaves, reported per parameter. The cell rows read crysta's
+// cell freedom; the coordinate rows read its special positions, with the representative rule: the first axis that names a
 // basic carries it, and a later axis of the same basic follows that one. A part crysta cannot
 // resolve is reported independent (symmetry.hpp says why).
 std::vector<ParameterTie> structure_ties(const Structure& s) {
@@ -458,7 +378,6 @@ void restore_positional_dependents(Structure& s, const std::set<const Parameter*
             }
         }
     }
-    complete_model_positions(s);
 }
 
 void seed_positional_start_companions(
@@ -921,96 +840,20 @@ void fill_crysta_sequential(const SequentialFitConfig& config,
 
 namespace {
 
-// Until edi's crysta SDK carries the alias and constraint rows, edi puts the two loops into the
-// analysis.edi crysta wrote, spelled and placed exactly as crysta's writer does (each loop only with
-// rows, a cell bare when CIF allows it, else in double quotes, `enabled` only when a constraint is
-// disabled). Removed when the pin moves and the rows cross to crysta like the rest.
-bool bare_cell_is_legal(const std::string& value) {
-    if (value.empty() || value == "?" || value == "." ||
-        value.find_first_of(" \t") != std::string::npos ||
-        std::string_view("_#$'\"[];").find(value.front()) != std::string_view::npos) {
-        return false;
+// The declared aliases and constraints cross as declared, row for row: crysta reads, checks, saves and
+// applies them; edi keeps the text.
+void fill_crysta_relations(const Project& model, crysta::Project& converted) {
+    converted.aliases.clear();
+    converted.aliases.reserve(model.aliases.size());
+    for (const auto& alias : model.aliases) {
+        converted.aliases.push_back({alias->id.value(), alias->parameter_unique_name.value()});
     }
-    std::string lower = value.substr(0, 7);
-    std::transform(lower.begin(), lower.end(), lower.begin(),
-                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-    for (const char* word : {"data_", "loop_", "save_", "global_", "stop_"}) {
-        if (lower.rfind(word, 0) == 0) {
-            return false;
-        }
+    converted.constraints.clear();
+    converted.constraints.reserve(model.constraints.size());
+    for (const auto& constraint : model.constraints) {
+        converted.constraints.push_back(
+            {constraint->id.value(), constraint->expression.value(), constraint->enabled.get()});
     }
-    return true;
-}
-
-std::string encode_cell(const std::string& value) {
-    if (bare_cell_is_legal(value)) {
-        return value;
-    }
-    for (std::size_t index = 0; index + 1 < value.size(); ++index) {
-        if (value[index] == '"' && (value[index + 1] == ' ' || value[index + 1] == '\t')) {
-            return "'" + value + "'";
-        }
-    }
-    return "\"" + value + "\"";
-}
-
-std::string relation_loops(const Project& model) {
-    std::string text;
-    if (!model.aliases.empty()) {
-        text += "loop_\n_alias.id\n_alias.parameter_unique_name\n";
-        for (const auto& alias : model.aliases) {
-            text += encode_cell(alias->id.value()) + " " + encode_cell(alias->parameter_unique_name.value()) + "\n";
-        }
-        text += "\n";
-    }
-    if (!model.constraints.empty()) {
-        const bool any_disabled = std::any_of(model.constraints.begin(), model.constraints.end(),
-                                              [](const auto& constraint) { return !constraint->enabled.get(); });
-        text += "loop_\n_constraint.id\n_constraint.expression\n";
-        if (any_disabled) {
-            text += "_constraint.enabled\n";
-        }
-        for (const auto& constraint : model.constraints) {
-            text += encode_cell(constraint->id.value()) + " " + encode_cell(constraint->expression.value());
-            if (any_disabled) {
-                text += constraint->enabled.get() ? " true" : " false";
-            }
-            text += "\n";
-        }
-        text += "\n";
-    }
-    return text;
-}
-
-void insert_relation_loops(const Project& model, const std::filesystem::path& analysis_file) {
-    const std::string loops = relation_loops(model);
-    if (loops.empty()) {
-        return;
-    }
-    std::string text;
-    {
-        std::ifstream in(analysis_file, std::ios::binary);
-        std::ostringstream read;
-        read << in.rdbuf();
-        text = read.str();
-    }
-    std::size_t at = text.find("\n_sequential_fit.data_dir ");
-    if (at == std::string::npos) {
-        at = text.find("\nloop_\n_joint_fit.experiment_id\n");
-    }
-    if (at == std::string::npos) {
-        throw IoError("cannot place the alias and constraint loops in " + analysis_file.string());
-    }
-    text.insert(at + 1, loops);
-    const std::filesystem::path staged = analysis_file.string() + ".relations";
-    {
-        std::ofstream out(staged, std::ios::binary | std::ios::trunc);
-        out << text;
-        if (!out) {
-            throw IoError("cannot write " + staged.string());
-        }
-    }
-    std::filesystem::rename(staged, analysis_file);
 }
 
 }  // namespace
@@ -1089,6 +932,7 @@ void save_project_via_crysta(const Project& model, const std::string& directory)
     // mode does — a save that dropped it would turn a sequential project into a single one on
     // the next load.
     fill_crysta_sequential(model.sequential_fit, cproject.sequential_fit);
+    fill_crysta_relations(model, cproject);
     // Review-1 F5/F1: the engine project must know WHERE this model came from. crysta's save
     // carries a scan's data directory and results.csv from the project's own directory and proves
     // the declared data_dir stays inside it; with an empty path it can do neither, so an edi save
@@ -1191,7 +1035,6 @@ void save_project_via_crysta(const Project& model, const std::string& directory)
         geom.bond_distance_inc = std::optional<double>(geom.bond_distance_inc.get());
     }
     crysta::save_project(cproject, directory);
-    insert_relation_loops(model, std::filesystem::path(directory) / "analysis" / "analysis.edi");
 }
 
 namespace detail {
@@ -1824,6 +1667,10 @@ void Project::calculate() {
         }
     }
     try {
+        // Every dependent at its relation's value before anything reads it, by crysta's applier;
+        // relations that cannot hold refuse the calculation with crysta's code, as crysta's own does.
+        refresh_relations(*this);
+        apply_relations(*this);
         publish_calculation();
     } catch (...) {
         for (auto& bank_item : experiments) {
@@ -1863,6 +1710,158 @@ crysta::BeamModeEnum crysta_kind(BeamModeEnum mode) {
                                                      : crysta::BeamModeEnum::TimeOfFlight;
 }
 }  // namespace
+
+namespace {
+
+// The whole model as one engine project, for its relations: the structure, every bank (no data
+// needed) and the declared aliases and constraints.
+struct RelationProject {
+    BuiltExperiments banks;
+    std::unique_ptr<crysta::Project> project;
+};
+
+RelationProject relation_project(const Project& model) {
+    RelationProject converted;
+    converted.banks.reserve(model.experiments.size());
+    for (const auto& bank_item : model.experiments) {
+        build_on_heap(converted.banks, *bank_item);
+    }
+    converted.project = std::make_unique<crysta::Project>(to_crysta_structure(model.structure()),
+                                                          experiment_list(converted.banks));
+    fill_crysta_relations(model, *converted.project);
+    return converted;
+}
+
+enum class Completion : std::uint8_t { Values, ValuesAndUncertainties };
+
+// Every dependent of `converted` set from its relation by crysta's one applier, then copied onto
+// the model by unique name: its value, and after a fit its e.s.d., keeping the one it held before
+// the fit for undo (a dependent has no fit-start row, so nothing is written for it).
+void copy_dependents(crysta::Project& converted, Project& model, Completion completion) {
+    const crysta::RelationGraph relations = crysta::apply_relations(converted, false);
+    std::map<std::string, Parameter*> by_name;
+    for (const NamedSlot& slot : named_slots(model)) {
+        by_name.emplace(slot.unique_name, slot.parameter);
+    }
+    for (const crysta::Relation& relation : relations.relations()) {
+        const auto found = by_name.find(relation.target_name);
+        if (found == by_name.end()) {
+            continue;
+        }
+        Parameter& target = *found->second;
+        if (target.value.get() != relation.target->value()) {
+            target.value = relation.target->value();
+        }
+        if (completion == Completion::ValuesAndUncertainties) {
+            target.start_uncertainty = target.uncertainty.get();
+            target.uncertainty = relation.target->uncertainty();
+        }
+    }
+}
+
+Dependence dependence_of(crysta::Dependence source) {
+    switch (source) {
+        case crysta::Dependence::SymmetryFixed: return Dependence::SymmetryFixed;
+        case crysta::Dependence::SymmetryTied: return Dependence::SymmetryTied;
+        case crysta::Dependence::Constrained: return Dependence::Constrained;
+        case crysta::Dependence::Independent: break;
+    }
+    return Dependence::Independent;
+}
+
+// crysta's wording for why a dependent's free flag is ignored.
+std::string dependent_source(const crysta::Relation& relation) {
+    switch (relation.source) {
+        case crysta::Dependence::SymmetryFixed: return "fixed by symmetry";
+        case crysta::Dependence::SymmetryTied: return "constrained by symmetry";
+        case crysta::Dependence::Constrained: return "constrained by '" + relation.declared + "'";
+        case crysta::Dependence::Independent: break;
+    }
+    return "independent";
+}
+
+// Every parameter's mark from crysta's graph; a dependent's free flag cleared, with crysta's warning
+// when there is a sink to give it to.
+void mark_dependents(Project& model, const crysta::RelationGraph& relations, const WarningSink& warn) {
+    std::map<std::string, Parameter*> by_name;
+    for (const NamedSlot& slot : named_slots(model)) {
+        slot.parameter->dependence = Dependence::Independent;
+        by_name.emplace(slot.unique_name, slot.parameter);
+    }
+    for (const crysta::Relation& relation : relations.relations()) {
+        const auto found = by_name.find(relation.target_name);
+        if (found == by_name.end()) {
+            continue;
+        }
+        Parameter& target = *found->second;
+        target.dependence = dependence_of(relation.source);
+        if (target.free.get()) {
+            target.free = false;
+            if (warn) {
+                warn("crysta.domain.dependent_free_ignored: parameter '" + relation.target_name +
+                     "' is " + dependent_source(relation) +
+                     "; free = True is ignored and it stays dependent");
+            }
+        }
+    }
+}
+
+}  // namespace
+
+void refresh_relations(Project& project, const WarningSink& warn) {
+    if (project.structures.empty()) {
+        return;
+    }
+    std::optional<RelationProject> converted;
+    try {
+        converted = relation_project(project);
+    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — a calculation refuses it
+        return;
+    }
+    const std::vector<crysta::RelationProblem> problems =
+        crysta::relation_problems(*converted->project);
+    if (!problems.empty()) {
+        std::vector<Diagnostic> diagnostics;
+        for (const crysta::RelationProblem& problem : problems) {
+            diagnostics.push_back({problem.code, Severity::Error, "analysis", problem.message, {}, "crysta"});
+        }
+        throw DomainValidationError(std::move(diagnostics));
+    }
+    mark_dependents(project, crysta::compile_relations(*converted->project, false), warn);
+}
+
+bool apply_relations(Project& project) {
+    if (project.structures.empty()) {
+        return false;
+    }
+    try {
+        RelationProject converted = relation_project(project);
+        copy_dependents(*converted.project, project, Completion::Values);
+        mark_dependents(project, crysta::compile_relations(*converted.project, false), {});
+        return true;
+    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — a calculation says why
+        return false;
+    }
+}
+
+void restore_dependents(Project& project) {
+    RelationProject converted = relation_project(project);
+    const crysta::RelationGraph relations = crysta::compile_relations(*converted.project, false);
+    copy_dependents(*converted.project, project, Completion::Values);
+    std::map<std::string, Parameter*> by_name;
+    for (const NamedSlot& slot : named_slots(project)) {
+        by_name.emplace(slot.unique_name, slot.parameter);
+    }
+    for (const crysta::Relation& relation : relations.relations()) {
+        const auto found = by_name.find(relation.target_name);
+        if (found == by_name.end()) {
+            continue;
+        }
+        Parameter& target = *found->second;
+        target.uncertainty = target.start_uncertainty.get();
+        target.start_uncertainty = std::nullopt;
+    }
+}
 
 std::vector<std::string> absorption_file_tokens(BeamModeEnum mode) {
     return crysta::file_tokens(crysta::TokenField::AbsorptionType, crysta_kind(mode));
@@ -1906,6 +1905,7 @@ std::string engine_model_dump(const Project& project) {
     const BuiltExperiments banks = calculation_banks(project.experiments);
     crysta::Project engine(to_crysta_structure(project.structure()), experiment_list(banks));
     engine.structure.scattering_lengths_fm = project.structure().scattering_lengths_fm;
+    fill_crysta_relations(project, engine);
     return crysta::model_dump(engine);
 }
 
@@ -1932,6 +1932,7 @@ void Project::publish_calculation() {
     }
     crysta::Project engine(to_crysta_structure(structure()), experiment_list(banks));
     engine.structure.scattering_lengths_fm = structure().scattering_lengths_fm;
+    fill_crysta_relations(*this, engine);
 
     std::vector<PdDataBase> data;
     std::vector<PowderReflnDataBase> reflections;
@@ -2297,10 +2298,11 @@ std::vector<std::string> identity_paths(const IterationCallback& subscriber,
 // series is written, never what the engine computes. It runs LAST, after the value write-back and every
 // completion pass, because the pattern must describe the model a SAVE would serialise. The three paths share
 // one function rather than three agreeing copies: a fourth entry point cannot forget a step it never spells.
-void publish_fit_state(Project& project) {
+void publish_fit_state(Project& project, crysta::Project& converted) {
     rebalance_positional_fit_state(project.structure());  // review-9 F1: lossless snapshot hand-off
-    complete_model_cell(project.structure());  // the symmetric half of the completion contract
-    complete_model_positions(project.structure());  // and its positional analog (seq=51)
+    // Every dependent as crysta completed it on the fit's own project (Wyckoff followers, cell
+    // siblings and constrained parameters), values and e.s.d.s.
+    copy_dependents(converted, project, Completion::ValuesAndUncertainties);
     project.refresh_calculated_pattern();  // The pattern follows the model it describes
 }
 
@@ -2440,6 +2442,7 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
         // (build_crysta_project + select_scattering) the forward accessors use — no persistent
         // CachedForwardModel (a later C09 slice), and nothing here forecloses it.
         crysta::Project project = build_crysta_project(structure(), experiment());
+        fill_crysta_relations(*this, project);
         const std::size_t considered = project.collect_parameters().size();  // _fit_result
         crysta::NeutronScattering scattering = select_scattering(structure());
         make_fit_ready(project.experiment());
@@ -2598,7 +2601,8 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
 
         // Write the refined value/esd back onto the edi model Parameters (all labels resolved above).
         detail::write_back(refined);
-        publish_fit_state(*this);
+        crysta::write_fit_result_into(project, result);  // crysta completes the dependents
+        publish_fit_state(*this, project);
         record_fit_result(*this, outcome, considered);
         return outcome;
     } catch (const std::invalid_argument&) {
@@ -2839,6 +2843,7 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         // sequential driver reads (structure name and experiment name feed the results.csv
         // column grammar; the scan block and iteration bound are the declared inputs).
         crysta::Project cproject = build_crysta_project(structure(), experiment());
+        fill_crysta_relations(*this, cproject);
         make_fit_ready(cproject.experiment());
         cproject.structure.name = structure().name;
         cproject.structure.scattering_lengths_fm = structure().scattering_lengths_fm;
@@ -3002,7 +3007,7 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         // keeps its pre-scan values, and results.csv is the resume point.
         if (!result.cancelled) {
             detail::write_back(refined);
-            publish_fit_state(*this);
+            publish_fit_state(*this, cproject);
             clear_fit_result(*this);  // A scan records no `_fit_result`; an earlier fit's would be stale
         }
         return outcome;
@@ -3033,6 +3038,7 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
             make_fit_ready(build_on_heap(built, *experiment_item));
         }
         crysta::Project project(to_crysta_structure(structure()), experiment_list(built));
+        fill_crysta_relations(*this, project);
         const std::size_t considered = project.collect_parameters().size();  // _fit_result
         project.fitting_mode = crysta::model_token_from_file(
             crysta::TokenField::FittingMode, crysta::BeamModeEnum::TimeOfFlight,
@@ -3183,7 +3189,8 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
             }
         }
         detail::write_back(refined);
-        publish_fit_state(*this);
+        crysta::write_fit_result_into(project, result);  // crysta completes the dependents
+        publish_fit_state(*this, project);
         record_fit_result(*this, outcome, considered);
         // Before shared items this copied bank 0 into the single-bank mirror (the loader set it
         // up that way), so `experiment` never reports stale values after a joint refinement.

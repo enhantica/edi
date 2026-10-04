@@ -113,15 +113,21 @@ void save_project_as(Project& project, const std::string& directory);
 // the adapter (the one crysta-touching TU); edi-only signature (ADR-0003).
 void save_project_via_crysta(const Project& project, const std::string& directory);
 
-// The symmetric completion helpers, implemented in the adapter (the one crysta-touching TU;
-// edi-only signatures, ADR-0003): re-derive every symmetry-tied dependent — cell siblings,
-// special-position follower axes — from the model's own independent values through crysta's
-// constraint machinery. A refinement completes through them on the way back from a fit;
-// undo_fit restores through them, so a restored representative pulls its followers back too.
-// The cell helper moves values only (a dependent cell parameter can never be free, so no
-// builder consumes its uncertainty); the positional helper completes uncertainties with values.
-void complete_model_cell(Structure& structure);
-void complete_model_positions(Structure& structure);
+// The project's relations checked by crysta (a refusal is a DomainValidationError carrying crysta's
+// `crysta.domain.constraint_*` codes), every parameter marked with its dependence, and a dependent's
+// free flag cleared with crysta's `crysta.domain.dependent_free_ignored` warning to `warn`. The loader
+// runs it; so does every edit of the relations.
+void refresh_relations(Project& project, const WarningSink& warn = {});
+
+// Every dependent (a cell sibling, a special-position follower, a constrained parameter) set from
+// its relation at the model's current independent values by crysta's one applier, values only.
+// Implemented in the adapter (the one crysta-touching TU, ADR-0003). Returns false and changes
+// nothing when the model cannot be converted or its relations do not hold; a calculation says why.
+bool apply_relations(Project& project);
+
+// Undo's half: apply_relations, then each dependent's e.s.d. back to the one it held before the
+// fit (kept in memory by the fit's write-back, or seeded by the loader from a legacy file).
+void restore_dependents(Project& project);
 
 // Review-9 F1 — the lossless prior-state property on edi's own paths (implemented in the
 // adapter, ADR-0003). rebalance_positional_fit_state runs between write_back and the
@@ -130,8 +136,8 @@ void complete_model_positions(Structure& structure);
 // the declared free axes only, and puts a fixed representative's own uncertainty presence
 // back. restore_positional_dependents is undo's positional pass: a restored snapshot axis
 // derives its basic back onto the representative sign-correctly, free tied axes that did not
-// restore their own snapshot take the restored uncertainty, fixed axes are never touched,
-// then values complete.
+// restore their own snapshot take the restored uncertainty, and fixed axes are never touched;
+// restore_dependents then completes the values.
 void rebalance_positional_fit_state(Structure& structure);
 void restore_positional_dependents(Structure& structure,
                                    const std::set<const Parameter*>& restored);

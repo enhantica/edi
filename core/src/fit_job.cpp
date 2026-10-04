@@ -97,10 +97,7 @@ FitFrame frame_of(Project& preview, const std::map<std::string, double>& values)
     }
     FitFrame frame;
     try {
-        for (const auto& structure : preview.structures) {
-            complete_model_cell(*structure);
-            complete_model_positions(*structure);
-        }
+        apply_relations(preview);
         preview.calculate();
         frame.reserve(preview.experiments.size());
         for (std::size_t index = 0; index < preview.experiments.size(); ++index) {

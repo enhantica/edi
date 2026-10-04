@@ -256,6 +256,13 @@ struct NamedParameter {
 };
 std::vector<NamedParameter> named_parameters(const Project& project);
 
+// The same walk over a project being written: each refinable parameter by its unique name.
+struct NamedSlot {
+    std::string unique_name;
+    Parameter* parameter = nullptr;
+};
+std::vector<NamedSlot> named_slots(Project& project);
+
 // The analysis categories shown (D-i): the minimizer and the fitting mode always; the scan declaration
 // in a scan mode. Every loop the block writes is shown as its own category ("loop in .edi — table in
 // gui"): the joint weights always (the writer writes them in every mode; admitted in joint mode only),

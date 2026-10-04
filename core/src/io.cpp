@@ -2873,12 +2873,44 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
                 project.aliases.push_back(std::move(alias));
             }
         }
-        if (const Loop* constraints = block.loop_with("_constraint.id")) {
+        if (const Loop* constraints = block.loop_with("_constraint.expression")) {
+            const bool has_id = constraints->column("_constraint.id") >= 0;
             for (const auto& row : constraints->rows) {
                 ParameterConstraint constraint;
-                constraint.id = loop_cell(*constraints, row, "_constraint.id", analysis_file.string());
                 constraint.expression =
                     loop_cell(*constraints, row, "_constraint.expression", analysis_file.string());
+                // An omitted id is the text left of the '=', as diffraction-lib and crysta read it;
+                // crysta then checks the whole constraint (refresh_relations below).
+                std::string id;
+                if (has_id) {
+                    id = loop_cell(*constraints, row, "_constraint.id", analysis_file.string());
+                } else {
+                    const std::string& text = constraint.expression.value();
+                    const std::size_t equals = text.find('=');
+                    id = equals == std::string::npos ? std::string() : text.substr(0, equals);
+                    id.erase(0, id.find_first_not_of(" \t"));
+                    id.erase(id.find_last_not_of(" \t") + 1);
+                    // crysta's reader refuses the same two rows with the same codes.
+                    const auto refuse = [&analysis_file](const char* code, std::string message) {
+                        throw DomainValidationError({Diagnostic{code, Severity::Error,
+                                                                analysis_file.string(),
+                                                                std::move(message), {}, "crysta"}});
+                    };
+                    if (id.empty()) {
+                        refuse("crysta.domain.constraint_syntax",
+                               "constraint '" + std::to_string(project.constraints.size() + 1) +
+                                   "': a constraint is '<alias> = <expression>', and '" + text +
+                                   "' names no alias left of an '='");
+                    }
+                    for (const auto& other : project.constraints) {
+                        if (other->id.value() == id) {
+                            refuse("crysta.domain.constraint_target",
+                                   "parameter '" + id + "' is set by two constraints, '" +
+                                       other->expression.value() + "' and '" + text + "'");
+                        }
+                    }
+                }
+                constraint.id = id;
                 if (constraints->column("_constraint.enabled") >= 0) {  // absent: every constraint applies
                     constraint.enabled = strict_bool(
                         loop_cell(*constraints, row, "_constraint.enabled", analysis_file.string()),
@@ -3313,6 +3345,9 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
             warn(message.str());
         }
     }
+    // The declared and symmetry relations, as crysta reads them: refused when they cannot hold,
+    // every parameter marked, a dependent's free flag cleared with a warning.
+    refresh_relations(project, warn);
     return project;
 }
 
@@ -3383,6 +3418,14 @@ std::vector<NamedParameter> named_parameters(const Project& project) {
     return named;
 }
 
+std::vector<NamedSlot> named_slots(Project& project) {
+    std::vector<NamedSlot> named;
+    for (const auto& slot : parameter_slots(project)) {
+        named.push_back({slot.unique_name, slot.parameter});
+    }
+    return named;
+}
+
 UndoFitOutcome undo_fit(Project& project) {
     const UndoFitOutcome outcome = restore_fit_start(project);
     if (!outcome.was_no_op) {
@@ -3423,8 +3466,10 @@ UndoFitOutcome restore_fit_start(Project& project) {
         // never touches a fixed axis's uncertainty presence — an undone model matches the
         // pre-fit state on every axis. A no-op undo changes NOTHING, so the second undo stays
         // idempotent by construction.
-        complete_model_cell(project.structure());
         restore_positional_dependents(project.structure(), restored);
+        // Every dependent follows its restored independents through crysta's applier and gets
+        // back the e.s.d. it held before the fit.
+        restore_dependents(project);
         clear_fit_result(project);  // The undone fit's result goes with it
     }
     return outcome;
