@@ -1,0 +1,44 @@
+{
+  "schema": 1,
+  "source": {
+    "engine": "FullProf.2k 7.95 inputs (references); crysta through edi (regression pins)",
+    "artifact": "PROVENANCE.md",
+    "provenance": "PROVENANCE.md"
+  },
+  "variants": {
+    "fast-descent": {
+      "quantities": {
+        "reduced_chi_square": {
+          "value": 0.0001447904953,
+          "kind": "regression-pin",
+          "tol_abs": 1e-09,
+          "tol_rel": null
+        },
+        "iterations": {
+          "value": 5.0,
+          "kind": "regression-pin",
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "rwp": {
+          "value": 0.0002292997186,
+          "kind": "regression-pin",
+          "tol_abs": 1e-09,
+          "tol_rel": null
+        },
+        "param.setup_polarization_coefficient.value": {
+          "value": 0.5,
+          "kind": "reference",
+          "tol_abs": 5e-05,
+          "tol_rel": null
+        },
+        "param.setup_monochromator_twotheta.value": {
+          "value": 26.5650511771,
+          "kind": "reference",
+          "tol_abs": 0.15,
+          "tol_rel": null
+        }
+      }
+    }
+  }
+}

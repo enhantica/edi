@@ -1,0 +1,170 @@
+# edi documentation — MkDocs (strict). Two audiences: docs/user/ for people who use
+# edi, docs/dev/ for people who build it; the subtle bottom-right audience switcher
+# joins them.
+site_name: edi
+site_description: "Diffraction data analysis"
+# Where GitHub Pages publishes the site once the repository is public (the Pages workflow).
+site_url: https://enhantica.github.io/edi/
+repo_url: https://github.com/enhantica/edi
+docs_dir: docs
+site_dir: site
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - toc.follow
+
+# The navigation is EXPLICIT: a CLI project's page counts as documented only when it is listed
+# here, never because its file exists — and `omitted_files: warn` under --strict makes a page left
+# out of this list a docs-build failure rather than a page that silently vanishes.
+nav:
+  - index.md
+  - Dev:
+      - dev/index.md
+      - dev/features.md
+      - Adrs:
+          - dev/adrs/index.md
+          - dev/adrs/0001-product-scope-and-relation-to-crysta.md
+          - dev/adrs/0002-monorepo-layout.md
+          - dev/adrs/0003-crysta-engine-boundary.md
+          - dev/adrs/0005-gui-base-injection-seams.md
+          - dev/adrs/0006-wasm-web-parity.md
+          - dev/adrs/0007-cli-surface.md
+          - dev/adrs/0008-minimized-external-deps.md
+          - dev/adrs/0009-cpp-product-core-thin-bindings.md
+          - dev/adrs/0010-parameter-metadata-and-vocabulary.md
+          - dev/adrs/0011-public-surface-necessity-rule.md
+          - dev/adrs/0012-collection-protocol.md
+          - dev/adrs/0013-weak-reference-policy.md
+          - dev/adrs/0014-xray-scattering-source-selectors.md
+          - dev/adrs/0015-edi-app-stack.md
+          - dev/adrs/0016-collection-owned-loop-ids.md
+          - dev/adrs/0017-tokens-cross-through-crysta.md
+          - dev/adrs/0017-prebuilt-crysta-sdk.md
+          - dev/adrs/0017-app-gui-design.md
+          - dev/adrs/0018-one-column-table-for-every-category.md
+          - dev/adrs/0019-symmetry-ties-in-the-gui.md
+          - dev/adrs/0020-calculation-worker-and-publication.md
+          - dev/adrs/0021-pattern-presentation.md
+          - dev/adrs/0022-structure-scene.md
+          - dev/adrs/0023-web-build.md
+          - dev/adrs/template.md
+      - Design:
+          - dev/design/api-types.md
+          - dev/design/app-design-inventory.md
+          - dev/design/architecture-and-upstreams.md
+          - dev/design/diffraction-lib-parity.md
+          - dev/design/modern-qt-guidelines.md
+          - dev/public-release-checklist.md
+          - dev/design/where-tests-live.md
+      - Requirements:
+          - dev/requirements/rwg-edi-coverage.md
+      - Verification:
+          - dev/verification/index.md
+          - dev/verification/pd-neut-cwl_LBCO_basic.ipynb
+          - dev/verification/pd-neut-cwl_LBCO_preferred-orientation.ipynb
+          - dev/verification/pd-neut-cwl_LaB6_11B.ipynb
+          - dev/verification/pd-neut-cwl_LaB6_absorption.ipynb
+          - dev/verification/pd-neut-cwl_LaB6_basic.ipynb
+          - dev/verification/pd-neut-cwl_LaB6_fcj-asymmetry.ipynb
+          - dev/verification/pd-neut-cwl_PbSO4_basic.ipynb
+          - dev/verification/pd-neut-cwl_PbSO4_beba-asymmetry.ipynb
+          - dev/verification/pd-neut-cwl_Y2O3_isotropic-adp.ipynb
+          - dev/verification/pd-neut-tof_Fe_pseudo-voigt.ipynb
+          - dev/verification/pd-neut-tof_NCAF_jorgensen-von-dreele.ipynb
+          - dev/verification/pd-neut-tof_Si_jorgensen-von-dreele-size-strain.ipynb
+          - dev/verification/pd-neut-tof_Si_jorgensen-von-dreele.ipynb
+          - dev/verification/pd-neut-tof_Si_jorgensen.ipynb
+          - dev/verification/pd-neut-tof_diamond_dream.ipynb
+          - dev/verification/pd-xray-cwl_LiF_single.ipynb
+          - dev/verification/pd-xray-cwl_LiF_single_polarization.ipynb
+  - User:
+      - user/index.md
+      - user/features.md
+      - CLI projects:
+          - user/cli/index.md
+          - user/cli/pd-neut-cwl_cosio-d20_start-1/index.md
+          - user/cli/pd-neut-cwl_cosio-d20_start-4/index.md
+          - user/cli/pd-neut-cwl_cosio-d20_scan-3f/index.md
+          - user/cli/pd-neut-cwl_cosio-d20_scan-324f/index.md
+          - user/cli/pd-neut-cwl_lbco-hrpt_start-2/index.md
+          - user/cli/pd-neut-cwl_lbco-hrpt_start-4/index.md
+          - user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/index.md
+          - user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/index.md
+          - user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/index.md
+          - user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/index.md
+          - user/cli/pd-neut-tof_diamond-dream_basic/index.md
+          - user/cli/pd-neut-tof_si-sepd_start-2/index.md
+          - user/cli/pd-neut-tof_si-sepd_start-5/index.md
+          - user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/index.md
+          - user/cli/pd-neut-cwl_pbso4_beba-asymmetry/index.md
+          - user/cli/pd-neut-tof_fe_pseudo-voigt/index.md
+          - user/cli/pd-neut-tof_cecoal-polaris_chebyshev/index.md
+          - user/cli/pd-neut-tof_ceo2-pearl_polynomial/index.md
+          - user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/index.md
+          - user/cli/pd-xray-cwl_lif_single/index.md
+      - Guides:
+          - user/guides/complete-project-loading.md
+      - Tutorials:
+          - user/tutorials/index.md
+          - user/tutorials/refine-cosio-d20-tscan.ipynb
+          - user/tutorials/refine-lbco-hrpt-from-data.ipynb
+          - user/tutorials/refine-ncaf-wish.ipynb
+          - user/tutorials/refine-si-sepd.ipynb
+          - user/tutorials/simulate-si-tof.ipynb
+
+# The verification notebook PAGES live in the docs tree; their FullProf reference DATA stays
+# at knowledge/verification/fullprof beside the tests that read it. Jupytext .py sources
+# never render as pages. A CLI project's own
+# files (its project/ tree, PROVENANCE.md and any fullprof/ evidence) are inputs, not pages: each project's page is its
+# docs/user/cli/<id>/index.md.
+exclude_docs: |
+  *.py
+  /user/cli/*/project/
+  /user/cli/*/PROVENANCE.md
+  /user/cli/*/fullprof/
+
+# Defining `plugins` drops the implicit default, so `search` is restated explicitly.
+# mkdocs-jupyter renders the Verification notebooks PRE-EXECUTED (the CI docs job runs
+# notebook-exec-ci before docs-build); include_requirejs is required for the plotly figures.
+hooks:
+  - tools/docs/features_projection_hook.py
+
+plugins:
+  - search
+  - mkdocs-jupyter:
+      include: ['*.ipynb']
+      execute: false
+      allow_errors: false
+      include_source: true
+      include_requirejs: true
+
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.superfences
+
+# Link validation is relaxed (crysta precedent): the dev corpus carries many inline
+# file-path references and repo-target links that are not mkdocs page links.
+# Repo-level md link integrity is checked separately.
+validation:
+  nav:
+    omitted_files: warn
+    not_found: ignore
+    absolute_links: ignore
+  links:
+    not_found: ignore
+    anchors: ignore
+    absolute_links: ignore
+    unrecognized_links: ignore
+
+extra_javascript:
+  - assets/javascripts/audience.js
+
+extra_css:
+  - assets/stylesheets/audience.css

@@ -1,0 +1,53 @@
+{
+  "upstream_sha": "0d9f10e412a0cd08d4dd0af95845dd9bb597dcdf",
+  "pages": {
+    "fcj": {
+      "page": "pd-neut-cwl_LaB6_fcj-asymmetry",
+      "upstream_directory": "pd-neut-cwl_lab6",
+      "files": {
+        "ECH0030684_LaB6_1p622A_fcj.prf": "791ed87f188bcdefcb668d81d144023d7c8f9cad8b05ed7b829ae420813b8d85",
+        "ECH0030684_LaB6_1p622A_fcj.pcr": "34aa5fb2745ecff3ea206126faf2c1055a45cabe0a43a17105e3efe76653f26a",
+        "ECH0030684_LaB6_1p622A_fcj.dat": "c41427269a36cad15936de9c11fea8c6719293a6e5acfe4146291efa8ed26cbc",
+        "ECH0030684_LaB6_1p622A_fcj.bac": "6e9c617371a72357082cd201a44d7e8c1d0a104ef1f139d3ea3173c3ef592149",
+        "ECH0030684_LaB6_1p622A_fcj.sum": "42289ad161634b6fed3c3047da295c824058e663d6ba5bed68ad9e8c0da08cd3"
+      },
+      "oracle": "FullProf",
+      "source_sha256": "0afd36d4e8c7c42db78be6172f363e3e7a169fc818117acea55d36312e625a13"
+    },
+    "beba": {
+      "page": "pd-neut-cwl_PbSO4_beba-asymmetry",
+      "upstream_directory": "pd-neut-cwl_pbso4_beba-asymmetry",
+      "files": {
+        "pbso4.pcr": "b4f1ec62dd50fc73a48ec66bf2c285a4b865a7415d519390aea1ce0c45827e1b",
+        "pbso4.dat": "637bfde3bb1adb24045fb688c2a0cdfd424bf7bc9956f267a11053ba82a944e2",
+        "pbso4.sum": "18014b6dd3c118708df12c87aa8630ba6ed1d793c86ed6e90e2e953030c6be16",
+        "pbso4.prf": "551bf092e20d3bc57aa60326dc75435f102fc7cc0efa62e1819ac4b97aa4a832",
+        "pbso4.bac": "a7ee9ccd9fd7b10713495817b715b87b38cf2cb97c561750b4e09a83eb34103a"
+      },
+      "oracle": "FullProf at AsyLim=180 after a BeBa-coefficient fit or issue-166 inferred map; raw cryspy remains a convention comparison",
+      "source_sha256": "9300352ca0ddf430a8ca3bf8e0bbb5d38f77889da7c2fa70d7cb46f2d51e1810",
+      "comparison_files": {
+        "pbso4.pcr": "23791b9d6564fc5d3e2840d3fb6dced4fbbe7ab480e0915aa1434f3886559c65",
+        "pbso4.dat": "637bfde3bb1adb24045fb688c2a0cdfd424bf7bc9956f267a11053ba82a944e2",
+        "pbso4.sum": "42128272cb26869839a4b7a406c8a34e38c0f70ddb83eb6f671246587e65158b",
+        "pbso4.prf": "071e2b81921e0c47b12819db5a65ec3cc2efa92d914bb46746cb7c3faa35107b",
+        "pbso4.bac": "a7ee9ccd9fd7b10713495817b715b87b38cf2cb97c561750b4e09a83eb34103a"
+      },
+      "comparison_provenance": "Authored FullProf 8.40 regeneration from upstream PCR; only AsyLim 160 -> 180, owner 2026-09-26"
+    },
+    "tof": {
+      "page": "pd-neut-tof_Fe_pseudo-voigt",
+      "upstream_directory": "pd-neut-tof_fe_pseudo-voigt",
+      "files": {
+        "fe_1.bac": "16a34bda1efbf25220b4625eed1a779163c14084689141182a7eba6c8d4609ec",
+        "fe_1.prf": "fd3761ea0c11dcb8e82571341bfa3b4045bf218e74df7e0a073d200c83a8012f",
+        "fe.pcr": "f6190f4c930ac5bae6411152b3196617e7a85654b6294bbab51b0a3ef5688779",
+        "fe.sum": "5286353543b3d81b82d682d3cc95da8a12b850620b0d65f12237148b41b3c489",
+        "fe.dat": "cfa0e32227587856d96e1d0936783be310cdf756a6f09aacd9da72a82612ebc4"
+      },
+      "oracle": "FullProf",
+      "source_sha256": "a0662915cf31fe4f2bd9bc7579b5993790bffc8b935560a69b94d22ff715edd5"
+    }
+  },
+  "cryspy_version": "0.12.1"
+}

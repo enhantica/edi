@@ -1,0 +1,26 @@
+data_ceo2
+
+_edi.schema_version 3
+
+_cell.length_a 5.410495
+_cell.length_b 5.410495
+_cell.length_c 5.410495
+_cell.angle_alpha 90.0
+_cell.angle_beta 90.0
+_cell.angle_gamma 90.0
+
+_space_group.name_h_m "F m -3 m"
+
+loop_
+_atom_site.id
+_atom_site.type_symbol
+_atom_site.fract_x
+_atom_site.fract_y
+_atom_site.fract_z
+_atom_site.wyckoff_letter
+_atom_site.multiplicity
+_atom_site.occupancy
+_atom_site.adp_iso
+_atom_site.adp_type
+Ce Ce 0.0 0.0 0.0 a 4 1.0 0.30159() Biso
+O O 0.25 0.25 0.25 c 8 1.0 0.49641() Biso

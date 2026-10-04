@@ -1,0 +1,12 @@
+_edi.schema_version 3
+
+_metadata.name             pd_neut_tof_fe_pseudo_voigt
+_metadata.title            "Fe (ferrite), BEER (ESS), TOF pseudo-Voigt"
+_metadata.description      ?
+_metadata.created          "26 Sep 2026 10:28:28"
+_metadata.last_modified    "26 Sep 2026 10:28:29"
+_metadata.timestamp        ?
+
+# Deliberately unsupported (edi ADR-0017 §14): opening this project warns
+# `unsupported _rendering_plot.type "plotly" - using auto`, a third message for the app's list.
+_rendering_plot.type plotly

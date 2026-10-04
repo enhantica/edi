@@ -1,0 +1,196 @@
+{
+  "schema": 1,
+  "source": {
+    "engine": "FullProf 8.40 (references); edi (regression pins)",
+    "artifact": "fullprof/ls-fit.sum",
+    "provenance": "PROVENANCE.md"
+  },
+  "quantities": {
+    "n_free": {
+      "value": 32.0,
+      "kind": "reference",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    },
+    "param.scale.value": {
+      "value": 16720.916015625,
+      "kind": "reference",
+      "tol_abs": 1211.631225584,
+      "tol_rel": null
+    },
+    "param.calib_d_to_tof_offset.value": {
+      "value": 3.6256,
+      "kind": "reference",
+      "tol_abs": 1.334,
+      "tol_rel": null
+    },
+    "param.calib_d_to_tof_quadratic.value": {
+      "value": -2.03,
+      "kind": "reference",
+      "tol_abs": 0.76,
+      "tol_rel": null
+    },
+    "param.broad_gauss_sigma_1.value": {
+      "value": 46.924992,
+      "kind": "reference",
+      "tol_abs": 8.586152,
+      "tol_rel": null
+    },
+    "param.broad_lorentz_gamma_1.value": {
+      "value": 4.140237,
+      "kind": "reference",
+      "tol_abs": 1.240412,
+      "tol_rel": null
+    },
+    "param.Ce.fract_z.value": {
+      "value": 0.38229,
+      "kind": "reference",
+      "tol_abs": 0.00064,
+      "tol_rel": null
+    },
+    "param.Ce.adp_iso.value": {
+      "value": 0.489,
+      "kind": "reference",
+      "tol_abs": 0.08,
+      "tol_rel": null
+    },
+    "param.Co.fract_z.value": {
+      "value": 0.81557,
+      "kind": "reference",
+      "tol_abs": 0.00132,
+      "tol_rel": null
+    },
+    "param.Co.adp_iso.value": {
+      "value": 0.372,
+      "kind": "reference",
+      "tol_abs": 0.104,
+      "tol_rel": null
+    },
+    "param.Al1.adp_iso.value": {
+      "value": 0.66,
+      "kind": "reference",
+      "tol_abs": 0.096,
+      "tol_rel": null
+    },
+    "param.Al2.fract_z.value": {
+      "value": 0.04304,
+      "kind": "reference",
+      "tol_abs": 0.00088,
+      "tol_rel": null
+    },
+    "param.Al2.adp_iso.value": {
+      "value": 0.626,
+      "kind": "reference",
+      "tol_abs": 0.1,
+      "tol_rel": null
+    },
+    "param.Al3.fract_x.value": {
+      "value": 0.06958,
+      "kind": "reference",
+      "tol_abs": 0.00056,
+      "tol_rel": null
+    },
+    "param.Al3.fract_z.value": {
+      "value": 0.70169,
+      "kind": "reference",
+      "tol_abs": 0.00064,
+      "tol_rel": null
+    },
+    "param.Al3.adp_iso.value": {
+      "value": 0.576,
+      "kind": "reference",
+      "tol_abs": 0.092,
+      "tol_rel": null
+    },
+    "param.background[0].value": {
+      "value": 26877.0,
+      "kind": "reference",
+      "tol_abs": 624.72,
+      "tol_rel": null
+    },
+    "param.background[1].value": {
+      "value": 4615.5,
+      "kind": "reference",
+      "tol_abs": 1171.6,
+      "tol_rel": null
+    },
+    "param.background[2].value": {
+      "value": 2949.4,
+      "kind": "reference",
+      "tol_abs": 1087.32,
+      "tol_rel": null
+    },
+    "param.background[3].value": {
+      "value": -123.51,
+      "kind": "reference",
+      "tol_abs": 1029.88,
+      "tol_rel": null
+    },
+    "param.background[4].value": {
+      "value": 633.65,
+      "kind": "reference",
+      "tol_abs": 975.24,
+      "tol_rel": null
+    },
+    "param.background[5].value": {
+      "value": 515.33,
+      "kind": "reference",
+      "tol_abs": 929.84,
+      "tol_rel": null
+    },
+    "param.background[6].value": {
+      "value": 547.51,
+      "kind": "reference",
+      "tol_abs": 880.96,
+      "tol_rel": null
+    },
+    "param.background[7].value": {
+      "value": 329.05,
+      "kind": "reference",
+      "tol_abs": 820.32,
+      "tol_rel": null
+    },
+    "param.background[8].value": {
+      "value": 454.36,
+      "kind": "reference",
+      "tol_abs": 728.76,
+      "tol_rel": null
+    },
+    "param.background[9].value": {
+      "value": 706.44,
+      "kind": "reference",
+      "tol_abs": 605.64,
+      "tol_rel": null
+    },
+    "param.background[10].value": {
+      "value": 554.54,
+      "kind": "reference",
+      "tol_abs": 413.16,
+      "tol_rel": null
+    },
+    "param.background[11].value": {
+      "value": 167.71,
+      "kind": "reference",
+      "tol_abs": 186.956,
+      "tol_rel": null
+    },
+    "iterations": {
+      "value": 4.0,
+      "kind": "regression-pin",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    },
+    "reduced_chi_square": {
+      "value": 2.869451006,
+      "kind": "regression-pin",
+      "tol_abs": 1e-06,
+      "tol_rel": null
+    },
+    "rwp": {
+      "value": 0.02088086078,
+      "kind": "regression-pin",
+      "tol_abs": 1e-09,
+      "tol_rel": null
+    }
+  }
+}

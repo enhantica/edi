@@ -1,0 +1,13 @@
+_edi.schema_version 3
+
+_fitting_mode.type single
+
+# Deliberately unsupported (edi ADR-0017 §14): opening this project warns
+# `unsupported _minimizer.type "bumps (lm)" - using crysta`, so the app's message list always has an
+# example to show. The fit runs with crysta.
+_minimizer.type "bumps (lm)"
+
+loop_
+_joint_fit.experiment_id
+_joint_fit.weight
+beer 1

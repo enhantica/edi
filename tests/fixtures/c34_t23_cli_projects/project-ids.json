@@ -1,0 +1,19 @@
+{
+  "authority": "development hub knowledge/decision-records.md, owner decisions 2026-09-24: project id rule and tolerance-pinned non-executing seeds",
+  "source_to_project": {
+    "cosio-d20-s1": "pd-neut-cwl_cosio-d20_start-1",
+    "cosio-d20-s4": "pd-neut-cwl_cosio-d20_start-4",
+    "cosio-d20-scan-3f": "pd-neut-cwl_cosio-d20_scan-3f",
+    "lbco-hrpt-s2": "pd-neut-cwl_lbco-hrpt_start-2",
+    "lbco-hrpt-s4": "pd-neut-cwl_lbco-hrpt_start-4",
+    "ncaf-wish-2bank-s3": "pd-neut-tof_ncaf-wish-2bank_start-3",
+    "ncaf-wish-3bank-s5": "pd-neut-tof_ncaf-wish-3bank_start-5",
+    "si-sepd-s2": "pd-neut-tof_si-sepd_start-2",
+    "si-sepd-s5": "pd-neut-tof_si-sepd_start-5"
+  },
+  "temporarily_nonexecuting_sources": [
+    "ncaf-wish-2bank-s3",
+    "si-sepd-s2",
+    "si-sepd-s5"
+  ]
+}

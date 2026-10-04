@@ -1,0 +1,29 @@
+data_ncaf
+_audit_creation_method              ' structural twin of the frozen NCAF EDI project'
+_chemical_formula_sum               'Al2 Ca3 F14 Na2'
+_cell_formula_units_Z               4
+_cell_length_a                      10.250256
+_cell_length_b                      10.250256
+_cell_length_c                      10.250256
+_cell_angle_alpha                   90
+_cell_angle_beta                    90
+_cell_angle_gamma                   90
+_space_group_IT_number              199
+_space_group_name_H-M_alt           'I 21 3'
+
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_symmetry_multiplicity
+_atom_site_Wyckoff_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+_atom_site_occupancy
+_atom_site_B_iso_or_equiv
+Ca1 Ca 12 b 0.4664(10) 0 0.25 1 0.93284(10)
+Al1 Al 8 a 0.25193(10) 0.25193(10) 0.25193(10) 1 0.81973(10)
+Na1 Na 8 a 0.08526(10) 0.08526(10) 0.08526(10) 1 2.27039(10)
+F1 F 24 c 0.13761(10) 0.30558(10) 0.11963(10) 1 0.94591(10)
+F2 F 24 c 0.36233(10) 0.36318(10) 0.18704(10) 1 1.44298(10)
+F3 F 8 a 0.46106(10) 0.46106(10) 0.46106(10) 1 0.94745(10)

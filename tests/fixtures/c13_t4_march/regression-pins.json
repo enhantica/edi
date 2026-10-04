@@ -1,0 +1,9 @@
+{
+  "claim": "REGRESSION PIN: March ratio added to the existing LBCO fitting project.",
+  "method": "sha256 of committed HEAD blobs for the explicitly named extension files",
+  "sha256": {
+    "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/expected.json": "7f24649919671dc502982c8796edee63ba2d93a6442fc007a074a5ea2235fd37",
+    "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project/experiments/hrpt.edi": "4a7aa10f25ecc085a7b8b9f0f621b44feab8b1b3864bb185b2d349991fecd162"
+  },
+  "task": ""
+}

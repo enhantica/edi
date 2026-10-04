@@ -1,0 +1,11 @@
+{
+  "upstream_commit": "0d9f10e412a0cd08d4dd0af95845dd9bb597dcdf",
+  "project": "pd-neut-cwl_lbco_preferred-orientation",
+  "files": {
+    "lbco.pcr": "5759c765e3050ca6298ad7a3f5cbeb93cc76991bd4f9c36b4e39dcaffeda4403",
+    "lbco.dat": "83c7f3d27d2e254367dd7dc3730261b9a5ebb811baaeed01fde050a7ba99be24",
+    "lbco.prf": "35dc25fbc63948be198b7ab7274c7e9ba98621bd796edc8c87d8a8e8909df89f",
+    "lbco.sum": "1a01f3a87c4eca5eabed96dcf7040f339ded66f09a77b3d02fdeff3713807275",
+    "lbco.bac": "07f4b0b0371334c6b67bfebca0f75374e2e33685fdbf87ee877d673335833d03"
+  }
+}

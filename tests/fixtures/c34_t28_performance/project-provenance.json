@@ -1,0 +1,34 @@
+{
+  "input_sha256": {
+    "analysis/analysis.edi": "39fbca0c5cfba66ab4e126f6070c173209bdec5b984a7462a84e702363e3570f",
+    "experiments/wish_1_10.edi": "6893edefb924126beb3817b349dc4f263ff11308172d7cfff70dd9b003b6b67c",
+    "experiments/wish_2_9.edi": "cf1953881302612f1dd7f659ac76026c2f75dfd929f6a846b7c0c822328eef19",
+    "experiments/wish_3_8.edi": "58437073a03edf8861f09c22d0ddc85637268b35e189f76dc430b62068af0bfa",
+    "experiments/wish_4_7.edi": "5642c0c37de594406461d2b66ef20d09c46e4cd3af26d1f92e4615714179a6ae",
+    "experiments/wish_5_6.edi": "555792faa1e574fad3b12a810b6aa7dc67abad14977453c97d65a9d0b8826b3b",
+    "project.edi": "95a8dc39779c96a985966891e022ae4e4b01cfc96057dbfa7414b2d873ec3e3a",
+    "structures/ncaf.edi": "e82cb95b0026e4bd5bbfcade8895353cd7cec44267a26f12aa6d13c2bb5a46c0"
+  },
+  "project_sha256": {
+    "analysis/analysis.edi": "39fbca0c5cfba66ab4e126f6070c173209bdec5b984a7462a84e702363e3570f",
+    "experiments/wish_1_10.edi": "58fb9d00bffbb3046fdd59eb7a6a478366c7e3c6d4d10d5910390a3e5d7f483c",
+    "experiments/wish_2_9.edi": "d7478675aca1132c6c97177404c10e199d0a6464a20b61363f3bfd4c3d02ad14",
+    "experiments/wish_3_8.edi": "1ebf695c746aef0b3b3285434f523745822c04057a28f52bf8f4d72059c519b7",
+    "experiments/wish_4_7.edi": "4cd084aa4c8a6c6528eb9b345c7a2b3511733a7df198904c1f16ea100ce1840c",
+    "experiments/wish_5_6.edi": "b762e0aa86752398fa0adaa446606004e17f69af7148733f2de53173f301ceeb",
+    "project.edi": "95a8dc39779c96a985966891e022ae4e4b01cfc96057dbfa7414b2d873ec3e3a",
+    "structures/ncaf.edi": "78b8a4708c42f8dd6a4e6d126bda466ca1e3f3b50bab20c1838600ac8487ee55"
+  },
+  "reference": "three-sigma performance workload; retained historical source input",
+  "shifted_tokens": {
+    "experiments/wish_1_10.edi": 37,
+    "experiments/wish_2_9.edi": 33,
+    "experiments/wish_3_8.edi": 32,
+    "experiments/wish_4_7.edi": 38,
+    "experiments/wish_5_6.edi": 37,
+    "structures/ncaf.edi": 22
+  },
+  "sigma_offset": 3,
+  "source_commit": "f3ea7afea400639f2a66d6acb8d922163f1ef128",
+  "source_project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project"
+}

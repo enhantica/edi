@@ -1,0 +1,49 @@
+data_experiment
+_edi.schema_version 3
+_experiment_type.sample_form powder
+_experiment_type.radiation_probe neutron
+_experiment_type.scattering_type bragg
+_calculator.type cryspy
+_experiment_type.beam_mode "constant wavelength"
+_peak.type cwl-pseudo-voigt
+_peak.broad_gauss_u 0
+_peak.broad_gauss_v 0
+_peak.broad_gauss_w 0.01
+_peak.broad_lorentz_x 0
+_peak.broad_lorentz_y 0
+_instrument.setup_wavelength 1.54
+_instrument.calib_twotheta_offset 0.29
+_instrument.calib_sample_displacement 0.17
+_instrument.calib_sample_transparency -0.21
+loop_
+_linked_structure.structure_id
+_linked_structure.scale
+structure 1
+
+loop_
+_excluded_region.id
+_excluded_region.start
+_excluded_region.end
+1 24.54560819148427 26.04560819148427
+2 67.214169454424592 68.714169454424592
+
+loop_
+_data.two_theta
+_data.intensity_meas
+_data.intensity_meas_su
+24.54560819148427 2 1
+25.54560819148427 2 1
+26.54560819148427 2 1
+46.629888822954427 2 1
+66.714169454424592 2 1
+67.714169454424592 2 1
+68.714169454424592 2 1
+
+_peak.cutoff_fwhm 8.2
+_background.type line-segment
+loop_
+_background.id
+_background.position
+_background.intensity
+1 20 0
+2 75 0

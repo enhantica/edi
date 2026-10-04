@@ -1,0 +1,34 @@
+data_ncaf
+
+_edi.schema_version 2
+
+_cell.length_a 10.250256
+_cell.length_b 10.250256
+_cell.length_c 10.250256
+_cell.angle_alpha 90.
+_cell.angle_beta 90.
+_cell.angle_gamma 90.
+
+_space_group.name_h_m "I 21 3"
+_space_group.coord_system_code 1
+
+_geom.min_bond_distance_cutoff 0.
+_geom.bond_distance_inc 0.25
+
+loop_
+_atom_site.id
+_atom_site.type_symbol
+_atom_site.fract_x
+_atom_site.fract_y
+_atom_site.fract_z
+_atom_site.wyckoff_letter
+_atom_site.multiplicity
+_atom_site.occupancy
+_atom_site.adp_iso
+_atom_site.adp_type
+Ca1 Ca 0.4664(10) 0 0.25 b 12 1. 0.93284(10) Biso
+Al1 Al 0.25193(10) 0.25193(10) 0.25193(10) a 8 1. 0.81973(10) Biso
+Na1 Na 0.08526(10) 0.08526(10) 0.08526(10) a 8 1. 2.27039(10) Biso
+F1 F 0.13761(10) 0.30558(10) 0.11963(10) c 24 1. 0.94591(10) Biso
+F2 F 0.36233(10) 0.36318(10) 0.18704(10) c 24 1. 1.44298(10) Biso
+F3 F 0.46106(10) 0.46106(10) 0.46106(10) a 8 1. 0.94745(10) Biso

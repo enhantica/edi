@@ -1,0 +1,43 @@
+{
+  "schema": 1,
+  "reference": "native CLI, independent of wasm",
+  "project": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project",
+  "project_sha256": "59598683c87d8eaeb8111c504a69731a45242c1498841008032b6e787535ffa8",
+  "native_build_commit": "33e69adc523faebad4957f0216926d146f6ee476",
+  "native_extension_sha256": "6811a6373af2f4bd3655ed476b8bd76fefc3d041791cbd01d09610449cb3dd14",
+  "command": [
+    "python",
+    "-m",
+    "edi",
+    "fit",
+    "<committed project>",
+    "--dry",
+    "--report",
+    "machine",
+    "--verbosity",
+    "full"
+  ],
+  "status": "done",
+  "converged": "true",
+  "reduced_chi_square": 1.297269332,
+  "parameters": {
+    "param.Ba.adp_iso.value": 0.5145724787,
+    "param.Co.adp_iso.value": 0.2112290798,
+    "param.La.adp_iso.value": 0.5153289482,
+    "param.O.adp_iso.value": 1.391586328,
+    "param.background[0].value": 169.5932718,
+    "param.background[1].value": 165.0317819,
+    "param.background[2].value": 166.9936786,
+    "param.background[3].value": 175.8909608,
+    "param.background[4].value": 171.2366393,
+    "param.broad_gauss_u.value": 0.08260675493,
+    "param.broad_gauss_v.value": -0.117578449,
+    "param.broad_gauss_w.value": 0.121316547,
+    "param.broad_lorentz_y.value": 0.08387178157,
+    "param.calib_twotheta_offset.value": 0.6204145628,
+    "param.cell_length_a.value": 3.890790544,
+    "param.scale.value": 9.13189281
+  },
+  "relative_tolerance": 1e-09,
+  "absolute_tolerance": 1e-11
+}

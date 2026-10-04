@@ -1,0 +1,10 @@
+_fitting_mode.type joint
+
+loop_
+_joint_fit.experiment_id
+_joint_fit.weight
+wish_1_10 1
+wish_2_9 1
+wish_3_8 1
+wish_4_7 1
+wish_5_6 1

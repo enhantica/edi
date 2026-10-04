@@ -1,0 +1,7 @@
+{
+  "generator": "tests/fixtures/c11_t62/repin.py",
+  "crysta_commit": "190129d631c648c10ea8486fcd490d8ac002defc",
+  "edi_commit": "af22657cc35ff1ae7e53b9a53aeda5338212f99c",
+  "default_record_sha256": "4fa31a294ad5f3f3c2a547fd1aed8a4e74f34465fc3c7afa06fa8e14b75d8518",
+  "claim": "Regression pin only; covariance, terminal polish and CW generation limit changed."
+}

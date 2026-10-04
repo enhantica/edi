@@ -1,0 +1,56 @@
+# Proposes a crysta SDK pin update when crysta main has a newer build: a branch with only the pin
+# lines changed, and a CI run on it. A maintainer opens and merges the pull request.
+name: crysta SDK update
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+  pull-requests: read
+
+concurrency:
+  group: crysta-sdk-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    name: crysta SDK update
+    # Only in the canonical public repository: the repository is named enhantica/edi at the cutover
+    # (docs/dev/public-release-checklist.md), so a copy under another name (edi-public before the
+    # swap, a fork) never pushes a pin branch. No pull request triggers this workflow; the fork test
+    # is the guard every job using the crysta token carries.
+    if: github.repository == 'enhantica/edi' && github.event.pull_request.head.repo.fork == false
+    environment: crysta-sdk
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Mint a crysta installation token
+        id: crysta-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.ENHANTICA_APP_ID }}
+          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          owner: enhantica
+          repositories: crysta
+          permission-contents: read
+      - name: Clone crysta main (the order of its builds)
+        env:
+          CRYSTA_TOKEN: ${{ steps.crysta-token.outputs.token }}
+        run: >-
+          git clone --filter=blob:none --no-checkout
+          "https://x-access-token:${CRYSTA_TOKEN}@github.com/enhantica/crysta.git" "$RUNNER_TEMP/crysta"
+      - name: Propose the newest crysta build; prune superseded update branches
+        env:
+          CRYSTA_TOKEN: ${{ steps.crysta-token.outputs.token }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          python3 tools/ci/crysta_sdk_update.py --crysta-clone "$RUNNER_TEMP/crysta"

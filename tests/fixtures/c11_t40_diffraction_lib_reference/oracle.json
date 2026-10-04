@@ -1,0 +1,3483 @@
+{
+  "descriptors": [
+    {
+      "attribute": "mu_r",
+      "cif_names": [
+        "_easydiffraction_absorption.mu_r"
+      ],
+      "edi_names": [
+        "_absorption.mu_r"
+      ],
+      "internal_name": "mu_r",
+      "source": "src/easydiffraction/datablocks/experiment/categories/absorption/cylinder_hewat.py",
+      "surface": "absorption"
+    },
+    {
+      "attribute": "type",
+      "cif_names": [
+        "_easydiffraction_absorption.type"
+      ],
+      "edi_names": [
+        "_absorption.type"
+      ],
+      "internal_name": "type",
+      "source": "src/easydiffraction/datablocks/experiment/categories/absorption/base.py",
+      "surface": "absorption"
+    },
+    {
+      "attribute": "id",
+      "cif_names": [
+        "_easydiffraction_alias.id",
+        "_alias.label"
+      ],
+      "edi_names": [
+        "_alias.id"
+      ],
+      "internal_name": "id",
+      "source": "src/easydiffraction/analysis/categories/aliases/default.py",
+      "surface": "aliases"
+    },
+    {
+      "attribute": "parameter_unique_name",
+      "cif_names": [
+        "_easydiffraction_alias.parameter_unique_name",
+        "_alias.param_unique_name"
+      ],
+      "edi_names": [
+        "_alias.parameter_unique_name"
+      ],
+      "internal_name": "parameter_unique_name",
+      "source": "src/easydiffraction/analysis/categories/aliases/default.py",
+      "surface": "aliases"
+    },
+    {
+      "attribute": "id",
+      "cif_names": [
+        "_atom_site_aniso.label"
+      ],
+      "edi_names": [
+        "_atom_site_aniso.id"
+      ],
+      "internal_name": "id",
+      "source": "src/easydiffraction/datablocks/structure/categories/atom_site_aniso/default.py",
+      "surface": "atom_site_aniso"
+    },
+    {
+      "attribute": "adp_iso",
+      "cif_names": [
+        "_atom_site.B_iso_or_equiv",
+        "_atom_site.U_iso_or_equiv"
+      ],
+      "edi_names": [
+        "_atom_site.adp_iso"
+      ],
+      "internal_name": "adp_iso",
+      "source": "src/easydiffraction/datablocks/structure/categories/atom_sites/default.py",
+      "surface": "atom_sites"
+    },
+    {
+      "attribute": "adp_type",
+      "cif_names": [
+        "_atom_site.ADP_type"
+      ],
+      "edi_names": [
+        "_atom_site.adp_type"
+      ],
+      "internal_name": "adp_type",
+      "source": "src/easydiffraction/datablocks/structure/categories/atom_sites/default.py",
+      "surface": "atom_sites"
+    },
+    {
+      "attribute": "fract_x",
+      "cif_names": [],
+      "edi_names": [
+        "_atom_site.fract_x"
+      ],
+      "internal_name": "fract_x",
+      "source": "src/easydiffraction/datablocks/structure/categories/atom_sites/default.py",
+      "surface": "atom_sites"
+    },
+    {
+      "attribute": "fract_y",
+      "cif_names": [],
+      "edi_names": [
+        "_atom_site.fract_y"
+      ],
+      "internal_name": "fract_y",
+      "source": "src/easydiffraction/datablocks/structure/categories/atom_sites/default.py",
+      "surface": "atom_sites"
+    },
+    {
+      "attribute": "fract_z",
+      "cif_names": [],
+      "edi_names": [
+        "_atom_site.fract_z"
+      ],
+      "internal_name": "fract_z",
+      "source": "src/easydiffraction/datablocks/structure/categories/atom_sites/default.py",
+      "surface": "atom_sites"
+    },
+    {
+      "attribute": "id",
+      "cif_names": [
+        "_atom_site.label"
+      ],
+      "edi_names": [
+        "_atom_site.id"
+      ],
+      "internal_name": "id",
+      "source": "src/easydiffraction/datablocks/structure/categories/atom_sites/default.py",
+      "surface": "atom_sites"
+    },
+    {
+      "attribute": "multiplicity",
+      "cif_names": [
+        "_atom_site.site_symmetry_multiplicity"
+      ],
+      "edi_names": [
+        "_atom_site.multiplicity"
+      ],
+      "internal_name": "multiplicity",
+      "source": "src/easydiffraction/datablocks/structure/categories/atom_sites/default.py",
+      "surface": "atom_sites"
+    },
+    {
+      "attribute": "occupancy",
+      "cif_names": [],
+      "edi_names": [
+        "_atom_site.occupancy"
+      ],
+      "internal_name": "occupancy",
+      "source": "src/easydiffraction/datablocks/structure/categories/atom_sites/default.py",
+      "surface": "atom_sites"
+    },
+    {
+      "attribute": "type_symbol",
+      "cif_names": [],
+      "edi_names": [
+        "_atom_site.type_symbol"
+      ],
+      "internal_name": "type_symbol",
+      "source": "src/easydiffraction/datablocks/structure/categories/atom_sites/default.py",
+      "surface": "atom_sites"
+    },
+    {
+      "attribute": "wyckoff_letter",
+      "cif_names": [
+        "_atom_site.Wyckoff_symbol",
+        "_atom_site.Wyckoff_letter"
+      ],
+      "edi_names": [
+        "_atom_site.wyckoff_letter"
+      ],
+      "internal_name": "wyckoff_letter",
+      "source": "src/easydiffraction/datablocks/structure/categories/atom_sites/default.py",
+      "surface": "atom_sites"
+    },
+    {
+      "attribute": "coef",
+      "cif_names": [
+        "_pd_background.Chebyshev_coef"
+      ],
+      "edi_names": [
+        "_background.coef"
+      ],
+      "internal_name": "coef",
+      "source": "src/easydiffraction/datablocks/experiment/categories/background/chebyshev.py",
+      "surface": "background"
+    },
+    {
+      "attribute": "id",
+      "cif_names": [
+        "_pd_background.id"
+      ],
+      "edi_names": [
+        "_background.id"
+      ],
+      "internal_name": "id",
+      "source": "src/easydiffraction/datablocks/experiment/categories/background/chebyshev.py",
+      "surface": "background"
+    },
+    {
+      "attribute": "id",
+      "cif_names": [
+        "_pd_background.id"
+      ],
+      "edi_names": [
+        "_background.id"
+      ],
+      "internal_name": "id",
+      "source": "src/easydiffraction/datablocks/experiment/categories/background/line_segment.py",
+      "surface": "background"
+    },
+    {
+      "attribute": "intensity",
+      "cif_names": [
+        "_pd_background.line_segment_intensity",
+        "_pd_background_line_segment_intensity"
+      ],
+      "edi_names": [
+        "_background.intensity"
+      ],
+      "internal_name": "intensity",
+      "source": "src/easydiffraction/datablocks/experiment/categories/background/line_segment.py",
+      "surface": "background"
+    },
+    {
+      "attribute": "order",
+      "cif_names": [
+        "_pd_background.Chebyshev_order"
+      ],
+      "edi_names": [
+        "_background.order"
+      ],
+      "internal_name": "order",
+      "source": "src/easydiffraction/datablocks/experiment/categories/background/chebyshev.py",
+      "surface": "background"
+    },
+    {
+      "attribute": "position",
+      "cif_names": [
+        "_pd_background.line_segment_X",
+        "_pd_background_line_segment_X"
+      ],
+      "edi_names": [
+        "_background.position"
+      ],
+      "internal_name": "position",
+      "source": "src/easydiffraction/datablocks/experiment/categories/background/line_segment.py",
+      "surface": "background"
+    },
+    {
+      "attribute": "type",
+      "cif_names": [
+        "_easydiffraction_background.type"
+      ],
+      "edi_names": [
+        "_background.type"
+      ],
+      "internal_name": "type",
+      "source": "src/easydiffraction/datablocks/experiment/categories/background/base.py",
+      "surface": "background"
+    },
+    {
+      "attribute": "type",
+      "cif_names": [
+        "_easydiffraction_calculator.type"
+      ],
+      "edi_names": [
+        "_calculator.type"
+      ],
+      "internal_name": "type",
+      "source": "src/easydiffraction/datablocks/experiment/categories/calculator/default.py",
+      "surface": "calculator"
+    },
+    {
+      "attribute": "angle_alpha",
+      "cif_names": [],
+      "edi_names": [
+        "_cell.angle_alpha"
+      ],
+      "internal_name": "angle_alpha",
+      "source": "src/easydiffraction/datablocks/structure/categories/cell/default.py",
+      "surface": "cell"
+    },
+    {
+      "attribute": "angle_beta",
+      "cif_names": [],
+      "edi_names": [
+        "_cell.angle_beta"
+      ],
+      "internal_name": "angle_beta",
+      "source": "src/easydiffraction/datablocks/structure/categories/cell/default.py",
+      "surface": "cell"
+    },
+    {
+      "attribute": "angle_gamma",
+      "cif_names": [],
+      "edi_names": [
+        "_cell.angle_gamma"
+      ],
+      "internal_name": "angle_gamma",
+      "source": "src/easydiffraction/datablocks/structure/categories/cell/default.py",
+      "surface": "cell"
+    },
+    {
+      "attribute": "length_a",
+      "cif_names": [],
+      "edi_names": [
+        "_cell.length_a"
+      ],
+      "internal_name": "length_a",
+      "source": "src/easydiffraction/datablocks/structure/categories/cell/default.py",
+      "surface": "cell"
+    },
+    {
+      "attribute": "length_b",
+      "cif_names": [],
+      "edi_names": [
+        "_cell.length_b"
+      ],
+      "internal_name": "length_b",
+      "source": "src/easydiffraction/datablocks/structure/categories/cell/default.py",
+      "surface": "cell"
+    },
+    {
+      "attribute": "length_c",
+      "cif_names": [],
+      "edi_names": [
+        "_cell.length_c"
+      ],
+      "internal_name": "length_c",
+      "source": "src/easydiffraction/datablocks/structure/categories/cell/default.py",
+      "surface": "cell"
+    },
+    {
+      "attribute": "expression",
+      "cif_names": [
+        "_easydiffraction_constraint.expression"
+      ],
+      "edi_names": [
+        "_constraint.expression"
+      ],
+      "internal_name": "expression",
+      "source": "src/easydiffraction/analysis/categories/constraints/default.py",
+      "surface": "constraints"
+    },
+    {
+      "attribute": "id",
+      "cif_names": [
+        "_easydiffraction_constraint.id"
+      ],
+      "edi_names": [
+        "_constraint.id"
+      ],
+      "internal_name": "id",
+      "source": "src/easydiffraction/analysis/categories/constraints/default.py",
+      "surface": "constraints"
+    },
+    {
+      "attribute": "calc_status",
+      "cif_names": [
+        "_pd_data.refinement_status"
+      ],
+      "edi_names": [
+        "_data.calc_status"
+      ],
+      "internal_name": "calc_status",
+      "source": "src/easydiffraction/datablocks/experiment/categories/data/bragg_pd.py",
+      "surface": "data"
+    },
+    {
+      "attribute": "calc_status",
+      "cif_names": [
+        "_pd_data.refinement_status"
+      ],
+      "edi_names": [
+        "_data.calc_status"
+      ],
+      "internal_name": "calc_status",
+      "source": "src/easydiffraction/datablocks/experiment/categories/data/total_pd.py",
+      "surface": "data"
+    },
+    {
+      "attribute": "d_spacing",
+      "cif_names": [
+        "_pd_proc.d_spacing"
+      ],
+      "edi_names": [
+        "_data.d_spacing"
+      ],
+      "internal_name": "d_spacing",
+      "source": "src/easydiffraction/datablocks/experiment/categories/data/bragg_pd.py",
+      "surface": "data"
+    },
+    {
+      "attribute": "g_r_calc",
+      "cif_names": [
+        "_pd_calc.intensity_total"
+      ],
+      "edi_names": [
+        "_data.g_r_calc"
+      ],
+      "internal_name": "g_r_calc",
+      "source": "src/easydiffraction/datablocks/experiment/categories/data/total_pd.py",
+      "surface": "data"
+    },
+    {
+      "attribute": "g_r_meas",
+      "cif_names": [
+        "_pd_meas.intensity_total"
+      ],
+      "edi_names": [
+        "_data.g_r_meas"
+      ],
+      "internal_name": "g_r_meas",
+      "source": "src/easydiffraction/datablocks/experiment/categories/data/total_pd.py",
+      "surface": "data"
+    },
+    {
+      "attribute": "g_r_meas_su",
+      "cif_names": [
+        "_pd_meas.intensity_total_su"
+      ],
+      "edi_names": [
+        "_data.g_r_meas_su"
+      ],
+      "internal_name": "g_r_meas_su",
+      "source": "src/easydiffraction/datablocks/experiment/categories/data/total_pd.py",
+      "surface": "data"
+    },
+    {
+      "attribute": "id",
+      "cif_names": [
+        "_pd_data.point_id"
+      ],
+      "edi_names": [
+        "_data.id"
+      ],
+      "internal_name": "id",
+      "source": "src/easydiffraction/datablocks/experiment/categories/data/bragg_pd.py",
+      "surface": "data"
+    },
+    {
+      "attribute": "id",
+      "cif_names": [
+        "_pd_data.point_id"
+      ],
+      "edi_names": [
+        "_data.id"
+      ],
+      "internal_name": "id",
+      "source": "src/easydiffraction/datablocks/experiment/categories/data/total_pd.py",
+      "surface": "data"
+    },
+    {
+      "attribute": "intensity_bkg",
+      "cif_names": [
+        "_pd_calc.intensity_bkg"
+      ],
+      "edi_names": [
+        "_data.intensity_bkg"
+      ],
+      "internal_name": "intensity_bkg",
+      "source": "src/easydiffraction/datablocks/experiment/categories/data/bragg_pd.py",
+      "surface": "data"
+    },
+    {
+      "attribute": "intensity_calc",
+      "cif_names": [
+        "_pd_calc.intensity_total"
+      ],
+      "edi_names": [
+        "_data.intensity_calc"
+      ],
+      "internal_name": "intensity_calc",
+      "source": "src/easydiffraction/datablocks/experiment/categories/data/bragg_pd.py",
+      "surface": "data"
+    },
+    {
+      "attribute": "intensity_meas",
+      "cif_names": [
+        "_pd_meas.intensity_total",
+        "_pd_proc.intensity_norm"
+      ],
+      "edi_names": [
+        "_data.intensity_meas"
+      ],
+      "internal_name": "intensity_meas",
+      "source": "src/easydiffraction/datablocks/experiment/categories/data/bragg_pd.py",
+      "surface": "data"
+    },
+    {
+      "attribute": "intensity_meas_su",
+      "cif_names": [
+        "_pd_meas.intensity_total_su",
+        "_pd_proc.intensity_norm_su"
+      ],
+      "edi_names": [
+        "_data.intensity_meas_su"
+      ],
+      "internal_name": "intensity_meas_su",
+      "source": "src/easydiffraction/datablocks/experiment/categories/data/bragg_pd.py",
+      "surface": "data"
+    },
+    {
+      "attribute": "r",
+      "cif_names": [
+        "_pd_proc.r"
+      ],
+      "edi_names": [
+        "_data.r"
+      ],
+      "internal_name": "r",
+      "source": "src/easydiffraction/datablocks/experiment/categories/data/total_pd.py",
+      "surface": "data"
+    },
+    {
+      "attribute": "time_of_flight",
+      "cif_names": [
+        "_pd_meas.time_of_flight"
+      ],
+      "edi_names": [
+        "_data.time_of_flight"
+      ],
+      "internal_name": "time_of_flight",
+      "source": "src/easydiffraction/datablocks/experiment/categories/data/bragg_pd.py",
+      "surface": "data"
+    },
+    {
+      "attribute": "two_theta",
+      "cif_names": [
+        "_pd_proc.2theta_scan",
+        "_pd_meas.2theta_scan"
+      ],
+      "edi_names": [
+        "_data.two_theta"
+      ],
+      "internal_name": "two_theta",
+      "source": "src/easydiffraction/datablocks/experiment/categories/data/bragg_pd.py",
+      "surface": "data"
+    },
+    {
+      "attribute": "sin_theta_over_lambda_max",
+      "cif_names": [
+        "_refln.sin_theta_over_lambda_range_max"
+      ],
+      "edi_names": [
+        "_data_range.sin_theta_over_lambda_max"
+      ],
+      "internal_name": "sin_theta_over_lambda_max",
+      "source": "src/easydiffraction/datablocks/experiment/categories/data_range/sc.py",
+      "surface": "data_range"
+    },
+    {
+      "attribute": "sin_theta_over_lambda_min",
+      "cif_names": [
+        "_refln.sin_theta_over_lambda_range_min"
+      ],
+      "edi_names": [
+        "_data_range.sin_theta_over_lambda_min"
+      ],
+      "internal_name": "sin_theta_over_lambda_min",
+      "source": "src/easydiffraction/datablocks/experiment/categories/data_range/sc.py",
+      "surface": "data_range"
+    },
+    {
+      "attribute": "time_of_flight_inc",
+      "cif_names": [
+        "_pd_meas.time_of_flight_range_inc"
+      ],
+      "edi_names": [
+        "_data_range.time_of_flight_inc"
+      ],
+      "internal_name": "time_of_flight_inc",
+      "source": "src/easydiffraction/datablocks/experiment/categories/data_range/tof.py",
+      "surface": "data_range"
+    },
+    {
+      "attribute": "time_of_flight_max",
+      "cif_names": [
+        "_pd_meas.time_of_flight_range_max"
+      ],
+      "edi_names": [
+        "_data_range.time_of_flight_max"
+      ],
+      "internal_name": "time_of_flight_max",
+      "source": "src/easydiffraction/datablocks/experiment/categories/data_range/tof.py",
+      "surface": "data_range"
+    },
+    {
+      "attribute": "time_of_flight_min",
+      "cif_names": [
+        "_pd_meas.time_of_flight_range_min"
+      ],
+      "edi_names": [
+        "_data_range.time_of_flight_min"
+      ],
+      "internal_name": "time_of_flight_min",
+      "source": "src/easydiffraction/datablocks/experiment/categories/data_range/tof.py",
+      "surface": "data_range"
+    },
+    {
+      "attribute": "two_theta_inc",
+      "cif_names": [
+        "_pd_meas.2theta_range_inc"
+      ],
+      "edi_names": [
+        "_data_range.two_theta_inc"
+      ],
+      "internal_name": "two_theta_inc",
+      "source": "src/easydiffraction/datablocks/experiment/categories/data_range/cwl.py",
+      "surface": "data_range"
+    },
+    {
+      "attribute": "two_theta_max",
+      "cif_names": [
+        "_pd_meas.2theta_range_max"
+      ],
+      "edi_names": [
+        "_data_range.two_theta_max"
+      ],
+      "internal_name": "two_theta_max",
+      "source": "src/easydiffraction/datablocks/experiment/categories/data_range/cwl.py",
+      "surface": "data_range"
+    },
+    {
+      "attribute": "two_theta_min",
+      "cif_names": [
+        "_pd_meas.2theta_range_min"
+      ],
+      "edi_names": [
+        "_data_range.two_theta_min"
+      ],
+      "internal_name": "two_theta_min",
+      "source": "src/easydiffraction/datablocks/experiment/categories/data_range/cwl.py",
+      "surface": "data_range"
+    },
+    {
+      "attribute": "ambient_electric_field",
+      "cif_names": [
+        "_easydiffraction_diffrn.ambient_electric_field"
+      ],
+      "edi_names": [
+        "_diffrn.ambient_electric_field"
+      ],
+      "internal_name": "ambient_electric_field",
+      "source": "src/easydiffraction/datablocks/experiment/categories/diffrn/default.py",
+      "surface": "diffrn"
+    },
+    {
+      "attribute": "ambient_magnetic_field",
+      "cif_names": [
+        "_easydiffraction_diffrn.ambient_magnetic_field"
+      ],
+      "edi_names": [
+        "_diffrn.ambient_magnetic_field"
+      ],
+      "internal_name": "ambient_magnetic_field",
+      "source": "src/easydiffraction/datablocks/experiment/categories/diffrn/default.py",
+      "surface": "diffrn"
+    },
+    {
+      "attribute": "ambient_pressure",
+      "cif_names": [],
+      "edi_names": [
+        "_diffrn.ambient_pressure"
+      ],
+      "internal_name": "ambient_pressure",
+      "source": "src/easydiffraction/datablocks/experiment/categories/diffrn/default.py",
+      "surface": "diffrn"
+    },
+    {
+      "attribute": "ambient_temperature",
+      "cif_names": [],
+      "edi_names": [
+        "_diffrn.ambient_temperature"
+      ],
+      "internal_name": "ambient_temperature",
+      "source": "src/easydiffraction/datablocks/experiment/categories/diffrn/default.py",
+      "surface": "diffrn"
+    },
+    {
+      "attribute": "end",
+      "cif_names": [
+        "_easydiffraction_excluded_region.end"
+      ],
+      "edi_names": [
+        "_excluded_region.end"
+      ],
+      "internal_name": "end",
+      "source": "src/easydiffraction/datablocks/experiment/categories/excluded_regions/default.py",
+      "surface": "excluded_regions"
+    },
+    {
+      "attribute": "id",
+      "cif_names": [
+        "_easydiffraction_excluded_region.id"
+      ],
+      "edi_names": [
+        "_excluded_region.id"
+      ],
+      "internal_name": "id",
+      "source": "src/easydiffraction/datablocks/experiment/categories/excluded_regions/default.py",
+      "surface": "excluded_regions"
+    },
+    {
+      "attribute": "start",
+      "cif_names": [
+        "_easydiffraction_excluded_region.start"
+      ],
+      "edi_names": [
+        "_excluded_region.start"
+      ],
+      "internal_name": "start",
+      "source": "src/easydiffraction/datablocks/experiment/categories/excluded_regions/default.py",
+      "surface": "excluded_regions"
+    },
+    {
+      "attribute": "beam_mode",
+      "cif_names": [
+        "_easydiffraction_experiment_type.beam_mode",
+        "_expt_type.beam_mode"
+      ],
+      "edi_names": [
+        "_experiment_type.beam_mode"
+      ],
+      "internal_name": "beam_mode",
+      "source": "src/easydiffraction/datablocks/experiment/categories/experiment_type/default.py",
+      "surface": "experiment_type"
+    },
+    {
+      "attribute": "radiation_probe",
+      "cif_names": [
+        "_easydiffraction_experiment_type.radiation_probe",
+        "_expt_type.radiation_probe"
+      ],
+      "edi_names": [
+        "_experiment_type.radiation_probe"
+      ],
+      "internal_name": "radiation_probe",
+      "source": "src/easydiffraction/datablocks/experiment/categories/experiment_type/default.py",
+      "surface": "experiment_type"
+    },
+    {
+      "attribute": "sample_form",
+      "cif_names": [
+        "_easydiffraction_experiment_type.sample_form",
+        "_expt_type.sample_form"
+      ],
+      "edi_names": [
+        "_experiment_type.sample_form"
+      ],
+      "internal_name": "sample_form",
+      "source": "src/easydiffraction/datablocks/experiment/categories/experiment_type/default.py",
+      "surface": "experiment_type"
+    },
+    {
+      "attribute": "scattering_type",
+      "cif_names": [
+        "_easydiffraction_experiment_type.scattering_type",
+        "_expt_type.scattering_type"
+      ],
+      "edi_names": [
+        "_experiment_type.scattering_type"
+      ],
+      "internal_name": "scattering_type",
+      "source": "src/easydiffraction/datablocks/experiment/categories/experiment_type/default.py",
+      "surface": "experiment_type"
+    },
+    {
+      "attribute": "model",
+      "cif_names": [
+        "_easydiffraction_extinction.model"
+      ],
+      "edi_names": [
+        "_extinction.model"
+      ],
+      "internal_name": "model",
+      "source": "src/easydiffraction/datablocks/experiment/categories/extinction/becker_coppens.py",
+      "surface": "extinction"
+    },
+    {
+      "attribute": "mosaicity",
+      "cif_names": [
+        "_easydiffraction_extinction.mosaicity"
+      ],
+      "edi_names": [
+        "_extinction.mosaicity"
+      ],
+      "internal_name": "mosaicity",
+      "source": "src/easydiffraction/datablocks/experiment/categories/extinction/becker_coppens.py",
+      "surface": "extinction"
+    },
+    {
+      "attribute": "radius",
+      "cif_names": [
+        "_easydiffraction_extinction.radius"
+      ],
+      "edi_names": [
+        "_extinction.radius"
+      ],
+      "internal_name": "radius",
+      "source": "src/easydiffraction/datablocks/experiment/categories/extinction/becker_coppens.py",
+      "surface": "extinction"
+    },
+    {
+      "attribute": "type",
+      "cif_names": [
+        "_easydiffraction_extinction.type"
+      ],
+      "edi_names": [
+        "_extinction.type"
+      ],
+      "internal_name": "type",
+      "source": "src/easydiffraction/datablocks/experiment/categories/extinction/base.py",
+      "surface": "extinction"
+    },
+    {
+      "attribute": "correlation",
+      "cif_names": [],
+      "edi_names": [
+        "_fit_parameter_correlation.correlation"
+      ],
+      "internal_name": "correlation",
+      "source": "src/easydiffraction/analysis/categories/fit_parameter_correlations/default.py",
+      "surface": "fit_parameter_correlations"
+    },
+    {
+      "attribute": "id",
+      "cif_names": [],
+      "edi_names": [
+        "_fit_parameter_correlation.id"
+      ],
+      "internal_name": "id",
+      "source": "src/easydiffraction/analysis/categories/fit_parameter_correlations/default.py",
+      "surface": "fit_parameter_correlations"
+    },
+    {
+      "attribute": "parameter_unique_name_i",
+      "cif_names": [
+        "_fit_parameter_correlation.param_unique_name_i"
+      ],
+      "edi_names": [
+        "_fit_parameter_correlation.parameter_unique_name_i"
+      ],
+      "internal_name": "parameter_unique_name_i",
+      "source": "src/easydiffraction/analysis/categories/fit_parameter_correlations/default.py",
+      "surface": "fit_parameter_correlations"
+    },
+    {
+      "attribute": "parameter_unique_name_j",
+      "cif_names": [
+        "_fit_parameter_correlation.param_unique_name_j"
+      ],
+      "edi_names": [
+        "_fit_parameter_correlation.parameter_unique_name_j"
+      ],
+      "internal_name": "parameter_unique_name_j",
+      "source": "src/easydiffraction/analysis/categories/fit_parameter_correlations/default.py",
+      "surface": "fit_parameter_correlations"
+    },
+    {
+      "attribute": "source_kind",
+      "cif_names": [],
+      "edi_names": [
+        "_fit_parameter_correlation.source_kind"
+      ],
+      "internal_name": "source_kind",
+      "source": "src/easydiffraction/analysis/categories/fit_parameter_correlations/default.py",
+      "surface": "fit_parameter_correlations"
+    },
+    {
+      "attribute": "bounds_uncertainty_multiplier",
+      "cif_names": [
+        "_fit_parameter.fit_bounds_uncertainty_multiplier"
+      ],
+      "edi_names": [
+        "_fit_parameter.bounds_uncertainty_multiplier"
+      ],
+      "internal_name": "bounds_uncertainty_multiplier",
+      "source": "src/easydiffraction/analysis/categories/fit_parameters/default.py",
+      "surface": "fit_parameters"
+    },
+    {
+      "attribute": "fit_max",
+      "cif_names": [],
+      "edi_names": [
+        "_fit_parameter.fit_max"
+      ],
+      "internal_name": "fit_max",
+      "source": "src/easydiffraction/analysis/categories/fit_parameters/default.py",
+      "surface": "fit_parameters"
+    },
+    {
+      "attribute": "fit_min",
+      "cif_names": [],
+      "edi_names": [
+        "_fit_parameter.fit_min"
+      ],
+      "internal_name": "fit_min",
+      "source": "src/easydiffraction/analysis/categories/fit_parameters/default.py",
+      "surface": "fit_parameters"
+    },
+    {
+      "attribute": "parameter_unique_name",
+      "cif_names": [
+        "_fit_parameter.param_unique_name"
+      ],
+      "edi_names": [
+        "_fit_parameter.parameter_unique_name"
+      ],
+      "internal_name": "parameter_unique_name",
+      "source": "src/easydiffraction/analysis/categories/fit_parameters/default.py",
+      "surface": "fit_parameters"
+    },
+    {
+      "attribute": "posterior_best_sample_value",
+      "cif_names": [],
+      "edi_names": [
+        "_fit_parameter.posterior_best_sample_value"
+      ],
+      "internal_name": "posterior_best_sample_value",
+      "source": "src/easydiffraction/analysis/categories/fit_parameters/default.py",
+      "surface": "fit_parameters"
+    },
+    {
+      "attribute": "posterior_effective_sample_size_bulk",
+      "cif_names": [],
+      "edi_names": [
+        "_fit_parameter.posterior_effective_sample_size_bulk"
+      ],
+      "internal_name": "posterior_effective_sample_size_bulk",
+      "source": "src/easydiffraction/analysis/categories/fit_parameters/default.py",
+      "surface": "fit_parameters"
+    },
+    {
+      "attribute": "posterior_gelman_rubin",
+      "cif_names": [],
+      "edi_names": [
+        "_fit_parameter.posterior_gelman_rubin"
+      ],
+      "internal_name": "posterior_gelman_rubin",
+      "source": "src/easydiffraction/analysis/categories/fit_parameters/default.py",
+      "surface": "fit_parameters"
+    },
+    {
+      "attribute": "posterior_interval_68_high",
+      "cif_names": [],
+      "edi_names": [
+        "_fit_parameter.posterior_interval_68_high"
+      ],
+      "internal_name": "posterior_interval_68_high",
+      "source": "src/easydiffraction/analysis/categories/fit_parameters/default.py",
+      "surface": "fit_parameters"
+    },
+    {
+      "attribute": "posterior_interval_68_low",
+      "cif_names": [],
+      "edi_names": [
+        "_fit_parameter.posterior_interval_68_low"
+      ],
+      "internal_name": "posterior_interval_68_low",
+      "source": "src/easydiffraction/analysis/categories/fit_parameters/default.py",
+      "surface": "fit_parameters"
+    },
+    {
+      "attribute": "posterior_interval_95_high",
+      "cif_names": [],
+      "edi_names": [
+        "_fit_parameter.posterior_interval_95_high"
+      ],
+      "internal_name": "posterior_interval_95_high",
+      "source": "src/easydiffraction/analysis/categories/fit_parameters/default.py",
+      "surface": "fit_parameters"
+    },
+    {
+      "attribute": "posterior_interval_95_low",
+      "cif_names": [],
+      "edi_names": [
+        "_fit_parameter.posterior_interval_95_low"
+      ],
+      "internal_name": "posterior_interval_95_low",
+      "source": "src/easydiffraction/analysis/categories/fit_parameters/default.py",
+      "surface": "fit_parameters"
+    },
+    {
+      "attribute": "posterior_median",
+      "cif_names": [],
+      "edi_names": [
+        "_fit_parameter.posterior_median"
+      ],
+      "internal_name": "posterior_median",
+      "source": "src/easydiffraction/analysis/categories/fit_parameters/default.py",
+      "surface": "fit_parameters"
+    },
+    {
+      "attribute": "posterior_uncertainty",
+      "cif_names": [],
+      "edi_names": [
+        "_fit_parameter.posterior_uncertainty"
+      ],
+      "internal_name": "posterior_uncertainty",
+      "source": "src/easydiffraction/analysis/categories/fit_parameters/default.py",
+      "surface": "fit_parameters"
+    },
+    {
+      "attribute": "start_uncertainty",
+      "cif_names": [],
+      "edi_names": [
+        "_fit_parameter.start_uncertainty"
+      ],
+      "internal_name": "start_uncertainty",
+      "source": "src/easydiffraction/analysis/categories/fit_parameters/default.py",
+      "surface": "fit_parameters"
+    },
+    {
+      "attribute": "start_value",
+      "cif_names": [],
+      "edi_names": [
+        "_fit_parameter.start_value"
+      ],
+      "internal_name": "start_value",
+      "source": "src/easydiffraction/analysis/categories/fit_parameters/default.py",
+      "surface": "fit_parameters"
+    },
+    {
+      "attribute": "fitting_time",
+      "cif_names": [],
+      "edi_names": [
+        "_fit_result.fitting_time"
+      ],
+      "internal_name": "fitting_time",
+      "source": "src/easydiffraction/analysis/categories/fit_result/base.py",
+      "surface": "fit_result"
+    },
+    {
+      "attribute": "iterations",
+      "cif_names": [],
+      "edi_names": [
+        "_fit_result.iterations"
+      ],
+      "internal_name": "iterations",
+      "source": "src/easydiffraction/analysis/categories/fit_result/base.py",
+      "surface": "fit_result"
+    },
+    {
+      "attribute": "message",
+      "cif_names": [],
+      "edi_names": [
+        "_fit_result.message"
+      ],
+      "internal_name": "message",
+      "source": "src/easydiffraction/analysis/categories/fit_result/base.py",
+      "surface": "fit_result"
+    },
+    {
+      "attribute": "reduced_chi_square",
+      "cif_names": [],
+      "edi_names": [
+        "_fit_result.reduced_chi_square"
+      ],
+      "internal_name": "reduced_chi_square",
+      "source": "src/easydiffraction/analysis/categories/fit_result/base.py",
+      "surface": "fit_result"
+    },
+    {
+      "attribute": "result_kind",
+      "cif_names": [],
+      "edi_names": [
+        "_fit_result.result_kind"
+      ],
+      "internal_name": "result_kind",
+      "source": "src/easydiffraction/analysis/categories/fit_result/base.py",
+      "surface": "fit_result"
+    },
+    {
+      "attribute": "type",
+      "cif_names": [
+        "_easydiffraction_fitting_mode.type"
+      ],
+      "edi_names": [
+        "_fitting_mode.type"
+      ],
+      "internal_name": "type",
+      "source": "src/easydiffraction/analysis/categories/fitting_mode/default.py",
+      "surface": "fitting_mode"
+    },
+    {
+      "attribute": "bond_distance_inc",
+      "cif_names": [
+        "_geom.bond_distance_incr"
+      ],
+      "edi_names": [
+        "_geom.bond_distance_inc"
+      ],
+      "internal_name": "bond_distance_inc",
+      "source": "src/easydiffraction/datablocks/structure/categories/geom/default.py",
+      "surface": "geom"
+    },
+    {
+      "attribute": "min_bond_distance_cutoff",
+      "cif_names": [],
+      "edi_names": [
+        "_geom.min_bond_distance_cutoff"
+      ],
+      "internal_name": "min_bond_distance_cutoff",
+      "source": "src/easydiffraction/datablocks/structure/categories/geom/default.py",
+      "surface": "geom"
+    },
+    {
+      "attribute": "calib_d_to_tof_linear",
+      "cif_names": [
+        "_instr.d_to_tof_linear"
+      ],
+      "edi_names": [
+        "_instrument.calib_d_to_tof_linear"
+      ],
+      "internal_name": "d_to_tof_linear",
+      "source": "src/easydiffraction/datablocks/experiment/categories/instrument/tof.py",
+      "surface": "instrument"
+    },
+    {
+      "attribute": "calib_d_to_tof_offset",
+      "cif_names": [
+        "_instr.d_to_tof_offset"
+      ],
+      "edi_names": [
+        "_instrument.calib_d_to_tof_offset"
+      ],
+      "internal_name": "d_to_tof_offset",
+      "source": "src/easydiffraction/datablocks/experiment/categories/instrument/tof.py",
+      "surface": "instrument"
+    },
+    {
+      "attribute": "calib_d_to_tof_quadratic",
+      "cif_names": [
+        "_instr.d_to_tof_quad"
+      ],
+      "edi_names": [
+        "_instrument.calib_d_to_tof_quadratic"
+      ],
+      "internal_name": "d_to_tof_quadratic",
+      "source": "src/easydiffraction/datablocks/experiment/categories/instrument/tof.py",
+      "surface": "instrument"
+    },
+    {
+      "attribute": "calib_d_to_tof_reciprocal",
+      "cif_names": [
+        "_instr.d_to_tof_recip"
+      ],
+      "edi_names": [
+        "_instrument.calib_d_to_tof_reciprocal"
+      ],
+      "internal_name": "d_to_tof_reciprocal",
+      "source": "src/easydiffraction/datablocks/experiment/categories/instrument/tof.py",
+      "surface": "instrument"
+    },
+    {
+      "attribute": "calib_sample_displacement",
+      "cif_names": [
+        "_instr.sample_displacement"
+      ],
+      "edi_names": [
+        "_instrument.calib_sample_displacement"
+      ],
+      "internal_name": "sample_displacement",
+      "source": "src/easydiffraction/datablocks/experiment/categories/instrument/cwl.py",
+      "surface": "instrument"
+    },
+    {
+      "attribute": "calib_sample_transparency",
+      "cif_names": [
+        "_instr.sample_transparency"
+      ],
+      "edi_names": [
+        "_instrument.calib_sample_transparency"
+      ],
+      "internal_name": "sample_transparency",
+      "source": "src/easydiffraction/datablocks/experiment/categories/instrument/cwl.py",
+      "surface": "instrument"
+    },
+    {
+      "attribute": "calib_twotheta_offset",
+      "cif_names": [
+        "_pd_calib.2theta_offset",
+        "_instr.2theta_offset"
+      ],
+      "edi_names": [
+        "_instrument.calib_twotheta_offset"
+      ],
+      "internal_name": "twotheta_offset",
+      "source": "src/easydiffraction/datablocks/experiment/categories/instrument/cwl.py",
+      "surface": "instrument"
+    },
+    {
+      "attribute": "setup_monochromator_twotheta",
+      "cif_names": [
+        "_instr.monochromator_twotheta"
+      ],
+      "edi_names": [
+        "_instrument.setup_monochromator_twotheta"
+      ],
+      "internal_name": "monochromator_twotheta",
+      "source": "src/easydiffraction/datablocks/experiment/categories/instrument/cwl.py",
+      "surface": "instrument"
+    },
+    {
+      "attribute": "setup_polarization_coefficient",
+      "cif_names": [
+        "_instr.polarization_coefficient"
+      ],
+      "edi_names": [
+        "_instrument.setup_polarization_coefficient"
+      ],
+      "internal_name": "polarization_coefficient",
+      "source": "src/easydiffraction/datablocks/experiment/categories/instrument/cwl.py",
+      "surface": "instrument"
+    },
+    {
+      "attribute": "setup_twotheta_bank",
+      "cif_names": [
+        "_instr.2theta_bank"
+      ],
+      "edi_names": [
+        "_instrument.setup_twotheta_bank"
+      ],
+      "internal_name": "twotheta_bank",
+      "source": "src/easydiffraction/datablocks/experiment/categories/instrument/tof.py",
+      "surface": "instrument"
+    },
+    {
+      "attribute": "setup_wavelength",
+      "cif_names": [
+        "_diffrn_radiation_wavelength.value",
+        "_instr.wavelength"
+      ],
+      "edi_names": [
+        "_instrument.setup_wavelength"
+      ],
+      "internal_name": "wavelength",
+      "source": "src/easydiffraction/datablocks/experiment/categories/instrument/cwl.py",
+      "surface": "instrument"
+    },
+    {
+      "attribute": "setup_wavelength_2",
+      "cif_names": [
+        "_instr.wavelength_2"
+      ],
+      "edi_names": [
+        "_instrument.setup_wavelength_2"
+      ],
+      "internal_name": "wavelength_2",
+      "source": "src/easydiffraction/datablocks/experiment/categories/instrument/cwl.py",
+      "surface": "instrument"
+    },
+    {
+      "attribute": "setup_wavelength_2_to_1_ratio",
+      "cif_names": [
+        "_instr.wavelength_2_to_1_ratio"
+      ],
+      "edi_names": [
+        "_instrument.setup_wavelength_2_to_1_ratio"
+      ],
+      "internal_name": "wavelength_2_to_1_ratio",
+      "source": "src/easydiffraction/datablocks/experiment/categories/instrument/cwl.py",
+      "surface": "instrument"
+    },
+    {
+      "attribute": "experiment_id",
+      "cif_names": [
+        "_easydiffraction_joint_fit.experiment_id"
+      ],
+      "edi_names": [
+        "_joint_fit.experiment_id"
+      ],
+      "internal_name": "experiment_id",
+      "source": "src/easydiffraction/analysis/categories/joint_fit/default.py",
+      "surface": "joint_fit"
+    },
+    {
+      "attribute": "weight",
+      "cif_names": [
+        "_easydiffraction_joint_fit.weight"
+      ],
+      "edi_names": [
+        "_joint_fit.weight"
+      ],
+      "internal_name": "weight",
+      "source": "src/easydiffraction/analysis/categories/joint_fit/default.py",
+      "surface": "joint_fit"
+    },
+    {
+      "attribute": "scale",
+      "cif_names": [
+        "_easydiffraction_sc_crystal_block.scale",
+        "_sc_crystal_block.scale"
+      ],
+      "edi_names": [
+        "_linked_structure.scale"
+      ],
+      "internal_name": "scale",
+      "source": "src/easydiffraction/datablocks/experiment/categories/linked_structure/default.py",
+      "surface": "linked_structure"
+    },
+    {
+      "attribute": "structure_id",
+      "cif_names": [
+        "_easydiffraction_sc_crystal_block.id",
+        "_sc_crystal_block.id"
+      ],
+      "edi_names": [
+        "_linked_structure.structure_id"
+      ],
+      "internal_name": "structure_id",
+      "source": "src/easydiffraction/datablocks/experiment/categories/linked_structure/default.py",
+      "surface": "linked_structure"
+    },
+    {
+      "attribute": "scale",
+      "cif_names": [
+        "_pd_phase_block.scale"
+      ],
+      "edi_names": [
+        "_linked_structure.scale"
+      ],
+      "internal_name": "scale",
+      "source": "src/easydiffraction/datablocks/experiment/categories/linked_structures/default.py",
+      "surface": "linked_structures"
+    },
+    {
+      "attribute": "structure_id",
+      "cif_names": [
+        "_pd_phase_block.id"
+      ],
+      "edi_names": [
+        "_linked_structure.structure_id"
+      ],
+      "internal_name": "structure_id",
+      "source": "src/easydiffraction/datablocks/experiment/categories/linked_structures/default.py",
+      "surface": "linked_structures"
+    },
+    {
+      "attribute": "type",
+      "cif_names": [
+        "_easydiffraction_minimizer.type"
+      ],
+      "edi_names": [
+        "_minimizer.type"
+      ],
+      "internal_name": "type",
+      "source": "src/easydiffraction/analysis/categories/minimizer/base.py",
+      "surface": "minimizer"
+    },
+    {
+      "attribute": "asym_beba_a0",
+      "cif_names": [
+        "_easydiffraction_peak.asym_beba_a0"
+      ],
+      "edi_names": [
+        "_peak.asym_beba_a0"
+      ],
+      "internal_name": "asym_beba_a0",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/cwl_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "asym_beba_a1",
+      "cif_names": [
+        "_easydiffraction_peak.asym_beba_a1"
+      ],
+      "edi_names": [
+        "_peak.asym_beba_a1"
+      ],
+      "internal_name": "asym_beba_a1",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/cwl_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "asym_beba_b0",
+      "cif_names": [
+        "_easydiffraction_peak.asym_beba_b0"
+      ],
+      "edi_names": [
+        "_peak.asym_beba_b0"
+      ],
+      "internal_name": "asym_beba_b0",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/cwl_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "asym_beba_b1",
+      "cif_names": [
+        "_easydiffraction_peak.asym_beba_b1"
+      ],
+      "edi_names": [
+        "_peak.asym_beba_b1"
+      ],
+      "internal_name": "asym_beba_b1",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/cwl_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "asym_fcj_1",
+      "cif_names": [
+        "_easydiffraction_peak.asym_fcj_1"
+      ],
+      "edi_names": [
+        "_peak.asym_fcj_1"
+      ],
+      "internal_name": "asym_fcj_1",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/cwl_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "asym_fcj_2",
+      "cif_names": [
+        "_easydiffraction_peak.asym_fcj_2"
+      ],
+      "edi_names": [
+        "_peak.asym_fcj_2"
+      ],
+      "internal_name": "asym_fcj_2",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/cwl_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "broad_gauss_sigma_0",
+      "cif_names": [
+        "_easydiffraction_peak.broad_gauss_sigma_0"
+      ],
+      "edi_names": [
+        "_peak.broad_gauss_sigma_0"
+      ],
+      "internal_name": "broad_gauss_sigma_0",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/tof_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "broad_gauss_sigma_1",
+      "cif_names": [
+        "_easydiffraction_peak.broad_gauss_sigma_1"
+      ],
+      "edi_names": [
+        "_peak.broad_gauss_sigma_1"
+      ],
+      "internal_name": "broad_gauss_sigma_1",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/tof_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "broad_gauss_sigma_2",
+      "cif_names": [
+        "_easydiffraction_peak.broad_gauss_sigma_2"
+      ],
+      "edi_names": [
+        "_peak.broad_gauss_sigma_2"
+      ],
+      "internal_name": "broad_gauss_sigma_2",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/tof_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "broad_gauss_size",
+      "cif_names": [
+        "_easydiffraction_peak.broad_gauss_size"
+      ],
+      "edi_names": [
+        "_peak.broad_gauss_size"
+      ],
+      "internal_name": "broad_gauss_size",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/tof_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "broad_gauss_strain",
+      "cif_names": [
+        "_easydiffraction_peak.broad_gauss_strain"
+      ],
+      "edi_names": [
+        "_peak.broad_gauss_strain"
+      ],
+      "internal_name": "broad_gauss_strain",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/tof_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "broad_gauss_u",
+      "cif_names": [
+        "_easydiffraction_peak.broad_gauss_u"
+      ],
+      "edi_names": [
+        "_peak.broad_gauss_u"
+      ],
+      "internal_name": "broad_gauss_u",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/cwl_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "broad_gauss_v",
+      "cif_names": [
+        "_easydiffraction_peak.broad_gauss_v"
+      ],
+      "edi_names": [
+        "_peak.broad_gauss_v"
+      ],
+      "internal_name": "broad_gauss_v",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/cwl_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "broad_gauss_w",
+      "cif_names": [
+        "_easydiffraction_peak.broad_gauss_w"
+      ],
+      "edi_names": [
+        "_peak.broad_gauss_w"
+      ],
+      "internal_name": "broad_gauss_w",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/cwl_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "broad_lorentz_gamma_0",
+      "cif_names": [
+        "_easydiffraction_peak.broad_lorentz_gamma_0"
+      ],
+      "edi_names": [
+        "_peak.broad_lorentz_gamma_0"
+      ],
+      "internal_name": "broad_lorentz_gamma_0",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/tof_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "broad_lorentz_gamma_1",
+      "cif_names": [
+        "_easydiffraction_peak.broad_lorentz_gamma_1"
+      ],
+      "edi_names": [
+        "_peak.broad_lorentz_gamma_1"
+      ],
+      "internal_name": "broad_lorentz_gamma_1",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/tof_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "broad_lorentz_gamma_2",
+      "cif_names": [
+        "_easydiffraction_peak.broad_lorentz_gamma_2"
+      ],
+      "edi_names": [
+        "_peak.broad_lorentz_gamma_2"
+      ],
+      "internal_name": "broad_lorentz_gamma_2",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/tof_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "broad_lorentz_size",
+      "cif_names": [
+        "_easydiffraction_peak.broad_lorentz_size"
+      ],
+      "edi_names": [
+        "_peak.broad_lorentz_size"
+      ],
+      "internal_name": "broad_lorentz_size",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/tof_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "broad_lorentz_strain",
+      "cif_names": [
+        "_easydiffraction_peak.broad_lorentz_strain"
+      ],
+      "edi_names": [
+        "_peak.broad_lorentz_strain"
+      ],
+      "internal_name": "broad_lorentz_strain",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/tof_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "broad_lorentz_x",
+      "cif_names": [
+        "_easydiffraction_peak.broad_lorentz_x"
+      ],
+      "edi_names": [
+        "_peak.broad_lorentz_x"
+      ],
+      "internal_name": "broad_lorentz_x",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/cwl_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "broad_lorentz_y",
+      "cif_names": [
+        "_easydiffraction_peak.broad_lorentz_y"
+      ],
+      "edi_names": [
+        "_peak.broad_lorentz_y"
+      ],
+      "internal_name": "broad_lorentz_y",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/cwl_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "broad_q",
+      "cif_names": [
+        "_easydiffraction_peak.broad_q"
+      ],
+      "edi_names": [
+        "_peak.broad_q"
+      ],
+      "internal_name": "broad_q",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/total_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "cutoff_fwhm",
+      "cif_names": [
+        "_easydiffraction_peak.cutoff_fwhm"
+      ],
+      "edi_names": [
+        "_peak.cutoff_fwhm"
+      ],
+      "internal_name": "cutoff_fwhm",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/cwl_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "cutoff_fwhm",
+      "cif_names": [
+        "_easydiffraction_peak.cutoff_fwhm"
+      ],
+      "edi_names": [
+        "_peak.cutoff_fwhm"
+      ],
+      "internal_name": "cutoff_fwhm",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/tof_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "cutoff_q",
+      "cif_names": [
+        "_easydiffraction_peak.cutoff_q"
+      ],
+      "edi_names": [
+        "_peak.cutoff_q"
+      ],
+      "internal_name": "cutoff_q",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/total_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "damp_particle_diameter",
+      "cif_names": [
+        "_easydiffraction_peak.damp_particle_diameter"
+      ],
+      "edi_names": [
+        "_peak.damp_particle_diameter"
+      ],
+      "internal_name": "damp_particle_diameter",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/total_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "damp_q",
+      "cif_names": [
+        "_easydiffraction_peak.damp_q"
+      ],
+      "edi_names": [
+        "_peak.damp_q"
+      ],
+      "internal_name": "damp_q",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/total_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "decay_beta_0",
+      "cif_names": [
+        "_easydiffraction_peak.decay_beta_0"
+      ],
+      "edi_names": [
+        "_peak.decay_beta_0"
+      ],
+      "internal_name": "decay_beta_0",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/tof_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "decay_beta_1",
+      "cif_names": [
+        "_easydiffraction_peak.decay_beta_1"
+      ],
+      "edi_names": [
+        "_peak.decay_beta_1"
+      ],
+      "internal_name": "decay_beta_1",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/tof_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "dexp_decay_beta_00",
+      "cif_names": [
+        "_easydiffraction_peak.dexp_decay_beta_00"
+      ],
+      "edi_names": [
+        "_peak.dexp_decay_beta_00"
+      ],
+      "internal_name": "dexp_decay_beta_00",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/tof_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "dexp_decay_beta_01",
+      "cif_names": [
+        "_easydiffraction_peak.dexp_decay_beta_01"
+      ],
+      "edi_names": [
+        "_peak.dexp_decay_beta_01"
+      ],
+      "internal_name": "dexp_decay_beta_01",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/tof_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "dexp_decay_beta_10",
+      "cif_names": [
+        "_easydiffraction_peak.dexp_decay_beta_10"
+      ],
+      "edi_names": [
+        "_peak.dexp_decay_beta_10"
+      ],
+      "internal_name": "dexp_decay_beta_10",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/tof_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "dexp_rise_alpha_1",
+      "cif_names": [
+        "_easydiffraction_peak.dexp_rise_alpha_1"
+      ],
+      "edi_names": [
+        "_peak.dexp_rise_alpha_1"
+      ],
+      "internal_name": "dexp_rise_alpha_1",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/tof_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "dexp_rise_alpha_2",
+      "cif_names": [
+        "_easydiffraction_peak.dexp_rise_alpha_2"
+      ],
+      "edi_names": [
+        "_peak.dexp_rise_alpha_2"
+      ],
+      "internal_name": "dexp_rise_alpha_2",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/tof_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "dexp_switch_r_01",
+      "cif_names": [
+        "_easydiffraction_peak.dexp_switch_r_01"
+      ],
+      "edi_names": [
+        "_peak.dexp_switch_r_01"
+      ],
+      "internal_name": "dexp_switch_r_01",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/tof_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "dexp_switch_r_02",
+      "cif_names": [
+        "_easydiffraction_peak.dexp_switch_r_02"
+      ],
+      "edi_names": [
+        "_peak.dexp_switch_r_02"
+      ],
+      "internal_name": "dexp_switch_r_02",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/tof_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "dexp_switch_r_03",
+      "cif_names": [
+        "_easydiffraction_peak.dexp_switch_r_03"
+      ],
+      "edi_names": [
+        "_peak.dexp_switch_r_03"
+      ],
+      "internal_name": "dexp_switch_r_03",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/tof_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "rise_alpha_0",
+      "cif_names": [
+        "_easydiffraction_peak.rise_alpha_0"
+      ],
+      "edi_names": [
+        "_peak.rise_alpha_0"
+      ],
+      "internal_name": "rise_alpha_0",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/tof_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "rise_alpha_1",
+      "cif_names": [
+        "_easydiffraction_peak.rise_alpha_1"
+      ],
+      "edi_names": [
+        "_peak.rise_alpha_1"
+      ],
+      "internal_name": "rise_alpha_1",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/tof_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "sharp_delta_1",
+      "cif_names": [
+        "_easydiffraction_peak.sharp_delta_1"
+      ],
+      "edi_names": [
+        "_peak.sharp_delta_1"
+      ],
+      "internal_name": "sharp_delta_1",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/total_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "sharp_delta_2",
+      "cif_names": [
+        "_easydiffraction_peak.sharp_delta_2"
+      ],
+      "edi_names": [
+        "_peak.sharp_delta_2"
+      ],
+      "internal_name": "sharp_delta_2",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/total_mixins.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "type",
+      "cif_names": [
+        "_easydiffraction_peak.type"
+      ],
+      "edi_names": [
+        "_peak.type"
+      ],
+      "internal_name": "type",
+      "source": "src/easydiffraction/datablocks/experiment/categories/peak/base.py",
+      "surface": "peak"
+    },
+    {
+      "attribute": "index_h",
+      "cif_names": [
+        "_pd_pref_orient_March_Dollase.index_h",
+        "_pref_orient.index_h"
+      ],
+      "edi_names": [
+        "_preferred_orientation.index_h"
+      ],
+      "internal_name": "index_h",
+      "source": "src/easydiffraction/datablocks/experiment/categories/pref_orient/default.py",
+      "surface": "pref_orient"
+    },
+    {
+      "attribute": "index_k",
+      "cif_names": [
+        "_pd_pref_orient_March_Dollase.index_k",
+        "_pref_orient.index_k"
+      ],
+      "edi_names": [
+        "_preferred_orientation.index_k"
+      ],
+      "internal_name": "index_k",
+      "source": "src/easydiffraction/datablocks/experiment/categories/pref_orient/default.py",
+      "surface": "pref_orient"
+    },
+    {
+      "attribute": "index_l",
+      "cif_names": [
+        "_pd_pref_orient_March_Dollase.index_l",
+        "_pref_orient.index_l"
+      ],
+      "edi_names": [
+        "_preferred_orientation.index_l"
+      ],
+      "internal_name": "index_l",
+      "source": "src/easydiffraction/datablocks/experiment/categories/pref_orient/default.py",
+      "surface": "pref_orient"
+    },
+    {
+      "attribute": "march_r",
+      "cif_names": [
+        "_pd_pref_orient_March_Dollase.r",
+        "_pref_orient.march_r"
+      ],
+      "edi_names": [
+        "_preferred_orientation.march_r"
+      ],
+      "internal_name": "march_r",
+      "source": "src/easydiffraction/datablocks/experiment/categories/pref_orient/default.py",
+      "surface": "pref_orient"
+    },
+    {
+      "attribute": "march_random_fract",
+      "cif_names": [
+        "_easydiffraction_pref_orient.march_random_fract",
+        "_pref_orient.march_random_fract"
+      ],
+      "edi_names": [
+        "_preferred_orientation.march_random_fract"
+      ],
+      "internal_name": "march_random_fract",
+      "source": "src/easydiffraction/datablocks/experiment/categories/pref_orient/default.py",
+      "surface": "pref_orient"
+    },
+    {
+      "attribute": "structure_id",
+      "cif_names": [
+        "_pd_pref_orient_March_Dollase.phase_id",
+        "_pref_orient.phase_id"
+      ],
+      "edi_names": [
+        "_preferred_orientation.structure_id"
+      ],
+      "internal_name": "structure_id",
+      "source": "src/easydiffraction/datablocks/experiment/categories/pref_orient/default.py",
+      "surface": "pref_orient"
+    },
+    {
+      "attribute": "d_spacing",
+      "cif_names": [],
+      "edi_names": [
+        "_refln.d_spacing"
+      ],
+      "internal_name": "d_spacing",
+      "source": "src/easydiffraction/datablocks/experiment/categories/refln/bragg_sc.py",
+      "surface": "refln"
+    },
+    {
+      "attribute": "f_calc",
+      "cif_names": [],
+      "edi_names": [
+        "_refln.f_calc"
+      ],
+      "internal_name": "f_calc",
+      "source": "src/easydiffraction/datablocks/experiment/categories/refln/bragg_pd.py",
+      "surface": "refln"
+    },
+    {
+      "attribute": "f_squared_calc",
+      "cif_names": [],
+      "edi_names": [
+        "_refln.f_squared_calc"
+      ],
+      "internal_name": "f_squared_calc",
+      "source": "src/easydiffraction/datablocks/experiment/categories/refln/bragg_pd.py",
+      "surface": "refln"
+    },
+    {
+      "attribute": "id",
+      "cif_names": [],
+      "edi_names": [
+        "_refln.id"
+      ],
+      "internal_name": "id",
+      "source": "src/easydiffraction/datablocks/experiment/categories/refln/bragg_sc.py",
+      "surface": "refln"
+    },
+    {
+      "attribute": "index_h",
+      "cif_names": [],
+      "edi_names": [
+        "_refln.index_h"
+      ],
+      "internal_name": "index_h",
+      "source": "src/easydiffraction/datablocks/experiment/categories/refln/bragg_sc.py",
+      "surface": "refln"
+    },
+    {
+      "attribute": "index_k",
+      "cif_names": [],
+      "edi_names": [
+        "_refln.index_k"
+      ],
+      "internal_name": "index_k",
+      "source": "src/easydiffraction/datablocks/experiment/categories/refln/bragg_sc.py",
+      "surface": "refln"
+    },
+    {
+      "attribute": "index_l",
+      "cif_names": [],
+      "edi_names": [
+        "_refln.index_l"
+      ],
+      "internal_name": "index_l",
+      "source": "src/easydiffraction/datablocks/experiment/categories/refln/bragg_sc.py",
+      "surface": "refln"
+    },
+    {
+      "attribute": "intensity_calc",
+      "cif_names": [],
+      "edi_names": [
+        "_refln.intensity_calc"
+      ],
+      "internal_name": "intensity_calc",
+      "source": "src/easydiffraction/datablocks/experiment/categories/refln/bragg_sc.py",
+      "surface": "refln"
+    },
+    {
+      "attribute": "intensity_meas",
+      "cif_names": [],
+      "edi_names": [
+        "_refln.intensity_meas"
+      ],
+      "internal_name": "intensity_meas",
+      "source": "src/easydiffraction/datablocks/experiment/categories/refln/bragg_sc.py",
+      "surface": "refln"
+    },
+    {
+      "attribute": "intensity_meas_su",
+      "cif_names": [],
+      "edi_names": [
+        "_refln.intensity_meas_su"
+      ],
+      "internal_name": "intensity_meas_su",
+      "source": "src/easydiffraction/datablocks/experiment/categories/refln/bragg_sc.py",
+      "surface": "refln"
+    },
+    {
+      "attribute": "sin_theta_over_lambda",
+      "cif_names": [],
+      "edi_names": [
+        "_refln.sin_theta_over_lambda"
+      ],
+      "internal_name": "sin_theta_over_lambda",
+      "source": "src/easydiffraction/datablocks/experiment/categories/refln/bragg_sc.py",
+      "surface": "refln"
+    },
+    {
+      "attribute": "structure_id",
+      "cif_names": [
+        "_pd_refln.phase_id",
+        "_refln.phase_id"
+      ],
+      "edi_names": [
+        "_refln.structure_id"
+      ],
+      "internal_name": "structure_id",
+      "source": "src/easydiffraction/datablocks/experiment/categories/refln/bragg_pd.py",
+      "surface": "refln"
+    },
+    {
+      "attribute": "time_of_flight",
+      "cif_names": [],
+      "edi_names": [
+        "_refln.time_of_flight"
+      ],
+      "internal_name": "time_of_flight",
+      "source": "src/easydiffraction/datablocks/experiment/categories/refln/bragg_pd.py",
+      "surface": "refln"
+    },
+    {
+      "attribute": "two_theta",
+      "cif_names": [],
+      "edi_names": [
+        "_refln.two_theta"
+      ],
+      "internal_name": "two_theta",
+      "source": "src/easydiffraction/datablocks/experiment/categories/refln/bragg_pd.py",
+      "surface": "refln"
+    },
+    {
+      "attribute": "wavelength",
+      "cif_names": [],
+      "edi_names": [
+        "_refln.wavelength"
+      ],
+      "internal_name": "wavelength",
+      "source": "src/easydiffraction/datablocks/experiment/categories/refln/bragg_sc.py",
+      "surface": "refln"
+    },
+    {
+      "attribute": "type",
+      "cif_names": [],
+      "edi_names": [
+        "_rendering_plot.type"
+      ],
+      "internal_name": "type",
+      "source": "src/easydiffraction/project/categories/rendering_plot/default.py",
+      "surface": "rendering_plot"
+    },
+    {
+      "attribute": "type",
+      "cif_names": [],
+      "edi_names": [
+        "_rendering_structure.type"
+      ],
+      "internal_name": "type",
+      "source": "src/easydiffraction/project/categories/rendering_structure/default.py",
+      "surface": "rendering_structure"
+    },
+    {
+      "attribute": "type",
+      "cif_names": [],
+      "edi_names": [
+        "_rendering_table.type"
+      ],
+      "internal_name": "type",
+      "source": "src/easydiffraction/project/categories/rendering_table/default.py",
+      "surface": "rendering_table"
+    },
+    {
+      "attribute": "chunk_size",
+      "cif_names": [
+        "_easydiffraction_sequential_fit.chunk_size"
+      ],
+      "edi_names": [
+        "_sequential_fit.chunk_size"
+      ],
+      "internal_name": "chunk_size",
+      "source": "src/easydiffraction/analysis/categories/sequential_fit/default.py",
+      "surface": "sequential_fit"
+    },
+    {
+      "attribute": "data_dir",
+      "cif_names": [
+        "_easydiffraction_sequential_fit.data_dir"
+      ],
+      "edi_names": [
+        "_sequential_fit.data_dir"
+      ],
+      "internal_name": "data_dir",
+      "source": "src/easydiffraction/analysis/categories/sequential_fit/default.py",
+      "surface": "sequential_fit"
+    },
+    {
+      "attribute": "file_pattern",
+      "cif_names": [
+        "_easydiffraction_sequential_fit.file_pattern"
+      ],
+      "edi_names": [
+        "_sequential_fit.file_pattern"
+      ],
+      "internal_name": "file_pattern",
+      "source": "src/easydiffraction/analysis/categories/sequential_fit/default.py",
+      "surface": "sequential_fit"
+    },
+    {
+      "attribute": "max_workers",
+      "cif_names": [
+        "_easydiffraction_sequential_fit.max_workers"
+      ],
+      "edi_names": [
+        "_sequential_fit.max_workers"
+      ],
+      "internal_name": "max_workers",
+      "source": "src/easydiffraction/analysis/categories/sequential_fit/default.py",
+      "surface": "sequential_fit"
+    },
+    {
+      "attribute": "id",
+      "cif_names": [
+        "_easydiffraction_sequential_fit_extract.id"
+      ],
+      "edi_names": [
+        "_sequential_fit_extract.id"
+      ],
+      "internal_name": "id",
+      "source": "src/easydiffraction/analysis/categories/sequential_fit_extract/default.py",
+      "surface": "sequential_fit_extract"
+    },
+    {
+      "attribute": "pattern",
+      "cif_names": [
+        "_easydiffraction_sequential_fit_extract.pattern"
+      ],
+      "edi_names": [
+        "_sequential_fit_extract.pattern"
+      ],
+      "internal_name": "pattern",
+      "source": "src/easydiffraction/analysis/categories/sequential_fit_extract/default.py",
+      "surface": "sequential_fit_extract"
+    },
+    {
+      "attribute": "target",
+      "cif_names": [
+        "_easydiffraction_sequential_fit_extract.target"
+      ],
+      "edi_names": [
+        "_sequential_fit_extract.target"
+      ],
+      "internal_name": "target",
+      "source": "src/easydiffraction/analysis/categories/sequential_fit_extract/default.py",
+      "surface": "sequential_fit_extract"
+    },
+    {
+      "attribute": "id",
+      "cif_names": [],
+      "edi_names": [
+        "_software.id"
+      ],
+      "internal_name": "id",
+      "source": "src/easydiffraction/analysis/categories/software/base.py",
+      "surface": "software"
+    },
+    {
+      "attribute": "name",
+      "cif_names": [],
+      "edi_names": [
+        "_software.name"
+      ],
+      "internal_name": "name",
+      "source": "src/easydiffraction/analysis/categories/software/base.py",
+      "surface": "software"
+    },
+    {
+      "attribute": "url",
+      "cif_names": [],
+      "edi_names": [
+        "_software.url"
+      ],
+      "internal_name": "url",
+      "source": "src/easydiffraction/analysis/categories/software/base.py",
+      "surface": "software"
+    },
+    {
+      "attribute": "version",
+      "cif_names": [],
+      "edi_names": [
+        "_software.version"
+      ],
+      "internal_name": "version",
+      "source": "src/easydiffraction/analysis/categories/software/base.py",
+      "surface": "software"
+    },
+    {
+      "attribute": "coord_system_code",
+      "cif_names": [
+        "_space_group.IT_coordinate_system_code",
+        "_space_group_IT_coordinate_system_code",
+        "_symmetry.IT_coordinate_system_code",
+        "_symmetry_IT_coordinate_system_code"
+      ],
+      "edi_names": [
+        "_space_group.coord_system_code"
+      ],
+      "internal_name": "coord_system_code",
+      "source": "src/easydiffraction/datablocks/structure/categories/space_group/default.py",
+      "surface": "space_group"
+    },
+    {
+      "attribute": "name_h_m",
+      "cif_names": [
+        "_space_group.name_H-M_alt",
+        "_space_group_name_H-M_alt",
+        "_symmetry.space_group_name_H-M",
+        "_symmetry_space_group_name_H-M"
+      ],
+      "edi_names": [
+        "_space_group.name_h_m"
+      ],
+      "internal_name": "name_h_m",
+      "source": "src/easydiffraction/datablocks/structure/categories/space_group/default.py",
+      "surface": "space_group"
+    },
+    {
+      "attribute": "coords_xyz",
+      "cif_names": [],
+      "edi_names": [
+        "_space_group_Wyckoff.coords_xyz"
+      ],
+      "internal_name": "coords_xyz",
+      "source": "src/easydiffraction/datablocks/structure/categories/space_group_wyckoff/default.py",
+      "surface": "space_group_wyckoff"
+    },
+    {
+      "attribute": "id",
+      "cif_names": [],
+      "edi_names": [
+        "_space_group_Wyckoff.id"
+      ],
+      "internal_name": "id",
+      "source": "src/easydiffraction/datablocks/structure/categories/space_group_wyckoff/default.py",
+      "surface": "space_group_wyckoff"
+    },
+    {
+      "attribute": "letter",
+      "cif_names": [],
+      "edi_names": [
+        "_space_group_Wyckoff.letter"
+      ],
+      "internal_name": "letter",
+      "source": "src/easydiffraction/datablocks/structure/categories/space_group_wyckoff/default.py",
+      "surface": "space_group_wyckoff"
+    },
+    {
+      "attribute": "multiplicity",
+      "cif_names": [],
+      "edi_names": [
+        "_space_group_Wyckoff.multiplicity"
+      ],
+      "internal_name": "multiplicity",
+      "source": "src/easydiffraction/datablocks/structure/categories/space_group_wyckoff/default.py",
+      "surface": "space_group_wyckoff"
+    },
+    {
+      "attribute": "site_symmetry",
+      "cif_names": [],
+      "edi_names": [
+        "_space_group_Wyckoff.site_symmetry"
+      ],
+      "internal_name": "site_symmetry",
+      "source": "src/easydiffraction/datablocks/structure/categories/space_group_wyckoff/default.py",
+      "surface": "space_group_wyckoff"
+    },
+    {
+      "attribute": "adp_probability",
+      "cif_names": [],
+      "edi_names": [
+        "_structure_style.adp_probability"
+      ],
+      "internal_name": "adp_probability",
+      "source": "src/easydiffraction/project/categories/structure_style/default.py",
+      "surface": "structure_style"
+    },
+    {
+      "attribute": "atom_scale",
+      "cif_names": [],
+      "edi_names": [
+        "_structure_style.atom_scale"
+      ],
+      "internal_name": "atom_scale",
+      "source": "src/easydiffraction/project/categories/structure_style/default.py",
+      "surface": "structure_style"
+    },
+    {
+      "attribute": "atom_view",
+      "cif_names": [],
+      "edi_names": [
+        "_structure_style.atom_view"
+      ],
+      "internal_name": "atom_view",
+      "source": "src/easydiffraction/project/categories/structure_style/default.py",
+      "surface": "structure_style"
+    },
+    {
+      "attribute": "color_scheme",
+      "cif_names": [],
+      "edi_names": [
+        "_structure_style.color_scheme"
+      ],
+      "internal_name": "color_scheme",
+      "source": "src/easydiffraction/project/categories/structure_style/default.py",
+      "surface": "structure_style"
+    },
+    {
+      "attribute": "fit",
+      "cif_names": [],
+      "edi_names": [
+        "_verbosity.fit"
+      ],
+      "internal_name": "fit",
+      "source": "src/easydiffraction/project/categories/verbosity/default.py",
+      "surface": "verbosity"
+    }
+  ],
+  "enums": {
+    "BeamModeEnum": {
+      "CONSTANT_WAVELENGTH": "constant wavelength",
+      "TIME_OF_FLIGHT": "time-of-flight"
+    },
+    "PeakProfileTypeEnum": {
+      "CWL_PSEUDO_VOIGT": "cwl-pseudo-voigt",
+      "CWL_PSEUDO_VOIGT_BERAR_BALDINOZZI_ASYMMETRY": "cwl-pseudo-voigt-berar-baldinozzi-asymmetry",
+      "CWL_THOMPSON_COX_HASTINGS": "cwl-thompson-cox-hastings",
+      "TOF_DOUBLE_JORGENSEN_VON_DREELE": "tof-double-jorgensen-von-dreele",
+      "TOF_JORGENSEN": "tof-jorgensen",
+      "TOF_JORGENSEN_VON_DREELE": "tof-jorgensen-von-dreele",
+      "TOF_PSEUDO_VOIGT": "tof-pseudo-voigt",
+      "TOTAL_GAUSSIAN_DAMPED_SINC": "total-gaussian-damped-sinc"
+    },
+    "RadiationProbeEnum": {
+      "NEUTRON": "neutron",
+      "XRAY": "xray"
+    },
+    "SampleFormEnum": {
+      "POWDER": "powder",
+      "SINGLE_CRYSTAL": "single crystal"
+    },
+    "ScatteringTypeEnum": {
+      "BRAGG": "bragg",
+      "TOTAL": "total"
+    }
+  },
+  "implemented_intersection": [
+    "absorption.type",
+    "atom_sites.adp_iso",
+    "atom_sites.adp_type",
+    "atom_sites.fract_x",
+    "atom_sites.fract_y",
+    "atom_sites.fract_z",
+    "atom_sites.id",
+    "atom_sites.occupancy",
+    "atom_sites.type_symbol",
+    "atom_sites.wyckoff_letter",
+    "background.intensity",
+    "background.position",
+    "cell.angle_alpha",
+    "cell.angle_beta",
+    "cell.angle_gamma",
+    "cell.length_a",
+    "cell.length_b",
+    "cell.length_c",
+    "data.intensity_meas",
+    "data.intensity_meas_su",
+    "data.time_of_flight",
+    "data.two_theta",
+    "experiment_type.beam_mode",
+    "experiment_type.radiation_probe",
+    "experiment_type.sample_form",
+    "experiment_type.scattering_type",
+    "fit_result.fitting_time",
+    "fit_result.iterations",
+    "fit_result.reduced_chi_square",
+    "fit_result.result_kind",
+    "fit_result.success",
+    "instrument.calib_d_to_tof_linear",
+    "instrument.calib_d_to_tof_offset",
+    "instrument.calib_d_to_tof_quadratic",
+    "instrument.calib_d_to_tof_reciprocal",
+    "instrument.calib_twotheta_offset",
+    "instrument.setup_twotheta_bank",
+    "instrument.setup_wavelength",
+    "linked_structure.scale",
+    "linked_structure.structure_id",
+    "peak.broad_gauss_sigma_0",
+    "peak.broad_gauss_sigma_1",
+    "peak.broad_gauss_sigma_2",
+    "peak.broad_gauss_size",
+    "peak.broad_gauss_strain",
+    "peak.broad_gauss_u",
+    "peak.broad_gauss_v",
+    "peak.broad_gauss_w",
+    "peak.broad_lorentz_gamma_0",
+    "peak.broad_lorentz_gamma_1",
+    "peak.broad_lorentz_gamma_2",
+    "peak.broad_lorentz_size",
+    "peak.broad_lorentz_strain",
+    "peak.broad_lorentz_x",
+    "peak.broad_lorentz_y",
+    "peak.cutoff_fwhm",
+    "peak.decay_beta_0",
+    "peak.decay_beta_1",
+    "peak.rise_alpha_0",
+    "peak.rise_alpha_1",
+    "peak.type",
+    "space_group.coord_system_code",
+    "space_group.name_h_m"
+  ],
+  "inherited_category_selectors": [
+    "absorption.type",
+    "background.type",
+    "calculator.type",
+    "extinction.type",
+    "fitting_mode.type",
+    "minimizer.type",
+    "peak.type",
+    "rendering_plot.type",
+    "rendering_structure.type",
+    "rendering_table.type"
+  ],
+  "internal_descriptors": [
+    "metadata.created_descriptor",
+    "metadata.description_descriptor",
+    "metadata.last_modified_descriptor",
+    "metadata.project_id",
+    "metadata.timestamp_descriptor",
+    "metadata.title_descriptor"
+  ],
+  "source": {
+    "category_pattern": "categories/([a-z_0-9]+)/",
+    "commit": "0ffba46f4b501066a73e77f00fa29fa13519b417",
+    "edi_presence_test": "category-qualified introspection of the built edi module: each upstream category names the edi accessor that exposes it and the attributes are read from the live element object",
+    "edi_surface": {
+      "absorption": [
+        "parameters",
+        "type"
+      ],
+      "atom_sites": [
+        "adp_iso",
+        "adp_type",
+        "fract_x",
+        "fract_y",
+        "fract_z",
+        "id",
+        "occupancy",
+        "parameters",
+        "type_symbol",
+        "wyckoff_letter"
+      ],
+      "background": [
+        "intensity",
+        "parameters",
+        "position"
+      ],
+      "cell": [
+        "angle_alpha",
+        "angle_beta",
+        "angle_gamma",
+        "length_a",
+        "length_b",
+        "length_c",
+        "parameters"
+      ],
+      "data": [
+        "intensity_meas",
+        "intensity_meas_su",
+        "time_of_flight",
+        "two_theta"
+      ],
+      "excluded_regions": [],
+      "experiment_type": [
+        "beam_mode",
+        "radiation_probe",
+        "sample_form",
+        "scattering_type"
+      ],
+      "fit_result": [
+        "banks",
+        "converged",
+        "fitting_time",
+        "iterations",
+        "reduced_chi_square",
+        "result_kind",
+        "rwp",
+        "status",
+        "success",
+        "uncertainty",
+        "values"
+      ],
+      "fitting_mode": [],
+      "instrument": [
+        "calib_d_to_tof_linear",
+        "calib_d_to_tof_offset",
+        "calib_d_to_tof_quadratic",
+        "calib_d_to_tof_reciprocal",
+        "calib_twotheta_offset",
+        "parameters",
+        "setup_twotheta_bank",
+        "setup_wavelength"
+      ],
+      "linked_structure": [
+        "parameters",
+        "scale",
+        "structure_id"
+      ],
+      "peak": [
+        "broad_gauss_sigma_0",
+        "broad_gauss_sigma_1",
+        "broad_gauss_sigma_2",
+        "broad_gauss_size",
+        "broad_gauss_strain",
+        "broad_gauss_u",
+        "broad_gauss_v",
+        "broad_gauss_w",
+        "broad_lorentz_gamma_0",
+        "broad_lorentz_gamma_1",
+        "broad_lorentz_gamma_2",
+        "broad_lorentz_size",
+        "broad_lorentz_strain",
+        "broad_lorentz_x",
+        "broad_lorentz_y",
+        "cutoff_fwhm",
+        "decay_beta_0",
+        "decay_beta_1",
+        "parameters",
+        "rise_alpha_0",
+        "rise_alpha_1",
+        "type"
+      ],
+      "space_group": [
+        "coord_system_code",
+        "it_number",
+        "name_h_m"
+      ]
+    },
+    "master_pin": "0ffba46f4b501066a73e77f00fa29fa13519b417",
+    "method": "every public @property under every categories/<name>/ directory at the pin \u2014 the full tree, no source allowlist",
+    "repo": "https://github.com/easyscience/diffraction-lib",
+    "scan_root": "src/easydiffraction/"
+  },
+  "totals": {
+    "absent_from_edi": 243,
+    "attributes": 306,
+    "categories": 40,
+    "present_in_edi": 63
+  },
+  "unimplemented_notes": {
+    "absorption.mu_r": "upstream's CW cylinder absorption surface; edi's TOF `abscor1`/`abscor2` pair is a declared divergence \u2014 see table (a)",
+    "aliases.id": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "aliases.param": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "aliases.parameter_unique_name": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "aliases.parameters": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "atom_site_aniso.adp_11": "anisotropic ADP storage, not modelled \u2014 edi stores isotropic B only and refuses a declared anisotropic `_atom_site.adp_type` at load",
+    "atom_site_aniso.adp_12": "anisotropic ADP storage, not modelled \u2014 edi stores isotropic B only and refuses a declared anisotropic `_atom_site.adp_type` at load",
+    "atom_site_aniso.adp_13": "anisotropic ADP storage, not modelled \u2014 edi stores isotropic B only and refuses a declared anisotropic `_atom_site.adp_type` at load",
+    "atom_site_aniso.adp_22": "anisotropic ADP storage, not modelled \u2014 edi stores isotropic B only and refuses a declared anisotropic `_atom_site.adp_type` at load",
+    "atom_site_aniso.adp_23": "anisotropic ADP storage, not modelled \u2014 edi stores isotropic B only and refuses a declared anisotropic `_atom_site.adp_type` at load",
+    "atom_site_aniso.adp_33": "anisotropic ADP storage, not modelled \u2014 edi stores isotropic B only and refuses a declared anisotropic `_atom_site.adp_type` at load",
+    "atom_site_aniso.id": "anisotropic ADP storage, not modelled \u2014 edi stores isotropic B only and refuses a declared anisotropic `_atom_site.adp_type` at load",
+    "atom_sites.adp_iso_as_b": "upstream's B-valued view of the isotropic ADP; edi stores it as B natively, so edi's `adp_iso` already IS this value \u2014 see table (a)",
+    "atom_sites.multiplicity": "tolerated on read, not modelled",
+    "background.coef": "Chebyshev-polynomial background implementation (`background/chebyshev.py` at the pin); edi implements line-segment backgrounds only",
+    "background.id": "row ordinal, read past",
+    "background.order": "Chebyshev-polynomial background implementation (`background/chebyshev.py` at the pin); edi implements line-segment backgrounds only",
+    "background.type": "the `_background.type` tag is read at load, but edi exposes no `type` attribute on a background point",
+    "calculator.calculator": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "calculator.type": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "constraints.enabled": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "constraints.expression": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "constraints.id": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "constraints.lhs_alias": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "constraints.rhs_expr": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "data.calc_status": "calculated-pattern or PDF column edi does not persist",
+    "data.d_spacing": "calculated-pattern or PDF column edi does not persist",
+    "data.g_r_calc": "calculated-pattern or PDF column edi does not persist",
+    "data.g_r_meas": "calculated-pattern or PDF column edi does not persist",
+    "data.g_r_meas_su": "calculated-pattern or PDF column edi does not persist",
+    "data.id": "row ordinal, read past",
+    "data.intensity_bkg": "calculated-pattern or PDF column edi does not persist",
+    "data.intensity_calc": "calculated-pattern or PDF column edi does not persist",
+    "data.r": "calculated-pattern or PDF column edi does not persist",
+    "data.unfiltered_x": "pre-exclusion axis copy edi does not retain",
+    "data.x": "see table (a): edi names the axis by mode and reads it through `MeasuredPattern.axis`",
+    "data.x_descriptor": "see table (a): edi names the axis by mode, so no descriptor selects between axes",
+    "data_range.d_spacing_max": "upstream range/step metadata; edi derives its range from the measured pattern rather than storing it",
+    "data_range.d_spacing_min": "upstream range/step metadata; edi derives its range from the measured pattern rather than storing it",
+    "data_range.sin_theta_over_lambda_max": "upstream range/step metadata; edi derives its range from the measured pattern rather than storing it",
+    "data_range.sin_theta_over_lambda_min": "upstream range/step metadata; edi derives its range from the measured pattern rather than storing it",
+    "data_range.time_of_flight_inc": "upstream range/step metadata; edi derives its range from the measured pattern rather than storing it",
+    "data_range.time_of_flight_max": "upstream range/step metadata; edi derives its range from the measured pattern rather than storing it",
+    "data_range.time_of_flight_min": "upstream range/step metadata; edi derives its range from the measured pattern rather than storing it",
+    "data_range.two_theta_inc": "upstream range/step metadata; edi derives its range from the measured pattern rather than storing it",
+    "data_range.two_theta_max": "upstream range/step metadata; edi derives its range from the measured pattern rather than storing it",
+    "data_range.two_theta_min": "upstream range/step metadata; edi derives its range from the measured pattern rather than storing it",
+    "data_range.x_max": "upstream range/step metadata; edi derives its range from the measured pattern rather than storing it",
+    "data_range.x_min": "upstream range/step metadata; edi derives its range from the measured pattern rather than storing it",
+    "data_range.x_step": "upstream range/step metadata; edi derives its range from the measured pattern rather than storing it",
+    "diffrn.ambient_electric_field": "ambient-condition metadata, not modelled",
+    "diffrn.ambient_magnetic_field": "ambient-condition metadata, not modelled",
+    "diffrn.ambient_pressure": "ambient-condition metadata, not modelled",
+    "diffrn.ambient_temperature": "ambient-condition metadata, not modelled",
+    "excluded_regions.end": "see table (a): edi keeps excluded regions as plain `(start, end)` pairs, so neither element is a named attribute",
+    "excluded_regions.id": "row ordinal, read past",
+    "excluded_regions.start": "see table (a): edi keeps excluded regions as plain `(start, end)` pairs, so neither element is a named attribute",
+    "extinction.model": "extinction correction, not implemented",
+    "extinction.mosaicity": "extinction correction, not implemented",
+    "extinction.radius": "extinction correction, not implemented",
+    "extinction.type": "extinction correction, not implemented",
+    "fit_parameter_correlations.correlation": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "fit_parameter_correlations.id": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "fit_parameter_correlations.parameter_unique_name_i": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "fit_parameter_correlations.parameter_unique_name_j": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "fit_parameter_correlations.source_kind": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "fit_parameters.bounds_uncertainty_multiplier": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "fit_parameters.fit_max": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "fit_parameters.fit_min": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "fit_parameters.parameter_unique_name": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "fit_parameters.posterior_best_sample_value": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "fit_parameters.posterior_effective_sample_size_bulk": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "fit_parameters.posterior_gelman_rubin": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "fit_parameters.posterior_interval_68_high": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "fit_parameters.posterior_interval_68_low": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "fit_parameters.posterior_interval_95_high": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "fit_parameters.posterior_interval_95_low": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "fit_parameters.posterior_median": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "fit_parameters.posterior_uncertainty": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "fit_parameters.start_uncertainty": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "fit_parameters.start_value": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "fit_result.acceptance_rate_mean": "richer fit statistics than edi reports \u2014 edi exposes `fitting_time`, `iterations`, `reduced_chi_square`, `result_kind` and `success`; the rest arrive with the `analysis.*` surface (ruled C)",
+    "fit_result.background_function": "richer fit statistics than edi reports \u2014 edi exposes `fitting_time`, `iterations`, `reduced_chi_square`, `result_kind` and `success`; the rest arrive with the `analysis.*` surface (ruled C)",
+    "fit_result.best_log_posterior": "richer fit statistics than edi reports \u2014 edi exposes `fitting_time`, `iterations`, `reduced_chi_square`, `result_kind` and `success`; the rest arrive with the `analysis.*` surface (ruled C)",
+    "fit_result.correlation_available": "richer fit statistics than edi reports \u2014 edi exposes `fitting_time`, `iterations`, `reduced_chi_square`, `result_kind` and `success`; the rest arrive with the `analysis.*` surface (ruled C)",
+    "fit_result.covariance_available": "richer fit statistics than edi reports \u2014 edi exposes `fitting_time`, `iterations`, `reduced_chi_square`, `result_kind` and `success`; the rest arrive with the `analysis.*` surface (ruled C)",
+    "fit_result.credible_interval_inner": "richer fit statistics than edi reports \u2014 edi exposes `fitting_time`, `iterations`, `reduced_chi_square`, `result_kind` and `success`; the rest arrive with the `analysis.*` surface (ruled C)",
+    "fit_result.credible_interval_outer": "richer fit statistics than edi reports \u2014 edi exposes `fitting_time`, `iterations`, `reduced_chi_square`, `result_kind` and `success`; the rest arrive with the `analysis.*` surface (ruled C)",
+    "fit_result.degrees_of_freedom": "richer fit statistics than edi reports \u2014 edi exposes `fitting_time`, `iterations`, `reduced_chi_square`, `result_kind` and `success`; the rest arrive with the `analysis.*` surface (ruled C)",
+    "fit_result.effective_sample_size_min": "richer fit statistics than edi reports \u2014 edi exposes `fitting_time`, `iterations`, `reduced_chi_square`, `result_kind` and `success`; the rest arrive with the `analysis.*` surface (ruled C)",
+    "fit_result.exit_reason": "richer fit statistics than edi reports \u2014 edi exposes `fitting_time`, `iterations`, `reduced_chi_square`, `result_kind` and `success`; the rest arrive with the `analysis.*` surface (ruled C)",
+    "fit_result.gelman_rubin_max": "richer fit statistics than edi reports \u2014 edi exposes `fitting_time`, `iterations`, `reduced_chi_square`, `result_kind` and `success`; the rest arrive with the `analysis.*` surface (ruled C)",
+    "fit_result.message": "edi reports terminal state as the `FitOutcome.status` enum plus `FitStatus`, not a free-text message",
+    "fit_result.n_data_points": "richer fit statistics than edi reports \u2014 edi exposes `fitting_time`, `iterations`, `reduced_chi_square`, `result_kind` and `success`; the rest arrive with the `analysis.*` surface (ruled C)",
+    "fit_result.n_free_parameters": "richer fit statistics than edi reports \u2014 edi exposes `fitting_time`, `iterations`, `reduced_chi_square`, `result_kind` and `success`; the rest arrive with the `analysis.*` surface (ruled C)",
+    "fit_result.n_parameters": "richer fit statistics than edi reports \u2014 edi exposes `fitting_time`, `iterations`, `reduced_chi_square`, `result_kind` and `success`; the rest arrive with the `analysis.*` surface (ruled C)",
+    "fit_result.number_constraints": "richer fit statistics than edi reports \u2014 edi exposes `fitting_time`, `iterations`, `reduced_chi_square`, `result_kind` and `success`; the rest arrive with the `analysis.*` surface (ruled C)",
+    "fit_result.number_reflns_gt": "richer fit statistics than edi reports \u2014 edi exposes `fitting_time`, `iterations`, `reduced_chi_square`, `result_kind` and `success`; the rest arrive with the `analysis.*` surface (ruled C)",
+    "fit_result.number_reflns_total": "richer fit statistics than edi reports \u2014 edi exposes `fitting_time`, `iterations`, `reduced_chi_square`, `result_kind` and `success`; the rest arrive with the `analysis.*` surface (ruled C)",
+    "fit_result.number_restraints": "richer fit statistics than edi reports \u2014 edi exposes `fitting_time`, `iterations`, `reduced_chi_square`, `result_kind` and `success`; the rest arrive with the `analysis.*` surface (ruled C)",
+    "fit_result.objective_name": "richer fit statistics than edi reports \u2014 edi exposes `fitting_time`, `iterations`, `reduced_chi_square`, `result_kind` and `success`; the rest arrive with the `analysis.*` surface (ruled C)",
+    "fit_result.objective_value": "richer fit statistics than edi reports \u2014 edi exposes `fitting_time`, `iterations`, `reduced_chi_square`, `result_kind` and `success`; the rest arrive with the `analysis.*` surface (ruled C)",
+    "fit_result.point_estimate_name": "richer fit statistics than edi reports \u2014 edi exposes `fitting_time`, `iterations`, `reduced_chi_square`, `result_kind` and `success`; the rest arrive with the `analysis.*` surface (ruled C)",
+    "fit_result.prof_r_factor": "richer fit statistics than edi reports \u2014 edi exposes `fitting_time`, `iterations`, `reduced_chi_square`, `result_kind` and `success`; the rest arrive with the `analysis.*` surface (ruled C)",
+    "fit_result.prof_wr_expected": "richer fit statistics than edi reports \u2014 edi exposes `fitting_time`, `iterations`, `reduced_chi_square`, `result_kind` and `success`; the rest arrive with the `analysis.*` surface (ruled C)",
+    "fit_result.prof_wr_factor": "richer fit statistics than edi reports \u2014 edi exposes `fitting_time`, `iterations`, `reduced_chi_square`, `result_kind` and `success`; the rest arrive with the `analysis.*` surface (ruled C)",
+    "fit_result.profile_function": "richer fit statistics than edi reports \u2014 edi exposes `fitting_time`, `iterations`, `reduced_chi_square`, `result_kind` and `success`; the rest arrive with the `analysis.*` surface (ruled C)",
+    "fit_result.r_factor_all": "richer fit statistics than edi reports \u2014 edi exposes `fitting_time`, `iterations`, `reduced_chi_square`, `result_kind` and `success`; the rest arrive with the `analysis.*` surface (ruled C)",
+    "fit_result.r_factor_gt": "richer fit statistics than edi reports \u2014 edi exposes `fitting_time`, `iterations`, `reduced_chi_square`, `result_kind` and `success`; the rest arrive with the `analysis.*` surface (ruled C)",
+    "fit_result.resolved_random_seed": "richer fit statistics than edi reports \u2014 edi exposes `fitting_time`, `iterations`, `reduced_chi_square`, `result_kind` and `success`; the rest arrive with the `analysis.*` surface (ruled C)",
+    "fit_result.sampler_completed": "richer fit statistics than edi reports \u2014 edi exposes `fitting_time`, `iterations`, `reduced_chi_square`, `result_kind` and `success`; the rest arrive with the `analysis.*` surface (ruled C)",
+    "fit_result.shift_over_su_max": "richer fit statistics than edi reports \u2014 edi exposes `fitting_time`, `iterations`, `reduced_chi_square`, `result_kind` and `success`; the rest arrive with the `analysis.*` surface (ruled C)",
+    "fit_result.shift_over_su_mean": "richer fit statistics than edi reports \u2014 edi exposes `fitting_time`, `iterations`, `reduced_chi_square`, `result_kind` and `success`; the rest arrive with the `analysis.*` surface (ruled C)",
+    "fit_result.threshold_expression": "richer fit statistics than edi reports \u2014 edi exposes `fitting_time`, `iterations`, `reduced_chi_square`, `result_kind` and `success`; the rest arrive with the `analysis.*` surface (ruled C)",
+    "fit_result.wr_factor_all": "richer fit statistics than edi reports \u2014 edi exposes `fitting_time`, `iterations`, `reduced_chi_square`, `result_kind` and `success`; the rest arrive with the `analysis.*` surface (ruled C)",
+    "fit_result.wr_factor_gt": "richer fit statistics than edi reports \u2014 edi exposes `fitting_time`, `iterations`, `reduced_chi_square`, `result_kind` and `success`; the rest arrive with the `analysis.*` surface (ruled C)",
+    "fitting_mode.type": "upstream's switchable fitting-mode category; edi's `analysis.fitting_mode` is a plain string selector with no category object behind it",
+    "geom.as_cif": "upstream's per-category CIF accessor; edi serialises through its own `.edi` writer",
+    "geom.bond_distance_inc": "geometry/bond-distance analysis, not implemented",
+    "geom.min_bond_distance_cutoff": "geometry/bond-distance analysis, not implemented",
+    "instrument.calib_sample_displacement": "CW instrument feature edi has not implemented",
+    "instrument.calib_sample_transparency": "CW instrument feature edi has not implemented",
+    "instrument.setup_monochromator_twotheta": "CW instrument feature edi has not implemented",
+    "instrument.setup_polarization_coefficient": "CW instrument feature edi has not implemented",
+    "instrument.setup_wavelength_2": "CW instrument feature edi has not implemented",
+    "instrument.setup_wavelength_2_to_1_ratio": "CW instrument feature edi has not implemented",
+    "joint_fit.experiment_id": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "joint_fit.weight": "edi spells this `experiment.dataset_weight` \u2014 see table (a)",
+    "linked_structures.scale": "upstream's linked-structure COLLECTION category; the parity verdict for this quantity is carried by the singular `linked_structure` rows, so these names are absent under this spelling",
+    "linked_structures.structure_id": "upstream's linked-structure COLLECTION category; the parity verdict for this quantity is carried by the singular `linked_structure` rows, so these names are absent under this spelling",
+    "metadata.as_cif": "upstream's per-category CIF accessor; edi serialises through its own `.edi` writer",
+    "metadata.created": "project metadata edi does not record",
+    "metadata.description": "project metadata edi does not record",
+    "metadata.last_modified": "project metadata edi does not record",
+    "metadata.name": "project metadata edi does not record",
+    "metadata.path": "project metadata edi does not record",
+    "metadata.timestamp": "project metadata edi does not record",
+    "metadata.title": "project metadata edi does not record",
+    "metadata.unique_name": "project metadata edi does not record",
+    "minimizer.burn_in_steps": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "minimizer.chains": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "minimizer.initialization_method": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "minimizer.max_iterations": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "minimizer.parallel_workers": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "minimizer.population_size": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "minimizer.proposal_moves": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "minimizer.random_seed": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "minimizer.sampling_steps": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "minimizer.thinning_interval": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "minimizer.type": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
+    "peak.asym_beba_a0": "reserved rung 2 (Berar-Baldinozzi, ) \u2014 the token is refused by name",
+    "peak.asym_beba_a1": "reserved rung 2 (Berar-Baldinozzi, ) \u2014 the token is refused by name",
+    "peak.asym_beba_b0": "reserved rung 2 (Berar-Baldinozzi, ) \u2014 the token is refused by name",
+    "peak.asym_beba_b1": "reserved rung 2 (Berar-Baldinozzi, ) \u2014 the token is refused by name",
+    "peak.asym_fcj_1": "reserved rung 1 (Finger-Cox-Jephcoat, ) \u2014 the token is refused by name",
+    "peak.asym_fcj_2": "reserved rung 1 (Finger-Cox-Jephcoat, ) \u2014 the token is refused by name",
+    "peak.broad_q": "PDF/pair-distribution damping-broadening term, not implemented",
+    "peak.cutoff_q": "PDF/pair-distribution damping-broadening term, not implemented",
+    "peak.damp_particle_diameter": "PDF/pair-distribution damping term, not implemented",
+    "peak.damp_q": "PDF/pair-distribution damping term, not implemented",
+    "peak.dexp_decay_beta_00": "double-Jorgensen-von-Dreele profile, not implemented",
+    "peak.dexp_decay_beta_01": "double-Jorgensen-von-Dreele profile, not implemented",
+    "peak.dexp_decay_beta_10": "double-Jorgensen-von-Dreele profile, not implemented",
+    "peak.dexp_rise_alpha_1": "double-Jorgensen-von-Dreele profile, not implemented",
+    "peak.dexp_rise_alpha_2": "double-Jorgensen-von-Dreele profile, not implemented",
+    "peak.dexp_switch_r_01": "double-Jorgensen-von-Dreele profile, not implemented",
+    "peak.dexp_switch_r_02": "double-Jorgensen-von-Dreele profile, not implemented",
+    "peak.dexp_switch_r_03": "double-Jorgensen-von-Dreele profile, not implemented",
+    "peak.sharp_delta_1": "PDF/pair-distribution peak-sharpening term, not implemented",
+    "peak.sharp_delta_2": "PDF/pair-distribution peak-sharpening term, not implemented",
+    "pref_orient.index_h": "preferred-orientation correction, not implemented",
+    "pref_orient.index_k": "preferred-orientation correction, not implemented",
+    "pref_orient.index_l": "preferred-orientation correction, not implemented",
+    "pref_orient.march_r": "preferred-orientation correction, not implemented",
+    "pref_orient.march_random_fract": "preferred-orientation correction, not implemented",
+    "pref_orient.structure_id": "preferred-orientation correction, not implemented",
+    "refln.d_spacing": "reflection column edi does not expose on its read-out",
+    "refln.f_calc": "reflection column edi does not expose on its read-out",
+    "refln.f_squared_calc": "reflection column edi does not expose on its read-out",
+    "refln.id": "reflection column edi does not expose on its read-out",
+    "refln.index_h": "reflection column edi does not expose on its read-out",
+    "refln.index_k": "reflection column edi does not expose on its read-out",
+    "refln.index_l": "reflection column edi does not expose on its read-out",
+    "refln.intensity_calc": "reflection column edi does not expose on its read-out",
+    "refln.intensity_meas": "reflection column edi does not expose on its read-out",
+    "refln.intensity_meas_su": "reflection column edi does not expose on its read-out",
+    "refln.parameters": "reflection column edi does not expose on its read-out",
+    "refln.sin_theta_over_lambda": "reflection column edi does not expose on its read-out",
+    "refln.structure_id": "reflection column edi does not expose on its read-out",
+    "refln.time_of_flight": "reflection column edi does not expose on its read-out",
+    "refln.two_theta": "reflection column edi does not expose on its read-out",
+    "refln.wavelength": "reflection column edi does not expose on its read-out",
+    "rendering_plot.plotter": "display/rendering subsystem, not ported",
+    "rendering_plot.type": "display/rendering subsystem, not ported",
+    "rendering_structure.as_cif": "upstream's per-category CIF accessor; edi serialises through its own `.edi` writer",
+    "rendering_structure.type": "display/rendering subsystem, not ported",
+    "rendering_structure.viewer": "display/rendering subsystem, not ported",
+    "rendering_table.tabler": "display/rendering subsystem, not ported",
+    "rendering_table.type": "display/rendering subsystem, not ported",
+    "report.cif": "report renderer edi does not provide",
+    "report.html": "report renderer edi does not provide",
+    "report.html_offline": "report renderer edi does not provide",
+    "report.pdf": "report renderer edi does not provide",
+    "report.project": "report renderer edi does not provide",
+    "report.tex": "report renderer edi does not provide",
+    "sequential_fit.as_cif": "upstream's per-category CIF accessor; edi serialises through its own `.edi` writer",
+    "sequential_fit.chunk_size": "sequential/batch fitting over a data directory, not implemented",
+    "sequential_fit.copy_data": "sequential/batch fitting over a data directory, not implemented",
+    "sequential_fit.data_dir": "sequential/batch fitting over a data directory, not implemented",
+    "sequential_fit.file_pattern": "sequential/batch fitting over a data directory, not implemented",
+    "sequential_fit.max_workers": "sequential/batch fitting over a data directory, not implemented",
+    "sequential_fit.reverse": "sequential/batch fitting over a data directory, not implemented",
+    "sequential_fit_extract.id": "sequential/batch fitting over a data directory, not implemented",
+    "sequential_fit_extract.pattern": "sequential/batch fitting over a data directory, not implemented",
+    "sequential_fit_extract.required": "sequential/batch fitting over a data directory, not implemented",
+    "sequential_fit_extract.target": "sequential/batch fitting over a data directory, not implemented",
+    "software.id": "software provenance field edi does not record",
+    "software.name": "software provenance field edi does not record",
+    "software.parameters": "software provenance field edi does not record",
+    "software.url": "software provenance field edi does not record",
+    "software.version": "software provenance field edi does not record",
+    "space_group.crystal_system": "derived classification edi does not store \u2014 the space-group name and coordinate-system code carry it",
+    "space_group_wyckoff.coords_xyz": "upstream per-Wyckoff-position table; edi carries only `_atom_site.wyckoff_letter` on the site itself",
+    "space_group_wyckoff.id": "upstream per-Wyckoff-position table; edi carries only `_atom_site.wyckoff_letter` on the site itself",
+    "space_group_wyckoff.letter": "upstream per-Wyckoff-position table; edi carries only `_atom_site.wyckoff_letter` on the site itself",
+    "space_group_wyckoff.multiplicity": "upstream per-Wyckoff-position table; edi carries only `_atom_site.wyckoff_letter` on the site itself",
+    "space_group_wyckoff.site_symmetry": "upstream per-Wyckoff-position table; edi carries only `_atom_site.wyckoff_letter` on the site itself",
+    "structure_style.adp_probability": "display/rendering subsystem, not ported",
+    "structure_style.as_cif": "upstream's per-category CIF accessor; edi serialises through its own `.edi` writer",
+    "structure_style.atom_scale": "display/rendering subsystem, not ported",
+    "structure_style.atom_view": "display/rendering subsystem, not ported",
+    "structure_style.color_scheme": "display/rendering subsystem, not ported",
+    "structure_view.as_cif": "upstream's per-category CIF accessor; edi serialises through its own `.edi` writer",
+    "structure_view.range_a_max": "display/rendering subsystem, not ported",
+    "structure_view.range_a_min": "display/rendering subsystem, not ported",
+    "structure_view.range_b_max": "display/rendering subsystem, not ported",
+    "structure_view.range_b_min": "display/rendering subsystem, not ported",
+    "structure_view.range_c_max": "display/rendering subsystem, not ported",
+    "structure_view.range_c_min": "display/rendering subsystem, not ported",
+    "structure_view.show_labels": "display/rendering subsystem, not ported",
+    "structure_view.show_moments": "display/rendering subsystem, not ported",
+    "verbosity.as_cif": "upstream's per-category CIF accessor; edi serialises through its own `.edi` writer",
+    "verbosity.fit": "upstream's verbosity category; edi's `Verbosity` is the  output-contract type, not this category \u2014 see table (b)"
+  },
+  "unimplemented_upstream": [
+    "absorption.mu_r",
+    "aliases.id",
+    "aliases.param",
+    "aliases.parameter_unique_name",
+    "aliases.parameters",
+    "atom_site_aniso.adp_11",
+    "atom_site_aniso.adp_12",
+    "atom_site_aniso.adp_13",
+    "atom_site_aniso.adp_22",
+    "atom_site_aniso.adp_23",
+    "atom_site_aniso.adp_33",
+    "atom_site_aniso.id",
+    "atom_sites.adp_iso_as_b",
+    "atom_sites.multiplicity",
+    "background.coef",
+    "background.id",
+    "background.order",
+    "background.type",
+    "calculator.calculator",
+    "calculator.type",
+    "constraints.enabled",
+    "constraints.expression",
+    "constraints.id",
+    "constraints.lhs_alias",
+    "constraints.rhs_expr",
+    "data.calc_status",
+    "data.d_spacing",
+    "data.g_r_calc",
+    "data.g_r_meas",
+    "data.g_r_meas_su",
+    "data.id",
+    "data.intensity_bkg",
+    "data.intensity_calc",
+    "data.r",
+    "data.unfiltered_x",
+    "data.x",
+    "data.x_descriptor",
+    "data_range.d_spacing_max",
+    "data_range.d_spacing_min",
+    "data_range.sin_theta_over_lambda_max",
+    "data_range.sin_theta_over_lambda_min",
+    "data_range.time_of_flight_inc",
+    "data_range.time_of_flight_max",
+    "data_range.time_of_flight_min",
+    "data_range.two_theta_inc",
+    "data_range.two_theta_max",
+    "data_range.two_theta_min",
+    "data_range.x_max",
+    "data_range.x_min",
+    "data_range.x_step",
+    "diffrn.ambient_electric_field",
+    "diffrn.ambient_magnetic_field",
+    "diffrn.ambient_pressure",
+    "diffrn.ambient_temperature",
+    "excluded_regions.end",
+    "excluded_regions.id",
+    "excluded_regions.start",
+    "extinction.model",
+    "extinction.mosaicity",
+    "extinction.radius",
+    "extinction.type",
+    "fit_parameter_correlations.correlation",
+    "fit_parameter_correlations.id",
+    "fit_parameter_correlations.parameter_unique_name_i",
+    "fit_parameter_correlations.parameter_unique_name_j",
+    "fit_parameter_correlations.source_kind",
+    "fit_parameters.bounds_uncertainty_multiplier",
+    "fit_parameters.fit_max",
+    "fit_parameters.fit_min",
+    "fit_parameters.parameter_unique_name",
+    "fit_parameters.posterior_best_sample_value",
+    "fit_parameters.posterior_effective_sample_size_bulk",
+    "fit_parameters.posterior_gelman_rubin",
+    "fit_parameters.posterior_interval_68_high",
+    "fit_parameters.posterior_interval_68_low",
+    "fit_parameters.posterior_interval_95_high",
+    "fit_parameters.posterior_interval_95_low",
+    "fit_parameters.posterior_median",
+    "fit_parameters.posterior_uncertainty",
+    "fit_parameters.start_uncertainty",
+    "fit_parameters.start_value",
+    "fit_result.acceptance_rate_mean",
+    "fit_result.background_function",
+    "fit_result.best_log_posterior",
+    "fit_result.correlation_available",
+    "fit_result.covariance_available",
+    "fit_result.credible_interval_inner",
+    "fit_result.credible_interval_outer",
+    "fit_result.degrees_of_freedom",
+    "fit_result.effective_sample_size_min",
+    "fit_result.exit_reason",
+    "fit_result.gelman_rubin_max",
+    "fit_result.message",
+    "fit_result.n_data_points",
+    "fit_result.n_free_parameters",
+    "fit_result.n_parameters",
+    "fit_result.number_constraints",
+    "fit_result.number_reflns_gt",
+    "fit_result.number_reflns_total",
+    "fit_result.number_restraints",
+    "fit_result.objective_name",
+    "fit_result.objective_value",
+    "fit_result.point_estimate_name",
+    "fit_result.prof_r_factor",
+    "fit_result.prof_wr_expected",
+    "fit_result.prof_wr_factor",
+    "fit_result.profile_function",
+    "fit_result.r_factor_all",
+    "fit_result.r_factor_gt",
+    "fit_result.resolved_random_seed",
+    "fit_result.sampler_completed",
+    "fit_result.shift_over_su_max",
+    "fit_result.shift_over_su_mean",
+    "fit_result.threshold_expression",
+    "fit_result.wr_factor_all",
+    "fit_result.wr_factor_gt",
+    "fitting_mode.type",
+    "geom.as_cif",
+    "geom.bond_distance_inc",
+    "geom.min_bond_distance_cutoff",
+    "instrument.calib_sample_displacement",
+    "instrument.calib_sample_transparency",
+    "instrument.setup_monochromator_twotheta",
+    "instrument.setup_polarization_coefficient",
+    "instrument.setup_wavelength_2",
+    "instrument.setup_wavelength_2_to_1_ratio",
+    "joint_fit.experiment_id",
+    "joint_fit.weight",
+    "linked_structures.scale",
+    "linked_structures.structure_id",
+    "metadata.as_cif",
+    "metadata.created",
+    "metadata.description",
+    "metadata.last_modified",
+    "metadata.name",
+    "metadata.path",
+    "metadata.timestamp",
+    "metadata.title",
+    "metadata.unique_name",
+    "minimizer.burn_in_steps",
+    "minimizer.chains",
+    "minimizer.initialization_method",
+    "minimizer.max_iterations",
+    "minimizer.parallel_workers",
+    "minimizer.population_size",
+    "minimizer.proposal_moves",
+    "minimizer.random_seed",
+    "minimizer.sampling_steps",
+    "minimizer.thinning_interval",
+    "minimizer.type",
+    "peak.asym_beba_a0",
+    "peak.asym_beba_a1",
+    "peak.asym_beba_b0",
+    "peak.asym_beba_b1",
+    "peak.asym_fcj_1",
+    "peak.asym_fcj_2",
+    "peak.broad_q",
+    "peak.cutoff_q",
+    "peak.damp_particle_diameter",
+    "peak.damp_q",
+    "peak.dexp_decay_beta_00",
+    "peak.dexp_decay_beta_01",
+    "peak.dexp_decay_beta_10",
+    "peak.dexp_rise_alpha_1",
+    "peak.dexp_rise_alpha_2",
+    "peak.dexp_switch_r_01",
+    "peak.dexp_switch_r_02",
+    "peak.dexp_switch_r_03",
+    "peak.sharp_delta_1",
+    "peak.sharp_delta_2",
+    "pref_orient.index_h",
+    "pref_orient.index_k",
+    "pref_orient.index_l",
+    "pref_orient.march_r",
+    "pref_orient.march_random_fract",
+    "pref_orient.structure_id",
+    "refln.d_spacing",
+    "refln.f_calc",
+    "refln.f_squared_calc",
+    "refln.id",
+    "refln.index_h",
+    "refln.index_k",
+    "refln.index_l",
+    "refln.intensity_calc",
+    "refln.intensity_meas",
+    "refln.intensity_meas_su",
+    "refln.parameters",
+    "refln.sin_theta_over_lambda",
+    "refln.structure_id",
+    "refln.time_of_flight",
+    "refln.two_theta",
+    "refln.wavelength",
+    "rendering_plot.plotter",
+    "rendering_plot.type",
+    "rendering_structure.as_cif",
+    "rendering_structure.type",
+    "rendering_structure.viewer",
+    "rendering_table.tabler",
+    "rendering_table.type",
+    "report.cif",
+    "report.html",
+    "report.html_offline",
+    "report.pdf",
+    "report.project",
+    "report.tex",
+    "sequential_fit.as_cif",
+    "sequential_fit.chunk_size",
+    "sequential_fit.copy_data",
+    "sequential_fit.data_dir",
+    "sequential_fit.file_pattern",
+    "sequential_fit.max_workers",
+    "sequential_fit.reverse",
+    "sequential_fit_extract.id",
+    "sequential_fit_extract.pattern",
+    "sequential_fit_extract.required",
+    "sequential_fit_extract.target",
+    "software.id",
+    "software.name",
+    "software.parameters",
+    "software.url",
+    "software.version",
+    "space_group.crystal_system",
+    "space_group_wyckoff.coords_xyz",
+    "space_group_wyckoff.id",
+    "space_group_wyckoff.letter",
+    "space_group_wyckoff.multiplicity",
+    "space_group_wyckoff.site_symmetry",
+    "structure_style.adp_probability",
+    "structure_style.as_cif",
+    "structure_style.atom_scale",
+    "structure_style.atom_view",
+    "structure_style.color_scheme",
+    "structure_view.as_cif",
+    "structure_view.range_a_max",
+    "structure_view.range_a_min",
+    "structure_view.range_b_max",
+    "structure_view.range_b_min",
+    "structure_view.range_c_max",
+    "structure_view.range_c_min",
+    "structure_view.show_labels",
+    "structure_view.show_moments",
+    "verbosity.as_cif",
+    "verbosity.fit"
+  ],
+  "universe": {
+    "absorption": [
+      "mu_r",
+      "type"
+    ],
+    "aliases": [
+      "id",
+      "param",
+      "parameter_unique_name",
+      "parameters"
+    ],
+    "atom_site_aniso": [
+      "adp_11",
+      "adp_12",
+      "adp_13",
+      "adp_22",
+      "adp_23",
+      "adp_33",
+      "id"
+    ],
+    "atom_sites": [
+      "adp_iso",
+      "adp_iso_as_b",
+      "adp_type",
+      "fract_x",
+      "fract_y",
+      "fract_z",
+      "id",
+      "multiplicity",
+      "occupancy",
+      "type_symbol",
+      "wyckoff_letter"
+    ],
+    "background": [
+      "coef",
+      "id",
+      "intensity",
+      "order",
+      "position",
+      "type"
+    ],
+    "calculator": [
+      "calculator",
+      "type"
+    ],
+    "cell": [
+      "angle_alpha",
+      "angle_beta",
+      "angle_gamma",
+      "length_a",
+      "length_b",
+      "length_c"
+    ],
+    "constraints": [
+      "enabled",
+      "expression",
+      "id",
+      "lhs_alias",
+      "rhs_expr"
+    ],
+    "data": [
+      "calc_status",
+      "d_spacing",
+      "g_r_calc",
+      "g_r_meas",
+      "g_r_meas_su",
+      "id",
+      "intensity_bkg",
+      "intensity_calc",
+      "intensity_meas",
+      "intensity_meas_su",
+      "r",
+      "time_of_flight",
+      "two_theta",
+      "unfiltered_x",
+      "x",
+      "x_descriptor"
+    ],
+    "data_range": [
+      "d_spacing_max",
+      "d_spacing_min",
+      "sin_theta_over_lambda_max",
+      "sin_theta_over_lambda_min",
+      "time_of_flight_inc",
+      "time_of_flight_max",
+      "time_of_flight_min",
+      "two_theta_inc",
+      "two_theta_max",
+      "two_theta_min",
+      "x_max",
+      "x_min",
+      "x_step"
+    ],
+    "diffrn": [
+      "ambient_electric_field",
+      "ambient_magnetic_field",
+      "ambient_pressure",
+      "ambient_temperature"
+    ],
+    "excluded_regions": [
+      "end",
+      "id",
+      "start"
+    ],
+    "experiment_type": [
+      "beam_mode",
+      "radiation_probe",
+      "sample_form",
+      "scattering_type"
+    ],
+    "extinction": [
+      "model",
+      "mosaicity",
+      "radius",
+      "type"
+    ],
+    "fit_parameter_correlations": [
+      "correlation",
+      "id",
+      "parameter_unique_name_i",
+      "parameter_unique_name_j",
+      "source_kind"
+    ],
+    "fit_parameters": [
+      "bounds_uncertainty_multiplier",
+      "fit_max",
+      "fit_min",
+      "parameter_unique_name",
+      "posterior_best_sample_value",
+      "posterior_effective_sample_size_bulk",
+      "posterior_gelman_rubin",
+      "posterior_interval_68_high",
+      "posterior_interval_68_low",
+      "posterior_interval_95_high",
+      "posterior_interval_95_low",
+      "posterior_median",
+      "posterior_uncertainty",
+      "start_uncertainty",
+      "start_value"
+    ],
+    "fit_result": [
+      "acceptance_rate_mean",
+      "background_function",
+      "best_log_posterior",
+      "correlation_available",
+      "covariance_available",
+      "credible_interval_inner",
+      "credible_interval_outer",
+      "degrees_of_freedom",
+      "effective_sample_size_min",
+      "exit_reason",
+      "fitting_time",
+      "gelman_rubin_max",
+      "iterations",
+      "message",
+      "n_data_points",
+      "n_free_parameters",
+      "n_parameters",
+      "number_constraints",
+      "number_reflns_gt",
+      "number_reflns_total",
+      "number_restraints",
+      "objective_name",
+      "objective_value",
+      "point_estimate_name",
+      "prof_r_factor",
+      "prof_wr_expected",
+      "prof_wr_factor",
+      "profile_function",
+      "r_factor_all",
+      "r_factor_gt",
+      "reduced_chi_square",
+      "resolved_random_seed",
+      "result_kind",
+      "sampler_completed",
+      "shift_over_su_max",
+      "shift_over_su_mean",
+      "success",
+      "threshold_expression",
+      "wr_factor_all",
+      "wr_factor_gt"
+    ],
+    "fitting_mode": [
+      "type"
+    ],
+    "geom": [
+      "as_cif",
+      "bond_distance_inc",
+      "min_bond_distance_cutoff"
+    ],
+    "instrument": [
+      "calib_d_to_tof_linear",
+      "calib_d_to_tof_offset",
+      "calib_d_to_tof_quadratic",
+      "calib_d_to_tof_reciprocal",
+      "calib_sample_displacement",
+      "calib_sample_transparency",
+      "calib_twotheta_offset",
+      "setup_monochromator_twotheta",
+      "setup_polarization_coefficient",
+      "setup_twotheta_bank",
+      "setup_wavelength",
+      "setup_wavelength_2",
+      "setup_wavelength_2_to_1_ratio"
+    ],
+    "joint_fit": [
+      "experiment_id",
+      "weight"
+    ],
+    "linked_structure": [
+      "scale",
+      "structure_id"
+    ],
+    "linked_structures": [
+      "scale",
+      "structure_id"
+    ],
+    "metadata": [
+      "as_cif",
+      "created",
+      "description",
+      "last_modified",
+      "name",
+      "path",
+      "timestamp",
+      "title",
+      "unique_name"
+    ],
+    "minimizer": [
+      "burn_in_steps",
+      "chains",
+      "initialization_method",
+      "max_iterations",
+      "parallel_workers",
+      "population_size",
+      "proposal_moves",
+      "random_seed",
+      "sampling_steps",
+      "thinning_interval",
+      "type"
+    ],
+    "peak": [
+      "asym_beba_a0",
+      "asym_beba_a1",
+      "asym_beba_b0",
+      "asym_beba_b1",
+      "asym_fcj_1",
+      "asym_fcj_2",
+      "broad_gauss_sigma_0",
+      "broad_gauss_sigma_1",
+      "broad_gauss_sigma_2",
+      "broad_gauss_size",
+      "broad_gauss_strain",
+      "broad_gauss_u",
+      "broad_gauss_v",
+      "broad_gauss_w",
+      "broad_lorentz_gamma_0",
+      "broad_lorentz_gamma_1",
+      "broad_lorentz_gamma_2",
+      "broad_lorentz_size",
+      "broad_lorentz_strain",
+      "broad_lorentz_x",
+      "broad_lorentz_y",
+      "broad_q",
+      "cutoff_fwhm",
+      "cutoff_q",
+      "damp_particle_diameter",
+      "damp_q",
+      "decay_beta_0",
+      "decay_beta_1",
+      "dexp_decay_beta_00",
+      "dexp_decay_beta_01",
+      "dexp_decay_beta_10",
+      "dexp_rise_alpha_1",
+      "dexp_rise_alpha_2",
+      "dexp_switch_r_01",
+      "dexp_switch_r_02",
+      "dexp_switch_r_03",
+      "rise_alpha_0",
+      "rise_alpha_1",
+      "sharp_delta_1",
+      "sharp_delta_2",
+      "type"
+    ],
+    "pref_orient": [
+      "index_h",
+      "index_k",
+      "index_l",
+      "march_r",
+      "march_random_fract",
+      "structure_id"
+    ],
+    "refln": [
+      "d_spacing",
+      "f_calc",
+      "f_squared_calc",
+      "id",
+      "index_h",
+      "index_k",
+      "index_l",
+      "intensity_calc",
+      "intensity_meas",
+      "intensity_meas_su",
+      "parameters",
+      "sin_theta_over_lambda",
+      "structure_id",
+      "time_of_flight",
+      "two_theta",
+      "wavelength"
+    ],
+    "rendering_plot": [
+      "plotter",
+      "type"
+    ],
+    "rendering_structure": [
+      "as_cif",
+      "type",
+      "viewer"
+    ],
+    "rendering_table": [
+      "tabler",
+      "type"
+    ],
+    "report": [
+      "cif",
+      "html",
+      "html_offline",
+      "pdf",
+      "project",
+      "tex"
+    ],
+    "sequential_fit": [
+      "as_cif",
+      "chunk_size",
+      "copy_data",
+      "data_dir",
+      "file_pattern",
+      "max_workers",
+      "reverse"
+    ],
+    "sequential_fit_extract": [
+      "id",
+      "pattern",
+      "required",
+      "target"
+    ],
+    "software": [
+      "id",
+      "name",
+      "parameters",
+      "url",
+      "version"
+    ],
+    "space_group": [
+      "coord_system_code",
+      "crystal_system",
+      "name_h_m"
+    ],
+    "space_group_wyckoff": [
+      "coords_xyz",
+      "id",
+      "letter",
+      "multiplicity",
+      "site_symmetry"
+    ],
+    "structure_style": [
+      "adp_probability",
+      "as_cif",
+      "atom_scale",
+      "atom_view",
+      "color_scheme"
+    ],
+    "structure_view": [
+      "as_cif",
+      "range_a_max",
+      "range_a_min",
+      "range_b_max",
+      "range_b_min",
+      "range_c_max",
+      "range_c_min",
+      "show_labels",
+      "show_moments"
+    ],
+    "verbosity": [
+      "as_cif",
+      "fit"
+    ]
+  }
+}

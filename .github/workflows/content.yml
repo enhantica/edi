@@ -1,0 +1,50 @@
+# The public-content check (tools/public-release/content_check.py): every push and pull request, so
+# nothing that is not fit to publish reaches the repository's files, commit messages or pull requests.
+# It needs no token and no secret, so a fork's pull request runs it too.
+name: content check
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    types: [opened, synchronize, reopened, edited, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  content:
+    name: content check
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Check the change's files, commit messages and pull-request text
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          if [ "$EVENT" = pull_request ]; then
+            printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr-body.txt"
+            exec python tools/public-release/content_check.py --base "$PR_BASE" \
+              --title "$PR_TITLE" --body-file "$RUNNER_TEMP/pr-body.txt"
+          fi
+          base="$PUSH_BEFORE"
+          if [ -z "$base" ] || [ "$base" = 0000000000000000000000000000000000000000 ]; then
+            if [ "$GITHUB_REF_NAME" = "$DEFAULT_BRANCH" ]; then
+              base=root  # the repository's first push: everything
+            else
+              # A new branch: what it adds to the default branch.
+              base=$(git merge-base "origin/$DEFAULT_BRANCH" HEAD 2>/dev/null || echo root)
+            fi
+          fi
+          exec python tools/public-release/content_check.py --base "$base"

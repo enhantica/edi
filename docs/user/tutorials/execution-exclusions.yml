@@ -1,0 +1,22 @@
+# The tutorial execution-exclusion declaration: the ported tutorials are in the docs, execution-
+# disabled, with the exclusion declared and enumerated.
+#
+# Each entry names its unblocker, the work whose landing lets the tutorial execute; the list shrinks
+# to empty as that work lands. The declaration is a gate input, not prose:
+# tools/checks/tutorial_execution_exclusions.py (in verify-quick and verify-full) is red on an
+# unlisted unexecuted tutorial, a listed-but-missing notebook, and a listed-but-executed one; the
+# executed set is derived from pixi.toml's nbmake invocations, never restated.
+#
+# A permanently-skipped notebook in a docs tree is a gate that cannot fail; this file exists so the
+# exclusion CAN fail, at the change set that should have retired it.
+excluded:
+  - notebook: refine-lbco-hrpt-from-data.ipynb
+    unblocked_by: tutorial-runner
+  - notebook: refine-si-sepd.ipynb
+    unblocked_by: tutorial-runner
+  - notebook: refine-ncaf-wish.ipynb
+    unblocked_by: tutorial-runner
+  - notebook: simulate-si-tof.ipynb
+    unblocked_by: tutorial-runner
+  - notebook: refine-cosio-d20-tscan.ipynb
+    unblocked_by: sequential-scan-tutorial

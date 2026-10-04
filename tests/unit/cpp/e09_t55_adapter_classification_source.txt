@@ -1,0 +1,1504 @@
+#include <algorithm>
+#include <array>
+#include <bit>
+#include <chrono>
+#include <cstdint>
+#include <cstdio>
+#include <map>
+#include <memory>
+#include <optional>
+#include <set>
+#include <stdexcept>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "adapter_test_access.hpp"  // edi::detail conversion seam (core/src only; test-only, not installed)
+#include "crysta/cell_symmetry.hpp"
+#include "crysta/experiment_builder.hpp"
+#include "crysta/fit.hpp"
+#include "crysta/fit_report.hpp"
+#include "crysta/model.hpp"
+#include "crysta/parameter.hpp"
+#include "crysta/partype.hpp"
+#include "crysta/pattern.hpp"
+#include "crysta/recompute.hpp"
+#include "crysta/residual.hpp"
+#include "crysta/scattering.hpp"
+#include "crysta/symmetry.hpp"
+#include "edi/model.hpp"
+
+// The crysta adapter (ADR-0003): the ONLY edi translation unit that touches the engine, through its
+// public API only. Maps the edi model -> crysta model via the public constructors + the public
+// TofJorgensenExperiment builder ( / ), then calls the public compute_pattern. No engine
+// physics lives here (ADR-0009); crysta owns the forward model. The edi->crysta cell/site/experiment
+// conversions are defined in `edi::detail` (declared in adapter_test_access.hpp) so a test can inspect
+// them without exposing engine storage order in edi's public API.
+
+namespace edi {
+namespace {
+
+crysta::Parameter param(const Parameter& p, const crysta::ParameterType& type, const char* name) {
+    return crysta::Parameter(p.value, type, crysta::ParameterLabel(name), p.free, std::nullopt,
+                             p.uncertainty.value_or(0.0));
+}
+
+crysta::ParameterState state(const Parameter& p) { return {p.value, p.free, p.uncertainty.value_or(0.0)}; }
+
+// Resolve the model's space group through crysta's resolver — 's two-path selection: an
+// optional coordinate-system code selects the exact (name, code) setting; absent (empty) keeps the
+// name-only path (ambiguous names keep crysta's candidate-naming error). Every fail-closed decision
+// — mismatch, unknown code, no-code ambiguity — stays in crysta's resolver; edi re-implements none
+// of it.
+crysta::SpaceGroup resolve_group(const Structure& s) {
+    return s.space_group.coord_system_code.empty()
+               ? crysta::resolve_space_group(s.space_group.name_h_m)
+               : crysta::resolve_space_group_by_hm_code(s.space_group.name_h_m, s.space_group.coord_system_code);
+}
+
+// The symmetry-completed six cell values ( fork 2, dictionary order a,b,c,alpha,beta,gamma).
+// crysta's own per-setting freedom map (crysta::cell_freedom, ) is the single source of the
+// tie: a dependent parameter takes its independent leader's value and a symmetry-fixed angle takes
+// its constant, so a cubic cell written as `a` alone computes with b = c = a rather than with the
+// default 1.0 Å — the silent-wrong-answer path the crysta 501d49ea bump would otherwise open (the
+// engine stopped ignoring b/c at ). This is exactly the tie crysta itself applies on its
+// refinement path, sourced from the same map, so the forward and refinement cells cannot disagree
+// and edi acquires no crystallographic knowledge of its own (ADR-0009).
+std::array<double, 6> completed_cell_values(const Cell& cell, const crysta::CellFreedom& freedom) {
+    const Parameter* const raw[6] = {&cell.length_a,     &cell.length_b,    &cell.length_c,
+                                     &cell.angle_alpha, &cell.angle_beta, &cell.angle_gamma};
+    std::array<double, 6> values{};
+    for (std::size_t i = 0; i < 6; ++i) {
+        const int leader = freedom.follows[i];
+        values[i] = leader == crysta::CellFreedom::kFixed
+                        ? freedom.fixed[i]
+                        : raw[static_cast<std::size_t>(leader)]->value;
+    }
+    return values;
+}
+
+// The engine cell the boundary contract hands crysta: the user's cell parameters (esd + free flags
+// verbatim — a free flag on a dependent parameter stays the user's claim, refused by crysta's own
+// free-set builder with its own structured error) with the VALUES symmetry-completed per the map
+// above. Sits beside — never inside — detail::to_crysta_cell: that seam is the space-group-free raw
+// conversion the adapter probe drives with non-resolvable models, and completion requires a
+// resolved setting by definition.
+crysta::Cell to_completed_crysta_cell(const Cell& c, const crysta::CellFreedom& freedom) {
+    const std::array<double, 6> values = completed_cell_values(c, freedom);
+    const Parameter* const raw[6] = {&c.length_a, &c.length_b, &c.length_c, &c.angle_alpha, &c.angle_beta, &c.angle_gamma};
+    const char* const names[6] = {"a", "b", "c", "alpha", "beta", "gamma"};
+    std::vector<crysta::Parameter> cell_params;
+    cell_params.reserve(6);
+    for (std::size_t i = 0; i < 6; ++i) {
+        Parameter completed = *raw[i];
+        completed.value = values[i];
+        cell_params.push_back(param(completed, crysta::CELL, names[i]));
+    }
+    return crysta::Cell(std::move(cell_params));
+}
+
+// Full structure for calculate(): needs the space group resolved (crysta MVP1: I 2₁3 only). Kept
+// internal — the probe inspects cell + atom sites separately (via edi::detail), so it never needs a
+// resolvable space group and can use a non-cubic conversion model. The cell crysta computes with is
+// the symmetry-COMPLETED cell (fork 2's contract, above): this is the single edi→engine conversion
+// choke point, so every consumer — calculate, refine, refine_joint —
+// crosses the boundary with a cell that satisfies the model's own space-group ties.
+crysta::Structure to_crysta_structure(const Structure& s) {
+    crysta::SpaceGroup space_group = resolve_group(s);
+    const crysta::CellFreedom freedom = crysta::cell_freedom(space_group);
+    return crysta::Structure(to_completed_crysta_cell(s.cell, freedom), std::move(space_group),
+                             detail::to_crysta_atom_sites(s.atom_sites));
+}
+
+// Build the crysta model + scattering table for an in-memory forward call — the adapter stays
+// the single crysta-touching TU with one build path.
+crysta::Project build_crysta_project(const Structure& structure, const ExperimentBase& experiment) {
+    return crysta::Project(to_crysta_structure(structure), detail::to_crysta_experiment(experiment));
+}
+
+crysta::NeutronScattering select_scattering(const Structure& structure) {
+    // Honour the model's element->b_c map when supplied; fall back to crysta's default neutron table.
+    return structure.scattering_lengths_fm.empty()
+               ? crysta::load_neutron_scattering()
+               : crysta::NeutronScattering(structure.scattering_lengths_fm);
+}
+
+// Make a converted experiment FIT-ready (, generalised to N banks by ). Historically
+// the forward builder emitted the 3-term calibration and crysta's fit path read instrument[3] —
+// the reciprocal term — so this padded a fixed 0.0 there. Since  crysta's builder stamps
+// the 4-wide instrument itself, and since  seq-104 edi's model CARRIES the reciprocal and
+// the conversion passes it through (`d_to_tof_reciprocal` below), so the guard here can no longer
+// fire; it stays as a fail-safe for a caller that hands in a hand-built 3-term experiment.
+void make_fit_ready(crysta::ExperimentBase& built) {
+    // The reciprocal pad is TOF-only by construction: the CW instrument layout is
+    // (calib_twotheta_offset, setup_wavelength) with no reciprocal slot — crysta's CW free_from_model
+    // (supported since , consumed by edi from ) reads exactly those two, so a CW
+    // experiment is already fit-ready as converted and padding it would corrupt the layout.
+    if (built.kind != crysta::BeamModeEnum::TimeOfFlight) {
+        return;
+    }
+    if (built.instrument.size() < 4) {
+        built.instrument.emplace_back(0.0, crysta::CALIBRATION,
+                                      crysta::ParameterLabel("calib_d_to_tof_reciprocal"));
+    }
+}
+
+// A crysta FitResultBase label resolved onto edi's own model (): the edi Parameter it refines +
+// a stable, edi-owned identity path that resolves through `import edi`'s public model
+// (`Project`.<attr>[.<attr>|[i]]…) — NO crysta engine label crosses the boundary. The path is the
+// FitResultBase key; the pointer is the write-back target.
+struct ResolvedParameter {
+    Parameter* target;
+    std::string path;
+};
+
+// Resolve the INSTRUMENT half of the label grammar — the per-experiment quantities crysta emits
+// unprefixed for a single-bank fit and `<bank>.`-prefixed for a joint one. `path_prefix` is the
+// edi-owned path root the caller wants (`experiment.` for the single-bank seam,
+// `experiments[<bank>].` for a joint one), so both entry points share ONE label table and cannot
+// drift apart. Returns nullopt if `label` is not an instrument label at all (the caller then tries
+// the structural half) or names a field this experiment does not carry.
+std::optional<ResolvedParameter> resolve_instrument_label(ExperimentBase& experiment,
+                                                          const std::string& label,
+                                                          const std::string& path_prefix) {
+    if (label.rfind("background[", 0) == 0 && !label.empty() && label.back() == ']') {
+        const std::size_t index = static_cast<std::size_t>(
+            std::stoul(label.substr(11, label.size() - 12)));  // "background[<i>]"
+        if (index >= experiment.background.size()) return std::nullopt;
+        return ResolvedParameter{&experiment.background[index].intensity,
+                                 path_prefix + "background[" + std::to_string(index) + "].intensity"};
+    }
+    if (label == "scale") {
+        return ResolvedParameter{&experiment.linked_structure.scale,
+                                 path_prefix + "linked_structure.scale"};
+    }
+    // ONE flat label table (): the seam rename made the TOF and CW label sets disjoint
+    // (crysta's CW 2θ zero-shift is now "calib_twotheta_offset", its TOF calibration zero
+    // "calib_d_to_tof_offset"), so the  kind dispatch died with the collision that forced it.
+    // Every label leaf equals the edi field leaf (plan I2/S5). Presence-tracked CW fields keep
+    // the fail-closed rule: a label whose field the model never carried stays unresolvable — the
+    // abscor1 precedent — never a write to a value the model never had (plan I8).
+    using RequiredField = Parameter& (*)(ExperimentBase&);
+    static const std::map<std::string, std::pair<RequiredField, const char*>> kRequired{
+        {"calib_d_to_tof_offset",
+         {+[](ExperimentBase& e) -> Parameter& { return e.instrument.calib_d_to_tof_offset; },
+          "instrument.calib_d_to_tof_offset"}},
+        {"calib_d_to_tof_linear",
+         {+[](ExperimentBase& e) -> Parameter& { return e.instrument.calib_d_to_tof_linear; },
+          "instrument.calib_d_to_tof_linear"}},
+        {"calib_d_to_tof_quadratic",
+         {+[](ExperimentBase& e) -> Parameter& { return e.instrument.calib_d_to_tof_quadratic; },
+          "instrument.calib_d_to_tof_quadratic"}},
+        {"calib_d_to_tof_reciprocal",
+         {+[](ExperimentBase& e) -> Parameter& { return e.instrument.calib_d_to_tof_reciprocal; },
+          "instrument.calib_d_to_tof_reciprocal"}},
+        {"rise_alpha_0",
+         {+[](ExperimentBase& e) -> Parameter& { return e.peak.rise_alpha_0; }, "peak.rise_alpha_0"}},
+        {"rise_alpha_1",
+         {+[](ExperimentBase& e) -> Parameter& { return e.peak.rise_alpha_1; }, "peak.rise_alpha_1"}},
+        {"decay_beta_0",
+         {+[](ExperimentBase& e) -> Parameter& { return e.peak.decay_beta_0; }, "peak.decay_beta_0"}},
+        {"decay_beta_1",
+         {+[](ExperimentBase& e) -> Parameter& { return e.peak.decay_beta_1; }, "peak.decay_beta_1"}},
+        {"broad_gauss_sigma_0",
+         {+[](ExperimentBase& e) -> Parameter& { return e.peak.broad_gauss_sigma_0; },
+          "peak.broad_gauss_sigma_0"}},
+        {"broad_gauss_sigma_1",
+         {+[](ExperimentBase& e) -> Parameter& { return e.peak.broad_gauss_sigma_1; },
+          "peak.broad_gauss_sigma_1"}},
+        {"broad_gauss_sigma_2",
+         {+[](ExperimentBase& e) -> Parameter& { return e.peak.broad_gauss_sigma_2; },
+          "peak.broad_gauss_sigma_2"}},
+        {"broad_gauss_size",
+         {+[](ExperimentBase& e) -> Parameter& { return e.peak.broad_gauss_size; },
+          "peak.broad_gauss_size"}},
+        {"broad_gauss_strain",
+         {+[](ExperimentBase& e) -> Parameter& { return e.peak.broad_gauss_strain; },
+          "peak.broad_gauss_strain"}},
+        {"broad_lorentz_gamma_0",
+         {+[](ExperimentBase& e) -> Parameter& { return e.peak.broad_lorentz_gamma_0; },
+          "peak.broad_lorentz_gamma_0"}},
+        {"broad_lorentz_gamma_1",
+         {+[](ExperimentBase& e) -> Parameter& { return e.peak.broad_lorentz_gamma_1; },
+          "peak.broad_lorentz_gamma_1"}},
+        {"broad_lorentz_gamma_2",
+         {+[](ExperimentBase& e) -> Parameter& { return e.peak.broad_lorentz_gamma_2; },
+          "peak.broad_lorentz_gamma_2"}},
+        {"broad_lorentz_size",
+         {+[](ExperimentBase& e) -> Parameter& { return e.peak.broad_lorentz_size; },
+          "peak.broad_lorentz_size"}},
+        {"broad_lorentz_strain",
+         {+[](ExperimentBase& e) -> Parameter& { return e.peak.broad_lorentz_strain; },
+          "peak.broad_lorentz_strain"}},
+    };
+    if (const auto it = kRequired.find(label); it != kRequired.end()) {
+        return ResolvedParameter{&it->second.first(experiment), path_prefix + it->second.second};
+    }
+    using OptionalField = std::optional<Parameter>& (*)(ExperimentBase&);
+    static const std::map<std::string, std::pair<OptionalField, const char*>> kPresenceTracked{
+        {"calib_twotheta_offset",
+         {+[](ExperimentBase& e) -> std::optional<Parameter>& { return e.instrument.calib_twotheta_offset; },
+          "instrument.calib_twotheta_offset"}},
+        {"setup_wavelength",
+         {+[](ExperimentBase& e) -> std::optional<Parameter>& { return e.instrument.setup_wavelength; },
+          "instrument.setup_wavelength"}},
+        {"broad_gauss_u",
+         {+[](ExperimentBase& e) -> std::optional<Parameter>& { return e.peak.broad_gauss_u; },
+          "peak.broad_gauss_u"}},
+        {"broad_gauss_v",
+         {+[](ExperimentBase& e) -> std::optional<Parameter>& { return e.peak.broad_gauss_v; },
+          "peak.broad_gauss_v"}},
+        {"broad_gauss_w",
+         {+[](ExperimentBase& e) -> std::optional<Parameter>& { return e.peak.broad_gauss_w; },
+          "peak.broad_gauss_w"}},
+        {"broad_lorentz_x",
+         {+[](ExperimentBase& e) -> std::optional<Parameter>& { return e.peak.broad_lorentz_x; },
+          "peak.broad_lorentz_x"}},
+        {"broad_lorentz_y",
+         {+[](ExperimentBase& e) -> std::optional<Parameter>& { return e.peak.broad_lorentz_y; },
+          "peak.broad_lorentz_y"}},
+        {"abscor1",
+         {+[](ExperimentBase& e) -> std::optional<Parameter>& { return e.absorption.abscor1; },
+          "absorption.abscor1"}},
+    };
+    if (const auto it = kPresenceTracked.find(label); it != kPresenceTracked.end()) {
+        std::optional<Parameter>& field = it->second.first(experiment);
+        if (!field) return std::nullopt;
+        return ResolvedParameter{&*field, path_prefix + it->second.second};
+    }
+    return std::nullopt;
+}
+
+// Resolve the SHARED STRUCTURAL half — the quantities crysta emits once per fit, unprefixed, for
+// both the single-bank and joint layouts (cell length, positional basics, per-site Biso/occupancy).
+std::optional<ResolvedParameter> resolve_structural_label(Structure& structure,
+                                                          const std::string& label) {
+    // All six cell labels crysta's free-set builder can emit (cell_symmetry.cpp kLabels, ).
+    // Mapping cell_a alone was  fact 5's gap: a Pnma cell_b/cell_c — or any non-cubic
+    // independent edge/angle — died at the unmapped-label refusal. crysta only ever emits the
+    // INDEPENDENT parameters of the resolved setting; the dependent ones follow through the
+    // completion contract (to_completed_crysta_cell above).
+    static const std::map<std::string, std::pair<Parameter Cell::*, const char*>> kCell{
+        {"cell_length_a", {&Cell::length_a, "length_a"}},
+        {"cell_length_b", {&Cell::length_b, "length_b"}},
+        {"cell_length_c", {&Cell::length_c, "length_c"}},
+        {"cell_angle_alpha", {&Cell::angle_alpha, "angle_alpha"}},
+        {"cell_angle_beta", {&Cell::angle_beta, "angle_beta"}},
+        {"cell_angle_gamma", {&Cell::angle_gamma, "angle_gamma"}},
+    };
+    if (const auto it = kCell.find(label); it != kCell.end()) {
+        return ResolvedParameter{&(structure.cell.*(it->second.first)),
+                                 std::string("structure.cell.") + it->second.second};
+    }
+    const std::size_t dot = label.rfind('.');
+    if (dot != std::string::npos) {
+        const std::string site = label.substr(0, dot);
+        const std::string field = label.substr(dot + 1);
+        for (AtomSite& atom : structure.atom_sites) {
+            if (atom.id != site) continue;
+            // Sites are addressed by their edi label (stable across model edits), not list position.
+            const std::string base = "structure.atom_sites[" + atom.id + "].";
+            if (field == "fract_x") return ResolvedParameter{&atom.fract_x, base + "fract_x"};
+            if (field == "fract_y") return ResolvedParameter{&atom.fract_y, base + "fract_y"};
+            if (field == "fract_z") return ResolvedParameter{&atom.fract_z, base + "fract_z"};
+            if (field == "adp_iso") return ResolvedParameter{&atom.adp_iso, base + "adp_iso"};
+            if (field == "occupancy") {
+                return ResolvedParameter{&atom.occupancy, base + "occupancy"};
+            }
+        }
+    }
+    return std::nullopt;
+}
+
+// Translate a crysta free_from_model label (residual.cpp grammar) into the edi model parameter +
+// its edi-owned path. Returns std::nullopt for a label with no edi field — the caller fails closed
+// (a total translation is required before any write-back). Site coordinates/ADP/occupancy resolve
+// by the site's edi label (stable across model edits), not list position.
+//
+// This is the SINGLE-BANK seam (): crysta emits instrument labels unprefixed here. The joint
+// seam is resolve_joint_label below; the two share the label tables but never each other's grammar.
+std::optional<ResolvedParameter> resolve_label(Structure& structure, ExperimentBase& experiment,
+                                                const std::string& label) {
+    if (auto instrument = resolve_instrument_label(experiment, label, "experiment.")) {
+        return instrument;
+    }
+    return resolve_structural_label(structure, label);
+}
+
+// Translate a JOINT crysta label (; size-based grammar since ). The label grammar
+// crysta emits is a property of the PROJECT SIZE (residual.cpp `free_from_model`): with
+// `experiments.size() > 1` every per-bank instrument parameter is namespaced `<bank-name>.<field>`
+// (`append_instrument_free`) and the shared structural block is emitted unprefixed exactly once;
+// a ONE-experiment project always gets the single-file UNPREFIXED instrument labels instead —
+// whatever entry point built it. This resolver mirrors that dispatch exactly, in three stages:
+//
+//  1. LONGEST-MATCH bank prefix with validation backtracking (the multi-bank grammar). Every bank
+//     name that prefixes the label followed by `.` is tried, longest first, and the remainder must
+//     resolve as an INSTRUMENT label; otherwise the next-longest candidate is tried. Longest-match
+//     (rather than splitting at the first `.`) is what makes the mapping total: crysta forms
+//     labels as `name + "." + field`, so some candidate always reproduces the true split even when
+//     one bank name prefixes another.
+//  2. ONE-BANK projects only: an unprefixed label is tried as that single bank's instrument label
+//     (kind-dispatched as everywhere) — the grammar crysta actually emits for that size, not a
+//     fallback past a failed prefix match. Unambiguous by construction (there is exactly one
+//     bank), and the resolved path keeps the bank-named joint key grammar
+//     (`experiments[<bank>].<field>`), so the result shape does not depend on bank count.
+//  3. Otherwise the label must be shared structural.
+//
+// Bank and site namespaces cannot be confused even if a bank were named after a site: their field
+// sets are disjoint (`scale/offset/.../abscor1` vs `x/y/z/Biso/occ`), so a site label falls through
+// stage 1 by construction, and stage 2's instrument tables cannot claim a `<site>.<field>` label
+// (every entry is dot-free). `refine_joint` additionally rejects such a project outright, so the
+// ambiguity is unrepresentable rather than merely resolvable. On a MULTI-bank project there is
+// still no bank-0 fallback: an unprefixed instrument label names no bank there, resolves to
+// nullopt, and the caller fails closed.
+std::optional<ResolvedParameter> resolve_joint_label(Structure& structure,
+                                                     std::vector<BraggPdExperiment>& experiments,
+                                                     const std::string& label) {
+    std::vector<std::size_t> candidates;
+    for (std::size_t bank = 0; bank < experiments.size(); ++bank) {
+        const std::string& name = experiments[bank].name;
+        if (!name.empty() && label.size() > name.size() + 1 && label.compare(0, name.size(), name) == 0
+            && label[name.size()] == '.') {
+            candidates.push_back(bank);
+        }
+    }
+    std::sort(candidates.begin(), candidates.end(),
+              [&experiments](std::size_t left, std::size_t right) {
+                  return experiments[left].name.size() > experiments[right].name.size();
+              });
+    for (const std::size_t bank : candidates) {
+        ExperimentBase& experiment = experiments[bank];
+        const std::string field = label.substr(experiment.name.size() + 1);
+        if (auto resolved = resolve_instrument_label(
+                experiment, field, "experiments[" + experiment.name + "].")) {
+            return resolved;
+        }
+    }
+    // ONE-BANK layout (): crysta's free_from_model uses the joint (prefixed) grammar only
+    // for experiments.size() > 1 — a one-experiment project always emits the single-file
+    // UNPREFIXED instrument labels (residual.cpp free_from_model), whatever entry point built it.
+    // Mirror that dispatch exactly, for both kinds: with one bank an unprefixed instrument label
+    // is unambiguous, and the result path stays bank-named (`experiments[<bank>].<field>`) so the
+    // joint key grammar is unchanged. Before this, a one-bank refine_joint died at write-back on
+    // 'offset'/'zero' for TOF and CW alike — the pre-existing half of the fact-5 label gap.
+    if (experiments.size() == 1) {
+        if (auto resolved = resolve_instrument_label(
+                experiments[0], label, "experiments[" + experiments[0].name + "].")) {
+            return resolved;
+        }
+    }
+    return resolve_structural_label(structure, label);
+}
+
+// ---------------------------------------------------------------------------------------------
+//  cached path helpers. All of it stays in this TU (ADR-0003): no crysta type reaches a
+// header, a binding or a host.
+// ---------------------------------------------------------------------------------------------
+
+// The 14 profile coefficients in the engine's peak[] slot order (crysta experiment_builder.cpp:31-80:
+// Gaussian [0..8], Lorentzian [9..13]) — the same order to_crysta_experiment feeds the builder, so
+// build_index and the conversion cannot drift. V1 proves it rather than trusting this comment.
+using PeakSlotField = Parameter& (*)(ExperimentBase&);
+const std::array<std::pair<const char*, PeakSlotField>, 14> kPeakSlots{{
+    {"peak.rise_alpha_0", +[](ExperimentBase& e) -> Parameter& { return e.peak.rise_alpha_0; }},
+    {"peak.rise_alpha_1", +[](ExperimentBase& e) -> Parameter& { return e.peak.rise_alpha_1; }},
+    {"peak.decay_beta_0", +[](ExperimentBase& e) -> Parameter& { return e.peak.decay_beta_0; }},
+    {"peak.decay_beta_1", +[](ExperimentBase& e) -> Parameter& { return e.peak.decay_beta_1; }},
+    {"peak.broad_gauss_sigma_0",
+     +[](ExperimentBase& e) -> Parameter& { return e.peak.broad_gauss_sigma_0; }},
+    {"peak.broad_gauss_sigma_1",
+     +[](ExperimentBase& e) -> Parameter& { return e.peak.broad_gauss_sigma_1; }},
+    {"peak.broad_gauss_sigma_2",
+     +[](ExperimentBase& e) -> Parameter& { return e.peak.broad_gauss_sigma_2; }},
+    {"peak.broad_gauss_size", +[](ExperimentBase& e) -> Parameter& { return e.peak.broad_gauss_size; }},
+    {"peak.broad_gauss_strain",
+     +[](ExperimentBase& e) -> Parameter& { return e.peak.broad_gauss_strain; }},
+    {"peak.broad_lorentz_gamma_0",
+     +[](ExperimentBase& e) -> Parameter& { return e.peak.broad_lorentz_gamma_0; }},
+    {"peak.broad_lorentz_gamma_1",
+     +[](ExperimentBase& e) -> Parameter& { return e.peak.broad_lorentz_gamma_1; }},
+    {"peak.broad_lorentz_gamma_2",
+     +[](ExperimentBase& e) -> Parameter& { return e.peak.broad_lorentz_gamma_2; }},
+    {"peak.broad_lorentz_size", +[](ExperimentBase& e) -> Parameter& { return e.peak.broad_lorentz_size; }},
+    {"peak.broad_lorentz_strain",
+     +[](ExperimentBase& e) -> Parameter& { return e.peak.broad_lorentz_strain; }},
+}};
+
+
+// One indexed parameter: the engine Parameter a mutation must click, and the edi model Parameter
+// that mirrors it. Built together in ONE traversal so the two sides cannot drift.
+struct Slot {
+    crysta::Parameter* engine;
+    Parameter* model;
+};
+using Index = std::map<std::string, Slot>;
+
+// --- canonical source encoding (the stale-source guard) ---------------------------------------
+//
+// An INJECTIVE byte encoding of everything in a Project that can affect the built engine graph, the
+// parameter index, a calculation or a refinement. Compared VERBATIM (never hashed), so no digest
+// collision can mask a mutation. Doubles are emitted as their exact 64-bit pattern, so -0.0 vs 0.0,
+// NaN payloads and full precision all distinguish; strings and containers are length-prefixed, so no
+// concatenation of one field can imitate another.
+//
+// Deliberately TOTAL over the whole Project — including `experiments` and `fitting_mode`, which the
+// single-bank handle never reads. Failing closed on an unrelated edit is the conservative direction;
+// missing a field is not. Adding a field to edi::Project REQUIRES extending this.
+void put_u64(std::string& out, std::uint64_t value) {
+    char buffer[17];
+    std::snprintf(buffer, sizeof(buffer), "%016llx", static_cast<unsigned long long>(value));
+    out.append(buffer, 16);
+}
+
+void put_double(std::string& out, double value) {
+    put_u64(out, std::bit_cast<std::uint64_t>(value));
+}
+
+void put_text(std::string& out, const std::string& value) {
+    put_u64(out, value.size());
+    out += value;
+    out += '\x1e';
+}
+
+void put_parameter(std::string& out, const Parameter& parameter) {
+    put_double(out, parameter.value);
+    put_double(out, parameter.uncertainty.value_or(0.0));
+    out += parameter.free ? '1' : '0';
+}
+
+void put_optional_parameter(std::string& out, const std::optional<Parameter>& parameter) {
+    out += parameter ? 'P' : '-';  // presence encoded distinctly from a 0 value
+    if (parameter) put_parameter(out, *parameter);
+}
+
+void put_experiment(std::string& out, const ExperimentBase& experiment) {
+    for (const auto& slot : kPeakSlots) {
+        put_text(out, slot.first);
+        put_parameter(out, slot.second(const_cast<ExperimentBase&>(experiment)));
+    }
+    put_parameter(out, experiment.instrument.calib_d_to_tof_offset);
+    put_parameter(out, experiment.instrument.calib_d_to_tof_linear);
+    put_parameter(out, experiment.instrument.calib_d_to_tof_quadratic);
+    put_parameter(out, experiment.instrument.calib_d_to_tof_reciprocal);
+    put_parameter(out, experiment.linked_structure.scale);
+    put_u64(out, experiment.background.size());
+    for (const LineSegment& point : experiment.background) {
+        put_double(out, point.position);  // NOT a Parameter, but it moves the background
+        put_parameter(out, point.intensity);
+    }
+    put_parameter(out, experiment.instrument.setup_twotheta_bank.value);
+    put_double(out, experiment.peak.cutoff_fwhm);
+    put_optional_parameter(out, experiment.absorption.abscor1);
+    put_optional_parameter(out, experiment.absorption.abscor2);
+    out += experiment.absorption.type ? 'T' : '-';
+    if (experiment.absorption.type) put_text(out, *experiment.absorption.type);
+    put_text(out, experiment.name);
+    out += experiment.peak.type ? 'P' : '-';
+    if (experiment.peak.type) put_text(out, *experiment.peak.type);
+    //  (review-1 B1) / : the four typed axes and all seven CW fields are part of the
+    // calculation-affecting source state, so they are fingerprinted — a TOF handle whose source is
+    // mutated CW-ward (a beam-mode flip or any CW field write) is DETECTED as a stale source
+    // rather than continuing on stale TOF engine state. Presence is encoded distinctly from every
+    // value, so engaging an axis at its default is still a detected mutation.
+    const auto put_axis = [&out](const auto& axis) {
+        out += axis ? 'A' : '-';
+        if (axis) put_text(out, token(*axis));
+    };
+    put_axis(experiment.experiment_type.sample_form);
+    put_axis(experiment.experiment_type.beam_mode);
+    put_axis(experiment.experiment_type.radiation_probe);
+    put_axis(experiment.experiment_type.scattering_type);
+    put_optional_parameter(out, experiment.peak.broad_gauss_u);
+    put_optional_parameter(out, experiment.peak.broad_gauss_v);
+    put_optional_parameter(out, experiment.peak.broad_gauss_w);
+    put_optional_parameter(out, experiment.peak.broad_lorentz_x);
+    put_optional_parameter(out, experiment.peak.broad_lorentz_y);
+    put_optional_parameter(out, experiment.instrument.setup_wavelength);
+    put_optional_parameter(out, experiment.instrument.calib_twotheta_offset);
+    put_text(out, experiment.linked_structure.structure_id);
+    put_double(out, experiment.dataset_weight);
+    put_u64(out, experiment.excluded_regions.size());
+    for (const auto& region : experiment.excluded_regions) {
+        put_double(out, region.first);
+        put_double(out, region.second);
+    }
+    // `ExperimentBase::data` () is DELIBERATELY NOT ENCODED: the encoding fingerprints the
+    // model content, and embedded data alters nothing a forward calculation computes.
+}
+
+void put_structure(std::string& out, const Structure& structure) {
+    put_text(out, structure.name);
+    put_text(out, structure.space_group.name_h_m);
+    // : the code changes the resolved setting
+    put_text(out, structure.space_group.coord_system_code);
+    for (const Parameter* cell :
+         {&structure.cell.length_a, &structure.cell.length_b, &structure.cell.length_c,
+          &structure.cell.angle_alpha, &structure.cell.angle_beta, &structure.cell.angle_gamma}) {
+        put_parameter(out, *cell);
+    }
+    put_u64(out, structure.atom_sites.size());
+    for (const AtomSite& site : structure.atom_sites) {
+        put_text(out, site.id);
+        put_text(out, site.type_symbol);
+        put_text(out, site.wyckoff_letter);
+        put_parameter(out, site.fract_x);
+        put_parameter(out, site.fract_y);
+        put_parameter(out, site.fract_z);
+        put_parameter(out, site.occupancy);
+        put_parameter(out, site.adp_iso);
+    }
+    put_u64(out, structure.scattering_lengths_fm.size());
+    for (const auto& entry : structure.scattering_lengths_fm) {  // std::map: key-ordered
+        put_text(out, entry.first);
+        put_double(out, entry.second);
+    }
+}
+
+std::string canonical_encoding(const Project& project) {
+    std::string out;
+    out.reserve(4096);
+    //  (ruled C): TOTAL over the PLURAL storage — count-prefixed, so an emptied
+    // collection is encoded state (a detectable mutation), never a throw from a singular view.
+    put_u64(out, project.structures.size());
+    for (const Structure& structure : project.structures) {
+        put_structure(out, structure);
+    }
+    put_u64(out, project.experiments.size());
+    for (const ExperimentBase& experiment : project.experiments) {
+        put_experiment(out, experiment);
+    }
+    put_text(out, project.fitting_mode);
+    return out;
+}
+
+// --- V3: identity rejection --------------------------------------------------------------------
+//
+// A site label is both the engine's free-set label prefix and edi's own index path segment, so an
+// empty, delimiter-bearing or duplicated label would make a parameter's identity ambiguous. Rejected
+// up front (the  refine_joint precedent), which makes a wrong-parameter write from a label
+// collision unrepresentable rather than merely detectable.
+void validate_identities(const Structure& structure) {
+    std::map<std::string, std::size_t> seen;
+    for (std::size_t index = 0; index < structure.atom_sites.size(); ++index) {
+        const std::string& label = structure.atom_sites[index].id;
+        if (label.empty()) {
+            throw std::invalid_argument("edi cached model: atom site " + std::to_string(index) +
+                                        " has an empty label (a label identifies its parameters)");
+        }
+        if (label.find_first_of(".[]") != std::string::npos) {
+            throw std::invalid_argument("edi cached model: atom site label '" + label +
+                                        "' contains a reserved delimiter ('.', '[' or ']')");
+        }
+        const auto inserted = seen.emplace(label, index);
+        if (!inserted.second) {
+            throw std::invalid_argument("edi cached model: duplicate atom site label '" + label +
+                                        "' (sites " + std::to_string(inserted.first->second) +
+                                        " and " + std::to_string(index) + ")");
+        }
+    }
+}
+
+// --- the parameter index ------------------------------------------------------------------------
+//
+// Maps every edi identity path to (engine Parameter, model Parameter). The path grammar is exactly
+// the  FitResultBase key grammar, so a FitResultBase key is directly usable as a set() path.
+// `cproject` must already be in its FINAL storage: these pointers alias its members.
+Index build_index(Project& model, crysta::Project& cproject) {
+    Index index;
+    crysta::Structure& cstructure = cproject.structure;
+    crysta::ExperimentBase& cexperiment = cproject.experiment();
+
+    Cell& cell = model.structure().cell;
+    Parameter* const model_cell[6] = {&cell.length_a,     &cell.length_b,    &cell.length_c,
+                                      &cell.angle_alpha, &cell.angle_beta, &cell.angle_gamma};
+    const char* const cell_names[6] = {"length_a",    "length_b",   "length_c",
+                                       "angle_alpha", "angle_beta", "angle_gamma"};
+    for (std::size_t i = 0; i < 6; ++i) {
+        index.emplace(std::string("structure.cell.") + cell_names[i],
+                      Slot{&cstructure.cell.parameters[i], model_cell[i]});
+    }
+
+    for (std::size_t site = 0; site < model.structure().atom_sites.size(); ++site) {
+        AtomSite& atom = model.structure().atom_sites[site];
+        crysta::AtomSite& catom = cstructure.atom_sites[site];
+        const std::string base = "structure.atom_sites[" + atom.id + "].";
+        index.emplace(base + "fract_x", Slot{&catom.fract[0], &atom.fract_x});
+        index.emplace(base + "fract_y", Slot{&catom.fract[1], &atom.fract_y});
+        index.emplace(base + "fract_z", Slot{&catom.fract[2], &atom.fract_z});
+        index.emplace(base + "occupancy", Slot{&catom.occupancy, &atom.occupancy});
+        index.emplace(base + "adp_iso", Slot{&catom.adp_iso, &atom.adp_iso});
+    }
+
+    ExperimentBase& experiment = model.experiment();
+    for (std::size_t i = 0; i < kPeakSlots.size(); ++i) {
+        index.emplace(std::string("experiment.") + kPeakSlots[i].first,
+                      Slot{&cexperiment.peak[i], &kPeakSlots[i].second(experiment)});
+    }
+    index.emplace("experiment.instrument.calib_d_to_tof_offset",
+                  Slot{&cexperiment.instrument[0], &experiment.instrument.calib_d_to_tof_offset});
+    index.emplace("experiment.instrument.calib_d_to_tof_linear",
+                  Slot{&cexperiment.instrument[1], &experiment.instrument.calib_d_to_tof_linear});
+    index.emplace("experiment.instrument.calib_d_to_tof_quadratic",
+                  Slot{&cexperiment.instrument[2], &experiment.instrument.calib_d_to_tof_quadratic});
+    index.emplace("experiment.instrument.calib_d_to_tof_reciprocal",
+                  Slot{&cexperiment.instrument[3], &experiment.instrument.calib_d_to_tof_reciprocal});
+    index.emplace("experiment.linked_structure.scale",
+                  Slot{&cexperiment.scale, &experiment.linked_structure.scale});
+    for (std::size_t i = 0; i < experiment.background.size(); ++i) {
+        index.emplace(
+            "experiment.background[" + std::to_string(i) + "].intensity",
+            Slot{&cexperiment.background[i].intensity, &experiment.background[i].intensity});
+    }
+    // Presence-tracked (): a model that never declared abscor1 has no such path, so a set()
+    // on it is an unknown path rather than a silent write to a 0 the model never carried. abscor2 is
+    // deliberately never indexed — crysta holds it fixed and freeing it is a hard error there.
+    if (experiment.absorption.abscor1 && !cexperiment.absorption.empty()) {
+        index.emplace("experiment.absorption.abscor1",
+                      Slot{&cexperiment.absorption[0], &*experiment.absorption.abscor1});
+    }
+    return index;
+}
+
+// The six cell identity paths in dictionary order — shared by V1's completion-aware expectations
+// and the cached surface's cell-write dispatch, so the two cannot disagree on the path grammar.
+const std::array<const char*, 6> kCellPathNames{"length_a",    "length_b",   "length_c",
+                                                "angle_alpha", "angle_beta", "angle_gamma"};
+
+std::optional<std::size_t> cell_path_slot(const std::string& path) {
+    static const std::string kPrefix = "structure.cell.";
+    if (path.compare(0, kPrefix.size(), kPrefix) != 0) return std::nullopt;
+    for (std::size_t i = 0; i < kCellPathNames.size(); ++i) {
+        if (path.compare(kPrefix.size(), std::string::npos, kCellPathNames[i]) == 0) return i;
+    }
+    return std::nullopt;
+}
+
+// --- V1: sentinel-injection totality proof -------------------------------------------------------
+//
+// Proves build_index selects exactly the engine Parameter that received each path's edi value, for
+// FIXED parameters as well as free ones: assign every path a distinct sentinel in a throwaway copy,
+// rebuild the engine project from it, and require each indexed engine Parameter to carry its own
+// path's sentinel. Catches transposition, peak[]/background[] off-by-one, wrong site and wrong
+// calibration slot. Then injectivity, then whole-tree completeness.
+//
+// It runs on a COPY, so the live project's clocks are never polluted; edi builds unbounded
+// parameters, so any sentinel is legal, and the probe is never evaluated.
+void validate_index(const Project& model, const Index& index, crysta::Project& cproject) {
+    std::vector<std::string> paths;
+    paths.reserve(index.size());
+    for (const auto& entry : index) paths.push_back(entry.first);
+
+    Project probe = model;
+    crysta::Project seed = build_crysta_project(probe.structure(), probe.experiment());
+    make_fit_ready(seed.experiment());
+    Index seed_index = build_index(probe, seed);
+    if (seed_index.size() != index.size()) {
+        throw std::invalid_argument("edi cached model: index validation failed (unstable index size)");
+    }
+    for (std::size_t i = 0; i < paths.size(); ++i) {
+        const auto it = seed_index.find(paths[i]);
+        if (it == seed_index.end()) {
+            throw std::invalid_argument("edi cached model: index validation failed (path '" +
+                                        paths[i] + "' is not reproducible)");
+        }
+        it->second.model->value = 1.0e6 + static_cast<double>(i);
+    }
+
+    crysta::Project rebuilt = build_crysta_project(probe.structure(), probe.experiment());
+    make_fit_ready(rebuilt.experiment());
+
+    // Check THE INDEX UNDER TEST, not a freshly rebuilt one — otherwise the validator would only be
+    // confirming build_index against itself and would accept any wrong mapping handed to it.
+    //
+    // `cproject` and `rebuilt` are built from the same model shape by the same code, so their
+    // traversal orders coincide: a POSITION in collect_parameters() names a slot independently of
+    // build_index. So map each indexed engine pointer to its position in the live project, and
+    // require the same position in the sentinel-laden rebuild to carry that path's sentinel. A
+    // transposed index yields a different position and therefore the wrong sentinel.
+    const std::vector<crysta::Parameter*> live_slots = cproject.collect_parameters();
+    const std::vector<crysta::Parameter*> rebuilt_slots = rebuilt.collect_parameters();
+    if (live_slots.size() != rebuilt_slots.size()) {
+        throw std::invalid_argument(
+            "edi cached model: index validation failed (engine layout is not reproducible)");
+    }
+    std::map<const crysta::Parameter*, std::size_t> position;
+    for (std::size_t i = 0; i < live_slots.size(); ++i) position.emplace(live_slots[i], i);
+
+    // The cell paths' expected sentinels go through the completion contract (fork 2): a dependent
+    // cell parameter's engine slot carries its LEADER's sentinel and a symmetry-fixed angle carries
+    // its constant, per crysta's own freedom map — so V1 now also proves the completion is applied
+    // through that map, not just that the six slots line up.
+    const crysta::CellFreedom freedom = crysta::cell_freedom(resolve_group(model.structure()));
+    std::map<std::string, double> sentinel_of_path;
+    for (std::size_t i = 0; i < paths.size(); ++i) {
+        sentinel_of_path.emplace(paths[i], 1.0e6 + static_cast<double>(i));
+    }
+    for (std::size_t i = 0; i < paths.size(); ++i) {
+        const crysta::Parameter* engine = index.at(paths[i]).engine;
+        const auto slot = position.find(engine);
+        if (slot == position.end()) {
+            throw std::invalid_argument(
+                "edi cached model: index validation failed — path '" + paths[i] +
+                "' addresses a parameter outside this project");
+        }
+        double expected = 1.0e6 + static_cast<double>(i);
+        if (const std::optional<std::size_t> cell_index = cell_path_slot(paths[i])) {
+            // A dependent cell slot carries its LEADER's sentinel and a fixed angle its constant,
+            // so two dependent (or two fixed) slots are value-indistinguishable and a sentinel
+            // check alone would accept their transposition. The cell has what no other block has —
+            // a canonical addressable layout (cell.parameters[i], dictionary order) — so the six
+            // slots are proven by ADDRESS IDENTITY instead, which detects any cell transposition
+            // outright; the value check below then proves the completion put the mapped value there.
+            if (engine != &cproject.structure.cell.parameters[*cell_index]) {
+                throw std::invalid_argument(
+                    "edi cached model: index validation failed — path '" + paths[i] +
+                    "' does not address its dictionary-order engine cell slot");
+            }
+            const int leader = freedom.follows[*cell_index];
+            if (leader == crysta::CellFreedom::kFixed) {
+                expected = freedom.fixed[*cell_index];
+            } else {
+                // Checked lookup: an index missing its leader's path must be the structured
+                // refusal every other defect here gets, never an uncaught std::out_of_range.
+                const std::string leader_path =
+                    std::string("structure.cell.") + kCellPathNames[static_cast<std::size_t>(leader)];
+                const auto leader_sentinel = sentinel_of_path.find(leader_path);
+                if (leader_sentinel == sentinel_of_path.end()) {
+                    throw std::invalid_argument(
+                        "edi cached model: index validation failed — path '" + paths[i] +
+                        "' depends on missing leader path '" + leader_path + "'");
+                }
+                expected = leader_sentinel->second;
+            }
+        }
+        if (rebuilt_slots[slot->second]->value() != expected) {
+            throw std::invalid_argument(
+                "edi cached model: index validation failed — path '" + paths[i] +
+                "' does not address the engine parameter that carries its value");
+        }
+    }
+
+    // Injectivity: no two paths may address the same engine parameter.
+    std::set<const crysta::Parameter*> engines;
+    for (const auto& entry : index) {
+        if (!engines.insert(entry.second.engine).second) {
+            throw std::invalid_argument("edi cached model: index validation failed — path '" +
+                                        entry.first + "' aliases another path's engine parameter");
+        }
+    }
+
+    // Completeness: every engine parameter reachable in the LIVE project is either indexed or one of
+    // the deliberately unmapped slots, asserted by address rather than by count.
+    crysta::ExperimentBase& cexperiment = cproject.experiment();
+    std::set<const crysta::Parameter*> allowed_unmapped;
+    if (cexperiment.absorption.size() > 1) {
+        allowed_unmapped.insert(&cexperiment.absorption[1]);  // abscor2: engine-fixed, never indexed
+    }
+    if (!model.experiment().absorption.abscor1 && !cexperiment.absorption.empty()) {
+        allowed_unmapped.insert(&cexperiment.absorption[0]);  // absent in the model
+    }
+    for (const crysta::Parameter* parameter : cproject.collect_parameters()) {
+        if (engines.count(parameter) != 0 || allowed_unmapped.count(parameter) != 0) continue;
+        throw std::invalid_argument(
+            "edi cached model: index validation failed — engine parameter '" + parameter->name() +
+            "' is reachable in the project but addressed by no identity path");
+    }
+}
+
+// --- V2: positional-aware free-set cross-check ---------------------------------------------------
+//
+// Re-proves, against crysta's OWN label emission, that the  translation is total and that the
+// index addresses the same parameters the engine will refine. Pointer identity is required only when
+// the engine supplies a handle: positional basics are emitted with parameter == nullptr because
+// crysta refines them through the constraint basis rather than the site Parameter (residual.hpp:51-58,
+// residual.cpp:1590-1594). Requiring identity there would reject any model that frees a coordinate —
+// which the  acceptance model does; V1 already proves those coordinate pointers independently.
+// Takes the free set the caller already computed, so it can run BOTH at construction (best effort)
+// and at refine() (where a free set is required anyway and the check therefore always applies).
+void cross_check_free_set(Project& model, const Index& index,
+                          const std::vector<crysta::FreeParameter>& free_set) {
+    for (const crysta::FreeParameter& free : free_set) {
+        const std::optional<ResolvedParameter> resolved =
+            resolve_label(model.structure(), model.experiment(), free.label);
+        if (!resolved) {
+            throw std::invalid_argument(
+                "edi cached model: engine free-set label '" + free.label +
+                "' does not resolve to an edi model parameter (unmapped engine label)");
+        }
+        const auto it = index.find(resolved->path);
+        if (it == index.end()) {
+            throw std::invalid_argument("edi cached model: engine free-set label '" + free.label +
+                                        "' resolves to unindexed path '" + resolved->path + "'");
+        }
+        if (free.parameter == nullptr) {
+            if (free.kind != crysta::FreeKind::POSITIONAL_BASIC || free.basic_index < 0) {
+                throw std::invalid_argument(
+                    "edi cached model: engine free-set label '" + free.label +
+                    "' supplied no parameter handle and is not a positional basic");
+            }
+            continue;  // refined through the constraint basis; V1 covers the coordinate pointer
+        }
+        if (it->second.engine != free.parameter) {
+            throw std::invalid_argument("edi cached model: engine free-set label '" + free.label +
+                                        "' addresses a different parameter than path '" +
+                                        resolved->path + "'");
+        }
+    }
+}
+
+}  // namespace
+
+namespace detail {
+
+crysta::Cell to_crysta_cell(const Cell& c) {
+    std::vector<crysta::Parameter> cell_params;
+    cell_params.push_back(param(c.length_a, crysta::CELL, "a"));
+    cell_params.push_back(param(c.length_b, crysta::CELL, "b"));
+    cell_params.push_back(param(c.length_c, crysta::CELL, "c"));
+    cell_params.push_back(param(c.angle_alpha, crysta::CELL, "alpha"));
+    cell_params.push_back(param(c.angle_beta, crysta::CELL, "beta"));
+    cell_params.push_back(param(c.angle_gamma, crysta::CELL, "gamma"));
+    return crysta::Cell(std::move(cell_params));
+}
+
+std::vector<crysta::AtomSite> to_crysta_atom_sites(const std::vector<AtomSite>& atoms) {
+    std::vector<crysta::AtomSite> sites;
+    sites.reserve(atoms.size());
+    for (const auto& a : atoms) {
+        sites.emplace_back(a.id, a.type_symbol, a.wyckoff_letter, "Biso",
+                           param(a.fract_x, crysta::ATOM_POS, "fract_x"),
+                           param(a.fract_y, crysta::ATOM_POS, "fract_y"),
+                           param(a.fract_z, crysta::ATOM_POS, "fract_z"),
+                           param(a.occupancy, crysta::OCC, "occupancy"),
+                           param(a.adp_iso, crysta::ADP, "b_iso"));
+    }
+    return sites;
+}
+
+// Fields the public TofJorgensenExperiment builder has no setter for, applied to the built
+// experiment (). They are plain public members of crysta::ExperimentBase, so this needs no
+// engine change. Unlike make_fit_ready above these are genuine model content — they belong on EVERY
+// converted experiment, forward and fit alike (`peak_type` in particular selects the Lorentzian
+// profile in crysta's forward kernel too, so omitting it would silently drop it from calculate()).
+//
+// Every one of these is load-bearing for a joint fit:
+//   name          the joint free-set label prefix (`<bank>.<field>`) — without it labels collide;
+//   peak_type     selects the Jorgensen-von-Dreele Lorentzian free block; crysta defaults to plain
+//                 `tof-jorgensen`, under which a bracketed Lorentzian coefficient is REJECTED, so
+//                 omitting this silently changes the free set (or hard-errors);
+//   absorption    the per-bank ABSCOR1/ABSCOR2 pair; absent/0 means mu*R = 0, i.e. A == 1;
+//   dataset_weight, excluded_regions  the per-bank joint weight and mask.
+void apply_post_build_fields(const ExperimentBase& e, crysta::ExperimentBase& built) {
+    built.name = e.name;
+    if (e.peak.type) {
+        built.peak_type = *e.peak.type;
+    }
+    // crysta's own beam_mode field stays the verbatim token; empty = the source declared none.
+    built.beam_mode =
+        e.experiment_type.beam_mode ? token(*e.experiment_type.beam_mode) : std::string();
+    built.dataset_weight = e.dataset_weight;
+    built.excluded_regions = e.excluded_regions;
+
+    // AbsorptionBase: crysta expects [abscor1, abscor2]. edi's fields are presence-tracked, and an absent
+    // key marshals as a fixed 0 — exactly what crysta's own loader produces for a project that
+    // predates the keys, so a key-absent project's fit is numerically unchanged. A freed ABSCOR2 is
+    // passed through rather than silently cleared; crysta rejects it with its own structured error.
+    built.absorption.clear();
+    built.absorption.push_back(
+        param(e.absorption.abscor1.value_or(Parameter{}), crysta::CORRECTION, "abscor1"));
+    built.absorption.push_back(
+        param(e.absorption.abscor2.value_or(Parameter{}), crysta::CORRECTION, "abscor2"));
+}
+
+// The CW conversion (): crysta has no named CW builder at b9aee906, so the adapter uses the
+// public ExperimentBase constructor with the documented CW vector layout — peak = [U, V, W, X, Y] and
+// instrument = (calib_twotheta_offset, setup_wavelength) — then sets the kind/beam-mode fields the
+// constructor does not take. No value transformation happens here beyond marshalling (Fork 2's
+// parity gate is what would catch one). A programmatic CW model with a missing field fails closed;
+// a loaded one cannot reach that error (the per-family registry requires all seven).
+crysta::BraggPdExperiment to_crysta_cwl_experiment(const ExperimentBase& e) {
+    const auto required = [&](const std::optional<Parameter>& field,
+                              const char* name) -> const Parameter& {
+        if (!field.has_value()) {
+            throw std::invalid_argument("constant-wavelength experiment '" + e.name +
+                                        "' is missing required field " + name);
+        }
+        return *field;
+    };
+    std::vector<crysta::Parameter> peak;
+    peak.reserve(5);
+    peak.push_back(param(required(e.peak.broad_gauss_u, "peak.broad_gauss_u"), crysta::PROFILE, "broad_gauss_u"));
+    peak.push_back(param(required(e.peak.broad_gauss_v, "peak.broad_gauss_v"), crysta::PROFILE, "broad_gauss_v"));
+    peak.push_back(param(required(e.peak.broad_gauss_w, "peak.broad_gauss_w"), crysta::PROFILE, "broad_gauss_w"));
+    peak.push_back(param(required(e.peak.broad_lorentz_x, "peak.broad_lorentz_x"), crysta::PROFILE, "broad_lorentz_x"));
+    peak.push_back(param(required(e.peak.broad_lorentz_y, "peak.broad_lorentz_y"), crysta::PROFILE, "broad_lorentz_y"));
+    std::vector<crysta::Parameter> instrument;
+    instrument.reserve(2);
+    instrument.push_back(param(required(e.instrument.calib_twotheta_offset, "instrument.calib_twotheta_offset"), crysta::CALIBRATION,
+                               "calib_twotheta_offset"));
+    instrument.push_back(
+        param(required(e.instrument.setup_wavelength, "instrument.setup_wavelength"), crysta::INSTRUMENT, "setup_wavelength"));
+    std::vector<crysta::LineSegment> background;
+    background.reserve(e.background.size());
+    for (const auto& point : e.background) {
+        background.emplace_back(point.position,
+                                param(point.intensity, crysta::BACKGROUND, "intensity"));
+    }
+    crysta::BraggPdExperiment built(std::move(peak), std::move(instrument),
+                             param(e.linked_structure.scale, crysta::SCALE, "scale"), std::move(background));
+    built.cutoff_fwhm = e.peak.cutoff_fwhm;
+    apply_post_build_fields(e, built);
+    built.kind = crysta::BeamModeEnum::ConstantWavelength;
+    if (!e.peak.type) {
+        built.peak_type = "cwl-pseudo-voigt";  // never leave the TOF default on a CW experiment
+    }
+    return built;
+}
+
+crysta::BraggPdExperiment to_crysta_experiment(const ExperimentBase& e) {
+    if (e.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH) {
+        return to_crysta_cwl_experiment(e);
+    }
+    crysta::TofJorgensenExperiment builder;
+    builder.alpha0(state(e.peak.rise_alpha_0))
+        .alpha1(state(e.peak.rise_alpha_1))
+        .beta0(state(e.peak.decay_beta_0))
+        .beta1(state(e.peak.decay_beta_1))
+        .sigma0(state(e.peak.broad_gauss_sigma_0))
+        .sigma1(state(e.peak.broad_gauss_sigma_1))
+        .sigma2(state(e.peak.broad_gauss_sigma_2))
+        .size_g(state(e.peak.broad_gauss_size))
+        .strain_g(state(e.peak.broad_gauss_strain))
+        .gamma0(state(e.peak.broad_lorentz_gamma_0))
+        .gamma1(state(e.peak.broad_lorentz_gamma_1))
+        .gamma2(state(e.peak.broad_lorentz_gamma_2))
+        .size_l(state(e.peak.broad_lorentz_size))
+        .strain_l(state(e.peak.broad_lorentz_strain))
+        .zero(state(e.instrument.calib_d_to_tof_offset))
+        .dtt1(state(e.instrument.calib_d_to_tof_linear))
+        .dtt2(state(e.instrument.calib_d_to_tof_quadratic))
+        .d_to_tof_reciprocal(state(e.instrument.calib_d_to_tof_reciprocal))
+        .scale(state(e.linked_structure.scale))
+        .setup_twotheta_bank(e.instrument.setup_twotheta_bank.value)
+        .cutoff_fwhm(e.peak.cutoff_fwhm);
+
+    std::vector<crysta::LineSegment> background;
+    background.reserve(e.background.size());
+    for (const auto& point : e.background) {
+        background.emplace_back(point.position,
+                                param(point.intensity, crysta::BACKGROUND, "intensity"));
+    }
+    builder.background(std::move(background));
+    crysta::BraggPdExperiment built = builder.build();
+    apply_post_build_fields(e, built);
+    return built;
+}
+
+}  // namespace detail
+
+std::vector<double> Project::calculate(const std::vector<double>& tof_grid) const {
+    const crysta::Project project = build_crysta_project(structure(), experiment());
+    const crysta::NeutronScattering scattering = select_scattering(structure());
+    return crysta::compute_pattern(project, scattering, tof_grid, experiment().instrument.setup_twotheta_bank.value,
+                                   experiment().peak.cutoff_fwhm);
+}
+namespace {
+
+// . The engine's reporting types become edi's HERE, in the adapter — the only place allowed to
+// touch crysta (ADR-0003). Everything on edi's side of this line trades in edi value types, which is
+// what keeps the public surface engine-free and independently compilable.
+edi::IterationRecord to_edi(const crysta::IterationRecord& record) {
+    return {record.iteration, record.rwp, record.reduced_chi_square, record.elapsed_ms,
+            record.unevaluable_trials};
+}
+
+std::vector<edi::IterationRecord> to_edi(const std::vector<crysta::IterationRecord>& history) {
+    std::vector<edi::IterationRecord> converted;
+    converted.reserve(history.size());
+    for (const crysta::IterationRecord& record : history) {
+        converted.push_back(to_edi(record));
+    }
+    return converted;
+}
+
+edi::FitStatus to_edi(crysta::FitStatus status) {
+    switch (status) {
+        case crysta::FitStatus::Done:
+            return edi::FitStatus::DONE;
+        case crysta::FitStatus::MaxIter:
+            return edi::FitStatus::MAX_ITER;
+        case crysta::FitStatus::NoStep:
+            return edi::FitStatus::NO_STEP;
+        case crysta::FitStatus::Cancelled:
+            return edi::FitStatus::CANCELLED;
+        case crysta::FitStatus::Error:
+            return edi::FitStatus::ERROR;
+    }
+    return edi::FitStatus::ERROR;
+}
+
+// Wrap an edi-typed subscriber as the engine's callback. An ABSENT subscriber yields an EMPTY engine
+// callback, so the engine's own `if (on_iteration)` guard means no crossing at all — that is the
+// zero-overhead guarantee, and it is a call-count property rather than a timing one.
+crysta::IterationCallback to_engine_callback(const IterationCallback& subscriber,
+                                             double dof,
+                                             std::chrono::steady_clock::time_point started) {
+    if (!subscriber) {
+        return {};
+    }
+    return [subscriber, dof, started](const crysta::IterationRecord& progress) {
+        // The engine's raw progress carries chi_square; a subscriber sees the SAME derived values
+        // the history and the machine record carry, so the streaming and after-the-fact views of
+        // one iteration never disagree.
+        const double elapsed_ms = std::chrono::duration<double, std::milli>(
+                                      std::chrono::steady_clock::now() - started)
+                                      .count();
+        subscriber({progress.iteration, progress.rwp, progress.chi_square / dof, elapsed_ms,
+                    progress.unevaluable_trials});
+    };
+}
+
+}  // namespace
+
+FitResultBase Project::refine(const std::vector<double>& grid, const std::vector<double>& observed,
+                           const std::vector<double>& sigma, const IterationCallback& on_iteration,
+                           const PreambleCallback& on_start) {
+    // Boundary checks (clean fail-closed messages before any engine contact — ADR-0003 pt 5): a
+    // structured ValueError, never a partial/silent result. The model is written only on success.
+    if (grid.empty() || observed.empty() || sigma.empty()) {
+        throw std::invalid_argument("edi refine: empty measured data (grid/observed/sigma)");
+    }
+    if (grid.size() != observed.size() || grid.size() != sigma.size()) {
+        throw std::invalid_argument(
+            "edi refine: measured data columns (grid, observed, sigma) must have equal length");
+    }
+    if (structure().atom_sites.empty()) {
+        throw std::invalid_argument("edi refine: structure has no atom sites");
+    }
+    try {
+        // Stateless rebuild-per-fit (the  shape): the same single crysta-touching build path
+        // (build_crysta_project + select_scattering) the forward accessors use — no persistent
+        // CachedForwardModel (a later C09 slice), and nothing here forecloses it.
+        crysta::Project project = build_crysta_project(structure(), experiment());
+        crysta::NeutronScattering scattering = select_scattering(structure());
+        make_fit_ready(project.experiment());
+
+        // Measured pattern -> mask the model's excluded regions, exactly as the crysta CLI does
+        // (apply_exclusions on the loaded project's regions); the caller supplies grid/observed/sigma.
+        crysta::ResidualPattern measured{grid, observed, sigma};
+        // Points as READ, before the mask — the caller-owned authority for `n_points_loaded`
+        // (). It must be taken here: apply_exclusions replaces `measured`, and the provider
+        // only ever sees the masked pattern.
+        const std::size_t n_points_loaded = measured.grid.size();
+        measured = crysta::apply_exclusions(measured, experiment().excluded_regions);
+        if (measured.grid.empty()) {
+            throw std::invalid_argument(
+                "edi refine: no measured data remains after applying the excluded regions");
+        }
+
+        // Free set from the model's own bracket flags (the crysta CLI `--free model` path); the
+        // adapter already propagated each Parameter.free into the crysta model, so this is
+        // byte-identical to the CLI's free_from_model on the same project.
+        std::vector<crysta::FreeParameter> free = crysta::free_from_model(project);
+        if (free.empty()) {
+            throw std::invalid_argument(
+                "edi refine: no free parameters (mark parameters refinable via their free flags)");
+        }
+
+        // Delegate the ENTIRE LM loop to crysta's public minimizer at the CLI defaults
+        // (separable_linear, max_iter 50, CutoffPolicy::Off, SolverRung::Lm, chi2/param tol) — the
+        // defaults refine_problem already carries, so the fit is bit-comparable to the CLI oracle.
+        crysta::PowderBraggResidual provider(project, scattering, std::move(measured),
+                                             experiment().instrument.setup_twotheta_bank.value, experiment().peak.cutoff_fwhm,
+                                             std::move(free));
+
+        // Pre-fit values (), captured from the provider BEFORE the minimizer runs — the same
+        // labels()/values() pairing the crysta CLI uses to build its own start column. Held as raw
+        // engine labels here and translated below through the same resolver as the refined values,
+        // so `start` and `values` end up sharing one key set and no engine label escapes.
+        std::map<std::string, double> start_by_label;
+        {
+            const std::vector<std::string> labels = provider.labels();
+            const std::vector<double> values = provider.values();
+            for (std::size_t index = 0; index < labels.size() && index < values.size(); ++index) {
+                start_by_label[labels[index]] = values[index];
+            }
+        }
+
+        // dof for the per-iteration reduced chi-square, from the MASKED length — the same
+        // denominator crysta's own record uses.
+        const double dof = static_cast<double>(provider.n_data() > provider.labels().size()
+                                                   ? provider.n_data() - provider.labels().size()
+                                                   : std::size_t{1});
+        // Pre-fit record (): the initial model's Rwp/reduced-chi2 at the start params, via
+        // crysta's shared residual seam — no fit, no numerics change. Always computed (engine-side,
+        // not a host crossing) so the post-hoc report can render the starting row; the streamed
+        // surface additionally gets it in the preamble below.
+        const crysta::IterationRecord crysta_pre_fit = crysta::pre_fit_record(provider, dof);
+        const IterationRecord pre_fit{crysta_pre_fit.iteration, crysta_pre_fit.rwp,
+                                      crysta_pre_fit.reduced_chi_square, crysta_pre_fit.elapsed_ms,
+                                      crysta_pre_fit.unevaluable_trials};
+        // Preamble (): fired ONCE here — after the provider is built (so the counts are
+        // known) and the pre-fit is evaluated, BEFORE the LM loop. Empty callback => no host
+        // crossing. Single-bank path: `banks` empty, mode single (mirrors crysta).
+        if (on_start) {
+            on_start(FitPreamble{/*joint=*/false, /*banks=*/{}, n_points_loaded, provider.n_data(),
+                                 provider.n_free(), pre_fit});
+        }
+        const auto fit_start = std::chrono::steady_clock::now();
+        crysta::IterationHistoryCollector collector(dof, fit_start);
+        // The subscriber is composed ON TOP of the always-on collector, so history exists whether
+        // or not anyone subscribed, and an absent subscriber crosses no host boundary at all.
+        //  (F-bound): the project's declared `_minimizer.max_iterations` bounds the fit;
+        // absent (0) keeps the historical 50-iteration cap.
+        const int max_iterations =
+            minimizer_max_iterations > 0 ? minimizer_max_iterations : 50;
+        const crysta::FitResultBase result =
+            crysta::refine_problem(provider, /*separable_linear=*/true, max_iterations,
+                                   collector.callback(to_engine_callback(on_iteration, dof, fit_start)));
+        const double elapsed_ms = std::chrono::duration<double, std::milli>(
+                                      std::chrono::steady_clock::now() - fit_start)
+                                      .count();
+
+        // Translate EVERY crysta result label to an edi-owned parameter (path + write-back target)
+        // FIRST, total and fail-closed: an unmapped/unknown label is a structured error, never a
+        // silent drop or a raw-label passthrough. Only once the whole result resolves do we build the
+        // edi-owned FitResultBase and apply the model write-back — so no crysta engine label ever
+        // crosses the `import edi` boundary and a partial/garbled result can never mutate the model.
+        struct Refined {
+            ResolvedParameter resolved;
+            double value;
+            double uncertainty;
+        };
+        std::vector<Refined> refined;
+        refined.reserve(result.values.size());
+        for (const auto& [label, value] : result.values) {
+            std::optional<ResolvedParameter> resolved = resolve_label(structure(), experiment(), label);
+            if (!resolved) {
+                throw std::invalid_argument(
+                    "edi refine: crysta result label '" + label +
+                    "' does not resolve to an edi model parameter (unmapped engine label)");
+            }
+            const auto found = result.uncertainty.find(label);
+            refined.push_back({std::move(*resolved), value,
+                               found != result.uncertainty.end() ? found->second : 0.0});
+        }
+
+        FitResultBase outcome;
+        outcome.rwp = result.rwp;
+        outcome.reduced_chi_square = result.reduced_chi_square;
+        outcome.iterations = result.iterations;
+        outcome.converged = result.converged;
+        outcome.n_points_loaded = n_points_loaded;
+        outcome.n_points_fitted = provider.n_data();
+        outcome.iterations_history = to_edi(collector.history());
+        outcome.pre_fit = pre_fit;
+        outcome.elapsed_ms = elapsed_ms;
+        outcome.status = to_edi(crysta::classify_fit_status(result));
+        // The engine's boundary-contact counters, verbatim (crysta ) — never recomputed
+        // and never defaulted: a zero here is the engine's zero, not edi's.
+        outcome.unevaluable_trials = result.unevaluable_trials;
+        outcome.terminal_unevaluable_trials = result.terminal_unevaluable_trials;
+        // Engine-keyed copies for the machine record (see FitResultBase::engine_values).
+        outcome.engine_values = result.values;
+        outcome.engine_uncertainty = result.uncertainty;
+        outcome.descent = result.descent;
+        // Key the result by the edi-owned identity path (no crysta label leaked).
+        for (const Refined& item : refined) {
+            outcome.values[item.resolved.path] = item.value;
+            outcome.uncertainty[item.resolved.path] = item.uncertainty;
+        }
+        // The pre-fit values, translated through the SAME resolver so `start` is keyed identically
+        // to `values`. A label that resolved above always resolves here (same model, same grammar).
+        for (const auto& [label, value] : start_by_label) {
+            std::optional<ResolvedParameter> resolved = resolve_label(structure(), experiment(), label);
+            if (resolved) {
+                outcome.start[resolved->path] = value;
+            }
+        }
+        // `banks` stays EMPTY on the single-bank path: crysta reports no per-bank block for a
+        // single-file fit, and fabricating one from the global metrics would be edi inventing a
+        // number the engine never produced.
+
+        // Write the refined value/esd back onto the edi model Parameters (all labels resolved above).
+        for (const Refined& item : refined) {
+            item.resolved.target->value = item.value;
+            item.resolved.target->uncertainty = item.uncertainty;
+        }
+        return outcome;
+    } catch (const std::invalid_argument&) {
+        throw;  // already a clean, structured ValueError — surface as-is.
+    } catch (const std::exception& error) {
+        // Any other engine/model failure on the fit path fails closed as a structured ValueError.
+        throw std::invalid_argument(std::string("edi refine failed: ") + error.what());
+    }
+}
+
+// The one-call forms (). These are pure sourcing wrappers: they pull each bank's pattern from
+// the model's own embedded data and delegate to the overloads above, so there is exactly one fit
+// path and a one-call refinement is result-identical to the explicit-pattern one by construction.
+//
+// The missing-data guard is the residual case for a hand-assembled experiment; a loaded fit-ready
+// project cannot reach it, because the one loader already proved every bank carries measured data.
+// A calculation-only bank (a `_data_range`-generated grid) refuses here too: the project's own
+// contents selected calculate, so a fit on it is a caller error, never a data accident.
+FitResultBase Project::refine(const IterationCallback& on_iteration,
+                           const PreambleCallback& on_start) {
+    if (!experiment().data.has_value() || experiment().calculation_only) {
+        throw std::invalid_argument("edi refine: experiment() '" + experiment().name +
+                                    "' carries no measured data (a calculation-only or "
+                                    "hand-assembled experiment cannot fit; pass the pattern "
+                                    "explicitly to refine with one)");
+    }
+    const PdDataBase& data = *experiment().data;
+    return refine(data.axis(), data.intensity_meas, data.intensity_meas_su, on_iteration, on_start);
+}
+
+FitResultBase Project::refine() { return refine(IterationCallback{}); }
+
+FitResultBase Project::refine_joint(const IterationCallback& on_iteration,
+                                 const PreambleCallback& on_start) {
+    if (experiments.empty()) {
+        throw std::invalid_argument("edi refine_joint: project has no experiments");
+    }
+    std::vector<PdDataBase> patterns;
+    patterns.reserve(experiments.size());
+    for (const ExperimentBase& bank : experiments) {
+        if (!bank.data.has_value() || bank.calculation_only) {
+            throw std::invalid_argument("edi refine_joint: experiment '" + bank.name +
+                                        "' carries no measured data (a calculation-only or "
+                                        "hand-assembled experiment cannot fit; pass the patterns "
+                                        "explicitly to refine with them)");
+        }
+        patterns.push_back(*bank.data);
+    }
+    return refine_joint(patterns, on_iteration, on_start);
+}
+
+FitResultBase Project::refine_joint() { return refine_joint(IterationCallback{}); }
+
+FitResultBase Project::refine_joint(const std::vector<PdDataBase>& patterns,
+                                 const IterationCallback& on_iteration,
+                                 const PreambleCallback& on_start) {
+    // Boundary checks first — every one of these is a clean, structured ValueError raised BEFORE any
+    // engine contact, so a malformed request can never partially mutate the model (ADR-0003 pt 5).
+    if (experiments.empty()) {
+        throw std::invalid_argument("edi refine_joint: project has no experiments (load a project "
+                                    "directory, or use refine() for a single bank)");
+    }
+    if (patterns.size() != experiments.size()) {
+        throw std::invalid_argument(
+            "edi refine_joint: expected one measured pattern per experiment (" +
+            std::to_string(experiments.size()) + " banks, got " + std::to_string(patterns.size()) +
+            " patterns)");
+    }
+    if (structure().atom_sites.empty()) {
+        throw std::invalid_argument("edi refine_joint: structure has no atom sites");
+    }
+    // Bank identity: the name is the engine's joint label prefix AND edi's own result key, so an
+    // empty, duplicated, delimiter-carrying, or site-colliding name would make a refined parameter's
+    // identity ambiguous. Rejected up front, which is what keeps the result mapping total.
+    std::map<std::string, std::size_t> seen;
+    for (std::size_t bank = 0; bank < experiments.size(); ++bank) {
+        const std::string& name = experiments[bank].name;
+        if (name.empty()) {
+            throw std::invalid_argument("edi refine_joint: experiment " + std::to_string(bank) +
+                                        " has an empty name (a bank name identifies its refined "
+                                        "parameters)");
+        }
+        if (name.find_first_of(".[]") != std::string::npos) {
+            throw std::invalid_argument("edi refine_joint: experiment name '" + name +
+                                        "' contains a reserved delimiter ('.', '[' or ']')");
+        }
+        if (const auto [it, inserted] = seen.emplace(name, bank); !inserted) {
+            throw std::invalid_argument("edi refine_joint: duplicate experiment name '" + name +
+                                        "' (banks " + std::to_string(it->second) + " and " +
+                                        std::to_string(bank) + ")");
+        }
+        for (const AtomSite& atom : structure().atom_sites) {
+            if (atom.id == name) {
+                throw std::invalid_argument("edi refine_joint: experiment name '" + name +
+                                            "' collides with an atom site label");
+            }
+        }
+        const PdDataBase& pattern = patterns[bank];
+        const std::vector<double>& axis_values = pattern.axis();  // fails closed on none-or-both
+        if (axis_values.empty() || pattern.intensity_meas.empty() ||
+            pattern.intensity_meas_su.empty()) {
+            throw std::invalid_argument("edi refine_joint: empty measured data for bank '" + name +
+                                        "' (axis/intensity_meas/intensity_meas_su)");
+        }
+        if (axis_values.size() != pattern.intensity_meas.size() ||
+            axis_values.size() != pattern.intensity_meas_su.size()) {
+            throw std::invalid_argument(
+                "edi refine_joint: measured data columns (axis, intensity_meas, "
+                "intensity_meas_su) must have equal length for bank '" + name + "'");
+        }
+    }
+    try {
+        // Stateless rebuild-per-fit, the same shape as the single-bank path: one crysta Project over
+        // the shared structure and EVERY loaded bank, so crysta's own free_from_model dispatches to
+        // its joint builder and derives the column layout ([shared structural | per-bank instrument]).
+        // edi never composes a free vector; it only marshals each Parameter's free flag.
+        std::vector<crysta::BraggPdExperiment> built;
+        built.reserve(experiments.size());
+        for (const ExperimentBase& experiment : experiments) {
+            built.push_back(detail::to_crysta_experiment(experiment));
+            make_fit_ready(built.back());
+        }
+        crysta::Project project(to_crysta_structure(structure()), std::move(built));
+        project.fitting_mode = fitting_mode.empty() ? "joint" : fitting_mode;
+        crysta::NeutronScattering scattering = select_scattering(structure());
+
+        // One masked pattern per bank, in `experiments` order. The joint residual's constructor does
+        // NOT apply exclusions (only its from_model helper does, and that reads data embedded in the
+        // project), so edi masks each bank itself — exactly the call the single-bank path makes.
+        std::vector<crysta::ResidualPattern> measured;
+        measured.reserve(patterns.size());
+        // Points as READ across every bank, before any mask — the caller-owned authority for
+        // `n_points_loaded` ().
+        std::size_t n_points_loaded = 0;
+        for (std::size_t bank = 0; bank < patterns.size(); ++bank) {
+            n_points_loaded += patterns[bank].axis().size();
+            crysta::ResidualPattern pattern{patterns[bank].axis(), patterns[bank].intensity_meas,
+                                            patterns[bank].intensity_meas_su};
+            pattern = crysta::apply_exclusions(pattern, experiments[bank].excluded_regions);
+            if (pattern.grid.empty()) {
+                throw std::invalid_argument(
+                    "edi refine_joint: no measured data remains for bank '" +
+                    experiments[bank].name + "' after applying its excluded regions");
+            }
+            measured.push_back(std::move(pattern));
+        }
+
+        // Delegate the ENTIRE joint LM loop to crysta's public minimizer at its documented defaults
+        // (separable_linear, max_iter 50, CutoffPolicy::Off, SolverRung::Lm, chi2/param tolerances) —
+        // the same settings `crysta fit <project> --rung lm` resolves to, so the fit is comparable to
+        // the published path. The provider is move-only; it owns the per-bank sub-projects.
+        crysta::JointBraggResidual provider(std::move(project), scattering, std::move(measured));
+        if (provider.n_free() == 0) {
+            throw std::invalid_argument("edi refine_joint: no free parameters (mark parameters "
+                                        "refinable via their free flags)");
+        }
+
+        // Pre-fit values () — captured before the minimizer, translated below (see the single
+        // bank path for the rationale). Joint labels carry their `<bank>.` prefix and resolve
+        // through resolve_joint_label, exactly as the refined values do.
+        std::map<std::string, double> start_by_label;
+        {
+            const std::vector<std::string> labels = provider.labels();
+            const std::vector<double> values = provider.values();
+            for (std::size_t index = 0; index < labels.size() && index < values.size(); ++index) {
+                start_by_label[labels[index]] = values[index];
+            }
+        }
+
+        const double dof = static_cast<double>(provider.n_data() > provider.n_free()
+                                                   ? provider.n_data() - provider.n_free()
+                                                   : std::size_t{1});
+        // Pre-fit record () at the joint start params — the shared residual seam, no fit.
+        const crysta::IterationRecord crysta_pre_fit = crysta::pre_fit_record(provider, dof);
+        const IterationRecord pre_fit{crysta_pre_fit.iteration, crysta_pre_fit.rwp,
+                                      crysta_pre_fit.reduced_chi_square, crysta_pre_fit.elapsed_ms,
+                                      crysta_pre_fit.unevaluable_trials};
+        // Preamble (): fired ONCE before the loop with the joint bank names + counts.
+        if (on_start) {
+            std::vector<std::string> bank_names;
+            bank_names.reserve(experiments.size());
+            for (const ExperimentBase& bank : experiments) {
+                bank_names.push_back(bank.name);
+            }
+            on_start(FitPreamble{/*joint=*/true, std::move(bank_names), n_points_loaded,
+                                 provider.n_data(), provider.n_free(), pre_fit});
+        }
+        const auto fit_start = std::chrono::steady_clock::now();
+        crysta::IterationHistoryCollector collector(dof, fit_start);
+        //  (F-bound): same declared-bound rule as the single path above.
+        const int max_iterations =
+            minimizer_max_iterations > 0 ? minimizer_max_iterations : 50;
+        const crysta::FitResultBase result =
+            crysta::refine_problem(provider, /*separable_linear=*/true, max_iterations,
+                                   collector.callback(to_engine_callback(on_iteration, dof, fit_start)));
+        const double elapsed_ms = std::chrono::duration<double, std::milli>(
+                                      std::chrono::steady_clock::now() - fit_start)
+                                      .count();
+
+        // Per-bank metrics, read from the provider while it is STILL ALIVE — it owns the per-bank
+        // sub-residuals and is destroyed when this scope ends, so this must happen here and cannot
+        // be recovered afterwards from the FitResultBase. Every number is the engine's; edi only
+        // renames the fields into its own value type.
+        std::vector<BankMetric> bank_metrics;
+        for (const crysta::BankMetric& metric : provider.bank_metrics(provider.values())) {
+            bank_metrics.push_back({metric.name, metric.n_points, metric.rwp, metric.chi_square});
+        }
+
+        // Translate EVERY joint label to an edi-owned parameter FIRST — total and fail-closed. Only
+        // once the whole result resolves is the outcome built and the model written, so no crysta
+        // label crosses the boundary and a partial/garbled result can never mutate the model.
+        struct Refined {
+            ResolvedParameter resolved;
+            double value;
+            double uncertainty;
+        };
+        std::vector<Refined> refined;
+        refined.reserve(result.values.size());
+        for (const auto& [label, value] : result.values) {
+            std::optional<ResolvedParameter> resolved =
+                resolve_joint_label(structure(), experiments, label);
+            if (!resolved) {
+                throw std::invalid_argument(
+                    "edi refine_joint: crysta result label '" + label +
+                    "' does not resolve to an edi model parameter (unmapped engine label)");
+            }
+            const auto found = result.uncertainty.find(label);
+            refined.push_back({std::move(*resolved), value,
+                               found != result.uncertainty.end() ? found->second : 0.0});
+        }
+
+        FitResultBase outcome;
+        outcome.rwp = result.rwp;
+        outcome.reduced_chi_square = result.reduced_chi_square;
+        outcome.iterations = result.iterations;
+        outcome.converged = result.converged;
+        outcome.banks = std::move(bank_metrics);
+        outcome.n_points_loaded = n_points_loaded;
+        outcome.n_points_fitted = provider.n_data();
+        outcome.iterations_history = to_edi(collector.history());
+        outcome.pre_fit = pre_fit;
+        outcome.elapsed_ms = elapsed_ms;
+        outcome.status = to_edi(crysta::classify_fit_status(result));
+        outcome.unevaluable_trials = result.unevaluable_trials;
+        outcome.terminal_unevaluable_trials = result.terminal_unevaluable_trials;
+        outcome.engine_values = result.values;
+        outcome.engine_uncertainty = result.uncertainty;
+        outcome.descent = result.descent;
+        for (const Refined& item : refined) {
+            outcome.values[item.resolved.path] = item.value;
+            outcome.uncertainty[item.resolved.path] = item.uncertainty;
+        }
+        for (const auto& [label, value] : start_by_label) {
+            std::optional<ResolvedParameter> resolved =
+                resolve_joint_label(structure(), experiments, label);
+            if (resolved) {
+                outcome.start[resolved->path] = value;
+            }
+        }
+        for (const Refined& item : refined) {
+            item.resolved.target->value = item.value;
+            item.resolved.target->uncertainty = item.uncertainty;
+        }
+        // Keep the bank-0 single-bank mirror consistent with the bank it mirrors (the loader sets it
+        // up that way), so `experiment` never reports stale values after a joint refinement.
+        if (!experiments.empty()) {
+            experiment() = experiments.front();
+        }
+        return outcome;
+    } catch (const std::invalid_argument&) {
+        throw;  // already a clean, structured ValueError — surface as-is.
+    } catch (const std::exception& error) {
+        throw std::invalid_argument(std::string("edi refine_joint failed: ") + error.what());
+    }
+}
+
+}  // namespace edi

@@ -1,0 +1,8 @@
+_edi.schema_version 3
+
+_metadata.name             pd_xray_cwl_lif_single
+_metadata.title            "LiF, Cu K-alpha1 X-ray, polarization against FullProf"
+_metadata.description      ?
+_metadata.created          "02 Oct 2026 14:28:55"
+_metadata.last_modified    "02 Oct 2026 14:28:56"
+_metadata.timestamp        ?

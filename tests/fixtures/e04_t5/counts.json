@@ -1,0 +1,356 @@
+{
+  "provenance": "CIF declarations and  diffraction-lib field inventory; symmetry is applied by the independent crysta probe at test runtime",
+  "structure": {
+    "sha256": "7f69d050d5ba4d9e5a43e551377f8be5d71b487418c83645044cbec0c3c16af2",
+    "parameters": [
+      {
+        "category": "cell",
+        "row": "",
+        "name": "length_a",
+        "free": true
+      },
+      {
+        "category": "cell",
+        "row": "",
+        "name": "length_b",
+        "free": false
+      },
+      {
+        "category": "cell",
+        "row": "",
+        "name": "length_c",
+        "free": false
+      },
+      {
+        "category": "cell",
+        "row": "",
+        "name": "angle_alpha",
+        "free": false
+      },
+      {
+        "category": "cell",
+        "row": "",
+        "name": "angle_beta",
+        "free": false
+      },
+      {
+        "category": "cell",
+        "row": "",
+        "name": "angle_gamma",
+        "free": false
+      },
+      {
+        "category": "atom_site",
+        "row": "La",
+        "name": "fract_x",
+        "free": false
+      },
+      {
+        "category": "atom_site",
+        "row": "La",
+        "name": "fract_y",
+        "free": false
+      },
+      {
+        "category": "atom_site",
+        "row": "La",
+        "name": "fract_z",
+        "free": false
+      },
+      {
+        "category": "atom_site",
+        "row": "La",
+        "name": "occupancy",
+        "free": false
+      },
+      {
+        "category": "atom_site",
+        "row": "La",
+        "name": "adp_iso",
+        "free": true
+      },
+      {
+        "category": "atom_site",
+        "row": "Ba",
+        "name": "fract_x",
+        "free": false
+      },
+      {
+        "category": "atom_site",
+        "row": "Ba",
+        "name": "fract_y",
+        "free": false
+      },
+      {
+        "category": "atom_site",
+        "row": "Ba",
+        "name": "fract_z",
+        "free": false
+      },
+      {
+        "category": "atom_site",
+        "row": "Ba",
+        "name": "occupancy",
+        "free": false
+      },
+      {
+        "category": "atom_site",
+        "row": "Ba",
+        "name": "adp_iso",
+        "free": true
+      },
+      {
+        "category": "atom_site",
+        "row": "Co",
+        "name": "fract_x",
+        "free": false
+      },
+      {
+        "category": "atom_site",
+        "row": "Co",
+        "name": "fract_y",
+        "free": false
+      },
+      {
+        "category": "atom_site",
+        "row": "Co",
+        "name": "fract_z",
+        "free": false
+      },
+      {
+        "category": "atom_site",
+        "row": "Co",
+        "name": "occupancy",
+        "free": false
+      },
+      {
+        "category": "atom_site",
+        "row": "Co",
+        "name": "adp_iso",
+        "free": true
+      },
+      {
+        "category": "atom_site",
+        "row": "O",
+        "name": "fract_x",
+        "free": false
+      },
+      {
+        "category": "atom_site",
+        "row": "O",
+        "name": "fract_y",
+        "free": false
+      },
+      {
+        "category": "atom_site",
+        "row": "O",
+        "name": "fract_z",
+        "free": false
+      },
+      {
+        "category": "atom_site",
+        "row": "O",
+        "name": "occupancy",
+        "free": false
+      },
+      {
+        "category": "atom_site",
+        "row": "O",
+        "name": "adp_iso",
+        "free": true
+      }
+    ]
+  },
+  "experiments": {
+    "hrpt": {
+      "sha256": "214fa812b198d5dd65d1019ce7b067212ebea5d7f0dd908217685828f890cd8a",
+      "parameters": [
+        {
+          "category": "peak",
+          "row": "",
+          "name": "broad_gauss_u",
+          "free": true
+        },
+        {
+          "category": "peak",
+          "row": "",
+          "name": "broad_gauss_v",
+          "free": true
+        },
+        {
+          "category": "peak",
+          "row": "",
+          "name": "broad_gauss_w",
+          "free": true
+        },
+        {
+          "category": "peak",
+          "row": "",
+          "name": "broad_lorentz_x",
+          "free": false
+        },
+        {
+          "category": "peak",
+          "row": "",
+          "name": "broad_lorentz_y",
+          "free": true
+        },
+        {
+          "category": "instrument",
+          "row": "",
+          "name": "setup_wavelength",
+          "free": false
+        },
+        {
+          "category": "instrument",
+          "row": "",
+          "name": "calib_twotheta_offset",
+          "free": true
+        },
+        {
+          "category": "absorption",
+          "row": "",
+          "name": "mu_r",
+          "free": false
+        },
+        {
+          "category": "background",
+          "row": "1",
+          "name": "intensity",
+          "free": true
+        },
+        {
+          "category": "background",
+          "row": "2",
+          "name": "intensity",
+          "free": true
+        },
+        {
+          "category": "background",
+          "row": "3",
+          "name": "intensity",
+          "free": true
+        },
+        {
+          "category": "background",
+          "row": "4",
+          "name": "intensity",
+          "free": true
+        },
+        {
+          "category": "background",
+          "row": "5",
+          "name": "intensity",
+          "free": true
+        },
+        {
+          "category": "linked_structure",
+          "row": "lbco",
+          "name": "scale",
+          "free": true
+        },
+        {
+          "category": "preferred_orientation",
+          "row": "lbco",
+          "name": "march_r",
+          "free": true
+        },
+        {
+          "category": "preferred_orientation",
+          "row": "lbco",
+          "name": "march_random_fract",
+          "free": false
+        }
+      ]
+    },
+    "second": {
+      "sha256": "399b8b4f52d23bf0966d1e1abf55398db0ccd4149e97e50fecf7896db0c2c6ab",
+      "parameters": [
+        {
+          "category": "peak",
+          "row": "",
+          "name": "broad_gauss_u",
+          "free": false
+        },
+        {
+          "category": "peak",
+          "row": "",
+          "name": "broad_gauss_v",
+          "free": true
+        },
+        {
+          "category": "peak",
+          "row": "",
+          "name": "broad_gauss_w",
+          "free": true
+        },
+        {
+          "category": "peak",
+          "row": "",
+          "name": "broad_lorentz_x",
+          "free": false
+        },
+        {
+          "category": "peak",
+          "row": "",
+          "name": "broad_lorentz_y",
+          "free": true
+        },
+        {
+          "category": "instrument",
+          "row": "",
+          "name": "setup_wavelength",
+          "free": false
+        },
+        {
+          "category": "instrument",
+          "row": "",
+          "name": "calib_twotheta_offset",
+          "free": true
+        },
+        {
+          "category": "absorption",
+          "row": "",
+          "name": "mu_r",
+          "free": false
+        },
+        {
+          "category": "background",
+          "row": "1",
+          "name": "intensity",
+          "free": true
+        },
+        {
+          "category": "background",
+          "row": "2",
+          "name": "intensity",
+          "free": true
+        },
+        {
+          "category": "background",
+          "row": "3",
+          "name": "intensity",
+          "free": true
+        },
+        {
+          "category": "linked_structure",
+          "row": "lbco",
+          "name": "scale",
+          "free": false
+        },
+        {
+          "category": "preferred_orientation",
+          "row": "lbco",
+          "name": "march_r",
+          "free": true
+        },
+        {
+          "category": "preferred_orientation",
+          "row": "lbco",
+          "name": "march_random_fract",
+          "free": false
+        }
+      ]
+    }
+  }
+}

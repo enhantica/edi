@@ -1,0 +1,51 @@
+# The pattern chart's latency bank, measured on the self-hosted fleet whose runners the bank names.
+# Dispatched by a maintainer only: no pull request, fork or push reaches the fleet.
+name: Bank latency
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bank:
+    name: bank · ${{ matrix.platform }}
+    # Only in the canonical public repository, named enhantica/edi at the cutover
+    # (docs/dev/public-release-checklist.md): the bank runs on the fleet's self-hosted runners.
+    if: github.repository == 'enhantica/edi' && github.event_name == 'workflow_dispatch'
+    environment: crysta-sdk
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: Linux
+            runner: [self-hosted, Linux, X64]
+          - platform: macOS
+            runner: [self-hosted, macOS, ARM64]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-pixi
+      - name: Mint a crysta installation token
+        id: crysta-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.ENHANTICA_APP_ID }}
+          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          owner: enhantica
+          repositories: crysta
+          permission-contents: read
+          permission-actions: read
+      - name: Build the native code
+        run: pixi run core-build
+        env:
+          GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
+      - name: Bank this runner's latency medians
+        run: pixi run --skip-deps python tools/ci/latency_bank.py --run --out "$RUNNER_TEMP/latency-bank-rows.json"
+      - name: Upload the bank rows
+        uses: actions/upload-artifact@v5
+        with:
+          name: latency-bank-${{ matrix.platform }}
+          path: ${{ runner.temp }}/latency-bank-rows.json
+          overwrite: true

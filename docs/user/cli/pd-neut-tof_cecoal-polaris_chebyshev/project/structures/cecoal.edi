@@ -1,0 +1,29 @@
+data_cecoal
+
+_edi.schema_version 3
+
+_cell.length_a 7.65038()
+_cell.length_b 4.051332()
+_cell.length_c 6.90536()
+_cell.angle_alpha 90.0
+_cell.angle_beta 90.0
+_cell.angle_gamma 90.0
+
+_space_group.name_h_m "P m m a"
+
+loop_
+_atom_site.id
+_atom_site.type_symbol
+_atom_site.fract_x
+_atom_site.fract_y
+_atom_site.fract_z
+_atom_site.wyckoff_letter
+_atom_site.multiplicity
+_atom_site.occupancy
+_atom_site.adp_iso
+_atom_site.adp_type
+Ce Ce 0.25 0.0 0.38279() e 2 1.0 0.50269() Biso
+Co Co 0.25 0.0 0.81319() e 2 1.0 0.47596() Biso
+Al1 Al 0.0 0.0 0.0 a 2 1.0 0.58479() Biso
+Al2 Al 0.25 0.5 0.04117() f 2 1.0 0.65836() Biso
+Al3 Al 0.0693() 0.5 0.7007() j 4 1.0() 0.53258() Biso

@@ -1,0 +1,136 @@
+{
+  "schema": 1,
+  "source": {
+    "engine": "FullProf 8.40 (references); edi (regression pins)",
+    "artifact": "../../../../knowledge/fitting/fullprof/pd-neut-cwl_lab6-11b-echidna_tch-fcj/ECH0030684_LaB6_1p622A.sum",
+    "provenance": "PROVENANCE.md"
+  },
+  "quantities": {
+    "n_free": {
+      "value": 17.0,
+      "kind": "reference",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    },
+    "param.scale.value": {
+      "value": 141.0906,
+      "kind": "reference",
+      "tol_abs": 2.918562,
+      "tol_rel": null
+    },
+    "param.calib_twotheta_offset.value": {
+      "value": -0.2135,
+      "kind": "reference",
+      "tol_abs": 0.0364,
+      "tol_rel": null
+    },
+    "param.setup_wavelength.value": {
+      "value": 1.622536,
+      "kind": "reference",
+      "tol_abs": 0.000176,
+      "tol_rel": null
+    },
+    "param.calib_sample_displacement.value": {
+      "value": 0.0539,
+      "kind": "reference",
+      "tol_abs": 0.0184,
+      "tol_rel": null
+    },
+    "param.calib_sample_transparency.value": {
+      "value": 0.0912,
+      "kind": "reference",
+      "tol_abs": 0.0276,
+      "tol_rel": null
+    },
+    "param.broad_gauss_u.value": {
+      "value": 0.08988,
+      "kind": "reference",
+      "tol_abs": 0.00884,
+      "tol_rel": null
+    },
+    "param.broad_gauss_v.value": {
+      "value": -0.37752,
+      "kind": "reference",
+      "tol_abs": 0.02696,
+      "tol_rel": null
+    },
+    "param.broad_gauss_w.value": {
+      "value": 0.4762,
+      "kind": "reference",
+      "tol_abs": 0.02176,
+      "tol_rel": null
+    },
+    "param.broad_lorentz_y.value": {
+      "value": 0.05265,
+      "kind": "reference",
+      "tol_abs": 0.00604,
+      "tol_rel": null
+    },
+    "param.La.adp_iso.value": {
+      "value": 0.597,
+      "kind": "reference",
+      "tol_abs": 0.08,
+      "tol_rel": null
+    },
+    "param.B.adp_iso.value": {
+      "value": 0.443,
+      "kind": "reference",
+      "tol_abs": 0.048,
+      "tol_rel": null
+    },
+    "param.B.fract_x.value": {
+      "value": 0.19978,
+      "kind": "reference",
+      "tol_abs": 0.00048,
+      "tol_rel": null
+    },
+    "param.background[0].value": {
+      "value": 781.95,
+      "kind": "reference",
+      "tol_abs": 13.8136,
+      "tol_rel": null
+    },
+    "param.background[1].value": {
+      "value": 75.495,
+      "kind": "reference",
+      "tol_abs": 34.7968,
+      "tol_rel": null
+    },
+    "param.background[2].value": {
+      "value": 292.12,
+      "kind": "reference",
+      "tol_abs": 89.036,
+      "tol_rel": null
+    },
+    "param.background[3].value": {
+      "value": -3.4942,
+      "kind": "reference",
+      "tol_abs": 62.28,
+      "tol_rel": null
+    },
+    "param.background[4].value": {
+      "value": -326.9,
+      "kind": "reference",
+      "tol_abs": 112.528,
+      "tol_rel": null
+    },
+    "iterations": {
+      "value": 2.0,
+      "kind": "regression-pin",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    },
+    "reduced_chi_square": {
+      "value": 8.844222988,
+      "kind": "regression-pin",
+      "tol_abs": 1e-06,
+      "tol_rel": null
+    },
+    "rwp": {
+      "value": 0.08176730916,
+      "kind": "regression-pin",
+      "tol_abs": 1e-09,
+      "tol_rel": null
+    }
+  }
+}

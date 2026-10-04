@@ -1,0 +1,53 @@
+# borderline-test repeats, review-6 B9 revision — the tiering METRIC, not bare call phases.
+#
+# Method: five targeted serial runs of the two borderline c09_t6 tests (pytest -q
+# --durations=0 -p no:cacheprovider, the producer's duration surface); per-repeat totals
+# computed by parse_durations ITSELF on each run's log — the exact accounting the 30 s
+# threshold reads (setup+call+teardown summed per node; a phase below pytest's 0.005 s
+# reporting floor contributes 0.000, the manifest's own documented convention).
+#
+# Phase completeness: each repeat's block below carries pytest's own statement that the
+# remaining 4 durations (2× setup, 2× teardown) are EACH below 0.005 s — so each test's
+# metric total exceeds its call phase by at most 0.01 s, bounded by the log itself.
+# The producer's full-pass log records the same shape for these tests: the manifest's
+# 32.85 s / 31.89 s are pure call-phase lines there, with setup/teardown below the floor.
+#
+# parse_durations totals per repeat (matches_all_193 / performs_no_native), seconds:
+#   repeat1: 24.09 / 24.83   repeat2: 24.38 / 24.50   repeat3: 23.79 / 25.42
+#   repeat4: 24.27 / 24.91   repeat5: 25.10 / 25.51   — all under the 30 s threshold.
+#
+== repeat 1 ==
+============================== slowest durations ===============================
+24.83s call     tests/hidden/test_c09_t6_joint_multibank_absorption.py::test_c09_t6_joint_refit_performs_no_native_file_io_or_subprocess
+24.09s call     tests/hidden/test_c09_t6_joint_multibank_absorption.py::test_c09_t6_joint_refit_matches_all_193_cli_values_esds_and_global_metrics
+
+(4 durations < 0.005s hidden.  Use -vv to show these durations.)
+============================== 2 passed in 49.02s ==============================
+== repeat 2 ==
+============================== slowest durations ===============================
+24.50s call     tests/hidden/test_c09_t6_joint_multibank_absorption.py::test_c09_t6_joint_refit_performs_no_native_file_io_or_subprocess
+24.38s call     tests/hidden/test_c09_t6_joint_multibank_absorption.py::test_c09_t6_joint_refit_matches_all_193_cli_values_esds_and_global_metrics
+
+(4 durations < 0.005s hidden.  Use -vv to show these durations.)
+============================== 2 passed in 48.98s ==============================
+== repeat 3 ==
+============================== slowest durations ===============================
+25.42s call     tests/hidden/test_c09_t6_joint_multibank_absorption.py::test_c09_t6_joint_refit_performs_no_native_file_io_or_subprocess
+23.79s call     tests/hidden/test_c09_t6_joint_multibank_absorption.py::test_c09_t6_joint_refit_matches_all_193_cli_values_esds_and_global_metrics
+
+(4 durations < 0.005s hidden.  Use -vv to show these durations.)
+============================== 2 passed in 49.31s ==============================
+== repeat 4 ==
+============================== slowest durations ===============================
+24.91s call     tests/hidden/test_c09_t6_joint_multibank_absorption.py::test_c09_t6_joint_refit_performs_no_native_file_io_or_subprocess
+24.27s call     tests/hidden/test_c09_t6_joint_multibank_absorption.py::test_c09_t6_joint_refit_matches_all_193_cli_values_esds_and_global_metrics
+
+(4 durations < 0.005s hidden.  Use -vv to show these durations.)
+============================== 2 passed in 49.27s ==============================
+== repeat 5 ==
+============================== slowest durations ===============================
+25.51s call     tests/hidden/test_c09_t6_joint_multibank_absorption.py::test_c09_t6_joint_refit_performs_no_native_file_io_or_subprocess
+25.10s call     tests/hidden/test_c09_t6_joint_multibank_absorption.py::test_c09_t6_joint_refit_matches_all_193_cli_values_esds_and_global_metrics
+
+(4 durations < 0.005s hidden.  Use -vv to show these durations.)
+============================== 2 passed in 50.73s ==============================

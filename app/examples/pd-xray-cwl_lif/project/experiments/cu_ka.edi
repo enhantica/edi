@@ -1,0 +1,31 @@
+data_cu_ka
+
+_edi.schema_version 3
+
+_experiment_type.sample_form powder
+_experiment_type.beam_mode "constant wavelength"
+_experiment_type.radiation_probe xray
+_experiment_type.scattering_type bragg
+
+_scattering_source.xray_form_factor it1992
+_scattering_source.xray_dispersion sasaki1989
+
+_instrument.setup_wavelength 1.54056
+_instrument.calib_twotheta_offset 0.
+
+_peak.type cwl-pseudo-voigt
+_peak.broad_gauss_u 0.048457
+_peak.broad_gauss_v -0.083053
+_peak.broad_gauss_w 0.04
+_peak.broad_lorentz_x 0.
+_peak.broad_lorentz_y 0.049268
+_peak.cutoff_fwhm 48.
+
+_data_range.two_theta_min 10.
+_data_range.two_theta_max 150.
+_data_range.two_theta_step 0.02
+
+loop_
+_linked_structure.structure_id
+_linked_structure.scale
+lif 0.01

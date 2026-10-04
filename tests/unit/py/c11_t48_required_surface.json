@@ -1,0 +1,53 @@
+{
+  "derivation": "Targets absent from the pre-task edi surface, derived from the  end-state,  classification rows closing with  or , and the anchored parameter dictionary, re-pointed to the settled diffraction-lib class hierarchy and verbatim vocabulary. The five deleted node-level free_parameters subjects remain only as explicit retirement controls because Project.free_parameters is their committed successor; no assertion is removed. Enum values are excluded because none of these sources carries enum-member rows; only the owning Severity class is required.",
+  "repo": "edi",
+  "required_paths": [
+    "AtomSite.adp_type",
+    "AtomSite.free_parameters",
+    "AtomSite.parameters",
+    "BackgroundPoint.free_parameters",
+    "Cell.free_parameters",
+    "Cell.parameters",
+    "Diagnostic",
+    "Diagnostic.code",
+    "Diagnostic.message",
+    "Diagnostic.params",
+    "Diagnostic.path",
+    "Diagnostic.severity",
+    "Diagnostic.source",
+    "DomainValidationError",
+    "Experiment.free_parameters",
+    "ExperimentBase.parameters",
+    "LineSegment.parameters",
+    "Project.free_parameters",
+    "Project.parameters",
+    "SchemaValidationError",
+    "Severity",
+    "SpaceGroup.it_number",
+    "Structure.free_parameters",
+    "Structure.parameters",
+    "SyntaxValidationError",
+    "ValidationError"
+  ],
+  "schema": 1,
+  "sources": [
+    {
+      "blob": "0f55526c5a3e566b3c3cba1f02547dd625eaa20d",
+      "commit": "8efd4055895df8e03e4d167d02a7893412502a86",
+      "path": "knowledge/analysis/-end-state-api.md",
+      "repo": "development hub"
+    },
+    {
+      "blob": "1ebb2706a126769e7f88697323e1311a90be6889",
+      "commit": "790e13782d4658d97ca35f6283b29c9ec677cb7e",
+      "path": "data/python-surface.json",
+      "repo": "crysta"
+    },
+    {
+      "blob": "c92a29c52053ef3de0f854308d487981c6bd8fcd",
+      "commit": "790e13782d4658d97ca35f6283b29c9ec677cb7e",
+      "path": "data/dictionary/parameters.yaml",
+      "repo": "crysta"
+    }
+  ]
+}

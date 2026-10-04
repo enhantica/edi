@@ -1,0 +1,186 @@
+# The expected images of the edi app's UI test: edi's OWN output, produced by
+# `edi_app --demo` and committed as a REGRESSION PIN of the edi app. They catch unintended change;
+# they never assert that the look matches easydiffractionbeta v0.9.9 (the side-by-side review in
+# docs/dev/design/app-design-inventory.md does that). One set serves every platform, compared by SSIM.
+kind: regression-pin
+produced_by: edi_app --demo (tools/ci/app-ui-bless.sh)
+source_commit: a980104ffc32f1e6f6fe1ccb2f523bceb42ab24d
+platform: Linux x86_64, QT_QPA_PLATFORM=xcb (Xwayland on headless Weston, Mesa llvmpipe OpenGL)
+qt_version: 6.11.2
+window: 1280x768, device-pixel ratio 1
+images: 72
+# 40 of the 68 were replaced one by one at 147a9cb, after the note above was written; the other 28 are
+# unchanged from source_commit above.
+reblessed:
+  - produced_at: 147a9cbff6f77276e682c9542bfe069b09869e78
+    reason: >-
+      Returned five examples to crysta's seed bytes, so each opens with one message and the status bar's
+      Messages item counts 1 not viewed, in red, on every page that shows one of them (2 where a refused
+      experiment is loaded as well)
+    platform: Linux x86_64, QT_QPA_PLATFORM=xcb (Xwayland on headless Weston, Mesa llvmpipe OpenGL)
+    images:
+      - 04-project-loaded.png
+      - 05-model-models.png
+      - 06-model-space-group.png
+      - 07-model-cell.png
+      - 08-model-atom-site.png
+      - 09-model-text-mode.png
+      - 10-experiment-experiments.png
+      - 11-experiment-profile-shape.png
+      - 12-experiment-background.png
+      - 13-analysis-basic.png
+      - 14-analysis-extra-minimizer.png
+      - 15-summary.png
+      - 16-summary-preferences.png
+      - 20-experiment-tof.png
+      - 21-structure-extras.png
+      - 22-analysis-fitting-mode.png
+      - 23-experiment-text.png
+      - 24-analysis-text.png
+      - 25-report-tof.png
+      - 26-experiment-loaded.png
+      - ex-pd-neut-cwl_cosio-d20_start-1.png
+      - ex-pd-neut-cwl_cosio-d20_start-4.png
+      - ex-pd-neut-tof_ncaf-wish-2bank_start-3.png
+      - ex-pd-neut-tof_si-sepd_start-2.png
+      - ex-pd-neut-tof_si-sepd_start-5.png
+      - t2-01-instrument-cw.png
+      - t2-02-linked-structure.png
+      - t2-03-experiment-extras-peak.png
+      - t2-04-analysis-slider.png
+      - t2-05-report-text.png
+      - t2-06-dark-experiment.png
+      - t2-07-dark-analysis.png
+      - t2-08-dark-structure-text.png
+      - t2-09-system-dark-report.png
+      - t2-10-system-light-report.png
+      - t2-11-project-text.png
+      - t2-12-measured-data.png
+      - t2-13-reflections.png
+      - t2-14-joint-fit.png
+      - t2-17-instrument-cw-four.png
+  - produced_at: dff41404feacd0b24e526f208ba1c589ca769574
+    reason: >-
+      the two Messages captures showed a hover highlight on the row under the Linux host's cursor (the
+      window's centre), which a macOS run does not draw (edi PR 97); the demo now parks its pointer in the
+      window's corner, and the two are captured again without it. The other 66 are unchanged by that.
+    platform: Linux x86_64, QT_QPA_PLATFORM=xcb (Xwayland on headless Weston, Mesa llvmpipe OpenGL)
+    images:
+      - t4-04-messages-list.png
+      - t4-06-messages-error.png
+  - produced_at: 456b4c8c90aa5c714872c353d04a45927dc1676f
+    reason: >-
+      every dialog is centred on whole pixels now (Components/AppDialog.qml): the three dialogs that sat on a
+      half pixel move by half a pixel. The three-row Messages dialog's thin edges were what a macOS run drew
+      differently (edi PR 97); About and Preferences move with the same rule.
+    platform: Linux x86_64, QT_QPA_PLATFORM=xcb (Xwayland on headless Weston, Mesa llvmpipe OpenGL)
+    images:
+      - 16-summary-preferences.png
+      - 28-home-about.png
+      - t4-04-messages-list.png
+  - produced_at: 600262d393069d6a5fe446ab49212fdf4d7dd0d9
+    reason: >-
+      A parameter the space group fixes or ties is shown disabled and is no longer a row of the Analysis
+      table, so the Structure pages, the Analysis table and the status bar's parameter count change on every
+      page that shows a project (edi ADR-0019); and the five seed examples declare crysta, so they open
+      without the calculator message and the Messages item counts 0 (1 where a refused experiment is loaded
+      as well). The other 5 are unchanged by that.
+    platform: Linux x86_64, QT_QPA_PLATFORM=xcb (Xwayland on headless Weston, Mesa llvmpipe OpenGL)
+    images:
+      - 04-project-loaded.png
+      - 05-model-models.png
+      - 06-model-space-group.png
+      - 07-model-cell.png
+      - 08-model-atom-site.png
+      - 09-model-text-mode.png
+      - 10-experiment-experiments.png
+      - 11-experiment-profile-shape.png
+      - 12-experiment-background.png
+      - 13-analysis-basic.png
+      - 14-analysis-extra-minimizer.png
+      - 15-summary.png
+      - 16-summary-preferences.png
+      - 17-experiment-profile-selector.png
+      - 18-experiment-tch.png
+      - 19-experiment-extras.png
+      - 20-experiment-tof.png
+      - 21-structure-extras.png
+      - 22-analysis-fitting-mode.png
+      - 23-experiment-text.png
+      - 24-analysis-text.png
+      - 25-report-tof.png
+      - 26-experiment-loaded.png
+      - 27-experiment-xray.png
+      - ex-pd-neut-cwl_cosio-d20_scan-324f.png
+      - ex-pd-neut-cwl_cosio-d20_scan-3f.png
+      - ex-pd-neut-cwl_cosio-d20_start-1.png
+      - ex-pd-neut-cwl_cosio-d20_start-4.png
+      - ex-pd-neut-cwl_lbco-hrpt_start-2.png
+      - ex-pd-neut-cwl_lbco-hrpt_start-4.png
+      - ex-pd-neut-cwl_pbso4_beba-asymmetry.png
+      - ex-pd-neut-tof_diamond-dream_basic.png
+      - ex-pd-neut-tof_fe_pseudo-voigt.png
+      - ex-pd-neut-tof_ncaf-wish-2bank_start-3.png
+      - ex-pd-neut-tof_ncaf-wish-3bank_start-5.png
+      - ex-pd-neut-tof_ncaf-wish-5bank_start-5.png
+      - ex-pd-neut-tof_ncaf-wish-5bank_start-fullprof.png
+      - ex-pd-neut-tof_si-sepd_start-2.png
+      - ex-pd-neut-tof_si-sepd_start-5.png
+      - ex-pd-xray-cwl_lif.png
+      - t2-01-instrument-cw.png
+      - t2-02-linked-structure.png
+      - t2-03-experiment-extras-peak.png
+      - t2-04-analysis-slider.png
+      - t2-05-report-text.png
+      - t2-06-dark-experiment.png
+      - t2-07-dark-analysis.png
+      - t2-08-dark-structure-text.png
+      - t2-09-system-dark-report.png
+      - t2-10-system-light-report.png
+      - t2-11-project-text.png
+      - t2-12-measured-data.png
+      - t2-13-reflections.png
+      - t2-14-joint-fit.png
+      - t2-15-scan-extraction.png
+      - t2-16-fit-start.png
+      - t2-17-instrument-cw-four.png
+      - t4-01-experiment-type.png
+      - t4-02-measured-data-uniform.png
+      - t4-03-messages-not-viewed.png
+      - t4-04-messages-list.png
+      - t4-05-messages-viewed.png
+      - t4-06-messages-error.png
+  - produced_at: a6946af83d13b58414197dd5db644ce0152f2b05
+    reason: >-
+      Edi pins the crysta build whose writer saves the calculator (956476cd), so the experiment Text tab
+      shows one more line, `_calculator.type crysta`, after the experiment-type block, and the lines below it
+      move down. The other 67 are unchanged by that.
+    platform: Linux x86_64, QT_QPA_PLATFORM=xcb (Xwayland on headless Weston, Mesa llvmpipe OpenGL)
+    images:
+      - 23-experiment-text.png
+  - produced_at: 85d3012e3b9cd4c363c777815da3017b5bc0d51a
+    reason: >-
+      The three FullProf background CLI projects join the examples, so their pages are captured (new, the
+      set's 69th to 71st images). Captured with edi at the merge of edi main d775b5fd into the branch, built
+      against crysta build-408946845f2d. The Project page's Examples list compares unchanged
+      (03-project-examples.png, SSIM 1.0000), so nothing else is captured again here; the run's other 53 SSIM
+      failures are pages chart redraw changed, which edi main carries as known reds and slot B re-blesses
+      separately.
+    platform: Linux x86_64, QT_QPA_PLATFORM=xcb (Xwayland on headless Weston, Mesa llvmpipe OpenGL)
+    images:
+      - ex-pd-neut-tof_cecoal-polaris_chebyshev.png
+      - ex-pd-neut-tof_ceo2-pearl_polynomial.png
+      - ex-pd-neut-cwl_lab6-11b-echidna_tch-fcj.png
+  - produced_at: d101c0cf59a72dce035041aae323f75109953e09
+    reason: >-
+      The CLI project pd-xray-cwl_lif_single joins the examples, so its page is captured
+      (ex-pd-xray-cwl_lif_single.png, new, the set's 69th image) and the Project page's Examples list gains
+      "lif single" at 17, which moves the list behind the three Messages dialogs. Captured with edi built
+      against crysta's head (its library sources as at crysta f7c24362). The other 65 are unchanged by
+      that (SSIM 1.0000 but ex-pd-xray-cwl_lif.png at 0.9808 min tile, within its bound).
+    platform: Linux x86_64, QT_QPA_PLATFORM=xcb (Xwayland on headless Weston, Mesa llvmpipe OpenGL)
+    images:
+      - ex-pd-xray-cwl_lif_single.png
+      - t4-03-messages-not-viewed.png
+      - t4-04-messages-list.png
+      - t4-05-messages-viewed.png

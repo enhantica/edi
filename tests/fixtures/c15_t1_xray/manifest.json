@@ -1,0 +1,27 @@
+{
+  "upstream": "https://github.com/easyscience/diffraction-lib",
+  "sha": "0d9f10e412a0cd08d4dd0af95845dd9bb597dcdf",
+  "files": {
+    "lif_single_unpolarized.pcr": "5b394218f4251d245e135c1a08df0aa50f3053b10d50a74c46407fe6388f1794",
+    "lif_single_unpolarized.dat": "06ba190e26656de021c199beef857cdf61acf5e05ca62564cb325d40d9628cae",
+    "lif_single_unpolarized.prf": "a8bb9b01ffe9b7a7cf66e875f1b1fd152cbbe2ff861b2fcd36c166059e447103",
+    "lif_single_unpolarized.sum": "14edb1a0ef4b45816d46f5e927a1b801f96ce007bc6077a79b762aa193098121",
+    "lif_single_unpolarized.bac": "a4d4499e76435e7c57d1b868374809bba5492d5b522e3e982572560104c1c10d"
+  },
+  "before_pages": [
+    "pd-neut-cwl_LBCO_basic",
+    "pd-neut-cwl_LaB6_11B",
+    "pd-neut-cwl_LaB6_absorption",
+    "pd-neut-cwl_LaB6_basic",
+    "pd-neut-cwl_LaB6_fcj-asymmetry",
+    "pd-neut-cwl_PbSO4_basic",
+    "pd-neut-cwl_PbSO4_beba-asymmetry",
+    "pd-neut-cwl_Y2O3_isotropic-adp",
+    "pd-neut-tof_Fe_pseudo-voigt",
+    "pd-neut-tof_NCAF_jorgensen-von-dreele",
+    "pd-neut-tof_Si_jorgensen",
+    "pd-neut-tof_Si_jorgensen-von-dreele",
+    "pd-neut-tof_Si_jorgensen-von-dreele-size-strain",
+    "pd-neut-tof_diamond_dream"
+  ]
+}

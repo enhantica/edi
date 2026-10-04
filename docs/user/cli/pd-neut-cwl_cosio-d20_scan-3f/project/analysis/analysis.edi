@@ -1,0 +1,19 @@
+_edi.schema_version 2
+
+_fitting_mode.type sequential
+
+_minimizer.type "crysta (lm)"
+_minimizer.max_iterations 1000
+_minimizer.descent fast_descent
+_minimizer.chi_square_tolerance 1e-4
+
+_sequential_fit.data_dir experiments/d20_scan
+_sequential_fit.file_pattern *.dat
+_sequential_fit.reverse false
+
+loop_
+_sequential_fit_extract.id
+_sequential_fit_extract.target
+_sequential_fit_extract.pattern
+_sequential_fit_extract.required
+temperature diffrn.ambient_temperature ^TEMP\s+([0-9.]+) true

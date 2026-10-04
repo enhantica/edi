@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "source": {
+    "engine": "FullProf 8.40 (references); edi (regression pins)",
+    "artifact": "../../../../knowledge/verification/fullprof/pd-neut-tof_diamond-dream_basic/diamond.sum",
+    "provenance": "PROVENANCE.md"
+  },
+  "quantities": {
+    "n_free": {
+      "value": 1.0,
+      "kind": "reference",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    },
+    "n_points_fitted": {
+      "value": 1948.0,
+      "kind": "reference",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    },
+    "param.scale.value": {
+      "value": 14.56962854,
+      "kind": "reference",
+      "tol_abs": 0.108666576,
+      "tol_rel": null
+    },
+    "iterations": {
+      "value": 2.0,
+      "kind": "regression-pin",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    },
+    "reduced_chi_square": {
+      "value": 18.24025953,
+      "kind": "regression-pin",
+      "tol_abs": 1e-06,
+      "tol_rel": null
+    },
+    "rwp": {
+      "value": 0.169634072,
+      "kind": "regression-pin",
+      "tol_abs": 1e-09,
+      "tol_rel": null
+    }
+  }
+}

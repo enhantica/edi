@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "source": {
+    "engine": "crysta",
+    "artifact": "PROVENANCE.md",
+    "provenance": "PROVENANCE.md"
+  },
+  "variants": {
+    "ladder": {
+      "quantities": {
+        "reduced_chi_square": {
+          "value": 15.69263995,
+          "kind": "regression-pin",
+          "tol_abs": 1e-06,
+          "tol_rel": null
+        },
+        "iterations": {
+          "value": 6.0,
+          "kind": "regression-pin",
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "rwp": {
+          "value": 0.08189529811,
+          "kind": "regression-pin",
+          "tol_abs": 1e-09,
+          "tol_rel": null
+        }
+      }
+    },
+    "fast-descent-linear-snap": {
+      "quantities": {
+        "reduced_chi_square": {
+          "value": 15.69263662,
+          "kind": "regression-pin",
+          "tol_abs": 1e-06,
+          "tol_rel": null
+        },
+        "iterations": {
+          "value": 5.0,
+          "kind": "regression-pin",
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "rwp": {
+          "value": 0.08189528941,
+          "kind": "regression-pin",
+          "tol_abs": 1e-09,
+          "tol_rel": null
+        }
+      }
+    }
+  }
+}

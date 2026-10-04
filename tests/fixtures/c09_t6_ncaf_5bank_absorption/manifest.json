@@ -1,0 +1,115 @@
+{
+  "c09_t14_writer_reference_correction": {
+    "corrected_pins": [
+      "expected/pre_task_writer/key_absent/structures/ncaf.edi",
+      "expected/desired_writer/type_none/structures/ncaf.edi"
+    ],
+    "examples": [
+      "0.90(5), not lossy 0.9(1) or decimal-bracket 0.9(0.05)",
+      "1.90(5), not lossy 1.9(1) or decimal-bracket 1.9(0.05)"
+    ],
+    "reference": "International Tables for Crystallography CIF standard-uncertainty convention",
+    "role": "reference correction of lossy writer regression pins, not code-derived output",
+    "rule": "widen the value to the uncertainty precision and emit an integer bracket",
+    "sweep": "all trailing-zero integer-bracket tokens in both source projects; 0.00670(1) was already correct"
+  },
+  "c12_t3_refresh": {
+    "commit": "7f4a5d4228be79110fafa5beaf8e5e95e700dc96",
+    "jvd_absorption": "source already carried code 1; pin adds only its required round-trip",
+    "key_absent": "absorption key is absent but source code 1 remains present and must round-trip",
+    "role": "regression-pin refresh for the intentional  writer extension, not a correctness oracle",
+    "type_none": "explicit absorption none is unchanged; source code 1 must now round-trip"
+  },
+  "crysta_cli_oracle": {
+    "binary": "build/crysta-build/crysta",
+    "command": [
+      "crysta",
+      "fit",
+      "tests/fitting/ncaf-5bank-absorption-perturbed-tof/project",
+      "--rung",
+      "lm",
+      "--out",
+      "/tmp/edi--crysta-cli.json"
+    ],
+    "cwd": "crysta checkout root",
+    "input": "tests/fitting/ncaf-5bank-absorption-perturbed-tof/project",
+    "input_files": {
+      "analysis/analysis.edi": "2a615ba0fdaa2475f3647f0218268e7ca09cadd75bcb8fc06d472d113ce40b45",
+      "experiments/wish_1_10.edi": "17d08f5f1868ef560f12ed3d034a90ea6f4abf6763037fdf099c3ae1121c0490",
+      "experiments/wish_2_9.edi": "02d7ac20ca334f6f07d9478651f4990c6e3b7ecc9430b31f2a75c4672a569b8e",
+      "experiments/wish_3_8.edi": "35a5b52d0d8a09d1dab964f8766f592bfac816b8be710012a76ffbb90ae75344",
+      "experiments/wish_4_7.edi": "07d094af2149ad8c50032df2ed5867a2da410a224f2062007590ee657b6c5d51",
+      "experiments/wish_5_6.edi": "76716495b728fc484653f7f6ee5b1bdfca2d63dd88ff74ef0fa44cc0fddda068",
+      "structures/ncaf.edi": "3aa67f9815eec29a5c1425ea1eedfbb3e4219de28d4c2799740ebd637ae2e690"
+    },
+    "output": "crysta_cli_joint_fit.json",
+    "output_sha256": "78da03e3eb0e9e05a12069a1a6d291647f9fab55931cac50532f085f5e69d406",
+    "pin": "e1f0452810006d1dd529f26a26cbcd3ad835f33c",
+    "representation": "published write_joint_results JSON, %.10g"
+  },
+  "desired_writer": {
+    "c11_t48_refresh": "regression pins refreshed solely for the declared fourth TOF calibration term; the added calib_d_to_tof_reciprocal row is not an independent correctness claim",
+    "e09_t58_final_delegation": {
+      "moved_goldens": 6,
+      "ruling_trace": {
+        "F-a": "key_absent and no_code_type_none experiment bytes gain the default none family token",
+        "F-c": "all three experiment bytes replace 2e+05 with 200000",
+        "F-d": "no_code_type_none structure bytes gain the model-held ADP type",
+        "T-3": "all three structure bytes gain derived multiplicities",
+        "one-row-per-basic": "zero bytes move: these save-only fixtures contain no fitted-state rows"
+      },
+      "source_record": "build/crysta-src/CRYSTA_SOURCE_SHA",
+      "source_sha": "fcea5f817c985cf94af731625d56f38e3fae0061"
+    },
+    "e09_t58_refresh": "regression pins advanced to schema 3 and the deliberate  canonical writer bytes; no generated value is an independent correctness claim",
+    "generator": "edi.Project.load(...).save_as(...)",
+    "jvd_absorption": "old-writer canonical bytes plus the accepted five JvD and three absorption fields",
+    "key_absent": "preserve absence separately from the explicit none selector",
+    "one_loader": "writer/round-trip fixtures declare fit-ready measured data from ncaf-wish-3bank-s5",
+    "role": "schema-3 implementation-produced regression pins, not correctness oracles",
+    "type_none": "preserve the explicit selector separately from key-absent invariance"
+  },
+  "edi_pre_task_writer": {
+    "commit": "66ab62948e2c012d1c3ca81aaaf0385887017229",
+    "role": "regression pin for canonical writer behaviour, not source-byte parity"
+  },
+  "files": {
+    "crysta_cli_joint_fit.json": "78da03e3eb0e9e05a12069a1a6d291647f9fab55931cac50532f085f5e69d406",
+    "expected/desired_writer/jvd_absorption/analysis/analysis.edi": "26b6bda07fd96154d4a8a42043f900b17121f91d04109446830781e9b16ced7b",
+    "expected/desired_writer/jvd_absorption/experiments/wish_1_10.edi": "948f327f7c262345c7a16b4a104465db41b2205f2f359a5ab18c62e18ad0c03c",
+    "expected/desired_writer/jvd_absorption/experiments/wish_2_9.edi": "a7aa46bcfc4984905bc159d6ee703b91a1d18ef4b72b8dee050f9507da80fd3d",
+    "expected/desired_writer/jvd_absorption/experiments/wish_3_8.edi": "1064196086fdbe021f7e4769b7f948230c3f7dccf7c2c0425a2b707b96e28c51",
+    "expected/desired_writer/jvd_absorption/experiments/wish_4_7.edi": "4964e393559e0caaf1b248a5c00c4426ed311f2962ba7964f0d15a420e547bad",
+    "expected/desired_writer/jvd_absorption/experiments/wish_5_6.edi": "83d38dbd488c7be045e009b11e61d6e9f36aaeec5f36de1ac6931e9215df00ea",
+    "expected/desired_writer/jvd_absorption/structures/ncaf.edi": "d6b516e62da2c79acf0935b8cfe1e71d50aedefa9f8f80c93376623070b9518d",
+    "expected/desired_writer/key_absent/analysis/analysis.edi": "278a2d75bfcbb4e5f78ed308e5be72fdf1d21ba100b4711e9c8746a17cbb5635",
+    "expected/desired_writer/key_absent/experiments/wish_5_6.edi": "c8307f78622a71b5a4211067f4c102cd84406dc3c5b3c42e78a6f71f5f652a1b",
+    "expected/desired_writer/key_absent/structures/ncaf.edi": "8d2cfac260741c78ff52859c25a7d205483de03a8dad3f824c84929a677f0a54",
+    "expected/desired_writer/no_code_type_none/analysis/analysis.edi": "278a2d75bfcbb4e5f78ed308e5be72fdf1d21ba100b4711e9c8746a17cbb5635",
+    "expected/desired_writer/no_code_type_none/experiments/wish_5_6.edi": "5fcf360e30d0a589e0a54639d9feef5317588b1358f3ca6c0c9c15dee96cc774",
+    "expected/desired_writer/no_code_type_none/structures/ncaf.edi": "b7009876ffe8a67993ddb1c6a5eb56512d92a3e5c7c231096044aade48a2e95b",
+    "expected/desired_writer/type_none/analysis/analysis.edi": "278a2d75bfcbb4e5f78ed308e5be72fdf1d21ba100b4711e9c8746a17cbb5635",
+    "expected/desired_writer/type_none/experiments/wish_5_6.edi": "c8307f78622a71b5a4211067f4c102cd84406dc3c5b3c42e78a6f71f5f652a1b",
+    "expected/desired_writer/type_none/structures/ncaf.edi": "8d2cfac260741c78ff52859c25a7d205483de03a8dad3f824c84929a677f0a54",
+    "expected/pre_task_writer/e02_t2_ncaf_5bank/analysis/analysis.edi": "26b6bda07fd96154d4a8a42043f900b17121f91d04109446830781e9b16ced7b",
+    "expected/pre_task_writer/e02_t2_ncaf_5bank/experiments/wish_1_10.edi": "876c9b90a5d5afb9fdc9173ca09cbe03421063619f8a67eca4fc44214a9502b2",
+    "expected/pre_task_writer/e02_t2_ncaf_5bank/experiments/wish_2_9.edi": "627165af316a74a034dc8fe7c5f2d506804e5cf835f48ae8dabd906e8fe7c9d6",
+    "expected/pre_task_writer/e02_t2_ncaf_5bank/experiments/wish_3_8.edi": "f3c032a486f887a67780561327ec065cedca11c39cd4ceccc4935913b71a9084",
+    "expected/pre_task_writer/e02_t2_ncaf_5bank/experiments/wish_4_7.edi": "f3084cd1743069ade82b2d056809cf6cc036bba789c43c505431b78405777706",
+    "expected/pre_task_writer/e02_t2_ncaf_5bank/experiments/wish_5_6.edi": "a60cf37c55d720651da63f87b10fa542469d7697d9dccfd4ea6fab5c88ce9807",
+    "expected/pre_task_writer/e02_t2_ncaf_5bank/structures/ncaf.edi": "ed613b408bb905e20d036264710df719f5b7cc4ab5e838657ac853ece479582e",
+    "expected/pre_task_writer/key_absent/analysis/analysis.edi": "9e193a9ad856f97453a190891e7a145996177c09c666313de4c31f175317463c",
+    "expected/pre_task_writer/key_absent/experiments/wish_5_6.edi": "76a63456b4ab22d0d561f98649358b1a41b60d83bacd1df0f4a797edd36ef1c2",
+    "expected/pre_task_writer/key_absent/structures/ncaf.edi": "141bface64413dc680383cdbc578e082b3bde77bc25170c9a63b90f97293cd01",
+    "expected/pre_task_writer/type_none/analysis/analysis.edi": "9e193a9ad856f97453a190891e7a145996177c09c666313de4c31f175317463c",
+    "expected/pre_task_writer/type_none/experiments/wish_5_6.edi": "76a63456b4ab22d0d561f98649358b1a41b60d83bacd1df0f4a797edd36ef1c2",
+    "expected/pre_task_writer/type_none/structures/ncaf.edi": "cf338f1512606fec03049b4db90c55a203169ba0d89af811987fbd9c0c20e43c",
+    "key_absent_project/experiments/wish_5_6.edi": "99e15d9ee51c1dde0cc9ff50428a9dc15a28fe99e5218d8e578678c242485cde",
+    "key_absent_project/structures/ncaf.edi": "d2f3678f1855746d9331a16652b1fcce43b400f585663ca701e5ad53f28dc9cd"
+  },
+  "key_absent_derivative": {
+    "source": "tests/fixtures/c09_t6_ncaf_5bank_absorption/type_none_project",
+    "transform": "remove every line beginning _absorption."
+  },
+  "schema": 1
+}

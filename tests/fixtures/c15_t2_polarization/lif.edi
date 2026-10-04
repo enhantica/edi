@@ -1,0 +1,44 @@
+data_structure
+_edi.schema_version 3
+_cell.length_a 4.026700
+_cell.length_b 4.026700
+_cell.length_c 4.026700
+_cell.angle_alpha 90
+_cell.angle_beta 90
+_cell.angle_gamma 90
+_space_group.name_h_m "F m -3 m"
+loop_
+_atom_site.id
+_atom_site.wyckoff_letter
+_atom_site.type_symbol
+_atom_site.adp_type
+_atom_site.fract_x
+_atom_site.fract_y
+_atom_site.fract_z
+_atom_site.occupancy
+_atom_site.adp_iso
+Li1 a Li Biso 0 0 0 1 1.2
+F1 b F Biso 0.5 0.5 0.5 1 0.8
+
+data_experiment
+_edi.schema_version 3
+_experiment_type.sample_form powder
+_experiment_type.radiation_probe xray
+_experiment_type.scattering_type bragg
+_experiment_type.beam_mode "constant wavelength"
+_peak.type cwl-pseudo-voigt
+_peak.broad_gauss_u 0.048457
+_peak.broad_gauss_v -0.083053
+_peak.broad_gauss_w 0.04
+_peak.broad_lorentz_x 0
+_peak.broad_lorentz_y 0.049268
+_peak.cutoff_fwhm 48
+_instrument.calib_twotheta_offset 0
+_instrument.setup_wavelength 1.540560
+loop_
+_linked_structure.structure_id
+_linked_structure.scale
+structure 0.02
+
+_scattering_source.xray_form_factor it1992
+_scattering_source.xray_dispersion sasaki1989

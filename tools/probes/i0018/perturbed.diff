@@ -1,0 +1,562 @@
+diff -ru a/project/experiments/wish_1_10.edi b/project/experiments/wish_1_10.edi
+--- a/project/experiments/wish_1_10.edi
++++ b/project/experiments/wish_1_10.edi
+@@ -32,13 +32,13 @@
+ _peak.type tof-jorgensen-von-dreele
+ 
+ _instrument.setup_twotheta_bank 27.081
+-_instrument.calib_d_to_tof_offset 0(10)
+-_instrument.calib_d_to_tof_linear 4985.32(10)
++_instrument.calib_d_to_tof_offset 35.30451(10)
++_instrument.calib_d_to_tof_linear 4980.04373(10)
+ _instrument.calib_d_to_tof_quadratic 1.85733
+ _instrument.calib_d_to_tof_reciprocal 0.
+ 
+ _absorption.type cylinder
+-_absorption.abscor1 0.0
++_absorption.abscor1 0.00000
+ _absorption.abscor2 0.0
+ 
+ loop_
+@@ -51,7 +51,7 @@
+ loop_
+ _linked_structure.structure_id
+ _linked_structure.scale
+-ncaf 37.04798(10)
++ncaf 39.37712(10)
+ 
+ _background.type line-segment
+ 
+@@ -60,40 +60,40 @@
+ _background.position
+ _background.intensity
+ 1 6056.0952 284.5072
+-2 7099.4761 0(10)
+-3 8008.2271 0(10)
+-4 8816.0059 0(10)
+-5 9724.7568 0(10)
+-6 10532.5352 0(10)
+-7 11710.5459 0(10)
+-8 12619.2969 0(10)
+-9 13393.4180 0(10)
+-10 14470.4561 0(10)
+-11 15614.8096 0(10)
+-12 17264.0254 0(10)
+-13 19283.4707 0(10)
+-14 20192.2207 0(10)
+-15 22346.2969 0(10)
+-16 24433.0586 0(10)
+-17 27563.2012 0(10)
+-18 30356.7695 0(10)
+-19 33049.3672 0(10)
+-20 35203.4414 0(10)
+-21 38826.4766 0(10)
+-22 44447.2695 0(10)
+-23 50068.0625 0(10)
+-24 55587.8828 0(10)
+-25 63586.3867 0(10)
+-26 74289.4531 0(10)
+-27 86385.1953 0(10)
+-28 98097.9844 0(10)
+-29 114791.3281 0(10)
+-30 128630.5156 0(10)
+-31 147091.2500 0(10)
+-32 167026.9219 0(10)
+-33 187448.0156 0(10)
+-34 208808.5312 0(10)
+-35 231077.7812 0(10)
++2 7099.4761 570.0229(10)
++3 8008.2271 447.8973(10)
++4 8816.0059 418.7187(10)
++5 9724.7568 647.6392(10)
++6 10532.5352 440.8561(10)
++7 11710.5459 416.2583(10)
++8 12619.2969 438.2224(10)
++9 13393.4180 66.3693(10)
++10 14470.4561 334.3682(10)
++11 15614.8096 169.1051(10)
++12 17264.0254 306.4761(10)
++13 19283.4707 160.0574(10)
++14 20192.2207 282.8384(10)
++15 22346.2969 202.2379(10)
++16 24433.0586 262.2629(10)
++17 27563.2012 216.7537(10)
++18 30356.7695 245.8217(10)
++19 33049.3672 202.3566(10)
++20 35203.4414 247.3641(10)
++21 38826.4766 210.4595(10)
++22 44447.2695 230.0974(10)
++23 50068.0625 200.9375(10)
++24 55587.8828 231.1531(10)
++25 63586.3867 196.3048(10)
++26 74289.4531 235.3126(10)
++27 86385.1953 185.8050(10)
++28 98097.9844 243.1904(10)
++29 114791.3281 174.2392(10)
++30 128630.5156 257.0272(10)
++31 147091.2500 164.3445(10)
++32 167026.9219 289.0852(10)
++33 187448.0156 105.7068(10)
++34 208808.5312 433.7164(10)
++35 231077.7812 359.1438(10)
+ 36 252332.8281 161.2677
+ 
+ loop_
+diff -ru a/project/experiments/wish_2_9.edi b/project/experiments/wish_2_9.edi
+--- a/project/experiments/wish_2_9.edi
++++ b/project/experiments/wish_2_9.edi
+@@ -14,17 +14,17 @@
+ 
+ _calculator.type crysta
+ 
+-_peak.rise_alpha_0 0.040554(10)
+-_peak.rise_alpha_1 0.023869(10)
+-_peak.decay_beta_0 0.005322(10)
+-_peak.decay_beta_1 0.083299(10)
++_peak.rise_alpha_0 0.085893(10)
++_peak.rise_alpha_1 0.094483(10)
++_peak.decay_beta_0 0.005649(10)
++_peak.decay_beta_1 0.095272(10)
+ _peak.broad_gauss_sigma_0 0
+-_peak.broad_gauss_sigma_1 69.8201(10)
+-_peak.broad_gauss_sigma_2 23.0513(10)
++_peak.broad_gauss_sigma_1 147.6564(10)
++_peak.broad_gauss_sigma_2 29.1403(10)
+ _peak.broad_gauss_size 0.
+ _peak.broad_gauss_strain 0.
+ _peak.broad_lorentz_gamma_0 0
+-_peak.broad_lorentz_gamma_1 1.6846(10)
++_peak.broad_lorentz_gamma_1 5.4470(10)
+ _peak.broad_lorentz_gamma_2 0
+ _peak.broad_lorentz_size 0.
+ _peak.broad_lorentz_strain 0.
+@@ -32,13 +32,13 @@
+ _peak.type tof-jorgensen-von-dreele
+ 
+ _instrument.setup_twotheta_bank 58.33
+-_instrument.calib_d_to_tof_offset 0(10)
+-_instrument.calib_d_to_tof_linear 10389.9(10)
++_instrument.calib_d_to_tof_offset 24.42662(10)
++_instrument.calib_d_to_tof_linear 10384.30477(10)
+ _instrument.calib_d_to_tof_quadratic 1.85233
+ _instrument.calib_d_to_tof_reciprocal 0.
+ 
+ _absorption.type cylinder
+-_absorption.abscor1 0.0(10)
++_absorption.abscor1 -0.01678(10)
+ _absorption.abscor2 0.0
+ 
+ loop_
+@@ -51,7 +51,7 @@
+ loop_
+ _linked_structure.structure_id
+ _linked_structure.scale
+-ncaf 36.15453(10)
++ncaf 33.46265(10)
+ 
+ _background.type line-segment
+ 
+@@ -59,28 +59,28 @@
+ _background.id
+ _background.position
+ _background.intensity
+-1 7246.0732 0(10)
+-2 9265.5195 0(10)
+-3 11097.9795 0(10)
+-4 13080.0303 0(10)
+-5 15473.4473 0(10)
+-6 16931.9355 0(10)
+-7 18614.8086 0(10)
+-8 20596.8594 0(10)
+-9 22504.1133 0(10)
+-10 26169.0332 0(10)
+-11 28113.6875 0(10)
+-12 30320.1172 0(10)
+-13 34770.3828 0(10)
+-14 40155.5703 0(10)
+-15 48341.8086 0(10)
+-16 58540.0156 0(10)
+-17 69139.8672 0(10)
+-18 80953.6328 0(10)
+-19 94214.6562 0(10)
+-20 107677.6328 0(10)
+-21 120889.3047 0(10)
+-22 132602.0938 0(10)
++1 7246.0732 554.0032(10)
++2 9265.5195 37.1248(10)
++3 11097.9795 543.7838(10)
++4 13080.0303 286.0584(10)
++5 15473.4473 411.7960(10)
++6 16931.9355 270.5722(10)
++7 18614.8086 420.3213(10)
++8 20596.8594 350.6550(10)
++9 22504.1133 375.9870(10)
++10 26169.0332 260.5512(10)
++11 28113.6875 285.9900(10)
++12 30320.1172 244.4382(10)
++13 34770.3828 266.1497(10)
++14 40155.5703 225.5290(10)
++15 48341.8086 238.6864(10)
++16 58540.0156 207.8890(10)
++17 69139.8672 237.7018(10)
++18 80953.6328 202.0207(10)
++19 94214.6562 251.3717(10)
++20 107677.6328 170.5838(10)
++21 120889.3047 304.0281(10)
++22 132602.0938 390.9125(10)
+ 
+ loop_
+ _data.time_of_flight
+diff -ru a/project/experiments/wish_3_8.edi b/project/experiments/wish_3_8.edi
+--- a/project/experiments/wish_3_8.edi
++++ b/project/experiments/wish_3_8.edi
+@@ -14,13 +14,13 @@
+ 
+ _calculator.type crysta
+ 
+-_peak.rise_alpha_0 -0.012131(10)
+-_peak.rise_alpha_1 0.122897(10)
+-_peak.decay_beta_0 0.005991(10)
+-_peak.decay_beta_1 0.027663(10)
++_peak.rise_alpha_0 -0.007097(10)
++_peak.rise_alpha_1 0.144095(10)
++_peak.decay_beta_0 0.005751(10)
++_peak.decay_beta_1 0.024048(10)
+ _peak.broad_gauss_sigma_0 0
+-_peak.broad_gauss_sigma_1 62.2430(10)
+-_peak.broad_gauss_sigma_2 16.8600(10)
++_peak.broad_gauss_sigma_1 23.5485(10)
++_peak.broad_gauss_sigma_2 22.9952(10)
+ _peak.broad_gauss_size 0.
+ _peak.broad_gauss_strain 0.
+ _peak.broad_lorentz_gamma_0 0
+@@ -32,13 +32,13 @@
+ _peak.type tof-jorgensen-von-dreele
+ 
+ _instrument.setup_twotheta_bank 90
+-_instrument.calib_d_to_tof_offset 0(10)
+-_instrument.calib_d_to_tof_linear 15105.5(10)
++_instrument.calib_d_to_tof_offset -8.51988(10)
++_instrument.calib_d_to_tof_linear 15102.85695(10)
+ _instrument.calib_d_to_tof_quadratic 1.00785
+ _instrument.calib_d_to_tof_reciprocal 0.
+ 
+ _absorption.type cylinder
+-_absorption.abscor1 0.0(10)
++_absorption.abscor1 0.00981(10)
+ _absorption.abscor2 0.0
+ 
+ loop_
+@@ -51,7 +51,7 @@
+ loop_
+ _linked_structure.structure_id
+ _linked_structure.scale
+-ncaf 37.34559(10)
++ncaf 35.03837(10)
+ 
+ _background.type line-segment
+ 
+@@ -59,28 +59,28 @@
+ _background.id
+ _background.position
+ _background.intensity
+-1 9089.7529 0(10)
+-2 11580.4033 0(10)
+-3 13667.1650 0(10)
+-4 15551.9824 0(10)
+-5 17739.7168 0(10)
+-6 20364.9961 0(10)
+-7 22653.7031 0(10)
+-8 24740.4648 0(10)
+-9 27130.1406 0(10)
+-10 29957.3672 0(10)
+-11 32616.3047 0(10)
+-12 36150.3359 0(10)
+-13 40963.3516 0(10)
+-14 47265.5195 0(10)
+-15 53391.1758 0(10)
+-16 62005.2383 0(10)
+-17 71866.8672 0(10)
+-18 82913.9922 0(10)
+-19 90385.9375 0(10)
+-20 99649.2188 0(10)
+-21 107356.7656 0(10)
+-22 115337.3203 0(10)
++1 9089.7529 668.9194(10)
++2 11580.4033 364.1213(10)
++3 13667.1650 515.4265(10)
++4 15551.9824 404.5989(10)
++5 17739.7168 453.2949(10)
++6 20364.9961 342.8466(10)
++7 22653.7031 376.8304(10)
++8 24740.4648 306.1813(10)
++9 27130.1406 358.8571(10)
++10 29957.3672 333.9021(10)
++11 32616.3047 316.2995(10)
++12 36150.3359 268.0707(10)
++13 40963.3516 267.1555(10)
++14 47265.5195 241.0033(10)
++15 53391.1758 249.4322(10)
++16 62005.2383 224.5294(10)
++17 71866.8672 258.8228(10)
++18 82913.9922 214.8817(10)
++19 90385.9375 279.2375(10)
++20 99649.2188 181.5619(10)
++21 107356.7656 331.6301(10)
++22 115337.3203 27.4991(10)
+ 
+ loop_
+ _data.time_of_flight
+diff -ru a/project/experiments/wish_4_7.edi b/project/experiments/wish_4_7.edi
+--- a/project/experiments/wish_4_7.edi
++++ b/project/experiments/wish_4_7.edi
+@@ -14,13 +14,13 @@
+ 
+ _calculator.type crysta
+ 
+-_peak.rise_alpha_0 -0.011598(10)
+-_peak.rise_alpha_1 0.122764(10)
+-_peak.decay_beta_0 0.006428(10)
+-_peak.decay_beta_1 0.014680(10)
++_peak.rise_alpha_0 -0.005526(10)
++_peak.rise_alpha_1 0.142180(10)
++_peak.decay_beta_0 0.006227(10)
++_peak.decay_beta_1 0.012763(10)
+ _peak.broad_gauss_sigma_0 0
+-_peak.broad_gauss_sigma_1 29.3563(10)
+-_peak.broad_gauss_sigma_2 18.1966(10)
++_peak.broad_gauss_sigma_1 60.6000(10)
++_peak.broad_gauss_sigma_2 24.8214(10)
+ _peak.broad_gauss_size 0.
+ _peak.broad_gauss_strain 0.
+ _peak.broad_lorentz_gamma_0 0
+@@ -32,13 +32,13 @@
+ _peak.type tof-jorgensen-von-dreele
+ 
+ _instrument.setup_twotheta_bank 121.66
+-_instrument.calib_d_to_tof_offset 0(10)
+-_instrument.calib_d_to_tof_linear 18660.1(10)
++_instrument.calib_d_to_tof_offset -11.73773(10)
++_instrument.calib_d_to_tof_linear 18657.90836(10)
+ _instrument.calib_d_to_tof_quadratic -0.47488
+ _instrument.calib_d_to_tof_reciprocal 0.
+ 
+ _absorption.type cylinder
+-_absorption.abscor1 0.0(10)
++_absorption.abscor1 0.01250(10)
+ _absorption.abscor2 0.0
+ 
+ loop_
+@@ -51,7 +51,7 @@
+ loop_
+ _linked_structure.structure_id
+ _linked_structure.scale
+-ncaf 37.91198(10)
++ncaf 35.36872(10)
+ 
+ _background.type line-segment
+ 
+@@ -59,34 +59,34 @@
+ _background.id
+ _background.position
+ _background.intensity
+-1 9089.7529 0(10)
+-2 10671.6523 0(10)
+-3 12287.2100 0(10)
+-4 14037.3975 0(10)
+-5 15451.0088 0(10)
+-6 16763.6504 0(10)
+-7 18076.2910 0(10)
+-8 19456.2461 0(10)
+-9 20465.9688 0(10)
+-10 21879.5801 0(10)
+-11 23798.0566 0(10)
+-12 25447.2715 0(10)
+-13 28072.5508 0(10)
+-14 30058.3418 0(10)
+-15 32582.6504 0(10)
+-16 34804.0391 0(10)
+-17 37160.0625 0(10)
+-18 40323.8594 0(10)
+-19 46894.5391 0(10)
+-20 50630.5156 0(10)
+-21 54602.0938 0(10)
+-22 58439.0430 0(10)
+-23 66519.8203 0(10)
+-24 75001.5000 0(10)
+-25 83649.2188 0(10)
+-26 92770.3828 0(10)
+-27 101524.3047 0(10)
+-28 107313.3906 0(10)
++1 9089.7529 744.1384(10)
++2 10671.6523 375.1687(10)
++3 12287.2100 637.3953(10)
++4 14037.3975 438.8822(10)
++5 15451.0088 619.8769(10)
++6 16763.6504 375.3132(10)
++7 18076.2910 523.5580(10)
++8 19456.2461 357.2247(10)
++9 20465.9688 566.7880(10)
++10 21879.5801 359.7866(10)
++11 23798.0566 423.0630(10)
++12 25447.2715 357.9145(10)
++13 28072.5508 373.0823(10)
++14 30058.3418 310.4654(10)
++15 32582.6504 329.1700(10)
++16 34804.0391 330.7339(10)
++17 37160.0625 337.0464(10)
++18 40323.8594 273.5539(10)
++19 46894.5391 275.2535(10)
++20 50630.5156 237.3148(10)
++21 54602.0938 265.0481(10)
++22 58439.0430 245.4569(10)
++23 66519.8203 270.1127(10)
++24 75001.5000 233.6611(10)
++25 83649.2188 287.4323(10)
++26 92770.3828 215.0375(10)
++27 101524.3047 330.4007(10)
++28 107313.3906 58.6827(10)
+ 
+ loop_
+ _data.time_of_flight
+diff -ru a/project/experiments/wish_5_6.edi b/project/experiments/wish_5_6.edi
+--- a/project/experiments/wish_5_6.edi
++++ b/project/experiments/wish_5_6.edi
+@@ -14,13 +14,13 @@
+ 
+ _calculator.type crysta
+ 
+-_peak.rise_alpha_0 -0.009502(10)
+-_peak.rise_alpha_1 0.110229(10)
+-_peak.decay_beta_0 0.006672(10)
+-_peak.decay_beta_1 0.010073(10)
++_peak.rise_alpha_0 -0.004231(10)
++_peak.rise_alpha_1 0.122745(10)
++_peak.decay_beta_0 0.006489(10)
++_peak.decay_beta_1 0.008771(10)
+ _peak.broad_gauss_sigma_0 0
+ _peak.broad_gauss_sigma_1 0.0000
+-_peak.broad_gauss_sigma_2 15.7010(10)
++_peak.broad_gauss_sigma_2 11.5786(10)
+ _peak.broad_gauss_size 0.
+ _peak.broad_gauss_strain 0.
+ _peak.broad_lorentz_gamma_0 0
+@@ -32,13 +32,13 @@
+ _peak.type tof-jorgensen-von-dreele
+ 
+ _instrument.setup_twotheta_bank 152.827
+-_instrument.calib_d_to_tof_offset 0(10)
+-_instrument.calib_d_to_tof_linear 20772.9(10)
++_instrument.calib_d_to_tof_offset -10.89696(10)
++_instrument.calib_d_to_tof_linear 20771.12367(10)
+ _instrument.calib_d_to_tof_quadratic -1.08308
+ _instrument.calib_d_to_tof_reciprocal 0.
+ 
+ _absorption.type cylinder
+-_absorption.abscor1 0.0(10)
++_absorption.abscor1 0.01823(10)
+ _absorption.abscor2 0.0
+ 
+ loop_
+@@ -51,7 +51,7 @@
+ loop_
+ _linked_structure.structure_id
+ _linked_structure.scale
+-ncaf 39.71005(10)
++ncaf 42.67603(10)
+ 
+ _background.type line-segment
+ 
+@@ -59,34 +59,34 @@
+ _background.id
+ _background.position
+ _background.intensity
+-1 11136.8740 0(10)
+-2 13313.3877 0(10)
+-3 9162.3037 0(10)
+-4 14906.5078 0(10)
+-5 16454.7500 0(10)
+-6 17352.2812 0(10)
+-7 18743.4551 0(10)
+-8 20179.5078 0(10)
+-9 21368.7363 0(10)
+-10 22176.0391 0(10)
+-11 22827.2266 0(10)
+-12 24644.7285 0(10)
+-13 26439.7910 0(10)
+-14 28257.2930 0(10)
+-15 31196.7109 0(10)
+-16 34034.4062 0(10)
+-17 37265.5195 0(10)
+-18 41214.6602 0(10)
+-19 44827.2266 0(10)
+-20 49830.9648 0(10)
+-21 52905.0117 0(10)
+-22 58204.9375 0(10)
+-23 62916.9805 0(10)
+-24 70186.9844 0(10)
+-25 74204.9375 0(10)
+-26 82103.2188 0(10)
+-27 91958.8672 0(10)
+-28 102712.0391 0(10)
++1 11136.8740 619.3932(10)
++2 13313.3877 444.2931(10)
++3 9162.3037 1029.5043(10)
++4 14906.5078 464.4642(10)
++5 16454.7500 638.2037(10)
++6 17352.2812 436.5340(10)
++7 18743.4551 488.4530(10)
++8 20179.5078 411.8540(10)
++9 21368.7363 449.1623(10)
++10 22176.0391 414.7179(10)
++11 22827.2266 531.8347(10)
++12 24644.7285 351.1019(10)
++13 26439.7910 413.7532(10)
++14 28257.2930 354.9142(10)
++15 31196.7109 364.4685(10)
++16 34034.4062 308.5815(10)
++17 37265.5195 327.9777(10)
++18 41214.6602 304.7337(10)
++19 44827.2266 301.2867(10)
++20 49830.9648 253.2485(10)
++21 52905.0117 275.8890(10)
++22 58204.9375 239.9881(10)
++23 62916.9805 281.8971(10)
++24 70186.9844 237.3100(10)
++25 74204.9375 293.5971(10)
++26 82103.2188 239.1098(10)
++27 91958.8672 306.4092(10)
++28 102712.0391 181.6428(10)
+ 
+ loop_
+ _data.time_of_flight
+diff -ru a/project/project.edi b/project/project.edi
+--- a/project/project.edi
++++ b/project/project.edi
+@@ -1,5 +1,5 @@
+ _edi.schema_version 2
+ 
+-_metadata.name             ncaf_wish_5bank_s5
+-_metadata.title            "5-bank NCAF WISH joint fit, free set and exclusions of FullProf tmpl_five_banks_p1.pcr"
++_metadata.name             ncaf_wish_5bank_perturbed
++_metadata.title            "5-bank NCAF WISH joint fit, FullProf values shifted by 3 sigma"
+ _metadata.description      ?
+diff -ru a/project/structures/ncaf.edi b/project/structures/ncaf.edi
+--- a/project/structures/ncaf.edi
++++ b/project/structures/ncaf.edi
+@@ -26,9 +26,9 @@
+ _atom_site.occupancy
+ _atom_site.adp_iso
+ _atom_site.adp_type
+-Ca1 Ca 0.4664(10) 0 0.25 b 12 1. 1.0(10) Biso
+-Al1 Al 0.25193(10) 0.25193(10) 0.25193(10) a 8 1. 1.0(10) Biso
+-Na1 Na 0.08526(10) 0.08526(10) 0.08526(10) a 8 1. 1.0(10) Biso
+-F1 F 0.13761(10) 0.30558(10) 0.11963(10) c 24 1. 1.0(10) Biso
+-F2 F 0.36233(10) 0.36318(10) 0.18704(10) c 24 1. 1.0(10) Biso
+-F3 F 0.46106(10) 0.46106(10) 0.46106(10) a 8 1. 1.0(10) Biso
++Ca1 Ca 0.46760(10) 0.00000 0.25000 b 12 1. 0.70462(10) Biso
++Al1 Al 0.25387(10) 0.25387(10) 0.25387(10) a 8 1. 0.59400(10) Biso
++Na1 Na 0.08621(10) 0.08621(10) 0.08621(10) a 8 1. 1.69941(10) Biso
++F1 F 0.13836(10) 0.30478(10) 0.12051(10) c 24 1. 0.78894(10) Biso
++F2 F 0.36334(10) 0.36232(10) 0.18779(10) c 24 1. 1.25757(10) Biso
++F3 F 0.46157(10) 0.46157(10) 0.46157(10) a 8 1. 0.70471(10) Biso

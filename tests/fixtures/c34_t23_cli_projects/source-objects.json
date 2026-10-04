@@ -1,0 +1,101 @@
+{
+  "source": "crysta",
+  "ref": "origin/main",
+  "commit": "973b34bd92f01ba77f89b049a3e7e74d252b9db3",
+  "method": "git ls-tree -r origin/main:tests/fitting/<id> -- project expected.json",
+  "claim": "Byte identity only. Expected numerical values retain their source kinds; crysta-produced fit outputs are regression pins, not correctness oracles.",
+  "projects": {
+    "cosio-d20-s1": {
+      "expected.json": "0d6cedce69f8c0920574756ea1fd105d516280bc",
+      "project/README.md": "d8eb7701a8903eb66ed059b951127aa06259c0f0",
+      "project/analysis/analysis.edi": "4710ee0d4fef7693d7f75fa4057e83cb338090a5",
+      "project/experiments/d20.edi": "4ef53fa426ec731451f73b0af2c0da6e00bcd08c",
+      "project/project.edi": "90c158126833673be5a68d2b397ad577fa95933b",
+      "project/structures/cosio.edi": "a23b934621dc674db0d6bac0a0da7b2aa7b0db79"
+    },
+    "cosio-d20-s4": {
+      "expected.json": "c18f266723033765e0890515f8b00ef595595be4",
+      "project/README.md": "991fbd7a5099cdd24222ae981922082bd5639f70",
+      "project/analysis/analysis.edi": "4710ee0d4fef7693d7f75fa4057e83cb338090a5",
+      "project/experiments/d20.edi": "fa8faa9bb6767755ceb5a931d4c499b71ffd8217",
+      "project/project.edi": "f0185a0911bc29ded413c25dd981f22405a12f94",
+      "project/structures/cosio.edi": "a23b934621dc674db0d6bac0a0da7b2aa7b0db79"
+    },
+    "cosio-d20-scan-3f": {
+      "expected.json": "626ef8abd5c00bb12c05bbb18361aea4598a17d7",
+      "project/analysis/analysis.edi": "07520968fa99c2642224da3e7448392d12eb4539",
+      "project/experiments/d20.edi": "c9de2f776e154e0f572d3fd0bb77cb02efacef67",
+      "project/experiments/d20_scan/all594687.dat": "8cf83f7e385f94aa938689deec062b36127623e0",
+      "project/experiments/d20_scan/all594791.dat": "bc234ead84f3e437f1901e023f570e1c4a61a5e3",
+      "project/experiments/d20_scan/all594842.dat": "b8e3ea32820dfd5da913c553fec1dd1a98506e06",
+      "project/project.edi": "3ab16d76d65758d8ad6c48740d3f35152a902141",
+      "project/structures/cosio.edi": "168c6b7ae026529c7d4a0985dd55e556c1109b5d"
+    },
+    "lbco-hrpt-s2": {
+      "expected.json": "b6c38be0073674fe0e142a59293d3c28fac277f1",
+      "project/README.md": "9b7eaa0ae038c0cb670d4f24437691da4f458b3d",
+      "project/analysis/analysis.edi": "4710ee0d4fef7693d7f75fa4057e83cb338090a5",
+      "project/experiments/hrpt.edi": "59cf7a7cc7aaa1c2dc5d257363ee047c24bcc93d",
+      "project/project.edi": "df8b747e89f4f7b0fe6d775312633780ef7514ee",
+      "project/structures/lbco.edi": "5a53684b27e2ac1c72fc4b22caded57cb430e191"
+    },
+    "lbco-hrpt-s4": {
+      "expected.json": "b72cce960a0e49bdf80b1c715f08de366bfae447",
+      "project/README.md": "8979582689e0f631d1e092b02d78c08b2c782538",
+      "project/analysis/analysis.edi": "4710ee0d4fef7693d7f75fa4057e83cb338090a5",
+      "project/experiments/hrpt.edi": "b5788ac9d214cf4682c6bb94031e4b36c382ae76",
+      "project/project.edi": "3ebe446270c588e4d83e6648de9014230c4ea97d",
+      "project/structures/lbco.edi": "5a53684b27e2ac1c72fc4b22caded57cb430e191"
+    },
+    "ncaf-wish-2bank-s3": {
+      "expected.json": "1de8ff7784d549e092d7f2643243935596269ca0",
+      "project/README.md": "7ef04f2fd2557e094b20f4fb10b4c90d71646712",
+      "project/analysis/analysis.edi": "7ab889271d7ad5378a00205e2af229b8755694a1",
+      "project/experiments/wish_4_7.edi": "1640d33e5b751062839941d4fff7ddfdcfa727d0",
+      "project/experiments/wish_5_6.edi": "f3a979cab435b320ea6198786321175fdc63c56e",
+      "project/project.edi": "b936790ad188ad86fb8f322defa01aed947efdce",
+      "project/structures/ncaf.edi": "e0749608c043d021c46c143a016e2ceed29c3cdb"
+    },
+    "ncaf-wish-3bank-s5": {
+      "expected.json": "8844e493fd370128f8c163f0c95751fd03f49783",
+      "project/analysis/analysis.edi": "50f33b19ad3a6c823ad7c68ba6cb45fa30f33dfb",
+      "project/experiments/wish_2_9.edi": "96c3ec6c9e75421d202063cb703af8757e9484f6",
+      "project/experiments/wish_4_7.edi": "558174b20715505cc1da0b737f3f3d547e9c15ab",
+      "project/experiments/wish_5_6.edi": "13a7f3f6e4564911d9d73950dd8fcc2af4098c89",
+      "project/project.edi": "d5fa29acd2365658767ac3138e7b7a499c4cbd51",
+      "project/structures/ncaf.edi": "a7477a02c63126f6cf896b8acde61979bd469477"
+    },
+    "si-sepd-s2": {
+      "expected.json": "3e3576d2d3bb25d5793090b5e5ff7766e3cdde0d",
+      "project/README.md": "fe23ebd51ee2ada0e31eac9ebba570a78853bf58",
+      "project/analysis/analysis.edi": "4710ee0d4fef7693d7f75fa4057e83cb338090a5",
+      "project/experiments/sepd.edi": "8d25c4752b7c62a2b745f7f531cb3c57d5c6d38a",
+      "project/project.edi": "50631e510819f85becbd62e7a5b8d6114804f9cd",
+      "project/structures/si.edi": "a87de9d9834e2e865e2d11548cdba6587af4c323"
+    },
+    "si-sepd-s5": {
+      "expected.json": "f4218ce9146d05cdd3461210af2513d4ed95eb04",
+      "project/README.md": "ca160e84c0572c11a568c6e7ca8df001efaa4f96",
+      "project/analysis/analysis.edi": "4710ee0d4fef7693d7f75fa4057e83cb338090a5",
+      "project/experiments/sepd.edi": "b805176076d90e68928e4a5c37bf505c7779c9bb",
+      "project/project.edi": "3cc6c0387eb13de0d2ba4fad49c4cf8cd7d4a775",
+      "project/structures/si.edi": "a87de9d9834e2e865e2d11548cdba6587af4c323"
+    }
+  },
+  "c11_t62_model_repin": {
+    "source": "crysta 190129d631c648c10ea8486fcd490d8ac002defc (CW bound ad999b88; limit frozen per fit adb3b700)",
+    "cases": [
+      "cosio-d20-s1",
+      "cosio-d20-s4"
+    ],
+    "kind": "regression pins only; all other source blob identities retained",
+    "generator": "tests/fixtures/c11_t62/repin.py"
+  },
+  "c13_t4_model_extension": {
+    "source": "crysta tests/fitting/lbco-hrpt-s2 extended by development hub  (a _preferred_orientation row, march_r free from 0.8; content ids, which a squash merge keeps)",
+    "cases": [
+      "lbco-hrpt-s2"
+    ],
+    "kind": "model extension plus its re-minted regression pins; all other source blob identities retained"
+  }
+}

@@ -1,0 +1,9 @@
+// SPDX-License-Identifier: BSD-3-Clause
+#ifndef EDI_APP_BUILD_INFO_HPP
+#define EDI_APP_BUILD_INFO_HPP
+
+// Configured by app/CMakeLists.txt from git at configure time.
+#define EDI_APP_VERSION "@EDI_APP_VERSION@"
+#define EDI_APP_DATE "@EDI_APP_DATE@"
+
+#endif  // EDI_APP_BUILD_INFO_HPP

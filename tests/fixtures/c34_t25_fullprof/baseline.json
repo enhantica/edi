@@ -1,0 +1,1214 @@
+{
+  "pd-neut-cwl_lab6-echidna_11b": {
+    "atoms": [
+      {
+        "phase": 1,
+        "label": "La",
+        "group": "Pm-3m",
+        "xyz": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "occ": 0.02083
+      },
+      {
+        "phase": 1,
+        "label": "B",
+        "group": "Pm-3m",
+        "xyz": [
+          0.19972,
+          0.5,
+          0.5
+        ],
+        "occ": 0.125
+      }
+    ],
+    "scales": [
+      42.98374
+    ],
+    "scale_codes": [
+      0.0
+    ],
+    "atom_codes": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "Ipr": 2.0,
+    "Ppl": 2.0,
+    "Ioc": 1.0,
+    "Mat": 0.0,
+    "Pcr": 1.0,
+    "Ls1": 0.0,
+    "Ls2": 4.0,
+    "Ls3": 0.0,
+    "NLI": 0.0,
+    "Prf": 2.0,
+    "Ins": 10.0,
+    "Rpa": -1.0,
+    "Sym": 0.0,
+    "Hkl": 0.0,
+    "Fou": 0.0,
+    "Sho": 0.0,
+    "Ana": 1.0,
+    "npar": 0,
+    "pcr": "COMM LaB6 Ge(331)\n! Current global Chi2 (Bragg contrib.) =      14.93    \n! Files => DAT-file: ECH0030684_LaB6_1p622A_11B.dat,  PCR-file: ECH0030684_LaB6_1p622A_11B\n!Job Npr Nph Nba Nex Nsc Nor Dum Iwg Ilo Ias Res Ste Nre Cry Uni Cor Opt Aut\n   1   7   1   0   2   1   0   1   0   0   1   0   0   0   0   0   0   0   1\n!\n!Ipr Ppl Ioc Mat Pcr Ls1 Ls2 Ls3 NLI Prf Ins Rpa Sym Hkl Fou Sho Ana\n   2   2   1   0   1   0   4   0   0   2  10  -1   0   0   0   0   1\n!\n! Lambda1  Lambda2    Ratio    Bkpos    Wdt    Cthm     muR   AsyLim   Rpolarz  2nd-muR -> Patt# 1\n 1.623899 1.623899  0.00000   80.000  12.000  0.0000  0.0000  180.00    0.0000  0.0000\n!\n!NCY  Eps  R_at  R_an  R_pr  R_gl     Thmin       Step       Thmax    PSD    Sent0\n200  0.10  0.04  0.04  0.04  0.04      4.1642   0.049998   163.7564   0.000   0.000\n!\n! Excluded regions (LowT  HighT) for Pattern#  1\n        0.00       10.00\n      164.00      180.00\n! \n! Additional scattering factors for Pattern#  1\nB11     0.66500    0.00000   0\n!\n       0    !Number of refined parameters\n!\n!  Zero    Code    SyCos    Code   SySin    Code  Lambda     Code MORE ->Patt# 1\n -0.45778    0.0  0.00000    0.0  0.00000    0.0 1.623899    0.00   0\n!   Background coefficients/codes  for Pattern#  1  (Polynomial of 6th degree)\n     777.346      52.434     365.757      14.659    -415.682       0.000\n        0.00        0.00        0.00        0.00        0.00        0.00\n!-------------------------------------------------------------------------------\n!  Data for PHASE number:   1  ==> Current R_Bragg for Pattern#  1:   4.2230\n!-------------------------------------------------------------------------------\nnuclear\n!\n!Nat Dis Ang Pr1 Pr2 Pr3 Jbt Irf Isy Str Furth       ATZ    Nvk Npr More\n   2   0   0 0.0 0.0 1.0   0   0   0   0   0        203.711   0   7   0\n!\n!\nP m -3 m                 <--Space group symbol\n!Atom   Typ       X        Y        Z     Biso       Occ     In Fin N_t Spc /Codes\nLa     La      0.00000  0.00000  0.00000  0.25812   0.02083   0   0   0    0  \n                  0.00     0.00     0.00     0.00      0.00\nB      B11     0.19972  0.50000  0.50000  0.11925   0.12500   0   0   0    0  \n                  0.00     0.00     0.00     0.00      0.00\n!-------> Profile Parameters for Pattern #   1  ----> Phase #   1\n!  Scale          Shape1      Bov      Str1      Str2      Str3   Strain-Model\n  42.98374       0.00000   0.00000   0.00000   0.00000   0.00000       0\n       0.00000     0.000     0.000     0.000     0.000     0.000\n!       U            V            W             X            Y         GauSiz      LorSiz    Size-Model\n     0.143431    -0.523140     0.590412     0.000000     0.054515     0.000000     0.000000       0\n         0.00         0.00         0.00         0.00         0.00         0.00         0.00\n!     a          b         c        alpha      beta       gamma      # Cell Info\n   4.156885   4.156885   4.156885  90.000000  90.000000  90.000000   \n    0.00000    0.00000    0.00000    0.00000    0.00000    0.00000\n!  Pref1    Pref2      Asy1     Asy2     Asy3     Asy4      S_L      D_L\n  0.00000  0.00000  0.00000  0.00000  0.00000  0.00000  0.00000  0.00000\n     0.00     0.00     0.00     0.00     0.00     0.00     0.00     0.00\n!  2Th1/TOF1    2Th2/TOF2  Pattern to plot\n      10.000     163.756       1\n",
+    "source": "knowledge/verification/fullprof/pd-neut-cwl_lab6/ECH0030684_LaB6_1p622A_11B.pcr"
+  },
+  "pd-neut-cwl_lab6-echidna_absorption": {
+    "atoms": [
+      {
+        "phase": 1,
+        "label": "La",
+        "group": "Pm-3m",
+        "xyz": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "occ": 0.02083
+      },
+      {
+        "phase": 1,
+        "label": "B",
+        "group": "Pm-3m",
+        "xyz": [
+          0.19972,
+          0.5,
+          0.5
+        ],
+        "occ": 0.125
+      }
+    ],
+    "scales": [
+      42.98374
+    ],
+    "scale_codes": [
+      0.0
+    ],
+    "atom_codes": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "Ipr": 2.0,
+    "Ppl": 2.0,
+    "Ioc": 1.0,
+    "Mat": 0.0,
+    "Pcr": 1.0,
+    "Ls1": 0.0,
+    "Ls2": 4.0,
+    "Ls3": 0.0,
+    "NLI": 0.0,
+    "Prf": 2.0,
+    "Ins": 10.0,
+    "Rpa": -1.0,
+    "Sym": 0.0,
+    "Hkl": 0.0,
+    "Fou": 0.0,
+    "Sho": 0.0,
+    "Ana": 1.0,
+    "npar": 0,
+    "pcr": "COMM LaB6 Ge(331)\n! Current global Chi2 (Bragg contrib.) =      14.93    \n! Files => DAT-file: ECH0030684_LaB6_1p622A_absorption.dat,  PCR-file: ECH0030684_LaB6_1p622A_absorption\n!Job Npr Nph Nba Nex Nsc Nor Dum Iwg Ilo Ias Res Ste Nre Cry Uni Cor Opt Aut\n   1   7   1   0   2   0   0   1   0   0   1   0   0   0   0   0   0   0   1\n!\n!Ipr Ppl Ioc Mat Pcr Ls1 Ls2 Ls3 NLI Prf Ins Rpa Sym Hkl Fou Sho Ana\n   2   2   1   0   1   0   4   0   0   2  10  -1   0   0   0   0   1\n!\n! Lambda1  Lambda2    Ratio    Bkpos    Wdt    Cthm     muR   AsyLim   Rpolarz  2nd-muR -> Patt# 1\n 1.623899 1.623899  0.00000   80.000  12.000  0.0000  0.7000  180.00    0.0000  0.0000\n!\n!NCY  Eps  R_at  R_an  R_pr  R_gl     Thmin       Step       Thmax    PSD    Sent0\n200  0.10  0.04  0.04  0.04  0.04      4.1642   0.049998   163.7564   0.000   0.000\n!\n! Excluded regions (LowT  HighT) for Pattern#  1\n        0.00       10.00\n      164.00      180.00\n! \n! Additional scattering factors for Pattern#  1\n!\n       0    !Number of refined parameters\n!\n!  Zero    Code    SyCos    Code   SySin    Code  Lambda     Code MORE ->Patt# 1\n -0.45778    0.0  0.00000    0.0  0.00000    0.0 1.623899    0.00   0\n!   Background coefficients/codes  for Pattern#  1  (Polynomial of 6th degree)\n     777.346      52.434     365.757      14.659    -415.682       0.000\n        0.00        0.00        0.00        0.00        0.00        0.00\n!-------------------------------------------------------------------------------\n!  Data for PHASE number:   1  ==> Current R_Bragg for Pattern#  1:   4.2230\n!-------------------------------------------------------------------------------\nnuclear\n!\n!Nat Dis Ang Pr1 Pr2 Pr3 Jbt Irf Isy Str Furth       ATZ    Nvk Npr More\n   2   0   0 0.0 0.0 1.0   0   0   0   0   0        203.711   0   7   0\n!\n!\nP m -3 m                 <--Space group symbol\n!Atom   Typ       X        Y        Z     Biso       Occ     In Fin N_t Spc /Codes\nLa     La      0.00000  0.00000  0.00000  0.25812   0.02083   0   0   0    0  \n                  0.00     0.00     0.00     0.00      0.00\nB      B       0.19972  0.50000  0.50000  0.11925   0.12500   0   0   0    0  \n                  0.00     0.00     0.00     0.00      0.00\n!-------> Profile Parameters for Pattern #   1  ----> Phase #   1\n!  Scale          Shape1      Bov      Str1      Str2      Str3   Strain-Model\n  42.98374       0.00000   0.00000   0.00000   0.00000   0.00000       0\n       0.00000     0.000     0.000     0.000     0.000     0.000\n!       U            V            W             X            Y         GauSiz      LorSiz    Size-Model\n     0.143431    -0.523140     0.590412     0.000000     0.054515     0.000000     0.000000       0\n         0.00         0.00         0.00         0.00         0.00         0.00         0.00\n!     a          b         c        alpha      beta       gamma      # Cell Info\n   4.156885   4.156885   4.156885  90.000000  90.000000  90.000000   \n    0.00000    0.00000    0.00000    0.00000    0.00000    0.00000\n!  Pref1    Pref2      Asy1     Asy2     Asy3     Asy4      S_L      D_L\n  0.00000  0.00000  0.00000  0.00000  0.00000  0.00000  0.00000  0.00000\n     0.00     0.00     0.00     0.00     0.00     0.00     0.00     0.00\n!  2Th1/TOF1    2Th2/TOF2  Pattern to plot\n      10.000     163.756       1\n",
+    "source": "knowledge/verification/fullprof/pd-neut-cwl_lab6/ECH0030684_LaB6_1p622A_absorption.pcr"
+  },
+  "pd-neut-cwl_lab6-echidna_basic": {
+    "atoms": [
+      {
+        "phase": 1,
+        "label": "La",
+        "group": "Pm-3m",
+        "xyz": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "occ": 0.02083
+      },
+      {
+        "phase": 1,
+        "label": "B",
+        "group": "Pm-3m",
+        "xyz": [
+          0.19972,
+          0.5,
+          0.5
+        ],
+        "occ": 0.125
+      }
+    ],
+    "scales": [
+      42.98374
+    ],
+    "scale_codes": [
+      0.0
+    ],
+    "atom_codes": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "Ipr": 2.0,
+    "Ppl": 2.0,
+    "Ioc": 1.0,
+    "Mat": 0.0,
+    "Pcr": 1.0,
+    "Ls1": 0.0,
+    "Ls2": 4.0,
+    "Ls3": 0.0,
+    "NLI": 0.0,
+    "Prf": 2.0,
+    "Ins": 10.0,
+    "Rpa": -1.0,
+    "Sym": 0.0,
+    "Hkl": 0.0,
+    "Fou": 0.0,
+    "Sho": 0.0,
+    "Ana": 1.0,
+    "npar": 0,
+    "pcr": "COMM LaB6 Ge(331)\n! Current global Chi2 (Bragg contrib.) =      14.93    \n! Files => DAT-file: ECH0030684_LaB6_1p622A_baseline.dat,  PCR-file: ECH0030684_LaB6_1p622A_baseline\n!Job Npr Nph Nba Nex Nsc Nor Dum Iwg Ilo Ias Res Ste Nre Cry Uni Cor Opt Aut\n   1   7   1   0   2   0   0   1   0   0   1   0   0   0   0   0   0   0   1\n!\n!Ipr Ppl Ioc Mat Pcr Ls1 Ls2 Ls3 NLI Prf Ins Rpa Sym Hkl Fou Sho Ana\n   2   2   1   0   1   0   4   0   0   2  10  -1   0   0   0   0   1\n!\n! Lambda1  Lambda2    Ratio    Bkpos    Wdt    Cthm     muR   AsyLim   Rpolarz  2nd-muR -> Patt# 1\n 1.623899 1.623899  0.00000   80.000  12.000  0.0000  0.0000  180.00    0.0000  0.0000\n!\n!NCY  Eps  R_at  R_an  R_pr  R_gl     Thmin       Step       Thmax    PSD    Sent0\n200  0.10  0.04  0.04  0.04  0.04      4.1642   0.049998   163.7564   0.000   0.000\n!\n! Excluded regions (LowT  HighT) for Pattern#  1\n        0.00       10.00\n      164.00      180.00\n! \n! Additional scattering factors for Pattern#  1\n!\n       0    !Number of refined parameters\n!\n!  Zero    Code    SyCos    Code   SySin    Code  Lambda     Code MORE ->Patt# 1\n -0.45778    0.0  0.00000    0.0  0.00000    0.0 1.623899    0.00   0\n!   Background coefficients/codes  for Pattern#  1  (Polynomial of 6th degree)\n     777.346      52.434     365.757      14.659    -415.682       0.000\n        0.00        0.00        0.00        0.00        0.00        0.00\n!-------------------------------------------------------------------------------\n!  Data for PHASE number:   1  ==> Current R_Bragg for Pattern#  1:   4.2230\n!-------------------------------------------------------------------------------\nnuclear\n!\n!Nat Dis Ang Pr1 Pr2 Pr3 Jbt Irf Isy Str Furth       ATZ    Nvk Npr More\n   2   0   0 0.0 0.0 1.0   0   0   0   0   0        203.711   0   7   0\n!\n!\nP m -3 m                 <--Space group symbol\n!Atom   Typ       X        Y        Z     Biso       Occ     In Fin N_t Spc /Codes\nLa     La      0.00000  0.00000  0.00000  0.25812   0.02083   0   0   0    0  \n                  0.00     0.00     0.00     0.00      0.00\nB      B       0.19972  0.50000  0.50000  0.11925   0.12500   0   0   0    0  \n                  0.00     0.00     0.00     0.00      0.00\n!-------> Profile Parameters for Pattern #   1  ----> Phase #   1\n!  Scale          Shape1      Bov      Str1      Str2      Str3   Strain-Model\n  42.98374       0.00000   0.00000   0.00000   0.00000   0.00000       0\n       0.00000     0.000     0.000     0.000     0.000     0.000\n!       U            V            W             X            Y         GauSiz      LorSiz    Size-Model\n     0.143431    -0.523140     0.590412     0.000000     0.054515     0.000000     0.000000       0\n         0.00         0.00         0.00         0.00         0.00         0.00         0.00\n!     a          b         c        alpha      beta       gamma      # Cell Info\n   4.156885   4.156885   4.156885  90.000000  90.000000  90.000000   \n    0.00000    0.00000    0.00000    0.00000    0.00000    0.00000\n!  Pref1    Pref2      Asy1     Asy2     Asy3     Asy4      S_L      D_L\n  0.00000  0.00000  0.00000  0.00000  0.00000  0.00000  0.00000  0.00000\n     0.00     0.00     0.00     0.00     0.00     0.00     0.00     0.00\n!  2Th1/TOF1    2Th2/TOF2  Pattern to plot\n      10.000     163.756       1\n",
+    "source": "knowledge/verification/fullprof/pd-neut-cwl_lab6/ECH0030684_LaB6_1p622A_baseline.pcr"
+  },
+  "pd-neut-cwl_lab6-11b-echidna_tch-fcj": {
+    "atoms": [
+      {
+        "phase": 1,
+        "label": "La",
+        "group": "Pm-3m",
+        "xyz": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "occ": 0.02083
+      },
+      {
+        "phase": 1,
+        "label": "B",
+        "group": "Pm-3m",
+        "xyz": [
+          0.5,
+          0.5,
+          0.19978
+        ],
+        "occ": 0.125
+      }
+    ],
+    "scales": [
+      141.0817
+    ],
+    "scale_codes": [
+      11.0
+    ],
+    "atom_codes": [
+      0.0,
+      0.0,
+      0.0,
+      151.0,
+      0.0,
+      0.0,
+      0.0,
+      131.0,
+      141.0,
+      0.0
+    ],
+    "Ipr": 0.0,
+    "Ppl": 0.0,
+    "Ioc": 1.0,
+    "Mat": 0.0,
+    "Pcr": 2.0,
+    "Ls1": 0.0,
+    "Ls2": 4.0,
+    "Ls3": 0.0,
+    "NLI": 0.0,
+    "Prf": -3.0,
+    "Ins": 10.0,
+    "Rpa": -1.0,
+    "Sym": 0.0,
+    "Hkl": 0.0,
+    "Fou": 0.0,
+    "Sho": 0.0,
+    "Ana": 1.0,
+    "npar": 17,
+    "pcr": "COMM LaB6 Ge(331)\n! Current global Chi2 (Bragg contrib.) =      9.133    \n! Files => DAT-file: ECH0030684_LaB6_1p622A.dat,  PCR-file: ECH0030684_LaB6_1p622A\n!Job Npr Nph Nba Nex Nsc Nor Dum Iwg Ilo Ias Res Ste Nre Cry Uni Cor Opt Aut\n   1   7   1   0   2   1   0   1   0   0   1   0   0   0   0   0   0   0   1\n!\n!Ipr Ppl Ioc Mat Pcr Ls1 Ls2 Ls3 NLI Prf Ins Rpa Sym Hkl Fou Sho Ana\n   0   0   1   0   2   0   4   0   0  -3  10  -1   0   0   0   0   1\n!\n! Lambda1  Lambda2    Ratio    Bkpos    Wdt    Cthm     muR   AsyLim   Rpolarz  2nd-muR -> Patt# 1\n 1.622536 1.622536  0.00000   80.000 12.0000  0.0000  0.7000  180.00    0.0000  0.0000\n!\n!NCY  Eps  R_at  R_an  R_pr  R_gl     Thmin       Step       Thmax    PSD    Sent0\n100  0.10  0.40  0.40  0.40  0.40      4.1642   0.049998   163.7564   0.000   0.000\n!\n! Excluded regions (LowT  HighT) for Pattern#  1\n        0.00       10.00\n      164.00      180.00\n! \n! Additional scattering factors for Pattern#  1\nB11     0.66500    0.00000   0\n!\n      17    !Number of refined parameters\n!\n!  Zero    Code    SyCos    Code   SySin    Code  Lambda     Code MORE ->Patt# 1\n -0.21356   51.0  0.05395  171.0  0.09127  161.0 1.622536   61.00   0\n!   Background coefficients/codes  for Pattern#  1  (Polynomial of 6th degree)\n     781.932      75.473     292.094      -3.451    -326.104       0.000\n       71.00       81.00       91.00      101.00      111.00        0.00\n!-------------------------------------------------------------------------------\n!  Data for PHASE number:   1  ==> Current R_Bragg for Pattern#  1:   3.5066\n!-------------------------------------------------------------------------------\nnuclear\n!\n!Nat Dis Ang Pr1 Pr2 Pr3 Jbt Irf Isy Str Furth       ATZ    Nvk Npr More\n   2   0   0 0.0 0.0 1.0   0   0   0   0   0        203.711   0   7   0\n!\n!\nP m -3 m                 <--Space group symbol\n!Atom   Typ       X        Y        Z     Biso       Occ     In Fin N_t Spc /Codes\nLa     La      0.00000  0.00000  0.00000  0.59716   0.02083   0   0   0    0  \n                  0.00     0.00     0.00   151.00      0.00\nB      B11     0.50000  0.50000  0.19978  0.44250   0.12500   0   0   0    0  \n                  0.00     0.00   131.00   141.00      0.00\n!-------> Profile Parameters for Pattern #   1  ----> Phase #   1\n!  Scale          Shape1      Bov      Str1      Str2      Str3   Strain-Model\n  141.0817       0.00000   0.00000   0.00000   0.00000   0.00000       0\n      11.00000     0.000     0.000     0.000     0.000     0.000\n!       U            V            W             X            Y         GauSiz      LorSiz    Size-Model\n     0.089876    -0.377516     0.476188     0.000000     0.052654     0.000000     0.000000       0\n        31.00        41.00        21.00         0.00       121.00         0.00         0.00\n!     a          b         c        alpha      beta       gamma      #Cell Info\n   4.156885   4.156885   4.156885  90.000000  90.000000  90.000000   \n    0.00000    0.00000    0.00000    0.00000    0.00000    0.00000\n!  Pref1    Pref2      Asy1     Asy2     Asy3     Asy4      S_L      D_L\n  0.00000  0.00000  0.00000  0.00000  0.00000  0.00000  0.08000  0.08000\n     0.00     0.00     0.00     0.00     0.00     0.00     0.00     0.00\n!  2Th1/TOF1    2Th2/TOF2  Pattern to plot\n      10.000     163.756       1\n",
+    "source": "knowledge/verification/fullprof/pd-neut-cwl_lab6-11b_tch-fcj/ECH0030684_LaB6_1p622A.pcr"
+  },
+  "pd-neut-cwl_lbco-hrpt_basic": {
+    "atoms": [
+      {
+        "phase": 1,
+        "label": "La",
+        "group": "Pm-3m",
+        "xyz": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "occ": 0.01042
+      },
+      {
+        "phase": 1,
+        "label": "Ba",
+        "group": "Pm-3m",
+        "xyz": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "occ": 0.01042
+      },
+      {
+        "phase": 1,
+        "label": "Co",
+        "group": "Pm-3m",
+        "xyz": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "occ": 0.02083
+      },
+      {
+        "phase": 1,
+        "label": "O",
+        "group": "Pm-3m",
+        "xyz": [
+          0.0,
+          0.5,
+          0.5
+        ],
+        "occ": 0.06116
+      }
+    ],
+    "scales": [
+      9.40587
+    ],
+    "scale_codes": [
+      0.0
+    ],
+    "atom_codes": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "Ipr": 2.0,
+    "Ppl": 2.0,
+    "Ioc": 1.0,
+    "Mat": 0.0,
+    "Pcr": 1.0,
+    "Ls1": 0.0,
+    "Ls2": 4.0,
+    "Ls3": 0.0,
+    "NLI": 0.0,
+    "Prf": 2.0,
+    "Ins": 10.0,
+    "Rpa": 1.0,
+    "Sym": 1.0,
+    "Hkl": 0.0,
+    "Fou": 0.0,
+    "Sho": 1.0,
+    "Ana": 1.0,
+    "npar": 0,
+    "pcr": "COMM La0.5Ba0.5CoO3\n! Current global Chi2 (Bragg contrib.) =      1.302    \n! Files => DAT-file: lbco.dat,  PCR-file: lbco\n!Job Npr Nph Nba Nex Nsc Nor Dum Iwg Ilo Ias Res Ste Nre Cry Uni Cor Opt Aut\n   1   7   1   5   2   0   0   0   0   0   0   0   0   0   0   0   0   1   1\n!\n!Ipr Ppl Ioc Mat Pcr Ls1 Ls2 Ls3 NLI Prf Ins Rpa Sym Hkl Fou Sho Ana\n   2   2   1   0   1   0   4   0   0   2  10   1   1   0   0   1   1\n!\n! Lambda1  Lambda2    Ratio    Bkpos    Wdt    Cthm     muR   AsyLim   Rpolarz  2nd-muR -> Patt# 1\n 1.494000 1.494000  0.00000   77.275  30.000  0.0000  0.0000  160.00    0.0000  0.0000\n!\n!NCY  Eps  R_at  R_an  R_pr  R_gl     Thmin       Step       Thmax    PSD    Sent0\n500  0.05  0.20  0.20  0.20  0.20     10.3000   0.050018   164.8500   0.000   0.000\n!\n!2Theta/TOF/E(Kev)   Background  for Pattern#  1\n        10.0000       169.0000          0.00\n        30.0000       164.1000          0.00\n        50.0000       166.9100          0.00\n       110.0000       175.2700          0.00\n       165.0000       174.5600          0.00\n! \n! Excluded regions (LowT  HighT) for Pattern#  1\n        0.00        5.00\n      165.00      180.00\n! \n!\n       0    !Number of refined parameters\n!\n!  Zero    Code    SyCos    Code   SySin    Code  Lambda     Code MORE ->Patt# 1\n  0.62040    0.0  0.00000    0.0  0.00000    0.0 0.000000    0.00   0\n!-------------------------------------------------------------------------------\n!  Data for PHASE number:   1  ==> Current R_Bragg for Pattern#  1:   0.0000\n!-------------------------------------------------------------------------------\nLBCO\n!\n!Nat Dis Ang Pr1 Pr2 Pr3 Jbt Irf Isy Str Furth       ATZ    Nvk Npr More\n   4   0   0 0.0 0.0 1.0   0   0   0   0   0        244.138   0   7   0\n!\n!\nP m -3 m                 <--Space group symbol\n!Atom   Typ       X        Y        Z     Biso       Occ     In Fin N_t Spc /Codes\nLa     La      0.00000  0.00000  0.00000  0.57511   0.01042   0   0   0    0  \n                  0.00     0.00     0.00     0.00      0.00\nBa     Ba      0.00000  0.00000  0.00000  0.57511   0.01042   0   0   0    0  \n                  0.00     0.00     0.00     0.00      0.00\nCo     Co      0.50000  0.50000  0.50000  0.26023   0.02083   0   0   0    0  \n                  0.00     0.00     0.00     0.00      0.00\nO      O       0.00000  0.50000  0.50000  1.36662   0.06116   0   0   0    0  \n                  0.00     0.00     0.00     0.00      0.00\n!-------> Profile Parameters for Pattern #   1  ----> Phase #   1\n!  Scale          Shape1      Bov      Str1      Str2      Str3   Strain-Model\n  9.405870       0.00000   0.00000   0.00000   0.00000   0.00000       0\n       0.00000     0.000     0.000     0.000     0.000     0.000\n!       U            V            W             X            Y         GauSiz      LorSiz    Size-Model\n     0.081547    -0.115345     0.121125     0.000000     0.083038     0.000000     0.000000       0\n         0.00         0.00         0.00         0.00         0.00         0.00         0.00\n!     a          b         c        alpha      beta       gamma      # Cell Info\n   3.890790   3.890790   3.890790  90.000000  90.000000  90.000000   #box -0.25 1.25 -0.15 1.15 -0.15 1.15\n    0.00000    0.00000    0.00000    0.00000    0.00000    0.00000\n!  Pref1    Pref2      Asy1     Asy2     Asy3     Asy4      S_L      D_L\n  0.00000  0.00000  0.00000  0.00000  0.00000  0.00000  0.00000  0.00000\n     0.00     0.00     0.00     0.00     0.00     0.00     0.00     0.00\n!  2Th1/TOF1    2Th2/TOF2  Pattern to plot\n      10.300     155.450       1\n",
+    "source": "knowledge/verification/fullprof/pd-neut-cwl_lbco_basic/lbco.pcr"
+  },
+  "pd-neut-cwl_pbso4_basic": {
+    "atoms": [
+      {
+        "phase": 1,
+        "label": "Pb",
+        "group": "Pnma",
+        "xyz": [
+          0.18754,
+          0.25,
+          0.16709
+        ],
+        "occ": 0.5
+      },
+      {
+        "phase": 1,
+        "label": "S",
+        "group": "Pnma",
+        "xyz": [
+          0.06532,
+          0.25,
+          0.68401
+        ],
+        "occ": 0.5
+      },
+      {
+        "phase": 1,
+        "label": "O1",
+        "group": "Pnma",
+        "xyz": [
+          0.90822,
+          0.25,
+          0.59542
+        ],
+        "occ": 0.5
+      },
+      {
+        "phase": 1,
+        "label": "O2",
+        "group": "Pnma",
+        "xyz": [
+          0.1939,
+          0.25,
+          0.54359
+        ],
+        "occ": 0.5
+      },
+      {
+        "phase": 1,
+        "label": "O3",
+        "group": "Pnma",
+        "xyz": [
+          0.08114,
+          0.02713,
+          0.80863
+        ],
+        "occ": 1.0
+      }
+    ],
+    "scales": [
+      1.4679
+    ],
+    "scale_codes": [
+      0.0
+    ],
+    "atom_codes": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "Ipr": 2.0,
+    "Ppl": 2.0,
+    "Ioc": 1.0,
+    "Mat": 0.0,
+    "Pcr": 1.0,
+    "Ls1": 0.0,
+    "Ls2": 4.0,
+    "Ls3": 0.0,
+    "NLI": 0.0,
+    "Prf": 2.0,
+    "Ins": 6.0,
+    "Rpa": 1.0,
+    "Sym": 1.0,
+    "Hkl": 0.0,
+    "Fou": 0.0,
+    "Sho": 1.0,
+    "Ana": 1.0,
+    "npar": 0,
+    "pcr": "COMM PbSO4 D1A(ILL),Rietveld Round Robin, R.J. Hill,JApC 25,589(1992)\n! Current global Chi2 (Bragg contrib.) =      4.717    \n! Files => DAT-file: pbso4.dat,  PCR-file: pbso4\n!Job Npr Nph Nba Nex Nsc Nor Dum Iwg Ilo Ias Res Ste Nre Cry Uni Cor Opt Aut\n   1   7   1   8   2   0   0   0   0   0   0   0   0   0   0   0   0   1   1\n!\n!Ipr Ppl Ioc Mat Pcr Ls1 Ls2 Ls3 NLI Prf Ins Rpa Sym Hkl Fou Sho Ana\n   2   2   1   0   1   0   4   0   0   2   6   1   1   0   0   1   1\n!\n! Lambda1  Lambda2    Ratio    Bkpos    Wdt    Cthm     muR   AsyLim   Rpolarz  2nd-muR -> Patt# 1\n 1.912000 1.912000  1.00000   70.000  30.000  0.0000  0.0000  160.00    0.0000  0.0000\n!\n!NCY  Eps  R_at  R_an  R_pr  R_gl     Thmin       Step       Thmax    PSD    Sent0\n500  0.05  0.20  0.20  0.20  0.20     10.0000   0.050000   155.4500   0.000   0.000\n!\n!2Theta/TOF/E(Kev)   Background  for Pattern#  1\n        11.0000       210.0598          0.00\n        15.0000       196.5971          0.00\n        20.0000       196.3124          0.00\n        30.0000       189.6129          0.00\n        50.0000       207.9771          0.00\n        70.0000       202.0884          0.00\n       120.0000       246.0258          0.00\n       153.0000       224.7353          0.00\n! \n! Excluded regions (LowT  HighT) for Pattern#  1\n        0.00       10.00\n      155.45      180.00\n! \n!\n       0    !Number of refined parameters\n!\n!  Zero    Code    SyCos    Code   SySin    Code  Lambda     Code MORE ->Patt# 1\n -0.14357    0.0  0.00000    0.0  0.00000    0.0 0.000000    0.00   0\n!-------------------------------------------------------------------------------\n!  Data for PHASE number:   1  ==> Current R_Bragg for Pattern#  1:   0.0000\n!-------------------------------------------------------------------------------\nPbSO4\n!\n!Nat Dis Ang Pr1 Pr2 Pr3 Jbt Irf Isy Str Furth       ATZ    Nvk Npr More\n   5   0   0 0.0 0.0 1.0   0   0   0   0   0       1213.030   0   7   1\n!\n!Jvi Jdi Hel Sol Mom Ter  Brind   RMua    RMub    RMuc   Jtyp  Nsp_Ref Ph_Shift N_Domains\n   0   3   0   0   0   0  1.0000  0.0000  0.0000  0.0000    1      0      0      0\n!\n! Max_dst(dist) (angles)  Bond-Valence Calc.\n      3.5000      0.0000        BVS\n!  N_cations   N_anions     Tolerance(%) / Name or cations/ and Anions\n       2           1               20.00\nPB+2 S+6 \nO-2 \n!\n!\nP n m a                  <--Space group symbol\n!Atom   Typ       X        Y        Z     Biso       Occ     In Fin N_t Spc /Codes\nPb     PB      0.18754  0.25000  0.16709  1.38058   0.50000   0   0   0    1  #color cyan\n                  0.00     0.00     0.00     0.00      0.00\nS      S       0.06532  0.25000  0.68401  0.36192   0.50000   0   0   0    2  #radius 0.5  color green\n                  0.00     0.00     0.00     0.00      0.00\nO1     O       0.90822  0.25000  0.59542  2.03661   0.50000   0   0   0    3  #conn S O 0 2.2\n                  0.00     0.00     0.00     0.00      0.00\nO2     O       0.19390  0.25000  0.54359  1.50417   0.50000   0   0   0    3  \n                  0.00     0.00     0.00     0.00      0.00\nO3     O       0.08114  0.02713  0.80863  1.34347   1.00000   0   0   0    3  \n                  0.00     0.00     0.00     0.00      0.00\n!-------> Profile Parameters for Pattern #   1  ----> Phase #   1\n!  Scale          Shape1      Bov      Str1      Str2      Str3   Strain-Model\n  1.467900       0.00000   0.00000   0.00000   0.00000   0.00000       0\n       0.00000     0.000     0.000     0.000     0.000     0.000\n!       U            V            W             X            Y         GauSiz      LorSiz    Size-Model\n     0.139488    -0.414074     0.388200     0.000000     0.086383     0.000000     0.000000       0\n         0.00         0.00         0.00         0.00         0.00         0.00         0.00\n!     a          b         c        alpha      beta       gamma      # Cell Info\n   8.477992   5.396482   6.957715  90.000000  90.000000  90.000000   #box -0.25 1.25 -0.15 1.15 -0.15 1.15\n    0.00000    0.00000    0.00000    0.00000    0.00000    0.00000\n!  Pref1    Pref2      Asy1     Asy2     Asy3     Asy4      S_L      D_L\n  0.00000  0.00000  0.00000  0.00000  0.00000  0.00000  0.00000  0.00000\n     0.00     0.00     0.00     0.00     0.00     0.00     0.00     0.00\n!  2Th1/TOF1    2Th2/TOF2  Pattern to plot\n      10.000     155.450       1\n",
+    "source": "knowledge/verification/fullprof/pd-neut-cwl_pbso4_basic/pbso4.pcr"
+  },
+  "pd-neut-cwl_y2o3_isotropic-adp": {
+    "atoms": [
+      {
+        "phase": 1,
+        "label": "Y1",
+        "group": "Ia-3",
+        "xyz": [
+          -0.03236,
+          0.0,
+          0.25
+        ],
+        "occ": 0.5
+      },
+      {
+        "phase": 1,
+        "label": "Y2",
+        "group": "Ia-3",
+        "xyz": [
+          0.25,
+          0.25,
+          0.25
+        ],
+        "occ": 0.16667
+      },
+      {
+        "phase": 1,
+        "label": "O1",
+        "group": "Ia-3",
+        "xyz": [
+          0.39072,
+          0.15204,
+          0.3803
+        ],
+        "occ": 1.0
+      }
+    ],
+    "scales": [
+      1.0602
+    ],
+    "scale_codes": [
+      0.0
+    ],
+    "atom_codes": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "Ipr": 0.0,
+    "Ppl": 2.0,
+    "Ioc": 1.0,
+    "Mat": 0.0,
+    "Pcr": 1.0,
+    "Ls1": 0.0,
+    "Ls2": 4.0,
+    "Ls3": 0.0,
+    "NLI": 0.0,
+    "Prf": 2.0,
+    "Ins": 10.0,
+    "Rpa": 0.0,
+    "Sym": 1.0,
+    "Hkl": 0.0,
+    "Fou": 0.0,
+    "Sho": 1.0,
+    "Ana": 1.0,
+    "npar": 0,
+    "pcr": "COMM Y2O3 Ge(551) 300mm_varH 15/10/13\n! Current global Chi2 (Bragg contrib.) =      1.263    \n! Files => DAT-file: y2o3.dat,  PCR-file: y2o3_isotropic_adp\n!Job Npr Nph Nba Nex Nsc Nor Dum Iwg Ilo Ias Res Ste Nre Cry Uni Cor Opt Aut\n   1   7   1  21   2   0   0   0   0   0   0   0   0   0   0   0   0   1   1\n!\n!Ipr Ppl Ioc Mat Pcr Ls1 Ls2 Ls3 NLI Prf Ins Rpa Sym Hkl Fou Sho Ana\n   0   2   1   0   1   0   4   0   0   2  10   0   1   0   0   1   1\n!\n! Lambda1  Lambda2    Ratio    Bkpos    Wdt    Cthm     muR   AsyLim   Rpolarz  2nd-muR -> Patt# 1\n 1.548220 1.548220  0.00000   10.000  20.000  0.0000  0.0000  160.00    0.0000  0.0000\n!\n!NCY  Eps  R_at  R_an  R_pr  R_gl     Thmin       Step       Thmax    PSD    Sent0\n  1  0.10  1.00  1.00  1.00  1.00      0.9500   0.050019   153.9000   0.000   0.000\n!\n!2Theta/TOF/E(Kev)   Background  for Pattern#  1\n        12.5856      9864.0967          0.00\n        19.4181      9431.1865          0.00\n        21.8751      9165.1064          0.00\n        27.8998      8813.4053          0.00\n        32.9147      8632.3789          0.00\n        39.1152      8237.0059          0.00\n        45.7120      7896.9585          0.00\n        51.9387      7764.3862          0.00\n        60.5580      7483.5161          0.00\n        68.1982      7260.7822          0.00\n        81.3276      7112.5850          0.00\n        88.7996      6847.3413          0.00\n        94.3171      6772.0112          0.00\n        98.1541      6625.6704          0.00\n       100.9813      6586.0649          0.00\n       104.3134      6502.6460          0.00\n       108.7225      6404.9531          0.00\n       116.0673      6495.7471          0.00\n       121.4862      6277.9780          0.00\n       131.2805      6314.6699          0.00\n       135.7928      6504.0566          0.00\n! \n! Excluded regions (LowT  HighT) for Pattern#  1\n        0.00       12.00\n      137.50      180.00\n! \n!\n       0    !Number of refined parameters\n!\n!  Zero    Code    SyCos    Code   SySin    Code  Lambda     Code MORE ->Patt# 1\n -0.01625    0.0  0.00000    0.0  0.00000    0.0 0.000000    0.00   0\n!-------------------------------------------------------------------------------\n!  Data for PHASE number:   1  ==> Current R_Bragg for Pattern#  1:   0.0000\n!-------------------------------------------------------------------------------\nY2O3\n!\n!Nat Dis Ang Pr1 Pr2 Pr3 Jbt Irf Isy Str Furth       ATZ    Nvk Npr More\n   3   0   0 0.0 0.0 1.0   0   0   0   0   0       3612.974   0   7   0\n!\n!\nI a -3                   <--Space group symbol\n!Atom   Typ       X        Y        Z     Biso       Occ     In Fin N_t Spc /Codes\nY1     Y    -0.03236  0.00000  0.25000  0.30000   0.50000   0   0   0    0  \n                  0.00     0.00     0.00     0.00      0.00\nY2     Y     0.25000  0.25000  0.25000  0.30000   0.16667   0   0   0    0  \n                  0.00     0.00     0.00     0.00      0.00\nO1     O     0.39072  0.15204  0.38030  0.50000   1.00000   0   0   0    0  \n                  0.00     0.00     0.00     0.00      0.00\n!-------> Profile Parameters for Pattern #   1  ----> Phase #   1\n!  Scale          Shape1      Bov      Str1      Str2      Str3   Strain-Model\n  1.060200       0.00000   0.00000   0.00000   0.00000   0.00000       0\n       0.00000     0.000     0.000     0.000     0.000     0.000\n!       U            V            W             X            Y         GauSiz      LorSiz    Size-Model\n     0.036631    -0.068345     0.131426     0.000000     0.000000     0.000000     0.000000       0\n         0.00         0.00         0.00         0.00         0.00         0.00         0.00\n!     a          b         c        alpha      beta       gamma      # Cell Info\n  10.605744  10.605744  10.605744  90.000000  90.000000  90.000000   \n    0.00000    0.00000    0.00000    0.00000    0.00000    0.00000\n!  Pref1    Pref2      Asy1     Asy2     Asy3     Asy4      S_L      D_L\n  0.00000  0.00000  0.00000  0.00000  0.00000  0.00000  0.00000  0.00000\n     0.00     0.00     0.00     0.00     0.00     0.00     0.00     0.00\n!  2Th1/TOF1    2Th2/TOF2  Pattern to plot\n      12.000     137.500       1\n",
+    "source": "knowledge/verification/fullprof/pd-neut-cwl_y2o3_isotropic-adp/y2o3_isotropic_adp.pcr"
+  },
+  "pd-neut-tof_cecoal-polaris_chebyshev": {
+    "atoms": [
+      {
+        "phase": 1,
+        "label": "Ce",
+        "group": "Pmma",
+        "xyz": [
+          0.25,
+          0.0,
+          0.38279
+        ],
+        "occ": 1.0
+      },
+      {
+        "phase": 1,
+        "label": "Co",
+        "group": "Pmma",
+        "xyz": [
+          0.25,
+          0.0,
+          0.81319
+        ],
+        "occ": 1.0
+      },
+      {
+        "phase": 1,
+        "label": "Al1",
+        "group": "Pmma",
+        "xyz": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "occ": 1.0
+      },
+      {
+        "phase": 1,
+        "label": "Al2",
+        "group": "Pmma",
+        "xyz": [
+          0.25,
+          0.5,
+          0.04117
+        ],
+        "occ": 1.0
+      },
+      {
+        "phase": 1,
+        "label": "Al3",
+        "group": "Pmma",
+        "xyz": [
+          0.0693,
+          0.5,
+          0.7007
+        ],
+        "occ": 2.04131
+      }
+    ],
+    "scales": [
+      1041.189
+    ],
+    "scale_codes": [
+      11.0
+    ],
+    "atom_codes": [
+      0.0,
+      0.0,
+      161.0,
+      211.0,
+      0.0,
+      0.0,
+      0.0,
+      171.0,
+      221.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      231.0,
+      0.0,
+      0.0,
+      0.0,
+      181.0,
+      111.0,
+      0.0,
+      191.0,
+      0.0,
+      151.0,
+      101.0,
+      91.0
+    ],
+    "Ipr": 0.0,
+    "Ppl": 0.0,
+    "Ioc": 1.0,
+    "Mat": 0.0,
+    "Pcr": 1.0,
+    "Ls1": 0.0,
+    "Ls2": 4.0,
+    "Ls3": 0.0,
+    "NLI": 0.0,
+    "Prf": -3.0,
+    "Ins": 10.0,
+    "Rpa": 1.0,
+    "Sym": 1.0,
+    "Hkl": 0.0,
+    "Fou": 0.0,
+    "Sho": 0.0,
+    "Ana": 0.0,
+    "npar": 32,
+    "pcr": "COMM CeCoAl3 RT #13744 ThCr2Si2 type  TSample:   300.00 K\n! Current global Chi2 (Bragg contrib.) =      2.031    \n! Files => DAT-file: cecoal.dat,  PCR-file: cecoal\n!Job Npr Nph Nba Nex Nsc Nor Dum Iwg Ilo Ias Res Ste Nre Cry Uni Cor Opt Aut\n  -1   9   1  -5   2   0   0   1   1   0   1   0   0   0   0   1   0   0   1\n!\n!Ipr Ppl Ioc Mat Pcr Ls1 Ls2 Ls3 NLI Prf Ins Rpa Sym Hkl Fou Sho Ana\n   0   0   1   0   1   0   4   0   0  -3  10   1   1   0   0   0   0\n!\n!  Bkpos        Wdt    Iabscor for Pattern#  1\n    7000.000    4.20     2\n!NCY  Eps  R_at  R_an  R_pr  R_gl    TOF-min      <Step>       TOF-max \n 15  0.02  1.00  1.00  1.00  1.00    3001.5891      4.3357  19004.6582\n!\n! Excluded regions (LowT  HighT) for Pattern#  1\n     2000.10     3000.00\n    19000.00    20000.00\n! \n!\n      32    !Number of refined parameters\n!\n!    Zero       Code      Dtt1      Code       Dtt2     Code  Dtt_1overd    Code  2ThetaBank  -> Patt#  1\n     3.93076   21.00  6176.03076    0.00    -1.92182  201.00     0.00000    0.00   145.000\n!\n!   Background coefficients/codes  for Pattern#  1  (Chebychev polynomials, up to 24 coefficients)\n   26833.268    4390.595    2629.921    -513.844     284.766     163.453\n       31.00       41.00       51.00      241.00      251.00      261.00\n     240.860     -72.050      15.103     126.011     -12.868    -280.942\n      271.00      281.00      291.00      301.00      311.00      321.00\n       0.000       0.000       0.000       0.000       0.000       0.000\n        0.00        0.00        0.00        0.00        0.00        0.00\n       0.000       0.000       0.000       0.000       0.000       0.000\n        0.00        0.00        0.00        0.00        0.00        0.00\n!-------------------------------------------------------------------------------\n!  Data for PHASE number:   1  ==> Current R_Bragg for Pattern#  1:   5.4621\n!-------------------------------------------------------------------------------\nCeCoAl3\n!\n!Nat Dis Ang Pr1 Pr2 Pr3 Jbt Irf Isy Str Furth       ATZ    Nvk Npr More\n   5   0   0 0.0 0.0 1.0   0   0   0   0   0       9859.010   0   9   0\n!\n!\nP m m a                  <--Space group symbol\n!Atom   Typ       X        Y        Z     Biso       Occ     In Fin N_t Spc /Codes\nCe     CE      0.25000  0.00000  0.38279  0.50270   1.00000   0   0   0    0  #color green\n                  0.00     0.00   161.00   211.00      0.00\nCo     CO      0.25000  0.00000  0.81319  0.47597   1.00000   0   0   0    0  #color yellow\n                  0.00     0.00   171.00   221.00      0.00\nAl1    AL      0.00000  0.00000  0.00000  0.58480   1.00000   0   0   0    0  #conn Al Al 0.0 3.5\n                  0.00     0.00     0.00   231.00      0.00\nAl2    AL      0.25000  0.50000  0.04117  0.65837   1.00000   0   0   0    0  \n                  0.00     0.00   181.00   111.00      0.00\nAl3    AL      0.06930  0.50000  0.70070  0.53258   2.04131   0   0   0    0  \n                191.00     0.00   151.00   101.00     91.00\n!-------> Profile Parameters for Pattern #   1  ----> Phase #   1\n!  Scale         Extinc      Bov     Str1     Str2     Str3    Strain-Model\n  1041.189       0.0001   0.0000   0.0000   0.0000   0.0000       0\n      11.00000     0.00     0.00     0.00     0.00     0.00\n!      Sig-2       Sig-1       Sig-0       Sig-Q     G-Strain     G-Size        Z0  Size-Model\n      0.0000     39.4625      0.0000      0.0000      0.0000      0.0000      0.0000   0\n        0.00       71.00        0.00        0.00        0.00        0.00        0.00\n!      Gam-2       Gam-1       Gam-0        LStr        LSiz\n      0.0000      4.7780      0.0000      0.0000      0.0000\n        0.00       81.00        0.00        0.00        0.00\n!     a          b         c        alpha      beta       gamma      #Cell Info\n   7.650379   4.051331   6.905360  90.000000  90.000000  90.000000   \n  121.00000  131.00000  141.00000    0.00000    0.00000    0.00000\n!      Pref1      Pref2        alph0       beta0       alph1       beta1      alphQ     betaQ\n    0.000000    0.000000    0.000000    0.043085    0.297100    0.002867    0.000000    0.000000\n        0.00        0.00        0.00        0.00        0.00        0.00        0.00        0.00\n!Absorption correction parameters\n   0.01561   61.00   0.00000    0.00            ABS: ABSCOR1  ABSCOR2\n!  2Th1/TOF1    2Th2/TOF2  Pattern to plot\n    3001.589   19000.000       1\n",
+    "source": "knowledge/verification/fullprof/pd-neut-tof_cecoal_chebyshev/cecoal.pcr"
+  },
+  "pd-neut-tof_ceo2-pearl_polynomial": {
+    "atoms": [
+      {
+        "phase": 1,
+        "label": "Ce",
+        "group": "Fm-3m",
+        "xyz": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "occ": 0.5
+      },
+      {
+        "phase": 1,
+        "label": "O",
+        "group": "Fm-3m",
+        "xyz": [
+          0.25,
+          0.25,
+          0.25
+        ],
+        "occ": 1.0
+      }
+    ],
+    "scales": [
+      3.672277
+    ],
+    "scale_codes": [
+      11.0
+    ],
+    "atom_codes": [
+      0.0,
+      0.0,
+      0.0,
+      51.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      61.0,
+      0.0
+    ],
+    "Ipr": 0.0,
+    "Ppl": 0.0,
+    "Ioc": 1.0,
+    "Mat": 0.0,
+    "Pcr": 1.0,
+    "Ls1": 0.0,
+    "Ls2": 4.0,
+    "Ls3": 0.0,
+    "NLI": 0.0,
+    "Prf": -3.0,
+    "Ins": 12.0,
+    "Rpa": 1.0,
+    "Sym": 1.0,
+    "Hkl": 0.0,
+    "Fou": 0.0,
+    "Sho": 0.0,
+    "Ana": 0.0,
+    "npar": 19,
+    "pcr": "COMM  Refinement of instrumental parameters of PEARL (NPROF=9)\n! Current global Chi2 (Bragg contrib.) =     0.5267E-03\n! Files => DAT-file: CeO2_PEARL.dat,  PCR-file: CeO2_PEARL\n!Job Npr Nph Nba Nex Nsc Nor Dum Iwg Ilo Ias Res Ste Nre Cry Uni Cor Opt Aut\n  -1   9   1   0   2   0   0   1   0   0   1   0   0   0   0   1   0   0   1\n!\n!Ipr Ppl Ioc Mat Pcr Ls1 Ls2 Ls3 NLI Prf Ins Rpa Sym Hkl Fou Sho Ana\n   0   0   1   0   1   0   4   0   0  -3  12   1   1   0   0   0   0\n!\n!  Bkpos        Wdt    Iabscor for Pattern#  1\n    7000.000    8.00     2\n!NCY  Eps  R_at  R_an  R_pr  R_gl    TOF-min      <Step>       TOF-max \n 10  0.05  1.00  1.00  1.00  1.00    1500.2500      2.0000  19380.7812\n!\n! Excluded regions (LowT  HighT) for Pattern#  1\n     1000.10     2000.00\n    18700.00    20000.00\n! \n!\n      19    !Number of refined parameters\n!\n!    Zero       Code      Dtt1      Code       Dtt2     Code  Dtt_1overd    Code  2ThetaBank  -> Patt#  1\n     3.05218  141.00  4677.92969  151.00     1.76238  161.00     0.00000    0.00    90.000\n!   Background coefficients/codes  for Pattern#  1  (Polynomial of 6th degree)\n    2181.026     221.440     376.993   -1931.526    1965.937    -588.860\n       21.00       31.00       41.00       81.00       91.00      121.00\n!-------------------------------------------------------------------------------\n!  Data for PHASE number:   1  ==> Current R_Bragg for Pattern#  1:   1.8353\n!-------------------------------------------------------------------------------\nLaMnO3\n!\n!Nat Dis Ang Pr1 Pr2 Pr3 Jbt Irf Isy Str Furth       ATZ    Nvk Npr More\n   2   0   0 0.0 0.0 1.0   0   0   0   0   0     396561.688   0   9   0\n!\n!\nF m 3 m                  <--Space group symbol\n!Atom   Typ       X        Y        Z     Biso       Occ     In Fin N_t Spc /Codes\nCe     CE      0.00000  0.00000  0.00000  0.30188   0.50000   0   0   0    0  \n                  0.00     0.00     0.00    51.00      0.00\nO      O       0.25000  0.25000  0.25000  0.49613   1.00000   0   0   0    0  \n                  0.00     0.00     0.00    61.00      0.00\n!-------> Profile Parameters for Pattern #   1  ----> Phase #   1\n!  Scale         Extinc      Bov     Str1     Str2     Str3    Strain-Model\n  3.672277       0.0000   0.0000   0.0000   0.0000   0.0000       0\n      11.00000     0.00     0.00     0.00     0.00     0.00\n!      Sig-2       Sig-1       Sig-0       Sig-Q     G-Strain     G-Size        Z0  Size-Model\n      3.5757     83.8040      0.0000      0.0000      0.0000      0.0000      0.0000   0\n      191.00      101.00        0.00        0.00        0.00        0.00        0.00\n!      Gam-2       Gam-1       Gam-0        LStr        LSiz\n      0.0000      4.8413      0.0000      0.0000      0.0000\n        0.00      111.00        0.00        0.00        0.00\n!     a          b         c        alpha      beta       gamma      #Cell Info\n   5.410495   5.410495   5.410495  90.000000  90.000000  90.000000   \n    0.00000    0.00000    0.00000    0.00000    0.00000    0.00000\n!      Pref1      Pref2        alph0       beta0       alph1       beta1      alphQ     betaQ\n    0.000000    0.000000    0.000000    0.025455    0.251545    0.029004    0.000000    0.000000\n        0.00        0.00        0.00      171.00      131.00      181.00        0.00        0.00\n!Absorption correction parameters\n   0.00028   71.00   0.00000    0.00            ABS: ABSCOR1  ABSCOR2\n!  2Th1/TOF1    2Th2/TOF2  Pattern to plot\n    2000.000   18700.000       1\n",
+    "source": "knowledge/verification/fullprof/pd-neut-tof_ceo2-pearl_polynomial/Ceo2_PEARL.pcr"
+  },
+  "pd-neut-tof_diamond-dream_basic": {
+    "atoms": [
+      {
+        "phase": 1,
+        "label": "C",
+        "group": "Fd-3m:1",
+        "xyz": [
+          0.125,
+          0.125,
+          0.125
+        ],
+        "occ": 1.0
+      }
+    ],
+    "scales": [
+      0.101178
+    ],
+    "scale_codes": [
+      51.0
+    ],
+    "atom_codes": [
+      0.0,
+      0.0,
+      0.0,
+      151.0,
+      0.0
+    ],
+    "Ipr": 0.0,
+    "Ppl": 2.0,
+    "Ioc": 1.0,
+    "Mat": 0.0,
+    "Pcr": 1.0,
+    "Ls1": 0.0,
+    "Ls2": 4.0,
+    "Ls3": 0.0,
+    "NLI": 0.0,
+    "Prf": 2.0,
+    "Ins": 10.0,
+    "Rpa": 1.0,
+    "Sym": 0.0,
+    "Hkl": 0.0,
+    "Fou": 0.0,
+    "Sho": 0.0,
+    "Ana": 0.0,
+    "npar": 15,
+    "pcr": "COMM  Diamond - DREAM (ESS) McStas-simulated reduced TOF data\n! Current global Chi2 (Bragg contrib.) =      18.14    \n! Files => DAT-file: diamond.dat,  PCR-file: diamond\n!Job Npr Nph Nba Nex Nsc Nor Dum Iwg Ilo Ias Res Ste Nre Cry Uni Cor Opt Aut\n  -1   9   1   8   2   0   0   0   0   0   0   0   0   0   0   1   0   0   1\n!\n!Ipr Ppl Ioc Mat Pcr Ls1 Ls2 Ls3 NLI Prf Ins Rpa Sym Hkl Fou Sho Ana\n   0   2   1   0   1   0   4   0   0   2  10   1   0   0   0   0   0\n!\n!  Bkpos        Wdt    Iabscor for Pattern#  1\n     150.000   30.00     0\n!NCY  Eps  R_at  R_an  R_pr  R_gl    TOF-min      <Step>       TOF-max \n100  0.05  0.01  0.01  0.01  0.01    8675.1074     29.0146  66503.6875\n!\n!2Theta/TOF/E(Kev)   Background  for Pattern#  1\n     10000.0000        -0.2284         71.00\n     14000.0000         0.3915         81.00\n     21000.0000         0.6957         91.00\n     27500.0000         0.5692        101.00\n     40000.0000         0.3028        111.00\n     50000.0000         0.6136        121.00\n     61000.0000         0.7375        131.00\n     70000.0000         0.6141        141.00\n! \n! Excluded regions (LowT  HighT) for Pattern#  1\n        0.00     9999.00\n    70001.00   200000.00\n! \n!\n      15    !Number of refined parameters\n!\n!    Zero       Code      Dtt1      Code       Dtt2     Code  Dtt_1overd    Code  2ThetaBank  -> Patt#  1\n     0.00000    0.00 28385.86133   61.00     0.00000    0.00     0.00000    0.00    90.000\n!-------------------------------------------------------------------------------\n!  Data for PHASE number:   1  ==> Current R_Bragg for Pattern#  1:  16.4439\n!-------------------------------------------------------------------------------\nDiamond\n!\n!Nat Dis Ang Pr1 Pr2 Pr3 Jbt Irf Isy Str Furth       ATZ    Nvk Npr More\n   1   0   0 0.0 0.0 1.0   0   0   0   0   0      27673.344   0   9   0\n!\n!\nF d -3 m:1               <--Space group symbol\n!Atom   Typ       X        Y        Z     Biso       Occ     In Fin N_t Spc /Codes\nC      C       0.12500  0.12500  0.12500  0.89263   1.00000   0   0   0    0  \n                  0.00     0.00     0.00   151.00      0.00\n!-------> Profile Parameters for Pattern #   1  ----> Phase #   1\n!  Scale          Extinc       Bov      Str1      Str2      Str3    Strain-Mode\n 0.1011780        0.0000    0.0000    0.0000    0.0000    0.0000         0\n      51.00000      0.00      0.00      0.00      0.00      0.00\n!      Sigma-2       Sigma-1       Sigma-0       Sigma-Q   Iso-GStrain     Iso-GSize     Ani-LSize   Size-Model\n        0.0000     4887.9180    46937.7188        0.0000        0.0000        0.0000        0.0000       0\n          0.00         41.00         31.00          0.00          0.00          0.00          0.00\n!      Gamma-2       Gamma-1       Gamma-0   Iso-LorStrain   Iso-LorSize\n        0.0000        0.0000        0.0000        0.0000        0.0000\n          0.00          0.00          0.00          0.00          0.00\n!     a          b         c        alpha      beta       gamma      # Cell Info\n   3.567000   3.567000   3.567000  90.000000  90.000000  90.000000   \n    0.00000    0.00000    0.00000    0.00000    0.00000    0.00000\n!      Pref1      Pref2        alph0       beta0       alph1       beta1       alphQ       betaQ\n    0.000000    0.000000    0.000000    0.014330    0.022544    0.000000    0.000000    0.000000\n        0.00        0.00        0.00       11.00       21.00        0.00        0.00        0.00\n!Absorption correction parameters\n   0.00000    0.00   0.00000    0.00            ABS: ABSCOR1  ABSCOR2\n!  2Th1/TOF1    2Th2/TOF2  Pattern to plot\n   10000.000   66503.688       1\n",
+    "source": "knowledge/verification/fullprof/pd-neut-tof_diamond_dream/diamond.pcr"
+  },
+  "pd-neut-tof_ncaf-wish_jorgensen-von-dreele": {
+    "atoms": [
+      {
+        "phase": 1,
+        "label": "Ca1",
+        "group": "I213",
+        "xyz": [
+          0.4661,
+          0.0,
+          0.25
+        ],
+        "occ": 0.5
+      },
+      {
+        "phase": 1,
+        "label": "Al1",
+        "group": "I213",
+        "xyz": [
+          0.25163,
+          0.25163,
+          0.25163
+        ],
+        "occ": 0.33333
+      },
+      {
+        "phase": 1,
+        "label": "Na1",
+        "group": "I213",
+        "xyz": [
+          0.08472,
+          0.08472,
+          0.08472
+        ],
+        "occ": 0.33333
+      },
+      {
+        "phase": 1,
+        "label": "F1",
+        "group": "I213",
+        "xyz": [
+          0.13748,
+          0.30533,
+          0.11947
+        ],
+        "occ": 1.0
+      },
+      {
+        "phase": 1,
+        "label": "F2",
+        "group": "I213",
+        "xyz": [
+          0.36263,
+          0.36333,
+          0.18669
+        ],
+        "occ": 1.0
+      },
+      {
+        "phase": 1,
+        "label": "F3",
+        "group": "I213",
+        "xyz": [
+          0.4612,
+          0.4612,
+          0.4612
+        ],
+        "occ": 0.33333
+      }
+    ],
+    "scales": [
+      36.17374
+    ],
+    "scale_codes": [
+      0.0
+    ],
+    "atom_codes": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "Ipr": 2.0,
+    "Ppl": 2.0,
+    "Ioc": 1.0,
+    "Ls1": 0.0,
+    "Ls2": 4.0,
+    "Ls3": 0.0,
+    "Prf": 2.0,
+    "Ins": 14.0,
+    "Hkl": 0.0,
+    "Fou": 0.0,
+    "Ana": 0.0,
+    "npar": 0,
+    "pcr": "YAG highres\n! Current global Chi2 (Bragg contrib.) =      15.89    \nNPATT      1       1 <- Flags for patterns (1:refined, 0: excluded)\nW_PAT   1.000\n!Nph Dum Ias Nre Cry Opt Aut\n   1   1   1   0   0   0   1\n!Job Npr Nba Nex Nsc Nor Iwg Ilo Res Ste Uni Cor Anm Int\n  -1  13  28   2   0   1   0   0   0   0   1   0   0   0  !-> Patt#: 1\n!\n!File names of data(patterns) files\n55025-5_6raw.gss\n!\n!Mat Pcr NLI Rpa Sym Sho\n   0   1   0   0   0   0\n!Ipr Ppl Ioc Ls1 Ls2 Ls3 Prf Ins Hkl Fou Ana\n   2   2   1   0   4   0   2  14   0   0   0  !-> Patt#: 1\n!\n!  Bkpos        Wdt    Iabscor for Pattern#  1\n    3000.000   40.00     2\n!NCY  Eps  R_at  R_an  R_pr  R_gl\n 20  0.30  0.30  0.30  0.30  0.30\n!    TOF-min      <Step>       TOF-max  -> Patt#: 1\n   7267.5684     23.3535 103417.6719\n!\n!2Theta/TOF/E(Kev)   Background  for Pattern#  1\n     11136.8740       522.6016          0.00\n     13313.3877       560.0339          0.00\n      9162.3037       291.1664          0.00\n     14906.5078       548.9700          0.00\n     16454.7500       531.0416          0.00\n     17352.2812       495.8744          0.00\n     18743.4551       428.6869          0.00\n     20179.5078       452.5262          0.00\n     21368.7363       397.2762          0.00\n     22176.0391       469.9897          0.00\n     22827.2266       478.4576          0.00\n     24644.7285       380.1794          0.00\n     26439.7910       381.5229          0.00\n     28257.2930       378.6624          0.00\n     31196.7109       343.9877          0.00\n     34034.4062       328.3991          0.00\n     37265.5195       310.7079          0.00\n     41214.6602       322.9500          0.00\n     44827.2266       283.0960          0.00\n     49830.9648       272.6882          0.00\n     52905.0117       256.8817          0.00\n     58204.9375       259.8665          0.00\n     62916.9805       260.7619          0.00\n     70186.9844       262.2211          0.00\n     74204.9375       262.0392          0.00\n     82103.2188       268.1811          0.00\n     91958.8672       268.2294          0.00\n    102712.0391       262.4211          0.00\n! \n! Excluded regions (LowT  HighT) for Pattern#  1\n        0.00     9000.00\n   104000.00   300000.00\n! \n!\n       0    !Number of refined parameters\n!\n!    Zero       Code      Dtt1      Code       Dtt2     Code  Dtt_1overd    Code  2ThetaBank  -> Patt#  1\n   -13.88128    0.00 20773.12305    0.00    -1.08308    0.00     0.00000    0.00   152.827\n!-------------------------------------------------------------------------------\n!  Data for PHASE number:   1  ==> Current R_Bragg for Pattern#  1:   3.9911\n!-------------------------------------------------------------------------------\nY5Al3O12 Nuclear\n!\n!Nat Dis Ang Jbt Isy Str Furth        ATZ     Nvk More\n   6   0   0   0   0   0   0       1944.6354   0   0\n!Contributions (0/1) of this phase to the  1 patterns\n 1\n!Irf Npr Jtyp  Nsp_Ref Ph_Shift for Pattern#  1\n   0   9   -1      0      0\n! Pr1    Pr2    Pr3   Brind.   Rmua   Rmub   Rmuc     for Pattern#  1\n  0.000  0.000  1.000  1.000  0.000  0.000  0.000\n!\n!\nI 21 3                   <--Space group symbol\n!Atom   Typ       X        Y        Z     Biso       Occ     In Fin N_t Spc /Codes\nCa1    CA      0.46610  0.00000  0.25000  0.88721   0.50000   0   0   0    0  \n                  0.00     0.00     0.00     0.00      0.00\nAl1    AL      0.25163  0.25163  0.25163  0.65230   0.33333   0   0   0    0  \n                  0.00     0.00     0.00     0.00      0.00\nNa1    NA      0.08472  0.08472  0.08472  1.89168   0.33333   0   0   0    0  \n                  0.00     0.00     0.00     0.00      0.00\nF1     F       0.13748  0.30533  0.11947  0.89535   1.00000   0   0   0    0  \n                  0.00     0.00     0.00     0.00      0.00\nF2     F       0.36263  0.36333  0.18669  1.27175   1.00000   0   0   0    0  \n                  0.00     0.00     0.00     0.00      0.00\nF3     F       0.46120  0.46120  0.46120  0.78029   0.33333   0   0   0    0  \n                  0.00     0.00     0.00     0.00      0.00\n!-------> Profile Parameters for Pattern #   1  ----> Phase #   1\n!  Scale          Extinc       Bov      Str1      Str2      Str3    Strain-Mode\n  36.17374        0.0000    0.0000    0.0000    0.0000    0.0000         0\n       0.00000      0.00      0.00      0.00      0.00      0.00\n!      Sigma-2       Sigma-1       Sigma-0       Sigma-Q   Iso-GStrain     Iso-GSize     Ani-LSize   Size-Model\n       15.6959        0.0000        0.0000        0.0000        0.0000        0.0000        0.0000       0\n          0.00          0.00          0.00          0.00          0.00          0.00          0.00\n!      Gamma-2       Gamma-1       Gamma-0   Iso-LorStrain   Iso-LorSize\n        0.0000        0.0000        0.0000        0.0000        0.0000\n          0.00          0.00          0.00          0.00          0.00\n!     a          b         c        alpha      beta       gamma      # Cell Info\n  10.250256  10.250256  10.250256  90.000000  90.000000  90.000000   \n    0.00000    0.00000    0.00000    0.00000    0.00000    0.00000\n!      Pref1      Pref2        alph0       beta0       alph1       beta1       alphQ       betaQ\n    1.000000    0.000000   -0.009276    0.006705    0.109622    0.009708    0.000000    0.000000\n        0.00        0.00        0.00        0.00        0.00        0.00        0.00        0.00\n!Absorption correction parameters\n   0.00000    0.00   0.00000    0.00            ABS: ABSCOR1  ABSCOR2\n!  2Th1/TOF1    2Th2/TOF2  Pattern to plot\n    9000.000  103417.672       1\n",
+    "source": "knowledge/verification/fullprof/pd-neut-tof_ncaf_jorgensen-von-dreele/tmpl_one_bank.pcr"
+  },
+  "pd-neut-tof_si-sepd_ikeda-carpenter": {
+    "atoms": [
+      {
+        "phase": 1,
+        "label": "Si",
+        "group": "Fd-3m:2",
+        "xyz": [
+          0.125,
+          0.125,
+          0.125
+        ],
+        "occ": 1.0
+      }
+    ],
+    "scales": [
+      0.6807285
+    ],
+    "scale_codes": [
+      21.0
+    ],
+    "atom_codes": [
+      0.0,
+      0.0,
+      0.0,
+      111.0,
+      0.0
+    ],
+    "Ipr": 0.0,
+    "Ppl": 0.0,
+    "Ioc": 1.0,
+    "Mat": 0.0,
+    "Pcr": 2.0,
+    "Ls1": 0.0,
+    "Ls2": 4.0,
+    "Ls3": 0.0,
+    "NLI": 0.0,
+    "Prf": -3.0,
+    "Ins": 12.0,
+    "Rpa": 1.0,
+    "Sym": 1.0,
+    "Hkl": 1.0,
+    "Fou": 2.0,
+    "Sho": 0.0,
+    "Ana": 0.0,
+    "npar": 16,
+    "pcr": "COMM  Backscattering Bank (2theta= 144.845)  Si- Argonne\n! Current global Chi2 (Bragg contrib.) =      6.789    \n! Files => DAT-file: arg_si.dat,  PCR-file: arg_si\n!Job Npr Nph Nba Nex Nsc Nor Dum Iwg Ilo Ias Res Ste Nre Cry Uni Cor Opt Aut\n  -1  13   1  -4   2   0   0   0   0   0   0   0   0   0   0   1   0   0   1\n!\n!Ipr Ppl Ioc Mat Pcr Ls1 Ls2 Ls3 NLI Prf Ins Rpa Sym Hkl Fou Sho Ana\n   0   0   1   0   2   0   4   0   0  -3  12   1   1   1   2   0   0\n!\n!  Bkpos        Wdt    Iabscor for Pattern#  1\n    7000.000    8.20     2\n!NCY  Eps  R_at  R_an  R_pr  R_gl    TOF-min      <Step>       TOF-max \n 10  0.05  1.00  1.00  1.00  1.00    2000.0000      5.0000  29995.0000\n!\n! Excluded regions (LowT  HighT) for Pattern#  1\n     1000.10     2000.00\n    29999.00    40000.00\n! \n!\n      16    !Number of refined parameters\n!\n!    Zero       Code      Dtt1      Code       Dtt2     Code  Dtt_1overd    Code  2ThetaBank  -> Patt#  1\n    -5.18027   11.00  7476.91016    0.00    -1.54000    0.00     0.00000    0.00   144.845\n!\n!   Background coefficients/codes  for Pattern#  1  (Fourier cosine series, up to 18 coefficients)\n     151.666      -1.076      35.884      11.070      19.836       3.152\n       41.00       51.00       61.00       71.00       81.00       91.00\n      10.399       0.000       0.000       0.000       0.000       0.000\n      101.00        0.00        0.00        0.00        0.00        0.00\n       0.000       0.000       0.000       0.000       0.000       0.000\n        0.00        0.00        0.00        0.00        0.00        0.00\n!-------------------------------------------------------------------------------\n!  Data for PHASE number:   1  ==> Current R_Bragg for Pattern#  1:   3.5144\n!-------------------------------------------------------------------------------\nStandard-Si\n!\n!Nat Dis Ang Pr1 Pr2 Pr3 Jbt Irf Isy Str Furth       ATZ    Nvk Npr More\n   1   0   0 0.0 0.0 1.0   0   0   0   0   0     129420.289   0  13   0\n!\n!\nF d 3 m                  <--Space group symbol\n!Atom   Typ       X        Y        Z     Biso       Occ     In Fin N_t Spc /Codes\nSi     SI      0.12500  0.12500  0.12500  0.45207   1.00000   0   0   0    0  # color green conn Si Si 0 2.5\n                  0.00     0.00     0.00   111.00      0.00\n!-------> Profile Parameters for Pattern #   1  ----> Phase #   1\n!  Scale          Extinc       Bov      Str1      Str2      Str3    Strain-Mode\n 0.6807285        0.0070    0.0000    0.0000    0.0000    0.0000         0\n      21.00000    121.00      0.00      0.00      0.00      0.00\n!      Sigma-2       Sigma-1       Sigma-0       Sigma-Q   Iso-GStrain     Iso-GSize     Ani-LSize   Size-Model\n        0.0000       33.0422        8.4059        0.0000        0.0000        0.0000        0.0000       0\n          0.00        161.00        131.00          0.00          0.00          0.00          0.00\n!      Gamma-2       Gamma-1       Gamma-0   Iso-LorStrain   Iso-LorSize\n        0.0000        2.6045        0.0000        0.0000        0.0000\n          0.00         31.00          0.00          0.00          0.00\n!     a          b         c        alpha      beta       gamma      # Cell Info\n   5.426328   5.426328   5.426328  90.000000  90.000000  90.000000   # multiple box -1.15 1.15 -1.15 1.15 -0.15 1.15\n  141.00000  141.00000  141.00000    0.00000    0.00000    0.00000\n!      Pref1      Pref2        alph0       beta0       alph1       Kappa\n    0.000000    0.000000    0.000000   21.668488    0.879000   75.321373    0.000000    0.000000\n        0.00        0.00        0.00        0.00        0.00        0.00        0.00        0.00\n!Absorption correction parameters\n   0.00336  151.00   0.00000    0.00            ABS: ABSCOR1  ABSCOR2\n!  2Th1/TOF1    2Th2/TOF2  Pattern to plot\n    2000.000   29995.000       1\n",
+    "source": "knowledge/verification/fullprof/pd-neut-tof_si_ikeda-carpenter/arg_si_ic.pcr"
+  },
+  "pd-neut-tof_si-sepd_jorgensen": {
+    "atoms": [
+      {
+        "phase": 1,
+        "label": "Si",
+        "group": "Fd-3m:2",
+        "xyz": [
+          0.125,
+          0.125,
+          0.125
+        ],
+        "occ": 0.04167
+      }
+    ],
+    "scales": [
+      381.3153
+    ],
+    "scale_codes": [
+      0.0
+    ],
+    "atom_codes": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "Ipr": 2.0,
+    "Ppl": 2.0,
+    "Ioc": 1.0,
+    "Mat": 0.0,
+    "Pcr": 1.0,
+    "Ls1": 0.0,
+    "Ls2": 4.0,
+    "Ls3": 0.0,
+    "NLI": 0.0,
+    "Prf": 2.0,
+    "Ins": 12.0,
+    "Rpa": 1.0,
+    "Sym": 1.0,
+    "Hkl": 1.0,
+    "Fou": 2.0,
+    "Sho": 0.0,
+    "Ana": 0.0,
+    "npar": 0,
+    "pcr": "COMM  Backscattering Bank (2theta= 144.845)  Si- Argonne\n! Current global Chi2 (Bragg contrib.) =      4.393    \n! Files => DAT-file: arg_si.dat,  PCR-file: arg_si\n!Job Npr Nph Nba Nex Nsc Nor Dum Iwg Ilo Ias Res Ste Nre Cry Uni Cor Opt Aut\n  -1   9   1  -4   2   0   0   0   0   0   0   0   0   0   0   1   0   0   1\n!\n!Ipr Ppl Ioc Mat Pcr Ls1 Ls2 Ls3 NLI Prf Ins Rpa Sym Hkl Fou Sho Ana\n   2    2    1    0    1    0    4    0    0    2   12    1    1    1    2    0    0\n!\n!  Bkpos        Wdt    Iabscor for Pattern#  1\n     150.000   30.00     2\n!NCY  Eps  R_at  R_an  R_pr  R_gl    TOF-min      <Step>       TOF-max \n 50  0.05  0.02  0.02  0.02  0.02    2000.0000      5.0000  29995.0000\n!\n! Excluded regions (LowT  HighT) for Pattern#  1\n     1000.10     2000.00\n    29999.00    40000.00\n! \n!\n       0    !Number of refined parameters\n!\n!    Zero       Code      Dtt1      Code       Dtt2     Code  Dtt_1overd    Code  2ThetaBank  -> Patt#  1\n    -8.56733   0.00  7476.91016    0.00    -1.54000    0.00     0.00000    0.00   144.845\n!\n!   Background coefficients/codes  for Pattern#  1  (Fourier cosine series, up to 18 coefficients)\n     154.316       1.340      37.000      12.332      17.706       4.785\n        0.00        0.00        0.00        0.00        0.00        0.00\n       6.808       0.000       0.000       0.000       0.000       0.000\n        0.00        0.00        0.00        0.00        0.00        0.00\n       0.000       0.000       0.000       0.000       0.000       0.000\n        0.00        0.00        0.00        0.00        0.00        0.00\n!-------------------------------------------------------------------------------\n!  Data for PHASE number:   1  ==> Current R_Bragg for Pattern#  1:   2.0355\n!-------------------------------------------------------------------------------\nStandard-Si\n!\n!Nat Dis Ang Pr1 Pr2 Pr3 Jbt Irf Isy Str Furth       ATZ    Nvk Npr More\n   1   0   0 0.0 0.0 1.0   0   0   0   0   0     129420.289   0   9   0\n!\n!\nF d -3 m                 <--Space group symbol\n!Atom   Typ       X        Y        Z     Biso       Occ     In Fin N_t Spc /Codes\nSi     SI      0.12500  0.12500  0.12500  0.54095   0.04167   0   0   0    0  # color green conn Si Si 0 2.5\n                  0.00     0.00     0.00     0.00      0.00\n!-------> Profile Parameters for Pattern #   1  ----> Phase #   1\n!  Scale          Extinc       Bov      Str1      Str2      Str3    Strain-Mode\n  381.3153        0.0000    0.0000    0.0000    0.0000    0.0000         0\n      0.00000      0.00      0.00      0.00      0.00      0.00\n!      Sigma-2       Sigma-1       Sigma-0       Sigma-Q   Iso-GStrain     Iso-GSize     Ani-LSize   Size-Model\n        0.0000       29.6492        5.0790        0.0000        0.0000        0.0000        0.0000       0\n          0.00          0.00          0.00          0.00          0.00          0.00          0.00\n!      Gamma-2       Gamma-1       Gamma-0   Iso-LorStrain   Iso-LorSize\n        0.0000        0.0000        0.0000        0.0000        0.0000\n          0.00          0.00          0.00          0.00          0.00\n!     a          b         c        alpha      beta       gamma      # Cell Info\n   5.432382   5.432382   5.432382  90.000000  90.000000  90.000000   # multiple box -1.15 1.15 -1.15 1.15 -0.15 1.15\n    0.00000    0.00000    0.00000    0.00000    0.00000    0.00000\n!      Pref1      Pref2        alph0       beta0       alph1       beta1       alphQ       betaQ\n    0.000000    0.000000    0.000000    0.038020    0.235422    0.010902    0.000000    0.000000\n        0.00        0.00        0.00        0.00        0.00        0.00        0.00        0.00\n!Absorption correction parameters\n   0.00000    0.00   0.00000    0.00            ABS: ABSCOR1  ABSCOR2\n!  2Th1/TOF1    2Th2/TOF2  Pattern to plot\n    2000.000   29995.000       1\n",
+    "source": "knowledge/verification/fullprof/pd-neut-tof_si_jorgensen/arg_si.pcr"
+  },
+  "pd-neut-tof_si-sepd_jorgensen-von-dreele": {
+    "atoms": [
+      {
+        "phase": 1,
+        "label": "Si",
+        "group": "Fd-3m:2",
+        "xyz": [
+          0.125,
+          0.125,
+          0.125
+        ],
+        "occ": 0.04167
+      }
+    ],
+    "scales": [
+      388.8488
+    ],
+    "scale_codes": [
+      0.0
+    ],
+    "atom_codes": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "Ipr": 2.0,
+    "Ppl": 2.0,
+    "Ioc": 1.0,
+    "Mat": 0.0,
+    "Pcr": 1.0,
+    "Ls1": 0.0,
+    "Ls2": 4.0,
+    "Ls3": 0.0,
+    "NLI": 0.0,
+    "Prf": 2.0,
+    "Ins": 12.0,
+    "Rpa": 1.0,
+    "Sym": 1.0,
+    "Hkl": 1.0,
+    "Fou": 2.0,
+    "Sho": 0.0,
+    "Ana": 0.0,
+    "npar": 0,
+    "pcr": "COMM  Backscattering Bank (2theta= 144.845)  Si- Argonne\n! Current global Chi2 (Bragg contrib.) =      7.991    \n! Files => DAT-file: arg_si.dat,  PCR-file: arg_si\n!Job Npr Nph Nba Nex Nsc Nor Dum Iwg Ilo Ias Res Ste Nre Cry Uni Cor Opt Aut\n  -1   9   1  -4   2   0   0   0   0   0   0   0   0   0   0   1   0   0   1\n!\n!Ipr Ppl Ioc Mat Pcr Ls1 Ls2 Ls3 NLI Prf Ins Rpa Sym Hkl Fou Sho Ana\n   2   2   1   0   1   0   4   0   0   2  12   1   1   1   2   0   0\n!\n!  Bkpos        Wdt    Iabscor for Pattern#  1\n    7000.000    8.20     2\n!NCY  Eps  R_at  R_an  R_pr  R_gl    TOF-min      <Step>       TOF-max \n 15  0.05  1.00  1.00  1.00  1.00    2000.0000      5.0000  29995.0000\n!\n! Excluded regions (LowT  HighT) for Pattern#  1\n     1000.10     2000.00\n    29999.00    40000.00\n! \n!\n       0    !Number of refined parameters\n!\n!    Zero       Code      Dtt1      Code       Dtt2     Code  Dtt_1overd    Code  2ThetaBank  -> Patt#  1\n    -9.18766    0.00  7476.91016    0.00    -1.54000    0.00     0.00000    0.00   144.845\n!\n!   Background coefficients/codes  for Pattern#  1  (Fourier cosine series, up to 18 coefficients)\n     152.737       1.429      37.243      12.115      19.181       3.348\n        0.00        0.00        0.00        0.00        0.00        0.00\n       8.737       0.000       0.000       0.000       0.000       0.000\n        0.00        0.00        0.00        0.00        0.00        0.00\n       0.000       0.000       0.000       0.000       0.000       0.000\n        0.00        0.00        0.00        0.00        0.00        0.00\n!-------------------------------------------------------------------------------\n!  Data for PHASE number:   1  ==> Current R_Bragg for Pattern#  1:   2.0375\n!-------------------------------------------------------------------------------\nStandard-Si\n!\n!Nat Dis Ang Pr1 Pr2 Pr3 Jbt Irf Isy Str Furth       ATZ    Nvk Npr More\n   1   0   0 0.0 0.0 1.0   0   0   0   0   0        224.724   0   9   0\n!\n!\nF d -3 m                 <--Space group symbol\n!Atom   Typ       X        Y        Z     Biso       Occ     In Fin N_t Spc /Codes\nSi     SI      0.12500  0.12500  0.12500  0.52448   0.04167   0   0   0    0  # color green conn Si Si 0 2.5\n                  0.00     0.00     0.00     0.00      0.00\n!-------> Profile Parameters for Pattern #   1  ----> Phase #   1\n!  Scale          Extinc       Bov      Str1      Str2      Str3    Strain-Mode\n  388.8488        0.0000    0.0000    0.0000    0.0000    0.0000         0\n       0.00000      0.00      0.00      0.00      0.00      0.00\n!      Sigma-2       Sigma-1       Sigma-0       Sigma-Q   Iso-GStrain     Iso-GSize     Ani-LSize   Size-Model\n        0.0000       33.0419        3.5544        0.0000        0.0000        0.0000        0.0000       0\n          0.00          0.00          0.00          0.00          0.00          0.00          0.00\n!      Gamma-2       Gamma-1       Gamma-0   Iso-LorStrain   Iso-LorSize\n        0.0000        2.5430        0.0000        0.0000        0.0000\n          0.00          0.00          0.00          0.00          0.00\n!     a          b         c        alpha      beta       gamma      # Cell Info\n   5.431342   5.431342   5.431342  90.000000  90.000000  90.000000   # multiple box -1.15 1.15 -1.15 1.15 -0.15 1.15\n    0.00000    0.00000    0.00000    0.00000    0.00000    0.00000\n!      Pref1      Pref2        alph0       beta0       alph1       beta1       alphQ       betaQ\n    0.000000    0.000000    0.000000    0.042210    0.597100    0.009460    0.000000    0.000000\n        0.00        0.00        0.00        0.00        0.00        0.00        0.00        0.00\n!Absorption correction parameters\n   0.00000    0.00   0.00000    0.00            ABS: ABSCOR1  ABSCOR2\n!  2Th1/TOF1    2Th2/TOF2  Pattern to plot\n    2000.000   29995.000       1\n",
+    "source": "knowledge/verification/fullprof/pd-neut-tof_si_jorgensen-von-dreele/arg_si.pcr"
+  },
+  "pd-neut-tof_si-sepd_jorgensen-von-dreele-size-strain": {
+    "atoms": [
+      {
+        "phase": 1,
+        "label": "Si",
+        "group": "Fd-3m:2",
+        "xyz": [
+          0.125,
+          0.125,
+          0.125
+        ],
+        "occ": 0.04167
+      }
+    ],
+    "scales": [
+      388.8488
+    ],
+    "scale_codes": [
+      0.0
+    ],
+    "atom_codes": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "Ipr": 2.0,
+    "Ppl": 2.0,
+    "Ioc": 1.0,
+    "Mat": 0.0,
+    "Pcr": 1.0,
+    "Ls1": 0.0,
+    "Ls2": 4.0,
+    "Ls3": 0.0,
+    "NLI": 0.0,
+    "Prf": 2.0,
+    "Ins": 12.0,
+    "Rpa": 1.0,
+    "Sym": 1.0,
+    "Hkl": 1.0,
+    "Fou": 2.0,
+    "Sho": 0.0,
+    "Ana": 0.0,
+    "npar": 0,
+    "pcr": "COMM  Backscattering Bank (2theta= 144.845)  Si- Argonne\n! Current global Chi2 (Bragg contrib.) =      7.991    \n! Files => DAT-file: arg_si.dat,  PCR-file: arg_si\n!Job Npr Nph Nba Nex Nsc Nor Dum Iwg Ilo Ias Res Ste Nre Cry Uni Cor Opt Aut\n  -1   9   1  -4   2   0   0   0   0   0   0   0   0   0   0   1   0   0   1\n!\n!Ipr Ppl Ioc Mat Pcr Ls1 Ls2 Ls3 NLI Prf Ins Rpa Sym Hkl Fou Sho Ana\n   2   2   1   0   1   0   4   0   0   2  12   1   1   1   2   0   0\n!\n!  Bkpos        Wdt    Iabscor for Pattern#  1\n    7000.000    8.20     2\n!NCY  Eps  R_at  R_an  R_pr  R_gl    TOF-min      <Step>       TOF-max \n 15  0.05  1.00  1.00  1.00  1.00    2000.0000      5.0000  29995.0000\n!\n! Excluded regions (LowT  HighT) for Pattern#  1\n     1000.10     2000.00\n    29999.00    40000.00\n! \n!\n       0    !Number of refined parameters\n!\n!    Zero       Code      Dtt1      Code       Dtt2     Code  Dtt_1overd    Code  2ThetaBank  -> Patt#  1\n    -9.18766    0.00  7476.91016    0.00    -1.54000    0.00     0.00000    0.00   144.845\n!\n!   Background coefficients/codes  for Pattern#  1  (Fourier cosine series, up to 18 coefficients)\n     152.737       1.429      37.243      12.115      19.181       3.348\n        0.00        0.00        0.00        0.00        0.00        0.00\n       8.737       0.000       0.000       0.000       0.000       0.000\n        0.00        0.00        0.00        0.00        0.00        0.00\n       0.000       0.000       0.000       0.000       0.000       0.000\n        0.00        0.00        0.00        0.00        0.00        0.00\n!-------------------------------------------------------------------------------\n!  Data for PHASE number:   1  ==> Current R_Bragg for Pattern#  1:   2.0413\n!-------------------------------------------------------------------------------\nStandard-Si\n!\n!Nat Dis Ang Pr1 Pr2 Pr3 Jbt Irf Isy Str Furth       ATZ    Nvk Npr More\n   1   0   0 0.0 0.0 1.0   0   0   0   0   0     129420.289   0   9   0\n!\n!\nF d -3 m                 <--Space group symbol\n!Atom   Typ       X        Y        Z     Biso       Occ     In Fin N_t Spc /Codes\nSi     SI      0.12500  0.12500  0.12500  0.52448   0.04167   0   0   0    0  # color green conn Si Si 0 2.5\n                  0.00     0.00     0.00     0.00      0.00\n!-------> Profile Parameters for Pattern #   1  ----> Phase #   1\n!  Scale          Extinc       Bov      Str1      Str2      Str3    Strain-Mode\n  388.8488        0.0000    0.0000    0.0000    0.0000    0.0000         0\n       0.00000      0.00      0.00      0.00      0.00      0.00\n!      Sigma-2       Sigma-1       Sigma-0       Sigma-Q   Iso-GStrain     Iso-GSize     Ani-LSize   Size-Model\n       20.0000       38.0419        3.5544        0.0000        0.0000        0.0000        0.0000       0\n          0.00          0.00          0.00          0.00          0.00          0.00          0.00\n!      Gamma-2       Gamma-1       Gamma-0   Iso-LorStrain   Iso-LorSize\n        2.0000        3.5430        0.0000        0.0000        0.0000\n          0.00          0.00          0.00          0.00          0.00\n!     a          b         c        alpha      beta       gamma      # Cell Info\n   5.431342   5.431342   5.431342  90.000000  90.000000  90.000000   # multiple box -1.15 1.15 -1.15 1.15 -0.15 1.15\n    0.00000    0.00000    0.00000    0.00000    0.00000    0.00000\n!      Pref1      Pref2        alph0       beta0       alph1       beta1       alphQ       betaQ\n    0.000000    0.000000    0.000000    0.042210    0.597100    0.009460    0.000000    0.000000\n        0.00        0.00        0.00        0.00        0.00        0.00        0.00        0.00\n!Absorption correction parameters\n   0.00000    0.00   0.00000    0.00            ABS: ABSCOR1  ABSCOR2\n!  2Th1/TOF1    2Th2/TOF2  Pattern to plot\n    2000.000   29995.000       1\n",
+    "source": "knowledge/verification/fullprof/pd-neut-tof_si_jorgensen-von-dreele-size-strain/arg_si.pcr"
+  },
+  "pd-neut-cwl_yap-spodi_3k": {
+    "atoms": [
+      {
+        "phase": 1,
+        "label": "Y",
+        "group": "Pbnm",
+        "xyz": [
+          0.01241,
+          0.55406,
+          0.25
+        ],
+        "occ": 0.5
+      },
+      {
+        "phase": 1,
+        "label": "Al",
+        "group": "Pbnm",
+        "xyz": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "occ": 0.5
+      },
+      {
+        "phase": 1,
+        "label": "O1",
+        "group": "Pbnm",
+        "xyz": [
+          -0.08385,
+          -0.02195,
+          0.25
+        ],
+        "occ": 0.5
+      },
+      {
+        "phase": 1,
+        "label": "O2",
+        "group": "Pbnm",
+        "xyz": [
+          0.2047,
+          0.29483,
+          0.04427
+        ],
+        "occ": 1.0
+      },
+      {
+        "phase": 2,
+        "label": "Al1",
+        "group": "R-3c:H",
+        "xyz": [
+          0.0,
+          0.0,
+          0.33351
+        ],
+        "occ": 0.66667
+      },
+      {
+        "phase": 2,
+        "label": "O1",
+        "group": "R-3c:H",
+        "xyz": [
+          0.3503,
+          0.0,
+          0.25
+        ],
+        "occ": 1.0
+      }
+    ],
+    "scales": [
+      27.897,
+      0.04717
+    ],
+    "scale_codes": [
+      11.0,
+      411.0
+    ],
+    "atom_codes": [
+      61.0,
+      71.0,
+      0.0,
+      161.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      171.0,
+      0.0,
+      81.0,
+      91.0,
+      0.0,
+      181.0,
+      0.0,
+      101.0,
+      111.0,
+      121.0,
+      191.0,
+      0.0,
+      0.0,
+      0.0,
+      201.0,
+      451.0,
+      0.0,
+      441.0,
+      0.0,
+      0.0,
+      461.0,
+      0.0
+    ],
+    "Ipr": 0.0,
+    "Ppl": 0.0,
+    "Ioc": 1.0,
+    "Mat": 1.0,
+    "Pcr": 1.0,
+    "Ls1": 0.0,
+    "Ls2": 4.0,
+    "Ls3": 0.0,
+    "NLI": 0.0,
+    "Prf": -3.0,
+    "Ins": 10.0,
+    "Rpa": -1.0,
+    "Sym": 1.0,
+    "Hkl": 1.0,
+    "Fou": 0.0,
+    "Sho": 1.0,
+    "Ana": 1.0,
+    "npar": 56,
+    "pcr": "COMM YAlO3                                                                      \n! Current global Chi2 (Bragg contrib.) =      10.67    \n! Files => DAT-file: yap_3k,  PCR-file: yap_3k\n!Job Npr Nph Nba Nex Nsc Nor Dum Iwg Ilo Ias Res Ste Nre Cry Uni Cor Opt Aut\n   1   5   2  25   2   0   0   0   0   0   0   0   0   0   0   0   0   1   1\n!\n!Ipr Ppl Ioc Mat Pcr Ls1 Ls2 Ls3 NLI Prf Ins Rpa Sym Hkl Fou Sho Ana\n   0   0   1   1   1   0   4   0   0  -3  10  -1   1   1   0   1   1\n!\n! lambda1 Lambda2    Ratio    Bkpos    Wdt    Cthm     muR   AsyLim   Rpolarz ->Patt# 1\n 1.548160 1.548160  1.0000   10.000 20.0000  0.0000  0.0221  160.00    0.0000\n!\n!NCY  Eps  R_at  R_an  R_pr  R_gl     Thmin       Step       Thmax    PSD    Sent0\n150  0.10  1.00  1.00  1.00  1.00      2.3000   0.050017   151.9500   0.000   0.000\n!\n!2Theta/TOF/E(Kev)   Background  for Pattern#  1\n        4.050     1320.726      471.000\n        4.777     1824.863      481.000\n        6.786     2430.764      491.000\n       13.259     2109.545      501.000\n       18.170     2027.129      511.000\n       23.750     2073.392      521.000\n       32.009     2105.281      531.000\n       36.473     2159.067      541.000\n       47.188     1992.411      551.000\n       52.098     2014.860      561.000\n       59.018     2053.951      351.000\n       69.955     1987.962      341.000\n       80.000     2154.405      331.000\n       90.491     2163.197      321.000\n      101.205     2156.520      311.000\n      106.339     2072.121      301.000\n      108.795     1958.424      291.000\n      112.589     1996.128      281.000\n      119.286     1983.888      271.000\n      128.214     2479.002      261.000\n      133.125     2323.176      251.000\n      140.938     2670.620      241.000\n      145.625     2585.601      231.000\n      148.080     2790.443      221.000\n      151.900     2796.275      211.000\n! \n! Excluded regions (LowT  HighT) for Pattern#  1\n        0.00        4.00\n      153.95      180.00\n! \n!\n      56    !Number of refined parameters\n!\n!  Zero    Code    SyCos    Code   SySin    Code  Lambda     Code MORE ->Patt# 1\n  0.00147   21.0  0.00000    0.0  0.00000    0.0 0.000000    0.00   0\n!-------------------------------------------------------------------------------\n!  Data for PHASE number:   1  ==> Current R_Bragg for Pattern#  1:     0.00\n!-------------------------------------------------------------------------------\nYAlO3                                                                                                                                                               \n!\n!Nat Dis Ang Pr1 Pr2 Pr3 Jbt Irf Isy Str Furth       ATZ    Nvk Npr More\n   4   0   0 0.0 0.0 1.0   0   0   0   0   0       1047.833   0   5   1\n!\n!Jvi Jdi Hel Sol Mom Ter  Brind   RMua    RMub    RMuc   Jtyp  Nsp_Ref Ph_Shift N_Domains\n   0   3   0   0   0   0  1.0000  0.0000  0.0000  0.0000    1      0      0      0\n!\n! Max_dst(dist) (angles)  Bond-Valence Calc.\n      3.0000      0.0000        BVS\n!  N_cations   N_anions     Tolerance(%) / Name or cations/ and Anions\n       2           1                0.00\nY+3  AL+3\nO-2 \n!\nP b n m                  <--Space group symbol\n!Atom Typ       X        Y        Z     Biso       Occ     In Fin N_t Spc /Codes\nY    Y       0.01241  0.55406  0.25000  0.11812   0.50000   0   0   0    0                                                                                  \n               61.00    71.00     0.00   161.00      0.00\nAl   AL      0.00000  0.00000  0.00000  0.12590   0.50000   0   0   0    0                                                                                  \n                0.00     0.00     0.00   171.00      0.00\nO1   O      -0.08385 -0.02195  0.25000  0.05560   0.50000   0   0   0    0                                                                                  \n               81.00    91.00     0.00   181.00      0.00\nO2   O       0.20470  0.29483  0.04427  0.13977   1.00000   0   0   0    0                                                                                  \n              101.00   111.00   121.00   191.00      0.00\n!-------> Profile Parameters for Pattern #  1\n!  Scale        Shape1      Bov      Str1      Str2      Str3   Strain-Model\n  27.897       0.12522   0.00000   0.00000   0.00000   0.00000       0\n    11.00000   381.000     0.000     0.000     0.000     0.000\n!       U         V          W           X          Y        GauSiz   LorSiz Size-Model\n   0.038898  -0.046205   0.105864   0.000000   0.000000   0.000000   0.000000    0\n    131.000    141.000    151.000      0.000      0.000      0.000      0.000\n!     a          b         c        alpha      beta       gamma      #Cell Info\n   5.172419   5.326590   7.360847  90.000000  90.000000  90.000000                                                                                   \n   31.00000   41.00000   51.00000    0.00000    0.00000    0.00000\n!  Pref1    Pref2      Asy1     Asy2     Asy3     Asy4  \n  0.00000  0.00000  0.21545  0.00305 -0.27813  0.05563\n     0.00     0.00   361.00   371.00   391.00   401.00\n!-------------------------------------------------------------------------------\n!  Data for PHASE number:   2  ==> Current R_Bragg for Pattern#  1:     0.00\n!-------------------------------------------------------------------------------\nAl2O3                                                                                                                                                               \n!\n!Nat Dis Ang Pr1 Pr2 Pr3 Jbt Irf Isy Str Furth       ATZ    Nvk Npr More\n   2   0   0 0.0 0.0 1.0   0   0   0   0   0       3612.974   0   5   0\n!\nR -3 c                   <--Space group symbol\n!Atom Typ       X        Y        Z     Biso       Occ     In Fin N_t Spc /Codes\nAl1  Al      0.00000  0.00000  0.33351 -0.12809   0.66667   0   0   0    0                                                                                  \n                0.00     0.00   201.00   451.00      0.00\nO1   O       0.35030  0.00000  0.25000  1.22884   1.00000   0   0   0    0                                                                                  \n              441.00     0.00     0.00   461.00      0.00\n!-------> Profile Parameters for Pattern #  1\n!  Scale        Shape1      Bov      Str1      Str2      Str3   Strain-Model\n 0.47170E-01   0.12522   0.00000   0.00000   0.00000   0.00000       0\n   411.00000   381.000     0.000     0.000     0.000     0.000\n!       U         V          W           X          Y        GauSiz   LorSiz Size-Model\n   0.038898  -0.046205   0.105864   0.000000   0.000000   0.000000   0.000000    0\n    131.000    141.000    151.000      0.000      0.000      0.000      0.000\n!     a          b         c        alpha      beta       gamma      #Cell Info\n   4.756605   4.756605  12.973073  90.000000  90.000000 120.000000                                                                                   \n  421.00000  421.00000  431.00000    0.00000    0.00000  421.00000\n!  Pref1    Pref2      Asy1     Asy2     Asy3     Asy4  \n  0.00000  0.00000  0.21545  0.00305 -0.27813  0.05563\n     0.00     0.00   361.00   371.00   391.00   401.00\n!  2Th1/TOF1    2Th2/TOF2  Pattern # 1\n      10.300     147.000\n",
+    "source": "edi PR #75"
+  }
+}

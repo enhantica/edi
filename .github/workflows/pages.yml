@@ -1,0 +1,77 @@
+# The documentation site on GitHub Pages, with an unlisted /webapp/ folder reserved for the web app.
+# The site is built from main (or by dispatch) with the notebooks executed for rendering, which needs
+# crysta's SDK; /webapp/ carries a placeholder page marked noindex and is disallowed in robots.txt,
+# and nothing in the site links it.
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: build the site
+    if: github.event.pull_request.head.repo.fork == false
+    environment: crysta-sdk
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-pixi
+      - name: Prepare notebooks
+        run: pixi run notebook-prepare
+      - name: Mint a crysta installation token
+        id: crysta-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.ENHANTICA_APP_ID }}
+          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          owner: enhantica
+          repositories: crysta
+          permission-contents: read
+          permission-actions: read
+      - name: Build the native code
+        run: pixi run core-build
+        env:
+          GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
+      - name: Execute notebooks for rendering
+        run: pixi run notebook-exec-ci
+        env:
+          GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
+      - name: Strict docs build
+        run: pixi run docs-build
+      - name: Reserve the unlisted web-app folder
+        run: |
+          mkdir -p site/webapp
+          cp tools/public-release/webapp/index.html site/webapp/index.html
+          printf 'User-agent: *\nDisallow: /webapp/\n' >> site/robots.txt
+      - name: Upload the site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    name: deploy the site
+    needs: build
+    # A Pages site can be publicly visible, so Pages is enabled only once the repository is public
+    # (docs/dev/public-release-checklist.md, after the swap); until then the site is built and checked,
+    # and the deploy skips.
+    if: ${{ !github.event.repository.private }}
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,137 @@
+{
+  "schema": 1,
+  "provenance": {
+    "role": "independent decimal-standard-uncertainty oracle",
+    "engine": "easydiffraction/diffraction-lib uncertainties.ufloat_fromstr",
+    "commit": "39ada82c8aef8b4657c4ae8c68e888668db0f38e",
+    "read_path": "src/easydiffraction/io/cif/serialize.py::_set_param_from_cif -> src/easydiffraction/utils/utils.py::str_to_ufloat",
+    "empty_bracket_contract": "Empty brackets mark refinement intent, not a zero esd."
+  },
+  "integer_reference_provenance": {
+    "role": "independent integer-bracket IEEE-754 oracle",
+    "engine": "easydiffraction/diffraction-lib uncertainties.ufloat_fromstr",
+    "commit": "39ada82c8aef8b4657c4ae8c68e888668db0f38e",
+    "arithmetic": "N / 10^ndec"
+  },
+  "decimal_absolute": [
+    {
+      "token": "383.2(1.2)",
+      "value_hex": "0x1.7f33333333333p+8",
+      "esd_hex": "0x1.3333333333333p+0"
+    },
+    {
+      "token": "3.89(0.02)",
+      "value_hex": "0x1.f1eb851eb851fp+1",
+      "esd_hex": "0x1.47ae147ae147bp-6"
+    },
+    {
+      "token": "383.2(.2)",
+      "value_hex": "0x1.7f33333333333p+8",
+      "esd_hex": "0x1.999999999999ap-3"
+    },
+    {
+      "token": "383.2(1.)",
+      "value_hex": "0x1.7f33333333333p+8",
+      "esd_hex": "0x1.0000000000000p+0"
+    },
+    {
+      "token": "100(2.5)",
+      "value_hex": "0x1.9000000000000p+6",
+      "esd_hex": "0x1.4000000000000p+1"
+    },
+    {
+      "token": ".5(1.5)",
+      "value_hex": "0x1.0000000000000p-1",
+      "esd_hex": "0x1.8000000000000p+0"
+    }
+  ],
+  "reference_mantissa_acceptance": [
+    {
+      "token": "1.(5)",
+      "value_hex": "0x1.0000000000000p+0",
+      "esd_hex": "0x1.4000000000000p+2",
+      "free": true
+    },
+    {
+      "token": "18.(1)",
+      "value_hex": "0x1.2000000000000p+4",
+      "esd_hex": "0x1.0000000000000p+0",
+      "free": true
+    },
+    {
+      "token": ".5(3)",
+      "value_hex": "0x1.0000000000000p-1",
+      "esd_hex": "0x1.3333333333333p-2",
+      "free": true
+    },
+    {
+      "token": ".5",
+      "value_hex": "0x1.0000000000000p-1",
+      "esd_hex": null,
+      "free": false
+    }
+  ],
+  "legacy_integer_reference": [
+    {
+      "token": "3.89(2)",
+      "value_hex": "0x1.f1eb851eb851fp+1",
+      "esd_hex": "0x1.47ae147ae147bp-6"
+    },
+    {
+      "token": "383.2(12)",
+      "value_hex": "0x1.7f33333333333p+8",
+      "esd_hex": "0x1.3333333333333p+0"
+    },
+    {
+      "token": "383.2(1)",
+      "value_hex": "0x1.7f33333333333p+8",
+      "esd_hex": "0x1.999999999999ap-4"
+    }
+  ],
+  "states": [
+    {
+      "token": "3.89",
+      "value_hex": "0x1.f1eb851eb851fp+1",
+      "esd_hex": null,
+      "free": false
+    },
+    {
+      "token": "3.89(2)",
+      "value_hex": "0x1.f1eb851eb851fp+1",
+      "esd_hex": "0x1.47ae147ae147bp-6",
+      "free": true
+    },
+    {
+      "token": "3.89(0)",
+      "value_hex": "0x1.f1eb851eb851fp+1",
+      "esd_hex": "0x0.0p+0",
+      "free": true
+    },
+    {
+      "token": "3.89()",
+      "value_hex": "0x1.f1eb851eb851fp+1",
+      "esd_hex": null,
+      "free": true
+    }
+  ],
+  "strict_rejections": [
+    "1.2e3(4)"
+  ],
+  "non_finite_rejections": [
+    "inf",
+    "+inf",
+    "-inf",
+    "nan",
+    "NaN",
+    "1e999",
+    "-1e999",
+    "inf(1)",
+    "nan(1)"
+  ],
+  "malformed_rejections": [
+    "3.89(1.2.3)",
+    "3.89(a)",
+    "3.89(-1)",
+    "3.89(1.2"
+  ]
+}

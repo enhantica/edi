@@ -1,0 +1,35 @@
+{
+  "cif_twin": {
+    "role": "EDI-derived regression twin for exact representation parity",
+    "value_source": "project/structures/ncaf.edi"
+  },
+  "crysta": {
+    "loader": "crysta::load_project",
+    "pin": "e1f0452810006d1dd529f26a26cbcd3ad835f33c",
+    "source_path": "tools/spikes/ncaf_5bank_edi_converged_jorgensen"
+  },
+  "files": {
+    "crysta_reference.json": "6fc151f6239298589fe01da8bd8f959709a7990542a9771c1a9f58239b480f2c",
+    "ncaf.cif": "33f0f7bc0ba06f1bed69f10a8fe4024a0bf3f5eec55770d5e6adde71b0ff0172",
+    "project/analysis/analysis.edi": "2a615ba0fdaa2475f3647f0218268e7ca09cadd75bcb8fc06d472d113ce40b45",
+    "project/experiments/wish_1_10.edi": "e88b7079cdf8bdc71d1a7f07a2990e802e031595ed1e751c201aa316a6d5f775",
+    "project/experiments/wish_2_9.edi": "7964ece70aec24e0bffe09bc582829277e4fe55e04cf2ebced7f65f12054ca9a",
+    "project/experiments/wish_3_8.edi": "e511f21db3647ca1ddbddeaa66cda51ae14313b1b7508c9000d58784c5d5d59e",
+    "project/experiments/wish_4_7.edi": "bddd740e35a81697be7903c24255127bd7766de0e57355eb304656d28e346214",
+    "project/experiments/wish_5_6.edi": "f9b5a29d9c5d6153ceabb9418c1a5661051315a9a88b7be8cef02c1eabe3dc09",
+    "project/structures/ncaf.edi": "e1dd3cb74a2f0f33b2fbac5e1fb91441aa9719820576e950239cdc18de3d9183",
+    "published_cod_1000236.cif": "d97c83cbe11972944a052ff68d462f07415b3c2cda9cda12dc868edb98978d27"
+  },
+  "published_structure": {
+    "authors": "G. Courbion and G. F\u00e9rey",
+    "cod_id": 1000236,
+    "cod_revision": 130149,
+    "cod_sha256": "fef30351157a406336d44b35a416bfd848810b54112077b733b0fd7ca6142ae9",
+    "doi": "10.1016/0022-4596(88)90239-3",
+    "journal": "Journal of Solid State Chemistry 76 (1988) 426-431",
+    "role": "independent published structural-value oracle",
+    "source_file": "published_cod_1000236.cif",
+    "source_url": "https://www.crystallography.net/cod/1000236.cif@130149"
+  },
+  "schema": 2
+}

@@ -1,0 +1,6655 @@
+{
+ "classification": {
+  "members": {
+   "AbsorptionBase": {
+    "parameters": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CategoryItem.parameters",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "type": {
+     "need": {
+      "by": "counterpart",
+      "ref": "SwitchableCategoryBase.type",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "AbsorptionFactory": {
+    "create": {
+     "need": {
+      "by": "deviation",
+      "ref": "D54",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "create_default_for": {
+     "need": {
+      "by": "deviation",
+      "ref": "D54",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "default_tag": {
+     "need": {
+      "by": "deviation",
+      "ref": "D54",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "register": {
+     "need": {
+      "by": "deviation",
+      "ref": "D54",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "registry": {
+     "need": {
+      "by": "deviation",
+      "ref": "D54",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "supported_tags": {
+     "need": {
+      "by": "deviation",
+      "ref": "D54",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "Analysis": {
+    "calculate": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Analysis.calculate",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "descent": {
+     "need": {
+      "by": "deviation",
+      "ref": "D56",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "fit": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Analysis.fit",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "fitting_mode": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Analysis.fitting_mode",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "AtomSite": {
+    "adp_iso": {
+     "need": {
+      "by": "counterpart",
+      "ref": "AtomSite.adp_iso",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "adp_type": {
+     "need": {
+      "by": "counterpart",
+      "ref": "AtomSite.adp_type",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "fract_x": {
+     "need": {
+      "by": "counterpart",
+      "ref": "AtomSite.fract_x",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "fract_y": {
+     "need": {
+      "by": "counterpart",
+      "ref": "AtomSite.fract_y",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "fract_z": {
+     "need": {
+      "by": "counterpart",
+      "ref": "AtomSite.fract_z",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "id": {
+     "need": {
+      "by": "counterpart",
+      "ref": "AtomSite.id",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "occupancy": {
+     "need": {
+      "by": "counterpart",
+      "ref": "AtomSite.occupancy",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "parameters": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CategoryItem.parameters",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "type_symbol": {
+     "need": {
+      "by": "counterpart",
+      "ref": "AtomSite.type_symbol",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "wyckoff_letter": {
+     "need": {
+      "by": "counterpart",
+      "ref": "AtomSite.wyckoff_letter",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "AtomSites": {
+    "add": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CategoryCollection.add",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "clear": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.clear",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "create": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CategoryCollection.create",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "items": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.items",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "keys": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.keys",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "names": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.names",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "remove": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.remove",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "values": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.values",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "AtomSitesCartnTransform": {
+    "axes": {
+     "need": {
+      "by": "deviation",
+      "ref": "D72",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "mat_11": {
+     "need": {
+      "by": "deviation",
+      "ref": "D72",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "mat_12": {
+     "need": {
+      "by": "deviation",
+      "ref": "D72",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "mat_13": {
+     "need": {
+      "by": "deviation",
+      "ref": "D72",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "mat_21": {
+     "need": {
+      "by": "deviation",
+      "ref": "D72",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "mat_22": {
+     "need": {
+      "by": "deviation",
+      "ref": "D72",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "mat_23": {
+     "need": {
+      "by": "deviation",
+      "ref": "D72",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "mat_31": {
+     "need": {
+      "by": "deviation",
+      "ref": "D72",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "mat_32": {
+     "need": {
+      "by": "deviation",
+      "ref": "D72",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "mat_33": {
+     "need": {
+      "by": "deviation",
+      "ref": "D72",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "BankMetric": {
+    "chi_square": {
+     "need": {
+      "by": "deviation",
+      "ref": "D47",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "n_points": {
+     "need": {
+      "by": "deviation",
+      "ref": "D47",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "name": {
+     "need": {
+      "by": "deviation",
+      "ref": "D47",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "rwp": {
+     "need": {
+      "by": "deviation",
+      "ref": "D47",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "BeamModeEnum": {
+    "CONSTANT_WAVELENGTH": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "TIME_OF_FLIGHT": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "BraggPdExperiment": {
+    "absorption": {
+     "need": {
+      "by": "counterpart",
+      "ref": "BraggPdExperiment.absorption",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "background": {
+     "need": {
+      "by": "counterpart",
+      "ref": "BraggPdExperiment.background",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "background_origin": {
+     "need": {
+      "by": "deviation",
+      "ref": "D75",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "background_terms": {
+     "need": {
+      "by": "deviation",
+      "ref": "D75",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "background_type": {
+     "need": {
+      "by": "deviation",
+      "ref": "D75",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "background_x_max": {
+     "need": {
+      "by": "deviation",
+      "ref": "D75",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "background_x_min": {
+     "need": {
+      "by": "deviation",
+      "ref": "D75",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "data": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PdExperimentBase.data",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "dataset_weight": {
+     "need": {
+      "by": "deviation",
+      "ref": "D7",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "excluded_regions": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PdExperimentBase.excluded_regions",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "experiment_type": {
+     "need": {
+      "by": "counterpart",
+      "ref": "ExperimentBase.experiment_type",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "instrument": {
+     "need": {
+      "by": "counterpart",
+      "ref": "BraggPdExperiment.instrument",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "linked_structure": {
+     "need": {
+      "by": "deviation",
+      "ref": "D50",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "name": {
+     "need": {
+      "by": "counterpart",
+      "ref": "ExperimentBase.name",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "parameters": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CategoryOwner.parameters",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "peak": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PdExperimentBase.peak",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "preferred_orientation": {
+     "need": {
+      "by": "counterpart",
+      "ref": "BraggPdExperiment.preferred_orientation",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "refln": {
+     "need": {
+      "by": "counterpart",
+      "ref": "BraggPdExperiment.refln",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "Cell": {
+    "angle_alpha": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Cell.angle_alpha",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "angle_beta": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Cell.angle_beta",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "angle_gamma": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Cell.angle_gamma",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "length_a": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Cell.length_a",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "length_b": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Cell.length_b",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "length_c": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Cell.length_c",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "parameters": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CategoryItem.parameters",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "CwlInstrumentBase": {
+    "parameters": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CategoryItem.parameters",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "CwlPdInstrumentBase": {
+    "parameters": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CategoryItem.parameters",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "CwlPdNeutronInstrument": {
+    "calib_sample_displacement": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CwlPdInstrumentBase.calib_sample_displacement",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "calib_sample_transparency": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CwlPdInstrumentBase.calib_sample_transparency",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "calib_twotheta_offset": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CwlPdInstrumentBase.calib_twotheta_offset",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "parameters": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CategoryItem.parameters",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "setup_wavelength": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CwlInstrumentBase.setup_wavelength",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "CwlPdXrayInstrument": {
+    "calib_sample_displacement": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CwlPdInstrumentBase.calib_sample_displacement",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "calib_sample_transparency": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CwlPdInstrumentBase.calib_sample_transparency",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "calib_twotheta_offset": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CwlPdInstrumentBase.calib_twotheta_offset",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "parameters": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CategoryItem.parameters",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "setup_monochromator_twotheta": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CwlPdXrayInstrument.setup_monochromator_twotheta",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "setup_polarization_coefficient": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CwlPdXrayInstrument.setup_polarization_coefficient",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "setup_wavelength": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CwlInstrumentBase.setup_wavelength",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "CwlPseudoVoigt": {
+    "broad_gauss_u": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CwlBroadeningMixin.broad_gauss_u",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_gauss_v": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CwlBroadeningMixin.broad_gauss_v",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_gauss_w": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CwlBroadeningMixin.broad_gauss_w",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_lorentz_x": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CwlBroadeningMixin.broad_lorentz_x",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_lorentz_y": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CwlBroadeningMixin.broad_lorentz_y",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "cutoff_fwhm": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CwlBroadeningMixin.cutoff_fwhm",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "parameters": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CategoryItem.parameters",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "show_supported": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PeakBase.show_supported",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "type": {
+     "need": {
+      "by": "counterpart",
+      "ref": "SwitchableCategoryBase.type",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "CwlPseudoVoigtBerarBaldinozziAsymmetry": {
+    "asym_beba_a0": {
+     "need": {
+      "by": "counterpart",
+      "ref": "BerarBaldinozziAsymmetryMixin.asym_beba_a0",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "asym_beba_a1": {
+     "need": {
+      "by": "counterpart",
+      "ref": "BerarBaldinozziAsymmetryMixin.asym_beba_a1",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "asym_beba_b0": {
+     "need": {
+      "by": "counterpart",
+      "ref": "BerarBaldinozziAsymmetryMixin.asym_beba_b0",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "asym_beba_b1": {
+     "need": {
+      "by": "counterpart",
+      "ref": "BerarBaldinozziAsymmetryMixin.asym_beba_b1",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "asym_beba_limit": {
+     "need": {
+      "by": "deviation",
+      "ref": "D62",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_gauss_u": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CwlBroadeningMixin.broad_gauss_u",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_gauss_v": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CwlBroadeningMixin.broad_gauss_v",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_gauss_w": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CwlBroadeningMixin.broad_gauss_w",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_lorentz_x": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CwlBroadeningMixin.broad_lorentz_x",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_lorentz_y": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CwlBroadeningMixin.broad_lorentz_y",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "cutoff_fwhm": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CwlBroadeningMixin.cutoff_fwhm",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "parameters": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CategoryItem.parameters",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "show_supported": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PeakBase.show_supported",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "type": {
+     "need": {
+      "by": "counterpart",
+      "ref": "SwitchableCategoryBase.type",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "CwlThompsonCoxHastings": {
+    "asym_fcj_1": {
+     "need": {
+      "by": "counterpart",
+      "ref": "FcjAsymmetryMixin.asym_fcj_1",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "asym_fcj_2": {
+     "need": {
+      "by": "counterpart",
+      "ref": "FcjAsymmetryMixin.asym_fcj_2",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_gauss_u": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CwlBroadeningMixin.broad_gauss_u",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_gauss_v": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CwlBroadeningMixin.broad_gauss_v",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_gauss_w": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CwlBroadeningMixin.broad_gauss_w",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_lorentz_x": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CwlBroadeningMixin.broad_lorentz_x",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_lorentz_y": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CwlBroadeningMixin.broad_lorentz_y",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "cutoff_fwhm": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CwlBroadeningMixin.cutoff_fwhm",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "parameters": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CategoryItem.parameters",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "show_supported": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PeakBase.show_supported",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "type": {
+     "need": {
+      "by": "counterpart",
+      "ref": "SwitchableCategoryBase.type",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "CylinderHewatAbsorption": {
+    "abscor1": {
+     "need": {
+      "by": "deviation",
+      "ref": "D50",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "abscor2": {
+     "need": {
+      "by": "deviation",
+      "ref": "D50",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "mu_r": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CylinderHewatAbsorption.mu_r",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "parameters": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CategoryItem.parameters",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "type": {
+     "need": {
+      "by": "counterpart",
+      "ref": "SwitchableCategoryBase.type",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "Diagnostic": {
+    "code": {
+     "need": {
+      "by": "deviation",
+      "ref": "D32",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "message": {
+     "need": {
+      "by": "deviation",
+      "ref": "D32",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "params": {
+     "need": {
+      "by": "deviation",
+      "ref": "D32",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "path": {
+     "need": {
+      "by": "deviation",
+      "ref": "D32",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "severity": {
+     "need": {
+      "by": "deviation",
+      "ref": "D32",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "source": {
+     "need": {
+      "by": "deviation",
+      "ref": "D32",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "DomainValidationError": {
+    "add_note": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "args": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "with_traceback": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "ExpandedAtomSites": {
+    "atom_site_id": {
+     "need": {
+      "by": "deviation",
+      "ref": "D69",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "cartn_x": {
+     "need": {
+      "by": "deviation",
+      "ref": "D69",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "cartn_y": {
+     "need": {
+      "by": "deviation",
+      "ref": "D69",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "cartn_z": {
+     "need": {
+      "by": "deviation",
+      "ref": "D69",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "cluster_id": {
+     "need": {
+      "by": "deviation",
+      "ref": "D69",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "fract_x": {
+     "need": {
+      "by": "deviation",
+      "ref": "D69",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "fract_y": {
+     "need": {
+      "by": "deviation",
+      "ref": "D69",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "fract_z": {
+     "need": {
+      "by": "deviation",
+      "ref": "D69",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "id": {
+     "need": {
+      "by": "deviation",
+      "ref": "D69",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "occupancy": {
+     "need": {
+      "by": "deviation",
+      "ref": "D69",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "site_symmetry": {
+     "need": {
+      "by": "deviation",
+      "ref": "D69",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "u_iso": {
+     "need": {
+      "by": "deviation",
+      "ref": "D69",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "ExperimentBase": {
+    "dataset_weight": {
+     "need": {
+      "by": "deviation",
+      "ref": "D7",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "experiment_type": {
+     "need": {
+      "by": "counterpart",
+      "ref": "ExperimentBase.experiment_type",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "linked_structure": {
+     "need": {
+      "by": "deviation",
+      "ref": "D50",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "name": {
+     "need": {
+      "by": "counterpart",
+      "ref": "ExperimentBase.name",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "parameters": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CategoryOwner.parameters",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "ExperimentFactory": {
+    "create": {
+     "need": {
+      "by": "deviation",
+      "ref": "D54",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "create_default_for": {
+     "need": {
+      "by": "deviation",
+      "ref": "D54",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "default_tag": {
+     "need": {
+      "by": "deviation",
+      "ref": "D54",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "from_cif_path": {
+     "need": {
+      "by": "counterpart",
+      "ref": "ExperimentFactory.from_cif_path",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "from_cif_str": {
+     "need": {
+      "by": "counterpart",
+      "ref": "ExperimentFactory.from_cif_str",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "from_data_path": {
+     "need": {
+      "by": "counterpart",
+      "ref": "ExperimentFactory.from_data_path",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "from_dict": {
+     "need": {
+      "by": "deviation",
+      "ref": "D51",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "from_scratch": {
+     "need": {
+      "by": "counterpart",
+      "ref": "ExperimentFactory.from_scratch",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "register": {
+     "need": {
+      "by": "deviation",
+      "ref": "D54",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "registry": {
+     "need": {
+      "by": "deviation",
+      "ref": "D54",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "supported_tags": {
+     "need": {
+      "by": "deviation",
+      "ref": "D54",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "ExperimentType": {
+    "beam_mode": {
+     "need": {
+      "by": "counterpart",
+      "ref": "ExperimentType.beam_mode",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "radiation_probe": {
+     "need": {
+      "by": "counterpart",
+      "ref": "ExperimentType.radiation_probe",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "sample_form": {
+     "need": {
+      "by": "counterpart",
+      "ref": "ExperimentType.sample_form",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "scattering_type": {
+     "need": {
+      "by": "counterpart",
+      "ref": "ExperimentType.scattering_type",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "Experiments": {
+    "add": {
+     "need": {
+      "by": "counterpart",
+      "ref": "DatablockCollection.add",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "add_from_cif_path": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Experiments.add_from_cif_path",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "add_from_cif_str": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Experiments.add_from_cif_str",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "add_from_data_path": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Experiments.add_from_data_path",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "add_from_edi_path": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Experiments.add_from_edi_path",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "clear": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.clear",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "create": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Experiments.create",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "items": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.items",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "keys": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.keys",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "names": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.names",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "remove": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.remove",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "show_names": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Experiments.show_names",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "values": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.values",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "FitPreamble": {
+    "pre_fit": {
+     "need": {
+      "by": "deviation",
+      "ref": "D40",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "FitResultBase": {
+    "banks": {
+     "need": {
+      "by": "deviation",
+      "ref": "D47",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "converged": {
+     "need": {
+      "by": "deviation",
+      "ref": "D47",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "fitting_time": {
+     "need": {
+      "by": "counterpart",
+      "ref": "FitResultBase.fitting_time",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "iterations": {
+     "need": {
+      "by": "deviation",
+      "ref": "D47",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "reduced_chi_square": {
+     "need": {
+      "by": "deviation",
+      "ref": "D47",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "result_kind": {
+     "need": {
+      "by": "counterpart",
+      "ref": "FitResultBase.result_kind",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "rwp": {
+     "need": {
+      "by": "deviation",
+      "ref": "D47",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "status": {
+     "need": {
+      "by": "deviation",
+      "ref": "D47",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "success": {
+     "need": {
+      "by": "counterpart",
+      "ref": "FitResultBase.success",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "uncertainty": {
+     "need": {
+      "by": "deviation",
+      "ref": "D47",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "values": {
+     "need": {
+      "by": "deviation",
+      "ref": "D47",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "FitStatus": {
+    "CANCELLED": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "DONE": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "ERROR": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "MAX_ITER": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "NO_STEP": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "SUPERSEDED": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "UNAVAILABLE": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "Geom": {
+    "bond_distance_inc": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Geom.bond_distance_inc",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "min_bond_distance_cutoff": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Geom.min_bond_distance_cutoff",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "GeomBond": {
+    "atom_site_label_1": {
+     "need": {
+      "by": "deviation",
+      "ref": "D71",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "atom_site_label_2": {
+     "need": {
+      "by": "deviation",
+      "ref": "D71",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "distance": {
+     "need": {
+      "by": "deviation",
+      "ref": "D71",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "expanded_atom_site_id_1": {
+     "need": {
+      "by": "deviation",
+      "ref": "D71",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "expanded_atom_site_id_2": {
+     "need": {
+      "by": "deviation",
+      "ref": "D71",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "id": {
+     "need": {
+      "by": "deviation",
+      "ref": "D71",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "site_symmetry_1": {
+     "need": {
+      "by": "deviation",
+      "ref": "D71",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "site_symmetry_2": {
+     "need": {
+      "by": "deviation",
+      "ref": "D71",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "InstrumentBase": {
+    "parameters": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CategoryItem.parameters",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "InstrumentFactory": {
+    "create": {
+     "need": {
+      "by": "deviation",
+      "ref": "D54",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "create_default_for": {
+     "need": {
+      "by": "deviation",
+      "ref": "D54",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "default_tag": {
+     "need": {
+      "by": "deviation",
+      "ref": "D54",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "register": {
+     "need": {
+      "by": "deviation",
+      "ref": "D54",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "registry": {
+     "need": {
+      "by": "deviation",
+      "ref": "D54",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "supported_tags": {
+     "need": {
+      "by": "deviation",
+      "ref": "D54",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "IoError": {
+    "add_note": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "args": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "with_traceback": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "IterationRecord": {
+    "iteration": {
+     "need": {
+      "by": "deviation",
+      "ref": "D40",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "reduced_chi_square": {
+     "need": {
+      "by": "deviation",
+      "ref": "D40",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "rwp": {
+     "need": {
+      "by": "deviation",
+      "ref": "D40",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "LeastSquaresFitResult": {
+    "banks": {
+     "need": {
+      "by": "deviation",
+      "ref": "D47",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "converged": {
+     "need": {
+      "by": "deviation",
+      "ref": "D47",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "fitting_time": {
+     "need": {
+      "by": "counterpart",
+      "ref": "FitResultBase.fitting_time",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "iterations": {
+     "need": {
+      "by": "counterpart",
+      "ref": "FitResultBase.iterations",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "reduced_chi_square": {
+     "need": {
+      "by": "counterpart",
+      "ref": "FitResultBase.reduced_chi_square",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "result_kind": {
+     "need": {
+      "by": "counterpart",
+      "ref": "FitResultBase.result_kind",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "rwp": {
+     "need": {
+      "by": "deviation",
+      "ref": "D47",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "status": {
+     "need": {
+      "by": "deviation",
+      "ref": "D47",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "success": {
+     "need": {
+      "by": "counterpart",
+      "ref": "FitResultBase.success",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "uncertainty": {
+     "need": {
+      "by": "deviation",
+      "ref": "D47",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "values": {
+     "need": {
+      "by": "deviation",
+      "ref": "D47",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "LineSegment": {
+    "intensity": {
+     "need": {
+      "by": "deviation",
+      "ref": "D48",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "parameters": {
+     "need": {
+      "by": "deviation",
+      "ref": "D48",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "position": {
+     "need": {
+      "by": "deviation",
+      "ref": "D48",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "LinkedStructure": {
+    "parameters": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CategoryItem.parameters",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "scale": {
+     "need": {
+      "by": "counterpart",
+      "ref": "LinkedStructure.scale",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "structure_id": {
+     "need": {
+      "by": "counterpart",
+      "ref": "LinkedStructure.structure_id",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "NoAbsorption": {
+    "parameters": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CategoryItem.parameters",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "type": {
+     "need": {
+      "by": "counterpart",
+      "ref": "SwitchableCategoryBase.type",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "Parameter": {
+    "description": {
+     "need": {
+      "by": "counterpart",
+      "ref": "GenericDescriptorBase.description",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "free": {
+     "need": {
+      "by": "counterpart",
+      "ref": "GenericParameter.free",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "is_attached": {
+     "need": {
+      "by": "deviation",
+      "ref": "D68",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "max_value": {
+     "need": {
+      "by": "deviation",
+      "ref": "D5",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "min_value": {
+     "need": {
+      "by": "deviation",
+      "ref": "D5",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "name": {
+     "need": {
+      "by": "counterpart",
+      "ref": "GenericDescriptorBase.name",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "start_uncertainty": {
+     "need": {
+      "by": "counterpart",
+      "ref": "FitParameterItem.start_uncertainty",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "start_value": {
+     "need": {
+      "by": "counterpart",
+      "ref": "FitParameterItem.start_value",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "uncertainty": {
+     "need": {
+      "by": "deviation",
+      "ref": "D4",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "units": {
+     "need": {
+      "by": "counterpart",
+      "ref": "GenericNumericDescriptor.units",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "value": {
+     "need": {
+      "by": "counterpart",
+      "ref": "GenericDescriptorBase.value",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "PdCwlData": {
+    "axis": {
+     "need": {
+      "by": "deviation",
+      "ref": "D48",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "calc_status": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PdDataBase.calc_status",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "d_spacing": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PdDataBase.d_spacing",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "intensity_bkg": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PdDataBase.intensity_bkg",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "intensity_calc": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PdDataBase.intensity_calc",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "intensity_meas": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PdDataBase.intensity_meas",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "intensity_meas_su": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PdDataBase.intensity_meas_su",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "two_theta": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PdCwlData.two_theta",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "PdDataBase": {
+    "axis": {
+     "need": {
+      "by": "deviation",
+      "ref": "D48",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "calc_status": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PdDataBase.calc_status",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "d_spacing": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PdDataBase.d_spacing",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "intensity_bkg": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PdDataBase.intensity_bkg",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "intensity_calc": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PdDataBase.intensity_calc",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "intensity_meas": {
+     "need": {
+      "by": "deviation",
+      "ref": "D48",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "intensity_meas_su": {
+     "need": {
+      "by": "deviation",
+      "ref": "D48",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "PdExperimentBase": {
+    "data": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PdExperimentBase.data",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "dataset_weight": {
+     "need": {
+      "by": "deviation",
+      "ref": "D7",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "excluded_regions": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PdExperimentBase.excluded_regions",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "experiment_type": {
+     "need": {
+      "by": "counterpart",
+      "ref": "ExperimentBase.experiment_type",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "linked_structure": {
+     "need": {
+      "by": "deviation",
+      "ref": "D50",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "name": {
+     "need": {
+      "by": "counterpart",
+      "ref": "ExperimentBase.name",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "parameters": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CategoryOwner.parameters",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "peak": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PdExperimentBase.peak",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "refln": {
+     "need": {
+      "by": "counterpart",
+      "ref": "BraggPdExperiment.refln",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "PdTofData": {
+    "axis": {
+     "need": {
+      "by": "deviation",
+      "ref": "D48",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "calc_status": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PdDataBase.calc_status",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "d_spacing": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PdDataBase.d_spacing",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "intensity_bkg": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PdDataBase.intensity_bkg",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "intensity_calc": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PdDataBase.intensity_calc",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "intensity_meas": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PdDataBase.intensity_meas",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "intensity_meas_su": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PdDataBase.intensity_meas_su",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "time_of_flight": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PdTofData.time_of_flight",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "PeakBase": {
+    "cutoff_fwhm": {
+     "need": {
+      "by": "deviation",
+      "ref": "D50",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "parameters": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CategoryItem.parameters",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "show_supported": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PeakBase.show_supported",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "type": {
+     "need": {
+      "by": "counterpart",
+      "ref": "SwitchableCategoryBase.type",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "PeakFactory": {
+    "create": {
+     "need": {
+      "by": "deviation",
+      "ref": "D54",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "create_default_for": {
+     "need": {
+      "by": "deviation",
+      "ref": "D54",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "default_tag": {
+     "need": {
+      "by": "deviation",
+      "ref": "D54",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "register": {
+     "need": {
+      "by": "deviation",
+      "ref": "D54",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "registry": {
+     "need": {
+      "by": "deviation",
+      "ref": "D54",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "show_supported": {
+     "need": {
+      "by": "counterpart",
+      "ref": "FactoryBase.show_supported",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "supported_tags": {
+     "need": {
+      "by": "deviation",
+      "ref": "D54",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "PeakProfileTypeEnum": {
+    "CWL_PSEUDO_VOIGT": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "CWL_PSEUDO_VOIGT_BERAR_BALDINOZZI_ASYMMETRY": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "CWL_THOMPSON_COX_HASTINGS": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "TOF_JORGENSEN": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "TOF_JORGENSEN_VON_DREELE": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "TOF_PSEUDO_VOIGT": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "PolynomialTerm": {
+    "coef": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PolynomialTerm.coef",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "order": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PolynomialTerm.order",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "parameters": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CategoryItem.parameters",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "PowderCwlReflnData": {
+    "d_spacing": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PowderReflnDataBase.d_spacing",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "f_calc": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PowderReflnDataBase.f_calc",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "f_squared_calc": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PowderReflnDataBase.f_squared_calc",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "id": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PowderReflnDataBase.id",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "index_h": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PowderReflnDataBase.index_h",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "index_k": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PowderReflnDataBase.index_k",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "index_l": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PowderReflnDataBase.index_l",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "sin_theta_over_lambda": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PowderReflnDataBase.sin_theta_over_lambda",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "structure_id": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PowderReflnDataBase.structure_id",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "two_theta": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PowderCwlReflnData.two_theta",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "PowderReflnDataBase": {
+    "d_spacing": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PowderReflnDataBase.d_spacing",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "f_calc": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PowderReflnDataBase.f_calc",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "f_squared_calc": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PowderReflnDataBase.f_squared_calc",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "id": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PowderReflnDataBase.id",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "index_h": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PowderReflnDataBase.index_h",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "index_k": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PowderReflnDataBase.index_k",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "index_l": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PowderReflnDataBase.index_l",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "sin_theta_over_lambda": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PowderReflnDataBase.sin_theta_over_lambda",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "structure_id": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PowderReflnDataBase.structure_id",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "PowderTofReflnData": {
+    "d_spacing": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PowderReflnDataBase.d_spacing",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "f_calc": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PowderReflnDataBase.f_calc",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "f_squared_calc": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PowderReflnDataBase.f_squared_calc",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "id": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PowderReflnDataBase.id",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "index_h": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PowderReflnDataBase.index_h",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "index_k": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PowderReflnDataBase.index_k",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "index_l": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PowderReflnDataBase.index_l",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "sin_theta_over_lambda": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PowderReflnDataBase.sin_theta_over_lambda",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "structure_id": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PowderReflnDataBase.structure_id",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "time_of_flight": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PowderTofReflnData.time_of_flight",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "PrefOrient": {
+    "index_h": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PrefOrient.index_h",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "index_k": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PrefOrient.index_k",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "index_l": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PrefOrient.index_l",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "march_r": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PrefOrient.march_r",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "march_random_fract": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PrefOrient.march_random_fract",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "parameters": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CategoryItem.parameters",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "structure_id": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PrefOrient.structure_id",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "PrefOrients": {
+    "add": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CategoryCollection.add",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "clear": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CategoryCollection.clear",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "create": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CategoryCollection.create",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "items": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.items",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "keys": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.keys",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "names": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.names",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "remove": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.remove",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "values": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.values",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "Project": {
+    "analysis": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Project.analysis",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "calculate": {
+     "need": {
+      "by": "deviation",
+      "ref": "D49",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "descent": {
+     "need": {
+      "by": "deviation",
+      "ref": "D56",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "experiment": {
+     "need": {
+      "by": "deviation",
+      "ref": "D49",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "experiments": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Project.experiments",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "fit": {
+     "need": {
+      "by": "deviation",
+      "ref": "D3",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "fit_independent": {
+     "need": {
+      "by": "deviation",
+      "ref": "D3",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "fit_joint": {
+     "need": {
+      "by": "deviation",
+      "ref": "D3",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "fit_sequential": {
+     "need": {
+      "by": "deviation",
+      "ref": "D3",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "fitting_mode": {
+     "need": {
+      "by": "deviation",
+      "ref": "D3",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "free_parameters": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Project.free_parameters",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "load": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Project.load",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "metadata": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Project.metadata",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "name": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Project.name",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "parameters": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Project.parameters",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "save": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Project.save",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "save_as": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Project.save_as",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "structure": {
+     "need": {
+      "by": "deviation",
+      "ref": "D49",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "structures": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Project.structures",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "ProjectMetadata": {
+    "created": {
+     "need": {
+      "by": "counterpart",
+      "ref": "ProjectMetadata.created",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "description": {
+     "need": {
+      "by": "counterpart",
+      "ref": "ProjectMetadata.description",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "last_modified": {
+     "need": {
+      "by": "counterpart",
+      "ref": "ProjectMetadata.last_modified",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "name": {
+     "need": {
+      "by": "counterpart",
+      "ref": "ProjectMetadata.name",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "path": {
+     "need": {
+      "by": "counterpart",
+      "ref": "ProjectMetadata.path",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "show_as_text": {
+     "need": {
+      "by": "counterpart",
+      "ref": "ProjectMetadata.show_as_text",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "timestamp": {
+     "need": {
+      "by": "counterpart",
+      "ref": "ProjectMetadata.timestamp",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "title": {
+     "need": {
+      "by": "counterpart",
+      "ref": "ProjectMetadata.title",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "unique_name": {
+     "need": {
+      "by": "counterpart",
+      "ref": "ProjectMetadata.unique_name",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "update_last_modified": {
+     "need": {
+      "by": "counterpart",
+      "ref": "ProjectMetadata.update_last_modified",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "RadiationProbeEnum": {
+    "NEUTRON": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "XRAY": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "SampleFormEnum": {
+    "POWDER": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "SINGLE_CRYSTAL": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "ScExperimentBase": {
+    "dataset_weight": {
+     "need": {
+      "by": "deviation",
+      "ref": "D7",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "experiment_type": {
+     "need": {
+      "by": "counterpart",
+      "ref": "ExperimentBase.experiment_type",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "linked_structure": {
+     "need": {
+      "by": "deviation",
+      "ref": "D50",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "name": {
+     "need": {
+      "by": "counterpart",
+      "ref": "ExperimentBase.name",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "parameters": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CategoryOwner.parameters",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "ScanFileRecord": {
+    "converged": {
+     "need": {
+      "by": "deviation",
+      "ref": "D40",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "file_name": {
+     "need": {
+      "by": "deviation",
+      "ref": "D40",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "iterations": {
+     "need": {
+      "by": "deviation",
+      "ref": "D40",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "reduced_chi_square": {
+     "need": {
+      "by": "deviation",
+      "ref": "D40",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "ScanPreamble": {
+    "completed_rows": {
+     "need": {
+      "by": "deviation",
+      "ref": "D40",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "total_files": {
+     "need": {
+      "by": "deviation",
+      "ref": "D40",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "ScatteringTypeEnum": {
+    "BRAGG": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "TOTAL": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "SchemaValidationError": {
+    "add_note": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "args": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "with_traceback": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "Severity": {
+    "Error": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "Info": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "Warning": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "SpaceGroup": {
+    "coord_system_code": {
+     "need": {
+      "by": "counterpart",
+      "ref": "SpaceGroup.coord_system_code",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "it_number": {
+     "need": {
+      "by": "deviation",
+      "ref": "D49",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "name_h_m": {
+     "need": {
+      "by": "counterpart",
+      "ref": "SpaceGroup.name_h_m",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "SpaceGroupSymop": {
+    "id": {
+     "need": {
+      "by": "deviation",
+      "ref": "D70",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "operation_xyz": {
+     "need": {
+      "by": "deviation",
+      "ref": "D70",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "Structure": {
+    "atom_sites": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Structure.atom_sites",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "atom_sites_cartn_transform": {
+     "need": {
+      "by": "deviation",
+      "ref": "D72",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "cell": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Structure.cell",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "expanded_atom_sites": {
+     "need": {
+      "by": "deviation",
+      "ref": "D69",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "geom": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Structure.geom",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "geom_bond": {
+     "need": {
+      "by": "deviation",
+      "ref": "D71",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "geometry": {
+     "need": {
+      "by": "deviation",
+      "ref": "D73",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "name": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Structure.name",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "parameters": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CategoryOwner.parameters",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "scattering_lengths_fm": {
+     "need": {
+      "by": "deviation",
+      "ref": "D51",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "space_group": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Structure.space_group",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "space_group_symop": {
+     "need": {
+      "by": "deviation",
+      "ref": "D70",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "StructureFactory": {
+    "from_cif_path": {
+     "need": {
+      "by": "counterpart",
+      "ref": "StructureFactory.from_cif_path",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "from_cif_str": {
+     "need": {
+      "by": "counterpart",
+      "ref": "StructureFactory.from_cif_str",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "from_dict": {
+     "need": {
+      "by": "deviation",
+      "ref": "D51",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "from_scratch": {
+     "need": {
+      "by": "counterpart",
+      "ref": "StructureFactory.from_scratch",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "StructureGeometry": {
+    "atom_sites_cartn_transform": {
+     "need": {
+      "by": "deviation",
+      "ref": "D73",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "expanded_atom_sites": {
+     "need": {
+      "by": "deviation",
+      "ref": "D73",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "geom_bond": {
+     "need": {
+      "by": "deviation",
+      "ref": "D73",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "is_current": {
+     "need": {
+      "by": "deviation",
+      "ref": "D73",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "space_group_symop": {
+     "need": {
+      "by": "deviation",
+      "ref": "D73",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "view_range": {
+     "need": {
+      "by": "deviation",
+      "ref": "D73",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "Structures": {
+    "add": {
+     "need": {
+      "by": "counterpart",
+      "ref": "DatablockCollection.add",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "add_from_cif_path": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Structures.add_from_cif_path",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "add_from_cif_str": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Structures.add_from_cif_str",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "add_from_edi_path": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Structures.add_from_edi_path",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "clear": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.clear",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "create": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Structures.create",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "items": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.items",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "keys": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.keys",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "names": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.names",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "remove": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.remove",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "show_names": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Structures.show_names",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "values": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.values",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "SyntaxValidationError": {
+    "add_note": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "args": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "with_traceback": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "TofJorgensen": {
+    "broad_gauss_sigma_0": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofGaussianBroadeningMixin.broad_gauss_sigma_0",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_gauss_sigma_1": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofGaussianBroadeningMixin.broad_gauss_sigma_1",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_gauss_sigma_2": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofGaussianBroadeningMixin.broad_gauss_sigma_2",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_gauss_size": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofGaussianBroadeningMixin.broad_gauss_size",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_gauss_strain": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofGaussianBroadeningMixin.broad_gauss_strain",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "cutoff_fwhm": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofGaussianBroadeningMixin.cutoff_fwhm",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "decay_beta_0": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofBackToBackExponentialMixin.decay_beta_0",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "decay_beta_1": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofBackToBackExponentialMixin.decay_beta_1",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "parameters": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CategoryItem.parameters",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "rise_alpha_0": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofBackToBackExponentialMixin.rise_alpha_0",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "rise_alpha_1": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofBackToBackExponentialMixin.rise_alpha_1",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "show_supported": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PeakBase.show_supported",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "type": {
+     "need": {
+      "by": "counterpart",
+      "ref": "SwitchableCategoryBase.type",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "TofJorgensenVonDreele": {
+    "broad_gauss_sigma_0": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofGaussianBroadeningMixin.broad_gauss_sigma_0",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_gauss_sigma_1": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofGaussianBroadeningMixin.broad_gauss_sigma_1",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_gauss_sigma_2": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofGaussianBroadeningMixin.broad_gauss_sigma_2",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_gauss_size": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofGaussianBroadeningMixin.broad_gauss_size",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_gauss_strain": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofGaussianBroadeningMixin.broad_gauss_strain",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_lorentz_gamma_0": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofLorentzianBroadeningMixin.broad_lorentz_gamma_0",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_lorentz_gamma_1": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofLorentzianBroadeningMixin.broad_lorentz_gamma_1",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_lorentz_gamma_2": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofLorentzianBroadeningMixin.broad_lorentz_gamma_2",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_lorentz_size": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofLorentzianBroadeningMixin.broad_lorentz_size",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_lorentz_strain": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofLorentzianBroadeningMixin.broad_lorentz_strain",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "cutoff_fwhm": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofGaussianBroadeningMixin.cutoff_fwhm",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "decay_beta_0": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofBackToBackExponentialMixin.decay_beta_0",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "decay_beta_1": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofBackToBackExponentialMixin.decay_beta_1",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "parameters": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CategoryItem.parameters",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "rise_alpha_0": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofBackToBackExponentialMixin.rise_alpha_0",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "rise_alpha_1": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofBackToBackExponentialMixin.rise_alpha_1",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "show_supported": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PeakBase.show_supported",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "type": {
+     "need": {
+      "by": "counterpart",
+      "ref": "SwitchableCategoryBase.type",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "TofPdInstrument": {
+    "calib_d_to_tof_linear": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofPdInstrument.calib_d_to_tof_linear",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "calib_d_to_tof_offset": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofPdInstrument.calib_d_to_tof_offset",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "calib_d_to_tof_quadratic": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofPdInstrument.calib_d_to_tof_quadratic",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "calib_d_to_tof_reciprocal": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofPdInstrument.calib_d_to_tof_reciprocal",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "parameters": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CategoryItem.parameters",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "setup_twotheta_bank": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofPdInstrument.setup_twotheta_bank",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "TofPseudoVoigt": {
+    "broad_gauss_sigma_0": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofGaussianBroadeningMixin.broad_gauss_sigma_0",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_gauss_sigma_1": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofGaussianBroadeningMixin.broad_gauss_sigma_1",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_gauss_sigma_2": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofGaussianBroadeningMixin.broad_gauss_sigma_2",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_gauss_size": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofGaussianBroadeningMixin.broad_gauss_size",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_gauss_strain": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofGaussianBroadeningMixin.broad_gauss_strain",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_lorentz_gamma_0": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofLorentzianBroadeningMixin.broad_lorentz_gamma_0",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_lorentz_gamma_1": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofLorentzianBroadeningMixin.broad_lorentz_gamma_1",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_lorentz_gamma_2": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofLorentzianBroadeningMixin.broad_lorentz_gamma_2",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_lorentz_size": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofLorentzianBroadeningMixin.broad_lorentz_size",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_lorentz_strain": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofLorentzianBroadeningMixin.broad_lorentz_strain",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "cutoff_fwhm": {
+     "need": {
+      "by": "counterpart",
+      "ref": "TofGaussianBroadeningMixin.cutoff_fwhm",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "parameters": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CategoryItem.parameters",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "show_supported": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PeakBase.show_supported",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "type": {
+     "need": {
+      "by": "counterpart",
+      "ref": "SwitchableCategoryBase.type",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "ValidationError": {
+    "add_note": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "args": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "with_traceback": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "VerbosityEnum": {
+    "COMPACT": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "FULL": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "OFF": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   }
+  },
+  "module": {
+   "AbsorptionBase": {
+    "need": {
+     "by": "counterpart",
+     "ref": "AbsorptionBase",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "AbsorptionFactory": {
+    "need": {
+     "by": "deviation",
+     "ref": "D54",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "Analysis": {
+    "need": {
+     "by": "counterpart",
+     "ref": "Analysis",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "AtomSite": {
+    "need": {
+     "by": "counterpart",
+     "ref": "AtomSite",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "AtomSites": {
+    "need": {
+     "by": "counterpart",
+     "ref": "AtomSites",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "AtomSitesCartnTransform": {
+    "need": {
+     "by": "deviation",
+     "ref": "D72",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "BankMetric": {
+    "need": {
+     "by": "deviation",
+     "ref": "D47",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "BeamModeEnum": {
+    "need": {
+     "by": "counterpart",
+     "ref": "BeamModeEnum",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "BraggPdExperiment": {
+    "need": {
+     "by": "counterpart",
+     "ref": "BraggPdExperiment",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "Cell": {
+    "need": {
+     "by": "counterpart",
+     "ref": "Cell",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "CwlInstrumentBase": {
+    "need": {
+     "by": "counterpart",
+     "ref": "CwlInstrumentBase",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "CwlPdInstrumentBase": {
+    "need": {
+     "by": "counterpart",
+     "ref": "CwlPdInstrumentBase",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "CwlPdNeutronInstrument": {
+    "need": {
+     "by": "counterpart",
+     "ref": "CwlPdNeutronInstrument",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "CwlPdXrayInstrument": {
+    "need": {
+     "by": "counterpart",
+     "ref": "CwlPdXrayInstrument",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "CwlPseudoVoigt": {
+    "need": {
+     "by": "counterpart",
+     "ref": "CwlPseudoVoigt",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "CwlPseudoVoigtBerarBaldinozziAsymmetry": {
+    "need": {
+     "by": "counterpart",
+     "ref": "CwlPseudoVoigtBerarBaldinozziAsymmetry",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "CwlThompsonCoxHastings": {
+    "need": {
+     "by": "counterpart",
+     "ref": "CwlThompsonCoxHastings",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "CylinderHewatAbsorption": {
+    "need": {
+     "by": "counterpart",
+     "ref": "CylinderHewatAbsorption",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "Diagnostic": {
+    "need": {
+     "by": "deviation",
+     "ref": "D32",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "DomainValidationError": {
+    "need": {
+     "by": "deviation",
+     "ref": "D32",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "ExpandedAtomSites": {
+    "need": {
+     "by": "deviation",
+     "ref": "D69",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "ExperimentBase": {
+    "need": {
+     "by": "counterpart",
+     "ref": "ExperimentBase",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "ExperimentFactory": {
+    "need": {
+     "by": "deviation",
+     "ref": "D54",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "ExperimentType": {
+    "need": {
+     "by": "counterpart",
+     "ref": "ExperimentType",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "Experiments": {
+    "need": {
+     "by": "counterpart",
+     "ref": "Experiments",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "FitPreamble": {
+    "need": {
+     "by": "deviation",
+     "ref": "D40",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "FitResultBase": {
+    "need": {
+     "by": "deviation",
+     "ref": "D47",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "FitStatus": {
+    "need": {
+     "by": "deviation",
+     "ref": "D47",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "Geom": {
+    "need": {
+     "by": "counterpart",
+     "ref": "Geom",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "GeomBond": {
+    "need": {
+     "by": "deviation",
+     "ref": "D71",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "InstrumentBase": {
+    "need": {
+     "by": "counterpart",
+     "ref": "InstrumentBase",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "InstrumentFactory": {
+    "need": {
+     "by": "deviation",
+     "ref": "D54",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "IoError": {
+    "need": {
+     "by": "deviation",
+     "ref": "D32",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "IterationRecord": {
+    "need": {
+     "by": "deviation",
+     "ref": "D40",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "LeastSquaresFitResult": {
+    "need": {
+     "by": "counterpart",
+     "ref": "LeastSquaresFitResult",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "LineSegment": {
+    "need": {
+     "by": "deviation",
+     "ref": "D48",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "LinkedStructure": {
+    "need": {
+     "by": "counterpart",
+     "ref": "LinkedStructure",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "NoAbsorption": {
+    "need": {
+     "by": "counterpart",
+     "ref": "NoAbsorption",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "Parameter": {
+    "need": {
+     "by": "counterpart",
+     "ref": "Parameter",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "PdCwlData": {
+    "need": {
+     "by": "counterpart",
+     "ref": "PdCwlData",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "PdDataBase": {
+    "need": {
+     "by": "deviation",
+     "ref": "D48",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "PdExperimentBase": {
+    "need": {
+     "by": "counterpart",
+     "ref": "PdExperimentBase",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "PdTofData": {
+    "need": {
+     "by": "counterpart",
+     "ref": "PdTofData",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "PeakBase": {
+    "need": {
+     "by": "counterpart",
+     "ref": "PeakBase",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "PeakFactory": {
+    "need": {
+     "by": "deviation",
+     "ref": "D54",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "PeakProfileTypeEnum": {
+    "need": {
+     "by": "counterpart",
+     "ref": "PeakProfileTypeEnum",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "PolynomialTerm": {
+    "need": {
+     "by": "counterpart",
+     "ref": "PolynomialTerm",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "PowderCwlReflnData": {
+    "need": {
+     "by": "counterpart",
+     "ref": "PowderCwlReflnData",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "PowderReflnDataBase": {
+    "need": {
+     "by": "counterpart",
+     "ref": "PowderReflnDataBase",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "PowderTofReflnData": {
+    "need": {
+     "by": "counterpart",
+     "ref": "PowderTofReflnData",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "PrefOrient": {
+    "need": {
+     "by": "counterpart",
+     "ref": "PrefOrient",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "PrefOrients": {
+    "need": {
+     "by": "counterpart",
+     "ref": "PrefOrients",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "Project": {
+    "need": {
+     "by": "counterpart",
+     "ref": "Project",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "ProjectMetadata": {
+    "need": {
+     "by": "counterpart",
+     "ref": "ProjectMetadata",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "RadiationProbeEnum": {
+    "need": {
+     "by": "counterpart",
+     "ref": "RadiationProbeEnum",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "SampleFormEnum": {
+    "need": {
+     "by": "counterpart",
+     "ref": "SampleFormEnum",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "ScExperimentBase": {
+    "need": {
+     "by": "counterpart",
+     "ref": "ScExperimentBase",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "ScanFileRecord": {
+    "need": {
+     "by": "deviation",
+     "ref": "D40",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "ScanPreamble": {
+    "need": {
+     "by": "deviation",
+     "ref": "D40",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "ScatteringTypeEnum": {
+    "need": {
+     "by": "counterpart",
+     "ref": "ScatteringTypeEnum",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "SchemaValidationError": {
+    "need": {
+     "by": "deviation",
+     "ref": "D32",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "Severity": {
+    "need": {
+     "by": "deviation",
+     "ref": "D32",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "SpaceGroup": {
+    "need": {
+     "by": "counterpart",
+     "ref": "SpaceGroup",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "SpaceGroupSymop": {
+    "need": {
+     "by": "deviation",
+     "ref": "D70",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "Structure": {
+    "need": {
+     "by": "counterpart",
+     "ref": "Structure",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "StructureFactory": {
+    "need": {
+     "by": "counterpart",
+     "ref": "StructureFactory",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "StructureGeometry": {
+    "need": {
+     "by": "deviation",
+     "ref": "D73",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "Structures": {
+    "need": {
+     "by": "counterpart",
+     "ref": "Structures",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "SyntaxValidationError": {
+    "need": {
+     "by": "deviation",
+     "ref": "D32",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "TofJorgensen": {
+    "need": {
+     "by": "counterpart",
+     "ref": "TofJorgensen",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "TofJorgensenVonDreele": {
+    "need": {
+     "by": "counterpart",
+     "ref": "TofJorgensenVonDreele",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "TofPdInstrument": {
+    "need": {
+     "by": "counterpart",
+     "ref": "TofPdInstrument",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "TofPseudoVoigt": {
+    "need": {
+     "by": "counterpart",
+     "ref": "TofPseudoVoigt",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "ValidationError": {
+    "need": {
+     "by": "deviation",
+     "ref": "D32",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "VerbosityEnum": {
+    "need": {
+     "by": "deviation",
+     "ref": "D6",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "error_report": {
+    "need": {
+     "by": "deviation",
+     "ref": "D40",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "iteration_line": {
+    "need": {
+     "by": "deviation",
+     "ref": "D40",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "machine_report": {
+    "need": {
+     "by": "deviation",
+     "ref": "D40",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "parameter_table": {
+    "need": {
+     "by": "deviation",
+     "ref": "D40",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "progress_report": {
+    "need": {
+     "by": "deviation",
+     "ref": "D40",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "scan_progress_line": {
+    "need": {
+     "by": "deviation",
+     "ref": "D40",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "scan_summary": {
+    "need": {
+     "by": "deviation",
+     "ref": "D40",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "stream_header": {
+    "need": {
+     "by": "deviation",
+     "ref": "D40",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "summary_line": {
+    "need": {
+     "by": "deviation",
+     "ref": "D40",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "verification": {
+    "need": {
+     "by": "deviation",
+     "ref": "D51",
+     "verdict": "keep"
+    },
+    "reason": "N2",
+    "verdict": "internal"
+   }
+  }
+ },
+ "directionality": "crysta-py \u2286 edi-py is a standing constraint on edi: a name enters crysta.__all__ only in a commit where edi carries it; a public crysta name edi lacks is red at crysta's PR consumer job today, and at edi's verify against the pinned crysta once edi's tools/ci/crysta.pin carries the declaration \u2014 crysta cannot add a public name without edi following",
+ "public": {
+  "AbsorptionBase": {
+   "kind": "class",
+   "members": [
+    "parameters",
+    "type"
+   ]
+  },
+  "AbsorptionFactory": {
+   "kind": "class",
+   "members": [
+    "create",
+    "create_default_for",
+    "default_tag",
+    "register",
+    "registry",
+    "supported_tags"
+   ]
+  },
+  "Analysis": {
+   "kind": "class",
+   "members": [
+    "calculate",
+    "descent",
+    "fit",
+    "fitting_mode"
+   ]
+  },
+  "AtomSite": {
+   "kind": "class",
+   "members": [
+    "adp_iso",
+    "adp_type",
+    "fract_x",
+    "fract_y",
+    "fract_z",
+    "id",
+    "occupancy",
+    "parameters",
+    "type_symbol",
+    "wyckoff_letter"
+   ]
+  },
+  "AtomSites": {
+   "kind": "class",
+   "members": [
+    "add",
+    "clear",
+    "create",
+    "items",
+    "keys",
+    "names",
+    "remove",
+    "values"
+   ]
+  },
+  "AtomSitesCartnTransform": {
+   "kind": "class",
+   "members": [
+    "axes",
+    "mat_11",
+    "mat_12",
+    "mat_13",
+    "mat_21",
+    "mat_22",
+    "mat_23",
+    "mat_31",
+    "mat_32",
+    "mat_33"
+   ]
+  },
+  "BankMetric": {
+   "kind": "class",
+   "members": [
+    "chi_square",
+    "n_points",
+    "name",
+    "rwp"
+   ]
+  },
+  "BeamModeEnum": {
+   "kind": "enum",
+   "members": [
+    "CONSTANT_WAVELENGTH",
+    "TIME_OF_FLIGHT"
+   ]
+  },
+  "BraggPdExperiment": {
+   "kind": "class",
+   "members": [
+    "absorption",
+    "background",
+    "background_origin",
+    "background_terms",
+    "background_type",
+    "background_x_max",
+    "background_x_min",
+    "data",
+    "dataset_weight",
+    "excluded_regions",
+    "experiment_type",
+    "instrument",
+    "linked_structure",
+    "name",
+    "parameters",
+    "peak",
+    "preferred_orientation",
+    "refln"
+   ]
+  },
+  "Cell": {
+   "kind": "class",
+   "members": [
+    "angle_alpha",
+    "angle_beta",
+    "angle_gamma",
+    "length_a",
+    "length_b",
+    "length_c",
+    "parameters"
+   ]
+  },
+  "CwlInstrumentBase": {
+   "kind": "class",
+   "members": [
+    "parameters"
+   ]
+  },
+  "CwlPdInstrumentBase": {
+   "kind": "class",
+   "members": [
+    "parameters"
+   ]
+  },
+  "CwlPdNeutronInstrument": {
+   "kind": "class",
+   "members": [
+    "calib_sample_displacement",
+    "calib_sample_transparency",
+    "calib_twotheta_offset",
+    "parameters",
+    "setup_wavelength"
+   ]
+  },
+  "CwlPdXrayInstrument": {
+   "kind": "class",
+   "members": [
+    "calib_sample_displacement",
+    "calib_sample_transparency",
+    "calib_twotheta_offset",
+    "parameters",
+    "setup_monochromator_twotheta",
+    "setup_polarization_coefficient",
+    "setup_wavelength"
+   ]
+  },
+  "CwlPseudoVoigt": {
+   "kind": "class",
+   "members": [
+    "broad_gauss_u",
+    "broad_gauss_v",
+    "broad_gauss_w",
+    "broad_lorentz_x",
+    "broad_lorentz_y",
+    "cutoff_fwhm",
+    "parameters",
+    "show_supported",
+    "type"
+   ]
+  },
+  "CwlPseudoVoigtBerarBaldinozziAsymmetry": {
+   "kind": "class",
+   "members": [
+    "asym_beba_a0",
+    "asym_beba_a1",
+    "asym_beba_b0",
+    "asym_beba_b1",
+    "asym_beba_limit",
+    "broad_gauss_u",
+    "broad_gauss_v",
+    "broad_gauss_w",
+    "broad_lorentz_x",
+    "broad_lorentz_y",
+    "cutoff_fwhm",
+    "parameters",
+    "show_supported",
+    "type"
+   ]
+  },
+  "CwlThompsonCoxHastings": {
+   "kind": "class",
+   "members": [
+    "asym_fcj_1",
+    "asym_fcj_2",
+    "broad_gauss_u",
+    "broad_gauss_v",
+    "broad_gauss_w",
+    "broad_lorentz_x",
+    "broad_lorentz_y",
+    "cutoff_fwhm",
+    "parameters",
+    "show_supported",
+    "type"
+   ]
+  },
+  "CylinderHewatAbsorption": {
+   "kind": "class",
+   "members": [
+    "abscor1",
+    "abscor2",
+    "mu_r",
+    "parameters",
+    "type"
+   ]
+  },
+  "Diagnostic": {
+   "kind": "class",
+   "members": [
+    "code",
+    "message",
+    "params",
+    "path",
+    "severity",
+    "source"
+   ]
+  },
+  "DomainValidationError": {
+   "kind": "exception",
+   "members": [
+    "add_note",
+    "args",
+    "with_traceback"
+   ]
+  },
+  "ExpandedAtomSites": {
+   "kind": "class",
+   "members": [
+    "atom_site_id",
+    "cartn_x",
+    "cartn_y",
+    "cartn_z",
+    "cluster_id",
+    "fract_x",
+    "fract_y",
+    "fract_z",
+    "id",
+    "occupancy",
+    "site_symmetry",
+    "u_iso"
+   ]
+  },
+  "ExperimentBase": {
+   "kind": "class",
+   "members": [
+    "dataset_weight",
+    "experiment_type",
+    "linked_structure",
+    "name",
+    "parameters"
+   ]
+  },
+  "ExperimentFactory": {
+   "kind": "class",
+   "members": [
+    "create",
+    "create_default_for",
+    "default_tag",
+    "from_cif_path",
+    "from_cif_str",
+    "from_data_path",
+    "from_dict",
+    "from_scratch",
+    "register",
+    "registry",
+    "supported_tags"
+   ]
+  },
+  "ExperimentType": {
+   "kind": "class",
+   "members": [
+    "beam_mode",
+    "radiation_probe",
+    "sample_form",
+    "scattering_type"
+   ]
+  },
+  "Experiments": {
+   "kind": "class",
+   "members": [
+    "add",
+    "add_from_cif_path",
+    "add_from_cif_str",
+    "add_from_data_path",
+    "add_from_edi_path",
+    "clear",
+    "create",
+    "items",
+    "keys",
+    "names",
+    "remove",
+    "show_names",
+    "values"
+   ]
+  },
+  "FitPreamble": {
+   "kind": "class",
+   "members": [
+    "pre_fit"
+   ]
+  },
+  "FitResultBase": {
+   "kind": "class",
+   "members": [
+    "banks",
+    "converged",
+    "fitting_time",
+    "iterations",
+    "reduced_chi_square",
+    "result_kind",
+    "rwp",
+    "status",
+    "success",
+    "uncertainty",
+    "values"
+   ]
+  },
+  "FitStatus": {
+   "kind": "enum",
+   "members": [
+    "CANCELLED",
+    "DONE",
+    "ERROR",
+    "MAX_ITER",
+    "NO_STEP",
+    "SUPERSEDED",
+    "UNAVAILABLE"
+   ]
+  },
+  "Geom": {
+   "kind": "class",
+   "members": [
+    "bond_distance_inc",
+    "min_bond_distance_cutoff"
+   ]
+  },
+  "GeomBond": {
+   "kind": "class",
+   "members": [
+    "atom_site_label_1",
+    "atom_site_label_2",
+    "distance",
+    "expanded_atom_site_id_1",
+    "expanded_atom_site_id_2",
+    "id",
+    "site_symmetry_1",
+    "site_symmetry_2"
+   ]
+  },
+  "InstrumentBase": {
+   "kind": "class",
+   "members": [
+    "parameters"
+   ]
+  },
+  "InstrumentFactory": {
+   "kind": "class",
+   "members": [
+    "create",
+    "create_default_for",
+    "default_tag",
+    "register",
+    "registry",
+    "supported_tags"
+   ]
+  },
+  "IoError": {
+   "kind": "exception",
+   "members": [
+    "add_note",
+    "args",
+    "with_traceback"
+   ]
+  },
+  "IterationRecord": {
+   "kind": "class",
+   "members": [
+    "iteration",
+    "reduced_chi_square",
+    "rwp"
+   ]
+  },
+  "LeastSquaresFitResult": {
+   "kind": "class",
+   "members": [
+    "banks",
+    "converged",
+    "fitting_time",
+    "iterations",
+    "reduced_chi_square",
+    "result_kind",
+    "rwp",
+    "status",
+    "success",
+    "uncertainty",
+    "values"
+   ]
+  },
+  "LineSegment": {
+   "kind": "class",
+   "members": [
+    "intensity",
+    "parameters",
+    "position"
+   ]
+  },
+  "LinkedStructure": {
+   "kind": "class",
+   "members": [
+    "parameters",
+    "scale",
+    "structure_id"
+   ]
+  },
+  "NoAbsorption": {
+   "kind": "class",
+   "members": [
+    "parameters",
+    "type"
+   ]
+  },
+  "Parameter": {
+   "kind": "class",
+   "members": [
+    "description",
+    "free",
+    "is_attached",
+    "max_value",
+    "min_value",
+    "name",
+    "start_uncertainty",
+    "start_value",
+    "uncertainty",
+    "units",
+    "value"
+   ]
+  },
+  "PdCwlData": {
+   "kind": "class",
+   "members": [
+    "axis",
+    "calc_status",
+    "d_spacing",
+    "intensity_bkg",
+    "intensity_calc",
+    "intensity_meas",
+    "intensity_meas_su",
+    "two_theta"
+   ]
+  },
+  "PdDataBase": {
+   "kind": "class",
+   "members": [
+    "axis",
+    "calc_status",
+    "d_spacing",
+    "intensity_bkg",
+    "intensity_calc",
+    "intensity_meas",
+    "intensity_meas_su"
+   ]
+  },
+  "PdExperimentBase": {
+   "kind": "class",
+   "members": [
+    "data",
+    "dataset_weight",
+    "excluded_regions",
+    "experiment_type",
+    "linked_structure",
+    "name",
+    "parameters",
+    "peak",
+    "refln"
+   ]
+  },
+  "PdTofData": {
+   "kind": "class",
+   "members": [
+    "axis",
+    "calc_status",
+    "d_spacing",
+    "intensity_bkg",
+    "intensity_calc",
+    "intensity_meas",
+    "intensity_meas_su",
+    "time_of_flight"
+   ]
+  },
+  "PeakBase": {
+   "kind": "class",
+   "members": [
+    "cutoff_fwhm",
+    "parameters",
+    "show_supported",
+    "type"
+   ]
+  },
+  "PeakFactory": {
+   "kind": "class",
+   "members": [
+    "create",
+    "create_default_for",
+    "default_tag",
+    "register",
+    "registry",
+    "show_supported",
+    "supported_tags"
+   ]
+  },
+  "PeakProfileTypeEnum": {
+   "kind": "enum",
+   "members": [
+    "CWL_PSEUDO_VOIGT",
+    "CWL_PSEUDO_VOIGT_BERAR_BALDINOZZI_ASYMMETRY",
+    "CWL_THOMPSON_COX_HASTINGS",
+    "TOF_JORGENSEN",
+    "TOF_JORGENSEN_VON_DREELE",
+    "TOF_PSEUDO_VOIGT"
+   ]
+  },
+  "PolynomialTerm": {
+   "kind": "class",
+   "members": [
+    "coef",
+    "order",
+    "parameters"
+   ]
+  },
+  "PowderCwlReflnData": {
+   "kind": "class",
+   "members": [
+    "d_spacing",
+    "f_calc",
+    "f_squared_calc",
+    "id",
+    "index_h",
+    "index_k",
+    "index_l",
+    "sin_theta_over_lambda",
+    "structure_id",
+    "two_theta"
+   ]
+  },
+  "PowderReflnDataBase": {
+   "kind": "class",
+   "members": [
+    "d_spacing",
+    "f_calc",
+    "f_squared_calc",
+    "id",
+    "index_h",
+    "index_k",
+    "index_l",
+    "sin_theta_over_lambda",
+    "structure_id"
+   ]
+  },
+  "PowderTofReflnData": {
+   "kind": "class",
+   "members": [
+    "d_spacing",
+    "f_calc",
+    "f_squared_calc",
+    "id",
+    "index_h",
+    "index_k",
+    "index_l",
+    "sin_theta_over_lambda",
+    "structure_id",
+    "time_of_flight"
+   ]
+  },
+  "PrefOrient": {
+   "kind": "class",
+   "members": [
+    "index_h",
+    "index_k",
+    "index_l",
+    "march_r",
+    "march_random_fract",
+    "parameters",
+    "structure_id"
+   ]
+  },
+  "PrefOrients": {
+   "kind": "class",
+   "members": [
+    "add",
+    "clear",
+    "create",
+    "items",
+    "keys",
+    "names",
+    "remove",
+    "values"
+   ]
+  },
+  "Project": {
+   "kind": "class",
+   "members": [
+    "analysis",
+    "calculate",
+    "descent",
+    "experiment",
+    "experiments",
+    "fit",
+    "fit_independent",
+    "fit_joint",
+    "fit_sequential",
+    "fitting_mode",
+    "free_parameters",
+    "load",
+    "metadata",
+    "name",
+    "parameters",
+    "save",
+    "save_as",
+    "structure",
+    "structures"
+   ]
+  },
+  "ProjectMetadata": {
+   "kind": "class",
+   "members": [
+    "created",
+    "description",
+    "last_modified",
+    "name",
+    "path",
+    "show_as_text",
+    "timestamp",
+    "title",
+    "unique_name",
+    "update_last_modified"
+   ]
+  },
+  "RadiationProbeEnum": {
+   "kind": "enum",
+   "members": [
+    "NEUTRON",
+    "XRAY"
+   ]
+  },
+  "SampleFormEnum": {
+   "kind": "enum",
+   "members": [
+    "POWDER",
+    "SINGLE_CRYSTAL"
+   ]
+  },
+  "ScExperimentBase": {
+   "kind": "class",
+   "members": [
+    "dataset_weight",
+    "experiment_type",
+    "linked_structure",
+    "name",
+    "parameters"
+   ]
+  },
+  "ScanFileRecord": {
+   "kind": "class",
+   "members": [
+    "converged",
+    "file_name",
+    "iterations",
+    "reduced_chi_square"
+   ]
+  },
+  "ScanPreamble": {
+   "kind": "class",
+   "members": [
+    "completed_rows",
+    "total_files"
+   ]
+  },
+  "ScatteringTypeEnum": {
+   "kind": "enum",
+   "members": [
+    "BRAGG",
+    "TOTAL"
+   ]
+  },
+  "SchemaValidationError": {
+   "kind": "exception",
+   "members": [
+    "add_note",
+    "args",
+    "with_traceback"
+   ]
+  },
+  "Severity": {
+   "kind": "enum",
+   "members": [
+    "Error",
+    "Info",
+    "Warning"
+   ]
+  },
+  "SpaceGroup": {
+   "kind": "class",
+   "members": [
+    "coord_system_code",
+    "it_number",
+    "name_h_m"
+   ]
+  },
+  "SpaceGroupSymop": {
+   "kind": "class",
+   "members": [
+    "id",
+    "operation_xyz"
+   ]
+  },
+  "Structure": {
+   "kind": "class",
+   "members": [
+    "atom_sites",
+    "atom_sites_cartn_transform",
+    "cell",
+    "expanded_atom_sites",
+    "geom",
+    "geom_bond",
+    "geometry",
+    "name",
+    "parameters",
+    "scattering_lengths_fm",
+    "space_group",
+    "space_group_symop"
+   ]
+  },
+  "StructureFactory": {
+   "kind": "class",
+   "members": [
+    "from_cif_path",
+    "from_cif_str",
+    "from_dict",
+    "from_scratch"
+   ]
+  },
+  "StructureGeometry": {
+   "kind": "class",
+   "members": [
+    "atom_sites_cartn_transform",
+    "expanded_atom_sites",
+    "geom_bond",
+    "is_current",
+    "space_group_symop",
+    "view_range"
+   ]
+  },
+  "Structures": {
+   "kind": "class",
+   "members": [
+    "add",
+    "add_from_cif_path",
+    "add_from_cif_str",
+    "add_from_edi_path",
+    "clear",
+    "create",
+    "items",
+    "keys",
+    "names",
+    "remove",
+    "show_names",
+    "values"
+   ]
+  },
+  "SyntaxValidationError": {
+   "kind": "exception",
+   "members": [
+    "add_note",
+    "args",
+    "with_traceback"
+   ]
+  },
+  "TofJorgensen": {
+   "kind": "class",
+   "members": [
+    "broad_gauss_sigma_0",
+    "broad_gauss_sigma_1",
+    "broad_gauss_sigma_2",
+    "broad_gauss_size",
+    "broad_gauss_strain",
+    "cutoff_fwhm",
+    "decay_beta_0",
+    "decay_beta_1",
+    "parameters",
+    "rise_alpha_0",
+    "rise_alpha_1",
+    "show_supported",
+    "type"
+   ]
+  },
+  "TofJorgensenVonDreele": {
+   "kind": "class",
+   "members": [
+    "broad_gauss_sigma_0",
+    "broad_gauss_sigma_1",
+    "broad_gauss_sigma_2",
+    "broad_gauss_size",
+    "broad_gauss_strain",
+    "broad_lorentz_gamma_0",
+    "broad_lorentz_gamma_1",
+    "broad_lorentz_gamma_2",
+    "broad_lorentz_size",
+    "broad_lorentz_strain",
+    "cutoff_fwhm",
+    "decay_beta_0",
+    "decay_beta_1",
+    "parameters",
+    "rise_alpha_0",
+    "rise_alpha_1",
+    "show_supported",
+    "type"
+   ]
+  },
+  "TofPdInstrument": {
+   "kind": "class",
+   "members": [
+    "calib_d_to_tof_linear",
+    "calib_d_to_tof_offset",
+    "calib_d_to_tof_quadratic",
+    "calib_d_to_tof_reciprocal",
+    "parameters",
+    "setup_twotheta_bank"
+   ]
+  },
+  "TofPseudoVoigt": {
+   "kind": "class",
+   "members": [
+    "broad_gauss_sigma_0",
+    "broad_gauss_sigma_1",
+    "broad_gauss_sigma_2",
+    "broad_gauss_size",
+    "broad_gauss_strain",
+    "broad_lorentz_gamma_0",
+    "broad_lorentz_gamma_1",
+    "broad_lorentz_gamma_2",
+    "broad_lorentz_size",
+    "broad_lorentz_strain",
+    "cutoff_fwhm",
+    "parameters",
+    "show_supported",
+    "type"
+   ]
+  },
+  "ValidationError": {
+   "kind": "exception",
+   "members": [
+    "add_note",
+    "args",
+    "with_traceback"
+   ]
+  },
+  "VerbosityEnum": {
+   "kind": "enum",
+   "members": [
+    "COMPACT",
+    "FULL",
+    "OFF"
+   ]
+  },
+  "error_report": {
+   "kind": "function"
+  },
+  "iteration_line": {
+   "kind": "function"
+  },
+  "machine_report": {
+   "kind": "function"
+  },
+  "parameter_table": {
+   "kind": "function"
+  },
+  "progress_report": {
+   "kind": "function"
+  },
+  "scan_progress_line": {
+   "kind": "function"
+  },
+  "scan_summary": {
+   "kind": "function"
+  },
+  "stream_header": {
+   "kind": "function"
+  },
+  "summary_line": {
+   "kind": "function"
+  }
+ },
+ "removed": {
+  "Absorption": {
+   "reason": "renamed `AbsorptionBase` under the 2026-08-31 owner verbatim-name ruling (verbatim-names: our name IS diffraction-lib's name, Base/Enum and all); same concept, the upstream spelling",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "AtomSite.free_parameters": {
+   "reason": "removed under the 2026-08-30 owner ruling: diffraction-lib carries `free_parameters` on the project only; no script ever read a node's; `Project.free_parameters` stays",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "BackgroundPoint": {
+   "reason": "renamed `LineSegment` under the 2026-08-31 owner verbatim-name ruling (verbatim-names: our name IS diffraction-lib's name, Base/Enum and all); same concept, the upstream spelling",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "BackgroundPoint.free_parameters": {
+   "reason": "removed under the 2026-08-30 owner ruling: diffraction-lib carries `free_parameters` on the project only; no script ever read a node's; `Project.free_parameters` stays",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "BeamMode": {
+   "reason": "renamed `BeamModeEnum` under the 2026-08-31 owner verbatim-name ruling (verbatim-names: our name IS diffraction-lib's name, Base/Enum and all); same concept, the upstream spelling",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "CachedModel": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "CachedModel.calculate": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "CachedModel.get": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "CachedModel.paths": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "CachedModel.project": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "CachedModel.rebuilds": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "CachedModel.refine": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "CachedModel.set": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "CachedModel.set_free": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "CachedModel.structure_factors": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "Cell.cubic": {
+   "reason": "no diffraction-lib counterpart, no register row, no consumer; the C++ static went with it",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "Cell.free_parameters": {
+   "reason": "removed under the 2026-08-30 owner ruling: diffraction-lib carries `free_parameters` on the project only; no script ever read a node's; `Project.free_parameters` stays",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "Experiment": {
+   "reason": "renamed `ExperimentBase` under the 2026-08-31 owner verbatim-name ruling (verbatim-names: our name IS diffraction-lib's name, Base/Enum and all); same concept, the upstream spelling",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "Experiment.free_parameters": {
+   "reason": "removed under the 2026-08-30 owner ruling: diffraction-lib carries `free_parameters` on the project only; no script ever read a node's; `Project.free_parameters` stays",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "ExperimentBase.absorption": {
+   "reason": "re-homed to `BraggPdExperiment.absorption` under the structural-adoption ruling structural-adoption (the intermediates and the leaf carry their members exactly where upstream homes them; the base keeps the shared surface)",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "ExperimentBase.background": {
+   "reason": "re-homed to `BraggPdExperiment.background` under the structural-adoption ruling structural-adoption (the intermediates and the leaf carry their members exactly where upstream homes them; the base keeps the shared surface)",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "ExperimentBase.data": {
+   "reason": "re-homed to `PdExperimentBase.data` under the structural-adoption ruling structural-adoption (the intermediates and the leaf carry their members exactly where upstream homes them; the base keeps the shared surface)",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "ExperimentBase.excluded_regions": {
+   "reason": "re-homed to `PdExperimentBase.excluded_regions` under the structural-adoption ruling structural-adoption (the intermediates and the leaf carry their members exactly where upstream homes them; the base keeps the shared surface)",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "ExperimentBase.free_parameters": {
+   "reason": "removed under the 2026-08-30 owner ruling: diffraction-lib carries `free_parameters` on the project only; no script ever read a node's; `Project.free_parameters` stays",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "ExperimentBase.instrument": {
+   "reason": "re-homed to `BraggPdExperiment.instrument` under the structural-adoption ruling structural-adoption (the intermediates and the leaf carry their members exactly where upstream homes them; the base keeps the shared surface)",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "ExperimentBase.peak": {
+   "reason": "re-homed to `PdExperimentBase.peak` under the structural-adoption ruling structural-adoption (the intermediates and the leaf carry their members exactly where upstream homes them; the base keeps the shared surface)",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "FitOutcome": {
+   "reason": "renamed `FitResultBase` under the 2026-08-31 owner verbatim-name ruling (verbatim-names: our name IS diffraction-lib's name, Base/Enum and all); same concept, the upstream spelling",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "FitOutcome.descent": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "FitOutcome.elapsed_ms": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "FitOutcome.engine_esd": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "FitOutcome.engine_values": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "FitOutcome.esd": {
+   "reason": "spelled `uncertainty` under the 2026-08-31 consistency sweep (uncertainty-sweep: `esd` appears nowhere upstream; upstream spells `uncertainty`)",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "FitOutcome.iterations_history": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "FitOutcome.n_points_fitted": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "FitOutcome.n_points_loaded": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "FitOutcome.pre_fit": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "FitOutcome.start": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "FitOutcome.terminal_unevaluable_trials": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "FitOutcome.unevaluable_trials": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "FitPreamble.banks": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "FitPreamble.joint": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "FitPreamble.n_free": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "FitPreamble.n_points_fitted": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "FitPreamble.n_points_loaded": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "FitResult.descent": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "FitResult.elapsed_ms": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "FitResult.engine_esd": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "FitResult.engine_values": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "FitResult.iterations_history": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "FitResult.n_points_fitted": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "FitResult.n_points_loaded": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "FitResult.pre_fit": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "FitResult.start": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "FitResult.terminal_unevaluable_trials": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "FitResult.unevaluable_trials": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "FitResultBase.descent": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "FitResultBase.elapsed_ms": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "FitResultBase.engine_esd": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "FitResultBase.engine_values": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "FitResultBase.iterations_history": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "FitResultBase.n_points_fitted": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "FitResultBase.n_points_loaded": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "FitResultBase.pre_fit": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "FitResultBase.start": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "FitResultBase.terminal_unevaluable_trials": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "FitResultBase.unevaluable_trials": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "Instrument": {
+   "reason": "renamed `InstrumentBase` under the 2026-08-31 owner verbatim-name ruling (verbatim-names: our name IS diffraction-lib's name, Base/Enum and all); same concept, the upstream spelling",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "IterationRecord.elapsed_ms": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "IterationRecord.reduced_chi2": {
+   "reason": "spelled `reduced_chi_square` under the 2026-08-31 verbatim-name ruling (upstream FitResultBase.reduced_chi_square); the machine-record key renamed with it under ADR-0057 schema 8 (a row rename is a remove+add, hence the bump)",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "IterationRecord.unevaluable_trials": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "LineSegment.free_parameters": {
+   "reason": "removed under the 2026-08-30 owner ruling: diffraction-lib carries `free_parameters` on the project only; no script ever read a node's; `Project.free_parameters` stays",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "MeasuredPattern": {
+   "reason": "renamed `PdDataBase` under the 2026-08-31 owner verbatim-name ruling (verbatim-names: our name IS diffraction-lib's name, Base/Enum and all); same concept, the upstream spelling",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "Parameter.cif_names": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "Parameter.display_name": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "Parameter.display_units": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "Parameter.edi_names": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "Parameter.esd": {
+   "reason": "spelled `uncertainty` under the 2026-08-31 consistency sweep (uncertainty-sweep: `esd` appears nowhere upstream; upstream spells `uncertainty`)",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "Parameter.latex_name": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "Parameter.latex_units": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "Peak": {
+   "reason": "renamed `PeakBase` under the 2026-08-31 owner verbatim-name ruling (verbatim-names: our name IS diffraction-lib's name, Base/Enum and all); same concept, the upstream spelling",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "PeakProfileType": {
+   "reason": "renamed `PeakProfileTypeEnum` under the 2026-08-31 owner verbatim-name ruling (verbatim-names: our name IS diffraction-lib's name, Base/Enum and all); same concept, the upstream spelling",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "Project.cached": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "Project.load_complete": {
+   "reason": "retired under the 2026-08-31 owner one-loader ruling ('one loader, project contents select calculate vs fit', knowledge/decision-records.md): Project.load is the single loader and inherited the complete postconditions, conditional on what the project declares (_data loop = fit-ready, _data_range grid = calculation); pre-1.0, no alias",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "Project.refine": {
+   "reason": "renamed to `fit`/`fit_joint` under the 2026-09-09 owner ruling reconciling the refine/fit verb split (one verb for one operation): the public Project.refine family retired in favour of the fit spelling that crysta and edi now share",
+   "removed_in": "refine-to-fit rename"
+  },
+  "Project.refine_joint": {
+   "reason": "renamed to `fit`/`fit_joint` under the 2026-09-09 owner ruling reconciling the refine/fit verb split (one verb for one operation): the public Project.refine family retired in favour of the fit spelling that crysta and edi now share",
+   "removed_in": "refine-to-fit rename"
+  },
+  "Project.structure_factors": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "RadiationProbe": {
+   "reason": "renamed `RadiationProbeEnum` under the 2026-08-31 owner verbatim-name ruling (verbatim-names: our name IS diffraction-lib's name, Base/Enum and all); same concept, the upstream spelling",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "Reflection": {
+   "reason": "dead C++ deleted under the 2026-08-31 seq-35 drive (the standing keep-only-on-strong-justification ruling): edi's own value type over crysta's now-deleted ReflectionRow, never bound to Python; its consumers (structure_factors / CachedModel) were removed in this task, leaving the bare struct in the public header",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "SampleForm": {
+   "reason": "renamed `SampleFormEnum` under the 2026-08-31 owner verbatim-name ruling (verbatim-names: our name IS diffraction-lib's name, Base/Enum and all); same concept, the upstream spelling",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "ScatteringType": {
+   "reason": "renamed `ScatteringTypeEnum` under the 2026-08-31 owner verbatim-name ruling (verbatim-names: our name IS diffraction-lib's name, Base/Enum and all); same concept, the upstream spelling",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "Structure.free_parameters": {
+   "reason": "removed under the 2026-08-30 owner ruling: diffraction-lib carries `free_parameters` on the project only; no script ever read a node's; `Project.free_parameters` stays",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "Structure.load_cif": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "Verbosity": {
+   "reason": "renamed `VerbosityEnum` under the 2026-08-31 owner verbatim-name ruling (verbatim-names: our name IS diffraction-lib's name, Base/Enum and all); same concept, the upstream spelling",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "covered_tag_allowlist": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "covered_tag_categories": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "human_report": {
+   "reason": "removed under the 2026-08-30 owner ruling: the CLI composes its human output from the streaming parts (stream_header / iteration_line / summary_line / parameter_table); nothing called the one-shot function",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "np": {
+   "reason": "an accidental numpy re-export (import numpy as np in the package __init__), not an edi name: no diffraction-lib counterpart, no register row, no consumer; the module now imports numpy as _np",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "parameter_specs": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  },
+  "pre_fit_line": {
+   "reason": "removed under the 2026-08-30 owner ruling (keep only on a strong justification): no consumer among edi's CLI, notebooks, verification pages, tools and the substitution scripts, and no diffraction-lib counterpart",
+   "removed_in": "necessity review (ADR-0011)"
+  }
+ },
+ "schema": 4
+}

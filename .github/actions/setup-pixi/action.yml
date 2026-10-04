@@ -1,0 +1,27 @@
+name: 'Setup pixi'
+description: >-
+  Thin wrapper over prefix-dev/setup-pixi that pins the action version, the pixi LAUNCHER
+  version and the edi CI install flags in ONE place (mirroring crysta's wrapper): install
+  with a frozen lock (the committed pixi.lock is authoritative in CI — before this wrapper
+  the four inline call sites passed no inputs at all, so CI could silently re-solve) and
+  skip the post-job cleanup. The launcher pin MUST agree with the `requires-pixi`
+  declaration in pixi.toml — the hub's org-toolchain parity gate fails closed on a mismatch,
+  and pixi itself refuses to run when the installed launcher violates `requires-pixi`.
+runs:
+  using: 'composite'
+  steps:
+    - uses: prefix-dev/setup-pixi@v0.9.6
+      with:
+        # The org launcher pin. Hardcoded, not an input, so a call site cannot drift from the
+        # declared pin.
+        pixi-version: v0.76.2
+        # Install the pinned launcher to a JOB-SCOPED path, never the default ~/.pixi/bin/pixi:
+        # on a persistent self-hosted runner that path already exists, and setup-pixi's pinned
+        # download refuses to overwrite an existing file ("Destination file path ... already
+        # exists" — crysta PR #135 macOS leg), leaving a stale wrong-version launcher that
+        # requires-pixi then rejects. runner.temp is cleaned per job, so the pinned download
+        # always succeeds, is prepended to PATH for the job, and never clobbers the machine's
+        # shared ~/.pixi/bin (which the hub VM also uses).
+        pixi-bin-path: ${{ runner.temp }}/pinned-pixi/pixi
+        frozen: true
+        post-cleanup: false

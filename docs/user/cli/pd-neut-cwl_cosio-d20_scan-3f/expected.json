@@ -1,0 +1,52 @@
+{
+  "schema": 1,
+  "source": {
+    "engine": "crysta via python -m edi (re-pinned: fast_descent, chi_square_tolerance 1e-4)",
+    "artifact": "project/analysis/results.csv",
+    "provenance": "PROVENANCE.md"
+  },
+  "quantities": {
+    "n_free": {
+      "value": 39.0,
+      "kind": "reference",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    },
+    "results[52.345].fit_result.reduced_chi_square": {
+      "value": 4.784745100206658,
+      "kind": "regression-pin",
+      "tol_abs": 1e-06,
+      "tol_rel": null
+    },
+    "results[299.394].fit_result.reduced_chi_square": {
+      "value": 4.382171633700766,
+      "kind": "regression-pin",
+      "tol_abs": 1e-06,
+      "tol_rel": null
+    },
+    "results[497.379].fit_result.reduced_chi_square": {
+      "value": 3.887590417242671,
+      "kind": "regression-pin",
+      "tol_abs": 1e-06,
+      "tol_rel": null
+    },
+    "results[52.345].fit_result.iterations": {
+      "value": 4.0,
+      "kind": "regression-pin",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    },
+    "results[299.394].fit_result.iterations": {
+      "value": 6.0,
+      "kind": "regression-pin",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    },
+    "results[497.379].fit_result.iterations": {
+      "value": 10.0,
+      "kind": "regression-pin",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    }
+  }
+}

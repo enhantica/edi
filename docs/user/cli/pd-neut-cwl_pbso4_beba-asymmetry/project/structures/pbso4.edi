@@ -1,0 +1,31 @@
+data_pbso4
+
+_edi.schema_version 3
+
+_cell.length_a 8.479506
+_cell.length_b 5.397256
+_cell.length_c 6.958973
+_cell.angle_alpha 90
+_cell.angle_beta 90
+_cell.angle_gamma 90
+
+_space_group.name_h_m "P n m a"
+_space_group.coord_system_code abc
+_space_group.it_number 62
+
+loop_
+_atom_site.id
+_atom_site.type_symbol
+_atom_site.fract_x
+_atom_site.fract_y
+_atom_site.fract_z
+_atom_site.wyckoff_letter
+_atom_site.multiplicity
+_atom_site.occupancy
+_atom_site.adp_iso
+_atom_site.adp_type
+Pb Pb 0.18752 0.25 0.16705 c 4 1 1.39017 Biso
+S S 0.06549 0.25 0.68373 c 4 1 0.3927 Biso
+O1 O 0.90816 0.25 0.59544 c 4 1 1.99307 Biso
+O2 O 0.19355 0.25 0.54331 c 4 1 1.47771 Biso
+O3 O 0.08109 0.02727 0.80869 d 8 1 1.30007 Biso

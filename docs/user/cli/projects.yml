@@ -1,0 +1,63 @@
+# The CLI project registry: every project under docs/user/cli/<id>/ and whether it is in the EXECUTING
+# set — the set CI and `pixi run verify` run through `python -m edi` and compare against the project's
+# expected.json (tools/checks/cli_projects.py). A C33 feature task `add`s a project here or `extend`s
+# one. Project ids are <technique>_<sample>[-<instrument>]_<variant>, lowercase, each part kebab-case;
+# a project reproducing a diffraction-lib page keeps its stem lowercased.
+# `offline: true`: executing, but too slow for CI — it runs only when asked for explicitly
+# (`python tools/checks/cli_projects.py --offline`), never in CI or `pixi run verify`.
+schema: 1
+projects:
+  - id: pd-neut-cwl_cosio-d20_start-1
+    executing: true
+  - id: pd-neut-cwl_cosio-d20_start-4
+    executing: true
+  - id: pd-neut-cwl_cosio-d20_scan-3f
+    executing: true
+  - id: pd-neut-cwl_cosio-d20_scan-324f
+    executing: true
+    offline: true
+  - id: pd-neut-cwl_lbco-hrpt_start-2
+    executing: true
+  - id: pd-neut-cwl_lbco-hrpt_start-4
+    executing: true
+  - id: pd-neut-tof_ncaf-wish-2bank_start-3
+    executing: true
+  - id: pd-neut-tof_ncaf-wish-3bank_start-5
+    executing: true
+  - id: pd-neut-tof_ncaf-wish-5bank_start-5
+    # The five-bank project with the original FullProf free set and excluded regions.
+    executing: true
+  - id: pd-neut-tof_ncaf-wish-5bank_start-fullprof
+    # The same project started at every value of FullProf's own .pcr.
+    executing: true
+  - id: pd-neut-tof_si-sepd_start-2
+    executing: true
+  - id: pd-neut-tof_si-sepd_start-5
+    executing: true
+  - id: pd-neut-tof_diamond-dream_basic
+    executing: true
+  - id: pd-neut-cwl_lab6-echidna_fcj-asymmetry
+    # A scale-only fit of a verification parameter set; executing once every feature its full .pcr fit needs exists (the C33 milestone
+    # page's list).
+    executing: false
+  - id: pd-neut-cwl_pbso4_beba-asymmetry
+    # A scale-only fit of a verification parameter set; executing once every feature its full .pcr fit needs exists (the C33 milestone
+    # page's list).
+    executing: false
+  - id: pd-neut-tof_fe_pseudo-voigt
+    # A scale-only fit of a verification parameter set; executing once every feature its full .pcr fit needs exists (the C33 milestone
+    # page's list).
+    executing: false
+  - id: pd-neut-tof_cecoal-polaris_chebyshev
+    # CeCoAl3 with FullProf's Chebyshev background (Nba -5), against a FullProf fit.
+    executing: true
+  - id: pd-neut-tof_ceo2-pearl_polynomial
+    # CeO2 with FullProf's plain polynomial background (Nba 0), against a FullProf fit.
+    executing: true
+  - id: pd-neut-cwl_lab6-11b-echidna_tch-fcj
+    # The owner's LaB6 TCH x FCJ fit, polynomial background, against FullProf.
+    executing: true
+  - id: pd-xray-cwl_lif_single
+    # Fits the two X-ray polarization parameters against FullProf's calculated profile; executing since edi
+    # declared the two parameters.
+    executing: true

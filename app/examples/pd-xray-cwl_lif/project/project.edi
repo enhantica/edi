@@ -1,0 +1,5 @@
+_edi.schema_version 3
+
+_metadata.name             lif_xray
+_metadata.title            "LiF, X-ray powder diffraction (calculation)"
+_metadata.description      "The app's X-ray example: the constants of docs/dev/verification/pd-xray-cwl_LiF_single.py (its FullProf reference), on a calculation grid"

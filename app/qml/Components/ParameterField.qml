@@ -1,0 +1,60 @@
+// SPDX-License-Identifier: BSD-3-Clause
+import QtQuick
+import QtQuick.Controls
+
+import EasyApplication.Gui.Elements as EaElements
+
+import edi.app
+
+// One parameter as an editable field (the base's ParamTextField, as the original's groups use it):
+// the value with its uncertainty, the units inside the field, the "vary" toggle in its context menu.
+// A value the user typed goes through the core (ParameterItem.value -> assign_value); a refused one
+// (typed text that is not a number, or a value the core refuses) shows why and the field returns to
+// the model's value. A parameter the space group fixes or ties to another (edi ADR-0019) is shown
+// disabled, with the value symmetry implies: no typing, no vary toggle.
+EaElements.ParamTextField {
+    id: field
+
+    required property ParameterItem item
+    property string label: item ? item.shortName : ""
+    // Why the last typed text was refused before reaching the core; the core's own refusal is the item's.
+    property string typedRefusal: ""
+    readonly property string refusal: typedRefusal !== "" ? typedRefusal : item !== null ? item.lastError : ""
+    readonly property bool refinable: item === null || item.refinable
+
+    enabled: refinable
+    parameter: item ? {
+        "value": item.value,
+        "error": item.hasUncertainty ? item.uncertainty : 0,
+        "enabled": field.refinable,
+        "fittable": field.refinable,
+        "fit": item.free && field.refinable,
+        "category": item.category,
+        "name": item.name,
+        "shortPrettyName": field.label,
+        "units": item.displayUnits
+    } : ({})
+
+    warned: refusal !== ""
+    // Its title as every field's: left, inset as a combo box's, ending in "…" (edi ADR-0017 §5).
+    Component.onCompleted: FieldTitles.align(field)
+    ToolTip.text: refusal
+    ToolTip.visible: refusal !== "" && (hovered || activeFocus)
+
+    onValueChanged: typedRefusal = ""
+    onAccepted: commit()
+    onEditingFinished: commit()
+
+    // Return and leaving the field both commit; the second of the two finds nothing new.
+    function commit() {
+        if (item !== null && text !== field.value) {
+            typedRefusal = TypedInput.refusal(text, "number");
+            if (typedRefusal === "") {
+                item.value = Number(text);
+            }
+            text = Qt.binding(() => field.value);
+        }
+    }
+    fitCheckBox.onToggled: if (item !== null)
+        item.free = fitCheckBox.checked
+}

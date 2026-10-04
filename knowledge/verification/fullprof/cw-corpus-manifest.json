@@ -1,0 +1,122 @@
+{
+  "commit": "39ada82c8aef8b4657c4ae8c68e888668db0f38e",
+  "committed": {
+    "pd-neut-cwl_lab6-echidna_11b": {
+      "ECH0030684_LaB6_1p622A_11B.bac": "sha256:d35819a839993fc1d967e8b946a72bc373d89f073d5a3b6964ee7a7efa821bf2",
+      "ECH0030684_LaB6_1p622A_11B.dat": "sha256:c41427269a36cad15936de9c11fea8c6719293a6e5acfe4146291efa8ed26cbc",
+      "ECH0030684_LaB6_1p622A_11B.pcr": "sha256:284cd7020a35427d8a3df107792fc74ff7f043e011eac896de6987f35bfa2530",
+      "ECH0030684_LaB6_1p622A_11B.prf": "sha256:99c6851fedae979a0f84eeddff33ecd143025d8c462dabcf6160d9492ba9eb6e",
+      "ECH0030684_LaB6_1p622A_11B.sum": "sha256:8ff10c7420dbf29c58fb2a00ce15db8415b5c7b5ebcef5d53e87396561d0ae61",
+      "PROVENANCE.md": "sha256:3b599ba5ee66a5c8cdea5871f6e111030bd913b12cb194cd7b9e1f8cba77670a"
+    },
+    "pd-neut-cwl_lab6-echidna_absorption": {
+      "ECH0030684_LaB6_1p622A_absorption.bac": "sha256:66ca08f0fe55304143f5e6a4a43def3e85dbadbf2350c7fa2f52fabd940665fa",
+      "ECH0030684_LaB6_1p622A_absorption.dat": "sha256:c41427269a36cad15936de9c11fea8c6719293a6e5acfe4146291efa8ed26cbc",
+      "ECH0030684_LaB6_1p622A_absorption.pcr": "sha256:65841dda06ebfaa8d17e567ed1e635084bab83df48ab605a06af5d58d10d38a4",
+      "ECH0030684_LaB6_1p622A_absorption.prf": "sha256:40d897f62aa26a762a42e2eb56d6ea829e90bbdefe2f431f89e130b1cbb2f560",
+      "ECH0030684_LaB6_1p622A_absorption.sum": "sha256:52831cc5e68a8c822fb12e5fd4419535fd49605893058371bcd1458b08e963b6",
+      "PROVENANCE.md": "sha256:53e6f3666373259c04d4f3454c831899f124c3bbec4cafdabf00404cd80a8433"
+    },
+    "pd-neut-cwl_lab6-echidna_basic": {
+      "ECH0030684_LaB6_1p622A_baseline.bac": "sha256:a3fe5fcf1e9a5a43d5e854ce840dc84aa6862a1f747d1f7b5e72fff9b0366e3c",
+      "ECH0030684_LaB6_1p622A_baseline.dat": "sha256:c41427269a36cad15936de9c11fea8c6719293a6e5acfe4146291efa8ed26cbc",
+      "ECH0030684_LaB6_1p622A_baseline.pcr": "sha256:a6e38ea30cdf0c029a1960cbb96fae1617143b1811b01a15f8e20f8393d724d5",
+      "ECH0030684_LaB6_1p622A_baseline.prf": "sha256:8d0484e615c778e6789aa60668c1649f50a151ff22e0958bd6eb0a2e43a2e481",
+      "ECH0030684_LaB6_1p622A_baseline.sum": "sha256:26d2d0f4e7ae195bba13b1d34fb8300ef1ce71a1cca1cbe3c5a2ba041cbd6af8",
+      "PROVENANCE.md": "sha256:5f0b9ca5d5a333f2b3bc8b155f35b3659fea72954f53f566547b7765a6b63d58"
+    },
+    "pd-neut-cwl_lab6-echidna_fcj-asymmetry": {
+      "ECH0030684_LaB6_1p622A_fcj.bac": "sha256:6e9c617371a72357082cd201a44d7e8c1d0a104ef1f139d3ea3173c3ef592149",
+      "ECH0030684_LaB6_1p622A_fcj.dat": "sha256:c41427269a36cad15936de9c11fea8c6719293a6e5acfe4146291efa8ed26cbc",
+      "ECH0030684_LaB6_1p622A_fcj.pcr": "sha256:34aa5fb2745ecff3ea206126faf2c1055a45cabe0a43a17105e3efe76653f26a",
+      "ECH0030684_LaB6_1p622A_fcj.prf": "sha256:791ed87f188bcdefcb668d81d144023d7c8f9cad8b05ed7b829ae420813b8d85",
+      "ECH0030684_LaB6_1p622A_fcj.sum": "sha256:42289ad161634b6fed3c3047da295c824058e663d6ba5bed68ad9e8c0da08cd3",
+      "PROVENANCE.md": "sha256:f57d8f7911198617e9194d0d00a3ec2356d08ed6340607e61df3405003c9a547"
+    },
+    "pd-neut-cwl_lbco-hrpt_basic": {
+      "PROVENANCE.md": "sha256:6add726162e0b4afa9baae2ad4983159bd0df6b4c128cd764d5cf45f332827a9",
+      "lbco.bac": "sha256:07f4b0b0371334c6b67bfebca0f75374e2e33685fdbf87ee877d673335833d03",
+      "lbco.dat": "sha256:83c7f3d27d2e254367dd7dc3730261b9a5ebb811baaeed01fde050a7ba99be24",
+      "lbco.pcr": "sha256:4ec747b9dc88dd798015d7061dccee6e9f31dc8f2448a82a943a0a965fd84581",
+      "lbco.prf": "sha256:640490df5dd98482f561c7b1a3a7714ae860bc6fd709db1b40b37b5275dff1bb",
+      "lbco.sum": "sha256:9a96665f826bd0b83e374992c8a56868094906a674ff4b348618ec8e774acde9"
+    },
+    "pd-neut-cwl_lbco-hrpt_preferred-orientation": {
+      "PROVENANCE.md": "sha256:68cc3d4f3d2493f76140ef7c5cedc4b21590fc962cf7d7ffaece7edf92bcf655",
+      "lbco.bac": "sha256:07f4b0b0371334c6b67bfebca0f75374e2e33685fdbf87ee877d673335833d03",
+      "lbco.dat": "sha256:83c7f3d27d2e254367dd7dc3730261b9a5ebb811baaeed01fde050a7ba99be24",
+      "lbco.pcr": "sha256:5759c765e3050ca6298ad7a3f5cbeb93cc76991bd4f9c36b4e39dcaffeda4403",
+      "lbco.prf": "sha256:35dc25fbc63948be198b7ab7274c7e9ba98621bd796edc8c87d8a8e8909df89f",
+      "lbco.sum": "sha256:1a01f3a87c4eca5eabed96dcf7040f339ded66f09a77b3d02fdeff3713807275"
+    },
+    "pd-neut-cwl_pbso4_basic": {
+      "PROVENANCE.md": "sha256:5da60d24a7e0bd03534401b081d7e2c9c7d50f6376cb66331c609569f58582fd",
+      "pbso4.bac": "sha256:e7a9a2551558c8fd8159b85adaaf7ad5e15fce173fc9fcd950defaaade7154c8",
+      "pbso4.dat": "sha256:637bfde3bb1adb24045fb688c2a0cdfd424bf7bc9956f267a11053ba82a944e2",
+      "pbso4.pcr": "sha256:b1f962c0d10c3ac50fa63c550d5aa85e463626c53ab346b6ef473cf5c0b73538",
+      "pbso4.prf": "sha256:c85bf109a776be3257fd8b8d69cb554435a1d106de54444aadc5bfa9fe15e907",
+      "pbso4.sum": "sha256:00ae2424b0ce876f2ed173cc51ca88d48fb2e704b071fd8e6366d9055fc92768"
+    },
+    "pd-neut-cwl_pbso4_beba-asymmetry": {
+      "PROVENANCE.md": "sha256:bc454e1f2dd026e1082cae7e8eca46f1038f95fd2d6fff8734d74fefec7a5cef",
+      "pbso4.bac": "sha256:a7ee9ccd9fd7b10713495817b715b87b38cf2cb97c561750b4e09a83eb34103a",
+      "pbso4.dat": "sha256:637bfde3bb1adb24045fb688c2a0cdfd424bf7bc9956f267a11053ba82a944e2",
+      "pbso4.pcr": "sha256:23791b9d6564fc5d3e2840d3fb6dced4fbbe7ab480e0915aa1434f3886559c65",
+      "pbso4.prf": "sha256:071e2b81921e0c47b12819db5a65ec3cc2efa92d914bb46746cb7c3faa35107b",
+      "pbso4.sum": "sha256:42128272cb26869839a4b7a406c8a34e38c0f70ddb83eb6f671246587e65158b"
+    },
+    "pd-neut-cwl_y2o3_isotropic-adp": {
+      "PROVENANCE.md": "sha256:bc99bc69e5b7a7dd0a624bf667757f7962f40ba5bf9035de171d0bba530dcf71",
+      "y2o3_isotropic_adp.bac": "sha256:a0e3fbdd25c98e65cd3123f9ec445015a4ec14a57707026bb23e6986a8e9e3eb",
+      "y2o3_isotropic_adp.dat": "sha256:0b3bc38ed073536f503a27776704853e735b6aaaaaa4bdbd4af8146bfd2bbf61",
+      "y2o3_isotropic_adp.pcr": "sha256:52f92a16e31a3745cf19c0ceee0c18f2180edbb34f0bae94fe3f27e9b637edf2",
+      "y2o3_isotropic_adp.prf": "sha256:7b70793eb5b3556de446371b98876c62dfff5775dc5d8e41ef80ac5eca82b2f5",
+      "y2o3_isotropic_adp.sum": "sha256:721fea6c55fd689ffb0fddfdc489bc5f122305a8db701b2ea9904e2ead91f582"
+    },
+    "pd-xray-cwl_lif_single": {
+      "lif_single_unpolarized.bac": "sha256:a4d4499e76435e7c57d1b868374809bba5492d5b522e3e982572560104c1c10d",
+      "lif_single_unpolarized.dat": "sha256:06ba190e26656de021c199beef857cdf61acf5e05ca62564cb325d40d9628cae",
+      "lif_single_unpolarized.pcr": "sha256:5b394218f4251d245e135c1a08df0aa50f3053b10d50a74c46407fe6388f1794",
+      "lif_single_unpolarized.prf": "sha256:a8bb9b01ffe9b7a7cf66e875f1b1fd152cbbe2ff861b2fcd36c166059e447103",
+      "lif_single_unpolarized.sum": "sha256:14edb1a0ef4b45816d46f5e927a1b801f96ce007bc6077a79b762aa193098121"
+    },
+    "pd-xray-cwl_lif_single-polarization": {
+      "lif_single_polarized.bac": "sha256:423eabac3ebd8ea65c5761f79594adc82fc79ba24c7b63313292ac8c76b974c2",
+      "lif_single_polarized.dat": "sha256:06ba190e26656de021c199beef857cdf61acf5e05ca62564cb325d40d9628cae",
+      "lif_single_polarized.pcr": "sha256:ee0ccb367617e839ddfc2ae6c3a9904e1daba03e2d0cb8aab7c95233ae5bde4f",
+      "lif_single_polarized.prf": "sha256:1b1186880704ddbdae5b6e39b0444bdb177d9b5c13ad99dd0b7f5463d1b7d849",
+      "lif_single_polarized.sum": "sha256:d2b25204f6853cab5bc2b64fc931595f0b8803e8ae0f73383fd91937434a3e67"
+    }
+  },
+  "corpus_root": "docs/docs/verification",
+  "directories": [
+    "pd-neut-cwl_lab6",
+    "pd-neut-cwl_lbco_basic",
+    "pd-neut-cwl_lbco_preferred-orientation",
+    "pd-neut-cwl_pbso4_basic",
+    "pd-neut-cwl_pbso4_beba-asymmetry",
+    "pd-neut-cwl_y2o3_beta-adp",
+    "pd-neut-cwl_y2o3_isotropic-adp",
+    "pd-xray-cwl_lif",
+    "pd-xray-cwl_pbso4_round-robin"
+  ],
+  "pages": [
+    "pd-neut-cwl_LBCO_basic",
+    "pd-neut-cwl_LBCO_preferred-orientation",
+    "pd-neut-cwl_LaB6_11B",
+    "pd-neut-cwl_LaB6_absorption",
+    "pd-neut-cwl_LaB6_basic",
+    "pd-neut-cwl_LaB6_fcj-asymmetry",
+    "pd-neut-cwl_LaB6_sycos-sysin",
+    "pd-neut-cwl_PbSO4_basic",
+    "pd-neut-cwl_PbSO4_beba-asymmetry",
+    "pd-neut-cwl_Y2O3_beta-adp",
+    "pd-neut-cwl_Y2O3_isotropic-adp",
+    "pd-xray-cwl_LiF_doublet",
+    "pd-xray-cwl_LiF_single",
+    "pd-xray-cwl_LiF_single_absorption",
+    "pd-xray-cwl_LiF_single_polarization",
+    "pd-xray-cwl_PbSO4_round-robin"
+  ],
+  "repository": "https://github.com/easyscience/diffraction-lib"
+}

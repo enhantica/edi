@@ -1,0 +1,46 @@
+# --- Reference-library clones (study material) ---------------------------------
+# Shallow clones under knowledge/libraries/<name>/ are git-ignored: read, never
+# copied. The authored catalog (clone.sh, README.md, ideas-from-*.md, MIGRATION-MAP.md,
+# DESIGN-NOTES.md) lives directly in knowledge/libraries/ and IS tracked.
+knowledge/libraries/*/
+knowledge/libraries/clone*.log
+
+# --- Build / tooling artifacts -------------------------------------------------
+build/
+dist/
+site/
+.pixi/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+node_modules/
+# The compiled nanobind extension is emitted into the package dir (lib/edi/) so the editable
+# `import edi` resolves it (E01); it is a build artifact rebuilt by `pixi run core-build` — never tracked.
+lib/edi/*.so
+
+# --- Local scratch and editor state -------------------------------------------- tmp/ is the
+# local scratch area (downloads, staged corpora, throwaway projects).idea/ is JetBrains editor
+# state. crysta ignores both; edi never did, so a scratch run or opening the repo in an IDE
+# dirtied the tree — and a dirty passenger tree fails the mount contract closed, blocking lane
+# spawns.
+tmp/
+/.idea/
+
+# --- OS / editor ---------------------------------------------------------------
+.DS_Store
+*.swp
+
+# agent-os lane liveness (local)
+tools/agent-os/.heartbeat-*
+
+# Coverage artifacts (an untracked .coverage dirties the checkout and fails the mount
+# contract closed, blocking lane spawns — fourth occurrence before this fix)
+.coverage
+.coverage.*
+
+# The verification .ipynb are DERIVED (jupytext from the .py sources, notebook-prepare) and
+# executed in place for the docs render - generated artifacts, never tracked, so no local run
+# of the docs chain can dirty the tree.
+docs/dev/verification/*.ipynb

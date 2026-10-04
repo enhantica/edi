@@ -1,0 +1,186 @@
+
+
+        **********************************************************
+        ** PROGRAM FullProf.2k (Version 8.40 - Feb2026-ILL JRC) **
+        **********************************************************
+                       M U L T I -- P A T T E R N                 
+            Rietveld, Profile Matching & Integrated Intensity     
+                 Refinement of X-ray and/or Neutron Data
+
+
+    Date: 25/09/2026  Time: 13:22:27.262                              
+
+ => PCR file code: cecoal
+ => DAT file code: cecoal               -> Relative contribution: 1.0000                                                            
+ => Title: CeCoAl3 RT #13744 ThCr2Si2 type  TSample:   300.00 K
+
+ ==> CONDITIONS OF THIS RUN FOR PATTERN No.:  1
+
+ => Global Refinement of neutron powder data                                                                                        
+ => Neutron Time-Of-Flight data                                                                                                     
+ => Abcisa variable is T.O.F. in microsecs
+ => The    9th default profile function was selected
+
+ => X-Y type of data: 2theta/TOF/E(Kev) Intens sigma for pattern:  1
+ => Absorption correction type: 2
+ => Base of peaks: 2.0*HW*    4.20
+ ==> T.O.F. range, and number of points:
+    TOFmin:    3001.589111  TOFmax:   19004.658203
+    No. of points:   3693
+ =>-------> Pattern#  1
+ => Crystal Structure Refinement for phase: 1
+ => The density (volumic mass) of phase 1 is:    4.781 g/cm3
+ => Scor: 2.8482
+
+ ==> RESULTS OF REFINEMENT:
+
+
+ => No. of fitted parameters:    0
+
+
+------------------------------------------------------------------------------
+ => Phase No.  1 CeCoAl3                                 P m m a             
+------------------------------------------------------------------------------
+
+ =>  No. of reflections for pattern#:   1:  1517  
+
+
+ ==> ATOM PARAMETERS:
+
+  Name      x     sx       y     sy       z      sz      B   sB   occ. socc.  Mult
+ Ce      0.25000(   0)  0.00000(   0)  0.38279(   0)  0.503(  0)  0.250(  0)    2
+ Co      0.25000(   0)  0.00000(   0)  0.81319(   0)  0.476(  0)  0.250(  0)    2
+ Al1     0.00000(   0)  0.00000(   0)  0.00000(   0)  0.585(  0)  0.250(  0)    2
+ Al2     0.25000(   0)  0.50000(   0)  0.04117(   0)  0.658(  0)  0.250(  0)    2
+ Al3     0.06930(   0)  0.50000(   0)  0.70070(   0)  0.533(  0)  0.510(  0)    4
+
+ ==> PROFILE PARAMETERS FOR PATTERN#  1
+
+ => Cell parameters      :
+                              7.65038   0.00000
+                              4.05133   0.00000
+                              6.90536   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+ 
+
+ => Overall scale factor       :  16660.060546875     0.000000000
+ => T.O.F. Extinction parameter:     0.001600    0.000000
+ => Overall temperature  factor:     0.000000    0.000000
+ => T.O.F. Gaussian variances Sig-2, Sig-1, Sig-0: 
+         0.000000    0.000000
+        39.461498    0.000000
+         0.000000    0.000000
+
+ => T.O.F. Gaussian variance Sig-Q:     0.000000    0.000000
+ => T.O.F. Isotropic Gaussian Strain parameter (G-strain):      0.00000     0.00000
+ => T.O.F. Isotropic Gaussian Size   parameter (G-size)  :      0.00000     0.00000
+ => T.O.F. Anisotropic Lorentzian  Size  parameter (Ani-LorSize):      0.00000     0.00000
+ => T.O.F. Lorentzian FWHM Gam-2, Gam-1, Gam-0: 
+         0.000000    0.000000
+         4.778100    0.000000
+         0.000000    0.000000
+
+ => T.O.F. Lorentzian strain and size parameters (LStr,LSiz): 
+         0.000000    0.000000
+         0.000000    0.000000
+
+ => Direct cell parameters: 
+        7.650381    0.000000
+        4.051332    0.000000
+        6.905360    0.000000
+       90.000000    0.000000
+       90.000000    0.000000
+       90.000000    0.000000
+
+ => Preferred orientation parameters: 
+         0.000000    0.000000
+         0.000000    0.000000
+
+ => T.O.F. Peak shape parameter alpha0,beta0,beta1,alphaQ,betaQ: 
+        0.000000    0.000000    0.043085
+        0.000000    0.297100    0.000000
+        0.002867    0.000000    0.000000
+        0.000000    0.000000    0.000000
+
+
+ => Absorption parameters: 
+                             0.156100E-01   0.00000    
+                              0.00000       0.00000    
+
+
+
+ ==> GLOBAL PARAMETERS FOR PATTERN#  1
+
+
+ => Zero-point:     3.9304    0.0000
+ => Chebychev Polynomials Background Parameters ==>
+                               26833.      0.0000    
+                               4390.5      0.0000    
+                               2629.9      0.0000    
+                              -513.84      0.0000    
+                               284.71      0.0000    
+                               163.45      0.0000    
+                               240.86      0.0000    
+                              -72.052      0.0000    
+                               15.094      0.0000    
+                               126.01      0.0000    
+                              -12.868      0.0000    
+                              -280.94      0.0000    
+                               0.0000      0.0000    
+                               0.0000      0.0000    
+                               0.0000      0.0000    
+                               0.0000      0.0000    
+                               0.0000      0.0000    
+                               0.0000      0.0000    
+                               0.0000      0.0000    
+                               0.0000      0.0000    
+                               0.0000      0.0000    
+                               0.0000      0.0000    
+                               0.0000      0.0000    
+                               0.0000      0.0000    
+ 
+
+ => T.O.F.- dtt1       (    TOFo=dtt1*dsp     ):   6176.03      0.00
+ => T.O.F.- dtt2       (TOF=TOFo+dtt2*dsp*dsp ):     -1.92      0.00
+ => T.O.F.- dtt_1OverD (TOF=TOF+dtt_1overD/dsp):      0.00      0.00
+
+ ==> RELIABILITY FACTORS WITH ALL NON-EXCLUDED POINTS FOR PATTERN:  1
+
+  => Cycle:  1 => MaxCycle: 15
+ => N-P+C:  3691
+ =>  R-factors (not corrected for background) for Pattern:  1
+ => Rp:  3.28     Rwp:  5.34     Rexp:    3.99 Chi2:  1.79      M.L. refinement
+ => Conventional Rietveld R-factors for Pattern:  1
+ => Rp:  13.6     Rwp:  15.9     Rexp:   11.92 Chi2:  1.79    
+ => Deviance:  0.338E+06     Dev*  :   91.53    
+ => DW-Stat.:    0.6080     DW-exp:     1.8978
+ => N-sigma of the GoF:       33.909
+
+ ==> RELIABILITY FACTORS FOR POINTS WITH BRAGG CONTRIBUTIONS FOR PATTERN:  1
+
+ => N-P+C:  3284
+ =>  R-factors (not corrected for background) for Pattern:  1
+ => Rp:  2.96     Rwp:  4.93     Rexp:    3.96 Chi2:  1.55      M.L. refinement
+ => Conventional Rietveld R-factors for Pattern:  1
+ => Rp:  11.0     Rwp:  14.0     Rexp:   11.28 Chi2:  1.55    
+ => Deviance:  0.259E+06     Dev*  :   78.77    
+ => DW-Stat.:    0.7901     DW-exp:     1.8916
+ => N-sigma of the GoF:       22.186
+
+ => Global user-weigthed Chi2 (Bragg contrib.):   2.01    
+
+     -----------------------------------------------------
+     BRAGG R-Factors and weight fractions for Pattern #  1
+     -----------------------------------------------------
+
+ => Phase:  1     CeCoAl3
+ => Bragg R-factor:   5.46       Vol:  214.026( 0.000)  Fract(%):  100.00( 0.00)
+ => Rf-factor=  2.54             ATZ:         616.188   Brindley:  1.0000
+
+ 
+              CPU Time:     0.609 seconds
+                            0.010 minutes
+
+ => Run finished at:     Date: 25/09/2026  Time: 13:22:27.881                              

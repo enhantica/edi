@@ -1,0 +1,44 @@
+{
+  "schema": 1,
+  "provenance": {
+    "role": "independent crysta dictionary/grammar classification oracle",
+    "repository": "crysta",
+    "crysta_commit": "501d49eaf484859829ed92a4ac83b7b82dae3f5b",
+    "dictionary_path": "data/dictionary/parameters.yaml",
+    "grammar_paths": [
+      "src/core/experiment_family.hpp",
+      "src/core/experiment_tokens.hpp"
+    ],
+    "derivation": " re-ran the  committed case matrix at crysta 501d49ea; the hidden gate executes that pinned crysta library loader on every committed case",
+    "numeric_role": "nontrivial transport inputs only; no fixture number is a CW-physics oracle"
+  },
+  "dictionary": {
+    "families": {
+      "peak": [
+        "_peak.broad_gauss_u",
+        "_peak.broad_gauss_v",
+        "_peak.broad_gauss_w",
+        "_peak.broad_lorentz_x",
+        "_peak.broad_lorentz_y"
+      ],
+      "instrument": [
+        "_instrument.calib_twotheta_offset",
+        "_instrument.setup_wavelength"
+      ]
+    }
+  },
+  "classifications": {
+    "cwl_valid": true,
+    "tof_valid": true,
+    "cwl_with_tof_beam": false,
+    "tof_with_cwl_beam": false,
+    "cwl_bad_beam_hyphen": false,
+    "cwl_no_beam": true,
+    "tof_no_peak": true,
+    "cwl_reserved_fcj": false,
+    "cwl_reserved_beba": false,
+    "cwl_unknown_peak": false,
+    "cwl_with_tof_tag": false,
+    "tof_with_cw_tag": false
+  }
+}

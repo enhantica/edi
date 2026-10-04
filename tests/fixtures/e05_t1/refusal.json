@@ -1,0 +1,16 @@
+{
+  "path": "tests/fixtures/e05_t1/failed-fit/project",
+  "record": {
+    "schema": "8",
+    "record": "error",
+    "status": "error"
+  },
+  "reason": "no free parameters",
+  "edi_sha": "4c119b8529c5338859d38171b8d69ba74cb429c0",
+  "inputs_sha256": {
+    "analysis/analysis.edi": "9b1aff7a505d8667abd69794009f4db9530df5631697cd5bc10827275e7b86d4",
+    "experiments/hrpt.edi": "ce13b8c507ae21529ba599f0c879c4c2e28e6c2e4f14077de6d6ec37986ef526",
+    "project.edi": "2e60cb718b05382029973687cb3d48dc4b85cec1b932e25844d760572af7bef7",
+    "structures/lbco.edi": "5c88ad76d91033c4c57d87748664c8d16e406e4be2a66238cb948563518c443c"
+  }
+}

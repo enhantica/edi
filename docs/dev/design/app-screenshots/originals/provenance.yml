@@ -1,0 +1,77 @@
+# Reference originals for gate 5. Captured by the owner on 2026-09-27 from easydiffractionbeta v0.9.9
+# (Home: "14 nov 2024") on macOS, 2560x1592 PNG (Retina 2x of a 1280x796 window including the title
+# bar), Co2SiO4 (D20) built-in example loaded; byte-identical copies of the owner's files (sha256
+# below). The macOS pointer is visible in most shots (a capture artifact, not UI). The older 2024 set
+# committed in easydiffractionbeta (tests/gui/screenshots/desired) is superseded as the reference.
+app: easydiffractionbeta v0.9.9
+platform: macOS
+pixel_size: [2560, 1592]
+captured: 2026-09-27
+images:
+  - file: 01-home.png
+    original_name: "Screenshot 2026-09-27 at 21.02.09.png"
+    sha256: a16e93943fdae4b108e007b496bd45d1c68ed938bb0e321ae556269033f27c42
+    state: "Home page, no project"
+  - file: 02-project-no-project.png
+    original_name: "Screenshot 2026-09-27 at 21.02.13.png"
+    sha256: c34a4a8bd4c20624b18f0d85738936fa3388b40276feb314e638cb6b4fdfbbc8
+    state: "Project page, no project; Get started expanded"
+  - file: 03-project-examples.png
+    original_name: "Screenshot 2026-09-27 at 21.02.16.png"
+    sha256: ae6109815b80ccba053346ea619930a2de1e5ad870a77b25fa3bf349bc818fb5
+    state: "Project page, no project; Examples expanded (six built-in examples)"
+  - file: 04-project-loaded.png
+    original_name: "Screenshot 2026-09-27 at 21.02.29.png"
+    sha256: ce0c17c91f69e86a13b35ffa2305b4324197c1e80fda63fea850fee1edddeed2
+    state: "Project page after loading the Co2SiO4 (D20) example: Description tab; Examples expanded"
+  - file: 05-model-models.png
+    original_name: "Screenshot 2026-09-27 at 21.02.33.png"
+    sha256: c7576b9cc41b0873937a7aedc20231b999e430b7b213cded230c60594f8c0a32
+    state: "Model page: Structure view; Models (1) expanded"
+  - file: 06-model-space-group.png
+    original_name: "Screenshot 2026-09-27 at 21.02.37.png"
+    sha256: f1479ddaf005c8d50e8abb0bc62964adb1024f5168ad18319321334a951e5e9d
+    state: "Model page: Space group expanded"
+  - file: 07-model-cell.png
+    original_name: "Screenshot 2026-09-27 at 21.02.39.png"
+    sha256: c0d0f68c414a48b318e78bdb9111097b9576767c671a8cd380d9641a9ce91766
+    state: "Model page: Cell expanded"
+  - file: 08-model-atom-site.png
+    original_name: "Screenshot 2026-09-27 at 21.02.42.png"
+    sha256: a202eec5a264ab4f60853ebfd47711dc092576f6384946867640c92575722945
+    state: "Model page: Atom site (6) expanded"
+  - file: 09-model-text-mode.png
+    original_name: "Screenshot 2026-09-27 at 21.02.47.png"
+    sha256: 2eb190fb11a2a6977f877300b03169fac21ea15ccf42b517709e6cbe61dfe5c6
+    state: "Model page: Text mode tab"
+  - file: 10-experiment-experiments.png
+    original_name: "Screenshot 2026-09-27 at 21.02.51.png"
+    sha256: 40d528481e028d42d12f4e7321ea43952874a14b38753ed3f72ebc1c2bcef1a1
+    state: "Experiment page: Chart view; Experiments (1) expanded"
+  - file: 11-experiment-profile-shape.png
+    original_name: "Screenshot 2026-09-27 at 21.03.00.png"
+    sha256: fd3d71019f3c7dd20cf66f93f982938eeeb27e8c134457c09e486e209e473df8
+    state: "Experiment page: Profile shape expanded"
+  - file: 12-experiment-background.png
+    original_name: "Screenshot 2026-09-27 at 21.03.03.png"
+    sha256: b4987a4bf8d73f0491698ee50a2d93a941067301facce3404f450a7fb94dad1c
+    state: "Experiment page: Background (14) expanded"
+  - file: 13-analysis-basic.png
+    original_name: "Screenshot 2026-09-27 at 21.03.09.png"
+    sha256: b75b62b07103904fba907e2e6bf2c46597241c3a0ebfc57c350dd5eeb34e703e
+    state: "Analysis page: Fitting tab; Basic controls (fit parameters table)"
+  - file: 14-analysis-extra-minimizer.png
+    original_name: "Screenshot 2026-09-27 at 21.03.18.png"
+    sha256: 1ecaa53f63c9952058d47118145ca16f6528f51d0986fdf00b53020c5524c9aa
+    state: "Analysis page: Extra controls; Minimization engine expanded"
+  - file: 15-summary.png
+    original_name: "Screenshot 2026-09-27 at 21.03.21.png"
+    sha256: 20ab81eecf4a96b131ccce9451d24512886fe87838139a447ec89034e4f6fbee
+    state: "Summary page"
+  - file: 16-summary-preferences.png
+    original_name: "Screenshot 2026-09-27 at 21.03.29.png"
+    sha256: 2cc4878e116dfbd31ae7598823fa0c9269eca65e60c8626840bb10a757c572be
+    state: "Summary page with the Preferences dialog open (Appearance tab)"
+excluded:
+  - original_name: "Screenshot 2026-09-27 at 21.02.20.png"
+    reason: "Project page, Recent projects expanded: shows the owner's local file-system paths; the port shows the group empty (recent projects need the E06 settings facade)"

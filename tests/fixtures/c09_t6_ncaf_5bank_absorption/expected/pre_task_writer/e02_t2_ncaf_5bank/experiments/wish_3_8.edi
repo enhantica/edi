@@ -1,0 +1,61 @@
+data_wish_3_8
+
+_edi.schema_version 2
+
+_peak.rise_alpha_0 -0.012056(10)
+_peak.rise_alpha_1 0.122605(10)
+_peak.decay_beta_0 0.006013(10)
+_peak.decay_beta_1 0.027211(10)
+_peak.broad_gauss_sigma_0 0
+_peak.broad_gauss_sigma_1 62.0718(10)
+_peak.broad_gauss_sigma_2 16.9229(10)
+_peak.broad_gauss_size 0
+_peak.broad_gauss_strain 0
+_peak.cutoff_fwhm 20
+_peak.type tof-jorgensen
+
+_instrument.setup_twotheta_bank 90
+_instrument.calib_d_to_tof_offset -12.9275(10)
+_instrument.calib_d_to_tof_linear 15105.5(10)
+_instrument.calib_d_to_tof_quadratic 1.00785
+
+loop_
+_excluded_region.id
+_excluded_region.start
+_excluded_region.end
+1 0 9000
+2 116000 3e+05
+
+loop_
+_linked_structure.structure_id
+_linked_structure.scale
+ncaf 36.8073(10)
+
+_background.type line-segment
+
+loop_
+_background.id
+_background.position
+_background.intensity
+1 9089.7529 432.7(10)
+2 11580.4033 502.2203(10)
+3 13667.165 411.9241(10)
+4 15551.9824 469.0353(10)
+5 17739.7168 404.1036(10)
+6 20364.9961 375.4321(10)
+7 22653.7031 344.2768(10)
+8 24740.4648 331.0701(10)
+9 27130.1406 335.2022(10)
+10 29957.3672 353.1218(10)
+11 32616.3047 298.5371(10)
+12 36150.3359 283.6908(10)
+13 40963.3516 253.9048(10)
+14 47265.5195 254.3469(10)
+15 53391.1758 235.4982(10)
+16 62005.2383 240.6914(10)
+17 71866.8672 239.3277(10)
+18 82913.9922 242.9129(10)
+19 90385.9375 241.0819(10)
+20 99649.2188 235.3664(10)
+21 107356.7656 238.8687(10)
+22 115337.3203 246.3332(10)

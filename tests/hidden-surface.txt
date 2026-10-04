@@ -1,0 +1,3 @@
+# The repo-declared hidden test surface (development hub  ruling 66, I14): unit is
+# the hidden set; every path outside tests/unit is visible.
+tests/unit/**

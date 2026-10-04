@@ -1,0 +1,46 @@
+data_structure
+_cell.length_a 8.479506
+_cell.length_b 5.397256
+_cell.length_c 6.958973
+_cell.angle_alpha 90
+_cell.angle_beta 90
+_cell.angle_gamma 90
+_space_group.name_h_m "P n m a"
+loop_
+_atom_site.id
+_atom_site.wyckoff_letter
+_atom_site.type_symbol
+_atom_site.adp_type
+_atom_site.fract_x
+_atom_site.fract_y
+_atom_site.fract_z
+_atom_site.occupancy
+_atom_site.adp_iso
+Pb c Pb Biso 0.18752 0.25 0.16705 1.0 1.39017
+S c S Biso 0.06549 0.25 0.68373 1.0 0.3927
+O1 c O Biso 0.90816 0.25 0.59544 1.0 1.99307
+O2 c O Biso 0.19355 0.25 0.54331 1.0 1.47771
+O3 d O Biso 0.08109 0.02727 0.80869 1.0 1.30007
+
+data_experiment
+_experiment_type.sample_form powder
+_experiment_type.radiation_probe neutron
+_experiment_type.scattering_type bragg
+_experiment_type.beam_mode "constant wavelength"
+_peak.type cwl-pseudo-voigt-berar-baldinozzi-asymmetry
+_peak.broad_gauss_u 0.153402
+_peak.broad_gauss_v -0.453103
+_peak.broad_gauss_w 0.419409
+_peak.broad_lorentz_x 0.0
+_peak.broad_lorentz_y 0.086818
+_peak.asym_beba_a0 0.29465
+_peak.asym_beba_b0 0.02261
+_peak.asym_beba_a1 -0.10961
+_peak.asym_beba_b1 0.04941
+_peak.cutoff_fwhm 30.0
+_instrument.calib_twotheta_offset -0.08424
+_instrument.setup_wavelength 1.912
+loop_
+_linked_structure.structure_id
+_linked_structure.scale
+structure 1.463815

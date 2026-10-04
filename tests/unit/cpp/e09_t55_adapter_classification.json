@@ -1,0 +1,362 @@
+{
+  "schema": 2,
+  "task": "adapter-mapping-classification",
+  "subject": "the pre-move adapter classification and its post-P0d source disposition",
+  "classification_source": {
+    "anchor": "content-sha256-v1",
+    "path": "tests/unit/cpp/e09_t55_adapter_classification_source.txt",
+    "reason": "The classification predates P0d, so its exact measured bytes are retained in-tree; content identity proves what was measured without requiring commit history.",
+    "sha256": "3bbd306d42fc286647076478b98fadce37724386ed06916ffe62e3d5b1fe5b33",
+    "lines": 1504
+  },
+  "post_move_source": {
+    "anchor": "content-sha256-v1",
+    "tree_sha256": "7a625e4993bc96ec43b1b7c3e39420e59fb5469a9bc7551b12fb0929dc2393ce",
+    "files": [
+      {
+        "path": "core/src/adapter.cpp",
+        "sha256": "d99664dd30d140658c5dbbc10d50fa517beaf211f55de72223c655cdf537ecb4",
+        "lines": 2018
+      },
+      {
+        "path": "core/src/parameter_paths.cpp",
+        "sha256": "1970e66f6a049759391bc337de440715625acdef647dc0831cddcb7a6fb76afd",
+        "lines": 322
+      },
+      {
+        "path": "core/src/parameter_paths.hpp",
+        "sha256": "ba4f74c342da43b3be85f1de18f6856a84cc5af92f4c6c5cbe1a9b67ccfbec8b",
+        "lines": 64
+      },
+      {
+        "path": "core/src/canonical_encoding.cpp",
+        "sha256": "536f14a49d53b8c8fc89a8170d1e56b7f6cf4df29613ab5ee0bcf55b618b6f0f",
+        "lines": 183
+      },
+      {
+        "path": "core/src/canonical_encoding.hpp",
+        "sha256": "6542c0d699dc4c51683873693fb91842ff6f8976c1f3abb174b03b110cd665e1",
+        "lines": 21
+      },
+      {
+        "path": "core/src/fit_policy.cpp",
+        "sha256": "44638a004c3d0736789263bcfa9667959ee47d62b6ef61ea74e637a7ee5767dc",
+        "lines": 211
+      },
+      {
+        "path": "core/src/fit_policy.hpp",
+        "sha256": "d0fbff294c89ed25c906e8b87601b00342ed4bb7328756d51b0b0d28048e81ac",
+        "lines": 57
+      }
+    ]
+  },
+  "criterion": {
+    "mapping": "The function's direct responsibility is structural representation transfer between edi and crysta values, labels, identities, callbacks, or result records. Selecting a corresponding field from source representation metadata is mapping when it synthesises no value or product policy.",
+    "logic": "The function directly introduces any default or fallback, validation or refusal, inference or completion, canonical format/cache policy, calculation/refinement orchestration, derived metric, or write-back policy. Mixed functions are classified logic; a wrapper is not made logic solely because a called conversion helper contains logic."
+  },
+  "derivation": "Named definitions are the unindented source lines matching ^[A-Za-z_][^;=]*\\(. Function spans run from that signature's first opening brace through its balanced closing brace, inclusive; comments and string/character literals do not affect brace depth.",
+  "summary": {
+    "named_functions": 42,
+    "mapping_functions": 12,
+    "logic_functions": 30,
+    "classified_function_span_lines": 1205,
+    "mapping_span_lines": 299,
+    "logic_span_lines": 906
+  },
+  "functions": [
+    {
+      "id": "param",
+      "start_line": 41,
+      "end_line": 44,
+      "classification": "logic",
+      "reason": "Synthesises uncertainty=0.0 when edi's optional uncertainty is absent."
+    },
+    {
+      "id": "state",
+      "start_line": 46,
+      "end_line": 46,
+      "classification": "logic",
+      "reason": "Synthesises uncertainty=0.0 while converting an edi parameter state."
+    },
+    {
+      "id": "resolve_group",
+      "start_line": 53,
+      "end_line": 57,
+      "classification": "mapping",
+      "reason": "Selects the matching crysta resolver from the represented name/code presence; validation remains in crysta."
+    },
+    {
+      "id": "completed_cell_values",
+      "start_line": 67,
+      "end_line": 78,
+      "classification": "logic",
+      "reason": "Infers dependent and fixed cell values from the symmetry freedom map."
+    },
+    {
+      "id": "to_completed_crysta_cell",
+      "start_line": 86,
+      "end_line": 98,
+      "classification": "logic",
+      "reason": "Applies inferred symmetry-completed values before constructing the engine cell."
+    },
+    {
+      "id": "to_crysta_structure",
+      "start_line": 106,
+      "end_line": 111,
+      "classification": "logic",
+      "reason": "Resolves symmetry and initiates cell-value completion for the converted structure."
+    },
+    {
+      "id": "build_crysta_project",
+      "start_line": 115,
+      "end_line": 117,
+      "classification": "mapping",
+      "reason": "Assembles the two converted value objects into the corresponding crysta project without a new decision."
+    },
+    {
+      "id": "select_scattering",
+      "start_line": 119,
+      "end_line": 124,
+      "classification": "logic",
+      "reason": "Defaults to crysta's table when edi carries no explicit scattering map."
+    },
+    {
+      "id": "make_fit_ready",
+      "start_line": 132,
+      "end_line": 144,
+      "classification": "logic",
+      "reason": "Pads a missing reciprocal calibration field with a fixed zero."
+    },
+    {
+      "id": "resolve_instrument_label",
+      "start_line": 161,
+      "end_line": 270,
+      "classification": "mapping",
+      "reason": "Translates engine instrument-label grammar to the corresponding edi field and identity path."
+    },
+    {
+      "id": "resolve_structural_label",
+      "start_line": 274,
+      "end_line": 311,
+      "classification": "mapping",
+      "reason": "Translates engine structural labels to corresponding edi fields and identity paths."
+    },
+    {
+      "id": "resolve_label",
+      "start_line": 320,
+      "end_line": 326,
+      "classification": "mapping",
+      "reason": "Composes the single-bank instrument and structural representation mappings."
+    },
+    {
+      "id": "resolve_joint_label",
+      "start_line": 355,
+      "end_line": 392,
+      "classification": "mapping",
+      "reason": "Translates joint bank-prefixed label grammar to edi fields using representation names."
+    },
+    {
+      "id": "put_u64",
+      "start_line": 448,
+      "end_line": 452,
+      "classification": "logic",
+      "reason": "Defines the canonical cache encoding's hexadecimal integer format."
+    },
+    {
+      "id": "put_double",
+      "start_line": 454,
+      "end_line": 456,
+      "classification": "logic",
+      "reason": "Defines the canonical cache encoding's exact bit representation for doubles."
+    },
+    {
+      "id": "put_text",
+      "start_line": 458,
+      "end_line": 462,
+      "classification": "logic",
+      "reason": "Defines length-prefix and delimiter decisions for the canonical cache encoding."
+    },
+    {
+      "id": "put_parameter",
+      "start_line": 464,
+      "end_line": 468,
+      "classification": "logic",
+      "reason": "Defines parameter encoding and defaults absent uncertainty to zero."
+    },
+    {
+      "id": "put_optional_parameter",
+      "start_line": 470,
+      "end_line": 473,
+      "classification": "logic",
+      "reason": "Defines presence markers in the canonical cache encoding."
+    },
+    {
+      "id": "put_experiment",
+      "start_line": 475,
+      "end_line": 528,
+      "classification": "logic",
+      "reason": "Chooses the experiment fields and omissions that form the stale-source cache key."
+    },
+    {
+      "id": "put_structure",
+      "start_line": 530,
+      "end_line": 556,
+      "classification": "logic",
+      "reason": "Chooses the structure fields and ordering that form the stale-source cache key."
+    },
+    {
+      "id": "canonical_encoding",
+      "start_line": 558,
+      "end_line": 573,
+      "classification": "logic",
+      "reason": "Defines total project ordering and cache-key format policy."
+    },
+    {
+      "id": "validate_identities",
+      "start_line": 581,
+      "end_line": 600,
+      "classification": "logic",
+      "reason": "Rejects empty, delimiter-bearing, and duplicate atom identities."
+    },
+    {
+      "id": "build_index",
+      "start_line": 607,
+      "end_line": 661,
+      "classification": "mapping",
+      "reason": "Pairs corresponding edi and crysta parameter fields under edi identity paths."
+    },
+    {
+      "id": "cell_path_slot",
+      "start_line": 668,
+      "end_line": 675,
+      "classification": "mapping",
+      "reason": "Decodes an edi cell identity path into its corresponding dictionary-order slot."
+    },
+    {
+      "id": "validate_index",
+      "start_line": 687,
+      "end_line": 807,
+      "classification": "logic",
+      "reason": "Runs sentinel inference and validation, including allowed-unmapped policy and structured refusals."
+    },
+    {
+      "id": "cross_check_free_set",
+      "start_line": 819,
+      "end_line": 848,
+      "classification": "logic",
+      "reason": "Validates totality and pointer identity between the free set and the adapter index."
+    },
+    {
+      "id": "detail::to_crysta_cell",
+      "start_line": 854,
+      "end_line": 863,
+      "classification": "mapping",
+      "reason": "Copies the six edi cell fields into corresponding crysta parameter slots."
+    },
+    {
+      "id": "detail::to_crysta_atom_sites",
+      "start_line": 865,
+      "end_line": 877,
+      "classification": "mapping",
+      "reason": "Copies each edi atom-site field into the corresponding crysta atom-site field."
+    },
+    {
+      "id": "apply_post_build_fields",
+      "start_line": 892,
+      "end_line": 912,
+      "classification": "logic",
+      "reason": "Defaults absent absorption parameters and beam mode while applying post-builder state."
+    },
+    {
+      "id": "detail::to_crysta_cwl_experiment",
+      "start_line": 920,
+      "end_line": 957,
+      "classification": "logic",
+      "reason": "Validates required fields and defaults an absent CW peak selector."
+    },
+    {
+      "id": "detail::to_crysta_experiment",
+      "start_line": 959,
+      "end_line": 996,
+      "classification": "logic",
+      "reason": "Infers the effective beam-mode branch and applies post-build defaulting."
+    },
+    {
+      "id": "Project::calculate",
+      "start_line": 1000,
+      "end_line": 1005,
+      "classification": "logic",
+      "reason": "Orchestrates engine calculation and applies scattering fallback selection."
+    },
+    {
+      "id": "to_edi(iteration)",
+      "start_line": 1011,
+      "end_line": 1014,
+      "classification": "mapping",
+      "reason": "Copies one crysta iteration record into the corresponding edi value fields."
+    },
+    {
+      "id": "to_edi(history)",
+      "start_line": 1016,
+      "end_line": 1023,
+      "classification": "mapping",
+      "reason": "Maps a sequence of crysta iteration records to edi records."
+    },
+    {
+      "id": "to_edi(status)",
+      "start_line": 1025,
+      "end_line": 1039,
+      "classification": "logic",
+      "reason": "Maps known statuses but also defines the fallback of an unmatched status to ERROR."
+    },
+    {
+      "id": "to_engine_callback",
+      "start_line": 1044,
+      "end_line": 1060,
+      "classification": "logic",
+      "reason": "Defines absent-callback policy and derives elapsed time and reduced chi-square."
+    },
+    {
+      "id": "Project::refine(explicit-pattern)",
+      "start_line": 1064,
+      "end_line": 1236,
+      "classification": "logic",
+      "reason": "Validates inputs, masks data, selects fit policy, derives metrics, translates results, and writes back."
+    },
+    {
+      "id": "Project::refine(embedded-pattern)",
+      "start_line": 1246,
+      "end_line": 1256,
+      "classification": "logic",
+      "reason": "Validates and sources embedded measured data before delegating."
+    },
+    {
+      "id": "Project::refine()",
+      "start_line": 1258,
+      "end_line": 1258,
+      "classification": "logic",
+      "reason": "Defines the no-callback refinement entry-point orchestration."
+    },
+    {
+      "id": "Project::refine_joint(embedded-patterns)",
+      "start_line": 1260,
+      "end_line": 1277,
+      "classification": "logic",
+      "reason": "Validates and sources every embedded bank pattern before delegating."
+    },
+    {
+      "id": "Project::refine_joint()",
+      "start_line": 1279,
+      "end_line": 1279,
+      "classification": "logic",
+      "reason": "Defines the no-callback joint-refinement entry-point orchestration."
+    },
+    {
+      "id": "Project::refine_joint(explicit-patterns)",
+      "start_line": 1281,
+      "end_line": 1502,
+      "classification": "logic",
+      "reason": "Validates bank identity/data, defaults fitting mode, masks data, selects fit policy, derives metrics, and writes back."
+    }
+  ]
+}

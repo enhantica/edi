@@ -1,0 +1,5 @@
+_edi.schema_version 3
+
+_metadata.name             pd_neut_tof_ceo2_pearl_polynomial
+_metadata.title            "CeO2, PEARL (ISIS), polynomial background"
+_metadata.description      ?

@@ -1,0 +1,34 @@
+{
+  "schema": 1,
+  "source": {
+    "engine": "diffraction-lib 0d9f10e (bumps lm + cryspy)",
+    "artifact": "diffraction-lib/project/analysis/results.csv",
+    "provenance": "diffraction-lib/PROVENANCE.md"
+  },
+  "quantities": {
+    "n_free": {
+      "value": 39.0,
+      "kind": "reference",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    },
+    "results[52.345].fit_result.reduced_chi_square": {
+      "value": 4.783623,
+      "kind": "regression-pin",
+      "tol_abs": 1e-06,
+      "tol_rel": null
+    },
+    "results[299.394].fit_result.reduced_chi_square": {
+      "value": 4.381669,
+      "kind": "regression-pin",
+      "tol_abs": 1e-06,
+      "tol_rel": null
+    },
+    "results[497.379].fit_result.reduced_chi_square": {
+      "value": 3.887557,
+      "kind": "regression-pin",
+      "tol_abs": 1e-06,
+      "tol_rel": null
+    }
+  }
+}

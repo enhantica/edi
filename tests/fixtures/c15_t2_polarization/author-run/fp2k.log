@@ -1,0 +1,61 @@
+  
+ =>         **********************************************************
+ =>         ** PROGRAM FullProf.2k (Version 8.40 - Feb2026-ILL JRC) **
+ =>         **********************************************************
+ =>                        M U L T I -- P A T T E R N
+ =>             Rietveld, Profile Matching & Integrated Intensity
+ =>                  Refinement of X-ray and/or Neutron Data
+ =>                      (Multi_Pattern: Linux-version)
+  
+  ==> Give the code of the files (xx for xx.pcr):   
+ => START Date:02/10/2026  Time => 15:11:58.808
+ => Reading control file *.PCR ... lif_single_polarized
+==> Give the name of data file (yy for yy.dat)
+ =>                            (yy.uxd, or yy.acq)
+ =>                  (<cr> =lif_single_polarized):
+ => Reading intensity file of pattern  1  lif_single_polarized
+ => Generating reflections for pattern:       1
+ =>                       Phase number:       1
+ => end of preliminary calculations !
+  
+    ===================>>> CYCLE:       1
+  
+ => Control file *.pcr: lif_single_polarized
+ => Pattern:   1  lif_single_polarized
+ => Ordering reflections contributing to each point for pattern:       1
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ => Writing results for cycle       1
+ => R-Factors:   99.8      100.     Chi2:  412.     DW-Stat.:  0.0135   Patt#:  1
+ => Expected :            4.94                                1.9199
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  99.8     Rwp:  100.     Rexp:    4.94                        Chi2:  412.
+    => Global user-weigthed Chi2 (Bragg contrib.):   361.4
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    Bragg R-factor:   97.88
+    =>    RF-factor     :   86.77
+  
+ => Convergence reached at this CYCLE !!!!: CYCLE No.       1
+ => R-Factors:   99.8      100.     Chi2:  412.     DW-Stat.:  0.0135   Patt#:  1
+ => Expected :            4.94                                1.9199
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  99.8     Rwp:  100.     Rexp:    4.94                        Chi2:  412.
+    => Global user-weigthed Chi2 (Bragg contrib.):   510.4
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    Bragg R-factor:   97.88
+    =>    RF-factor     :   86.77
+ => Normal end, final calculations and writing...
+  
+  
+ =>               CPU Time:     0.141 seconds
+ =>                             0.002 minutes
+  
+ => END   Date:02/10/2026  Time => 15:11:58.941
+  
+ => Data Files :
+ =>             - lif_single_polarized.dat
+ => PCR  File  : lif_single_polarized
+ => Do you want to continue (<cr>=N)? 
+         (s:same, a:another problem):  => END

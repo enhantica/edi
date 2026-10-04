@@ -1,0 +1,70 @@
+#  adds the first edi tests that must fit disposable copies: save-by-default cannot run
+# against the pinned corpus in place. Rows are exact test files and name a manifest case from
+# the crysta corpus authority; tools/testing/fit_policy.py validates both before admitting a fit.
+schema: 1
+sites:
+  - file: tests/system/py/test_c11_t43_sequential_surfaces.py
+    case: cosio-d20-scan-3f
+  - file: tests/system/py/test_c11_t43_rejection_classes.py
+    case: cosio-d20-scan-3f
+  # : the native event gate fits a one-iteration disposable copy, then compares each
+  # completion event against the scan writer's own results.csv row.
+  - file: tests/system/py/test_c34_t22_sequential_progress.py
+    case: cosio-d20-scan-3f
+  # : the corpus runner realizes every edi-side case on a DISPOSABLE COPY — a sequential
+  # case's fit writes results.csv beside the project by contract, and the runner's corpus root
+  # can be a live checkout (crysta's edi-verification harness). Today's one edi-side case:
+  - file: tests/system/py/test_c06_t6_fitting_corpus.py
+    case: cosio-d20-scan-3f
+  - file: tests/system/py/test_c11_t35_descent_end_to_end.py
+    case: cosio-d20-s1
+  - file: tests/system/py/test_e09_t58_fit_result_writeback.py
+    case: lbco-hrpt-s2
+  - file: tests/system/py/test_e09_t58_project_model_operations.py
+    case: ncaf-wish-3bank-s5
+  - file: tests/integration/py/test_e09_t58_project_only_fit_inputs.py
+    case: lbco-hrpt-s2
+  - file: tests/system/py/test_e09_t58_cli_persistence.py
+    case: lbco-hrpt-s2
+  - file: tests/system/py/test_e09_t58_absorption_cli_canonicalization.py
+    case: ncaf-wish-3bank-s5
+  - file: tests/system/py/test_e09_t58_absorption_family_contract.py
+    case: ncaf-wish-3bank-s5
+  #  disposable scan controls; single/joint controls also use declared corpus cases.
+  - file: tests/system/py/test_c34_t24_declared_fit_conditions.py
+    case: cosio-d20-scan-3f
+  - file: tests/system/py/test_c11_t62_scan_contract.py
+    case: cosio-d20-scan-3f
+  - file: tests/system/py/test_c11_t62_cli_cancel.py
+    case: cosio-d20-scan-3f
+  - file: tests/system/py/test_c11_t62_native_scan_io.py
+    case: cosio-d20-scan-3f
+  - file: tests/system/py/test_c11_t57_minimizer_type.py
+    case: cosio-d20-s1
+
+  #  pre-move freshness observations use disposable declared corpus inputs.
+  - file: tests/system/py/test_c34_t28_python_freshness.py
+    case: cosio-d20-s1
+  - file: tests/system/py/test_c34_t28_python_scan_freshness.py
+    case: cosio-d20-scan-3f
+  - file: tests/system/py/test_c09_t13_tof_fit_parity.py
+    case: si-sepd-s2
+  # the committed CLI project is the lbco-hrpt-s4 corpus vehicle; fits use copies.
+  - file: tests/system/py/test_e04_t11_wasm_fit.py
+    case: lbco-hrpt-s4
+
+  # : save/Undo must write private copies of the declared single/joint inputs.
+  - file: tests/system/py/test_e05_t1_cli_fit_save.py
+    case: lbco-hrpt-s2
+  - file: tests/system/py/test_e05_t1_cli_joint_fit_save.py
+    case: ncaf-wish-3bank-s5
+
+  # : private LiF corpus copies preserve measured data and probe
+  # physical domains before each continuation, with a one-iteration fit.
+  - file: tests/integration/py/test_e05_t1_physical_domain.py
+    case: lif-xray-s1
+
+  # : the same private LiF physical-domain vehicle, extended to
+  # positive wavelength, numerical cell admission and all factory readers.
+  - file: tests/integration/py/test_e05_t1_metric_admission.py
+    case: lif-xray-s1

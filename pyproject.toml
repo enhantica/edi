@@ -1,0 +1,137 @@
+[build-system]
+requires = ["hatchling", "versioningit"]
+build-backend = "hatchling.build"
+
+[project]
+name = "easydiffraction"
+dynamic = ["version"]  # versioningit derives it from git v* tags (the diffraction-lib pattern)
+description = "Diffraction data analysis"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "BSD-3-Clause"
+# The extension compiles in nanobind and its robin-map; their licences ship with every distribution.
+license-files = ["LICENSE", "THIRD-PARTY-NOTICES", "licenses/nanobind-LICENSE", "licenses/robin-map-LICENSE"]
+authors = [{ name = "Enhantica contributors" }]
+
+[tool.hatch.build.targets.wheel]
+packages = ["lib/edi"]
+# The compiled nanobind extension is emitted per build configuration into
+# <build-dir>/python/edi — no shared source-tree artifact. Wheel assembly must stage the chosen
+# configuration's `_edi` into lib/edi explicitly when release packaging lands; the artifacts
+# glob below then picks it up from the staged location (today it matches nothing, by design).
+artifacts = ["lib/edi/*.so"]
+
+# ---- versioningit (versions from git tags — the diffraction-lib pattern) --------------
+[tool.hatch.version]
+source = "versioningit"
+
+[tool.versioningit.format]
+distance = "{base_version}+dev{distance}"
+dirty = "{base_version}+dirty{distance}"
+distance-dirty = "{base_version}+devdirty{distance}"
+
+[tool.versioningit.vcs]
+method = "git"
+match = ["v*"]
+default-tag = "v0.0.0"  # untagged repos read 0.0.0+devN until the first release tag
+
+# ---- ruff ---------------------------------------------------------------------------
+# ---- ruff ---------------------------------------------------------------------------
+# The ORG-LEVEL ruleset: ADR-0026's enhanced set, promoted from crysta-scoped to the
+# org standard. The canonical values live in the design records; every deliberate
+# divergence below is a REGISTERED exception there (the hub parity gate fails closed on
+# an unregistered one).
+[tool.ruff]
+line-length = 99
+indent-width = 4
+preview = true   # enable not-yet-stable rules (FURB, …) — canonical
+# Excluded: the vendored library clones, the build outputs and the `*_hidden.py` test modules, whose
+# lint belongs with their own suite. The docs tree is NOT excluded, so the verification notebooks'
+# jupytext sources under docs/dev/verification/ stay linted.
+extend-exclude = ["knowledge/libraries", "docs/user/guides", "build", "site", "tests/*_hidden.py", "tests/**/*_hidden.py"]
+
+[tool.ruff.lint]
+select = [
+    "C90", "D", "F", "FLY", "FURB", "I", "N", "NPY", "PGH", "PERF", "RUF",
+    "TRY", "UP", "E", "W", "PLC", "PLE", "PLR", "PLW", "ANN", "ARG", "ASYNC",
+    "B", "BLE", "C4", "COM", "DTZ", "EM", "FA", "FBT", "G", "ICN", "INP",
+    "ISC", "LOG", "PIE", "PT", "PTH", "PYI", "RET", "RSE", "S", "SIM",
+    "SLOT", "T20", "TC", "TID",
+]
+ignore = ["COM812"]   # conflicts with `ruff format` (canonical ignore)
+# Registered exceptions (burn-down: the edi lint issue). The measured residue of adopting
+# the org set on 2026-07-22 (106 findings, 24 families) — each family is burned down,
+# never grown.
+extend-ignore = [
+    "ANN001", "ANN202", "ANN205", "C901", "D102", "D103", "D401", "EM101", "EM102",
+    "FBT003", "INP001", "PLR2004", "PT018", "RUF005", "RUF007", "RUF067", "RUF069",
+    "S108", "S404", "S603", "S607", "T201", "TC003", "TRY003",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"*/__init__.py" = ["F401"]                  # canonical: re-exports are intentional
+"tests/**" = ["ANN", "D", "S101", "T20"]    # canonical: tests carve-out
+"*/cli.py" = ["T20"]                         # canonical: the CLI prints by design
+# Verification pages: jupytext py:percent notebooks — dashed reference filenames (N999),
+# no module docstring (D100), one-import-per-line (I001), and bare expression echo
+# cells (B018) are the ported page convention, kept diffable against the reference sources.
+"docs/dev/verification/*" = ["N999", "D100", "I001", "B018"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"   # canonical
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10    # canonical
+
+[tool.ruff.lint.pylint]
+max-args = 7           # canonical (ruff counts self/cls)
+max-positional-args = 7
+
+# ---- ruff format --------------------------------------------------------------------
+# Mirror crysta's formatter block (ADR-0004 shared discipline; canonical in the org
+# standard). The helper scripts under tools/ are single-quoted, so edi's
+# ruff must format to single quotes too.
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
+docstring-code-format = true
+
+# ---- mypy ---------------------------------------------------------------------------
+# Config is a deliverable (AGENTS.md §Code style); lib/edi is an empty placeholder in E01,
+# so this passes trivially and tightens as the binding surface lands (E02). mypy is not yet
+# in the pixi env / verify gate — wiring it in is a follow-up once there is code to check.
+[tool.mypy]
+python_version = "3.12"
+files = ["lib/edi"]
+ignore_missing_imports = true
+
+# ---- pytest -------------------------------------------------------------------------
+[tool.pytest.ini_options]
+# pytest's cache has NO environment variable — it is an ini option only, so it is set here
+# rather than in [activation.env] with the others. Same destination, same reason.
+cache_dir = "build/.pytest_cache"
+testpaths = ["lib", "tests"]
+addopts = "-q"
+# The `heavy` marker registration is retired with the marker itself; no marker-based
+# selection remains, and the per-tier audit refuses one returning. Never crawl the
+# knowledge base (git-ignored reference-project clones carry their own test suites) or
+# env/build trees — even on the empty-testpaths fallback.
+norecursedirs = ["knowledge", ".pixi", "build", "site", ".git", "node_modules"]
+
+# Coverage THRESHOLDS, declared here — the one place to look. Each is seeded at today's MEASURED
+# value (owner: a zero threshold can never fire, so it proves nothing and permits silent decline);
+# a later task raises them toward 80 %. Python: the PACKAGE only (lib/edi), the UNIT tier only —
+# `pixi run py-cov-unit` (pytest-cov honours fail_under). Measured 2026-08-28 on this box: 397 of
+# 627 statements = 63.317 %, seeded at the two-decimal floor so the seed itself cannot flap on
+# rounding.
+[tool.coverage.run]
+source = ["edi"]
+
+[tool.coverage.report]
+precision = 2
+fail_under = 80
+
+# C++: llvm-cov LINE coverage of core/src + core/include under the unit tier, enforced by
+# tools/ci/cpp-coverage-unit.sh. Lines only — regions/functions/branches are not gates.
+[tool.edi.coverage]
+cpp_lines_min = 80

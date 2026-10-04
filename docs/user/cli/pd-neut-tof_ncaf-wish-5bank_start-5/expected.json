@@ -1,0 +1,136 @@
+{
+  "schema": 1,
+  "source": {
+    "engine": "FullProf 8.40 (references); edi (regression pins)",
+    "artifact": "fullprof/tmpl_five_banks_p1.out",
+    "provenance": "PROVENANCE.md"
+  },
+  "quantities": {
+    "n_free": {
+      "value": 193.0,
+      "kind": "reference",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    },
+    "iterations": {
+      "value": 5.0,
+      "kind": "regression-pin",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    },
+    "n_points_fitted": {
+      "value": 18973.0,
+      "kind": "regression-pin",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    },
+    "reduced_chi_square": {
+      "value": 9.497535494,
+      "kind": "regression-pin",
+      "tol_abs": 1e-06,
+      "tol_rel": null
+    },
+    "rwp": {
+      "value": 0.07694458606,
+      "kind": "regression-pin",
+      "tol_abs": 1e-09,
+      "tol_rel": null
+    },
+    "param.Ca1.fract_x.value": {
+      "value": 0.46646,
+      "kind": "reference",
+      "tol_abs": 0.00038,
+      "tol_rel": null
+    },
+    "param.Ca1.adp_iso.value": {
+      "value": 1.01506,
+      "kind": "reference",
+      "tol_abs": 0.10349,
+      "tol_rel": null
+    },
+    "param.Al1.fract_x.value": {
+      "value": 0.25195,
+      "kind": "reference",
+      "tol_abs": 0.00064,
+      "tol_rel": null
+    },
+    "param.Al1.adp_iso.value": {
+      "value": 0.91257,
+      "kind": "reference",
+      "tol_abs": 0.1062,
+      "tol_rel": null
+    },
+    "param.Na1.fract_x.value": {
+      "value": 0.08516,
+      "kind": "reference",
+      "tol_abs": 0.00035,
+      "tol_rel": null
+    },
+    "param.Na1.adp_iso.value": {
+      "value": 2.35014,
+      "kind": "reference",
+      "tol_abs": 0.21693,
+      "tol_rel": null
+    },
+    "param.F1.fract_x.value": {
+      "value": 0.13758,
+      "kind": "reference",
+      "tol_abs": 0.00026,
+      "tol_rel": null
+    },
+    "param.F1.fract_y.value": {
+      "value": 0.30553,
+      "kind": "reference",
+      "tol_abs": 0.00025,
+      "tol_rel": null
+    },
+    "param.F1.fract_z.value": {
+      "value": 0.11961,
+      "kind": "reference",
+      "tol_abs": 0.0003,
+      "tol_rel": null
+    },
+    "param.F1.adp_iso.value": {
+      "value": 1.01421,
+      "kind": "reference",
+      "tol_abs": 0.07509,
+      "tol_rel": null
+    },
+    "param.F2.fract_x.value": {
+      "value": 0.36229,
+      "kind": "reference",
+      "tol_abs": 0.00035,
+      "tol_rel": null
+    },
+    "param.F2.fract_y.value": {
+      "value": 0.36316,
+      "kind": "reference",
+      "tol_abs": 0.00028,
+      "tol_rel": null
+    },
+    "param.F2.fract_z.value": {
+      "value": 0.18695,
+      "kind": "reference",
+      "tol_abs": 0.00028,
+      "tol_rel": null
+    },
+    "param.F2.adp_iso.value": {
+      "value": 1.52541,
+      "kind": "reference",
+      "tol_abs": 0.08929,
+      "tol_rel": null
+    },
+    "param.F3.fract_x.value": {
+      "value": 0.46109,
+      "kind": "reference",
+      "tol_abs": 0.00016,
+      "tol_rel": null
+    },
+    "param.F3.adp_iso.value": {
+      "value": 1.02457,
+      "kind": "reference",
+      "tol_abs": 0.10663,
+      "tol_rel": null
+    }
+  }
+}

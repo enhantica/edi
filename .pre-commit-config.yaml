@@ -1,0 +1,24 @@
+# edi — pre-commit (from enhantica/templates)
+repos:
+  # Lint/format run through pixi so pre-commit and CI use the SAME ruff version.
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check (via pixi)
+        entry: pixi run check
+        language: system
+        types: [python]
+        pass_filenames: false
+      - id: ruff-format-check
+        name: ruff format --check (via pixi)
+        entry: pixi run format-check
+        language: system
+        types: [python]
+        pass_filenames: false
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-yaml
+        exclude: ^(mkdocs\.yml|knowledge/|docs/)

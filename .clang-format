@@ -1,0 +1,8 @@
+# C++ formatting — the clang-format analogue of `ruff format` (AGENTS.md §Code style).
+# Google base with the project's 4-space indent and 99-column limit (matching the Python
+# ruff line-length). Mirrors crysta's config (ADR-0004 shared discipline).
+BasedOnStyle: Google
+IndentWidth: 4
+ColumnLimit: 99
+DerivePointerAlignment: false
+PointerAlignment: Left

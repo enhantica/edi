@@ -1,0 +1,218 @@
+<!doctype html>
+<!--
+  The EasyDiffraction web app's start page (edi ADR-0023). It loads one of the two builds beside it: the multithreaded one, which
+  needs a cross-origin-isolated page (SharedArrayBuffer), or the single-thread one, which runs anywhere and freezes the page while a
+  fit runs. Each build's files sit in a folder named by their content (`multithread-<hash>/`, `singlethread-<hash>/`), which
+  build.json names and the page reads past every cache: a redeploy cannot pair one build's cached script with another's module. On a
+  host that sends no COOP/COEP headers (GitHub Pages), coi-serviceworker.js adds them once it controls the page: the page registers
+  it and reloads once. `?build=multithread` or `?build=singlethread` forces a build. While the build downloads, compiles and starts,
+  the page shows the logo as a splash, its mark turning as in EasyDiffractionBeta's loading window (mark.svg over name.svg,
+  splash.css: the mark turns as an element, which the compositor keeps drawing while the module's start blocks the main thread); when
+  the page has a message instead of the app, the logo stands still (logo.svg). The page takes the colour scheme the app's settings
+  hold (light, dark, or the system's), as the app will.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, height=device-height, user-scalable=0">
+    <title>EasyDiffraction</title>
+    <style>
+      /* The app's content background and text colour, light and dark (gui-components Style/Colors.qml). */
+      :root { --background: #f4f4f4; --foreground: #333; }
+      :root[data-scheme="dark"] { --background: #3a3a3a; --foreground: #eee; }
+      html, body { padding: 0; margin: 0; overflow: hidden; height: 100%; background: var(--background); }
+      #screen { width: 100%; height: 100%; display: none; }
+      #loading {
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1em;
+        height: 100%; color: var(--foreground); font: 16px sans-serif;
+      }
+      /* The full logo at its size on the app's Home page (a 70 px mark; the owner, 2026-10-03). */
+      #splash { width: 224px; }
+      #still { width: 200px; display: none; }
+    </style>
+    <link rel="stylesheet" href="splash.css">
+    <script>
+      // The colour scheme before anything is drawn: the app's own choice, from its settings file, which the web
+      // build keeps in local storage (`edi.settings.ini`; [Preferences.Appearance] theme: 0 light, 1 dark, 2 the
+      // system's), else the system's.
+      (() => {
+        let theme = 2;
+        try {
+          const settings = localStorage.getItem("edi.settings.ini") || "";
+          const section = settings.split(/^\[/m).find((s) => s.startsWith("Preferences.Appearance]")) || "";
+          const match = section.match(/^theme=(\d)/m);
+          if (match) {
+            theme = Number(match[1]);
+          }
+        } catch (e) {
+          // no storage (a private window, blocked site data): the system's scheme
+        }
+        const dark = theme === 1 || (theme !== 0 && matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.dataset.scheme = dark ? "dark" : "light";
+      })();
+    </script>
+    <script>
+      // coi-serviceworker's page half only tells the worker which COEP mode this browser takes; this page
+      // registers the worker itself, so that it knows when to give up.
+      window.coi = { shouldRegister: () => false, quiet: true };
+    </script>
+    <script src="coi-serviceworker.js"></script>
+  </head>
+  <body>
+    <div id="loading">
+      <div id="splash" role="img" aria-label="EasyDiffraction">
+        <img class="name" id="name" src="name.svg" alt="">
+        <img class="mark" src="mark.svg" alt="">
+      </div>
+      <img id="still" src="logo.svg" alt="EasyDiffraction">
+      <script>
+        if (document.documentElement.dataset.scheme === "dark") {
+          document.getElementById("name").src = "name-dark.svg";
+          document.getElementById("still").src = "logo-dark.svg";
+        }
+      </script>
+      <div id="status">Loading...</div>
+      <noscript>EasyDiffraction needs JavaScript.</noscript>
+    </div>
+    <div id="screen"></div>
+    <script>
+      "use strict";
+      const BUILDS = ["multithread", "singlethread"];
+      const statusLine = document.getElementById("status");
+
+      // The page has a message instead of the app: the logo stops turning.
+      function showMessage(text) {
+        document.getElementById("splash").style.display = "none";
+        document.getElementById("still").style.display = "block";
+        statusLine.textContent = text;
+      }
+
+      function loadScript(src) {
+        return new Promise((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = src;
+          script.onload = resolve;
+          script.onerror = () => reject(new Error(`cannot load ${src}`));
+          document.body.appendChild(script);
+        });
+      }
+
+      function sessionStore() {
+        try {
+          return window.sessionStorage;
+        } catch (e) {
+          return null;
+        }
+      }
+
+      // The build this browser runs, or null while the page reloads under the service worker.
+      async function chooseBuild() {
+        const forced = new URLSearchParams(location.search).get("build");
+        if (BUILDS.includes(forced)) {
+          return forced;
+        }
+        if (self.crossOriginIsolated && typeof SharedArrayBuffer === "function") {
+          return "multithread";
+        }
+        // Once per session: a page still not isolated after the reload falls back instead of reloading again.
+        const session = sessionStore();
+        if (window.isSecureContext && navigator.serviceWorker && session && !session.getItem("edi.coi-reload")) {
+          try {
+            await navigator.serviceWorker.register("coi-serviceworker.js");
+            await navigator.serviceWorker.ready;
+            session.setItem("edi.coi-reload", "1");
+            location.reload();
+            return null;
+          } catch (e) {
+            console.warn("edi: the COOP/COEP service worker could not register:", e);
+          }
+        }
+        return "singlethread";
+      }
+
+      // Each build's folder, from build.json, never from a cache: a redeploy names new folders.
+      async function buildFolders() {
+        const response = await fetch("build.json", { cache: "no-store" });
+        if (!response.ok) {
+          throw new Error(`cannot read build.json (${response.status})`);
+        }
+        return response.json();
+      }
+
+      // The module, downloaded once and compiled here: streamed when the host labels it application/wasm, else from
+      // its bytes (a host serving it as text/plain makes Emscripten's own streaming fail and download it again).
+      async function loadModule(url) {
+        const response = await fetch(url, { credentials: "same-origin" });
+        if (!response.ok) {
+          throw new Error(`cannot download ${url} (HTTP ${response.status})`);
+        }
+        if ((response.headers.get("content-type") || "").startsWith("application/wasm")) {
+          return WebAssembly.compileStreaming(response);
+        }
+        return WebAssembly.compile(await response.arrayBuffer());
+      }
+
+      // A multithreaded build that fails before it has started gives way to the single-thread one, once.
+      function fallBack(build, reason) {
+        const params = new URLSearchParams(location.search);
+        if (build !== "multithread" || params.has("build")) {
+          return false;
+        }
+        console.warn(`edi: the multithreaded build did not start (${reason}); loading the single-thread build`);
+        params.set("build", "singlethread");
+        location.replace(`${location.pathname}?${params}`);
+        return true;
+      }
+
+      let loaded = false;
+      let started = "";
+
+      async function start() {
+        const build = await chooseBuild();
+        started = build || "";
+        if (build === null) {
+          return;
+        }
+        const folder = (await buildFolders())[build];
+        if (typeof folder !== "string" || !/^[a-z]+-[0-9a-f]+$/.test(folder)) {
+          throw new Error(`build.json names no ${build} build`);
+        }
+        window.ediBuild = build;
+        document.documentElement.dataset.build = build;
+        console.log(`edi: the ${build} build (crossOriginIsolated: ${self.crossOriginIsolated})`);
+        await loadScript(`${folder}/qtloader.js`);
+        await loadScript(`${folder}/edi_app.js`);
+        const screen = document.getElementById("screen");
+        await qtLoad({
+          locateFile: (file) => `${folder}/${file}`,
+          qt: {
+            module: loadModule(`${folder}/edi_app.wasm`),
+            onLoaded: () => {
+              loaded = true;
+              document.getElementById("loading").style.display = "none";
+              screen.style.display = "block";
+            },
+            onExit: (exit) => {
+              if (!loaded && fallBack(started, exit.text || `code ${exit.code}`)) {
+                return;
+              }
+              screen.style.display = "none";
+              document.getElementById("loading").style.display = "flex";
+              showMessage(`EasyDiffraction stopped${exit.code !== undefined ? ` (code ${exit.code})` : ""}${exit.text !== undefined ? `: ${exit.text}` : ""}`);
+            },
+            entryFunction: window.edi_app_entry,
+            containerElements: [screen],
+          },
+        });
+      }
+
+      start().catch((e) => {
+        if (!loaded && fallBack(started, e.message)) {
+          return;
+        }
+        showMessage(`EasyDiffraction could not start: ${e.message}`);
+        console.error(e);
+      });
+    </script>
+  </body>
+</html>

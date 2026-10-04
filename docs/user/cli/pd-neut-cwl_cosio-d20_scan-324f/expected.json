@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "source": {
+    "engine": "crysta via python -m edi (edi 5c0ddf9 on crysta 9c1caaec, OMP_NUM_THREADS=1)",
+    "artifact": "machine record (--report machine); per-file rows in project/analysis/results.csv",
+    "provenance": "PROVENANCE.md"
+  },
+  "quantities": {
+    "n_free": {
+      "value": 39.0,
+      "kind": "reference",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    },
+    "reduced_chi_square": {
+      "value": 4.805953672,
+      "kind": "regression-pin",
+      "tol_abs": 1e-06,
+      "tol_rel": null
+    },
+    "iterations": {
+      "value": 4.0,
+      "kind": "regression-pin",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    }
+  }
+}

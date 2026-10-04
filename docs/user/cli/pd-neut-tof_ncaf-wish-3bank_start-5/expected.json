@@ -1,0 +1,223 @@
+{
+  "schema": 1,
+  "source": {
+    "engine": "crysta",
+    "artifact": "PROVENANCE.md",
+    "provenance": "PROVENANCE.md"
+  },
+  "variants": {
+    "ladder": {
+      "quantities": {
+        "iterations": {
+          "value": 7.0,
+          "kind": "regression-pin",
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "n_free": {
+          "value": 102.0,
+          "kind": "reference",
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "reduced_chi_square": {
+          "value": 14.12339787,
+          "kind": "regression-pin",
+          "tol_abs": 1e-06,
+          "tol_rel": null
+        },
+        "rwp": {
+          "value": 0.07254201564,
+          "kind": "regression-pin",
+          "tol_abs": 1e-09,
+          "tol_rel": null
+        },
+        "param.Ca1.fract_x.value": {
+          "value": 0.46668,
+          "kind": "reference",
+          "tol_abs": 0.00046,
+          "tol_rel": null
+        },
+        "param.Ca1.fract_x.uncertainty": {
+          "value": 0.00046,
+          "kind": "reference",
+          "tol_abs": null,
+          "tol_rel": 0.6
+        },
+        "param.Ca1.adp_iso.value": {
+          "value": 0.968,
+          "kind": "reference",
+          "tol_abs": 0.135,
+          "tol_rel": null
+        },
+        "param.Ca1.adp_iso.uncertainty": {
+          "value": 0.135,
+          "kind": "reference",
+          "tol_abs": null,
+          "tol_rel": 0.6
+        },
+        "param.Al1.fract_x.value": {
+          "value": 0.25316,
+          "kind": "reference",
+          "tol_abs": 0.00075,
+          "tol_rel": null
+        },
+        "param.Al1.fract_x.uncertainty": {
+          "value": 0.00075,
+          "kind": "reference",
+          "tol_abs": null,
+          "tol_rel": 0.6
+        },
+        "param.Al1.adp_iso.value": {
+          "value": 0.636,
+          "kind": "reference",
+          "tol_abs": 0.133,
+          "tol_rel": null
+        },
+        "param.Al1.adp_iso.uncertainty": {
+          "value": 0.133,
+          "kind": "reference",
+          "tol_abs": null,
+          "tol_rel": 0.6
+        },
+        "param.Na1.fract_x.value": {
+          "value": 0.0854,
+          "kind": "reference",
+          "tol_abs": 0.00041,
+          "tol_rel": null
+        },
+        "param.Na1.fract_x.uncertainty": {
+          "value": 0.00041,
+          "kind": "reference",
+          "tol_abs": null,
+          "tol_rel": 0.6
+        },
+        "param.Na1.adp_iso.value": {
+          "value": 2.377,
+          "kind": "reference",
+          "tol_abs": 0.252,
+          "tol_rel": null
+        },
+        "param.Na1.adp_iso.uncertainty": {
+          "value": 0.252,
+          "kind": "reference",
+          "tol_abs": null,
+          "tol_rel": 0.6
+        },
+        "param.F1.fract_x.value": {
+          "value": 0.13811,
+          "kind": "reference",
+          "tol_abs": 0.0003,
+          "tol_rel": null
+        },
+        "param.F1.fract_x.uncertainty": {
+          "value": 0.0003,
+          "kind": "reference",
+          "tol_abs": null,
+          "tol_rel": 0.6
+        },
+        "param.F2.fract_z.value": {
+          "value": 0.1868,
+          "kind": "reference",
+          "tol_abs": 0.00033,
+          "tol_rel": null
+        },
+        "param.F2.fract_z.uncertainty": {
+          "value": 0.00033,
+          "kind": "reference",
+          "tol_abs": null,
+          "tol_rel": 0.6
+        },
+        "param.F3.fract_x.value": {
+          "value": 0.46104,
+          "kind": "reference",
+          "tol_abs": 0.00018,
+          "tol_rel": null
+        },
+        "param.F3.fract_x.uncertainty": {
+          "value": 0.00018,
+          "kind": "reference",
+          "tol_abs": null,
+          "tol_rel": 0.6
+        },
+        "param.wish_5_6.scale.value": {
+          "value": 38.176,
+          "kind": "reference",
+          "tol_abs": 1.165,
+          "tol_rel": null
+        },
+        "param.wish_5_6.scale.uncertainty": {
+          "value": 1.165,
+          "kind": "reference",
+          "tol_abs": null,
+          "tol_rel": 0.6
+        },
+        "param.wish_4_7.scale.value": {
+          "value": 36.9241,
+          "kind": "reference",
+          "tol_abs": 0.9801,
+          "tol_rel": null
+        },
+        "param.wish_4_7.scale.uncertainty": {
+          "value": 0.9801,
+          "kind": "reference",
+          "tol_abs": null,
+          "tol_rel": 0.6
+        },
+        "param.wish_2_9.scale.value": {
+          "value": 37.0097,
+          "kind": "reference",
+          "tol_abs": 1.067,
+          "tol_rel": null
+        },
+        "param.wish_2_9.scale.uncertainty": {
+          "value": 1.067,
+          "kind": "reference",
+          "tol_abs": null,
+          "tol_rel": 0.6
+        },
+        "bank.wish_5_6.rwp": {
+          "value": 0.0792,
+          "kind": "reference",
+          "tol_abs": null,
+          "tol_rel": 0.05
+        },
+        "bank.wish_4_7.rwp": {
+          "value": 0.0777,
+          "kind": "reference",
+          "tol_abs": null,
+          "tol_rel": 0.05
+        },
+        "bank.wish_2_9.rwp": {
+          "value": 0.0481,
+          "kind": "reference",
+          "tol_abs": null,
+          "tol_rel": 0.05
+        }
+      }
+    }
+  },
+  "edi": {
+    "source": "the committed F-rec golden goldens/joint-default.json - the crysta CLI at the engine-default config edi one-call runs; both surfaces byte-agree at display precision",
+    "quantities": {
+      "iterations": {
+        "value": 7.0,
+        "kind": "reference",
+        "tol_abs": 0.0,
+        "tol_rel": null
+      },
+      "reduced_chi_square": {
+        "value": 14.12339787,
+        "kind": "regression-pin",
+        "tol_abs": 1e-06,
+        "tol_rel": null
+      },
+      "rwp": {
+        "value": 0.07254201564,
+        "kind": "regression-pin",
+        "tol_abs": 1e-09,
+        "tol_rel": null
+      }
+    }
+  }
+}

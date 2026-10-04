@@ -1,0 +1,13 @@
+_edi.schema_version 2
+
+_fitting_mode.type joint
+
+_minimizer.type crysta
+_minimizer.max_iterations 1000
+_minimizer.chi_square_tolerance 1e-4
+
+loop_
+_joint_fit.experiment_id
+_joint_fit.weight
+wish_4_7 1.0
+wish_5_6 1.0

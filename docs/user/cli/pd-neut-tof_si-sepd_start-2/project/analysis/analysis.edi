@@ -1,0 +1,7 @@
+_edi.schema_version 2
+
+_fitting_mode.type single
+
+_minimizer.type crysta
+_minimizer.max_iterations 1000
+_minimizer.chi_square_tolerance 1e-4

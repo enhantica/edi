@@ -1,0 +1,1269 @@
+"""Generated external-reference snapshot; regenerate with the adjacent generator."""
+
+SOURCE_COMMIT = '0ffba46f4b501066a73e77f00fa29fa13519b417'
+SOURCE_FILE_COUNT = 300
+SOURCE_BLOB_INDEX_SHA256 = '81f4d40d6c730e55c5211e92bb81000db3abce4d63f9f8cb980e61e387abfca0'
+
+class absorption:
+    @property
+    def mu_r(self):
+        ...
+
+    @property
+    def type(self):
+        ...
+
+class aliases:
+    @property
+    def id(self):
+        ...
+
+    @property
+    def param(self):
+        ...
+
+    @property
+    def parameter_unique_name(self):
+        ...
+
+    @property
+    def parameters(self):
+        ...
+
+class atom_site_aniso:
+    @property
+    def adp_11(self):
+        ...
+
+    @property
+    def adp_12(self):
+        ...
+
+    @property
+    def adp_13(self):
+        ...
+
+    @property
+    def adp_22(self):
+        ...
+
+    @property
+    def adp_23(self):
+        ...
+
+    @property
+    def adp_33(self):
+        ...
+
+    @property
+    def id(self):
+        ...
+
+class atom_sites:
+    @property
+    def adp_iso(self):
+        ...
+
+    @property
+    def adp_iso_as_b(self):
+        ...
+
+    @property
+    def adp_type(self):
+        ...
+
+    @property
+    def fract_x(self):
+        ...
+
+    @property
+    def fract_y(self):
+        ...
+
+    @property
+    def fract_z(self):
+        ...
+
+    @property
+    def id(self):
+        ...
+
+    @property
+    def multiplicity(self):
+        ...
+
+    @property
+    def occupancy(self):
+        ...
+
+    @property
+    def type_symbol(self):
+        ...
+
+    @property
+    def wyckoff_letter(self):
+        ...
+
+class background:
+    @property
+    def coef(self):
+        ...
+
+    @property
+    def id(self):
+        ...
+
+    @property
+    def intensity(self):
+        ...
+
+    @property
+    def order(self):
+        ...
+
+    @property
+    def position(self):
+        ...
+
+    @property
+    def type(self):
+        ...
+
+class calculator:
+    @property
+    def calculator(self):
+        ...
+
+    @property
+    def type(self):
+        ...
+
+class cell:
+    @property
+    def angle_alpha(self):
+        ...
+
+    @property
+    def angle_beta(self):
+        ...
+
+    @property
+    def angle_gamma(self):
+        ...
+
+    @property
+    def length_a(self):
+        ...
+
+    @property
+    def length_b(self):
+        ...
+
+    @property
+    def length_c(self):
+        ...
+
+class constraints:
+    @property
+    def enabled(self):
+        ...
+
+    @property
+    def expression(self):
+        ...
+
+    @property
+    def id(self):
+        ...
+
+    @property
+    def lhs_alias(self):
+        ...
+
+    @property
+    def rhs_expr(self):
+        ...
+
+class data:
+    @property
+    def calc_status(self):
+        ...
+
+    @property
+    def d_spacing(self):
+        ...
+
+    @property
+    def g_r_calc(self):
+        ...
+
+    @property
+    def g_r_meas(self):
+        ...
+
+    @property
+    def g_r_meas_su(self):
+        ...
+
+    @property
+    def id(self):
+        ...
+
+    @property
+    def intensity_bkg(self):
+        ...
+
+    @property
+    def intensity_calc(self):
+        ...
+
+    @property
+    def intensity_meas(self):
+        ...
+
+    @property
+    def intensity_meas_su(self):
+        ...
+
+    @property
+    def r(self):
+        ...
+
+    @property
+    def time_of_flight(self):
+        ...
+
+    @property
+    def two_theta(self):
+        ...
+
+    @property
+    def unfiltered_x(self):
+        ...
+
+    @property
+    def x(self):
+        ...
+
+    @property
+    def x_descriptor(self):
+        ...
+
+class data_range:
+    @property
+    def d_spacing_max(self):
+        ...
+
+    @property
+    def d_spacing_min(self):
+        ...
+
+    @property
+    def sin_theta_over_lambda_max(self):
+        ...
+
+    @property
+    def sin_theta_over_lambda_min(self):
+        ...
+
+    @property
+    def time_of_flight_inc(self):
+        ...
+
+    @property
+    def time_of_flight_max(self):
+        ...
+
+    @property
+    def time_of_flight_min(self):
+        ...
+
+    @property
+    def two_theta_inc(self):
+        ...
+
+    @property
+    def two_theta_max(self):
+        ...
+
+    @property
+    def two_theta_min(self):
+        ...
+
+    @property
+    def x_max(self):
+        ...
+
+    @property
+    def x_min(self):
+        ...
+
+    @property
+    def x_step(self):
+        ...
+
+class diffrn:
+    @property
+    def ambient_electric_field(self):
+        ...
+
+    @property
+    def ambient_magnetic_field(self):
+        ...
+
+    @property
+    def ambient_pressure(self):
+        ...
+
+    @property
+    def ambient_temperature(self):
+        ...
+
+class excluded_regions:
+    @property
+    def end(self):
+        ...
+
+    @property
+    def id(self):
+        ...
+
+    @property
+    def start(self):
+        ...
+
+class experiment_type:
+    @property
+    def beam_mode(self):
+        ...
+
+    @property
+    def radiation_probe(self):
+        ...
+
+    @property
+    def sample_form(self):
+        ...
+
+    @property
+    def scattering_type(self):
+        ...
+
+class extinction:
+    @property
+    def model(self):
+        ...
+
+    @property
+    def mosaicity(self):
+        ...
+
+    @property
+    def radius(self):
+        ...
+
+    @property
+    def type(self):
+        ...
+
+class fit_parameter_correlations:
+    @property
+    def correlation(self):
+        ...
+
+    @property
+    def id(self):
+        ...
+
+    @property
+    def parameter_unique_name_i(self):
+        ...
+
+    @property
+    def parameter_unique_name_j(self):
+        ...
+
+    @property
+    def source_kind(self):
+        ...
+
+class fit_parameters:
+    @property
+    def bounds_uncertainty_multiplier(self):
+        ...
+
+    @property
+    def fit_max(self):
+        ...
+
+    @property
+    def fit_min(self):
+        ...
+
+    @property
+    def parameter_unique_name(self):
+        ...
+
+    @property
+    def posterior_best_sample_value(self):
+        ...
+
+    @property
+    def posterior_effective_sample_size_bulk(self):
+        ...
+
+    @property
+    def posterior_gelman_rubin(self):
+        ...
+
+    @property
+    def posterior_interval_68_high(self):
+        ...
+
+    @property
+    def posterior_interval_68_low(self):
+        ...
+
+    @property
+    def posterior_interval_95_high(self):
+        ...
+
+    @property
+    def posterior_interval_95_low(self):
+        ...
+
+    @property
+    def posterior_median(self):
+        ...
+
+    @property
+    def posterior_uncertainty(self):
+        ...
+
+    @property
+    def start_uncertainty(self):
+        ...
+
+    @property
+    def start_value(self):
+        ...
+
+class fit_result:
+    @property
+    def acceptance_rate_mean(self):
+        ...
+
+    @property
+    def background_function(self):
+        ...
+
+    @property
+    def best_log_posterior(self):
+        ...
+
+    @property
+    def correlation_available(self):
+        ...
+
+    @property
+    def covariance_available(self):
+        ...
+
+    @property
+    def credible_interval_inner(self):
+        ...
+
+    @property
+    def credible_interval_outer(self):
+        ...
+
+    @property
+    def degrees_of_freedom(self):
+        ...
+
+    @property
+    def effective_sample_size_min(self):
+        ...
+
+    @property
+    def exit_reason(self):
+        ...
+
+    @property
+    def fitting_time(self):
+        ...
+
+    @property
+    def gelman_rubin_max(self):
+        ...
+
+    @property
+    def iterations(self):
+        ...
+
+    @property
+    def message(self):
+        ...
+
+    @property
+    def n_data_points(self):
+        ...
+
+    @property
+    def n_free_parameters(self):
+        ...
+
+    @property
+    def n_parameters(self):
+        ...
+
+    @property
+    def number_constraints(self):
+        ...
+
+    @property
+    def number_reflns_gt(self):
+        ...
+
+    @property
+    def number_reflns_total(self):
+        ...
+
+    @property
+    def number_restraints(self):
+        ...
+
+    @property
+    def objective_name(self):
+        ...
+
+    @property
+    def objective_value(self):
+        ...
+
+    @property
+    def point_estimate_name(self):
+        ...
+
+    @property
+    def prof_r_factor(self):
+        ...
+
+    @property
+    def prof_wr_expected(self):
+        ...
+
+    @property
+    def prof_wr_factor(self):
+        ...
+
+    @property
+    def profile_function(self):
+        ...
+
+    @property
+    def r_factor_all(self):
+        ...
+
+    @property
+    def r_factor_gt(self):
+        ...
+
+    @property
+    def reduced_chi_square(self):
+        ...
+
+    @property
+    def resolved_random_seed(self):
+        ...
+
+    @property
+    def result_kind(self):
+        ...
+
+    @property
+    def sampler_completed(self):
+        ...
+
+    @property
+    def shift_over_su_max(self):
+        ...
+
+    @property
+    def shift_over_su_mean(self):
+        ...
+
+    @property
+    def success(self):
+        ...
+
+    @property
+    def threshold_expression(self):
+        ...
+
+    @property
+    def wr_factor_all(self):
+        ...
+
+    @property
+    def wr_factor_gt(self):
+        ...
+
+class fitting_mode:
+    @property
+    def type(self):
+        ...
+
+class geom:
+    @property
+    def as_cif(self):
+        ...
+
+    @property
+    def bond_distance_inc(self):
+        ...
+
+    @property
+    def min_bond_distance_cutoff(self):
+        ...
+
+class instrument:
+    @property
+    def calib_d_to_tof_linear(self):
+        ...
+
+    @property
+    def calib_d_to_tof_offset(self):
+        ...
+
+    @property
+    def calib_d_to_tof_quadratic(self):
+        ...
+
+    @property
+    def calib_d_to_tof_reciprocal(self):
+        ...
+
+    @property
+    def calib_sample_displacement(self):
+        ...
+
+    @property
+    def calib_sample_transparency(self):
+        ...
+
+    @property
+    def calib_twotheta_offset(self):
+        ...
+
+    @property
+    def setup_monochromator_twotheta(self):
+        ...
+
+    @property
+    def setup_polarization_coefficient(self):
+        ...
+
+    @property
+    def setup_twotheta_bank(self):
+        ...
+
+    @property
+    def setup_wavelength(self):
+        ...
+
+    @property
+    def setup_wavelength_2(self):
+        ...
+
+    @property
+    def setup_wavelength_2_to_1_ratio(self):
+        ...
+
+class joint_fit:
+    @property
+    def experiment_id(self):
+        ...
+
+    @property
+    def weight(self):
+        ...
+
+class linked_structure:
+    @property
+    def scale(self):
+        ...
+
+    @property
+    def structure_id(self):
+        ...
+
+class linked_structures:
+    @property
+    def scale(self):
+        ...
+
+    @property
+    def structure_id(self):
+        ...
+
+class metadata:
+    @property
+    def as_cif(self):
+        ...
+
+    @property
+    def created(self):
+        ...
+
+    @property
+    def description(self):
+        ...
+
+    @property
+    def last_modified(self):
+        ...
+
+    @property
+    def name(self):
+        ...
+
+    @property
+    def path(self):
+        ...
+
+    @property
+    def timestamp(self):
+        ...
+
+    @property
+    def title(self):
+        ...
+
+    @property
+    def unique_name(self):
+        ...
+
+class minimizer:
+    @property
+    def burn_in_steps(self):
+        ...
+
+    @property
+    def chains(self):
+        ...
+
+    @property
+    def initialization_method(self):
+        ...
+
+    @property
+    def max_iterations(self):
+        ...
+
+    @property
+    def parallel_workers(self):
+        ...
+
+    @property
+    def population_size(self):
+        ...
+
+    @property
+    def proposal_moves(self):
+        ...
+
+    @property
+    def random_seed(self):
+        ...
+
+    @property
+    def sampling_steps(self):
+        ...
+
+    @property
+    def thinning_interval(self):
+        ...
+
+    @property
+    def type(self):
+        ...
+
+class peak:
+    @property
+    def asym_beba_a0(self):
+        ...
+
+    @property
+    def asym_beba_a1(self):
+        ...
+
+    @property
+    def asym_beba_b0(self):
+        ...
+
+    @property
+    def asym_beba_b1(self):
+        ...
+
+    @property
+    def asym_fcj_1(self):
+        ...
+
+    @property
+    def asym_fcj_2(self):
+        ...
+
+    @property
+    def broad_gauss_sigma_0(self):
+        ...
+
+    @property
+    def broad_gauss_sigma_1(self):
+        ...
+
+    @property
+    def broad_gauss_sigma_2(self):
+        ...
+
+    @property
+    def broad_gauss_size(self):
+        ...
+
+    @property
+    def broad_gauss_strain(self):
+        ...
+
+    @property
+    def broad_gauss_u(self):
+        ...
+
+    @property
+    def broad_gauss_v(self):
+        ...
+
+    @property
+    def broad_gauss_w(self):
+        ...
+
+    @property
+    def broad_lorentz_gamma_0(self):
+        ...
+
+    @property
+    def broad_lorentz_gamma_1(self):
+        ...
+
+    @property
+    def broad_lorentz_gamma_2(self):
+        ...
+
+    @property
+    def broad_lorentz_size(self):
+        ...
+
+    @property
+    def broad_lorentz_strain(self):
+        ...
+
+    @property
+    def broad_lorentz_x(self):
+        ...
+
+    @property
+    def broad_lorentz_y(self):
+        ...
+
+    @property
+    def broad_q(self):
+        ...
+
+    @property
+    def cutoff_fwhm(self):
+        ...
+
+    @property
+    def cutoff_q(self):
+        ...
+
+    @property
+    def damp_particle_diameter(self):
+        ...
+
+    @property
+    def damp_q(self):
+        ...
+
+    @property
+    def decay_beta_0(self):
+        ...
+
+    @property
+    def decay_beta_1(self):
+        ...
+
+    @property
+    def dexp_decay_beta_00(self):
+        ...
+
+    @property
+    def dexp_decay_beta_01(self):
+        ...
+
+    @property
+    def dexp_decay_beta_10(self):
+        ...
+
+    @property
+    def dexp_rise_alpha_1(self):
+        ...
+
+    @property
+    def dexp_rise_alpha_2(self):
+        ...
+
+    @property
+    def dexp_switch_r_01(self):
+        ...
+
+    @property
+    def dexp_switch_r_02(self):
+        ...
+
+    @property
+    def dexp_switch_r_03(self):
+        ...
+
+    @property
+    def rise_alpha_0(self):
+        ...
+
+    @property
+    def rise_alpha_1(self):
+        ...
+
+    @property
+    def sharp_delta_1(self):
+        ...
+
+    @property
+    def sharp_delta_2(self):
+        ...
+
+    @property
+    def type(self):
+        ...
+
+class pref_orient:
+    @property
+    def index_h(self):
+        ...
+
+    @property
+    def index_k(self):
+        ...
+
+    @property
+    def index_l(self):
+        ...
+
+    @property
+    def march_r(self):
+        ...
+
+    @property
+    def march_random_fract(self):
+        ...
+
+    @property
+    def structure_id(self):
+        ...
+
+class refln:
+    @property
+    def d_spacing(self):
+        ...
+
+    @property
+    def f_calc(self):
+        ...
+
+    @property
+    def f_squared_calc(self):
+        ...
+
+    @property
+    def id(self):
+        ...
+
+    @property
+    def index_h(self):
+        ...
+
+    @property
+    def index_k(self):
+        ...
+
+    @property
+    def index_l(self):
+        ...
+
+    @property
+    def intensity_calc(self):
+        ...
+
+    @property
+    def intensity_meas(self):
+        ...
+
+    @property
+    def intensity_meas_su(self):
+        ...
+
+    @property
+    def parameters(self):
+        ...
+
+    @property
+    def sin_theta_over_lambda(self):
+        ...
+
+    @property
+    def structure_id(self):
+        ...
+
+    @property
+    def time_of_flight(self):
+        ...
+
+    @property
+    def two_theta(self):
+        ...
+
+    @property
+    def wavelength(self):
+        ...
+
+class rendering_plot:
+    @property
+    def plotter(self):
+        ...
+
+    @property
+    def type(self):
+        ...
+
+class rendering_structure:
+    @property
+    def as_cif(self):
+        ...
+
+    @property
+    def type(self):
+        ...
+
+    @property
+    def viewer(self):
+        ...
+
+class rendering_table:
+    @property
+    def tabler(self):
+        ...
+
+    @property
+    def type(self):
+        ...
+
+class report:
+    @property
+    def cif(self):
+        ...
+
+    @property
+    def html(self):
+        ...
+
+    @property
+    def html_offline(self):
+        ...
+
+    @property
+    def pdf(self):
+        ...
+
+    @property
+    def project(self):
+        ...
+
+    @property
+    def tex(self):
+        ...
+
+class sequential_fit:
+    @property
+    def as_cif(self):
+        ...
+
+    @property
+    def chunk_size(self):
+        ...
+
+    @property
+    def copy_data(self):
+        ...
+
+    @property
+    def data_dir(self):
+        ...
+
+    @property
+    def file_pattern(self):
+        ...
+
+    @property
+    def max_workers(self):
+        ...
+
+    @property
+    def reverse(self):
+        ...
+
+class sequential_fit_extract:
+    @property
+    def id(self):
+        ...
+
+    @property
+    def pattern(self):
+        ...
+
+    @property
+    def required(self):
+        ...
+
+    @property
+    def target(self):
+        ...
+
+class software:
+    @property
+    def id(self):
+        ...
+
+    @property
+    def name(self):
+        ...
+
+    @property
+    def parameters(self):
+        ...
+
+    @property
+    def url(self):
+        ...
+
+    @property
+    def version(self):
+        ...
+
+class space_group:
+    @property
+    def coord_system_code(self):
+        ...
+
+    @property
+    def crystal_system(self):
+        ...
+
+    @property
+    def name_h_m(self):
+        ...
+
+class space_group_wyckoff:
+    @property
+    def coords_xyz(self):
+        ...
+
+    @property
+    def id(self):
+        ...
+
+    @property
+    def letter(self):
+        ...
+
+    @property
+    def multiplicity(self):
+        ...
+
+    @property
+    def site_symmetry(self):
+        ...
+
+class structure_style:
+    @property
+    def adp_probability(self):
+        ...
+
+    @property
+    def as_cif(self):
+        ...
+
+    @property
+    def atom_scale(self):
+        ...
+
+    @property
+    def atom_view(self):
+        ...
+
+    @property
+    def color_scheme(self):
+        ...
+
+class structure_view:
+    @property
+    def as_cif(self):
+        ...
+
+    @property
+    def range_a_max(self):
+        ...
+
+    @property
+    def range_a_min(self):
+        ...
+
+    @property
+    def range_b_max(self):
+        ...
+
+    @property
+    def range_b_min(self):
+        ...
+
+    @property
+    def range_c_max(self):
+        ...
+
+    @property
+    def range_c_min(self):
+        ...
+
+    @property
+    def show_labels(self):
+        ...
+
+    @property
+    def show_moments(self):
+        ...
+
+class verbosity:
+    @property
+    def as_cif(self):
+        ...
+
+    @property
+    def fit(self):
+        ...

@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "disposition": "ruling-65 corpus-vocabulary retirement",
+  "reason": "The retired five-bank corpus vehicle has no surviving case that carries its exact CLI/input provenance or five-bank writer bytes. The three-bank successor carries the semantic JvD/absorption checks; the two surviving legacy writer shapes remain pinned.",
+  "retired": [
+    "tests/unit/py/test_c09_t6_io_seams.py::test_c09_t6_fixture_manifest_pins_published_crysta_cli_and_every_input",
+    "tests/unit/py/test_c09_t6_io_seams.py::test_c09_t6_jvd_absorption_save_regression_pin_round_trips",
+    "tests/unit/py/test_c11_t4_cw_selection.py::test_c11_t4_existing_tof_writer_goldens_remain_byte_exact[jvd_absorption-subcase]"
+  ]
+}

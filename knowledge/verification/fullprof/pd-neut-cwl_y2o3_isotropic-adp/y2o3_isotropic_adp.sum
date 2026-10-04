@@ -1,0 +1,224 @@
+
+
+        **********************************************************
+        ** PROGRAM FullProf.2k (Version 8.40 - Feb2026-ILL JRC) **
+        **********************************************************
+                       M U L T I -- P A T T E R N                 
+            Rietveld, Profile Matching & Integrated Intensity     
+                 Refinement of X-ray and/or Neutron Data
+
+
+    Date: 25/09/2026  Time: 14:33:56.133                              
+
+ => PCR file code: y2o3_isotropic_adp
+ => DAT file code: y2o3_isotropic_adp   -> Relative contribution: 1.0000                                                            
+ => Title: Y2O3 Ge(551) 300mm_varH 15/10/13
+
+ ==> CONDITIONS OF THIS RUN FOR PATTERN No.:  1
+
+ => Global Refinement of neutron powder data                                                                                        
+ => The    7th default profile function was selected
+
+ => X-Y type of data: 2theta/TOF/E(Kev) Intens sigma for pattern:  1
+ => Analysis of refinement at the end
+ => Wavelengths:  1.54822 1.54822
+ => Cos(Monochromator angle)=   0.0000
+ => Absorption correction (AC), muR-eff =   0.0000  0.0000
+ => Base of peaks: 2.0*HW*   20.00
+ ==> Angular range, step and number of points:
+     2Thmin:       0.950000  2Thmax:     153.899994  Step:       0.050019  No. of points:   3060
+ =>-------> Pattern#  1
+ => Crystal Structure Refinement for phase: 1
+ => The density (volumic mass) of phase 1 is:    5.029 g/cm3
+ => Scor: 3.2519
+
+ ==> RESULTS OF REFINEMENT:
+
+
+ => No. of fitted parameters:    0
+
+
+------------------------------------------------------------------------------
+ => Phase No.  1 Y2O3                                    I a -3              
+------------------------------------------------------------------------------
+
+ =>  No. of reflections for pattern#:   1:   229  
+
+
+ ==> ATOM PARAMETERS:
+
+  Name      x     sx       y     sy       z      sz      B   sB   occ. socc.  Mult
+ Y1     -0.03236(   0)  0.00000(   0)  0.25000(   0)  0.300(  0)  0.500(  0)   24
+ Y2      0.25000(   0)  0.25000(   0)  0.25000(   0)  0.300(  0)  0.167(  0)    8
+ O1      0.39072(   0)  0.15204(   0)  0.38030(   0)  0.500(  0)  1.000(  0)   48
+
+ ==> PROFILE PARAMETERS FOR PATTERN#  1
+
+ => Cell parameters      :
+                             10.60574   0.00000
+                             10.60574   0.00000
+                             10.60574   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+ 
+ => overall scale factor :   1.060200      0.000000    
+ => Eta(p-v) or m(p-vii) :    0.00000   0.00000
+ => Overall tem. factor  :    0.00000   0.00000
+ => Halfwidth parameters :    0.03663   0.00000
+                             -0.06835   0.00000
+                              0.13143   0.00000
+ => Preferred orientation:    0.00000   0.00000
+                              0.00000   0.00000
+ => Asymmetry parameters :    0.00000   0.00000
+                              0.00000   0.00000
+                              0.00000   0.00000
+                              0.00000   0.00000
+ => X and y parameters   :    0.00000   0.00000
+                              0.00000   0.00000
+ => Strain parameters    :    0.00000   0.00000
+                              0.00000   0.00000
+                              0.00000   0.00000
+ => Size parameters (G,L):    0.00000   0.00000
+                              0.00000   0.00000
+
+ => Add. shape parameters: 
+                              0.00000       0.00000    
+                              0.00000       0.00000    
+
+
+
+ ==> GLOBAL PARAMETERS FOR PATTERN#  1
+
+
+ => Zero-point:    -0.0162    0.0000
+ => Cos(2theta)-shift parameter :   0.0000  0.0000
+ => Sin(2theta)-shift parameter :   0.0000  0.0000
+
+ ==> RELIABILITY FACTORS WITH ALL NON-EXCLUDED POINTS FOR PATTERN:  1
+
+  => Cycle:  1 => MaxCycle:  1
+ => N-P+C:  2509
+ =>  R-factors (not corrected for background) for Pattern:  1
+ => Rp:  49.0     Rwp:  121.     Rexp:    1.24 Chi2: 0.950E+04  L.S. refinement
+ => Conventional Rietveld R-factors for Pattern:  1
+ => Rp:  915.     Rwp:  935.     Rexp:    9.60 Chi2: 0.950E+04
+ => Deviance:  0.876E+07     Dev*  :   3493.    
+ => DW-Stat.:    0.0539     DW-exp:     1.8759
+ => N-sigma of the GoF:   336454.938
+
+ ==> RELIABILITY FACTORS FOR POINTS WITH BRAGG CONTRIBUTIONS FOR PATTERN:  1
+
+ => N-P+C:  2509
+ =>  R-factors (not corrected for background) for Pattern:  1
+ => Rp:  49.0     Rwp:  121.     Rexp:    1.24 Chi2: 0.950E+04  L.S. refinement
+ => Conventional Rietveld R-factors for Pattern:  1
+ => Rp:  915.     Rwp:  935.     Rexp:    9.60 Chi2: 0.950E+04
+ => Deviance:  0.876E+07     Dev*  :   3493.    
+ => DW-Stat.:    0.0539     DW-exp:     1.8759
+ => N-sigma of the GoF:   336454.938
+
+ => Global user-weigthed Chi2 (Bragg contrib.):  0.950E+04
+ => Scor: 3.2519
+
+ ==> RESULTS OF REFINEMENT:
+
+
+ => No. of fitted parameters:    0
+
+
+------------------------------------------------------------------------------
+ => Phase No.  1 Y2O3                                    I a -3              
+------------------------------------------------------------------------------
+
+ =>  No. of reflections for pattern#:   1:   229  
+
+
+ ==> ATOM PARAMETERS:
+
+  Name      x     sx       y     sy       z      sz      B   sB   occ. socc.  Mult
+ Y1     -0.03236(   0)  0.00000(   0)  0.25000(   0)  0.300(  0)  0.500(  0)   24
+ Y2      0.25000(   0)  0.25000(   0)  0.25000(   0)  0.300(  0)  0.167(  0)    8
+ O1      0.39072(   0)  0.15204(   0)  0.38030(   0)  0.500(  0)  1.000(  0)   48
+
+ ==> PROFILE PARAMETERS FOR PATTERN#  1
+
+ => Cell parameters      :
+                             10.60574   0.00000
+                             10.60574   0.00000
+                             10.60574   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+ 
+ => overall scale factor :   1.060200      0.000000    
+ => Eta(p-v) or m(p-vii) :    0.00000   0.00000
+ => Overall tem. factor  :    0.00000   0.00000
+ => Halfwidth parameters :    0.03663   0.00000
+                             -0.06835   0.00000
+                              0.13143   0.00000
+ => Preferred orientation:    0.00000   0.00000
+                              0.00000   0.00000
+ => Asymmetry parameters :    0.00000   0.00000
+                              0.00000   0.00000
+                              0.00000   0.00000
+                              0.00000   0.00000
+ => X and y parameters   :    0.00000   0.00000
+                              0.00000   0.00000
+ => Strain parameters    :    0.00000   0.00000
+                              0.00000   0.00000
+                              0.00000   0.00000
+ => Size parameters (G,L):    0.00000   0.00000
+                              0.00000   0.00000
+
+ => Add. shape parameters: 
+                              0.00000       0.00000    
+                              0.00000       0.00000    
+
+
+
+ ==> GLOBAL PARAMETERS FOR PATTERN#  1
+
+
+ => Zero-point:    -0.0162    0.0000
+ => Cos(2theta)-shift parameter :   0.0000  0.0000
+ => Sin(2theta)-shift parameter :   0.0000  0.0000
+
+ ==> RELIABILITY FACTORS WITH ALL NON-EXCLUDED POINTS FOR PATTERN:  1
+
+  => Cycle:  1 => MaxCycle:  1
+ => N-P+C:  2509
+ =>  R-factors (not corrected for background) for Pattern:  1
+ => Rp:  49.0     Rwp:  121.     Rexp:    1.24 Chi2: 0.950E+04  L.S. refinement
+ => Conventional Rietveld R-factors for Pattern:  1
+ => Rp:  915.     Rwp:  935.     Rexp:    9.60 Chi2: 0.950E+04
+ => Deviance:  0.876E+07     Dev*  :   3493.    
+ => DW-Stat.:    0.0539     DW-exp:     1.8759
+ => N-sigma of the GoF:   336454.938
+
+ ==> RELIABILITY FACTORS FOR POINTS WITH BRAGG CONTRIBUTIONS FOR PATTERN:  1
+
+ => N-P+C:  2509
+ =>  R-factors (not corrected for background) for Pattern:  1
+ => Rp:  49.0     Rwp:  121.     Rexp:    1.24 Chi2: 0.950E+04  L.S. refinement
+ => Conventional Rietveld R-factors for Pattern:  1
+ => Rp:  915.     Rwp:  935.     Rexp:    9.60 Chi2: 0.950E+04
+ => Deviance:  0.876E+07     Dev*  :   3493.    
+ => DW-Stat.:    0.0539     DW-exp:     1.8759
+ => N-sigma of the GoF:   336454.938
+
+ => Global user-weigthed Chi2 (Bragg contrib.):  0.950E+04
+
+     -----------------------------------------------------
+     BRAGG R-Factors and weight fractions for Pattern #  1
+     -----------------------------------------------------
+
+ => Phase:  1     Y2O3
+ => Bragg R-factor:   909.       Vol: 1192.953( 0.000)  Fract(%):  100.00( 0.00)
+ => Rf-factor=  218.             ATZ:        3612.974   Brindley:  1.0000
+
+ 
+              CPU Time:     0.250 seconds
+                            0.004 minutes
+
+ => Run finished at:     Date: 25/09/2026  Time: 14:33:56.384                              

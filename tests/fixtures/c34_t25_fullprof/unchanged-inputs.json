@@ -1,0 +1,113 @@
+{
+  "source_commit": "fce50e3667df29bdac68da41315748777aa75e3c",
+  "projects": {
+    "pd-neut-cwl_lab6-echidna_11b": {
+      "source": "knowledge/verification/fullprof/pd-neut-cwl_lab6/ECH0030684_LaB6_1p622A_11B.pcr",
+      "pcr_sha256": "284cd7020a35427d8a3df107792fc74ff7f043e011eac896de6987f35bfa2530",
+      "auxiliary_sha256": {
+        "ECH0030684_LaB6_1p622A_11B.dat": "c41427269a36cad15936de9c11fea8c6719293a6e5acfe4146291efa8ed26cbc"
+      }
+    },
+    "pd-neut-cwl_lab6-echidna_absorption": {
+      "source": "knowledge/verification/fullprof/pd-neut-cwl_lab6/ECH0030684_LaB6_1p622A_absorption.pcr",
+      "pcr_sha256": "65841dda06ebfaa8d17e567ed1e635084bab83df48ab605a06af5d58d10d38a4",
+      "auxiliary_sha256": {
+        "ECH0030684_LaB6_1p622A_absorption.dat": "c41427269a36cad15936de9c11fea8c6719293a6e5acfe4146291efa8ed26cbc"
+      }
+    },
+    "pd-neut-cwl_lab6-echidna_basic": {
+      "source": "knowledge/verification/fullprof/pd-neut-cwl_lab6/ECH0030684_LaB6_1p622A_baseline.pcr",
+      "pcr_sha256": "a6e38ea30cdf0c029a1960cbb96fae1617143b1811b01a15f8e20f8393d724d5",
+      "auxiliary_sha256": {
+        "ECH0030684_LaB6_1p622A_baseline.dat": "c41427269a36cad15936de9c11fea8c6719293a6e5acfe4146291efa8ed26cbc"
+      }
+    },
+    "pd-neut-cwl_lab6-11b-echidna_tch-fcj": {
+      "source": "knowledge/verification/fullprof/pd-neut-cwl_lab6-11b_tch-fcj/ECH0030684_LaB6_1p622A.pcr",
+      "pcr_sha256": "87662d7d37bac643d8c9aaac88417b1647ee3b905464c9c4b16012a8b4f37073",
+      "auxiliary_sha256": {
+        "ECH0030684_LaB6_1p622A.dat": "c41427269a36cad15936de9c11fea8c6719293a6e5acfe4146291efa8ed26cbc"
+      }
+    },
+    "pd-neut-cwl_lbco-hrpt_basic": {
+      "source": "knowledge/verification/fullprof/pd-neut-cwl_lbco_basic/lbco.pcr",
+      "pcr_sha256": "4ec747b9dc88dd798015d7061dccee6e9f31dc8f2448a82a943a0a965fd84581",
+      "auxiliary_sha256": {
+        "lbco.dat": "83c7f3d27d2e254367dd7dc3730261b9a5ebb811baaeed01fde050a7ba99be24"
+      }
+    },
+    "pd-neut-cwl_pbso4_basic": {
+      "source": "knowledge/verification/fullprof/pd-neut-cwl_pbso4_basic/pbso4.pcr",
+      "pcr_sha256": "b1f962c0d10c3ac50fa63c550d5aa85e463626c53ab346b6ef473cf5c0b73538",
+      "auxiliary_sha256": {
+        "pbso4.dat": "637bfde3bb1adb24045fb688c2a0cdfd424bf7bc9956f267a11053ba82a944e2"
+      }
+    },
+    "pd-neut-cwl_y2o3_isotropic-adp": {
+      "source": "knowledge/verification/fullprof/pd-neut-cwl_y2o3_isotropic-adp/y2o3_isotropic_adp.pcr",
+      "pcr_sha256": "52f92a16e31a3745cf19c0ceee0c18f2180edbb34f0bae94fe3f27e9b637edf2",
+      "auxiliary_sha256": {
+        "y2o3.dat": "0b3bc38ed073536f503a27776704853e735b6aaaaaa4bdbd4af8146bfd2bbf61"
+      }
+    },
+    "pd-neut-tof_cecoal-polaris_chebyshev": {
+      "source": "knowledge/verification/fullprof/pd-neut-tof_cecoal_chebyshev/cecoal.pcr",
+      "pcr_sha256": "b534f8b2ab06a922784ae5850cdd6609b457c640ed02ba049913046b407323ae",
+      "auxiliary_sha256": {
+        "cecoal.dat": "3c702bc31c5c6b435a3cb8d4b72cde2495a6a521ce336fd1be20e4df6c429790"
+      }
+    },
+    "pd-neut-tof_ceo2-pearl_polynomial": {
+      "source": "knowledge/verification/fullprof/pd-neut-tof_ceo2-pearl_polynomial/Ceo2_PEARL.pcr",
+      "pcr_sha256": "c16ab45a7fe3f1735465a02822a85fac81acce4b1fcc44cb50d68fb100b2a9f5",
+      "auxiliary_sha256": {
+        "Ceo2_PEARL.dat": "7397e5c44f2193f86e49ac8680d5c3bd2499bafbb955e3698335d49693335ca7"
+      }
+    },
+    "pd-neut-tof_diamond-dream_basic": {
+      "source": "knowledge/verification/fullprof/pd-neut-tof_diamond_dream/diamond.pcr",
+      "pcr_sha256": "7146350e4e33767090fb38a934f6997af7d2031c14efd14c9496cf9c00331431",
+      "auxiliary_sha256": {
+        "diamond.dat": "ee26f48918f03157cc66aa1e7033afe2623289e7ac43a2c15311c2d48048a456"
+      }
+    },
+    "pd-neut-tof_ncaf-wish_jorgensen-von-dreele": {
+      "source": "knowledge/verification/fullprof/pd-neut-tof_ncaf_jorgensen-von-dreele/tmpl_one_bank.pcr",
+      "pcr_sha256": "9ad39c37848fd34af54ba8a3b054dad2f98b153a1ae9f5f4699b9d432f93acb5",
+      "auxiliary_sha256": {
+        "55025-5_6raw.gss": "7562b86085370d5aa0ce3f866bd1164c437308c4e0394de895f6c28ececd478d",
+        "TOF_irf_file.irf": "97c1e504407e3229af5c618e0fe8c49fdf8ab3ecd79a133939e492eb6d01243a"
+      }
+    },
+    "pd-neut-tof_si-sepd_ikeda-carpenter": {
+      "source": "knowledge/verification/fullprof/pd-neut-tof_si_ikeda-carpenter/arg_si_ic.pcr",
+      "pcr_sha256": "2e67f23f327c6fb9f4eae3c624be8e2dda27882309e0ba2ffaa324c554be3551",
+      "auxiliary_sha256": {
+        "arg_si_ic.dat": "261b9e2846b0b159dab906e144d5f05e36cdad36a42edf1df848720043568e5b"
+      }
+    },
+    "pd-neut-tof_si-sepd_jorgensen": {
+      "source": "knowledge/verification/fullprof/pd-neut-tof_si_jorgensen/arg_si.pcr",
+      "pcr_sha256": "234fe84471a18590e426a3c7aa2db651804827cce6f7b9659b0d80b1e1b82698",
+      "auxiliary_sha256": {
+        "TOF_irf_file.irf": "ce7205ce1af4ae1ac1cc284bb7db2d3662aa2507c4ff9fa5d561592015441ba7",
+        "arg_si.dat": "261b9e2846b0b159dab906e144d5f05e36cdad36a42edf1df848720043568e5b"
+      }
+    },
+    "pd-neut-tof_si-sepd_jorgensen-von-dreele": {
+      "source": "knowledge/verification/fullprof/pd-neut-tof_si_jorgensen-von-dreele/arg_si.pcr",
+      "pcr_sha256": "e930b99b7bd150fa93a92fa89d7a5b9870624f8465eacb036d3b7e893dfd9851",
+      "auxiliary_sha256": {
+        "TOF_irf_file.irf": "82e7d3f808011332d06eeeff35253b6f3931ff5979a73d04bb268af9568f926a",
+        "arg_si.dat": "261b9e2846b0b159dab906e144d5f05e36cdad36a42edf1df848720043568e5b"
+      }
+    },
+    "pd-neut-tof_si-sepd_jorgensen-von-dreele-size-strain": {
+      "source": "knowledge/verification/fullprof/pd-neut-tof_si_jorgensen-von-dreele-size-strain/arg_si.pcr",
+      "pcr_sha256": "ec0c1edf292209f97a07d7f0a19dc99dc13a36f80ad25419d5105452812d4bfe",
+      "auxiliary_sha256": {
+        "arg_si.dat": "261b9e2846b0b159dab906e144d5f05e36cdad36a42edf1df848720043568e5b"
+      }
+    }
+  }
+}

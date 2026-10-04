@@ -1,0 +1,12 @@
+_edi.schema_version 3
+
+_fitting_mode.type single
+
+_minimizer.type crysta
+
+_minimizer.max_iterations 1000
+
+loop_
+_joint_fit.experiment_id
+_joint_fit.weight
+hrpt 1

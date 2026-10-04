@@ -1,0 +1,120 @@
+{
+  "schema": 1,
+  "source": {
+    "engine": "crysta",
+    "artifact": "PROVENANCE.md",
+    "provenance": "PROVENANCE.md"
+  },
+  "variants": {
+    "ladder": {
+      "quantities": {
+        "reduced_chi_square": {
+          "value": 3.611119184,
+          "kind": "regression-pin",
+          "tol_abs": 1e-06,
+          "tol_rel": null
+        },
+        "iterations": {
+          "value": 4.0,
+          "kind": "regression-pin",
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "rwp": {
+          "value": 0.06941175916,
+          "kind": "regression-pin",
+          "tol_abs": 1e-09,
+          "tol_rel": null
+        }
+      }
+    },
+    "fast-descent": {
+      "quantities": {
+        "reduced_chi_square": {
+          "value": 3.611119171,
+          "kind": "regression-pin",
+          "tol_abs": 1e-06,
+          "tol_rel": null
+        },
+        "iterations": {
+          "value": 4.0,
+          "kind": "regression-pin",
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "rwp": {
+          "value": 0.06941175903,
+          "kind": "regression-pin",
+          "tol_abs": 1e-09,
+          "tol_rel": null
+        }
+      }
+    },
+    "fast-descent-linear-snap": {
+      "quantities": {
+        "reduced_chi_square": {
+          "value": 3.611114657,
+          "kind": "regression-pin",
+          "tol_abs": 1e-06,
+          "tol_rel": null
+        },
+        "iterations": {
+          "value": 4.0,
+          "kind": "regression-pin",
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "rwp": {
+          "value": 0.06941171565,
+          "kind": "regression-pin",
+          "tol_abs": 1e-09,
+          "tol_rel": null
+        }
+      }
+    },
+    "fast-descent-guarded-linear-snap": {
+      "quantities": {
+        "reduced_chi_square": {
+          "value": 3.611114657,
+          "kind": "regression-pin",
+          "tol_abs": 1e-06,
+          "tol_rel": null
+        },
+        "iterations": {
+          "value": 4.0,
+          "kind": "regression-pin",
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "rwp": {
+          "value": 0.06941171565,
+          "kind": "regression-pin",
+          "tol_abs": 1e-09,
+          "tol_rel": null
+        }
+      }
+    },
+    "multistart-prune": {
+      "quantities": {
+        "reduced_chi_square": {
+          "value": 3.611114145,
+          "kind": "regression-pin",
+          "tol_abs": 1e-06,
+          "tol_rel": null
+        },
+        "iterations": {
+          "value": 1.0,
+          "kind": "regression-pin",
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "rwp": {
+          "value": 0.06941171073,
+          "kind": "regression-pin",
+          "tol_abs": 1e-09,
+          "tol_rel": null
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "edi",
+  "tier": "tests/unit",
+  "metrics": {
+    "cpp": {
+      "kind": "line",
+      "minimum": 80,
+      "roots": [
+        "core/include",
+        "core/src"
+      ]
+    },
+    "python": {
+      "kind": "line",
+      "minimum": 80,
+      "roots": [
+        "lib/edi"
+      ]
+    }
+  },
+  "exclusions": []
+}

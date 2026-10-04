@@ -1,0 +1,10 @@
+_edi.schema_version 2
+
+_fitting_mode.type joint
+
+loop_
+_joint_fit.experiment_id
+_joint_fit.weight
+wish_5_6 1.0
+wish_4_7 1.0
+wish_2_9 1.0

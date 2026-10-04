@@ -1,0 +1,358 @@
+{
+  "fit_sha256": {
+    "README.md": "24680816d23943898d5c318e49c2d158b1b811a85a70381bdf192e5189bbcd76",
+    "analysis/analysis.edi": "06acc049b2fdfd16e06af5c03634f364d62a2819d2bb2b0ea456cd4b79ba5061",
+    "experiments/d20.edi": "70911c172271eca0aceed6be00cbf9a233c014a438d1ed10071b02031209a767",
+    "project.edi": "d15fd6bb0cfa3d72ae8fd32dc0b67f4278a72b31d26b7ce952ff1eef246bcd67",
+    "structures/cosio.edi": "7ec9ca0fb52e1c29aa6a5aa68ca0e6a58db75ccc369a613f32d2036221994b48"
+  },
+  "input_sha256": {
+    "analysis/analysis.edi": "94796601eb6ff20dda9d624cc5e0b311749c222f8393e032f5c0cf4df9842452",
+    "experiments/experiment.edi": "9ae555a4d65b73757a3ab92d2e699110c4d520116a18b02857cc5482a28028db",
+    "project.edi": "8c719cd4f91874e64ee8be366b8cbb9e9af814f13d05758e25c8d5d3899617d1",
+    "structures/structure.edi": "4aa0093a236c9f75222df7d29265e6cb6b6dbb7ae81ac4dc7b0e647ef12b26b3"
+  },
+  "kind": "pre-move Python freshness regression pin",
+  "routes": {
+    "background": {
+      "after": {
+        "geometry_saved": true,
+        "held_window_current": true,
+        "pattern_saved": false,
+        "reflections_saved": false
+      },
+      "before": {
+        "geometry_saved": true,
+        "held_window_current": true,
+        "pattern_saved": true,
+        "reflections_saved": true
+      },
+      "refused": null
+    },
+    "cell-changed": {
+      "after": {
+        "geometry_saved": false,
+        "held_window_current": false,
+        "pattern_saved": false,
+        "reflections_saved": false
+      },
+      "before": {
+        "geometry_saved": true,
+        "held_window_current": true,
+        "pattern_saved": true,
+        "reflections_saved": true
+      },
+      "refused": null
+    },
+    "cell-equal": {
+      "after": {
+        "geometry_saved": false,
+        "held_window_current": false,
+        "pattern_saved": false,
+        "reflections_saved": false
+      },
+      "before": {
+        "geometry_saved": true,
+        "held_window_current": true,
+        "pattern_saved": true,
+        "reflections_saved": true
+      },
+      "refused": null
+    },
+    "exclusions-equal": {
+      "after": {
+        "geometry_saved": true,
+        "held_window_current": true,
+        "pattern_saved": false,
+        "reflections_saved": false
+      },
+      "before": {
+        "geometry_saved": true,
+        "held_window_current": true,
+        "pattern_saved": true,
+        "reflections_saved": true
+      },
+      "refused": null
+    },
+    "fit": {
+      "after": {
+        "geometry_saved": true,
+        "held_window_current": false,
+        "pattern_saved": true,
+        "reflections_saved": true
+      },
+      "before": {
+        "geometry_saved": true,
+        "held_window_current": true,
+        "pattern_saved": true,
+        "reflections_saved": true
+      },
+      "refused": null
+    },
+    "fit-start": {
+      "after": {
+        "geometry_saved": true,
+        "held_window_current": true,
+        "pattern_saved": true,
+        "reflections_saved": true
+      },
+      "before": {
+        "geometry_saved": true,
+        "held_window_current": true,
+        "pattern_saved": true,
+        "reflections_saved": true
+      },
+      "refused": null
+    },
+    "free-flag": {
+      "after": {
+        "geometry_saved": true,
+        "held_window_current": true,
+        "pattern_saved": true,
+        "reflections_saved": true
+      },
+      "before": {
+        "geometry_saved": true,
+        "held_window_current": true,
+        "pattern_saved": true,
+        "reflections_saved": true
+      },
+      "refused": null
+    },
+    "geom-changed": {
+      "after": {
+        "geometry_saved": false,
+        "held_window_current": false,
+        "pattern_saved": true,
+        "reflections_saved": true
+      },
+      "before": {
+        "geometry_saved": true,
+        "held_window_current": true,
+        "pattern_saved": true,
+        "reflections_saved": true
+      },
+      "refused": null
+    },
+    "geom-equal": {
+      "after": {
+        "geometry_saved": false,
+        "held_window_current": false,
+        "pattern_saved": true,
+        "reflections_saved": true
+      },
+      "before": {
+        "geometry_saved": true,
+        "held_window_current": true,
+        "pattern_saved": true,
+        "reflections_saved": true
+      },
+      "refused": null
+    },
+    "measured-equal": {
+      "after": {
+        "geometry_saved": true,
+        "held_window_current": true,
+        "pattern_saved": false,
+        "reflections_saved": false
+      },
+      "before": {
+        "geometry_saved": true,
+        "held_window_current": true,
+        "pattern_saved": true,
+        "reflections_saved": true
+      },
+      "refused": null
+    },
+    "offset": {
+      "after": {
+        "geometry_saved": true,
+        "held_window_current": true,
+        "pattern_saved": false,
+        "reflections_saved": false
+      },
+      "before": {
+        "geometry_saved": true,
+        "held_window_current": true,
+        "pattern_saved": true,
+        "reflections_saved": true
+      },
+      "refused": null
+    },
+    "scale-equal": {
+      "after": {
+        "geometry_saved": true,
+        "held_window_current": true,
+        "pattern_saved": false,
+        "reflections_saved": false
+      },
+      "before": {
+        "geometry_saved": true,
+        "held_window_current": true,
+        "pattern_saved": true,
+        "reflections_saved": true
+      },
+      "refused": null
+    },
+    "scattering-equal": {
+      "after": {
+        "geometry_saved": true,
+        "held_window_current": true,
+        "pattern_saved": false,
+        "reflections_saved": false
+      },
+      "before": {
+        "geometry_saved": true,
+        "held_window_current": true,
+        "pattern_saved": true,
+        "reflections_saved": true
+      },
+      "refused": null
+    },
+    "sequential": {
+      "after": {
+        "geometry_saved": true,
+        "held_window_current": false,
+        "pattern_saved": true,
+        "reflections_saved": true
+      },
+      "before": {
+        "geometry_saved": true,
+        "held_window_current": true,
+        "pattern_saved": true,
+        "reflections_saved": true
+      },
+      "refused": null
+    },
+    "sigma-equal": {
+      "after": {
+        "geometry_saved": true,
+        "held_window_current": true,
+        "pattern_saved": false,
+        "reflections_saved": false
+      },
+      "before": {
+        "geometry_saved": true,
+        "held_window_current": true,
+        "pattern_saved": true,
+        "reflections_saved": true
+      },
+      "refused": null
+    },
+    "site-equal": {
+      "after": {
+        "geometry_saved": false,
+        "held_window_current": false,
+        "pattern_saved": false,
+        "reflections_saved": false
+      },
+      "before": {
+        "geometry_saved": true,
+        "held_window_current": true,
+        "pattern_saved": true,
+        "reflections_saved": true
+      },
+      "refused": null
+    },
+    "site-id-changed": {
+      "after": {
+        "geometry_saved": false,
+        "held_window_current": false,
+        "pattern_saved": false,
+        "reflections_saved": false
+      },
+      "before": {
+        "geometry_saved": true,
+        "held_window_current": true,
+        "pattern_saved": true,
+        "reflections_saved": true
+      },
+      "refused": null
+    },
+    "site-id-equal": {
+      "after": {
+        "geometry_saved": false,
+        "held_window_current": false,
+        "pattern_saved": false,
+        "reflections_saved": false
+      },
+      "before": {
+        "geometry_saved": true,
+        "held_window_current": true,
+        "pattern_saved": true,
+        "reflections_saved": true
+      },
+      "refused": null
+    },
+    "uncertainty-zero": {
+      "after": {
+        "geometry_saved": true,
+        "held_window_current": true,
+        "pattern_saved": true,
+        "reflections_saved": true
+      },
+      "before": {
+        "geometry_saved": true,
+        "held_window_current": true,
+        "pattern_saved": true,
+        "reflections_saved": true
+      },
+      "refused": null
+    },
+    "undo": {
+      "after": {
+        "geometry_saved": true,
+        "held_window_current": false,
+        "pattern_saved": true,
+        "reflections_saved": true
+      },
+      "before": {
+        "geometry_saved": true,
+        "held_window_current": true,
+        "pattern_saved": true,
+        "reflections_saved": true
+      },
+      "refused": null
+    },
+    "whole-data": {
+      "after": {
+        "geometry_saved": true,
+        "held_window_current": true,
+        "pattern_saved": false,
+        "reflections_saved": false
+      },
+      "before": {
+        "geometry_saved": true,
+        "held_window_current": true,
+        "pattern_saved": true,
+        "reflections_saved": true
+      },
+      "refused": null
+    },
+    "whole-structure": {
+      "after": {
+        "geometry_saved": false,
+        "held_window_current": false,
+        "pattern_saved": false,
+        "reflections_saved": false
+      },
+      "before": {
+        "geometry_saved": true,
+        "held_window_current": true,
+        "pattern_saved": true,
+        "reflections_saved": true
+      },
+      "refused": null
+    }
+  },
+  "scan_sha256": {
+    "analysis/analysis.edi": "3f302dcf1af65b7d3c1f9bf37f8ec0610a237cde18c43185b38e9300c196638e",
+    "experiments/d20.edi": "55ea976b34dffea45b1eb379a3f358d4afef7df9e3331fa3ced46fd63229949c",
+    "experiments/d20_scan/all594687.dat": "13d209575f8ddfeaa32183cbfe6ee457cdbff505763cdca09be1d7c801e8415d",
+    "experiments/d20_scan/all594791.dat": "0ec0607b473b3f618d3f56d494eca9184e8f38751ffaabdb77172a45f3b3999f",
+    "experiments/d20_scan/all594842.dat": "95656a5ee8468c3a012010831a05889c093d08d7779b1ac77d4918cb0e823590",
+    "project.edi": "e44cd6f657e735668298903867ee7768670420bd5f8fb72bc11071c25d2ef2a3",
+    "structures/cosio.edi": "342f2074cf64d77c6085c8879cda36c3b8913890d161cc537027d2a2720c2dd6"
+  },
+  "source_commit": "f3ea7afea400639f2a66d6acb8d922163f1ef128"
+}

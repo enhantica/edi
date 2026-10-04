@@ -1,0 +1,100 @@
+{
+  "commit": "3421414fc10cb573cd5b15f59ae0ce52f5f5847f",
+  "environment": "cpp-ci",
+  "path": "pixi.lock",
+  "platforms": {
+    "linux-64": {
+      "eigen": [
+        "3.4.0",
+        "h54a6638_2"
+      ],
+      "gcc_impl_linux-64": [
+        "14.3.0",
+        "h235f0fe_19"
+      ],
+      "gxx_impl_linux-64": [
+        "14.3.0",
+        "h2185e75_19"
+      ],
+      "libgcc": [
+        "15.2.0",
+        "he0feb66_19"
+      ],
+      "libgcc-devel_linux-64": [
+        "14.3.0",
+        "hf649bbc_119"
+      ],
+      "libgomp": [
+        "15.2.0",
+        "he0feb66_19"
+      ],
+      "libstdcxx": [
+        "15.2.0",
+        "h934c35e_19"
+      ],
+      "libstdcxx-devel_linux-64": [
+        "14.3.0",
+        "h9f08a49_119"
+      ],
+      "llvm-openmp": [
+        "22.1.8",
+        "h4922eb0_0"
+      ],
+      "sleef": [
+        "3.9.0",
+        "ha0421bc_0"
+      ],
+      "sysroot_linux-64": [
+        "2.28",
+        "h4ee821c_9"
+      ]
+    },
+    "osx-arm64": {
+      "clang_impl_osx-arm64": [
+        "19.1.7",
+        "default_hc11f16d_9"
+      ],
+      "clangxx_impl_osx-arm64": [
+        "19.1.7",
+        "default_hc11f16d_9"
+      ],
+      "eigen": [
+        "3.4.0",
+        "h784d473_2"
+      ],
+      "libcxx": [
+        "22.1.8",
+        "h55c6f16_0"
+      ],
+      "libcxx-devel": [
+        "19.1.7",
+        "h6dc3340_2"
+      ],
+      "llvm-openmp": [
+        "22.1.8",
+        "hc7d1edf_0"
+      ],
+      "sleef": [
+        "3.9.0",
+        "hb028509_0"
+      ]
+    },
+    "win-64": {
+      "eigen": [
+        "3.4.0",
+        "h5112557_2"
+      ],
+      "llvm-openmp": [
+        "22.1.8",
+        "h4fa8253_0"
+      ],
+      "sleef": [
+        "3.9.0",
+        "h67fd636_0"
+      ]
+    }
+  },
+  "ref": "3421414fc10cb573cd5b15f59ae0ce52f5f5847f",
+  "repo": "enhantica/crysta",
+  "sha256": "12c3ba554aeab992f213f95cb5862c223e5bce2f749631f3f4b22f6f847d60b0"
+}
