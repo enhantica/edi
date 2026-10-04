@@ -74,6 +74,7 @@ nav:
           - dev/verification/pd-neut-cwl_PbSO4_basic.ipynb
           - dev/verification/pd-neut-cwl_PbSO4_beba-asymmetry.ipynb
           - dev/verification/pd-neut-cwl_Y2O3_isotropic-adp.ipynb
+          - dev/verification/pd-neut-cwl_cosio-d20_biso-tied.ipynb
           - dev/verification/pd-neut-tof_Fe_pseudo-voigt.ipynb
           - dev/verification/pd-neut-tof_NCAF_jorgensen-von-dreele.ipynb
           - dev/verification/pd-neut-tof_Si_jorgensen-von-dreele-size-strain.ipynb
