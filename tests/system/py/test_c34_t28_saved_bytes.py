@@ -34,6 +34,10 @@ POLYNOMIAL_CASES = [
 ]
 
 
+# New relation data keeps its own fixed-point witness and never replaces an old pin.
+RELATION_CASES = ['corpus:constraint-covariance/project']
+
+
 def test_saved_byte_inventory_covers_every_current_cli_and_corpus_project(tmp_path):
     # Before: all inputs existed before the move. After : preserve
     # every old witness, with separately labelled post-feature LiF pins.
@@ -45,11 +49,14 @@ def test_saved_byte_inventory_covers_every_current_cli_and_corpus_project(tmp_pa
         '/ no old byte witness is replaced by a post-feature pin'
     )
     assert set(REFERENCE.inputs()) == (
-        set(BASELINE['cases']) | additions | set(POLYNOMIAL_CASES)
+        set(BASELINE['cases'])
+        | additions
+        | set(POLYNOMIAL_CASES)
+        | (set(RELATION_CASES) & set(REFERENCE.inputs()))
     ), (
         ' I22 every project must retain its pre-move byte witness, labelled '
         ' LiF pin or explicit  serialization fixed-point witness; '
-        'no unknown project may be omitted'
+        'or a declared relation-corpus fixed point; no unknown project may be omitted'
     )
     # Closed-form controls for the only inherited-byte mapping, independent of
     # the engine. Both input and output must refuse a missing, duplicate,
@@ -184,7 +191,7 @@ def test_byte_witness_observes_value_order_inventory_and_measured_files(tmp_path
     )
 
 
-@pytest.mark.parametrize('case', POLYNOMIAL_CASES)
+@pytest.mark.parametrize('case', POLYNOMIAL_CASES + RELATION_CASES)
 def test_c13_t6_new_projects_have_a_second_save_fixed_point(tmp_path, case):
     inputs = REFERENCE.inputs()
     assert case in inputs, ' every new declared project needs its serialization witness'
