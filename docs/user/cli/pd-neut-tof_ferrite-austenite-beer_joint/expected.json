@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "source": {
+    "engine": "cryspy",
+    "artifact": "PROVENANCE.md",
+    "provenance": "PROVENANCE.md"
+  },
+  "quantities": {
+    "rwp": {
+      "value": 0.06883298820841714,
+      "kind": "reference",
+      "tol_abs": null,
+      "tol_rel": 0.05
+    }
+  }
+}

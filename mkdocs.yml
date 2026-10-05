@@ -75,6 +75,7 @@ nav:
           - dev/verification/pd-neut-cwl_PbSO4_beba-asymmetry.ipynb
           - dev/verification/pd-neut-cwl_Y2O3_isotropic-adp.ipynb
           - dev/verification/pd-neut-tof_Fe_pseudo-voigt.ipynb
+          - dev/verification/pd-neut-tof_ferrite-austenite_beer_joint.ipynb
           - dev/verification/pd-neut-tof_NCAF_jorgensen-von-dreele.ipynb
           - dev/verification/pd-neut-tof_Si_jorgensen-von-dreele-size-strain.ipynb
           - dev/verification/pd-neut-tof_Si_jorgensen-von-dreele.ipynb
@@ -99,6 +100,7 @@ nav:
           - user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/index.md
           - user/cli/pd-neut-tof_diamond-dream_basic/index.md
           - user/cli/pd-neut-tof_si-sepd_start-2/index.md
+          - user/cli/pd-neut-tof_ferrite-austenite-beer_joint/index.md
           - user/cli/pd-neut-tof_si-sepd_start-5/index.md
           - user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/index.md
           - user/cli/pd-neut-cwl_pbso4_beba-asymmetry/index.md

@@ -12,7 +12,7 @@ _diffrn.ambient_pressure ?
 _diffrn.ambient_magnetic_field ?
 _diffrn.ambient_electric_field ?
 
-_calculator.type crysta
+_calculator.type cryspy
 
 _peak.broad_lorentz_gamma_0 0.()
 _peak.broad_lorentz_gamma_1 0.
