@@ -75,12 +75,11 @@ Run by the maintainer the owner authorized for the cut.
 - [ ] The content check (`content.yml`) runs on every push and pull request and is required by the
       ruleset. Commit messages, pull-request titles and bodies, branch names, review comments and CI
       logs are written for the public from the cut onward.
-- [ ] The self-hosted runners serve the repository while it is private, with the private workflows
-      in `.github/workflows`. The content check (`content.yml`) is the one public workflow installed
-      already; the others wait under `tools/public-release/github/workflows`.
-- [ ] **Pages** stays disabled while the repository is private, because a Pages site can be publicly
-      visible. The private `ci.yml`'s `pages` job is switched off, and `pages.yml` is not installed
-      until the public workflows are swapped in.
+- [ ] The public workflows are installed in `.github/workflows` and run on GitHub-hosted runners;
+      the content check (`content.yml`) is one of them. The latency bank (`bank-latency.yml`) runs on
+      the self-hosted fleet by dispatch only, so no pull request reaches a self-hosted runner.
+- [ ] **Pages** stays off: both jobs of `pages.yml` run on no event (`if: false`) until the owner
+      turns the site on.
 - [ ] The scheduled and writing workflows run only in the repository named `enhantica/edi`: the
       crysta SDK update (`crysta-sdk-update.yml`) and the latency bank (`bank-latency.yml`).
 
@@ -91,15 +90,14 @@ The owner makes the repository public personally; no script and no session does.
 - [ ] Before: the self-hosted runners leave the repository. A runner group that does not allow
       public repositories stops serving it by itself at the visibility change; confirm every group
       the repository uses is such a group, or that fork pull requests require approval.
-- [ ] Before the visibility change, by pull request: swap in the public workflows (prepared under
-      `tools/public-release/github/workflows`) and flip the runners to GitHub-hosted. Then
-      GitHub-hosted runners run every job a pull request reaches, with no self-hosted job reachable
-      from a fork's pull request.
+- [ ] Before the visibility change, by pull request: the public workflows replace the private ones in
+      `.github/workflows`, on GitHub-hosted runners. GitHub-hosted runners then run every job a pull
+      request reaches, with no self-hosted job reachable from a fork's pull request.
 - [ ] Before: the logs of runs on self-hosted runners are deleted or have expired
       (`gh run list --repo enhantica/edi`, then `gh run delete <id>` for each run a self-hosted
       runner served), so no runner's machine paths or names are published with them.
 - [ ] The owner changes the visibility to public.
-- [ ] **Pages** is enabled, with GitHub Actions (`pages.yml`) as its source. The site URL is the one
+- [ ] When the owner turns the site on, **Pages** is enabled, with GitHub Actions (`pages.yml`) as its source. The site URL is the one
       `mkdocs.yml` declares; `/webapp/` stays unlisted (noindex, disallowed in `robots.txt`, linked
       from nowhere). Pages publishes the site, and `/webapp/` answers with its placeholder.
 - [ ] Hosted CI is green on the public `edi`.
