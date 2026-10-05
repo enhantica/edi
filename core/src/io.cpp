@@ -2499,6 +2499,43 @@ BraggPdExperiment experiment_from_edi_text(const std::string& text) {
     return experiment_from_block(block, where);
 }
 
+BraggPdExperiment simulation_experiment(const std::string& name, const ExperimentTypeTokens& type,
+                                        const std::string& structure_id) {
+    const bool constant_wavelength = type.beam_mode == "constant wavelength";
+    std::string text = "data_" + name + "\n\n_edi.schema_version 3\n\n";
+    text += "_experiment_type.sample_form \"" + type.sample_form + "\"\n";
+    text += "_experiment_type.beam_mode \"" + type.beam_mode + "\"\n";
+    text += "_experiment_type.radiation_probe \"" + type.radiation_probe + "\"\n";
+    text += "_experiment_type.scattering_type \"" + type.scattering_type + "\"\n\n";
+    // Starting values that give a readable pattern: a pseudo-Voigt at about a diffractometer's resolution
+    // for constant wavelength (HRPT's neutron wavelength, Cu Kα for X-rays), Jorgensen's profile on a 90°
+    // bank for time-of-flight.
+    if (constant_wavelength) {
+        text += type.radiation_probe == "xray" ? "_instrument.setup_wavelength 1.54056\n"
+                                               : "_instrument.setup_wavelength 1.494\n";
+        text += "_instrument.calib_twotheta_offset 0.\n\n"
+                "_peak.type cwl-pseudo-voigt\n"
+                "_peak.broad_gauss_u 0.1\n_peak.broad_gauss_v -0.1\n_peak.broad_gauss_w 0.1\n"
+                "_peak.broad_lorentz_x 0.\n_peak.broad_lorentz_y 0.1\n\n"
+                "_data_range.two_theta_min 10.\n_data_range.two_theta_max 150.\n"
+                "_data_range.two_theta_step 0.05\n";
+    } else {
+        text += "_instrument.setup_twotheta_bank 90.\n"
+                "_instrument.calib_d_to_tof_offset 0.\n_instrument.calib_d_to_tof_linear 7000.\n"
+                "_instrument.calib_d_to_tof_quadratic 0.\n\n"
+                "_peak.type tof-jorgensen\n"
+                "_peak.rise_alpha_0 0.\n_peak.rise_alpha_1 0.25\n"
+                "_peak.decay_beta_0 0.025\n_peak.decay_beta_1 0.03\n"
+                "_peak.broad_gauss_sigma_0 0.\n_peak.broad_gauss_sigma_1 80.\n_peak.broad_gauss_sigma_2 3.\n\n"
+                "_data_range.time_of_flight_min 2000.\n_data_range.time_of_flight_max 20000.\n"
+                "_data_range.time_of_flight_step 10.\n";
+    }
+    if (!structure_id.empty()) {
+        text += "\nloop_\n_linked_structure.structure_id\n_linked_structure.scale\n" + structure_id + " 1.\n";
+    }
+    return experiment_from_edi_text(text);
+}
+
 // ----: structures and experiments from `.edi` block files ------------
 
 namespace {
