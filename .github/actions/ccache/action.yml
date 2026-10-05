@@ -22,10 +22,9 @@ runs:
           echo "CCACHE_DIR=$dir"
           echo "CCACHE_MAXSIZE=${{ inputs.max-size }}"
           # A hosted runner installs the environment afresh each run, so compilers are checked by content, not by
-          # timestamp, and paths inside the checkout are hashed relative to it.
+          # timestamp. No base_dir: it would make source paths relative, and the tests find their fixtures from
+          # __FILE__. The checkout's path is the same on every run, so absolute paths still hit.
           echo "CCACHE_COMPILERCHECK=content"
-          echo "CCACHE_BASEDIR=$GITHUB_WORKSPACE"
-          echo "CCACHE_NOHASHDIR=true"
           echo "CMAKE_C_COMPILER_LAUNCHER=ccache"
           echo "CMAKE_CXX_COMPILER_LAUNCHER=ccache"
         } >> "$GITHUB_ENV"
