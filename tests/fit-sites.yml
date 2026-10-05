@@ -83,3 +83,6 @@ sites:
 
   - file: tests/integration/py/test_constraint_fit.py
     case: constraint-covariance
+
+  - file: tests/system/py/test_beer_fullprof_agreement.py
+    case: beer-ferrite-austenite

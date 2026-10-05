@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-05T15:43:27Z
+# measured_utc = 2026-10-05T19:44:27Z
 #
-# Recorded from: tests-seq32-edi-after.log (127 node(s) measured once, 5871 banked, 0 stale row(s) dropped)
-# Collected tests: 6334; with a reported duration: 3971
-# Module-scoped fixture costs recorded: 15
+# Recorded from: tests-edi-banked-durations.log (43 node(s) measured once, 6204 banked, 0 stale row(s) dropped)
+# Collected tests: 6866; with a reported duration: 4115
+# Module-scoped fixture costs recorded: 16
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 6334
-# inventory_cpp = 232
-# inventory_measured = 5998
-# inventory_unmeasured = 568
+# inventory_python = 6866
+# inventory_cpp = 287
+# inventory_measured = 6212
+# inventory_unmeasured = 941
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_projects_open_and_populate_pages
@@ -1824,6 +1824,27 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[window-replace-no-loop-coordinate]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[window-replace-standalone-cell]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[window-replace-standalone-coordinate]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_each_declared_profile_calculates_and_roundtrips[cwl-gaussian]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_each_declared_profile_calculates_and_roundtrips[cwl-lorentzian]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_each_declared_profile_calculates_and_roundtrips[cwl-pseudo-voigt-berar-baldinozzi]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_each_declared_profile_calculates_and_roundtrips[cwl-pseudo-voigt]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_each_declared_profile_calculates_and_roundtrips[cwl-tch-pseudo-voigt-fcj]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_each_declared_profile_calculates_and_roundtrips[cwl-tch-pseudo-voigt]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_npr_family_refuses_tch_lorentz_widths[cwl-gaussian]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_npr_family_refuses_tch_lorentz_widths[cwl-lorentzian]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_npr_family_refuses_tch_lorentz_widths[cwl-pseudo-voigt-berar-baldinozzi]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_npr_family_refuses_tch_lorentz_widths[cwl-pseudo-voigt]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_npr_shapes_match_absolute_normalized_closed_forms[cwl-gaussian-1.54]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_npr_shapes_match_absolute_normalized_closed_forms[cwl-gaussian-2.37]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_npr_shapes_match_absolute_normalized_closed_forms[cwl-lorentzian-1.54]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_npr_shapes_match_absolute_normalized_closed_forms[cwl-lorentzian-2.37]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_npr_shapes_match_absolute_normalized_closed_forms[cwl-pseudo-voigt-1.54]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_npr_shapes_match_absolute_normalized_closed_forms[cwl-pseudo-voigt-2.37]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_retired_tokens_are_named_unknown_profile_errors[retired-beba]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_retired_tokens_are_named_unknown_profile_errors[retired-fcj]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_supported_cw_inventory_contains_exactly_the_six_profiles
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_rename_bytes.py::test_tch_rename_preserves_pre_change_regression_bytes[fcj-cwl-tch-pseudo-voigt-fcj]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_rename_bytes.py::test_tch_rename_preserves_pre_change_regression_bytes[tch-cwl-tch-pseudo-voigt]
 0.090	tests/integration/py/test_e01_scaffold.py::test_app_is_one_option_gated_cpp_qml_host
 0.140	tests/integration/py/test_e01_scaffold.py::test_checkout_imports_edi_without_path_injection
 0.030	tests/integration/py/test_e01_scaffold.py::test_ci_routes_surfaces_and_uses_strict_self_hosted_jobs
@@ -2882,6 +2903,16 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e05_t1_physical_domain.p
 0.000	tests/integration/py/test_multiphase_app_contract.py::test_linked_structure_rows_use_available_names_and_add_remove_disable_actions
 0.000	tests/integration/py/test_multiphase_app_contract.py::test_shared_block_selector_has_bounded_square_icon_steps_and_file_labels
 0.000	tests/integration/py/test_multiphase_app_contract.py::test_structure_loading_is_not_capped_at_one_and_chart_retains_phase_identity
+0.010	tests/integration/py/test_multiphase_constraints.py::test_added_cubic_structure_keeps_symmetry_dependence
+0.010	tests/integration/py/test_multiphase_constraints.py::test_added_structure_geometry_applies_cross_phase_declarations[stored]
+0.010	tests/integration/py/test_multiphase_constraints.py::test_added_structure_geometry_applies_cross_phase_declarations[window]
+0.000	tests/integration/py/test_multiphase_constraints.py::test_cross_phase_cycle_is_refused_without_changing_loaded_files
+0.080	tests/integration/py/test_multiphase_constraints.py::test_same_site_id_in_two_structures_resolves_to_distinct_parameters[datablock]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_multiphase_constraints.py::test_same_site_id_in_two_structures_resolves_to_distinct_parameters[structure]
+0.010	tests/integration/py/test_multiphase_constraints.py::test_structure_added_after_project_creation_participates_in_constraints
+UNMEASURED:failed-in-this-run	tests/system/py/test_beer_fullprof_agreement.py::test_beer_fit_agrees_with_every_fullprof_parameter
+UNMEASURED:failed-in-this-run	tests/system/py/test_beer_fullprof_agreement.py::test_delivered_beer_project_preserves_shared_biso_and_free_set
+0.000	tests/system/py/test_beer_fullprof_agreement.py::test_fullprof_beer_reference_preserves_all_independent_variables
 1.360	tests/system/py/test_beer_multiphase.py::test_beer_joint_fit_preserves_both_phases_and_independent_bank_scales
 0.930	tests/system/py/test_beer_multiphase.py::test_beer_two_phases_and_independent_bank_scales_survive_two_save_cycles
 0.000	tests/system/py/test_c06_t6_fitting_corpus.py::test_corpus_absent_at_pin_is_a_named_transition_state[corpus-present]
@@ -4669,6 +4700,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::te
 0.090	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[corpus:background-lab6/project]
 0.110	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[corpus:background-pearl/project]
 0.590	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[corpus:beer-ferrite-austenite/project]
+0.080	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[corpus:constraint-covariance/project]
 0.210	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project]
 0.190	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project]
 0.200	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project]
@@ -4701,7 +4733,6 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::te
 0.200	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-tof_si-sepd_start-2/project]
 0.190	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-tof_si-sepd_start-5/project]
 0.100	tests/system/py/test_c34_t28_saved_bytes.py::test_saved_byte_inventory_covers_every_current_cli_and_corpus_project
-0.080	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[corpus:constraint-covariance/project]
 0.000	tests/system/py/test_c34_t28_storage_decisions.py::test_each_prior_decision_links_its_storage_amendment[0012]
 0.000	tests/system/py/test_c34_t28_storage_decisions.py::test_each_prior_decision_links_its_storage_amendment[0016]
 0.000	tests/system/py/test_c34_t28_storage_decisions.py::test_implemented_decisions_have_no_stale_status[0016]
@@ -4754,6 +4785,14 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_value_expressions.py:
 0.010	tests/system/py/test_constraint_surfaces.py::test_cosio_scan_projects_restore_the_constraint_and_execute[pd-neut-cwl_cosio-d20_scan-324f]
 0.010	tests/system/py/test_constraint_surfaces.py::test_cosio_scan_projects_restore_the_constraint_and_execute[pd-neut-cwl_cosio-d20_scan-3f]
 0.000	tests/system/py/test_constraint_surfaces.py::test_tied_biso_notebook_executes_its_fullprof_comparison_and_fit
+UNMEASURED:failed-in-this-run	tests/system/py/test_cwl_cli.py::test_each_cw_profile_is_selectable_from_the_cli[cwl-gaussian]
+UNMEASURED:failed-in-this-run	tests/system/py/test_cwl_cli.py::test_each_cw_profile_is_selectable_from_the_cli[cwl-lorentzian]
+UNMEASURED:failed-in-this-run	tests/system/py/test_cwl_cli.py::test_each_cw_profile_is_selectable_from_the_cli[cwl-pseudo-voigt-berar-baldinozzi]
+UNMEASURED:failed-in-this-run	tests/system/py/test_cwl_cli.py::test_each_cw_profile_is_selectable_from_the_cli[cwl-pseudo-voigt]
+UNMEASURED:failed-in-this-run	tests/system/py/test_cwl_cli.py::test_each_cw_profile_is_selectable_from_the_cli[cwl-tch-pseudo-voigt-fcj]
+UNMEASURED:failed-in-this-run	tests/system/py/test_cwl_cli.py::test_each_cw_profile_is_selectable_from_the_cli[cwl-tch-pseudo-voigt]
+UNMEASURED:failed-in-this-run	tests/system/py/test_cwl_token_migration.py::test_no_tracked_file_keeps_a_retired_cw_token
+0.000	tests/system/py/test_cwl_token_migration.py::test_retired_token_scan_detects_each_planted_spelling
 0.000	tests/system/py/test_e02_fullprof_parity.py::test_corpus_fullprof_loader_follows_manifest_hash_not_directory_order
 1.520	tests/system/py/test_e02_fullprof_parity.py::test_e02_fitted_corpus_project_agrees_with_independent_fullprof_profile
 0.110	tests/system/py/test_e02_product_core.py::test_e02_cpp_adapter_conversion_probe
@@ -5653,6 +5692,10 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_phase_sum
 UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_texture_is_local_to_phase_and_invariant_under_axis_sign
 UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_two_free_scales_recover_unequal_independent_contributions
 UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_two_named_phases_load_and_roundtrip
+UNMEASURED:failed-in-this-run	tests/system/py/test_yap_agreement.py::test_delivered_yap_project_has_both_phases_and_physical_occupancies
+UNMEASURED:failed-in-this-run	tests/system/py/test_yap_agreement.py::test_verification_page_executes_the_owner_reference_comparison
+UNMEASURED:failed-in-this-run	tests/system/py/test_yap_agreement.py::test_yap_fit_agrees_with_every_other_fullprof_parameter_and_rwp
+UNMEASURED:failed-in-this-run	tests/system/py/test_yap_agreement.py::test_yap_project_reproduces_the_external_instrument_and_profile_settings
 0.010	tests/system/py/test_yap_fullprof.py::test_fullprof_reference_retains_every_non_asymmetry_parameter_and_occupancy
 0.010	tests/system/py/test_yap_fullprof.py::test_yalo3_single_phase_control_calculates_from_the_external_structure
 0.000	tests/test_c34_t1a_selector_arity.py::test_direct_file_and_glob_selectors_reach_the_notebook

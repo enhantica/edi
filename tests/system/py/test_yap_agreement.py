@@ -1,4 +1,4 @@
-"""Preserved YAP agreement gates for the constant-wavelength profile task."""
+"""Agreement with the unchanged owner-supplied YAP FullProf model."""
 
 import shutil
 from pathlib import Path
@@ -63,4 +63,22 @@ def test_verification_page_executes_the_owner_reference_comparison():
     ), 'The page must name the external origin and the inexact-asymmetry fallback rule'
     assert 'pytest.skip' not in text and 'pytest.xfail' not in text, (
         'The independent agreement page must execute its comparisons'
+    )
+
+
+def test_yap_project_reproduces_the_external_instrument_and_profile_settings():
+    assert PROJECT.is_dir(), 'YAP settings require the delivered owner-reference project'
+    project = edi.Project.load(PROJECT)
+    experiment = project.experiments[0]
+    assert experiment.peak.asym_beba_limit.value == 160, (
+        'The YAP model must retain the FullProf asymmetry limit in degrees'
+    )
+    assert experiment.absorption.mu_r.value == pytest.approx(0.0221, abs=0, rel=0), (
+        'The YAP model must reproduce the nonzero FullProf absorption setting'
+    )
+    assert len(experiment.background) == 25, (
+        'The YAP model must retain every external interpolated background point'
+    )
+    assert len(experiment.excluded_regions) == 2, (
+        'The YAP model must retain both external excluded regions'
     )
