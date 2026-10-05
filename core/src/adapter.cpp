@@ -1560,6 +1560,32 @@ StructureGeometry structure_geometry(const Structure& structure, const ViewWindo
 }
 
 namespace {
+// The project that holds `structure`, reached through its sites' adopted link
+// (Project::adopt_parameter_rows) and checked to hold this very structure; null otherwise.
+Project* project_holding(const Structure& structure) {
+    Project* project = static_cast<const detail::KeyedBase&>(structure.atom_sites).host();
+    if (project == nullptr) {
+        return nullptr;
+    }
+    for (const auto& item : project->structures) {
+        if (item.get() == &structure) {
+            return project;
+        }
+    }
+    return nullptr;
+}
+
+// Before a geometry is computed for a project-owned structure, its relations set the coordinates and the
+// cell, as a calculation sets them (edi ADR-0024); a relation that cannot hold refuses with crysta's code.
+Project* relations_applied(const Structure& structure) {
+    Project* project = project_holding(structure);
+    if (project != nullptr) {
+        refresh_relations(*project);
+        apply_relations(*project);
+    }
+    return project;
+}
+
 // Whether no alias or constraint was written since a source recorded them (edi ADR-0024): read through
 // the collections' records, so a replaced collection or a destroyed project never compares equal. A
 // source that recorded none (geometry computed from a structure alone) has none to compare.
@@ -1598,9 +1624,15 @@ void store_geometry(Structure& structure, const Project* project = nullptr) {
 
 WindowGeometry window_geometry(const Structure& structure, const ViewWindow& window) {
     WindowGeometry out;
+    const Project* project = relations_applied(structure);
     // The inputs are read before the computation, so a write during it leaves the result stale.
-    out.source = std::make_shared<const detail::GeometrySource>(
-        detail::GeometrySource{detail::geometry_inputs(structure)});
+    detail::GeometrySource source{detail::geometry_inputs(structure)};
+    if (project != nullptr) {
+        source.aliases = project->aliases.record();
+        source.constraints = project->constraints.record();
+        source.relations = detail::relation_inputs(project->aliases, project->constraints);
+    }
+    out.source = std::make_shared<const detail::GeometrySource>(std::move(source));
     out.geometry = structure_geometry(structure, window);
     return out;
 }
@@ -1625,7 +1657,7 @@ bool Structure::geometry_current() const {
 
 const StructureGeometry& Structure::current_geometry() {
     if (!geometry_current()) {
-        store_geometry(*this);
+        store_geometry(*this, relations_applied(*this));
     }
     return geometry;
 }
@@ -2126,6 +2158,10 @@ CalculationResult stage_computed(const Project& calculated, WorkStamps stamps, s
     CalculationResult result;
     result.stamps = std::move(stamps);
     result.refusal = std::move(refusal);
+    // The dependents as the calculation completed them, so the live project holds them beside the arrays.
+    for (const NamedParameter& dependent : named_dependents(calculated)) {
+        result.completed.emplace_back(dependent.unique_name, dependent.parameter->value.get());
+    }
     // The geometry is staged whatever the pattern did, as Project::calculate() stores it first.
     result.geometry.reserve(calculated.structures.size());
     for (const auto& structure_item : calculated.structures) {
@@ -2210,20 +2246,38 @@ PublishOutcome publish(Project& live, CalculationResult&& result) {
             return PublishOutcome::Superseded;
         }
     }
-    // --- everything that can throw is prepared before the first write ----------------------------
+    // --- the dependents the calculation completed (edi ADR-0024) --------------------------------
+    // A relation edited before the snapshot leaves the live dependents behind the copy the arrays were
+    // calculated from: they are written first, and the arrays are then current against them. The sources
+    // below read these values, so they follow the writes; should one of them fail, each value written is
+    // still the one its relation gives.
+    if (!result.completed.empty()) {
+        std::map<std::string, Parameter*> by_name;
+        for (const NamedSlot& slot : named_slots(live)) {
+            by_name.emplace(slot.unique_name, slot.parameter);
+        }
+        for (const auto& [name, value] : result.completed) {
+            const auto found = by_name.find(name);
+            if (found != by_name.end() && found->second->value.get() != value) {
+                found->second->value = value;
+            }
+        }
+    }
+    // --- the sources, encoded from the live project as the arrays describe it --------------------
     std::vector<std::shared_ptr<const detail::ComputedSource>> sources(banks);
     if (!refused) {
         for (std::size_t index = 0; index < banks; ++index) {
             sources[index] = std::make_shared<const detail::ComputedSource>(detail::ComputedSource{
-                stamps.experiment_inputs[index], stamps.experiments, stamps.structures, stamps.edits,
-                stamps.edits_at, stamps.aliases, stamps.constraints, stamps.relations});
+                detail::calculation_inputs(live.structures, *live.experiments[index]), stamps.experiments,
+                stamps.structures, stamps.edits, stamps.edits_at, stamps.aliases, stamps.constraints,
+                stamps.relations});
         }
     }
     std::vector<std::shared_ptr<const detail::GeometrySource>> geometry_sources(structures);
     for (std::size_t index = 0; index < structures; ++index) {
         if (result.geometry[index].has_value()) {
             geometry_sources[index] = std::make_shared<const detail::GeometrySource>(
-                detail::GeometrySource{stamps.structure_inputs[index], stamps.aliases,
+                detail::GeometrySource{detail::geometry_inputs(*live.structures[index]), stamps.aliases,
                                        stamps.constraints, stamps.relations});
         }
     }

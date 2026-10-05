@@ -274,6 +274,9 @@ struct NamedParameter {
 };
 std::vector<NamedParameter> named_parameters(const Project& project);
 
+// The dependents (each parameter a relation sets), by unique name, in the slot walk's order.
+std::vector<NamedParameter> named_dependents(const Project& project);
+
 // The same walk over a project being written: each refinable parameter by its unique name.
 struct NamedSlot {
     std::string unique_name;

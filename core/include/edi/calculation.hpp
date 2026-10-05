@@ -68,6 +68,9 @@ struct CalculationResult {
     std::vector<PowderReflnDataBase> refln;
     // Per structure: its computed geometry, or none where crysta refused it.
     std::vector<std::optional<StructureGeometry>> geometry;
+    // Each dependent's value as the calculation completed it, by unique name (edi ADR-0024): publish
+    // writes them with the arrays they were calculated from.
+    std::vector<std::pair<std::string, double>> completed;
 };
 
 enum class PublishOutcome : std::uint8_t {

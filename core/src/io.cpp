@@ -3426,6 +3426,16 @@ std::vector<NamedParameter> named_parameters(const Project& project) {
     return named;
 }
 
+std::vector<NamedParameter> named_dependents(const Project& project) {
+    std::vector<NamedParameter> named;
+    for (const auto& slot : parameter_slots(project)) {
+        if (slot.parameter->dependence != Dependence::Independent) {
+            named.push_back({slot.unique_name, slot.parameter});
+        }
+    }
+    return named;
+}
+
 std::vector<NamedSlot> named_slots(Project& project) {
     std::vector<NamedSlot> named;
     for (const auto& slot : parameter_slots(project)) {
