@@ -224,6 +224,52 @@
       ]
     },
     {
+      "name": "_linked_structure",
+      "form": "loop",
+      "columns": [
+        {
+          "member": "LinkedStructure::structure_id",
+          "type": "ItemKey",
+          "items": [
+            "structure_id"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
+        },
+        {
+          "member": "LinkedStructure::scale",
+          "type": "Parameter",
+          "items": [
+            "scale"
+          ],
+          "storage": [
+            "value: crysta::Column<double>",
+            "uncertainty: crysta::Column<std::optional<double>>",
+            "free: crysta::Column<std::uint8_t>",
+            "start_value: crysta::Column<std::optional<double>>",
+            "start_uncertainty: crysta::Column<std::optional<double>>"
+          ]
+        },
+        {
+          "member": "LinkedStructure::enabled",
+          "type": "detail::Written<bool>",
+          "items": [
+            "enabled"
+          ],
+          "storage": [
+            "crysta::Column<std::uint8_t>"
+          ]
+        }
+      ],
+      "row": "LinkedStructure",
+      "legacy": [
+        "_easydiffraction_sc_crystal_block",
+        "_sc_crystal_block",
+        "_pd_phase_block"
+      ]
+    },
+    {
       "name": "_preferred_orientation",
       "form": "loop",
       "columns": [
@@ -841,32 +887,6 @@
         "_instr",
         "_diffrn_radiation_wavelength",
         "_pd_calib"
-      ]
-    },
-    {
-      "name": "_linked_structure",
-      "form": "one row",
-      "columns": [
-        {
-          "member": "LinkedStructure::structure_id",
-          "type": "std::string",
-          "items": [
-            "structure_id"
-          ]
-        },
-        {
-          "member": "LinkedStructure::scale",
-          "type": "Parameter",
-          "items": [
-            "scale"
-          ]
-        }
-      ],
-      "owner": "LinkedStructure",
-      "legacy": [
-        "_easydiffraction_sc_crystal_block",
-        "_sc_crystal_block",
-        "_pd_phase_block"
       ]
     },
     {
@@ -2687,12 +2707,17 @@
     },
     {
       "member": "LinkedStructure::structure_id",
-      "type": "std::string",
+      "type": "ItemKey",
       "category": "_linked_structure"
     },
     {
       "member": "LinkedStructure::scale",
       "type": "Parameter",
+      "category": "_linked_structure"
+    },
+    {
+      "member": "LinkedStructure::enabled",
+      "type": "detail::Written<bool>",
       "category": "_linked_structure"
     },
     {
@@ -2704,11 +2729,6 @@
       "member": "LinkedStructure::epoch",
       "type": "detail::Epoch",
       "part": "the row's identity as a calculation input"
-    },
-    {
-      "member": "LinkedStructure::table_row",
-      "type": "detail::CategoryRow",
-      "part": "the row token of the object's non-loop categories"
     },
     {
       "member": "AbsorptionBase::abscor1",
@@ -2927,8 +2947,8 @@
       ]
     },
     {
-      "member": "ExperimentBase::linked_structure",
-      "type": "LinkedStructure",
+      "member": "ExperimentBase::linked_structures",
+      "type": "ItemVec<LinkedStructure>",
       "holds": [
         "_linked_structure"
       ]
