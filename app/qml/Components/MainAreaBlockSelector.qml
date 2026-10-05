@@ -28,7 +28,9 @@ Item {
 
     // The chart's own margin above its toolbar, here also above and beside the row (PatternChart.toolbarGap).
     readonly property real margin: EaStyle.Sizes.fontPixelSize
-    readonly property real reservedHeight: visible ? height + margin + EaStyle.Sizes.borderThickness : 0
+    // The margin above the row, the row, the margin down to its line, and the line: the chart below keeps its own
+    // margin above its toolbar, so the line has the same margin under it as over it.
+    readonly property real reservedHeight: visible ? 2 * margin + height + EaStyle.Sizes.borderThickness : 0
 
     x: margin
     y: tabBarHeight + margin
