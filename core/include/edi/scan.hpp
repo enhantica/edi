@@ -37,6 +37,10 @@ struct ScanResults {
 };
 ScanResults read_scan_results(const Project& project);
 
+/// The header and the last row of `analysis/results.csv`, read from the file's two ends, so a scan in progress
+/// takes each new row without reading the rows before it. Empty when there is no complete row.
+ScanResults read_last_scan_result(const Project& project);
+
 /// The unit of an extract rule's target, as a column heading shows it (`K` for a temperature), or empty.
 std::string scan_target_unit(const std::string& target);
 

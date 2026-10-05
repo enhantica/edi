@@ -890,24 +890,78 @@ std::vector<std::string> scan_extract_values(const Project& project, const std::
     return crysta::sequential_extract_values(config, (std::filesystem::path(directory) / file).string());
 }
 
+namespace {
+
+// crysta writes plain comma-joined cells, with no quoting (its results.csv contract).
+std::vector<std::string> split_scan_row(const std::string& line) {
+    std::vector<std::string> cells(1);
+    for (const char character : line) {
+        if (character == ',') {
+            cells.emplace_back();
+        } else if (character != '\r') {
+            cells.back() += character;
+        }
+    }
+    return cells;
+}
+
+}  // namespace
+
+ScanResults read_last_scan_result(const Project& project) {
+    ScanResults results;
+    std::ifstream input(std::filesystem::path(project.path) / "analysis" / "results.csv", std::ios::binary);
+    std::string header;
+    if (!input || !std::getline(input, header)) {
+        return results;
+    }
+    const std::streamoff body = input.tellg();
+    input.seekg(0, std::ios::end);
+    std::streamoff end = input.tellg();
+    // Back over the final line break, then to the line break before the last row.
+    std::string line;
+    char character = 0;
+    while (end > body) {
+        input.seekg(end - 1);
+        input.get(character);
+        if (character != '\n' && character != '\r') {
+            break;
+        }
+        --end;
+    }
+    std::streamoff start = end;
+    while (start > body) {
+        input.seekg(start - 1);
+        input.get(character);
+        if (character == '\n') {
+            break;
+        }
+        --start;
+    }
+    if (start >= end) {
+        return results;
+    }
+    line.resize(static_cast<std::size_t>(end - start));
+    input.seekg(start);
+    input.read(line.data(), end - start);
+    results.header = split_scan_row(header);
+    std::vector<std::string> cells = split_scan_row(line);
+    if (cells.size() != results.header.size()) {
+        results.header.clear();
+        return results;
+    }
+    const std::string prefix = project.sequential_fit.data_dir + "/";
+    const std::string file = cells[0].starts_with(prefix) ? cells[0].substr(prefix.size()) : cells[0];
+    results.rows.emplace(file, std::move(cells));
+    return results;
+}
+
 ScanResults read_scan_results(const Project& project) {
     ScanResults results;
     std::ifstream input(std::filesystem::path(project.path) / "analysis" / "results.csv");
     if (!input) {
         return results;
     }
-    // crysta writes plain comma-joined cells, with no quoting (its results.csv contract).
-    const auto split = [](const std::string& line) {
-        std::vector<std::string> cells(1);
-        for (const char character : line) {
-            if (character == ',') {
-                cells.emplace_back();
-            } else if (character != '\r') {
-                cells.back() += character;
-            }
-        }
-        return cells;
-    };
+    const auto split = split_scan_row;
     std::string line;
     if (!std::getline(input, line)) {
         return results;
