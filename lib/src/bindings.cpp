@@ -15,6 +15,7 @@
 #include <nanobind/stl/unique_ptr.h>
 #include <nanobind/stl/variant.h>
 #include <nanobind/stl/vector.h>
+#include <type_traits>
 
 #include <array>
 #include <atomic>
@@ -851,6 +852,18 @@ static void def_keyed_collection(nb::class_<View>& view_cls, nb::class_<Iter>& i
                 const std::ptrdiff_t at = self.find_first(name);
                 if (at < 0) {
                     throw nb::key_error(name.c_str());
+                }
+                if constexpr (std::is_same_v<View, edi::views::StructuresView>) {
+                    // A structure an experiment links stays: removing it would leave the link naming
+                    // nothing. Remove the link first.
+                    for (const auto& experiment : self.owner->experiments) {
+                        for (const auto& link : experiment->linked_structures) {
+                            if (link->structure_id.value() == name) {
+                                throw std::invalid_argument("structure '" + name + "' is linked by experiment '" +
+                                                            experiment->name + "'; remove that link first");
+                            }
+                        }
+                    }
                 }
                 self.vec().erase_at(static_cast<std::size_t>(at));
             },

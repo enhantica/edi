@@ -262,6 +262,20 @@ void ProjectViewModel::removeStructure(int index) {
         return;
     }
     edi::Project& project = *project_;
+    // A structure an experiment links stays: removing it would leave the link naming nothing. The
+    // link is removed first, on the Experiment page.
+    const std::string& name = project.structures[static_cast<std::size_t>(index)]->name.value();
+    for (const auto& experiment : project.experiments) {
+        for (const auto& link : experiment->linked_structures) {
+            if (link->structure_id.value() == name) {
+                const QString error = tr("Structure '%1' is linked by experiment '%2'; remove that link first.")
+                                          .arg(QString::fromStdString(name), QString::fromStdString(experiment->name));
+                setLastError(error);
+                emit refused(error);
+                return;
+            }
+        }
+    }
     apply(edi::Edit::erase(project.structures, static_cast<std::size_t>(index)), true);
 }
 
