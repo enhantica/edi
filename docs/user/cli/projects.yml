@@ -13,6 +13,9 @@ projects:
     executing: true
   - id: pd-neut-cwl_cosio-d20_scan-3f
     executing: true
+  - id: pd-neut-cwl_cosio-d20_scan-162f
+    executing: true
+    offline: true
   - id: pd-neut-cwl_cosio-d20_scan-324f
     executing: true
     offline: true
