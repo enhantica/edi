@@ -2392,6 +2392,8 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
             }
             return build_crysta_project(structure(), experiment());
         }();
+        // The atom-site rule on exactly this fit's participants: the selected bank's enabled phases.
+        detail::require_populated_participants(project, "edi fit");
         if (phases) {
             // The phase-sum residual reads the measured pattern from the experiment, and masks it itself.
             project.experiment().data = crysta::PdDataBase(grid, observed, sigma);
@@ -2801,7 +2803,16 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         // structure and the template experiment, with the identity and declarations the
         // sequential driver reads (structure name and experiment name feed the results.csv
         // column grammar; the scan block and iteration bound are the declared inputs).
+        // The engine refuses a sequential or independent fit of several linked structures; this
+        // single-structure build would otherwise fit the first structure alone and ignore the rest.
+        if (structures.size() > 1 || experiment().linked_structures.size() != 1 ||
+            !experiment().linked_structure().enabled.get()) {
+            throw std::invalid_argument(
+                "edi fit_sequential: a sequential or independent fit with several linked structures is not "
+                "supported yet");
+        }
         crysta::Project cproject = build_crysta_project(structure(), experiment());
+        detail::require_populated_participants(cproject, "edi fit_sequential");
         make_fit_ready(cproject.experiment());
         cproject.structure().name = structure().name;
         cproject.structure().scattering_lengths_fm = structure().scattering_lengths_fm;
@@ -3008,6 +3019,8 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
             }
             return crysta::Project(to_crysta_structure(structure()), experiment_list(built));
         }();
+        // The atom-site rule on exactly this fit's participants: every bank's enabled phases.
+        detail::require_populated_participants(project, "edi fit_joint");
         if (phases) {
             // The phase-sum residual reads each bank's measured pattern from its experiment, and masks
             // it itself.

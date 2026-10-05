@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include "crysta/model.hpp"
 #include "edi/model.hpp"
 
 // Lifted verbatim out of adapter.cpp; see the header for what this file is.
@@ -15,30 +16,16 @@ namespace edi {
 
 namespace detail {
 
-namespace {
-
-// Every structure an enabled linked structure names takes part in the fit and must have atom sites. A
-// structure no enabled link names is not fitted, so it may be empty. An id naming no structure is left
-// to the engine, which refuses it before choosing a structure.
-void require_fitted_structures_have_sites(const Project& project, const char* surface) {
-    for (const auto& experiment : project.experiments) {
-        for (const auto& link : experiment->linked_structures) {
-            if (!link->enabled.get()) {
-                continue;
-            }
-            const std::string& id = link->structure_id.value();
-            for (const auto& structure : project.structures) {
-                const bool named = structure->name.value() == id || (id.empty() && project.structures.size() == 1);
-                if (named && structure->atom_sites.empty()) {
-                    throw std::invalid_argument(std::string(surface) + ": structure '" +
-                                                detail::printable_id(structure->name.value()) + "' has no atom sites");
-                }
-            }
+// The structures taking part in a fit are those its enabled links name, resolved by crysta on the very
+// project the fit builds (crysta::fit_participants), so this check and the provider see the same set.
+void require_populated_participants(const crysta::Project& project, const char* surface) {
+    for (const crysta::Structure* structure : crysta::fit_participants(project)) {
+        if (structure->atom_sites.empty()) {
+            throw std::invalid_argument(std::string(surface) + ": structure has no atom sites ('" +
+                                        detail::printable_id(structure->name.value()) + "')");
         }
     }
 }
-
-}  // namespace
 
 // --- V3: identity rejection --------------------------------------------------------------------
 void validate_fit_request(const std::vector<double>& grid, const std::vector<double>& observed,
@@ -50,7 +37,6 @@ void validate_fit_request(const std::vector<double>& grid, const std::vector<dou
         throw std::invalid_argument(
             "edi fit: measured data columns (grid, observed, sigma) must have equal length");
     }
-    require_fitted_structures_have_sites(project, "edi fit");
 }
 
 void validate_joint_request(const Project& project,
@@ -66,7 +52,6 @@ void validate_joint_request(const Project& project,
             std::to_string(experiments.size()) + " banks, got " + std::to_string(patterns.size()) +
             " patterns)");
     }
-    require_fitted_structures_have_sites(project, "edi fit_joint");
     // Bank identity: the name is the engine's joint label prefix AND edi's own result key, so an
     // empty, duplicated, delimiter-carrying, or site-colliding name would make a refined parameter's
     // identity ambiguous. Rejected up front, which is what keeps the result mapping total.

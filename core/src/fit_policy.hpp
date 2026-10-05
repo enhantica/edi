@@ -14,19 +14,24 @@
 #include <cstddef>
 #include <vector>
 
+#include "crysta/model.hpp"
 #include "edi/model.hpp"
 #include "parameter_paths.hpp"
 
 namespace edi::detail {
 
-// Project::fit(grid, observed, sigma, ...) boundary checks: empty or ragged measured data, a
-// structure with no atom sites.
+// Project::fit(grid, observed, sigma, ...) boundary checks: empty or ragged measured data. The atom-site
+// rule is require_populated_participants, on the project the fit builds.
 void validate_fit_request(const std::vector<double>& grid, const std::vector<double>& observed,
                              const std::vector<double>& sigma, const Project& project);
 
 // Project::fit_joint(patterns, ...) boundary checks: no experiments, a pattern/bank count
-// mismatch, no atom sites, an unusable bank identity (empty / delimiter / duplicate / site-colliding
+// mismatch, an unusable bank identity (empty / delimiter / duplicate / site-colliding
 // name), empty or ragged per-bank data. `PdDataBase::axis()` fails closed on none-or-both.
+// The atom-site rule on exactly a fit's participants: every structure an enabled link of the fitted
+// banks names, resolved by crysta on the project the fit builds. Refused by name otherwise.
+void require_populated_participants(const crysta::Project& project, const char* surface);
+
 void validate_joint_request(const Project& project,
                             const ItemVec<BraggPdExperiment>& experiments,
                             const std::vector<PdDataBase>& patterns);
