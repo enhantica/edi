@@ -20,6 +20,8 @@ engine boundary (ADR-0003).
   [modern-Qt guidelines](design/modern-qt-guidelines.md).
 - **[Requirements coverage](requirements/rwg-edi-coverage.md)** — the RWG requirements
   split by owner (edi vs crysta).
+- **[The app against a local crysta](local-crysta.md)** — one command to build crysta from a
+  checkout, link the app to it and start it, for local development.
 - **[Verification notebooks](verification/index.md)** — executable FullProf-parity
   pages; they live beside their reference data and the tests that assert on them
   (their FullProf reference data stays at `knowledge/verification/fullprof`, beside the tests that assert on it).

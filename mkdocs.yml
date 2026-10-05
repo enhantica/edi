@@ -25,6 +25,7 @@ nav:
   - Dev:
       - dev/index.md
       - dev/features.md
+      - dev/local-crysta.md
       - Adrs:
           - dev/adrs/index.md
           - dev/adrs/0001-product-scope-and-relation-to-crysta.md

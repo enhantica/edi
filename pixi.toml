@@ -228,6 +228,9 @@ app-build = { cmd = ["bash", "tools/ci/app-build.sh"] }
 app = { cmd = "EDI_APP_TARGETS=edi_app bash tools/ci/app-build.sh && bash tools/ci/app-run.sh" }
 # Start the already-built app with no build and no network check.
 app-run = { cmd = ["bash", "tools/ci/app-run.sh"] }
+# Development only: build crysta from a local checkout, link the app to it and start it
+# (`pixi run -e app app-with-crysta ../crysta`; docs/dev/local-crysta.md).
+app-with-crysta = { cmd = ["bash", "tools/dev/app-with-crysta.sh"] }
 # Run the app's Qt Quick Test tier with the runner app-build built (refuses a vacuous run).
 app-test = { cmd = ["bash", "tools/ci/app-test.sh"], depends-on = [{ task = "app-build", environment = "app" }] }
 # The drawn cases (tests/unit/app/tst_*_drawn.qml) on the capture platform, where Qt Quick 3D draws; by hand while
