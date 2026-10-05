@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "edi/calculation.hpp"
+#include "edi/scan.hpp"
 #include "adapter_test_access.hpp"  // edi::detail conversion seam (core/src only; test-only, not installed)
 #include "canonical_encoding.hpp"  // edi-only logic: core/src-private, never installed
 #include "identity_bridge.hpp"  // The loader's reach into crysta's identity rules
@@ -862,6 +863,70 @@ void fill_crysta_sequential(const SequentialFitConfig& config,
     for (const auto& rule : config.extract) {
         converted.extract.push_back({rule->id.value(), rule->target, rule->pattern, rule->required});
     }
+}
+
+ScanDatasets scan_datasets(const Project& project) {
+    crysta::SequentialFitConfig config;
+    fill_crysta_sequential(project.sequential_fit, config);
+    crysta::SequentialScanFiles files =
+        crysta::sequential_scan_files(config, project.path, project.scan_data_root);
+    return {std::move(files.directory), std::move(files.names)};
+}
+
+PdDataBase read_scan_dataset(const std::string& directory, const std::string& file, BeamModeEnum mode) {
+    const crysta::PdDataBase read = crysta::read_sequential_scan_data((std::filesystem::path(directory) / file).string());
+    PdDataBase data;
+    std::vector<double> axis(read.grid.begin(), read.grid.end());
+    (mode == BeamModeEnum::CONSTANT_WAVELENGTH ? data.two_theta : data.time_of_flight) = std::move(axis);
+    data.intensity_meas = std::vector<double>(read.intensity.begin(), read.intensity.end());
+    data.intensity_meas_su = std::vector<double>(read.sigma.begin(), read.sigma.end());
+    return data;
+}
+
+std::vector<std::string> scan_extract_values(const Project& project, const std::string& directory,
+                                             const std::string& file) {
+    crysta::SequentialFitConfig config;
+    fill_crysta_sequential(project.sequential_fit, config);
+    return crysta::sequential_extract_values(config, (std::filesystem::path(directory) / file).string());
+}
+
+ScanResults read_scan_results(const Project& project) {
+    ScanResults results;
+    std::ifstream input(std::filesystem::path(project.path) / "analysis" / "results.csv");
+    if (!input) {
+        return results;
+    }
+    // crysta writes plain comma-joined cells, with no quoting (its results.csv contract).
+    const auto split = [](const std::string& line) {
+        std::vector<std::string> cells(1);
+        for (const char character : line) {
+            if (character == ',') {
+                cells.emplace_back();
+            } else if (character != '\r') {
+                cells.back() += character;
+            }
+        }
+        return cells;
+    };
+    std::string line;
+    if (!std::getline(input, line)) {
+        return results;
+    }
+    results.header = split(line);
+    const std::string prefix = project.sequential_fit.data_dir + "/";
+    while (std::getline(input, line)) {
+        std::vector<std::string> cells = split(line);
+        if (cells.size() != results.header.size()) {
+            continue;
+        }
+        const std::string file = cells[0].starts_with(prefix) ? cells[0].substr(prefix.size()) : cells[0];
+        results.rows.emplace(file, std::move(cells));
+    }
+    return results;
+}
+
+std::string scan_target_unit(const std::string& target) {
+    return target == "diffrn.ambient_temperature" ? std::string("K") : std::string();
 }
 
 namespace {
