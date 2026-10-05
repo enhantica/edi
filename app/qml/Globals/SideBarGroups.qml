@@ -11,6 +11,18 @@ import QtQuick
 // one is always shown. `shown`, not `visible`: an item's `visible` is also false while its page is hidden, and
 // the order must not change with that.
 QtObject {
+    // Each category group's open or closed state, by its tab and category id. Showing another block rebuilds
+    // the page's groups, and each new group opens or stays closed as its predecessor was left.
+    property var openStates: ({})
+
+    function isOpen(key) {
+        return openStates[key] === true;
+    }
+
+    function setOpen(key, open) {
+        openStates[key] = open;
+    }
+
     function shownGroups(group) {
         const siblings = group && group.parent ? group.parent.children : [];
         const shown = [];
