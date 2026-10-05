@@ -61,6 +61,13 @@ produced by edi or crysta.
   180° limit angle. Since 2026-10-05 it no longer uses diffraction-lib's
   model, so it no longer counts toward parity.
 
+### YAlO3 and Al2O3, two phases
+
+- [pd-neut-cwl YAP multiphase](pd-neut-cwl_YAP_multiphase.ipynb) – **two
+  phases summed** in one pattern, YAlO3 and corundum (`R -3 c`), with the
+  **pseudo-Voigt × Bérar-Baldinozzi asymmetry** (FullProf's Npr 5) shared by
+  both, against the owner's FullProf project at its own parameters.
+
 ### Y2O3 structure
 
 - [pd-neut-cwl Y2O3 isotropic ADPs](pd-neut-cwl_Y2O3_isotropic-adp.ipynb)
@@ -98,8 +105,8 @@ produced by edi or crysta.
 ### Ferrite and austenite, two phases
 
 - [pd-neut-tof ferrite and austenite, BEER joint](pd-neut-tof_ferrite-austenite_beer_joint.ipynb) –
-  **two phases summed** in each of two banks, calculated and fitted jointly; no reference
-  comparison yet (the owner's FullProf project comes with shared-parameter constraints).
+  **two phases summed** in each of two banks, calculated and fitted jointly, one B iso shared by
+  both Fe sites as in the owner's FullProf project.
 
 ### NCAF structure
 
