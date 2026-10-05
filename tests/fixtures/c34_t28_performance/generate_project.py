@@ -3,6 +3,7 @@
 import hashlib
 import json
 import re
+import runpy
 import zipfile
 from decimal import Decimal
 from pathlib import Path
@@ -38,6 +39,11 @@ def main():
         data, count = original, 0
         if name.endswith('.edi'):
             transformed, count = NUMBER.subn(shift, original.decode())
+            if relative == 'structures/ncaf.edi':
+                canonicalize = runpy.run_path(str(ROOT / 'tests/fixtures/ncaf_free_flags.py'))[
+                    'canonicalize'
+                ]
+                transformed = canonicalize(transformed)
             data = transformed.encode()
         target = HERE / 'project' / relative
         target.parent.mkdir(parents=True, exist_ok=True)

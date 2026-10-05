@@ -19,6 +19,12 @@ MATERIALIZE = runpy.run_path(str(ROOT / 'tests/fixtures/constraint_expressions/p
 ALIASES = [('a', 'phase.atom_site.A.adp_iso'), ('b', 'phase.atom_site.B.adp_iso')]
 
 
+def assert_code(error, code):
+    assert any(str(item.code) == code for item in error.diagnostics), (
+        'a refusal must carry its stable code in the structured diagnostics'
+    )
+
+
 def model(tmp_path, expressions=(), **kwargs):
     return engine.Project.load(MATERIALIZE(tmp_path, ALIASES, expressions, **kwargs))
 
@@ -111,10 +117,14 @@ def test_angle_units_require_the_explicit_degree_conversion(tmp_path):
     ids=lambda value: re.sub(r'[^A-Za-z0-9_.-]', '_', str(value)),
 )
 def test_interpreter_and_non_grammar_tokens_are_named_refusals(tmp_path, rhs):
-    with pytest.raises(
-        (ValueError, RuntimeError), match=re.escape('crysta.domain.constraint_syntax')
-    ) as failure:
+    with pytest.raises(engine.ValidationError) as failure:
         model(tmp_path, ['b = ' + rhs])
+    code = (
+        'constraint_reference'
+        if rhs in {'lambda', 'unknown', 'nan', 'inf', 'e'}
+        else 'constraint_syntax'
+    )
+    assert_code(failure.value, 'crysta.domain.' + code)
     message = str(failure.value)
     assert 'column' in message.lower(), 'a grammar refusal must locate its offending token'
     if rhs.strip():
@@ -154,7 +164,7 @@ def test_interpreter_and_non_grammar_tokens_are_named_refusals(tmp_path, rhs):
 def test_graph_and_reference_refusals_identify_the_participants(
     tmp_path, aliases, expressions, code, names
 ):
-    with pytest.raises((ValueError, RuntimeError), match='crysta.domain.' + code) as failure:
+    with pytest.raises(engine.ValidationError) as failure:
         engine.Project.load(
             MATERIALIZE(
                 tmp_path,
@@ -163,6 +173,7 @@ def test_graph_and_reference_refusals_identify_the_participants(
                 symmetry=code == 'constraint_target' and 'cell' in aliases[0][1],
             )
         )
+    assert_code(failure.value, 'crysta.domain.' + code)
     for name in names:
         assert name in str(failure.value), (
             'a refused relation must identify every offending participant'
@@ -175,10 +186,9 @@ def test_graph_and_reference_refusals_identify_the_participants(
     ids=lambda value: re.sub(r'[^A-Za-z0-9_.-]', '_', str(value)),
 )
 def test_nonfinite_value_or_slope_refuses_the_strict_load(tmp_path, rhs):
-    with pytest.raises(
-        (ValueError, RuntimeError), match=re.escape('crysta.domain.constraint_value')
-    ) as failure:
+    with pytest.raises(engine.ValidationError) as failure:
         model(tmp_path, ['b = ' + rhs])
+    assert_code(failure.value, 'crysta.domain.constraint_value')
     assert 'b' in str(failure.value), (
         'a domain error must name the relation that cannot be evaluated'
     )
@@ -231,12 +241,12 @@ def test_reserved_alias_names_are_refused(tmp_path, name):
 
 
 def test_chain_is_topological_and_direct_target_writes_are_replaced(tmp_path):
-    aliases = [*ALIASES, ('c', 'bank.background.right.intensity')]
+    aliases = [*ALIASES, ('c', 'bank.background.2.intensity')]
     project = engine.Project.load(MATERIALIZE(tmp_path, aliases, ['c = 3*b + 2', 'b = 2*a + 1']))
     a, b = pair(project)
     for value in (0.41, 0.19, 0.41):
         a.value = value
-        b.value = 99
+        b.value = 5.5
         project.analysis.calculate()
         assert b.value == pytest.approx(2 * value + 1), (
             'calculation must overwrite a direct dependent edit'
@@ -345,14 +355,19 @@ def test_quoted_loops_round_trip_and_default_id_is_written(tmp_path):
 
 
 def test_background_address_uses_row_id_after_reordering(tmp_path):
-    aliases = [('a', 'bank.background.right.intensity'), ('b', 'phase.atom_site.B.adp_iso')]
+    aliases = [('a', 'bank.background.2.intensity'), ('b', 'phase.atom_site.B.adp_iso')]
     directory = MATERIALIZE(tmp_path, aliases, ['b = a/10'])
     path = directory / 'experiments/bank.edi'
-    path.write_text(path.read_text().replace('left 20 3\nright 100 9', 'right 100 9\nleft 20 3'))
     project = engine.Project.load(directory)
     project.analysis.calculate()
     assert pair(project)[1].value == pytest.approx(0.9), (
-        'background references must follow row identity rather than storage position'
+        'the second background ordinal must resolve despite nonordinal declared ids'
+    )
+    path.write_text(path.read_text().replace('left 20 3\nright 100 9', 'right 100 9\nleft 20 3'))
+    project = engine.Project.load(directory)
+    project.analysis.calculate()
+    assert pair(project)[1].value == pytest.approx(0.3), (
+        'background references must follow one-based row ordinals after reordering'
     )
 
 
@@ -395,10 +410,9 @@ def test_invalid_independent_edit_is_refused_at_every_strict_entry(tmp_path, ent
         if entry == 'calculate'
         else lambda: project.save_as(tmp_path / 'saved')
     )
-    with pytest.raises(
-        (ValueError, RuntimeError), match=re.escape('crysta.domain.constraint_value')
-    ):
+    with pytest.raises(engine.ValidationError) as failure:
         action()
+    assert_code(failure.value, 'crysta.domain.constraint_value')
 
 
 def test_alias_creation_refuses_foreign_handles_and_duplicate_ids(tmp_path):

@@ -3,6 +3,7 @@
 import json
 import math
 import runpy
+import subprocess
 from pathlib import Path
 
 import edi as engine
@@ -10,16 +11,32 @@ import numpy as np
 import pytest
 
 from conftest import corpus_case_dir
+from tests.system.py import test_e09_t58_cli_persistence as persistence
 
 ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / 'tests/fixtures/constraint_expressions'
 MATERIALIZE = runpy.run_path(str(FIXTURE / 'project.py'))['materialize']
 REFERENCE = json.loads((FIXTURE / 'covariance.json').read_text())
 ALIASES = [
-    ('a', 'bank.background.base.coef'),
-    ('b', 'bank.background.ramp.coef'),
-    ('c', 'bank.background.curve.coef'),
+    ('a', 'bank.background.1.coef'),
+    ('b', 'bank.background.2.coef'),
+    ('c', 'bank.background.3.coef'),
 ]
+
+
+def undo_saved(project, destination):
+    project.save_as(destination)
+    result = subprocess.run(
+        [*persistence._local_cli(), 'undo', str(destination)],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=10,
+    )
+    assert result.returncode == 0, (
+        'the existing undo CLI must restore the persisted constrained fit: ' + result.stderr
+    )
+    return engine.Project.load(destination)
 
 
 def coefficient_project():
@@ -69,10 +86,11 @@ def test_full_covariance_reaches_dependent_writeback_and_undo(tmp_path):
         if line.startswith(('bank.background', 'experiment.background'))
     ]
     assert len(fit_rows) == 2, 'only the two independent coefficients may own fit-start rows'
-    assert not any('curve' in row or '[2]' in row for row in fit_rows), (
+    assert not any('.3.coef' in row or '[2]' in row for row in fit_rows), (
         'a dependent must never acquire an independent fit-start row'
     )
-    project.undo_fit()
+    project = undo_saved(project, tmp_path / 'undone')
+    terms = dict(zip(('base', 'ramp', 'curve'), project.experiment.background_terms, strict=True))
     assert terms['base'].coef.value == 4, 'undo must restore the first independent start'
     assert terms['ramp'].coef.value == 1, 'undo must restore both independent starts'
     assert terms['curve'].coef.value == 3, (
@@ -87,7 +105,7 @@ def test_independent_covariance_generator_reproduces_the_committed_reference():
     )
 
 
-def test_disabled_relation_stays_inactive_during_fit_and_can_be_reenabled():
+def test_disabled_relation_stays_inactive_during_fit_and_can_be_reenabled(tmp_path):
     project = coefficient_project()
     relation = project.analysis.constraints['c']
     relation.enabled = False
@@ -107,7 +125,9 @@ def test_disabled_relation_stays_inactive_during_fit_and_can_be_reenabled():
         'disabled fitting must match the independent ordinary linear least-squares reference'
     )
     assert len(project.analysis.constraints) == 1, 'fitting must retain the disabled declaration'
-    project.undo_fit()
+    project = undo_saved(project, tmp_path / 'undone')
+    terms = project.experiment.background_terms
+    relation = project.analysis.constraints['c']
     assert not project.analysis.constraints['c'].enabled, (
         'fit undo must not reactivate a disabled relation'
     )
