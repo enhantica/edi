@@ -253,7 +253,7 @@ void FitViewModel::ended(const edi::FitReport& report) {
         setProgress(QString::number(result.iterations),
                     QStringLiteral("%1 → %2").arg(chi(result.pre_fit.reduced_chi_square), chi(result.reduced_chi_square)),
                     status_text(report.status), outcome_key(report.status));
-        setElapsed(duration(result.elapsed_ms / 1000.0));
+        setElapsed(duration(project_.fit_result.fitting_time));
         results_->setRecord(project_);
         sync();
         emit finished();

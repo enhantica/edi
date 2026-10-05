@@ -64,13 +64,12 @@ EaElements.ComboBox {
         }
 
         contentItem: Column {
-            implicitHeight: (searchField.visible ? searchField.height : 0) + list.implicitHeight
-
             EaElements.TextField {
                 id: searchField
                 objectName: "comboBox.search"
                 visible: control.searchable
                 width: parent.width
+                horizontalAlignment: TextInput.AlignLeft
                 placeholderText: qsTr("Search")
                 // Enter picks the first entry the search leaves.
                 onAccepted: {

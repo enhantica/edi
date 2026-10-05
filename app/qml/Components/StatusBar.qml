@@ -170,7 +170,7 @@ EaElements.StatusBar {
                 if (fitArea.running)
                     return fitArea.joined([bar.fit.elapsed, fitArea.chi]);
                 const rest = fitArea.joined([fitArea.iterations, bar.fit.elapsed, fitArea.chi]);
-                return rest === "" ? "" : FitOutcomes.separator.trimStart() + rest;
+                return rest === "" ? "" : FitOutcomes.separator.trim() + " " + rest;
             }
         }
     }

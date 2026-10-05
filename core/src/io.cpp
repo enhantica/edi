@@ -2516,7 +2516,7 @@ BraggPdExperiment simulation_experiment(const std::string& name, const Experimen
         text += "_instrument.calib_twotheta_offset 0.\n\n"
                 "_peak.type cwl-pseudo-voigt\n"
                 "_peak.broad_gauss_u 0.1\n_peak.broad_gauss_v -0.1\n_peak.broad_gauss_w 0.1\n"
-                "_peak.broad_lorentz_x 0.\n_peak.broad_lorentz_y 0.1\n\n"
+                "_peak.broad_lorentz_x 0.\n_peak.broad_lorentz_y 0.1\n_peak.cutoff_fwhm 8.\n\n"
                 "_data_range.two_theta_min 10.\n_data_range.two_theta_max 150.\n"
                 "_data_range.two_theta_step 0.05\n";
     } else {
@@ -2526,7 +2526,8 @@ BraggPdExperiment simulation_experiment(const std::string& name, const Experimen
                 "_peak.type tof-jorgensen\n"
                 "_peak.rise_alpha_0 0.\n_peak.rise_alpha_1 0.25\n"
                 "_peak.decay_beta_0 0.025\n_peak.decay_beta_1 0.03\n"
-                "_peak.broad_gauss_sigma_0 0.\n_peak.broad_gauss_sigma_1 80.\n_peak.broad_gauss_sigma_2 3.\n\n"
+                "_peak.broad_gauss_sigma_0 0.\n_peak.broad_gauss_sigma_1 80.\n_peak.broad_gauss_sigma_2 3.\n"
+                "_peak.broad_gauss_size 0.\n_peak.broad_gauss_strain 0.\n_peak.cutoff_fwhm 8.\n\n"
                 "_data_range.time_of_flight_min 2000.\n_data_range.time_of_flight_max 20000.\n"
                 "_data_range.time_of_flight_step 10.\n";
     }

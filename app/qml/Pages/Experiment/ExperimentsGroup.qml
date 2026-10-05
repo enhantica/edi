@@ -110,7 +110,7 @@ EaElements.GroupBox {
                     height: parent ? parent.height : 0
 
                     EaComponents.TableViewLabel {
-                        visible: !row.experiment.calculationOnly
+                        visible: row.experiment !== null && !row.experiment.calculationOnly
                         width: parent.width
                         horizontalAlignment: Text.AlignLeft
                         elide: Text.ElideMiddle
@@ -118,7 +118,7 @@ EaElements.GroupBox {
                     }
                     EaElements.Button {
                         objectName: `experiments.loadData.${row.index}`
-                        visible: row.experiment.calculationOnly
+                        visible: row.experiment !== null && row.experiment.calculationOnly
                         anchors.verticalCenter: parent.verticalCenter
                         width: parent.width
                         enabled: false
