@@ -23,9 +23,8 @@ void exercise(O& owner, std::tuple<C...> cats, const char* selected, bool change
         [&] {
             INFO(C::name);
             const bool affected = selected && std::string(C::name) == selected && changes;
-            CHECK_MESSAGE(
-                (after[i] != before[i]) == affected,
-                " I21/R5 generations encode precisely schema cells and old renewal");
+            CHECK_MESSAGE((after[i] != before[i]) == affected,
+                          " I21/R5 generations encode precisely schema cells and old renewal");
             CHECK_MESSAGE((edi::OneRow<C>::rows() == 1 && edi::OneRow<C>(owner).token() == token),
                           " I21 writes preserve the single row identity");
             ++i;
@@ -92,8 +91,7 @@ void all(O& o, std::tuple<C...> cats) {
     CHECK_MESSAGE(copy.table_row.token() != token,
                   " I21 copies create independent row identities");
     o = copy;
-    CHECK_MESSAGE(o.table_row.token() == token,
-                  " I21 assignment retains the target row identity");
+    CHECK_MESSAGE(o.table_row.token() == token, " I21 assignment retains the target row identity");
 }
 }  // namespace
 TEST_CASE("C34-T28 edi one-row public schemas retain every cell and category boundary") {
@@ -109,14 +107,29 @@ TEST_CASE("C34-T28 edi one-row public schemas retain every cell and category bou
     all(peak, std::tuple<edi::PeakCategory>{});
     edi::InstrumentBase instrument;
     all(instrument, std::tuple<edi::InstrumentCategory>{});
-    edi::LinkedStructure link;
-    all(link, std::tuple<edi::LinkedStructureCategory>{});
     edi::AbsorptionBase absorption;
     all(absorption, std::tuple<edi::AbsorptionCategory>{});
     edi::ExperimentBase experiment;
     const auto cats =
         std::tuple<edi::ScatteringSourceCategory, edi::JointFitCategory, edi::DataRangeCategory>{};
     all(experiment, cats);
+    // Link fields belong to keyed loop rows now, not a one-row category.
+    auto link = std::make_shared<edi::LinkedStructure>();
+    link->structure_id = "phase";
+    experiment.linked_structures.push_back(link);
+    auto loop_write = [&](auto write) {
+        const auto before = experiment.linked_structures.category_stamp();
+        exercise(experiment, cats, nullptr, false, write);
+        CHECK_MESSAGE(experiment.linked_structures.category_stamp() > before,
+                      "Link loop writes must advance their category and no one-row category");
+    };
+    loop_write([&] { link->scale.value = 1.375; });
+    loop_write([&] { link->scale.uncertainty = 0.03125; });
+    loop_write([&] { link->scale.free = true; });
+    loop_write([&] { link->scale.start_value = 2.125; });
+    loop_write([&] { link->scale.start_uncertainty = 0.0625; });
+    loop_write([&] { link->enabled = false; });
+
     exercise(experiment, cats, nullptr, false, [&] { experiment.name = "outside"; });
     edi::Project project;
     const auto pcats =

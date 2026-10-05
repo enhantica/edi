@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-05T14:09:55Z
+# measured_utc = 2026-10-05T15:43:27Z
 #
-# Recorded from: tests-seq31-edi-after.log (2 node(s) measured once, 5869 banked, 5 stale row(s) dropped)
-# Collected tests: 6207; with a reported duration: 3844
-# Module-scoped fixture costs recorded: 14
+# Recorded from: tests-seq32-edi-after.log (127 node(s) measured once, 5871 banked, 0 stale row(s) dropped)
+# Collected tests: 6334; with a reported duration: 3971
+# Module-scoped fixture costs recorded: 15
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 6207
+# inventory_python = 6334
 # inventory_cpp = 232
-# inventory_measured = 5871
+# inventory_measured = 5998
 # inventory_unmeasured = 568
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
@@ -5034,6 +5034,133 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t12_public_release.py::te
 0.170	tests/system/py/test_e09_t75_staging_scratch.py::test_python_ci_staging_obeys_the_job_boundary[term-corpus-policy]
 0.210	tests/system/py/test_e09_t75_update_refusal.py::test_admitted_field_pagination_changes_the_requested_page
 3.880	tests/system/py/test_e09_t75_update_refusal.py::test_successful_updater_retry_cannot_erase_a_transport_refusal
+0.080	tests/system/py/test_fit_participants.py::test_atom_site_requirement_matches_the_requested_banks[forward-disabled-empty-analysis-joint]
+0.080	tests/system/py/test_fit_participants.py::test_atom_site_requirement_matches_the_requested_banks[forward-disabled-empty-analysis-single]
+0.080	tests/system/py/test_fit_participants.py::test_atom_site_requirement_matches_the_requested_banks[forward-disabled-empty-joint]
+0.040	tests/system/py/test_fit_participants.py::test_atom_site_requirement_matches_the_requested_banks[forward-disabled-empty-single]
+0.050	tests/system/py/test_fit_participants.py::test_atom_site_requirement_matches_the_requested_banks[forward-other-bank-empty-analysis-joint]
+0.060	tests/system/py/test_fit_participants.py::test_atom_site_requirement_matches_the_requested_banks[forward-other-bank-empty-analysis-single]
+0.030	tests/system/py/test_fit_participants.py::test_atom_site_requirement_matches_the_requested_banks[forward-other-bank-empty-joint]
+0.040	tests/system/py/test_fit_participants.py::test_atom_site_requirement_matches_the_requested_banks[forward-other-bank-empty-single]
+0.050	tests/system/py/test_fit_participants.py::test_atom_site_requirement_matches_the_requested_banks[forward-selected-empty-analysis-joint]
+0.050	tests/system/py/test_fit_participants.py::test_atom_site_requirement_matches_the_requested_banks[forward-selected-empty-analysis-single]
+0.030	tests/system/py/test_fit_participants.py::test_atom_site_requirement_matches_the_requested_banks[forward-selected-empty-joint]
+0.110	tests/system/py/test_fit_participants.py::test_atom_site_requirement_matches_the_requested_banks[forward-selected-empty-single]
+0.080	tests/system/py/test_fit_participants.py::test_atom_site_requirement_matches_the_requested_banks[forward-unused-empty-first-analysis-joint]
+0.070	tests/system/py/test_fit_participants.py::test_atom_site_requirement_matches_the_requested_banks[forward-unused-empty-first-analysis-single]
+0.040	tests/system/py/test_fit_participants.py::test_atom_site_requirement_matches_the_requested_banks[forward-unused-empty-first-joint]
+0.040	tests/system/py/test_fit_participants.py::test_atom_site_requirement_matches_the_requested_banks[forward-unused-empty-first-single]
+0.070	tests/system/py/test_fit_participants.py::test_atom_site_requirement_matches_the_requested_banks[reverse-disabled-empty-analysis-joint]
+0.060	tests/system/py/test_fit_participants.py::test_atom_site_requirement_matches_the_requested_banks[reverse-disabled-empty-analysis-single]
+0.040	tests/system/py/test_fit_participants.py::test_atom_site_requirement_matches_the_requested_banks[reverse-disabled-empty-joint]
+0.040	tests/system/py/test_fit_participants.py::test_atom_site_requirement_matches_the_requested_banks[reverse-disabled-empty-single]
+0.050	tests/system/py/test_fit_participants.py::test_atom_site_requirement_matches_the_requested_banks[reverse-other-bank-empty-analysis-joint]
+0.050	tests/system/py/test_fit_participants.py::test_atom_site_requirement_matches_the_requested_banks[reverse-other-bank-empty-analysis-single]
+0.030	tests/system/py/test_fit_participants.py::test_atom_site_requirement_matches_the_requested_banks[reverse-other-bank-empty-joint]
+0.030	tests/system/py/test_fit_participants.py::test_atom_site_requirement_matches_the_requested_banks[reverse-other-bank-empty-single]
+0.050	tests/system/py/test_fit_participants.py::test_atom_site_requirement_matches_the_requested_banks[reverse-selected-empty-analysis-joint]
+0.060	tests/system/py/test_fit_participants.py::test_atom_site_requirement_matches_the_requested_banks[reverse-selected-empty-analysis-single]
+0.030	tests/system/py/test_fit_participants.py::test_atom_site_requirement_matches_the_requested_banks[reverse-selected-empty-joint]
+0.040	tests/system/py/test_fit_participants.py::test_atom_site_requirement_matches_the_requested_banks[reverse-selected-empty-single]
+0.070	tests/system/py/test_fit_participants.py::test_atom_site_requirement_matches_the_requested_banks[reverse-unused-empty-first-analysis-joint]
+0.060	tests/system/py/test_fit_participants.py::test_atom_site_requirement_matches_the_requested_banks[reverse-unused-empty-first-analysis-single]
+0.040	tests/system/py/test_fit_participants.py::test_atom_site_requirement_matches_the_requested_banks[reverse-unused-empty-first-joint]
+0.040	tests/system/py/test_fit_participants.py::test_atom_site_requirement_matches_the_requested_banks[reverse-unused-empty-first-single]
+0.060	tests/system/py/test_fit_participants.py::test_canonical_phase_identity_cannot_bypass_active_atom_site_requirement[empty-link-id-analysis-joint]
+0.060	tests/system/py/test_fit_participants.py::test_canonical_phase_identity_cannot_bypass_active_atom_site_requirement[empty-link-id-analysis-single]
+0.030	tests/system/py/test_fit_participants.py::test_canonical_phase_identity_cannot_bypass_active_atom_site_requirement[empty-link-id-joint]
+0.030	tests/system/py/test_fit_participants.py::test_canonical_phase_identity_cannot_bypass_active_atom_site_requirement[empty-link-id-single]
+0.050	tests/system/py/test_fit_participants.py::test_canonical_phase_identity_cannot_bypass_active_atom_site_requirement[empty-structure-name-analysis-joint]
+0.050	tests/system/py/test_fit_participants.py::test_canonical_phase_identity_cannot_bypass_active_atom_site_requirement[empty-structure-name-analysis-single]
+0.030	tests/system/py/test_fit_participants.py::test_canonical_phase_identity_cannot_bypass_active_atom_site_requirement[empty-structure-name-joint]
+0.030	tests/system/py/test_fit_participants.py::test_canonical_phase_identity_cannot_bypass_active_atom_site_requirement[empty-structure-name-single]
+0.080	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[analysis-forward-connected-cell]
+0.050	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[analysis-forward-connected-unanchored]
+0.090	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[analysis-forward-connected-wavelength]
+0.050	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[analysis-forward-disabled-cell-bridge]
+0.070	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[analysis-forward-disabled-free-phase]
+0.270	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[analysis-forward-disabled-wavelength-bridge]
+0.070	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[analysis-forward-each-cell]
+0.080	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[analysis-forward-each-wavelength]
+0.050	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[analysis-forward-foreign-cell]
+0.050	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[analysis-forward-foreign-wavelength]
+0.050	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[analysis-forward-inactive-fixed-bank]
+0.050	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[analysis-forward-unused-fixed-structure]
+0.080	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[analysis-reverse-connected-cell]
+0.050	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[analysis-reverse-connected-unanchored]
+0.070	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[analysis-reverse-connected-wavelength]
+0.050	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[analysis-reverse-disabled-cell-bridge]
+0.080	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[analysis-reverse-disabled-free-phase]
+0.050	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[analysis-reverse-disabled-wavelength-bridge]
+0.070	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[analysis-reverse-each-cell]
+0.070	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[analysis-reverse-each-wavelength]
+0.050	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[analysis-reverse-foreign-cell]
+0.050	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[analysis-reverse-foreign-wavelength]
+0.060	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[analysis-reverse-inactive-fixed-bank]
+0.050	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[analysis-reverse-unused-fixed-structure]
+0.050	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[joint-forward-connected-cell]
+0.030	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[joint-forward-connected-unanchored]
+0.050	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[joint-forward-connected-wavelength]
+0.030	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[joint-forward-disabled-cell-bridge]
+0.050	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[joint-forward-disabled-free-phase]
+0.030	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[joint-forward-disabled-wavelength-bridge]
+0.040	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[joint-forward-each-cell]
+0.040	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[joint-forward-each-wavelength]
+0.030	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[joint-forward-foreign-cell]
+0.090	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[joint-forward-foreign-wavelength]
+0.030	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[joint-forward-inactive-fixed-bank]
+0.040	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[joint-forward-unused-fixed-structure]
+0.050	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[joint-reverse-connected-cell]
+0.030	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[joint-reverse-connected-unanchored]
+0.070	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[joint-reverse-connected-wavelength]
+0.030	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[joint-reverse-disabled-cell-bridge]
+0.040	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[joint-reverse-disabled-free-phase]
+0.030	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[joint-reverse-disabled-wavelength-bridge]
+0.040	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[joint-reverse-each-cell]
+0.050	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[joint-reverse-each-wavelength]
+0.030	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[joint-reverse-foreign-cell]
+0.030	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[joint-reverse-foreign-wavelength]
+0.030	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[joint-reverse-inactive-fixed-bank]
+0.030	tests/system/py/test_fit_participants.py::test_each_active_component_needs_its_own_anchor[joint-reverse-unused-fixed-structure]
+0.040	tests/system/py/test_fit_participants.py::test_fit_identifiability_is_not_a_load_calculate_or_save_precondition[connected-unanchored]
+0.030	tests/system/py/test_fit_participants.py::test_fit_identifiability_is_not_a_load_calculate_or_save_precondition[foreign-cell]
+0.040	tests/system/py/test_fit_participants.py::test_fit_identifiability_is_not_a_load_calculate_or_save_precondition[foreign-wavelength]
+0.030	tests/system/py/test_fit_participants.py::test_fit_identifiability_is_not_a_load_calculate_or_save_precondition[inactive-fixed-bank]
+0.050	tests/system/py/test_fit_participants.py::test_mixed_beam_families_remain_refused_for_joint_fit
+0.030	tests/system/py/test_fit_participants.py::test_singleton_unnamed_link_compatibility_still_validates_its_atoms
+0.240	tests/system/py/test_fit_participants.py::test_warm_disabled_bridge_removes_its_anchor_and_reenabling_restores_it
+0.030	tests/system/py/test_fit_participants_native.py::test_native_canonical_phase_identity_cannot_skip_atom_preflight[empty-link-id-explicit-joint]
+0.020	tests/system/py/test_fit_participants_native.py::test_native_canonical_phase_identity_cannot_skip_atom_preflight[empty-link-id-explicit-single]
+0.030	tests/system/py/test_fit_participants_native.py::test_native_canonical_phase_identity_cannot_skip_atom_preflight[empty-structure-name-explicit-joint]
+0.030	tests/system/py/test_fit_participants_native.py::test_native_canonical_phase_identity_cannot_skip_atom_preflight[empty-structure-name-explicit-single]
+0.050	tests/system/py/test_fit_participants_native.py::test_native_explicit_joint_uses_each_enabled_component[connected-cell]
+0.030	tests/system/py/test_fit_participants_native.py::test_native_explicit_joint_uses_each_enabled_component[connected-unanchored]
+0.050	tests/system/py/test_fit_participants_native.py::test_native_explicit_joint_uses_each_enabled_component[connected-wavelength]
+0.030	tests/system/py/test_fit_participants_native.py::test_native_explicit_joint_uses_each_enabled_component[disabled-cell-bridge]
+0.050	tests/system/py/test_fit_participants_native.py::test_native_explicit_joint_uses_each_enabled_component[disabled-free-phase]
+0.020	tests/system/py/test_fit_participants_native.py::test_native_explicit_joint_uses_each_enabled_component[disabled-wavelength-bridge]
+0.050	tests/system/py/test_fit_participants_native.py::test_native_explicit_joint_uses_each_enabled_component[each-cell]
+0.050	tests/system/py/test_fit_participants_native.py::test_native_explicit_joint_uses_each_enabled_component[each-wavelength]
+0.030	tests/system/py/test_fit_participants_native.py::test_native_explicit_joint_uses_each_enabled_component[foreign-cell]
+0.021	tests/system/py/test_fit_participants_native.py::test_native_explicit_joint_uses_each_enabled_component[foreign-wavelength]
+0.030	tests/system/py/test_fit_participants_native.py::test_native_explicit_joint_uses_each_enabled_component[inactive-fixed-bank]
+0.030	tests/system/py/test_fit_participants_native.py::test_native_explicit_joint_uses_each_enabled_component[unused-fixed-structure]
+0.050	tests/system/py/test_fit_participants_native.py::test_native_explicit_pattern_atom_check_matches_its_selected_banks[forward-disabled-empty-explicit-joint]
+0.040	tests/system/py/test_fit_participants_native.py::test_native_explicit_pattern_atom_check_matches_its_selected_banks[forward-disabled-empty-explicit-single]
+0.030	tests/system/py/test_fit_participants_native.py::test_native_explicit_pattern_atom_check_matches_its_selected_banks[forward-other-bank-empty-explicit-joint]
+0.040	tests/system/py/test_fit_participants_native.py::test_native_explicit_pattern_atom_check_matches_its_selected_banks[forward-other-bank-empty-explicit-single]
+0.020	tests/system/py/test_fit_participants_native.py::test_native_explicit_pattern_atom_check_matches_its_selected_banks[forward-selected-empty-explicit-joint]
+0.020	tests/system/py/test_fit_participants_native.py::test_native_explicit_pattern_atom_check_matches_its_selected_banks[forward-selected-empty-explicit-single]
+0.050	tests/system/py/test_fit_participants_native.py::test_native_explicit_pattern_atom_check_matches_its_selected_banks[forward-unused-empty-first-explicit-joint]
+0.040	tests/system/py/test_fit_participants_native.py::test_native_explicit_pattern_atom_check_matches_its_selected_banks[forward-unused-empty-first-explicit-single]
+0.060	tests/system/py/test_fit_participants_native.py::test_native_explicit_pattern_atom_check_matches_its_selected_banks[reverse-disabled-empty-explicit-joint]
+0.040	tests/system/py/test_fit_participants_native.py::test_native_explicit_pattern_atom_check_matches_its_selected_banks[reverse-disabled-empty-explicit-single]
+0.020	tests/system/py/test_fit_participants_native.py::test_native_explicit_pattern_atom_check_matches_its_selected_banks[reverse-other-bank-empty-explicit-joint]
+0.030	tests/system/py/test_fit_participants_native.py::test_native_explicit_pattern_atom_check_matches_its_selected_banks[reverse-other-bank-empty-explicit-single]
+0.030	tests/system/py/test_fit_participants_native.py::test_native_explicit_pattern_atom_check_matches_its_selected_banks[reverse-selected-empty-explicit-joint]
+0.030	tests/system/py/test_fit_participants_native.py::test_native_explicit_pattern_atom_check_matches_its_selected_banks[reverse-selected-empty-explicit-single]
+0.050	tests/system/py/test_fit_participants_native.py::test_native_explicit_pattern_atom_check_matches_its_selected_banks[reverse-unused-empty-first-explicit-joint]
+0.040	tests/system/py/test_fit_participants_native.py::test_native_explicit_pattern_atom_check_matches_its_selected_banks[reverse-unused-empty-first-explicit-single]
 UNMEASURED:failed-in-this-run	tests/system/py/test_locked_dependencies.py::test_app_configure_uses_locked_packages_and_truthful_sdk[system-absent]
 UNMEASURED:failed-in-this-run	tests/system/py/test_locked_dependencies.py::test_app_configure_uses_locked_packages_and_truthful_sdk[system-present]
 0.000	tests/system/py/test_locked_dependencies.py::test_dependency_escape_observer_closes_paths_and_symlink_redirects
@@ -6493,4 +6620,5 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 4.456	tests/system/py/test_e05_t1_background_provenance.py
 # module-cost: 1.716	tests/system/py/test_e09_t58_start_tied_numeric.py
 # module-cost: 0.180	tests/system/py/test_e09_t75_native_execution.py
+# module-cost: 3.929	tests/system/py/test_fit_participants_native.py
 # module-cost: 2.483	tests/unit/py/test_e04_t9_latency_ratchet.py

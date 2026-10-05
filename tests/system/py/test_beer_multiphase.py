@@ -85,7 +85,8 @@ def test_beer_joint_fit_preserves_both_phases_and_independent_bank_scales(tmp_pa
         result = project.analysis.fit()
         assert result.converged, 'Each BEER stage must complete its declared joint fit'
         current_rwp = beer.active_rwp(project)
-        assert math.isfinite(current_rwp) and current_rwp < initial_rwp, (
+        assert math.isfinite(current_rwp), 'The BEER joint fit must have a finite residual'
+        assert current_rwp < initial_rwp, (
             'A BEER joint fit must improve the included-window residual from its starting model'
         )
         assert set(project.structures.keys()) == {'ferrite', 'austenite'}, (
@@ -97,7 +98,9 @@ def test_beer_joint_fit_preserves_both_phases_and_independent_bank_scales(tmp_pa
         for experiment in project.experiments:
             for phase in ('ferrite', 'austenite'):
                 scale = support.links(experiment)[phase].scale
-                assert scale.free and math.isfinite(scale.value) and scale.value > 0, (
+                assert scale.free, 'Each BEER phase scale must remain free'
+                assert math.isfinite(scale.value), 'Each BEER phase scale must remain finite'
+                assert scale.value > 0, (
                     'Both phase scales in each bank must remain independent finite free parameters'
                 )
             for point in experiment.background:

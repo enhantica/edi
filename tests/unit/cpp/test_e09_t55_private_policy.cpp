@@ -11,10 +11,31 @@
 #include "canonical_encoding.hpp"
 #include "edi/model.hpp"
 #include "edi/validation.hpp"
-#include "parameter_paths.hpp"
 #include "fit_policy.hpp"
+#include "parameter_paths.hpp"
 
 namespace {
+
+crysta::Project empty_phase_project() {
+    auto phase = crysta::structure_from_edi_text(
+        "data_structure\n_cell.length_a 2.2\n_cell.length_b 3.1\n_cell.length_c 4.3\n"
+        "_cell.angle_alpha 90\n_cell.angle_beta 90\n_cell.angle_gamma 90\n"
+        "_space_group.name_h_m \"P 1\"\nloop_\n_atom_site.id\n_atom_site.type_symbol\n"
+        "_atom_site.wyckoff_letter\n_atom_site.adp_type\n_atom_site.fract_x\n"
+        "_atom_site.fract_y\n_atom_site.fract_z\n_atom_site.occupancy\n_atom_site.adp_iso\n"
+        "X Gd a Biso 0 0 0 0.7 0\n");
+    phase.atom_sites.clear();
+    const auto bank = crysta::experiment_from_edi_text(
+        "data_bank\n_experiment_type.sample_form powder\n"
+        "_experiment_type.radiation_probe neutron\n_experiment_type.scattering_type bragg\n"
+        "_experiment_type.beam_mode \"constant wavelength\"\n_peak.type cwl-pseudo-voigt\n"
+        "_peak.broad_gauss_u 0\n_peak.broad_gauss_v 0\n_peak.broad_gauss_w 0.01\n"
+        "_peak.broad_lorentz_x 0\n_peak.broad_lorentz_y 0\n_peak.cutoff_fwhm 5\n"
+        "_instrument.calib_twotheta_offset 0\n_instrument.setup_wavelength 1.54\n"
+        "loop_\n_linked_structure.structure_id\n"
+        "_linked_structure.scale\nstructure 1.125\n");
+    return crysta::Project(phase, bank);
+}
 
 void check_invalid(const std::function<void()>& action, const std::string& fragment,
                    const char* requirement) {
@@ -82,8 +103,10 @@ TEST_CASE("E09-T55 parameter paths resolve the documented engine label grammar")
     }};
     for (const auto& [label, path] : required) {
         const auto resolved = edi::detail::resolve_label(structure, experiment, label);
-        REQUIRE_MESSAGE(resolved.has_value(), "every documented required engine label must resolve");
-        CHECK_MESSAGE(resolved->path == path, "a required engine label must retain its public identity path");
+        REQUIRE_MESSAGE(resolved.has_value(),
+                        "every documented required engine label must resolve");
+        CHECK_MESSAGE(resolved->path == path,
+                      "a required engine label must retain its public identity path");
     }
 
     const auto background = edi::detail::resolve_label(structure, experiment, "background[1]");
@@ -97,7 +120,7 @@ TEST_CASE("E09-T55 parameter paths resolve the documented engine label grammar")
 
     const auto scale = edi::detail::resolve_label(structure, experiment, "scale");
     REQUIRE_MESSAGE(scale.has_value(), "the linked-structure scale label must resolve");
-    CHECK_MESSAGE(scale->target == &experiment.linked_structure.scale,
+    CHECK_MESSAGE(scale->target == &experiment.linked_structure().scale,
                   "scale must target the linked-structure scale parameter");
 }
 
@@ -105,8 +128,14 @@ TEST_CASE("E09-T55 optional and structural parameter identities fail closed") {
     edi::Structure structure = one_site_structure("Si1");
     edi::ExperimentBase experiment;
     const std::array<const char*, 8> optional_labels{{
-        "calib_twotheta_offset", "setup_wavelength", "broad_gauss_u", "broad_gauss_v",
-        "broad_gauss_w", "broad_lorentz_x", "broad_lorentz_y", "abscor1",
+        "calib_twotheta_offset",
+        "setup_wavelength",
+        "broad_gauss_u",
+        "broad_gauss_v",
+        "broad_gauss_w",
+        "broad_lorentz_x",
+        "broad_lorentz_y",
+        "abscor1",
     }};
     for (const char* label : optional_labels) {
         CHECK_MESSAGE(!edi::detail::resolve_label(structure, experiment, label),
@@ -140,7 +169,8 @@ TEST_CASE("E09-T55 optional and structural parameter identities fail closed") {
     }};
     for (const auto& [label, path] : structural) {
         const auto resolved = edi::detail::resolve_structural_label(structure, label);
-        REQUIRE_MESSAGE(resolved.has_value(), "every documented structural engine label must resolve");
+        REQUIRE_MESSAGE(resolved.has_value(),
+                        "every documented structural engine label must resolve");
         CHECK_MESSAGE(resolved->path == path,
                       "a structural engine label must retain its stable public identity path");
     }
@@ -161,11 +191,10 @@ TEST_CASE("E09-T55 joint parameter identities use longest bank prefix and projec
     edi::BraggPdExperiment long_bank;
     long_bank.name = "bank.long";
     banks.push_back(std::move(long_bank));
-    const auto longest = edi::detail::resolve_joint_label(
-        structure, banks, "bank.long.calib_d_to_tof_linear");
+    const auto longest =
+        edi::detail::resolve_joint_label(structure, banks, "bank.long.calib_d_to_tof_linear");
     REQUIRE_MESSAGE(longest.has_value(), "the longest matching bank prefix must resolve");
-    CHECK_MESSAGE(longest->path ==
-                      "experiments[bank.long].instrument.calib_d_to_tof_linear",
+    CHECK_MESSAGE(longest->path == "experiments[bank.long].instrument.calib_d_to_tof_linear",
                   "joint identity must retain the complete bank name");
     CHECK_MESSAGE(!edi::detail::resolve_joint_label(structure, banks, "calib_d_to_tof_linear"),
                   "a multi-bank instrument label must never fall back to bank zero");
@@ -174,13 +203,15 @@ TEST_CASE("E09-T55 joint parameter identities use longest bank prefix and projec
     edi::BraggPdExperiment single_bank;
     single_bank.name = "bank";
     banks.push_back(std::move(single_bank));
-    const auto single = edi::detail::resolve_joint_label(
-        structure, banks, "calib_d_to_tof_linear");
-    REQUIRE_MESSAGE(single.has_value(), "a one-bank joint project must accept unprefixed engine labels");
+    const auto single =
+        edi::detail::resolve_joint_label(structure, banks, "calib_d_to_tof_linear");
+    REQUIRE_MESSAGE(single.has_value(),
+                    "a one-bank joint project must accept unprefixed engine labels");
     CHECK_MESSAGE(single->path == "experiments[bank].instrument.calib_d_to_tof_linear",
                   "a one-bank joint identity must still carry its bank name");
     const auto shared = edi::detail::resolve_joint_label(structure, banks, "Si.fract_x");
-    REQUIRE_MESSAGE(shared.has_value(), "shared structural labels must resolve in a joint project");
+    REQUIRE_MESSAGE(shared.has_value(),
+                    "shared structural labels must resolve in a joint project");
     CHECK_MESSAGE(shared->path == "structure.atom_sites[Si].fract_x",
                   "joint structural identity must remain shared and unprefixed");
 }
@@ -200,19 +231,22 @@ TEST_CASE("E09-T55 refinement policy rejects ambiguous identities and malformed 
     CHECK_MESSAGE(structure.atom_sites.size() == 1,
                   " duplicate admission preserves original site storage");
 
-    const edi::Structure valid = one_site_structure();
+    edi::Project valid;
+    *valid.structures.front() = one_site_structure();
     edi::detail::validate_fit_request({1.0}, {2.0}, {1.0}, valid);
     check_invalid([&] { edi::detail::validate_fit_request({}, {2.0}, {1.0}, valid); },
                   "empty measured data", "empty refinement data must be rejected");
     check_invalid([&] { edi::detail::validate_fit_request({1.0, 2.0}, {2.0}, {1.0}, valid); },
                   "equal length", "ragged refinement data must be rejected");
-    const edi::Structure empty_structure;
-    check_invalid([&] { edi::detail::validate_fit_request({1.0}, {2.0}, {1.0}, empty_structure); },
-                  "no atom sites", "a structure without sites must be rejected");
+    auto empty_structure = empty_phase_project();
+    check_invalid(
+        [&] { edi::detail::require_populated_participants(empty_structure, "single fit"); },
+        "no atom sites", "an active participant without sites must be rejected");
 }
 
 TEST_CASE("E09-T55 joint refinement policy validates every bank identity and pattern") {
-    const edi::Structure structure = one_site_structure("Si");
+    edi::Project structure;
+    *structure.structures.front() = one_site_structure("Si");
     edi::ItemVec<edi::BraggPdExperiment> banks;
     edi::BraggPdExperiment bank;
     bank.name = "bank1";
@@ -223,16 +257,19 @@ TEST_CASE("E09-T55 joint refinement policy validates every bank identity and pat
     const edi::ItemVec<edi::BraggPdExperiment> no_banks;
     check_invalid([&] { edi::detail::validate_joint_request(structure, no_banks, {}); },
                   "no experiments", "a joint fit without banks must be rejected");
-    check_invalid([&] { edi::detail::validate_joint_request(structure, banks, {}); }, "one measured pattern",
-                  "the pattern count must equal the bank count");
-    const edi::Structure empty_structure;
-    check_invalid([&] { edi::detail::validate_joint_request(empty_structure, banks, patterns); },
-                  "no atom sites", "a joint fit without atom sites must be rejected");
+    check_invalid([&] { edi::detail::validate_joint_request(structure, banks, {}); },
+                  "one measured pattern", "the pattern count must equal the bank count");
+    auto empty_structure = empty_phase_project();
+    check_invalid(
+        [&] { edi::detail::require_populated_participants(empty_structure, "joint fit"); },
+        "no atom sites", "a joint active participant without sites must be rejected");
 
-    for (const std::string& bad_name : {std::string{}, std::string{"bad.name"}, std::string{"Si"}}) {
+    for (const std::string& bad_name :
+         {std::string{}, std::string{"bad.name"}, std::string{"Si"}}) {
         banks[0]->name = bad_name;
         check_invalid([&] { edi::detail::validate_joint_request(structure, banks, patterns); },
-                      bad_name.empty() ? "empty name" : (bad_name == "Si" ? "collides" : "reserved delimiter"),
+                      bad_name.empty() ? "empty name"
+                                       : (bad_name == "Si" ? "collides" : "reserved delimiter"),
                       "an ambiguous bank identity must be rejected");
     }
     banks.clear();
@@ -282,7 +319,8 @@ TEST_CASE("E09-T55 refinement bounds and write-back preserve their documented in
     edi::Parameter parameter{1.0, 0.5};
     edi::detail::write_back({{{&parameter, "structure.cell.length_a"}, 2.0, 0.25}});
     CHECK_MESSAGE(parameter.value == 2.0, "write-back must update the resolved parameter value");
-    REQUIRE_MESSAGE(parameter.uncertainty.has_value(), "write-back must retain a standard uncertainty");
+    REQUIRE_MESSAGE(parameter.uncertainty.has_value(),
+                    "write-back must retain a standard uncertainty");
     CHECK_MESSAGE(*parameter.uncertainty == 0.25,
                   "write-back must update the resolved parameter uncertainty");
 }
@@ -300,17 +338,20 @@ TEST_CASE("E09-T55 canonical encoding detects calculation-affecting mutations") 
     project.experiments[0]->background[0]->intensity = edi::Parameter{2.0};
     project.fitting_mode = "single";
     const std::string baseline = edi::detail::canonical_encoding(project);
-    CHECK_MESSAGE(!baseline.empty(), "the canonical source encoding must represent a non-empty project");
+    CHECK_MESSAGE(!baseline.empty(),
+                  "the canonical source encoding must represent a non-empty project");
 
     const auto distinct_after = [&](const std::function<void(edi::Project&)>& mutation) {
         edi::Project changed = project;
         mutation(changed);
         return edi::detail::canonical_encoding(changed) != baseline;
     };
-    CHECK_MESSAGE(distinct_after([](edi::Project& p) { p.structures[0]->cell.length_a.value = 2.0; }),
-                  "a cell mutation must invalidate the canonical source encoding");
-    CHECK_MESSAGE(distinct_after([](edi::Project& p) { p.structures[0]->atom_sites[0]->id = "Si2"; }),
-                  "a site-identity mutation must invalidate the canonical source encoding");
+    CHECK_MESSAGE(
+        distinct_after([](edi::Project& p) { p.structures[0]->cell.length_a.value = 2.0; }),
+        "a cell mutation must invalidate the canonical source encoding");
+    CHECK_MESSAGE(
+        distinct_after([](edi::Project& p) { p.structures[0]->atom_sites[0]->id = "Si2"; }),
+        "a site-identity mutation must invalidate the canonical source encoding");
     CHECK_MESSAGE(distinct_after([](edi::Project& p) {
                       auto values = static_cast<const std::map<std::string, double>&>(
                           p.structures[0]->scattering_lengths_fm);
@@ -318,12 +359,19 @@ TEST_CASE("E09-T55 canonical encoding detects calculation-affecting mutations") 
                       p.structures[0]->scattering_lengths_fm = std::move(values);
                   }),
                   "a scattering-length mutation must invalidate the canonical source encoding");
-    CHECK_MESSAGE(distinct_after([](edi::Project& p) { p.experiments[0]->peak.type = "tof-jorgensen"; }),
-                  "a peak-type mutation must invalidate the canonical source encoding");
-    CHECK_MESSAGE(distinct_after([](edi::Project& p) { p.experiments[0]->experiment_type.beam_mode = edi::BeamModeEnum::TIME_OF_FLIGHT; }),
+    CHECK_MESSAGE(
+        distinct_after([](edi::Project& p) { p.experiments[0]->peak.type = "tof-jorgensen"; }),
+        "a peak-type mutation must invalidate the canonical source encoding");
+    CHECK_MESSAGE(distinct_after([](edi::Project& p) {
+                      p.experiments[0]->experiment_type.beam_mode =
+                          edi::BeamModeEnum::TIME_OF_FLIGHT;
+                  }),
                   "an explicit beam-mode mutation must invalidate the canonical source encoding");
-    CHECK_MESSAGE(distinct_after([](edi::Project& p) { p.experiments[0]->instrument.setup_wavelength = edi::Parameter{1.54}; }),
-                  "engaging an optional instrument parameter must invalidate the canonical source encoding");
+    CHECK_MESSAGE(
+        distinct_after([](edi::Project& p) {
+            p.experiments[0]->instrument.setup_wavelength = edi::Parameter{1.54};
+        }),
+        "engaging an optional instrument parameter must invalidate the canonical source encoding");
     CHECK_MESSAGE(distinct_after([](edi::Project& p) {
                       auto values = static_cast<const std::vector<std::pair<double, double>>&>(
                           p.experiments[0]->excluded_regions);
@@ -364,12 +412,12 @@ TEST_CASE("E09-T55 validation errors retain tier, code, path, and message") {
         }
         CHECK_MESSAGE(raised, "the validation helper must observe edi::ValidationError");
     };
-    verify([] { edi::fail_syntax("fixture.edi", "token", "broken value"); }, 1,
-           "edi.syntax.token", "syntax failures must retain their structured diagnostic");
+    verify([] { edi::fail_syntax("fixture.edi", "token", "broken value"); }, 1, "edi.syntax.token",
+           "syntax failures must retain their structured diagnostic");
     verify([] { edi::fail_schema("fixture.edi", "number", "broken value"); }, 2,
            "edi.schema.number", "schema failures must retain their structured diagnostic");
-    verify([] { edi::fail_domain("fixture.edi", "range", "broken value"); }, 3,
-           "edi.domain.range", "domain failures must retain their structured diagnostic");
+    verify([] { edi::fail_domain("fixture.edi", "range", "broken value"); }, 3, "edi.domain.range",
+           "domain failures must retain their structured diagnostic");
     CHECK_MESSAGE(std::string(edi::severity_name(edi::Severity::Error)) == "error",
                   "error severity must have its stable lowercase name");
     CHECK_MESSAGE(std::string(edi::severity_name(edi::Severity::Warning)) == "warning",
@@ -381,12 +429,13 @@ TEST_CASE("E09-T55 validation errors retain tier, code, path, and message") {
 TEST_CASE("E09-T55 one-call refinement sourcing fails closed without observations") {
     edi::Project project;
     project.structure().atom_sites.push_back(edi::AtomSite{});
-    check_invalid([&] { static_cast<void>(project.fit()); }, "carries no measured data",
-                  "single-bank one-call refinement must refuse an experiment without observations");
-    check_invalid([&] {
-        static_cast<void>(project.fit(edi::IterationCallback{}, edi::PreambleCallback{}));
-    }, "carries no measured data",
-                  "the callback overload must share the one-call observation guard");
+    check_invalid(
+        [&] { static_cast<void>(project.fit()); }, "carries no measured data",
+        "single-bank one-call refinement must refuse an experiment without observations");
+    check_invalid(
+        [&] { static_cast<void>(project.fit(edi::IterationCallback{}, edi::PreambleCallback{})); },
+        "carries no measured data",
+        "the callback overload must share the one-call observation guard");
 
     project.experiment().data = measured_pattern();
     project.experiment().calculation_only = true;
@@ -398,10 +447,13 @@ TEST_CASE("E09-T55 one-call refinement sourcing fails closed without observation
                   "joint one-call refinement must refuse a project without banks");
     project.experiments.push_back(edi::BraggPdExperiment{});
     project.experiments[0]->name = "bank";
-    check_invalid([&] {
-        static_cast<void>(project.fit_joint(edi::IterationCallback{}, edi::PreambleCallback{}));
-    }, "carries no measured data",
-                  "the joint callback overload must refuse a bank without observations");
+    check_invalid(
+        [&] {
+            static_cast<void>(
+                project.fit_joint(edi::IterationCallback{}, edi::PreambleCallback{}));
+        },
+        "carries no measured data",
+        "the joint callback overload must refuse a bank without observations");
     project.experiments[0]->data = measured_pattern();
     project.experiments[0]->calculation_only = true;
     check_invalid([&] { static_cast<void>(project.fit_joint()); }, "carries no measured data",
