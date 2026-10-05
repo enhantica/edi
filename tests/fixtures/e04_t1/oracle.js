@@ -2,14 +2,14 @@
 var frozen = {
   "source": "diffraction-lib 0ffba46f declarations +  §2b D-a..D-j + CLI files",
   "profiles": {
-    "cwl-pseudo-voigt": [
+    "cwl-tch-pseudo-voigt": [
       "broad_gauss_u",
       "broad_gauss_v",
       "broad_gauss_w",
       "broad_lorentz_x",
       "broad_lorentz_y"
     ],
-    "cwl-thompson-cox-hastings": [
+    "cwl-tch-pseudo-voigt-fcj": [
       "broad_gauss_u",
       "broad_gauss_v",
       "broad_gauss_w",
@@ -2052,7 +2052,7 @@ var frozen = {
       "project": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project",
       "experiment": "d20",
       "sha256": "7053aa291373fc6df17e3d2ced5008a098ef314f65e06a1204f6d0ecbb1ae518",
-      "peakType": "cwl-pseudo-voigt",
+      "peakType": "cwl-tch-pseudo-voigt",
       "mode": "cwl",
       "peakFields": [
         "broad_gauss_u",
@@ -2112,7 +2112,7 @@ var frozen = {
           "free": false,
           "uncertainty": 0.0
         },
-        "_peak.type": "cwl-pseudo-voigt",
+        "_peak.type": "cwl-tch-pseudo-voigt",
         "_instrument.setup_wavelength": {
           "value": 1.87,
           "free": false,
@@ -2132,7 +2132,7 @@ var frozen = {
       "project": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project",
       "experiment": "d20",
       "sha256": "55ea976b34dffea45b1eb379a3f358d4afef7df9e3331fa3ced46fd63229949c",
-      "peakType": "cwl-pseudo-voigt",
+      "peakType": "cwl-tch-pseudo-voigt",
       "mode": "cwl",
       "peakFields": [
         "broad_gauss_u",
@@ -2197,7 +2197,7 @@ var frozen = {
           "free": false,
           "uncertainty": 0.0
         },
-        "_peak.type": "cwl-pseudo-voigt",
+        "_peak.type": "cwl-tch-pseudo-voigt",
         "_instrument.setup_wavelength": {
           "value": 1.87,
           "free": false,
@@ -2217,7 +2217,7 @@ var frozen = {
       "project": "docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project",
       "experiment": "d20",
       "sha256": "9b9b01ad0ed3bfe12206653fa14976675e56ba87460484b969ec8433147ba6d3",
-      "peakType": "cwl-pseudo-voigt",
+      "peakType": "cwl-tch-pseudo-voigt",
       "mode": "cwl",
       "peakFields": [
         "broad_gauss_u",
@@ -2282,7 +2282,7 @@ var frozen = {
           "free": false,
           "uncertainty": 0.0
         },
-        "_peak.type": "cwl-pseudo-voigt",
+        "_peak.type": "cwl-tch-pseudo-voigt",
         "_instrument.setup_wavelength": {
           "value": 1.87,
           "free": false,
@@ -2553,7 +2553,7 @@ var frozen = {
       "project": "docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project",
       "experiment": "d20",
       "sha256": "05b04c3d9d5ce502e2ef4f43bf1e3119eb2ecc6f05a621eeed605fea7b0455da",
-      "peakType": "cwl-pseudo-voigt",
+      "peakType": "cwl-tch-pseudo-voigt",
       "mode": "cwl",
       "peakFields": [
         "broad_gauss_u",
@@ -2618,7 +2618,7 @@ var frozen = {
           "free": false,
           "uncertainty": 0.0
         },
-        "_peak.type": "cwl-pseudo-voigt",
+        "_peak.type": "cwl-tch-pseudo-voigt",
         "_instrument.setup_wavelength": {
           "value": 1.87,
           "free": false,
@@ -2638,7 +2638,7 @@ var frozen = {
       "project": "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project",
       "experiment": "echidna",
       "sha256": "5976f0e0678ca16bb7bc1e52c9a2a1ea9a4043d9c3afead6a996b6e1b38b0159",
-      "peakType": "cwl-thompson-cox-hastings",
+      "peakType": "cwl-tch-pseudo-voigt-fcj",
       "mode": "cwl",
       "peakFields": [
         "broad_gauss_u",
@@ -2711,7 +2711,7 @@ var frozen = {
           "free": false,
           "uncertainty": 0.0
         },
-        "_peak.type": "cwl-thompson-cox-hastings",
+        "_peak.type": "cwl-tch-pseudo-voigt-fcj",
         "_instrument.setup_wavelength": {
           "value": 1.622536,
           "free": true,
@@ -2751,7 +2751,7 @@ var frozen = {
       "project": "docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project",
       "experiment": "echidna",
       "sha256": "372e3a1cee4228b17a254007a48d906f313db9dd2a9292df69e707a7dd4246ef",
-      "peakType": "cwl-thompson-cox-hastings",
+      "peakType": "cwl-tch-pseudo-voigt-fcj",
       "mode": "cwl",
       "peakFields": [
         "broad_gauss_u",
@@ -2821,7 +2821,7 @@ var frozen = {
           "free": false,
           "uncertainty": 0.0
         },
-        "_peak.type": "cwl-thompson-cox-hastings",
+        "_peak.type": "cwl-tch-pseudo-voigt-fcj",
         "_instrument.setup_wavelength": {
           "value": 1.623899,
           "free": false,
@@ -2841,7 +2841,7 @@ var frozen = {
       "project": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project",
       "experiment": "hrpt",
       "sha256": "4a7aa10f25ecc085a7b8b9f0f621b44feab8b1b3864bb185b2d349991fecd162",
-      "peakType": "cwl-pseudo-voigt",
+      "peakType": "cwl-tch-pseudo-voigt",
       "mode": "cwl",
       "peakFields": [
         "broad_gauss_u",
@@ -2901,7 +2901,7 @@ var frozen = {
           "free": false,
           "uncertainty": 0.0
         },
-        "_peak.type": "cwl-pseudo-voigt",
+        "_peak.type": "cwl-tch-pseudo-voigt",
         "_instrument.setup_wavelength": {
           "value": 1.494,
           "free": false,
@@ -3090,7 +3090,7 @@ var frozen = {
       "project": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project",
       "experiment": "hrpt",
       "sha256": "58a44cc8c5a6493056634cc5442c548bbf44cce5c615b22b16173d0ec771e8ce",
-      "peakType": "cwl-pseudo-voigt",
+      "peakType": "cwl-tch-pseudo-voigt",
       "mode": "cwl",
       "peakFields": [
         "broad_gauss_u",
@@ -3150,7 +3150,7 @@ var frozen = {
           "free": false,
           "uncertainty": 0.0
         },
-        "_peak.type": "cwl-pseudo-voigt",
+        "_peak.type": "cwl-tch-pseudo-voigt",
         "_instrument.setup_wavelength": {
           "value": 1.494,
           "free": false,
@@ -7127,7 +7127,7 @@ var frozen = {
       "project": "docs/user/cli/pd-xray-cwl_lif_single/project",
       "experiment": "cu_ka",
       "sha256": "9fb985ff9604f1beb98a6cfedb721b154b9819d7f816bcc159b033db3d2b09d8",
-      "peakType": "cwl-pseudo-voigt",
+      "peakType": "cwl-tch-pseudo-voigt",
       "mode": "cwl",
       "peakFields": [
         "broad_gauss_u",
@@ -7192,7 +7192,7 @@ var frozen = {
           "free": false,
           "uncertainty": 0.0
         },
-        "_peak.type": "cwl-pseudo-voigt",
+        "_peak.type": "cwl-tch-pseudo-voigt",
         "_instrument.setup_wavelength": {
           "value": 1.54056,
           "free": false,

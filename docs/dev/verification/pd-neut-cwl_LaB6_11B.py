@@ -95,7 +95,7 @@ experiment = ExperimentFactory.from_cif_str(f"""data_lab6
 _edi.schema_version 3
 _experiment_type.beam_mode "constant wavelength"
 _scattering_source.neutron_scattering_length sears1992
-_peak.type cwl-pseudo-voigt
+_peak.type cwl-tch-pseudo-voigt
 _peak.cutoff_fwhm {FULLPROF_WDT}
 _peak.broad_gauss_u {FULLPROF_U}
 _peak.broad_gauss_v {FULLPROF_V}

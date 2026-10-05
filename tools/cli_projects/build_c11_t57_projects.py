@@ -177,7 +177,7 @@ def lab6() -> edi.Project:
         'echidna',
         [
             '_experiment_type.beam_mode "constant wavelength"',
-            '_peak.type cwl-thompson-cox-hastings',
+            '_peak.type cwl-tch-pseudo-voigt-fcj',
             '_peak.cutoff_fwhm 12.0',
             '_peak.broad_gauss_u 0.143431',
             '_peak.broad_gauss_v -0.523140',

@@ -13,7 +13,7 @@ _peak.broad_lorentz_y 0.054515
 _peak.asym_fcj_1 0.08
 _peak.asym_fcj_2 0.08
 _peak.cutoff_fwhm 12
-_peak.type cwl-thompson-cox-hastings
+_peak.type cwl-tch-pseudo-voigt-fcj
 
 _instrument.setup_wavelength 1.623899
 _instrument.calib_twotheta_offset -0.45778

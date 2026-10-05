@@ -36,8 +36,8 @@ B2B = ['rise_alpha_0', 'rise_alpha_1', 'decay_beta_0', 'decay_beta_1']
 FCJ = ['asym_fcj_1', 'asym_fcj_2']
 BEBA = ['asym_beba_a0', 'asym_beba_b0', 'asym_beba_a1', 'asym_beba_b1', 'asym_beba_limit']
 PROFILES = {
-    'cwl-pseudo-voigt': CW,
-    'cwl-thompson-cox-hastings': CW + FCJ,
+    'cwl-tch-pseudo-voigt': CW,
+    'cwl-tch-pseudo-voigt-fcj': CW + FCJ,
     'cwl-pseudo-voigt-berar-baldinozzi-asymmetry': CW + BEBA,
     'tof-jorgensen': B2B + GAUSS,
     'tof-jorgensen-von-dreele': B2B + GAUSS + LORENTZ,
