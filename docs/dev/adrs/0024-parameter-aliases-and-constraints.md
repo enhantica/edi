@@ -1,10 +1,10 @@
 # 0024. Parameter aliases and constraints: crysta decides, edi keeps the text
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-05
-- **Implementation:** 🟡 Partially implemented — the rows, the loader, the conversion to crysta, load-time checking,
-  dependence marks, the free-flag rule, the fit write-back and undo of dependents, and the Python surface; the app's
-  display of constrained parameters follows with ADR-0019's amendment
+- **Implementation:** ✅ Implemented — the rows, the loader, the conversion to crysta, load-time checking,
+  dependence marks, the free-flag rule, the fit write-back and undo of dependents, the Python surface, and the app's
+  display of constrained parameters (ADR-0019's amendment)
 - **Priority:** High
 - **Forward constraint (binding on new features):**
   - edi never parses an expression and never decides whether a parameter is dependent: crysta's public API answers
