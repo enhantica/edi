@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-05T13:04:49Z
+# measured_utc = 2026-10-05T13:22:41Z
 #
-# Recorded from: notebook-message.log (1 node(s) measured once, 6021 banked, 0 stale row(s) dropped)
-# Collected tests: 6597; with a reported duration: 3938
+# Recorded from: edi-focused.log (5 node(s) measured once, 6020 banked, 0 stale row(s) dropped)
+# Collected tests: 6600; with a reported duration: 3939
 # Module-scoped fixture costs recorded: 14
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 6597
+# inventory_python = 6600
 # inventory_cpp = 268
-# inventory_measured = 6022
+# inventory_measured = 6025
 # inventory_unmeasured = 843
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
@@ -5780,9 +5780,12 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_c11_t43_fit_status_contract.py:
 0.000	tests/unit/py/test_c11_t48_data_path_factory.py::test_c11_t48_data_path_factory_preserves_columns_and_sigma_rules
 0.070	tests/unit/py/test_c11_t48_python_surface_necessity.py::test_c11_t48_adp_type_and_it_number_round_trip_from_the_edi_text
 0.000	tests/unit/py/test_c11_t48_python_surface_necessity.py::test_c11_t48_missing_declared_corpus_fails_instead_of_skipping
-0.060	tests/unit/py/test_c11_t48_python_surface_necessity.py::test_c11_t48_necessity_manifest_is_total_and_refusal_controls_can_fail
-0.000	tests/unit/py/test_c11_t48_python_surface_necessity.py::test_c11_t48_post_base_removal_records_are_protected_against_deletion
+0.050	tests/unit/py/test_c11_t48_python_surface_necessity.py::test_c11_t48_necessity_manifest_is_total_and_refusal_controls_can_fail
+0.010	tests/unit/py/test_c11_t48_python_surface_necessity.py::test_c11_t48_post_base_removal_records_are_protected_against_deletion
 0.000	tests/unit/py/test_c11_t48_python_surface_necessity.py::test_c11_t48_removed_manifest_paths_and_cell_cubic_are_unreachable
+0.000	tests/unit/py/test_c11_t48_python_surface_necessity.py::test_c11_t48_retained_baseline_cannot_shrink_or_gain_paths[drop-member]
+0.000	tests/unit/py/test_c11_t48_python_surface_necessity.py::test_c11_t48_retained_baseline_cannot_shrink_or_gain_paths[drop-name]
+0.000	tests/unit/py/test_c11_t48_python_surface_necessity.py::test_c11_t48_retained_baseline_cannot_shrink_or_gain_paths[invent-member]
 0.010	tests/unit/py/test_c11_t48_python_surface_necessity.py::test_c11_t48_validation_error_tiers_are_value_errors_with_diagnostics[domain]
 0.000	tests/unit/py/test_c11_t48_python_surface_necessity.py::test_c11_t48_validation_error_tiers_are_value_errors_with_diagnostics[schema]
 0.000	tests/unit/py/test_c11_t48_python_surface_necessity.py::test_c11_t48_validation_error_tiers_are_value_errors_with_diagnostics[syntax]
