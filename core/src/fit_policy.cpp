@@ -15,9 +15,34 @@ namespace edi {
 
 namespace detail {
 
+namespace {
+
+// Every structure an enabled linked structure names takes part in the fit and must have atom sites. A
+// structure no enabled link names is not fitted, so it may be empty. An id naming no structure is left
+// to the engine, which refuses it before choosing a structure.
+void require_fitted_structures_have_sites(const Project& project, const char* surface) {
+    for (const auto& experiment : project.experiments) {
+        for (const auto& link : experiment->linked_structures) {
+            if (!link->enabled.get()) {
+                continue;
+            }
+            const std::string& id = link->structure_id.value();
+            for (const auto& structure : project.structures) {
+                const bool named = structure->name.value() == id || (id.empty() && project.structures.size() == 1);
+                if (named && structure->atom_sites.empty()) {
+                    throw std::invalid_argument(std::string(surface) + ": structure '" +
+                                                detail::printable_id(structure->name.value()) + "' has no atom sites");
+                }
+            }
+        }
+    }
+}
+
+}  // namespace
+
 // --- V3: identity rejection --------------------------------------------------------------------
 void validate_fit_request(const std::vector<double>& grid, const std::vector<double>& observed,
-                             const std::vector<double>& sigma, const Structure& structure) {
+                             const std::vector<double>& sigma, const Project& project) {
     if (grid.empty() || observed.empty() || sigma.empty()) {
         throw std::invalid_argument("edi fit: empty measured data (grid/observed/sigma)");
     }
@@ -25,12 +50,10 @@ void validate_fit_request(const std::vector<double>& grid, const std::vector<dou
         throw std::invalid_argument(
             "edi fit: measured data columns (grid, observed, sigma) must have equal length");
     }
-    if (structure.atom_sites.empty()) {
-        throw std::invalid_argument("edi fit: structure has no atom sites");
-    }
+    require_fitted_structures_have_sites(project, "edi fit");
 }
 
-void validate_joint_request(const Structure& structure,
+void validate_joint_request(const Project& project,
                             const ItemVec<BraggPdExperiment>& experiments,
                             const std::vector<PdDataBase>& patterns) {
     if (experiments.empty()) {
@@ -43,9 +66,7 @@ void validate_joint_request(const Structure& structure,
             std::to_string(experiments.size()) + " banks, got " + std::to_string(patterns.size()) +
             " patterns)");
     }
-    if (structure.atom_sites.empty()) {
-        throw std::invalid_argument("edi fit_joint: structure has no atom sites");
-    }
+    require_fitted_structures_have_sites(project, "edi fit_joint");
     // Bank identity: the name is the engine's joint label prefix AND edi's own result key, so an
     // empty, duplicated, delimiter-carrying, or site-colliding name would make a refined parameter's
     // identity ambiguous. Rejected up front, which is what keeps the result mapping total.
@@ -68,12 +89,18 @@ void validate_joint_request(const Structure& structure,
                                         std::to_string(it->second) + " and " +
                                         std::to_string(bank) + ")");
         }
-        for (const auto& atom_item : structure.atom_sites) {
-            const AtomSite& atom = *atom_item;
-            if (atom.id == name) {
-                throw std::invalid_argument("edi fit_joint: experiment name '" +
-                                            detail::printable_id(name) +
-                                            "' collides with an atom site label");
+        for (const auto& structure : project.structures) {
+            for (const auto& atom_item : structure->atom_sites) {
+                if (atom_item->id == name) {
+                    throw std::invalid_argument("edi fit_joint: experiment name '" +
+                                                detail::printable_id(name) +
+                                                "' collides with an atom site label");
+                }
+            }
+            // With several structures, labels start with the structure's name as well.
+            if (project.structures.size() > 1 && structure->name.value() == name) {
+                throw std::invalid_argument("edi fit_joint: experiment name '" + detail::printable_id(name) +
+                                            "' collides with a structure name");
             }
         }
         const PdDataBase& pattern = patterns[bank];

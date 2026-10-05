@@ -2375,7 +2375,7 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
     // structured ValueError, never a partial/silent result. The model is written only on success.
     // The checks themselves are edi-side policy (fit_policy.cpp).
     validate_descent(descent, "edi fit");
-    detail::validate_fit_request(grid, observed, sigma, structure());
+    detail::validate_fit_request(grid, observed, sigma, *this);
     try {
         // Stateless rebuild-per-fit: the same single crysta-touching build path
         // (build_crysta_project + select_scattering) the forward accessors use — no persistent
@@ -2984,7 +2984,7 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
     // engine contact, so a malformed request can never partially mutate the model (ADR-0003 pt 5).
     // The checks themselves are edi-side policy (fit_policy.cpp).
     validate_descent(descent, "edi fit_joint");
-    detail::validate_joint_request(structure(), experiments, patterns);
+    detail::validate_joint_request(*this, experiments, patterns);
     try {
         // Stateless rebuild-per-fit, the same shape as the single-bank path: one crysta Project over
         // the shared structure and EVERY loaded bank, so crysta's own free_from_model dispatches to
