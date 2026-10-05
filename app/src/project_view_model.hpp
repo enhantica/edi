@@ -22,6 +22,7 @@
 #include "edi/model.hpp"
 #include "edi/scan.hpp"
 #include "edi/worker.hpp"
+#include "evolution_view_model.hpp"
 #include "experiment_view_model.hpp"
 #include "fit_view_model.hpp"
 #include "parameter_table_model.hpp"
@@ -104,6 +105,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // rule, with its unit ("temperature (K)").
     Q_PROPERTY(bool scan READ scan CONSTANT)
     Q_PROPERTY(QStringList scanColumns READ scanColumns CONSTANT)
+    // The Evolution tab: a fitted parameter across the scan's datasets (scan projects).
+    Q_PROPERTY(edi_app::EvolutionViewModel* evolution READ evolution CONSTANT)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
     // The app bar's Undo (edi ADR-0024): the newest recorded change — an edit of the aliases or
     // constraints, or a fit — is undone, so they undo in the order they were made.
@@ -150,6 +153,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool canCreateExperiment() const;
     bool scan() const { return scan_; }
     QStringList scanColumns() const { return scan_columns_; }
+    EvolutionViewModel* evolution() const { return evolution_; }
     QString lastError() const { return last_error_; }
     bool calculating() const { return calculating_; }
     StructureViewOptions* structureViewOptions() const { return structure_view_options_; }
@@ -262,6 +266,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // shown, the dataset shown, and the template the dataset views are made from, kept until an edit makes the
     // shown state the template (edi ADR-0017 §19).
     bool scan_ = false;
+    EvolutionViewModel* evolution_ = nullptr;
     QStringList scan_columns_;
     edi::ScanDatasets scan_datasets_;
     edi::ScanResults scan_results_;

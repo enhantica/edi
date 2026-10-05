@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "fit_view_model.hpp"
 
+#include <algorithm>
+#include <cmath>
+
 #include "analysis_view_model.hpp"
 #include "edi/edit.hpp"
 #include "edi/selectors.hpp"
@@ -109,6 +112,80 @@ void FitResultListModel::setRecord(const edi::Project& project) {
     setTableRows(rows);
 }
 
+ScanSummary ScanSummary::of(const edi::ScanDatasets& datasets, const edi::ScanResults& results) {
+    ScanSummary summary;
+    summary.files = static_cast<int>(datasets.files.size());
+    std::size_t chi_column = 1, success_column = 2;
+    for (std::size_t i = 0; i < results.header.size(); ++i) {
+        if (results.header[i] == "fit_result.reduced_chi_square") chi_column = i;
+        if (results.header[i] == "fit_result.success") success_column = i;
+    }
+    bool first = true;
+    for (const std::string& file : datasets.files) {
+        const auto row = results.rows.find(file);
+        if (row == results.rows.end()) {
+            continue;
+        }
+        ++summary.fitted;
+        const std::vector<std::string>& cells = row->second;
+        if (success_column < cells.size() && cells[success_column] == "True") {
+            ++summary.ok;
+        } else {
+            ++summary.failed;
+        }
+        bool number = false;
+        const double chi2 =
+            chi_column < cells.size() ? QString::fromStdString(cells[chi_column]).toDouble(&number) : 0.0;
+        if (number && std::isfinite(chi2)) {
+            summary.chi_min = first ? chi2 : std::min(summary.chi_min, chi2);
+            summary.chi_max = first ? chi2 : std::max(summary.chi_max, chi2);
+            first = false;
+        }
+    }
+    if (summary.fitted > 0) {
+        summary.outcome = summary.failed > 0               ? QStringLiteral("failed")
+                          : summary.fitted < summary.files ? QStringLiteral("stopped")
+                                                           : QStringLiteral("success");
+    }
+    return summary;
+}
+
+namespace {
+
+QString chi_range(const ScanSummary& summary) {
+    return summary.chi_min == summary.chi_max ? chi(summary.chi_min)
+                                              : QStringLiteral("%1–%2").arg(chi(summary.chi_min), chi(summary.chi_max));
+}
+
+QString outcome_word(const QString& key) {
+    if (key == QLatin1String("success")) return FitViewModel::tr("Success");
+    if (key == QLatin1String("stopped")) return FitViewModel::tr("Stopped");
+    return FitViewModel::tr("Failed");
+}
+
+}  // namespace
+
+void FitResultListModel::setScan(const ScanSummary& summary) {
+    if (summary.fitted == 0) {
+        clear();
+        return;
+    }
+    QList<Row> rows;
+    int key = 0;
+    const auto row = [&rows, &key](const QString& icon, const QString& metric, const QString& value,
+                                   const QString& outcome = QString()) {
+        rows.append(
+            {reinterpret_cast<const void*>(static_cast<std::uintptr_t>(++key)), {icon, metric, value, outcome}});
+    };
+    row(QStringLiteral("flask"), tr("Minimizer"), QStringLiteral("crysta"));
+    row(QString(), tr("Overall status"), outcome_word(summary.outcome), summary.outcome);
+    row(QStringLiteral("copy"), tr("Files fitted"), QStringLiteral("%1/%2").arg(summary.fitted).arg(summary.files));
+    row(QStringLiteral("check-circle"), tr("Converged"), QString::number(summary.ok));
+    row(QStringLiteral("times-circle"), tr("Failed"), QString::number(summary.failed));
+    row(QStringLiteral("ruler"), tr("Goodness-of-fit range (reduced χ²)"), chi_range(summary));
+    setTableRows(rows);
+}
+
 void FitResultListModel::clear() { setTableRows({}); }
 
 // ---- FitViewModel ---------------------------------------------------------------------------------
@@ -143,6 +220,21 @@ void FitViewModel::showRecord() {
                 recorded_outcome(result));
     setElapsed(duration(result.fitting_time));
     results_->setRecord(project_);
+}
+
+void FitViewModel::showScan(const edi::ScanDatasets& datasets, const edi::ScanResults& results) {
+    scan_ = ScanSummary::of(datasets, results);
+    emit scanSummaryChanged();
+    emit scanFilesChanged();
+    emit scanOkChanged();
+    emit scanFailedChanged();
+    if (scan_.fitted == 0) {
+        return;
+    }
+    // The driver's results record no time.
+    setProgress(QString(), chi_range(scan_), outcome_word(scan_.outcome), scan_.outcome);
+    setElapsed(QString());
+    results_->setScan(scan_);
 }
 
 FitViewModel::~FitViewModel() { close(); }

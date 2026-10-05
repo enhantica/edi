@@ -182,6 +182,7 @@ EaElements.StatusBar {
             anchors.verticalCenter: parent.verticalCenter
             font.family: EaStyle.Fonts.ptMono.name
             font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.9
+            textFormat: Text.StyledText
             color: EaStyle.Colors.themeForeground
             Behavior on color {
                 EaAnimations.ThemeChange {}
@@ -191,7 +192,9 @@ EaElements.StatusBar {
                     return "";
                 if (fitArea.running)
                     return fitArea.joined([bar.fit.elapsed, fitArea.chi]);
-                const rest = fitArea.joined([fitArea.iterations, bar.fit.elapsed, fitArea.chi]);
+                // A scan's summary: files, then the ok and fail counts (a fail count above zero in red), time, χ².
+                const fail = qsTr("%1 fail").arg(bar.fit.scanFailed);
+                const rest = bar.fit.scanSummary ? fitArea.joined([bar.fit.scanFiles, qsTr("%1 ok").arg(bar.fit.scanOk), bar.fit.scanFailed > 0 ? `<font color="${EaStyle.Colors.red}">${fail}</font>` : fail, bar.fit.elapsed, fitArea.chi]) : fitArea.joined([fitArea.iterations, bar.fit.elapsed, fitArea.chi]);
                 return rest === "" ? "" : FitOutcomes.separator.trim() + " " + rest;
             }
         }

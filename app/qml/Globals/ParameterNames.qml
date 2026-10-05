@@ -17,7 +17,7 @@ QtObject {
 
     // A block kind's icon, as the block tables show it.
     function blockIcon(kind) {
-        return kind === "structure" ? "layer-group" : kind === "experiment" ? "microscope" : "";
+        return kind === "structure" ? "layer-group" : kind === "experiment" ? "microscope" : kind === "parameter" ? "chart-line" : "";
     }
 
     // easydiffractionbeta's parameter icons (Logic/Calculators.py), by `.edi` item name or its prefix; none

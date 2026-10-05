@@ -162,6 +162,9 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     connect(fit_, &FitViewModel::canUndoChanged, this, [this] { syncUndo(); });
     connect(fit_, &FitViewModel::runningChanged, this, [this] { syncUndo(); });
     note_fit();
+    if (scan_) {
+        fit_->showScan(scan_datasets_, scan_results_);
+    }
     // A scan project opens on its first dataset (the template dataset, once projects record one).
     if (scan_ && !scan_datasets_.files.empty()) {
         viewDataset(0);
@@ -404,6 +407,7 @@ void ProjectViewModel::loadScan() {
     const edi::Project& project = *project_;
     scan_ = project.sequential_fit.declared() && project.experiments.size() == 1 &&
             edi::is_scan_fitting_mode(edi::effective_fitting_mode(project));
+    evolution_ = new EvolutionViewModel(this);
     if (!scan_) {
         return;
     }
@@ -418,6 +422,8 @@ void ProjectViewModel::loadScan() {
         setLastError(QString::fromUtf8(refusal.what()));
     }
     scan_results_ = edi::read_scan_results(project);
+    evolution_->setScan(scan_datasets_, scan_results_, project.sequential_fit.extract.size(),
+                        scan_columns_.value(0));
 }
 
 void ProjectViewModel::syncDatasets() {

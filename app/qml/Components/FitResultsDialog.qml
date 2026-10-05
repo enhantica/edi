@@ -5,6 +5,7 @@ import QtQuick
 import QtQuick.Controls
 
 import EasyApplication.Gui.Style as EaStyle
+import EasyApplication.Gui.Elements as EaElements
 import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
@@ -18,12 +19,30 @@ AppDialog {
     id: dialog
 
     readonly property FitResultListModel results: Session.project ? Session.project.fit.results : null
+    // After a scan the table is the run's summary, with a button to the Evolution tab (edi ADR-0017 §19).
+    readonly property bool scan: Session.project !== null && Session.project.fit.scanSummary
 
     objectName: "fit.results"
     title: qsTr("Least-squares fit results")
     standardButtons: Dialog.Ok
     contentWidth: listArea.width
-    contentHeight: listArea.height
+    contentHeight: listArea.height + (dialog.scan ? evolutionButton.height + EaStyle.Sizes.fontPixelSize : 0)
+
+    EaElements.SideBarButton {
+        id: evolutionButton
+
+        objectName: "fit.results.evolution"
+        visible: dialog.scan
+        y: listArea.height + EaStyle.Sizes.fontPixelSize
+        width: listArea.width
+        fontIcon: "chart-line"
+        text: qsTr("Show evolution")
+        onClicked: {
+            dialog.close();
+            AppState.open(AppState.Page.Analysis);
+            AppState.evolutionRequested();
+        }
+    }
 
     Item {
         id: listArea

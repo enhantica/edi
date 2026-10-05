@@ -43,6 +43,8 @@ QtObject {
     // Save as, asked for from a page (Get started); the window's folder dialog answers (Main.qml; edi
     // ADR-0017 §13).
     signal saveAsRequested
+    // The Analysis page's Evolution tab, asked for from the results window after a scan (edi ADR-0017 §19).
+    signal evolutionRequested
 
     function open(page) {
         reached = Math.max(reached, page);

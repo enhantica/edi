@@ -52,6 +52,7 @@ qt_add_qml_module(edi_app_module
         src/pattern_chart_controller.hpp src/pattern_chart_controller.cpp
         src/chart_models.hpp src/chart_models.cpp
         src/measured_layer.hpp src/measured_layer.cpp
+        src/evolution_view_model.hpp src/evolution_view_model.cpp
         src/experiment_view_model.hpp src/experiment_view_model.cpp
         src/analysis_view_model.hpp src/analysis_view_model.cpp
         src/fit_view_model.hpp src/fit_view_model.cpp
@@ -80,6 +81,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/ParameterField.qml
         qml/Components/ParameterGrid.qml
         qml/Components/PatternChart.qml
+        qml/Components/EvolutionChart.qml
         qml/Components/SearchableComboBox.qml
         qml/Components/SelectorField.qml
         qml/Components/StatusBar.qml

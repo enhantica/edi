@@ -45,6 +45,11 @@ EaComponents.ContentPage {
     property bool blockOneColour: false
     signal blockActivated(int index)
 
+    // Shows one of the main area's tabs (the base's tab bar is the main content's first child).
+    function showMainTab(index) {
+        mainContent.children[0].currentIndex = index;
+    }
+
     // The base's fade above Continue, in the sidebar's colour, reads as a shadow over the Text tab's text view,
     // which runs under the Continue pill (edi ADR-0017 §7): hidden on that tab. The base
     // names it nowhere, so it is found as the SideBar's child with a gradient.

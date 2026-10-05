@@ -157,7 +157,7 @@ Row {
         spacing: 0
         enabled: row.blockIndex > 0
         fontIcon: "arrow-circle-up"
-        ToolTip.text: row.blockKind === "experiment" ? qsTr("Previous experiment") : qsTr("Previous structure")
+        ToolTip.text: row.blockKind === "experiment" ? qsTr("Previous experiment") : row.blockKind === "parameter" ? qsTr("Previous parameter") : qsTr("Previous structure")
         onClicked: row.step(-1)
     }
 
@@ -170,7 +170,7 @@ Row {
         spacing: 0
         enabled: row.blockIndex >= 0 && row.blockIndex < selector.count - 1
         fontIcon: "arrow-circle-down"
-        ToolTip.text: row.blockKind === "experiment" ? qsTr("Next experiment") : qsTr("Next structure")
+        ToolTip.text: row.blockKind === "experiment" ? qsTr("Next experiment") : row.blockKind === "parameter" ? qsTr("Next parameter") : qsTr("Next structure")
         onClicked: row.step(1)
     }
 }

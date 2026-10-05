@@ -863,6 +863,20 @@ refuses to write its bank rows into it.
   shown state becomes the template the next dataset views start from.
 - **A dataset's Fit outcome** is its results row's: *Success* when the driver's `fit_result.success` is true, *Failed*
   otherwise; *Not fitted* without a row. Its extracted values come from its row, or from its file once shown.
+- **The Evolution tab** (Analysis, after Pattern; text only like every tab, §2) draws one fitted parameter across
+  the datasets (`Components/EvolutionChart.qml`, `EvolutionViewModel`): a point per fitted dataset with its
+  uncertainty as an error bar, drawn as the pattern chart draws measured points. While the tab is shown the selector
+  row lists the parameters `analysis/results.csv` records instead of the datasets. x is the first extract rule's
+  value with its unit, or the file's place in the scan (the box at the chart's top left, *x: …* closed as the
+  pattern chart's). A click on a point shows that dataset, on every page; a line marks the shown one. Above 5000
+  points the chart draws, per x bucket, only the lowest and the highest, so every excursion stays visible. The tab
+  is disabled in a project that is not a scan.
+- **After a scan** the status bar's summary reads *outcome · fitted/files · N ok · N fail · χ² min–max*, a fail count
+  above zero in red, and the results window shows the run as a whole: Overall status, files fitted, converged,
+  failed and the χ² range, with *Show evolution*, which opens the Evolution tab. The outcome is the worst file's:
+  Failed if any failed, Stopped while files are left, else Success. The driver's `results.csv` records no time, so a
+  scan read from it shows none.
+
 ## Consequences
 
 - The design choices the owner makes by eye are reviewable against a written rule; the phase-2 reviewer checks

@@ -12,6 +12,7 @@
 
 #include "edi/fit_job.hpp"
 #include "edi/model.hpp"
+#include "edi/scan.hpp"
 #include "edi/worker.hpp"
 #include "row_table_model.hpp"
 
@@ -26,6 +27,20 @@ QString recorded_outcome(const edi::FitResultRecord& result);
 // The last fit's results, as diffraction-lib's "Least-squares fit results" table: roles
 // `icon` (a font icon), `metric`, `value` and `outcome` (the outcome key on the Overall status row, else
 // empty), from the fit's final result.
+// What a scan's results say about the run as a whole: the outcome is the worst file's (Failed when any failed,
+// Stopped when files are left, else Success; none without a fitted file).
+struct ScanSummary {
+    int files = 0;
+    int fitted = 0;
+    int ok = 0;
+    int failed = 0;
+    double chi_min = 0.0;
+    double chi_max = 0.0;
+    QString outcome;
+
+    static ScanSummary of(const edi::ScanDatasets& datasets, const edi::ScanResults& results);
+};
+
 class FitResultListModel : public RowTableModel {
     Q_OBJECT
     QML_ELEMENT
@@ -36,6 +51,9 @@ class FitResultListModel : public RowTableModel {
     // The rows of the result the project records (`_fit_result`): after a fit and after a project that holds
     // one is opened alike.
     void setRecord(const edi::Project& project);
+    // A scan's summary instead (edi ADR-0017 §19): its outcome, the files fitted, the ok and fail counts and the χ²
+    // range, from `analysis/results.csv`.
+    void setScan(const ScanSummary& summary);
     void clear();
 };
 
@@ -66,6 +84,11 @@ class FitViewModel : public QObject {
     Q_PROPERTY(QString status READ status NOTIFY statusChanged)
     Q_PROPERTY(QString outcome READ outcome NOTIFY outcomeChanged)
     Q_PROPERTY(edi_app::FitResultListModel* results READ results CONSTANT)
+    // A scan's summary (scan projects): `scanFiles` reads "fitted/files", then the ok and fail counts.
+    Q_PROPERTY(bool scanSummary READ scanSummary NOTIFY scanSummaryChanged)
+    Q_PROPERTY(QString scanFiles READ scanFiles NOTIFY scanFilesChanged)
+    Q_PROPERTY(int scanOk READ scanOk NOTIFY scanOkChanged)
+    Q_PROPERTY(int scanFailed READ scanFailed NOTIFY scanFailedChanged)
 
    public:
     FitViewModel(edi::Project& project, edi::work::Worker& worker, ProjectViewModel& owner, QObject* parent);
@@ -85,6 +108,12 @@ class FitViewModel : public QObject {
     QString status() const { return status_; }
     QString outcome() const { return outcome_; }
     FitResultListModel* results() const { return results_; }
+    bool scanSummary() const { return scan_.fitted > 0; }
+    QString scanFiles() const { return QStringLiteral("%1/%2").arg(scan_.fitted).arg(scan_.files); }
+    int scanOk() const { return scan_.ok; }
+    int scanFailed() const { return scan_.failed; }
+    // A scan project's results: the status bar's summary and the results window show the run as a whole.
+    void showScan(const edi::ScanDatasets& datasets, const edi::ScanResults& results);
 
     Q_INVOKABLE void start();
     Q_INVOKABLE void cancel();
@@ -108,6 +137,10 @@ class FitViewModel : public QObject {
     void goodnessOfFitChanged();
     void statusChanged();
     void outcomeChanged();
+    void scanSummaryChanged();
+    void scanFilesChanged();
+    void scanOkChanged();
+    void scanFailedChanged();
     // A fit ended with a result the project now holds (finished, cancelled or stopped early): the pop-up.
     void finished();
     // A fit was refused or failed; the project is unchanged.
@@ -131,6 +164,7 @@ class FitViewModel : public QObject {
     ProjectViewModel& owner_;
     std::unique_ptr<edi::FitJob> job_;
     FitResultListModel* results_;
+    ScanSummary scan_;
     // Frames wait here for the next frame tick, at most one at a time (the job calculates the next only
     // once this one is shown).
     std::optional<edi::FitFrame> pending_frame_;
