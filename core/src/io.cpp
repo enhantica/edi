@@ -3424,8 +3424,10 @@ UndoFitOutcome restore_fit_start(Project& project) {
         // never touches a fixed axis's uncertainty presence — an undone model matches the
         // pre-fit state on every axis. A no-op undo changes NOTHING, so the second undo stays
         // idempotent by construction.
-        complete_model_cell(project.structure());
-        restore_positional_dependents(project.structure(), restored);
+        for (const auto& structure : project.structures) {
+            complete_model_cell(*structure);
+            restore_positional_dependents(*structure, restored);
+        }
         clear_fit_result(project);  // The undone fit's result goes with it
     }
     return outcome;
@@ -3466,8 +3468,8 @@ void save_project(const Project& project, const std::string& directory) {
                           "shared fit-parameter id grammar cannot address its parameters");
         }
     };
-    if (!project.structures.empty()) {
-        refuse_reserved_name(project.structure().name, "structure");
+    for (const auto& structure : project.structures) {
+        refuse_reserved_name(structure->name, "structure");
     }
     for (const auto& experiment_item : project.experiments) {
         refuse_reserved_name(experiment_item->name, "experiment");

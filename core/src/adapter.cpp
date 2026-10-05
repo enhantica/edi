@@ -1094,8 +1094,9 @@ void save_project_via_crysta(const Project& model, const std::string& directory)
         }
         for (std::size_t index = 0; index < current.size(); ++index) {
             if (!current[index]) {
-                crysta::Parameter& scale = cproject.experiments[index].scale();
-                scale.set_value(scale.value());
+                for (crysta::LinkedStructure& link : cproject.experiments[index].linked_structures) {
+                    link.scale.set_value(link.scale.value());
+                }
             }
         }
     }
@@ -1199,6 +1200,17 @@ std::vector<crysta::AtomSite> to_crysta_atom_sites(const ItemVec<AtomSite>& atom
     }
     return sites;
 }
+
+namespace {
+// The engine experiment is built around one scale. It is seeded from the first row, and
+// apply_post_build_fields then writes every link, so no phase is dropped.
+const LinkedStructure& seed_link(const ExperimentBase& e) {
+    if (e.linked_structures.empty()) {
+        throw std::out_of_range("experiment '" + e.name.value() + "' links no structure");
+    }
+    return *e.linked_structures[0];
+}
+}  // namespace
 
 // Fields the public TofJorgensenExperiment builder has no setter for, applied to the built
 // experiment. They are plain public members of crysta::ExperimentBase, so this needs no
@@ -1447,7 +1459,7 @@ crysta::BraggPdExperiment to_crysta_cwl_experiment(const ExperimentBase& e) {
                                 param(point->intensity, crysta::BACKGROUND, "intensity"));
     }
     crysta::BraggPdExperiment built(std::move(peak), std::move(instrument),
-                             param(e.linked_structure().scale, crysta::SCALE, "scale"), std::move(background));
+                             param(seed_link(e).scale, crysta::SCALE, "scale"), std::move(background));
     built.cutoff_fwhm = e.peak.cutoff_fwhm;
     built.kind = crysta::BeamModeEnum::ConstantWavelength;  // before the post-build fill: the
     // TOF-only abscor guard reads it
@@ -1516,7 +1528,7 @@ crysta::BraggPdExperiment to_crysta_experiment(const ExperimentBase& e) {
         .dtt1(state(e.instrument.calib_d_to_tof_linear))
         .dtt2(state(e.instrument.calib_d_to_tof_quadratic))
         .d_to_tof_reciprocal(state(e.instrument.calib_d_to_tof_reciprocal))
-        .scale(state(e.linked_structure().scale))
+        .scale(state(seed_link(e).scale))
         .setup_twotheta_bank(e.instrument.setup_twotheta_bank.value)
         .cutoff_fwhm(e.peak.cutoff_fwhm);
 
@@ -2399,7 +2411,6 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
             project.experiment().data = crysta::PdDataBase(grid, observed, sigma);
         }
         const std::size_t considered = project.collect_parameters().size();  // _fit_result
-        crysta::NeutronScattering scattering = select_scattering(structure());
         make_fit_ready(project.experiment());
 
         // Measured pattern -> mask the model's excluded regions, exactly as the crysta CLI does
@@ -2562,6 +2573,8 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
         // Delegate the ENTIRE LM loop to crysta's public minimizer at the CLI defaults
         // (separable_linear, max_iter 50, CutoffPolicy::Off, SolverRung::Lm, chi2/param tol) — the
         // defaults fit_problem already carries, so the fit is bit-comparable to the CLI oracle.
+        // The one structure's declared scattering lengths; a phase fit reads each phase's own.
+        crysta::NeutronScattering scattering = select_scattering(structure());
         crysta::PowderBraggResidual provider(project, scattering, std::move(measured),
                                              experiment().instrument.setup_twotheta_bank.value, experiment().peak.cutoff_fwhm,
                                              std::move(free));
@@ -3033,7 +3046,6 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
         project.fitting_mode = crysta::model_token_from_file(
             crysta::TokenField::FittingMode, crysta::BeamModeEnum::TimeOfFlight,
             fitting_mode.empty() ? std::string("joint") : fitting_mode);
-        crysta::NeutronScattering scattering = select_scattering(structure());
 
         // One masked pattern per bank, in `experiments` order. The joint residual's constructor does
         // NOT apply exclusions (only its from_model helper does, and that reads data embedded in the
@@ -3191,6 +3203,7 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
         // the same settings `crysta fit <project> --rung lm` resolves to, so the fit is comparable to
         // the published path. The provider is move-only; it owns the per-bank sub-projects, built
         // from its own copy of the project.
+        crysta::NeutronScattering scattering = select_scattering(structure());  // the one structure's
         crysta::JointBraggResidual provider(project, scattering, std::move(measured));
         return finish(provider);
     } catch (const std::invalid_argument&) {

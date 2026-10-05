@@ -79,14 +79,18 @@ std::optional<ResolvedParameter> resolve_instrument_label(ExperimentBase& experi
         return ResolvedParameter{&experiment.background[index]->intensity,
                                  path_prefix + "background[" + std::to_string(index) + "].intensity"};
     }
+    // An unprefixed scale or texture label names the bank's one link and its one row; a bank of
+    // several phases is addressed through `<structure>.scale` / `<structure>.march_*` only, so a
+    // bare label never lands on the first phase.
     if (label == "scale") {
+        if (experiment.linked_structures.size() != 1) return std::nullopt;
         return ResolvedParameter{&experiment.linked_structure().scale,
                                  path_prefix + "linked_structure.scale"};
     }
-    // Crysta emits the preferred-orientation pair under its leaf names; the one row (crysta
-    // links one structure) is element 0 of the collection.
     if (label == "march_r" || label == "march_random_fract") {
-        if (experiment.preferred_orientation.size() == 0) return std::nullopt;
+        if (experiment.preferred_orientation.size() != 1 || experiment.linked_structures.size() != 1) {
+            return std::nullopt;
+        }
         PrefOrient& row = *experiment.preferred_orientation[0];
         return ResolvedParameter{label == "march_r" ? &row.march_r : &row.march_random_fract,
                                  path_prefix + "preferred_orientation[0]." + label};
@@ -337,6 +341,11 @@ std::optional<ResolvedParameter> resolve_project_label(Project& project, Experim
     if (auto structural = resolve_prefixed_structural(project, label)) {
         return structural;
     }
+    if (project.structures.size() > 1) {
+        // Several structures: a structural label carries its structure's prefix (above); an
+        // unprefixed one is the bank's own instrument label or nothing, never structure 0's.
+        return resolve_instrument_label(experiment, label, "experiment.");
+    }
     return resolve_label(project.structure(), experiment, label);
 }
 
@@ -366,6 +375,13 @@ std::optional<ResolvedParameter> resolve_joint_project_label(Project& project, c
         if (auto structural = resolve_prefixed_structural(project, label)) {
             return structural;
         }
+        // One bank: crysta emits its instrument labels unprefixed. Anything else names no
+        // parameter here, never the first structure's.
+        if (project.experiments.size() == 1) {
+            ExperimentBase& bank = *project.experiments[0];
+            return resolve_instrument_label(bank, label, "experiments[" + bank.name.value() + "].");
+        }
+        return std::nullopt;
     }
     return resolve_joint_label(project.structure(), project.experiments, label);
 }
