@@ -170,8 +170,8 @@ EaElements.StatusBar {
             width: EaStyle.Sizes.fontPixelSize * 20
             anchors.verticalCenter: parent.verticalCenter
             // A scan fills the bar by its files (S3); a single fit, whose length is unknown, with stripes.
-            indeterminate: !fitArea.scanning
-            fraction: fitArea.scanning ? bar.fit.scanProgress : 0
+            indeterminate: bar.fit === null || !bar.fit.scanning
+            fraction: bar.fit !== null && bar.fit.scanning ? bar.fit.scanProgress : 0
             fontFamily: EaStyle.Fonts.ptMono.name
             text: fitArea.scanning ? bar.fit.scanText : fitArea.joined([qsTr("fitting"), fitArea.iterations])
         }
@@ -210,13 +210,21 @@ EaElements.StatusBar {
         }
         // Scan results the template has changed since stay, marked out of date until the next run replaces them.
         Text {
+            anchors.verticalCenter: parent.verticalCenter
+            visible: outOfDate.visible
+            font: outOfDate.font
+            color: EaStyle.Colors.themeForeground
+            text: FitOutcomes.separator.trim()
+        }
+        Text {
+            id: outOfDate
             objectName: "statusBar.fit.outOfDate"
             anchors.verticalCenter: parent.verticalCenter
             visible: !fitArea.running && bar.fit !== null && bar.fit.outOfDate
             font.family: EaStyle.Fonts.ptMono.name
             font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.9
             color: EaStyle.Colors.orange
-            text: FitOutcomes.separator.trim() + " " + qsTr("out of date")
+            text: qsTr("out of date")
         }
     }
 

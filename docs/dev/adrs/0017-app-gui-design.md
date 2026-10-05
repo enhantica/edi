@@ -865,8 +865,9 @@ refuses to write its bank rows into it.
   otherwise; *Not fitted* without a row. Its extracted values come from its row, or from its file once shown.
 - **The Evolution tab** (Analysis, after Pattern; text only like every tab, §2) draws one fitted parameter across
   the datasets (`Components/EvolutionChart.qml`, `EvolutionViewModel`): a point per fitted dataset with its
-  uncertainty as an error bar, drawn as the pattern chart draws measured points. While the tab is shown the selector
-  row lists the parameters `analysis/results.csv` records instead of the datasets. x is the first extract rule's
+  uncertainty as an error bar, drawn as the pattern chart draws measured points. The page's selector row keeps listing the
+  datasets, as on the Pattern tab; a selector in the chart's own toolbar, beside the x box, chooses among the
+  parameters `analysis/results.csv` records. x is the first extract rule's
   value with its unit, or the file's place in the scan (the box at the chart's top left, *x: …* closed as the
   pattern chart's). A click on a point shows that dataset, on every page; a line marks the shown one. Above 5000
   points the chart draws, per x bucket, only the lowest and the highest, so every excursion stays visible. The tab

@@ -17,9 +17,6 @@ WorkflowPage {
     readonly property ProjectViewModel project: Session.project
     readonly property AnalysisViewModel analysis: project ? project.analysis : null
     readonly property ExperimentViewModel experiment: project ? project.currentExperiment : null
-    readonly property EvolutionViewModel evolution: project ? project.evolution : null
-    // The Evolution tab is the one shown: the selector row then chooses the parameter it draws.
-    readonly property bool evolutionShown: evolutionChart.SwipeView.isCurrentItem
 
     // Each category's content, by `.edi` category id.
     readonly property var contents: ({
@@ -91,22 +88,17 @@ WorkflowPage {
     // The same selector as the Experiment page's, over the one current experiment the project holds, so
     // choosing here or there is one choice (edi ADR-0017 §7).
     blockSelectorShown: true
-    blockSelectorRightInset: evolutionShown ? evolutionChart.toolbarRightInset : chartView.toolbarRightInset
-    blocks: evolutionShown ? (evolution ? evolution.parameters : null) : project ? project.experiments : null
+    blockSelectorRightInset: chartView.toolbarRightInset
+    blocks: project ? project.experiments : null
     blocksTextRole: "label"
-    blockKind: evolutionShown ? "parameter" : "experiment"
-    blockOutcomeRole: evolutionShown ? "" : "fitOutcome"
-    blockCurrentOutcome: experiment && !evolutionShown ? experiment.fitOutcome : ""
+    blockKind: "experiment"
+    blockOutcomeRole: "fitOutcome"
+    blockCurrentOutcome: experiment ? experiment.fitOutcome : ""
     blockOneColour: project !== null && project.scan
-    blockTemplateRole: project !== null && project.scan && !evolutionShown ? "isTemplate" : ""
-    blockCurrentTemplate: project !== null && project.scan && !evolutionShown && project.currentExperimentIndex === project.templateIndex
-    blockIndex: evolutionShown ? (evolution ? evolution.currentParameter : -1) : project ? project.currentExperimentIndex : -1
-    onBlockActivated: index => {
-        if (page.evolutionShown)
-            page.evolution.currentParameter = index;
-        else
-            page.project.currentExperimentIndex = index;
-    }
+    blockTemplateRole: project !== null && project.scan ? "isTemplate" : ""
+    blockCurrentTemplate: project !== null && project.scan && project.currentExperimentIndex === project.templateIndex
+    blockIndex: project ? project.currentExperimentIndex : -1
+    onBlockActivated: index => page.project.currentExperimentIndex = index
     Connections {
         target: AppState
         function onEvolutionRequested() {

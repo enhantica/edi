@@ -24,12 +24,9 @@ EaElements.GroupBox {
     // A scan project lists its datasets: No. · Fit · Datablock · File · one column per extract rule, with no
     // colour column and no remove button (one template experiment shows them all).
     readonly property bool scan: project !== null && project.scan
-    // The table lays a row's cells out by their place among the header's, so the value columns are fixed
-    // cells, two at most, a column with no rule having no width.
+    // One column per extract rule, with its unit. The table lays a row's cells out by their place among the
+    // header's, so the header and each row repeat over the same list.
     readonly property var scanColumns: project ? project.scanColumns : []
-    function valueWidth(column) {
-        return column < group.scanColumns.length ? AppSizes.dataColumnWidth * 1.4 : 0;
-    }
 
     objectName: "group.experiments"
     title: qsTr("Experiments (%1)").arg(project ? project.experiments.count : 0)
@@ -69,13 +66,24 @@ EaElements.GroupBox {
                     horizontalAlignment: Text.AlignLeft
                     text: qsTr("File")
                 }
-                EaComponents.TableViewLabel {
-                    width: group.valueWidth(0)
-                    text: group.scanColumns.length > 0 ? group.scanColumns[0] : ""
-                }
-                EaComponents.TableViewLabel {
-                    width: group.valueWidth(1)
-                    text: group.scanColumns.length > 1 ? group.scanColumns[1] : ""
+                // Each in a plain item: a repeated label has no parent while it is made, and the table copies a
+                // header cell's alignment onto the row cell at its place, the repeater's own included while a row
+                // has not made its cells yet.
+                Repeater {
+                    property int horizontalAlignment: Text.AlignHCenter
+                    model: group.scanColumns
+                    delegate: Item {
+                        id: column
+                        required property string modelData
+                        property int horizontalAlignment: Text.AlignHCenter
+                        width: AppSizes.dataColumnWidth * 1.4
+                        height: EaStyle.Sizes.tableRowHeight
+                        EaComponents.TableViewLabel {
+                            anchors.fill: parent
+                            horizontalAlignment: column.horizontalAlignment
+                            text: column.modelData
+                        }
+                    }
                 }
                 EaComponents.TableViewLabel {
                     width: group.scan ? 0 : AppSizes.iconColumnWidth
@@ -154,7 +162,8 @@ EaElements.GroupBox {
                     }
                     EaElements.Button {
                         objectName: `experiments.loadData.${row.index}`
-                        visible: !group.scan && row.experiment !== null && row.experiment.calculationOnly
+                        // A simulation's only: a scan's datasets and loaded experiments have their data.
+                        visible: row.experiment !== null && row.experiment.calculationOnly
                         anchors.verticalCenter: parent.verticalCenter
                         width: parent.width
                         enabled: false
@@ -162,13 +171,20 @@ EaElements.GroupBox {
                     }
                 }
                 // What the scan's extract rules take from the dataset, with their units.
-                EaComponents.TableViewLabel {
-                    width: group.valueWidth(0)
-                    text: row.extracted && row.extracted.length > 0 ? row.extracted[0] : ""
-                }
-                EaComponents.TableViewLabel {
-                    width: group.valueWidth(1)
-                    text: row.extracted && row.extracted.length > 1 ? row.extracted[1] : ""
+                Repeater {
+                    property int horizontalAlignment: Text.AlignHCenter
+                    model: group.scanColumns.length
+                    delegate: Item {
+                        id: value
+                        required property int index
+                        property int horizontalAlignment: Text.AlignHCenter
+                        height: EaStyle.Sizes.tableRowHeight
+                        EaComponents.TableViewLabel {
+                            anchors.fill: parent
+                            horizontalAlignment: value.horizontalAlignment
+                            text: row.extracted && row.extracted.length > value.index ? row.extracted[value.index] : ""
+                        }
+                    }
                 }
                 EaComponents.TableViewButton {
                     objectName: `experiments.remove.${row.index}`

@@ -268,7 +268,6 @@ AnalysisViewModel::AnalysisViewModel(edi::Project& project, ProjectEditor& edito
       constraints_(new ConstraintListModel(project, editor, this)),
       categories_(new CategoryListModel(this)),
       text_(new BlockText([saved] { return saved("analysis/analysis.edi"); }, this)) {
-    syncFittingModeOptions();
     descent_options_->setOptions(edi::supported_descents(), edi::default_descent());
     minimizer_type_options_->setOptions(edi::supported_minimizer_types());
     sync();
@@ -317,22 +316,17 @@ void AnalysisViewModel::setLastError(const QString& error) {
     }
 }
 
-void AnalysisViewModel::syncFittingModeOptions() {
+void AnalysisViewModel::sync() {
     // A project that declares a scan fits one template experiment at a time: joint is offered only without one.
     const bool scan = project_.sequential_fit.declared();
-    if (fitting_mode_options_->count() > 0 && scan == scan_declared_) {
-        return;
+    if (fitting_mode_options_->count() == 0 || scan != scan_declared_) {
+        scan_declared_ = scan;
+        std::vector<std::string> modes = edi::supported_fitting_modes();
+        if (scan) {
+            std::erase(modes, std::string("joint"));
+        }
+        fitting_mode_options_->setOptions(modes, "single");
     }
-    scan_declared_ = scan;
-    std::vector<std::string> modes = edi::supported_fitting_modes();
-    if (scan) {
-        std::erase(modes, std::string("joint"));
-    }
-    fitting_mode_options_->setOptions(modes, "single");
-}
-
-void AnalysisViewModel::sync() {
-    syncFittingModeOptions();
     const QString mode = QString::fromStdString(edi::effective_fitting_mode(project_));
     if (mode != fitting_mode_) {
         fitting_mode_ = mode;

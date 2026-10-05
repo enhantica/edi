@@ -12,8 +12,8 @@ import edi.app
 // The Evolution tab's chart (edi ADR-0017 §19): one fitted parameter across a scan's datasets, each dataset a point
 // with its uncertainty as an error bar, drawn as the pattern chart draws measured points (MeasuredLayer). x is the
 // first extract rule's value or the file's place in the scan (the box at the top left); the parameter is chosen in
-// the selector row above. A click on a point shows that dataset, here and on the Pattern tab; a dashed line marks
-// the shown one.
+// the selector beside that box; the page's selector row above lists the datasets, as on the Pattern tab. A click on
+// a point shows that dataset, here and on the Pattern tab; a line marks the shown one.
 Item {
     id: chart
 
@@ -59,6 +59,20 @@ Item {
         closedTexts: chart.evolution ? chart.evolution.xModes.map(mode => qsTr("x: %1").arg(mode)) : []
         currentIndex: chart.evolution ? chart.evolution.xMode : 0
         onActivated: index => chart.evolution.xMode = index
+    }
+
+    // The parameter drawn, one of those results.csv records, with the previous and next buttons.
+    BlockSelector {
+        objectName: "evolution.parameters"
+        x: xBox.x + xBox.width + AppSizes.toolbarSpacing * 4
+        y: xBox.y + (xBox.height - height) / 2
+        width: Math.max(0, chart.width - x - chart.toolbarRightInset)
+        backgroundColor: EaStyle.Colors.chartBackground
+        blocks: chart.evolution ? chart.evolution.parameters : null
+        blocksTextRole: "label"
+        blockKind: "parameter"
+        blockIndex: chart.evolution ? chart.evolution.currentParameter : -1
+        onBlockActivated: index => chart.evolution.currentParameter = index
     }
 
     GraphsView {
