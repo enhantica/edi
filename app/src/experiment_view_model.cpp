@@ -146,6 +146,12 @@ void ExperimentViewModel::setCutoffFwhm(double cutoff) {
 
 void ExperimentViewModel::setLinkedStructureId(const QString& id) {
     edi::ExperimentBase& experiment = experiment_;
+    if (experiment.linked_structures.size() != 1) {
+        // A bank of several phases changes a link in its Linked structures table.
+        setLastError(tr("This experiment links %1 structures: change a link in its Linked structures table")
+                         .arg(experiment.linked_structures.size()));
+        return;
+    }
     setLastError(editor_.apply(edi::Edit::link_structure(experiment.linked_structure(), id.toStdString()), false));
 }
 
@@ -177,10 +183,15 @@ void ExperimentViewModel::sync() {
     update(absorption_type_, QString::fromStdString(experiment_.absorption.type.value_or("none")),
            &ExperimentViewModel::absorptionTypeChanged);
     update(cutoff_fwhm_, experiment_.peak.cutoff_fwhm, &ExperimentViewModel::cutoffFwhmChanged);
-    update(linked_structure_id_, QString::fromStdString(experiment_.linked_structure().structure_id.value()),
+    // The one link's id and scale; empty for a bank of several phases, whose rows the Linked structures
+    // table shows.
+    const bool one_link = experiment_.linked_structures.size() == 1;
+    update(linked_structure_id_,
+           one_link ? QString::fromStdString(experiment_.linked_structure().structure_id.value()) : QString(),
            &ExperimentViewModel::linkedStructureIdChanged);
     update(dataset_weight_, experiment_.dataset_weight, &ExperimentViewModel::datasetWeightChanged);
-    update(scale_, registry_.find(&experiment_.linked_structure().scale), &ExperimentViewModel::scaleChanged);
+    update(scale_, one_link ? registry_.find(&experiment_.linked_structure().scale) : nullptr,
+           &ExperimentViewModel::scaleChanged);
     // `data` is a loop in `.edi` — its points — though the core's category list counts no rows for it; the
     // sidebar titles it as a loop, with the number of measured points (edi ADR-0017 §3).
     measured_range_->sync();

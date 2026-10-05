@@ -3091,7 +3091,8 @@ struct ExperimentBase : std::enable_shared_from_this<ExperimentBase> {
     // experiment links one unnamed structure.
     ItemVec<LinkedStructure> linked_structures{
         std::vector<std::shared_ptr<LinkedStructure>>{std::make_shared<LinkedStructure>()}};
-    // The first link: the single-phase shortcut (throws when the experiment links none).
+    // The one link: the single-phase shortcut. Throws when the experiment links none or several, so
+    // a bank of several phases is never read or written as its first one.
     LinkedStructure& linked_structure();
     const LinkedStructure& linked_structure() const;
     AbsorptionBase absorption;
@@ -3890,11 +3891,19 @@ class Project {
         if (structures.empty()) {
             throw std::invalid_argument("edi Project: no structure (structures is empty)");
         }
+        if (structures.size() > 1) {  // several phases are never read as the first one
+            throw std::invalid_argument("edi Project: the project holds " + std::to_string(structures.size()) +
+                                        " structures; name one through structures");
+        }
         return *structures.front();
     }
     const Structure& structure() const {
         if (structures.empty()) {
             throw std::invalid_argument("edi Project: no structure (structures is empty)");
+        }
+        if (structures.size() > 1) {  // several phases are never read as the first one
+            throw std::invalid_argument("edi Project: the project holds " + std::to_string(structures.size()) +
+                                        " structures; name one through structures");
         }
         return *structures.front();
     }
@@ -4370,11 +4379,21 @@ inline LinkedStructure& ExperimentBase::linked_structure() {
     if (linked_structures.empty()) {
         throw std::out_of_range("experiment '" + name.value() + "' links no structure");
     }
+    if (linked_structures.size() > 1) {
+        throw std::invalid_argument("experiment '" + name.value() + "' links " +
+                                    std::to_string(linked_structures.size()) +
+                                    " structures; name one through linked_structures");
+    }
     return *linked_structures.front();
 }
 inline const LinkedStructure& ExperimentBase::linked_structure() const {
     if (linked_structures.empty()) {
         throw std::out_of_range("experiment '" + name.value() + "' links no structure");
+    }
+    if (linked_structures.size() > 1) {
+        throw std::invalid_argument("experiment '" + name.value() + "' links " +
+                                    std::to_string(linked_structures.size()) +
+                                    " structures; name one through linked_structures");
     }
     return *linked_structures.front();
 }

@@ -2025,15 +2025,18 @@ NB_MODULE(_edi, m) {
         .def_rw("experiment_type", &edi::ExperimentBase::experiment_type)
         .def_prop_rw(
             "linked_structure",
-            [](edi::ExperimentBase& self) { return self.linked_structures.front(); },
-            [](edi::ExperimentBase& self, const edi::LinkedStructure& value) {
-                // The single-phase shortcut: the first link takes the value's fields.
-                edi::LinkedStructure& first = self.linked_structure();
-                first.structure_id = value.structure_id.value();
-                first.scale = value.scale;
-                first.enabled = value.enabled.get();
+            [](edi::ExperimentBase& self) {
+                self.linked_structure();  // refuses a bank of no or several links
+                return self.linked_structures.front();
             },
-            "The first linked structure (the single-phase shortcut).")
+            [](edi::ExperimentBase& self, const edi::LinkedStructure& value) {
+                // The single-phase shortcut: the one link takes the value's fields.
+                edi::LinkedStructure& only = self.linked_structure();
+                only.structure_id = value.structure_id.value();
+                only.scale = value.scale;
+                only.enabled = value.enabled.get();
+            },
+            "The one linked structure (the single-phase shortcut); refused when the experiment links several.")
         .def_prop_ro(
             "linked_structures",
             [](edi::ExperimentBase& self) {
