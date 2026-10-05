@@ -49,6 +49,7 @@ class DemoDriver : public QObject {
     //                               running fit's moving bar never settles
     //   resize:<width>x<height>     the window's logical size
     //   type:<text>                 type the text into the focused field
+    //   expand:<group>              unfold a group, whether or not it is folded
     struct Step {
         QString image;
         QStringList actions;

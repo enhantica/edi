@@ -24,7 +24,7 @@ constexpr int kSettleIntervalMs = 100;
 constexpr int kSettleMaxAttempts = 30;
 // A fit the demo starts ends within this, or the run fails; `capture-now` captures this long after its actions.
 constexpr int kFitWaitMs = 300000;
-constexpr int kUnsettledCaptureMs = 1500;
+constexpr int kUnsettledCaptureMs = 150;
 
 // Open a bundled example from the Project page: scroll its row into view, click it.
 QStringList open_example(const QString& id) {
@@ -160,19 +160,23 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // ... and the fit area, the fitting buttons, the block selector in the main view's tab bar, the Experiments
     // explorer with its Fit column, type selectors and Create experiment, and a searchable combo box. Each
     // opens its example from Home, so `--demo-only t16-` runs them alone.
-    const QStringList start = {QStringLiteral("appBar.tab.home"), QStringLiteral("home.start")};
+    const QStringList start = {QStringLiteral("appBar.tab.home"), QStringLiteral("home.start"),
+                               QStringLiteral("expand:group.examples")};
     steps_.push_back({"t16-01-analysis", start + open_example("pd-neut-cwl_cosio-d20_start-1") + QStringList{analysis, basic}});
     steps_.push_back({"t16-02-fit-running", {"fitting.start", "capture-now"}});
     steps_.push_back({"t16-03-fit-done", {"wait-fit"}});
     steps_.push_back({"t16-04-fit-results", {"statusBar.fit.outcome"}});
-    steps_.push_back({"t16-05-experiments", {"choose:OK", experiment, basic, "group.experiments"}});
+    steps_.push_back({"t16-05-experiments", {"choose:OK", experiment, basic, "expand:group.experiments"}});
     steps_.push_back({"t16-06-structure", {"appBar.tab.structure", basic}});
     steps_.push_back({"t16-07-narrow", {"resize:900x768", experiment}});
-    steps_.push_back({"t16-08-create-experiment", QStringList{"resize:1280x768"} + start + open_example("pd-xray-cwl_lif")
-                                                      + QStringList{experiment, basic, "group.experiments", "experiments.create"}});
+    steps_.push_back({"t16-08-lif", QStringList{"resize:1280x768"} + start + open_example("pd-xray-cwl_lif")
+                                         + QStringList{experiment, basic, "expand:group.experiments"}});
+    steps_.push_back({"t16-08-create-experiment", {"experiments.create"}});
     steps_.push_back({"t16-09-create-tof", {"experimentType.beamMode", "choose:time-of-flight"}});
     steps_.push_back({"t16-10-create-undone", {"appBar.button.undo"}});
-    steps_.push_back({"t16-11-alias-search", {analysis, extras, "group.alias", "aliases.append", "alias.parameter.0"}});
+    steps_.push_back({"t16-11-alias-search", start + open_example("pd-neut-cwl_cosio-d20_scan-3f")
+                                                 + QStringList{analysis, extras, "expand:group.alias", "aliases.append",
+                                                               "alias.parameter.0"}});
     steps_.push_back({"t16-12-alias-search-filtered", {"type:scale"}});
     if (!only.isEmpty()) {
         std::erase_if(steps_, [&only](const Step& step) { return !step.image.startsWith(only); });
@@ -337,6 +341,14 @@ bool DemoDriver::perform(const QString& action) {
         }
         auto* content = qvariant_cast<QQuickItem*>(flickable->property("contentItem"));
         flickable->setProperty("contentY", content != nullptr ? view->mapToItem(content, line.topLeft()).y() : line.y());
+        return true;
+    }
+    if (action.startsWith(QLatin1String("expand:"))) {
+        QQuickItem* group = find(action.mid(7), false);
+        if (group == nullptr || !group->setProperty("collapsed", false)) {
+            fail(QStringLiteral("step %1: cannot expand '%2'").arg(steps_[current_].image, action.mid(7)));
+            return false;
+        }
         return true;
     }
     if (action.startsWith(QLatin1String("type:"))) {
