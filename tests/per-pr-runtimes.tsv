@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-05T12:30:09Z
+# measured_utc = 2026-10-05T12:43:25Z
 #
-# Recorded from: edi18-correct.log (2 node(s) measured once, 6015 banked, 0 stale row(s) dropped)
-# Collected tests: 6593; with a reported duration: 3937
-# Module-scoped fixture costs recorded: 13
+# Recorded from: edi18-app-receipts.log (5 node(s) measured once, 6017 banked, 0 stale row(s) dropped)
+# Collected tests: 6597; with a reported duration: 3938
+# Module-scoped fixture costs recorded: 14
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,15 +29,19 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 6593
+# inventory_python = 6597
 # inventory_cpp = 268
-# inventory_measured = 6017
-# inventory_unmeasured = 844
+# inventory_measured = 6022
+# inventory_unmeasured = 843
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_projects_open_and_populate_pages
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_missing_property_fails_the_production_qmllint_import_context
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_owner_amendments_execute_in_the_production_qml_host
+0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_owner_amendment_receipts_cover_every_original_gui_boundary[test_library_settable_scalars_and_derived_readonly]
+0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_owner_amendment_receipts_cover_every_original_gui_boundary[test_library_settable_table_columns_reach_core]
+0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_owner_amendment_receipts_cover_every_original_gui_boundary[test_settable_fields_are_editable_in_the_page]
+0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_owner_amendment_receipts_cover_every_original_gui_boundary[test_visible_xray_and_background_selectors_and_no_split_groups]
+0.003	tests/integration/app/test_e04_t1_runtime_escapes.py::test_owner_amendments_execute_in_the_production_qml_host
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_runtime_escape_reaches_the_same_assertions[broad_notifications]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_runtime_escape_reaches_the_same_assertions[missing_property]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_ui_compare.py::test_production_comparator_similarity_and_missing_escape[different-size-False]
@@ -6902,6 +6906,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # unaffected; excluding one test only moves the cost to the next sibling).
 # These rows mark and deselect NOTHING - kept for visibility
 # and the stale-module integrity refusal.
+# module-cost: 14.897	tests/integration/app/test_e04_t1_runtime_escapes.py
 # module-cost: 1.914	tests/integration/py/test_e04_t12_name_allowance.py
 # module-cost: 0.192	tests/integration/py/test_e09_t75_sdk_consumer.py
 # module-cost: 2.511	tests/system/py/test_c09_t9_output_contract_and_cli.py
