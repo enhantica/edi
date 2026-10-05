@@ -29,7 +29,7 @@ EaElements.StatusBar {
         let width = 0;
         let shown = 0;
         for (const item of items) {
-            if (item.visible) {
+            if (item.shown) {
                 width += item.labelledWidth;
                 shown += 1;
             }
@@ -38,11 +38,27 @@ EaElements.StatusBar {
         const fitWidth = fitArea.visible ? fitArea.width + spacing : 0;
         return width + Math.max(0, shown - 1) * spacing + fitWidth <= bar.width - 2 * EaStyle.Sizes.fontPixelSize;
     }
+    // How many of the items, in their order, fit beside the fit area with their icons and values only: the
+    // rest give way, the last first (owner, 2026-10-05: the items never run into the fit area).
+    readonly property int roomFor: {
+        const spacing = EaStyle.Sizes.fontPixelSize * 1.2;
+        const available = bar.width - 2 * EaStyle.Sizes.fontPixelSize - (fitArea.visible ? fitArea.width + spacing : 0);
+        let width = 0;
+        for (let i = 0; i < items.length; ++i) {
+            if (!items[i].shown)
+                continue;
+            width += (width > 0 ? spacing : 0) + items[i].compactWidth;
+            if (width > available)
+                return i;
+        }
+        return items.length;
+    }
 
     StatusBarItem {
         id: warningsItem
         objectName: "statusBar.warnings"
         showKey: bar.keysFit
+        room: bar.items.indexOf(warningsItem) < bar.roomFor
         keyIcon: "exclamation-triangle"
         keyText: qsTr("Messages")
         valueText: String(Session.loadWarnings ? Session.loadWarnings.unviewedCount : 0)
@@ -55,6 +71,7 @@ EaElements.StatusBar {
         id: projectItem
         objectName: "statusBar.project"
         showKey: bar.keysFit
+        room: bar.items.indexOf(projectItem) < bar.roomFor
         keyIcon: "archive"
         keyText: qsTr("Project")
         valueText: bar.project ? bar.project.name : qsTr("Undefined")
@@ -64,7 +81,8 @@ EaElements.StatusBar {
         id: structuresItem
         objectName: "statusBar.structures"
         showKey: bar.keysFit
-        visible: bar.project !== null
+        room: bar.items.indexOf(structuresItem) < bar.roomFor
+        shown: bar.project !== null && valueText !== ""
         keyIcon: "layer-group"
         keyText: qsTr("Structures")
         valueText: bar.project ? bar.project.structures.count : ""
@@ -74,7 +92,8 @@ EaElements.StatusBar {
         id: experimentsItem
         objectName: "statusBar.experiments"
         showKey: bar.keysFit
-        visible: bar.project !== null
+        room: bar.items.indexOf(experimentsItem) < bar.roomFor
+        shown: bar.project !== null && valueText !== ""
         keyIcon: "microscope"
         keyText: qsTr("Experiments")
         valueText: bar.project ? bar.project.experiments.count : ""
@@ -84,6 +103,7 @@ EaElements.StatusBar {
         id: calculatorItem
         objectName: "statusBar.calculator"
         showKey: bar.keysFit
+        room: bar.items.indexOf(calculatorItem) < bar.roomFor
         keyIcon: "calculator"
         keyText: qsTr("Calculator")
         valueText: "crysta"
@@ -93,7 +113,8 @@ EaElements.StatusBar {
         id: minimizerItem
         objectName: "statusBar.minimizer"
         showKey: bar.keysFit
-        visible: bar.project !== null
+        room: bar.items.indexOf(minimizerItem) < bar.roomFor
+        shown: bar.project !== null && valueText !== ""
         keyIcon: "level-down-alt"
         keyText: qsTr("Minimizer")
         valueText: bar.project ? bar.project.analysis.minimizerType : ""
@@ -103,7 +124,8 @@ EaElements.StatusBar {
         id: parametersItem
         objectName: "statusBar.parameters"
         showKey: bar.keysFit
-        visible: bar.project !== null
+        room: bar.items.indexOf(parametersItem) < bar.roomFor
+        shown: bar.project !== null && valueText !== ""
         keyIcon: "th-list"
         keyText: qsTr("Parameters")
         valueText: bar.project ? qsTr("%1 (%2 free, %3 fixed)").arg(bar.project.parameters.count).arg(bar.project.parameters.freeCount).arg(bar.project.parameters.fixedCount) : ""
