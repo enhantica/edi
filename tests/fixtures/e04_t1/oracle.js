@@ -2041,9 +2041,9 @@ var frozen = {
         "project.edi": "f7afd0f1cf662c51d11e80cec521b9d40993f11c66590448c6c8077ee31ac8a1",
         "structures/austenite.edi": "c6c7ed62fbdae12e38dbe046c87daea47a7dd90c00204e9ca5192cee24fe75c4",
         "structures/ferrite.edi": "0e480192a8a22bbab539176d0d4d4ce2248b7bdcc3c2c6d53b023db0bba6c330",
-        "experiments/expt_n2.edi": "ddd7c25a92756036d664085ace1ecbb9c717d61d855206f5ee924be448c05e3e",
-        "experiments/expt_s2.edi": "8100464287aa546b3aba15d31bb11a2edddd6cde575e7e0353e43afb7908b542",
-        "analysis/analysis.edi": "90378a847ac489271bec039ecbe199b85fcd79e986588f3523ea31e4dbbc2b10"
+        "experiments/expt_n2.edi": "d4120e1f08229d5454b9f8adbb776c6dd85292f96ab8f5b9e8940b4ebd096cd1",
+        "experiments/expt_s2.edi": "8e53f72146027cd8fcddf300656b8a7568b5d37f0d99f8bc30a14e4bec612c29",
+        "analysis/analysis.edi": "b9bf3cbba3d67f97f4e361606f39650fe14313635d32e5176f3269e6692f28dd"
       }
     }
   ],
@@ -3908,7 +3908,7 @@ var frozen = {
     {
       "project": "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project",
       "experiment": "expt_n2",
-      "sha256": "ddd7c25a92756036d664085ace1ecbb9c717d61d855206f5ee924be448c05e3e",
+      "sha256": "d4120e1f08229d5454b9f8adbb776c6dd85292f96ab8f5b9e8940b4ebd096cd1",
       "peakType": "tof-pseudo-voigt",
       "mode": "tof",
       "peakFields": [
@@ -4021,7 +4021,7 @@ var frozen = {
     {
       "project": "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project",
       "experiment": "expt_s2",
-      "sha256": "8100464287aa546b3aba15d31bb11a2edddd6cde575e7e0353e43afb7908b542",
+      "sha256": "8e53f72146027cd8fcddf300656b8a7568b5d37f0d99f8bc30a14e4bec612c29",
       "peakType": "tof-pseudo-voigt",
       "mode": "tof",
       "peakFields": [

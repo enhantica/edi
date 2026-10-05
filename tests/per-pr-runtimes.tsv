@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-05T12:29:53Z
+# measured_utc = 2026-10-05T13:21:45Z
 #
-# Recorded from: tests-seq26-edi-final-delivery-focused.log (2 node(s) measured once, 5870 banked, 0 stale row(s) dropped)
-# Collected tests: 6208; with a reported duration: 3844
+# Recorded from: tests-seq29-after.log (4 node(s) measured once, 5870 banked, 0 stale row(s) dropped)
+# Collected tests: 6210; with a reported duration: 3844
 # Module-scoped fixture costs recorded: 14
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 6208
+# inventory_python = 6210
 # inventory_cpp = 232
 # inventory_measured = 5872
-# inventory_unmeasured = 568
+# inventory_unmeasured = 570
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_projects_open_and_populate_pages
@@ -3815,6 +3815,7 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.p
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.py::test_complete_manifest_dispatches_every_declared_variant[pd-neut-tof_cecoal-polaris_chebyshev]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.py::test_complete_manifest_dispatches_every_declared_variant[pd-neut-tof_ceo2-pearl_polynomial]
 0.190	tests/system/py/test_c34_t24_cli_variants.py::test_complete_manifest_dispatches_every_declared_variant[pd-neut-tof_diamond-dream_basic]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.py::test_complete_manifest_dispatches_every_declared_variant[pd-neut-tof_ferrite-austenite-beer_joint]
 0.200	tests/system/py/test_c34_t24_cli_variants.py::test_complete_manifest_dispatches_every_declared_variant[pd-neut-tof_ncaf-wish-2bank_start-3]
 0.190	tests/system/py/test_c34_t24_cli_variants.py::test_complete_manifest_dispatches_every_declared_variant[pd-neut-tof_ncaf-wish-3bank_start-5]
 0.210	tests/system/py/test_c34_t24_cli_variants.py::test_complete_manifest_dispatches_every_declared_variant[pd-neut-tof_ncaf-wish-5bank_start-5]
@@ -3845,6 +3846,7 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.p
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-tof_cecoal-polaris_chebyshev-0]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-tof_ceo2-pearl_polynomial-0]
 0.420	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-tof_diamond-dream_basic-0]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-tof_ferrite-austenite-beer_joint-0]
 1.440	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-tof_ncaf-wish-2bank_start-3-0]
 2.230	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-tof_ncaf-wish-2bank_start-3-1]
 1.660	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-tof_ncaf-wish-3bank_start-5-0]
