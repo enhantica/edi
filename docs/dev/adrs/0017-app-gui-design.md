@@ -214,13 +214,14 @@ and `stepMaximum`.
 
 - **One block selector per page, in a row at the top of the main area** (owner, 2026-10-05; it was under the
   sidebar's tab bar before, and the main view's tab bar for one build): on the Structure, Experiment and Analysis
-  pages, under the main view's tab bar and above the chart toolbar, a full-width row
-  (`Components/MainAreaBlockSelector.qml`, `objectName` `mainArea.blocks`) on the chart background: the previous
-  and next buttons on the left, then a compact combo box (`Components/BlockSelector.qml`) filling the rest of the
-  width, with the chart toolbar's margin above and below. The charts give up that height. Every line of the box
-  reads as easydiffractionbeta's Text-tab selector: the block's number (minor colour), its icon in its colour (§8),
-  its name, a long one cut in the middle; an experiment's line starts with its fit outcome (§17) in a slot one
-  icon wide, empty without a result. The row is hidden while the project holds no block of the page's kind.
+  pages, under the main view's tab bar and above the chart toolbar, a row (`Components/MainAreaBlockSelector.qml`,
+  `objectName` `mainArea.blocks`) on the chart background: a compact combo box (`Components/BlockSelector.qml`),
+  then the previous and next buttons, the last one's right edge on the right edge of the chart toolbar below
+  (which differs by page: each chart states it as `toolbarRightInset`). The chart toolbar's margin is above the
+  row, and a line across the main area a margin below it separates it from the chart (owner, 2026-10-05). The
+  charts give up that height. Every line of the box reads in the Experiments table's column order: the block's
+  number (minor colour), its icon in its colour (§8), for an experiment its fit outcome (§17), then its name, a
+  long one cut in the middle. The row is hidden while the project holds no block of the page's kind.
 - **Long lists are searchable** (owner, 2026-10-05): every combo box that lists project items (the block selector,
   the alias parameter) is a `Components/SearchableComboBox.qml`, which puts a search field at the top of its list
   when it holds more than 10 entries. The field filters by any part of an entry's text, ignoring case; Enter picks
@@ -804,8 +805,11 @@ refuses to write its bank rows into it.
   (green check circle), *Max iterations* and *No step* (amber exclamation circle; the result is kept), *Stopped*
   (grey stop circle), *Superseded* (grey minus circle) and *Failed* (red cross circle). No underline; the summary's
   outcome highlights on hover, as every clickable status-bar item does, and opens the results.
-- **The Fit column** of the Experiments table shows the outcome icon on each experiment the last fit fitted: the
-  first after a single fit, every bank after a joint fit; the cell is empty otherwise.
+- **The Fit column** of the Experiments table, and each experiment's line in the block selector, show the outcome
+  icon on each experiment the last fit fitted: the first after a single fit, every bank after a joint fit. Any
+  other experiment is *Not fitted*: a thin unfilled ring the size of the outcome icons, in the minor colour (owner,
+  2026-10-05). The icon font edi takes from the EasyApplication base is Font Awesome 5's solid face, which has no
+  hollow circle, so the ring is drawn (`FitOutcomes.ring`, `IconLine`).
 - **A fit-results pop-up** opens when a fit ends with a result (finished, cancelled or stopped early): diffraction-lib's
   "Least-squares fit results" table, numbered rows of an icon, the metric and its value — minimizer, overall status,
   fitting time (seconds), iterations, goodness-of-fit (reduced χ²), Rwp, and each bank's Rwp for a joint fit. The
