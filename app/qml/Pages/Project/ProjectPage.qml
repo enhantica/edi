@@ -19,10 +19,9 @@ WorkflowPage {
     mainTabs: [
         IconTabButton {
             objectName: "mainArea.project.tab.description"
-            // The project's icon, in the tab's own colour, and name; the word alone with no project (edi
-            // ADR-0017 §2).
-            fontIcon: page.project ? "archive" : ""
-            text: page.project ? page.project.name : qsTr("Project")
+            // The view's name with the page's icon in the tab's own colour (edi ADR-0017 §2).
+            fontIcon: "archive"
+            text: qsTr("Project")
         }
     ]
     mainItems: [

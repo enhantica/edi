@@ -41,11 +41,9 @@ WorkflowPage {
     mainTabs: [
         IconTabButton {
             objectName: "mainArea.experiment.tab.chart"
-            // The experiment's icon in its colour, and its name; the word alone with no experiment (edi
-            // ADR-0017 §2).
-            fontIcon: page.experiment ? "microscope" : ""
-            iconColor: AppColors.experiment(page.project ? page.project.currentExperimentIndex : -1)
-            text: page.experiment ? page.experiment.name : qsTr("Experiment")
+            // The view's name with the page's icon in the tab's own colour (edi ADR-0017 §2).
+            fontIcon: "microscope"
+            text: qsTr("Pattern")
         }
     ]
     mainItems: [

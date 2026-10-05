@@ -53,14 +53,12 @@ The decisions it rests on, unchanged here:
 
 ### 2. The main area and the Experiment type group
 
-- **Main-area tab names** are the current block's icon and name, no word (ideas 6–8, then idea 23): Project
-  page the `archive` icon (the app bar's Project icon) in the tab's own text colour — a project has no
-  datablock colour, so the icon follows the tab's active and inactive colour as its text does — then the
-  project's name; Structure page the structure's `layer-group` icon in its colour (§8) and its name; Experiment
-  page the experiment's `microscope` icon in its colour and its name. With no block the tab reads the plain
-  word `Project`, `Structure` or `Experiment`, without an icon: an icon alone would not say what the empty tab
-  is. `Components/IconTabButton.qml` is the base's `TabButton` with its content drawn as one icon line (§10).
-  Analysis keeps `Fitting`.
+- **Main-area tab names name the view** (owner, 2026-10-05; until then they were the current block's icon and name,
+  ideas 6–8 and 23): **Project** on Project, **Structure** on Structure, **Pattern** on Experiment and Analysis (Analysis
+  had *Fitting*), **Summary** on Report. The block is named by the selector row above the view (§7), so each tab
+  carries its page's app-bar icon (`archive`, `layer-group`, `microscope`, `calculator`, `clipboard-list`) in the
+  tab's own text colour, not a block colour. `Components/IconTabButton.qml` is the base's `TabButton` with its
+  content drawn as one icon line (§10).
 - **Experiment type** sits in the Experiments explorer, between its table and its buttons (owner, 2026-10-05), and
   has no sidebar group of its own. It shows the selected experiment's type axes as a grid **three wide**, filled
   row by row: sample form, beam mode and probe on the first row; scattering type, dimensionality and

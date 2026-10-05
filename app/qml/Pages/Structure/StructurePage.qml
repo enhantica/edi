@@ -30,11 +30,9 @@ WorkflowPage {
     mainTabs: [
         IconTabButton {
             objectName: "mainArea.structure.tab.view"
-            // The structure's icon in its colour, and its name; the word alone with no structure (edi ADR-0017
-            // §2).
-            fontIcon: page.structure ? "layer-group" : ""
-            iconColor: AppColors.structure(page.project ? page.project.currentStructureIndex : -1)
-            text: page.structure ? page.structure.name : qsTr("Structure")
+            // The view's name with the page's icon in the tab's own colour (edi ADR-0017 §2).
+            fontIcon: "layer-group"
+            text: qsTr("Structure")
         }
     ]
     mainItems: [
