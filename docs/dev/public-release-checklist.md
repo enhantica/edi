@@ -78,8 +78,8 @@ Run by the maintainer the owner authorized for the cut.
 - [ ] The public workflows are installed in `.github/workflows` and run on GitHub-hosted runners;
       the content check (`content.yml`) is one of them. The latency bank (`bank-latency.yml`) runs on
       the self-hosted fleet by dispatch only, so no pull request reaches a self-hosted runner.
-- [ ] **Pages** stays off: both jobs of `pages.yml` run on no event (`if: false`) until the owner
-      turns the site on.
+- [ ] **Pages** is on: `pages.yml` builds the docs and the web app from main and deploys them while
+      the repository is public.
 - [ ] The scheduled and writing workflows run only in the repository named `enhantica/edi`: the
       crysta SDK update (`crysta-sdk-update.yml`) and the latency bank (`bank-latency.yml`).
 
@@ -97,9 +97,8 @@ The owner makes the repository public personally; no script and no session does.
       (`gh run list --repo enhantica/edi`, then `gh run delete <id>` for each run a self-hosted
       runner served), so no runner's machine paths or names are published with them.
 - [ ] The owner changes the visibility to public.
-- [ ] When the owner turns the site on, **Pages** is enabled, with GitHub Actions (`pages.yml`) as its source. The site URL is the one
-      `mkdocs.yml` declares; `/webapp/` stays unlisted (noindex, disallowed in `robots.txt`, linked
-      from nowhere). Pages publishes the site, and `/webapp/` answers with its placeholder.
+- [ ] **Pages** is enabled, with GitHub Actions (`pages.yml`) as its source. The site URL is the one
+      `mkdocs.yml` declares, and the web app is at `/webapp/`, linked from the docs.
 - [ ] Hosted CI is green on the public `edi`.
 - [ ] The scheduled crysta SDK update workflow is enabled again (GitHub disables a schedule after 60
       days without activity).

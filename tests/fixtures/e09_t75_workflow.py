@@ -21,6 +21,7 @@ def active(  # noqa: PLR0913 - each keyword is one workflow context input
     core_only=False,
     repository='enhantica/edi',
     fork=False,
+    repository_private=False,
 ):
     ref = event_ref(event) if ref is None else ref
     value = node.get('if', 'success()')
@@ -32,6 +33,7 @@ def active(  # noqa: PLR0913 - each keyword is one workflow context input
         'github.event_name': event,
         'inputs.core_only': core_only,
         'github.repository': repository,
+        'github.event.repository.private': repository_private,
         'github.event.pull_request.head.repo.fork': fork if event == 'pull_request' else '',
         'github.event.pull_request.head.repo.full_name': ('outside/edi' if fork else repository)
         if event == 'pull_request'
