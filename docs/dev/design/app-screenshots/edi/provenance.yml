@@ -184,3 +184,11 @@ reblessed:
       - t4-03-messages-not-viewed.png
       - t4-04-messages-list.png
       - t4-05-messages-viewed.png
+  - produced_at: a71bea162daf657c3284274f4d169441b6cb2d43
+    reason: >-
+      The BEER example starts from the owner's FullProf project's values (31 background points per bank,
+      FullProf's peak widths, zero and scales), so its page shows a smaller residual and 76 free parameters.
+      Captured with edi built against crysta 8a99c16c. Only this image is replaced.
+    platform: Linux x86_64, QT_QPA_PLATFORM=xcb (Xwayland on headless Weston, Mesa llvmpipe OpenGL)
+    images:
+      - ex-pd-neut-tof_ferrite-austenite-beer_joint.png
