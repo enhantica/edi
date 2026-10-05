@@ -307,7 +307,7 @@
     "checks": {
       "8": "the main tab reads the microscope icon in the experiment colour and the experiment name, no word",
       "9": "the block selector (number, coloured icon, name) sits above the groups, under the tab bar, on Basic",
-      "18": "Peak profile (cwl-pseudo-voigt-berar-baldinozzi-asymmetry) has no subheading; its fields run U V W, then X Y, then A0 B0 A1 B1 AsyLim on the asymmetry row"
+      "18": "Peak profile (cwl-pseudo-voigt-berar-baldinozzi) has no subheading; its fields run U V W, then Eta0 Eta1, then A0 B0 A1 B1 AsyLim on the asymmetry row"
     }
   },
   {

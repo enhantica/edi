@@ -56,10 +56,10 @@ produced by edi or crysta.
   three cell edges independent — the corpus's first non-cubic CW
   page), no correction models.
 - [pd-neut-cwl PbSO4 Bérar-Baldinozzi asymmetry](pd-neut-cwl_PbSO4_beba-asymmetry.ipynb)
-  – **pseudo-Voigt × Bérar-Baldinozzi asymmetry** against **cryspy**
-  (unfitted), and against FullProf only through diffraction-lib issue
-  166's inferred coefficient map or after an asymmetry-only fit, all at
-  one 180° limit angle.
+  – **pseudo-Voigt × Bérar-Baldinozzi asymmetry** (FullProf's Npr 5), its
+  widths, mixing and coefficients fitted to FullProf's TCH profile at one
+  180° limit angle. Since 2026-10-05 it no longer uses diffraction-lib's
+  model, so it no longer counts toward parity.
 
 ### Y2O3 structure
 

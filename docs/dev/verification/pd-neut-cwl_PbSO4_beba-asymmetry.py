@@ -1,71 +1,43 @@
 # %% [markdown]
 # # PbSO4 — powder neutron CW — Bérar-Baldinozzi asymmetry
 #
-# Verifies the empirical **Bérar-Baldinozzi** asymmetry
-# (`cwl-pseudo-voigt-berar-baldinozzi-asymmetry`) on anglesite. crysta multiplies the TCH
+# Verifies the empirical **Bérar-Baldinozzi** asymmetry on the **pseudo-Voigt**
+# (`cwl-pseudo-voigt-berar-baldinozzi`, FullProf's Npr 5) on anglesite. crysta multiplies the
 # pseudo-Voigt by the paper's Hermite factor (J. Appl. Cryst. 26, 128 (1993)):
 #
 # `1 + (A0 F_a(z) + B0 F_b(z)) / tan θ + (A1 F_a(z) + B1 F_b(z)) / tan 2θ`, with
 # `z = Δ2θ / H`, `F_a = 2z·exp(-z²)` and `F_b = 2(2z² - 3)·F_a`,
 #
 # with diffraction-lib's `asym_beba_{a0,b0,a1,b1}` in FullProf's P1..P4 roles. `H` and `θ` are
-# taken at the reflection's 2θ_k (ObjCryst's definition).
+# taken at the reflection's 2θ_k (ObjCryst's definition), which conserves each reflection's
+# integrated intensity exactly. The pseudo-Voigt has one Caglioti width
+# `H² = U tan²θ + V tanθ + W` and the mixing `η = η₀ + η₁·2θ`.
 #
-# **The evaluation point is chosen on merit**. Per reflection, the correction is odd in `z` about
-# the centre, so it conserves each reflection's integrated intensity exactly. Evaluated at each
-# pattern point, as cryspy does, it drifts that intensity by up to +13.8 % at 5° on this page's
-# coefficients. It also costs 3.4 times as much per fit iteration. The two are equally stable, and
-# fit quality against FullProf, the tie-break, was not needed.
+# **The model changed on 2026-10-05.** Until then this page used the TCH pseudo-Voigt with
+# Bérar-Baldinozzi, diffraction-lib's model and FullProf's Npr 7 with asymmetry. That pair is
+# removed (crysta ADR-0080): Bérar-Baldinozzi now acts on the pseudo-Voigt, its usual partner.
+# FullProf's reference is still the Npr 7 calculation, so no parameter set reproduces it exactly.
+# The page fits the pseudo-Voigt's widths, mixing and the four coefficients to FullProf's profile
+# and records how close the Npr 5 shape gets. It no longer uses diffraction-lib's model, so it no
+# longer counts toward diffraction-lib parity, and the cryspy comparison of the old model is gone.
 #
-# **cryspy is a measured divergence, not the oracle.** cryspy implements the same published
-# form, but evaluates `H` and `θ` (and its symmetric core) at each pattern point. It was this
-# page's oracle until the evaluation point was chosen on merit. The unfitted comparison at the same
-# four coefficients is kept, measured and printed, but no longer gates.
+# **FullProf's coefficients mean something else.** FullProf's source is closed; as inferred in
+# diffraction-lib issue 166 from its calculated output, it uses the opposite sign of `z` and its
+# second function behaves as `F_b ≈ (8z³ - 6z)·exp(-z²)`. The inferred map from its P1..P4 to the
+# paper's coefficients, `(-P1 - 3·P2, -P2, -P3 - 3·P4, -P4)`, gives the fit its starting point.
 #
-# **FullProf's coefficients mean something else — a documented divergence, not an error.**
-# Upstream's page states it: *"FullProf and cryspy use different coefficient conventions."* The
-# two conventions are the paper's (cryspy's, and crysta's) and FullProf's. FullProf's source is
-# closed and crysfml2008 has no Bérar-Baldinozzi, so FullProf's behaviour is known only **as
-# inferred in diffraction-lib issue 166** from its calculated output, to the `.prf` precision
-# floor. That inference finds two differences:
+# **One limit angle, 180°**, crysta's default, and the FullProf reference regenerated once at
+# authoring time with `AsyLim` = 180 (see its `PROVENANCE.md`).
 #
-# 1. FullProf uses the opposite sign of `z`.
-# 2. Its second function behaves as `F_b ≈ (8z³ - 6z)·exp(-z²)` where the paper's is
-#    `(8z³ - 12z)·exp(-z²)`.
-#
-# Everything else, including both angular factors, agrees. The inferred map from FullProf's
-# P1..P4 to the paper's coefficients is `(-P1 - 3·P2, -P2, -P3 - 3·P4, -P4)`. It is not exact —
-# the two F_b differ in shape — so FullProf is compared only through that map, or after fitting
-# the four coefficients to its profile, never at its raw P values.
-#
-# **One limit angle, 180°.** FullProf's upstream `.pcr` corrects only reflections below
-# `AsyLim` = 160°; cryspy has no limit. Every comparison here uses 180° (owner direction
-# 2026-09-26): crysta's `asym_beba_limit` default, cryspy's native behaviour, and a FullProf
-# reference regenerated once at authoring time with `AsyLim` = 180 (see its `PROVENANCE.md`).
-#
-# **Method differences from upstream's page, with the reasons.** Upstream gates only a cryspy
-# fit to FullProf. This page gates two comparisons and records a third:
-#
-# 1. FullProf through the inferred map — **unfitted**;
-# 2. FullProf after the same asymmetry-only fit upstream runs;
-# 3. unfitted cryspy — the measured divergence, printed, not gated.
-#
-# A fit alone can be satisfied by a wrong kernel with compensating coefficients, so it is
-# never the only check.
-#
-# **The bounds are labelled regression pins** — this page's own measured closeness with
-# stated headroom (crysta per-reflection default, all at the 180° limit):
+# **The bounds are labelled regression pins** — this page's own measured closeness after the fit,
+# with stated headroom:
 #
 # | comparison | profile diff | max deviation | area ratio | correlation |
 # | --- | --- | --- | --- | --- |
-# | FullProf, issue-166 map (gated) | 0.83 % | 6.09 % | 0.99987 | 0.9999518 |
-# | FullProf, fitted (gated) | 0.83 % | 6.06 % | 0.99984 | 0.9999520 |
-# | cryspy, unfitted (measured) | 0.60 % | 0.43 % | 0.99607 | 0.9999784 |
+# | FullProf, fitted (gated) | 1.08 % | 5.96 % | 1.00170 | 0.9999191 |
 #
-# The fit barely moves the mapped coefficients' agreement: the residual is the F_b shape
-# difference, which no choice of the paper's coefficients absorbs. Against cryspy, the evaluation
-# point alone accounts for 0.108 % at identical coefficients; the rest of the 0.39 % area
-# difference is not decomposed here.
+# The old TCH model reached 0.83 % on the same profile; the remainder is the Npr 5 shape, which
+# has one width and a linear mixing where FullProf's Npr 7 has two widths.
 
 # %%
 import numpy as np
@@ -84,12 +56,6 @@ FULLPROF_PRF_FILE = 'pbso4.prf'
 FULLPROF_SUM_FILE = 'pbso4.sum'
 FULLPROF_BAC_FILE = 'pbso4.bac'
 FULLPROF_LABEL = verify.fullprof_label(FULLPROF_PROJECT_DIR, FULLPROF_SUM_FILE)
-
-# cryspy 0.12.1's unfitted calculation of upstream's page, on the same grid (its PROVENANCE.md).
-CRYSPY_REFERENCE = (
-    verify.bundled_reference_dir().parent / 'cryspy' / FULLPROF_PROJECT_DIR / 'pbso4_cryspy.tsv'
-)
-LABEL_CRYSPY = 'cryspy 0.12.1'
 
 # Structure
 FULLPROF_SPACE_GROUP = 'P n m a'  # FullProf Space group symbol
@@ -111,8 +77,7 @@ FULLPROF_WAVELENGTH = 1.912000  # FullProf Lambda
 FULLPROF_U = 0.153402  # FullProf U
 FULLPROF_V = -0.453103  # FullProf V
 FULLPROF_W = 0.419409  # FullProf W
-FULLPROF_X = 0.0  # FullProf X
-FULLPROF_Y = 0.086818  # FullProf Y
+ETA_0_START = 0.25  # near the TCH mixing at mid-angle
 FULLPROF_WDT = 30.0  # FullProf Wdt
 FULLPROF_ASY_1 = 0.29465  # FullProf Asy1 (P1)
 FULLPROF_ASY_2 = 0.02261  # FullProf Asy2 (P2)
@@ -126,9 +91,6 @@ x, calc_fullprof = verify.load_fullprof_calc_profile(
     FULLPROF_BAC_FILE,
     FULLPROF_ZERO,
 )
-cryspy_x, calc_cryspy = np.loadtxt(CRYSPY_REFERENCE, unpack=True)
-if not np.array_equal(cryspy_x, x):
-    raise ValueError('the cryspy reference must sit on the FullProf grid')
 
 # %% [markdown]
 # ## Define the structure
@@ -158,29 +120,26 @@ structure = StructureFactory.from_dict({
 # %% [markdown]
 # ## Define the experiment
 #
-# FullProf's P1..P4 enter as the paper's coefficients unchanged — exactly what upstream's page
-# hands cryspy before it fits.
-#
-# The neutron experiment, as project-file text, declares Sears (1992) as its scattering-length
-# source — FullProf's own Pb, S and O lengths; cryspy's table is the
-# same publication.
+# FullProf's Gaussian widths and its P1..P4 through issue 166's map are the fit's starts; the
+# mixing starts near the TCH value at mid-angle. The neutron experiment, as project-file text,
+# declares Sears (1992) as its scattering-length source, FullProf's own Pb, S and O lengths.
 
 # %%
 experiment = ExperimentFactory.from_cif_str(f"""data_pbso4
 _edi.schema_version 3
 _experiment_type.beam_mode "constant wavelength"
 _scattering_source.neutron_scattering_length sears1992
-_peak.type cwl-pseudo-voigt-berar-baldinozzi-asymmetry
+_peak.type cwl-pseudo-voigt-berar-baldinozzi
 _peak.cutoff_fwhm {FULLPROF_WDT}
 _peak.broad_gauss_u {FULLPROF_U}
 _peak.broad_gauss_v {FULLPROF_V}
 _peak.broad_gauss_w {FULLPROF_W}
-_peak.broad_lorentz_x {FULLPROF_X}
-_peak.broad_lorentz_y {FULLPROF_Y}
-_peak.asym_beba_a0 {FULLPROF_ASY_1}
-_peak.asym_beba_b0 {FULLPROF_ASY_2}
-_peak.asym_beba_a1 {FULLPROF_ASY_3}
-_peak.asym_beba_b1 {FULLPROF_ASY_4}
+_peak.mixing_eta_0 {ETA_0_START}
+_peak.mixing_eta_1 0
+_peak.asym_beba_a0 {-FULLPROF_ASY_1 - 3.0 * FULLPROF_ASY_2}
+_peak.asym_beba_b0 {-FULLPROF_ASY_2}
+_peak.asym_beba_a1 {-FULLPROF_ASY_3 - 3.0 * FULLPROF_ASY_4}
+_peak.asym_beba_b1 {-FULLPROF_ASY_4}
 _peak.asym_beba_limit {FULLPROF_ASY_LIM}
 _instrument.setup_wavelength {FULLPROF_WAVELENGTH}
 _instrument.calib_twotheta_offset {FULLPROF_ZERO}
@@ -200,70 +159,43 @@ project.experiment = experiment
 verify.set_reference_as_measured(project.experiment, x, calc_fullprof)
 
 # %% [markdown]
-# ## edi-crysta VS cryspy — unfitted, the measured divergence
-
-# %%
-project.analysis.calculate()
-calc_ed_crysta = np.array(project.experiment.data.intensity_calc)
-LABEL_ED_CRYSTA = verify.engine_label('crysta')
-
-verify.plot_pattern_comparison(
-    project.experiment,
-    reference=calc_cryspy,
-    candidate=calc_ed_crysta,
-    reference_label=LABEL_CRYSPY,
-    candidate_label=LABEL_ED_CRYSTA,
-)
-
-# %%
-divergence = verify.pattern_closeness(calc_cryspy, calc_ed_crysta)
-print(f'{LABEL_ED_CRYSTA} vs {LABEL_CRYSPY} (measured, not gated): {divergence}')
-
-# %% [markdown]
-# ## edi-crysta VS FullProf — through issue 166's inferred map
+# ## Fit the pseudo-Voigt and its asymmetry to FullProf
 #
-# The same calculation with FullProf's P1..P4 carried to the paper's coefficients by the map
-# inferred in diffraction-lib issue 166. What remains is the F_b shape difference the map
-# cannot absorb.
+# The widths, the mixing and the four coefficients are free; the structure, the scale and the
+# instrument stay at FullProf's values.
 
 # %%
 peak = project.experiment.peak
-peak.asym_beba_a0 = -FULLPROF_ASY_1 - 3.0 * FULLPROF_ASY_2
-peak.asym_beba_b0 = -FULLPROF_ASY_2
-peak.asym_beba_a1 = -FULLPROF_ASY_3 - 3.0 * FULLPROF_ASY_4
-peak.asym_beba_b1 = -FULLPROF_ASY_4
-
-project.analysis.calculate()
-calc_ed_crysta_mapped = np.array(project.experiment.data.intensity_calc)
-LABEL_ED_CRYSTA_MAPPED = verify.engine_label('crysta', note='issue-166 map')
-
-verify.plot_pattern_comparison(
-    project.experiment,
-    reference=calc_fullprof,
-    candidate=calc_ed_crysta_mapped,
-    reference_label=FULLPROF_LABEL,
-    candidate_label=LABEL_ED_CRYSTA_MAPPED,
-)
-
-# %% [markdown]
-# ## Fit edi-crysta's four coefficients to FullProf
-#
-# Upstream's method: free only the four asymmetry coefficients, every other parameter fixed at
-# FullProf's values, and fit the FullProf profile.
-
-# %%
-peak.asym_beba_a0.free = True
-peak.asym_beba_b0.free = True
-peak.asym_beba_a1.free = True
-peak.asym_beba_b1.free = True
+for name in (
+    'broad_gauss_u',
+    'broad_gauss_v',
+    'broad_gauss_w',
+    'mixing_eta_0',
+    'mixing_eta_1',
+    'asym_beba_a0',
+    'asym_beba_b0',
+    'asym_beba_a1',
+    'asym_beba_b1',
+):
+    getattr(peak, name).free = True
 
 project.analysis.fit()
-for name in ('asym_beba_a0', 'asym_beba_b0', 'asym_beba_a1', 'asym_beba_b1'):
+for name in (
+    'broad_gauss_u',
+    'broad_gauss_v',
+    'broad_gauss_w',
+    'mixing_eta_0',
+    'mixing_eta_1',
+    'asym_beba_a0',
+    'asym_beba_b0',
+    'asym_beba_a1',
+    'asym_beba_b1',
+):
     print(f'{name} = {getattr(peak, name).value:.6f}')
 
 project.analysis.calculate()
 calc_ed_crysta_fitted = np.array(project.experiment.data.intensity_calc)
-LABEL_ED_CRYSTA_FITTED = verify.engine_label('crysta', note='fitted')
+LABEL_ED_CRYSTA_FITTED = verify.engine_label('crysta', note='pseudo-Voigt, fitted')
 
 verify.plot_pattern_comparison(
     project.experiment,
@@ -274,16 +206,14 @@ verify.plot_pattern_comparison(
 )
 
 # %%
+print(verify.pattern_closeness(calc_fullprof, calc_ed_crysta_fitted))
 verify.assert_patterns_agree(
-    [
-        (f'{LABEL_ED_CRYSTA_MAPPED} vs {FULLPROF_LABEL}', calc_fullprof, calc_ed_crysta_mapped),
-        (f'{LABEL_ED_CRYSTA_FITTED} vs {FULLPROF_LABEL}', calc_fullprof, calc_ed_crysta_fitted),
-    ],
+    [(f'{LABEL_ED_CRYSTA_FITTED} vs {FULLPROF_LABEL}', calc_fullprof, calc_ed_crysta_fitted)],
     tolerances=verify.AgreementTolerances(
-        max_profile_difference_percent=1.0,
+        max_profile_difference_percent=1.3,
         max_deviation_percent=7.0,
         min_intensity_ratio=0.9995,
-        max_intensity_ratio=1.0008,
-        min_correlation=0.99993,
+        max_intensity_ratio=1.003,
+        min_correlation=0.99990,
     ),
 )
