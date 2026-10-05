@@ -171,59 +171,104 @@ TEST_CASE("Native unrefreshed constraints save active dependents bare") {
 #include "e04_t9_support.hpp"
 #include "edi/fit_job.hpp"
 
-TEST_CASE("A declaration-only edit supersedes completed queued FitJob adoption") {
-    for (const std::string kind :
-         {"control", "clear-all", "expression", "equal-expression", "disable", "constraint-remove",
-          "constraint-add", "constraint-rename", "alias-add", "alias-remove", "alias-rename",
-          "alias-retarget"}) {
-        CAPTURE(kind);
-        auto live = transition_project();
-        live.structure().atom_sites[0]->adp_iso.free = true;
-        live.minimizer_max_iterations = 2;
-        live.calculate();
-        e04_t9::OwnerQueue queue;
-        std::mutex mutex;
-        std::condition_variable ready;
-        bool finished = false;
-        edi::work::Worker worker([&](auto delivery) { queue.post(std::move(delivery)); },
-                                 {{}, [&](const auto& event) {
-                                      if (event.kind == edi::work::EventKind::Finished) {
-                                          std::lock_guard lock(mutex);
-                                          finished = true;
-                                          ready.notify_one();
-                                      }
-                                  }});
-        std::optional<edi::FitReport> report;
-        edi::FitJob fit(live, worker, {{}, {}, {}, [&](const auto& result) { report = result; }});
-        REQUIRE_MESSAGE((fit.start()), "The declaration-race control must start an actual FitJob");
-        {
-            std::unique_lock lock(mutex);
-            REQUIRE_MESSAGE(
-                (ready.wait_for(lock, std::chrono::seconds(10), [&] { return finished; })),
-                "The worker must finish before the declaration edit while owner deliveries remain "
-                "queued");
-        }
-        auto& a = live.structure().atom_sites[0]->adp_iso;
-        auto& b = live.structure().atom_sites[1]->adp_iso;
-        const auto av = a.value.get(), bv = b.value.get();
-        const auto au = a.uncertainty.get(), bu = b.uncertainty.get();
-        if (kind != "control") declaration_edit(live, kind);
-        while (!report) queue.one();
-        queue.drain();
-        if (kind == "control") {
-            CHECK_MESSAGE((report->adopted()),
-                          "An unchanged relation fit must finish with adopted output");
-        } else {
-            CHECK_MESSAGE((report->status == edi::FitStatus::SUPERSEDED),
-                          "A declaration-only edit must supersede a finished fit waiting for "
-                          "owner adoption");
-            CHECK_MESSAGE((a.value.get() == av && b.value.get() == bv &&
-                           a.uncertainty.get() == au && b.uncertainty.get() == bu),
-                          "Supersession must publish neither independent nor dependent values and "
-                          "uncertainties");
-            CHECK_MESSAGE((!a.start_value.get()), "Supersession must publish no fit-start record");
-        }
+namespace {
+void check_queued_declaration_edit(const std::string& kind) {
+    CAPTURE(kind);
+    auto live = transition_project();
+    live.structure().atom_sites[0]->adp_iso.free = true;
+    live.minimizer_max_iterations = 2;
+    live.calculate();
+    e04_t9::OwnerQueue queue;
+    std::mutex mutex;
+    std::condition_variable ready;
+    bool finished = false;
+    edi::work::Worker worker([&](auto delivery) { queue.post(std::move(delivery)); },
+                             {{}, [&](const auto& event) {
+                                  if (event.kind == edi::work::EventKind::Finished) {
+                                      std::lock_guard lock(mutex);
+                                      finished = true;
+                                      ready.notify_one();
+                                  }
+                              }});
+    std::optional<edi::FitReport> report;
+    edi::FitJob fit(live, worker, {{}, {}, {}, [&](const auto& result) { report = result; }});
+    REQUIRE_MESSAGE((fit.start()), "The declaration-race control must start an actual FitJob");
+    {
+        std::unique_lock lock(mutex);
+        REQUIRE_MESSAGE(
+            (ready.wait_for(lock, std::chrono::seconds(10), [&] { return finished; })),
+            "The worker must finish before the declaration edit while owner deliveries remain "
+            "queued");
     }
+    auto& a = live.structure().atom_sites[0]->adp_iso;
+    auto& b = live.structure().atom_sites[1]->adp_iso;
+    const auto av = a.value.get(), bv = b.value.get();
+    const auto au = a.uncertainty.get(), bu = b.uncertainty.get();
+    if (kind != "control") declaration_edit(live, kind);
+    while (!report) queue.one();
+    queue.drain();
+    if (kind == "control") {
+        CHECK_MESSAGE((report->adopted()),
+                      "An unchanged relation fit must finish with adopted output");
+    } else {
+        CHECK_MESSAGE((report->status == edi::FitStatus::SUPERSEDED),
+                      "A declaration-only edit must supersede a finished fit waiting for "
+                      "owner adoption");
+        CHECK_MESSAGE((a.value.get() == av && b.value.get() == bv && a.uncertainty.get() == au &&
+                       b.uncertainty.get() == bu),
+                      "Supersession must publish neither independent nor dependent values and "
+                      "uncertainties");
+        CHECK_MESSAGE((!a.start_value.get()), "Supersession must publish no fit-start record");
+    }
+}
+}  // namespace
+
+TEST_CASE("Queued FitJob declaration adoption: control") {
+    check_queued_declaration_edit("control");
+}
+
+TEST_CASE("Queued FitJob declaration adoption: clear-all") {
+    check_queued_declaration_edit("clear-all");
+}
+
+TEST_CASE("Queued FitJob declaration adoption: expression") {
+    check_queued_declaration_edit("expression");
+}
+
+TEST_CASE("Queued FitJob declaration adoption: equal-expression") {
+    check_queued_declaration_edit("equal-expression");
+}
+
+TEST_CASE("Queued FitJob declaration adoption: disable") {
+    check_queued_declaration_edit("disable");
+}
+
+TEST_CASE("Queued FitJob declaration adoption: constraint-remove") {
+    check_queued_declaration_edit("constraint-remove");
+}
+
+TEST_CASE("Queued FitJob declaration adoption: constraint-add") {
+    check_queued_declaration_edit("constraint-add");
+}
+
+TEST_CASE("Queued FitJob declaration adoption: constraint-rename") {
+    check_queued_declaration_edit("constraint-rename");
+}
+
+TEST_CASE("Queued FitJob declaration adoption: alias-add") {
+    check_queued_declaration_edit("alias-add");
+}
+
+TEST_CASE("Queued FitJob declaration adoption: alias-remove") {
+    check_queued_declaration_edit("alias-remove");
+}
+
+TEST_CASE("Queued FitJob declaration adoption: alias-rename") {
+    check_queued_declaration_edit("alias-rename");
+}
+
+TEST_CASE("Queued FitJob declaration adoption: alias-retarget") {
+    check_queued_declaration_edit("alias-retarget");
 }
 
 TEST_CASE("Coordinate and cell declaration edits revoke stored geometry") {

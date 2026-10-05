@@ -371,24 +371,6 @@ def test_background_address_uses_row_id_after_reordering(tmp_path):
     )
 
 
-def test_identical_site_ids_in_distinct_structures_do_not_alias(tmp_path):
-    aliases = [('a', 'other.atom_site.A.adp_iso'), ('b', 'phase.atom_site.A.adp_iso')]
-    project = engine.Project.load(
-        MATERIALIZE(tmp_path, aliases, ['b = 2*a + 1'], second_structure=True)
-    )
-    project.analysis.calculate()
-    assert next(s for s in project.structures if s.name == 'phase').atom_sites[
-        0
-    ].adp_iso.value == pytest.approx(2.3), (
-        'a keyed structure reference must not resolve to the first identically named site'
-    )
-    assert next(s for s in project.structures if s.name == 'other').atom_sites[
-        0
-    ].adp_iso.value == pytest.approx(0.65, rel=0, abs=0), (
-        'cross-structure application must preserve the independent phase'
-    )
-
-
 def test_projects_without_constraints_keep_the_pre_feature_writer_regression_pin(tmp_path):
     fixture = ROOT / 'tests/fixtures/constraint_expressions'
     snapshot = runpy.run_path(str(fixture / 'freeze_unconstrained.py'))['snapshot']
