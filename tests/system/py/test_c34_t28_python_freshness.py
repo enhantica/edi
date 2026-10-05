@@ -40,7 +40,16 @@ def test_python_freshness_inputs_and_route_inventory_stay_bound(tmp_path, monkey
         == BASELINE['fit_sha256']
     ), ' I23 fit and undo inputs retain the complete committed corpus case'
     scan = reference.corpus_root(ROOT) / 'cosio-d20-scan-3f/project'
-    assert reference.input_hashes(scan) == BASELINE['scan_sha256'], (
+    extension = json.loads(
+        (ROOT / 'tests/fixtures/constraint_expressions/byte-pins.json').read_text()
+    )['cases']['corpus:cosio-d20-scan-3f/project']
+    assert extension['before']['input_sha256'] == BASELINE['scan_sha256'], (
+        'the scan model extension must retain the immutable earlier freshness input witness'
+    )
+    assert set(extension['after_input_sha256']) == set(BASELINE['scan_sha256']), (
+        'the scan model extension must retain every sequential frame and file'
+    )
+    assert reference.input_hashes(scan) == extension['after_input_sha256'], (
         ' I23 every sequential input, including each data frame, stays pinned'
     )
 
