@@ -453,8 +453,16 @@ def runner_values(job):
 
 
 def test_public_ci_uses_hosted_runners_and_guards_private_tokens():
+    findings = public_token_findings(workflows())
+    assert not findings, (
+        'public CI must use hosted runners; private credentials need a non-fork guard and '
+        'reviewed environment: ' + ', '.join(findings)
+    )
+
+
+def public_token_findings(documents):
     findings = []
-    for filename, doc in workflows():
+    for filename, doc in documents:
         for name, job in doc.get('jobs', {}).items():
             if 'uses' in job:
                 findings.append(filename + ':' + name + ':unreviewed reusable workflow')
@@ -473,20 +481,57 @@ def test_public_ci_uses_hosted_runners_and_guards_private_tokens():
                 private = 'create-github-app-token' in serialized or bool(
                     re.search(r'secrets\.(?!GITHUB_TOKEN\b)\w+', serialized)
                 )
-                if private and not (nonfork(job.get('if', '')) or nonfork(step.get('if', ''))):
+                disabled = job.get('if') is False or job.get('if') == 'false'
+                if private and not (
+                    disabled or nonfork(job.get('if', '')) or nonfork(step.get('if', ''))
+                ):
                     findings.append(filename + ':' + name + ':unguarded private token')
                 if private and not job.get('environment'):
                     findings.append(filename + ':' + name + ':token outside reviewed environment')
-    assert not findings, (
-        'public CI must use hosted runners; private credentials need a non-fork guard and '
-        'reviewed '
-        'environment: ' + ', '.join(findings)
+    return findings
+
+
+@pytest.mark.parametrize('defect', ['unguarded', 'negated', 'disjunction', 'environment', 'pages'])
+def test_private_token_guards_still_refuse_forks_after_public_switch(defect):
+    import copy  # noqa: PLC0415
+
+    documents = workflows()
+    assert not public_token_findings(documents), (
+        'the hosted workflow must refuse fork credentials before every guard escape'
+    )
+    damaged = copy.deepcopy(documents)
+    ci = next(doc for name, doc in damaged if name == 'ci.yml')
+    job = ci['jobs']['app']
+    if defect == 'pages':
+        pages = next(doc for name, doc in damaged if name == 'pages.yml')
+        pages['jobs']['build']['if'] = 'true'
+    elif defect == 'environment':
+        job.pop('environment')
+    else:
+        job['if'] = {
+            'unguarded': '${{ !inputs.core_only }}',
+            'negated': '${{ !inputs.core_only && '
+            'github.event.pull_request.head.repo.fork != false }}',
+            'disjunction': '${{ !inputs.core_only || '
+            'github.event.pull_request.head.repo.fork == false }}',
+        }[defect]
+    assert public_token_findings(damaged), (
+        'core-only skips and disabled Pages must never mask a fork token or environment escape'
     )
 
 
 def test_public_artifacts_exclude_engine_object_code_and_runner_names():
+    assert not public_artifact_findings(workflows()), (
+        'public uploads must expose reviewed text/image outputs or the prescribed webapp, '
+        'with no private native engine objects or runner names'
+    )
+
+
+def public_artifact_findings(documents):
+    from tests.fixtures.e09_t75_workflow import active  # noqa: PLC0415
+
     findings = []
-    for filename, doc in workflows():
+    for filename, doc in documents:
         for name, job in doc.get('jobs', {}).items():
             for step in job.get('steps', []):
                 if 'upload-artifact' not in step.get('uses', ''):
@@ -495,8 +540,29 @@ def test_public_artifacts_exclude_engine_object_code_and_runner_names():
                 artifact, paths = options.get('name', ''), options.get('path', '')
                 if 'runner.name' in artifact or 'edi-native' in artifact:
                     findings.append(filename + ':' + name + ':private artifact identity')
-                # Explicitly safe output types; an opaque archive/build directory needs a
-                # reviewed packaging gate, not a claim that its contents happen to be safe.
+                required_programs = (
+                    '\n'.join(
+                        s.get('run', '')
+                        for s in job.get('steps', [])
+                        if active(s, 'pull_request') and not s.get('continue-on-error')
+                    )
+                    if name == 'app-wasm'
+                    else ''
+                )
+                webapp = (
+                    filename == 'ci.yml'
+                    and name == 'app-wasm'
+                    and (
+                        (artifact == 'edi-webapp' and paths == 'build/wasm/site')
+                        or (
+                            artifact == 'edi-webapp-checks'
+                            and paths == '${{ runner.temp }}/edi-webapp-checks'
+                        )
+                    )
+                    and 'wasm-build' in required_programs
+                    and 'wasm-check' in required_programs
+                    and 'e04_t11_wasm_delivery.py' in required_programs
+                )
                 for path in paths.splitlines():
                     if path.startswith('!'):
                         continue
@@ -504,11 +570,53 @@ def test_public_artifacts_exclude_engine_object_code_and_runner_names():
                         Path(path).suffix
                         in {'.json', '.log', '.txt', '.csv', '.tsv', '.png', '.svg'}
                         or path in {'build/app/ui-actual', 'build/app/ui-diff'}
+                        or webapp
                     ):
                         findings.append(filename + ':' + name + ':opaque/binary artifact ' + path)
-    assert not findings, (
-        'public uploads must expose reviewed text/image outputs and no private engine object code '
-        'or runner names: ' + ', '.join(findings)
+    return findings
+
+
+@pytest.mark.parametrize(
+    'defect',
+    [
+        'native-path',
+        'native-name',
+        'runner-name',
+        'other-job',
+        'no-build',
+        'no-check',
+        'disabled-check',
+        'optional-check',
+    ],
+)
+def test_webapp_artifact_allowance_refuses_native_object_escapes(defect):
+    import copy  # noqa: PLC0415
+
+    doc = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
+    assert not public_artifact_findings([('ci.yml', doc)]), (
+        'the prescribed webapp and evidence uploads must pass before each native escape'
+    )
+    damaged = copy.deepcopy(doc)
+    job = damaged['jobs']['app-wasm']
+    upload = next(s for s in job['steps'] if s.get('with', {}).get('name') == 'edi-webapp')
+    if defect == 'native-path':
+        upload['with']['path'] = 'build/ci'
+    elif defect == 'native-name':
+        upload['with']['name'] = 'edi-native-linux-64'
+    elif defect == 'runner-name':
+        upload['with']['name'] = '${{ runner.name }}'
+    elif defect == 'other-job':
+        damaged['jobs']['native']['steps'].append(copy.deepcopy(upload))
+    elif defect in {'disabled-check', 'optional-check'}:
+        check = next(s for s in job['steps'] if 'wasm-check' in s.get('run', ''))
+        check['if' if defect == 'disabled-check' else 'continue-on-error'] = (
+            defect != 'disabled-check'
+        )
+    else:
+        token = 'wasm-build' if defect == 'no-build' else 'wasm-check'
+        job['steps'] = [s for s in job['steps'] if token not in s.get('run', '')]
+    assert public_artifact_findings([('ci.yml', damaged)]), (
+        'the webapp allowance must refuse native identity, objects and missing packaging checks'
     )
 
 
