@@ -88,10 +88,10 @@ bool AliasListModel::setText(int row, const QString& role, const QString& value)
     }
     const std::string text = value.toStdString();
     if (role == QLatin1String("id")) {
-        return editor_.apply(edi::Edit::rename_alias(*alias, text), true).isEmpty();
+        return editor_.apply_relation_edit(edi::Edit::rename_alias(*alias, text)).isEmpty();
     }
     if (role == QLatin1String("parameter")) {
-        return editor_.apply(edi::Edit::assign(alias->parameter_unique_name, text), true).isEmpty();
+        return editor_.apply_relation_edit(edi::Edit::assign(alias->parameter_unique_name, text)).isEmpty();
     }
     return false;
 }
@@ -111,7 +111,7 @@ void AliasListModel::append() {
             break;
         }
     }
-    editor_.apply(edi::Edit::append(project.aliases, std::move(alias)), true);
+    editor_.apply_relation_edit(edi::Edit::append(project.aliases, std::move(alias)));
 }
 
 void AliasListModel::duplicate(int row) {
@@ -122,7 +122,7 @@ void AliasListModel::duplicate(int row) {
     edi::Project& project = project_;
     edi::ParameterAlias copy = *source;
     copy.id = unused_name(source->id.value() + "_", [&project](const std::string& id) { return holds_id(project.aliases, id); });
-    editor_.apply(edi::Edit::append(project.aliases, std::move(copy)), true);
+    editor_.apply_relation_edit(edi::Edit::append(project.aliases, std::move(copy)));
 }
 
 void AliasListModel::remove(int row) {
@@ -130,7 +130,7 @@ void AliasListModel::remove(int row) {
         return;
     }
     edi::Project& project = project_;
-    editor_.apply(edi::Edit::erase(project.aliases, static_cast<std::size_t>(row)), true);
+    editor_.apply_relation_edit(edi::Edit::erase(project.aliases, static_cast<std::size_t>(row)));
 }
 
 // ---- ConstraintListModel ------------------------------------------------------------------------
@@ -162,10 +162,10 @@ bool ConstraintListModel::setText(int row, const QString& role, const QString& v
     }
     const std::string text = value.toStdString();
     if (role == QLatin1String("id")) {
-        return editor_.apply(edi::Edit::rename_constraint(*constraint, text), true).isEmpty();
+        return editor_.apply_relation_edit(edi::Edit::rename_constraint(*constraint, text)).isEmpty();
     }
     if (role == QLatin1String("expression")) {
-        return editor_.apply(edi::Edit::assign(constraint->expression, text), true).isEmpty();
+        return editor_.apply_relation_edit(edi::Edit::assign(constraint->expression, text)).isEmpty();
     }
     return false;
 }
@@ -176,7 +176,7 @@ bool ConstraintListModel::setEnabled(int row, bool enabled) {
     if (constraint == nullptr) {
         return false;
     }
-    return editor_.apply(edi::Edit::assign(constraint->enabled, enabled), true).isEmpty();
+    return editor_.apply_relation_edit(edi::Edit::assign(constraint->enabled, enabled)).isEmpty();
 }
 
 void ConstraintListModel::append() {
@@ -188,7 +188,7 @@ void ConstraintListModel::append() {
     if (project.aliases.size() >= 2) {
         constraint.expression = project.aliases[1]->id.value() + " = " + project.aliases[0]->id.value();
     }
-    editor_.apply(edi::Edit::append(project.constraints, std::move(constraint)), true);
+    editor_.apply_relation_edit(edi::Edit::append(project.constraints, std::move(constraint)));
 }
 
 void ConstraintListModel::duplicate(int row) {
@@ -200,7 +200,7 @@ void ConstraintListModel::duplicate(int row) {
     edi::ParameterConstraint copy = *source;
     copy.id = unused_name(source->id.value() + "_",
                           [&project](const std::string& id) { return holds_id(project.constraints, id); });
-    editor_.apply(edi::Edit::append(project.constraints, std::move(copy)), true);
+    editor_.apply_relation_edit(edi::Edit::append(project.constraints, std::move(copy)));
 }
 
 void ConstraintListModel::remove(int row) {
@@ -208,7 +208,7 @@ void ConstraintListModel::remove(int row) {
         return;
     }
     edi::Project& project = project_;
-    editor_.apply(edi::Edit::erase(project.constraints, static_cast<std::size_t>(row)), true);
+    editor_.apply_relation_edit(edi::Edit::erase(project.constraints, static_cast<std::size_t>(row)));
 }
 
 // ---- FitStartListModel --------------------------------------------------------------------------

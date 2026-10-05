@@ -103,6 +103,18 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     hooks.calculated = [this](std::uint64_t /*generation*/) { emit calculationFinished(); };
     preview_ = std::make_unique<edi::LivePreview>(*project_, *worker_, std::move(hooks));
     fit_ = new FitViewModel(*project_, *worker_, *this, this);
+    // A fit is the newest undoable change once it ends with a result (finished, cancelled or stopped
+    // early), as is a fit start state the loaded project already holds; its undo is one level, so a
+    // second fit in a row is the same entry.
+    const auto note_fit = [this] {
+        if (fit_->canUndo() && (undo_history_.empty() || undo_history_.back().has_value())) {
+            undo_history_.emplace_back(std::nullopt);
+        }
+        syncUndo();
+    };
+    connect(fit_, &FitViewModel::finished, this, note_fit);
+    connect(fit_, &FitViewModel::canUndoChanged, this, [this] { syncUndo(); });
+    note_fit();
     preview_->recalculate();
     publishCalculating();
 }
@@ -303,6 +315,46 @@ QString ProjectViewModel::apply(const edi::Edit& change, bool structural) {
     setModified(true);
     publishCalculating();
     return {};
+}
+
+QString ProjectViewModel::apply_relation_edit(const edi::Edit& change) {
+    edi::RelationsUndo before = edi::capture_relations(*project_);
+    const QString refusal = apply(change, true);
+    if (refusal.isEmpty()) {
+        // The door's completion has run: what the edit changed is now known.
+        edi::keep_changed(before, *project_);
+        undo_history_.emplace_back(std::move(before));
+        syncUndo();
+    }
+    return refusal;
+}
+
+void ProjectViewModel::undo() {
+    syncUndo();
+    if (!can_undo_) {
+        return;
+    }
+    std::optional<edi::RelationsUndo> entry = std::move(undo_history_.back());
+    undo_history_.pop_back();
+    if (entry.has_value()) {
+        apply(edi::Edit::restore_relations(*project_, std::move(*entry)), true);
+    } else {
+        fit_->undo();
+    }
+    syncUndo();
+}
+
+void ProjectViewModel::syncUndo() {
+    // A fit entry whose start state is gone (undone, or replaced by a load) is no longer undoable.
+    while (!undo_history_.empty() && !undo_history_.back().has_value() &&
+           (fit_ == nullptr || !fit_->canUndo())) {
+        undo_history_.pop_back();
+    }
+    const bool can_undo = !undo_history_.empty();
+    if (can_undo != can_undo_) {
+        can_undo_ = can_undo;
+        emit canUndoChanged();
+    }
 }
 
 void ProjectViewModel::setModified(bool modified) {

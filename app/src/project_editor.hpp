@@ -22,6 +22,9 @@ class ProjectEditor {
     virtual ~ProjectEditor() = default;
     // Empty on success; the core's refusal message otherwise, with nothing changed.
     virtual QString apply(const edi::Edit& change, bool structural) = 0;
+    // An edit of the declared relations (edi ADR-0024): applied as `apply` does, and recorded, so the
+    // app bar's Undo restores the rows and every parameter state it changed.
+    virtual QString apply_relation_edit(const edi::Edit& change) = 0;
 };
 
 // A file of the project's current save, by its path relative to the project directory (D7); throws
