@@ -82,4 +82,66 @@ TestCase {
         tryVerify(() => !project.calculating, 10000, "Undo must finish restoring implied values");
         compare(RelationUndoObserver.state(project), before, "Controller Undo must restore declaration text ids enabled state dependence free marks values and prior uncertainty");
     }
+
+    function test_refused_restore_preserves_record_data() {
+        return [
+            {
+                tag: "removed",
+                route: "remove"
+            },
+            {
+                tag: "renamed",
+                route: "rename"
+            }
+        ];
+    }
+    function test_refused_restore_preserves_record(data) {
+        const project = Session.project;
+        const before = RelationUndoObserver.state(project);
+        verify(project.analysis.constraints.setText(1, "expression", "b = 3*a + 1"), "The history witness must admit a value-changing relation edit");
+        tryVerify(() => !project.calculating, 10000, "The relation edit must settle");
+        verify(RelationUndoObserver.blockRestore(project, data.route, true), "The target must become unavailable to restoration");
+        project.undo();
+        const kept = project.canUndo;
+        verify(RelationUndoObserver.blockRestore(project, data.route, false), "The same target must be available for retry");
+        project.undo();
+        tryVerify(() => !project.calculating, 10000, "A retried restoration must settle");
+        verify(kept, "A refused restore must preserve its history record");
+        compare(RelationUndoObserver.state(project), before, "Retry must restore the same record after its parameter becomes available");
+    }
+    function test_running_fit_cannot_consume_relation_history() {
+        const project = Session.project;
+        verify(RelationUndoObserver.prepareFit(project), "The witness must have an independent fit parameter");
+        const before = RelationUndoObserver.state(project);
+        verify(project.analysis.constraints.setText(0, "expression", "b = 3*a + 1"), "The interleaving witness must create a relation history record");
+        tryVerify(() => !project.calculating, 10000, "The edit must settle before starting the fit");
+        verify(RelationUndoObserver.refuseNextFit(project, true), "The worker refusal must leave existing history available");
+        project.fit.start();
+        verify(project.fit.running, "The undo attempt must happen while the real fit controller is running");
+        project.undo();
+        tryVerify(() => !project.fit.running, 10000, "The refused fit must finish delivery");
+        verify(RelationUndoObserver.refuseNextFit(project, false), "The invalid declaration must be repaired before retrying Undo");
+        verify(project.canUndo, "Running or refused fitting must preserve earlier relation history");
+        project.undo();
+        tryVerify(() => !project.calculating, 10000, "The preserved relation Undo must settle");
+        compare(RelationUndoObserver.state(project), before, "Undo after a refused fit must restore the original relation state");
+    }
+    function test_refused_fit_keeps_previous_fit_record() {
+        const project = Session.project;
+        verify(RelationUndoObserver.prepareFit(project), "The fit history control needs an independent parameter");
+        const before = RelationUndoObserver.state(project);
+        project.fit.start();
+        verify(project.fit.running, "The first fit must actually start");
+        tryVerify(() => !project.fit.running, 10000, "The first fit must finish before the refusal witness");
+        verify(project.fit.canUndo && project.canUndo, "A successful first fit must have a real undo record");
+        verify(RelationUndoObserver.refuseNextFit(project, true), "The second worker must encounter an invalid declaration");
+        project.fit.start();
+        verify(project.fit.running && !project.fit.canUndo, "The witness must cross temporary fit Undo unavailability");
+        tryVerify(() => !project.fit.running, 10000, "The refused second fit must finish");
+        verify(RelationUndoObserver.refuseNextFit(project, false), "Undo must be retried with valid declarations");
+        verify(project.canUndo, "A transient canUndo change must not delete the previous fit history");
+        project.undo();
+        tryVerify(() => !project.calculating, 10000, "The previous fit Undo must settle");
+        compare(RelationUndoObserver.state(project), before, "Undo must restore the state preceding the first fit");
+    }
 }

@@ -83,3 +83,79 @@ def test_alias_first_handle_owns_storage_and_obeys_detachment(
         + result.stdout
         + result.stderr
     )
+
+
+RETAINED_CHILD = r"""
+import gc
+import sys
+import edi
+
+project = edi.Project.load(sys.argv[1])
+kind, route, flag = sys.argv[2:]
+held = project.structures[0] if kind in ('site', 'cell') else project.experiments[0]
+handle = project.analysis.aliases['held'].param
+assert not handle.symmetry_constrained, 'the retained-owner control has no symmetry follower'
+assert handle.user_constrained, 'the retained-owner control begins with a declared dependent'
+if route == 'destroy':
+    del project
+elif route == 'remove':
+    collection = project.structures if kind in ('site', 'cell') else project.experiments
+    collection.remove(held.name)
+elif route == 'replace':
+    replacement = edi.Project.load(sys.argv[1])
+    if kind in ('site', 'cell'):
+        item = replacement.structures[0]
+        replacement.structures.remove(item.name)
+        project.structures.add(item)
+    else:
+        item = replacement.experiments[0]
+        replacement.experiments.remove(item.name)
+        project.experiments.add(item)
+elif route == 'transfer':
+    collection = project.structures if kind in ('site', 'cell') else project.experiments
+    collection.remove(held.name)
+    new_owner = edi.Project.load(sys.argv[1])
+    new_owner.analysis.constraints.remove('held')
+    destination = new_owner.structures if kind in ('site', 'cell') else new_owner.experiments
+    destination.add(held)
+    del project
+else:
+    assert route == 'live', 'the owner-lifetime control route must be explicit'
+gc.collect()
+try:
+    result = getattr(handle, flag)
+except (ValueError, RuntimeError) as refusal:
+    assert route != 'live', 'live retained owners must permit dependence reads'
+    words = ('owner', 'project', 'detach', 'alias', 'parameter', 'unknown')
+    assert any(word in str(refusal).lower() for word in words), (
+        'an unavailable owner must refuse dependence by name')
+else:
+    assert isinstance(result, bool), 'dependence reads must return a safe Boolean'
+    if flag == 'symmetry_constrained':
+        assert not result, 'no lifetime route can invent a symmetry constraint'
+    elif route == 'live':
+        assert result, 'the retained live owner must preserve the declared dependence'
+    elif route != 'destroy':
+        assert not result, 'detached or transferred storage must not consult its former project'
+"""
+
+
+@pytest.mark.parametrize(('kind', 'target', 'expected'), TARGETS, ids=[v[0] for v in TARGETS])
+@pytest.mark.parametrize('exit_route', ['live', 'destroy', 'remove', 'replace', 'transfer'])
+@pytest.mark.parametrize('flag', ['user_constrained', 'symmetry_constrained'])
+def test_retained_container_dependence_follows_only_its_live_owner(
+    tmp_path, kind, target, expected, exit_route, flag
+):
+    directory = MATERIALIZE(tmp_path, [('held', target)], [f'held = {expected}'])
+    result = subprocess.run(
+        [sys.executable, '-c', RETAINED_CHILD, str(directory), kind, exit_route, flag],
+        capture_output=True,
+        text=True,
+        timeout=20,
+        check=False,
+    )
+    assert result.returncode == 0, (
+        'retained containers must never leave dependence reads with a dead project: '
+        + result.stdout
+        + result.stderr
+    )

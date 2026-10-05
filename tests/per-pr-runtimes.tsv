@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-05T03:35:09Z
+# measured_utc = 2026-10-05T05:53:53Z
 #
-# Recorded from: edi-fixed.log; edi-native-runner.xml (Release O3, OMP_NUM_THREADS=1); failing native nodes remain unmeasured
-# Collected tests: 6287; with a reported duration: 3810
+# Recorded from: edi-python.log; edi-native.xml (archived source, Release O2, OMP_NUM_THREADS=1)
+# Collected tests: 6355; with a reported duration: 3858
 # Module-scoped fixture costs recorded: 10
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 6287
-# inventory_cpp = 249
-# inventory_measured = 5855
-# inventory_unmeasured = 681
+# inventory_python = 6355
+# inventory_cpp = 252
+# inventory_measured = 5903
+# inventory_unmeasured = 704
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_projects_open_and_populate_pages
@@ -1382,6 +1382,66 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t28_paired_cache.py:
 0.170	tests/integration/py/test_constraint_alias_lifetime.py::test_alias_first_handle_owns_storage_and_obeys_detachment[replace-profile]
 0.160	tests/integration/py/test_constraint_alias_lifetime.py::test_alias_first_handle_owns_storage_and_obeys_detachment[replace-scale]
 0.160	tests/integration/py/test_constraint_alias_lifetime.py::test_alias_first_handle_owns_storage_and_obeys_detachment[replace-site]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[symmetry_constrained-destroy-background]
+0.200	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[symmetry_constrained-destroy-cell]
+0.180	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[symmetry_constrained-destroy-instrument]
+0.180	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[symmetry_constrained-destroy-profile]
+0.160	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[symmetry_constrained-destroy-scale]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[symmetry_constrained-destroy-site]
+0.160	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[symmetry_constrained-live-background]
+0.190	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[symmetry_constrained-live-cell]
+0.170	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[symmetry_constrained-live-instrument]
+0.190	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[symmetry_constrained-live-profile]
+0.160	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[symmetry_constrained-live-scale]
+0.190	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[symmetry_constrained-live-site]
+0.190	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[symmetry_constrained-remove-background]
+0.170	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[symmetry_constrained-remove-cell]
+0.190	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[symmetry_constrained-remove-instrument]
+0.150	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[symmetry_constrained-remove-profile]
+0.160	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[symmetry_constrained-remove-scale]
+0.160	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[symmetry_constrained-remove-site]
+0.180	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[symmetry_constrained-replace-background]
+0.170	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[symmetry_constrained-replace-cell]
+0.210	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[symmetry_constrained-replace-instrument]
+0.200	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[symmetry_constrained-replace-profile]
+0.170	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[symmetry_constrained-replace-scale]
+0.160	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[symmetry_constrained-replace-site]
+0.210	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[symmetry_constrained-transfer-background]
+0.180	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[symmetry_constrained-transfer-cell]
+0.170	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[symmetry_constrained-transfer-instrument]
+0.190	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[symmetry_constrained-transfer-profile]
+0.170	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[symmetry_constrained-transfer-scale]
+0.170	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[symmetry_constrained-transfer-site]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[user_constrained-destroy-background]
+0.200	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[user_constrained-destroy-cell]
+0.170	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[user_constrained-destroy-instrument]
+0.180	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[user_constrained-destroy-profile]
+0.170	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[user_constrained-destroy-scale]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[user_constrained-destroy-site]
+0.190	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[user_constrained-live-background]
+0.170	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[user_constrained-live-cell]
+0.180	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[user_constrained-live-instrument]
+0.170	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[user_constrained-live-profile]
+0.200	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[user_constrained-live-scale]
+0.160	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[user_constrained-live-site]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[user_constrained-remove-background]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[user_constrained-remove-cell]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[user_constrained-remove-instrument]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[user_constrained-remove-profile]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[user_constrained-remove-scale]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[user_constrained-remove-site]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[user_constrained-replace-background]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[user_constrained-replace-cell]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[user_constrained-replace-instrument]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[user_constrained-replace-profile]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[user_constrained-replace-scale]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[user_constrained-replace-site]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[user_constrained-transfer-background]
+0.180	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[user_constrained-transfer-cell]
+0.170	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[user_constrained-transfer-instrument]
+0.200	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[user_constrained-transfer-profile]
+0.180	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[user_constrained-transfer-scale]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_alias_lifetime.py::test_retained_container_dependence_follows_only_its_live_owner[user_constrained-transfer-site]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_alias_creation_refuses_foreign_handles_and_duplicate_ids
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_angle_units_require_the_explicit_degree_conversion
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_background_address_uses_row_id_after_reordering
@@ -1464,6 +1524,14 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_fit.py::test_disabled_relation_stays_inactive_during_fit_and_can_be_reenabled
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_fit.py::test_full_covariance_reaches_dependent_writeback_and_undo
 0.000	tests/integration/py/test_constraint_fit.py::test_independent_covariance_generator_reproduces_the_committed_reference
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_geometry_renewal.py::test_geometry_read_completes_declaration_only_changes[False-stored-cell]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_geometry_renewal.py::test_geometry_read_completes_declaration_only_changes[False-stored-coordinate]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_geometry_renewal.py::test_geometry_read_completes_declaration_only_changes[False-window-cell]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_geometry_renewal.py::test_geometry_read_completes_declaration_only_changes[False-window-coordinate]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_geometry_renewal.py::test_geometry_read_completes_declaration_only_changes[True-stored-cell]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_geometry_renewal.py::test_geometry_read_completes_declaration_only_changes[True-stored-coordinate]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_geometry_renewal.py::test_geometry_read_completes_declaration_only_changes[True-window-cell]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_geometry_renewal.py::test_geometry_read_completes_declaration_only_changes[True-window-coordinate]
 0.000	tests/integration/py/test_constraint_no_interpreter.py::test_interpreter_symbol_detector_reaches_each_escape
 0.060	tests/integration/py/test_constraint_no_interpreter.py::test_product_constraint_code_cannot_delegate_to_an_interpreter
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_transitions.py::test_declaration_only_change_renews_held_computed_category[data]
@@ -5235,12 +5303,15 @@ UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_categories.cpp::New
 0.001	tests/unit/cpp/test_constraint_edits.cpp::Constraint core edits preserve source rows through append duplicate and removal
 0.009	tests/unit/cpp/test_constraint_edits.cpp::Constraint core enable edits retain the inactive declaration
 UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_saved_text.cpp::Saved analysis and shown block text retain enabled and disabled relation loops
-UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_transitions.cpp::A declaration-only edit supersedes completed queued FitJob adoption
-UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_transitions.cpp::Coordinate and cell declaration edits revoke stored geometry
-UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_transitions.cpp::Native alias admission refuses invalid saves and canonical text before publication
-UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_transitions.cpp::Native unrefreshed constraints save active dependents bare
-UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_transitions.cpp::Relation declaration writes revoke computed currentness without parameter writes
-UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_transitions.cpp::Relation declaration writes supersede calculated publications atomically
+0.214	tests/unit/cpp/test_constraint_transitions.cpp::A declaration-only edit supersedes completed queued FitJob adoption
+0.011	tests/unit/cpp/test_constraint_transitions.cpp::Coordinate and cell declaration edits revoke stored geometry
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_transitions.cpp::Declaration edits before a work snapshot publish completed values with arrays
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_transitions.cpp::Held native window geometry retains relation provenance and renews dependent values
+0.010	tests/unit/cpp/test_constraint_transitions.cpp::Native alias admission refuses invalid saves and canonical text before publication
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_transitions.cpp::Native geometry renewal applies valid relations and refuses invalid declarations
+0.003	tests/unit/cpp/test_constraint_transitions.cpp::Native unrefreshed constraints save active dependents bare
+0.040	tests/unit/cpp/test_constraint_transitions.cpp::Relation declaration writes revoke computed currentness without parameter writes
+0.072	tests/unit/cpp/test_constraint_transitions.cpp::Relation declaration writes supersede calculated publications atomically
 0.004	tests/unit/cpp/test_constraint_transitions.cpp::Unchanged relation declarations admit calculated publication
 0.030	tests/unit/cpp/test_e05_t1_fit_job.cpp::E05-T1 gate 3 engine checkpoint cancel retains partial values and undo
 0.036	tests/unit/cpp/test_e05_t1_fit_job.cpp::E05-T1 gate 3 joint engine checkpoint cancel retains partial values and undo

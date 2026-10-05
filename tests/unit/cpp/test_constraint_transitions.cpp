@@ -18,6 +18,10 @@ edi::Project transition_project() {
             .string());
 }
 void declaration_edit(edi::Project& p, const std::string& kind) {
+    if (kind == "clear-all") {
+        p.constraints.clear();
+        p.aliases.clear();
+    }
     if (kind == "expression") p.constraints[1]->expression = "b = 3*a + 1";
     if (kind == "equal-expression") p.constraints[1]->expression = "b = 2*a + 1";
     if (kind == "disable") p.constraints[1]->enabled = false;
@@ -39,9 +43,10 @@ void declaration_edit(edi::Project& p, const std::string& kind) {
         p.aliases.push_back(std::make_shared<edi::ParameterAlias>(row));
     }
 }
-const std::vector<std::string> edits{
-    "expression",     "equal-expression", "disable",      "constraint-rename", "constraint-remove",
-    "constraint-add", "alias-retarget",   "alias-rename", "alias-remove",      "alias-add"};
+const std::vector<std::string> edits{"expression",        "equal-expression",  "disable",
+                                     "constraint-rename", "constraint-remove", "constraint-add",
+                                     "alias-retarget",    "alias-rename",      "alias-remove",
+                                     "alias-add",         "clear-all"};
 }  // namespace
 
 TEST_CASE("Relation declaration writes revoke computed currentness without parameter writes") {
@@ -168,7 +173,7 @@ TEST_CASE("Native unrefreshed constraints save active dependents bare") {
 
 TEST_CASE("A declaration-only edit supersedes completed queued FitJob adoption") {
     for (const std::string kind :
-         {"control", "expression", "equal-expression", "disable", "constraint-remove",
+         {"control", "clear-all", "expression", "equal-expression", "disable", "constraint-remove",
           "constraint-add", "constraint-rename", "alias-add", "alias-remove", "alias-rename",
           "alias-retarget"}) {
         CAPTURE(kind);
@@ -293,4 +298,119 @@ TEST_CASE("Native alias admission refuses invalid saves and canonical text befor
                           "Canonical Analysis text must apply the same alias admission as save");
         }
     }
+}
+
+TEST_CASE("Declaration edits before a work snapshot publish completed values with arrays") {
+    auto p = transition_project();
+    p.calculate();
+    auto& target = p.structure().atom_sites[1]->adp_iso;
+    const double before = target.value.get();
+    const auto buffer = p.experiment().data->intensity_calc.values().data();
+    p.constraints[1]->expression = "b = 3*a + 1";
+    auto work = edi::snapshot_for_work(p);
+    work.project.calculate();
+    REQUIRE_MESSAGE(
+        work.project.structure().atom_sites[1]->adp_iso.value.get() == doctest::Approx(1.9),
+        "The worker must apply the edited relation at the independent input 0.3");
+    auto staged = edi::stage_computed(work.project, work.stamps);
+    const auto outcome = edi::publish(p, std::move(staged));
+    if (outcome == edi::PublishOutcome::Superseded) {
+        CHECK_MESSAGE((target.value.get() == before &&
+                       p.experiment().data->intensity_calc.values().data() == buffer),
+                      "A refused calculation publication preserves both values and arrays");
+    } else {
+        CHECK_MESSAGE(
+            target.value.get() == doctest::Approx(1.9),
+            "Published arrays and their completed dependent values must describe one model");
+        CHECK_MESSAGE(p.experiment().computed_current(),
+                      "A successful calculation publication must carry current arrays");
+    }
+}
+
+TEST_CASE("Native geometry renewal applies valid relations and refuses invalid declarations") {
+    for (const std::string family : {"coordinate", "cell"}) {
+        for (const bool invalid : {false, true}) {
+            CAPTURE(family);
+            CAPTURE(invalid);
+            auto p = transition_project();
+            p.constraints.erase_at(0);
+            p.aliases[0]->parameter_unique_name =
+                family == "cell" ? "phase.cell.length_a" : "phase.atom_site.A.fract_x";
+            p.aliases[1]->parameter_unique_name =
+                family == "cell" ? "phase.cell.length_b" : "phase.atom_site.B.fract_y";
+            p.constraints[0]->expression = family == "cell" ? "b = 1.2*a" : "b = 2*a + .1";
+            p.calculate();
+            auto old = p.structure().current_geometry();
+            p.constraints[0]->expression = invalid            ? "b = missing"
+                                           : family == "cell" ? "b = 1.3*a"
+                                                              : "b = 3*a + .1";
+            bool refused = false;
+            try {
+                const auto renewed = p.structure().current_geometry();
+                CHECK_MESSAGE(!invalid, "Invalid geometry relations must refuse value reads");
+                if (!invalid) {
+                    const double expected = family == "cell" ? 5.33 : .61;
+                    CHECK_MESSAGE(
+                        (family == "cell" ? p.structure().cell.length_b.value.get()
+                                          : p.structure().atom_sites[1]->fract_y.value.get()) ==
+                            doctest::Approx(expected),
+                        "Geometry reads must complete the new relation before computing");
+                    if (family == "cell") {
+                        CHECK_MESSAGE(
+                            renewed.atom_sites_cartn_transform.matrix[4] == doctest::Approx(5.33),
+                            "The renewed Cartesian frame must use the dependent cell length");
+                    } else {
+                        const auto& atoms = renewed.expanded_atom_sites;
+                        bool found = false;
+                        for (std::size_t i = 0; i < atoms.atom_site_id.size(); ++i) {
+                            if (atoms.atom_site_id[i] == "B") {
+                                found = true;
+                                CHECK_MESSAGE(
+                                    atoms.fract_y[i] == doctest::Approx(.61),
+                                    "The renewed expanded site must use the dependent coordinate");
+                            }
+                        }
+                        CHECK_MESSAGE(found,
+                                      "The geometry witness must include the dependent atom");
+                    }
+                }
+            } catch (const std::exception&) {
+                refused = true;
+            }
+            CHECK_MESSAGE(refused == invalid,
+                          "Valid geometry renews and invalid relation admission refuses");
+        }
+    }
+}
+
+TEST_CASE("Held native window geometry retains relation provenance and renews dependent values") {
+    auto p = transition_project();
+    p.constraints.erase_at(0);
+    p.aliases[0]->parameter_unique_name = "phase.atom_site.A.fract_x";
+    p.aliases[1]->parameter_unique_name = "phase.atom_site.B.fract_y";
+    p.constraints[0]->expression = "b = 2*a + .1";
+    p.calculate();
+    const auto held = edi::window_geometry(p.structure(), {});
+    REQUIRE_MESSAGE(edi::window_geometry_current(p.structure(), held),
+                    "The window control must be current before the declaration edit");
+    p.constraints[0]->expression = "b = 3*a + .1";
+    CHECK_MESSAGE(!edi::window_geometry_current(p.structure(), held),
+                  "A held window must retain the relation generation that produced it");
+    const auto renewed = edi::window_geometry(p.structure(), {});
+    CHECK_MESSAGE(
+        p.structure().atom_sites[1]->fract_y.value.get() == doctest::Approx(.61),
+        "A window read must complete the dependent coordinate before producing geometry");
+    const auto& sites = renewed.geometry.expanded_atom_sites;
+    bool found = false;
+    for (std::size_t i = 0; i < sites.atom_site_id.size(); ++i) {
+        if (sites.atom_site_id[i] == "B") {
+            found = true;
+            CHECK_MESSAGE(sites.fract_y[i] == doctest::Approx(.61),
+                          "Window arrays must describe the new relation's dependent value");
+        }
+    }
+    CHECK_MESSAGE(found, "The renewed native window must contain its dependent atom");
+    p.constraints[0]->expression = "b = missing";
+    CHECK_THROWS_MESSAGE(edi::window_geometry(p.structure(), {}),
+                         "Invalid relations must refuse native window geometry");
 }
