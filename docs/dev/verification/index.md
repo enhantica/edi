@@ -89,8 +89,8 @@ produced by edi or crysta.
 ### Ferrite and austenite, two phases
 
 - [pd-neut-tof ferrite and austenite, BEER joint](pd-neut-tof_ferrite-austenite_beer_joint.ipynb) –
-  **two phases summed** in each of two banks, against CrySPY's pattern (the reference
-  is CrySPY, not FullProf; phase scales carry 1/sin θ of the bank).
+  **two phases summed** in each of two banks, calculated and fitted jointly; no reference
+  comparison yet (the owner's FullProf project comes with shared-parameter constraints).
 
 ### NCAF structure
 
