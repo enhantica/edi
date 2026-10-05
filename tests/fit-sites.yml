@@ -73,3 +73,5 @@ sites:
     case: constraint-covariance
   - file: tests/system/py/test_scan_driver_resume.py
     case: cosio-d20-scan-3f
+  - file: tests/system/py/test_scan_lazy_input.py
+    case: cosio-d20-scan-3f

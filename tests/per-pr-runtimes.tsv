@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-05T18:49:07Z
+# measured_utc = 2026-10-05T19:00:45Z
 #
-# Recorded from: per-pr-durations.txt (3 node(s) measured once, 6070 banked, 0 stale row(s) dropped)
-# Collected tests: 6715; with a reported duration: 3951
-# Module-scoped fixture costs recorded: 15
+# Recorded from: per-pr-durations.txt (2 node(s) measured once, 6073 banked, 0 stale row(s) dropped)
+# Collected tests: 6717; with a reported duration: 3952
+# Module-scoped fixture costs recorded: 16
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 6715
+# inventory_python = 6717
 # inventory_cpp = 287
-# inventory_measured = 6073
+# inventory_measured = 6075
 # inventory_unmeasured = 929
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
@@ -5547,6 +5547,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_locked_dependencies.py::test_
 0.000	tests/system/py/test_scan_driver_resume.py::test_callback_runs_after_each_result_is_committed
 0.000	tests/system/py/test_scan_driver_resume.py::test_resumed_facade_csv_is_cell_identical_to_native_driver_consistency
 0.000	tests/system/py/test_scan_driver_resume.py::test_stop_retains_committed_rows_and_continue_visits_only_remaining_files
+0.001	tests/system/py/test_scan_lazy_input.py::test_driver_opens_only_current_file_and_bounded_read_ahead
+0.000	tests/system/py/test_scan_lazy_input.py::test_gate_rejects_an_exercised_read_all_files_before_fitting_escape
 0.000	tests/test_c34_t1a_selector_arity.py::test_direct_file_and_glob_selectors_reach_the_notebook
 0.000	tests/test_c34_t1a_selector_arity.py::test_glob_exclusion_subtracts_while_the_sibling_stays_in
 0.000	tests/test_c34_t1a_selector_arity.py::test_separated_color_value_is_consumed_not_a_selector
@@ -7057,4 +7059,5 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 1.762	tests/system/py/test_e09_t58_start_tied_numeric.py
 # module-cost: 0.180	tests/system/py/test_e09_t75_native_execution.py
 # module-cost: 1.184	tests/system/py/test_scan_driver_resume.py
+# module-cost: 1.379	tests/system/py/test_scan_lazy_input.py
 # module-cost: 2.743	tests/unit/py/test_e04_t9_latency_ratchet.py
