@@ -50,6 +50,8 @@ class DemoDriver : public QObject {
     //   resize:<width>x<height>     the window's logical size
     //   type:<text>                 type the text into the focused field
     //   expand:<group>              unfold a group, whether or not it is folded
+    //   save-as:<name>              save the open project into a directory of that name in the run's
+    //                               scratch directory (or at an absolute path); open-project:<name> opens one
     struct Step {
         QString image;
         QStringList actions;

@@ -54,12 +54,12 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         {"02-project-no-project", {"home.start"}},
         {"03-project-examples", {"group.examples"}},
         {"04-project-loaded", {"examples.open.pd-neut-cwl_cosio-d20_start-1"}},
-        {"05-model-models", {"appBar.tab.structure", "group.structures"}},
+        {"05-model-models", {"appBar.tab.structure", "expand:group.structures"}},
         {"06-model-space-group", {"group.space_group"}},
         {"07-model-cell", {"group.cell"}},
         {"08-model-atom-site", {"group.atom_site"}},
         {"09-model-text-mode", {text}},
-        {"10-experiment-experiments", {experiment, "group.experiments"}},
+        {"10-experiment-experiments", {experiment, "expand:group.experiments"}},
         {"11-experiment-profile-shape", {"group.peak"}},
         {"12-experiment-background", {"group.background"}},
         {"13-analysis-basic", {"appBar.tab.analysis"}},
@@ -139,7 +139,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // ... then ideas no capture above shows (edi ADR-0017): the Experiment type grid three
     // wide (§2), and Measured data's one increment where the steps are equal (§6; t2-12 shows the range) ...
     steps_.push_back({"t4-01-experiment-type", open_example("pd-neut-cwl_lbco-hrpt_start-2")
-                                                   + QStringList{experiment, basic, "group.experiments"}});
+                                                   + QStringList{experiment, basic, "expand:group.experiments"}});
     steps_.push_back({"t4-02-measured-data-uniform", {extras, "group.data"}});
     // ... and the messages (ideas 24-26; §14): the example that always has three, counted in the status bar
     // before they are viewed, listed in the dialog, and counted again after it closes; then a refused
@@ -173,11 +173,33 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                          + QStringList{experiment, basic, "expand:group.experiments"}});
     steps_.push_back({"t16-08-create-experiment", {"experiments.create"}});
     steps_.push_back({"t16-09-create-tof", {"experimentType.beamMode", "choose:time-of-flight"}});
-    steps_.push_back({"t16-10-create-undone", {"appBar.button.undo"}});
+    steps_.push_back({"t16-09-create-text", {text}});
+    steps_.push_back({"t16-10-create-undone", {basic, "appBar.button.undo"}});
     steps_.push_back({"t16-11-alias-search", start + open_example("pd-neut-cwl_cosio-d20_scan-3f")
                                                  + QStringList{analysis, extras, "expand:group.alias", "aliases.append",
                                                                "alias.parameter.0"}});
     steps_.push_back({"t16-12-alias-search-filtered", {"type:scale"}});
+    // The owner's review of the first look (2026-10-05): the selector row at the top of the main area, its
+    // list and the outcome icons, on a project with two structures and two experiments and on one with one each.
+    const QString structure = QStringLiteral("appBar.tab.structure");
+    const QString blocks = QStringLiteral("mainArea.blocks.box");
+    const QString close = QStringLiteral("key:Escape");
+    steps_.push_back({"t16-20-beer-structure", start + open_example("pd-neut-tof_ferrite-austenite-beer_joint")
+                                                   + QStringList{structure, basic}});
+    steps_.push_back({"t16-21-beer-structure-list", {blocks}});
+    steps_.push_back({"t16-22-beer-experiment", {close, experiment, basic}});
+    steps_.push_back({"t16-23-beer-experiment-list", {blocks}});
+    steps_.push_back({"t16-24-beer-analysis-fitted", {close, analysis, basic, "fitting.start", "wait-fit", "choose:OK"}});
+    steps_.push_back({"t16-25-beer-analysis-list", {blocks}});
+    steps_.push_back({"t16-26-beer-experiment-fitted", {close, experiment, basic}});
+    steps_.push_back({"t16-27-cosio-structure", start + open_example("pd-neut-cwl_cosio-d20_start-1")
+                                                    + QStringList{structure, basic}});
+    steps_.push_back({"t16-28-cosio-experiment", {experiment, basic}});
+    steps_.push_back({"t16-29-cosio-experiment-list", {blocks}});
+    steps_.push_back({"t16-30-cosio-analysis", {close, analysis, basic}});
+    steps_.push_back({"t16-40-created-saved-reopened",
+                      {"experiments.create", "save-as:created", "open-project:created", experiment, "mainArea.blocks.box",
+                       "choose:experiment1 · experiment1.edi", text, "scroll-to:text.view:_data_range"}});
     if (!only.isEmpty()) {
         std::erase_if(steps_, [&only](const Step& step) { return !step.image.startsWith(only); });
     }
@@ -341,6 +363,19 @@ bool DemoDriver::perform(const QString& action) {
         }
         auto* content = qvariant_cast<QQuickItem*>(flickable->property("contentItem"));
         flickable->setProperty("contentY", content != nullptr ? view->mapToItem(content, line.topLeft()).y() : line.y());
+        return true;
+    }
+    if (action.startsWith(QLatin1String("save-as:")) || action.startsWith(QLatin1String("open-project:"))) {
+        QQmlEngine* engine = qmlEngine(window_.contentItem());
+        auto* session = engine ? engine->singletonInstance<Session*>("edi.app", "Session") : nullptr;
+        const bool save = action.startsWith(QLatin1String("save-as:"));
+        const QString name = action.section(QLatin1Char(':'), 1);
+        const QUrl directory = QUrl::fromLocalFile(QDir::isAbsolutePath(name) ? name : loaded_files_.filePath(name));
+        if (session == nullptr || !(save ? session->saveAs(directory) : session->openProject(directory))) {
+            fail(QStringLiteral("step %1: %2 refused: %3")
+                     .arg(steps_[current_].image, action, session ? session->lastError() : QStringLiteral("no session")));
+            return false;
+        }
         return true;
     }
     if (action.startsWith(QLatin1String("expand:"))) {
