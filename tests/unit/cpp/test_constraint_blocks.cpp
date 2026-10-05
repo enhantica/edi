@@ -6,6 +6,7 @@
 #include <string>
 
 #include "edi/io.hpp"
+#include "edi/validation.hpp"
 
 namespace {
 struct ProjectDirectory {
@@ -42,11 +43,13 @@ TEST_CASE("Core joint fitting refuses unsupported relation directions") {
         bool refused = false;
         try {
             (void)project.fit_joint();
-        } catch (const std::exception& error) {
+        } catch (const edi::DomainValidationError& error) {
             refused = true;
             const std::string message(error.what());
+            REQUIRE_MESSAGE(!error.diagnostics().empty(),
+                            "The core adapter must preserve structured joint block diagnostics");
             CHECK_MESSAGE(
-                message.find("crysta.domain.constraint_crosses_blocks") != std::string::npos,
+                error.diagnostics().front().code == "crysta.domain.constraint_crosses_blocks",
                 "The core adapter must preserve the joint block refusal code");
             CHECK_MESSAGE(message.find("bank") != std::string::npos,
                           "The joint refusal must identify its independent bank");

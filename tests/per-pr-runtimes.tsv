@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-05T07:38:14Z
+# measured_utc = 2026-10-05T10:48:57Z
 #
-# Recorded from: tests-seq20-sweep.log (44 node(s) measured once, 5793 banked, 5 stale row(s) dropped)
-# Collected tests: 6169; with a reported duration: 3792
+# Recorded from: seq17 edi-native.xml (pinned SDK build/ci Release; OMP_NUM_THREADS=1; retired monolith removed, twelve already-committed cases restored)
+# Collected tests: 6574; with a reported duration: 3904
 # Module-scoped fixture costs recorded: 11
 #
 # Breaches are decided PER TIER against the table
@@ -30,9 +30,9 @@
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 6574
-# inventory_cpp = 269
-# inventory_measured = 5977
-# inventory_unmeasured = 866
+# inventory_cpp = 268
+# inventory_measured = 5978
+# inventory_unmeasured = 864
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_projects_open_and_populate_pages
@@ -5512,8 +5512,8 @@ UNMEASURED:failed-in-this-run	tests/unit/cpp/test_c34_t28_storage_lifetimes.cpp:
 UNMEASURED:failed-in-this-run	tests/unit/cpp/test_c34_t28_value_semantics.cpp::C34-T28 F20 preserved aggregate comparisons retain standard value order
 UNMEASURED:failed-in-this-run	tests/unit/cpp/test_c34_t28_value_semantics.cpp::C34-T28 F20 preserved measured expressions retain values and equality
 UNMEASURED:failed-in-this-run	tests/unit/cpp/test_c34_t28_value_semantics.cpp::C34-T28 F20 preserved plain string expressions retain reads and ordering
-UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_blocks.cpp::Core joint bank dependents can reach the shared structural prefix
-UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_blocks.cpp::Core joint fitting refuses unsupported relation directions
+0.009	tests/unit/cpp/test_constraint_blocks.cpp::Core joint bank dependents can reach the shared structural prefix
+0.018	tests/unit/cpp/test_constraint_blocks.cpp::Core joint fitting refuses unsupported relation directions
 UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_categories.cpp::Core dependent marks cover both Structure and Experiment fields
 UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_categories.cpp::New core projects contain no GUI preview declarations
 0.003	tests/unit/cpp/test_constraint_edits.cpp::Alias candidates exclude dependents while retaining ordinary fixed parameters
@@ -5527,25 +5527,24 @@ UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_owner_rebinding.cpp
 UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_owner_rebinding.cpp::Project move assignment rebinds direct children immediately
 UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_owner_rebinding.cpp::Project move binds direct children before any accessor
 UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_saved_text.cpp::Saved analysis and shown block text retain enabled and disabled relation loops
-0.214	tests/unit/cpp/test_constraint_transitions.cpp::A declaration-only edit supersedes completed queued FitJob adoption
 0.011	tests/unit/cpp/test_constraint_transitions.cpp::Coordinate and cell declaration edits revoke stored geometry
 UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_transitions.cpp::Declaration edits before a work snapshot publish completed values with arrays
 UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_transitions.cpp::Held native window geometry retains relation provenance and renews dependent values
 0.010	tests/unit/cpp/test_constraint_transitions.cpp::Native alias admission refuses invalid saves and canonical text before publication
 UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_transitions.cpp::Native geometry renewal applies valid relations and refuses invalid declarations
 0.003	tests/unit/cpp/test_constraint_transitions.cpp::Native unrefreshed constraints save active dependents bare
-0.021	tests/unit/cpp/test_constraint_transitions.cpp::Queued FitJob declaration adoption: alias-add
-0.022	tests/unit/cpp/test_constraint_transitions.cpp::Queued FitJob declaration adoption: alias-remove
-0.022	tests/unit/cpp/test_constraint_transitions.cpp::Queued FitJob declaration adoption: alias-rename
-0.019	tests/unit/cpp/test_constraint_transitions.cpp::Queued FitJob declaration adoption: alias-retarget
-0.011	tests/unit/cpp/test_constraint_transitions.cpp::Queued FitJob declaration adoption: clear-all
-0.021	tests/unit/cpp/test_constraint_transitions.cpp::Queued FitJob declaration adoption: constraint-add
-0.021	tests/unit/cpp/test_constraint_transitions.cpp::Queued FitJob declaration adoption: constraint-remove
+0.012	tests/unit/cpp/test_constraint_transitions.cpp::Queued FitJob declaration adoption: alias-add
+0.023	tests/unit/cpp/test_constraint_transitions.cpp::Queued FitJob declaration adoption: alias-remove
+0.025	tests/unit/cpp/test_constraint_transitions.cpp::Queued FitJob declaration adoption: alias-rename
+0.021	tests/unit/cpp/test_constraint_transitions.cpp::Queued FitJob declaration adoption: alias-retarget
+0.018	tests/unit/cpp/test_constraint_transitions.cpp::Queued FitJob declaration adoption: clear-all
+0.018	tests/unit/cpp/test_constraint_transitions.cpp::Queued FitJob declaration adoption: constraint-add
+0.013	tests/unit/cpp/test_constraint_transitions.cpp::Queued FitJob declaration adoption: constraint-remove
 0.021	tests/unit/cpp/test_constraint_transitions.cpp::Queued FitJob declaration adoption: constraint-rename
-0.033	tests/unit/cpp/test_constraint_transitions.cpp::Queued FitJob declaration adoption: control
-0.016	tests/unit/cpp/test_constraint_transitions.cpp::Queued FitJob declaration adoption: disable
-0.013	tests/unit/cpp/test_constraint_transitions.cpp::Queued FitJob declaration adoption: equal-expression
-0.018	tests/unit/cpp/test_constraint_transitions.cpp::Queued FitJob declaration adoption: expression
+0.018	tests/unit/cpp/test_constraint_transitions.cpp::Queued FitJob declaration adoption: control
+0.020	tests/unit/cpp/test_constraint_transitions.cpp::Queued FitJob declaration adoption: disable
+0.020	tests/unit/cpp/test_constraint_transitions.cpp::Queued FitJob declaration adoption: equal-expression
+0.020	tests/unit/cpp/test_constraint_transitions.cpp::Queued FitJob declaration adoption: expression
 0.040	tests/unit/cpp/test_constraint_transitions.cpp::Relation declaration writes revoke computed currentness without parameter writes
 0.072	tests/unit/cpp/test_constraint_transitions.cpp::Relation declaration writes supersede calculated publications atomically
 0.004	tests/unit/cpp/test_constraint_transitions.cpp::Unchanged relation declarations admit calculated publication
