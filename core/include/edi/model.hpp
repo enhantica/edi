@@ -4056,6 +4056,11 @@ class Project : public detail::ProjectAnchor {
     // instead (per-object precision).
     void note_edit() noexcept { edits_.renew(); }
 
+    // A held experiment's value read reaches calculate() through its collection's link to this project
+    // (ExperimentBase::ensure_computed). The links hold from construction and every assignment (edi
+    // ADR-0024), so this only sets them again; it stays for the callers that ask for it.
+    void adopt_experiments() noexcept { link_rows(); }
+
    private:
     // ADR-0020 §1: the transaction reads and compares the editor record.
     friend WorkStamps work_stamps(const Project& live);
