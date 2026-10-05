@@ -2039,10 +2039,10 @@ var frozen = {
       "loaderWarning": "Warning: unsupported _calculator.type \"cryspy\" - using crysta\nWarning: unsupported _minimizer.type \"lmfit (leastsq)\" - using crysta",
       "files": {
         "project.edi": "f7afd0f1cf662c51d11e80cec521b9d40993f11c66590448c6c8077ee31ac8a1",
-        "structures/austenite.edi": "c6c7ed62fbdae12e38dbe046c87daea47a7dd90c00204e9ca5192cee24fe75c4",
-        "structures/ferrite.edi": "0e480192a8a22bbab539176d0d4d4ce2248b7bdcc3c2c6d53b023db0bba6c330",
-        "experiments/expt_n2.edi": "d4120e1f08229d5454b9f8adbb776c6dd85292f96ab8f5b9e8940b4ebd096cd1",
-        "experiments/expt_s2.edi": "8e53f72146027cd8fcddf300656b8a7568b5d37f0d99f8bc30a14e4bec612c29",
+        "structures/austenite.edi": "f69da3e935c3893b6dff3bfd902e3338c63f33a3cd043e47096f9932280331b3",
+        "structures/ferrite.edi": "500fcf2007cefefb4b4477e10006596520d8e1cb8e61945d0791ff14ef27521c",
+        "experiments/expt_n2.edi": "6e8f4ac836219d4ba503ff5583823b1d12eb523f788e16c03d86b2b5d2bacdda",
+        "experiments/expt_s2.edi": "948b6f720ed6d72a5d5f0c5b8b06cae3dca6159f4f9e6edd56739110a2f2290a",
         "analysis/analysis.edi": "b9bf3cbba3d67f97f4e361606f39650fe14313635d32e5176f3269e6692f28dd"
       }
     }
@@ -3908,7 +3908,7 @@ var frozen = {
     {
       "project": "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project",
       "experiment": "expt_n2",
-      "sha256": "d4120e1f08229d5454b9f8adbb776c6dd85292f96ab8f5b9e8940b4ebd096cd1",
+      "sha256": "6e8f4ac836219d4ba503ff5583823b1d12eb523f788e16c03d86b2b5d2bacdda",
       "peakType": "tof-pseudo-voigt",
       "mode": "tof",
       "peakFields": [
@@ -3952,8 +3952,9 @@ var frozen = {
         "_diffrn.ambient_magnetic_field": "?",
         "_diffrn.ambient_electric_field": "?",
         "_calculator.type": "cryspy",
+        "_scattering_source.neutron_scattering_length": "sears1992",
         "_peak.broad_lorentz_gamma_0": {
-          "value": 0.0,
+          "value": 5.0279,
           "free": true,
           "uncertainty": null
         },
@@ -3968,22 +3969,22 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_peak.broad_gauss_sigma_0": {
-          "value": 300.0,
+          "value": 914.6177,
           "free": true,
           "uncertainty": null
         },
         "_peak.broad_gauss_sigma_1": {
-          "value": 1200.0,
+          "value": 1249.5679,
           "free": true,
           "uncertainty": null
         },
         "_peak.broad_gauss_sigma_2": {
-          "value": 900.0,
+          "value": 325.2586,
           "free": true,
           "uncertainty": null
         },
         "_peak.cutoff_fwhm": {
-          "value": 0.0,
+          "value": 12.0,
           "free": false,
           "uncertainty": 0.0
         },
@@ -3994,12 +3995,12 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_instrument.calib_d_to_tof_offset": {
-          "value": 0.0,
+          "value": -2.09073,
           "free": true,
           "uncertainty": null
         },
         "_instrument.calib_d_to_tof_linear": {
-          "value": 54902.18695,
+          "value": 54902.1875,
           "free": false,
           "uncertainty": 0.0
         },
@@ -4021,7 +4022,7 @@ var frozen = {
     {
       "project": "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project",
       "experiment": "expt_s2",
-      "sha256": "8e53f72146027cd8fcddf300656b8a7568b5d37f0d99f8bc30a14e4bec612c29",
+      "sha256": "948b6f720ed6d72a5d5f0c5b8b06cae3dca6159f4f9e6edd56739110a2f2290a",
       "peakType": "tof-pseudo-voigt",
       "mode": "tof",
       "peakFields": [
@@ -4065,8 +4066,9 @@ var frozen = {
         "_diffrn.ambient_magnetic_field": "?",
         "_diffrn.ambient_electric_field": "?",
         "_calculator.type": "cryspy",
+        "_scattering_source.neutron_scattering_length": "sears1992",
         "_peak.broad_lorentz_gamma_0": {
-          "value": 0.0,
+          "value": 5.033,
           "free": true,
           "uncertainty": null
         },
@@ -4081,22 +4083,22 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_peak.broad_gauss_sigma_0": {
-          "value": 300.0,
+          "value": 893.6397,
           "free": true,
           "uncertainty": null
         },
         "_peak.broad_gauss_sigma_1": {
-          "value": 1200.0,
+          "value": 1283.6387,
           "free": true,
           "uncertainty": null
         },
         "_peak.broad_gauss_sigma_2": {
-          "value": 900.0,
+          "value": 311.7041,
           "free": true,
           "uncertainty": null
         },
         "_peak.cutoff_fwhm": {
-          "value": 0.0,
+          "value": 12.0,
           "free": false,
           "uncertainty": 0.0
         },
@@ -4107,12 +4109,12 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_instrument.calib_d_to_tof_offset": {
-          "value": 0.0,
+          "value": -10.29183,
           "free": true,
           "uncertainty": null
         },
         "_instrument.calib_d_to_tof_linear": {
-          "value": 54902.18695,
+          "value": 54902.1875,
           "free": false,
           "uncertainty": 0.0
         },
