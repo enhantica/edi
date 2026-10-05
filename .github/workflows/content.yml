@@ -15,8 +15,7 @@ permissions:
 jobs:
   content:
     name: content check
-    # Self-hosted while the repository is private, like ci.yml; the public flip changes this line.
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
         with:

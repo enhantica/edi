@@ -459,8 +459,8 @@ def test_ci_runs_notebooks_for_every_result_changing_surface() -> None:
                 'private notebook and docs steps remain required whenever their job executes'
             )
     else:
-        assert set(data['notebooks']['needs']) == {'changes', 'native'}, (
-            'public notebooks wait for the common source and native producer'
+        assert set(data['notebooks']['needs']) == {'changes', 'native', 'core'}, (
+            'public notebooks wait for the common source, native producer and early core tests'
         )
         from tests.system.py.test_e04_t12_public_release import (  # noqa: PLC0415 - avoid test-module import cycles
             test_public_ci_uses_hosted_runners_and_guards_private_tokens,

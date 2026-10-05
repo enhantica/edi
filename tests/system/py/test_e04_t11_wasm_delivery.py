@@ -11,6 +11,9 @@ import json
 import math
 import os
 import re
+import shutil
+import subprocess
+import sys
 import tomllib
 import zipfile
 from pathlib import Path
@@ -20,6 +23,56 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / 'tests/fixtures/e04_t11_wasm'
+
+
+def test_public_webapp_packer_excludes_native_build_outputs(tmp_path):
+    root = tmp_path / 'source'
+    scripts = root / 'tools/ci'
+    scripts.mkdir(parents=True)
+    for name in ('wasm-pack.sh', 'wasm-env.sh', 'wasm_import_check.mjs'):
+        shutil.copy2(ROOT / 'tools/ci' / name, scripts / name)
+    shutil.copytree(ROOT / 'app/web', root / 'app/web')
+    for name in ('DEPENDENCIES.md', 'LICENSE', 'COPYING', 'THIRD-PARTY-NOTICES'):
+        shutil.copy2(ROOT / name, root / name)
+    toolchain = tmp_path / 'toolchain'
+    node = toolchain / 'emsdk-4.0.7/node/transport/bin/node'
+    node.parent.mkdir(parents=True)
+    node.write_text('#!/bin/sh\nexit 0\n')
+    node.chmod(0o755)
+    # Transport inventory only: the real module/link validator has its own gates.
+    native = {'engine.a', 'engine.so', 'engine.dll', 'engine.o', '_edi.pyd'}
+    for mode in ('multithread', 'singlethread'):
+        app = root / 'build/wasm' / mode / 'app/app'
+        app.mkdir(parents=True)
+        for name in ('edi_app.js', 'edi_app.wasm', 'qtloader.js', 'CRYSTA_SOURCE_SHA'):
+            (app / name).write_bytes(('independent transport ' + mode + name).encode())
+        for name in native:
+            (app / name).write_bytes(b'private native object transport witness')
+    binary = root / 'build/ci/core/engine.a'
+    binary.parent.mkdir(parents=True)
+    binary.write_bytes(b'private native object transport witness')
+    env = {**os.environ, 'EDI_WASM_TOOLCHAIN': str(toolchain)}
+    env['PATH'] = str(Path(sys.executable).parent) + os.pathsep + env['PATH']
+    run = subprocess.run(
+        ['bash', str(scripts / 'wasm-pack.sh')],
+        cwd=root,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=8,
+    )
+    assert run.returncode == 0, (
+        'the actual webapp packer must complete the independent transport inventory: ' + run.stderr
+    )
+    with zipfile.ZipFile(root / 'build/wasm/edi-webapp.zip') as archive:
+        names = archive.namelist()
+        assert not any(Path(name).name in native or name.startswith('build/') for name in names), (
+            'public webapp packaging must exclude native libraries, objects and build trees'
+        )
+        assert sum(Path(name).name == 'edi_app.wasm' for name in names) == 2, (
+            'excluding native objects must retain both prescribed WebAssembly transport outputs'
+        )
 
 
 def test_native_fixture_is_bound_to_the_committed_nontrivial_project():

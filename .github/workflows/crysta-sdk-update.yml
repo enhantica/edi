@@ -1,14 +1,5 @@
-# The crysta SDK update (edi ADR-0017). Every 30 minutes, and whenever crysta's
-# `publish` job dispatches it after a push to crysta main, this finds the newest build-<sha> prerelease on
-# crysta main that is newer than edi's pin, pushes `crysta-sdk/<sha12>` from edi main with only the pin
-# lines changed, and dispatches ci.yml on it: a push by this job's token starts no pull_request run, and
-# the dispatched run is a full one. The maintainers open the PR (the org does not let Actions open
-# pull requests) and merges it through its merge guard (`merge-when-gated.sh --pin-update`) on that CI
-# evidence. Superseded update branches are deleted only when a complete open-PR listing, read with this
-# token's `pull-requests: read`, proves no open PR uses them.
-#
-# No build runs here, so it runs on a hosted runner, where `gh` is installed (no `gh` on the
-# self-hosted fleet).
+# Proposes a crysta SDK pin update when crysta main has a newer build: a branch with only the pin
+# lines changed, and a CI run on it. A maintainer opens and merges the pull request.
 name: crysta SDK update
 
 on:
@@ -28,13 +19,18 @@ concurrency:
 jobs:
   update:
     name: crysta SDK update
+    # Only in the canonical public repository: the repository is named enhantica/edi at the cutover
+    # (docs/dev/public-release-checklist.md), so a copy under another name (edi-public before the
+    # swap, a fork) never pushes a pin branch. No pull request triggers this workflow; the fork test
+    # is the guard every job using the crysta token carries.
+    if: github.repository == 'enhantica/edi' && github.event.pull_request.head.repo.fork == false
+    environment: crysta-sdk
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
         with:
           ref: main
           fetch-depth: 0
-      # The crysta App token: contents-read on crysta, for its releases and its main history.
       - name: Mint a crysta installation token
         id: crysta-token
         uses: actions/create-github-app-token@v2
