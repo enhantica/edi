@@ -24,24 +24,28 @@ non-zero:
 | excluded regions | the `.pcr`'s regions, the first ending at FullProf's TOF-min (40158.2305 µs) so that the fit uses the same points FullProf did |
 | `_scattering_source.neutron_scattering_length` | `sears1992`, FullProf's own table |
 
-Two things differ, because edi cannot express them yet:
+FullProf shares one B iso between the two Fe sites (code 81). The project declares the same tie as a constraint,
+`biso_austenite = biso_ferrite` in `analysis.edi`: ferrite's B iso is free and austenite's follows it, so the fit
+has FullProf's 75 free parameters.
 
-- FullProf ties the peak widths of the two phases within a pattern with shared codes. edi has one set per bank,
-  so the project takes phase 1's (ferrite) values, which differ from austenite's by at most 0.02 %.
-- FullProf shares one B iso between the two Fe sites (code 81). Here each site's B iso is free on its own, so the
-  fit has one free parameter more than FullProf's 75.
+One thing differs: FullProf ties the peak widths of the two phases within a pattern with shared codes. edi has one
+set per bank, so the project takes phase 1's (ferrite) values, which differ from austenite's by at most 0.02 %.
 
 ## Check run
 
-`python -m edi fit <copy> --dry --report machine --verbosity full`: `status=done`, `n_free=76`,
-`n_points_fitted=5642`, `iterations=3`, `reduced_chi_square=6.926083272`, `rwp=0.07147118444`, under a second.
-The starting values give Rwp 0.0726. FullProf's fit of the same project prints Rwp 7.06 % (S2) and 6.84 % (N2).
+`python -m edi fit <copy> --dry --report machine --verbosity full`: `status=done`, `n_free=75`,
+`n_points_fitted=5642`, `iterations=3`, `reduced_chi_square=6.925059031`, `rwp=0.07147231917`, under a second.
+FullProf's fit of the same project prints Rwp 7.20 % (S2) and 7.06 % (N2) over all non-excluded points.
+
+Every fitted value is within FullProf's standard uncertainty of FullProf's own; the largest difference is ferrite's
+B iso, 1.7216 against 1.715(16), 0.41 of its uncertainty.
 
 ## expected.json
 
 | quantity | kind | source |
 | --- | --- | --- |
-| `n_free` | reference | the `.pcr`'s 75 refined parameters, plus one for the B iso edi does not share |
+| `n_free` | reference | the `.pcr`'s 75 refined parameters |
 | `iterations`, `reduced_chi_square`, `rwp` | regression pin | the check run above |
 
-No value is compared with FullProf's fitted parameters yet. That comparison needs the shared B iso.
+The fitted values are compared with FullProf's, within FullProf's standard uncertainties, by edi's FullProf
+agreement test.
