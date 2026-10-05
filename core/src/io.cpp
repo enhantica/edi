@@ -2765,6 +2765,19 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
                           " - the project's contents select calculate or fit as a whole, and a "
                           "mixed data/range project is refused");
         }
+        // Every linked structure names a structure of the project, as crysta's loader requires (an empty
+        // id spells `structure`).
+        const auto spelled = [](const std::string& id) { return id.empty() ? std::string("structure") : id; };
+        for (const auto& link : experiment.linked_structures) {
+            const std::string wanted = spelled(link->structure_id.value());
+            const bool held = std::any_of(project.structures.begin(), project.structures.end(),
+                                          [&](const auto& structure) { return spelled(structure->name.value()) == wanted; });
+            if (!held) {
+                throw IoError("project " + directory + ": experiment '" + experiment.name + "' (" + file.string() +
+                              ") links the structure '" + detail::printable_id(wanted) +
+                              "', which the project does not hold");
+            }
+        }
         project.experiments.push_back(std::move(experiment));
     }
 
