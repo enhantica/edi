@@ -1,6 +1,7 @@
 """The external BEER two-phase/two-bank load, fit and persistence contract."""
 
 import hashlib
+import json
 import math
 from pathlib import Path
 
@@ -93,6 +94,77 @@ def test_beer_scale_convention_uses_only_reference_geometry_and_maps_each_uncert
     )
 
 
+def test_beer_offset_convention_is_external_signed_and_preserves_every_su():
+    ref = beer.reference()
+    raw = (beer.HOME / 'reference.json').read_bytes()
+    path = beer.HOME / 'offset-convention.json'
+    correction = json.loads(path.read_text())
+    assert (
+        hashlib.sha256(path.read_bytes()).hexdigest()
+        == '34d4bce9e15d50381b16233014ab96711d1d79d63dd67d8a0912d7508a9dbb5b'
+    ), 'The independently derived BEER width-convention artifact must retain its authoring digest'
+    assert correction['reference_sha256'] == hashlib.sha256(raw).hexdigest(), (
+        'The offset displacement must bind the exact unconstrained external reference'
+    )
+    assert (
+        correction['author_sha256']
+        == hashlib.sha256((beer.HOME.parent / 'author_beer_offsets.py').read_bytes()).hexdigest()
+    ), 'The independent offset record must bind its visible authoring procedure'
+    assert correction['function_sha256'] == {
+        'powder_diffraction_cutoff.py': (
+            '02a81565e7b3c7fbf95aa3e7b0acaf2d25b82d9806d6531922cf784caaccda22'
+        ),
+        'powder_diffraction_tof.py': (
+            'e67c9a66e46267c9a1e90db818921555eaf9e027fa8d74621cd7513936368030'
+        ),
+    }, 'The displacement must come from the captured CrySPY functions'
+    assert correction['cryspy_version'] == ref['versions']['cryspy'], (
+        'The independent offset derivation must use the reference calculator version'
+    )
+    assert len(correction['stages']) == len(ref['stages']), (
+        'Both external BEER stages require their own width-convention calculation'
+    )
+    for index, stage in enumerate(ref['stages']):
+        mapped = beer.mapped_parameters(ref, stage)
+        expected = beer.agreement_parameters(ref, index)
+        assert set(expected) == set(mapped), (
+            'The offset convention must retain every fitted external parameter'
+        )
+        assert set(correction['stages'][index]) == {'expt_n2', 'expt_s2'}, (
+            'The width convention must bind both independently fitted BEER banks'
+        )
+        for bank, record in correction['stages'][index].items():
+            external = beer.HOME / f'reference-run/stage-{index + 1}/experiments/{bank}.edi'
+            assert (
+                record['external_input_sha256']
+                == hashlib.sha256(external.read_bytes()).hexdigest()
+            ), 'Each displacement must use its own saved external stage and bank'
+            assert (
+                record['signed_shift_us'] < 0 and abs(record['reflection_width_control_us']) < 1e-6
+            ), 'Point widths must shift later; reflection widths must give zero displacement'
+            assert record['cost_at_displacement'] < record['cost_at_zero'], (
+                'The displacement must improve the full included bank profile'
+            )
+            assert record['included_points'] == 2810 and record['reflections'] == 16, (
+                'The calculation must use every included row and both phases'
+            )
+            key = f'{bank}.instrument.d_to_tof_offset'
+            assert expected[key]['value'] == mapped[key]['value'] - record['signed_shift_us'], (
+                'Each BEER offset must subtract its signed independently derived convention shift'
+            )
+        for key, parameter in mapped.items():
+            assert expected[key]['su'] == parameter['su'], (
+                'The width convention must never widen any independent standard uncertainty'
+            )
+            if not key.endswith('.instrument.d_to_tof_offset'):
+                assert expected[key] == parameter, (
+                    'The width convention must leave every other parameter expectation unchanged'
+                )
+    assert (beer.HOME / 'reference.json').read_bytes() == raw and beer.reference() == ref, (
+        'The offset comparison must preserve external bytes and in-memory reference values'
+    )
+
+
 def test_beer_two_phases_and_independent_bank_scales_survive_two_save_cycles(tmp_path):
     project = engine.Project.load(beer.write_initial(tmp_path / 'input'))
     assert set(project.structures.keys()) == {'ferrite', 'austenite'}, (
@@ -161,7 +233,7 @@ def test_beer_joint_fit_recovers_both_phases_with_every_external_uncertainty(tmp
     )
     stage_deviations = {}
     for index, stage in enumerate(ref['stages'], 1):
-        expected_parameters = beer.mapped_parameters(ref, stage)
+        expected_parameters = beer.agreement_parameters(ref, index - 1)
         result = project.analysis.fit()
         assert result.converged, (
             'Each BEER tutorial stage must report a completed converged joint fit'
@@ -184,14 +256,15 @@ def test_beer_joint_fit_recovers_both_phases_with_every_external_uncertainty(tmp
     assert not stage_deviations, (
         'Every BEER fitted parameter must agree within its own '
         'independent reported standard uncertainty, with phase scale value '
-        'and SU mapped by 1/sin(theta_bank): '
+        'and SU mapped by 1/sin(theta_bank), offsets minus the independently derived '
+        'CrySPY width-at-d(t) signed shift, all at one SU: '
         f'{stage_deviations}'
     )
     assert len(project.free_parameters) == 16, (
         'Fixing only BEER backgrounds must leave all sixteen '
         'unconstrained second-stage parameters free'
     )
-    expected_parameters = beer.mapped_parameters(ref, ref['stages'][-1])
+    expected_parameters = beer.agreement_parameters(ref, len(ref['stages']) - 1)
     for name in ('ferrite', 'austenite'):
         for experiment in project.experiments:
             expected = expected_parameters[f'{experiment.name}.linked_structure.{name}.scale']

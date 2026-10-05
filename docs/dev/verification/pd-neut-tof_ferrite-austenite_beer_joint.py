@@ -15,12 +15,23 @@
 # **Scale convention.** edi's time-of-flight intensity carries sin θ of the bank (FullProf's
 # convention, as the `pd-neut-tof_Fe_pseudo-voigt` page shows with FullProf's own scale);
 # CrySPY's does not. The same pattern therefore needs each phase scale divided by sin θ_bank,
-# here sin 45°. That is the only conversion.
+# here sin 45°. Scale values and their uncertainties use the same factor.
 #
 # **Parameter uncertainties.** CrySPY reports each fitted value with its standard uncertainty
 # (`reference.json`). This page sets the values and compares patterns; a fit of the same
 # project is held to those values within one uncertainty each, the scales after the sin θ
 # conversion.
+#
+# **TOF offset convention.** CrySPY 0.12.1 evaluates profile widths at each data point's
+# d(t); the FullProf convention uses each reflection's d_hkl. CrySPY's profile skews later,
+# with an effective displacement depending on the bank's widths and reflection mixture.
+# `author_beer_offsets.py` derives it using CrySPY's own functions at the saved reference
+# values, all included external rows and both phases, without any edi/crysta outputs.
+# `offset-convention.json` records its inputs, source hashes and zero-displacement control.
+# The BEER agreement gate compares offsets with reference minus the recorded signed shift
+# (the negative of the later-profile displacement); each offset's one-SU bound is unchanged.
+# Every other parameter retains its one-SU expectation, with phase scale units mapped above.
+# See `tests/fixtures/multiphase/beer/PROVENANCE.md` for the authoring procedure and sign.
 #
 # **The bounds are labelled regression pins**: this page's own measured closeness with stated
 # headroom (profile difference 0.12 %, max deviation 0.11 %, area ratio 0.999998, correlation

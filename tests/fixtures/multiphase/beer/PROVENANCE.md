@@ -53,3 +53,30 @@ five percent relative permits independent optimizer termination. No
 parameter is omitted or given a wider numerical tolerance.
 
 Project id: pd-neut-tof_ferrite-austenite-beer_joint.
+
+
+CrySPY 0.12.1 computes TOF profile widths at each data point's d(t), whereas
+FullProf's reflection-width convention uses d_hkl. These functions give a
+later asymmetric profile even though both analytic reflection centres are
+zero + dtt1*d_hkl. There is no universal calibration mapping: the displacement
+depends on the bank's widths, reflection mixture, grid and weights.
+
+`author_beer_offsets.py` derives the effective displacement using only the
+captured CrySPY 0.12.1 functions and reference values. On all 2810 included
+rows per bank it constructs both conventions for all 16 saved reflections
+from both phases, with external F-squared values, cubic multiplicities and
+independent phase scales. It minimizes the inverse-variance weighted squared
+profile difference with only one displacement varying. Measured intensities
+and crysta/edi outputs never enter this calculation. The reflection-width
+identity control gives zero displacement. The command, generator/function
+hashes, input hashes, numerical package versions and control results are in
+`offset-convention.json`; no reference calculator runs during a test.
+
+The signed shift is **minus** that later-profile displacement. The gate
+therefore compares an offset with **raw reference minus signed shift**, still
+within that offset's unchanged one-SU bound. The independently derived signed
+shifts in microseconds (N2, S2) are (-0.163575880, -0.161091629) for stage 1
+and (-0.163576124, -0.161091935) for stage 2. Raw `reference.json` is unchanged.
+Every other expectation keeps its previous value and one-SU bound, with only
+phase scale units converted as described above. The verification page records
+this convention finding; the agreement gate uses the frozen derived artifact.

@@ -1,0 +1,57 @@
+{
+  "reference_sha256": "b194523d2cbd6cf9e250b39609e59966a3563059d46980665130800649ca3f12",
+  "cryspy_version": "0.12.1",
+  "author_sha256": "e75ce162d0e28d94661e95d2b989766b4b79db95fd72824fa475f024f8cde450",
+  "numerical_versions": {
+    "numpy": "2.4.6",
+    "scipy": "1.17.1"
+  },
+  "function_sha256": {
+    "powder_diffraction_cutoff.py": "02a81565e7b3c7fbf95aa3e7b0acaf2d25b82d9806d6531922cf784caaccda22",
+    "powder_diffraction_tof.py": "e67c9a66e46267c9a1e90db818921555eaf9e027fa8d74621cd7513936368030"
+  },
+  "command": "../diffraction-lib/.pixi/envs/default/bin/python tests/fixtures/multiphase/author_beer_offsets.py --cryspy-functions ../diffraction-lib/.pixi/envs/default/lib/python3.14/site-packages/cryspy/A_functions_base",
+  "definition": "signed shift = minus the displacement of a reflection-width CrySPY profile minimizing inverse-variance weighted squared differences from the point-width CrySPY profile, on all included external rows. Only this displacement varies; no measured intensities, product outputs or product imports enter the objective. Expected offset = raw reference offset minus signed shift. External SUs are unchanged.",
+  "stages": [
+    {
+      "expt_n2": {
+        "signed_shift_us": -0.1635758796873037,
+        "reflection_width_control_us": 1.4862290162458018e-12,
+        "cost_at_zero": 73.77167106075946,
+        "cost_at_displacement": 49.00631933231983,
+        "included_points": 2810,
+        "reflections": 16,
+        "external_input_sha256": "e1843bb22307d5df50861d510884b3aba8c2ca3629d4dc4d3a22c2e85d2cf230"
+      },
+      "expt_s2": {
+        "signed_shift_us": -0.16109162894583443,
+        "reflection_width_control_us": 1.833237339827415e-12,
+        "cost_at_zero": 71.68207849644452,
+        "cost_at_displacement": 47.41222046212175,
+        "included_points": 2810,
+        "reflections": 16,
+        "external_input_sha256": "1b69cd449db994be85e440e0ee84133b38bd3870378ed84ea4a34d9748327782"
+      }
+    },
+    {
+      "expt_n2": {
+        "signed_shift_us": -0.16357612386783194,
+        "reflection_width_control_us": 5.461118899237294e-11,
+        "cost_at_zero": 73.77193872170938,
+        "cost_at_displacement": 49.006541588009675,
+        "included_points": 2810,
+        "reflections": 16,
+        "external_input_sha256": "7a263a362003194604b6307efef1ef8bdfc09ec55601827f4111ca5ed45fc305"
+      },
+      "expt_s2": {
+        "signed_shift_us": -0.16109193518413653,
+        "reflection_width_control_us": 2.0577094808745016e-12,
+        "cost_at_zero": 71.68234595156713,
+        "cost_at_displacement": 47.41244068855124,
+        "included_points": 2810,
+        "reflections": 16,
+        "external_input_sha256": "eab85c5956ee6ebca586067cf61e3d87deabd0de45353dcf8334c4c1f99d88a5"
+      }
+    }
+  ]
+}
