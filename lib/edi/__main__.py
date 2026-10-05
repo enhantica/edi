@@ -615,6 +615,10 @@ def main(argv: list[str] | None = None) -> int:
         if record:
             print(record, end='')
         print(f'edi fit: {error}', file=sys.stderr)
+        # An engine refusal keeps its catalogue code, so a script can tell the causes apart.
+        for diagnostic in getattr(error, 'diagnostics', ()):
+            if diagnostic.code:
+                print(f'edi fit: {diagnostic.code}', file=sys.stderr)
         return 1
 
 

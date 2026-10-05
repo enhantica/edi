@@ -856,6 +856,25 @@ void fill_crysta_relations(const Project& model, crysta::Project& converted) {
     }
 }
 
+// crysta's coded problems as edi's DomainValidationError, each code kept (ADR-0024).
+DomainValidationError coded_refusal(const std::vector<crysta::RelationProblem>& problems) {
+    std::vector<Diagnostic> diagnostics;
+    diagnostics.reserve(problems.size());
+    for (const crysta::RelationProblem& problem : problems) {
+        diagnostics.push_back({problem.code, Severity::Error, "analysis", problem.message, {}, "crysta"});
+    }
+    return DomainValidationError(std::move(diagnostics));
+}
+
+// A refusal from crysta that carries codes is raised again as coded_refusal; the caller rethrows
+// any other exception unchanged.
+void raise_coded(const std::exception& error) {
+    const std::vector<crysta::RelationProblem> problems = crysta::problems_of(error);
+    if (!problems.empty()) {
+        throw coded_refusal(problems);
+    }
+}
+
 }  // namespace
 
 void save_project_via_crysta(const Project& model, const std::string& directory) {
@@ -1034,7 +1053,12 @@ void save_project_via_crysta(const Project& model, const std::string& directory)
         crysta::Geom& geom = cproject.structure.geom;
         geom.bond_distance_inc = std::optional<double>(geom.bond_distance_inc.get());
     }
-    crysta::save_project(cproject, directory);
+    try {
+        crysta::save_project(cproject, directory);
+    } catch (const std::exception& error) {
+        raise_coded(error);
+        throw;
+    }
 }
 
 namespace detail {
@@ -1821,11 +1845,7 @@ void refresh_relations(Project& project, const WarningSink& warn) {
     const std::vector<crysta::RelationProblem> problems =
         crysta::relation_problems(*converted->project);
     if (!problems.empty()) {
-        std::vector<Diagnostic> diagnostics;
-        for (const crysta::RelationProblem& problem : problems) {
-            diagnostics.push_back({problem.code, Severity::Error, "analysis", problem.message, {}, "crysta"});
-        }
-        throw DomainValidationError(std::move(diagnostics));
+        throw coded_refusal(problems);
     }
     mark_dependents(project, crysta::compile_relations(*converted->project, false), warn);
 }
@@ -3071,7 +3091,14 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
         // the same settings `crysta fit <project> --rung lm` resolves to, so the fit is comparable to
         // the published path. The provider is move-only; it owns the per-bank sub-projects, built
         // from its own copy of the project.
-        crysta::JointBraggResidual provider(project, scattering, std::move(measured));
+        std::optional<crysta::JointBraggResidual> joint;
+        try {
+            joint.emplace(project, scattering, std::move(measured));
+        } catch (const std::exception& error) {
+            raise_coded(error);  // a relation between banks keeps its code
+            throw;
+        }
+        crysta::JointBraggResidual& provider = *joint;
         if (provider.n_free() == 0) {
             throw std::invalid_argument("edi fit_joint: no free parameters (mark parameters "
                                         "refinable via their free flags)");

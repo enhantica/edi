@@ -3526,7 +3526,7 @@ void save_project(const Project& project, const std::string& directory) {
     }
     try {
         save_project_via_crysta(project, directory);
-    } catch (const IoError&) {
+    } catch (const IoError&) {  // a coded refusal (a ValidationError) keeps its codes
         throw;
     } catch (const std::exception& error) {
         throw IoError(error.what());
