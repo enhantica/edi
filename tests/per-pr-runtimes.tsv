@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-04T21:37:33Z
+# measured_utc = 2026-10-05T03:35:09Z
 #
-# Recorded from: retained branch bank and inherited main bank; no new measurements
-# Collected tests: 6256; with a reported duration: 3785
+# Recorded from: edi-fixed.log; edi-native-runner.xml (Release O3, OMP_NUM_THREADS=1); failing native nodes remain unmeasured
+# Collected tests: 6287; with a reported duration: 3810
 # Module-scoped fixture costs recorded: 10
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 6257
-# inventory_cpp = 242
-# inventory_measured = 5828
-# inventory_unmeasured = 671
+# inventory_python = 6287
+# inventory_cpp = 249
+# inventory_measured = 5855
+# inventory_unmeasured = 681
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_projects_open_and_populate_pages
@@ -1364,6 +1364,24 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t28_paired_cache.py:
 0.030	tests/integration/py/test_c34_t28_pr_artifact.py::test_artifact_substitutions_refuse_after_the_matching_control[tested-file]
 0.020	tests/integration/py/test_c34_t28_pr_artifact.py::test_matching_pr_artifact_is_usable_before_the_whole_run_finishes[linux-64]
 0.020	tests/integration/py/test_c34_t28_pr_artifact.py::test_matching_pr_artifact_is_usable_before_the_whole_run_finishes[osx-arm64]
+0.170	tests/integration/py/test_constraint_alias_lifetime.py::test_alias_first_handle_owns_storage_and_obeys_detachment[destroy-background]
+0.180	tests/integration/py/test_constraint_alias_lifetime.py::test_alias_first_handle_owns_storage_and_obeys_detachment[destroy-cell]
+0.160	tests/integration/py/test_constraint_alias_lifetime.py::test_alias_first_handle_owns_storage_and_obeys_detachment[destroy-instrument]
+0.140	tests/integration/py/test_constraint_alias_lifetime.py::test_alias_first_handle_owns_storage_and_obeys_detachment[destroy-profile]
+0.170	tests/integration/py/test_constraint_alias_lifetime.py::test_alias_first_handle_owns_storage_and_obeys_detachment[destroy-scale]
+0.160	tests/integration/py/test_constraint_alias_lifetime.py::test_alias_first_handle_owns_storage_and_obeys_detachment[destroy-site]
+0.160	tests/integration/py/test_constraint_alias_lifetime.py::test_alias_first_handle_owns_storage_and_obeys_detachment[remove-background]
+0.190	tests/integration/py/test_constraint_alias_lifetime.py::test_alias_first_handle_owns_storage_and_obeys_detachment[remove-cell]
+0.160	tests/integration/py/test_constraint_alias_lifetime.py::test_alias_first_handle_owns_storage_and_obeys_detachment[remove-instrument]
+0.160	tests/integration/py/test_constraint_alias_lifetime.py::test_alias_first_handle_owns_storage_and_obeys_detachment[remove-profile]
+0.150	tests/integration/py/test_constraint_alias_lifetime.py::test_alias_first_handle_owns_storage_and_obeys_detachment[remove-scale]
+0.180	tests/integration/py/test_constraint_alias_lifetime.py::test_alias_first_handle_owns_storage_and_obeys_detachment[remove-site]
+0.150	tests/integration/py/test_constraint_alias_lifetime.py::test_alias_first_handle_owns_storage_and_obeys_detachment[replace-background]
+0.170	tests/integration/py/test_constraint_alias_lifetime.py::test_alias_first_handle_owns_storage_and_obeys_detachment[replace-cell]
+0.160	tests/integration/py/test_constraint_alias_lifetime.py::test_alias_first_handle_owns_storage_and_obeys_detachment[replace-instrument]
+0.170	tests/integration/py/test_constraint_alias_lifetime.py::test_alias_first_handle_owns_storage_and_obeys_detachment[replace-profile]
+0.160	tests/integration/py/test_constraint_alias_lifetime.py::test_alias_first_handle_owns_storage_and_obeys_detachment[replace-scale]
+0.160	tests/integration/py/test_constraint_alias_lifetime.py::test_alias_first_handle_owns_storage_and_obeys_detachment[replace-site]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_alias_creation_refuses_foreign_handles_and_duplicate_ids
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_angle_units_require_the_explicit_degree_conversion
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_background_address_uses_row_id_after_reordering
@@ -1448,6 +1466,15 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_fit.py::test_
 0.000	tests/integration/py/test_constraint_fit.py::test_independent_covariance_generator_reproduces_the_committed_reference
 0.000	tests/integration/py/test_constraint_no_interpreter.py::test_interpreter_symbol_detector_reaches_each_escape
 0.060	tests/integration/py/test_constraint_no_interpreter.py::test_product_constraint_code_cannot_delegate_to_an_interpreter
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_transitions.py::test_declaration_only_change_renews_held_computed_category[data]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_transitions.py::test_declaration_only_change_renews_held_computed_category[refln]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_transitions.py::test_invalid_alias_save_refuses_before_disk_publication[alias-only-dangling]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_transitions.py::test_invalid_alias_save_refuses_before_disk_publication[alias-only-reserved]
+0.000	tests/integration/py/test_constraint_transitions.py::test_invalid_alias_save_refuses_before_disk_publication[disabled-dangling]
+0.000	tests/integration/py/test_constraint_transitions.py::test_invalid_alias_save_refuses_before_disk_publication[disabled-reserved]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_transitions.py::test_invalid_alias_save_refuses_before_disk_publication[last-removed-dangling]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_transitions.py::test_invalid_alias_save_refuses_before_disk_publication[last-removed-reserved]
+0.010	tests/integration/py/test_constraint_transitions.py::test_relation_removal_restores_no_loop_bytes_and_disabled_values_stay_bare
 0.090	tests/integration/py/test_e01_scaffold.py::test_app_is_one_option_gated_cpp_qml_host
 0.140	tests/integration/py/test_e01_scaffold.py::test_checkout_imports_edi_without_path_injection
 0.030	tests/integration/py/test_e01_scaffold.py::test_ci_routes_surfaces_and_uses_strict_self_hosted_jobs
@@ -4644,11 +4671,14 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t9_latency.py::test_real_
 0.180	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_sdk_token_grant_route_refuses_another_resource_or_operation[operation]
 0.170	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_sdk_token_grant_route_refuses_another_resource_or_operation[resource]
 0.180	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_sdk_token_grant_route_refuses_another_resource_or_operation[unknown-option]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[app-wasm]
 1.700	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[app]
 1.680	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[audit]
 1.710	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[cli-python]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[core-macos]
 1.600	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[core]
 1.650	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[docs]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[native-macos]
 0.250	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[native]
 1.580	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[notebooks]
 0.100	tests/system/py/test_e09_t74_ci_source_consumption.py::test_new_consumers_really_consuming_the_shared_sha_are_admitted[checkout]
@@ -5199,12 +5229,19 @@ UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_blocks.cpp::Core jo
 UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_blocks.cpp::Core joint fitting refuses unsupported relation directions
 UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_categories.cpp::Core dependent marks cover both Structure and Experiment fields
 UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_categories.cpp::New core projects contain no GUI preview declarations
-UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_edits.cpp::Alias candidates exclude dependents while retaining ordinary fixed parameters
-UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_edits.cpp::Alias candidates exclude symmetry fixed coordinates and cell fields
-UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_edits.cpp::Alias core edits support append duplicate removal and snapshot restoration
-UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_edits.cpp::Constraint core edits support append duplicate removal and snapshot restoration
-UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_edits.cpp::Constraint core enable edits are reversible without deleting the declaration
+0.003	tests/unit/cpp/test_constraint_edits.cpp::Alias candidates exclude dependents while retaining ordinary fixed parameters
+0.005	tests/unit/cpp/test_constraint_edits.cpp::Alias candidates exclude symmetry fixed coordinates and cell fields
+0.012	tests/unit/cpp/test_constraint_edits.cpp::Alias core edits preserve source rows through append duplicate and removal
+0.001	tests/unit/cpp/test_constraint_edits.cpp::Constraint core edits preserve source rows through append duplicate and removal
+0.009	tests/unit/cpp/test_constraint_edits.cpp::Constraint core enable edits retain the inactive declaration
 UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_saved_text.cpp::Saved analysis and shown block text retain enabled and disabled relation loops
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_transitions.cpp::A declaration-only edit supersedes completed queued FitJob adoption
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_transitions.cpp::Coordinate and cell declaration edits revoke stored geometry
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_transitions.cpp::Native alias admission refuses invalid saves and canonical text before publication
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_transitions.cpp::Native unrefreshed constraints save active dependents bare
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_transitions.cpp::Relation declaration writes revoke computed currentness without parameter writes
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_transitions.cpp::Relation declaration writes supersede calculated publications atomically
+0.004	tests/unit/cpp/test_constraint_transitions.cpp::Unchanged relation declarations admit calculated publication
 0.030	tests/unit/cpp/test_e05_t1_fit_job.cpp::E05-T1 gate 3 engine checkpoint cancel retains partial values and undo
 0.036	tests/unit/cpp/test_e05_t1_fit_job.cpp::E05-T1 gate 3 joint engine checkpoint cancel retains partial values and undo
 0.011	tests/unit/cpp/test_e05_t1_fit_job.cpp::E05-T1 gate 3 joint worker token cancellation reaches a running fit

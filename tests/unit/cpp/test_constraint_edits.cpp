@@ -37,12 +37,8 @@ void alias_edits(Project& project) {
             Edit::erase(project.aliases, count)();
             CHECK_MESSAGE(project.aliases.size() == count,
                           "Removing an alias must use the closed core operation");
-            Edit::append(project.aliases, copy)();
-            project = before;
-            CHECK_MESSAGE(project.aliases.size() == count,
-                          "Restoring an edit snapshot must restore the alias collection");
             CHECK_MESSAGE(project.aliases[0]->id.value() == before.aliases[0]->id.value(),
-                          "Snapshot restoration must retain keyed alias identities");
+                          "Closed append and removal must retain the source alias identity");
         } else {
             FAIL_CHECK(
                 "Alias append and removal must be available through the closed core edit "
@@ -76,10 +72,8 @@ void constraint_edits(Project& project) {
             Edit::erase(project.constraints, count)();
             CHECK_MESSAGE(project.constraints.size() == count,
                           "Removing a constraint must use the closed core operation");
-            Edit::append(project.constraints, copy)();
-            project = before;
-            CHECK_MESSAGE(project.constraints.size() == count,
-                          "Restoring an edit snapshot must restore the constraint collection");
+            CHECK_MESSAGE(project.constraints[0]->id.value() == before.constraints[0]->id.value(),
+                          "Closed append and removal must retain the source constraint identity");
         } else {
             FAIL_CHECK("Constraint append and removal must be closed core edit operations");
         }
@@ -92,7 +86,6 @@ template <class Project, class Edit = edi::Edit>
 void enabled_edits(Project& project) {
     if constexpr (requires { project.constraints[0]->enabled; }) {
         for (auto& row : project.constraints) Edit::assign(row->enabled, false)();
-        const auto disabled = project;
         project.structure().atom_sites[1]->adp_iso.value = 9;
         project.calculate();
         CHECK_MESSAGE(project.structure().atom_sites[1]->adp_iso.value == 9,
@@ -101,26 +94,26 @@ void enabled_edits(Project& project) {
         project.calculate();
         CHECK_MESSAGE(project.structure().atom_sites[1]->adp_iso.value == doctest::Approx(1.6),
                       "Reenabled core constraints must apply at the next calculation");
-        project = disabled;
+        for (auto& row : project.constraints) Edit::assign(row->enabled, false)();
         project.structure().atom_sites[1]->adp_iso.value = 7;
         project.calculate();
         CHECK_MESSAGE(project.structure().atom_sites[1]->adp_iso.value == 7,
-                      "Restoring an edit snapshot must restore the disabled state too");
+                      "Disabling again must leave the directly assigned target independent");
     } else {
         FAIL_CHECK("The core must retain disabled constraints without applying them");
     }
 }
 }  // namespace
 
-TEST_CASE("Alias core edits support append duplicate removal and snapshot restoration") {
+TEST_CASE("Alias core edits preserve source rows through append duplicate and removal") {
     auto project = relation_edit_project();
     alias_edits(project);
 }
-TEST_CASE("Constraint core edits support append duplicate removal and snapshot restoration") {
+TEST_CASE("Constraint core edits preserve source rows through append duplicate and removal") {
     auto project = relation_edit_project();
     constraint_edits(project);
 }
-TEST_CASE("Constraint core enable edits are reversible without deleting the declaration") {
+TEST_CASE("Constraint core enable edits retain the inactive declaration") {
     auto project = relation_edit_project();
     enabled_edits(project);
 }

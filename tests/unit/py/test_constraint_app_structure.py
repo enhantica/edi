@@ -142,7 +142,7 @@ def test_alias_picker_uses_core_candidates_and_the_closed_edit_door():
         'the alias picker must enumerate core-owned suitable parameter identities'
     )
     assert 'edi::Edit::' in text and re.search(r'\.apply\(|->apply\(', text), (
-        'relation edits must enter the closed core edit door for publication and undo'
+        'relation edits must enter the closed core edit door for publication'
     )
 
 
