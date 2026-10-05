@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: BSD-3-Clause
 # Place the web app's site folder (tools/ci/wasm-pack.sh) into the rendered docs as /webapp/ (edi ADR-0023): the
-# publishing step. No docs page links it (unlisted).
+# publishing step; the docs link it.
 #   bash tools/ci/docs-webapp.sh <web app folder> <rendered docs folder>
 set -euo pipefail
 app="${1:?the web app folder (build/wasm/site)}"

@@ -22,6 +22,7 @@ theme:
 # out of this list a docs-build failure rather than a page that silently vanishes.
 nav:
   - index.md
+  - Web app: https://enhantica.github.io/edi/webapp/
   - Dev:
       - dev/index.md
       - dev/features.md
