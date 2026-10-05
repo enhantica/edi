@@ -79,7 +79,7 @@ jobs:
 
   lint:
     name: lint
-    if: ${{ !inputs.core_only }}
+    if: inputs.core_only != true
     runs-on: *linux
     steps:
       - uses: actions/checkout@v5
@@ -137,7 +137,7 @@ jobs:
 
   audit:
     name: audit
-    if: ${{ !inputs.core_only && github.event.pull_request.head.repo.fork == false }}
+    if: github.event.pull_request.head.repo.fork == false && inputs.core_only != true
     environment: crysta-sdk
     # After the core tests, which take the runners first; a core failure cancels the run before these start.
     needs: [changes, core]
@@ -245,7 +245,7 @@ jobs:
     # Runs for every result-changing surface, so no job condition: the steps that use the crysta
     # token, and the run that needs their build, carry the fork guard (a fork's pull request skips
     # this job anyway, through the native job it needs).
-    if: ${{ !inputs.core_only }}
+    if: inputs.core_only != true
     environment: crysta-sdk
     # After the native build and the core tests of this run, which take the runners first; a core failure
     # cancels the run before these start. Each job still builds its own tree (no artifact carries crysta).
@@ -280,7 +280,7 @@ jobs:
 
   cli-python:
     name: cli-python · ${{ matrix.platform }}
-    if: ${{ !inputs.core_only && github.event.pull_request.head.repo.fork == false }}
+    if: github.event.pull_request.head.repo.fork == false && inputs.core_only != true
     environment: crysta-sdk
     # After the core tests, which take the runners first; a core failure cancels the run before these start.
     needs: [changes, core]
@@ -340,7 +340,7 @@ jobs:
 
   docs:
     name: docs
-    if: ${{ !inputs.core_only && github.event.pull_request.head.repo.fork == false }}
+    if: github.event.pull_request.head.repo.fork == false && inputs.core_only != true
     environment: crysta-sdk
     # After the core tests, which take the runners first; a core failure cancels the run before these start.
     needs: [changes, core]
@@ -375,7 +375,7 @@ jobs:
 
   app:
     name: app · ${{ matrix.platform }}
-    if: ${{ !inputs.core_only && github.event.pull_request.head.repo.fork == false }}
+    if: github.event.pull_request.head.repo.fork == false && inputs.core_only != true
     environment: crysta-sdk
     # After the core tests, which take the runners first; a core failure cancels the run before these start.
     needs: [changes, core]
@@ -456,7 +456,7 @@ jobs:
   # wasm from the pinned SDK's source, per kit.
   app-wasm:
     name: app · WebAssembly
-    if: ${{ !inputs.core_only && github.event.pull_request.head.repo.fork == false }}
+    if: github.event.pull_request.head.repo.fork == false && inputs.core_only != true
     environment: crysta-sdk
     # After the core tests, which take the runners first; a core failure cancels the run before these start.
     needs: [changes, core]
