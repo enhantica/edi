@@ -6,6 +6,13 @@ library version 0.19.1, lmfit 1.3.4. `reference.json` records all versions,
 commands, source archive URL/ref/digests, input/output digests, fitted values,
 standard uncertainties and both fit-quality conventions.
 
+Commands use paths relative to the edi checkout: `../diffraction-lib` is the
+external checkout at the commit above, and `../beer-authoring` is the scratch
+run directory. The public-path correction changes only those command strings;
+the raw capture, data, saved input/output hashes and numerical records are
+unchanged. The corrected reference digest is
+`33fd1d176a90bfb4298188bd67bf7a02752b0f4072fb26e53a8af195432851e0`.
+
 The authoring run executed the tutorial's two joint fits once each. The first
 fit auto-saved before the extractor failed on a string-valued space-group
 parameter. Recovery loaded that saved result, including Edi rounding and

@@ -16,7 +16,7 @@ def test_beer_reference_binds_both_banks_and_every_reported_uncertainty():
     ref = beer.reference()
     assert (
         hashlib.sha256((beer.HOME / 'reference.json').read_bytes()).hexdigest()
-        == 'd1db452ea46531ec8d9ab2b31360a4b0487bc03c34a29e9db6fe1aef960a6df8'
+        == '33fd1d176a90bfb4298188bd67bf7a02752b0f4072fb26e53a8af195432851e0'
     ), (
         'The committed independent BEER values, uncertainties and run '
         'provenance must retain their authoring digest'

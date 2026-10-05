@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-05T07:38:14Z
+# measured_utc = 2026-10-05T07:54:55Z
 #
-# Recorded from: tests-seq20-sweep.log (44 node(s) measured once, 5793 banked, 5 stale row(s) dropped)
-# Collected tests: 6169; with a reported duration: 3792
+# Recorded from: tests-seq21-beer-reference.log (1 node(s) measured once, 5828 banked, 0 stale row(s) dropped)
+# Collected tests: 6184; with a reported duration: 3796
 # Module-scoped fixture costs recorded: 11
 #
 # Breaches are decided PER TIER against the table

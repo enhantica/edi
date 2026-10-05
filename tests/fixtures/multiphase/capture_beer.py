@@ -1,6 +1,7 @@
 import argparse
 import hashlib
 import json
+import shlex
 import shutil
 import zipfile
 from pathlib import Path
@@ -26,19 +27,23 @@ record['data_source'] = {
         'ferrite-austenite-beer.zip'
     ),
 }
-record['commands'] = [
-    args.commands
-    .read_text()
-    .splitlines()[-2]
-    .replace(
-        (
-            ' --resume-first-stage /home/andrewsazonov/runs/c12-t4/beer-authoring/'
-            'projects/calibrate-beer-ess'
-        ),
-        '',
-    ),
-    args.commands.read_text().splitlines()[-2],
-]
+# Publish reproducible coordinates relative to an edi checkout, rather than
+# the author's home directory. The external checkout and run directory are
+# siblings of edi; all options and the two-stage recovery remain explicit.
+command = shlex.split(args.commands.read_text().splitlines()[-2])
+command[0] = '../diffraction-lib/.pixi/envs/default/bin/python'
+command[command.index('-u') + 1] = 'tests/fixtures/multiphase/author_beer.py'
+for option, relative in {
+    '--tutorial': '../diffraction-lib/docs/docs/tutorials/calibrate-beer-ess.py',
+    '--archive': 'tests/fixtures/multiphase/beer/data/ferrite-austenite-beer.zip',
+    '--output': '../beer-authoring/record',
+    '--resume-first-stage': '../beer-authoring/projects/calibrate-beer-ess',
+}.items():
+    command[command.index(option) + 1] = relative
+first_command = command.copy()
+resume_index = first_command.index('--resume-first-stage')
+del first_command[resume_index : resume_index + 2]
+record['commands'] = [shlex.join(first_command), shlex.join(command)]
 record['capture_recovery'] = (
     'The first fit succeeded and auto-saved before the extractor '
     'rejected a string-valued space-group parameter. The second '
