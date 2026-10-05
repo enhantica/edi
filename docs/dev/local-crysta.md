@@ -5,13 +5,11 @@ change crysta and edi together, one command builds crysta from your checkout, li
 the app:
 
 ```bash
-git clone https://github.com/enhantica/crysta.git
-git clone https://github.com/enhantica/edi.git
 cd edi
 pixi run -e app app-with-crysta ../crysta
 ```
 
-Use the same branch in both clones when the change spans them (`git clone --branch <branch> ...`).
+Here `../crysta` is a crysta checkout next to edi. When a change spans both, check out the same branch in each.
 
 - crysta is built as it is in the checkout, uncommitted changes included, in crysta's own `cpp-ci` pixi
   environment, and installed under `<crysta>/build/edi-local`. crysta's tests are not run.
