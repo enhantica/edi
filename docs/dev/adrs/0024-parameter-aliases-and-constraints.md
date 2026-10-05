@@ -34,14 +34,23 @@ through crysta (ADR-0019 already reads crysta for the symmetry ties).
    `Dependence` mark from crysta's graph: independent, fixed or tied by symmetry, or constrained.
 4. **Free flag.** A dependent stays dependent. A loaded free flag on one is cleared with crysta's warning
    `crysta.domain.dependent_free_ignored`; setting one free warns the same way and changes nothing.
-5. **Values and e.s.d.s.** After any edit the app runs crysta's applier (`apply_relations`). After a fit, the
-   dependents' values and e.s.d.s are copied back from crysta by unique name, each dependent's previous e.s.d. kept in
-   memory so undo restores it.
+5. **Values and e.s.d.s.** After any edit the app runs crysta's applier (`apply_relations`). A Python edit of the
+   relations writes no value: it leaves the computed categories stale, and the next read or calculation applies the
+   relations before it computes anything, the geometry included. After a fit, the dependents' values and e.s.d.s are
+   copied back from crysta by unique name, each dependent's previous e.s.d. kept in memory so undo restores it.
 6. **Python.** diffraction-lib's names: `Alias` (`id`, `parameter_unique_name`, `param`), `Aliases.create(id=,
    param=)`, `Constraint` (`id`, `expression`, `lhs_alias`, `rhs_expr`), `Constraints.create(expression=, id=None)`,
    `enabled`, `enable()`, `disable()`, `show()`, and `Parameter.user_constrained` / `.symmetry_constrained`. Two
    differences: a taken id is refused (diffraction-lib replaces the row), and `Constraint.enabled` is per row, so
-   `enable()` and `disable()` set every row. `create` asks crysta first; a refused row is not added.
+   `enable()` and `disable()` set every row. `create` asks crysta first; a refused row is not added. `Alias.param`
+   returns the parameter as the ordinary field getters do: attached to its row and keeping its owner alive.
+7. **Currentness.** The alias and constraint rows are inputs of every computed category and of stored geometry: a
+   declaration write, an equal rewrite included, makes them stale, and a calculation or fit result taken before it is
+   not published (`relation_inputs` in the canonical encoding, beside the calculation and geometry inputs).
+8. **Undo.** Each app edit of the relations records the rows before it and every parameter state it changed. The app
+   bar's Undo restores the newest recorded change, so relation edits and fits undo in the order they were made. A
+   relation undo is an `Edit` built from that record (`restore_relations`), as a fit's is built from its start state
+   (`undo_fit`); a parameter removed since refuses it with nothing written.
 
 ## Consequences
 
