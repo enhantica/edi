@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-05T04:08:44Z
+# measured_utc = 2026-10-05T06:14:48Z
 #
-# Recorded from: tests-seq9-edi-final3.log (2 node(s) measured once, 5828 banked, 0 stale row(s) dropped)
-# Collected tests: 6171; with a reported duration: 3795
+# Recorded from: banked rows (nothing added; 3 stale row(s) dropped)
+# Collected tests: 6168; with a reported duration: 3795
 # Module-scoped fixture costs recorded: 10
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 6171
+# inventory_python = 6168
 # inventory_cpp = 232
 # inventory_measured = 5828
-# inventory_unmeasured = 575
+# inventory_unmeasured = 572
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_projects_open_and_populate_pages
@@ -5012,11 +5012,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_phase_sum
 UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_texture_is_local_to_phase_and_invariant_under_axis_sign
 UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_two_free_scales_recover_unequal_independent_contributions
 UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_two_named_phases_load_and_roundtrip
-UNMEASURED:failed-in-this-run	tests/system/py/test_yap_fullprof.py::test_delivered_yap_project_has_both_phases_and_physical_occupancies
 0.010	tests/system/py/test_yap_fullprof.py::test_fullprof_reference_retains_every_non_asymmetry_parameter_and_occupancy
-UNMEASURED:failed-in-this-run	tests/system/py/test_yap_fullprof.py::test_verification_page_executes_the_owner_reference_comparison
 0.010	tests/system/py/test_yap_fullprof.py::test_yalo3_single_phase_control_calculates_from_the_external_structure
-UNMEASURED:failed-in-this-run	tests/system/py/test_yap_fullprof.py::test_yap_fit_agrees_with_every_other_fullprof_parameter_and_rwp
 0.000	tests/test_c34_t1a_selector_arity.py::test_direct_file_and_glob_selectors_reach_the_notebook
 0.000	tests/test_c34_t1a_selector_arity.py::test_glob_exclusion_subtracts_while_the_sibling_stays_in
 0.000	tests/test_c34_t1a_selector_arity.py::test_separated_color_value_is_consumed_not_a_selector

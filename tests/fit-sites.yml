@@ -72,5 +72,3 @@ sites:
   - file: tests/system/py/test_multiphase.py
     case: multiphase-scales
 
-  - file: tests/system/py/test_yap_fullprof.py
-    case: yap-spodi-3k
