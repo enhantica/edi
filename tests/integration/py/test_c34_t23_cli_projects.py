@@ -283,11 +283,19 @@ def assert_registry_wiring(manifest, workflow):
             private_full = condition == '${{ !inputs.core_only }}' and all(
                 runner[0] == 'self-hosted' for runner in runners
             )
-            trusted_public = (
-                condition == 'github.event.pull_request.head.repo.fork == false'
-                and job.get('environment') == 'crysta-sdk'
-                and all(runner[0] == 'github-hosted' for runner in runners)
+            trusted_public = job.get('environment') == 'crysta-sdk' and all(
+                runner[0] == 'github-hosted' for runner in runners
             )
+            if trusted_public:
+                from tests.fixtures.e09_t75_workflow import active  # noqa: PLC0415
+
+                try:
+                    trusted_public = active(job, 'pull_request') and all(
+                        not active(job, 'pull_request', fork=True, core_only=repair)
+                        for repair in (False, True)
+                    )
+                except AssertionError:
+                    trusted_public = False
             if not (private_full or trusted_public):
                 continue
         for step in job.get('steps', []):
