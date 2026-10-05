@@ -73,6 +73,32 @@ def test_public_webapp_packer_excludes_native_build_outputs(tmp_path):
         assert sum(Path(name).name == 'edi_app.wasm' for name in names) == 2, (
             'excluding native objects must retain both prescribed WebAssembly transport outputs'
         )
+    docs = root / 'site'
+    docs.mkdir()
+    (docs / 'index.html').write_text('Independent documentation transport witness')
+    site = root / 'build/wasm/site'
+    expected = {
+        path.relative_to(site): path.read_bytes() for path in site.rglob('*') if path.is_file()
+    }
+    placed = subprocess.run(
+        ['bash', str(ROOT / 'tools/ci/docs-webapp.sh'), str(site), str(docs)],
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=8,
+    )
+    assert placed.returncode == 0, (
+        'the actual publisher must place the packed app: ' + placed.stderr
+    )
+    assert {
+        path.relative_to(docs / 'webapp'): path.read_bytes()
+        for path in (docs / 'webapp').rglob('*')
+        if path.is_file()
+    } == expected, 'public docs placement must preserve every packed webapp asset byte'
+    assert (docs / 'index.html').read_text() == 'Independent documentation transport witness', (
+        'placing the webapp must preserve the rendered documentation landing page'
+    )
 
 
 def test_native_fixture_is_bound_to_the_committed_nontrivial_project():

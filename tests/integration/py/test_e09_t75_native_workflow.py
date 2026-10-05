@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from tests.fixtures.e09_t75_workflow import reached
+from tests.fixtures.e09_t75_workflow import active, reached
 from tests.integration.py.ci_runner_contract import platform_job, self_hosted_runners
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -42,11 +42,23 @@ def public_build_boundary(data, name, platform=None):
         assert sum(runner[1] == expected_os for runner in runners) == 1, (
             'each public native boundary must execute on its exact prescribed SDK platform'
         )
-    assert (
-        'if' not in job
-        if name == 'notebooks'
-        else job.get('if') == 'github.event.pull_request.head.repo.fork == false'
-    ), 'public SDK native jobs must retain the positive trusted-pull-request fork boundary'
+    if name != 'notebooks':
+        terms = str(job.get('if', '')).removeprefix('${{').removesuffix('}}').split('&&')
+        assert any(
+            term.strip(' ()') == 'github.event.pull_request.head.repo.fork == false'
+            for term in terms
+        ) and '||' not in str(job.get('if', '')), (
+            'public SDK native jobs must retain the positive trusted-pull-request fork boundary'
+        )
+        for core_only in (False, True):
+            assert not active(job, 'pull_request', fork=True, core_only=core_only), (
+                'every public SDK job must refuse forks with either core-only input'
+            )
+    for event in ('pull_request', 'push', 'workflow_dispatch'):
+        assert active(job, event), 'every full trusted event must reach its public SDK job'
+        assert active(job, event, core_only=True) == (name in {'native', 'core'}), (
+            'core-only repairs retain native/core and skip every downstream public SDK job'
+        )
     assert job.get('environment') == 'crysta-sdk', (
         'public native builds must use the protected private SDK environment'
     )
@@ -104,6 +116,25 @@ def public_build_boundary(data, name, platform=None):
     ) and not steps[uses[0]].get('continue-on-error'), (
         'the first public native use must execute whenever the protected build job succeeds'
     )
+
+
+@pytest.mark.parametrize(
+    'condition',
+    [
+        'true',
+        'github.event.pull_request.head.repo.fork != false',
+        'github.event.pull_request.head.repo.fork == false || inputs.core_only != true',
+        'github.event.pull_request.head.repo.fork == false && inputs.core_only == true',
+        'github.event.pull_request.head.repo.fork == false && inputs.unknown != true',
+    ],
+)
+def test_public_sdk_boundary_rejects_guard_and_core_only_escapes(condition):
+    data = jobs()
+    public_build_boundary(data, 'audit')
+    damaged = copy.deepcopy(data)
+    damaged['audit']['if'] = condition
+    with pytest.raises(AssertionError):
+        public_build_boundary(damaged, 'audit')
 
 
 def test_d6_one_unfiltered_native_matrix_uploads_the_prescribed_artifacts():

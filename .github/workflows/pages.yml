@@ -1,7 +1,6 @@
-# The documentation site on GitHub Pages, with an unlisted /webapp/ folder reserved for the web app.
-# When switched on, the site is built from main (or by dispatch) with the notebooks executed for
-# rendering, which needs crysta's SDK; /webapp/ carries a placeholder page marked noindex and is
-# disallowed in robots.txt, and nothing in the site links it.
+# The documentation site on GitHub Pages, with the web app at /webapp/. The site is built from main (or
+# by dispatch) with the notebooks executed for rendering, which needs crysta's SDK; the web app is built
+# as CI's `app · WebAssembly` job builds it and placed into the site (ADR-0023).
 name: Pages
 
 on:
@@ -17,11 +16,9 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Switched off until further notice by the owner: both jobs are kept with their steps and run on no
-  # event. Turning the site back on, by removing the two `if: false` lines, is the owner's decision.
   build:
     name: build the site
-    if: false
+    if: github.event.pull_request.head.repo.fork == false
     environment: crysta-sdk
     runs-on: &linux ubuntu-24.04
     steps:
@@ -49,11 +46,12 @@ jobs:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
       - name: Strict docs build
         run: pixi run docs-build
-      - name: Reserve the unlisted web-app folder
-        run: |
-          mkdir -p site/webapp
-          cp tools/public-release/webapp/index.html site/webapp/index.html
-          printf 'User-agent: *\nDisallow: /webapp/\n' >> site/robots.txt
+      - name: Install the WebAssembly toolchain  # Emscripten, Qt's wasm kits, Eigen, Chrome
+        run: pixi run -e app wasm-toolchain
+      - name: Build both kits and pack the web app
+        run: pixi run -e app --skip-deps wasm-build
+      - name: Place the web app at /webapp/
+        run: bash tools/ci/docs-webapp.sh build/wasm/site site
       - name: Upload the site
         uses: actions/upload-pages-artifact@v3
         with:
@@ -62,10 +60,8 @@ jobs:
   deploy:
     name: deploy the site
     needs: build
-    # Off with the build. A Pages site can be publicly visible, so when the site is turned back on this
-    # becomes `if: ${{ !github.event.repository.private }}`: it deploys only once the repository is public
-    # (docs/dev/public-release-checklist.md).
-    if: false
+    # A Pages site is publicly visible, so it deploys only while the repository is public.
+    if: github.event.repository.private == false
     permissions:
       pages: write
       id-token: write

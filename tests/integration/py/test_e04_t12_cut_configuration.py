@@ -16,6 +16,8 @@ from urllib.parse import unquote
 import pytest
 import yaml
 
+from tests.fixtures.e09_t75_workflow import active
+
 ROOT = Path(__file__).resolve().parents[3]
 
 
@@ -222,14 +224,7 @@ def evaluate(node, values):
 
 
 def condition(expression, *, fork, event):
-    if not expression:
-        return True
-    text = str(expression).strip().removeprefix('${{').removesuffix('}}').strip()
-    text = text.replace('github.event.pull_request.head.repo.fork', 'fork')
-    text = text.replace('github.event_name', 'event')
-    text = text.replace('false', 'False').replace('true', 'True')
-    text = text.replace('&&', ' and ').replace('||', ' or ')
-    return evaluate(ast.parse(text, mode='eval').body, {'fork': fork, 'event': event})
+    return active({'if': expression} if expression is not None else {}, event, fork=fork)
 
 
 def environment_name(value, *, fork, event):
