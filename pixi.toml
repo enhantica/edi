@@ -101,6 +101,8 @@ pyyaml = "*"
 # crysta made in (doctest, not Catch2 v3 — which stopped being header-only). One binary,
 # built EXCLUDE_FROM_ALL by `cpp-test`.
 doctest = "*"
+# Non-GUI QML expression gates execute JavaScript in this declared environment.
+nodejs = "==22.23.2"
 
 # The LLVM source-based coverage toolchain, linux-64 ONLY — coverage runs on the Linux leg
 # exclusively, so the macOS solves stay untouched. clangxx supplies the clang++ driver;

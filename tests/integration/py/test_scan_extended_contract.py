@@ -429,14 +429,26 @@ set(CMAKE_CURRENT_SOURCE_DIR "{APP.as_posix()}")
 set(EMSCRIPTEN {'TRUE' if web else 'FALSE'})
 file(WRITE "{receipt.as_posix()}" "")
 foreach(command include configure_file qt_add_library
- qt_add_qml_module target_include_directories set_target_properties
+ target_include_directories set_target_properties
  qt_add_executable target_compile_definitions add_custom_target add_dependencies
  target_link_options install)
  function(${{command}})
  endfunction()
 endforeach()
 function(target_link_libraries target)
- set_property(GLOBAL APPEND PROPERTY "probe_links_${{target}}" ${{ARGN}})
+ set(scope PUBLIC)
+ foreach(edge IN LISTS ARGN)
+  if(edge MATCHES "^(PRIVATE|PUBLIC|INTERFACE)$")
+   set(scope "${{edge}}")
+  else()
+   if(NOT scope STREQUAL "INTERFACE")
+    set_property(GLOBAL APPEND PROPERTY "probe_own_${{target}}" "${{edge}}")
+   endif()
+   if(NOT scope STREQUAL "PRIVATE")
+    set_property(GLOBAL APPEND PROPERTY "probe_interface_${{target}}" "${{edge}}")
+   endif()
+  endif()
+ endforeach()
 endfunction()
 function(qt_add_resources target resource)
  cmake_parse_arguments(ARG "" "PREFIX;BASE" "FILES;OPTIONS" ${{ARGN}})
@@ -455,6 +467,26 @@ function(qt_add_resources target resource)
   file(APPEND "{receipt.as_posix()}" "${{row}}\\t${{digest}}\\n")
  endforeach()
 endfunction()
+function(qt_add_qml_module target)
+ # Qt6QmlMacros forwards RESOURCES to qt_add_resources at its URI resource prefix.
+ # edi uses QTP0001 NEW via qt_standard_project_setup(REQUIRES 6.8).
+ cmake_parse_arguments(QML "NO_RESOURCE_TARGET_PATH"
+  "URI;VERSION;RESOURCE_PREFIX;TARGET_PATH"
+  "RESOURCES;QML_FILES;SOURCES;DEPENDENCIES;IMPORTS;OPTIONAL_IMPORTS" ${{ARGN}})
+ if(NOT QML_RESOURCE_PREFIX)
+  set(QML_RESOURCE_PREFIX "/qt/qml")
+ endif()
+ if(NOT QML_NO_RESOURCE_TARGET_PATH)
+  if(NOT QML_TARGET_PATH)
+   string(REPLACE "." "/" QML_TARGET_PATH "${{QML_URI}}")
+  endif()
+  string(REGEX REPLACE "/$" "" QML_RESOURCE_PREFIX "${{QML_RESOURCE_PREFIX}}")
+  string(APPEND QML_RESOURCE_PREFIX "/${{QML_TARGET_PATH}}")
+ endif()
+ qt_add_resources(${{target}} "qml_resources"
+  PREFIX "${{QML_RESOURCE_PREFIX}}" BASE "${{CMAKE_CURRENT_SOURCE_DIR}}"
+  FILES ${{QML_RESOURCES}})
+endfunction()
 {body}
 set(queue edi_app)
 set(reachable)
@@ -464,7 +496,13 @@ while(queue)
   continue()
  endif()
  list(APPEND reachable "${{target}}")
- get_property(edges GLOBAL PROPERTY "probe_links_${{target}}")
+ get_property(edges GLOBAL PROPERTY "probe_own_${{target}}")
+ # A linked library's usage requirements reach its consumer. The executable's
+ # INTERFACE is for a consumer of that executable, not its own deployment.
+ if(NOT target STREQUAL "edi_app")
+  get_property(exported GLOBAL PROPERTY "probe_interface_${{target}}")
+  list(APPEND edges ${{exported}})
+ endif()
  list(APPEND queue ${{edges}})
 endwhile()
 list(JOIN reachable "\\n" target_text)
@@ -510,10 +548,14 @@ def bundled_inputs(files, project_id):
 def assert_bundled_index(files, index):
     digest = hashlib.sha256(('\n'.join(index) + '\n').encode()).hexdigest()
     records = [line.split('\t') for line in files]
-    assert any(
-        address == '/edi/examples/index.txt' and actual == digest
-        for target, _resource, address, actual in records
-    ), 'Examples: the advertised index bytes are bundled at the address the loader opens'
+    actual = [
+        payload
+        for _target, _resource, address, payload in records
+        if address == '/edi/examples/index.txt'
+    ]
+    assert actual == [digest], (
+        'Examples: the advertised index has one payload at the address the loader opens'
+    )
 
 
 def assert_web_exclusion(files, index):
@@ -584,8 +626,7 @@ def test_effective_bundle_contains_selected_scan_payloads(tmp_path, web):
 
 def test_resource_observer_rejects_comment_only_and_inactive_bundle_calls(tmp_path):
     cmake = (APP / 'CMakeLists.txt').read_text()
-    live = cmake.replace('if(EXISTS ${project}/analysis/analysis.edi)', 'if(FALSE)')
-    # The retained full scan is available before the smaller example is authored.
+    live = cmake
     good, _index = resource_inventory(tmp_path / 'good', False, live)
     full = 'pd-neut-cwl_cosio-d20_scan-324f'
     expected = expected_bundle(324)
@@ -611,11 +652,7 @@ def test_resource_observer_rejects_comment_only_and_inactive_bundle_calls(tmp_pa
 def test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload(
     tmp_path, dimension
 ):
-    cmake = (
-        (APP / 'CMakeLists.txt')
-        .read_text()
-        .replace('if(EXISTS ${project}/analysis/analysis.edi)', 'if(FALSE)')
-    )
+    cmake = (APP / 'CMakeLists.txt').read_text()
     full = 'pd-neut-cwl_cosio-d20_scan-324f'
     expected = expected_bundle(324)
     good, index = resource_inventory(tmp_path / 'good', False, cmake)
@@ -642,14 +679,26 @@ def test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden
         (
             'metadata',
             cmake.replace(
-                'list(APPEND bundled ${file})',
-                'if(NOT file MATCHES "[.]edi$")\nlist(APPEND bundled ${file})\nendif()',
+                'qt_add_resources(edi_app_module "edi_example_${id}"',
+                'list(FILTER files EXCLUDE REGEX "[.]edi$")\n        '
+                'qt_add_resources(edi_app_module "edi_example_${id}"',
             ),
         ),
     ]:
         if dimension != label:
             continue
+        assert mutated != cmake, 'Examples: the escape reaches the committed packaging operation'
         bad, _ = resource_inventory(tmp_path / label, False, mutated)
+        if dimension == 'metadata':
+            actual = bundled_inputs(bad, full)
+            assert not any(address.endswith('.edi') for address in actual), (
+                'Examples: the live metadata escape removes opening metadata'
+            )
+            assert {
+                address: digest
+                for address, digest in expected.items()
+                if not address.endswith('.edi')
+            } == actual, 'Examples: the metadata escape preserves every selected scan input'
         assert bundled_inputs(bad, full) != expected, (
             'Examples: each discarded identity dimension must reject its packaging escape'
         )
@@ -657,6 +706,7 @@ def test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden
         return
     no_index = re.sub(r'qt_add_resources\(edi_app_module "edi_example_index"[\s\S]*?\)', '', cmake)
     if dimension == 'index':
+        assert no_index != cmake, 'Examples: the escape removes the live index resource call'
         bad, index = resource_inventory(tmp_path / 'index', False, no_index)
         with pytest.raises(AssertionError, match='advertised index'):
             assert_bundled_index(bad, index)
@@ -879,8 +929,10 @@ def test_rendered_evolution_and_stale_observers_reject_unrelated_models_handlers
         ),
         ('model: view.results.points', 'model: other.results.points'),
     ]:
+        changed = good.replace(old, new)
+        assert changed != good, 'Evolution wiring: the control changes its named connection'
         with pytest.raises((AssertionError, pytest.fail.Exception)):
-            assert_evolution_bindings(good.replace(old, new))
+            assert_evolution_bindings(changed)
     marker = """Item {
  Text {
   text: qsTr("out of date")
@@ -895,6 +947,7 @@ def test_rendered_evolution_and_stale_observers_reject_unrelated_models_handlers
         marker.replace('visible: bar.fit.outOfDate', 'visible: true')
         + '\nText { visible: bar.fit.outOfDate; text: "unrelated" }',
     ]:
+        assert changed != marker, 'Stale wiring: the control changes its named marker binding'
         with pytest.raises((AssertionError, pytest.fail.Exception)):
             assert_stale_marker(changed)
 
@@ -919,15 +972,100 @@ def test_working_copy_observer_rejects_copy_to_an_unrelated_destination(monkeypa
 
 
 def test_resource_observer_accepts_a_separately_linked_example_library(tmp_path):
-    cmake = (
-        (APP / 'CMakeLists.txt')
-        .read_text()
-        .replace('if(EXISTS ${project}/analysis/analysis.edi)', 'if(FALSE)')
-    )
-    cmake = cmake.replace('qt_add_resources(edi_app_module', 'qt_add_resources(example_layer')
+    live = (APP / 'CMakeLists.txt').read_text()
+    cmake = live.replace('qt_add_resources(edi_app_module', 'qt_add_resources(example_layer')
+    assert cmake != live, 'Examples: the control relocates the live resources to another target'
+    cmake += '\nqt_add_library(example_layer STATIC)\n'
     cmake += '\ntarget_link_libraries(edi_app_module PRIVATE example_layer)\n'
     files, index = resource_inventory(tmp_path, False, cmake)
     assert_bundled_index(files, index)
     assert bundled_inputs(files, 'pd-neut-cwl_cosio-d20_scan-324f') == expected_bundle(324), (
         'Examples: resource inclusion follows the target linked to the app'
     )
+
+
+@pytest.mark.parametrize('placement', ['default', 'prefix', 'alias'])
+def test_resource_observer_rejects_excluded_payload_in_the_live_qml_module(tmp_path, placement):
+    cmake = (APP / 'CMakeLists.txt').read_text()
+    good, index = resource_inventory(tmp_path / 'good', True, cmake)
+    assert_web_exclusion(good, index)
+    logo = '/qt/qml/edi/app/resources/logo/App.svg'
+    assert any(row.split('\t')[2] == logo for row in good), (
+        'Examples: the existing QML module resource route records its deployed address'
+    )
+    full = 'pd-neut-cwl_cosio-d20_scan-324f'
+    name = next(name for name in example_inventory(324) if name.startswith('02_'))
+    payload = ROOT / 'docs/user/cli' / full / 'project/experiments/d20_scan' / name
+    declaration = 'resources/logo/App.svg'
+    changed = cmake.replace(declaration, declaration + '\n        "' + str(payload) + '"', 1)
+    assert changed != cmake, 'Examples: the escape reaches the existing QML RESOURCES list'
+    # Qt aliases preserve the resource identity even for a source outside the module tree.
+    alias = 'forbidden-scan.bin'
+    changed = (
+        'set_source_files_properties("'
+        + str(payload)
+        + '" PROPERTIES QT_RESOURCE_ALIAS '
+        + alias
+        + ')\n'
+        + changed
+    )
+    address = '/qt/qml/edi/app/' + alias
+    if placement == 'prefix':
+        changed = changed.replace('URI edi.app', 'URI edi.app\n    RESOURCE_PREFIX "/other"', 1)
+        address = '/other/edi/app/' + alias
+    elif placement == 'alias':
+        changed = changed.replace(alias, 'renamed.dat')
+        address = '/qt/qml/edi/app/renamed.dat'
+    bad, index = resource_inventory(tmp_path / 'bad', True, changed)
+    digest = hashlib.sha256(payload.read_bytes()).hexdigest()
+    assert any(row.split('\t')[2:] == [address, digest] for row in bad), (
+        'Examples: the live QML route includes the injected bytes at their effective address'
+    )
+    with pytest.raises(AssertionError, match='web'):
+        assert_web_exclusion(bad, index)
+
+
+@pytest.mark.parametrize('link', ['PRIVATE', 'PUBLIC', 'INTERFACE', 'library-interface'])
+def test_resource_observer_distinguishes_executable_and_library_interfaces(tmp_path, link):
+    cmake = (APP / 'CMakeLists.txt').read_text()
+    relocated = cmake.replace('qt_add_resources(edi_app_module', 'qt_add_resources(example_layer')
+    assert relocated != cmake, 'Examples: the linkage control relocates the production resources'
+    relocated += '\nqt_add_library(example_layer STATIC)\n'
+    if link == 'library-interface':
+        relocated += '\ntarget_link_libraries(edi_app_module INTERFACE example_layer)\n'
+    else:
+        relocated += '\ntarget_link_libraries(edi_app ' + link + ' example_layer)\n'
+    files, index = resource_inventory(tmp_path, False, relocated)
+    full = 'pd-neut-cwl_cosio-d20_scan-324f'
+    if link == 'INTERFACE':
+        assert bundled_inputs(files, full) == {}, (
+            'Examples: an executable INTERFACE edge does not deploy its resources'
+        )
+        with pytest.raises(AssertionError, match='advertised index'):
+            assert_bundled_index(files, index)
+    else:
+        assert bundled_inputs(files, full) == expected_bundle(324), (
+            'Examples: own links and linked-library usage requirements deploy their resources'
+        )
+        assert_bundled_index(files, index)
+
+
+def test_resource_observer_rejects_a_second_payload_at_the_index_address(tmp_path):
+    cmake = (APP / 'CMakeLists.txt').read_text()
+    good, index = resource_inventory(tmp_path / 'good', False, cmake)
+    assert_bundled_index(good, index)
+    cmake += """
+set_source_files_properties(${_cli}/pd-neut-cwl_cosio-d20_scan-324f/project/analysis/analysis.edi
+ PROPERTIES QT_RESOURCE_ALIAS index.txt)
+qt_add_resources(edi_app "index_collision" PREFIX "/edi/examples" BASE ${_cli}
+ FILES ${_cli}/pd-neut-cwl_cosio-d20_scan-324f/project/analysis/analysis.edi)
+"""
+    bad, index = resource_inventory(tmp_path / 'bad', False, cmake)
+    payloads = [
+        row.split('\t')[3] for row in bad if row.split('\t')[2] == '/edi/examples/index.txt'
+    ]
+    assert len(payloads) == 2 and len(set(payloads)) == 2, (
+        'Examples: the live collision carries two different payloads at the opening index address'
+    )
+    with pytest.raises(AssertionError, match='advertised index'):
+        assert_bundled_index(bad, index)

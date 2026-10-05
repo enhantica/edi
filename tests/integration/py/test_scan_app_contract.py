@@ -5,8 +5,8 @@ from __future__ import annotations
 
 import json
 import re
-import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -124,8 +124,8 @@ def control_type(text, name):
 
 
 def javascript(program):
-    node = shutil.which('node')
-    assert node, 'Scan wiring: the runner must provide its JavaScript interpreter'
+    node = Path(sys.prefix) / 'bin/node'
+    assert node.is_file(), 'Scan wiring: the declared Python environment supplies Node'
     result = subprocess.run(
         [node], input=program, text=True, capture_output=True, check=False, timeout=5
     )
@@ -304,13 +304,12 @@ def test_follow_observer_rejects_disconnected_controls_and_unrelated_handlers():
         ),
         ('onToggled: group.fit.following = checked', 'onToggled: {}'),
     ]:
-        changed = (
-            text.replace(old, new)
-            + '\nButton { enabled: group.fit.scanning; onToggled: group.fit.'
-            'following = checked }'
-        )
+        changed = text.replace(old, new)
         assert changed != text, (
             'Follow wiring: each escape must actually alter the production control'
+        )
+        changed += (
+            '\nButton { enabled: group.fit.scanning; onToggled: group.fit.following = checked }'
         )
         with pytest.raises(AssertionError):
             assert_follow(changed)
@@ -361,13 +360,23 @@ def assert_outcome_consumers(bar, label, dialog):
     line = block(label, 'IconLine {')
     icon_cell = block(dialog, 'IconCell {')
     value_cell = item(dialog, 'fit.results.value.${row.index}')
-    for key, word, icon, color in OUTCOMES:
-        state = (
-            '\nconst label={outcome:'
-            + json.dumps(key)
-            + '}; const row={outcome:label.outcome,icon:"fallback",value:"17"};'
-        )
-        segments = evaluate(property_value(line, 'segments'), context + state)
+    expressions = [
+        property_value(icon_cell, 'icon'),
+        property_value(icon_cell, 'iconColor'),
+        property_value(value_cell, 'text'),
+        property_value(value_cell, 'color'),
+    ]
+    context += '\nconst keys=' + json.dumps([key for key, *_ in OUTCOMES]) + ';'
+    rows = evaluate(
+        'keys.map(outcome=>{const label={outcome}; '
+        'const row={outcome,icon:"fallback",value:"17"}; return ['
+        + property_value(line, 'segments')
+        + ',['
+        + ','.join(expressions)
+        + ']];})',
+        context,
+    )
+    for (_key, word, icon, color), (segments, overall) in zip(OUTCOMES, rows, strict=True):
         assert [
             segments[0]['icon'],
             segments[1]['text'],
@@ -376,13 +385,7 @@ def assert_outcome_consumers(bar, label, dialog):
         ] == [icon, word, color, color], (
             'Outcomes: displayed status segments use the effective tuple'
         )
-        expressions = [
-            property_value(icon_cell, 'icon'),
-            property_value(icon_cell, 'iconColor'),
-            property_value(value_cell, 'text'),
-            property_value(value_cell, 'color'),
-        ]
-        assert evaluate('[' + ','.join(expressions) + ']', context + state) == [
+        assert overall == [
             icon,
             color,
             word,
@@ -437,34 +440,36 @@ eta:'ETA',chi:'CHI',goodnessOfFit:'CHI',completed:3,total:8,fraction:0.375,
 percent:37.5,iterations:'13',outcome:'success'}};
 const fitArea={};"""
     running = property_value(area, 'running')
-    for run, scan in [(True, True), (True, False), (False, True)]:
-        state = (
-            context
-            + 'bar.fit.running='
-            + json.dumps(run)
-            + ';bar.fit.scanning='
-            + json.dumps(scan)
-            + ';'
-        )
-        state += 'fitArea.running=(' + running + ');'
-        assert evaluate(property_value(progress, 'visible'), state) == run, (
+    states = [(True, True), (True, False), (False, True)]
+    prop = 'fraction' if re.search(r'(?m)^\s*fraction:', progress) else 'value'
+    maximum = property_value(progress, 'to') if re.search(r'(?m)^\s*to:', progress) else '1'
+    expressions = [
+        property_value(progress, 'visible'),
+        property_value(outcome, 'visible'),
+        'run ? (' + property_value(progress, 'indeterminate') + ') : null',
+        'run && scan ? (' + property_value(progress, prop) + ') : null',
+        'run && scan ? (' + maximum + ') : null',
+    ]
+    context += '\nconst states=' + json.dumps(states) + ';'
+    actual = evaluate(
+        'states.map(([run,scan])=>{ bar.fit.running=run; bar.fit.scanning=scan; '
+        'fitArea.running=(' + running + '); return [' + ','.join(expressions) + '];})',
+        context,
+    )
+    for (run, scan), (visible, terminal, striped, fill, maximum) in zip(
+        states, actual, strict=True
+    ):
+        assert visible == run, (
             'Status bar wiring: progress visibility follows the actual running producer'
         )
-        assert evaluate(property_value(outcome, 'visible'), state) == (not run), (
+        assert terminal == (not run), (
             'Status bar wiring: outcome visibility follows the terminal producer'
         )
         if run:
-            assert evaluate(property_value(progress, 'indeterminate'), state) == (not scan), (
+            assert striped == (not scan), (
                 'Status bar wiring: single fits stripe and scans have determinate fill'
             )
             if scan:
-                prop = 'fraction' if re.search(r'(?m)^\s*fraction:', progress) else 'value'
-                fill = evaluate(property_value(progress, prop), state)
-                maximum = (
-                    evaluate(property_value(progress, 'to'), state)
-                    if re.search(r'(?m)^\s*to:', progress)
-                    else 1
-                )
                 assert fill / maximum == 3 / 8, (
                     'Status bar wiring: the displayed fill is completed datasets '
                     'divided by their total'
@@ -687,15 +692,58 @@ def test_sidebar_tabs_have_requested_names():
     )
 
 
-def test_explorer_fit_column_has_outcome_model_roles():
-    qml = source('qml/Pages/Experiment/ExperimentsGroup.qml')
+def assert_explorer_outcomes(qml):
     control = item(qml, 'experiments.fit.${row.index}')
-    for function, prop in [('icon', 'icon'), ('color', 'iconColor'), ('word', 'toolTip')]:
-        require(
-            property_value(control, prop),
-            r'FitOutcomes\.' + function + r'\(row\.fitOutcome\)',
-            'Fit lists wiring: the actual cell uses its row outcome tuple',
-        )
+    expressions = [property_value(control, prop) for prop in ('icon', 'iconColor', 'toolTip')]
+    expressions = [
+        '(function()' + value + ')()' if value.startswith('{') else '(' + value + ')'
+        for value in expressions
+    ]
+    context = outcome_functions(source('qml/Globals/FitOutcomes.qml'))
+    context += (
+        '\nconst FitOutcomes={word,icon,color}; const keys='
+        + json.dumps([key for key, _word, _icon, _color in OUTCOMES])
+        + ';'
+    )
+    actual = evaluate(
+        'keys.map(fitOutcome=>{ const row={fitOutcome}; return ['
+        + ','.join(expressions)
+        + ']; })',
+        context,
+    )
+    assert actual == [[icon, color, word] for _key, word, icon, color in OUTCOMES], (
+        'Fit lists wiring: the displayed explorer tuple equals its row outcome'
+    )
+
+
+def test_explorer_fit_column_has_outcome_model_roles():
+    assert_explorer_outcomes(source('qml/Pages/Experiment/ExperimentsGroup.qml'))
+
+
+@pytest.mark.parametrize(
+    ('prop', 'fallback'),
+    [
+        ('icon', '"times-circle"'),
+        ('iconColor', '"red"'),
+        ('toolTip', '"Failed"'),
+    ],
+)
+def test_explorer_observer_rejects_untaken_mapping_branches(prop, fallback):
+    qml = source('qml/Pages/Experiment/ExperimentsGroup.qml')
+    assert_explorer_outcomes(qml)
+    control = item(qml, 'experiments.fit.${row.index}')
+    expression = property_value(control, prop)
+    changed = control.replace(expression, 'false ? (' + expression + ') : ' + fallback, 1)
+    assert changed != control, 'Fit lists wiring: the escape alters the actual cell expression'
+    with pytest.raises(AssertionError, match='displayed explorer tuple'):
+        assert_explorer_outcomes(qml.replace(control, changed, 1))
+
+
+def test_javascript_uses_declared_runtime_with_empty_path(monkeypatch):
+    monkeypatch.setenv('PATH', '')
+    assert evaluate('3 * 7') == 21, (
+        'Scan wiring: expression execution uses the declared runtime without ambient PATH'
+    )
 
 
 @pytest.mark.parametrize('component', ['AliasesGroup', 'ConstraintsGroup'])
@@ -839,8 +887,10 @@ def test_effective_consumers_reject_wrong_branches_and_disconnected_search(chann
     if channel != 'block-delegate':
         return
     block_delegate = block(source('qml/Components/BlockSelector.qml'), 'delegate:')
+    changed = block_delegate.replace('selector.matches(text)', 'true')
+    assert changed != block_delegate, 'Search wiring: the escape changes the overridden delegate'
     with pytest.raises(AssertionError):
-        assert_search(shared, block_delegate.replace('selector.matches(text)', 'true'))
+        assert_search(shared, changed)
 
 
 def test_search_accepts_direct_field_and_state_compositions():
@@ -848,6 +898,9 @@ def test_search_accepts_direct_field_and_state_compositions():
     direct = shared.replace(
         'searchable ? searchText.trim().toLowerCase()',
         'searchable ? searchField.text.trim().toLowerCase()',
+    )
+    assert direct != shared, (
+        'Search wiring: the control supplies the alternative field composition'
     )
     delegate = block(shared, 'delegate:')
     visible_delegate = (
@@ -862,6 +915,7 @@ def test_search_accepts_direct_field_and_state_compositions():
             'readonly property bool matching: control.matches(text)\n        visible: matching',
         )
     )
+    assert visible_delegate != delegate, 'Search wiring: the control supplies visibility filtering'
     assert_search(shared)
     assert_search(direct, visible_delegate)
 
