@@ -18,6 +18,7 @@ import struct
 import subprocess
 import sys
 import tarfile
+import time
 import tomllib
 import zipfile
 import zlib
@@ -1017,17 +1018,27 @@ def secret_findings(entries):
     ]
 
 
-def test_secret_scanner_checks_the_prepared_tree():
+def test_independent_secret_predicate_checks_every_decoded_member():
     findings = secret_findings(publication_texts())
     assert not findings, (
         'the independent publication check must reject credentials in decoded members: '
         + ', '.join(findings[:20])
     )
+
+
+def test_secret_scanner_checks_the_prepared_tree():
+    deadline = time.monotonic() + 5
     scanner = script('scan.py')
     try:
-        # Leave room for the independent predicate within the existing system
-        # tier's five-second bound. A slow/incomplete scan cannot certify a tree.
-        result = run(sys.executable, str(scanner), '--tree', str(ROOT), timeout=3)
+        # This node performs one complete production scan. The separate independent
+        # predicate above keeps its own full-tree obligation and runtime attribution.
+        result = run(
+            sys.executable,
+            str(scanner),
+            '--tree',
+            str(ROOT),
+            timeout=max(0, deadline - time.monotonic()),
+        )
     except subprocess.TimeoutExpired:
         pytest.fail('the full publication scanner must complete within the system-test budget')
     require_success(result, 'the final release secrets scan must inspect the entire prepared tree')

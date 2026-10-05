@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-05T08:15:22Z
+# measured_utc = 2026-10-05T10:02:39Z
 #
-# Recorded from: tests-seq22-sweep.log (42 node(s) measured once, 5803 banked, 2 stale row(s) dropped)
-# Collected tests: 6177; with a reported duration: 3808
+# Recorded from: tests-seq27-sweep.log (37 node(s) measured once, 5810 banked, 0 stale row(s) dropped)
+# Collected tests: 6178; with a reported duration: 3810
 # Module-scoped fixture costs recorded: 11
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 6177
+# inventory_python = 6178
 # inventory_cpp = 232
-# inventory_measured = 5845
-# inventory_unmeasured = 564
+# inventory_measured = 5847
+# inventory_unmeasured = 563
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_projects_open_and_populate_pages
@@ -4128,11 +4128,11 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::te
 4.650	tests/system/py/test_c34_t28_native_surface.py::test_every_preserved_public_declaration_keeps_its_compiler_type
 2.260	tests/system/py/test_c34_t28_native_surface.py::test_native_contract_detects_reference_and_exception_drift[attachment-may-throw]
 2.360	tests/system/py/test_c34_t28_native_surface.py::test_native_contract_detects_reference_and_exception_drift[axis-by-value]
-0.410	tests/system/py/test_c34_t28_pairing.py::test_pairing_reports_unlanded_work_and_a_stale_pin_on_intermediate_rows[ahead-current]
-0.390	tests/system/py/test_c34_t28_pairing.py::test_pairing_reports_unlanded_work_and_a_stale_pin_on_intermediate_rows[ahead-stale]
-0.580	tests/system/py/test_c34_t28_pairing.py::test_pairing_reports_unlanded_work_and_a_stale_pin_on_intermediate_rows[behind]
-0.380	tests/system/py/test_c34_t28_pairing.py::test_pairing_reports_unlanded_work_and_a_stale_pin_on_intermediate_rows[main]
-0.450	tests/system/py/test_c34_t28_pairing.py::test_pairing_reports_unlanded_work_and_a_stale_pin_on_intermediate_rows[squashed]
+0.420	tests/system/py/test_c34_t28_pairing.py::test_pairing_reports_unlanded_work_and_a_stale_pin_on_intermediate_rows[ahead-current]
+0.350	tests/system/py/test_c34_t28_pairing.py::test_pairing_reports_unlanded_work_and_a_stale_pin_on_intermediate_rows[ahead-stale]
+0.400	tests/system/py/test_c34_t28_pairing.py::test_pairing_reports_unlanded_work_and_a_stale_pin_on_intermediate_rows[behind]
+0.310	tests/system/py/test_c34_t28_pairing.py::test_pairing_reports_unlanded_work_and_a_stale_pin_on_intermediate_rows[main]
+0.460	tests/system/py/test_c34_t28_pairing.py::test_pairing_reports_unlanded_work_and_a_stale_pin_on_intermediate_rows[squashed]
 0.000	tests/system/py/test_c34_t28_performance_reference.py::test_invalid_engine_time_cannot_be_a_fast_result[-1]
 0.000	tests/system/py/test_c34_t28_performance_reference.py::test_invalid_engine_time_cannot_be_a_fast_result[0]
 0.000	tests/system/py/test_c34_t28_performance_reference.py::test_invalid_engine_time_cannot_be_a_fast_result[inf]
@@ -4351,6 +4351,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_value_expressions.py:
 0.000	tests/system/py/test_e04_t12_public_release.py::test_fork_guard_cannot_admit_or_negate_the_attacker[github.event_name == 'workflow_dispatch'-True]
 0.007	tests/system/py/test_e04_t12_public_release.py::test_frozen_api_gate_survives_one_commit_history
 0.000	tests/system/py/test_e04_t12_public_release.py::test_independent_private_pattern_controls
+1.710	tests/system/py/test_e04_t12_public_release.py::test_independent_secret_predicate_checks_every_decoded_member
 0.010	tests/system/py/test_e04_t12_public_release.py::test_live_edi_history_anchors_resolve_in_one_commit_tree
 0.080	tests/system/py/test_e04_t12_public_release.py::test_pages_builds_docs_and_publishes_the_linked_webapp
 0.170	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[disabled-placement]
@@ -4384,7 +4385,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_value_expressions.py:
 0.000	tests/system/py/test_e04_t12_public_release.py::test_secret_prefix_filter_keeps_every_credential_shape[slack-p]
 0.000	tests/system/py/test_e04_t12_public_release.py::test_secret_prefix_filter_keeps_every_credential_shape[slack-r]
 0.000	tests/system/py/test_e04_t12_public_release.py::test_secret_prefix_filter_keeps_every_credential_shape[slack-s]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t12_public_release.py::test_secret_scanner_checks_the_prepared_tree
+2.580	tests/system/py/test_e04_t12_public_release.py::test_secret_scanner_checks_the_prepared_tree
 0.160	tests/system/py/test_e04_t12_public_release.py::test_secret_scanner_rejects_a_credential_control
 0.000	tests/system/py/test_e04_t12_public_release.py::test_source_and_application_licences_are_complete
 0.720	tests/system/py/test_e04_t12_public_release.py::test_test_and_tool_identity_is_independent_of_checkout_name
@@ -4544,35 +4545,35 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t9_latency.py::test_real_
 0.030	tests/system/py/test_e09_t58_start_tied_numeric.py::test_edi_start_tied_refuses_nonfinite_and_partial_numbers[y=1.25e-3junk;z=.]
 0.040	tests/system/py/test_e09_t58_start_tied_numeric.py::test_edi_start_tied_refuses_nonfinite_and_partial_numbers[y=inf;z=.]
 0.030	tests/system/py/test_e09_t58_start_tied_numeric.py::test_edi_start_tied_refuses_nonfinite_and_partial_numbers[y=nan;z=.]
-0.530	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_auth_retry_is_bounded_and_exhaustion_never_substitutes_a_sibling[absent-2-fetch]
-0.480	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_auth_retry_is_bounded_and_exhaustion_never_substitutes_a_sibling[absent-2-ls-remote]
-0.540	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_auth_retry_is_bounded_and_exhaustion_never_substitutes_a_sibling[absent-99-fetch]
-0.580	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_auth_retry_is_bounded_and_exhaustion_never_substitutes_a_sibling[absent-99-ls-remote]
-0.540	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_auth_retry_is_bounded_and_exhaustion_never_substitutes_a_sibling[exact-2-fetch]
-0.490	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_auth_retry_is_bounded_and_exhaustion_never_substitutes_a_sibling[exact-2-ls-remote]
-0.540	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_auth_retry_is_bounded_and_exhaustion_never_substitutes_a_sibling[exact-99-fetch]
-0.570	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_auth_retry_is_bounded_and_exhaustion_never_substitutes_a_sibling[exact-99-ls-remote]
-0.570	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_auth_retry_is_bounded_and_exhaustion_never_substitutes_a_sibling[main-only-2-fetch]
-0.520	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_auth_retry_is_bounded_and_exhaustion_never_substitutes_a_sibling[main-only-2-ls-remote]
-0.600	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_auth_retry_is_bounded_and_exhaustion_never_substitutes_a_sibling[main-only-99-fetch]
-0.590	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_auth_retry_is_bounded_and_exhaustion_never_substitutes_a_sibling[main-only-99-ls-remote]
-0.270	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_ci_branch_lookup_refuses_ambiguous_or_invalid_refs[ambiguous]
-0.250	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_ci_branch_lookup_refuses_ambiguous_or_invalid_refs[bad-sha]
-0.230	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_ci_branch_lookup_refuses_ambiguous_or_invalid_refs[noncommit]
-0.230	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_ci_branch_lookup_refuses_ambiguous_or_invalid_refs[wrong-ref]
-0.350	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_ci_pairing_retains_the_pin_and_refuses_lookup_errors[error]
-0.480	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_ci_pairing_retains_the_pin_and_refuses_lookup_errors[none]
-0.350	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_ci_pairing_retains_the_pin_and_refuses_lookup_errors[present]
-0.660	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_ci_unreadable_crysta_branch_refuses_before_main[denied]
-0.660	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_ci_unreadable_crysta_branch_refuses_before_main[malformed]
-0.650	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_ci_unreadable_crysta_branch_refuses_before_main[wrong-repo]
-0.300	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_extra_branch_lookup_counterfactual_turns_pairing_gate_red
-0.190	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_sdk_token_grant_route_refuses_another_resource_or_operation[attached-data]
-0.160	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_sdk_token_grant_route_refuses_another_resource_or_operation[attached-form]
+0.710	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_auth_retry_is_bounded_and_exhaustion_never_substitutes_a_sibling[absent-2-fetch]
+0.550	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_auth_retry_is_bounded_and_exhaustion_never_substitutes_a_sibling[absent-2-ls-remote]
+0.580	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_auth_retry_is_bounded_and_exhaustion_never_substitutes_a_sibling[absent-99-fetch]
+0.560	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_auth_retry_is_bounded_and_exhaustion_never_substitutes_a_sibling[absent-99-ls-remote]
+0.590	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_auth_retry_is_bounded_and_exhaustion_never_substitutes_a_sibling[exact-2-fetch]
+0.510	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_auth_retry_is_bounded_and_exhaustion_never_substitutes_a_sibling[exact-2-ls-remote]
+0.580	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_auth_retry_is_bounded_and_exhaustion_never_substitutes_a_sibling[exact-99-fetch]
+0.660	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_auth_retry_is_bounded_and_exhaustion_never_substitutes_a_sibling[exact-99-ls-remote]
+0.630	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_auth_retry_is_bounded_and_exhaustion_never_substitutes_a_sibling[main-only-2-fetch]
+0.590	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_auth_retry_is_bounded_and_exhaustion_never_substitutes_a_sibling[main-only-2-ls-remote]
+0.610	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_auth_retry_is_bounded_and_exhaustion_never_substitutes_a_sibling[main-only-99-fetch]
+0.620	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_auth_retry_is_bounded_and_exhaustion_never_substitutes_a_sibling[main-only-99-ls-remote]
+0.260	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_ci_branch_lookup_refuses_ambiguous_or_invalid_refs[ambiguous]
+0.260	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_ci_branch_lookup_refuses_ambiguous_or_invalid_refs[bad-sha]
+0.270	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_ci_branch_lookup_refuses_ambiguous_or_invalid_refs[noncommit]
+0.260	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_ci_branch_lookup_refuses_ambiguous_or_invalid_refs[wrong-ref]
+0.370	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_ci_pairing_retains_the_pin_and_refuses_lookup_errors[error]
+0.560	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_ci_pairing_retains_the_pin_and_refuses_lookup_errors[none]
+0.690	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_ci_pairing_retains_the_pin_and_refuses_lookup_errors[present]
+0.730	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_ci_unreadable_crysta_branch_refuses_before_main[denied]
+0.720	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_ci_unreadable_crysta_branch_refuses_before_main[malformed]
+0.890	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_ci_unreadable_crysta_branch_refuses_before_main[wrong-repo]
+0.640	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_extra_branch_lookup_counterfactual_turns_pairing_gate_red
+0.170	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_sdk_token_grant_route_refuses_another_resource_or_operation[attached-data]
+0.190	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_sdk_token_grant_route_refuses_another_resource_or_operation[attached-form]
 0.180	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_sdk_token_grant_route_refuses_another_resource_or_operation[attached-method]
-0.170	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_sdk_token_grant_route_refuses_another_resource_or_operation[long-method]
-0.180	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_sdk_token_grant_route_refuses_another_resource_or_operation[operation]
-0.170	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_sdk_token_grant_route_refuses_another_resource_or_operation[resource]
+0.210	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_sdk_token_grant_route_refuses_another_resource_or_operation[long-method]
+0.170	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_sdk_token_grant_route_refuses_another_resource_or_operation[operation]
+0.370	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_sdk_token_grant_route_refuses_another_resource_or_operation[resource]
 0.180	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_sdk_token_grant_route_refuses_another_resource_or_operation[unknown-option]
 3.020	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[app-wasm]
 3.410	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[app]
@@ -6456,7 +6457,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 0.146	tests/system/py/test_c11_t62_native_scan_io.py
 # module-cost: 3.362	tests/system/py/test_c15_t2_native_family.py
 # module-cost: 0.011	tests/system/py/test_c34_t28_census_escapes.py
-# module-cost: 0.570	tests/system/py/test_e04_t12_public_release.py
+# module-cost: 0.663	tests/system/py/test_e04_t12_public_release.py
 # module-cost: 4.456	tests/system/py/test_e05_t1_background_provenance.py
 # module-cost: 1.716	tests/system/py/test_e09_t58_start_tied_numeric.py
 # module-cost: 0.180	tests/system/py/test_e09_t75_native_execution.py
