@@ -7,8 +7,8 @@
 # evidence. Superseded update branches are deleted only when a complete open-PR listing, read with this
 # token's `pull-requests: read`, proves no open PR uses them.
 #
-# It runs on the project's own runners and reaches GitHub with curl, as the other jobs do; the
-# runners have no `gh`.
+# No build runs here, so it runs on a hosted runner, where `gh` is installed (no `gh` on the
+# self-hosted fleet).
 name: crysta SDK update
 
 on:
@@ -28,7 +28,7 @@ concurrency:
 jobs:
   update:
     name: crysta SDK update
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
         with:
@@ -50,12 +50,6 @@ jobs:
         run: >-
           git clone --filter=blob:none --no-checkout
           "https://x-access-token:${CRYSTA_TOKEN}@github.com/enhantica/crysta.git" "$RUNNER_TEMP/crysta"
-      # A runner keeps its workspace between runs, local branches included. Proposals live on origin,
-      # so a local update branch an earlier run left is dropped rather than read as a held one.
-      - name: Drop local update branches an earlier run left
-        run: |
-          git for-each-ref --format='%(refname:short)' refs/heads/crysta-sdk/ |
-            xargs -r git branch -D
       - name: Propose the newest crysta build; prune superseded update branches
         env:
           CRYSTA_TOKEN: ${{ steps.crysta-token.outputs.token }}

@@ -22,7 +22,6 @@ import subprocess
 import sys
 from pathlib import Path
 from typing import NoReturn
-from urllib.parse import quote
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import crysta_sdk  # THE pin reader, beside this file
@@ -40,32 +39,13 @@ def refuse(message: str) -> NoReturn:
     raise RefusedError(message)
 
 
-def run(*argv: str, cwd: Path = ROOT) -> str:
-    """Run a git operation; a failure refuses, naming it."""
-    r = subprocess.run(argv, cwd=cwd, capture_output=True, text=True, check=False)
+def run(*argv: str, cwd: Path = ROOT, token: str | None = None) -> str:
+    """Run a git or gh operation (gh as ``token`` when given); a failure refuses, naming it."""
+    env = {**os.environ, 'GH_TOKEN': token} if token else None
+    r = subprocess.run(argv, cwd=cwd, capture_output=True, text=True, check=False, env=env)
     if r.returncode:
         refuse(f'{" ".join(argv[:3])} … failed ({r.returncode}): {r.stderr.strip()[:300]}')
     return r.stdout
-
-
-def github(path: str, token: str, *, method: str = 'GET', payload: dict | None = None) -> object:
-    """Call GitHub's REST API with curl, as crysta_sdk reads crysta: the runners have no gh."""
-    argv = ['curl', '-fsS', '-X', method, '-H', f'Authorization: Bearer {token}']
-    argv += ['-H', 'Accept: application/vnd.github+json', '-H', 'X-GitHub-Api-Version: 2022-11-28']
-    if payload is not None:
-        argv += ['-H', 'Content-Type: application/json', '--data', json.dumps(payload)]
-    elif method == 'GET':
-        argv += ['--retry', '3']  # a read is safe to repeat; a dispatch is not
-    r = subprocess.run([*argv, f'https://api.github.com/{path}'], capture_output=True, check=False)
-    if r.returncode:
-        why = r.stderr.decode(errors='replace').strip()[:200]
-        refuse(f'{method} {path} failed (curl {r.returncode}): {why}')
-    return json.loads(r.stdout) if r.stdout.strip() else None
-
-
-def edi_token() -> str:
-    """Return the workflow's own token, which pushes, dispatches and lists edi's PRs."""
-    return os.environ.get('GH_TOKEN') or refuse('no GH_TOKEN: edi cannot be read or dispatched')
 
 
 def pinned_sha() -> str:
@@ -81,15 +61,9 @@ def pinned_sha() -> str:
     return shas.pop()
 
 
-def releases(token: str) -> list[dict]:
-    """Return every crysta release record, page by page."""
-    found, page = [], 1
-    while True:
-        rows = github(f'repos/enhantica/crysta/releases?per_page=100&page={page}', token)
-        found += rows
-        if len(rows) < 100:
-            return found
-        page += 1
+def releases(slurped: list) -> list[dict]:
+    """Return release records from `gh api --paginate --slurp` (pages, or one flat array)."""
+    return [r for item in slurped for r in (item if isinstance(item, list) else [item])]
 
 
 def newest_build(crysta: Path, pin: str) -> str | None:
@@ -97,9 +71,12 @@ def newest_build(crysta: Path, pin: str) -> str | None:
     token = os.environ.get('CRYSTA_TOKEN') or refuse(
         'no CRYSTA_TOKEN: crysta releases are unreadable'
     )
+    pages = json.loads(
+        run('gh', 'api', '--paginate', '--slurp', 'repos/enhantica/crysta/releases', token=token)
+    )
     shas = {
         r['tag_name'][6:]
-        for r in releases(token)
+        for r in releases(pages)
         if re.fullmatch(r'build-[0-9a-f]{40}', r['tag_name'])
     }
     order = run('git', 'rev-list', 'origin/main', cwd=crysta).split()  # newest first
@@ -129,12 +106,12 @@ def landed_as(crysta: Path, pin: str, token: str) -> str | None:
 
 def open_pr_heads() -> set[str]:
     """Return every open PR's head branch, from a complete listing (a partial one refuses)."""
-    q = 'repo%3Aenhantica%2Fedi+is%3Apr+is%3Aopen'
-    pages, items = [], {}
-    while not pages or (pages[-1]['items'] and len(items) < pages[-1]['total_count']):
-        page = f'search/issues?q={q}&per_page=100&page={len(pages) + 1}'
-        pages.append(github(page, edi_token()))
-        items.update({i['number']: i for i in pages[-1]['items']})
+    q = 'repo:enhantica/edi is:pr is:open'
+    pages = json.loads(
+        run('gh', 'api', '--paginate', '--slurp', '-X', 'GET', 'search/issues', '-f', f'q={q}')
+    )
+    pages = pages if isinstance(pages, list) else [pages]  # `--slurp` pages, or one response
+    items = {i['number']: i for page in pages for i in page['items']}
     if (
         not pages
         or any(p['total_count'] != len(items) for p in pages)
@@ -143,7 +120,7 @@ def open_pr_heads() -> set[str]:
         refuse('the open-PR listing is incomplete; no branch is deleted')
     return {  # a search item carries no head branch on GitHub; read the PR when it is not inline
         (item.get('head') or {}).get('ref')
-        or github(f'repos/enhantica/edi/pulls/{number}', edi_token())['head']['ref']
+        or json.loads(run('gh', 'api', f'repos/enhantica/edi/pulls/{number}'))['head']['ref']
         for number, item in items.items()
     }
 
@@ -164,19 +141,13 @@ def main(argv: list[str]) -> int:
 def dispatched(branch: str) -> None:
     """F17: a published proposal still needs a dispatched CI run at its head."""
     head = run('git', 'rev-parse', f'refs/remotes/origin/{branch}').strip()
-    path = 'repos/enhantica/edi/actions/workflows/ci.yml/runs?event=workflow_dispatch&per_page=50'
-    runs = github(f'{path}&branch={quote(branch, safe="")}', edi_token())['workflow_runs']
-    if any(r.get('head_sha') == head for r in runs):
+    flags = '--workflow ci.yml --event workflow_dispatch --json headSha --limit 50'
+    runs = json.loads(run('gh', 'run', 'list', *flags.split(), '--branch', branch))
+    if any(r.get('headSha') == head for r in runs):
         print(f'crysta-sdk-update: {branch} is already proposed and its CI run exists')
     else:
-        dispatch(branch)
+        run('gh', 'workflow', 'run', 'ci.yml', '--ref', branch)
         print(f'crysta-sdk-update: {branch} was pushed without a CI run — dispatched ci.yml')
-
-
-def dispatch(branch: str) -> None:
-    """Start ci.yml on ``branch``: a push by the job's token starts no run of its own."""
-    path = 'repos/enhantica/edi/actions/workflows/ci.yml/dispatches'
-    github(path, edi_token(), method='POST', payload={'ref': branch})
 
 
 def propose(branch: str, sha: str, *, held: bool) -> None:
@@ -219,7 +190,7 @@ def propose(branch: str, sha: str, *, held: bool) -> None:
     if not held:
         run('git', 'commit', '-qam', f'Pin crysta build-{sha} (crysta SDK update)')
     run('git', 'push', 'origin', f'HEAD:refs/heads/{branch}')
-    dispatch(branch)
+    run('gh', 'workflow', 'run', 'ci.yml', '--ref', branch)
     print(f'crysta-sdk-update: pushed {branch} and dispatched ci.yml on it')
 
 
