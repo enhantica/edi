@@ -1,0 +1,27 @@
+_edi.schema_version 3
+
+_fitting_mode.type joint
+
+_minimizer.type "lmfit (leastsq)"
+_minimizer.max_iterations 1000
+_minimizer.chi_square_tolerance 1e-8
+
+loop_
+_alias.id
+_alias.parameter_unique_name
+s2_ferrite_scale expt_s2.linked_structure.ferrite.scale
+s2_austenite_scale expt_s2.linked_structure.austenite.scale
+n2_ferrite_scale expt_n2.linked_structure.ferrite.scale
+n2_austenite_scale expt_n2.linked_structure.austenite.scale
+
+loop_
+_constraint.id
+_constraint.expression
+n2_ferrite_scale "n2_ferrite_scale = s2_ferrite_scale"
+n2_austenite_scale "n2_austenite_scale = s2_austenite_scale"
+
+loop_
+_joint_fit.experiment_id
+_joint_fit.weight
+expt_s2 0.5
+expt_n2 0.5

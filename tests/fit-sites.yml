@@ -72,3 +72,6 @@ sites:
   - file: tests/system/py/test_multiphase.py
     case: multiphase-scales
 
+
+  - file: tests/system/py/test_beer_multiphase.py
+    case: beer-ferrite-austenite

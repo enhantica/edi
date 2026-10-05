@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-05T06:14:48Z
+# measured_utc = 2026-10-05T06:31:54Z
 #
-# Recorded from: banked rows (nothing added; 3 stale row(s) dropped)
-# Collected tests: 6168; with a reported duration: 3795
+# Recorded from: tests-seq14-edi-focused.log (2 node(s) measured once, 5829 banked, 0 stale row(s) dropped)
+# Collected tests: 6172; with a reported duration: 3796
 # Module-scoped fixture costs recorded: 10
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 6168
+# inventory_python = 6172
 # inventory_cpp = 232
-# inventory_measured = 5828
-# inventory_unmeasured = 572
+# inventory_measured = 5829
+# inventory_unmeasured = 575
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_projects_open_and_populate_pages
@@ -2409,6 +2409,10 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e05_t1_physical_domain.p
 UNMEASURED:failed-in-this-run	tests/integration/py/test_multiphase_app_contract.py::test_linked_structure_rows_use_available_names_and_add_remove_disable_actions
 UNMEASURED:failed-in-this-run	tests/integration/py/test_multiphase_app_contract.py::test_shared_block_selector_has_bounded_plain_arrow_steps_and_file_labels
 UNMEASURED:failed-in-this-run	tests/integration/py/test_multiphase_app_contract.py::test_structure_loading_is_not_capped_at_one_and_chart_retains_phase_identity
+UNMEASURED:failed-in-this-run	tests/system/py/test_beer_multiphase.py::test_beer_cli_id_and_verification_page_use_the_committed_external_inputs
+UNMEASURED:failed-in-this-run	tests/system/py/test_beer_multiphase.py::test_beer_joint_fit_recovers_both_phases_with_every_external_uncertainty
+0.010	tests/system/py/test_beer_multiphase.py::test_beer_reference_binds_both_banks_and_every_reported_uncertainty
+UNMEASURED:failed-in-this-run	tests/system/py/test_beer_multiphase.py::test_beer_two_phases_and_bank_constraints_survive_two_save_cycles
 0.000	tests/system/py/test_c06_t6_fitting_corpus.py::test_corpus_absent_at_pin_is_a_named_transition_state[corpus-present]
 0.060	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[background-cecoal]
 0.050	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[background-lab6]

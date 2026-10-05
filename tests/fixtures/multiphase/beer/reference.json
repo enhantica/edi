@@ -1,0 +1,3956 @@
+{
+  "diffraction_lib_commit": "0d9f10e412a0cd08d4dd0af95845dd9bb597dcdf",
+  "versions": {
+    "easydiffraction": "0.19.1",
+    "cryspy": "0.12.1",
+    "numpy": "2.4.6",
+    "scipy": "1.17.1",
+    "lmfit": "1.3.4"
+  },
+  "tutorial_sha256": "107c04c39dd0ba4cbdf8030e29194604f6b1709e059f59290159ceb11002662e",
+  "archive_sha256": "68bdc067bda10fa07bfa9546375fa1ac85dd575add401c6b813cbd066cdb7d5e",
+  "initial_sha256": {
+    "analysis/analysis.edi": "8fcf469a7dead4f904debe7a6fef62c4f98a7e5ab78ff537d012b7cd0a54d2a9",
+    "experiments/expt_n2.edi": "9be8f4fd45c94f81832527ad6fc3c4d52e71e26fafb3dd3e4aa89880a85318bb",
+    "experiments/expt_s2.edi": "4114a51a2e646d05e3f9a1069d9a39856d9b79b0a00859a09461e78542462fd8",
+    "project.edi": "cc0bf701487e5100333b0d439ebbb5393c352d2b5fdf4e2a689b4ffa726e886e",
+    "structures/austenite.edi": "a2ed0dee7ba5362747bc79cfc5f4df9c540f1b68d7c7fa1cfc4dbb9e5c010ef6",
+    "structures/ferrite.edi": "14e120445ddcc9439f5091a6dc3053f691e64d53c856dbf21d80fffac63f1cc0"
+  },
+  "output_sha256": {
+    "analysis/analysis.edi": "f2a9cab3ce01a18804265fa31f7bcc726611f3ec337e8631a30be15427ec7ca5",
+    "experiments/expt_n2.edi": "614730c934499e1b26576cf2c195d2eaf40a859f6c2292ba5ffc0a50c60c580b",
+    "experiments/expt_s2.edi": "6df1da4d4f96e4e7971c833e703a1c248db2aa616deb6fb88d720c987f65d2eb",
+    "project.edi": "c146f1e5edc9a59a6e44b5930b7efb98fa72d4907585ed477b142a3dea323aae",
+    "structures/austenite.edi": "030d898d69f6ce928cd0d9aa24cf17ef9893a2cca0d04fe4048ffb6b9e42ed24",
+    "structures/ferrite.edi": "9ba5a73d68a1daf7f59ea4b5bb76ffe50b316567521f07f2468125b968568653"
+  },
+  "stages": [
+    {
+      "success": true,
+      "message": "Fit succeeded.",
+      "iterations": 331,
+      "chi_square": 71513.92034877,
+      "reduced_chi_square": 12.84835076,
+      "rwp": 0.03397624067736194,
+      "minimizer": null,
+      "calculators": {
+        "expt_n2": "cryspy",
+        "expt_s2": "cryspy"
+      },
+      "parameters": {
+        "ferrite.atom_site.Fe.adp_iso": {
+          "value": 1.719,
+          "su": 0.013
+        },
+        "austenite.atom_site.Fe.adp_iso": {
+          "value": 1.713,
+          "su": 0.012
+        },
+        "expt_s2.linked_structure.ferrite.scale": {
+          "value": 284.72,
+          "su": 0.84
+        },
+        "expt_s2.linked_structure.austenite.scale": {
+          "value": 67.91,
+          "su": 0.17
+        },
+        "expt_s2.peak.broad_lorentz_gamma_0": {
+          "value": 5.24,
+          "su": 0.19
+        },
+        "expt_s2.peak.broad_gauss_sigma_0": {
+          "value": 884.0,
+          "su": 57.0
+        },
+        "expt_s2.peak.broad_gauss_sigma_1": {
+          "value": 1284.0,
+          "su": 57.0
+        },
+        "expt_s2.peak.broad_gauss_sigma_2": {
+          "value": 311.0,
+          "su": 11.0
+        },
+        "expt_s2.instrument.d_to_tof_offset": {
+          "value": -10.45,
+          "su": 0.12
+        },
+        "expt_s2.background.1.intensity": {
+          "value": 0.167,
+          "su": 0.023
+        },
+        "expt_s2.background.2.intensity": {
+          "value": 0.2072,
+          "su": 0.0097
+        },
+        "expt_s2.background.3.intensity": {
+          "value": 0.1976,
+          "su": 0.0096
+        },
+        "expt_s2.background.4.intensity": {
+          "value": 0.19,
+          "su": 0.0088
+        },
+        "expt_s2.background.5.intensity": {
+          "value": 0.283,
+          "su": 0.01
+        },
+        "expt_s2.background.6.intensity": {
+          "value": 0.318,
+          "su": 0.01
+        },
+        "expt_s2.background.7.intensity": {
+          "value": 0.2719,
+          "su": 0.0076
+        },
+        "expt_s2.background.8.intensity": {
+          "value": 0.2269,
+          "su": 0.0066
+        },
+        "expt_s2.background.9.intensity": {
+          "value": 0.2098,
+          "su": 0.0059
+        },
+        "expt_s2.background.10.intensity": {
+          "value": 0.2155,
+          "su": 0.0056
+        },
+        "expt_s2.background.11.intensity": {
+          "value": 0.157,
+          "su": 0.0043
+        },
+        "expt_s2.background.12.intensity": {
+          "value": 0.2259,
+          "su": 0.005
+        },
+        "expt_s2.background.13.intensity": {
+          "value": 0.365,
+          "su": 0.0092
+        },
+        "expt_s2.background.14.intensity": {
+          "value": 0.4054,
+          "su": 0.0096
+        },
+        "expt_s2.background.15.intensity": {
+          "value": 0.3428,
+          "su": 0.0098
+        },
+        "expt_s2.background.16.intensity": {
+          "value": 0.584,
+          "su": 0.013
+        },
+        "expt_s2.background.17.intensity": {
+          "value": 1.022,
+          "su": 0.033
+        },
+        "expt_s2.background.18.intensity": {
+          "value": 1.214,
+          "su": 0.034
+        },
+        "expt_s2.background.19.intensity": {
+          "value": 0.878,
+          "su": 0.016
+        },
+        "expt_s2.background.20.intensity": {
+          "value": 0.031,
+          "su": 0.029
+        },
+        "expt_n2.peak.broad_lorentz_gamma_0": {
+          "value": 5.24,
+          "su": 0.19
+        },
+        "expt_n2.peak.broad_gauss_sigma_0": {
+          "value": 922.0,
+          "su": 57.0
+        },
+        "expt_n2.peak.broad_gauss_sigma_1": {
+          "value": 1227.0,
+          "su": 57.0
+        },
+        "expt_n2.peak.broad_gauss_sigma_2": {
+          "value": 329.0,
+          "su": 11.0
+        },
+        "expt_n2.instrument.d_to_tof_offset": {
+          "value": -2.26,
+          "su": 0.12
+        },
+        "expt_n2.background.1.intensity": {
+          "value": 0.19,
+          "su": 0.024
+        },
+        "expt_n2.background.2.intensity": {
+          "value": 0.2066,
+          "su": 0.0097
+        },
+        "expt_n2.background.3.intensity": {
+          "value": 0.2029,
+          "su": 0.0098
+        },
+        "expt_n2.background.4.intensity": {
+          "value": 0.1937,
+          "su": 0.0089
+        },
+        "expt_n2.background.5.intensity": {
+          "value": 0.274,
+          "su": 0.01
+        },
+        "expt_n2.background.6.intensity": {
+          "value": 0.32,
+          "su": 0.01
+        },
+        "expt_n2.background.7.intensity": {
+          "value": 0.2561,
+          "su": 0.0073
+        },
+        "expt_n2.background.8.intensity": {
+          "value": 0.234,
+          "su": 0.0067
+        },
+        "expt_n2.background.9.intensity": {
+          "value": 0.2153,
+          "su": 0.0061
+        },
+        "expt_n2.background.10.intensity": {
+          "value": 0.2272,
+          "su": 0.0059
+        },
+        "expt_n2.background.11.intensity": {
+          "value": 0.1583,
+          "su": 0.0044
+        },
+        "expt_n2.background.12.intensity": {
+          "value": 0.222,
+          "su": 0.005
+        },
+        "expt_n2.background.13.intensity": {
+          "value": 0.3601,
+          "su": 0.0091
+        },
+        "expt_n2.background.14.intensity": {
+          "value": 0.4091,
+          "su": 0.0097
+        },
+        "expt_n2.background.15.intensity": {
+          "value": 0.3464,
+          "su": 0.0098
+        },
+        "expt_n2.background.16.intensity": {
+          "value": 0.576,
+          "su": 0.013
+        },
+        "expt_n2.background.17.intensity": {
+          "value": 1.007,
+          "su": 0.033
+        },
+        "expt_n2.background.18.intensity": {
+          "value": 1.182,
+          "su": 0.034
+        },
+        "expt_n2.background.19.intensity": {
+          "value": 0.886,
+          "su": 0.017
+        },
+        "expt_n2.background.20.intensity": {
+          "value": 0.017,
+          "su": 0.028
+        }
+      },
+      "all_parameters": {
+        "austenite.cell.length_a": {
+          "value": 3.6468,
+          "su": null,
+          "free": false
+        },
+        "austenite.cell.length_b": {
+          "value": 3.6468,
+          "su": null,
+          "free": false
+        },
+        "austenite.cell.length_c": {
+          "value": 3.6468,
+          "su": null,
+          "free": false
+        },
+        "austenite.cell.angle_alpha": {
+          "value": 90.0,
+          "su": null,
+          "free": false
+        },
+        "austenite.cell.angle_beta": {
+          "value": 90.0,
+          "su": null,
+          "free": false
+        },
+        "austenite.cell.angle_gamma": {
+          "value": 90.0,
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group.name_h_m": {
+          "value": "F m -3 m",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group.coord_system_code": {
+          "value": "1",
+          "su": null,
+          "free": false
+        },
+        "austenite.atom_site.Fe.id": {
+          "value": "Fe",
+          "su": null,
+          "free": false
+        },
+        "austenite.atom_site.Fe.type_symbol": {
+          "value": "Fe",
+          "su": null,
+          "free": false
+        },
+        "austenite.atom_site.Fe.fract_x": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "austenite.atom_site.Fe.fract_y": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "austenite.atom_site.Fe.fract_z": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "austenite.atom_site.Fe.wyckoff_letter": {
+          "value": "a",
+          "su": null,
+          "free": false
+        },
+        "austenite.atom_site.Fe.multiplicity": {
+          "value": 4,
+          "su": null,
+          "free": false
+        },
+        "austenite.atom_site.Fe.occupancy": {
+          "value": 1.0,
+          "su": null,
+          "free": false
+        },
+        "austenite.atom_site.Fe.adp_iso": {
+          "value": 1.713,
+          "su": 0.012,
+          "free": true
+        },
+        "austenite.atom_site.Fe.adp_type": {
+          "value": "Biso",
+          "su": null,
+          "free": false
+        },
+        "austenite.geom.min_bond_distance_cutoff": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "austenite.geom.bond_distance_inc": {
+          "value": 0.25,
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.192l.id": {
+          "value": "192l",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.192l.letter": {
+          "value": "l",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.192l.multiplicity": {
+          "value": 192,
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.192l.site_symmetry": {
+          "value": "1",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.192l.coords_xyz": {
+          "value": "(x,y,z) (x,-z,y) (x,z,-y) (z,y,-x) (-z,y,x) (-y,x,z) (y,-x,z) (z,x,y) (y,z,x) (-y,-z,x) (z,-x,-y) (-y,z,-x) (-z,-x,y) (-z,x,-y) (y,-z,-x) (x,-y,-z) (-x,y,-z) (-x,-y,z) (y,x,-z) (-y,-x,-z) (z,-y,x) (-z,-y,-x) (-x,z,y) (-x,-z,-y) (-x,-y,-z) (-x,z,-y) (-x,-z,y) (-z,-y,x) (z,-y,-x) (y,-x,-z) (-y,x,-z) (-z,-x,-y) (-y,-z,-x) (y,z,-x) (-z,x,y) (y,-z,x) (z,x,-y) (z,-x,y) (-y,z,x) (-x,y,z) (x,-y,z) (x,y,-z) (-y,-x,z) (y,x,z) (-z,y,-x) (z,y,x) (x,-z,-y) (x,z,y) (x,y+1/2,z+1/2) (x,-z+1/2,y+1/2) (x,z+1/2,-y+1/2) (z,y+1/2,-x+1/2) (-z,y+1/2,x+1/2) (-y,x+1/2,z+1/2) (y,-x+1/2,z+1/2) (z,x+1/2,y+1/2) (y,z+1/2,x+1/2) (-y,-z+1/2,x+1/2) (z,-x+1/2,-y+1/2) (-y,z+1/2,-x+1/2) (-z,-x+1/2,y+1/2) (-z,x+1/2,-y+1/2) (y,-z+1/2,-x+1/2) (x,-y+1/2,-z+1/2) (-x,y+1/2,-z+1/2) (-x,-y+1/2,z+1/2) (y,x+1/2,-z+1/2) (-y,-x+1/2,-z+1/2) (z,-y+1/2,x+1/2) (-z,-y+1/2,-x+1/2) (-x,z+1/2,y+1/2) (-x,-z+1/2,-y+1/2) (-x,-y+1/2,-z+1/2) (-x,z+1/2,-y+1/2) (-x,-z+1/2,y+1/2) (-z,-y+1/2,x+1/2) (z,-y+1/2,-x+1/2) (y,-x+1/2,-z+1/2) (-y,x+1/2,-z+1/2) (-z,-x+1/2,-y+1/2) (-y,-z+1/2,-x+1/2) (y,z+1/2,-x+1/2) (-z,x+1/2,y+1/2) (y,-z+1/2,x+1/2) (z,x+1/2,-y+1/2) (z,-x+1/2,y+1/2) (-y,z+1/2,x+1/2) (-x,y+1/2,z+1/2) (x,-y+1/2,z+1/2) (x,y+1/2,-z+1/2) (-y,-x+1/2,z+1/2) (y,x+1/2,z+1/2) (-z,y+1/2,-x+1/2) (z,y+1/2,x+1/2) (x,-z+1/2,-y+1/2) (x,z+1/2,y+1/2) (x+1/2,y,z+1/2) (x+1/2,-z,y+1/2) (x+1/2,z,-y+1/2) (z+1/2,y,-x+1/2) (-z+1/2,y,x+1/2) (-y+1/2,x,z+1/2) (y+1/2,-x,z+1/2) (z+1/2,x,y+1/2) (y+1/2,z,x+1/2) (-y+1/2,-z,x+1/2) (z+1/2,-x,-y+1/2) (-y+1/2,z,-x+1/2) (-z+1/2,-x,y+1/2) (-z+1/2,x,-y+1/2) (y+1/2,-z,-x+1/2) (x+1/2,-y,-z+1/2) (-x+1/2,y,-z+1/2) (-x+1/2,-y,z+1/2) (y+1/2,x,-z+1/2) (-y+1/2,-x,-z+1/2) (z+1/2,-y,x+1/2) (-z+1/2,-y,-x+1/2) (-x+1/2,z,y+1/2) (-x+1/2,-z,-y+1/2) (-x+1/2,-y,-z+1/2) (-x+1/2,z,-y+1/2) (-x+1/2,-z,y+1/2) (-z+1/2,-y,x+1/2) (z+1/2,-y,-x+1/2) (y+1/2,-x,-z+1/2) (-y+1/2,x,-z+1/2) (-z+1/2,-x,-y+1/2) (-y+1/2,-z,-x+1/2) (y+1/2,z,-x+1/2) (-z+1/2,x,y+1/2) (y+1/2,-z,x+1/2) (z+1/2,x,-y+1/2) (z+1/2,-x,y+1/2) (-y+1/2,z,x+1/2) (-x+1/2,y,z+1/2) (x+1/2,-y,z+1/2) (x+1/2,y,-z+1/2) (-y+1/2,-x,z+1/2) (y+1/2,x,z+1/2) (-z+1/2,y,-x+1/2) (z+1/2,y,x+1/2) (x+1/2,-z,-y+1/2) (x+1/2,z,y+1/2) (x+1/2,y+1/2,z) (x+1/2,-z+1/2,y) (x+1/2,z+1/2,-y) (z+1/2,y+1/2,-x) (-z+1/2,y+1/2,x) (-y+1/2,x+1/2,z) (y+1/2,-x+1/2,z) (z+1/2,x+1/2,y) (y+1/2,z+1/2,x) (-y+1/2,-z+1/2,x) (z+1/2,-x+1/2,-y) (-y+1/2,z+1/2,-x) (-z+1/2,-x+1/2,y) (-z+1/2,x+1/2,-y) (y+1/2,-z+1/2,-x) (x+1/2,-y+1/2,-z) (-x+1/2,y+1/2,-z) (-x+1/2,-y+1/2,z) (y+1/2,x+1/2,-z) (-y+1/2,-x+1/2,-z) (z+1/2,-y+1/2,x) (-z+1/2,-y+1/2,-x) (-x+1/2,z+1/2,y) (-x+1/2,-z+1/2,-y) (-x+1/2,-y+1/2,-z) (-x+1/2,z+1/2,-y) (-x+1/2,-z+1/2,y) (-z+1/2,-y+1/2,x) (z+1/2,-y+1/2,-x) (y+1/2,-x+1/2,-z) (-y+1/2,x+1/2,-z) (-z+1/2,-x+1/2,-y) (-y+1/2,-z+1/2,-x) (y+1/2,z+1/2,-x) (-z+1/2,x+1/2,y) (y+1/2,-z+1/2,x) (z+1/2,x+1/2,-y) (z+1/2,-x+1/2,y) (-y+1/2,z+1/2,x) (-x+1/2,y+1/2,z) (x+1/2,-y+1/2,z) (x+1/2,y+1/2,-z) (-y+1/2,-x+1/2,z) (y+1/2,x+1/2,z) (-z+1/2,y+1/2,-x) (z+1/2,y+1/2,x) (x+1/2,-z+1/2,-y) (x+1/2,z+1/2,y)",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.96k.id": {
+          "value": "96k",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.96k.letter": {
+          "value": "k",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.96k.multiplicity": {
+          "value": 96,
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.96k.site_symmetry": {
+          "value": "m",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.96k.coords_xyz": {
+          "value": "(x,x,z) (x,x+1/2,z+1/2) (x+1/2,x,z+1/2) (x+1/2,x+1/2,z) (-x,-x,z) (-x,-x+1/2,z+1/2) (-x+1/2,-x,z+1/2) (-x+1/2,-x+1/2,z) (-x,x,-z) (-x,x+1/2,-z+1/2) (-x+1/2,x,-z+1/2) (-x+1/2,x+1/2,-z) (x,-x,-z) (x,-x+1/2,-z+1/2) (x+1/2,-x,-z+1/2) (x+1/2,-x+1/2,-z) (z,x,x) (z,x+1/2,x+1/2) (z+1/2,x,x+1/2) (z+1/2,x+1/2,x) (z,-x,-x) (z,-x+1/2,-x+1/2) (z+1/2,-x,-x+1/2) (z+1/2,-x+1/2,-x) (-z,-x,x) (-z,-x+1/2,x+1/2) (-z+1/2,-x,x+1/2) (-z+1/2,-x+1/2,x) (-z,x,-x) (-z,x+1/2,-x+1/2) (-z+1/2,x,-x+1/2) (-z+1/2,x+1/2,-x) (x,z,x) (x,z+1/2,x+1/2) (x+1/2,z,x+1/2) (x+1/2,z+1/2,x) (-x,z,-x) (-x,z+1/2,-x+1/2) (-x+1/2,z,-x+1/2) (-x+1/2,z+1/2,-x) (x,-z,-x) (x,-z+1/2,-x+1/2) (x+1/2,-z,-x+1/2) (x+1/2,-z+1/2,-x) (-x,-z,x) (-x,-z+1/2,x+1/2) (-x+1/2,-z,x+1/2) (-x+1/2,-z+1/2,x) (x,x,-z) (x,x+1/2,-z+1/2) (x+1/2,x,-z+1/2) (x+1/2,x+1/2,-z) (-x,-x,-z) (-x,-x+1/2,-z+1/2) (-x+1/2,-x,-z+1/2) (-x+1/2,-x+1/2,-z) (x,-x,z) (x,-x+1/2,z+1/2) (x+1/2,-x,z+1/2) (x+1/2,-x+1/2,z) (-x,x,z) (-x,x+1/2,z+1/2) (-x+1/2,x,z+1/2) (-x+1/2,x+1/2,z) (x,z,-x) (x,z+1/2,-x+1/2) (x+1/2,z,-x+1/2) (x+1/2,z+1/2,-x) (-x,z,x) (-x,z+1/2,x+1/2) (-x+1/2,z,x+1/2) (-x+1/2,z+1/2,x) (-x,-z,-x) (-x,-z+1/2,-x+1/2) (-x+1/2,-z,-x+1/2) (-x+1/2,-z+1/2,-x) (x,-z,x) (x,-z+1/2,x+1/2) (x+1/2,-z,x+1/2) (x+1/2,-z+1/2,x) (z,x,-x) (z,x+1/2,-x+1/2) (z+1/2,x,-x+1/2) (z+1/2,x+1/2,-x) (z,-x,x) (z,-x+1/2,x+1/2) (z+1/2,-x,x+1/2) (z+1/2,-x+1/2,x) (-z,x,x) (-z,x+1/2,x+1/2) (-z+1/2,x,x+1/2) (-z+1/2,x+1/2,x) (-z,-x,-x) (-z,-x+1/2,-x+1/2) (-z+1/2,-x,-x+1/2) (-z+1/2,-x+1/2,-x)",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.96j.id": {
+          "value": "96j",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.96j.letter": {
+          "value": "j",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.96j.multiplicity": {
+          "value": 96,
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.96j.site_symmetry": {
+          "value": "m",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.96j.coords_xyz": {
+          "value": "(0,y,z) (0,-z,y) (0,z,-y) (z,y,0) (-z,y,0) (-y,0,z) (y,0,z) (z,0,y) (y,z,0) (-y,-z,0) (z,0,-y) (-y,z,0) (-z,0,y) (-z,0,-y) (y,-z,0) (0,-y,-z) (0,y,-z) (0,-y,z) (y,0,-z) (-y,0,-z) (z,-y,0) (-z,-y,0) (0,z,y) (0,-z,-y) (0,y+1/2,z+1/2) (0,-z+1/2,y+1/2) (0,z+1/2,-y+1/2) (z,y+1/2,1/2) (-z,y+1/2,1/2) (-y,1/2,z+1/2) (y,1/2,z+1/2) (z,1/2,y+1/2) (y,z+1/2,1/2) (-y,-z+1/2,1/2) (z,1/2,-y+1/2) (-y,z+1/2,1/2) (-z,1/2,y+1/2) (-z,1/2,-y+1/2) (y,-z+1/2,1/2) (0,-y+1/2,-z+1/2) (0,y+1/2,-z+1/2) (0,-y+1/2,z+1/2) (y,1/2,-z+1/2) (-y,1/2,-z+1/2) (z,-y+1/2,1/2) (-z,-y+1/2,1/2) (0,z+1/2,y+1/2) (0,-z+1/2,-y+1/2) (1/2,y,z+1/2) (1/2,-z,y+1/2) (1/2,z,-y+1/2) (z+1/2,y,1/2) (-z+1/2,y,1/2) (-y+1/2,0,z+1/2) (y+1/2,0,z+1/2) (z+1/2,0,y+1/2) (y+1/2,z,1/2) (-y+1/2,-z,1/2) (z+1/2,0,-y+1/2) (-y+1/2,z,1/2) (-z+1/2,0,y+1/2) (-z+1/2,0,-y+1/2) (y+1/2,-z,1/2) (1/2,-y,-z+1/2) (1/2,y,-z+1/2) (1/2,-y,z+1/2) (y+1/2,0,-z+1/2) (-y+1/2,0,-z+1/2) (z+1/2,-y,1/2) (-z+1/2,-y,1/2) (1/2,z,y+1/2) (1/2,-z,-y+1/2) (1/2,y+1/2,z) (1/2,-z+1/2,y) (1/2,z+1/2,-y) (z+1/2,y+1/2,0) (-z+1/2,y+1/2,0) (-y+1/2,1/2,z) (y+1/2,1/2,z) (z+1/2,1/2,y) (y+1/2,z+1/2,0) (-y+1/2,-z+1/2,0) (z+1/2,1/2,-y) (-y+1/2,z+1/2,0) (-z+1/2,1/2,y) (-z+1/2,1/2,-y) (y+1/2,-z+1/2,0) (1/2,-y+1/2,-z) (1/2,y+1/2,-z) (1/2,-y+1/2,z) (y+1/2,1/2,-z) (-y+1/2,1/2,-z) (z+1/2,-y+1/2,0) (-z+1/2,-y+1/2,0) (1/2,z+1/2,y) (1/2,-z+1/2,-y)",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.48i.id": {
+          "value": "48i",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.48i.letter": {
+          "value": "i",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.48i.multiplicity": {
+          "value": 48,
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.48i.site_symmetry": {
+          "value": "mm2",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.48i.coords_xyz": {
+          "value": "(1/2,y,y) (1/2,y+1/2,y+1/2) (0,y,y+1/2) (0,y+1/2,y) (1/2,-y,y) (1/2,-y+1/2,y+1/2) (0,-y,y+1/2) (0,-y+1/2,y) (1/2,y,-y) (1/2,y+1/2,-y+1/2) (0,y,-y+1/2) (0,y+1/2,-y) (1/2,-y,-y) (1/2,-y+1/2,-y+1/2) (0,-y,-y+1/2) (0,-y+1/2,-y) (y,1/2,y) (y,0,y+1/2) (y+1/2,1/2,y+1/2) (y+1/2,0,y) (y,1/2,-y) (y,0,-y+1/2) (y+1/2,1/2,-y+1/2) (y+1/2,0,-y) (-y,1/2,y) (-y,0,y+1/2) (-y+1/2,1/2,y+1/2) (-y+1/2,0,y) (-y,1/2,-y) (-y,0,-y+1/2) (-y+1/2,1/2,-y+1/2) (-y+1/2,0,-y) (y,y,1/2) (y,y+1/2,0) (y+1/2,y,0) (y+1/2,y+1/2,1/2) (-y,y,1/2) (-y,y+1/2,0) (-y+1/2,y,0) (-y+1/2,y+1/2,1/2) (y,-y,1/2) (y,-y+1/2,0) (y+1/2,-y,0) (y+1/2,-y+1/2,1/2) (-y,-y,1/2) (-y,-y+1/2,0) (-y+1/2,-y,0) (-y+1/2,-y+1/2,1/2)",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.48h.id": {
+          "value": "48h",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.48h.letter": {
+          "value": "h",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.48h.multiplicity": {
+          "value": 48,
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.48h.site_symmetry": {
+          "value": "mm2",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.48h.coords_xyz": {
+          "value": "(0,y,y) (0,y+1/2,y+1/2) (1/2,y,y+1/2) (1/2,y+1/2,y) (0,-y,y) (0,-y+1/2,y+1/2) (1/2,-y,y+1/2) (1/2,-y+1/2,y) (0,y,-y) (0,y+1/2,-y+1/2) (1/2,y,-y+1/2) (1/2,y+1/2,-y) (0,-y,-y) (0,-y+1/2,-y+1/2) (1/2,-y,-y+1/2) (1/2,-y+1/2,-y) (y,0,y) (y,1/2,y+1/2) (y+1/2,0,y+1/2) (y+1/2,1/2,y) (y,0,-y) (y,1/2,-y+1/2) (y+1/2,0,-y+1/2) (y+1/2,1/2,-y) (-y,0,y) (-y,1/2,y+1/2) (-y+1/2,0,y+1/2) (-y+1/2,1/2,y) (-y,0,-y) (-y,1/2,-y+1/2) (-y+1/2,0,-y+1/2) (-y+1/2,1/2,-y) (y,y,0) (y,y+1/2,1/2) (y+1/2,y,1/2) (y+1/2,y+1/2,0) (-y,y,0) (-y,y+1/2,1/2) (-y+1/2,y,1/2) (-y+1/2,y+1/2,0) (y,-y,0) (y,-y+1/2,1/2) (y+1/2,-y,1/2) (y+1/2,-y+1/2,0) (-y,-y,0) (-y,-y+1/2,1/2) (-y+1/2,-y,1/2) (-y+1/2,-y+1/2,0)",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.48g.id": {
+          "value": "48g",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.48g.letter": {
+          "value": "g",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.48g.multiplicity": {
+          "value": 48,
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.48g.site_symmetry": {
+          "value": "mm2",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.48g.coords_xyz": {
+          "value": "(x,1/4,1/4) (x,3/4,1/4) (x,1/4,3/4) (1/4,1/4,-x) (3/4,1/4,x) (3/4,x,1/4) (1/4,-x,1/4) (1/4,x,1/4) (1/4,1/4,x) (3/4,3/4,x) (1/4,-x,3/4) (3/4,1/4,-x) (3/4,-x,1/4) (3/4,x,3/4) (1/4,3/4,-x) (x,3/4,3/4) (-x,1/4,3/4) (-x,3/4,1/4) (1/4,x,3/4) (3/4,-x,3/4) (1/4,3/4,x) (3/4,3/4,-x) (-x,1/4,1/4) (-x,3/4,3/4) (1/4,3/4,-x+1/2) (3/4,3/4,x+1/2) (3/4,x+1/2,3/4) (1/4,-x+1/2,3/4) (1/4,x+1/2,3/4) (1/4,3/4,x+1/2) (3/4,1/4,x+1/2) (1/4,-x+1/2,1/4) (3/4,3/4,-x+1/2) (3/4,-x+1/2,3/4) (3/4,x+1/2,1/4) (1/4,1/4,-x+1/2) (1/4,x+1/2,1/4) (3/4,-x+1/2,1/4) (1/4,1/4,x+1/2) (3/4,1/4,-x+1/2) (x+1/2,1/4,3/4) (x+1/2,3/4,3/4) (x+1/2,1/4,1/4) (x+1/2,3/4,1/4) (-x+1/2,1/4,1/4) (-x+1/2,3/4,3/4) (-x+1/2,1/4,3/4) (-x+1/2,3/4,1/4)",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.32f.id": {
+          "value": "32f",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.32f.letter": {
+          "value": "f",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.32f.multiplicity": {
+          "value": 32,
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.32f.site_symmetry": {
+          "value": "3m",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.32f.coords_xyz": {
+          "value": "(x,x,x) (x,x+1/2,x+1/2) (x+1/2,x,x+1/2) (x+1/2,x+1/2,x) (-x,-x,x) (-x,-x+1/2,x+1/2) (-x+1/2,-x,x+1/2) (-x+1/2,-x+1/2,x) (-x,x,-x) (-x,x+1/2,-x+1/2) (-x+1/2,x,-x+1/2) (-x+1/2,x+1/2,-x) (x,-x,-x) (x,-x+1/2,-x+1/2) (x+1/2,-x,-x+1/2) (x+1/2,-x+1/2,-x) (x,x,-x) (x,x+1/2,-x+1/2) (x+1/2,x,-x+1/2) (x+1/2,x+1/2,-x) (-x,-x,-x) (-x,-x+1/2,-x+1/2) (-x+1/2,-x,-x+1/2) (-x+1/2,-x+1/2,-x) (x,-x,x) (x,-x+1/2,x+1/2) (x+1/2,-x,x+1/2) (x+1/2,-x+1/2,x) (-x,x,x) (-x,x+1/2,x+1/2) (-x+1/2,x,x+1/2) (-x+1/2,x+1/2,x)",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.24e.id": {
+          "value": "24e",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.24e.letter": {
+          "value": "e",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.24e.multiplicity": {
+          "value": 24,
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.24e.site_symmetry": {
+          "value": "4mm",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.24e.coords_xyz": {
+          "value": "(x,0,0) (0,0,-x) (0,0,x) (0,x,0) (0,-x,0) (-x,0,0) (x,1/2,1/2) (0,1/2,-x+1/2) (0,1/2,x+1/2) (0,x+1/2,1/2) (0,-x+1/2,1/2) (-x,1/2,1/2) (x+1/2,0,1/2) (1/2,0,-x+1/2) (1/2,0,x+1/2) (1/2,x,1/2) (1/2,-x,1/2) (-x+1/2,0,1/2) (x+1/2,1/2,0) (1/2,1/2,-x) (1/2,1/2,x) (1/2,x+1/2,0) (1/2,-x+1/2,0) (-x+1/2,1/2,0)",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.24d.id": {
+          "value": "24d",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.24d.letter": {
+          "value": "d",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.24d.multiplicity": {
+          "value": 24,
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.24d.site_symmetry": {
+          "value": "mmm",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.24d.coords_xyz": {
+          "value": "(0,1/4,1/4) (0,3/4,1/4) (0,1/4,3/4) (1/4,1/4,0) (3/4,1/4,0) (3/4,0,1/4) (1/4,0,1/4) (3/4,3/4,0) (1/4,0,3/4) (3/4,0,3/4) (1/4,3/4,0) (0,3/4,3/4) (1/4,3/4,1/2) (3/4,3/4,1/2) (3/4,1/2,3/4) (1/4,1/2,3/4) (3/4,1/4,1/2) (1/4,1/2,1/4) (3/4,1/2,1/4) (1/4,1/4,1/2) (1/2,1/4,3/4) (1/2,3/4,3/4) (1/2,1/4,1/4) (1/2,3/4,1/4)",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.8c.id": {
+          "value": "8c",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.8c.letter": {
+          "value": "c",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.8c.multiplicity": {
+          "value": 8,
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.8c.site_symmetry": {
+          "value": "-43m",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.8c.coords_xyz": {
+          "value": "(1/4,1/4,1/4) (1/4,3/4,1/4) (1/4,1/4,3/4) (3/4,1/4,1/4) (3/4,3/4,1/4) (1/4,3/4,3/4) (3/4,1/4,3/4) (3/4,3/4,3/4)",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.4b.id": {
+          "value": "4b",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.4b.letter": {
+          "value": "b",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.4b.multiplicity": {
+          "value": 4,
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.4b.site_symmetry": {
+          "value": "m-3m",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.4b.coords_xyz": {
+          "value": "(1/2,1/2,1/2) (1/2,0,0) (0,1/2,0) (0,0,1/2)",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.4a.id": {
+          "value": "4a",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.4a.letter": {
+          "value": "a",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.4a.multiplicity": {
+          "value": 4,
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.4a.site_symmetry": {
+          "value": "m-3m",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.4a.coords_xyz": {
+          "value": "(0,0,0) (0,1/2,1/2) (1/2,0,1/2) (1/2,1/2,0)",
+          "su": null,
+          "free": false
+        },
+        "ferrite.cell.length_a": {
+          "value": 2.886,
+          "su": null,
+          "free": false
+        },
+        "ferrite.cell.length_b": {
+          "value": 2.886,
+          "su": null,
+          "free": false
+        },
+        "ferrite.cell.length_c": {
+          "value": 2.886,
+          "su": null,
+          "free": false
+        },
+        "ferrite.cell.angle_alpha": {
+          "value": 90.0,
+          "su": null,
+          "free": false
+        },
+        "ferrite.cell.angle_beta": {
+          "value": 90.0,
+          "su": null,
+          "free": false
+        },
+        "ferrite.cell.angle_gamma": {
+          "value": 90.0,
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group.name_h_m": {
+          "value": "I m -3 m",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group.coord_system_code": {
+          "value": "1",
+          "su": null,
+          "free": false
+        },
+        "ferrite.atom_site.Fe.id": {
+          "value": "Fe",
+          "su": null,
+          "free": false
+        },
+        "ferrite.atom_site.Fe.type_symbol": {
+          "value": "Fe",
+          "su": null,
+          "free": false
+        },
+        "ferrite.atom_site.Fe.fract_x": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "ferrite.atom_site.Fe.fract_y": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "ferrite.atom_site.Fe.fract_z": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "ferrite.atom_site.Fe.wyckoff_letter": {
+          "value": "a",
+          "su": null,
+          "free": false
+        },
+        "ferrite.atom_site.Fe.multiplicity": {
+          "value": 2,
+          "su": null,
+          "free": false
+        },
+        "ferrite.atom_site.Fe.occupancy": {
+          "value": 1.0,
+          "su": null,
+          "free": false
+        },
+        "ferrite.atom_site.Fe.adp_iso": {
+          "value": 1.719,
+          "su": 0.013,
+          "free": true
+        },
+        "ferrite.atom_site.Fe.adp_type": {
+          "value": "Biso",
+          "su": null,
+          "free": false
+        },
+        "ferrite.geom.min_bond_distance_cutoff": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "ferrite.geom.bond_distance_inc": {
+          "value": 0.25,
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.96l.id": {
+          "value": "96l",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.96l.letter": {
+          "value": "l",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.96l.multiplicity": {
+          "value": 96,
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.96l.site_symmetry": {
+          "value": "1",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.96l.coords_xyz": {
+          "value": "(x,y,z) (x,-z,y) (x,z,-y) (z,y,-x) (-z,y,x) (-y,x,z) (y,-x,z) (z,x,y) (y,z,x) (-y,-z,x) (z,-x,-y) (-y,z,-x) (-z,-x,y) (-z,x,-y) (y,-z,-x) (x,-y,-z) (-x,y,-z) (-x,-y,z) (y,x,-z) (-y,-x,-z) (z,-y,x) (-z,-y,-x) (-x,z,y) (-x,-z,-y) (-x,-y,-z) (-x,z,-y) (-x,-z,y) (-z,-y,x) (z,-y,-x) (y,-x,-z) (-y,x,-z) (-z,-x,-y) (-y,-z,-x) (y,z,-x) (-z,x,y) (y,-z,x) (z,x,-y) (z,-x,y) (-y,z,x) (-x,y,z) (x,-y,z) (x,y,-z) (-y,-x,z) (y,x,z) (-z,y,-x) (z,y,x) (x,-z,-y) (x,z,y) (x+1/2,y+1/2,z+1/2) (x+1/2,-z+1/2,y+1/2) (x+1/2,z+1/2,-y+1/2) (z+1/2,y+1/2,-x+1/2) (-z+1/2,y+1/2,x+1/2) (-y+1/2,x+1/2,z+1/2) (y+1/2,-x+1/2,z+1/2) (z+1/2,x+1/2,y+1/2) (y+1/2,z+1/2,x+1/2) (-y+1/2,-z+1/2,x+1/2) (z+1/2,-x+1/2,-y+1/2) (-y+1/2,z+1/2,-x+1/2) (-z+1/2,-x+1/2,y+1/2) (-z+1/2,x+1/2,-y+1/2) (y+1/2,-z+1/2,-x+1/2) (x+1/2,-y+1/2,-z+1/2) (-x+1/2,y+1/2,-z+1/2) (-x+1/2,-y+1/2,z+1/2) (y+1/2,x+1/2,-z+1/2) (-y+1/2,-x+1/2,-z+1/2) (z+1/2,-y+1/2,x+1/2) (-z+1/2,-y+1/2,-x+1/2) (-x+1/2,z+1/2,y+1/2) (-x+1/2,-z+1/2,-y+1/2) (-x+1/2,-y+1/2,-z+1/2) (-x+1/2,z+1/2,-y+1/2) (-x+1/2,-z+1/2,y+1/2) (-z+1/2,-y+1/2,x+1/2) (z+1/2,-y+1/2,-x+1/2) (y+1/2,-x+1/2,-z+1/2) (-y+1/2,x+1/2,-z+1/2) (-z+1/2,-x+1/2,-y+1/2) (-y+1/2,-z+1/2,-x+1/2) (y+1/2,z+1/2,-x+1/2) (-z+1/2,x+1/2,y+1/2) (y+1/2,-z+1/2,x+1/2) (z+1/2,x+1/2,-y+1/2) (z+1/2,-x+1/2,y+1/2) (-y+1/2,z+1/2,x+1/2) (-x+1/2,y+1/2,z+1/2) (x+1/2,-y+1/2,z+1/2) (x+1/2,y+1/2,-z+1/2) (-y+1/2,-x+1/2,z+1/2) (y+1/2,x+1/2,z+1/2) (-z+1/2,y+1/2,-x+1/2) (z+1/2,y+1/2,x+1/2) (x+1/2,-z+1/2,-y+1/2) (x+1/2,z+1/2,y+1/2)",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.48k.id": {
+          "value": "48k",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.48k.letter": {
+          "value": "k",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.48k.multiplicity": {
+          "value": 48,
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.48k.site_symmetry": {
+          "value": "m",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.48k.coords_xyz": {
+          "value": "(x,x,z) (x+1/2,x+1/2,z+1/2) (-x,-x,z) (-x+1/2,-x+1/2,z+1/2) (-x,x,-z) (-x+1/2,x+1/2,-z+1/2) (x,-x,-z) (x+1/2,-x+1/2,-z+1/2) (z,x,x) (z+1/2,x+1/2,x+1/2) (z,-x,-x) (z+1/2,-x+1/2,-x+1/2) (-z,-x,x) (-z+1/2,-x+1/2,x+1/2) (-z,x,-x) (-z+1/2,x+1/2,-x+1/2) (x,z,x) (x+1/2,z+1/2,x+1/2) (-x,z,-x) (-x+1/2,z+1/2,-x+1/2) (x,-z,-x) (x+1/2,-z+1/2,-x+1/2) (-x,-z,x) (-x+1/2,-z+1/2,x+1/2) (x,x,-z) (x+1/2,x+1/2,-z+1/2) (-x,-x,-z) (-x+1/2,-x+1/2,-z+1/2) (x,-x,z) (x+1/2,-x+1/2,z+1/2) (-x,x,z) (-x+1/2,x+1/2,z+1/2) (x,z,-x) (x+1/2,z+1/2,-x+1/2) (-x,z,x) (-x+1/2,z+1/2,x+1/2) (-x,-z,-x) (-x+1/2,-z+1/2,-x+1/2) (x,-z,x) (x+1/2,-z+1/2,x+1/2) (z,x,-x) (z+1/2,x+1/2,-x+1/2) (z,-x,x) (z+1/2,-x+1/2,x+1/2) (-z,x,x) (-z+1/2,x+1/2,x+1/2) (-z,-x,-x) (-z+1/2,-x+1/2,-x+1/2)",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.48j.id": {
+          "value": "48j",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.48j.letter": {
+          "value": "j",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.48j.multiplicity": {
+          "value": 48,
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.48j.site_symmetry": {
+          "value": "m",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.48j.coords_xyz": {
+          "value": "(0,y,z) (0,-z,y) (0,z,-y) (z,y,0) (-z,y,0) (-y,0,z) (y,0,z) (z,0,y) (y,z,0) (-y,-z,0) (z,0,-y) (-y,z,0) (-z,0,y) (-z,0,-y) (y,-z,0) (0,-y,-z) (0,y,-z) (0,-y,z) (y,0,-z) (-y,0,-z) (z,-y,0) (-z,-y,0) (0,z,y) (0,-z,-y) (1/2,y+1/2,z+1/2) (1/2,-z+1/2,y+1/2) (1/2,z+1/2,-y+1/2) (z+1/2,y+1/2,1/2) (-z+1/2,y+1/2,1/2) (-y+1/2,1/2,z+1/2) (y+1/2,1/2,z+1/2) (z+1/2,1/2,y+1/2) (y+1/2,z+1/2,1/2) (-y+1/2,-z+1/2,1/2) (z+1/2,1/2,-y+1/2) (-y+1/2,z+1/2,1/2) (-z+1/2,1/2,y+1/2) (-z+1/2,1/2,-y+1/2) (y+1/2,-z+1/2,1/2) (1/2,-y+1/2,-z+1/2) (1/2,y+1/2,-z+1/2) (1/2,-y+1/2,z+1/2) (y+1/2,1/2,-z+1/2) (-y+1/2,1/2,-z+1/2) (z+1/2,-y+1/2,1/2) (-z+1/2,-y+1/2,1/2) (1/2,z+1/2,y+1/2) (1/2,-z+1/2,-y+1/2)",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.48i.id": {
+          "value": "48i",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.48i.letter": {
+          "value": "i",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.48i.multiplicity": {
+          "value": 48,
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.48i.site_symmetry": {
+          "value": "2",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.48i.coords_xyz": {
+          "value": "(1/4,y,-y+1/2) (3/4,y+1/2,-y) (3/4,-y,-y+1/2) (1/4,-y+1/2,-y) (3/4,y,y+1/2) (1/4,y+1/2,y) (1/4,-y,y+1/2) (3/4,-y+1/2,y) (-y+1/2,1/4,y) (-y,3/4,y+1/2) (-y+1/2,3/4,-y) (-y,1/4,-y+1/2) (y+1/2,3/4,y) (y,1/4,y+1/2) (y+1/2,1/4,-y) (y,3/4,-y+1/2) (y,-y+1/2,1/4) (y+1/2,-y,3/4) (-y,-y+1/2,3/4) (-y+1/2,-y,1/4) (y,y+1/2,3/4) (y+1/2,y,1/4) (-y,y+1/2,1/4) (-y+1/2,y,3/4) (3/4,-y,y+1/2) (1/4,-y+1/2,y) (1/4,y,y+1/2) (3/4,y+1/2,y) (1/4,-y,-y+1/2) (3/4,-y+1/2,-y) (3/4,y,-y+1/2) (1/4,y+1/2,-y) (y+1/2,3/4,-y) (y,1/4,-y+1/2) (y+1/2,1/4,y) (y,3/4,y+1/2) (-y+1/2,1/4,-y) (-y,3/4,-y+1/2) (-y+1/2,3/4,y) (-y,1/4,y+1/2) (-y,y+1/2,3/4) (-y+1/2,y,1/4) (y,y+1/2,1/4) (y+1/2,y,3/4) (-y,-y+1/2,1/4) (-y+1/2,-y,3/4) (y,-y+1/2,3/4) (y+1/2,-y,1/4)",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.24h.id": {
+          "value": "24h",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.24h.letter": {
+          "value": "h",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.24h.multiplicity": {
+          "value": 24,
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.24h.site_symmetry": {
+          "value": "mm2",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.24h.coords_xyz": {
+          "value": "(0,y,y) (1/2,y+1/2,y+1/2) (0,-y,y) (1/2,-y+1/2,y+1/2) (0,y,-y) (1/2,y+1/2,-y+1/2) (0,-y,-y) (1/2,-y+1/2,-y+1/2) (y,0,y) (y+1/2,1/2,y+1/2) (y,0,-y) (y+1/2,1/2,-y+1/2) (-y,0,y) (-y+1/2,1/2,y+1/2) (-y,0,-y) (-y+1/2,1/2,-y+1/2) (y,y,0) (y+1/2,y+1/2,1/2) (-y,y,0) (-y+1/2,y+1/2,1/2) (y,-y,0) (y+1/2,-y+1/2,1/2) (-y,-y,0) (-y+1/2,-y+1/2,1/2)",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.24g.id": {
+          "value": "24g",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.24g.letter": {
+          "value": "g",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.24g.multiplicity": {
+          "value": 24,
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.24g.site_symmetry": {
+          "value": "mm2",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.24g.coords_xyz": {
+          "value": "(x,0,1/2) (x,1/2,0) (1/2,0,-x) (1/2,0,x) (0,x,1/2) (0,-x,1/2) (1/2,x,0) (0,1/2,x) (1/2,-x,0) (0,1/2,-x) (-x,0,1/2) (-x,1/2,0) (x+1/2,1/2,0) (x+1/2,0,1/2) (0,1/2,-x+1/2) (0,1/2,x+1/2) (1/2,x+1/2,0) (1/2,-x+1/2,0) (0,x+1/2,1/2) (1/2,0,x+1/2) (0,-x+1/2,1/2) (1/2,0,-x+1/2) (-x+1/2,1/2,0) (-x+1/2,0,1/2)",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.16f.id": {
+          "value": "16f",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.16f.letter": {
+          "value": "f",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.16f.multiplicity": {
+          "value": 16,
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.16f.site_symmetry": {
+          "value": "3m",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.16f.coords_xyz": {
+          "value": "(x,x,x) (x+1/2,x+1/2,x+1/2) (-x,-x,x) (-x+1/2,-x+1/2,x+1/2) (-x,x,-x) (-x+1/2,x+1/2,-x+1/2) (x,-x,-x) (x+1/2,-x+1/2,-x+1/2) (x,x,-x) (x+1/2,x+1/2,-x+1/2) (-x,-x,-x) (-x+1/2,-x+1/2,-x+1/2) (x,-x,x) (x+1/2,-x+1/2,x+1/2) (-x,x,x) (-x+1/2,x+1/2,x+1/2)",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.12e.id": {
+          "value": "12e",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.12e.letter": {
+          "value": "e",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.12e.multiplicity": {
+          "value": 12,
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.12e.site_symmetry": {
+          "value": "4mm",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.12e.coords_xyz": {
+          "value": "(x,0,0) (0,0,-x) (0,0,x) (0,x,0) (0,-x,0) (-x,0,0) (x+1/2,1/2,1/2) (1/2,1/2,-x+1/2) (1/2,1/2,x+1/2) (1/2,x+1/2,1/2) (1/2,-x+1/2,1/2) (-x+1/2,1/2,1/2)",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.12d.id": {
+          "value": "12d",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.12d.letter": {
+          "value": "d",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.12d.multiplicity": {
+          "value": 12,
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.12d.site_symmetry": {
+          "value": "-42m",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.12d.coords_xyz": {
+          "value": "(1/4,0,1/2) (1/4,1/2,0) (1/2,0,3/4) (1/2,0,1/4) (0,1/4,1/2) (0,3/4,1/2) (1/2,1/4,0) (0,1/2,1/4) (1/2,3/4,0) (0,1/2,3/4) (3/4,0,1/2) (3/4,1/2,0)",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.8c.id": {
+          "value": "8c",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.8c.letter": {
+          "value": "c",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.8c.multiplicity": {
+          "value": 8,
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.8c.site_symmetry": {
+          "value": "-3m",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.8c.coords_xyz": {
+          "value": "(1/4,1/4,1/4) (1/4,3/4,1/4) (1/4,1/4,3/4) (3/4,1/4,1/4) (3/4,3/4,1/4) (1/4,3/4,3/4) (3/4,1/4,3/4) (3/4,3/4,3/4)",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.6b.id": {
+          "value": "6b",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.6b.letter": {
+          "value": "b",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.6b.multiplicity": {
+          "value": 6,
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.6b.site_symmetry": {
+          "value": "4/mmm",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.6b.coords_xyz": {
+          "value": "(0,1/2,1/2) (1/2,1/2,0) (1/2,0,1/2) (1/2,0,0) (0,0,1/2) (0,1/2,0)",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.2a.id": {
+          "value": "2a",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.2a.letter": {
+          "value": "a",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.2a.multiplicity": {
+          "value": 2,
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.2a.site_symmetry": {
+          "value": "m-3m",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.2a.coords_xyz": {
+          "value": "(0,0,0) (1/2,1/2,1/2)",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.experiment_type.sample_form": {
+          "value": "powder",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.experiment_type.beam_mode": {
+          "value": "time-of-flight",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.experiment_type.radiation_probe": {
+          "value": "neutron",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.experiment_type.scattering_type": {
+          "value": "bragg",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.diffrn.ambient_temperature": {
+          "value": null,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.diffrn.ambient_pressure": {
+          "value": null,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.diffrn.ambient_magnetic_field": {
+          "value": null,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.diffrn.ambient_electric_field": {
+          "value": null,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.calculator.type": {
+          "value": "cryspy",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.linked_structure.ferrite.structure_id": {
+          "value": "ferrite",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.linked_structure.ferrite.scale": {
+          "value": 284.71971058,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.linked_structure.austenite.structure_id": {
+          "value": "austenite",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.linked_structure.austenite.scale": {
+          "value": 67.91319207,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.excluded_regions.1.id": {
+          "value": "1",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.excluded_regions.1.start": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.excluded_regions.1.end": {
+          "value": 40500.0,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.excluded_regions.2.id": {
+          "value": "2",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.excluded_regions.2.start": {
+          "value": 130000.0,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.excluded_regions.2.end": {
+          "value": 180000.0,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.data_range.time_of_flight_min": {
+          "value": NaN,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.data_range.time_of_flight_max": {
+          "value": NaN,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.data_range.time_of_flight_inc": {
+          "value": NaN,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.peak.broad_lorentz_gamma_0": {
+          "value": 5.24,
+          "su": 0.19,
+          "free": true
+        },
+        "expt_n2.peak.broad_lorentz_gamma_1": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.peak.broad_lorentz_gamma_2": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.peak.broad_lorentz_size_l": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.peak.broad_lorentz_strain_l": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.peak.broad_gauss_sigma_0": {
+          "value": 922.0,
+          "su": 57.0,
+          "free": true
+        },
+        "expt_n2.peak.broad_gauss_sigma_1": {
+          "value": 1227.0,
+          "su": 57.0,
+          "free": true
+        },
+        "expt_n2.peak.broad_gauss_sigma_2": {
+          "value": 329.0,
+          "su": 11.0,
+          "free": true
+        },
+        "expt_n2.peak.broad_gauss_size_g": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.peak.broad_gauss_strain_g": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.peak.cutoff_fwhm": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.peak.type": {
+          "value": "tof-pseudo-voigt",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.instrument.twotheta_bank": {
+          "value": 90.0,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.instrument.d_to_tof_offset": {
+          "value": -2.26,
+          "su": 0.12,
+          "free": true
+        },
+        "expt_n2.instrument.d_to_tof_linear": {
+          "value": 54902.18695,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.instrument.d_to_tof_quadratic": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.instrument.d_to_tof_reciprocal": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.1.id": {
+          "value": "1",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.1.position": {
+          "value": 40094.5234,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.1.intensity": {
+          "value": 0.19,
+          "su": 0.024,
+          "free": true
+        },
+        "expt_n2.background.2.id": {
+          "value": "2",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.2.position": {
+          "value": 48089.8489,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.2.intensity": {
+          "value": 0.2066,
+          "su": 0.0097,
+          "free": true
+        },
+        "expt_n2.background.3.id": {
+          "value": "3",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.3.position": {
+          "value": 51976.023,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.3.intensity": {
+          "value": 0.2029,
+          "su": 0.0098,
+          "free": true
+        },
+        "expt_n2.background.4.id": {
+          "value": "4",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.4.position": {
+          "value": 54301.3567,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.4.intensity": {
+          "value": 0.1937,
+          "su": 0.0089,
+          "free": true
+        },
+        "expt_n2.background.5.id": {
+          "value": "5",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.5.position": {
+          "value": 58729.047,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.5.intensity": {
+          "value": 0.274,
+          "su": 0.01,
+          "free": true
+        },
+        "expt_n2.background.6.id": {
+          "value": "6",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.6.position": {
+          "value": 62710.7828,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.6.intensity": {
+          "value": 0.32,
+          "su": 0.01,
+          "free": true
+        },
+        "expt_n2.background.7.id": {
+          "value": "7",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.7.position": {
+          "value": 67711.8429,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.7.intensity": {
+          "value": 0.2561,
+          "su": 0.0073,
+          "free": true
+        },
+        "expt_n2.background.8.id": {
+          "value": "8",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.8.position": {
+          "value": 73158.8575,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.8.intensity": {
+          "value": 0.234,
+          "su": 0.0067,
+          "free": true
+        },
+        "expt_n2.background.9.id": {
+          "value": "9",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.9.position": {
+          "value": 76439.8078,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.9.intensity": {
+          "value": 0.2153,
+          "su": 0.0061,
+          "free": true
+        },
+        "expt_n2.background.10.id": {
+          "value": "10",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.10.position": {
+          "value": 81249.7446,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.10.intensity": {
+          "value": 0.2272,
+          "su": 0.0059,
+          "free": true
+        },
+        "expt_n2.background.11.id": {
+          "value": "11",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.11.position": {
+          "value": 85263.3343,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.11.intensity": {
+          "value": 0.1583,
+          "su": 0.0044,
+          "free": true
+        },
+        "expt_n2.background.12.id": {
+          "value": "12",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.12.position": {
+          "value": 96157.3635,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.12.intensity": {
+          "value": 0.222,
+          "su": 0.005,
+          "free": true
+        },
+        "expt_n2.background.13.id": {
+          "value": "13",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.13.position": {
+          "value": 98132.3044,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.13.intensity": {
+          "value": 0.3601,
+          "su": 0.0091,
+          "free": true
+        },
+        "expt_n2.background.14.id": {
+          "value": "14",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.14.position": {
+          "value": 102368.8713,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.14.intensity": {
+          "value": 0.4091,
+          "su": 0.0097,
+          "free": true
+        },
+        "expt_n2.background.15.id": {
+          "value": "15",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.15.position": {
+          "value": 104248.2506,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.15.intensity": {
+          "value": 0.3464,
+          "su": 0.0098,
+          "free": true
+        },
+        "expt_n2.background.16.id": {
+          "value": "16",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.16.position": {
+          "value": 108771.5025,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.16.intensity": {
+          "value": 0.576,
+          "su": 0.013,
+          "free": true
+        },
+        "expt_n2.background.17.id": {
+          "value": "17",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.17.position": {
+          "value": 111606.4984,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.17.intensity": {
+          "value": 1.007,
+          "su": 0.033,
+          "free": true
+        },
+        "expt_n2.background.18.id": {
+          "value": "18",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.18.position": {
+          "value": 112721.3844,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.18.intensity": {
+          "value": 1.182,
+          "su": 0.034,
+          "free": true
+        },
+        "expt_n2.background.19.id": {
+          "value": "19",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.19.position": {
+          "value": 115715.6497,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.19.intensity": {
+          "value": 0.886,
+          "su": 0.017,
+          "free": true
+        },
+        "expt_n2.background.20.id": {
+          "value": "20",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.20.position": {
+          "value": 135592.4748,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.20.intensity": {
+          "value": 0.017,
+          "su": 0.028,
+          "free": true
+        },
+        "expt_n2.absorption.type": {
+          "value": "none",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.experiment_type.sample_form": {
+          "value": "powder",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.experiment_type.beam_mode": {
+          "value": "time-of-flight",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.experiment_type.radiation_probe": {
+          "value": "neutron",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.experiment_type.scattering_type": {
+          "value": "bragg",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.diffrn.ambient_temperature": {
+          "value": null,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.diffrn.ambient_pressure": {
+          "value": null,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.diffrn.ambient_magnetic_field": {
+          "value": null,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.diffrn.ambient_electric_field": {
+          "value": null,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.calculator.type": {
+          "value": "cryspy",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.linked_structure.ferrite.structure_id": {
+          "value": "ferrite",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.linked_structure.ferrite.scale": {
+          "value": 284.72,
+          "su": 0.84,
+          "free": true
+        },
+        "expt_s2.linked_structure.austenite.structure_id": {
+          "value": "austenite",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.linked_structure.austenite.scale": {
+          "value": 67.91,
+          "su": 0.17,
+          "free": true
+        },
+        "expt_s2.excluded_regions.1.id": {
+          "value": "1",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.excluded_regions.1.start": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.excluded_regions.1.end": {
+          "value": 40500.0,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.excluded_regions.2.id": {
+          "value": "2",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.excluded_regions.2.start": {
+          "value": 130000.0,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.excluded_regions.2.end": {
+          "value": 180000.0,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.data_range.time_of_flight_min": {
+          "value": NaN,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.data_range.time_of_flight_max": {
+          "value": NaN,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.data_range.time_of_flight_inc": {
+          "value": NaN,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.peak.broad_lorentz_gamma_0": {
+          "value": 5.24,
+          "su": 0.19,
+          "free": true
+        },
+        "expt_s2.peak.broad_lorentz_gamma_1": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.peak.broad_lorentz_gamma_2": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.peak.broad_lorentz_size_l": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.peak.broad_lorentz_strain_l": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.peak.broad_gauss_sigma_0": {
+          "value": 884.0,
+          "su": 57.0,
+          "free": true
+        },
+        "expt_s2.peak.broad_gauss_sigma_1": {
+          "value": 1284.0,
+          "su": 57.0,
+          "free": true
+        },
+        "expt_s2.peak.broad_gauss_sigma_2": {
+          "value": 311.0,
+          "su": 11.0,
+          "free": true
+        },
+        "expt_s2.peak.broad_gauss_size_g": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.peak.broad_gauss_strain_g": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.peak.cutoff_fwhm": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.peak.type": {
+          "value": "tof-pseudo-voigt",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.instrument.twotheta_bank": {
+          "value": 90.0,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.instrument.d_to_tof_offset": {
+          "value": -10.45,
+          "su": 0.12,
+          "free": true
+        },
+        "expt_s2.instrument.d_to_tof_linear": {
+          "value": 54902.18695,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.instrument.d_to_tof_quadratic": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.instrument.d_to_tof_reciprocal": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.1.id": {
+          "value": "1",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.1.position": {
+          "value": 40094.5234,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.1.intensity": {
+          "value": 0.167,
+          "su": 0.023,
+          "free": true
+        },
+        "expt_s2.background.2.id": {
+          "value": "2",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.2.position": {
+          "value": 48089.8489,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.2.intensity": {
+          "value": 0.2072,
+          "su": 0.0097,
+          "free": true
+        },
+        "expt_s2.background.3.id": {
+          "value": "3",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.3.position": {
+          "value": 51976.023,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.3.intensity": {
+          "value": 0.1976,
+          "su": 0.0096,
+          "free": true
+        },
+        "expt_s2.background.4.id": {
+          "value": "4",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.4.position": {
+          "value": 54301.3567,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.4.intensity": {
+          "value": 0.19,
+          "su": 0.0088,
+          "free": true
+        },
+        "expt_s2.background.5.id": {
+          "value": "5",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.5.position": {
+          "value": 58729.047,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.5.intensity": {
+          "value": 0.283,
+          "su": 0.01,
+          "free": true
+        },
+        "expt_s2.background.6.id": {
+          "value": "6",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.6.position": {
+          "value": 62710.7828,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.6.intensity": {
+          "value": 0.318,
+          "su": 0.01,
+          "free": true
+        },
+        "expt_s2.background.7.id": {
+          "value": "7",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.7.position": {
+          "value": 67711.8429,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.7.intensity": {
+          "value": 0.2719,
+          "su": 0.0076,
+          "free": true
+        },
+        "expt_s2.background.8.id": {
+          "value": "8",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.8.position": {
+          "value": 73158.8575,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.8.intensity": {
+          "value": 0.2269,
+          "su": 0.0066,
+          "free": true
+        },
+        "expt_s2.background.9.id": {
+          "value": "9",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.9.position": {
+          "value": 76439.8078,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.9.intensity": {
+          "value": 0.2098,
+          "su": 0.0059,
+          "free": true
+        },
+        "expt_s2.background.10.id": {
+          "value": "10",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.10.position": {
+          "value": 81249.7446,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.10.intensity": {
+          "value": 0.2155,
+          "su": 0.0056,
+          "free": true
+        },
+        "expt_s2.background.11.id": {
+          "value": "11",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.11.position": {
+          "value": 85263.3343,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.11.intensity": {
+          "value": 0.157,
+          "su": 0.0043,
+          "free": true
+        },
+        "expt_s2.background.12.id": {
+          "value": "12",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.12.position": {
+          "value": 96157.3635,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.12.intensity": {
+          "value": 0.2259,
+          "su": 0.005,
+          "free": true
+        },
+        "expt_s2.background.13.id": {
+          "value": "13",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.13.position": {
+          "value": 98132.3044,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.13.intensity": {
+          "value": 0.365,
+          "su": 0.0092,
+          "free": true
+        },
+        "expt_s2.background.14.id": {
+          "value": "14",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.14.position": {
+          "value": 102368.8713,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.14.intensity": {
+          "value": 0.4054,
+          "su": 0.0096,
+          "free": true
+        },
+        "expt_s2.background.15.id": {
+          "value": "15",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.15.position": {
+          "value": 104248.2506,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.15.intensity": {
+          "value": 0.3428,
+          "su": 0.0098,
+          "free": true
+        },
+        "expt_s2.background.16.id": {
+          "value": "16",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.16.position": {
+          "value": 108771.5025,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.16.intensity": {
+          "value": 0.584,
+          "su": 0.013,
+          "free": true
+        },
+        "expt_s2.background.17.id": {
+          "value": "17",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.17.position": {
+          "value": 111606.4984,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.17.intensity": {
+          "value": 1.022,
+          "su": 0.033,
+          "free": true
+        },
+        "expt_s2.background.18.id": {
+          "value": "18",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.18.position": {
+          "value": 112721.3844,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.18.intensity": {
+          "value": 1.214,
+          "su": 0.034,
+          "free": true
+        },
+        "expt_s2.background.19.id": {
+          "value": "19",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.19.position": {
+          "value": 115715.6497,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.19.intensity": {
+          "value": 0.878,
+          "su": 0.016,
+          "free": true
+        },
+        "expt_s2.background.20.id": {
+          "value": "20",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.20.position": {
+          "value": 135592.4748,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.20.intensity": {
+          "value": 0.031,
+          "su": 0.029,
+          "free": true
+        },
+        "expt_s2.absorption.type": {
+          "value": "none",
+          "su": null,
+          "free": false
+        }
+      },
+      "active_rwp": 0.06883298820841714,
+      "active_rwp_derivation": "sqrt(sum(((intensity_meas-intensity_calc)/intensity_meas_su)^2)/sum((intensity_meas/intensity_meas_su)^2)) over calc_status=incl in saved external Edi outputs; computed by capture_beer.py."
+    },
+    {
+      "success": true,
+      "message": "Fit succeeded.",
+      "iterations": 31,
+      "chi_square": 71514.01118380897,
+      "reduced_chi_square": 12.756691256476804,
+      "rwp": 0.033987366998188336,
+      "minimizer": "lmfit (leastsq)",
+      "calculators": {
+        "expt_n2": "cryspy",
+        "expt_s2": "cryspy"
+      },
+      "parameters": {
+        "austenite.atom_site.Fe.adp_iso": {
+          "value": 1.712650121360185,
+          "su": 0.011815620731607279
+        },
+        "ferrite.atom_site.Fe.adp_iso": {
+          "value": 1.7191217404258559,
+          "su": 0.012628233541492274
+        },
+        "expt_n2.peak.broad_lorentz_gamma_0": {
+          "value": 5.2440574443738805,
+          "su": 0.14752571278889778
+        },
+        "expt_n2.peak.broad_gauss_sigma_0": {
+          "value": 921.707301444069,
+          "su": 56.858476158520325
+        },
+        "expt_n2.peak.broad_gauss_sigma_1": {
+          "value": 1226.4625315600888,
+          "su": 56.81329799654204
+        },
+        "expt_n2.peak.broad_gauss_sigma_2": {
+          "value": 329.0500953363541,
+          "su": 11.311357438153784
+        },
+        "expt_n2.instrument.d_to_tof_offset": {
+          "value": -2.257354150248012,
+          "su": 0.1177663065586355
+        },
+        "expt_s2.linked_structure.ferrite.scale": {
+          "value": 284.7197928866948,
+          "su": 0.8353668375516405
+        },
+        "expt_s2.linked_structure.austenite.scale": {
+          "value": 67.91343368465299,
+          "su": 0.1683484007452996
+        },
+        "expt_s2.peak.broad_lorentz_gamma_0": {
+          "value": 5.234826853990973,
+          "su": 0.14696510509802443
+        },
+        "expt_s2.peak.broad_gauss_sigma_0": {
+          "value": 884.4056716561396,
+          "su": 56.29963631803461
+        },
+        "expt_s2.peak.broad_gauss_sigma_1": {
+          "value": 1284.113320457178,
+          "su": 56.242238016435095
+        },
+        "expt_s2.peak.broad_gauss_sigma_2": {
+          "value": 311.18016049030126,
+          "su": 11.194522955617904
+        },
+        "expt_s2.instrument.d_to_tof_offset": {
+          "value": -10.453363453159023,
+          "su": 0.11759941871304982
+        }
+      },
+      "all_parameters": {
+        "austenite.cell.length_a": {
+          "value": 3.6468,
+          "su": null,
+          "free": false
+        },
+        "austenite.cell.length_b": {
+          "value": 3.6468,
+          "su": null,
+          "free": false
+        },
+        "austenite.cell.length_c": {
+          "value": 3.6468,
+          "su": null,
+          "free": false
+        },
+        "austenite.cell.angle_alpha": {
+          "value": 90.0,
+          "su": null,
+          "free": false
+        },
+        "austenite.cell.angle_beta": {
+          "value": 90.0,
+          "su": null,
+          "free": false
+        },
+        "austenite.cell.angle_gamma": {
+          "value": 90.0,
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group.name_h_m": {
+          "value": "F m -3 m",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group.coord_system_code": {
+          "value": "1",
+          "su": null,
+          "free": false
+        },
+        "austenite.atom_site.Fe.id": {
+          "value": "Fe",
+          "su": null,
+          "free": false
+        },
+        "austenite.atom_site.Fe.type_symbol": {
+          "value": "Fe",
+          "su": null,
+          "free": false
+        },
+        "austenite.atom_site.Fe.fract_x": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "austenite.atom_site.Fe.fract_y": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "austenite.atom_site.Fe.fract_z": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "austenite.atom_site.Fe.wyckoff_letter": {
+          "value": "a",
+          "su": null,
+          "free": false
+        },
+        "austenite.atom_site.Fe.multiplicity": {
+          "value": 4,
+          "su": null,
+          "free": false
+        },
+        "austenite.atom_site.Fe.occupancy": {
+          "value": 1.0,
+          "su": null,
+          "free": false
+        },
+        "austenite.atom_site.Fe.adp_iso": {
+          "value": 1.712650121360185,
+          "su": 0.011815620731607279,
+          "free": true
+        },
+        "austenite.atom_site.Fe.adp_type": {
+          "value": "Biso",
+          "su": null,
+          "free": false
+        },
+        "austenite.geom.min_bond_distance_cutoff": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "austenite.geom.bond_distance_inc": {
+          "value": 0.25,
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.192l.id": {
+          "value": "192l",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.192l.letter": {
+          "value": "l",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.192l.multiplicity": {
+          "value": 192,
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.192l.site_symmetry": {
+          "value": "1",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.192l.coords_xyz": {
+          "value": "(x,y,z) (x,-z,y) (x,z,-y) (z,y,-x) (-z,y,x) (-y,x,z) (y,-x,z) (z,x,y) (y,z,x) (-y,-z,x) (z,-x,-y) (-y,z,-x) (-z,-x,y) (-z,x,-y) (y,-z,-x) (x,-y,-z) (-x,y,-z) (-x,-y,z) (y,x,-z) (-y,-x,-z) (z,-y,x) (-z,-y,-x) (-x,z,y) (-x,-z,-y) (-x,-y,-z) (-x,z,-y) (-x,-z,y) (-z,-y,x) (z,-y,-x) (y,-x,-z) (-y,x,-z) (-z,-x,-y) (-y,-z,-x) (y,z,-x) (-z,x,y) (y,-z,x) (z,x,-y) (z,-x,y) (-y,z,x) (-x,y,z) (x,-y,z) (x,y,-z) (-y,-x,z) (y,x,z) (-z,y,-x) (z,y,x) (x,-z,-y) (x,z,y) (x,y+1/2,z+1/2) (x,-z+1/2,y+1/2) (x,z+1/2,-y+1/2) (z,y+1/2,-x+1/2) (-z,y+1/2,x+1/2) (-y,x+1/2,z+1/2) (y,-x+1/2,z+1/2) (z,x+1/2,y+1/2) (y,z+1/2,x+1/2) (-y,-z+1/2,x+1/2) (z,-x+1/2,-y+1/2) (-y,z+1/2,-x+1/2) (-z,-x+1/2,y+1/2) (-z,x+1/2,-y+1/2) (y,-z+1/2,-x+1/2) (x,-y+1/2,-z+1/2) (-x,y+1/2,-z+1/2) (-x,-y+1/2,z+1/2) (y,x+1/2,-z+1/2) (-y,-x+1/2,-z+1/2) (z,-y+1/2,x+1/2) (-z,-y+1/2,-x+1/2) (-x,z+1/2,y+1/2) (-x,-z+1/2,-y+1/2) (-x,-y+1/2,-z+1/2) (-x,z+1/2,-y+1/2) (-x,-z+1/2,y+1/2) (-z,-y+1/2,x+1/2) (z,-y+1/2,-x+1/2) (y,-x+1/2,-z+1/2) (-y,x+1/2,-z+1/2) (-z,-x+1/2,-y+1/2) (-y,-z+1/2,-x+1/2) (y,z+1/2,-x+1/2) (-z,x+1/2,y+1/2) (y,-z+1/2,x+1/2) (z,x+1/2,-y+1/2) (z,-x+1/2,y+1/2) (-y,z+1/2,x+1/2) (-x,y+1/2,z+1/2) (x,-y+1/2,z+1/2) (x,y+1/2,-z+1/2) (-y,-x+1/2,z+1/2) (y,x+1/2,z+1/2) (-z,y+1/2,-x+1/2) (z,y+1/2,x+1/2) (x,-z+1/2,-y+1/2) (x,z+1/2,y+1/2) (x+1/2,y,z+1/2) (x+1/2,-z,y+1/2) (x+1/2,z,-y+1/2) (z+1/2,y,-x+1/2) (-z+1/2,y,x+1/2) (-y+1/2,x,z+1/2) (y+1/2,-x,z+1/2) (z+1/2,x,y+1/2) (y+1/2,z,x+1/2) (-y+1/2,-z,x+1/2) (z+1/2,-x,-y+1/2) (-y+1/2,z,-x+1/2) (-z+1/2,-x,y+1/2) (-z+1/2,x,-y+1/2) (y+1/2,-z,-x+1/2) (x+1/2,-y,-z+1/2) (-x+1/2,y,-z+1/2) (-x+1/2,-y,z+1/2) (y+1/2,x,-z+1/2) (-y+1/2,-x,-z+1/2) (z+1/2,-y,x+1/2) (-z+1/2,-y,-x+1/2) (-x+1/2,z,y+1/2) (-x+1/2,-z,-y+1/2) (-x+1/2,-y,-z+1/2) (-x+1/2,z,-y+1/2) (-x+1/2,-z,y+1/2) (-z+1/2,-y,x+1/2) (z+1/2,-y,-x+1/2) (y+1/2,-x,-z+1/2) (-y+1/2,x,-z+1/2) (-z+1/2,-x,-y+1/2) (-y+1/2,-z,-x+1/2) (y+1/2,z,-x+1/2) (-z+1/2,x,y+1/2) (y+1/2,-z,x+1/2) (z+1/2,x,-y+1/2) (z+1/2,-x,y+1/2) (-y+1/2,z,x+1/2) (-x+1/2,y,z+1/2) (x+1/2,-y,z+1/2) (x+1/2,y,-z+1/2) (-y+1/2,-x,z+1/2) (y+1/2,x,z+1/2) (-z+1/2,y,-x+1/2) (z+1/2,y,x+1/2) (x+1/2,-z,-y+1/2) (x+1/2,z,y+1/2) (x+1/2,y+1/2,z) (x+1/2,-z+1/2,y) (x+1/2,z+1/2,-y) (z+1/2,y+1/2,-x) (-z+1/2,y+1/2,x) (-y+1/2,x+1/2,z) (y+1/2,-x+1/2,z) (z+1/2,x+1/2,y) (y+1/2,z+1/2,x) (-y+1/2,-z+1/2,x) (z+1/2,-x+1/2,-y) (-y+1/2,z+1/2,-x) (-z+1/2,-x+1/2,y) (-z+1/2,x+1/2,-y) (y+1/2,-z+1/2,-x) (x+1/2,-y+1/2,-z) (-x+1/2,y+1/2,-z) (-x+1/2,-y+1/2,z) (y+1/2,x+1/2,-z) (-y+1/2,-x+1/2,-z) (z+1/2,-y+1/2,x) (-z+1/2,-y+1/2,-x) (-x+1/2,z+1/2,y) (-x+1/2,-z+1/2,-y) (-x+1/2,-y+1/2,-z) (-x+1/2,z+1/2,-y) (-x+1/2,-z+1/2,y) (-z+1/2,-y+1/2,x) (z+1/2,-y+1/2,-x) (y+1/2,-x+1/2,-z) (-y+1/2,x+1/2,-z) (-z+1/2,-x+1/2,-y) (-y+1/2,-z+1/2,-x) (y+1/2,z+1/2,-x) (-z+1/2,x+1/2,y) (y+1/2,-z+1/2,x) (z+1/2,x+1/2,-y) (z+1/2,-x+1/2,y) (-y+1/2,z+1/2,x) (-x+1/2,y+1/2,z) (x+1/2,-y+1/2,z) (x+1/2,y+1/2,-z) (-y+1/2,-x+1/2,z) (y+1/2,x+1/2,z) (-z+1/2,y+1/2,-x) (z+1/2,y+1/2,x) (x+1/2,-z+1/2,-y) (x+1/2,z+1/2,y)",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.96k.id": {
+          "value": "96k",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.96k.letter": {
+          "value": "k",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.96k.multiplicity": {
+          "value": 96,
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.96k.site_symmetry": {
+          "value": "m",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.96k.coords_xyz": {
+          "value": "(x,x,z) (x,x+1/2,z+1/2) (x+1/2,x,z+1/2) (x+1/2,x+1/2,z) (-x,-x,z) (-x,-x+1/2,z+1/2) (-x+1/2,-x,z+1/2) (-x+1/2,-x+1/2,z) (-x,x,-z) (-x,x+1/2,-z+1/2) (-x+1/2,x,-z+1/2) (-x+1/2,x+1/2,-z) (x,-x,-z) (x,-x+1/2,-z+1/2) (x+1/2,-x,-z+1/2) (x+1/2,-x+1/2,-z) (z,x,x) (z,x+1/2,x+1/2) (z+1/2,x,x+1/2) (z+1/2,x+1/2,x) (z,-x,-x) (z,-x+1/2,-x+1/2) (z+1/2,-x,-x+1/2) (z+1/2,-x+1/2,-x) (-z,-x,x) (-z,-x+1/2,x+1/2) (-z+1/2,-x,x+1/2) (-z+1/2,-x+1/2,x) (-z,x,-x) (-z,x+1/2,-x+1/2) (-z+1/2,x,-x+1/2) (-z+1/2,x+1/2,-x) (x,z,x) (x,z+1/2,x+1/2) (x+1/2,z,x+1/2) (x+1/2,z+1/2,x) (-x,z,-x) (-x,z+1/2,-x+1/2) (-x+1/2,z,-x+1/2) (-x+1/2,z+1/2,-x) (x,-z,-x) (x,-z+1/2,-x+1/2) (x+1/2,-z,-x+1/2) (x+1/2,-z+1/2,-x) (-x,-z,x) (-x,-z+1/2,x+1/2) (-x+1/2,-z,x+1/2) (-x+1/2,-z+1/2,x) (x,x,-z) (x,x+1/2,-z+1/2) (x+1/2,x,-z+1/2) (x+1/2,x+1/2,-z) (-x,-x,-z) (-x,-x+1/2,-z+1/2) (-x+1/2,-x,-z+1/2) (-x+1/2,-x+1/2,-z) (x,-x,z) (x,-x+1/2,z+1/2) (x+1/2,-x,z+1/2) (x+1/2,-x+1/2,z) (-x,x,z) (-x,x+1/2,z+1/2) (-x+1/2,x,z+1/2) (-x+1/2,x+1/2,z) (x,z,-x) (x,z+1/2,-x+1/2) (x+1/2,z,-x+1/2) (x+1/2,z+1/2,-x) (-x,z,x) (-x,z+1/2,x+1/2) (-x+1/2,z,x+1/2) (-x+1/2,z+1/2,x) (-x,-z,-x) (-x,-z+1/2,-x+1/2) (-x+1/2,-z,-x+1/2) (-x+1/2,-z+1/2,-x) (x,-z,x) (x,-z+1/2,x+1/2) (x+1/2,-z,x+1/2) (x+1/2,-z+1/2,x) (z,x,-x) (z,x+1/2,-x+1/2) (z+1/2,x,-x+1/2) (z+1/2,x+1/2,-x) (z,-x,x) (z,-x+1/2,x+1/2) (z+1/2,-x,x+1/2) (z+1/2,-x+1/2,x) (-z,x,x) (-z,x+1/2,x+1/2) (-z+1/2,x,x+1/2) (-z+1/2,x+1/2,x) (-z,-x,-x) (-z,-x+1/2,-x+1/2) (-z+1/2,-x,-x+1/2) (-z+1/2,-x+1/2,-x)",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.96j.id": {
+          "value": "96j",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.96j.letter": {
+          "value": "j",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.96j.multiplicity": {
+          "value": 96,
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.96j.site_symmetry": {
+          "value": "m",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.96j.coords_xyz": {
+          "value": "(0,y,z) (0,-z,y) (0,z,-y) (z,y,0) (-z,y,0) (-y,0,z) (y,0,z) (z,0,y) (y,z,0) (-y,-z,0) (z,0,-y) (-y,z,0) (-z,0,y) (-z,0,-y) (y,-z,0) (0,-y,-z) (0,y,-z) (0,-y,z) (y,0,-z) (-y,0,-z) (z,-y,0) (-z,-y,0) (0,z,y) (0,-z,-y) (0,y+1/2,z+1/2) (0,-z+1/2,y+1/2) (0,z+1/2,-y+1/2) (z,y+1/2,1/2) (-z,y+1/2,1/2) (-y,1/2,z+1/2) (y,1/2,z+1/2) (z,1/2,y+1/2) (y,z+1/2,1/2) (-y,-z+1/2,1/2) (z,1/2,-y+1/2) (-y,z+1/2,1/2) (-z,1/2,y+1/2) (-z,1/2,-y+1/2) (y,-z+1/2,1/2) (0,-y+1/2,-z+1/2) (0,y+1/2,-z+1/2) (0,-y+1/2,z+1/2) (y,1/2,-z+1/2) (-y,1/2,-z+1/2) (z,-y+1/2,1/2) (-z,-y+1/2,1/2) (0,z+1/2,y+1/2) (0,-z+1/2,-y+1/2) (1/2,y,z+1/2) (1/2,-z,y+1/2) (1/2,z,-y+1/2) (z+1/2,y,1/2) (-z+1/2,y,1/2) (-y+1/2,0,z+1/2) (y+1/2,0,z+1/2) (z+1/2,0,y+1/2) (y+1/2,z,1/2) (-y+1/2,-z,1/2) (z+1/2,0,-y+1/2) (-y+1/2,z,1/2) (-z+1/2,0,y+1/2) (-z+1/2,0,-y+1/2) (y+1/2,-z,1/2) (1/2,-y,-z+1/2) (1/2,y,-z+1/2) (1/2,-y,z+1/2) (y+1/2,0,-z+1/2) (-y+1/2,0,-z+1/2) (z+1/2,-y,1/2) (-z+1/2,-y,1/2) (1/2,z,y+1/2) (1/2,-z,-y+1/2) (1/2,y+1/2,z) (1/2,-z+1/2,y) (1/2,z+1/2,-y) (z+1/2,y+1/2,0) (-z+1/2,y+1/2,0) (-y+1/2,1/2,z) (y+1/2,1/2,z) (z+1/2,1/2,y) (y+1/2,z+1/2,0) (-y+1/2,-z+1/2,0) (z+1/2,1/2,-y) (-y+1/2,z+1/2,0) (-z+1/2,1/2,y) (-z+1/2,1/2,-y) (y+1/2,-z+1/2,0) (1/2,-y+1/2,-z) (1/2,y+1/2,-z) (1/2,-y+1/2,z) (y+1/2,1/2,-z) (-y+1/2,1/2,-z) (z+1/2,-y+1/2,0) (-z+1/2,-y+1/2,0) (1/2,z+1/2,y) (1/2,-z+1/2,-y)",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.48i.id": {
+          "value": "48i",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.48i.letter": {
+          "value": "i",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.48i.multiplicity": {
+          "value": 48,
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.48i.site_symmetry": {
+          "value": "mm2",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.48i.coords_xyz": {
+          "value": "(1/2,y,y) (1/2,y+1/2,y+1/2) (0,y,y+1/2) (0,y+1/2,y) (1/2,-y,y) (1/2,-y+1/2,y+1/2) (0,-y,y+1/2) (0,-y+1/2,y) (1/2,y,-y) (1/2,y+1/2,-y+1/2) (0,y,-y+1/2) (0,y+1/2,-y) (1/2,-y,-y) (1/2,-y+1/2,-y+1/2) (0,-y,-y+1/2) (0,-y+1/2,-y) (y,1/2,y) (y,0,y+1/2) (y+1/2,1/2,y+1/2) (y+1/2,0,y) (y,1/2,-y) (y,0,-y+1/2) (y+1/2,1/2,-y+1/2) (y+1/2,0,-y) (-y,1/2,y) (-y,0,y+1/2) (-y+1/2,1/2,y+1/2) (-y+1/2,0,y) (-y,1/2,-y) (-y,0,-y+1/2) (-y+1/2,1/2,-y+1/2) (-y+1/2,0,-y) (y,y,1/2) (y,y+1/2,0) (y+1/2,y,0) (y+1/2,y+1/2,1/2) (-y,y,1/2) (-y,y+1/2,0) (-y+1/2,y,0) (-y+1/2,y+1/2,1/2) (y,-y,1/2) (y,-y+1/2,0) (y+1/2,-y,0) (y+1/2,-y+1/2,1/2) (-y,-y,1/2) (-y,-y+1/2,0) (-y+1/2,-y,0) (-y+1/2,-y+1/2,1/2)",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.48h.id": {
+          "value": "48h",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.48h.letter": {
+          "value": "h",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.48h.multiplicity": {
+          "value": 48,
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.48h.site_symmetry": {
+          "value": "mm2",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.48h.coords_xyz": {
+          "value": "(0,y,y) (0,y+1/2,y+1/2) (1/2,y,y+1/2) (1/2,y+1/2,y) (0,-y,y) (0,-y+1/2,y+1/2) (1/2,-y,y+1/2) (1/2,-y+1/2,y) (0,y,-y) (0,y+1/2,-y+1/2) (1/2,y,-y+1/2) (1/2,y+1/2,-y) (0,-y,-y) (0,-y+1/2,-y+1/2) (1/2,-y,-y+1/2) (1/2,-y+1/2,-y) (y,0,y) (y,1/2,y+1/2) (y+1/2,0,y+1/2) (y+1/2,1/2,y) (y,0,-y) (y,1/2,-y+1/2) (y+1/2,0,-y+1/2) (y+1/2,1/2,-y) (-y,0,y) (-y,1/2,y+1/2) (-y+1/2,0,y+1/2) (-y+1/2,1/2,y) (-y,0,-y) (-y,1/2,-y+1/2) (-y+1/2,0,-y+1/2) (-y+1/2,1/2,-y) (y,y,0) (y,y+1/2,1/2) (y+1/2,y,1/2) (y+1/2,y+1/2,0) (-y,y,0) (-y,y+1/2,1/2) (-y+1/2,y,1/2) (-y+1/2,y+1/2,0) (y,-y,0) (y,-y+1/2,1/2) (y+1/2,-y,1/2) (y+1/2,-y+1/2,0) (-y,-y,0) (-y,-y+1/2,1/2) (-y+1/2,-y,1/2) (-y+1/2,-y+1/2,0)",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.48g.id": {
+          "value": "48g",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.48g.letter": {
+          "value": "g",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.48g.multiplicity": {
+          "value": 48,
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.48g.site_symmetry": {
+          "value": "mm2",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.48g.coords_xyz": {
+          "value": "(x,1/4,1/4) (x,3/4,1/4) (x,1/4,3/4) (1/4,1/4,-x) (3/4,1/4,x) (3/4,x,1/4) (1/4,-x,1/4) (1/4,x,1/4) (1/4,1/4,x) (3/4,3/4,x) (1/4,-x,3/4) (3/4,1/4,-x) (3/4,-x,1/4) (3/4,x,3/4) (1/4,3/4,-x) (x,3/4,3/4) (-x,1/4,3/4) (-x,3/4,1/4) (1/4,x,3/4) (3/4,-x,3/4) (1/4,3/4,x) (3/4,3/4,-x) (-x,1/4,1/4) (-x,3/4,3/4) (1/4,3/4,-x+1/2) (3/4,3/4,x+1/2) (3/4,x+1/2,3/4) (1/4,-x+1/2,3/4) (1/4,x+1/2,3/4) (1/4,3/4,x+1/2) (3/4,1/4,x+1/2) (1/4,-x+1/2,1/4) (3/4,3/4,-x+1/2) (3/4,-x+1/2,3/4) (3/4,x+1/2,1/4) (1/4,1/4,-x+1/2) (1/4,x+1/2,1/4) (3/4,-x+1/2,1/4) (1/4,1/4,x+1/2) (3/4,1/4,-x+1/2) (x+1/2,1/4,3/4) (x+1/2,3/4,3/4) (x+1/2,1/4,1/4) (x+1/2,3/4,1/4) (-x+1/2,1/4,1/4) (-x+1/2,3/4,3/4) (-x+1/2,1/4,3/4) (-x+1/2,3/4,1/4)",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.32f.id": {
+          "value": "32f",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.32f.letter": {
+          "value": "f",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.32f.multiplicity": {
+          "value": 32,
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.32f.site_symmetry": {
+          "value": "3m",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.32f.coords_xyz": {
+          "value": "(x,x,x) (x,x+1/2,x+1/2) (x+1/2,x,x+1/2) (x+1/2,x+1/2,x) (-x,-x,x) (-x,-x+1/2,x+1/2) (-x+1/2,-x,x+1/2) (-x+1/2,-x+1/2,x) (-x,x,-x) (-x,x+1/2,-x+1/2) (-x+1/2,x,-x+1/2) (-x+1/2,x+1/2,-x) (x,-x,-x) (x,-x+1/2,-x+1/2) (x+1/2,-x,-x+1/2) (x+1/2,-x+1/2,-x) (x,x,-x) (x,x+1/2,-x+1/2) (x+1/2,x,-x+1/2) (x+1/2,x+1/2,-x) (-x,-x,-x) (-x,-x+1/2,-x+1/2) (-x+1/2,-x,-x+1/2) (-x+1/2,-x+1/2,-x) (x,-x,x) (x,-x+1/2,x+1/2) (x+1/2,-x,x+1/2) (x+1/2,-x+1/2,x) (-x,x,x) (-x,x+1/2,x+1/2) (-x+1/2,x,x+1/2) (-x+1/2,x+1/2,x)",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.24e.id": {
+          "value": "24e",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.24e.letter": {
+          "value": "e",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.24e.multiplicity": {
+          "value": 24,
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.24e.site_symmetry": {
+          "value": "4mm",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.24e.coords_xyz": {
+          "value": "(x,0,0) (0,0,-x) (0,0,x) (0,x,0) (0,-x,0) (-x,0,0) (x,1/2,1/2) (0,1/2,-x+1/2) (0,1/2,x+1/2) (0,x+1/2,1/2) (0,-x+1/2,1/2) (-x,1/2,1/2) (x+1/2,0,1/2) (1/2,0,-x+1/2) (1/2,0,x+1/2) (1/2,x,1/2) (1/2,-x,1/2) (-x+1/2,0,1/2) (x+1/2,1/2,0) (1/2,1/2,-x) (1/2,1/2,x) (1/2,x+1/2,0) (1/2,-x+1/2,0) (-x+1/2,1/2,0)",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.24d.id": {
+          "value": "24d",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.24d.letter": {
+          "value": "d",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.24d.multiplicity": {
+          "value": 24,
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.24d.site_symmetry": {
+          "value": "mmm",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.24d.coords_xyz": {
+          "value": "(0,1/4,1/4) (0,3/4,1/4) (0,1/4,3/4) (1/4,1/4,0) (3/4,1/4,0) (3/4,0,1/4) (1/4,0,1/4) (3/4,3/4,0) (1/4,0,3/4) (3/4,0,3/4) (1/4,3/4,0) (0,3/4,3/4) (1/4,3/4,1/2) (3/4,3/4,1/2) (3/4,1/2,3/4) (1/4,1/2,3/4) (3/4,1/4,1/2) (1/4,1/2,1/4) (3/4,1/2,1/4) (1/4,1/4,1/2) (1/2,1/4,3/4) (1/2,3/4,3/4) (1/2,1/4,1/4) (1/2,3/4,1/4)",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.8c.id": {
+          "value": "8c",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.8c.letter": {
+          "value": "c",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.8c.multiplicity": {
+          "value": 8,
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.8c.site_symmetry": {
+          "value": "-43m",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.8c.coords_xyz": {
+          "value": "(1/4,1/4,1/4) (1/4,3/4,1/4) (1/4,1/4,3/4) (3/4,1/4,1/4) (3/4,3/4,1/4) (1/4,3/4,3/4) (3/4,1/4,3/4) (3/4,3/4,3/4)",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.4b.id": {
+          "value": "4b",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.4b.letter": {
+          "value": "b",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.4b.multiplicity": {
+          "value": 4,
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.4b.site_symmetry": {
+          "value": "m-3m",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.4b.coords_xyz": {
+          "value": "(1/2,1/2,1/2) (1/2,0,0) (0,1/2,0) (0,0,1/2)",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.4a.id": {
+          "value": "4a",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.4a.letter": {
+          "value": "a",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.4a.multiplicity": {
+          "value": 4,
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.4a.site_symmetry": {
+          "value": "m-3m",
+          "su": null,
+          "free": false
+        },
+        "austenite.space_group_Wyckoff.4a.coords_xyz": {
+          "value": "(0,0,0) (0,1/2,1/2) (1/2,0,1/2) (1/2,1/2,0)",
+          "su": null,
+          "free": false
+        },
+        "ferrite.cell.length_a": {
+          "value": 2.886,
+          "su": null,
+          "free": false
+        },
+        "ferrite.cell.length_b": {
+          "value": 2.886,
+          "su": null,
+          "free": false
+        },
+        "ferrite.cell.length_c": {
+          "value": 2.886,
+          "su": null,
+          "free": false
+        },
+        "ferrite.cell.angle_alpha": {
+          "value": 90.0,
+          "su": null,
+          "free": false
+        },
+        "ferrite.cell.angle_beta": {
+          "value": 90.0,
+          "su": null,
+          "free": false
+        },
+        "ferrite.cell.angle_gamma": {
+          "value": 90.0,
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group.name_h_m": {
+          "value": "I m -3 m",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group.coord_system_code": {
+          "value": "1",
+          "su": null,
+          "free": false
+        },
+        "ferrite.atom_site.Fe.id": {
+          "value": "Fe",
+          "su": null,
+          "free": false
+        },
+        "ferrite.atom_site.Fe.type_symbol": {
+          "value": "Fe",
+          "su": null,
+          "free": false
+        },
+        "ferrite.atom_site.Fe.fract_x": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "ferrite.atom_site.Fe.fract_y": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "ferrite.atom_site.Fe.fract_z": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "ferrite.atom_site.Fe.wyckoff_letter": {
+          "value": "a",
+          "su": null,
+          "free": false
+        },
+        "ferrite.atom_site.Fe.multiplicity": {
+          "value": 2,
+          "su": null,
+          "free": false
+        },
+        "ferrite.atom_site.Fe.occupancy": {
+          "value": 1.0,
+          "su": null,
+          "free": false
+        },
+        "ferrite.atom_site.Fe.adp_iso": {
+          "value": 1.7191217404258559,
+          "su": 0.012628233541492274,
+          "free": true
+        },
+        "ferrite.atom_site.Fe.adp_type": {
+          "value": "Biso",
+          "su": null,
+          "free": false
+        },
+        "ferrite.geom.min_bond_distance_cutoff": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "ferrite.geom.bond_distance_inc": {
+          "value": 0.25,
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.96l.id": {
+          "value": "96l",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.96l.letter": {
+          "value": "l",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.96l.multiplicity": {
+          "value": 96,
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.96l.site_symmetry": {
+          "value": "1",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.96l.coords_xyz": {
+          "value": "(x,y,z) (x,-z,y) (x,z,-y) (z,y,-x) (-z,y,x) (-y,x,z) (y,-x,z) (z,x,y) (y,z,x) (-y,-z,x) (z,-x,-y) (-y,z,-x) (-z,-x,y) (-z,x,-y) (y,-z,-x) (x,-y,-z) (-x,y,-z) (-x,-y,z) (y,x,-z) (-y,-x,-z) (z,-y,x) (-z,-y,-x) (-x,z,y) (-x,-z,-y) (-x,-y,-z) (-x,z,-y) (-x,-z,y) (-z,-y,x) (z,-y,-x) (y,-x,-z) (-y,x,-z) (-z,-x,-y) (-y,-z,-x) (y,z,-x) (-z,x,y) (y,-z,x) (z,x,-y) (z,-x,y) (-y,z,x) (-x,y,z) (x,-y,z) (x,y,-z) (-y,-x,z) (y,x,z) (-z,y,-x) (z,y,x) (x,-z,-y) (x,z,y) (x+1/2,y+1/2,z+1/2) (x+1/2,-z+1/2,y+1/2) (x+1/2,z+1/2,-y+1/2) (z+1/2,y+1/2,-x+1/2) (-z+1/2,y+1/2,x+1/2) (-y+1/2,x+1/2,z+1/2) (y+1/2,-x+1/2,z+1/2) (z+1/2,x+1/2,y+1/2) (y+1/2,z+1/2,x+1/2) (-y+1/2,-z+1/2,x+1/2) (z+1/2,-x+1/2,-y+1/2) (-y+1/2,z+1/2,-x+1/2) (-z+1/2,-x+1/2,y+1/2) (-z+1/2,x+1/2,-y+1/2) (y+1/2,-z+1/2,-x+1/2) (x+1/2,-y+1/2,-z+1/2) (-x+1/2,y+1/2,-z+1/2) (-x+1/2,-y+1/2,z+1/2) (y+1/2,x+1/2,-z+1/2) (-y+1/2,-x+1/2,-z+1/2) (z+1/2,-y+1/2,x+1/2) (-z+1/2,-y+1/2,-x+1/2) (-x+1/2,z+1/2,y+1/2) (-x+1/2,-z+1/2,-y+1/2) (-x+1/2,-y+1/2,-z+1/2) (-x+1/2,z+1/2,-y+1/2) (-x+1/2,-z+1/2,y+1/2) (-z+1/2,-y+1/2,x+1/2) (z+1/2,-y+1/2,-x+1/2) (y+1/2,-x+1/2,-z+1/2) (-y+1/2,x+1/2,-z+1/2) (-z+1/2,-x+1/2,-y+1/2) (-y+1/2,-z+1/2,-x+1/2) (y+1/2,z+1/2,-x+1/2) (-z+1/2,x+1/2,y+1/2) (y+1/2,-z+1/2,x+1/2) (z+1/2,x+1/2,-y+1/2) (z+1/2,-x+1/2,y+1/2) (-y+1/2,z+1/2,x+1/2) (-x+1/2,y+1/2,z+1/2) (x+1/2,-y+1/2,z+1/2) (x+1/2,y+1/2,-z+1/2) (-y+1/2,-x+1/2,z+1/2) (y+1/2,x+1/2,z+1/2) (-z+1/2,y+1/2,-x+1/2) (z+1/2,y+1/2,x+1/2) (x+1/2,-z+1/2,-y+1/2) (x+1/2,z+1/2,y+1/2)",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.48k.id": {
+          "value": "48k",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.48k.letter": {
+          "value": "k",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.48k.multiplicity": {
+          "value": 48,
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.48k.site_symmetry": {
+          "value": "m",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.48k.coords_xyz": {
+          "value": "(x,x,z) (x+1/2,x+1/2,z+1/2) (-x,-x,z) (-x+1/2,-x+1/2,z+1/2) (-x,x,-z) (-x+1/2,x+1/2,-z+1/2) (x,-x,-z) (x+1/2,-x+1/2,-z+1/2) (z,x,x) (z+1/2,x+1/2,x+1/2) (z,-x,-x) (z+1/2,-x+1/2,-x+1/2) (-z,-x,x) (-z+1/2,-x+1/2,x+1/2) (-z,x,-x) (-z+1/2,x+1/2,-x+1/2) (x,z,x) (x+1/2,z+1/2,x+1/2) (-x,z,-x) (-x+1/2,z+1/2,-x+1/2) (x,-z,-x) (x+1/2,-z+1/2,-x+1/2) (-x,-z,x) (-x+1/2,-z+1/2,x+1/2) (x,x,-z) (x+1/2,x+1/2,-z+1/2) (-x,-x,-z) (-x+1/2,-x+1/2,-z+1/2) (x,-x,z) (x+1/2,-x+1/2,z+1/2) (-x,x,z) (-x+1/2,x+1/2,z+1/2) (x,z,-x) (x+1/2,z+1/2,-x+1/2) (-x,z,x) (-x+1/2,z+1/2,x+1/2) (-x,-z,-x) (-x+1/2,-z+1/2,-x+1/2) (x,-z,x) (x+1/2,-z+1/2,x+1/2) (z,x,-x) (z+1/2,x+1/2,-x+1/2) (z,-x,x) (z+1/2,-x+1/2,x+1/2) (-z,x,x) (-z+1/2,x+1/2,x+1/2) (-z,-x,-x) (-z+1/2,-x+1/2,-x+1/2)",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.48j.id": {
+          "value": "48j",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.48j.letter": {
+          "value": "j",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.48j.multiplicity": {
+          "value": 48,
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.48j.site_symmetry": {
+          "value": "m",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.48j.coords_xyz": {
+          "value": "(0,y,z) (0,-z,y) (0,z,-y) (z,y,0) (-z,y,0) (-y,0,z) (y,0,z) (z,0,y) (y,z,0) (-y,-z,0) (z,0,-y) (-y,z,0) (-z,0,y) (-z,0,-y) (y,-z,0) (0,-y,-z) (0,y,-z) (0,-y,z) (y,0,-z) (-y,0,-z) (z,-y,0) (-z,-y,0) (0,z,y) (0,-z,-y) (1/2,y+1/2,z+1/2) (1/2,-z+1/2,y+1/2) (1/2,z+1/2,-y+1/2) (z+1/2,y+1/2,1/2) (-z+1/2,y+1/2,1/2) (-y+1/2,1/2,z+1/2) (y+1/2,1/2,z+1/2) (z+1/2,1/2,y+1/2) (y+1/2,z+1/2,1/2) (-y+1/2,-z+1/2,1/2) (z+1/2,1/2,-y+1/2) (-y+1/2,z+1/2,1/2) (-z+1/2,1/2,y+1/2) (-z+1/2,1/2,-y+1/2) (y+1/2,-z+1/2,1/2) (1/2,-y+1/2,-z+1/2) (1/2,y+1/2,-z+1/2) (1/2,-y+1/2,z+1/2) (y+1/2,1/2,-z+1/2) (-y+1/2,1/2,-z+1/2) (z+1/2,-y+1/2,1/2) (-z+1/2,-y+1/2,1/2) (1/2,z+1/2,y+1/2) (1/2,-z+1/2,-y+1/2)",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.48i.id": {
+          "value": "48i",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.48i.letter": {
+          "value": "i",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.48i.multiplicity": {
+          "value": 48,
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.48i.site_symmetry": {
+          "value": "2",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.48i.coords_xyz": {
+          "value": "(1/4,y,-y+1/2) (3/4,y+1/2,-y) (3/4,-y,-y+1/2) (1/4,-y+1/2,-y) (3/4,y,y+1/2) (1/4,y+1/2,y) (1/4,-y,y+1/2) (3/4,-y+1/2,y) (-y+1/2,1/4,y) (-y,3/4,y+1/2) (-y+1/2,3/4,-y) (-y,1/4,-y+1/2) (y+1/2,3/4,y) (y,1/4,y+1/2) (y+1/2,1/4,-y) (y,3/4,-y+1/2) (y,-y+1/2,1/4) (y+1/2,-y,3/4) (-y,-y+1/2,3/4) (-y+1/2,-y,1/4) (y,y+1/2,3/4) (y+1/2,y,1/4) (-y,y+1/2,1/4) (-y+1/2,y,3/4) (3/4,-y,y+1/2) (1/4,-y+1/2,y) (1/4,y,y+1/2) (3/4,y+1/2,y) (1/4,-y,-y+1/2) (3/4,-y+1/2,-y) (3/4,y,-y+1/2) (1/4,y+1/2,-y) (y+1/2,3/4,-y) (y,1/4,-y+1/2) (y+1/2,1/4,y) (y,3/4,y+1/2) (-y+1/2,1/4,-y) (-y,3/4,-y+1/2) (-y+1/2,3/4,y) (-y,1/4,y+1/2) (-y,y+1/2,3/4) (-y+1/2,y,1/4) (y,y+1/2,1/4) (y+1/2,y,3/4) (-y,-y+1/2,1/4) (-y+1/2,-y,3/4) (y,-y+1/2,3/4) (y+1/2,-y,1/4)",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.24h.id": {
+          "value": "24h",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.24h.letter": {
+          "value": "h",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.24h.multiplicity": {
+          "value": 24,
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.24h.site_symmetry": {
+          "value": "mm2",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.24h.coords_xyz": {
+          "value": "(0,y,y) (1/2,y+1/2,y+1/2) (0,-y,y) (1/2,-y+1/2,y+1/2) (0,y,-y) (1/2,y+1/2,-y+1/2) (0,-y,-y) (1/2,-y+1/2,-y+1/2) (y,0,y) (y+1/2,1/2,y+1/2) (y,0,-y) (y+1/2,1/2,-y+1/2) (-y,0,y) (-y+1/2,1/2,y+1/2) (-y,0,-y) (-y+1/2,1/2,-y+1/2) (y,y,0) (y+1/2,y+1/2,1/2) (-y,y,0) (-y+1/2,y+1/2,1/2) (y,-y,0) (y+1/2,-y+1/2,1/2) (-y,-y,0) (-y+1/2,-y+1/2,1/2)",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.24g.id": {
+          "value": "24g",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.24g.letter": {
+          "value": "g",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.24g.multiplicity": {
+          "value": 24,
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.24g.site_symmetry": {
+          "value": "mm2",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.24g.coords_xyz": {
+          "value": "(x,0,1/2) (x,1/2,0) (1/2,0,-x) (1/2,0,x) (0,x,1/2) (0,-x,1/2) (1/2,x,0) (0,1/2,x) (1/2,-x,0) (0,1/2,-x) (-x,0,1/2) (-x,1/2,0) (x+1/2,1/2,0) (x+1/2,0,1/2) (0,1/2,-x+1/2) (0,1/2,x+1/2) (1/2,x+1/2,0) (1/2,-x+1/2,0) (0,x+1/2,1/2) (1/2,0,x+1/2) (0,-x+1/2,1/2) (1/2,0,-x+1/2) (-x+1/2,1/2,0) (-x+1/2,0,1/2)",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.16f.id": {
+          "value": "16f",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.16f.letter": {
+          "value": "f",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.16f.multiplicity": {
+          "value": 16,
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.16f.site_symmetry": {
+          "value": "3m",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.16f.coords_xyz": {
+          "value": "(x,x,x) (x+1/2,x+1/2,x+1/2) (-x,-x,x) (-x+1/2,-x+1/2,x+1/2) (-x,x,-x) (-x+1/2,x+1/2,-x+1/2) (x,-x,-x) (x+1/2,-x+1/2,-x+1/2) (x,x,-x) (x+1/2,x+1/2,-x+1/2) (-x,-x,-x) (-x+1/2,-x+1/2,-x+1/2) (x,-x,x) (x+1/2,-x+1/2,x+1/2) (-x,x,x) (-x+1/2,x+1/2,x+1/2)",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.12e.id": {
+          "value": "12e",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.12e.letter": {
+          "value": "e",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.12e.multiplicity": {
+          "value": 12,
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.12e.site_symmetry": {
+          "value": "4mm",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.12e.coords_xyz": {
+          "value": "(x,0,0) (0,0,-x) (0,0,x) (0,x,0) (0,-x,0) (-x,0,0) (x+1/2,1/2,1/2) (1/2,1/2,-x+1/2) (1/2,1/2,x+1/2) (1/2,x+1/2,1/2) (1/2,-x+1/2,1/2) (-x+1/2,1/2,1/2)",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.12d.id": {
+          "value": "12d",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.12d.letter": {
+          "value": "d",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.12d.multiplicity": {
+          "value": 12,
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.12d.site_symmetry": {
+          "value": "-42m",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.12d.coords_xyz": {
+          "value": "(1/4,0,1/2) (1/4,1/2,0) (1/2,0,3/4) (1/2,0,1/4) (0,1/4,1/2) (0,3/4,1/2) (1/2,1/4,0) (0,1/2,1/4) (1/2,3/4,0) (0,1/2,3/4) (3/4,0,1/2) (3/4,1/2,0)",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.8c.id": {
+          "value": "8c",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.8c.letter": {
+          "value": "c",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.8c.multiplicity": {
+          "value": 8,
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.8c.site_symmetry": {
+          "value": "-3m",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.8c.coords_xyz": {
+          "value": "(1/4,1/4,1/4) (1/4,3/4,1/4) (1/4,1/4,3/4) (3/4,1/4,1/4) (3/4,3/4,1/4) (1/4,3/4,3/4) (3/4,1/4,3/4) (3/4,3/4,3/4)",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.6b.id": {
+          "value": "6b",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.6b.letter": {
+          "value": "b",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.6b.multiplicity": {
+          "value": 6,
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.6b.site_symmetry": {
+          "value": "4/mmm",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.6b.coords_xyz": {
+          "value": "(0,1/2,1/2) (1/2,1/2,0) (1/2,0,1/2) (1/2,0,0) (0,0,1/2) (0,1/2,0)",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.2a.id": {
+          "value": "2a",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.2a.letter": {
+          "value": "a",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.2a.multiplicity": {
+          "value": 2,
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.2a.site_symmetry": {
+          "value": "m-3m",
+          "su": null,
+          "free": false
+        },
+        "ferrite.space_group_Wyckoff.2a.coords_xyz": {
+          "value": "(0,0,0) (1/2,1/2,1/2)",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.experiment_type.sample_form": {
+          "value": "powder",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.experiment_type.beam_mode": {
+          "value": "time-of-flight",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.experiment_type.radiation_probe": {
+          "value": "neutron",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.experiment_type.scattering_type": {
+          "value": "bragg",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.diffrn.ambient_temperature": {
+          "value": null,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.diffrn.ambient_pressure": {
+          "value": null,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.diffrn.ambient_magnetic_field": {
+          "value": null,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.diffrn.ambient_electric_field": {
+          "value": null,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.calculator.type": {
+          "value": "cryspy",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.linked_structure.ferrite.structure_id": {
+          "value": "ferrite",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.linked_structure.ferrite.scale": {
+          "value": 284.7197928866948,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.linked_structure.austenite.structure_id": {
+          "value": "austenite",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.linked_structure.austenite.scale": {
+          "value": 67.91343368465299,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.excluded_regions.1.id": {
+          "value": "1",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.excluded_regions.1.start": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.excluded_regions.1.end": {
+          "value": 40500.0,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.excluded_regions.2.id": {
+          "value": "2",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.excluded_regions.2.start": {
+          "value": 130000.0,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.excluded_regions.2.end": {
+          "value": 180000.0,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.data_range.time_of_flight_min": {
+          "value": NaN,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.data_range.time_of_flight_max": {
+          "value": NaN,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.data_range.time_of_flight_inc": {
+          "value": NaN,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.peak.broad_lorentz_gamma_0": {
+          "value": 5.2440574443738805,
+          "su": 0.14752571278889778,
+          "free": true
+        },
+        "expt_n2.peak.broad_lorentz_gamma_1": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.peak.broad_lorentz_gamma_2": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.peak.broad_lorentz_size_l": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.peak.broad_lorentz_strain_l": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.peak.broad_gauss_sigma_0": {
+          "value": 921.707301444069,
+          "su": 56.858476158520325,
+          "free": true
+        },
+        "expt_n2.peak.broad_gauss_sigma_1": {
+          "value": 1226.4625315600888,
+          "su": 56.81329799654204,
+          "free": true
+        },
+        "expt_n2.peak.broad_gauss_sigma_2": {
+          "value": 329.0500953363541,
+          "su": 11.311357438153784,
+          "free": true
+        },
+        "expt_n2.peak.broad_gauss_size_g": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.peak.broad_gauss_strain_g": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.peak.cutoff_fwhm": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.peak.type": {
+          "value": "tof-pseudo-voigt",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.instrument.twotheta_bank": {
+          "value": 90.0,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.instrument.d_to_tof_offset": {
+          "value": -2.257354150248012,
+          "su": 0.1177663065586355,
+          "free": true
+        },
+        "expt_n2.instrument.d_to_tof_linear": {
+          "value": 54902.18695,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.instrument.d_to_tof_quadratic": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.instrument.d_to_tof_reciprocal": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.1.id": {
+          "value": "1",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.1.position": {
+          "value": 40094.5234,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.1.intensity": {
+          "value": 0.19,
+          "su": 0.024,
+          "free": false
+        },
+        "expt_n2.background.2.id": {
+          "value": "2",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.2.position": {
+          "value": 48089.8489,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.2.intensity": {
+          "value": 0.2066,
+          "su": 0.0097,
+          "free": false
+        },
+        "expt_n2.background.3.id": {
+          "value": "3",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.3.position": {
+          "value": 51976.023,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.3.intensity": {
+          "value": 0.2029,
+          "su": 0.0098,
+          "free": false
+        },
+        "expt_n2.background.4.id": {
+          "value": "4",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.4.position": {
+          "value": 54301.3567,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.4.intensity": {
+          "value": 0.1937,
+          "su": 0.0089,
+          "free": false
+        },
+        "expt_n2.background.5.id": {
+          "value": "5",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.5.position": {
+          "value": 58729.047,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.5.intensity": {
+          "value": 0.274,
+          "su": 0.01,
+          "free": false
+        },
+        "expt_n2.background.6.id": {
+          "value": "6",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.6.position": {
+          "value": 62710.7828,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.6.intensity": {
+          "value": 0.32,
+          "su": 0.01,
+          "free": false
+        },
+        "expt_n2.background.7.id": {
+          "value": "7",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.7.position": {
+          "value": 67711.8429,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.7.intensity": {
+          "value": 0.2561,
+          "su": 0.0073,
+          "free": false
+        },
+        "expt_n2.background.8.id": {
+          "value": "8",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.8.position": {
+          "value": 73158.8575,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.8.intensity": {
+          "value": 0.234,
+          "su": 0.0067,
+          "free": false
+        },
+        "expt_n2.background.9.id": {
+          "value": "9",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.9.position": {
+          "value": 76439.8078,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.9.intensity": {
+          "value": 0.2153,
+          "su": 0.0061,
+          "free": false
+        },
+        "expt_n2.background.10.id": {
+          "value": "10",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.10.position": {
+          "value": 81249.7446,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.10.intensity": {
+          "value": 0.2272,
+          "su": 0.0059,
+          "free": false
+        },
+        "expt_n2.background.11.id": {
+          "value": "11",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.11.position": {
+          "value": 85263.3343,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.11.intensity": {
+          "value": 0.1583,
+          "su": 0.0044,
+          "free": false
+        },
+        "expt_n2.background.12.id": {
+          "value": "12",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.12.position": {
+          "value": 96157.3635,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.12.intensity": {
+          "value": 0.222,
+          "su": 0.005,
+          "free": false
+        },
+        "expt_n2.background.13.id": {
+          "value": "13",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.13.position": {
+          "value": 98132.3044,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.13.intensity": {
+          "value": 0.3601,
+          "su": 0.0091,
+          "free": false
+        },
+        "expt_n2.background.14.id": {
+          "value": "14",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.14.position": {
+          "value": 102368.8713,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.14.intensity": {
+          "value": 0.4091,
+          "su": 0.0097,
+          "free": false
+        },
+        "expt_n2.background.15.id": {
+          "value": "15",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.15.position": {
+          "value": 104248.2506,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.15.intensity": {
+          "value": 0.3464,
+          "su": 0.0098,
+          "free": false
+        },
+        "expt_n2.background.16.id": {
+          "value": "16",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.16.position": {
+          "value": 108771.5025,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.16.intensity": {
+          "value": 0.576,
+          "su": 0.013,
+          "free": false
+        },
+        "expt_n2.background.17.id": {
+          "value": "17",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.17.position": {
+          "value": 111606.4984,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.17.intensity": {
+          "value": 1.007,
+          "su": 0.033,
+          "free": false
+        },
+        "expt_n2.background.18.id": {
+          "value": "18",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.18.position": {
+          "value": 112721.3844,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.18.intensity": {
+          "value": 1.182,
+          "su": 0.034,
+          "free": false
+        },
+        "expt_n2.background.19.id": {
+          "value": "19",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.19.position": {
+          "value": 115715.6497,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.19.intensity": {
+          "value": 0.886,
+          "su": 0.017,
+          "free": false
+        },
+        "expt_n2.background.20.id": {
+          "value": "20",
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.20.position": {
+          "value": 135592.4748,
+          "su": null,
+          "free": false
+        },
+        "expt_n2.background.20.intensity": {
+          "value": 0.017,
+          "su": 0.028,
+          "free": false
+        },
+        "expt_n2.absorption.type": {
+          "value": "none",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.experiment_type.sample_form": {
+          "value": "powder",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.experiment_type.beam_mode": {
+          "value": "time-of-flight",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.experiment_type.radiation_probe": {
+          "value": "neutron",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.experiment_type.scattering_type": {
+          "value": "bragg",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.diffrn.ambient_temperature": {
+          "value": null,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.diffrn.ambient_pressure": {
+          "value": null,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.diffrn.ambient_magnetic_field": {
+          "value": null,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.diffrn.ambient_electric_field": {
+          "value": null,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.calculator.type": {
+          "value": "cryspy",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.linked_structure.ferrite.structure_id": {
+          "value": "ferrite",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.linked_structure.ferrite.scale": {
+          "value": 284.7197928866948,
+          "su": 0.8353668375516405,
+          "free": true
+        },
+        "expt_s2.linked_structure.austenite.structure_id": {
+          "value": "austenite",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.linked_structure.austenite.scale": {
+          "value": 67.91343368465299,
+          "su": 0.1683484007452996,
+          "free": true
+        },
+        "expt_s2.excluded_regions.1.id": {
+          "value": "1",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.excluded_regions.1.start": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.excluded_regions.1.end": {
+          "value": 40500.0,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.excluded_regions.2.id": {
+          "value": "2",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.excluded_regions.2.start": {
+          "value": 130000.0,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.excluded_regions.2.end": {
+          "value": 180000.0,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.data_range.time_of_flight_min": {
+          "value": NaN,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.data_range.time_of_flight_max": {
+          "value": NaN,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.data_range.time_of_flight_inc": {
+          "value": NaN,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.peak.broad_lorentz_gamma_0": {
+          "value": 5.234826853990973,
+          "su": 0.14696510509802443,
+          "free": true
+        },
+        "expt_s2.peak.broad_lorentz_gamma_1": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.peak.broad_lorentz_gamma_2": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.peak.broad_lorentz_size_l": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.peak.broad_lorentz_strain_l": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.peak.broad_gauss_sigma_0": {
+          "value": 884.4056716561396,
+          "su": 56.29963631803461,
+          "free": true
+        },
+        "expt_s2.peak.broad_gauss_sigma_1": {
+          "value": 1284.113320457178,
+          "su": 56.242238016435095,
+          "free": true
+        },
+        "expt_s2.peak.broad_gauss_sigma_2": {
+          "value": 311.18016049030126,
+          "su": 11.194522955617904,
+          "free": true
+        },
+        "expt_s2.peak.broad_gauss_size_g": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.peak.broad_gauss_strain_g": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.peak.cutoff_fwhm": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.peak.type": {
+          "value": "tof-pseudo-voigt",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.instrument.twotheta_bank": {
+          "value": 90.0,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.instrument.d_to_tof_offset": {
+          "value": -10.453363453159023,
+          "su": 0.11759941871304982,
+          "free": true
+        },
+        "expt_s2.instrument.d_to_tof_linear": {
+          "value": 54902.18695,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.instrument.d_to_tof_quadratic": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.instrument.d_to_tof_reciprocal": {
+          "value": 0.0,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.1.id": {
+          "value": "1",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.1.position": {
+          "value": 40094.5234,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.1.intensity": {
+          "value": 0.167,
+          "su": 0.023,
+          "free": false
+        },
+        "expt_s2.background.2.id": {
+          "value": "2",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.2.position": {
+          "value": 48089.8489,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.2.intensity": {
+          "value": 0.2072,
+          "su": 0.0097,
+          "free": false
+        },
+        "expt_s2.background.3.id": {
+          "value": "3",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.3.position": {
+          "value": 51976.023,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.3.intensity": {
+          "value": 0.1976,
+          "su": 0.0096,
+          "free": false
+        },
+        "expt_s2.background.4.id": {
+          "value": "4",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.4.position": {
+          "value": 54301.3567,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.4.intensity": {
+          "value": 0.19,
+          "su": 0.0088,
+          "free": false
+        },
+        "expt_s2.background.5.id": {
+          "value": "5",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.5.position": {
+          "value": 58729.047,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.5.intensity": {
+          "value": 0.283,
+          "su": 0.01,
+          "free": false
+        },
+        "expt_s2.background.6.id": {
+          "value": "6",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.6.position": {
+          "value": 62710.7828,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.6.intensity": {
+          "value": 0.318,
+          "su": 0.01,
+          "free": false
+        },
+        "expt_s2.background.7.id": {
+          "value": "7",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.7.position": {
+          "value": 67711.8429,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.7.intensity": {
+          "value": 0.2719,
+          "su": 0.0076,
+          "free": false
+        },
+        "expt_s2.background.8.id": {
+          "value": "8",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.8.position": {
+          "value": 73158.8575,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.8.intensity": {
+          "value": 0.2269,
+          "su": 0.0066,
+          "free": false
+        },
+        "expt_s2.background.9.id": {
+          "value": "9",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.9.position": {
+          "value": 76439.8078,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.9.intensity": {
+          "value": 0.2098,
+          "su": 0.0059,
+          "free": false
+        },
+        "expt_s2.background.10.id": {
+          "value": "10",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.10.position": {
+          "value": 81249.7446,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.10.intensity": {
+          "value": 0.2155,
+          "su": 0.0056,
+          "free": false
+        },
+        "expt_s2.background.11.id": {
+          "value": "11",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.11.position": {
+          "value": 85263.3343,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.11.intensity": {
+          "value": 0.157,
+          "su": 0.0043,
+          "free": false
+        },
+        "expt_s2.background.12.id": {
+          "value": "12",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.12.position": {
+          "value": 96157.3635,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.12.intensity": {
+          "value": 0.2259,
+          "su": 0.005,
+          "free": false
+        },
+        "expt_s2.background.13.id": {
+          "value": "13",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.13.position": {
+          "value": 98132.3044,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.13.intensity": {
+          "value": 0.365,
+          "su": 0.0092,
+          "free": false
+        },
+        "expt_s2.background.14.id": {
+          "value": "14",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.14.position": {
+          "value": 102368.8713,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.14.intensity": {
+          "value": 0.4054,
+          "su": 0.0096,
+          "free": false
+        },
+        "expt_s2.background.15.id": {
+          "value": "15",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.15.position": {
+          "value": 104248.2506,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.15.intensity": {
+          "value": 0.3428,
+          "su": 0.0098,
+          "free": false
+        },
+        "expt_s2.background.16.id": {
+          "value": "16",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.16.position": {
+          "value": 108771.5025,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.16.intensity": {
+          "value": 0.584,
+          "su": 0.013,
+          "free": false
+        },
+        "expt_s2.background.17.id": {
+          "value": "17",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.17.position": {
+          "value": 111606.4984,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.17.intensity": {
+          "value": 1.022,
+          "su": 0.033,
+          "free": false
+        },
+        "expt_s2.background.18.id": {
+          "value": "18",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.18.position": {
+          "value": 112721.3844,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.18.intensity": {
+          "value": 1.214,
+          "su": 0.034,
+          "free": false
+        },
+        "expt_s2.background.19.id": {
+          "value": "19",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.19.position": {
+          "value": 115715.6497,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.19.intensity": {
+          "value": 0.878,
+          "su": 0.016,
+          "free": false
+        },
+        "expt_s2.background.20.id": {
+          "value": "20",
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.20.position": {
+          "value": 135592.4748,
+          "su": null,
+          "free": false
+        },
+        "expt_s2.background.20.intensity": {
+          "value": 0.031,
+          "su": 0.029,
+          "free": false
+        },
+        "expt_s2.absorption.type": {
+          "value": "none",
+          "su": null,
+          "free": false
+        }
+      },
+      "active_rwp": 0.06883303190609517,
+      "active_rwp_derivation": "sqrt(sum(((intensity_meas-intensity_calc)/intensity_meas_su)^2)/sum((intensity_meas/intensity_meas_su)^2)) over calc_status=incl in saved external Edi outputs; computed by capture_beer.py."
+    }
+  ],
+  "raw_capture_sha256": "5eab940d85b2ef01006c64b7af396b2cdc4f0f05b841de3497edfb911038e8a1",
+  "data_source": {
+    "dataset": "meas-ferrite-austenite-beer",
+    "ref": "35af7e9bf469a1ee4ecc889aff2279440b020c8a",
+    "url": "https://raw.githubusercontent.com/easyscience/diffraction/35af7e9bf469a1ee4ecc889aff2279440b020c8a/data/measured/ferrite-austenite-beer.zip"
+  },
+  "commands": [
+    "/home/andrewsazonov/Development/github.com/easyscience/diffraction-lib/.pixi/envs/default/bin/python -u /home/andrewsazonov/Development/github.com/enhantica/tasks/C12-T4/products/edi/tests/fixtures/multiphase/author_beer.py --tutorial /home/andrewsazonov/Development/github.com/easyscience/diffraction-lib/docs/docs/tutorials/calibrate-beer-ess.py --archive /home/andrewsazonov/Development/github.com/enhantica/tasks/C12-T4/products/edi/tests/fixtures/multiphase/beer/data/ferrite-austenite-beer.zip --output /home/andrewsazonov/runs/c12-t4/beer-authoring/record",
+    "/home/andrewsazonov/Development/github.com/easyscience/diffraction-lib/.pixi/envs/default/bin/python -u /home/andrewsazonov/Development/github.com/enhantica/tasks/C12-T4/products/edi/tests/fixtures/multiphase/author_beer.py --tutorial /home/andrewsazonov/Development/github.com/easyscience/diffraction-lib/docs/docs/tutorials/calibrate-beer-ess.py --archive /home/andrewsazonov/Development/github.com/enhantica/tasks/C12-T4/products/edi/tests/fixtures/multiphase/beer/data/ferrite-austenite-beer.zip --output /home/andrewsazonov/runs/c12-t4/beer-authoring/record --resume-first-stage /home/andrewsazonov/runs/c12-t4/beer-authoring/projects/calibrate-beer-ess"
+  ],
+  "capture_recovery": "The first fit succeeded and auto-saved before the extractor rejected a string-valued space-group parameter. The second invocation recovered that saved result, with rounded persisted first-stage values and reversed bank ordering, and ran only the tutorial second fit. No optimizer run was repeated. Rendering calls were omitted, and the verified local archive replaced downloading inside the tutorial.",
+  "data_sha256": {
+    "Duplex_in_HR_for_IRF_N2.dat": "c4166d5ced0595d814ce99cb5a8e032ee83e1a26a575172d5c1609a7f1361bf2",
+    "Duplex_in_HR_for_IRF_S2.dat": "cfa0e32227587856d96e1d0936783be310cdf756a6f09aacd9da72a82612ebc4",
+    "ferrite-austenite-beer.zip": "68bdc067bda10fa07bfa9546375fa1ac85dd575add401c6b813cbd066cdb7d5e"
+  }
+}
