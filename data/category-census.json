@@ -1932,6 +1932,11 @@
       "not_storage": "a parameter: the cells of one parameter column bundle"
     },
     {
+      "member": "Parameter::dependence",
+      "type": "Dependence",
+      "not_storage": "a parameter: the cells of one parameter column bundle"
+    },
+    {
       "member": "KeyedBase::host_",
       "type": "Project*",
       "not_storage": "the base of the table class"
