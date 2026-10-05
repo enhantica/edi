@@ -55,6 +55,9 @@ bash = ">=5.2"
 # edi declares no win-64, which is the one platform that has none.
 coreutils = ">=9"
 numpy = "*"
+# A compiler cache for the core build. CI switches it on (CMAKE_CXX_COMPILER_LAUNCHER, set by
+# .github/actions/ccache) and keeps its directory between runs; a local build uses it only when asked.
+ccache = "*"
 # Native profiling of the embedded engine without root — `py-spy record --native` on a child
 # process is how the unfolded reflection sum behind that issue was found.
 py-spy = "*"
