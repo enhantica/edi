@@ -248,7 +248,7 @@
      "closes": "E04-T16",
      "need": {
       "by": "deviation",
-      "ref": "D77",
+      "ref": "D78",
       "verdict": "keep"
      },
      "reason": "C",
