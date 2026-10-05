@@ -44,6 +44,10 @@ QtObject {
     // A chart toolbar's controls (ChartToolButton, ToolbarComboBox) are this tall, and this far apart within a
     // group; the block selector row and the structure legend take the same values (edi ADR-0017 §7, §15, §16).
     readonly property real toolbarControlSize: Math.round(unit * 2.5)
+    // The main area's side margin (the owner, 2026-10-05): the pattern chart's room right of its plot areas, which
+    // is also where the selector row and the chart toolbars start on the left, the structure view's toolbar
+    // inset on the right, and the pattern chart's gap from its toolbar down to the main plot area.
+    readonly property real mainAreaMargin: unit * 2
     readonly property real toolbarSpacing: unit * 0.25
     // The messages dialog's fixed width (edi ADR-0017 §14): about the Preferences dialog's.
     readonly property real messagesDialogContentWidth: unit * 38

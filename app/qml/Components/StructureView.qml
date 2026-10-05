@@ -40,8 +40,10 @@ Rectangle {
     readonly property bool apiKnown: GraphicsInfo.api !== GraphicsInfo.Unknown
     readonly property bool has3D: [GraphicsInfo.OpenGL, GraphicsInfo.Direct3D11, GraphicsInfo.Direct3D12, GraphicsInfo.Vulkan, GraphicsInfo.Metal].indexOf(GraphicsInfo.api) >= 0
     readonly property real margin: EaStyle.Sizes.fontPixelSize
+    // The main area's margin, left of the legend and right of the toolbar (owner, 2026-10-05).
+    readonly property real sideMargin: AppSizes.mainAreaMargin
     // How far the toolbar's right edge is from the view's: the block selector row above ends there too.
-    readonly property real toolbarRightInset: margin
+    readonly property real toolbarRightInset: sideMargin
     readonly property View3D view3d: scene.item as View3D
 
     // Saves the view as drawn — the scene with its labels, legend and triad, without the buttons and the
@@ -139,6 +141,7 @@ Rectangle {
             anchors.left: parent.left
             anchors.top: parent.top
             anchors.margins: view.margin
+            anchors.leftMargin: view.sideMargin
             entries: controller.legend
             visible: controller.legend.count > 0
         }
@@ -183,7 +186,7 @@ Rectangle {
     // The colour scheme, after the legend at the view's left (owner, 2026-10-05).
     ToolbarComboBox {
         objectName: "structure.toolbar.colors"
-        x: legend.visible ? view.margin + legend.width + view.margin : view.margin
+        x: legend.visible ? view.sideMargin + legend.width + view.margin : view.sideMargin
         y: view.margin
         toolTip: qsTr("Colour scheme")
         model: ["jmol", "vesta"]
@@ -197,6 +200,7 @@ Rectangle {
         anchors.top: parent.top
         anchors.right: parent.right
         anchors.margins: view.margin
+        anchors.rightMargin: view.sideMargin
         controller: controller
         options: view.options
     }

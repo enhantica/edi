@@ -217,7 +217,8 @@ and `stepMaximum`.
   then the previous and next buttons, the last one's right edge on the right edge of the chart toolbar below
   (which differs by page: each chart states it as `toolbarRightInset`). The chart toolbar's margin is above the
   row, and one margin, the chart's own above its toolbar, separates it from the chart, with no line (the owner
-  compared the two, 2026-10-05); the box and the buttons are a toolbar group's spacing apart. The
+  compared the two, 2026-10-05); the row and the chart toolbar below it start at the main area's margin
+  (`AppSizes.mainAreaMargin`, 2 em, the pattern chart's room right of its plot areas; the owner, 2026-10-05); the box and the buttons are a toolbar group's spacing apart. The
   charts give up that height. Every line of the box reads in the Experiments table's column order: the block's
   number (minor colour), its icon in its colour (§8), for an experiment its fit outcome (§17), then its name, a
   long one cut in the middle. The row is hidden while the project holds no block of the page's kind.
@@ -512,9 +513,10 @@ code (`QtCharts1dTab.qml` and the base's `QtCharts1dBase.qml`; the owner, 2026-1
   other.
 - **Draw order.** The grid and borders, then the measured markers and their error bars, then the lines: measured,
   background, calculated on top. The legend, the excluded bands and the hover text are over the panes.
-- **Margins.** One gap of one em (the owner, 2026-10-02, after easydiffractionbeta's chart): from the toolbar
-  buttons' bottom to the main plot area's top border, from the chart's top to the toolbar, and below the x title;
-  and 2 em from the plot areas' right border to the chart's right edge.
+- **Margins.** One em (the owner, 2026-10-02, after easydiffractionbeta's chart) from the chart's top to the
+  toolbar and below the x title. The main area's margin, `AppSizes.mainAreaMargin` (2 em), from the plot areas'
+  right border to the chart's right edge, from the chart's left edge to the toolbar's drop-downs, and from the
+  toolbar buttons' bottom to the main plot area's top border (the owner, 2026-10-05).
 - **Toolbar.** A row of square buttons (2.5 em, with a fill and a border in the axis colour) that ends at the plot
   areas' right border: legend, hover coordinates, a spacer, pan, box zoom, reset (the Home icon, as the structure
   view's), Home last. The y scale is a drop-down of linear, square root and log at the chart's left, a margin in, in
@@ -649,8 +651,8 @@ computes no geometry: it draws what `edi::present_structure` and `edi::scene_dra
   camera stands far back along the view direction: Qt's lighting takes each view ray from the camera's position,
   and from there the rays are parallel, as an orthographic camera's are in three.js, so every atom carries the
   same highlight.
-- **Placement.** Inside the view: the toolbar at the top right, one em from the top and right edges; the element
-  legend at the top left; the pointer hint at the bottom left (*drag = rotate*, *wheel = zoom*, *right-drag =
+- **Placement.** Inside the view: the toolbar at the top right, one em from the top edge and the main area's
+  margin (§15) from the right; the element legend at the top left, the same margin from the left; the pointer hint at the bottom left (*drag = rotate*, *wheel = zoom*, *right-drag =
   pan*, on three lines as diffraction-lib draws it); the download button at the bottom right; the hover label
   beside the pointer.
 - **Colours.** Every style colour is EasyApp's `EaStyle.Colors`, bound and never written as a literal, as
@@ -861,7 +863,6 @@ refuses to write its bank rows into it.
   shown state becomes the template the next dataset views start from.
 - **A dataset's Fit outcome** is its results row's: *Success* when the driver's `fit_result.success` is true, *Failed*
   otherwise; *Not fitted* without a row. Its extracted values come from its row, or from its file once shown.
-
 ## Consequences
 
 - The design choices the owner makes by eye are reviewable against a written rule; the phase-2 reviewer checks

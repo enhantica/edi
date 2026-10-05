@@ -27,19 +27,21 @@ Item {
     property real tabBarHeight: EaStyle.Sizes.tabBarHeight
     property real rightInset: margin
 
-    // The chart's own margin above its toolbar, here also above and beside the row (PatternChart.toolbarGap).
+    // The chart's own margin above its toolbar, here also above the row (PatternChart.topMargin); on the left the
+    // main area's margin (owner, 2026-10-05).
     readonly property real margin: EaStyle.Sizes.fontPixelSize
+    readonly property real leftMargin: AppSizes.mainAreaMargin
     // The margin above the row and the row; the chart's own margin above its toolbar is the one below it.
     readonly property real reservedHeight: visible ? margin + height : 0
 
-    x: margin
+    x: leftMargin
     y: tabBarHeight + margin
-    width: areaWidth - margin - rightInset
+    width: areaWidth - leftMargin - rightInset
     height: selector.height
 
     // The row's band, across the main area, in the chart's background.
     Rectangle {
-        x: -placement.margin
+        x: -placement.leftMargin
         y: -placement.margin
         width: placement.areaWidth
         height: placement.height + 2 * placement.margin

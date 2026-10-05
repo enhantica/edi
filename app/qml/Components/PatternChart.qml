@@ -32,12 +32,15 @@ Item {
     // border and the chart's edge.
     // Every length the panes are laid out by is a whole number of pixels, so the plot areas begin and end on
     // pixels: their 1 px borders and grid lines are sharp, and a pointer position is a position in the plot.
-    // One gap (the owner, 2026-10-02): between the toolbar buttons' bottom and the main pane's top border, above
-    // the toolbar, and below the x title.
+    // One gap (the owner, 2026-10-02): above the toolbar and below the x title.
     readonly property real toolbarGap: em
     readonly property real topMargin: toolbarGap
     readonly property real bottomMargin: toolbarGap
-    readonly property real rightMargin: em * 2
+    // The main area's margin (owner, 2026-10-05): right of the plot areas, left of the toolbar's drop-downs, and
+    // from the toolbar down to the main plot area.
+    readonly property real rightMargin: AppSizes.mainAreaMargin
+    readonly property real toolbarLeft: AppSizes.mainAreaMargin
+    readonly property real belowToolbar: AppSizes.mainAreaMargin
     // The x labels and the x title, under the bottom pane only; and the gutter the y titles are drawn in. The
     // titles are this file's own labels: Qt Graphs draws an axis title over the axis labels. A view keeps room
     // for its x axis under its plot area, labelled or not: `alignPanes` measures it, so the panes' heights
@@ -52,7 +55,7 @@ Item {
     readonly property real labelLift: tickRoom - Math.round(em * 0.4)
     readonly property real titleGutter: Math.round(em * 1.6)
     // The toolbar ends at the plot areas' right border, one em above the main one.
-    readonly property real topHeight: topMargin + toolbar.height + toolbarGap
+    readonly property real topHeight: topMargin + toolbar.height + belowToolbar
     // The panes' heights, as easydiffractionbeta divides them: of what the toolbar and the x axis leave, the
     // main pane takes 0.7 and the residual 0.3, each less half of what the tick rows take between them. A
     // structure's row is 1.5 em high, in a pane half an em higher.
@@ -350,7 +353,7 @@ Item {
     // The y scale, linear, square root or log, and the x axis, 2θ, time-of-flight or d-spacing, at the chart's
     // left (owner, 2026-10-05). The x axis shows the experiment's own and is disabled until switching exists.
     Row {
-        x: chart.sideMargin
+        x: chart.toolbarLeft
         y: chart.topMargin
         spacing: AppSizes.toolbarSpacing
 
