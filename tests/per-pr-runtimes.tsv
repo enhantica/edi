@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-04T17:05:08Z
+# measured_utc = 2026-10-05T04:03:49Z
 #
-# Recorded from: banked rows (nothing added; 29 stale row(s) dropped)
-# Collected tests: 6157; with a reported duration: 3792
+# Recorded from: tests-seq9-edi-final.log (14 node(s) measured once, 5825 banked, 0 stale row(s) dropped)
+# Collected tests: 6171; with a reported duration: 3795
 # Module-scoped fixture costs recorded: 10
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 6157
+# inventory_python = 6171
 # inventory_cpp = 232
-# inventory_measured = 5825
-# inventory_unmeasured = 564
+# inventory_measured = 5828
+# inventory_unmeasured = 575
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_projects_open_and_populate_pages
@@ -2406,6 +2406,9 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e05_t1_physical_domain.p
 0.160	tests/integration/py/test_e09_t75_sdk_consumer.py::test_sdk_download_http_method_remains_bound_to_the_addressed_read[-XPUT-osx-arm64]
 0.160	tests/integration/py/test_e09_t75_sdk_consumer.py::test_sdk_download_http_method_remains_bound_to_the_addressed_read[-dBODY-linux-64]
 0.160	tests/integration/py/test_e09_t75_sdk_consumer.py::test_sdk_download_http_method_remains_bound_to_the_addressed_read[-dBODY-osx-arm64]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_multiphase_app_contract.py::test_linked_structure_rows_use_available_names_and_add_remove_disable_actions
+UNMEASURED:failed-in-this-run	tests/integration/py/test_multiphase_app_contract.py::test_shared_block_selector_has_bounded_plain_arrow_steps_and_file_labels
+UNMEASURED:failed-in-this-run	tests/integration/py/test_multiphase_app_contract.py::test_structure_loading_is_not_capped_at_one_and_chart_retains_phase_identity
 0.000	tests/system/py/test_c06_t6_fitting_corpus.py::test_corpus_absent_at_pin_is_a_named_transition_state[corpus-present]
 0.060	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[background-cecoal]
 0.050	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[background-lab6]
@@ -5003,6 +5006,17 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_locked_dependencies.py::test_
 1.720	tests/system/py/test_locked_dependencies.py::test_real_configure_observer_catches_an_added_external_package[typed-cache]
 UNMEASURED:failed-in-this-run	tests/system/py/test_locked_dependencies.py::test_sdk_fingerprint_equals_configured_dependencies[system-absent]
 UNMEASURED:failed-in-this-run	tests/system/py/test_locked_dependencies.py::test_sdk_fingerprint_equals_configured_dependencies[system-present]
+UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_disabled_link_is_retained_but_excluded_from_calculation_and_fit
+UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_phase_sum_is_linear_and_warm_edits_reach_only_their_phase
+0.010	tests/system/py/test_multiphase.py::test_single_phase_negative_biso_is_preserved_and_has_its_physical_effect
+UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_texture_is_local_to_phase_and_invariant_under_axis_sign
+UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_two_free_scales_recover_unequal_independent_contributions
+UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_two_named_phases_load_and_roundtrip
+UNMEASURED:failed-in-this-run	tests/system/py/test_yap_fullprof.py::test_delivered_yap_project_has_both_phases_and_physical_occupancies
+0.010	tests/system/py/test_yap_fullprof.py::test_fullprof_reference_retains_every_non_asymmetry_parameter_and_occupancy
+UNMEASURED:failed-in-this-run	tests/system/py/test_yap_fullprof.py::test_verification_page_executes_the_owner_reference_comparison
+0.010	tests/system/py/test_yap_fullprof.py::test_yalo3_single_phase_control_calculates_from_the_external_structure
+UNMEASURED:failed-in-this-run	tests/system/py/test_yap_fullprof.py::test_yap_fit_agrees_with_every_other_fullprof_parameter_and_rwp
 0.000	tests/test_c34_t1a_selector_arity.py::test_direct_file_and_glob_selectors_reach_the_notebook
 0.000	tests/test_c34_t1a_selector_arity.py::test_glob_exclusion_subtracts_while_the_sibling_stays_in
 0.000	tests/test_c34_t1a_selector_arity.py::test_separated_color_value_is_consumed_not_a_selector

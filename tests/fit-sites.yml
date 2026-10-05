@@ -68,3 +68,9 @@ sites:
   # positive wavelength, numerical cell admission and all factory readers.
   - file: tests/integration/py/test_e05_t1_metric_admission.py
     case: lif-xray-s1
+
+  - file: tests/system/py/test_multiphase.py
+    case: multiphase-scales
+
+  - file: tests/system/py/test_yap_fullprof.py
+    case: yap-spodi-3k
