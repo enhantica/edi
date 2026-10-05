@@ -8,7 +8,8 @@
 # constant mixing η (FullProf's slope X is fixed at 0), with **Bérar-Baldinozzi** asymmetry below
 # `AsyLim` = 160° and the cylinder absorption muR = 0.0221 (`cylinder-hewat`).
 #
-# **The reference** is FullProf's verification twin of the owner's fitting project
+# **The reference** is external: the owner-supplied FullProf project for these data, not generated
+# by edi or crysta, here as FullProf's verification twin of that fitting project
 # (`pd-neut-cwl_yap-spodi_3k`): the fitted state with every parameter fixed, the scales fitted
 # alone once. edi calculates at those parameters, loaded from the delivered CLI project
 # `pd-neut-cwl_yap-spodi_3k`, and the Bragg-only profiles are compared.
@@ -17,7 +18,8 @@
 # 166 from FullProf's calculated output, FullProf uses the opposite sign of `z` and a different
 # second function, so its Asy1..Asy4 enter through the inferred map
 # `(-P1 - 3·P2, -P2, -P3 - 3·P4, -P4)`. The map is not exact, so the asymmetry is the one part of
-# this model that is not FullProf's; the project's fit refines it in edi's convention.
+# this model that is not FullProf's. The fallback rule: when the map is inexact, the four
+# coefficients are refined in edi's convention and not compared with FullProf's.
 #
 # **The bounds are labelled regression pins** — this page's own measured closeness with stated
 # headroom:
