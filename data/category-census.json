@@ -1944,17 +1944,17 @@
     {
       "member": "ProjectAnchor::link_",
       "type": "std::shared_ptr<ProjectLink>",
-      "not_storage": "a project's own link record, made by every constructor and cleared on destruction"
+      "not_storage": "a project's own link record, made on construction, cleared on destruction"
     },
     {
       "member": "ProjectAnchor::outer_",
       "type": "Project*",
-      "not_storage": "a project's own link record, made by every constructor and cleared on destruction"
+      "not_storage": "a project's own link record, made on construction, cleared on destruction"
     },
     {
       "member": "ProjectTail::owner_",
       "type": "Project*",
-      "not_storage": "a project's last member, which links its collections after a build or an assignment"
+      "not_storage": "a project's last member, linking its collections after a build or assignment"
     },
     {
       "member": "KeyedBase::host_link_",
