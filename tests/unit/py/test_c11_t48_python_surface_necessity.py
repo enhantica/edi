@@ -468,7 +468,7 @@ def test_c11_t48_retained_baseline_cannot_shrink_or_gain_paths(
     else:
         document['members']['Cell'].append('invented_member')
     damaged = tmp_path / 'damaged-baseline.json'
-    damaged.write_text(json.dumps(document), encoding='utf-8')
+    damaged.write_text(json.dumps(document, indent=2) + '\n', encoding='utf-8')
     monkeypatch.setitem(globals(), 'BASELINE', damaged)
     with pytest.raises(AssertionError, match='C11-T48 I1: retained surface baseline content'):
         _baseline_paths()
