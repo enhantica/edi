@@ -12,7 +12,9 @@ int main(int argc, char** argv) {
         for (auto& structure : project.structures)
             if (structure->name.value() == empty) structure->atom_sites.clear();
         if (spelling == "empty-structure-name") project.structures.front()->name = "";
-        if (spelling == "empty-link-id") project.experiment().linked_structure().structure_id = "";
+        if (spelling == "empty-link-id")
+            for (auto& link : project.experiment().linked_structures)
+                if (link->structure_id.value() == "structure") link->structure_id = "";
         const auto cancel = [] { return true; };
         if (route == "explicit-single") {
             const auto& data = *project.experiment().data;
