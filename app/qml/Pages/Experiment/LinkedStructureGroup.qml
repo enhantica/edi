@@ -49,8 +49,7 @@ Column {
                 text: qsTr("scale")
             }
             EaComponents.TableViewLabel {
-                width: EaStyle.Sizes.fontPixelSize * 2.5
-                text: qsTr("use")
+                width: AppSizes.iconColumnWidth
             }
             EaComponents.TableViewLabel {
                 width: AppSizes.iconColumnWidth
@@ -77,13 +76,15 @@ Column {
                 iconColor: AppColors.structure(row.colorIndex)
                 toolTip: qsTr("Calculated pattern color")
             }
-            EaElements.ComboBox {
+            // The structure, picked from the project's structures as the aliases table picks a parameter.
+            EaComponents.TableViewComboBox {
                 objectName: `linkedStructure.structureId.${row.index}`
                 width: table.headerLabelItems.length > 2 ? table.headerLabelItems[2].width : 0
-                height: EaStyle.Sizes.tableRowHeight
+                enabled: row.model.enabled
                 model: group.rows ? group.rows.structureNames : []
                 currentIndex: group.rows ? group.rows.structureNames.indexOf(row.structureId) : -1
                 displayText: row.structureId
+                ToolTip.text: row.structureId
                 onActivated: index => {
                     group.rows.setStructureId(row.index, group.rows.structureNames[index]);
                     currentIndex = Qt.binding(() => group.rows ? group.rows.structureNames.indexOf(row.structureId) : -1);
@@ -92,14 +93,15 @@ Column {
             ParameterCell {
                 objectName: `linkedStructure.scale.${row.index}`
                 width: EaStyle.Sizes.fontPixelSize * 8
+                enabled: row.model.enabled
                 item: row.model.scale
             }
-            EaComponents.TableViewCheckBox {
+            // Disabled as a constraint is: kept and saved, but neither calculated nor fitted.
+            EaComponents.TableViewButton {
                 objectName: `linkedStructure.enabled.${row.index}`
-                width: EaStyle.Sizes.fontPixelSize * 2.5
-                checked: row.model.enabled
-                ToolTip.text: qsTr("Use this structure in the calculation and the fit")
-                onToggled: group.rows.setEnabled(row.index, checked)
+                fontIcon: row.model.enabled ? "toggle-on" : "toggle-off"
+                ToolTip.text: row.model.enabled ? qsTr("Disable this linked structure") : qsTr("Enable this linked structure")
+                onClicked: group.rows.setEnabled(row.index, !row.model.enabled)
             }
             EaComponents.TableViewButton {
                 objectName: `linkedStructure.remove.${row.index}`
