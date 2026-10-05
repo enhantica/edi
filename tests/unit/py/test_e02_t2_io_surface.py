@@ -164,10 +164,10 @@ def test_multiple_structures_and_their_links_survive_two_save_cycles(tmp_path: P
             'Each bank must retain both linked structures through project loading'
         )
         assert _triplet(links['demo_two'].scale) == (
-            0.375 + index, 0.025 if index == 0 else 0.0, index == 0
-        ), (
-            'Each bank phase scale must retain its own value, uncertainty and free flag'
-        )
+            0.375 + index,
+            0.025 if index == 0 else 0.0,
+            index == 0,
+        ), 'Each bank phase scale must retain its own value, uncertainty and free flag'
         assert links['demo_two'].enabled == (index == 0), (
             'A disabled link must remain present with its persisted participation flag'
         )

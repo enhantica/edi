@@ -60,10 +60,15 @@ def test_shared_block_selector_has_bounded_square_icon_steps_and_file_labels():
     assert 'BlockSelector {' in workflow and 'visible: page.blockSelectorShown' in workflow, (
         'The shared workflow sidebar must host the enabled block selector'
     )
-    assert all(binding in workflow for binding in (
-        'blocks: page.blocks', 'blockKind: page.blockKind', 'blockIndex: page.blockIndex',
-        'onBlockActivated: index => page.blockActivated(index)',
-    )), 'The shared selector must forward the page collection, selection and activation'
+    assert all(
+        binding in workflow
+        for binding in (
+            'blocks: page.blocks',
+            'blockKind: page.blockKind',
+            'blockIndex: page.blockIndex',
+            'onBlockActivated: index => page.blockActivated(index)',
+        )
+    ), 'The shared selector must forward the page collection, selection and activation'
     for kind, collection in (('Experiment', 'experiments'), ('Structure', 'structures')):
         page = code(f'app/qml/Pages/{kind}/{kind}Page.qml')
         assert 'WorkflowPage {' in page and 'blockSelectorShown: true' in page, (

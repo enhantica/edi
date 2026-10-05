@@ -149,7 +149,8 @@ def write_artifacts(manifest, case_id=None, authoring_input=None):
         row = next(row for row in manifest['cases'] if row['id'] == case_id)
         inputs = {
             p.relative_to(authoring_input).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
-            for p in sorted(authoring_input.rglob('*')) if p.is_file()
+            for p in sorted(authoring_input.rglob('*'))
+            if p.is_file()
         }
         if inputs != row['inputs_sha256']:
             raise ValueError('captured CLI inputs must match the independent authoring project')
