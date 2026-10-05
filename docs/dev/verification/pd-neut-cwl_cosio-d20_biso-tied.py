@@ -169,23 +169,25 @@ _background.intensity
 
 
 # %% [markdown]
-# ## Check 1: the fixed twin
+# ## Check 1: the fixed project
 #
 # FullProf's converged values with no background, against FullProf's calculated profile
 # with its background removed.
 
 # %%
-twin = Project()
-twin.structure = build_structure(TWIN_CELL, TWIN_ATOM_SITES)
-twin.experiment = build_experiment(TWIN_ZERO, TWIN_SCALE, TWIN_UVWXY)
-verify.set_reference_as_measured(twin.experiment, x, calc_fullprof)
-twin.analysis.calculate()
+project = Project()
+project.structure = build_structure(TWIN_CELL, TWIN_ATOM_SITES)
+project.experiment = build_experiment(TWIN_ZERO, TWIN_SCALE, TWIN_UVWXY)
+verify.set_reference_as_measured(project.experiment, x, calc_fullprof)
+project.analysis.calculate()
 
-calc_ed_crysta = verify.restrict_to_included(twin.experiment, twin.experiment.data.intensity_calc)
+calc_ed_crysta = verify.restrict_to_included(
+    project.experiment, project.experiment.data.intensity_calc
+)
 LABEL_ED_CRYSTA = verify.engine_label('crysta')
 
 verify.plot_pattern_comparison(
-    twin.experiment,
+    project.experiment,
     reference=calc_fullprof,
     candidate=calc_ed_crysta,
     reference_label=FULLPROF_LABEL,
@@ -197,7 +199,7 @@ verify.assert_patterns_agree(
     [
         (
             f'{LABEL_ED_CRYSTA} vs {FULLPROF_LABEL}',
-            verify.restrict_to_included(twin.experiment, calc_fullprof),
+            verify.restrict_to_included(project.experiment, calc_fullprof),
             calc_ed_crysta,
         ),
     ],
@@ -216,16 +218,16 @@ measured = np.loadtxt(
     verify.bundled_reference_dir() / FULLPROF_PROJECT_DIR / FULLPROF_DAT_FILE, skiprows=6
 )
 
-project = Project()
-project.structure = build_structure(START_CELL, START_ATOM_SITES)
-project.experiment = build_experiment(START_ZERO, START_SCALE, START_UVWXY, START_BACKGROUND)
-project.experiment.data = PdCwlData(
+tied = Project()
+tied.structure = build_structure(START_CELL, START_ATOM_SITES)
+tied.experiment = build_experiment(START_ZERO, START_SCALE, START_UVWXY, START_BACKGROUND)
+tied.experiment.data = PdCwlData(
     two_theta=list(measured[:, 0]),
     intensity_meas=list(measured[:, 1]),
     intensity_meas_su=list(measured[:, 2]),
 )
 
-structure = project.structure
+structure = tied.structure
 for length in (structure.cell.length_a, structure.cell.length_b, structure.cell.length_c):
     length.free = True
 free_coordinates = {
@@ -241,7 +243,7 @@ for site_id, axes in free_coordinates.items():
 for site_id in ('Co1', 'Si', 'O1', 'O2', 'O3'):
     structure.atom_sites[site_id].adp_iso.free = True
 
-experiment = project.experiment
+experiment = tied.experiment
 experiment.instrument.calib_twotheta_offset.free = True
 experiment.linked_structure.scale.free = True
 for name in ('broad_gauss_u', 'broad_gauss_v', 'broad_gauss_w', 'broad_lorentz_y'):
@@ -249,12 +251,12 @@ for name in ('broad_gauss_u', 'broad_gauss_v', 'broad_gauss_w', 'broad_lorentz_y
 for point in experiment.background:
     point.intensity.free = True
 
-project.analysis.aliases.create(id='biso_Co1', param=structure.atom_sites['Co1'].adp_iso)
-project.analysis.aliases.create(id='biso_Co2', param=structure.atom_sites['Co2'].adp_iso)
-project.analysis.constraints.create(expression='biso_Co2 = biso_Co1')
+tied.analysis.aliases.create(id='biso_Co1', param=structure.atom_sites['Co1'].adp_iso)
+tied.analysis.aliases.create(id='biso_Co2', param=structure.atom_sites['Co2'].adp_iso)
+tied.analysis.constraints.create(expression='biso_Co2 = biso_Co1')
 
 # %%
-result = project.analysis.fit()
+result = tied.analysis.fit()
 print(f'converged: {result.converged}, reduced chi-square: {result.reduced_chi_square:.4f}')
 
 # %%
