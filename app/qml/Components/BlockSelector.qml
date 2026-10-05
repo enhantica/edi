@@ -37,7 +37,8 @@ Row {
     }
 
     width: EaStyle.Sizes.sideBarContentWidth
-    spacing: EaStyle.Sizes.fontPixelSize * 0.25
+    // The gap between the fields of a group (the Cell group's), between the box and each button.
+    spacing: AppSizes.fieldSpacing
 
     EaElements.ComboBox {
         id: selector
