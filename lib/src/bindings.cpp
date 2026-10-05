@@ -782,6 +782,51 @@ static void relations_changed(edi::Project& project) {
     }
 }
 
+// The Python object that owns a parameter's storage: its keyed row (a site, a background point or term,
+// a texture row) or, for a block field, its structure or experiment. None when the project holds none.
+static nb::object owner_of(edi::Project& project, const edi::Parameter* parameter) {
+    const auto holds = [parameter](auto& node) {
+        for (const edi::Parameter* held : node.parameters()) {
+            if (held == parameter) {
+                return true;
+            }
+        }
+        return false;
+    };
+    for (const std::shared_ptr<edi::Structure>& structure : project.structures) {
+        for (const std::shared_ptr<edi::AtomSite>& site : structure->atom_sites) {
+            if (holds(*site)) {
+                return nb::cast(site);
+            }
+        }
+        if (holds(structure->cell)) {
+            return nb::cast(structure);
+        }
+    }
+    for (const std::shared_ptr<edi::BraggPdExperiment>& experiment : project.experiments) {
+        for (const std::shared_ptr<edi::PrefOrient>& row : experiment->preferred_orientation) {
+            if (holds(*row)) {
+                return nb::cast(row);
+            }
+        }
+        for (const std::shared_ptr<edi::LineSegment>& point : experiment->background) {
+            if (holds(*point)) {
+                return nb::cast(point);
+            }
+        }
+        for (const std::shared_ptr<edi::PolynomialTerm>& term : experiment->background_terms) {
+            if (holds(*term)) {
+                return nb::cast(term);
+            }
+        }
+        if (holds(experiment->peak) || holds(experiment->instrument) || holds(experiment->linked_structure) ||
+            holds(experiment->absorption)) {
+            return nb::cast(experiment);
+        }
+    }
+    return nb::none();
+}
+
 static void relations_changed(const edi::ItemKey& key) {
     if (edi::Project* project = host_of(key)) {
         relations_changed(*project);
@@ -1201,7 +1246,14 @@ static void def_collection_views(nb::module_& m) {
                 }
                 for (const edi::NamedSlot& slot : edi::named_slots(*project)) {
                     if (slot.unique_name == self.parameter_unique_name.value()) {
-                        return nb::cast(slot.parameter, nb::rv_policy::reference);
+                        // As an ordinary field getter returns it: attached to its row (X12), and
+                        // keeping alive the object that owns its storage.
+                        edi::detail::point_parameters(*project);
+                        nb::object owner = owner_of(*project, slot.parameter);
+                        if (owner.is_none()) {
+                            return nb::none();
+                        }
+                        return nb::cast(slot.parameter, nb::rv_policy::reference_internal, owner);
                     }
                 }
                 return nb::none();
