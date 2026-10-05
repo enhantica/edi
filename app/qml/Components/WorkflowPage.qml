@@ -36,6 +36,8 @@ EaComponents.ContentPage {
     property string blocksTextRole: ""
     property string blockKind: ""
     property int blockIndex: 0
+    // Where the selector row ends, from the main area's right edge: the right edge of the chart toolbar below.
+    property real blockSelectorRightInset: EaStyle.Sizes.fontPixelSize
     // The blocks' fit-outcome role and the shown block's outcome (experiments; BlockSelector).
     property string blockOutcomeRole: ""
     property string blockCurrentOutcome: ""
@@ -105,6 +107,7 @@ EaComponents.ContentPage {
             id: blockSelector
             visible: page.blockSelectorShown && page.blocks !== null && page.blocks.count > 0
             areaWidth: mainContent.width
+            rightInset: page.blockSelectorRightInset
             blocks: page.blocks
             blocksTextRole: page.blocksTextRole
             blockKind: page.blockKind

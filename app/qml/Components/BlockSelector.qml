@@ -11,10 +11,10 @@ import edi.app
 
 // The compact block selector (easydiffractionbeta Pages/*/SideBarText/Models.qml, Experiments.qml): the page's
 // blocks in a combo box, the shown one current, as a row at the top of the main area (MainAreaBlockSelector; edi
-// ADR-0017 §7), with a previous and a next button on its left that step through the list. A long list has a
+// ADR-0017 §7), with a previous and a next button on its right that step through the list. A long list has a
 // search field (SearchableComboBox). Each block reads as there — its number, its icon in its colour (§8), its label
-// (`name · file`), on one centre line (§10) — in the box and in the list. Experiments start with how the last fit
-// ended on each (FitOutcomes), in a slot one icon wide that is empty when there is no result.
+// (`name · file`), on one centre line (§10) — in the box and in the list. An experiment's line shows how the last
+// fit ended on it (FitOutcomes) before its name, as the Experiments table's Fit column does.
 Row {
     id: row
 
@@ -46,34 +46,6 @@ Row {
     // The gap between the fields of a group (the Cell group's), between each button and the box.
     spacing: AppSizes.fieldSpacing
 
-    // The previous and next buttons, on the left: the base's sidebar button, square, with the arrow icons Continue
-    // uses.
-    EaElements.SideBarButton {
-        id: up
-
-        objectName: row.objectName ? `${row.objectName}.up` : ""
-        width: EaStyle.Sizes.comboBoxHeight
-        height: EaStyle.Sizes.comboBoxHeight
-        spacing: 0
-        enabled: row.blockIndex > 0
-        fontIcon: "arrow-circle-up"
-        ToolTip.text: row.blockKind === "experiment" ? qsTr("Previous experiment") : qsTr("Previous structure")
-        onClicked: row.step(-1)
-    }
-
-    EaElements.SideBarButton {
-        id: down
-
-        objectName: row.objectName ? `${row.objectName}.down` : ""
-        width: EaStyle.Sizes.comboBoxHeight
-        height: EaStyle.Sizes.comboBoxHeight
-        spacing: 0
-        enabled: row.blockIndex >= 0 && row.blockIndex < selector.count - 1
-        fontIcon: "arrow-circle-down"
-        ToolTip.text: row.blockKind === "experiment" ? qsTr("Next experiment") : qsTr("Next structure")
-        onClicked: row.step(1)
-    }
-
     SearchableComboBox {
         id: selector
 
@@ -82,14 +54,15 @@ Row {
         property alias blockKind: row.blockKind
         property alias blockIndex: row.blockIndex
 
-        // A block's line: its outcome slot, its number, its icon in its colour, its name, on one centre line
-        // (IconLine, §10).
+        // A block's line, in the Experiments table's column order: its number, its icon in its colour, its fit
+        // outcome, its name, on one centre line (IconLine, §10).
         function segments(index, name, nameColor, outcome) {
             if (index < 0)
                 return [];
             const slot = {
                 "icon": FitOutcomes.icon(outcome),
                 "color": FitOutcomes.color(outcome),
+                "ring": FitOutcomes.ring(outcome),
                 "slot": true
             };
             const number = {
@@ -104,7 +77,7 @@ Row {
                 "text": name,
                 "color": nameColor
             };
-            return row.outcomeRole !== "" ? [slot, number, icon, label] : [number, icon, label];
+            return row.outcomeRole !== "" ? [number, icon, slot, label] : [number, icon, label];
         }
 
         objectName: row.objectName ? `${row.objectName}.box` : ""
@@ -169,5 +142,33 @@ Row {
                 }
             }
         }
+    }
+
+    // The previous and next buttons, on the right: the base's sidebar button, square, with the arrow icons Continue
+    // uses.
+    EaElements.SideBarButton {
+        id: up
+
+        objectName: row.objectName ? `${row.objectName}.up` : ""
+        width: EaStyle.Sizes.comboBoxHeight
+        height: EaStyle.Sizes.comboBoxHeight
+        spacing: 0
+        enabled: row.blockIndex > 0
+        fontIcon: "arrow-circle-up"
+        ToolTip.text: row.blockKind === "experiment" ? qsTr("Previous experiment") : qsTr("Previous structure")
+        onClicked: row.step(-1)
+    }
+
+    EaElements.SideBarButton {
+        id: down
+
+        objectName: row.objectName ? `${row.objectName}.down` : ""
+        width: EaStyle.Sizes.comboBoxHeight
+        height: EaStyle.Sizes.comboBoxHeight
+        spacing: 0
+        enabled: row.blockIndex >= 0 && row.blockIndex < selector.count - 1
+        fontIcon: "arrow-circle-down"
+        ToolTip.text: row.blockKind === "experiment" ? qsTr("Next experiment") : qsTr("Next structure")
+        onClicked: row.step(1)
     }
 }

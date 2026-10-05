@@ -337,6 +337,9 @@ Item {
         yMax: controller.yMax
     }
 
+    // How far the toolbar's right edge is from the chart's: the block selector row above ends there too.
+    readonly property real toolbarRightInset: width - (toolbar.x + toolbar.width)
+
     ChartToolbar {
         id: toolbar
 

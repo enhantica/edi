@@ -84,6 +84,7 @@ WorkflowPage {
     }
     // One block selector for Basic, Extras and Text (edi ADR-0017 §7).
     blockSelectorShown: true
+    blockSelectorRightInset: structureView.toolbarRightInset
     blocks: project ? project.structures : null
     blocksTextRole: "label"
     blockKind: "structure"

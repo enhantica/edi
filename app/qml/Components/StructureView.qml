@@ -40,6 +40,8 @@ Rectangle {
     readonly property bool apiKnown: GraphicsInfo.api !== GraphicsInfo.Unknown
     readonly property bool has3D: [GraphicsInfo.OpenGL, GraphicsInfo.Direct3D11, GraphicsInfo.Direct3D12, GraphicsInfo.Vulkan, GraphicsInfo.Metal].indexOf(GraphicsInfo.api) >= 0
     readonly property real margin: EaStyle.Sizes.fontPixelSize
+    // How far the toolbar's right edge is from the view's: the block selector row above ends there too.
+    readonly property real toolbarRightInset: margin
     readonly property View3D view3d: scene.item as View3D
 
     // Saves the view as drawn — the scene with its labels, legend and triad, without the buttons and the

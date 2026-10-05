@@ -50,6 +50,7 @@ WorkflowPage {
     ]
     mainItems: [
         PatternChart {
+            id: chartView
             experiment: page.experiment
             shown: page.current && SwipeView.isCurrentItem
         }
@@ -88,6 +89,7 @@ WorkflowPage {
     }
     // One block selector in the main view's tab bar (edi ADR-0017 §7).
     blockSelectorShown: true
+    blockSelectorRightInset: chartView.toolbarRightInset
     blocks: project ? project.experiments : null
     blocksTextRole: "label"
     blockKind: "experiment"
