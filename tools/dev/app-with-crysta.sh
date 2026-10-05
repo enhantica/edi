@@ -31,11 +31,16 @@ for name in USER LANG LC_ALL PIXI_CACHE_DIR RATTLER_CACHE_DIR XDG_CACHE_HOME CCA
     [ -z "${!name:-}" ] || clean+=("$name=${!name}")
 done
 echo "app-with-crysta: building crysta from $src ($(git -C "$src" describe --always --dirty 2>/dev/null || echo 'no git')); crysta's tests are not run"
-# A fresh crysta checkout gets its `cpp-ci` environment without crysta's own Python package, whose
-# editable install would build all of crysta a second time; an existing environment is used as it is.
-if [ ! -d "$src/.pixi/envs/cpp-ci/conda-meta" ]; then
-    "${clean[@]}" "$pixi_bin" install --frozen --manifest-path "$src/pixi.toml" -e cpp-ci --skip crysta
+# The `cpp-ci` environment is brought to crysta's lock file first, so an environment made before a pin
+# moved is updated. Where crysta's own Python package is not installed yet, it stays out: its editable
+# install would build all of crysta a second time. Where it is installed, it is kept as it is (pixi's
+# --skip would remove it).
+env_dir="$src/.pixi/envs/cpp-ci"
+skip=(--skip crysta)
+if compgen -G "$env_dir/lib/python3*/site-packages/crysta-*.dist-info" >/dev/null; then
+    skip=()
 fi
+"${clean[@]}" "$pixi_bin" install --frozen --manifest-path "$src/pixi.toml" -e cpp-ci ${skip[@]+"${skip[@]}"}
 # shellcheck disable=SC2016  # expanded by the inner shell
 "${clean[@]}" "$pixi_bin" run --as-is --manifest-path "$src/pixi.toml" -e cpp-ci bash -euo pipefail -c '
     cmake -S "$1" -B "$2" -G Ninja -DCMAKE_BUILD_TYPE=Release -DCRYSTA_CXX_PACKAGE=ON -DCRYSTA_LTO=OFF \
