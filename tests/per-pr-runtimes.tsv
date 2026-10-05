@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-05T13:29:55Z
+# measured_utc = 2026-10-05T14:09:42Z
 #
-# Recorded from: controls.log (3 node(s) measured once, 6022 banked, 0 stale row(s) dropped)
-# Collected tests: 6600; with a reported duration: 3939
+# Recorded from: seq20 edi-python-final.log + edi-costs.json; edi-native.xml, isolated c2a2a15 / pinned SDK 114133f
+# Collected tests: 6667; with a reported duration: 3950
 # Module-scoped fixture costs recorded: 14
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 6600
-# inventory_cpp = 268
-# inventory_measured = 6025
-# inventory_unmeasured = 843
+# inventory_python = 6667
+# inventory_cpp = 287
+# inventory_measured = 6054
+# inventory_unmeasured = 900
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_projects_open_and_populate_pages
@@ -1754,6 +1754,73 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_transitions.p
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_transitions.py::test_invalid_alias_save_refuses_before_disk_publication[last-removed-dangling]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_transitions.py::test_invalid_alias_save_refuses_before_disk_publication[last-removed-reserved]
 0.010	tests/integration/py/test_constraint_transitions.py::test_relation_removal_restores_no_loop_bytes_and_disabled_values_stay_bare
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_alias_only_calculation_and_lazy_reads_are_current[data]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_alias_only_calculation_and_lazy_reads_are_current[geometry]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_alias_only_calculation_and_lazy_reads_are_current[refln]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_first_declarations_revoke_no_loop_geometry[stored-cell]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_first_declarations_revoke_no_loop_geometry[stored-coordinate]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_first_declarations_revoke_no_loop_geometry[window-cell]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_first_declarations_revoke_no_loop_geometry[window-coordinate]
+0.000	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[stored-assign-constrained-cell]
+0.000	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[stored-assign-constrained-coordinate]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[stored-assign-no-loop-cell]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[stored-assign-no-loop-coordinate]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[stored-assign-standalone-cell]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[stored-assign-standalone-coordinate]
+0.070	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[stored-destroy-constrained-cell]
+0.100	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[stored-destroy-constrained-coordinate]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[stored-destroy-no-loop-cell]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[stored-destroy-no-loop-coordinate]
+0.060	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[stored-destroy-standalone-cell]
+0.060	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[stored-destroy-standalone-coordinate]
+0.000	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[stored-insert-constrained-cell]
+0.000	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[stored-insert-constrained-coordinate]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[stored-insert-no-loop-cell]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[stored-insert-no-loop-coordinate]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[stored-insert-standalone-cell]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[stored-insert-standalone-coordinate]
+0.000	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[stored-remove-constrained-cell]
+0.000	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[stored-remove-constrained-coordinate]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[stored-remove-no-loop-cell]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[stored-remove-no-loop-coordinate]
+0.000	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[stored-remove-standalone-cell]
+0.000	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[stored-remove-standalone-coordinate]
+0.000	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[stored-replace-constrained-cell]
+0.000	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[stored-replace-constrained-coordinate]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[stored-replace-no-loop-cell]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[stored-replace-no-loop-coordinate]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[stored-replace-standalone-cell]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[stored-replace-standalone-coordinate]
+0.010	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[window-assign-constrained-cell]
+0.000	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[window-assign-constrained-coordinate]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[window-assign-no-loop-cell]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[window-assign-no-loop-coordinate]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[window-assign-standalone-cell]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[window-assign-standalone-coordinate]
+0.060	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[window-destroy-constrained-cell]
+0.080	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[window-destroy-constrained-coordinate]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[window-destroy-no-loop-cell]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[window-destroy-no-loop-coordinate]
+0.060	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[window-destroy-standalone-cell]
+0.060	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[window-destroy-standalone-coordinate]
+0.000	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[window-insert-constrained-cell]
+0.010	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[window-insert-constrained-coordinate]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[window-insert-no-loop-cell]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[window-insert-no-loop-coordinate]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[window-insert-standalone-cell]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[window-insert-standalone-coordinate]
+0.000	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[window-remove-constrained-cell]
+0.000	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[window-remove-constrained-coordinate]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[window-remove-no-loop-cell]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[window-remove-no-loop-coordinate]
+0.000	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[window-remove-standalone-cell]
+0.000	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[window-remove-standalone-coordinate]
+0.000	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[window-replace-constrained-cell]
+0.000	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[window-replace-constrained-coordinate]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[window-replace-no-loop-cell]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[window-replace-no-loop-coordinate]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[window-replace-standalone-cell]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[window-replace-standalone-coordinate]
 0.090	tests/integration/py/test_e01_scaffold.py::test_app_is_one_option_gated_cpp_qml_host
 0.140	tests/integration/py/test_e01_scaffold.py::test_checkout_imports_edi_without_path_injection
 0.030	tests/integration/py/test_e01_scaffold.py::test_ci_routes_surfaces_and_uses_strict_self_hosted_jobs
@@ -5544,6 +5611,25 @@ UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_categories.cpp::New
 0.012	tests/unit/cpp/test_constraint_edits.cpp::Alias core edits preserve source rows through append duplicate and removal
 0.001	tests/unit/cpp/test_constraint_edits.cpp::Constraint core edits preserve source rows through append duplicate and removal
 0.009	tests/unit/cpp/test_constraint_edits.cpp::Constraint core enable edits retain the inactive declaration
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_initial_context.cpp::Alias-only native calculation keeps stored window and pattern categories current
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_initial_context.cpp::Disabled-only native calculation keeps one-sided declaration categories current
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_initial_context.cpp::First cell declarations renew a native held data category
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_initial_context.cpp::First cell declarations renew a native held reflection category
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_initial_context.cpp::First coordinate declarations renew a native held data category
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_initial_context.cpp::First coordinate declarations renew a native held reflection category
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_initial_context.cpp::First native cell declarations revoke and renew warmed geometry
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_initial_context.cpp::First native coordinate declarations revoke and renew warmed geometry
+0.009	tests/unit/cpp/test_constraint_initial_context.cpp::Initial collection controls preserve clear-all equal-write and source-edit provenance
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_initial_context.cpp::Warm native cell geometry follows assignment into a new owner
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_initial_context.cpp::Warm native cell geometry follows insertion into a new owner
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_initial_context.cpp::Warm native cell geometry follows replacement into a new owner
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_initial_context.cpp::Warm native cell geometry revokes a destroyed owner
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_initial_context.cpp::Warm native cell geometry revokes a removed owner
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_initial_context.cpp::Warm native coordinate geometry follows assignment into a new owner
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_initial_context.cpp::Warm native coordinate geometry follows insertion into a new owner
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_initial_context.cpp::Warm native coordinate geometry follows replacement into a new owner
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_initial_context.cpp::Warm native coordinate geometry revokes a destroyed owner
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_initial_context.cpp::Warm native coordinate geometry revokes a removed owner
 UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_owner_rebinding.cpp::Native collection transfer binds retained children before geometry reads
 UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_owner_rebinding.cpp::Project copy assignment binds direct children independently
 UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_owner_rebinding.cpp::Project copy binds direct children to its own relation declarations
