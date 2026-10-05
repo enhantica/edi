@@ -426,9 +426,6 @@ def test_ci_runs_notebooks_for_every_result_changing_surface() -> None:
         workflow, 'notebooks' if '\n  notebooks:' in workflow else 'notebook-tests'
     )
     # Before: per-surface filters. After  I1/I34: unconditional native reuse.
-    assert re.search(r'^\s*needs:\s*\[changes, native\]\s*$', notebook_job, re.MULTILINE), (
-        '/ notebooks wait for the shared pin and native producer'
-    )
     from tests.fixtures.e09_t75_workflow import (  # noqa: PLC0415 - avoid test-module import cycles
         active,
     )
@@ -450,10 +447,21 @@ def test_ci_runs_notebooks_for_every_result_changing_surface() -> None:
         active(data['docs'], event) for event in ('push', 'pull_request', 'workflow_dispatch')
     ), '/ required docs execution cannot be path-filtered'
     if not public:
-        assert not re.search(r'^\s*if:', notebook_job + docs_job, re.MULTILINE), (
-            'private notebooks and docs must retain unconditional jobs and steps'
-        )
+        for name in ('notebooks', 'docs'):
+            assert set(data[name]['needs']) == {'changes', 'native', 'core'}, (
+                'notebooks and docs wait for Linux native production and the early core tests'
+            )
+            assert all(
+                not active(data[name], event, core_only=True)
+                for event in ('push', 'pull_request', 'workflow_dispatch')
+            ), 'only explicitly requested core-only repairs skip notebooks and docs'
+            assert all('if' not in step for step in data[name]['steps']), (
+                'private notebook and docs steps remain required whenever their job executes'
+            )
     else:
+        assert set(data['notebooks']['needs']) == {'changes', 'native'}, (
+            'public notebooks wait for the common source and native producer'
+        )
         from tests.system.py.test_e04_t12_public_release import (  # noqa: PLC0415 - avoid test-module import cycles
             test_public_ci_uses_hosted_runners_and_guards_private_tokens,
         )
