@@ -24,9 +24,9 @@ EaElements.GroupBox {
     // A scan project lists its datasets: No. · Fit · Datablock · File · one column per extract rule, with no
     // colour column and no remove button (one template experiment shows them all).
     readonly property bool scan: project !== null && project.scan
-    // One column per extract rule, with its unit. The table lays a row's cells out by their place among the
-    // header's, so the header and each row repeat over the same list.
-    readonly property var scanColumns: project ? project.scanColumns : []
+    // One column per extract rule, with its unit, from the table's own model. The table lays a row's cells out
+    // by their place among the header's, so the header and each row repeat over the same list.
+    readonly property var scanColumns: project ? project.experiments.columns : []
 
     objectName: "group.experiments"
     title: qsTr("Experiments (%1)").arg(project ? project.experiments.count : 0)

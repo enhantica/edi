@@ -48,6 +48,8 @@ class EvolutionViewModel : public QObject {
     Q_PROPERTY(double yMin READ yMin NOTIFY yMinChanged)
     Q_PROPERTY(double yMax READ yMax NOTIFY yMaxChanged)
     Q_PROPERTY(int count READ count NOTIFY countChanged)
+    // The template changed after these results were written (FitViewModel::outOfDate).
+    Q_PROPERTY(bool outOfDate READ outOfDate NOTIFY outOfDateChanged)
     // The layer the points are drawn on (the chart's).
     Q_PROPERTY(edi_app::MeasuredLayer* layer READ layer WRITE setLayer NOTIFY layerChanged)
 
@@ -73,6 +75,8 @@ class EvolutionViewModel : public QObject {
     double yMin() const { return y_min_; }
     double yMax() const { return y_max_; }
     int count() const { return static_cast<int>(points_.size()); }
+    bool outOfDate() const { return out_of_date_; }
+    void setOutOfDate(bool out_of_date);
     MeasuredLayer* layer() const { return layer_; }
     void setLayer(MeasuredLayer* layer);
 
@@ -92,6 +96,7 @@ class EvolutionViewModel : public QObject {
     void yMinChanged();
     void yMaxChanged();
     void countChanged();
+    void outOfDateChanged();
     void layerChanged();
 
    private:
@@ -112,6 +117,7 @@ class EvolutionViewModel : public QObject {
     std::vector<Point> points_;
     int current_ = -1;
     int x_mode_ = 0;
+    bool out_of_date_ = false;
     double x_min_ = 0.0, x_max_ = 1.0, y_min_ = 0.0, y_max_ = 1.0;
 };
 

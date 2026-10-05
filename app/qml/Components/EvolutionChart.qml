@@ -244,7 +244,7 @@ Item {
         anchors.right: plot.right
         anchors.bottom: plot.top
         anchors.bottomMargin: chart.em * 0.5
-        visible: chart.project !== null && chart.project.fit.outOfDate
+        visible: chart.evolution !== null && chart.evolution.outOfDate
         color: EaStyle.Colors.orange
         text: qsTr("Out of date: the template changed after this run")
     }

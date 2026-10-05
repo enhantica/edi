@@ -171,7 +171,7 @@ EaElements.StatusBar {
             anchors.verticalCenter: parent.verticalCenter
             // A scan fills the bar by its files (S3); a single fit, whose length is unknown, with stripes.
             indeterminate: bar.fit === null || !bar.fit.scanning
-            fraction: bar.fit !== null && bar.fit.scanning ? bar.fit.scanProgress : 0
+            fraction: bar.fit !== null && bar.fit.scanning && bar.fit.scanTotal > 0 ? bar.fit.scanFitted / bar.fit.scanTotal : 0
             fontFamily: EaStyle.Fonts.ptMono.name
             text: fitArea.scanning ? bar.fit.scanText : fitArea.joined([qsTr("fitting"), fitArea.iterations])
         }

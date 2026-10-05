@@ -87,6 +87,8 @@ class FitViewModel : public QObject {
     // A running scan (S3): the share of its files fitted, the bar's text (count, percent, the file just fitted) and
     // the time left at the pace so far.
     Q_PROPERTY(double scanProgress READ scanProgress NOTIFY scanProgressChanged)
+    Q_PROPERTY(int scanFitted READ scanFitted NOTIFY scanFittedChanged)
+    Q_PROPERTY(int scanTotal READ scanTotal NOTIFY scanTotalChanged)
     Q_PROPERTY(QString scanText READ scanText NOTIFY scanTextChanged)
     Q_PROPERTY(QString eta READ eta NOTIFY etaChanged)
     // The template changed after the scan results were written: they stay shown, marked out of date, until the
@@ -109,8 +111,9 @@ class FitViewModel : public QObject {
     QString scanText() const { return scan_text_; }
     QString eta() const { return eta_; }
     bool outOfDate() const { return out_of_date_; }
-    // The files the scan has fitted (C++ only: the demo waits on it).
+    // The files the scan has fitted, of all its files.
     int scanFitted() const { return scan_.fitted; }
+    int scanTotal() const { return scan_.files; }
     bool following() const { return following_; }
     void setFollowing(bool following);
     bool available() const { return available_; }
@@ -159,6 +162,8 @@ class FitViewModel : public QObject {
     void scanOkChanged();
     void scanFailedChanged();
     void scanProgressChanged();
+    void scanFittedChanged();
+    void scanTotalChanged();
     void scanTextChanged();
     void etaChanged();
     void outOfDateChanged();

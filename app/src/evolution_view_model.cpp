@@ -44,6 +44,13 @@ void EvolutionViewModel::setScan(const edi::ScanDatasets& datasets, const edi::S
     rebuild();
 }
 
+void EvolutionViewModel::setOutOfDate(bool out_of_date) {
+    if (out_of_date != out_of_date_) {
+        out_of_date_ = out_of_date;
+        emit outOfDateChanged();
+    }
+}
+
 void EvolutionViewModel::setCurrentParameter(int index) {
     if (index != current_ && index >= 0 && index < names_.size()) {
         current_ = index;

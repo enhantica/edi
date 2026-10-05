@@ -242,6 +242,8 @@ void FitViewModel::showScan(const edi::ScanDatasets& datasets, const edi::ScanRe
     emit scanOkChanged();
     emit scanFailedChanged();
     emit scanProgressChanged();
+    emit scanFittedChanged();
+    emit scanTotalChanged();
     // After a single fit on a dataset the status bar and the results window keep that fit's own.
     if (!scan_last_) {
         return;
@@ -416,6 +418,8 @@ void FitViewModel::setScanCounts(const ScanSummary& counts, const QString& file)
     emit scanOkChanged();
     emit scanFailedChanged();
     emit scanProgressChanged();
+    emit scanFittedChanged();
+    emit scanTotalChanged();
     const int percent = scan_.files > 0 ? static_cast<int>(100.0 * scan_.fitted / scan_.files) : 0;
     QStringList parts{QStringLiteral("%1/%2").arg(scan_.fitted).arg(scan_.files), QStringLiteral("%1%").arg(percent)};
     if (!file.isEmpty()) {

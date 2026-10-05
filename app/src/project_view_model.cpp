@@ -60,6 +60,13 @@ void ExperimentListModel::setExperiments(const QList<ExperimentViewModel*>& expe
     setTableRows(rows);
 }
 
+void ExperimentListModel::setColumns(const QStringList& columns) {
+    if (columns != columns_) {
+        columns_ = columns;
+        emit columnsChanged();
+    }
+}
+
 void ExperimentListModel::setDatasets(ExperimentViewModel* experiment, const QList<Dataset>& datasets) {
     QList<Row> rows;
     const QString name = experiment != nullptr ? experiment->name() : QString();
@@ -162,6 +169,7 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
         syncUndo();
     };
     connect(fit_, &FitViewModel::finished, this, note_fit);
+    connect(fit_, &FitViewModel::outOfDateChanged, this, [this] { evolution_->setOutOfDate(fit_->outOfDate()); });
     // A single fit on a scan dataset makes its result the template, and that dataset the template dataset
     // (`_sequential_fit.template_file`; edi ADR-0017 §19): the shown state is the template from now on.
     connect(fit_, &FitViewModel::finished, this, [this] {
@@ -507,6 +515,7 @@ void ProjectViewModel::syncDatasets() {
         experiment->setFitOutcome(current_dataset_ >= 0 && current_dataset_ < rows.size() ? rows[current_dataset_].outcome
                                                                                           : QString());
     }
+    experiment_list_->setColumns(scan_columns_);
     experiment_list_->setDatasets(experiment_models_.value(0), rows);
 }
 

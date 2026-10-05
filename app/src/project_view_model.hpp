@@ -58,6 +58,8 @@ class ExperimentListModel : public RowTableModel {
     Q_OBJECT
     QML_ELEMENT
     QML_UNCREATABLE("Belongs to a project")
+    // A scan's extract columns, one per rule with its unit, in the order of each row's `extracted` values.
+    Q_PROPERTY(QStringList columns READ columns NOTIFY columnsChanged)
 
    public:
     explicit ExperimentListModel(QObject* parent);
@@ -69,6 +71,14 @@ class ExperimentListModel : public RowTableModel {
         bool is_template = false;
     };
     void setDatasets(ExperimentViewModel* experiment, const QList<Dataset>& datasets);
+    QStringList columns() const { return columns_; }
+    void setColumns(const QStringList& columns);
+
+   signals:
+    void columnsChanged();
+
+   private:
+    QStringList columns_;
 };
 
 // The open project. It owns the core Project and is the editor every write goes through: the core
