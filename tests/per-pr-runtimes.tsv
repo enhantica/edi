@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-05T04:03:49Z
+# measured_utc = 2026-10-05T04:08:44Z
 #
-# Recorded from: tests-seq9-edi-final.log (14 node(s) measured once, 5825 banked, 0 stale row(s) dropped)
+# Recorded from: tests-seq9-edi-final3.log (2 node(s) measured once, 5828 banked, 0 stale row(s) dropped)
 # Collected tests: 6171; with a reported duration: 3795
 # Module-scoped fixture costs recorded: 10
 #

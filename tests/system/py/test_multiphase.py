@@ -63,7 +63,7 @@ def test_phase_sum_is_linear_and_warm_edits_reach_only_their_phase(tmp_path):
         atol=1e-12,
         err_msg='A warm scale edit must invalidate only its phase contribution',
     )
-    project.structures['beta'].atom_sites['X'].occupancy.value *= 0.625
+    project.structures['beta'].atom_sites[0].occupancy.value *= 0.625
     np.testing.assert_allclose(
         case.pattern(project),
         singles['alpha'] + 1.625 * 0.625**2 * singles['beta'],

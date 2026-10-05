@@ -161,7 +161,8 @@ def actual_values(project):
             elif bits[1] == 'cell':
                 value = getattr(s.cell, bits[2]).value
             else:
-                value = getattr(s.atom_sites[bits[1]], bits[2]).value
+                site = next(site for site in s.atom_sites if site.id == bits[1])
+                value = getattr(site, bits[2]).value
         elif bits[0] == 'profile':
             field = bits[1]
             if field == 'eta':

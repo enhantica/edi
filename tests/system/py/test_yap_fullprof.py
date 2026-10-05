@@ -85,9 +85,8 @@ def test_delivered_yap_project_has_both_phases_and_physical_occupancies():
             'Each delivered phase must carry physical site occupancies, '
             'never FullProf normalized occupancies'
         )
-    assert p.structures['Al2O3'].atom_sites['Al1'].adp_iso.value < 0, (
-        'The admitted negative Al1 Biso must not be silently clamped'
-    )
+    al1 = next(site for site in p.structures['Al2O3'].atom_sites if site.id == 'Al1')
+    assert al1.adp_iso.value < 0, 'The admitted negative Al1 Biso must not be silently clamped'
 
 
 def test_yap_fit_agrees_with_every_other_fullprof_parameter_and_rwp(tmp_path):
