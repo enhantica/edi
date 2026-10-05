@@ -302,8 +302,9 @@ the one its measured data takes in the pattern chart, and a structure's is the o
   icons and pretty labels: the block's icon in the block's colour; the category's icon (the sidebar group's,
   §3), for an atom site in its element's colour; the row — an atom's label, or a loop row's number counted
   from 1 (a background point, a preferred orientation, a linked structure: every loop category whose rows
-  carry parameters, by the core's `ParameterEntry::row_label`) — in the category icon's colour; the parameter's icon in the minor colour; then its short name in
-  bold (e.g. *[lbco] [atom] O [fill] **occ***). The parameter icons are easydiffractionbeta's by `.edi` name:
+  carry parameters, by the core's `ParameterEntry::row_label`) — in the category icon's colour; the parameter's icon in the minor colour; then its short name,
+  never bold (e.g. *[lbco] [atom] O [fill] occ*). In the parameter table the value is bold exactly when the parameter
+  is free (its vary box on), and regular otherwise (owner, 2026-10-05). The parameter icons are easydiffractionbeta's by `.edi` name:
   `length_*`, `angle_*` `ruler`; `fract_*` `map-marker-alt`; `occupancy` `fill`; `adp_*` `arrows-alt`; `scale`
   `weight`; `setup_wavelength` and `calib_d_to_tof_*` `radiation`, except `calib_d_to_tof_offset` and the other
   `calib_*` `arrows-alt-h`; `setup_twotheta_bank` `hashtag`; `broad_*`, `rise_*`, `decay_*` `shapes`;
@@ -519,7 +520,8 @@ code (`QtCharts1dTab.qml` and the base's `QtCharts1dBase.qml`; the owner, 2026-1
   view's), Home last. The y scale is a drop-down of linear, square root and log at the chart's left, a margin in, in
   the toolbar drop-down style (`ToolbarComboBox.qml`, §16) (the owner, 2026-10-02; moved left 2026-10-05), and right
   of it the x axis, 2θ, time-of-flight or d-spacing, showing the experiment's own axis; it is disabled until the
-  axis can be switched (owner, 2026-10-05). The controls are `AppSizes.toolbarControlSize` tall and
+  axis can be switched (owner, 2026-10-05). Closed, each box names its axis, *y: linear* and *x: 2θ*, *x: TOF* or
+  *x: d*; its list keeps the plain choices (`ToolbarComboBox.closedTexts`). The controls are `AppSizes.toolbarControlSize` tall and
   `AppSizes.toolbarSpacing` apart within a group.
 - **The legend's side** follows the x axis (owner, 2026-10-05): the top right of the main pane on a 2θ axis, the top
   left on a time-of-flight or d-spacing axis, where the strong peaks are at the other end. The legend and

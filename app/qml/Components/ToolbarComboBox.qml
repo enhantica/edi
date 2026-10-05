@@ -16,14 +16,19 @@ EaElements.ComboBox {
     id: box
 
     property string toolTip: ""
-    // The base's rich-text label leaves Qt's widest-text policy nothing to measure, so the entries are measured here.
+    // What the closed box shows for each entry (an axis box's "y: linear"), when it differs from the list's entry.
+    property var closedTexts: []
+    // The base's rich-text label leaves Qt's widest-text policy nothing to measure, so the entries, and the closed
+    // texts, are measured here.
     readonly property real widestEntry: {
         let widest = 0;
-        const entries = box.model || [];
+        const entries = (box.model || []).concat(box.closedTexts);
         for (let i = 0; i < entries.length; ++i)
             widest = Math.max(widest, metrics.advanceWidth(String(entries[i])));
         return Math.ceil(widest);
     }
+
+    displayText: box.closedTexts.length > box.currentIndex && box.currentIndex >= 0 ? box.closedTexts[box.currentIndex] : box.currentText
 
     width: widestEntry + contentItemLabel.leftPadding + contentItemLabel.rightPadding + leftPadding + rightPadding
     height: AppSizes.toolbarControlSize

@@ -358,6 +358,8 @@ Item {
             objectName: "chart.toolbar.yscale"
             toolTip: qsTr("Y scale")
             model: [qsTr("linear"), qsTr("square root"), qsTr("log")]
+            // The closed box names its axis (owner, 2026-10-05).
+            closedTexts: [qsTr("y: linear"), qsTr("y: square root"), qsTr("y: log")]
             currentIndex: controller.yScale
             onActivated: index => controller.yScale = index
         }
@@ -366,6 +368,7 @@ Item {
             enabled: false
             toolTip: qsTr("X axis")
             model: [qsTr("2θ"), qsTr("time-of-flight"), qsTr("d-spacing")]
+            closedTexts: [qsTr("x: 2θ"), qsTr("x: TOF"), qsTr("x: d")]
             currentIndex: ["twoTheta", "timeOfFlight", "dSpacing"].indexOf(chart.xAxis)
         }
     }
