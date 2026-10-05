@@ -38,7 +38,7 @@ BEBA = ['asym_beba_a0', 'asym_beba_b0', 'asym_beba_a1', 'asym_beba_b1', 'asym_be
 PROFILES = {
     'cwl-tch-pseudo-voigt': CW,
     'cwl-tch-pseudo-voigt-fcj': CW + FCJ,
-    'cwl-pseudo-voigt-berar-baldinozzi-asymmetry': CW + BEBA,
+    'cwl-pseudo-voigt-berar-baldinozzi': CW[:3] + ['mixing_eta_0', 'mixing_eta_1'] + BEBA,
     'tof-jorgensen': B2B + GAUSS,
     'tof-jorgensen-von-dreele': B2B + GAUSS + LORENTZ,
     'tof-pseudo-voigt': GAUSS + LORENTZ,

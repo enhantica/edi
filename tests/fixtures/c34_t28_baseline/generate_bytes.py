@@ -21,6 +21,7 @@ from pathlib import Path
 
 from tests.conftest import crysta_reference_source
 from tests.fixtures.c34_t28_baseline.closure import require_baseline_closure
+from tests.fixtures.cwl_family.historical import current_tokens, original_tokens
 
 ROOT = Path(__file__).resolve().parents[3]
 BASE = 'f3ea7afea400639f2a66d6acb8d922163f1ef128'
@@ -52,7 +53,9 @@ def inputs(root=ROOT):
 
 def hashes(directory):
     return {
-        p.relative_to(directory).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
+        p.relative_to(directory).as_posix(): hashlib.sha256(
+            original_tokens(p.read_bytes())
+        ).hexdigest()
         for p in sorted(directory.rglob('*'))
         if p.is_file()
     }
@@ -75,7 +78,7 @@ def committed_input(source, destination, revision=None):
                     raise ValueError('retained input bytes differ from the historical pin')
                 target = destination / name.removeprefix(relative + '/')
                 target.parent.mkdir(parents=True, exist_ok=True)
-                target.write_bytes(data)
+                target.write_bytes(current_tokens(data))
     else:
         payload = subprocess.check_output([
             'git',
@@ -111,7 +114,7 @@ def legacy_input_hashes(directory, case):
         assert len(re.findall(rb'(?m)^_calculator\.', contents)) == 1, (
             ' I22 no additional seed calculator field may escape the input oracle'
         )
-        old = contents.replace(declaration, b'_calculator.type cryspy\n', 1)
+        old = original_tokens(contents).replace(declaration, b'_calculator.type cryspy\n', 1)
         result[name] = hashlib.sha256(old).hexdigest()
     return result
 
@@ -128,7 +131,7 @@ def without_saved_calculator(name, contents):
     assert len(re.findall(rb'(?m)^_calculator\.', contents)) == 1, (
         ' I22 no additional saved calculator field may escape the output oracle'
     )
-    return contents.replace(declaration, b'', 1)
+    return original_tokens(contents.replace(declaration, b'', 1))
 
 
 def saved_hashes(directory):

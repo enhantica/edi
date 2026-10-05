@@ -226,7 +226,7 @@ TestCase {
         same(Probe.rows(e.categories).map(r => r.categoryId),
              ["experiment_type", "data", "background", "instrument", "peak", "excluded_region", "linked_structure", "absorption", "preferred_orientation", "scattering_source"],
              "owner category record: experiment groups are exactly the admitted edi categories");
-        e.peakType = "cwl-thompson-cox-hastings";
+        e.peakType = "cwl-tch-pseudo-voigt-fcj";
         reveal("peak", "peak.asym_fcj_1");
         const peak = visibleControl("group.peak");
         ["asym_fcj_1", "asym_fcj_2"].forEach(field =>

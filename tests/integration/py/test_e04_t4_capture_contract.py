@@ -322,7 +322,7 @@ VERIFIED_CAPTURES: dict[str, dict[str, object]] = {
             '9': 'the block selector (number, coloured '
             'icon, name) sits above the groups, '
             'under the tab bar, on Basic',
-            '18': 'Peak profile (cwl-pseudo-voigt) has '
+            '18': 'Peak profile (cwl-tch-pseudo-voigt) has '
             'no subheading; its fields run U V W '
             'on one row and X Y on the next',
         },
@@ -336,7 +336,7 @@ VERIFIED_CAPTURES: dict[str, dict[str, object]] = {
             '9': 'the block selector (number, coloured '
             'icon, name) sits above the groups, '
             'under the tab bar, on Basic',
-            '18': 'Peak profile (cwl-pseudo-voigt) has no '
+            '18': 'Peak profile (cwl-tch-pseudo-voigt) has no '
             'subheading; its fields run U V W on '
             'one row and X Y on the next',
             '24': 'the Messages item counts 1 not-viewed '
@@ -353,7 +353,7 @@ VERIFIED_CAPTURES: dict[str, dict[str, object]] = {
             '9': 'the block selector (number, coloured '
             'icon, name) sits above the groups, '
             'under the tab bar, on Basic',
-            '18': 'Peak profile (cwl-pseudo-voigt) has no '
+            '18': 'Peak profile (cwl-tch-pseudo-voigt) has no '
             'subheading; its fields run U V W on '
             'one row and X Y on the next',
         },
@@ -367,7 +367,7 @@ VERIFIED_CAPTURES: dict[str, dict[str, object]] = {
             '9': 'the block selector (number, coloured '
             'icon, name) sits above the groups, '
             'under the tab bar, on Basic',
-            '18': 'Peak profile (cwl-pseudo-voigt) has no '
+            '18': 'Peak profile (cwl-tch-pseudo-voigt) has no '
             'subheading; its fields run U V W on '
             'one row and X Y on the next',
         },
@@ -384,7 +384,7 @@ VERIFIED_CAPTURES: dict[str, dict[str, object]] = {
             'above the groups, under the '
             'tab bar, on Basic',
             '18': 'Peak profile '
-            '(cwl-thompson-cox-hastings) '
+            '(cwl-tch-pseudo-voigt-fcj) '
             'has no subheading; its fields '
             'run U V W, then X Y, then '
             'asym fcj1 fcj2, a row per '
@@ -400,7 +400,7 @@ VERIFIED_CAPTURES: dict[str, dict[str, object]] = {
             '9': 'the block selector (number, coloured '
             'icon, name) sits above the groups, '
             'under the tab bar, on Basic',
-            '18': 'Peak profile (cwl-pseudo-voigt) has no '
+            '18': 'Peak profile (cwl-tch-pseudo-voigt) has no '
             'subheading; its fields run U V W on '
             'one row and X Y on the next',
         },
@@ -414,7 +414,7 @@ VERIFIED_CAPTURES: dict[str, dict[str, object]] = {
             '9': 'the block selector (number, coloured '
             'icon, name) sits above the groups, '
             'under the tab bar, on Basic',
-            '18': 'Peak profile (cwl-pseudo-voigt) has no '
+            '18': 'Peak profile (cwl-tch-pseudo-voigt) has no '
             'subheading; its fields run U V W on '
             'one row and X Y on the next',
         },
@@ -429,7 +429,8 @@ VERIFIED_CAPTURES: dict[str, dict[str, object]] = {
             'icon, name) sits above the groups, '
             'under the tab bar, on Basic',
             '18': 'Peak profile '
-            '(cwl-pseudo-voigt-berar-baldinozzi-asymmetry) '
+            '(cwl-pseudo-voigt-berar-'
+            'baldinozzi-asymmetry) '
             'has no subheading; its fields run U '
             'V W, then X Y, then A0 B0 A1 B1 '
             'AsyLim on the asymmetry row',
@@ -583,7 +584,7 @@ VERIFIED_CAPTURES: dict[str, dict[str, object]] = {
             'experiment colour and the experiment name, no word',
             '9': 'the block selector (number, coloured icon, name) sits '
             'above the groups, under the tab bar, on Basic',
-            '18': 'Peak profile (cwl-pseudo-voigt) has no subheading; '
+            '18': 'Peak profile (cwl-tch-pseudo-voigt) has no subheading; '
             'its fields run U V W on one row and X Y on the next',
             '15': 'a calculation-only experiment has "Calculation '
             'range" on Basic and no Measured data group',

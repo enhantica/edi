@@ -86,3 +86,6 @@ sites:
 
   - file: tests/system/py/test_beer_fullprof_agreement.py
     case: beer-ferrite-austenite
+
+  - file: tests/system/py/test_yap_agreement.py
+    case: yap-spodi-3k

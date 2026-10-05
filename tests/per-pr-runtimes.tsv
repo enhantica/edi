@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-05T19:44:27Z
+# measured_utc = 2026-10-05T22:21:40Z
 #
-# Recorded from: tests-edi-banked-durations.log (43 node(s) measured once, 6204 banked, 0 stale row(s) dropped)
-# Collected tests: 6866; with a reported duration: 4115
+# Recorded from: tests-seq5-edi-changed.log (6 node(s) measured once, 6212 banked, 0 stale row(s) dropped)
+# Collected tests: 6872; with a reported duration: 4118
 # Module-scoped fixture costs recorded: 16
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 6866
+# inventory_python = 6872
 # inventory_cpp = 287
-# inventory_measured = 6212
-# inventory_unmeasured = 941
+# inventory_measured = 6216
+# inventory_unmeasured = 943
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_projects_open_and_populate_pages
@@ -1830,6 +1830,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_each
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_each_declared_profile_calculates_and_roundtrips[cwl-pseudo-voigt]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_each_declared_profile_calculates_and_roundtrips[cwl-tch-pseudo-voigt-fcj]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_each_declared_profile_calculates_and_roundtrips[cwl-tch-pseudo-voigt]
+0.000	tests/integration/py/test_cwl_family.py::test_historical_tch_byte_translation_changes_only_the_selector
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_npr_family_refuses_tch_lorentz_widths[cwl-gaussian]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_npr_family_refuses_tch_lorentz_widths[cwl-lorentzian]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_npr_family_refuses_tch_lorentz_widths[cwl-pseudo-voigt-berar-baldinozzi]
@@ -2924,6 +2925,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c06_t6_fitting_corpus.py::tes
 1.840	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[cosio-d20-scan-3f]
 0.070	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[multiphase-scales]
 1.530	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[ncaf-wish-3bank-s5::ladder]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[yap-spodi-3k]
 0.000	tests/system/py/test_c06_t6_fitting_corpus_consumer.py::test_c06_t6_case_resolver_fails_closed_for_an_invalid_override
 0.000	tests/system/py/test_c06_t6_fitting_corpus_consumer.py::test_c06_t6_case_resolver_uses_override_and_requires_the_requested_case
 0.720	tests/system/py/test_c06_t6_fitting_corpus_consumer.py::test_c06_t6_edi_runner_collection_is_the_manifest_projection
@@ -4304,6 +4306,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t22_sequential_progress.p
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.py::test_complete_manifest_dispatches_every_declared_variant[pd-neut-cwl_lab6-11b-echidna_tch-fcj]
 0.180	tests/system/py/test_c34_t24_cli_variants.py::test_complete_manifest_dispatches_every_declared_variant[pd-neut-cwl_lbco-hrpt_start-2]
 0.180	tests/system/py/test_c34_t24_cli_variants.py::test_complete_manifest_dispatches_every_declared_variant[pd-neut-cwl_lbco-hrpt_start-4]
+0.250	tests/system/py/test_c34_t24_cli_variants.py::test_complete_manifest_dispatches_every_declared_variant[pd-neut-cwl_yap-spodi_3k]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.py::test_complete_manifest_dispatches_every_declared_variant[pd-neut-tof_cecoal-polaris_chebyshev]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.py::test_complete_manifest_dispatches_every_declared_variant[pd-neut-tof_ceo2-pearl_polynomial]
 0.190	tests/system/py/test_c34_t24_cli_variants.py::test_complete_manifest_dispatches_every_declared_variant[pd-neut-tof_diamond-dream_basic]
@@ -4335,6 +4338,7 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.p
 0.470	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-cwl_lbco-hrpt_start-4-2]
 0.470	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-cwl_lbco-hrpt_start-4-3]
 0.590	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-cwl_lbco-hrpt_start-4-4]
+1.780	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-cwl_yap-spodi_3k-0]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-tof_cecoal-polaris_chebyshev-0]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-tof_ceo2-pearl_polynomial-0]
 0.420	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-tof_diamond-dream_basic-0]
@@ -4701,7 +4705,9 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::te
 0.110	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[corpus:background-pearl/project]
 0.590	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[corpus:beer-ferrite-austenite/project]
 0.080	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[corpus:constraint-covariance/project]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[corpus:yap-spodi-3k/project]
 0.210	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project]
+0.210	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-cwl_yap-spodi_3k/project]
 0.190	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project]
 0.200	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project]
 0.570	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project]

@@ -306,13 +306,13 @@ TestCase {
         let exp = project.currentExperiment;
         const originalText = exp.text.text;
         const before = rows(exp.peak).map(r => [r.parameter.name, r.parameter.value, r.parameter.free]);
-        exp.peakType = "cwl-thompson-cox-hastings";
+        exp.peakType = "cwl-tch-pseudo-voigt-fcj";
         ordered(fieldNames(exp.peakAsymmetry), ["asym_fcj_1", "asym_fcj_2"], "I17: FCJ fields engage");
         rows(exp.peakAsymmetry).forEach(r => {
             compare(r.parameter.value, 0, "I17: new FCJ field uses loader default");
             verify(!r.parameter.free, "I17: new FCJ field starts fixed");
         });
-        exp.peakType = "cwl-pseudo-voigt-berar-baldinozzi-asymmetry";
+        exp.peakType = "cwl-pseudo-voigt-berar-baldinozzi";
         ordered(fieldNames(exp.peakAsymmetry), Oracle.frozen.profiles[exp.peakType].slice(5), "I17: BeBa replaces FCJ");
         compare(rows(exp.peakAsymmetry)[4].parameter.value, 180, "I17: BeBa limit loader default");
         verify(!exp.text.text.includes("_peak.asym_fcj_"), "I17: disengaged fields disappear from persisted Text");

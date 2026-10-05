@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 
 from tests.fixtures.cwl_family import profiles
+from tests.fixtures.cwl_family.historical import current_tokens, original_tokens
 
 
 @pytest.mark.parametrize('token', profiles.TOKENS)
@@ -44,9 +45,9 @@ def test_retired_tokens_are_named_unknown_profile_errors(tmp_path, token):
     with pytest.raises((ValueError, RuntimeError)) as failure:
         engine.Project.load(profiles.write_project(tmp_path, token))
     assert token in str(failure.value), 'A retired token refusal must name the token'
-    assert 'unknown' in str(failure.value).lower(), (
-        'A retired token must be refused as an unknown profile and named in the diagnostic'
-    )
+    assert [str(item.code) for item in failure.value.diagnostics] == [
+        'edi.schema.unsupported-peak-type'
+    ], 'A retired token refusal must carry the stable unsupported-profile code and name the token'
 
 
 @pytest.mark.parametrize('token', profiles.TOKENS[:4])
@@ -82,4 +83,24 @@ def test_npr_shapes_match_absolute_normalized_closed_forms(tmp_path, token, wave
         rtol=2e-10,
         atol=1e-10,
         err_msg='Npr 0/1/5 must use normalized shapes and reflection angles in degrees',
+    )
+
+
+def test_historical_tch_byte_translation_changes_only_the_selector():
+    token = b'cwl-' + b'pseudo-voigt'
+    old = b'_peak.type ' + token + b'\n_peak.broad_lorentz_x .023\n'
+    current = old.replace(token, b'cwl-tch-pseudo-voigt', 1)
+    assert current_tokens(old) == current, (
+        'The historical subject must load under its canonical TCH profile selector'
+    )
+    assert original_tokens(current) == old, (
+        'The immutable TCH byte witness must translate only its exact profile selector'
+    )
+    damaged = current.replace(b'.023', b'.024')
+    assert original_tokens(damaged) != old, (
+        'A physical width change must remain visible through the historical token translation'
+    )
+    npr5 = b'_peak.type cwl-pseudo-voigt\n_peak.mixing_eta_0 .37\n'
+    assert original_tokens(npr5) == npr5, (
+        'The new Npr5 model must never be translated into a historical TCH witness'
     )

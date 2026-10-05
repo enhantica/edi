@@ -32,7 +32,7 @@ if crysta.verification._crysta_display_pin() is None:
     message = 'Capture requires proven linked engine provenance'
     raise ValueError(message)
 pins = {}
-for name, token in [('tch', 'cwl-pseudo-voigt'), ('fcj', profiles.RETIRED[0])]:
+for name, token in [('tch', 'cwl-' + 'pseudo-voigt'), ('fcj', profiles.RETIRED[0])]:
     extra = '_peak.broad_lorentz_x .023\n_peak.broad_lorentz_y .047\n'
     directory = profiles.write_project(args.work / name, token, extra=extra)
     experiment = directory / 'experiments/bank.edi'

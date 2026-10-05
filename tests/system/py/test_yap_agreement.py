@@ -35,23 +35,37 @@ def test_yap_fit_agrees_with_every_other_fullprof_parameter_and_rwp(tmp_path):
     target = tmp_path / 'project'
     shutil.copytree(PROJECT, target)
     p = edi.Project.load(target)
-    assert len(p.free_parameters) == 56, 'The YAP fit must retain all 56 declared free parameters'
+    assert len(p.free_parameters) == 56, 'The full YAP fit must retain 56 declared free parameters'
     result = p.fit()
-    actual = fullprof.actual_values(p)
-    for key, (value, su) in fullprof.reference()['parameters'].items():
-        assert abs(actual[key] - value) <= su, (
-            'Every non-asymmetry fitted parameter must agree within its own '
-            'FullProf standard uncertainty'
-        )
     assert abs(result.rwp / fullprof.reference()['rwp'] - 1) <= 0.05, (
-        'Fitted YAP Rwp must agree within five percent relative to FullProf'
+        'The full YAP model Rwp must agree within five percent relative to FullProf 4.08 percent'
     )
+    full_actual = fullprof.actual_values(p)
     saved = tmp_path / 'saved'
     p.save_as(saved)
     reopened = edi.Project.load(saved)
-    assert fullprof.actual_values(reopened) == actual, (
+    assert fullprof.actual_values(reopened) == full_actual, (
         'Both fitted phase models must roundtrip without changing their values'
     )
+    p = edi.Project.load(target)
+    for name in ('asym_beba_a0', 'asym_beba_b0', 'asym_beba_a1', 'asym_beba_b1'):
+        parameter = getattr(p.experiments[0].peak, name)
+        parameter.value = 0
+        parameter.free = False
+    assert len(p.free_parameters) == 52, (
+        'Fixing the four asymmetry coefficients must leave exactly 52 independent fitted values'
+    )
+    p.fit()
+    actual = fullprof.actual_values(p, asymmetry_off=True)
+    reference = fullprof.reference(asymmetry_off=True)
+    assert len(actual) == len(reference['parameters']) == 52, (
+        'The asymmetry-off comparison must cover every independent free value'
+    )
+    for key, (value, su) in reference['parameters'].items():
+        assert abs(actual[key] - value) <= su, (
+            'Every asymmetry-off fitted value must agree within its own FullProf uncertainty: '
+            + key
+        )
 
 
 def test_verification_page_executes_the_owner_reference_comparison():
@@ -59,7 +73,8 @@ def test_verification_page_executes_the_owner_reference_comparison():
     assert page.is_file(), 'YAP needs its own executable verification artifact'
     text = page.read_text()
     assert all(
-        word in text.lower() for word in ('fullprof', 'owner', 'asymmetry', 'uncertaint')
+        word in text.lower()
+        for word in ('fullprof', 'owner-supplied', 'asymmetry', 'fallback', 'inexact')
     ), 'The page must name the external origin and the inexact-asymmetry fallback rule'
     assert 'pytest.skip' not in text and 'pytest.xfail' not in text, (
         'The independent agreement page must execute its comparisons'

@@ -19,8 +19,8 @@ DESTINATIONS = {
     'tof': 'pd-neut-tof_fe_pseudo-voigt',
 }
 TOKENS = {
-    'fcj': 'cwl-thompson-cox-hastings',
-    'beba': 'cwl-pseudo-voigt-berar-baldinozzi-asymmetry',
+    'fcj': 'cwl-tch-pseudo-voigt-fcj',
+    'beba': 'cwl-pseudo-voigt-berar-baldinozzi',
     'tof': 'tof-pseudo-voigt',
 }
 
@@ -103,9 +103,9 @@ def test_page_exists_with_independent_reference(kind):
         ' every independent reference must name its source'
     )
     if kind == 'beba':
-        assert all(word in text.lower() for word in ('cryspy', 'fullprof', 'convention')), (
-            ' BeBa page must explain its cryspy oracle and FullProf convention divergence'
-        )
+        assert all(
+            word in text.lower() for word in ('npr 5', 'fullprof', 'model changed', 'coefficients')
+        ), ' BeBa page must explain its Npr5 model and FullProf convention divergence'
         comparisons = [
             ast.unparse(call).lower()
             for call in calls
@@ -137,6 +137,7 @@ def test_c33_filename_difference_adds_exactly_the_owned_pages():
     expected = {row['page'] for row in MANIFEST['pages'].values()}
     # The independently gated two-bank verification page is now retained prior art.
     before.add('pd-neut-tof_ferrite-austenite_beer_joint')
+    expected.add('pd-neut-cwl_YAP_multiphase')
     after = {path.stem for path in (ROOT / 'docs/dev/verification').glob('*.py')}
     #  adds its independently gated page; preserve the  set obligation.
     after.discard('pd-xray-cwl_LiF_single')
@@ -146,5 +147,5 @@ def test_c33_filename_difference_adds_exactly_the_owned_pages():
     # ADR-0078 adds its separately gated tied-Biso page; keep this task's delta exact.
     after.discard('pd-neut-cwl_cosio-d20_biso-tied')
     assert after - before == expected and before <= after, (
-        ' C33 counter must derive from exactly the three owned added filenames'
+        ' C33 counter must derive from the owned asymmetry pages and C11-T63 YAP addition'
     )

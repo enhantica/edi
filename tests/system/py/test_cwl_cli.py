@@ -25,6 +25,6 @@ def test_each_cw_profile_is_selectable_from_the_cli(tmp_path, token):
     assert result.returncode == 0, (
         'Every declared CW profile must calculate through the native CLI: ' + result.stderr
     )
-    assert '_data.intensity_calc' in (project / 'experiments/bank.edi').read_text(), (
+    assert '_data_calc.intensity_calc' in (project / 'experiments/bank.edi').read_text(), (
         'A successful profile CLI calculation must publish its calculated pattern'
     )

@@ -18,12 +18,12 @@ var frozen = {
       "asym_fcj_1",
       "asym_fcj_2"
     ],
-    "cwl-pseudo-voigt-berar-baldinozzi-asymmetry": [
+    "cwl-pseudo-voigt-berar-baldinozzi": [
       "broad_gauss_u",
       "broad_gauss_v",
       "broad_gauss_w",
-      "broad_lorentz_x",
-      "broad_lorentz_y",
+      "mixing_eta_0",
+      "mixing_eta_1",
       "asym_beba_a0",
       "asym_beba_b0",
       "asym_beba_a1",
@@ -788,7 +788,7 @@ var frozen = {
       "files": {
         "project.edi": "87d25fc29d7193ca138b24714a0afeafd7551daee12ba60919b4d097e72b2269",
         "structures/cosio.edi": "7ec9ca0fb52e1c29aa6a5aa68ca0e6a58db75ccc369a613f32d2036221994b48",
-        "experiments/d20.edi": "9b9b01ad0ed3bfe12206653fa14976675e56ba87460484b969ec8433147ba6d3",
+        "experiments/d20.edi": "c0ef1ce128acbcc94eda9294f6afd63fd80c059eb7f7e5f1c5981f3efb07fbca",
         "analysis/analysis.edi": "06acc049b2fdfd16e06af5c03634f364d62a2819d2bb2b0ea456cd4b79ba5061"
       }
     },
@@ -842,7 +842,7 @@ var frozen = {
       "files": {
         "project.edi": "af9f1f2177a007e7979e8ef30ae768972acfe1849b1e4b8c452f3f5c3e44c216",
         "structures/cosio.edi": "7ec9ca0fb52e1c29aa6a5aa68ca0e6a58db75ccc369a613f32d2036221994b48",
-        "experiments/d20.edi": "05b04c3d9d5ce502e2ef4f43bf1e3119eb2ecc6f05a621eeed605fea7b0455da",
+        "experiments/d20.edi": "6b86e5db73f55ae128b14d5ab237595530483f4543886f7e8d4012d30e05e1be",
         "analysis/analysis.edi": "06acc049b2fdfd16e06af5c03634f364d62a2819d2bb2b0ea456cd4b79ba5061"
       }
     },
@@ -961,7 +961,7 @@ var frozen = {
       "files": {
         "project.edi": "d230f1049d75c2b5b01c2b848e4d9287086c69ddf191d3881fccf0e1a38064df",
         "structures/cosio.edi": "1b3afde2d3a8184d6cb9789fa3fc8fa5dd026756a51e44a2cca6b80b9df8103a",
-        "experiments/d20.edi": "55ea976b34dffea45b1eb379a3f358d4afef7df9e3331fa3ced46fd63229949c",
+        "experiments/d20.edi": "0c97d871957341359beee76e7029f77d1bf0ed4eb8e4709733fe794fe3516a1c",
         "analysis/analysis.edi": "fde9a40134aaf6794cde3e396a01067e1018d78871c394d4646c95052416f726"
       }
     },
@@ -1073,7 +1073,7 @@ var frozen = {
       "files": {
         "project.edi": "90b4453599694b4beb76074b1b1f9b2944e36b551345d6ba1b1b1e72e2b2bc1a",
         "structures/cosio.edi": "4538c66b979d5783c2c3b5ba8c06494a54efeea3fc83c5488e89d5a10c0bb899",
-        "experiments/d20.edi": "7053aa291373fc6df17e3d2ced5008a098ef314f65e06a1204f6d0ecbb1ae518",
+        "experiments/d20.edi": "53ba4c8c28755334c633f23040fa411149d66294dc102862918ff461b09eca73",
         "analysis/analysis.edi": "b732d6abb6017d11a7f25d30349975e45b2ba72a25cf13f8c702376ea4d6bbf9"
       }
     },
@@ -1127,7 +1127,7 @@ var frozen = {
       "files": {
         "project.edi": "8d04523f74e1d78a1ef9948f97a84c2bddc4bced0c6b18771c1cf2298bb0263f",
         "structures/lbco.edi": "1c8421e95c44cad8dce012f78e57ed2bcabd783c76443eddf0d5d16873cba5c3",
-        "experiments/hrpt.edi": "4a7aa10f25ecc085a7b8b9f0f621b44feab8b1b3864bb185b2d349991fecd162",
+        "experiments/hrpt.edi": "5063e9ea674694f4ba201a2b7f77b985ae7a8c74111091912f6f9999e15ee2df",
         "analysis/analysis.edi": "06acc049b2fdfd16e06af5c03634f364d62a2819d2bb2b0ea456cd4b79ba5061"
       }
     },
@@ -1181,7 +1181,7 @@ var frozen = {
       "files": {
         "project.edi": "0f1ffd2f044fec55a27dc56a158827d246506e7cdceab58912c0431fe568f5c8",
         "structures/lbco.edi": "1c8421e95c44cad8dce012f78e57ed2bcabd783c76443eddf0d5d16873cba5c3",
-        "experiments/hrpt.edi": "58a44cc8c5a6493056634cc5442c548bbf44cce5c615b22b16173d0ec771e8ce",
+        "experiments/hrpt.edi": "c7a093e4cdee2aeca6553b84cca81293b748caeb6270d2083b5a043724128c26",
         "analysis/analysis.edi": "06acc049b2fdfd16e06af5c03634f364d62a2819d2bb2b0ea456cd4b79ba5061"
       }
     },
@@ -1636,7 +1636,7 @@ var frozen = {
       "files": {
         "project.edi": "bfef00c92dddfb3e04cecc03e50c63c8dd7dcb18080365fe04062641d805e1db",
         "structures/lab6.edi": "ae52d392119f81a94e77ba4128ee2afc447fbcd3bdd9cdc6e2fea56eba54074d",
-        "experiments/echidna.edi": "372e3a1cee4228b17a254007a48d906f313db9dd2a9292df69e707a7dd4246ef",
+        "experiments/echidna.edi": "133539d1a5bfb8611e3afbe487b7397f817aeb79e65376929ea4681cd91fdb2e",
         "analysis/analysis.edi": "622953d9f61a1927cfdde76b6296bf57805006e83817b80cd36f851b35d8ef79"
       }
     },
@@ -1687,8 +1687,79 @@ var frozen = {
       "files": {
         "project.edi": "7dc0e51c1ed6782a661c0f2223d1ee751cd09aaed4fc86f00a2f9bf94cc60dc1",
         "structures/pbso4.edi": "d14b19ea6dc7f6f3a129fa5fb3538f7413fc3cb727950c2f70fb9e2e6e3f2520",
-        "experiments/d1a.edi": "1397212f018457de21bd98ccc52918112db1eb46163c18860250735769522496",
+        "experiments/d1a.edi": "f02575053ccb68d9047209eada95ef0042fc632ffdef67024c5bd1198d5a8ddb",
         "analysis/analysis.edi": "494db6eaa33dd5b4e18e6fc2d28282486b2d9bfc50a8e52098e6ad34422062fd"
+      }
+    },
+    {
+      "id": "pd-neut-cwl_yap-spodi_3k",
+      "path": "docs/user/cli/pd-neut-cwl_yap-spodi_3k/project",
+      "metadata": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_metadata.name": "pd_neut_cwl_yap_spodi_3k",
+        "_metadata.title": "YAlO3 and Al2O3, SPODI (FRM II), two phases"
+      },
+      "analysis": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_minimizer.max_iterations": {
+          "value": 150.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_minimizer.chi_square_tolerance": {
+          "value": 1e-08,
+          "free": false,
+          "uncertainty": 0.0
+        }
+      },
+      "structures": [
+        {
+          "name": "Al2O3",
+          "atoms": 2,
+          "cellA": 4.756614,
+          "spaceGroup": "R -3 c",
+          "cell": [
+            4.756614,
+            4.756614,
+            12.973036,
+            90.0,
+            90.0,
+            120.0
+          ]
+        },
+        {
+          "name": "YAlO3",
+          "atoms": 4,
+          "cellA": 5.172418,
+          "spaceGroup": "P b n m",
+          "cell": [
+            5.172418,
+            5.32659,
+            7.360847,
+            90.0,
+            90.0,
+            90.0
+          ]
+        }
+      ],
+      "experiments": [
+        "spodi"
+      ],
+      "loaderWarning": "",
+      "files": {
+        "project.edi": "20ac0d91bda14553a8c7b18ad5af5bca90557b10c20b068227dbe783685631ae",
+        "structures/Al2O3.edi": "f5d727bf0362dae6abfb4c2503669e83085bc897cbb09db913b359eb37999472",
+        "structures/YAlO3.edi": "7a4c6c27b6314bca5d179350c2ee75e1e27565a6c59629c17ed11662e29a2ccb",
+        "experiments/spodi.edi": "f89b143912601bef9a62b3f61c6ff25c6988759785333e7186244c130b3d5e62",
+        "analysis/analysis.edi": "77ef8e7ab8edb6b3f1addcde5a59c0c3b0f8e7cba8e0a4f116b30b4792210066"
       }
     },
     {
@@ -1917,7 +1988,7 @@ var frozen = {
       "files": {
         "project.edi": "0f0754b37ba56b1ce05b6a5e4e545f91f5ef8b78b9b6d840fe01daefb9d6f839",
         "structures/lab6.edi": "06d8ee9eadd4dd9c5f72aed4f264446172a15f81a0571e4a02adfba6156a53fd",
-        "experiments/echidna.edi": "5976f0e0678ca16bb7bc1e52c9a2a1ea9a4043d9c3afead6a996b6e1b38b0159",
+        "experiments/echidna.edi": "6c9fc1b2b342f03c4b15ed7fb41f6afe9f9029ec1b3f05eaa6348e526d70c72e",
         "analysis/analysis.edi": "603772c6d4c286e53eb8554e6d2be4843c8f560cb942fec808bb8ca138eb993f"
       }
     },
@@ -1968,7 +2039,7 @@ var frozen = {
       "files": {
         "project.edi": "efa38eadd5af94f919ccb2c5ba29cd7f775bd5bf01954ac6e5d87fdfa5958866",
         "structures/lif.edi": "b68e864053c85ea3bb0e7a14b37131c7319cd2cd047b89d4dc4d8b30ff4033fe",
-        "experiments/cu_ka.edi": "9fb985ff9604f1beb98a6cfedb721b154b9819d7f816bcc159b033db3d2b09d8",
+        "experiments/cu_ka.edi": "5be14a0525ce8a09124e9f1beaa52fc12f3b49d9bf8201f19b6ac2c68948de5b",
         "analysis/analysis.edi": "76917b3672c7268e7fee9fb901c0ed8ffdd5ffcf29c6fc1083d470ad5b501e72"
       }
     },
@@ -2039,11 +2110,11 @@ var frozen = {
       "loaderWarning": "Warning: unsupported _calculator.type \"cryspy\" - using crysta\nWarning: unsupported _minimizer.type \"lmfit (leastsq)\" - using crysta",
       "files": {
         "project.edi": "f7afd0f1cf662c51d11e80cec521b9d40993f11c66590448c6c8077ee31ac8a1",
-        "structures/austenite.edi": "f69da3e935c3893b6dff3bfd902e3338c63f33a3cd043e47096f9932280331b3",
+        "structures/austenite.edi": "6b3eb1dab5b142687ed34263f04986ab3474bedfcaf9ce0d0ee7831f69929c93",
         "structures/ferrite.edi": "500fcf2007cefefb4b4477e10006596520d8e1cb8e61945d0791ff14ef27521c",
         "experiments/expt_n2.edi": "6e8f4ac836219d4ba503ff5583823b1d12eb523f788e16c03d86b2b5d2bacdda",
         "experiments/expt_s2.edi": "948b6f720ed6d72a5d5f0c5b8b06cae3dca6159f4f9e6edd56739110a2f2290a",
-        "analysis/analysis.edi": "b9bf3cbba3d67f97f4e361606f39650fe14313635d32e5176f3269e6692f28dd"
+        "analysis/analysis.edi": "e228e179bbb95062d1646300ac68b92cbc0692d9b34a436ed944ef97cdd3df07"
       }
     }
   ],
@@ -2051,7 +2122,7 @@ var frozen = {
     {
       "project": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project",
       "experiment": "d20",
-      "sha256": "7053aa291373fc6df17e3d2ced5008a098ef314f65e06a1204f6d0ecbb1ae518",
+      "sha256": "53ba4c8c28755334c633f23040fa411149d66294dc102862918ff461b09eca73",
       "peakType": "cwl-tch-pseudo-voigt",
       "mode": "cwl",
       "peakFields": [
@@ -2131,7 +2202,7 @@ var frozen = {
     {
       "project": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project",
       "experiment": "d20",
-      "sha256": "55ea976b34dffea45b1eb379a3f358d4afef7df9e3331fa3ced46fd63229949c",
+      "sha256": "0c97d871957341359beee76e7029f77d1bf0ed4eb8e4709733fe794fe3516a1c",
       "peakType": "cwl-tch-pseudo-voigt",
       "mode": "cwl",
       "peakFields": [
@@ -2216,7 +2287,7 @@ var frozen = {
     {
       "project": "docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project",
       "experiment": "d20",
-      "sha256": "9b9b01ad0ed3bfe12206653fa14976675e56ba87460484b969ec8433147ba6d3",
+      "sha256": "c0ef1ce128acbcc94eda9294f6afd63fd80c059eb7f7e5f1c5981f3efb07fbca",
       "peakType": "cwl-tch-pseudo-voigt",
       "mode": "cwl",
       "peakFields": [
@@ -2552,7 +2623,7 @@ var frozen = {
     {
       "project": "docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project",
       "experiment": "d20",
-      "sha256": "05b04c3d9d5ce502e2ef4f43bf1e3119eb2ecc6f05a621eeed605fea7b0455da",
+      "sha256": "6b86e5db73f55ae128b14d5ab237595530483f4543886f7e8d4012d30e05e1be",
       "peakType": "cwl-tch-pseudo-voigt",
       "mode": "cwl",
       "peakFields": [
@@ -2637,7 +2708,7 @@ var frozen = {
     {
       "project": "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project",
       "experiment": "echidna",
-      "sha256": "5976f0e0678ca16bb7bc1e52c9a2a1ea9a4043d9c3afead6a996b6e1b38b0159",
+      "sha256": "6c9fc1b2b342f03c4b15ed7fb41f6afe9f9029ec1b3f05eaa6348e526d70c72e",
       "peakType": "cwl-tch-pseudo-voigt-fcj",
       "mode": "cwl",
       "peakFields": [
@@ -2750,7 +2821,7 @@ var frozen = {
     {
       "project": "docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project",
       "experiment": "echidna",
-      "sha256": "372e3a1cee4228b17a254007a48d906f313db9dd2a9292df69e707a7dd4246ef",
+      "sha256": "133539d1a5bfb8611e3afbe487b7397f817aeb79e65376929ea4681cd91fdb2e",
       "peakType": "cwl-tch-pseudo-voigt-fcj",
       "mode": "cwl",
       "peakFields": [
@@ -2840,7 +2911,7 @@ var frozen = {
     {
       "project": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project",
       "experiment": "hrpt",
-      "sha256": "4a7aa10f25ecc085a7b8b9f0f621b44feab8b1b3864bb185b2d349991fecd162",
+      "sha256": "5063e9ea674694f4ba201a2b7f77b985ae7a8c74111091912f6f9999e15ee2df",
       "peakType": "cwl-tch-pseudo-voigt",
       "mode": "cwl",
       "peakFields": [
@@ -3089,7 +3160,7 @@ var frozen = {
     {
       "project": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project",
       "experiment": "hrpt",
-      "sha256": "58a44cc8c5a6493056634cc5442c548bbf44cce5c615b22b16173d0ec771e8ce",
+      "sha256": "c7a093e4cdee2aeca6553b84cca81293b748caeb6270d2083b5a043724128c26",
       "peakType": "cwl-tch-pseudo-voigt",
       "mode": "cwl",
       "peakFields": [
@@ -3168,15 +3239,15 @@ var frozen = {
     {
       "project": "docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project",
       "experiment": "d1a",
-      "sha256": "1397212f018457de21bd98ccc52918112db1eb46163c18860250735769522496",
-      "peakType": "cwl-pseudo-voigt-berar-baldinozzi-asymmetry",
+      "sha256": "f02575053ccb68d9047209eada95ef0042fc632ffdef67024c5bd1198d5a8ddb",
+      "peakType": "cwl-pseudo-voigt-berar-baldinozzi",
       "mode": "cwl",
       "peakFields": [
         "broad_gauss_u",
         "broad_gauss_v",
         "broad_gauss_w",
-        "broad_lorentz_x",
-        "broad_lorentz_y",
+        "mixing_eta_0",
+        "mixing_eta_1",
         "asym_beba_a0",
         "asym_beba_b0",
         "asym_beba_a1",
@@ -3202,50 +3273,51 @@ var frozen = {
         },
         "_experiment_type.beam_mode": "constant wavelength",
         "_scattering_source.neutron_scattering_length": "sears1992",
+        "_calculator.type": "crysta",
         "_peak.broad_gauss_u": {
           "value": 0.153402,
-          "free": false,
-          "uncertainty": 0.0
+          "free": true,
+          "uncertainty": null
         },
         "_peak.broad_gauss_v": {
           "value": -0.453103,
-          "free": false,
-          "uncertainty": 0.0
+          "free": true,
+          "uncertainty": null
         },
         "_peak.broad_gauss_w": {
           "value": 0.419409,
-          "free": false,
-          "uncertainty": 0.0
+          "free": true,
+          "uncertainty": null
         },
-        "_peak.broad_lorentz_x": {
+        "_peak.mixing_eta_0": {
+          "value": 0.25,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.mixing_eta_1": {
           "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_y": {
-          "value": 0.086818,
-          "free": false,
-          "uncertainty": 0.0
+          "free": true,
+          "uncertainty": null
         },
         "_peak.asym_beba_a0": {
           "value": -0.36248,
-          "free": false,
-          "uncertainty": 0.0
+          "free": true,
+          "uncertainty": null
         },
         "_peak.asym_beba_b0": {
           "value": -0.02261,
-          "free": false,
-          "uncertainty": 0.0
+          "free": true,
+          "uncertainty": null
         },
         "_peak.asym_beba_a1": {
           "value": -0.03862,
-          "free": false,
-          "uncertainty": 0.0
+          "free": true,
+          "uncertainty": null
         },
         "_peak.asym_beba_b1": {
           "value": -0.04941,
-          "free": false,
-          "uncertainty": 0.0
+          "free": true,
+          "uncertainty": null
         },
         "_peak.asym_beba_limit": {
           "value": 180.0,
@@ -3257,7 +3329,7 @@ var frozen = {
           "free": false,
           "uncertainty": 0.0
         },
-        "_peak.type": "cwl-pseudo-voigt-berar-baldinozzi-asymmetry",
+        "_peak.type": "cwl-pseudo-voigt-berar-baldinozzi",
         "_instrument.setup_wavelength": {
           "value": 1.912,
           "free": false,
@@ -3269,6 +3341,119 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_absorption.type": "none",
+        "_background.type": "line-segment"
+      },
+      "loops": {}
+    },
+    {
+      "project": "docs/user/cli/pd-neut-cwl_yap-spodi_3k/project",
+      "experiment": "spodi",
+      "sha256": "f89b143912601bef9a62b3f61c6ff25c6988759785333e7186244c130b3d5e62",
+      "peakType": "cwl-pseudo-voigt-berar-baldinozzi",
+      "mode": "cwl",
+      "peakFields": [
+        "broad_gauss_u",
+        "broad_gauss_v",
+        "broad_gauss_w",
+        "mixing_eta_0",
+        "mixing_eta_1",
+        "asym_beba_a0",
+        "asym_beba_b0",
+        "asym_beba_a1",
+        "asym_beba_b1",
+        "asym_beba_limit"
+      ],
+      "unusedFreeFields": [],
+      "instrumentFields": [
+        "setup_wavelength",
+        "calib_twotheta_offset"
+      ],
+      "range": [
+        4.05,
+        151.95,
+        0.04999999999999999,
+        2959
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.beam_mode": "constant wavelength",
+        "_scattering_source.neutron_scattering_length": "sears1992",
+        "_instrument.setup_wavelength": {
+          "value": 1.54816,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_twotheta_offset": {
+          "value": 0.00146,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.type": "cwl-pseudo-voigt-berar-baldinozzi",
+        "_peak.cutoff_fwhm": {
+          "value": 20.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_u": {
+          "value": 0.038892,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_v": {
+          "value": -0.0462,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_w": {
+          "value": 0.10586,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.mixing_eta_0": {
+          "value": 0.12522,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.mixing_eta_1": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.asym_beba_a0": {
+          "value": -0.22457,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.asym_beba_b0": {
+          "value": -0.00305,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.asym_beba_a1": {
+          "value": 0.11122,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.asym_beba_b1": {
+          "value": -0.05563,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.asym_beba_limit": {
+          "value": 160.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_absorption.type": "cylinder-hewat",
+        "_absorption.mu_r": {
+          "value": 0.0221,
+          "free": false,
+          "uncertainty": 0.0
+        },
         "_background.type": "line-segment"
       },
       "loops": {}
@@ -7126,7 +7311,7 @@ var frozen = {
     {
       "project": "docs/user/cli/pd-xray-cwl_lif_single/project",
       "experiment": "cu_ka",
-      "sha256": "9fb985ff9604f1beb98a6cfedb721b154b9819d7f816bcc159b033db3d2b09d8",
+      "sha256": "5be14a0525ce8a09124e9f1beaa52fc12f3b49d9bf8201f19b6ac2c68948de5b",
       "peakType": "cwl-tch-pseudo-voigt",
       "mode": "cwl",
       "peakFields": [
