@@ -109,9 +109,9 @@ The decisions it rests on, unchanged here:
   | `fit_parameter` | **Fit start values** (was *Fit start state*) | ✓ | `history` |
 
   The block lists keep theirs: `Structures (N)` (`layer-group`) and `Experiments (N)` (`microscope`).
-- **All foldable groups start folded** (owner, 2026-09-29), on every page and tab: the block lists
-  (Structures, Experiments) and every category. **The one exception is Get started** on Project → Basic, which
-  starts open, as the first thing a new user needs (the owner, 2026-09-29). Idea 10 (the top group of Basic and Extras open by
+- **All foldable groups start folded** (owner, 2026-09-29), on every page and tab: every category. **The
+  exceptions are Get started** on Project → Main, which starts open, as the first thing a new user needs (the
+  owner, 2026-09-29), **and the block lists** (Structures, Experiments), open at the start (owner, 2026-10-05). Idea 10 (the top group of Basic and Extras open by
   default) is **withdrawn**, and with it the block lists' reopening for each new project. The base's
   auto-collapse is kept: opening a group folds the others on its tab. Groups that cannot fold — the shared
   block selector (§7), the untitled Analysis Parameters and Fitting groups, the Text tab's groups — are not
@@ -212,15 +212,15 @@ and `stepMaximum`.
 
 ### 7. The block selector and the Text tab
 
-- **One block selector per page, in the main view's tab bar** (owner, 2026-10-05; it was under the sidebar's tab
-  bar before): on the Structure, Experiment and Analysis pages a compact combo box
-  (`Components/BlockSelector.qml`) whose every line reads as easydiffractionbeta's Text-tab selector: the block's
-  number (minor colour), its icon in its colour (§8), its name. It is right-aligned in the tab bar's row, half the
-  main area wide, on the chart background (`Components/MainAreaBlockSelector.qml`, `objectName`
-  `mainArea.blocks`). The tabs beside it shorten their names to the width it leaves; a long block name is cut in
-  the middle. Below `AppSizes.mainAreaSelectorBreak` of main-area width it moves to a row of its own under the
-  tab bar, as wide as the main area, and the tabs' view starts below it. It is hidden while the project holds
-  no block of the page's kind.
+- **One block selector per page, in a row at the top of the main area** (owner, 2026-10-05; it was under the
+  sidebar's tab bar before, and the main view's tab bar for one build): on the Structure, Experiment and Analysis
+  pages, under the main view's tab bar and above the chart toolbar, a full-width row
+  (`Components/MainAreaBlockSelector.qml`, `objectName` `mainArea.blocks`) on the chart background: the previous
+  and next buttons on the left, then a compact combo box (`Components/BlockSelector.qml`) filling the rest of the
+  width, with the chart toolbar's margin above and below. The charts give up that height. Every line of the box
+  reads as easydiffractionbeta's Text-tab selector: the block's number (minor colour), its icon in its colour (§8),
+  its name, a long one cut in the middle; an experiment's line starts with its fit outcome (§17) in a slot one
+  icon wide, empty without a result. The row is hidden while the project holds no block of the page's kind.
 - **Long lists are searchable** (owner, 2026-10-05): every combo box that lists project items (the block selector,
   the alias parameter) is a `Components/SearchableComboBox.qml`, which puts a search field at the top of its list
   when it holds more than 10 entries. The field filters by any part of an entry's text, ignoring case; Enter picks
