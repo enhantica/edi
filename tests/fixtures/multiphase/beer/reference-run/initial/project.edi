@@ -3,8 +3,8 @@ _edi.schema_version 1
 _metadata.name             beer_mcstas
 _metadata.title            "Untitled Project"
 _metadata.description      ?
-_metadata.created          "05 Oct 2026 06:17:51"
-_metadata.last_modified    "05 Oct 2026 06:17:51"
+_metadata.created          "05 Oct 2026 09:24:57"
+_metadata.last_modified    "05 Oct 2026 09:24:57"
 _metadata.timestamp        ?
 
 _rendering_plot.type auto

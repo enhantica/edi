@@ -52,17 +52,62 @@ def snapshot(project):
     }
 
 
-def main():
+def validate_unconstrained(project, removed_constraints, expected_constraints):
+    if set(removed_constraints) != expected_constraints:
+        message = 'The unconstrained capture must omit both known constraints'
+        raise ValueError(message)
+    if len(project.analysis.constraints) != 0:
+        message = 'The unconstrained reference must contain no active constraints'
+        raise ValueError(message)
+    if len(project.free_parameters) != 56:
+        message = 'BEER must retain the tutorial free set and both N2 scales'
+        raise ValueError(message)
+
+
+def write_reference(args, stages, removed_constraints):
+    record = {
+        'diffraction_lib_commit': '0d9f10e412a0cd08d4dd0af95845dd9bb597dcdf',
+        'versions': {
+            name: importlib.metadata.version(name)
+            for name in ('easydiffraction', 'cryspy', 'numpy', 'scipy', 'lmfit')
+        },
+        'tutorial_sha256': digest(args.tutorial),
+        'archive_sha256': digest(args.archive),
+        'initial_sha256': files(args.output / 'initial'),
+        'output_sha256': files(args.output / 'stage-2'),
+        'stages': stages,
+        'reference_variant': (
+            'unconstrained-independent-bank-scales'
+            if args.without_scale_constraints
+            else 'tutorial-cross-bank-constraints'
+        ),
+        'removed_constraints': removed_constraints,
+    }
+    (args.output / 'reference.json').write_text(json.dumps(record, indent=2) + '\n')
+    print('BEER independent reference complete', flush=True)
+
+
+def arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('--tutorial', required=True, type=Path)
     parser.add_argument('--archive', required=True, type=Path)
     parser.add_argument('--output', required=True, type=Path)
     parser.add_argument('--resume-first-stage', type=Path)
-    args = parser.parse_args()
+    parser.add_argument('--without-scale-constraints', action='store_true')
+    return parser.parse_args()
+
+
+def main():
+    args = arguments()
     args.output.mkdir(parents=True, exist_ok=bool(args.resume_first_stage))
     namespace = {'__name__': '__main__', '__file__': str(args.tutorial)}
     stages = []
     resuming = bool(args.resume_first_stage)
+    removed_constraints = []
+    expected_constraints = {
+        'n2_ferrite_scale = s2_ferrite_scale',
+        'n2_austenite_scale = s2_austenite_scale',
+    }
     for node in ast.parse(args.tutorial.read_text()).body:
         spelling = ast.unparse(node)
         if resuming:
@@ -93,9 +138,23 @@ def main():
         # Rendering has no model effect and needs no browser in an authoring service.
         if isinstance(node, ast.Expr) and spelling.startswith('project.display.'):
             continue
+        if args.without_scale_constraints and spelling.startswith(
+            'project.analysis.constraints.create('
+        ):
+            expression = next(
+                keyword.value.value
+                for keyword in node.value.keywords
+                if keyword.arg == 'expression'
+            )
+            if expression not in expected_constraints or expression in removed_constraints:
+                raise ValueError('Only the two declared BEER scale constraints may be omitted')
+            removed_constraints.append(expression)
+            continue
         is_fit = spelling == 'project.analysis.fit()'
         if is_fit and not stages:
             project = namespace['project']
+            if args.without_scale_constraints:
+                validate_unconstrained(project, removed_constraints, expected_constraints)
             project.save()
             shutil.copytree(project.metadata.path, args.output / 'initial')
             print('BEER initial project captured; starting tutorial fit 1', flush=True)
@@ -109,20 +168,7 @@ def main():
             shutil.copytree(project.metadata.path, args.output / f'stage-{len(stages)}')
             (args.output / 'stages.json').write_text(json.dumps(stages, indent=2) + '\n')
             print(f'BEER tutorial fit {len(stages)} captured', flush=True)
-    record = {
-        'diffraction_lib_commit': '0d9f10e412a0cd08d4dd0af95845dd9bb597dcdf',
-        'versions': {
-            name: importlib.metadata.version(name)
-            for name in ('easydiffraction', 'cryspy', 'numpy', 'scipy', 'lmfit')
-        },
-        'tutorial_sha256': digest(args.tutorial),
-        'archive_sha256': digest(args.archive),
-        'initial_sha256': files(args.output / 'initial'),
-        'output_sha256': files(args.output / 'stage-2'),
-        'stages': stages,
-    }
-    (args.output / 'reference.json').write_text(json.dumps(record, indent=2) + '\n')
-    print('BEER independent reference complete', flush=True)
+    write_reference(args, stages, removed_constraints)
 
 
 if __name__ == '__main__':

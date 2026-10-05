@@ -1,42 +1,55 @@
-# BEER independent reference
+# BEER ferrite/austenite reference with independent bank scales
 
-Source tutorial: diffraction-lib commit 0d9f10e412a0cd08d4dd0af95845dd9bb597dcdf,
-`docs/docs/tutorials/calibrate-beer-ess.py`. Default calculator CrySPY 0.12.1;
-library version 0.19.1, lmfit 1.3.4. `reference.json` records all versions,
-commands, source archive URL/ref/digests, input/output digests, fitted values,
-standard uncertainties and both fit-quality conventions.
+The two tutorial expressions `n2_ferrite_scale = s2_ferrite_scale` and
+`n2_austenite_scale = s2_austenite_scale` are omitted. Every other physics,
+data, structure, free-parameter declaration and joint-fitting statement is
+unchanged. Both N2 scales remain free. The original constrained capture remains in this repository's Git history.
 
-Commands use paths relative to the edi checkout: `../diffraction-lib` is the
-external checkout at the commit above, and `../beer-authoring` is the scratch
-run directory. The public-path correction changes only those command strings;
-the raw capture, data, saved input/output hashes and numerical records are
-unchanged. The corrected reference digest is
-`33fd1d176a90bfb4298188bd67bf7a02752b0f4072fb26e53a8af195432851e0`.
+The independent source is diffraction-lib commit
+`0d9f10e412a0cd08d4dd0af95845dd9bb597dcdf`, easydiffraction 0.19.1 and
+CrySPY 0.12.1. The original tutorial digest is
+`107c04c39dd0ba4cbdf8030e29194604f6b1709e059f59290159ceb11002662e`.
+Measured data come from easyscience/diffraction commit
+`35af7e9bf469a1ee4ecc889aff2279440b020c8a`; archive digest
+`68bdc067bda10fa07bfa9546375fa1ac85dd575add401c6b813cbd066cdb7d5e`.
 
-The authoring run executed the tutorial's two joint fits once each. The first
-fit auto-saved before the extractor failed on a string-valued space-group
-parameter. Recovery loaded that saved result, including Edi rounding and
-reversed bank order, and executed only the second fit. No completed fit was
-repeated. This capture variation is explicit in reference.json; it is not a
-fresh unmodified notebook output. The data archive was downloaded once;
-rendering calls were omitted. No environment was created in either product.
+One authoring invocation of edi's visible `author_beer.py` executes both
+stages in memory with `--without-scale-constraints`. Its pre-fit boundary
+requires that exactly the two known expressions were omitted, there are no
+active constraints, and all 56 parameters (40 backgrounds plus 16 others)
+are free. It performs the initial fit once, fixes only backgrounds, then
+performs the second fit once. It omits rendering and reuses the verified
+archive. No saved-stage recovery or repeat fit occurred. Tests consume saved
+artifacts and never execute diffraction-lib. The precise repository-relative
+command, all package versions and raw capture digest are in reference.json.
 
-The static raw Edi inputs and outputs are independent reference artifacts.
-`capture_beer.py` freezes them; `generate_beer.py` transcribes the initial and
-second-stage inputs into the current schema. The four optional zero-valued
-size/strain descriptors absent from crysta's dictionary are omitted; their
-zero contribution, every free profile field, cutoff, offset, both phases,
-measured points and uncertainties, backgrounds, exclusions, joint weights
-and cross-bank constraints are preserved. The original raw artifacts stay
-unchanged.
+`capture_beer.py` freezes the raw initial, stage-1 and stage-2 Edi trees.
+Its included-window Rwp uses only saved external rows with calc_status=incl:
+sqrt(sum(((measured-calculated)/sigma)^2) / sum((measured/sigma)^2)). The
+library's reported Rwp uses a different excluded-row basis; both quantities
+remain labelled in reference.json. The authoring command and captured outputs are recorded in `reference.json`
+and `reference-run/`.
 
-Parameter comparisons use exactly one external standard uncertainty; no
-parameters are excluded. The first fit includes forty background intensities;
-the second fixes them and fits fourteen other parameters. Rwp has no reported
-uncertainty, so the comparison allows five percent relative for independent
-optimizer termination. The library's reported Rwp includes excluded rows with
-zero calculation; `active_rwp` is separately derived by capture_beer.py only
-from saved rows with calc_status=incl, matching the engine's fit-window metric.
+`generate_beer.py` transcribes the saved inputs to schema 3, embeds the
+original measured columns at full precision, applies the tutorial's zero-
+error-to-one convention, and omits four optional zero-valued size/strain
+terms absent from crysta's dictionary. Unused alias declarations stay in the
+raw capture; they are omitted from the unconstrained active model.
 
-Canonical project id: pd-neut-tof_ferrite-austenite-beer_joint. The CLI and
-verification page use these committed measured inputs and independent values.
+CrySPY's TOF scale prefactor omits sin(theta_bank); FullProf's convention
+carries it. Therefore every phase scale value and its own SU map by
+1/sin(theta_bank), using only the fixed scattering angle in the external
+capture. Both BEER banks declare 2 theta = 90 degrees, giving sqrt(2). No
+factor comes from crysta output. Every other parameter and the raw capture
+stay unchanged by the conversion. The mapping gate also exercises a
+60-degree scattering-angle witness (factor two).
+
+The initial model has 56 free parameters; the second-stage corpus model
+has 16, including separate ferrite and austenite scales in each bank. The
+joint gate uses the declared `_fitting_mode.type joint` and `analysis.fit()`.
+Every fitted parameter is compared against its own external one-SU bound,
+with scale bounds converted consistently. Rwp has no reported uncertainty;
+five percent relative permits independent optimizer termination. No
+parameter is omitted or given a wider numerical tolerance.
+
+Project id: pd-neut-tof_ferrite-austenite-beer_joint.

@@ -14,11 +14,11 @@ _diffrn.ambient_electric_field ?
 
 _calculator.type cryspy
 
-_peak.broad_lorentz_gamma_0 5.24(19)
+_peak.broad_lorentz_gamma_0 5.25(19)
 _peak.broad_lorentz_gamma_1 0.
 _peak.broad_lorentz_gamma_2 0.
-_peak.broad_gauss_sigma_0 922(57)
-_peak.broad_gauss_sigma_1 1227(57)
+_peak.broad_gauss_sigma_0 920(57)
+_peak.broad_gauss_sigma_1 1228(57)
 _peak.broad_gauss_sigma_2 329(11)
 _peak.cutoff_fwhm 0.
 _peak.type tof-pseudo-voigt
@@ -34,8 +34,8 @@ _absorption.type none
 loop_
 _linked_structure.structure_id
 _linked_structure.scale
-ferrite 284.71971058
-austenite 67.91319207
+ferrite 403.74382992189492825(1.34350288425444031)
+austenite 95.8978216645195829(0.26870057685088811)
 
 loop_
 _excluded_region.id
@@ -51,25 +51,25 @@ _background.id
 _background.position
 _background.intensity
 1 40094.5234 0.190
-2 48089.8489 0.2066
+2 48089.8489 0.2065
 3 51976.023 0.2029
-4 54301.3567 0.1937
+4 54301.3567 0.1936
 5 58729.047 0.274
 6 62710.7828 0.320
 7 67711.8429 0.2561
 8 73158.8575 0.2340
-9 76439.8078 0.2153
-10 81249.7446 0.2272
+9 76439.8078 0.2152
+10 81249.7446 0.2270
 11 85263.3343 0.1583
-12 96157.3635 0.2220
-13 98132.3044 0.3601
-14 102368.8713 0.4091
-15 104248.2506 0.3464
+12 96157.3635 0.2219
+13 98132.3044 0.3602
+14 102368.8713 0.4092
+15 104248.2506 0.3463
 16 108771.5025 0.576
-17 111606.4984 1.007
-18 112721.3844 1.182
-19 115715.6497 0.886
-20 135592.4748 0.017
+17 111606.4984 1.005
+18 112721.3844 1.180
+19 115715.6497 0.887
+20 135592.4748 0.016
 
 loop_
 _data.time_of_flight

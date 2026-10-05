@@ -13,8 +13,10 @@ parser = argparse.ArgumentParser(
 )
 parser.add_argument('--run-root', type=Path, required=True)
 parser.add_argument('--commands', type=Path, required=True)
+parser.add_argument('--unconstrained-run', action='store_true')
+parser.add_argument('--output-home', type=Path)
 args = parser.parse_args()
-home = Path(__file__).with_name('beer')
+home = args.output_home or Path(__file__).with_name('beer')
 run = args.run_root
 record = json.loads((run / 'reference.json').read_text())
 record['raw_capture_sha256'] = hashlib.sha256((run / 'reference.json').read_bytes()).hexdigest()
@@ -30,7 +32,8 @@ record['data_source'] = {
 # Publish reproducible coordinates relative to an edi checkout, rather than
 # the author's home directory. The external checkout and run directory are
 # siblings of edi; all options and the two-stage recovery remain explicit.
-command = shlex.split(args.commands.read_text().splitlines()[-2])
+line = -1 if args.unconstrained_run else -2
+command = shlex.split(args.commands.read_text().splitlines()[line])
 command[0] = '../diffraction-lib/.pixi/envs/default/bin/python'
 command[command.index('-u') + 1] = 'tests/fixtures/multiphase/author_beer.py'
 for option, relative in {
@@ -39,20 +42,34 @@ for option, relative in {
     '--output': '../beer-authoring/record',
     '--resume-first-stage': '../beer-authoring/projects/calibrate-beer-ess',
 }.items():
-    command[command.index(option) + 1] = relative
-first_command = command.copy()
-resume_index = first_command.index('--resume-first-stage')
-del first_command[resume_index : resume_index + 2]
-record['commands'] = [shlex.join(first_command), shlex.join(command)]
-record['capture_recovery'] = (
-    'The first fit succeeded and auto-saved before the extractor '
-    'rejected a string-valued space-group parameter. The second '
-    'invocation recovered that saved result, with rounded persisted '
-    'first-stage values and reversed bank ordering, and ran only the '
-    'tutorial second fit. No optimizer run was repeated. Rendering '
-    'calls were omitted, and the verified local archive replaced '
-    'downloading inside the tutorial.'
-)
+    if option in command:
+        command[command.index(option) + 1] = relative
+if args.unconstrained_run:
+    if record['reference_variant'] != 'unconstrained-independent-bank-scales':
+        message = 'The unconstrained capture must identify its independent-bank variant'
+        raise ValueError(message)
+    record['commands'] = [shlex.join(command)]
+    record['capture_recovery'] = (
+        'One authoring invocation executed both tutorial fit stages in memory. '
+        'Only the two named cross-bank scale constraints were omitted; each bank '
+        'phase scale remained free. No saved-stage recovery or repeat optimizer '
+        'execution occurred. Rendering was omitted and the verified local archive '
+        'replaced downloading inside the tutorial.'
+    )
+else:
+    first_command = command.copy()
+    resume_index = first_command.index('--resume-first-stage')
+    del first_command[resume_index : resume_index + 2]
+    record['commands'] = [shlex.join(first_command), shlex.join(command)]
+    record['capture_recovery'] = (
+        'The first fit succeeded and auto-saved before the extractor '
+        'rejected a string-valued space-group parameter. The second '
+        'invocation recovered that saved result, with rounded persisted '
+        'first-stage values and reversed bank ordering, and ran only the '
+        'tutorial second fit. No optimizer run was repeated. Rendering '
+        'calls were omitted, and the verified local archive replaced '
+        'downloading inside the tutorial.'
+    )
 for index, stage in enumerate(record['stages'], 1):
     numerator = denominator = 0.0
     for p in (run / f'stage-{index}' / 'experiments').glob('*.edi'):

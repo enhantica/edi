@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-05T07:54:55Z
+# measured_utc = 2026-10-05T09:48:04Z
 #
-# Recorded from: tests-seq21-beer-reference.log (1 node(s) measured once, 5828 banked, 0 stale row(s) dropped)
-# Collected tests: 6184; with a reported duration: 3796
+# Recorded from: tests-seq26-edi-corpus.log (2 node(s) measured once, 5831 banked, 0 stale row(s) dropped)
+# Collected tests: 6187; with a reported duration: 3798
 # Module-scoped fixture costs recorded: 11
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 6184
+# inventory_python = 6187
 # inventory_cpp = 232
-# inventory_measured = 5829
+# inventory_measured = 5832
 # inventory_unmeasured = 587
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
@@ -2412,12 +2412,15 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_multiphase_app_contract.
 UNMEASURED:failed-in-this-run	tests/system/py/test_beer_multiphase.py::test_beer_cli_id_and_verification_page_use_the_committed_external_inputs
 UNMEASURED:failed-in-this-run	tests/system/py/test_beer_multiphase.py::test_beer_joint_fit_recovers_both_phases_with_every_external_uncertainty
 0.010	tests/system/py/test_beer_multiphase.py::test_beer_reference_binds_both_banks_and_every_reported_uncertainty
-UNMEASURED:failed-in-this-run	tests/system/py/test_beer_multiphase.py::test_beer_two_phases_and_bank_constraints_survive_two_save_cycles
+0.000	tests/system/py/test_beer_multiphase.py::test_beer_scale_convention_uses_only_reference_geometry_and_maps_each_uncertainty
+0.930	tests/system/py/test_beer_multiphase.py::test_beer_two_phases_and_independent_bank_scales_survive_two_save_cycles
 0.000	tests/system/py/test_c06_t6_fitting_corpus.py::test_corpus_absent_at_pin_is_a_named_transition_state[corpus-present]
 0.060	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[background-cecoal]
 0.050	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[background-lab6]
 0.120	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[background-pearl]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[beer-ferrite-austenite]
 1.840	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[cosio-d20-scan-3f]
+0.070	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[multiphase-scales]
 1.530	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[ncaf-wish-3bank-s5::ladder]
 0.000	tests/system/py/test_c06_t6_fitting_corpus_consumer.py::test_c06_t6_case_resolver_fails_closed_for_an_invalid_override
 0.000	tests/system/py/test_c06_t6_fitting_corpus_consumer.py::test_c06_t6_case_resolver_uses_override_and_requires_the_requested_case

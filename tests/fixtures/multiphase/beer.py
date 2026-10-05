@@ -7,8 +7,18 @@ from pathlib import Path
 
 import numpy as np
 
+from . import generate_beer
+
 HOME = Path(__file__).with_name('beer')
 PROJECT_ID = 'pd-neut-tof_ferrite-austenite-beer_joint'
+
+
+def scale_factor(reference, bank):
+    return generate_beer.scale_factor(reference, bank)
+
+
+def mapped_parameters(reference, stage):
+    return generate_beer.mapped_parameters(reference, stage)
 
 
 def reference():
@@ -43,7 +53,8 @@ def actual_values(project, parameters):
                     rows = experiment.linked_structure
                 item = getattr(rows[parts[0]], parts[1])
             elif category == 'background':
-                row = next(p for p in experiment.background if str(p.id) == parts[0])
+                # Native background ids are serialized one-based row ordinals.
+                row = experiment.background[int(parts[0]) - 1]
                 item = getattr(row, parts[1])
             else:
                 field = parts[0]

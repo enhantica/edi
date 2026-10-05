@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import math
 import re
 import shutil
 from pathlib import Path
@@ -13,8 +14,55 @@ CASE = 'beer-ferrite-austenite'
 PROJECT_ID = 'pd-neut-tof_ferrite-austenite-beer_joint'
 
 
+def scale_factor(reference, bank):
+    """CrySPY to FullProf TOF scale from the independent reference geometry."""
+    geometry = reference['stages'][0]['all_parameters'][f'{bank}.instrument.twotheta_bank']
+    two_theta = geometry['value']
+    if geometry['free'] or not math.isfinite(two_theta) or not 0 < two_theta <= 180:
+        message = 'BEER scale conversion requires fixed physical reference bank geometry'
+        raise ValueError(message)
+    return 1 / math.sin(math.radians(two_theta / 2))
+
+
+def mapped_parameters(reference, stage):
+    """Preserve every external parameter, scaling phase values and their own SU."""
+    mapped = {}
+    for key, parameter in stage['parameters'].items():
+        value = dict(parameter)
+        if '.linked_structure.' in key and key.endswith('.scale'):
+            conversion = scale_factor(reference, key.split('.')[0])
+            value['value'] *= conversion
+            value['su'] *= conversion
+        mapped[key] = value
+    return mapped
+
+
+def mapped_scale_token(token, conversion):
+    match = re.fullmatch(r'([+-]?(?:\d+\.?\d*|\.\d+))(?:\(([^)]*)\))?', token)
+    if match is None:
+        message = 'BEER phase scale must be a finite numeric parameter token'
+        raise ValueError(message)
+    mantissa, uncertainty = match.groups()
+    value = float(mantissa) * conversion
+    if not math.isfinite(value):
+        message = 'BEER scale mapping must retain finite inputs'
+        raise ValueError(message)
+    result = f'{value:.17f}'.rstrip('0').rstrip('.')
+    if uncertainty is not None:
+        if uncertainty:
+            su = float(uncertainty)
+            if '.' not in uncertainty:
+                su /= 10 ** len(mantissa.partition('.')[2])
+            # A decimal bracket is an absolute SU, independent of mantissa precision.
+            result += f'({su * conversion:.17f})'
+        else:
+            result += '()'
+    return result
+
+
 def transcribe(source, destination, background_free):
     destination.mkdir(parents=True, exist_ok=False)
+    reference = json.loads((HOME / 'reference.json').read_text())
     for path in source.rglob('*.edi'):
         relative = path.relative_to(source)
         text = path.read_text().replace('_edi.schema_version 1', '_edi.schema_version 3')
@@ -29,6 +77,16 @@ def transcribe(source, destination, background_free):
                 text,
                 flags=re.MULTILINE,
             )
+            # FullProf carries sin(theta_bank) in the TOF prefactor; CrySPY does not.
+            # The bank angle and each start value come only from the saved external run.
+            before, rest = text.split('_linked_structure.scale\n', 1)
+            rows, after = rest.split('\n\n', 1)
+            conversion = scale_factor(reference, path.stem)
+            rows = '\n'.join(
+                f'{phase} {mapped_scale_token(token, conversion)}'
+                for phase, token in (row.split() for row in rows.splitlines())
+            )
+            text = before + '_linked_structure.scale\n' + rows + '\n\n' + after
             name = 'N2' if path.stem == 'expt_n2' else 'S2'
             data = np.loadtxt(HOME / 'data' / f'Duplex_in_HR_for_IRF_{name}.dat')
             data[data[:, 2] == 0, 2] = 1  # The tutorial loader's zero-error convention.
@@ -50,6 +108,8 @@ def transcribe(source, destination, background_free):
                 .read_text()
                 .replace('_edi.schema_version 1', '_edi.schema_version 3')
             )
+            if reference['reference_variant'] == 'unconstrained-independent-bank-scales':
+                text = text.split('loop_\n_alias.id')[0].rstrip() + '\n'
             text += (
                 '\nloop_\n_joint_fit.experiment_id\n_joint_fit.weight\nexpt_s2 0.5\nexpt_n2 0.5\n'
             )
@@ -89,7 +149,12 @@ def main():
                     'provenance': 'PROVENANCE.md',
                 },
                 'quantities': {
-                    'n_free': {'value': 14, 'kind': 'reference', 'tol_abs': 0, 'tol_rel': None},
+                    'n_free': {
+                        'value': len(ref['stages'][-1]['parameters']),
+                        'kind': 'reference',
+                        'tol_abs': 0,
+                        'tol_rel': None,
+                    },
                     'rwp': {
                         'value': ref['stages'][-1]['active_rwp'],
                         'kind': 'reference',
@@ -108,13 +173,16 @@ def main():
         'The visible author_beer.py captures the tutorial; reference.json and raw Edi output '
         'live in edi tests/fixtures/multiphase/beer. No test runs diffraction-lib.\n'
         'This corpus starts from the saved first fit with backgrounds fixed, then performs '
-        'the second fit with all 14 remaining free parameters. Separate system gates execute '
-        'both stages and compare every parameter within its own standard uncertainty.\n'
+        'the second fit with all 16 remaining free parameters. Separate system gates execute '
+        'both stages and compare every parameter within its own standard uncertainty.\n\n'
         'Rwp has no reported uncertainty; five percent relative permits independent optimizer '
         'termination while forbidding material fit-quality loss. Parameter bounds remain one SU.\n'
         'Schema changes to 3; measured columns come from the original archive at full precision. '
         'Zero measured error becomes one exactly as in the tutorial loader. First-stage Edi '
-        'rounding is retained. CrySPY calculator/minimizer declarations '
+        'rounding is retained. Each bank phase scale and its SU map by 1/sin(theta_bank), '
+        'using only the fixed bank geometry in the external reference. The two tutorial '
+        'cross-bank scale constraints are omitted in this authoring variant. '
+        'CrySPY calculator/minimizer declarations '
         'are retained as provenance; '
         'crysta resolves its own backend on load.\n'
     )

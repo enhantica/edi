@@ -12,9 +12,3 @@ s2_ferrite_scale expt_s2.linked_structure.ferrite.scale
 s2_austenite_scale expt_s2.linked_structure.austenite.scale
 n2_ferrite_scale expt_n2.linked_structure.ferrite.scale
 n2_austenite_scale expt_n2.linked_structure.austenite.scale
-
-loop_
-_constraint.id
-_constraint.expression
-n2_ferrite_scale "n2_ferrite_scale = s2_ferrite_scale"
-n2_austenite_scale "n2_austenite_scale = s2_austenite_scale"
