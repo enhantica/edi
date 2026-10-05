@@ -332,7 +332,7 @@
     "add": {
      "need": {
       "by": "counterpart",
-      "ref": "CategoryCollection.add",
+      "ref": "AtomSites.add",
       "verdict": "keep"
      },
      "reason": "C",
@@ -341,7 +341,7 @@
     "clear": {
      "need": {
       "by": "counterpart",
-      "ref": "CollectionBase.clear",
+      "ref": "CategoryCollection.clear",
       "verdict": "keep"
      },
      "reason": "C",
@@ -839,7 +839,7 @@
     "clear": {
      "need": {
       "by": "counterpart",
-      "ref": "CollectionBase.clear",
+      "ref": "CategoryCollection.clear",
       "verdict": "keep"
      },
      "reason": "C",
