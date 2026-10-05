@@ -591,9 +591,6 @@ static void def_parameter_walks(nb::class_<Class>& cls) {
     cls.def_prop_ro(
         "parameters",
         [](Class& self) {
-            if constexpr (std::is_same_v<Class, edi::Project>) {
-                self.adopt_parameter_rows();  // each handle reaches this project (edi ADR-0024)
-            }
             edi::detail::point_parameters(self);  // X12: each handle's row
             return self.parameters();
         },
@@ -608,9 +605,6 @@ static void def_free_parameters(nb::class_<Class>& cls) {
     cls.def_prop_ro(
         "free_parameters",
         [](Class& self) {
-            if constexpr (std::is_same_v<Class, edi::Project>) {
-                self.adopt_parameter_rows();  // each handle reaches this project (edi ADR-0024)
-            }
             edi::detail::point_parameters(self);  // X12: each handle's row
             return self.free_parameters();
         },
@@ -818,11 +812,12 @@ static edi::Project* project_of(const edi::Parameter& parameter) {
 
 // A parameter's dependence as it is now. An edit that reaches no project (a space-group change) can
 // leave the marks behind, so the project's relations are refreshed first. A parameter no live project
-// holds (removed, moved, or its project destroyed) is set by no relation: its stored mark belongs to a
-// former project and is not consulted.
-static edi::Dependence dependence_now(const edi::Parameter& parameter) {
+// holds (removed, moved, or its project destroyed) is set by no relation: the mark a former project
+// left is cleared, so its readers and its free flag agree.
+static edi::Dependence dependence_now(edi::Parameter& parameter) {
     edi::Project* project = project_of(parameter);
     if (project == nullptr) {
+        parameter.dependence = edi::Dependence::Independent;
         return edi::Dependence::Independent;
     }
     warn_dependents(*project);
@@ -1295,7 +1290,6 @@ static void def_collection_views(nb::module_& m) {
                     if (slot.unique_name == self.parameter_unique_name.value()) {
                         // As an ordinary field getter returns it: attached to its row (X12), and
                         // keeping alive the object that owns its storage.
-                        project->adopt_parameter_rows();
                         edi::detail::point_parameters(*project);
                         nb::object owner = owner_of(*project, slot.parameter);
                         if (owner.is_none()) {
@@ -1650,9 +1644,9 @@ NB_MODULE(_edi, m) {
         // Whether a declared constraint or the space group sets this parameter (diffraction-lib
         // GenericParameter.user_constrained / .symmetry_constrained), from crysta's relation graph.
         .def_prop_ro("user_constrained",
-                     [](const edi::Parameter& p) { return dependence_now(p) == edi::Dependence::Constrained; })
+                     [](edi::Parameter& p) { return dependence_now(p) == edi::Dependence::Constrained; })
         .def_prop_ro("symmetry_constrained",
-                     [](const edi::Parameter& p) {
+                     [](edi::Parameter& p) {
                          const edi::Dependence dependence = dependence_now(p);
                          return dependence == edi::Dependence::SymmetryFixed ||
                                 dependence == edi::Dependence::SymmetryTied;
@@ -3073,7 +3067,6 @@ NB_MODULE(_edi, m) {
         .def_prop_ro(
             "structures",
             [](edi::Project& p) {
-                p.adopt_parameter_rows();  // A parameter handed out reads its dependence as it is now
                 return edi::views::StructuresView{&p, &edi::Project::structures,
                                                   &edi::Structure::name};
             },
@@ -3081,14 +3074,12 @@ NB_MODULE(_edi, m) {
         .def_prop_ro(
             "_aliases",
             [](edi::Project& p) {
-                p.adopt_relations();  // A held alias resolves its parameter through the project
                 return edi::views::AliasesView{&p, &edi::Project::aliases, &edi::ParameterAlias::id};
             },
             nb::keep_alive<0, 1>())
         .def_prop_ro(
             "_constraints",
             [](edi::Project& p) {
-                p.adopt_relations();  // An edited constraint re-marks the project's parameters
                 return edi::views::ConstraintsView{&p, &edi::Project::constraints,
                                                    &edi::ParameterConstraint::id};
             },
@@ -3096,8 +3087,6 @@ NB_MODULE(_edi, m) {
         .def_prop_ro(
             "experiments",
             [](edi::Project& p) {
-                p.adopt_experiments();  // A held experiment's value read calculates
-                p.adopt_parameter_rows();
                 return edi::views::ExperimentsView{&p, &edi::Project::experiments,
                                                    &edi::ExperimentBase::name};
             },
@@ -3105,7 +3094,6 @@ NB_MODULE(_edi, m) {
         .def_prop_rw(
             "structure",
             [](edi::Project& p) -> edi::Structure& {
-                p.adopt_parameter_rows();
                 return p.structure();
             },
             [](edi::Project& p, const edi::Structure& incoming) {
@@ -3119,8 +3107,6 @@ NB_MODULE(_edi, m) {
         .def_prop_rw(
             "experiment",
             [](edi::Project& p) -> edi::BraggPdExperiment& {
-                p.adopt_experiments();
-                p.adopt_parameter_rows();
                 return p.experiment();
             },
             [](edi::Project& p, const edi::BraggPdExperiment& incoming) {

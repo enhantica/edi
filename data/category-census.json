@@ -1942,14 +1942,19 @@
       "not_storage": "the revocable record through which nested collections reach their project"
     },
     {
-      "member": "ProjectSelfLink::link_",
+      "member": "ProjectAnchor::link_",
       "type": "std::shared_ptr<ProjectLink>",
-      "not_storage": "a project's own link record, cleared when the project is destroyed"
+      "not_storage": "a project's own link record, made by every constructor and cleared on destruction"
     },
     {
-      "member": "KeyedBase::host_",
+      "member": "ProjectAnchor::outer_",
       "type": "Project*",
-      "not_storage": "the base of the table class"
+      "not_storage": "a project's own link record, made by every constructor and cleared on destruction"
+    },
+    {
+      "member": "ProjectTail::owner_",
+      "type": "Project*",
+      "not_storage": "a project's last member, which links its collections after a build or an assignment"
     },
     {
       "member": "KeyedBase::host_link_",
@@ -3679,9 +3684,9 @@
       "not_storage": "the project's editor record"
     },
     {
-      "member": "Project::self_link_",
-      "type": "detail::ProjectSelfLink",
-      "not_storage": "the project's revocable link its nested collections reach it through"
+      "member": "Project::tail_",
+      "type": "detail::ProjectTail",
+      "not_storage": "the project's last member, which links its collections to its record"
     }
   ],
   "file_categories": {

@@ -41,6 +41,7 @@
 namespace edi {
 
 struct ExperimentBase;
+struct Structure;
 class Project;
 struct Parameter;
 // ADR-0020: the publication transaction, declared in edi/calculation.hpp.
@@ -1222,29 +1223,67 @@ class ItemKey;
 namespace detail {
 
 // A project's revocable reference to itself, as crysta's ProjectOwnerLink: one record per project
-// object, set to the project while it lives and cleared when it is destroyed. The nested collections a
-// project adopts (Project::adopt_parameter_rows) hold the record, so one that outlives its project
-// reads none.
+// object, set to the project while it lives and cleared when it is destroyed. Every collection of the
+// project, and every collection inside its structures and experiments, holds the record, so one that
+// outlives its project, or has left it, reads none (edi ADR-0024).
 struct ProjectLink {
     Project* project = nullptr;
 };
 
-// The project's end of the link: a copied or moved project makes its own record, and an assignment
-// keeps each side's.
-class ProjectSelfLink {
+// The project being built on this thread, from its first base to its last member.
+inline thread_local Project* project_being_built = nullptr;
+
+// The project's own record, as a base so it exists before any member: every constructor, copies and
+// moves included, makes a record naming this project. An assignment keeps each side's.
+class ProjectAnchor {
    public:
-    ProjectSelfLink() : link_(std::make_shared<ProjectLink>()) {}
-    ProjectSelfLink(const ProjectSelfLink& /*other*/) : ProjectSelfLink() {}
-    ProjectSelfLink(ProjectSelfLink&& /*other*/) : ProjectSelfLink() {}
-    // NOLINTNEXTLINE(bugprone-unhandled-self-assignment,cert-oop54-cpp) — keeps its own record
-    ProjectSelfLink& operator=(const ProjectSelfLink& /*other*/) noexcept { return *this; }
-    ProjectSelfLink& operator=(ProjectSelfLink&& /*other*/) noexcept { return *this; }
-    ~ProjectSelfLink() { link_->project = nullptr; }
     const std::shared_ptr<ProjectLink>& link() const noexcept { return link_; }
 
+   protected:
+    ProjectAnchor() { open(); }
+    ProjectAnchor(const ProjectAnchor& /*other*/) { open(); }
+    ProjectAnchor(ProjectAnchor&& /*other*/) { open(); }
+    // NOLINTNEXTLINE(bugprone-unhandled-self-assignment,cert-oop54-cpp) — keeps its own record
+    ProjectAnchor& operator=(const ProjectAnchor& /*other*/) noexcept { return *this; }
+    ProjectAnchor& operator=(ProjectAnchor&& /*other*/) noexcept { return *this; }
+    ~ProjectAnchor();
+
    private:
+    friend class ProjectTail;
+    void open();
     std::shared_ptr<ProjectLink> link_;
+    Project* outer_ = nullptr;  // the project being built when this one began (a nested build)
 };
+
+// The project's last member: built after every collection, it links them all to the record, and so does
+// every assignment, which runs it last too. So a project made any way (built, loaded, copied, moved or
+// assigned) has its links from the start (edi ADR-0024).
+class ProjectTail {
+   public:
+    ProjectTail() { close(); }
+    ProjectTail(const ProjectTail& /*other*/) { close(); }
+    ProjectTail(ProjectTail&& /*other*/) noexcept { close(); }
+    // NOLINTNEXTLINE(bugprone-unhandled-self-assignment,cert-oop54-cpp) — relinks its own project
+    ProjectTail& operator=(const ProjectTail& /*other*/) noexcept {
+        relink();
+        return *this;
+    }
+    ProjectTail& operator=(ProjectTail&& /*other*/) noexcept {
+        relink();
+        return *this;
+    }
+    ~ProjectTail() = default;
+
+   private:
+    void close() noexcept;
+    void relink() const noexcept;
+    Project* owner_ = nullptr;
+};
+
+// The collections inside a structure or an experiment take the link of the collection that admits it
+// (null when it leaves), so a retained one follows its item from project to project.
+inline void link_nested(Structure& structure, const std::shared_ptr<const ProjectLink>& link) noexcept;
+inline void link_nested(ExperimentBase& experiment, const std::shared_ptr<const ProjectLink>& link) noexcept;
 
 // A keyed collection, as its members' ids see it.
 class KeyedBase {
@@ -1262,21 +1301,21 @@ class KeyedBase {
     // Admit renaming `key` — the id of one of this collection's items — to `next`, or throw. Returns
     // false when `key` is not stored here (a stale record): the caller renames as detached.
     virtual bool admit_rename(const ItemKey& key, const std::string& next) const = 0;
-    // The project whose `experiments` (or relations, or structures) this collection is, once that
-    // project said so (Project::adopt_experiments); for a nested collection, the project that adopted
-    // it while that project lives (Project::adopt_parameter_rows); null otherwise.
-    Project* host() const noexcept {
-        if (host_ != nullptr) {
-            return host_;
-        }
-        return host_link_ ? host_link_->project : nullptr;
-    }
+    // The live project this collection belongs to, as a member or inside one of its structures or
+    // experiments; null otherwise (edi ADR-0024).
+    Project* host() const noexcept { return host_link_ ? host_link_->project : nullptr; }
+
+   protected:
+    const std::shared_ptr<const ProjectLink>& host_link() const noexcept { return host_link_; }
 
    private:
     friend class edi::Project;
-    Project* host_ = nullptr;
+    friend void link_nested(Structure& structure, const std::shared_ptr<const ProjectLink>& link) noexcept;
+    friend void link_nested(ExperimentBase& experiment,
+                            const std::shared_ptr<const ProjectLink>& link) noexcept;
     std::shared_ptr<const ProjectLink> host_link_;
 };
+
 
 }  // namespace detail
 
@@ -1812,6 +1851,7 @@ class ItemVec final : public detail::KeyedBase {
                 table_->store = &store_;
             }
             other.store_.edit().clear();
+            link_items();  // the items now belong where this collection does
         } else {
             store_.touch();  // a self-move-assignment is a write
         }
@@ -2008,6 +2048,15 @@ class ItemVec final : public detail::KeyedBase {
             }
             RowTraits<T>::link(*item, membership_);
         }
+        link_items();
+    }
+    // A structure's or experiment's own collections take this collection's project link (edi ADR-0024).
+    void link_items() noexcept {
+        if constexpr (std::is_same_v<T, Structure> || std::is_base_of_v<ExperimentBase, T>) {
+            for (const Ptr& item : store_.items()) {
+                detail::link_nested(*item, host_link());
+            }
+        }
     }
     void detach_one(const Ptr& item) noexcept {
         if (!item) {
@@ -2021,6 +2070,9 @@ class ItemVec final : public detail::KeyedBase {
         const detail::RowLink* row = RowTraits<T>::primary(*item);
         if (row != nullptr && row->record() == membership_.get()) {
             RowTraits<T>::unlink(*item);
+            if constexpr (std::is_same_v<T, Structure> || std::is_base_of_v<ExperimentBase, T>) {
+                detail::link_nested(*item, nullptr);  // it left this project
+            }
         }
     }
     void detach_all() noexcept {
@@ -3761,7 +3813,7 @@ inline void validate_sequential_data_dir(const std::string& data_dir, const std:
 // The top-level user object. calculate(tof_grid) runs the edi model through the crysta adapter and
 // returns the calculated intensity on the supplied TOF grid (len == tof_grid.size()); the grid is
 // the caller's argument (no measured data needed for a pure forward calculation).
-class Project {
+class Project : public detail::ProjectAnchor {
    public:
     // A default project holds ONE default structure and ONE default experiment, so the
     // programmatic single-block flow (`p.structure()...`, `calculate()`) works unchanged;
@@ -3769,9 +3821,7 @@ class Project {
     Project()
         : structures(std::vector<ItemVec<Structure>::Ptr>{std::make_shared<Structure>()}),
           experiments(std::vector<ItemVec<BraggPdExperiment>::Ptr>{
-              std::make_shared<BraggPdExperiment>()}) {
-        adopt_parameter_rows();
-    }
+              std::make_shared<BraggPdExperiment>()}) {}
     // The copying (Structure, BraggPdExperiment) constructor is RETIRED at every exposure
     // layer — native included, not just the Python
     // overload. Population goes through the collections; deleted, not removed,
@@ -3973,7 +4023,6 @@ class Project {
         if (structures.empty()) {
             throw std::invalid_argument("edi Project: no structure (structures is empty)");
         }
-        adopt_parameter_rows();  // a structure handed out reaches this project (edi ADR-0024)
         return *structures.front();
     }
     const Structure& structure() const {
@@ -3986,7 +4035,6 @@ class Project {
         if (experiments.empty()) {
             throw std::invalid_argument("edi Project: no experiment (experiments is empty)");
         }
-        adopt_parameter_rows();
         return *experiments.front();
     }
     const BraggPdExperiment& experiment() const {
@@ -4008,40 +4056,6 @@ class Project {
     // instead (per-object precision).
     void note_edit() noexcept { edits_.renew(); }
 
-    // Says `experiments` is this project's, so a held experiment's value read can reach
-    // calculate() (ExperimentBase::ensure_computed). calculate() calls it, and so does every
-    // surface that hands an experiment out. The mark never travels: a copied or moved project's
-    // collection starts without one (detail::KeyedBase).
-    void adopt_experiments() noexcept { static_cast<detail::KeyedBase&>(experiments).host_ = this; }
-    // The same for `aliases` and `constraints`, so a row handed out reaches this project: an alias
-    // resolves its parameter, and an edited row re-marks the parameters (edi ADR-0024).
-    void adopt_relations() noexcept {
-        static_cast<detail::KeyedBase&>(aliases).host_ = this;
-        static_cast<detail::KeyedBase&>(constraints).host_ = this;
-    }
-    // The same for the collections that hold parameters (the structures and their sites, each
-    // experiment's background and texture rows), so a parameter or structure handed out reaches this
-    // project through its row: its dependence mark is read, and its geometry computed, as the
-    // relations are now (edi ADR-0024). Construction, the loader, calculate() and every surface
-    // that hands a structure or experiment out call it.
-    // The nested collections live in structures and experiments that can outlive the project, so they
-    // hold the project's revocable link rather than the project itself; a reader still checks that the
-    // project holds the parameter it reached (it may have been removed or moved since).
-    void adopt_parameter_rows() noexcept {
-        self_link_.link()->project = this;
-        static_cast<detail::KeyedBase&>(structures).host_ = this;
-        for (const auto& structure_item : structures) {
-            static_cast<detail::KeyedBase&>(structure_item->atom_sites).host_link_ = self_link_.link();
-        }
-        for (const auto& experiment_item : experiments) {
-            static_cast<detail::KeyedBase&>(experiment_item->background).host_link_ = self_link_.link();
-            static_cast<detail::KeyedBase&>(experiment_item->background_terms).host_link_ =
-                self_link_.link();
-            static_cast<detail::KeyedBase&>(experiment_item->preferred_orientation).host_link_ =
-                self_link_.link();
-        }
-    }
-
    private:
     // ADR-0020 §1: the transaction reads and compares the editor record.
     friend WorkStamps work_stamps(const Project& live);
@@ -4050,8 +4064,67 @@ class Project {
     // calculate()'s body: converts, calculates and publishes every bank, or throws first.
     void publish_calculation();
     detail::EditLog edits_;
-    detail::ProjectSelfLink self_link_;  // edi ADR-0024: what adopted nested collections hold
+    // edi ADR-0024: every collection of the project, and every collection inside its structures and
+    // experiments, holds the project's record. ProjectTail calls it after a build or an assignment.
+    friend class detail::ProjectTail;
+    void link_rows() noexcept {
+        const std::shared_ptr<const detail::ProjectLink> own = link();
+        for (detail::KeyedBase* collection : std::initializer_list<detail::KeyedBase*>{
+                 &structures, &experiments, &aliases, &constraints}) {
+            collection->host_link_ = own;
+        }
+        for (const auto& structure_item : structures) {
+            detail::link_nested(*structure_item, own);
+        }
+        for (const auto& experiment_item : experiments) {
+            detail::link_nested(*experiment_item, own);
+        }
+    }
+    detail::ProjectTail tail_;  // the last member: see detail::ProjectTail
 };
+
+namespace detail {
+
+inline void ProjectAnchor::open() {
+    link_ = std::make_shared<ProjectLink>();
+    link_->project = static_cast<Project*>(this);
+    outer_ = project_being_built;
+    project_being_built = link_->project;
+}
+
+inline ProjectAnchor::~ProjectAnchor() {
+    if (project_being_built == link_->project) {  // a build that failed before its last member
+        project_being_built = outer_;
+    }
+    link_->project = nullptr;
+}
+
+inline void ProjectTail::close() noexcept {
+    owner_ = project_being_built;
+    if (owner_ != nullptr) {
+        project_being_built = static_cast<ProjectAnchor*>(owner_)->outer_;
+        relink();
+    }
+}
+
+inline void ProjectTail::relink() const noexcept {
+    if (owner_ != nullptr) {
+        owner_->link_rows();
+    }
+}
+
+inline void link_nested(Structure& structure, const std::shared_ptr<const ProjectLink>& link) noexcept {
+    static_cast<KeyedBase&>(structure.atom_sites).host_link_ = link;
+}
+
+inline void link_nested(ExperimentBase& experiment, const std::shared_ptr<const ProjectLink>& link) noexcept {
+    for (KeyedBase* collection : std::initializer_list<KeyedBase*>{
+             &experiment.background, &experiment.background_terms, &experiment.preferred_orientation}) {
+        collection->host_link_ = link;
+    }
+}
+
+}  // namespace detail
 
 // ADR-0018: the schema of every non-loop category. Each names the category on file, the members
 // that hold its columns, in column order, and the file item of each (an empty entry is a column

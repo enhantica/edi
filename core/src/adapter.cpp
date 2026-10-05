@@ -1560,8 +1560,8 @@ StructureGeometry structure_geometry(const Structure& structure, const ViewWindo
 }
 
 namespace {
-// The project that holds `structure`, reached through its sites' adopted link
-// (Project::adopt_parameter_rows) and checked to hold this very structure; null otherwise.
+// The project that holds `structure`, reached through its sites' link to their project (edi ADR-0024)
+// and checked to hold this very structure; null otherwise.
 Project* project_holding(const Structure& structure) {
     Project* project = static_cast<const detail::KeyedBase&>(structure.atom_sites).host();
     if (project == nullptr) {
@@ -1737,8 +1737,6 @@ void Project::calculate() {
     // (ExperimentBase::computed_current). A refusal clears every bank's computed
     // categories: no earlier result may stay readable beside a model the
     // calculation refused.
-    adopt_experiments();
-    adopt_parameter_rows();
     const auto clear_banks = [this] {
         for (auto& bank_item : experiments) {
             if (bank_item->data.has_value()) {
@@ -2282,7 +2280,6 @@ PublishOutcome publish(Project& live, CalculationResult&& result) {
         }
     }
     // --- the write pass: the state Project::calculate() on the live project would have left ------
-    live.adopt_experiments();
     for (std::size_t index = 0; index < structures; ++index) {
         Structure& structure = *live.structures[index];
         structure.geometry = result.geometry[index].has_value()

@@ -92,7 +92,8 @@ NOT_MODEL = {
     'GeometrySource': 'what a stored geometry was computed from',
     'EditLog': "a project's handle on its editor record",
     'ProjectLink': 'the revocable record through which nested collections reach their project',
-    'ProjectSelfLink': "a project's own link record, cleared when the project is destroyed",
+    'ProjectAnchor': "a project's own link record, made by every constructor and cleared on destruction",
+    'ProjectTail': "a project's last member, which links its collections after a build or an assignment",
     'ComputedSource': "what an experiment's computed categories were computed from",
     'ViewWindow': 'view state passed to a geometry read, never stored in the model',
     'StructureGeometry': 'the computed structure categories, published whole',
@@ -110,7 +111,7 @@ NOT_STORAGE = {
     'Structure::geometry_source': 'what the stored geometry was computed from',
     'ExperimentBase::computed_source': 'what the computed categories were computed from',
     'Project::edits_': "the project's editor record",
-    'Project::self_link_': "the project's revocable link its nested collections reach it through",
+    'Project::tail_': "the project's last member, which links its collections to its record",
 }
 # Member types that are a part of a table, not a cell of it.
 PARTS = {
