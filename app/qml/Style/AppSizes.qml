@@ -40,6 +40,10 @@ QtObject {
     readonly property real textViewMinimumHeight: unit * 5
     readonly property real textViewContinueClearance: EaStyle.Sizes.sideBarButtonHeight + unit * 0.5
     readonly property real reportPadding: unit * 2.5
+    // A chart toolbar's controls (ChartToolButton, ToolbarComboBox) are this tall, and this far apart within a
+    // group; the block selector row and the structure legend take the same values (edi ADR-0017 §7, §15, §16).
+    readonly property real toolbarControlSize: Math.round(unit * 2.5)
+    readonly property real toolbarSpacing: unit * 0.25
     // The messages dialog's fixed width (edi ADR-0017 §14): about the Preferences dialog's.
     readonly property real messagesDialogContentWidth: unit * 38
     // The About dialog's component table, as wide as the messages dialog and about ten rows high, and the

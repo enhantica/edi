@@ -5,6 +5,8 @@ import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Elements as EaElements
 
+import edi.app
+
 // One square button of a chart's toolbar (easydiffractionbeta's QtCharts1dTab.qml; edi ADR-0017 §15): a Font
 // Awesome icon on the content background inside a border in the chart's axis colour, the icon in the accent
 // colour while hovered or checked. Shared by the pattern chart and, with, the structure view.
@@ -16,7 +18,7 @@ Rectangle {
     property bool checked: false
     signal clicked
 
-    width: Math.round(EaStyle.Sizes.fontPixelSize * 2.5)
+    width: AppSizes.toolbarControlSize
     height: width
     color: EaStyle.Colors.contentBackground
     border.color: EaStyle.Colors.chartAxis

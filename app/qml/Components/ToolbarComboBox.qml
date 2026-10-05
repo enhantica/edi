@@ -5,6 +5,8 @@ import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Elements as EaElements
 
+import edi.app
+
 // A drop-down in a view's toolbar (edi ADR-0017 §15, §16; the owner, 2026-10-02), one style for the structure
 // view's colour scheme and the pattern chart's y scale: the base's combo box at the toolbar buttons' height, as
 // narrow as its widest entry with the arrow and the padding, and with the sidebar drop-downs' background — the
@@ -24,7 +26,7 @@ EaElements.ComboBox {
     }
 
     width: widestEntry + contentItemLabel.leftPadding + contentItemLabel.rightPadding + leftPadding + rightPadding
-    height: Math.round(EaStyle.Sizes.fontPixelSize * 2.5)
+    height: AppSizes.toolbarControlSize
     backgroundColor: Qt.tint(EaStyle.Colors.contentBackground, !box.hovered ? EaStyle.Colors.appBarComboBoxBackground : box.pressed ? EaStyle.Colors.appBarComboBoxBackgroundPressed : EaStyle.Colors.appBarComboBoxBackgroundHovered)
 
     FontMetrics {

@@ -345,9 +345,17 @@ Item {
 
         x: mainView.x + mainView.plotArea.x + mainView.plotArea.width - width
         y: chart.topMargin
-        yScale: controller.yScale
-        onYScaleChosen: scale => controller.yScale = scale
         onResetClicked: controller.reset()
+    }
+    // The y scale, linear, square root or log, at the chart's left (owner, 2026-10-05).
+    ToolbarComboBox {
+        objectName: "chart.toolbar.yscale"
+        x: chart.sideMargin
+        y: chart.topMargin
+        toolTip: qsTr("Y scale")
+        model: [qsTr("linear"), qsTr("square root"), qsTr("log")]
+        currentIndex: controller.yScale
+        onActivated: index => controller.yScale = index
     }
 
     GraphsView {

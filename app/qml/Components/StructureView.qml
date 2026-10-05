@@ -133,7 +133,9 @@ Rectangle {
             letterFont.pixelSize: EaStyle.Sizes.fontPixelSize * 1.15
         }
         ChartLegend {
+            id: legend
             objectName: "structure.view.legend"
+            minimumHeight: AppSizes.toolbarControlSize
             anchors.left: parent.left
             anchors.top: parent.top
             anchors.margins: view.margin
@@ -176,6 +178,17 @@ Rectangle {
         }
         onExited: hover.text = ""
         onWheel: wheel => controller.zoomAt(wheel.x, wheel.y, wheel.angleDelta.y)
+    }
+
+    // The colour scheme, after the legend at the view's left (owner, 2026-10-05).
+    ToolbarComboBox {
+        objectName: "structure.toolbar.colors"
+        x: legend.visible ? view.margin + legend.width + view.margin : view.margin
+        y: view.margin
+        toolTip: qsTr("Colour scheme")
+        model: ["jmol", "vesta"]
+        currentIndex: view.options && view.options.colorScheme === "vesta" ? 1 : 0
+        onActivated: index => view.options.colorScheme = index === 1 ? "vesta" : "jmol"
     }
 
     StructureToolbar {
