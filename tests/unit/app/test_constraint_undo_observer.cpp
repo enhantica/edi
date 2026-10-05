@@ -12,7 +12,7 @@ class RelationUndoObserver final : public QObject {
     Q_OBJECT
    public:
     using QObject::QObject;
-    Q_INVOKABLE QString state(QObject* object) const {
+    Q_INVOKABLE QString state(QObject* object, bool includeParameters = true) const {
         const auto* vm = qobject_cast<edi_app::ProjectViewModel*>(object);
         if (vm == nullptr) return {};
         const auto& project = vm->project();
@@ -27,12 +27,14 @@ class RelationUndoObserver final : public QObject {
                                           QString::fromStdString(constraint->expression.value()),
                                           constraint->enabled.get()});
         }
-        for (const auto* parameter : const_cast<edi::Project&>(project).parameters()) {
-            parameters.append(QJsonArray{parameter->value.get(), parameter->free.get(),
-                                         parameter->uncertainty.get().has_value()
-                                             ? QJsonValue(*parameter->uncertainty.get())
-                                             : QJsonValue(),
-                                         static_cast<int>(parameter->dependence)});
+        if (includeParameters) {
+            for (const auto* parameter : const_cast<edi::Project&>(project).parameters()) {
+                parameters.append(QJsonArray{parameter->value.get(), parameter->free.get(),
+                                             parameter->uncertainty.get().has_value()
+                                                 ? QJsonValue(*parameter->uncertainty.get())
+                                                 : QJsonValue(),
+                                             static_cast<int>(parameter->dependence)});
+            }
         }
         return QString::fromUtf8(QJsonDocument(QJsonObject{{"aliases", aliases},
                                                            {"constraints", constraints},

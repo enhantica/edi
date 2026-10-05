@@ -118,8 +118,11 @@ TestCase {
         verify(RelationUndoObserver.refuseNextFit(project, true), "The worker refusal must leave existing history available");
         project.fit.start();
         verify(project.fit.running, "The undo attempt must happen while the real fit controller is running");
+        const during = RelationUndoObserver.state(project, false);
         project.undo();
+        const unchanged = RelationUndoObserver.state(project, false) === during;
         tryVerify(() => !project.fit.running, 10000, "The refused fit must finish delivery");
+        verify(unchanged, "Undo must refuse model writes while the fit is running");
         verify(RelationUndoObserver.refuseNextFit(project, false), "The invalid declaration must be repaired before retrying Undo");
         verify(project.canUndo, "Running or refused fitting must preserve earlier relation history");
         project.undo();

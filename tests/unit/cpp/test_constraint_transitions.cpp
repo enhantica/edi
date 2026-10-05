@@ -312,6 +312,8 @@ TEST_CASE("Declaration edits before a work snapshot publish completed values wit
     REQUIRE_MESSAGE(
         work.project.structure().atom_sites[1]->adp_iso.value.get() == doctest::Approx(1.9),
         "The worker must apply the edited relation at the independent input 0.3");
+    const auto& expected_column = work.project.experiment().data->intensity_calc.values();
+    const std::vector<double> expected_array(expected_column.begin(), expected_column.end());
     auto staged = edi::stage_computed(work.project, work.stamps);
     const auto outcome = edi::publish(p, std::move(staged));
     if (outcome == edi::PublishOutcome::Superseded) {
@@ -319,6 +321,11 @@ TEST_CASE("Declaration edits before a work snapshot publish completed values wit
                        p.experiment().data->intensity_calc.values().data() == buffer),
                       "A refused calculation publication preserves both values and arrays");
     } else {
+        const auto& published_column = p.experiment().data->intensity_calc.values();
+        CHECK_MESSAGE((std::vector<double>(published_column.begin(), published_column.end()) ==
+                       expected_array),
+                      "Published arrays must equal the completed worker arrays accompanying the "
+                      "dependent values");
         CHECK_MESSAGE(
             target.value.get() == doctest::Approx(1.9),
             "Published arrays and their completed dependent values must describe one model");
