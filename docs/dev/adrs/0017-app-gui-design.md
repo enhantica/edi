@@ -218,7 +218,8 @@ and `stepMaximum`.
   `objectName` `mainArea.blocks`) on the chart background: a compact combo box (`Components/BlockSelector.qml`),
   then the previous and next buttons, the last one's right edge on the right edge of the chart toolbar below
   (which differs by page: each chart states it as `toolbarRightInset`). The chart toolbar's margin is above the
-  row, and a line across the main area a margin below it separates it from the chart (owner, 2026-10-05). The
+  row, and a line across the main area a margin below it, in the legend box's border colour, separates it from
+  the chart; the box and the buttons are a toolbar group's spacing apart (owner, 2026-10-05). The
   charts give up that height. Every line of the box reads in the Experiments table's column order: the block's
   number (minor colour), its icon in its colour (§8), for an experiment its fit outcome (§17), then its name, a
   long one cut in the middle. The row is hidden while the project holds no block of the page's kind.
@@ -517,8 +518,9 @@ code (`QtCharts1dTab.qml` and the base's `QtCharts1dBase.qml`; the owner, 2026-1
   and 2 em from the plot areas' right border to the chart's right edge.
 - **Toolbar.** A row of square buttons (2.5 em, with a fill and a border in the axis colour) that ends at the plot
   areas' right border: legend, hover coordinates, a spacer, pan, box zoom, reset (the Home icon, as the structure
-  view's), then a spacer and the y scale as a drop-down of linear, square root and log, in the toolbar drop-down
-  style (`ToolbarComboBox.qml`, §16) (the owner, 2026-10-02). The legend and
+  view's), Home last. The y scale is a drop-down of linear, square root and log at the chart's left, a margin in, in
+  the toolbar drop-down style (`ToolbarComboBox.qml`, §16) (the owner, 2026-10-02; moved left 2026-10-05). The
+  controls are `AppSizes.toolbarControlSize` tall and `AppSizes.toolbarSpacing` apart within a group. The legend and
   the hover coordinates are on at the start; pan and box zoom exclude each other, and box zoom is on at the start. An
   icon is in the accent colour while hovered or checked. `ChartToolButton.qml` and `ChartLegend.qml` are shared
   with the structure view (§16), whose toolbar is a row of the same buttons; `ChartToolbar.qml` is the pattern
@@ -654,14 +656,15 @@ computes no geometry: it draws what `edi::present_structure` and `edi::scene_dra
   `themeForeground` over a halo of the background; the legend and hint panels `mainContentBackgroundHalfTransparent`
   with a `chartGridLine` border; the buttons' `chartAxis` border. A theme switch redraws once. The atom colours
   are diffraction-lib's palettes, the same in both themes.
-- **Toolbar.** diffraction-lib's modebar, as `ChartToolButton`s with the chart toolbar's spacing and spacer.
-  Camera: projection (`cube`; *Parallel (orthographic) view* or *Perspective view*), `a`, `b`, `c` (*View along a*,
+- **Toolbar.** diffraction-lib's modebar, as `ChartToolButton`s with the chart toolbar's spacing and spacer:
+  the features group first, then the camera group ending in Home at the right (owner, 2026-10-05). Camera: projection (`cube`; *Parallel (orthographic) view* or *Perspective view*), `a`, `b`, `c` (*View along a*,
   … — the letter in bold in its axis colour, a label on the button), reset (`home`, *Reset view*: the home view, the
   projection kept). Features, one button per feature the structure has, in diffraction-lib's order: atoms (`atom`;
   all, asymmetric unit, none — *Atoms: all / asymmetric unit / none*, or *Atoms: show / hide* with no atom outside
   the asymmetric unit), labels (`tag`), bonds (`link`, when crysta found a bond), cell (`vector-square`), axes
   (`location-arrow`); a structure with no site has only cell and axes. A feature that is on shows its icon in the
-  accent colour. Then the colour scheme as a drop-down (`jmol`, `vesta`) in the toolbar drop-down style
+  accent colour. The colour scheme is a drop-down (`jmol`, `vesta`) at the view's left, after the atoms legend
+  (whose box is at least a toolbar control tall), in the toolbar drop-down style
   (`ToolbarComboBox.qml`, shared with the pattern chart's y scale): the sidebar drop-downs' background, the base's
   translucent combo-box colour over the content background (the owner, 2026-10-02), at the buttons' height, as narrow as its
   widest entry with the arrow and the padding. *Download PNG*
