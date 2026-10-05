@@ -2627,6 +2627,8 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
         return outcome;
     } catch (const std::invalid_argument&) {
         throw;  // already a clean, structured ValueError — surface as-is.
+    } catch (const ValidationError&) {
+        throw;  // a coded refusal keeps its codes
     } catch (const std::exception& error) {
         // Any other engine/model failure on the fit path fails closed as a structured ValueError.
         throw std::invalid_argument(std::string("edi fit failed: ") + error.what());
@@ -3033,6 +3035,8 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         return outcome;
     } catch (const std::invalid_argument&) {
         throw;
+    } catch (const ValidationError&) {
+        throw;  // a coded refusal keeps its codes
     } catch (const std::exception& error) {
         throw std::invalid_argument(std::string("edi fit_sequential failed: ") + error.what());
     }
@@ -3226,6 +3230,8 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
         return outcome;
     } catch (const std::invalid_argument&) {
         throw;  // already a clean, structured ValueError — surface as-is.
+    } catch (const ValidationError&) {
+        throw;  // a coded refusal keeps its codes
     } catch (const std::exception& error) {
         throw std::invalid_argument(std::string("edi fit_joint failed: ") + error.what());
     }
