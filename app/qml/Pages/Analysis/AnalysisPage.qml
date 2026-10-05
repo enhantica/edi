@@ -49,7 +49,7 @@ WorkflowPage {
         }
     ]
     mainItems: [
-        PatternChart {
+        ProjectPatternChart {
             id: chartView
             experiment: page.experiment
             shown: page.current && SwipeView.isCurrentItem

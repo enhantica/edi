@@ -81,6 +81,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/ParameterField.qml
         qml/Components/ParameterGrid.qml
         qml/Components/PatternChart.qml
+        qml/Components/ProjectPatternChart.qml
         qml/Components/EvolutionChart.qml
         qml/Components/SearchableComboBox.qml
         qml/Components/SelectorField.qml
