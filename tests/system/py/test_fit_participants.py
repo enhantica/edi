@@ -1,8 +1,5 @@
 """Fit admissibility follows only enabled participants of the requested problem."""
 
-import os
-from pathlib import Path
-
 import edi as engine
 import numpy as np
 import pytest
@@ -161,8 +158,6 @@ def test_singleton_unnamed_link_compatibility_still_validates_its_atoms(tmp_path
 
 def test_mixed_beam_families_remain_refused_for_joint_fit(tmp_path):
 
-    corpus = Path(os.environ['EDI_CRYSTA_CORPUS_ROOT'])
-    text = (corpus.parent / 'fixtures/c11_t57_profiles/tof/model.edi').read_text()
-    project = engine.Project.load(str(case.mixed(tmp_path / 'input', text)))
+    project = engine.Project.load(str(case.mixed(tmp_path / 'input')))
     with pytest.raises(ValueError, match=r'mixed|homogeneous|same.*kind|same.*family|uniform'):
         project.analysis.fit(should_cancel=lambda: True)

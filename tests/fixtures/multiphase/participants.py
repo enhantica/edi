@@ -115,7 +115,32 @@ def graph(root, key, *, reverse=False):
     return write(root, edges, fixed_wavelengths=wavelengths, fixed_cells=cells, reverse=reverse)
 
 
-def mixed(root, tof_text):
+# An authored valid TOF bank shape; these values claim no profile agreement.
+TOF_TEXT = """data_experiment
+_experiment_type.sample_form powder
+_experiment_type.radiation_probe neutron
+_experiment_type.scattering_type bragg
+_experiment_type.beam_mode "time-of-flight"
+_peak.type tof-pseudo-voigt
+_peak.broad_gauss_sigma_0 1
+_peak.broad_gauss_sigma_1 0
+_peak.broad_gauss_sigma_2 1
+_peak.broad_lorentz_gamma_0 0.75
+_peak.broad_lorentz_gamma_1 0
+_peak.broad_lorentz_gamma_2 0
+_peak.cutoff_fwhm 5
+_instrument.calib_d_to_tof_offset 0.125
+_instrument.calib_d_to_tof_linear 1000
+_instrument.calib_d_to_tof_quadratic 0
+_instrument.setup_twotheta_bank 90
+loop_
+_linked_structure.structure_id
+_linked_structure.scale
+structure 401.4629
+"""
+
+
+def mixed(root, tof_text=TOF_TEXT):
     root = write(
         root, {'p': [('alpha', True)], 'q': [('beta', True)]}, fixed_wavelengths=('p', 'q')
     )
