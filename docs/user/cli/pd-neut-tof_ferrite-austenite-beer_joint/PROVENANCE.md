@@ -7,10 +7,11 @@ fitted jointly, from the diffraction-lib tutorial `calibrate-beer-ess.py`.
 point transcribed into the current schema. The fixture's `PROVENANCE.md` and `reference.json` record the source
 commit, the data archive and every digest.
 
-`expected.json` holds the tutorial's first-stage result as computed by CrySPY: an independent **reference**, not
-a crysta regression pin. Its Rwp is taken over the included points of both banks (time of flight between 40 500
+The tutorial ties each phase's scale across the two banks with constraints; this project and its reference leave
+all four scales free instead, so the comparison covers what edi fits today.
+
+`expected.json` holds the first-stage result as computed by CrySPY: an independent **reference**, not a crysta
+regression pin. Its Rwp is taken over the included points of both banks (time of flight between 40 500
 and 130 000 µs). crysta's time-of-flight intensity carries sin θ of the bank, CrySPY's does not, so crysta's
 phase scales are CrySPY's divided by sin 45° when they describe the same pattern; the Rwp is unaffected.
 
-The project is not in the executing set yet: its constraints tie each phase's scale across the two banks, and
-crysta does not apply constraints yet.

@@ -8,8 +8,7 @@ description: >-
 # Ferrite and austenite on BEER, joint
 
 Two Fe phases, ferrite (body-centred) and austenite (face-centred), against two BEER (ESS) time-of-flight neutron
-banks, `expt_s2` and `expt_n2`, fitted jointly. Each bank sums both phases' patterns, each with its own scale, and
-the project's constraints tie each phase's scale across the two banks.
+banks, `expt_s2` and `expt_n2`, fitted jointly. Each bank sums both phases' patterns, each with its own scale.
 
 ## Run it
 
@@ -22,6 +21,6 @@ from its Examples list.
 
 ## What is checked
 
-`expected.json` holds CrySPY's result for the tutorial's first fit, an independent reference
-([PROVENANCE.md](PROVENANCE.md)). The project is not run by CI yet: crysta does not apply the constraints that tie
-the phase scales across the banks.
+`expected.json` holds CrySPY's result for the first fit, an independent reference
+([PROVENANCE.md](PROVENANCE.md)). CI and `pixi run verify` run this project through `python -m edi` and compare
+its Rwp with CrySPY's (`tools/checks/cli_projects.py`).

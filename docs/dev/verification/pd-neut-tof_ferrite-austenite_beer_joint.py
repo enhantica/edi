@@ -23,8 +23,8 @@
 # conversion.
 #
 # **The bounds are labelled regression pins**: this page's own measured closeness with stated
-# headroom (profile difference 0.12 %, max deviation 0.11 %, area ratio 0.99996 to 0.99997,
-# correlation 0.9999992 in both banks).
+# headroom (profile difference 0.12 %, max deviation 0.11 %, area ratio 0.999998, correlation
+# 0.9999992 in both banks).
 
 # %%
 import json

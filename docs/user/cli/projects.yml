@@ -62,6 +62,5 @@ projects:
     # declared the two parameters.
     executing: true
   - id: pd-neut-tof_ferrite-austenite-beer_joint
-    # Ferrite and austenite against two BEER banks, fitted jointly; executing once crysta applies the
-    # project's constraints, which tie the two banks' phase scales.
-    executing: false
+    # Ferrite and austenite against two BEER banks, fitted jointly, each bank's phase scales free.
+    executing: true

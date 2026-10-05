@@ -7,7 +7,7 @@
   },
   "quantities": {
     "rwp": {
-      "value": 0.06883298820841714,
+      "value": 0.06880450097767762,
       "kind": "reference",
       "tol_abs": null,
       "tol_rel": 0.05

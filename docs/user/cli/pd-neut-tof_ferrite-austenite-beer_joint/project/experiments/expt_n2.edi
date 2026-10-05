@@ -34,8 +34,8 @@ _absorption.type none
 loop_
 _linked_structure.structure_id
 _linked_structure.scale
-ferrite 285
-austenite 68
+ferrite 403.0508652763321038()
+austenite 96.16652224137047256()
 
 loop_
 _excluded_region.id
