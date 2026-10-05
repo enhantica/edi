@@ -826,7 +826,7 @@ static edi::Dependence dependence_now(edi::Parameter& parameter) {
 }
 
 // The Python object that owns a parameter's storage: its keyed row (a site, a background point or term,
-// a texture row) or, for a block field, its structure or experiment. None when the project holds none.
+// a texture row, a linked structure) or, for a block field, its structure or experiment. None when the project holds none.
 static nb::object owner_of(edi::Project& project, const edi::Parameter* parameter) {
     const auto holds = [parameter](auto& node) {
         for (const edi::Parameter* held : node.parameters()) {
@@ -852,6 +852,11 @@ static nb::object owner_of(edi::Project& project, const edi::Parameter* paramete
                 return nb::cast(row);
             }
         }
+        for (const std::shared_ptr<edi::LinkedStructure>& link : experiment->linked_structures) {
+            if (holds(*link)) {
+                return nb::cast(link);
+            }
+        }
         for (const std::shared_ptr<edi::LineSegment>& point : experiment->background) {
             if (holds(*point)) {
                 return nb::cast(point);
@@ -862,8 +867,7 @@ static nb::object owner_of(edi::Project& project, const edi::Parameter* paramete
                 return nb::cast(term);
             }
         }
-        if (holds(experiment->peak) || holds(experiment->instrument) || holds(experiment->linked_structure) ||
-            holds(experiment->absorption)) {
+        if (holds(experiment->peak) || holds(experiment->instrument) || holds(experiment->absorption)) {
             return nb::cast(experiment);
         }
     }

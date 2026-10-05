@@ -1885,7 +1885,8 @@ RelationProject relation_project(const Project& model) {
     for (const auto& bank_item : model.experiments) {
         build_on_heap(converted.banks, *bank_item);
     }
-    converted.project = std::make_unique<crysta::Project>(to_crysta_structure(model.structure()),
+    // Every structure of the project (its phases), so each one's relations are compiled.
+    converted.project = std::make_unique<crysta::Project>(to_crysta_structures(model),
                                                           experiment_list(converted.banks));
     fill_crysta_relations(model, *converted.project);
     return converted;
