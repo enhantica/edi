@@ -160,9 +160,9 @@ if(EMSCRIPTEN)
 endif()
 
 # The Examples: every project edi's CLI registry lists, in registry order, then the app's own X-ray
-# example — bundled without the scan data a project's
-# `_sequential_fit.data_dir` names (opening and calculating never read it). Configuration fails when
-# the registry and the project directories disagree.
+# example, each with its scan data (a scan's datasets are browsed in the app). The web app leaves out the
+# 324-file scan (19 MB); the 162-file cooling run is its scan example. Configuration fails when the registry
+# and the project directories disagree.
 set(_cli ${PROJECT_SOURCE_DIR}/docs/user/cli)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${_cli}/projects.yml)
 file(STRINGS ${_cli}/projects.yml _id_lines REGEX "^  - id: ")
@@ -180,25 +180,13 @@ foreach(entry IN LISTS _cli_entries)
         message(FATAL_ERROR "docs/user/cli/${entry}/ is not listed in docs/user/cli/projects.yml")
     endif()
 endforeach()
+if(EMSCRIPTEN)
+    list(REMOVE_ITEM EDI_APP_EXAMPLE_IDS pd-neut-cwl_cosio-d20_scan-324f)
+endif()
 function(edi_app_bundle_examples root)
     foreach(id IN LISTS ARGN)
-        set(project ${root}/${id}/project)
-        set(skip "")
-        if(EXISTS ${project}/analysis/analysis.edi)
-            file(STRINGS ${project}/analysis/analysis.edi _data_dir REGEX "^_sequential_fit.data_dir ")
-            if(_data_dir)
-                string(REGEX REPLACE "^_sequential_fit.data_dir +" "" skip "${_data_dir}")
-            endif()
-        endif()
-        file(GLOB_RECURSE files CONFIGURE_DEPENDS ${project}/*)
-        set(bundled)
-        foreach(file IN LISTS files)
-            if(NOT skip STREQUAL "" AND file MATCHES "^${project}/${skip}/")
-                continue()
-            endif()
-            list(APPEND bundled ${file})
-        endforeach()
-        qt_add_resources(edi_app_module "edi_example_${id}" PREFIX "/edi/examples" BASE ${root} FILES ${bundled})
+        file(GLOB_RECURSE files CONFIGURE_DEPENDS ${root}/${id}/project/*)
+        qt_add_resources(edi_app_module "edi_example_${id}" PREFIX "/edi/examples" BASE ${root} FILES ${files})
     endforeach()
 endfunction()
 edi_app_bundle_examples(${_cli} ${EDI_APP_EXAMPLE_IDS})
