@@ -198,7 +198,8 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"t16-29-cosio-experiment-list", {blocks}});
     steps_.push_back({"t16-30-cosio-analysis", {close, analysis, basic}});
     steps_.push_back({"t16-40-created-saved-reopened",
-                      {"experiments.create", "save-as:created", "open-project:created", experiment, "mainArea.blocks.box",
+                      start + open_example("pd-xray-cwl_lif") + QStringList{experiment, basic, "expand:group.experiments",
+                      "experiments.create", "save-as:created", "open-project:created", experiment, "mainArea.blocks.box",
                        "choose:experiment1 · experiment1.edi", text, "scroll-to:text.view:_data_range"}});
     if (!only.isEmpty()) {
         std::erase_if(steps_, [&only](const Step& step) { return !step.image.startsWith(only); });
