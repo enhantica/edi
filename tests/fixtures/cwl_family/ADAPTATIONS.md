@@ -28,3 +28,7 @@ serialization spelling explicitly; they do not bless current engine output.
 The asymmetry-off and full-model fits use separate copies of the delivered
 starting project. FullProf expectations are parsed from committed authoring-time
 outputs; neither tested engine creates a correctness expectation.
+
+The E09-T58 survey now explicitly classifies the new Gaussian, Lorentzian and Npr5 class/member and enum routes as non-operation public rows. Existing route classifications and model-operation signature controls remain. Crysta's narrow unit surface witnesses cover their declared descriptors, distinct enums and foreign-slot absence; runtime-attributed evidence is appended by the visible generator, without changing either coverage floor.
+
+The corresponding edi survey also lacked C12-T4's LinkedStructures container and its collection operations. Those explicit routes now receive the same other-public classification as the existing structure and experiment collections; no model-operation signature route is removed.
