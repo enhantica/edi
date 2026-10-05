@@ -9,8 +9,6 @@ import QtQuick.Templates as T
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
 
-import edi.app
-
 // The base's combo box with a search field at the top of its list when it holds more than `searchThreshold`
 // entries (edi ADR-0017 §7): every combo box that lists project items (blocks, parameters) is one of these. The
 // field filters the list by any part of an entry's text, ignoring case; Enter picks the first entry left.
@@ -23,6 +21,8 @@ EaElements.ComboBox {
     property int searchThreshold: 10
     readonly property bool searchable: count > searchThreshold
     readonly property string filter: searchable ? searchField.text.trim().toLowerCase() : ""
+    // The height the list may take: the window's, as the base's popup has it, less the popup's margins.
+    readonly property real windowHeight: T.Overlay.overlay ? T.Overlay.overlay.height : height * 20
 
     // Whether an entry's text matches the search.
     function matches(text) {
@@ -51,7 +51,7 @@ EaElements.ComboBox {
     popup: T.Popup {
         y: 0
         width: control.width
-        height: Math.min(contentItem.implicitHeight, control.Window.height - topMargin - bottomMargin)
+        height: Math.min(contentItem.implicitHeight, control.windowHeight - topMargin - bottomMargin)
         topMargin: EaStyle.Sizes.fontPixelSize
         bottomMargin: EaStyle.Sizes.fontPixelSize
         // The search field takes the keyboard while the list is open.
@@ -86,7 +86,7 @@ EaElements.ComboBox {
             ListView {
                 id: list
                 width: parent.width
-                height: Math.min(contentHeight, control.Window.height - control.popup.topMargin - control.popup.bottomMargin - (searchField.visible ? searchField.height : 0))
+                height: Math.min(contentHeight, control.windowHeight - control.popup.topMargin - control.popup.bottomMargin - (searchField.visible ? searchField.height : 0))
                 implicitHeight: contentHeight
                 clip: true
                 model: control.delegateModel
