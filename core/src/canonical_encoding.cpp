@@ -371,6 +371,27 @@ std::string calculation_inputs(const ItemVec<Structure>& structures,
     return out;
 }
 
+
+std::string relation_inputs(const ItemVec<ParameterAlias>& aliases,
+                            const ItemVec<ParameterConstraint>& constraints) {
+    std::string out;
+    put_u64(out, aliases.generation());
+    put_u64(out, aliases.size());
+    for (const auto& alias : aliases) {
+        put_text(out, alias->id.value());
+        put_written(out, alias->parameter_unique_name);
+    }
+    put_u64(out, constraints.generation());
+    put_u64(out, constraints.size());
+    for (const auto& constraint : constraints) {
+        put_text(out, constraint->id.value());
+        put_written(out, constraint->expression);
+        put_u64(out, constraint->enabled.get() ? 1 : 0);
+        put_u64(out, constraint->enabled.written());
+    }
+    return out;
+}
+
 }  // namespace detail
 // ADR-0018: the table view of every non-loop category, instantiated whole, so each schema's one
 // generation is compiled over exactly its columns.

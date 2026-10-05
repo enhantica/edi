@@ -2925,6 +2925,21 @@
       "not_storage": "what a stored geometry was computed from"
     },
     {
+      "member": "GeometrySource::aliases",
+      "type": "std::shared_ptr<const Membership>",
+      "not_storage": "what a stored geometry was computed from"
+    },
+    {
+      "member": "GeometrySource::constraints",
+      "type": "std::shared_ptr<const Membership>",
+      "not_storage": "what a stored geometry was computed from"
+    },
+    {
+      "member": "GeometrySource::relations",
+      "type": "std::string",
+      "not_storage": "what a stored geometry was computed from"
+    },
+    {
       "member": "EditLog::record_",
       "type": "std::shared_ptr<EditRecord>",
       "not_storage": "a project's handle on its editor record"
@@ -2952,6 +2967,21 @@
     {
       "member": "ComputedSource::edits_at",
       "type": "std::uint64_t",
+      "not_storage": "what an experiment's computed categories were computed from"
+    },
+    {
+      "member": "ComputedSource::aliases",
+      "type": "std::shared_ptr<const Membership>",
+      "not_storage": "what an experiment's computed categories were computed from"
+    },
+    {
+      "member": "ComputedSource::constraints",
+      "type": "std::shared_ptr<const Membership>",
+      "not_storage": "what an experiment's computed categories were computed from"
+    },
+    {
+      "member": "ComputedSource::relations",
+      "type": "std::string",
       "not_storage": "what an experiment's computed categories were computed from"
     },
     {

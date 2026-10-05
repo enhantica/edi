@@ -32,6 +32,13 @@ std::string calculation_inputs(const ItemVec<Structure>& structures,
 // which is the conservative direction.
 std::string geometry_inputs(const Structure& structure);
 
+// The declared relations (edi ADR-0024): every alias and constraint row with the identity of each
+// field's last write, and each collection's generation. A declaration sets dependents' values, so it
+// is an input of every computed category and of the geometry; equal encodings mean no declaration
+// was written, an equal rewrite included.
+std::string relation_inputs(const ItemVec<ParameterAlias>& aliases,
+                            const ItemVec<ParameterConstraint>& constraints);
+
 }  // namespace edi::detail
 
 #endif  // EDI_CANONICAL_ENCODING_HPP

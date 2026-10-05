@@ -772,14 +772,39 @@ static edi::Project* host_of(const edi::ItemKey& key) {
     return owner != nullptr ? owner->host() : nullptr;
 }
 
-// After an edit of the relations: crysta re-marks every parameter and clears a newly dependent free
-// flag with its warning. A set that cannot hold yet stays as declared; the next calculation, fit or
-// save refuses it with crysta's code.
-static void relations_changed(edi::Project& project) {
+// Before a calculation or fit: crysta re-marks every parameter and clears a dependent's stale free flag
+// with its warning, as crysta's own entry points do. A set that cannot hold is refused by the call itself.
+static void warn_dependents(edi::Project& project) {
     try {
         edi::refresh_relations(project, warn_python);
     } catch (const edi::ValidationError&) {  // NOLINT(bugprone-empty-catch) — refused at use
     }
+}
+
+// After an edit of the relations: it is an edit of the project, so the computed categories go stale
+// and the next read or calculation applies the new relations; crysta re-marks every parameter and
+// clears a newly dependent free flag with its warning. No parameter value is written here. A set that
+// cannot hold yet stays as declared; the next calculation, fit or save refuses it with crysta's code.
+static void relations_changed(edi::Project& project) {
+    project.note_edit();
+    warn_dependents(project);
+}
+
+// The project a parameter handle belongs to, through the row it is attached to (X12); null for one no
+// project holds.
+static edi::Project* project_of(const edi::Parameter& parameter) {
+    const edi::detail::RowLink* link = parameter.category.get();
+    const edi::detail::Membership* record = link != nullptr ? link->record() : nullptr;
+    return record != nullptr && record->owner != nullptr ? record->owner->host() : nullptr;
+}
+
+// A parameter's dependence as it is now. An edit that reaches no project (a space-group change) can
+// leave the marks behind, so the project's relations are refreshed first.
+static edi::Dependence dependence_now(const edi::Parameter& parameter) {
+    if (edi::Project* project = project_of(parameter)) {
+        warn_dependents(*project);
+    }
+    return parameter.dependence;
 }
 
 // The Python object that owns a parameter's storage: its keyed row (a site, a background point or term,
@@ -1601,11 +1626,12 @@ NB_MODULE(_edi, m) {
         // Whether a declared constraint or the space group sets this parameter (diffraction-lib
         // GenericParameter.user_constrained / .symmetry_constrained), from crysta's relation graph.
         .def_prop_ro("user_constrained",
-                     [](const edi::Parameter& p) { return p.dependence == edi::Dependence::Constrained; })
+                     [](const edi::Parameter& p) { return dependence_now(p) == edi::Dependence::Constrained; })
         .def_prop_ro("symmetry_constrained",
                      [](const edi::Parameter& p) {
-                         return p.dependence == edi::Dependence::SymmetryFixed ||
-                                p.dependence == edi::Dependence::SymmetryTied;
+                         const edi::Dependence dependence = dependence_now(p);
+                         return dependence == edi::Dependence::SymmetryFixed ||
+                                dependence == edi::Dependence::SymmetryTied;
                      })
         // ADR-0012: whether a collection holds this parameter's row. A removed row's parameters
         // keep their last values and refuse writes.
@@ -3023,6 +3049,7 @@ NB_MODULE(_edi, m) {
         .def_prop_ro(
             "structures",
             [](edi::Project& p) {
+                p.adopt_parameter_rows();  // A parameter handed out reads its dependence as it is now
                 return edi::views::StructuresView{&p, &edi::Project::structures,
                                                   &edi::Structure::name};
             },
@@ -3046,12 +3073,17 @@ NB_MODULE(_edi, m) {
             "experiments",
             [](edi::Project& p) {
                 p.adopt_experiments();  // A held experiment's value read calculates
+                p.adopt_parameter_rows();
                 return edi::views::ExperimentsView{&p, &edi::Project::experiments,
                                                    &edi::ExperimentBase::name};
             },
             nb::keep_alive<0, 1>())
         .def_prop_rw(
-            "structure", [](edi::Project& p) -> edi::Structure& { return p.structure(); },
+            "structure",
+            [](edi::Project& p) -> edi::Structure& {
+                p.adopt_parameter_rows();
+                return p.structure();
+            },
             [](edi::Project& p, const edi::Structure& incoming) {
                 if (p.structures.empty()) {
                     p.structures.push_back(incoming);
@@ -3064,6 +3096,7 @@ NB_MODULE(_edi, m) {
             "experiment",
             [](edi::Project& p) -> edi::BraggPdExperiment& {
                 p.adopt_experiments();
+                p.adopt_parameter_rows();
                 return p.experiment();
             },
             [](edi::Project& p, const edi::BraggPdExperiment& incoming) {
@@ -3214,7 +3247,7 @@ NB_MODULE(_edi, m) {
                 // The model is the single source of truth — no grid, bank, cutoff or
                 // scattering argument exists; the result is read from
                 // experiment.data.intensity_calc.
-                relations_changed(self);  // a stale free flag on a dependent warns, as crysta's does
+                warn_dependents(self);  // a stale free flag on a dependent warns, as crysta's does
                 nb::gil_scoped_release nogil;
                 self.calculate();
             },
@@ -3228,7 +3261,7 @@ NB_MODULE(_edi, m) {
             [](edi::Project& self, const std::optional<nb::callable>& on_iteration,
                const std::optional<nb::callable>& on_start,
                const std::optional<nb::callable>& should_cancel) {
-                relations_changed(self);
+                warn_dependents(self);
                 return fit_with_callbacks(
                     on_iteration, on_start, should_cancel,
                     [&](const edi::IterationCallback& cb, const edi::PreambleCallback& pre,
@@ -3251,7 +3284,7 @@ NB_MODULE(_edi, m) {
             [](edi::Project& self, const std::optional<nb::callable>& on_iteration,
                const std::optional<nb::callable>& on_start,
                const std::optional<nb::callable>& should_cancel) {
-                relations_changed(self);
+                warn_dependents(self);
                 return fit_with_callbacks(
                     on_iteration, on_start, should_cancel,
                     [&](const edi::IterationCallback& cb, const edi::PreambleCallback& pre,
@@ -3274,7 +3307,7 @@ NB_MODULE(_edi, m) {
                const std::optional<nb::callable>& on_scan_start,
                const std::optional<nb::callable>& on_file_complete,
                const std::optional<nb::callable>& should_cancel) {
-                relations_changed(self);
+                warn_dependents(self);
                 return fit_with_scan_callbacks(
                     on_iteration, on_start, on_scan_start, on_file_complete, should_cancel,
                     [&](const edi::IterationCallback& cb, const edi::PreambleCallback& pre,
@@ -3309,7 +3342,7 @@ NB_MODULE(_edi, m) {
                const std::optional<nb::callable>& on_scan_start,
                const std::optional<nb::callable>& on_file_complete,
                const std::optional<nb::callable>& should_cancel) {
-                relations_changed(self);
+                warn_dependents(self);
                 return fit_with_scan_callbacks(
                     on_iteration, on_start, on_scan_start, on_file_complete, should_cancel,
                     [&](const edi::IterationCallback& cb, const edi::PreambleCallback& pre,

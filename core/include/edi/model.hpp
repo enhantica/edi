@@ -3017,8 +3017,16 @@ struct EditRecord {
 // with the identity of its last write (geometry_inputs, core/src/canonical_encoding.hpp). The
 // project's editor record is NOT part of it: that record renews on every app edit, whichever
 // field it writes, and most fields are no input of the geometry.
+//
+// The declared relations set coordinates and cell values (edi ADR-0024), so when a project computed
+// the geometry its alias and constraint collections are recorded too, with their encoding
+// (relation_inputs): a write to either leaves the geometry stale. Geometry computed from a structure
+// alone records none.
 struct GeometrySource {
     std::string inputs;
+    std::shared_ptr<const Membership> aliases;
+    std::shared_ptr<const Membership> constraints;
+    std::string relations;
 };
 
 // The project's handle on its EditRecord, which is never null: a copy starts its own record; an
@@ -3057,6 +3065,11 @@ struct ComputedSource {
     std::shared_ptr<const Membership> structures;
     std::shared_ptr<const EditRecord> edits;  // the project's editor record, and its identity then
     std::uint64_t edits_at = 0;
+    // The project's alias and constraint collections and their encoding then (edi ADR-0024): a
+    // declaration write leaves the computed categories stale, an equal rewrite included.
+    std::shared_ptr<const Membership> aliases;
+    std::shared_ptr<const Membership> constraints;
+    std::string relations;
 };
 }  // namespace detail
 
@@ -3969,6 +3982,20 @@ class Project {
     void adopt_relations() noexcept {
         static_cast<detail::KeyedBase&>(aliases).host_ = this;
         static_cast<detail::KeyedBase&>(constraints).host_ = this;
+    }
+    // The same for the collections that hold parameters (the structures and their sites, each
+    // experiment's background and texture rows), so a parameter handed out reaches this project
+    // through its row: its dependence mark is read as the relations are now (edi ADR-0024).
+    void adopt_parameter_rows() noexcept {
+        static_cast<detail::KeyedBase&>(structures).host_ = this;
+        for (const auto& structure_item : structures) {
+            static_cast<detail::KeyedBase&>(structure_item->atom_sites).host_ = this;
+        }
+        for (const auto& experiment_item : experiments) {
+            static_cast<detail::KeyedBase&>(experiment_item->background).host_ = this;
+            static_cast<detail::KeyedBase&>(experiment_item->background_terms).host_ = this;
+            static_cast<detail::KeyedBase&>(experiment_item->preferred_orientation).host_ = this;
+        }
     }
 
    private:

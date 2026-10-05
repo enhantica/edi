@@ -1560,13 +1560,36 @@ StructureGeometry structure_geometry(const Structure& structure, const ViewWindo
 }
 
 namespace {
-// Computes the structure's default-window geometry and records what it was computed from. A
-// refusal leaves the structure with no geometry and rethrows.
-void store_geometry(Structure& structure) {
+// Whether no alias or constraint was written since a source recorded them (edi ADR-0024): read through
+// the collections' records, so a replaced collection or a destroyed project never compares equal. A
+// source that recorded none (geometry computed from a structure alone) has none to compare.
+bool relations_unchanged(const std::shared_ptr<const detail::Membership>& aliases,
+                         const std::shared_ptr<const detail::Membership>& constraints,
+                         const std::string& relations) {
+    if (!aliases && !constraints) {
+        return true;
+    }
+    const auto* alias_rows =
+        aliases ? dynamic_cast<const ItemVec<ParameterAlias>*>(aliases->owner) : nullptr;
+    const auto* constraint_rows =
+        constraints ? dynamic_cast<const ItemVec<ParameterConstraint>*>(constraints->owner) : nullptr;
+    return alias_rows != nullptr && constraint_rows != nullptr &&
+           detail::relation_inputs(*alias_rows, *constraint_rows) == relations;
+}
+
+// Computes the structure's default-window geometry and records what it was computed from: with the
+// project's declared relations when a project calculates it. A refusal leaves the structure with no
+// geometry and rethrows.
+void store_geometry(Structure& structure, const Project* project = nullptr) {
     structure.geometry = StructureGeometry{};
     structure.geometry_source.reset();
     // The inputs are read before the computation, so a write during it leaves the result stale.
     detail::GeometrySource source{detail::geometry_inputs(structure)};
+    if (project != nullptr) {
+        source.aliases = project->aliases.record();
+        source.constraints = project->constraints.record();
+        source.relations = detail::relation_inputs(project->aliases, project->constraints);
+    }
     structure.geometry = structure_geometry(structure, ViewWindow{});
     structure.geometry_source =
         std::make_shared<const detail::GeometrySource>(std::move(source));
@@ -1583,7 +1606,8 @@ WindowGeometry window_geometry(const Structure& structure, const ViewWindow& win
 }
 
 bool window_geometry_current(const Structure& structure, const WindowGeometry& result) {
-    return result.source != nullptr && detail::geometry_inputs(structure) == result.source->inputs;
+    return result.source != nullptr && detail::geometry_inputs(structure) == result.source->inputs &&
+           relations_unchanged(result.source->aliases, result.source->constraints, result.source->relations);
 }
 
 double default_min_bond_distance_cutoff() {
@@ -1595,7 +1619,8 @@ double default_bond_distance_inc() {
 
 bool Structure::geometry_current() const {
     const std::shared_ptr<const detail::GeometrySource>& source = geometry_source;
-    return source != nullptr && detail::geometry_inputs(*this) == source->inputs;
+    return source != nullptr && detail::geometry_inputs(*this) == source->inputs &&
+           relations_unchanged(source->aliases, source->constraints, source->relations);
 }
 
 const StructureGeometry& Structure::current_geometry() {
@@ -1664,7 +1689,8 @@ bool ExperimentBase::computed_current() const {
         return false;
     }
     const auto* structures = dynamic_cast<const ItemVec<Structure>*>(source->structures->owner);
-    return structures != nullptr && detail::calculation_inputs(*structures, *this) == source->inputs;
+    return structures != nullptr && detail::calculation_inputs(*structures, *this) == source->inputs &&
+           relations_unchanged(source->aliases, source->constraints, source->relations);
 }
 
 void Project::calculate() {
@@ -1680,23 +1706,7 @@ void Project::calculate() {
     // categories: no earlier result may stay readable beside a model the
     // calculation refused.
     adopt_experiments();
-    // Every structure's computed geometry is part of a calculation. Its own refusal — a `geom`
-    // value out of range, a site the one-digit symmetry code cannot reach — leaves that structure
-    // without geometry and does not stop the pattern, as in crysta: a geometry read raises it by
-    // name.
-    for (const auto& structure_item : structures) {
-        try {
-            store_geometry(*structure_item);
-        } catch (const std::invalid_argument&) {  // NOLINT(bugprone-empty-catch) — see above
-        }
-    }
-    try {
-        // Every dependent at its relation's value before anything reads it, by crysta's applier;
-        // relations that cannot hold refuse the calculation with crysta's code, as crysta's own does.
-        refresh_relations(*this);
-        apply_relations(*this);
-        publish_calculation();
-    } catch (...) {
+    const auto clear_banks = [this] {
         for (auto& bank_item : experiments) {
             if (bank_item->data.has_value()) {
                 bank_item->data->clear_computed();
@@ -1704,6 +1714,35 @@ void Project::calculate() {
             bank_item->refln.clear();
             bank_item->computed_source.reset();
         }
+    };
+    try {
+        // Every dependent at its relation's value before anything reads it, the geometry included, by
+        // crysta's applier; relations that cannot hold refuse the calculation with crysta's code and
+        // leave no computed category, as crysta's own calculation does.
+        refresh_relations(*this);
+        apply_relations(*this);
+    } catch (...) {
+        clear_banks();
+        for (const auto& structure_item : structures) {
+            structure_item->geometry = StructureGeometry{};
+            structure_item->geometry_source.reset();
+        }
+        throw;
+    }
+    // Every structure's computed geometry is part of a calculation. Its own refusal — a `geom`
+    // value out of range, a site the one-digit symmetry code cannot reach — leaves that structure
+    // without geometry and does not stop the pattern, as in crysta: a geometry read raises it by
+    // name.
+    for (const auto& structure_item : structures) {
+        try {
+            store_geometry(*structure_item, this);
+        } catch (const std::invalid_argument&) {  // NOLINT(bugprone-empty-catch) — see above
+        }
+    }
+    try {
+        publish_calculation();
+    } catch (...) {
+        clear_banks();
         throw;
     }
 }
@@ -1948,7 +1987,8 @@ void Project::publish_calculation() {
         // What this bank is calculated from, read before anything is published.
         sources.push_back(std::make_shared<const detail::ComputedSource>(detail::ComputedSource{
             detail::calculation_inputs(structures, *bank_item), experiments.record(),
-            structures.record(), edits_.record(), edits_.record()->epoch.value()}));
+            structures.record(), edits_.record(), edits_.record()->epoch.value(), aliases.record(),
+            constraints.record(), detail::relation_inputs(aliases, constraints)}));
     }
     crysta::Project engine(to_crysta_structure(structure()), experiment_list(banks));
     engine.structure.scattering_lengths_fm = structure().scattering_lengths_fm;
@@ -2012,6 +2052,9 @@ WorkStamps work_stamps(const Project& live) {
     stamps.structures_generation = live.structures.generation();
     stamps.edits = live.edits_.record();
     stamps.edits_at = live.edits_.record()->epoch.value();
+    stamps.aliases = live.aliases.record();
+    stamps.constraints = live.constraints.record();
+    stamps.relations = detail::relation_inputs(live.aliases, live.constraints);
     return stamps;
 }
 
@@ -2126,7 +2169,9 @@ bool unchanged_since(const Project& live, const WorkStamps& stamps) {
         live.structures.record() != stamps.structures ||
         live.experiments.generation() != stamps.experiments_generation ||
         live.structures.generation() != stamps.structures_generation || edits != stamps.edits ||
-        edits->epoch.value() != stamps.edits_at) {
+        edits->epoch.value() != stamps.edits_at || live.aliases.record() != stamps.aliases ||
+        live.constraints.record() != stamps.constraints ||
+        detail::relation_inputs(live.aliases, live.constraints) != stamps.relations) {
         return false;
     }
     if (stamps.experiment_inputs.size() != live.experiments.size() ||
@@ -2170,14 +2215,15 @@ PublishOutcome publish(Project& live, CalculationResult&& result) {
         for (std::size_t index = 0; index < banks; ++index) {
             sources[index] = std::make_shared<const detail::ComputedSource>(detail::ComputedSource{
                 stamps.experiment_inputs[index], stamps.experiments, stamps.structures, stamps.edits,
-                stamps.edits_at});
+                stamps.edits_at, stamps.aliases, stamps.constraints, stamps.relations});
         }
     }
     std::vector<std::shared_ptr<const detail::GeometrySource>> geometry_sources(structures);
     for (std::size_t index = 0; index < structures; ++index) {
         if (result.geometry[index].has_value()) {
             geometry_sources[index] = std::make_shared<const detail::GeometrySource>(
-                detail::GeometrySource{stamps.structure_inputs[index]});
+                detail::GeometrySource{stamps.structure_inputs[index], stamps.aliases,
+                                       stamps.constraints, stamps.relations});
         }
     }
     // --- the write pass: the state Project::calculate() on the live project would have left ------
