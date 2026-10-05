@@ -117,6 +117,18 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-pixi
+      # The compiler cache (core), between runs: this job keeps it for the next run.
+      - id: ccache
+        uses: ./.github/actions/ccache
+        with:
+          max-size: 400M
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/edi-ccache
+          key: ccache-core-${{ steps.ccache.outputs.key-prefix }}${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ccache-core-${{ steps.ccache.outputs.key-prefix }}
+            ccache-core-${{ runner.os }}-${{ runner.arch }}-
       - name: Mint a crysta installation token
         id: crysta-token
         uses: actions/create-github-app-token@v2
@@ -147,6 +159,18 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-pixi
+      # The compiler cache (core), between runs: the native job keeps it; this job only reads it.
+      - id: ccache
+        uses: ./.github/actions/ccache
+        with:
+          max-size: 400M
+      - uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/edi-ccache
+          key: ccache-core-${{ steps.ccache.outputs.key-prefix }}${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ccache-core-${{ steps.ccache.outputs.key-prefix }}
+            ccache-core-${{ runner.os }}-${{ runner.arch }}-
       - name: Mint a crysta installation token
         id: crysta-token
         uses: actions/create-github-app-token@v2
@@ -193,6 +217,18 @@ jobs:
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup-pixi
+      # The compiler cache (core), between runs: the native job keeps it; this job only reads it.
+      - id: ccache
+        uses: ./.github/actions/ccache
+        with:
+          max-size: 400M
+      - uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/edi-ccache
+          key: ccache-core-${{ steps.ccache.outputs.key-prefix }}${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ccache-core-${{ steps.ccache.outputs.key-prefix }}
+            ccache-core-${{ runner.os }}-${{ runner.arch }}-
       - name: Mint a crysta installation token
         id: crysta-token
         uses: actions/create-github-app-token@v2
@@ -256,6 +292,18 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-pixi
+      # The compiler cache (core), between runs: the native job keeps it; this job only reads it.
+      - id: ccache
+        uses: ./.github/actions/ccache
+        with:
+          max-size: 400M
+      - uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/edi-ccache
+          key: ccache-core-${{ steps.ccache.outputs.key-prefix }}${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ccache-core-${{ steps.ccache.outputs.key-prefix }}
+            ccache-core-${{ runner.os }}-${{ runner.arch }}-
       - name: Mint a crysta installation token
         if: github.event.pull_request.head.repo.fork == false
         id: crysta-token
@@ -300,6 +348,18 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-pixi
+      # The compiler cache (core), between runs: the native job keeps it; this job only reads it.
+      - id: ccache
+        uses: ./.github/actions/ccache
+        with:
+          max-size: 400M
+      - uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/edi-ccache
+          key: ccache-core-${{ steps.ccache.outputs.key-prefix }}${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ccache-core-${{ steps.ccache.outputs.key-prefix }}
+            ccache-core-${{ runner.os }}-${{ runner.arch }}-
       - name: Mint a crysta installation token
         id: crysta-token
         uses: actions/create-github-app-token@v2
@@ -350,6 +410,18 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-pixi
+      # The compiler cache (core), between runs: the native job keeps it; this job only reads it.
+      - id: ccache
+        uses: ./.github/actions/ccache
+        with:
+          max-size: 400M
+      - uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/edi-ccache
+          key: ccache-core-${{ steps.ccache.outputs.key-prefix }}${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ccache-core-${{ steps.ccache.outputs.key-prefix }}
+            ccache-core-${{ runner.os }}-${{ runner.arch }}-
       - name: Prepare notebooks
         run: pixi run notebook-prepare
       - name: Mint a crysta installation token
@@ -397,6 +469,18 @@ jobs:
         with:
           fetch-depth: 0  # the app's version line is `git describe`
       - uses: ./.github/actions/setup-pixi
+      # The compiler cache (app), between runs: this job keeps it for the next run.
+      - id: ccache
+        uses: ./.github/actions/ccache
+        with:
+          max-size: 1G
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/edi-ccache
+          key: ccache-app-${{ steps.ccache.outputs.key-prefix }}${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ccache-app-${{ steps.ccache.outputs.key-prefix }}
+            ccache-app-${{ runner.os }}-${{ runner.arch }}-
       - name: Mint a crysta installation token
         id: crysta-token
         uses: actions/create-github-app-token@v2
@@ -407,12 +491,8 @@ jobs:
           repositories: crysta
           permission-contents: read
           permission-actions: read
-      - name: Prepare the persistent build caches
-        run: |
-          echo "CCACHE_DIR=$HOME/.cache/edi-ccache" >> "$GITHUB_ENV"
-          echo "CCACHE_MAXSIZE=5G" >> "$GITHUB_ENV"
-          mkdir -p "$HOME/.cache/edi-ccache"
-          CCACHE_DIR="$HOME/.cache/edi-ccache" pixi run -e app ccache --zero-stats
+      - name: Zero the compiler cache's statistics
+        run: pixi run -e app ccache --zero-stats
       - name: Build the native code
         run: pixi run core-build
         env:
@@ -468,6 +548,18 @@ jobs:
         with:
           fetch-depth: 0  # the app's version line is `git describe`
       - uses: ./.github/actions/setup-pixi
+      # The compiler cache (wasm), between runs: this job keeps it for the next run.
+      - id: ccache
+        uses: ./.github/actions/ccache
+        with:
+          max-size: 2G
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/edi-ccache
+          key: ccache-wasm-${{ steps.ccache.outputs.key-prefix }}${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ccache-wasm-${{ steps.ccache.outputs.key-prefix }}
+            ccache-wasm-${{ runner.os }}-${{ runner.arch }}-
       - name: Mint a crysta installation token
         id: crysta-token
         uses: actions/create-github-app-token@v2
@@ -484,6 +576,13 @@ jobs:
         run: pixi run core-build
         env:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
+      # Emscripten, Qt's wasm kits, Eigen and Chrome, kept between runs and keyed by their pins (wasm-env.sh); the
+      # install step below checks each one's recorded version and reinstalls only what differs.
+      - name: Restore the WebAssembly toolchain
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/edi-wasm
+          key: edi-wasm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/ci/wasm-env.sh') }}
       - name: Install the WebAssembly toolchain  # Emscripten, Qt's wasm kits, Eigen, Chrome
         run: pixi run -e app wasm-toolchain
       - name: Build both kits and pack the site
