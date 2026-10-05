@@ -2945,6 +2945,11 @@
       "not_storage": "what a stored geometry was computed from"
     },
     {
+      "member": "GeometrySource::owner",
+      "type": "std::shared_ptr<const ProjectLink>",
+      "not_storage": "what a stored geometry was computed from"
+    },
+    {
       "member": "GeometrySource::aliases",
       "type": "std::shared_ptr<const Membership>",
       "not_storage": "what a stored geometry was computed from"
@@ -2987,6 +2992,11 @@
     {
       "member": "ComputedSource::edits_at",
       "type": "std::uint64_t",
+      "not_storage": "what an experiment's computed categories were computed from"
+    },
+    {
+      "member": "ComputedSource::owner",
+      "type": "std::shared_ptr<const ProjectLink>",
       "not_storage": "what an experiment's computed categories were computed from"
     },
     {

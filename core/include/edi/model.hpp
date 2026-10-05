@@ -3102,12 +3102,14 @@ struct EditRecord {
 // project's editor record is NOT part of it: that record renews on every app edit, whichever
 // field it writes, and most fields are no input of the geometry.
 //
-// The declared relations set coordinates and cell values (edi ADR-0024), so when a project computed
-// the geometry its alias and constraint collections are recorded too, with their encoding
-// (relation_inputs): a write to either leaves the geometry stale. Geometry computed from a structure
-// alone records none.
+// The declared relations set coordinates and cell values (edi ADR-0024), so the relations it was
+// computed under are recorded too: the owning project's record (null for a structure alone), its alias
+// and constraint collections (null for one that has never held a row) and their encoding
+// (relation_inputs). The geometry is current only while the structure has that same owner, or none,
+// and the declarations are unchanged.
 struct GeometrySource {
     std::string inputs;
+    std::shared_ptr<const ProjectLink> owner;
     std::shared_ptr<const Membership> aliases;
     std::shared_ptr<const Membership> constraints;
     std::string relations;
@@ -3149,8 +3151,10 @@ struct ComputedSource {
     std::shared_ptr<const Membership> structures;
     std::shared_ptr<const EditRecord> edits;  // the project's editor record, and its identity then
     std::uint64_t edits_at = 0;
-    // The project's alias and constraint collections and their encoding then (edi ADR-0024): a
-    // declaration write leaves the computed categories stale, an equal rewrite included.
+    // The project's record and its alias and constraint collections and their encoding then (edi
+    // ADR-0024), as GeometrySource records them: a declaration write leaves the computed categories
+    // stale, an equal rewrite and a first row included.
+    std::shared_ptr<const ProjectLink> owner;
     std::shared_ptr<const Membership> aliases;
     std::shared_ptr<const Membership> constraints;
     std::string relations;

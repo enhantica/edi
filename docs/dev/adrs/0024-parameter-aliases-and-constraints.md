@@ -53,7 +53,11 @@ through crysta (ADR-0019 already reads crysta for the symmetry ties).
    declaration write, an equal rewrite included, makes them stale, and a calculation or fit result taken before it is
    not published (`relation_inputs` in the canonical encoding, beside the calculation and geometry inputs). The
    parameters the aliases name are an expression's only sources, so their values are inputs too, and a site's Wyckoff
-   letter is a geometry input because a geometry read applies the symmetry relations. A
+   letter is a geometry input because a geometry read applies the symmetry relations. The project is an input as
+   well: stored geometry, a geometry window and the computed categories stay current only while their structure or
+   experiment has the same owning project (or none, both times) and that project has the same alias and constraint
+   lists. A first row in a list that never held one is a change, so a project that gains its first declarations, a
+   structure moved to another project, and one whose project was removed or destroyed all read as stale. A
    calculation's result carries each dependent's value as its relations gave it, and publication writes those values
    with the computed categories.
 8. **Undo.** Each app edit of the relations records the rows before it and every parameter state it changed. The app

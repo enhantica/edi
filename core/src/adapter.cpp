@@ -1587,21 +1587,30 @@ Project* relations_applied(const Structure& structure) {
     return project;
 }
 
-// Whether no alias or constraint was written since a source recorded them (edi ADR-0024): read through
-// the collections' records, so a replaced collection or a destroyed project never compares equal. A
-// source that recorded none (geometry computed from a structure alone) has none to compare.
-bool relations_unchanged(const std::shared_ptr<const detail::Membership>& aliases,
+// Whether a source's relations still hold for its holder, now owned by `live` (null: no project), edi
+// ADR-0024. The owner must be the same project, or none both times, so a structure that moved, left
+// or outlived its project is stale. The collections must be the same records, so a first row in a
+// collection that had none, or a replaced collection, is a change; then their rows must encode equal.
+bool relations_unchanged(const Project* live, const std::shared_ptr<const detail::ProjectLink>& owner,
+                         const std::shared_ptr<const detail::Membership>& aliases,
                          const std::shared_ptr<const detail::Membership>& constraints,
                          const std::string& relations) {
-    if (!aliases && !constraints) {
-        return true;
+    if (live == nullptr) {
+        return owner == nullptr;
     }
-    const auto* alias_rows =
-        aliases ? dynamic_cast<const ItemVec<ParameterAlias>*>(aliases->owner) : nullptr;
-    const auto* constraint_rows =
-        constraints ? dynamic_cast<const ItemVec<ParameterConstraint>*>(constraints->owner) : nullptr;
-    return alias_rows != nullptr && constraint_rows != nullptr &&
-           detail::relation_inputs(*alias_rows, *constraint_rows) == relations;
+    return owner.get() == live->link().get() && aliases == live->aliases.record() &&
+           constraints == live->constraints.record() &&
+           detail::relation_inputs(live->aliases, live->constraints) == relations;
+}
+
+template <typename Source>
+void record_relations(Source& source, const Project* project) {
+    if (project != nullptr) {
+        source.owner = project->link();
+        source.aliases = project->aliases.record();
+        source.constraints = project->constraints.record();
+        source.relations = detail::relation_inputs(project->aliases, project->constraints);
+    }
 }
 
 // Computes the structure's default-window geometry and records what it was computed from: with the
@@ -1612,11 +1621,7 @@ void store_geometry(Structure& structure, const Project* project = nullptr) {
     structure.geometry_source.reset();
     // The inputs are read before the computation, so a write during it leaves the result stale.
     detail::GeometrySource source{detail::geometry_inputs(structure)};
-    if (project != nullptr) {
-        source.aliases = project->aliases.record();
-        source.constraints = project->constraints.record();
-        source.relations = detail::relation_inputs(project->aliases, project->constraints);
-    }
+    record_relations(source, project);
     structure.geometry = structure_geometry(structure, ViewWindow{});
     structure.geometry_source =
         std::make_shared<const detail::GeometrySource>(std::move(source));
@@ -1633,19 +1638,17 @@ WindowGeometry window_geometry(const Structure& structure, const ViewWindow& win
     const Project* project = relations_applied(structure);
     // The inputs are read before the computation, so a write during it leaves the result stale.
     detail::GeometrySource source{detail::geometry_inputs(structure)};
-    if (project != nullptr) {
-        source.aliases = project->aliases.record();
-        source.constraints = project->constraints.record();
-        source.relations = detail::relation_inputs(project->aliases, project->constraints);
-    }
+    record_relations(source, project);
     out.source = std::make_shared<const detail::GeometrySource>(std::move(source));
     out.geometry = structure_geometry(structure, window);
     return out;
 }
 
 bool window_geometry_current(const Structure& structure, const WindowGeometry& result) {
-    return result.source != nullptr && detail::geometry_inputs(structure) == result.source->inputs &&
-           relations_unchanged(result.source->aliases, result.source->constraints, result.source->relations);
+    const std::shared_ptr<const detail::GeometrySource>& source = result.source;
+    return source != nullptr && detail::geometry_inputs(structure) == source->inputs &&
+           relations_unchanged(project_holding(structure), source->owner, source->aliases,
+                               source->constraints, source->relations);
 }
 
 double default_min_bond_distance_cutoff() {
@@ -1658,7 +1661,8 @@ double default_bond_distance_inc() {
 bool Structure::geometry_current() const {
     const std::shared_ptr<const detail::GeometrySource>& source = geometry_source;
     return source != nullptr && detail::geometry_inputs(*this) == source->inputs &&
-           relations_unchanged(source->aliases, source->constraints, source->relations);
+           relations_unchanged(project_holding(*this), source->owner, source->aliases, source->constraints,
+                               source->relations);
 }
 
 const StructureGeometry& Structure::current_geometry() {
@@ -1727,8 +1731,10 @@ bool ExperimentBase::computed_current() const {
         return false;
     }
     const auto* structures = dynamic_cast<const ItemVec<Structure>*>(source->structures->owner);
+    const detail::KeyedBase* rows = name.owner();
     return structures != nullptr && detail::calculation_inputs(*structures, *this) == source->inputs &&
-           relations_unchanged(source->aliases, source->constraints, source->relations);
+           relations_unchanged(rows != nullptr ? rows->host() : nullptr, source->owner, source->aliases,
+                               source->constraints, source->relations);
 }
 
 void Project::calculate() {
@@ -2032,7 +2038,7 @@ void Project::publish_calculation() {
         // What this bank is calculated from, read before anything is published.
         sources.push_back(std::make_shared<const detail::ComputedSource>(detail::ComputedSource{
             detail::calculation_inputs(structures, *bank_item), experiments.record(),
-            structures.record(), edits_.record(), edits_.record()->epoch.value(), aliases.record(),
+            structures.record(), edits_.record(), edits_.record()->epoch.value(), link(), aliases.record(),
             constraints.record(), detail::relation_inputs(aliases, constraints)}));
     }
     crysta::Project engine(to_crysta_structure(structure()), experiment_list(banks));
@@ -2281,16 +2287,16 @@ PublishOutcome publish(Project& live, CalculationResult&& result) {
         for (std::size_t index = 0; index < banks; ++index) {
             sources[index] = std::make_shared<const detail::ComputedSource>(detail::ComputedSource{
                 detail::calculation_inputs(live.structures, *live.experiments[index]), stamps.experiments,
-                stamps.structures, stamps.edits, stamps.edits_at, stamps.aliases, stamps.constraints,
-                stamps.relations});
+                stamps.structures, stamps.edits, stamps.edits_at, live.link(), stamps.aliases,
+                stamps.constraints, stamps.relations});
         }
     }
     std::vector<std::shared_ptr<const detail::GeometrySource>> geometry_sources(structures);
     for (std::size_t index = 0; index < structures; ++index) {
         if (result.geometry[index].has_value()) {
             geometry_sources[index] = std::make_shared<const detail::GeometrySource>(
-                detail::GeometrySource{detail::geometry_inputs(*live.structures[index]), stamps.aliases,
-                                       stamps.constraints, stamps.relations});
+                detail::GeometrySource{detail::geometry_inputs(*live.structures[index]), live.link(),
+                                       stamps.aliases, stamps.constraints, stamps.relations});
         }
     }
     // --- the write pass: the state Project::calculate() on the live project would have left ------
