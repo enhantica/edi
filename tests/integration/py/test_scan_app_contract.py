@@ -1,8 +1,4 @@
-"""App binding contracts from the owner's outcome and interaction tables.
-
-These source observers cover the enabled non-GUI tier. Rendered look and event
-behavior remain the owner's check while the Qt app tiers are disabled.
-"""
+"""Structural wiring checks; model state is exercised separately in the core tier."""
 
 from __future__ import annotations
 
@@ -19,241 +15,467 @@ def source(path):
     return re.sub(r'//[^\n]*|/\*.*?\*/', '', (APP / path).read_text(), flags=re.DOTALL)
 
 
+def spans(text):
+    stack, found = [], []
+    quote = ''
+    escaped = False
+    for position, character in enumerate(text):
+        if quote:
+            if character == quote and not escaped:
+                quote = ''
+            escaped = character == '\\' and not escaped
+        elif character in '"\'`':
+            quote = character
+            escaped = False
+        elif character == '{':
+            stack.append(position)
+        elif character == '}':
+            assert stack, 'Scan wiring: source blocks must balance before inspection'
+            found.append((stack.pop(), position + 1))
+    assert not stack, 'Scan wiring: source blocks must close before inspection'
+    return found
+
+
 def block(text, marker):
     start = text.index(marker)
     opening = text.index('{', start)
-    depth = 1
-    index = opening + 1
+    depth = 0
     quote = ''
-    while index < len(text) and depth:
-        character = text[index]
+    escaped = False
+    for position in range(opening, len(text)):
+        character = text[position]
         if quote:
-            if character == quote and text[index - 1] != '\\':
+            if character == quote and not escaped:
                 quote = ''
+            escaped = character == '\\' and not escaped
         elif character in '"\'`':
             quote = character
+            escaped = False
         elif character == '{':
             depth += 1
         elif character == '}':
             depth -= 1
-        index += 1
-    assert depth == 0, 'Scan UI: observed component blocks must have balanced braces'
-    return text[start:index]
+            if depth == 0:
+                return text[start : position + 1]
+    pytest.fail('Scan wiring: the observed block must close before inspection')
 
 
 def item(text, object_name):
-    match = re.search(r'objectName:\s*[\"\']' + re.escape(object_name) + r'[\"\']', text)
-    assert match, 'Scan UI: the requested control must exist in the shipped view'
-    opening = text.rfind('{', 0, match.start())
-    return block(text[opening:], '{')
+    match = re.search(r'objectName:\s*["\'`]' + re.escape(object_name) + r'["\'`]', text)
+    assert match, 'Scan wiring: the claimed control must exist in the shipped component'
+    begin, end = min(
+        ((a, b) for a, b in spans(text) if a < match.start() < b), key=lambda x: x[1] - x[0]
+    )
+    return text[begin:end]
+
+
+def require(text, pattern, message):
+    assert re.search(pattern, text, re.DOTALL), (
+        'Scan wiring: the claimed control must preserve its actual binding: ' + message
+    )
+
+
+def property_value(text, name):
+    match = re.search(r'(?m)^\s*' + re.escape(name) + r':\s*([^\n]+)', text)
+    assert match, 'Scan wiring: the claimed property must bind on its own control'
+    return match.group(1).strip()
+
+
+def assert_follow(text):
+    follow = item(text, 'fitting.follow')
+    assert property_value(follow, 'enabled') == 'group.fit !== null && group.fit.scanning', (
+        'Follow wiring: its own enabled binding must require a running scan'
+    )
+    assert (
+        property_value(follow, 'checked')
+        == 'group.fit !== null && group.fit.scanning && group.fit.following'
+    ), 'Follow wiring: its own checked binding must read live follow state'
+    assert property_value(follow, 'onToggled') == 'group.fit.following = checked', (
+        'Follow wiring: toggling must update that fit model'
+    )
 
 
 def test_messages_is_first_in_both_layout_and_width_inventory():
     text = source('qml/Components/StatusBar.qml')
-    controls = re.findall(r'objectName:\s*"(statusBar\.[^"]+)"', text)
-    assert controls and controls[0] == 'statusBar.warnings', (
-        'Status bar: Messages must be the first displayed item'
+    children = [
+        block(text[match.start() :], 'StatusBarItem')
+        for match in re.finditer(r'\bStatusBarItem\s*\{', text)
+    ]
+    assert children and 'objectName: "statusBar.warnings"' in children[0], (
+        'Status bar wiring: Messages is the first actual StatusBarItem child'
     )
-    inventory = re.search(r'items:\s*\[([^]]+)\]', text)
-    if inventory:
-        assert inventory.group(1).strip().split(',')[0].strip() == 'warningsItem', (
-            'Status bar: width accounting must use the same Messages-first order'
-        )
+    require(
+        text,
+        r'items:\s*\[\s*warningsItem\s*,',
+        'Status bar wiring: width inventory starts with Messages',
+    )
 
 
 def test_button_names_and_follow_have_live_model_bindings():
     text = source('qml/Pages/Analysis/FittingGroup.qml')
-    assert 'Cancel fitting' not in text and 'Stop fitting' in text, (
-        'Buttons: a running fit reads Stop fitting because its partial result is retained'
+    start = item(text, 'fitting.start')
+    assert (
+        property_value(start, 'enabled')
+        == 'group.fit !== null && (group.fit.running || group.fit.available)'
+    ), 'Buttons wiring: availability must guard the actual fit button'
+    assert (
+        property_value(start, 'onClicked')
+        == 'group.fit.running ? group.fit.cancel() : group.fit.start()'
+    ), 'Buttons wiring: the actual fit button dispatches stop or start from live running state'
+    require(
+        property_value(start, 'text'),
+        r'group\.fit\.running\s*\?\s*qsTr\("Stop fitting"\).*'
+        r'group\.fit\.continuable\s*\?\s*qsTr\("Continue fitting"\).*'
+        r'qsTr\("Start fitting"\)',
+        'Buttons wiring: the actual button label follows running and resumable state',
     )
-    combined = text + source('src/fit_view_model.cpp')
-    assert 'Continue fitting' in combined and 'Start fitting' in combined, (
-        'Buttons: a partial scan offers Continue and a fresh run offers Start'
-    )
-    assert re.search(r'(?:qsTr|tr)\("Follow"\)', text), (
-        'Follow: the Analysis fitting group must expose the requested toggle'
-    )
-    follow = text
-    assert re.search(r'(?:checked|checkable):', follow) and re.search(
-        r'on(?:Clicked|Toggled):', follow
-    ), 'Follow: the toggle must read and write live state'
-    assert re.search(r'width:|Layout\.fillWidth:|wide:', text), (
-        'Buttons: Start and Follow must have an explicit layout width contract'
-    )
-
-
-@pytest.mark.parametrize(
-    ('status_code', 'word'),
-    [
-        ('DONE', 'Success'),
-        ('MAX_ITER', 'Max iterations'),
-        ('NO_STEP', 'No step'),
-        ('CANCELLED', 'Stopped'),
-        ('SUPERSEDED', 'Superseded'),
-        ('ERROR', 'Failed'),
-    ],
-)
-def test_view_model_names_each_outcome_from_owner_table(status_code, word):
-    files = list((APP / 'src').glob('*fit*.*'))
-    text = '\n'.join(
-        re.sub(r'//[^\n]*|/\*.*?\*/', '', path.read_text(), flags=re.DOTALL) for path in files
-    )
-    if status_code == 'ERROR':
-        assert re.search(r'return[^;]*"Failed"', text), (
-            'Outcomes: engine errors use the Failed display word'
+    assert_follow(text)
+    follow = item(text, 'fitting.follow')
+    # Both controls inherit the same base width unless they override it.
+    for name in ('width', 'implicitWidth', 'wide'):
+        a = re.search(r'(?m)^\s*' + name + r':([^\n]+)', start)
+        b = re.search(r'(?m)^\s*' + name + r':([^\n]+)', follow)
+        assert (a.group(1).strip() if a else None) == (b.group(1).strip() if b else None), (
+            'Buttons wiring: Start and Follow share the same base and width override'
         )
-        return
-    assert re.search(
-        r'case\s+(?:edi::)?FitStatus::'
-        + status_code
-        + r'\s*:[^;{}]*[\"\']'
-        + re.escape(word)
-        + r'[\"\']',
-        text,
-    ), 'Outcomes: each engine exit reason must map to the owner-approved display word'
+
+
+def test_follow_observer_rejects_disconnected_controls_and_unrelated_handlers():
+    text = source('qml/Pages/Analysis/FittingGroup.qml')
+    assert_follow(text)
+    for old, new in [
+        ('enabled: group.fit !== null && group.fit.scanning', 'enabled: false'),
+        (
+            'checked: group.fit !== null && group.fit.scanning && group.fit.following',
+            'checked: true',
+        ),
+        ('onToggled: group.fit.following = checked', 'onToggled: {}'),
+    ]:
+        changed = (
+            text.replace(old, new)
+            + '\nButton { enabled: group.fit.scanning; onToggled: group.fit.following = checked }'
+        )
+        assert changed != text, (
+            'Follow wiring: each escape must actually alter the production control'
+        )
+        with pytest.raises(AssertionError):
+            assert_follow(changed)
+
+
+OUTCOMES = [
+    ('success', 'Success', 'check-circle', 'green'),
+    ('maxIterations', 'Max iterations', 'exclamation-circle', 'orange'),
+    ('noStep', 'No step', 'exclamation-circle', 'orange'),
+    ('stopped', 'Stopped', 'stop-circle', 'themeForegroundMinor'),
+    ('superseded', 'Superseded', 'minus-circle', 'themeForegroundMinor'),
+    ('failed', 'Failed', 'times-circle', 'red'),
+]
+
+
+def switch_value(text, function, key):
+    body = block(text, 'function ' + function + '(')
+    cases = list(re.finditer(r'case\s+"([^\"]+)":', body))
+    selected = next((m for m in cases if m.group(1) == key), None)
+    if selected:
+        returned = re.search(r'\breturn\s+([^;]+);', body[selected.end() :])
+    else:
+        last_switch = max(end for begin, end in spans(body) if begin > body.index('{'))
+        returned = re.search(r'\breturn\s+([^;]+);', body[last_switch:])
+    assert returned, (
+        'Outcomes wiring: each outcome must resolve through the called presentation function'
+    )
+    return returned.group(1).strip()
+
+
+@pytest.mark.parametrize(('key', 'word', 'icon', 'color'), OUTCOMES)
+def test_view_model_names_each_outcome_from_owner_table(key, word, icon, color):
+    text = source('qml/Globals/FitOutcomes.qml')
+    assert switch_value(text, 'word', key) == f'qsTr("{word}")', (
+        'Outcomes: the called word function follows the owner table'
+    )
+    assert switch_value(text, 'icon', key) == f'"{icon}"', (
+        'Outcomes: the called icon function follows the owner table'
+    )
+    assert switch_value(text, 'color', key) == 'EaStyle.Colors.' + color, (
+        'Outcomes: the called colour function follows the owner table'
+    )
+
+
+def assert_outcome_consumers(bar, label, dialog):
+    summary = item(bar, 'statusBar.fit.outcome')
+    require(
+        summary,
+        r'outcome:\s*bar\.fit\s*\?\s*bar\.fit\.outcome\s*:\s*""',
+        'Outcomes wiring: status summary reads the actual fit outcome',
+    )
+    for function in ('icon', 'word', 'color'):
+        require(
+            label,
+            r'FitOutcomes\.' + function + r'\(label\.outcome\)',
+            'Outcomes wiring: status label uses the shared tuple',
+        )
+        require(
+            dialog,
+            r'FitOutcomes\.' + function + r'\(row\.outcome\)',
+            'Outcomes wiring: results row uses the shared tuple',
+        )
+    assert not re.search(r'font\.underline:\s*true', bar + label + dialog), (
+        'Outcomes: clickable summaries do not underline'
+    )
 
 
 def test_result_row_and_status_summary_share_outcome_presentation():
-    text = source('src/fit_view_model.cpp')
-    assert not re.search(r'result\.success\s*\?\s*(?:QStringLiteral|tr)\(', text), (
-        'Outcomes: the results row must use the full outcome rather than a success/failure split'
+    assert_outcome_consumers(
+        source('qml/Components/StatusBar.qml'),
+        source('qml/Components/FitOutcomeLabel.qml'),
+        source('qml/Components/FitResultsDialog.qml'),
     )
-    dialog = source('qml/Components/FitResultsDialog.qml')
-    bar = source('qml/Components/StatusBar.qml')
-    assert not re.search(r'row\.icon\s*===\s*"check-circle"\s*\?', dialog), (
-        'Outcomes: amber and grey outcomes must retain their own colour in the results row'
+    rows = block(source('src/fit_view_model.cpp'), 'void FitResultListModel::setRecord(')
+    require(
+        rows,
+        r'row\(QString\(\),\s*tr\("Overall status"\),'
+        r'\s*status_text\(status\),\s*outcome_key\(status\)\)',
+        'Outcomes wiring: Overall status carries the same typed outcome key',
     )
-    assert not re.search(r'font\.underline:\s*true', dialog + bar), (
-        'Outcomes: clickable summaries highlight on hover without an underline'
+
+
+def test_outcome_gate_rejects_a_different_results_word():
+    bar, label, dialog = (
+        source('qml/Components/' + name)
+        for name in ('StatusBar.qml', 'FitOutcomeLabel.qml', 'FitResultsDialog.qml')
     )
+    changed = dialog.replace('FitOutcomes.word(row.outcome)', 'qsTr("Different")')
+    assert changed != dialog, (
+        'Outcomes: the different-word escape must reach the actual results consumer'
+    )
+    with pytest.raises(AssertionError):
+        assert_outcome_consumers(bar, label, changed)
 
 
 def test_status_fit_area_binds_live_progress_and_terminal_summary():
     text = source('qml/Components/StatusBar.qml')
-    models = source('src/fit_view_model.hpp') + source('src/fit_view_model.cpp')
-    assert re.search(r'ProgressBar|FitProgress', text), (
-        'Status bar: single and scan runs must share a progress area'
+    progress = item(text, 'statusBar.fit.progress')
+    outcome = item(text, 'statusBar.fit.outcome')
+    assert property_value(progress, 'visible') == 'fitArea.running', (
+        'Status bar wiring: running details disappear after fitting'
     )
-    for fact in ('elapsed', 'eta', 'fail', 'percent'):
-        assert re.search(fact, text + models, re.IGNORECASE), (
-            'Status bar: live progress must carry time, ETA, failures and completion fraction'
-        )
-    assert ' · ' in text + models, 'Status bar: facts use the same spaced middle-dot separator'
-    assert not re.search(r'onClicked:\s*[^\n]*\.(?:cancel|stop)\(', text), (
-        'Status bar: stopping stays in the Analysis group'
+    require(
+        outcome,
+        r'visible:\s*!fitArea\.running',
+        'Status bar wiring: only the terminal outcome remains after fitting',
     )
-    assert re.search(r'(?:summary|running)', text, re.IGNORECASE), (
-        'Status bar: running details and retained summary must be distinguished'
+    # The scan branch must carry actual live values, in the required order, in this area.
+    area = item(text, 'statusBar.fit')
+    require(
+        area,
+        r'\[[^]]*\.ok[^]]*\.fail[^]]*\.elapsed[^]]*\.eta[^]]*\.chi',
+        'Status bar wiring: scan facts are bound in ok, fail, time, ETA, chi order',
+    )
+    require(
+        progress,
+        r'indeterminate:\s*[^\n]*scann',
+        'Status bar wiring: stripe mode distinguishes single from scan progress',
+    )
+    require(
+        progress,
+        r'(?:value|fraction):\s*[^\n]*\.(?:percent|fraction|completed)',
+        'Status bar wiring: scan fill is bound to completion',
+    )
+    assert not re.search(r'\.(?:cancel|stop)\s*\(', text), (
+        'Status bar wiring: no handler in the bar stops a fit'
     )
 
 
 def test_create_experiment_is_enabled_and_routes_to_view_model():
     text = source('qml/Pages/Experiment/ExperimentsGroup.qml')
-    assert 'Create experiment' in text and 'Load experiment' in text, (
-        'Creating experiments: the two footer actions use the owner-approved names'
+    create = item(text, 'experiments.create')
+    require(
+        create,
+        r'enabled:\s*group\.project !== null && group\.project\.canCreateExperiment',
+        'Create wiring: the actual button admits valid simulation creation',
     )
-    assert re.search(r'onClicked:\s*[^\n]*\.(?:create|append|add)Experiment\(', text), (
-        'Creating experiments: the action must call the project view model'
+    require(
+        create,
+        r'onClicked:\s*group\.project\.createExperiment\(\)',
+        'Create wiring: the actual button enters the supported method',
     )
-    header = source('src/project_view_model.hpp')
-    assert re.search(r'Q_INVOKABLE\s+\w+\s+(?:create|append|add)Experiment\(', header), (
-        'Creating experiments: creation must enter the project edit boundary'
+    body = block(source('src/project_view_model.cpp'), 'bool ProjectViewModel::createExperiment(')
+    require(
+        body,
+        r'apply\(edi::Edit::create_experiment\(',
+        'Create wiring: the supported method applies the closed core edit',
+    )
+    require(
+        body, r'setCurrentExperimentIndex\(', 'Create wiring: creation selects the newly added row'
+    )
+    require(
+        item(text, 'experiments.load'),
+        r'loadDialog\.open\(\)|WebFiles\.openFiles\(',
+        'Load wiring: the actual action opens the multi-file loader',
+    )
+    require(
+        block(text, 'FileDialog {'),
+        r'onAccepted:\s*group\.project\.loadExperiments\(selectedFiles\)',
+        'Load wiring: accepted files reach the supported edit boundary',
     )
 
 
 def test_type_selectors_live_in_explorer_and_follow_selected_row():
     explorer = source('qml/Pages/Experiment/ExperimentsGroup.qml')
-    assert 'ExperimentTypeGroup' in explorer, (
-        'Experiment type: selectors belong below the explorer table and above its buttons'
+    component = block(explorer, 'ExperimentTypeGroup {')
+    require(
+        component,
+        r'experiment:\s*group\.project\s*\?\s*group\.project\.currentExperiment\s*:\s*null',
+        'Type wiring: values come from the selected experiment',
     )
-    assert explorer.index('ExperimentTypeGroup') < explorer.index('Create experiment'), (
-        'Experiment type: the explorer must place selectors before its footer actions'
+    require(
+        component,
+        r'experimentIndex:\s*group\.project\s*\?\s*group\.project\.currentExperimentIndex\s*:\s*-1',
+        'Type wiring: writes target the selected experiment index',
     )
-    component = block(explorer, 'ExperimentTypeGroup')
-    assert 'currentExperiment' in component, (
-        'Experiment type: selectors show the experiment selected in the table'
-    )
-    page = source('qml/Pages/Experiment/ExperimentPage.qml')
-    assert '"experiment_type":' not in page, (
-        'Experiment type: moving the group must remove the previous sidebar instance'
+    assert (
+        explorer.index('objectName: "experiments.list"')
+        < explorer.index('ExperimentTypeGroup {')
+        < explorer.index('objectName: "experiments.create"')
+    ), 'Type wiring: selectors sit between the explorer and its footer'
+    assert 'ExperimentTypeGroup' not in source('qml/Pages/Experiment/ExperimentPage.qml'), (
+        'Type wiring: the previous sidebar instance is removed'
     )
 
 
 @pytest.mark.parametrize('axis', ['sampleForm', 'beamMode', 'radiationProbe', 'scatteringType'])
 def test_data_free_experiment_type_has_a_write_boundary(axis):
-    header = source('src/experiment_view_model.hpp')
-    assert re.search(r'Q_PROPERTY\([^)]*\b' + axis + r'\b[^)]*\bWRITE\b', header), (
-        'Experiment type: each supported axis is editable before measured data arrives'
+    text = source('qml/Pages/Experiment/ExperimentTypeGroup.qml')
+    control = item(text, 'experimentType.' + axis)
+    assert property_value(control, 'enabled') == 'row.editable', (
+        'Type wiring: each actual selector follows the data-free guard'
     )
-    body = source('src/experiment_view_model.cpp')
-    assert re.search(r'calculation_only|hasMeasuredData|hasData|data\.has_value|data->', body), (
-        'Experiment type: its write boundary must distinguish simulation and measured data'
+    require(
+        text,
+        r'property bool editable:\s*experiment !== null && experiment\.calculationOnly',
+        'Type wiring: measured data locks every type selector',
+    )
+    require(
+        control,
+        r'onActivated:\s*index => row\.choose\(' + axis + r',\s*"' + axis + r'",\s*index\)',
+        'Type wiring: each supported axis uses the selected-row edit route',
+    )
+    require(
+        block(text, 'function choose('),
+        r'row\.project\.setExperimentType\(row\.experimentIndex,\s*axis,\s*token\)',
+        'Type wiring: the helper sends the actual selected index and token',
+    )
+    require(
+        block(source('src/project_view_model.cpp'), 'bool ProjectViewModel::setExperimentType('),
+        r'apply\(edi::Edit::replace_experiment\(project,\s*experiment,',
+        'Type wiring: supported edits reach the core replacement boundary',
     )
 
 
 def test_disabled_placeholders_and_load_data_are_present():
     types = source('qml/Pages/Experiment/ExperimentTypeGroup.qml')
-    assert r'1D' in types and r'None' in types, (
-        'Experiment type: dimensionality and polarization have their disabled placeholders'
+    for placeholder in ('dimensionality', 'polarization'):
+        assert (
+            property_value(item(types, 'experimentType.' + placeholder), 'enabled') == 'false'
+        ), 'Type wiring: each placeholder is disabled on its own control'
+    require(
+        item(types, 'experimentType.polarization'),
+        r'visible:.*radiationProbe === ExperimentViewModel\.Neutron',
+        'Type wiring: polarization is visible only for a neutron probe',
     )
-    assert re.search(r'Neutron|[Nn]eutron', types), (
-        'Experiment type: polarization is only shown for neutron experiments'
+    control = item(
+        source('qml/Pages/Experiment/ExperimentsGroup.qml'), 'experiments.loadData.${row.index}'
     )
-    explorer = source('qml/Pages/Experiment/ExperimentsGroup.qml')
-    assert 'Load data…' in explorer, (
-        'Creating experiments: a data-free row shows the future Load data action'
+    assert property_value(control, 'enabled') == 'false', (
+        'Load data wiring: the actual row action remains disabled'
     )
-    assert re.search(r'enabled:\s*false', explorer), (
-        'Creating experiments: plain-data loading stays disabled until it is implemented'
+    require(
+        control,
+        r'visible:.*row\.experiment\.calculationOnly',
+        'Load data wiring: the action belongs only to simulations',
     )
 
 
 @pytest.mark.parametrize('field', ['minimum', 'maximum', 'step'])
 def test_simulation_range_fields_have_live_write_bindings(field):
-    header = source('src/pattern_model.hpp')
-    assert re.search(r'Q_PROPERTY\([^)]*\b' + field + r'\b[^)]*WRITE', header), (
-        'Simulation range: start, end and step must have view-model write boundaries'
+    text = source('qml/Pages/Experiment/MeasuredRangeGroup.qml')
+    control = item(text, 'range.' + field)
+    assert property_value(control, 'editable') == 'group.editable', (
+        'Range wiring: each actual field shares the simulation guard'
     )
-    qml = source('qml/Pages/Experiment/MeasuredRangeGroup.qml')
-    control = item(qml, 'range.' + field)
-    assert not re.search(r'editable:\s*false', control), (
-        'Simulation range: editing is enabled for simulations and locked for measured data'
+    require(
+        text,
+        r'property bool editable:\s*experiment !== null && experiment\.calculationOnly',
+        'Range wiring: measured data locks range edits',
     )
-    assert re.search(r'onCommitted:|onValueChanged:', control), (
-        'Simulation range: entering a value must write the simulation grid'
+    require(
+        control,
+        r'onCommitted:\s*text => group\.experiment\.setRange\(',
+        'Range wiring: range edits use the supported setRange method',
+    )
+    require(
+        block(source('src/experiment_view_model.cpp'), 'void ExperimentViewModel::setRange('),
+        r'editor_\.apply\(edi::Edit::data_range\(experiment,\s*start,\s*end,\s*step\)',
+        'Range wiring: the supported method applies the validated core range edit',
     )
 
 
 def test_sidebar_tabs_have_requested_names():
     text = source('qml/Components/WorkflowPage.qml')
-    labels = re.findall(r'text:\s*qsTr\("([^\"]+)"\)', text)
-    assert labels[:3] == ['Main', 'Extra', 'Text'], (
-        'Sidebar: the tab labels must read Main, Extra and Text in that order'
+    assert [
+        property_value(item(text, 'sideBar.tab.' + key), 'text')
+        for key in ('basic', 'extras', 'text')
+    ] == ['qsTr("Main")', 'qsTr("Extra")', 'qsTr("Text")'], (
+        'Sidebar: actual tabs read Main, Extra, Text'
     )
 
 
 def test_explorer_fit_column_has_outcome_model_roles():
     qml = source('qml/Pages/Experiment/ExperimentsGroup.qml')
-    assert 'qsTr("Fit")' in qml, 'Fit lists: every project type has an explorer Fit column'
-    cpp = source('src/project_view_model.cpp')
-    assert re.search(r'fit(?:Outcome|Status|Icon)|fit_(?:outcome|status|icon)', cpp), (
-        'Fit lists: explorer rows must derive their outcomes from the model'
-    )
+    control = item(qml, 'experiments.fit.${row.index}')
+    for function, prop in [('icon', 'icon'), ('color', 'iconColor'), ('word', 'toolTip')]:
+        require(
+            property_value(control, prop),
+            r'FitOutcomes\.' + function + r'\(row\.fitOutcome\)',
+            'Fit lists wiring: the actual cell uses its row outcome tuple',
+        )
 
 
 @pytest.mark.parametrize('component', ['AliasesGroup', 'ConstraintsGroup'])
 def test_long_parameter_pickers_use_shared_search_component(component):
-    qml = source(f'qml/Pages/Analysis/{component}.qml')
-    used = set(re.findall(r'\b(\w*(?:Search|Combo)\w*)\s*\{', qml))
-    assert used - {'ComboBox'}, (
-        'Search: alias and constraint parameter pickers must use the shared searchable popup'
+    text = source(f'qml/Pages/Analysis/{component}.qml')
+    pickers = re.findall(r'\b(?:EaElements\.)?(\w*ComboBox)\s*\{', text)
+    assert pickers and all(name == 'SearchableComboBox' for name in pickers), (
+        'Search wiring: every project-item picker uses the shared search component'
     )
-    matches = [
-        path.read_text() for path in (APP / 'qml/Components').glob('*.qml') if path.stem in used
-    ]
-    assert any(
-        re.search(r'>\s*10\b', text)
-        and re.search(r'TextField|SearchField', text)
-        and re.search(r'indexOf|includes', text)
-        for text in matches
-    ), 'Search: the shared popup shows search strictly above ten and matches substrings'
+    shared = source('qml/Components/SearchableComboBox.qml')
+    require(
+        shared,
+        r'property int searchThreshold:\s*10',
+        'Search wiring: the shared threshold is ten entries',
+    )
+    require(
+        shared,
+        r'property bool searchable:\s*count > searchThreshold',
+        'Search wiring: strictly more than ten shows search',
+    )
+    require(
+        item(shared, 'comboBox.search'),
+        r'visible:\s*control\.searchable',
+        'Search wiring: the actual input follows that threshold',
+    )
+    require(
+        shared,
+        r'property string filter:\s*searchable\s*\?\s*searchField\.text',
+        'Search wiring: matches read the actual search input',
+    )
+    require(
+        block(shared, 'function matches('),
+        r'String\(text\)\.toLowerCase\(\)\.includes\(filter\)',
+        'Search wiring: any substring is matched',
+    )
+    require(
+        block(shared, 'delegate:'),
+        r'visible:\s*control\.matches\(text\)',
+        'Search wiring: actual delegate visibility uses the match result',
+    )

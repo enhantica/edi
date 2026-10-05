@@ -18,7 +18,10 @@ FIXTURE = ROOT / 'tests/fixtures/scan_template/project'
 
 
 def assert_lazy(observation):
-    opened = observation['opened_at_first_row']
+    opened = observation['files']
+    assert not observation['unresolved'], (
+        'Scale: every native input open must retain its path identity'
+    )
     assert opened, 'Scale: the observer must reach native data-file opens before judging laziness'
     assert len(opened) <= 5, (
         'Scale: before the first result only its file and four read-ahead files open'
@@ -30,7 +33,7 @@ def input_observations(tmp_path_factory):
     root = tmp_path_factory.mktemp('scan-input')
     library, preload = _build_native_observer(root)
     observations = {}
-    for mode in ('lazy', 'eager'):
+    for mode in ('lazy', 'eager-load', 'eager-load-relative', 'eager-load-openat'):
         project_dir = root / mode
         shutil.copytree(FIXTURE, project_dir)
         scan = project_dir / 'experiments/d20_scan'
@@ -79,9 +82,12 @@ def test_driver_opens_only_current_file_and_bounded_read_ahead(input_observation
     assert_lazy(input_observations['lazy'])
 
 
-def test_gate_rejects_an_exercised_read_all_files_before_fitting_escape(input_observations):
-    observation = input_observations['eager']
-    assert len(observation['opened_at_first_row']) == 20, (
+@pytest.mark.parametrize('escape', ['eager-load', 'eager-load-relative', 'eager-load-openat'])
+def test_gate_rejects_an_exercised_read_all_files_before_fitting_escape(
+    input_observations, escape
+):
+    observation = input_observations[escape]
+    assert len(observation['files']) == 20, (
         'Scale: the escape must actually reach every input file before the first result'
     )
     with pytest.raises(AssertionError, match='four read-ahead'):
