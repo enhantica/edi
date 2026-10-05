@@ -347,15 +347,27 @@ Item {
         y: chart.topMargin
         onResetClicked: controller.reset()
     }
-    // The y scale, linear, square root or log, at the chart's left (owner, 2026-10-05).
-    ToolbarComboBox {
-        objectName: "chart.toolbar.yscale"
+    // The y scale, linear, square root or log, and the x axis, 2θ, time-of-flight or d-spacing, at the chart's
+    // left (owner, 2026-10-05). The x axis shows the experiment's own and is disabled until switching exists.
+    Row {
         x: chart.sideMargin
         y: chart.topMargin
-        toolTip: qsTr("Y scale")
-        model: [qsTr("linear"), qsTr("square root"), qsTr("log")]
-        currentIndex: controller.yScale
-        onActivated: index => controller.yScale = index
+        spacing: AppSizes.toolbarSpacing
+
+        ToolbarComboBox {
+            objectName: "chart.toolbar.yscale"
+            toolTip: qsTr("Y scale")
+            model: [qsTr("linear"), qsTr("square root"), qsTr("log")]
+            currentIndex: controller.yScale
+            onActivated: index => controller.yScale = index
+        }
+        ToolbarComboBox {
+            objectName: "chart.toolbar.xaxis"
+            enabled: false
+            toolTip: qsTr("X axis")
+            model: [qsTr("2θ"), qsTr("time-of-flight"), qsTr("d-spacing")]
+            currentIndex: ["twoTheta", "timeOfFlight", "dSpacing"].indexOf(chart.xAxis)
+        }
     }
 
     GraphsView {
@@ -550,9 +562,15 @@ Item {
     }
 
     // The legend, inside the main plot's top right corner.
+    // The x axis the pattern is drawn on: "twoTheta", "timeOfFlight" or "dSpacing". Only the experiment's own
+    // axis is drawn for now (no switching yet).
+    readonly property string xAxis: chart.experiment && chart.experiment.beamMode === ExperimentViewModel.TimeOfFlight ? "timeOfFlight" : "twoTheta"
+
+    // The legend starts at the top right on a 2θ axis and at the top left on a time-of-flight or d-spacing one,
+    // where the strong peaks are at the other end (owner, 2026-10-05).
     ChartLegend {
         objectName: "chart.legend"
-        x: mainView.x + mainView.plotArea.x + mainView.plotArea.width - width - chart.em
+        x: chart.xAxis === "twoTheta" ? mainView.x + mainView.plotArea.x + mainView.plotArea.width - width - chart.em : mainView.x + mainView.plotArea.x + chart.em
         y: mainView.y + mainView.plotArea.y + chart.em
         visible: toolbar.legendShown && controller.hasData
         entries: controller.legend

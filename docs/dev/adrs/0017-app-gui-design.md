@@ -517,8 +517,12 @@ code (`QtCharts1dTab.qml` and the base's `QtCharts1dBase.qml`; the owner, 2026-1
 - **Toolbar.** A row of square buttons (2.5 em, with a fill and a border in the axis colour) that ends at the plot
   areas' right border: legend, hover coordinates, a spacer, pan, box zoom, reset (the Home icon, as the structure
   view's), Home last. The y scale is a drop-down of linear, square root and log at the chart's left, a margin in, in
-  the toolbar drop-down style (`ToolbarComboBox.qml`, §16) (the owner, 2026-10-02; moved left 2026-10-05). The
-  controls are `AppSizes.toolbarControlSize` tall and `AppSizes.toolbarSpacing` apart within a group. The legend and
+  the toolbar drop-down style (`ToolbarComboBox.qml`, §16) (the owner, 2026-10-02; moved left 2026-10-05), and right
+  of it the x axis, 2θ, time-of-flight or d-spacing, showing the experiment's own axis; it is disabled until the
+  axis can be switched (owner, 2026-10-05). The controls are `AppSizes.toolbarControlSize` tall and
+  `AppSizes.toolbarSpacing` apart within a group.
+- **The legend's side** follows the x axis (owner, 2026-10-05): the top right of the main pane on a 2θ axis, the top
+  left on a time-of-flight or d-spacing axis, where the strong peaks are at the other end. The legend and
   the hover coordinates are on at the start; pan and box zoom exclude each other, and box zoom is on at the start. An
   icon is in the accent colour while hovered or checked. `ChartToolButton.qml` and `ChartLegend.qml` are shared
   with the structure view (§16), whose toolbar is a row of the same buttons; `ChartToolbar.qml` is the pattern
