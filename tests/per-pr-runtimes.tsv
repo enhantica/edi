@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-05T20:10:19Z
+# measured_utc = 2026-10-05T21:01:05Z
 #
-# Recorded from: seq2 focused Python bank plus native doctest e04-t16-tests-seq2-cpp5.log
-# Collected tests: 6893; with a reported duration: 4119
-# Module-scoped fixture costs recorded: 2
+# Recorded from: e04-t16-tests-seq3-bank-replay.log (100 node(s) measured once, 6207 banked, 1 stale row(s) dropped)
+# Collected tests: 6923; with a reported duration: 4166
+# Module-scoped fixture costs recorded: 3
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 6893
+# inventory_python = 6923
 # inventory_cpp = 290
-# inventory_measured = 6249
-# inventory_unmeasured = 934
+# inventory_measured = 6280
+# inventory_unmeasured = 933
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_projects_open_and_populate_pages
@@ -2883,31 +2883,48 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e05_t1_physical_domain.p
 0.000	tests/integration/py/test_multiphase_app_contract.py::test_shared_block_selector_has_bounded_square_icon_steps_and_file_labels
 0.000	tests/integration/py/test_multiphase_app_contract.py::test_structure_loading_is_not_capped_at_one_and_chart_retains_phase_identity
 0.000	tests/integration/py/test_scan_app_contract.py::test_button_names_and_follow_have_live_model_bindings
-0.000	tests/integration/py/test_scan_app_contract.py::test_create_experiment_is_enabled_and_routes_to_view_model
-0.000	tests/integration/py/test_scan_app_contract.py::test_data_free_experiment_type_has_a_write_boundary[beamMode]
-0.000	tests/integration/py/test_scan_app_contract.py::test_data_free_experiment_type_has_a_write_boundary[radiationProbe]
-0.000	tests/integration/py/test_scan_app_contract.py::test_data_free_experiment_type_has_a_write_boundary[sampleForm]
-0.000	tests/integration/py/test_scan_app_contract.py::test_data_free_experiment_type_has_a_write_boundary[scatteringType]
+0.120	tests/integration/py/test_scan_app_contract.py::test_create_experiment_is_enabled_and_routes_to_view_model
+0.050	tests/integration/py/test_scan_app_contract.py::test_data_free_experiment_type_has_a_write_boundary[beamMode]
+0.040	tests/integration/py/test_scan_app_contract.py::test_data_free_experiment_type_has_a_write_boundary[radiationProbe]
+0.070	tests/integration/py/test_scan_app_contract.py::test_data_free_experiment_type_has_a_write_boundary[sampleForm]
+0.060	tests/integration/py/test_scan_app_contract.py::test_data_free_experiment_type_has_a_write_boundary[scatteringType]
 0.000	tests/integration/py/test_scan_app_contract.py::test_disabled_placeholders_and_load_data_are_present
+0.060	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[block-delegate]
+0.700	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[outcome-color]
+0.790	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[outcome-icon]
+0.770	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[outcome-word]
+0.050	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[search-header]
+0.050	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[search-height]
+0.110	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[search-index]
+0.060	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[search-input]
+0.050	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[search-opacity]
 0.000	tests/integration/py/test_scan_app_contract.py::test_explorer_fit_column_has_outcome_model_roles
 0.000	tests/integration/py/test_scan_app_contract.py::test_follow_observer_rejects_disconnected_controls_and_unrelated_handlers
-0.000	tests/integration/py/test_scan_app_contract.py::test_long_parameter_pickers_use_shared_search_component[AliasesGroup]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_app_contract.py::test_long_parameter_pickers_use_shared_search_component[ConstraintsGroup]
+0.290	tests/integration/py/test_scan_app_contract.py::test_forwarding_controls_reject_wrong_selected_index_token_range_and_visibility
+0.200	tests/integration/py/test_scan_app_contract.py::test_long_parameter_pickers_use_shared_search_component[AliasesGroup]
+0.210	tests/integration/py/test_scan_app_contract.py::test_long_parameter_pickers_use_shared_search_component[ConstraintsGroup]
 0.000	tests/integration/py/test_scan_app_contract.py::test_messages_is_first_in_both_layout_and_width_inventory
-0.000	tests/integration/py/test_scan_app_contract.py::test_outcome_gate_rejects_a_different_results_word
-0.000	tests/integration/py/test_scan_app_contract.py::test_result_row_and_status_summary_share_outcome_presentation
+0.120	tests/integration/py/test_scan_app_contract.py::test_outcome_gate_rejects_a_different_results_word
+0.630	tests/integration/py/test_scan_app_contract.py::test_result_row_and_status_summary_share_outcome_presentation
+0.200	tests/integration/py/test_scan_app_contract.py::test_search_accepts_direct_field_and_state_compositions
 0.000	tests/integration/py/test_scan_app_contract.py::test_sidebar_tabs_have_requested_names
-0.000	tests/integration/py/test_scan_app_contract.py::test_simulation_range_fields_have_live_write_bindings[maximum]
-0.000	tests/integration/py/test_scan_app_contract.py::test_simulation_range_fields_have_live_write_bindings[minimum]
-0.000	tests/integration/py/test_scan_app_contract.py::test_simulation_range_fields_have_live_write_bindings[step]
+0.050	tests/integration/py/test_scan_app_contract.py::test_simulation_range_fields_have_live_write_bindings[maximum]
+0.050	tests/integration/py/test_scan_app_contract.py::test_simulation_range_fields_have_live_write_bindings[minimum]
+0.060	tests/integration/py/test_scan_app_contract.py::test_simulation_range_fields_have_live_write_bindings[step]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_app_contract.py::test_status_fit_area_binds_live_progress_and_terminal_summary
+0.570	tests/integration/py/test_scan_app_contract.py::test_status_observer_rejects_wrong_progress_polarity_fill_producer_and_unused_facts[facts]
+0.230	tests/integration/py/test_scan_app_contract.py::test_status_observer_rejects_wrong_progress_polarity_fill_producer_and_unused_facts[fill]
+0.190	tests/integration/py/test_scan_app_contract.py::test_status_observer_rejects_wrong_progress_polarity_fill_producer_and_unused_facts[polarity]
+0.060	tests/integration/py/test_scan_app_contract.py::test_status_observer_rejects_wrong_progress_polarity_fill_producer_and_unused_facts[producer]
 0.000	tests/integration/py/test_scan_app_contract.py::test_type_selectors_live_in_explorer_and_follow_selected_row
-0.000	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[failed-Failed-times-circle-red]
+0.000	tests/integration/py/test_scan_app_contract.py::test_typed_status_producer_matches_the_shared_outcome_keys[actual]
+0.000	tests/integration/py/test_scan_app_contract.py::test_typed_status_producer_matches_the_shared_outcome_keys[wrongMAX]
+0.050	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[failed-Failed-times-circle-red]
 0.000	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[maxIterations-Max iterations-exclamation-circle-orange]
 0.000	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[noStep-No step-exclamation-circle-orange]
-0.000	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[stopped-Stopped-stop-circle-themeForegroundMinor]
-0.000	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[success-Success-check-circle-green]
-0.000	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[superseded-Superseded-minus-circle-themeForegroundMinor]
+0.060	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[stopped-Stopped-stop-circle-themeForegroundMinor]
+0.050	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[success-Success-check-circle-green]
+0.060	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[superseded-Superseded-minus-circle-themeForegroundMinor]
 0.000	tests/integration/py/test_scan_extended_contract.py::test_bundled_project_load_and_save_as_use_the_writable_copy_routes
 UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_extended_contract.py::test_effective_bundle_contains_selected_scan_payloads[desktop]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_extended_contract.py::test_effective_bundle_contains_selected_scan_payloads[web]
@@ -2915,16 +2932,25 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_extended_contract.p
 0.010	tests/integration/py/test_scan_extended_contract.py::test_example_gate_rejects_swapped_names_with_matching_local_provenance[162]
 0.010	tests/integration/py/test_scan_extended_contract.py::test_example_gate_rejects_swapped_names_with_matching_local_provenance[324]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_extended_contract.py::test_old_scan_results_are_retained_with_out_of_date_state
-UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_extended_contract.py::test_parameter_evolution_has_csv_model_errors_axis_switch_and_selection
-0.400	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_comment_only_and_inactive_bundle_calls
+UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_extended_contract.py::test_parameter_evolution_connects_rendered_errors_axis_and_point_selection
+0.300	tests/integration/py/test_scan_extended_contract.py::test_rendered_evolution_and_stale_observers_reject_unrelated_models_handlers_and_flags
+0.350	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_accepts_a_separately_linked_example_library
+0.610	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_comment_only_and_inactive_bundle_calls
+0.640	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[alias]
+0.710	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[hidden]
+0.650	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[index]
+0.590	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[metadata]
+0.640	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[prefix]
+0.640	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[target]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_extended_contract.py::test_scan_availability_and_joint_mode_follow_scan_declaration
 UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_extended_contract.py::test_scan_examples_have_exact_source_file_inventory_and_checksums[162]
-0.060	tests/integration/py/test_scan_extended_contract.py::test_scan_examples_have_exact_source_file_inventory_and_checksums[324]
+0.070	tests/integration/py/test_scan_extended_contract.py::test_scan_examples_have_exact_source_file_inventory_and_checksums[324]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_extended_contract.py::test_scan_explorer_header_has_declared_columns_in_order
 UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_extended_contract.py::test_scan_stop_continue_and_follow_have_model_state
 UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_extended_contract.py::test_scan_worker_routes_both_modes_to_existing_driver
-0.000	tests/integration/py/test_scan_extended_contract.py::test_selector_moves_to_main_tab_bar_once
+0.070	tests/integration/py/test_scan_extended_contract.py::test_selector_moves_to_main_tab_bar_once
 UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_extended_contract.py::test_user_page_and_scale_adr_document_approved_limits
+0.000	tests/integration/py/test_scan_extended_contract.py::test_working_copy_observer_rejects_copy_to_an_unrelated_destination
 0.120	tests/integration/py/test_scan_template.py::test_legacy_scan_without_template_field_preserves_model
 UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_template.py::test_loader_refuses_outside_template_file[../other/all594687.dat]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_template.py::test_loader_refuses_outside_template_file[../outside.dat]
@@ -5715,14 +5741,18 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_two_free_
 UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_two_named_phases_load_and_roundtrip
 0.000	tests/system/py/test_scan_driver_resume.py::test_callback_runs_after_each_result_is_committed
 0.000	tests/system/py/test_scan_driver_resume.py::test_event_gate_rejects_wrong_file_and_wrong_value_with_correct_callback_count
-0.000	tests/system/py/test_scan_driver_resume.py::test_resume_gate_rejects_real_duplicate_work_with_unchanged_csv_and_events
+0.140	tests/system/py/test_scan_driver_resume.py::test_resume_gate_rejects_real_duplicate_work_with_unchanged_csv_and_events
 0.000	tests/system/py/test_scan_driver_resume.py::test_resumed_facade_csv_is_cell_identical_to_native_driver_consistency
-0.060	tests/system/py/test_scan_driver_resume.py::test_save_as_retains_scan_results_and_preserves_the_source_copy
-0.000	tests/system/py/test_scan_driver_resume.py::test_stop_retains_committed_rows_and_continue_visits_only_remaining_files
-0.000	tests/system/py/test_scan_lazy_input.py::test_driver_opens_only_current_file_and_bounded_read_ahead
+0.050	tests/system/py/test_scan_driver_resume.py::test_save_as_retains_scan_results_and_preserves_the_source_copy
+0.008	tests/system/py/test_scan_driver_resume.py::test_stop_retains_committed_rows_and_continue_visits_only_remaining_files
+0.006	tests/system/py/test_scan_lazy_input.py::test_driver_opens_only_current_file_and_bounded_read_ahead
 0.000	tests/system/py/test_scan_lazy_input.py::test_gate_rejects_an_exercised_read_all_files_before_fitting_escape[eager-load-openat]
 0.000	tests/system/py/test_scan_lazy_input.py::test_gate_rejects_an_exercised_read_all_files_before_fitting_escape[eager-load-relative]
 0.000	tests/system/py/test_scan_lazy_input.py::test_gate_rejects_an_exercised_read_all_files_before_fitting_escape[eager-load]
+1.920	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[dispatch]
+1.220	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[follow]
+1.760	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[joint]
+1.010	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[state]
 0.010	tests/system/py/test_yap_fullprof.py::test_fullprof_reference_retains_every_non_asymmetry_parameter_and_occupancy
 0.010	tests/system/py/test_yap_fullprof.py::test_yalo3_single_phase_control_calculates_from_the_external_structure
 0.000	tests/test_c34_t1a_selector_arity.py::test_direct_file_and_glob_selectors_reach_the_notebook
@@ -7224,5 +7254,6 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # unaffected; excluding one test only moves the cost to the next sibling).
 # These rows mark and deselect NOTHING - kept for visibility
 # and the stale-module integrity refusal.
-# module-cost: 0.883	tests/system/py/test_scan_driver_resume.py
-# module-cost: 1.030	tests/system/py/test_scan_lazy_input.py
+# module-cost: 1.593	tests/integration/py/test_scan_app_contract.py
+# module-cost: 17.002	tests/system/py/test_scan_driver_resume.py
+# module-cost: 1.014	tests/system/py/test_scan_lazy_input.py

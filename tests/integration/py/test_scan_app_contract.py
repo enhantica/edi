@@ -1,8 +1,12 @@
-"""Structural wiring checks; model state is exercised separately in the core tier."""
+"""Structural wiring checks; model state is exercised separately in the
+core tier."""
 
 from __future__ import annotations
 
+import json
 import re
+import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -37,6 +41,9 @@ def spans(text):
 
 
 def block(text, marker):
+    assert marker in text, (
+        'Scan wiring: the claimed operation must exist in its effective component: ' + marker
+    )
     start = text.index(marker)
     opening = text.index('{', start)
     depth = 0
@@ -76,13 +83,155 @@ def require(text, pattern, message):
 
 
 def property_value(text, name):
-    match = re.search(r'(?m)^\s*' + re.escape(name) + r':\s*([^\n]+)', text)
-    assert match, 'Scan wiring: the claimed property must bind on its own control'
-    return match.group(1).strip()
+    opening = text.find('{')
+    nested = [(a, b) for a, b in spans(text) if a > opening]
+    pattern = r'(?m)^\s*(?:(?:readonly\s+)?property\s+\w+\s+)?' + re.escape(name) + r':\s*'
+    for match in re.finditer(pattern, text):
+        if any(a < match.start() < b for a, b in nested):
+            continue
+        start = match.end()
+        if text[start] == '{':
+            return block(text[start:], '{')
+        if text[start] == '[':
+            depth, quote = 0, ''
+            for end in range(start, len(text)):
+                c = text[end]
+                if quote:
+                    if c == quote and text[end - 1] != '\\':
+                        quote = ''
+                elif c in '"\'`':
+                    quote = c
+                elif c == '[':
+                    depth += 1
+                elif c == ']':
+                    depth -= 1
+                    if depth == 0:
+                        return text[start : end + 1]
+        line = text[start : text.index('\n', start)].strip()
+        if line.endswith('{'):
+            opening = text.index('{', start)
+            return text[start:opening] + block(text[opening:], '{')
+        return line
+    pytest.fail('Scan wiring: the claimed property must bind on its own control: ' + name)
+
+
+def control_type(text, name):
+    owned = item(text, name)
+    start = text.index(owned)
+    match = re.search(r'([\w.]+)\s*$', text[:start])
+    assert match, 'Scan wiring: the actual control must resolve its base type'
+    return match.group(1)
+
+
+def javascript(program):
+    node = shutil.which('node')
+    assert node, 'Scan wiring: the runner must provide its JavaScript interpreter'
+    result = subprocess.run(
+        [node], input=program, text=True, capture_output=True, check=False, timeout=5
+    )
+    assert result.returncode == 0, (
+        'Scan wiring: the actual expression must execute: ' + result.stderr
+    )
+    return json.loads(result.stdout)
+
+
+def evaluate(expression, context=''):
+    value = (
+        '(function()' + expression + ')()'
+        if expression.startswith('{')
+        else '(' + expression + ')'
+    )
+    return javascript(context + '\nconsole.log(JSON.stringify(' + value + '));')
+
+
+def assert_search(shared, delegate=None):
+    field = item(shared, 'comboBox.search')
+    delegate = delegate or block(shared, 'delegate:')
+    matcher = block(shared, 'function matches(')
+    # Both a direct input binding and state updated by the input are valid compositions.
+    program = """const control = {count: 11, searchText: ""}; const searchField = {text:
+""};
+const selector = control; const EaStyle = {Sizes: {comboBoxHeight:
+24}};
+Object.defineProperty(control, 'searchThreshold', {get: () => THRESHOLD}
+
+);
+Object.defineProperty(control, 'searchable', {get: () => {let {count,
+
+searchThreshold} = control; return SEARCHABLE}});
+Object.defineProperty(control, 'filter', {get: () => {let {searchable,
+
+searchText} = control; return FILTER}});
+control.matches = function(text) {let filter = control.filter; MATCH_BODY}
+
+;
+let output=[];
+for (const size of [10,11]) {
+ control.count=size;
+ for (const term of ["SiO", "absent"]) {
+  const text=term; searchField.text=term; ASSIGN;
+  const shown=evaluateRow("CoSiO cooling.dat");
+  output.push([control.searchable, shown]);
+ }
+}
+function evaluateRow(text) {
+ const matching = MATCHING;
+ return !!(VISIBLE) && (HEIGHT)>0 && (OPACITY)>0;
+}
+console.log(JSON.stringify(output));"""
+    replacements = {
+        'THRESHOLD': property_value(shared, 'searchThreshold'),
+        'SEARCHABLE': property_value(shared, 'searchable'),
+        'FILTER': property_value(shared, 'filter'),
+        'MATCH_BODY': matcher[matcher.index('{') + 1 : -1],
+        'ASSIGN': property_value(field, 'onTextChanged'),
+        'MATCHING': property_value(delegate, 'matching') if 'matching:' in delegate else 'true',
+        'VISIBLE': property_value(delegate, 'visible')
+        if re.search(r'(?m)^\s*visible:', delegate)
+        else 'true',
+        'HEIGHT': property_value(delegate, 'height')
+        if re.search(r'(?m)^\s*height:', delegate)
+        else '24',
+        'OPACITY': property_value(delegate, 'opacity')
+        if re.search(r'(?m)^\s*opacity:', delegate)
+        else '1',
+    }
+    for token, value in replacements.items():
+        program = program.replace(token, value)
+    assert javascript(program) == [[False, True], [False, True], [True, True], [True, False]], (
+        'Search wiring: actual field, matcher and delegate implement '
+        'case-insensitive substring filtering above ten'
+    )
+    assert property_value(field, 'visible') == 'control.searchable', (
+        'Search wiring: threshold controls the attached field'
+    )
+    completed = block(shared, 'Component.onCompleted:')
+    require(
+        completed,
+        r'control\.popup\.contentItem\.header\s*=\s*searchHeader\s*;',
+        'Search wiring: input is the popup list header',
+    )
+    accepted = property_value(field, 'onAccepted')
+    result = javascript(
+        """let picked=[],closed=0; const control={count:3,currentIndex:2,
+textAt:i=>["other","CoSiO cooling.dat","last"][i],matches:t=>t.includes("SiO"),
+
+
+activated:i=>picked.push(i),popup:{close:()=>closed++}};
+(function()BODY)();console.log(JSON.stringify([control.currentIndex,
+
+picked,closed]));""".replace('BODY', accepted)
+    )
+    assert result == [1, [1], 1], (
+        'Search wiring: Enter selects and activates the first matching original index'
+    )
 
 
 def assert_follow(text):
     follow = item(text, 'fitting.follow')
+    assert property_value(follow, 'checkable') == 'true', (
+        'Follow wiring: the actual button must toggle'
+    )
     assert property_value(follow, 'enabled') == 'group.fit !== null && group.fit.scanning', (
         'Follow wiring: its own enabled binding must require a running scan'
     )
@@ -131,6 +280,9 @@ def test_button_names_and_follow_have_live_model_bindings():
     )
     assert_follow(text)
     follow = item(text, 'fitting.follow')
+    assert control_type(text, 'fitting.start') == control_type(text, 'fitting.follow'), (
+        'Buttons wiring: Start and Follow inherit the same button base'
+    )
     # Both controls inherit the same base width unless they override it.
     for name in ('width', 'implicitWidth', 'wide'):
         a = re.search(r'(?m)^\s*' + name + r':([^\n]+)', start)
@@ -144,6 +296,7 @@ def test_follow_observer_rejects_disconnected_controls_and_unrelated_handlers():
     text = source('qml/Pages/Analysis/FittingGroup.qml')
     assert_follow(text)
     for old, new in [
+        ('checkable: true', 'checkable: false'),
         ('enabled: group.fit !== null && group.fit.scanning', 'enabled: false'),
         (
             'checked: group.fit !== null && group.fit.scanning && group.fit.following',
@@ -153,7 +306,8 @@ def test_follow_observer_rejects_disconnected_controls_and_unrelated_handlers():
     ]:
         changed = (
             text.replace(old, new)
-            + '\nButton { enabled: group.fit.scanning; onToggled: group.fit.following = checked }'
+            + '\nButton { enabled: group.fit.scanning; onToggled: group.fit.'
+            'following = checked }'
         )
         assert changed != text, (
             'Follow wiring: each escape must actually alter the production control'
@@ -172,32 +326,24 @@ OUTCOMES = [
 ]
 
 
-def switch_value(text, function, key):
-    body = block(text, 'function ' + function + '(')
-    cases = list(re.finditer(r'case\s+"([^\"]+)":', body))
-    selected = next((m for m in cases if m.group(1) == key), None)
-    if selected:
-        returned = re.search(r'\breturn\s+([^;]+);', body[selected.end() :])
-    else:
-        last_switch = max(end for begin, end in spans(body) if begin > body.index('{'))
-        returned = re.search(r'\breturn\s+([^;]+);', body[last_switch:])
-    assert returned, (
-        'Outcomes wiring: each outcome must resolve through the called presentation function'
+def outcome_functions(text):
+    colors = {color: color for _key, _word, _icon, color in OUTCOMES}
+    context = 'const qsTr=x=>x; const EaStyle={Colors:' + json.dumps(colors) + '};'
+    return (
+        context
+        + '\n'
+        + '\n'.join(block(text, 'function ' + name + '(') for name in ('word', 'icon', 'color'))
     )
-    return returned.group(1).strip()
 
 
 @pytest.mark.parametrize(('key', 'word', 'icon', 'color'), OUTCOMES)
 def test_view_model_names_each_outcome_from_owner_table(key, word, icon, color):
-    text = source('qml/Globals/FitOutcomes.qml')
-    assert switch_value(text, 'word', key) == f'qsTr("{word}")', (
-        'Outcomes: the called word function follows the owner table'
+    result = evaluate(
+        '[word(KEY),icon(KEY),color(KEY)]'.replace('KEY', json.dumps(key)),
+        outcome_functions(source('qml/Globals/FitOutcomes.qml')),
     )
-    assert switch_value(text, 'icon', key) == f'"{icon}"', (
-        'Outcomes: the called icon function follows the owner table'
-    )
-    assert switch_value(text, 'color', key) == 'EaStyle.Colors.' + color, (
-        'Outcomes: the called colour function follows the owner table'
+    assert result == [word, icon, color], (
+        'Outcomes: effective return branches follow the owner tuple'
     )
 
 
@@ -208,17 +354,40 @@ def assert_outcome_consumers(bar, label, dialog):
         r'outcome:\s*bar\.fit\s*\?\s*bar\.fit\.outcome\s*:\s*""',
         'Outcomes wiring: status summary reads the actual fit outcome',
     )
-    for function in ('icon', 'word', 'color'):
-        require(
-            label,
-            r'FitOutcomes\.' + function + r'\(label\.outcome\)',
-            'Outcomes wiring: status label uses the shared tuple',
+    context = (
+        outcome_functions(source('qml/Globals/FitOutcomes.qml'))
+        + '\nconst FitOutcomes={word,icon,color};'
+    )
+    line = block(label, 'IconLine {')
+    icon_cell = block(dialog, 'IconCell {')
+    value_cell = item(dialog, 'fit.results.value.${row.index}')
+    for key, word, icon, color in OUTCOMES:
+        state = (
+            '\nconst label={outcome:'
+            + json.dumps(key)
+            + '}; const row={outcome:label.outcome,icon:"fallback",value:"17"};'
         )
-        require(
-            dialog,
-            r'FitOutcomes\.' + function + r'\(row\.outcome\)',
-            'Outcomes wiring: results row uses the shared tuple',
+        segments = evaluate(property_value(line, 'segments'), context + state)
+        assert [
+            segments[0]['icon'],
+            segments[1]['text'],
+            segments[0]['color'],
+            segments[1]['color'],
+        ] == [icon, word, color, color], (
+            'Outcomes: displayed status segments use the effective tuple'
         )
+        expressions = [
+            property_value(icon_cell, 'icon'),
+            property_value(icon_cell, 'iconColor'),
+            property_value(value_cell, 'text'),
+            property_value(value_cell, 'color'),
+        ]
+        assert evaluate('[' + ','.join(expressions) + ']', context + state) == [
+            icon,
+            color,
+            word,
+            color,
+        ], 'Outcomes: Overall status takes the outcome branch for icon, word and both colours'
     assert not re.search(r'font\.underline:\s*true', bar + label + dialog), (
         'Outcomes: clickable summaries do not underline'
     )
@@ -252,38 +421,74 @@ def test_outcome_gate_rejects_a_different_results_word():
         assert_outcome_consumers(bar, label, changed)
 
 
-def test_status_fit_area_binds_live_progress_and_terminal_summary():
-    text = source('qml/Components/StatusBar.qml')
+def assert_scan_status(text):
+    area = item(text, 'statusBar.fit')
     progress = item(text, 'statusBar.fit.progress')
     outcome = item(text, 'statusBar.fit.outcome')
-    assert property_value(progress, 'visible') == 'fitArea.running', (
-        'Status bar wiring: running details disappear after fitting'
+    values = item(text, 'statusBar.fit.values')
+    context = """String.prototype.arg=function(value){return this.replace(/%[1-9]/,String(value));
+
+};const qsTr=x=>x;
+const FitOutcomes={separator:' | '};
+const bar={fit:{running:true,scanning:true,ok:7,fail:2,elapsed:'TIME',
+
+eta:'ETA',chi:'CHI',goodnessOfFit:'CHI',completed:3,total:8,fraction:0.375,
+
+percent:37.5,iterations:'13',outcome:'success'}};
+const fitArea={};"""
+    running = property_value(area, 'running')
+    for run, scan in [(True, True), (True, False), (False, True)]:
+        state = (
+            context
+            + 'bar.fit.running='
+            + json.dumps(run)
+            + ';bar.fit.scanning='
+            + json.dumps(scan)
+            + ';'
+        )
+        state += 'fitArea.running=(' + running + ');'
+        assert evaluate(property_value(progress, 'visible'), state) == run, (
+            'Status bar wiring: progress visibility follows the actual running producer'
+        )
+        assert evaluate(property_value(outcome, 'visible'), state) == (not run), (
+            'Status bar wiring: outcome visibility follows the terminal producer'
+        )
+        if run:
+            assert evaluate(property_value(progress, 'indeterminate'), state) == (not scan), (
+                'Status bar wiring: single fits stripe and scans have determinate fill'
+            )
+            if scan:
+                prop = 'fraction' if re.search(r'(?m)^\s*fraction:', progress) else 'value'
+                fill = evaluate(property_value(progress, prop), state)
+                maximum = (
+                    evaluate(property_value(progress, 'to'), state)
+                    if re.search(r'(?m)^\s*to:', progress)
+                    else 1
+                )
+                assert fill / maximum == 3 / 8, (
+                    'Status bar wiring: the displayed fill is completed datasets '
+                    'divided by their total'
+                )
+    # Execute the text that is actually displayed, not an unused facts array.
+    state = (
+        context
+        + 'fitArea.running=true;'
+        + block(area, 'function joined(').replace('function joined', 'fitArea.joined = function')
+        + ';'
     )
-    require(
-        outcome,
-        r'visible:\s*!fitArea\.running',
-        'Status bar wiring: only the terminal outcome remains after fitting',
-    )
-    # The scan branch must carry actual live values, in the required order, in this area.
-    area = item(text, 'statusBar.fit')
-    require(
-        area,
-        r'\[[^]]*\.ok[^]]*\.fail[^]]*\.elapsed[^]]*\.eta[^]]*\.chi',
-        'Status bar wiring: scan facts are bound in ok, fail, time, ETA, chi order',
-    )
-    require(
-        progress,
-        r'indeterminate:\s*[^\n]*scann',
-        'Status bar wiring: stripe mode distinguishes single from scan progress',
-    )
-    require(
-        progress,
-        r'(?:value|fraction):\s*[^\n]*\.(?:percent|fraction|completed)',
-        'Status bar wiring: scan fill is bound to completion',
+    for name in ('chi', 'iterations'):
+        state += 'fitArea.' + name + '=(' + property_value(area, name) + ');'
+    shown = evaluate(property_value(values, 'text'), state)
+    assert re.search(r'7.*2.*TIME.*ETA.*CHI', shown), (
+        'Status bar wiring: the live-value consumer displays ok, fail, time, ETA and chi in order'
     )
     assert not re.search(r'\.(?:cancel|stop)\s*\(', text), (
         'Status bar wiring: no handler in the bar stops a fit'
     )
+
+
+def test_status_fit_area_binds_live_progress_and_terminal_summary():
+    assert_scan_status(source('qml/Components/StatusBar.qml'))
 
 
 def test_create_experiment_is_enabled_and_routes_to_view_model():
@@ -306,7 +511,9 @@ def test_create_experiment_is_enabled_and_routes_to_view_model():
         'Create wiring: the supported method applies the closed core edit',
     )
     require(
-        body, r'setCurrentExperimentIndex\(', 'Create wiring: creation selects the newly added row'
+        body,
+        r'setCurrentExperimentIndex\(static_cast<int>\(experiment_models_\.size\(\)\) - 1\);',
+        'Create wiring: creation selects the newly added row',
     )
     require(
         item(text, 'experiments.load'),
@@ -318,6 +525,37 @@ def test_create_experiment_is_enabled_and_routes_to_view_model():
         r'onAccepted:\s*group\.project\.loadExperiments\(selectedFiles\)',
         'Load wiring: accepted files reach the supported edit boundary',
     )
+
+    assert property_value(block(text, 'FileDialog {'), 'fileMode') == 'FileDialog.OpenFiles', (
+        'Load wiring: desktop chooses multiple files'
+    )
+    action = property_value(item(text, 'experiments.load'), 'onClicked')
+    received = block(text, 'function onFilesOpened(')
+    for available in (False, True):
+        program = (
+            """let calls=[]; const files=['a.edi','b.edi'];
+const group={project:{loadExperiments:x=>calls.push(['loaded',x])},
+
+webRequest:0,webRequestProject:null};
+const WebFiles={available:AVAILABLE,openFiles:(filter,multiple)=>{calls.push(['web',
+
+filter,multiple]);return 41}};
+const loadDialog={open:()=>calls.push(['desktop'])};
+(function()ACTION)();
+RECEIVED
+if(WebFiles.available) onFilesOpened(41,files);
+console.log(JSON.stringify(calls));"""
+            .replace('AVAILABLE', json.dumps(available))
+            .replace('ACTION', action)
+            .replace('RECEIVED', received)
+        )
+        expected = (
+            [['web', '.edi', True], ['loaded', ['a.edi', 'b.edi']]] if available else [['desktop']]
+        )
+        assert javascript(program) == expected, (
+            'Load wiring: each platform opens its multi-file route and '
+            'browser files reach the initiating project'
+        )
 
 
 def test_type_selectors_live_in_explorer_and_follow_selected_row():
@@ -360,10 +598,22 @@ def test_data_free_experiment_type_has_a_write_boundary(axis):
         r'onActivated:\s*index => row\.choose\(' + axis + r',\s*"' + axis + r'",\s*index\)',
         'Type wiring: each supported axis uses the selected-row edit route',
     )
-    require(
-        block(text, 'function choose('),
-        r'row\.project\.setExperimentType\(row\.experimentIndex,\s*axis,\s*token\)',
-        'Type wiring: the helper sends the actual selected index and token',
+    chooser = block(text, 'function choose(')
+    program = """const Qt={binding:f=>f()}; let calls=[];
+const row={experimentIndex:3,project:{setExperimentType:(...args)=>calls.push(args)}
+
+};
+const box={value:'old',permittedValues:['old','chosen','other'],currentIndex:0}
+
+;
+CHOOSER
+choose(box,AXIS,1);
+console.log(JSON.stringify([calls,box.currentIndex]));""".replace('CHOOSER', chooser).replace(
+        'AXIS', json.dumps(axis)
+    )
+    assert javascript(program) == [[[3, axis, 'chosen']], 0], (
+        'Type wiring: activation forwards the selected experiment, axis '
+        'and option token and restores its stored index'
     )
     require(
         block(source('src/project_view_model.cpp'), 'bool ProjectViewModel::setExperimentType('),
@@ -378,22 +628,21 @@ def test_disabled_placeholders_and_load_data_are_present():
         assert (
             property_value(item(types, 'experimentType.' + placeholder), 'enabled') == 'false'
         ), 'Type wiring: each placeholder is disabled on its own control'
-    require(
-        item(types, 'experimentType.polarization'),
-        r'visible:.*radiationProbe === ExperimentViewModel\.Neutron',
-        'Type wiring: polarization is visible only for a neutron probe',
-    )
+    assert (
+        property_value(item(types, 'experimentType.polarization'), 'visible')
+        == 'row.experiment !== null && row.experiment.radiationProbe ==='
+        ' ExperimentViewModel.Neutron'
+    ), 'Type wiring: polarization is restricted to neutron experiments'
     control = item(
         source('qml/Pages/Experiment/ExperimentsGroup.qml'), 'experiments.loadData.${row.index}'
     )
     assert property_value(control, 'enabled') == 'false', (
         'Load data wiring: the actual row action remains disabled'
     )
-    require(
-        control,
-        r'visible:.*row\.experiment\.calculationOnly',
-        'Load data wiring: the action belongs only to simulations',
-    )
+    assert (
+        property_value(control, 'visible')
+        == 'row.experiment !== null && row.experiment.calculationOnly'
+    ), 'Load data wiring: the row action is restricted to simulations'
 
 
 @pytest.mark.parametrize('field', ['minimum', 'maximum', 'step'])
@@ -408,10 +657,18 @@ def test_simulation_range_fields_have_live_write_bindings(field):
         r'property bool editable:\s*experiment !== null && experiment\.calculationOnly',
         'Range wiring: measured data locks range edits',
     )
-    require(
-        control,
-        r'onCommitted:\s*text => group\.experiment\.setRange\(',
-        'Range wiring: range edits use the supported setRange method',
+    handler = property_value(control, 'onCommitted')
+    result = evaluate(
+        '(' + handler + ')("13.25")',
+        'let calls=[]; const '
+        'group={range:{minimum:4,maximum:80,step:0.2},experiment:{setRange'
+        ':(...args)=>{calls.push(args);return calls}}};',
+    )
+    expected = [4, 80, 0.2]
+    expected[['minimum', 'maximum', 'step'].index(field)] = 13.25
+    assert result == [expected], (
+        'Range wiring: the activated field forwards its value and '
+        'preserves the other two coordinates'
     )
     require(
         block(source('src/experiment_view_model.cpp'), 'void ExperimentViewModel::setRange('),
@@ -445,37 +702,291 @@ def test_explorer_fit_column_has_outcome_model_roles():
 def test_long_parameter_pickers_use_shared_search_component(component):
     text = source(f'qml/Pages/Analysis/{component}.qml')
     pickers = re.findall(r'\b(?:EaElements\.)?(\w*ComboBox)\s*\{', text)
-    assert pickers and all(name == 'SearchableComboBox' for name in pickers), (
+    assert all(name == 'SearchableComboBox' for name in pickers), (
         'Search wiring: every project-item picker uses the shared search component'
     )
     shared = source('qml/Components/SearchableComboBox.qml')
-    require(
-        shared,
-        r'property int searchThreshold:\s*10',
-        'Search wiring: the shared threshold is ten entries',
+    assert_search(shared)
+    assert_search(shared, block(source('qml/Components/BlockSelector.qml'), 'delegate:'))
+
+
+def status_mapping(text, tmp_path):
+    declarations = """#include <iostream>
+#include <string>
+using QString=std::string;
+#define QStringLiteral(value) std::string(value)
+namespace edi { enum class FitStatus {DONE,MAX_ITER,NO_STEP,CANCELLED,
+
+SUPERSEDED,UNAVAILABLE,ERROR}; }
+struct FitViewModel {static std::string tr(const char* value) {return value;
+
+}};"""
+    declarations += (
+        block(text, 'QString outcome_key(') + '\n' + block(text, 'QString status_text(')
     )
-    require(
-        shared,
-        r'property bool searchable:\s*count > searchThreshold',
-        'Search wiring: strictly more than ten shows search',
+    declarations += """
+int main() {for(int i=0;i<7;++i) {auto status=static_cast<edi::FitStatus>(i);
+
+ std::cout<<outcome_key(status)<<"|"<<status_text(status)<<"\\n";}}"""
+    file = tmp_path / 'mapping.cpp'
+    file.write_text(declarations)
+    executable = tmp_path / 'mapping'
+    result = subprocess.run(
+        ['c++', '-std=c++20', str(file), '-o', str(executable)],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=10,
     )
-    require(
-        item(shared, 'comboBox.search'),
-        r'visible:\s*control\.searchable',
-        'Search wiring: the actual input follows that threshold',
+    assert result.returncode == 0, (
+        'Outcomes: the actual typed producer mapping must compile: ' + result.stderr
     )
-    require(
-        shared,
-        r'property string filter:\s*searchable\s*\?\s*searchField\.text',
-        'Search wiring: matches read the actual search input',
+    return subprocess.run(
+        [str(executable)], capture_output=True, text=True, check=True, timeout=5
+    ).stdout.splitlines()
+
+
+@pytest.fixture(scope='module')
+def status_receipts(tmp_path_factory, status_control):
+    tmp_path = tmp_path_factory.mktemp('outcomes')
+    expected = [key + '|' + word for key, word, _icon, _color in OUTCOMES[:5]] + [
+        'failed|Failed',
+        'failed|Failed',
+    ]
+    text = source('src/fit_view_model.cpp')
+    good = status_mapping(text, tmp_path)
+    changed = text.replace(
+        'case edi::FitStatus::MAX_ITER: return QStringLiteral("maxIterations");',
+        'case edi::FitStatus::MAX_ITER: return QStringLiteral("failed");',
     )
-    require(
-        block(shared, 'function matches('),
-        r'String\(text\)\.toLowerCase\(\)\.includes\(filter\)',
-        'Search wiring: any substring is matched',
+    assert changed != text, (
+        'Outcomes: the producer escape must alter MAX_ITER at its actual branch'
     )
-    require(
-        block(shared, 'delegate:'),
-        r'visible:\s*control\.matches\(text\)',
-        'Search wiring: actual delegate visibility uses the match result',
+    return good, status_mapping(changed, tmp_path), expected, status_control
+
+
+@pytest.mark.parametrize('variant', ['actual', 'wrongMAX'])
+def test_typed_status_producer_matches_the_shared_outcome_keys(status_receipts, variant):
+    good, bad, expected, _control = status_receipts
+    assert (good == expected) if variant == 'actual' else (bad != expected), (
+        'Outcomes: the typed map follows the owner table and rejects a wrong MAX_ITER key'
     )
+
+
+@pytest.mark.parametrize(
+    'channel',
+    [
+        'outcome-icon',
+        'outcome-color',
+        'outcome-word',
+        'search-input',
+        'search-height',
+        'search-opacity',
+        'search-header',
+        'search-index',
+        'block-delegate',
+    ],
+)
+def test_effective_consumers_reject_wrong_branches_and_disconnected_search(channel):
+    bar, label, dialog = (
+        source('qml/Components/' + name)
+        for name in ('StatusBar.qml', 'FitOutcomeLabel.qml', 'FitResultsDialog.qml')
+    )
+    if channel.startswith('outcome-'):
+        assert_outcome_consumers(bar, label, dialog)
+        for old, new in [
+            ('row.outcome !== "" ? FitOutcomes.icon', 'row.outcome === "" ? FitOutcomes.icon'),
+            ('row.outcome !== "" ? FitOutcomes.color', 'row.outcome === "" ? FitOutcomes.color'),
+            ('row.outcome !== "" ? FitOutcomes.word', 'row.outcome === "" ? FitOutcomes.word'),
+        ]:
+            if not old.endswith(channel.removeprefix('outcome-')):
+                continue
+            mutated = dialog.replace(old, new)
+            assert mutated != dialog, (
+                'Outcomes: each wrong-branch escape reaches the effective results expression'
+            )
+            with pytest.raises(AssertionError):
+                assert_outcome_consumers(bar, label, mutated)
+    shared = source('qml/Components/SearchableComboBox.qml')
+    for old, new in [
+        ('control.searchText = text', 'control.searchText = ""'),
+        (
+            'matching ? EaStyle.Sizes.comboBoxHeight : 0',
+            'matching ? 0 : EaStyle.Sizes.comboBoxHeight',
+        ),
+        ('matching ? 1 : 0', 'matching ? 0 : 1'),
+        (
+            'control.popup.contentItem.header = searchHeader',
+            'control.popup.contentItem.header = null',
+        ),
+        ('control.currentIndex = i', 'control.currentIndex = 0'),
+    ]:
+        key = {
+            'control.searchText = text': 'search-input',
+            'matching ? EaStyle.Sizes.comboBoxHeight : 0': 'search-height',
+            'matching ? 1 : 0': 'search-opacity',
+            'control.popup.contentItem.header = searchHeader': 'search-header',
+            'control.currentIndex = i': 'search-index',
+        }[old]
+        if channel != key:
+            continue
+        mutated = shared.replace(old, new)
+        assert mutated != shared, (
+            'Search wiring: each escape must change the connected input or row'
+        )
+        with pytest.raises(AssertionError):
+            assert_search(mutated)
+    if channel != 'block-delegate':
+        return
+    block_delegate = block(source('qml/Components/BlockSelector.qml'), 'delegate:')
+    with pytest.raises(AssertionError):
+        assert_search(shared, block_delegate.replace('selector.matches(text)', 'true'))
+
+
+def test_search_accepts_direct_field_and_state_compositions():
+    shared = source('qml/Components/SearchableComboBox.qml')
+    direct = shared.replace(
+        'searchable ? searchText.trim().toLowerCase()',
+        'searchable ? searchField.text.trim().toLowerCase()',
+    )
+    delegate = block(shared, 'delegate:')
+    visible_delegate = (
+        delegate
+        .replace(
+            'height: matching ? EaStyle.Sizes.comboBoxHeight : 0',
+            'height: EaStyle.Sizes.comboBoxHeight',
+        )
+        .replace('opacity: matching ? 1 : 0', 'opacity: 1')
+        .replace(
+            'readonly property bool matching: control.matches(text)',
+            'readonly property bool matching: control.matches(text)\n        visible: matching',
+        )
+    )
+    assert_search(shared)
+    assert_search(direct, visible_delegate)
+
+
+def test_forwarding_controls_reject_wrong_selected_index_token_range_and_visibility(monkeypatch):
+    original = source
+    checks = [
+        (
+            'src/project_view_model.cpp',
+            'setCurrentExperimentIndex(static_cast<int>(experiment_models_.size()) - 1);',
+            'setCurrentExperimentIndex(0);',
+            test_create_experiment_is_enabled_and_routes_to_view_model,
+            (),
+        ),
+        (
+            'qml/Pages/Experiment/ExperimentTypeGroup.qml',
+            'box.permittedValues[index]',
+            'box.permittedValues[0]',
+            test_data_free_experiment_type_has_a_write_boundary,
+            ('beamMode',),
+        ),
+        (
+            'qml/Pages/Experiment/ExperimentTypeGroup.qml',
+            'row.experimentIndex, axis, token',
+            '0, axis, token',
+            test_data_free_experiment_type_has_a_write_boundary,
+            ('beamMode',),
+        ),
+        (
+            'qml/Pages/Experiment/ExperimentTypeGroup.qml',
+            'row.experiment.radiationProbe === ExperimentViewModel.Neutron',
+            'row.experiment.radiationProbe === ExperimentViewModel.Neutron || true',
+            test_disabled_placeholders_and_load_data_are_present,
+            (),
+        ),
+        (
+            'qml/Pages/Experiment/ExperimentsGroup.qml',
+            'row.experiment !== null && row.experiment.calculationOnly',
+            'row.experiment !== null && row.experiment.calculationOnly || true',
+            test_disabled_placeholders_and_load_data_are_present,
+            (),
+        ),
+        (
+            'qml/Pages/Experiment/MeasuredRangeGroup.qml',
+            'setRange(Number(text), group.range.maximum, group.range.step)',
+            'setRange(group.range.minimum, Number(text), group.range.step)',
+            test_simulation_range_fields_have_live_write_bindings,
+            ('minimum',),
+        ),
+        (
+            'qml/Pages/Experiment/ExperimentsGroup.qml',
+            'fileMode: FileDialog.OpenFiles',
+            'fileMode: FileDialog.OpenFile',
+            test_create_experiment_is_enabled_and_routes_to_view_model,
+            (),
+        ),
+        (
+            'qml/Pages/Experiment/ExperimentsGroup.qml',
+            'group.project.loadExperiments(files)',
+            'group.project.loadExperiments([])',
+            test_create_experiment_is_enabled_and_routes_to_view_model,
+            (),
+        ),
+    ]
+    for path, old, new, check, args in checks:
+        changed = original(path).replace(old, new)
+        assert changed != original(path), (
+            'Scan wiring: every forwarding escape must reach its actual operation'
+        )
+        monkeypatch.setattr(
+            __import__(__name__, fromlist=['source']),
+            'source',
+            lambda name, changed=changed, path=path: changed if name == path else original(name),
+        )
+        with pytest.raises((AssertionError, pytest.fail.Exception)):
+            check(*args)
+    monkeypatch.setattr(__import__(__name__, fromlist=['source']), 'source', original)
+
+
+@pytest.fixture(scope='module')
+def status_control():
+    actual = source('qml/Components/StatusBar.qml')
+    # The control supplies the pending scan presentation without counting it as product evidence.
+    progress = item(actual, 'statusBar.fit.progress')
+    progress_control = progress.replace(
+        'indeterminate: true',
+        'indeterminate: !bar.fit.scanning\n            value: bar.fit.completed / bar.fit.total',
+    )
+    values = item(actual, 'statusBar.fit.values')
+    body = property_value(values, 'text')
+    visible_control = values.replace(
+        body, 'fitArea.joined([bar.fit.ok,bar.fit.fail,bar.fit.elapsed,bar.fit.eta,fitArea.chi])'
+    )
+    good = actual.replace(progress, progress_control).replace(values, visible_control)
+    assert_scan_status(good)
+    return good
+
+
+@pytest.mark.parametrize('channel', ['polarity', 'fill', 'producer', 'facts'])
+def test_status_observer_rejects_wrong_progress_polarity_fill_producer_and_unused_facts(
+    channel, status_control
+):
+    good = status_control
+    for key, (old, new) in zip(
+        ['polarity', 'fill', 'producer', 'facts'],
+        [
+            ('indeterminate: !bar.fit.scanning', 'indeterminate: bar.fit.scanning'),
+            ('bar.fit.completed / bar.fit.total', 'bar.fit.completed'),
+            ('bar.fit !== null && bar.fit.running', 'false'),
+            (
+                (
+                    'text: '
+                    'fitArea.joined([bar.fit.ok,bar.fit.fail,bar.fit.elapsed,bar.fit.e'
+                    'ta,fitArea.chi])'
+                ),
+                'text: "wrong"',
+            ),
+        ],
+        strict=True,
+    ):
+        if key != channel:
+            continue
+        bad = good.replace(old, new)
+        assert bad != good, (
+            'Status bar wiring: each wrong effective branch reaches the actual control'
+        )
+        with pytest.raises(AssertionError):
+            assert_scan_status(bad)
