@@ -7,9 +7,9 @@ import edi.app
 
 // The page's block selector as a row of its own at the top of the main area, under the tab bar (edi ADR-0017 §7):
 // the combo box filling the width, then the previous and next buttons, ending where the chart toolbar below ends
-// (`rightInset`), on the chart background, with the chart toolbar's margin above it and a separating line a margin
-// below it. Placed by the main area (WorkflowPage), whose tabs' view starts `reservedHeight` lower so the charts give
-// up that height.
+// (`rightInset`), on the chart background, with the chart toolbar's margin above it and no line under it: the chart
+// keeps its own margin above its toolbar, so one margin separates the two (owner, 2026-10-05). Placed by the main
+// area (WorkflowPage), whose tabs' view starts `reservedHeight` lower so the charts give up that height.
 Item {
     id: placement
 
@@ -28,9 +28,8 @@ Item {
 
     // The chart's own margin above its toolbar, here also above and beside the row (PatternChart.toolbarGap).
     readonly property real margin: EaStyle.Sizes.fontPixelSize
-    // The margin above the row, the row, the margin down to its line, and the line: the chart below keeps its own
-    // margin above its toolbar, so the line has the same margin under it as over it.
-    readonly property real reservedHeight: visible ? 2 * margin + height + EaStyle.Sizes.borderThickness : 0
+    // The margin above the row and the row; the chart's own margin above its toolbar is the one below it.
+    readonly property real reservedHeight: visible ? margin + height : 0
 
     x: margin
     y: tabBarHeight + margin
@@ -44,15 +43,6 @@ Item {
         width: placement.areaWidth
         height: placement.height + 2 * placement.margin
         color: EaStyle.Colors.chartBackground
-    }
-    // The line between the row and the chart, across the main area, a margin under the row.
-    Rectangle {
-        x: -placement.margin
-        y: placement.height + placement.margin
-        width: placement.areaWidth
-        height: EaStyle.Sizes.borderThickness
-        // The legend box's border colour.
-        color: EaStyle.Colors.chartGridLine
     }
 
     BlockSelector {

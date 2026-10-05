@@ -218,8 +218,8 @@ and `stepMaximum`.
   `objectName` `mainArea.blocks`) on the chart background: a compact combo box (`Components/BlockSelector.qml`),
   then the previous and next buttons, the last one's right edge on the right edge of the chart toolbar below
   (which differs by page: each chart states it as `toolbarRightInset`). The chart toolbar's margin is above the
-  row, and a line across the main area a margin below it, in the legend box's border colour, separates it from
-  the chart; the box and the buttons are a toolbar group's spacing apart (owner, 2026-10-05). The
+  row, and one margin, the chart's own above its toolbar, separates it from the chart, with no line (the owner
+  compared the two, 2026-10-05); the box and the buttons are a toolbar group's spacing apart. The
   charts give up that height. Every line of the box reads in the Experiments table's column order: the block's
   number (minor colour), its icon in its colour (§8), for an experiment its fit outcome (§17), then its name, a
   long one cut in the middle. The row is hidden while the project holds no block of the page's kind.
