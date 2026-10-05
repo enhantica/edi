@@ -858,6 +858,7 @@ void fill_crysta_sequential(const SequentialFitConfig& config,
     converted.data_dir = config.data_dir;
     converted.file_pattern = config.file_pattern;
     converted.reverse = config.reverse;
+    converted.template_file = config.template_file;
     converted.extract.clear();
     converted.extract.reserve(config.extract.size());
     for (const auto& rule : config.extract) {
@@ -977,6 +978,26 @@ ScanResults read_scan_results(const Project& project) {
         results.rows.emplace(file, std::move(cells));
     }
     return results;
+}
+
+void check_scan_template_file(const Project& project, const std::string& file) {
+    crysta::SequentialFitConfig config;
+    fill_crysta_sequential(project.sequential_fit, config);
+    crysta::check_sequential_template_file(config, project.path, file);
+}
+
+void set_scan_template_file(Project& project, const std::string& file) {
+    check_scan_template_file(project, file);
+    if (project.experiments.size() != 1) {
+        throw std::invalid_argument("_sequential_fit.template_file: a scan has one template experiment; this project "
+                                    "has " + std::to_string(project.experiments.size()));
+    }
+    crysta::SequentialFitConfig config;
+    fill_crysta_sequential(project.sequential_fit, config);
+    const std::string directory = crysta::resolve_sequential_scan_dir(project.path, config.data_dir);
+    PdDataBase data = read_scan_dataset(directory, file, project.experiment().effective_beam_mode());
+    project.experiment().data = std::move(data);
+    project.sequential_fit.template_file = file;
 }
 
 std::string scan_target_unit(const std::string& target) {

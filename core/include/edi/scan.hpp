@@ -41,6 +41,14 @@ ScanResults read_scan_results(const Project& project);
 /// takes each new row without reading the rows before it. Empty when there is no complete row.
 ScanResults read_last_scan_result(const Project& project);
 
+/// The template dataset (`_sequential_fit.template_file`): `file` must be one of the scan's files as its listing
+/// names them. Throws, naming the file, for anything else (crysta::check_sequential_template_file); reads no file.
+void check_scan_template_file(const Project& project, const std::string& file);
+
+/// Makes `file` the template dataset: the template experiment's data becomes that file's, read as the driver reads
+/// it, and `_sequential_fit.template_file` names it. No parameter changes; a refusal changes nothing.
+void set_scan_template_file(Project& project, const std::string& file);
+
 /// The unit of an extract rule's target, as a column heading shows it (`K` for a temperature), or empty.
 std::string scan_target_unit(const std::string& target);
 

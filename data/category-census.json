@@ -1289,6 +1289,13 @@
           "items": [
             "reverse"
           ]
+        },
+        {
+          "member": "SequentialFitConfig::template_file",
+          "type": "std::string",
+          "items": [
+            "template_file"
+          ]
         }
       ],
       "owner": "SequentialFitConfig"
@@ -3509,6 +3516,11 @@
     {
       "member": "SequentialFitConfig::reverse",
       "type": "bool",
+      "category": "_sequential_fit"
+    },
+    {
+      "member": "SequentialFitConfig::template_file",
+      "type": "std::string",
       "category": "_sequential_fit"
     },
     {

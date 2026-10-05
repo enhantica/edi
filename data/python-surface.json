@@ -243,6 +243,16 @@
      },
      "reason": "C",
      "verdict": "public"
+    },
+    "template_file": {
+     "closes": "E04-T16",
+     "need": {
+      "by": "deviation",
+      "ref": "D77",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
     }
    },
    "AtomSite": {
@@ -5870,7 +5880,8 @@
     "constraints",
     "descent",
     "fit",
-    "fitting_mode"
+    "fitting_mode",
+    "template_file"
    ]
   },
   "AtomSite": {

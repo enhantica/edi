@@ -14,6 +14,7 @@
 
 #include "edi/parameter_spec.hpp"
 #include "edi/edits.hpp"
+#include "edi/scan.hpp"
 #include "edi/selectors.hpp"
 #include "edi/worker.hpp"
 #include "identity_bridge.hpp"  // Crysta's identity rules, via the adapter
@@ -2955,6 +2956,9 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
         if (const std::string* reverse = block.find("_sequential_fit.reverse")) {
             project.sequential_fit.reverse = strict_bool(*reverse, "_sequential_fit.reverse");
         }
+        if (const std::string* file = block.find("_sequential_fit.template_file")) {
+            project.sequential_fit.template_file = *file;
+        }
         if (const Loop* extract = block.loop_with("_sequential_fit_extract.id")) {
             for (const auto& row : extract->rows) {
                 SequentialExtractRule rule;
@@ -3436,6 +3440,10 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
 
     project.path = directory;
     project.metadata.path = directory;
+    // A declared template dataset must be one of the scan's files.
+    if (!project.sequential_fit.template_file.empty()) {
+        check_scan_template_file(project, project.sequential_fit.template_file);
+    }
     // Each value outside its admissible range — a fit may leave one there — is loaded and named in one
     // warning; the app marks it red.
     for (const ParameterEntry& entry : parameter_entries(project)) {
