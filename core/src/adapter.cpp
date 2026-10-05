@@ -1371,22 +1371,28 @@ crysta::BraggPdExperiment to_crysta_cwl_experiment(const ExperimentBase& e) {
     peak.push_back(param(required(e.peak.broad_gauss_u, "peak.broad_gauss_u"), crysta::PROFILE, "broad_gauss_u"));
     peak.push_back(param(required(e.peak.broad_gauss_v, "peak.broad_gauss_v"), crysta::PROFILE, "broad_gauss_v"));
     peak.push_back(param(required(e.peak.broad_gauss_w, "peak.broad_gauss_w"), crysta::PROFILE, "broad_gauss_w"));
-    peak.push_back(param(required(e.peak.broad_lorentz_x, "peak.broad_lorentz_x"), crysta::PROFILE, "broad_lorentz_x"));
-    peak.push_back(param(required(e.peak.broad_lorentz_y, "peak.broad_lorentz_y"), crysta::PROFILE, "broad_lorentz_y"));
-    // The asymmetry slots the DECLARED rung carries, after the five and in crysta's dictionary
-    // order (its peak_tags_for) — exactly the slots crysta's loader would hold, whether or not a
-    // programmatic model engaged them (an absent one takes the loader's default).
+    // Every other slot the DECLARED profile carries, in crysta's dictionary order (its
+    // peak_tags_for, ADR-0080) — exactly the slots crysta's loader would hold, whether or not a
+    // programmatic model engaged them (an absent optional one takes the loader's default).
     const auto slot = [&](const std::optional<Parameter>& field, const char* name,
                           double fallback) {
         Parameter value;
         value.value = fallback;
         peak.push_back(param(field ? *field : value, crysta::PROFILE, name));
     };
-    const std::string declared = e.peak.type.value_or("cwl-pseudo-voigt");
-    if (declared == "cwl-thompson-cox-hastings") {
+    const std::string declared = e.peak.type.value_or("cwl-tch-pseudo-voigt");
+    const CwlProfileSlots slots = cwl_profile_slots(declared);
+    if (slots.lorentz_xy) {
+        peak.push_back(param(required(e.peak.broad_lorentz_x, "peak.broad_lorentz_x"), crysta::PROFILE, "broad_lorentz_x"));
+        peak.push_back(param(required(e.peak.broad_lorentz_y, "peak.broad_lorentz_y"), crysta::PROFILE, "broad_lorentz_y"));
+    } else if (slots.mixing_eta) {
+        slot(e.peak.mixing_eta_0, "mixing_eta_0", 0.0);
+        slot(e.peak.mixing_eta_1, "mixing_eta_1", 0.0);
+    }
+    if (slots.fcj) {
         slot(e.peak.asym_fcj_1, "asym_fcj_1", 0.0);
         slot(e.peak.asym_fcj_2, "asym_fcj_2", 0.0);
-    } else if (declared == "cwl-pseudo-voigt-berar-baldinozzi-asymmetry") {
+    } else if (slots.beba) {
         slot(e.peak.asym_beba_a0, "asym_beba_a0", 0.0);
         slot(e.peak.asym_beba_b0, "asym_beba_b0", 0.0);
         slot(e.peak.asym_beba_a1, "asym_beba_a1", 0.0);
@@ -1431,7 +1437,7 @@ crysta::BraggPdExperiment to_crysta_cwl_experiment(const ExperimentBase& e) {
     // TOF-only abscor guard reads it
     apply_post_build_fields(e, built);
     if (!e.peak.type) {
-        built.peak_type = "cwl-pseudo-voigt";  // never leave the TOF default on a CW experiment
+        built.peak_type = "cwl-tch-pseudo-voigt";  // never leave the TOF default on a CW experiment
     }
     return crysta::BraggPdExperiment(built);  // a copy: an experiment never moves
 }

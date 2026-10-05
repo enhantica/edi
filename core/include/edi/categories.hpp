@@ -107,13 +107,15 @@ inline Category peak_category(ExperimentBase& experiment) {
     Category category{"peak"};
     PeakBase& peak = experiment.peak;
     const bool constant_wavelength = experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH;
-    const std::string profile = peak.type.value_or(constant_wavelength ? "cwl-pseudo-voigt" : "tof-jorgensen");
+    const std::string profile = peak.type.value_or(constant_wavelength ? "cwl-tch-pseudo-voigt" : "tof-jorgensen");
     if (constant_wavelength) {
         detail::add_optional(category.fields, "broad_gauss_u", peak.broad_gauss_u);
         detail::add_optional(category.fields, "broad_gauss_v", peak.broad_gauss_v);
         detail::add_optional(category.fields, "broad_gauss_w", peak.broad_gauss_w);
         detail::add_optional(category.fields, "broad_lorentz_x", peak.broad_lorentz_x);
         detail::add_optional(category.fields, "broad_lorentz_y", peak.broad_lorentz_y);
+        detail::add_optional(category.fields, "mixing_eta_0", peak.mixing_eta_0);
+        detail::add_optional(category.fields, "mixing_eta_1", peak.mixing_eta_1);
         detail::add_optional(category.asymmetry, "asym_fcj_1", peak.asym_fcj_1);
         detail::add_optional(category.asymmetry, "asym_fcj_2", peak.asym_fcj_2);
         detail::add_optional(category.asymmetry, "asym_beba_a0", peak.asym_beba_a0);

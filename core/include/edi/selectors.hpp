@@ -91,6 +91,11 @@ std::string scattering_source_value(const ExperimentBase& experiment, Scattering
 // The peak profiles an experiment of this beam mode can use: the shipped ones in their `.edi` order,
 // then any registered extension for the mode.
 std::vector<std::string> supported_peak_profiles(BeamModeEnum mode);
+// The profile a new experiment of this beam mode gets: the TCH pseudo-Voigt for constant wavelength.
+std::string default_peak_profile(BeamModeEnum mode);
+// What a profile selector shows for a token: the constant-wavelength profiles' short names
+// (crysta ADR-0080), the token itself for any other.
+std::string peak_profile_label(const std::string& token);
 // The absorption families of a beam mode, as a file spells them: CW none / cylinder-hewat /
 // cylinder-lobanov (the mu_r body), TOF none / cylinder (the ABSCOR pair). Read from crysta's
 // vocabulary table (ADR-0017).

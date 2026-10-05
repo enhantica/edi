@@ -105,6 +105,8 @@ inline constexpr const char* kLorentzX[] = {"_peak.broad_lorentz_x"};
 inline constexpr const char* kLorentzXCif[] = {"_easydiffraction_peak.broad_lorentz_x"};
 inline constexpr const char* kLorentzY[] = {"_peak.broad_lorentz_y"};
 inline constexpr const char* kLorentzYCif[] = {"_easydiffraction_peak.broad_lorentz_y"};
+inline constexpr const char* kMixingEta0[] = {"_peak.mixing_eta_0"};  // no upstream spelling
+inline constexpr const char* kMixingEta1[] = {"_peak.mixing_eta_1"};
 // The CW asymmetry coefficients, carried only by the declaring `_peak.type`.
 inline constexpr const char* kAsymFcj1[] = {"_peak.asym_fcj_1"};
 inline constexpr const char* kAsymFcj1Cif[] = {"_easydiffraction_peak.asym_fcj_1"};
@@ -280,6 +282,15 @@ inline const ParameterSpec peak_broad_lorentz_x{
 inline const ParameterSpec peak_broad_lorentz_y{
     "peak", "broad_lorentz_y", "degrees", "Lorentzian broadening from sample size effects",
     detail::kUnbounded, "broad_lorentz_y", "deg", "$Y$", "\\mathrm{deg}", detail::kLorentzY, detail::kLorentzYCif};
+
+// The pseudo-Voigt mixing eta = eta_0 + eta_1 2theta, 2theta in degrees (FullProf Eta0 and X of
+// Npr 5; crysta ADR-0080). No diffraction-lib counterpart.
+inline const ParameterSpec peak_mixing_eta_0{
+    "peak", "mixing_eta_0", "none", "Pseudo-Voigt mixing at 2theta = 0",
+    detail::kUnbounded, "Eta0", "", "$\\eta_0$", "", detail::kMixingEta0, {}};
+inline const ParameterSpec peak_mixing_eta_1{
+    "peak", "mixing_eta_1", "none", "Pseudo-Voigt mixing slope per degree 2theta",
+    detail::kUnbounded, "Eta1", "1/deg", "$\\eta_1$", "\\mathrm{deg}^{-1}", detail::kMixingEta1, {}};
 
 // Diffraction-lib's FcjAsymmetryMixin and BerarBaldinozziAsymmetryMixin, verbatim.
 inline const ParameterSpec peak_asym_fcj_1{

@@ -146,6 +146,8 @@ void put_experiment(std::string& out, const ExperimentBase& experiment, Scope sc
     put_optional_parameter(out, experiment.peak.broad_gauss_w, scope);
     put_optional_parameter(out, experiment.peak.broad_lorentz_x, scope);
     put_optional_parameter(out, experiment.peak.broad_lorentz_y, scope);
+    put_optional_parameter(out, experiment.peak.mixing_eta_0, scope);
+    put_optional_parameter(out, experiment.peak.mixing_eta_1, scope);
     put_optional_parameter(out, experiment.peak.asym_fcj_1, scope);
     put_optional_parameter(out, experiment.peak.asym_fcj_2, scope);
     put_optional_parameter(out, experiment.peak.asym_beba_a0, scope);

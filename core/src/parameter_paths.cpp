@@ -194,6 +194,13 @@ std::optional<ResolvedParameter> resolve_instrument_label(ExperimentBase& experi
         {"broad_lorentz_y",
          {+[](ExperimentBase& e) -> std::optional<Parameter>& { return e.peak.broad_lorentz_y; },
           "peak.broad_lorentz_y"}},
+        // The pseudo-Voigt mixing, present only on the profiles that carry it.
+        {"mixing_eta_0",
+         {+[](ExperimentBase& e) -> std::optional<Parameter>& { return e.peak.mixing_eta_0; },
+          "peak.mixing_eta_0"}},
+        {"mixing_eta_1",
+         {+[](ExperimentBase& e) -> std::optional<Parameter>& { return e.peak.mixing_eta_1; },
+          "peak.mixing_eta_1"}},
         // The CW asymmetry coefficients, present only on the rung that carries them.
         {"asym_fcj_1",
          {+[](ExperimentBase& e) -> std::optional<Parameter>& { return e.peak.asym_fcj_1; },

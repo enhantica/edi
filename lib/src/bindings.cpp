@@ -2021,10 +2021,12 @@ NB_MODULE(_edi, m) {
     nb::enum_<edi::PeakProfileTypeEnum>(m, "PeakProfileTypeEnum")
         .value("TOF_JORGENSEN", edi::PeakProfileTypeEnum::TOF_JORGENSEN)
         .value("TOF_JORGENSEN_VON_DREELE", edi::PeakProfileTypeEnum::TOF_JORGENSEN_VON_DREELE)
+        .value("CWL_GAUSSIAN", edi::PeakProfileTypeEnum::CWL_GAUSSIAN)
+        .value("CWL_LORENTZIAN", edi::PeakProfileTypeEnum::CWL_LORENTZIAN)
         .value("CWL_PSEUDO_VOIGT", edi::PeakProfileTypeEnum::CWL_PSEUDO_VOIGT)
-        .value("CWL_THOMPSON_COX_HASTINGS", edi::PeakProfileTypeEnum::CWL_THOMPSON_COX_HASTINGS)
-        .value("CWL_PSEUDO_VOIGT_BERAR_BALDINOZZI_ASYMMETRY",
-               edi::PeakProfileTypeEnum::CWL_PSEUDO_VOIGT_BERAR_BALDINOZZI_ASYMMETRY)
+        .value("CWL_PSEUDO_VOIGT_BERAR_BALDINOZZI", edi::PeakProfileTypeEnum::CWL_PSEUDO_VOIGT_BERAR_BALDINOZZI)
+        .value("CWL_TCH_PSEUDO_VOIGT", edi::PeakProfileTypeEnum::CWL_TCH_PSEUDO_VOIGT)
+        .value("CWL_TCH_PSEUDO_VOIGT_FCJ", edi::PeakProfileTypeEnum::CWL_TCH_PSEUDO_VOIGT_FCJ)
         .value("TOF_PSEUDO_VOIGT", edi::PeakProfileTypeEnum::TOF_PSEUDO_VOIGT);
 
     // The experiment-type category: presence-tracked axes read as their EFFECTIVE value (the
@@ -2080,18 +2082,17 @@ NB_MODULE(_edi, m) {
                 if (stored == "tof-jorgensen-von-dreele") {
                     return nb::cast(edi::PeakProfileTypeEnum::TOF_JORGENSEN_VON_DREELE);
                 }
-                if (stored == "cwl-pseudo-voigt") {
-                    return nb::cast(edi::PeakProfileTypeEnum::CWL_PSEUDO_VOIGT);
-                }
-                if (stored == "cwl-thompson-cox-hastings") {
-                    return nb::cast(edi::PeakProfileTypeEnum::CWL_THOMPSON_COX_HASTINGS);
-                }
-                if (stored == "cwl-pseudo-voigt-berar-baldinozzi-asymmetry") {
-                    return nb::cast(
-                        edi::PeakProfileTypeEnum::CWL_PSEUDO_VOIGT_BERAR_BALDINOZZI_ASYMMETRY);
-                }
-                if (stored == "tof-pseudo-voigt") {
-                    return nb::cast(edi::PeakProfileTypeEnum::TOF_PSEUDO_VOIGT);
+                for (const edi::PeakProfileTypeEnum profile :
+                     {edi::PeakProfileTypeEnum::CWL_GAUSSIAN,
+                      edi::PeakProfileTypeEnum::CWL_LORENTZIAN,
+                      edi::PeakProfileTypeEnum::CWL_PSEUDO_VOIGT,
+                      edi::PeakProfileTypeEnum::CWL_PSEUDO_VOIGT_BERAR_BALDINOZZI,
+                      edi::PeakProfileTypeEnum::CWL_TCH_PSEUDO_VOIGT,
+                      edi::PeakProfileTypeEnum::CWL_TCH_PSEUDO_VOIGT_FCJ,
+                      edi::PeakProfileTypeEnum::TOF_PSEUDO_VOIGT}) {
+                    if (stored == edi::token(profile)) {
+                        return nb::cast(profile);
+                    }
                 }
                 return nb::cast(stored);
             },
@@ -2146,48 +2147,59 @@ NB_MODULE(_edi, m) {
     def_view_parameter_field(tof_jorgensen_von_dreele, "broad_lorentz_strain",
                              &edi::PeakBase::broad_lorentz_strain);
 
-    nb::class_<edi::views::CwlPseudoVoigt, edi::views::PeakNode> cwl_pseudo_voigt(m, "CwlPseudoVoigt");
-    cwl_pseudo_voigt.def(nb::init<edi::ExperimentBase*>(), "experiment"_a, nb::keep_alive<1, 2>());
-    def_view_optional_parameter_field(cwl_pseudo_voigt, "broad_gauss_u", &edi::PeakBase::broad_gauss_u,
-                                      edi::spec::peak_broad_gauss_u);
-    def_view_optional_parameter_field(cwl_pseudo_voigt, "broad_gauss_v", &edi::PeakBase::broad_gauss_v,
-                                      edi::spec::peak_broad_gauss_v);
-    def_view_optional_parameter_field(cwl_pseudo_voigt, "broad_gauss_w", &edi::PeakBase::broad_gauss_w,
-                                      edi::spec::peak_broad_gauss_w);
-    def_view_optional_parameter_field(cwl_pseudo_voigt, "broad_lorentz_x", &edi::PeakBase::broad_lorentz_x,
-                                      edi::spec::peak_broad_lorentz_x);
-    def_view_optional_parameter_field(cwl_pseudo_voigt, "broad_lorentz_y", &edi::PeakBase::broad_lorentz_y,
-                                      edi::spec::peak_broad_lorentz_y);
-
-    // The two CW asymmetry rungs (the CW broadening block plus their own coefficients,
-    // diffraction-lib's mixin composition) and the TOF pseudo-Voigt (Gaussian + Lorentzian
-    // broadening, no back-to-back exponentials).
-    const auto def_cwl_broadening = [](auto& cls) {
+    // The constant-wavelength profiles (crysta ADR-0080), each with only its own members: the
+    // Caglioti U, V, W on every one, then the TCH X, Y or the pseudo-Voigt mixing, then the
+    // asymmetry coefficients. The TOF pseudo-Voigt follows.
+    const auto def_caglioti = [](auto& cls) {
         def_view_optional_parameter_field(cls, "broad_gauss_u", &edi::PeakBase::broad_gauss_u,
                                           edi::spec::peak_broad_gauss_u);
         def_view_optional_parameter_field(cls, "broad_gauss_v", &edi::PeakBase::broad_gauss_v,
                                           edi::spec::peak_broad_gauss_v);
         def_view_optional_parameter_field(cls, "broad_gauss_w", &edi::PeakBase::broad_gauss_w,
                                           edi::spec::peak_broad_gauss_w);
+    };
+    const auto def_tch = [&def_caglioti](auto& cls) {
+        def_caglioti(cls);
         def_view_optional_parameter_field(cls, "broad_lorentz_x", &edi::PeakBase::broad_lorentz_x,
                                           edi::spec::peak_broad_lorentz_x);
         def_view_optional_parameter_field(cls, "broad_lorentz_y", &edi::PeakBase::broad_lorentz_y,
                                           edi::spec::peak_broad_lorentz_y);
     };
-    nb::class_<edi::views::CwlThompsonCoxHastings, edi::views::PeakNode> cwl_thompson_cox_hastings(
-        m, "CwlThompsonCoxHastings");
-    cwl_thompson_cox_hastings.def(nb::init<edi::ExperimentBase*>(), "experiment"_a,
-                                  nb::keep_alive<1, 2>());
-    def_cwl_broadening(cwl_thompson_cox_hastings);
-    def_view_optional_parameter_field(cwl_thompson_cox_hastings, "asym_fcj_1",
+    const auto def_pseudo_voigt = [&def_caglioti](auto& cls) {
+        def_caglioti(cls);
+        def_view_optional_parameter_field(cls, "mixing_eta_0", &edi::PeakBase::mixing_eta_0,
+                                          edi::spec::peak_mixing_eta_0);
+        def_view_optional_parameter_field(cls, "mixing_eta_1", &edi::PeakBase::mixing_eta_1,
+                                          edi::spec::peak_mixing_eta_1);
+    };
+    nb::class_<edi::views::CwlGaussian, edi::views::PeakNode> cwl_gaussian(m, "CwlGaussian");
+    cwl_gaussian.def(nb::init<edi::ExperimentBase*>(), "experiment"_a, nb::keep_alive<1, 2>());
+    def_caglioti(cwl_gaussian);
+    nb::class_<edi::views::CwlLorentzian, edi::views::PeakNode> cwl_lorentzian(m, "CwlLorentzian");
+    cwl_lorentzian.def(nb::init<edi::ExperimentBase*>(), "experiment"_a, nb::keep_alive<1, 2>());
+    def_caglioti(cwl_lorentzian);
+    nb::class_<edi::views::CwlPseudoVoigt, edi::views::PeakNode> cwl_pseudo_voigt(m, "CwlPseudoVoigt");
+    cwl_pseudo_voigt.def(nb::init<edi::ExperimentBase*>(), "experiment"_a, nb::keep_alive<1, 2>());
+    def_pseudo_voigt(cwl_pseudo_voigt);
+    nb::class_<edi::views::CwlTchPseudoVoigt, edi::views::PeakNode> cwl_tch_pseudo_voigt(
+        m, "CwlTchPseudoVoigt");
+    cwl_tch_pseudo_voigt.def(nb::init<edi::ExperimentBase*>(), "experiment"_a,
+                             nb::keep_alive<1, 2>());
+    def_tch(cwl_tch_pseudo_voigt);
+    nb::class_<edi::views::CwlTchPseudoVoigtFcj, edi::views::PeakNode> cwl_tch_pseudo_voigt_fcj(
+        m, "CwlTchPseudoVoigtFcj");
+    cwl_tch_pseudo_voigt_fcj.def(nb::init<edi::ExperimentBase*>(), "experiment"_a,
+                                 nb::keep_alive<1, 2>());
+    def_tch(cwl_tch_pseudo_voigt_fcj);
+    def_view_optional_parameter_field(cwl_tch_pseudo_voigt_fcj, "asym_fcj_1",
                                       &edi::PeakBase::asym_fcj_1, edi::spec::peak_asym_fcj_1);
-    def_view_optional_parameter_field(cwl_thompson_cox_hastings, "asym_fcj_2",
+    def_view_optional_parameter_field(cwl_tch_pseudo_voigt_fcj, "asym_fcj_2",
                                       &edi::PeakBase::asym_fcj_2, edi::spec::peak_asym_fcj_2);
 
-    nb::class_<edi::views::CwlPseudoVoigtBerarBaldinozziAsymmetry, edi::views::PeakNode> cwl_beba(
-        m, "CwlPseudoVoigtBerarBaldinozziAsymmetry");
+    nb::class_<edi::views::CwlPseudoVoigtBerarBaldinozzi, edi::views::PeakNode> cwl_beba(
+        m, "CwlPseudoVoigtBerarBaldinozzi");
     cwl_beba.def(nb::init<edi::ExperimentBase*>(), "experiment"_a, nb::keep_alive<1, 2>());
-    def_cwl_broadening(cwl_beba);
+    def_pseudo_voigt(cwl_beba);
     def_view_optional_parameter_field(cwl_beba, "asym_beba_a0", &edi::PeakBase::asym_beba_a0,
                                       edi::spec::peak_asym_beba_a0);
     def_view_optional_parameter_field(cwl_beba, "asym_beba_b0", &edi::PeakBase::asym_beba_b0,
@@ -2609,7 +2621,7 @@ NB_MODULE(_edi, m) {
             "create_default_for",
             [](const std::string& value, nb::object experiment) {
                 const std::string tag = (value == "constant wavelength" || value == "cwl")
-                                            ? "cwl-pseudo-voigt"
+                                            ? "cwl-tch-pseudo-voigt"
                                             : "tof-jorgensen";
                 return factory_create(*g_peak_registry, tag, std::move(experiment));
             },
@@ -2744,11 +2756,15 @@ NB_MODULE(_edi, m) {
     g_peak_registry = new nb::object(nb::dict());
     (*g_peak_registry)["tof-jorgensen"] = m.attr("TofJorgensen");
     (*g_peak_registry)["tof-jorgensen-von-dreele"] = m.attr("TofJorgensenVonDreele");
+    // The constant-wavelength profiles (crysta ADR-0080) and the TOF pseudo-Voigt, each with its
+    // class.
+    (*g_peak_registry)["cwl-gaussian"] = m.attr("CwlGaussian");
+    (*g_peak_registry)["cwl-lorentzian"] = m.attr("CwlLorentzian");
     (*g_peak_registry)["cwl-pseudo-voigt"] = m.attr("CwlPseudoVoigt");
-    // The formerly reserved rungs and the TOF pseudo-Voigt, each with its class.
-    (*g_peak_registry)["cwl-thompson-cox-hastings"] = m.attr("CwlThompsonCoxHastings");
-    (*g_peak_registry)["cwl-pseudo-voigt-berar-baldinozzi-asymmetry"] =
-        m.attr("CwlPseudoVoigtBerarBaldinozziAsymmetry");
+    (*g_peak_registry)["cwl-pseudo-voigt-berar-baldinozzi"] =
+        m.attr("CwlPseudoVoigtBerarBaldinozzi");
+    (*g_peak_registry)["cwl-tch-pseudo-voigt"] = m.attr("CwlTchPseudoVoigt");
+    (*g_peak_registry)["cwl-tch-pseudo-voigt-fcj"] = m.attr("CwlTchPseudoVoigtFcj");
     (*g_peak_registry)["tof-pseudo-voigt"] = m.attr("TofPseudoVoigt");
     g_instrument_registry = new nb::object(nb::dict());
     (*g_instrument_registry)["tof-pd"] = m.attr("TofPdInstrument");

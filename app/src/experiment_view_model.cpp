@@ -57,7 +57,12 @@ ExperimentViewModel::ExperimentViewModel(SavedFile saved, edi::Project& project,
     capturePattern();  // the measured data shows before the first calculation is published
     // The options follow the experiment's type, which is read-only, so they are set once.
     const edi::BeamModeEnum mode = experiment_.effective_beam_mode();
-    peak_type_options_->setOptions(edi::supported_peak_profiles(mode));
+    const std::vector<std::string> profiles = edi::supported_peak_profiles(mode);
+    std::vector<std::string> profile_labels;
+    for (const std::string& profile : profiles) {
+        profile_labels.push_back(edi::peak_profile_label(profile));
+    }
+    peak_type_options_->setOptions(profiles, edi::default_peak_profile(mode), profile_labels);
     absorption_type_options_->setOptions(edi::supported_absorption_families(mode));
     background_type_options_->setOptions(edi::supported_background_types());
     for (int family = 0; family < 4; ++family) {
@@ -175,9 +180,7 @@ void ExperimentViewModel::sync() {
         }
     };
     update(name_, QString::fromStdString(experiment_.name), &ExperimentViewModel::nameChanged);
-    const std::string default_profile = experiment_.effective_beam_mode() == edi::BeamModeEnum::CONSTANT_WAVELENGTH
-                                            ? "cwl-pseudo-voigt"
-                                            : "tof-jorgensen";
+    const std::string default_profile = edi::default_peak_profile(experiment_.effective_beam_mode());
     update(peak_type_, QString::fromStdString(experiment_.peak.type.value_or(default_profile)),
            &ExperimentViewModel::peakTypeChanged);
     update(absorption_type_, QString::fromStdString(experiment_.absorption.type.value_or("none")),

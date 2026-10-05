@@ -625,7 +625,7 @@ const std::set<std::string>& known_covered_tags() {
         "_peak.broad_gauss_v", "_peak.broad_gauss_w", "_peak.broad_lorentz_gamma_0",
         "_peak.broad_lorentz_gamma_1", "_peak.broad_lorentz_gamma_2", "_peak.broad_lorentz_size",
         "_peak.broad_lorentz_strain", "_peak.broad_lorentz_x", "_peak.broad_lorentz_y",
-        "_peak.cutoff_fwhm", "_peak.decay_beta_0", "_peak.decay_beta_1", "_peak.rise_alpha_0",
+        "_peak.mixing_eta_0", "_peak.mixing_eta_1", "_peak.cutoff_fwhm", "_peak.decay_beta_0", "_peak.decay_beta_1", "_peak.rise_alpha_0",
         "_peak.rise_alpha_1", "_peak.type",
         // The CW asymmetry coefficients (read only on the rung that carries them).
         "_peak.asym_beba_a0", "_peak.asym_beba_a1", "_peak.asym_beba_b0", "_peak.asym_beba_b1",
@@ -832,16 +832,11 @@ constexpr const char* kPeakJvd = "tof-jorgensen-von-dreele";
 
 // ---- experiment families -----------------------------------------------------------------
 //
-// The closed `_peak.type` token table, mirroring crysta's SHIPPED grammar at b9aee906
-// (src/core/experiment_family.hpp) — the token→(kind, implemented) rows, never the design prose:
-// the rung-0 token is `cwl-pseudo-voigt`, while `cwl-thompson-cox-hastings` is the RESERVED rung-1
-// Finger-Cox-Jephcoat token. `implemented: false` means recognised-but-refused BY
-// NAME (packet Fork 3 branch (a)): the token is a known file, not a typo, and loading it is refused
-// naming the token rather than silently painted as the symmetric rung.
-constexpr const char* kPeakCwlPseudoVoigt = "cwl-pseudo-voigt";
-// The Finger-Cox-Jephcoat and Berar-Baldinozzi rungs and the TOF pseudo-Voigt.
-constexpr const char* kPeakCwlFcj = "cwl-thompson-cox-hastings";
-constexpr const char* kPeakCwlBeba = "cwl-pseudo-voigt-berar-baldinozzi-asymmetry";
+// The closed `_peak.type` token table, mirroring crysta's shipped grammar
+// (src/core/experiment_family.hpp, ADR-0080) — the token→(kind, implemented) rows. The default CW
+// profile is the TCH pseudo-Voigt. `implemented: false` means recognised-but-refused BY NAME: the
+// token is a known file, not a typo, and loading it is refused naming the token.
+constexpr const char* kPeakCwlDefault = "cwl-tch-pseudo-voigt";
 constexpr const char* kPeakTofPseudoVoigt = "tof-pseudo-voigt";
 constexpr const char* kBeamModeTof = "time-of-flight";
 constexpr const char* kBeamModeCwl = "constant wavelength";  // WITH a space — quoted on write
@@ -858,26 +853,28 @@ std::map<std::string, PeakTypeRow>& peak_type_rows() {
     static std::map<std::string, PeakTypeRow> rows{
         {kPeakJorgensen, {BeamModeEnum::TIME_OF_FLIGHT, true}},
         {kPeakJvd, {BeamModeEnum::TIME_OF_FLIGHT, true}},
-        {kPeakCwlPseudoVoigt, {BeamModeEnum::CONSTANT_WAVELENGTH, true}},
-        // The two asymmetry rungs (formerly reserved) and the TOF pseudo-Voigt.
-        {kPeakCwlFcj, {BeamModeEnum::CONSTANT_WAVELENGTH, true}},
-        {kPeakCwlBeba, {BeamModeEnum::CONSTANT_WAVELENGTH, true}},
+        {"cwl-gaussian", {BeamModeEnum::CONSTANT_WAVELENGTH, true}},
+        {"cwl-lorentzian", {BeamModeEnum::CONSTANT_WAVELENGTH, true}},
+        {"cwl-pseudo-voigt", {BeamModeEnum::CONSTANT_WAVELENGTH, true}},
+        {"cwl-pseudo-voigt-berar-baldinozzi", {BeamModeEnum::CONSTANT_WAVELENGTH, true}},
+        {"cwl-tch-pseudo-voigt", {BeamModeEnum::CONSTANT_WAVELENGTH, true}},
+        {"cwl-tch-pseudo-voigt-fcj", {BeamModeEnum::CONSTANT_WAVELENGTH, true}},
         {kPeakTofPseudoVoigt, {BeamModeEnum::TIME_OF_FLIGHT, true}},
     };
     return rows;
 }
 
-// The per-family tag registry: the CW rung-0 required scalars are EXACTLY the seven family-`cwl`
-// rows of crysta's dictionary at b9aee906 (proved complete against the committed tag manifest by
-// the hidden gate, not trusted); the forbidden set on each family is the FULL other family — a
+// The per-family tag registry: every CW profile requires U, V, W and the two instrument scalars, and
+// the TCH pair also X, Y (crysta's required family-`cwl` rows, by profile); the forbidden set on each family is the FULL other family — a
 // tag on a type that does not consume it is a hard error naming both tags (the
 // `tof-jorgensen`-forbids-Lorentzian idiom, generalised; verified against crysta's loader, which
 // refuses e.g. `_peak.broad_gauss_size` on a CW block as family-crossing). `_peak.cutoff_fwhm`
 // is family-NEUTRAL (not a dictionary parameter row; both context builders consume it) and appears
 // in neither set.
-constexpr std::array<const char*, 5> kCwlPeakTags{{"_peak.broad_gauss_u", "_peak.broad_gauss_v",
-                                                   "_peak.broad_gauss_w", "_peak.broad_lorentz_x",
-                                                   "_peak.broad_lorentz_y"}};
+constexpr std::array<const char*, 3> kCwlPeakTags{{"_peak.broad_gauss_u", "_peak.broad_gauss_v",
+                                                   "_peak.broad_gauss_w"}};
+constexpr std::array<const char*, 2> kCwlLorentzTags{{"_peak.broad_lorentz_x",
+                                                      "_peak.broad_lorentz_y"}};
 constexpr std::array<const char*, 2> kCwlInstrumentTags{{"_instrument.setup_wavelength",
                                                          "_instrument.calib_twotheta_offset"}};
 constexpr std::array<const char*, 19> kTofFamilyTags{{
@@ -889,9 +886,10 @@ constexpr std::array<const char*, 19> kTofFamilyTags{{
     "_instrument.calib_d_to_tof_offset", "_instrument.calib_d_to_tof_linear",
     "_instrument.calib_d_to_tof_quadratic", "_instrument.calib_d_to_tof_reciprocal",
 }};
-constexpr std::array<const char*, 11> kCwlFamilyTags{{
+constexpr std::array<const char*, 13> kCwlFamilyTags{{
     "_peak.broad_gauss_u", "_peak.broad_gauss_v", "_peak.broad_gauss_w", "_peak.broad_lorentz_x",
-    "_peak.broad_lorentz_y", "_instrument.setup_wavelength", "_instrument.calib_twotheta_offset",
+    "_peak.broad_lorentz_y", "_peak.mixing_eta_0", "_peak.mixing_eta_1",
+    "_instrument.setup_wavelength", "_instrument.calib_twotheta_offset",
     "_instrument.calib_sample_displacement", "_instrument.calib_sample_transparency",
     "_instrument.setup_polarization_coefficient", "_instrument.setup_monochromator_twotheta",
 }};
@@ -976,13 +974,42 @@ void validate_experiment_selectors(const Block& block, const std::string& peak_t
         for (const char* tag : kTofFamilyTags) {
             forbid_family(tag, "time-of-flight");
         }
-        // CW rung 0 requires the five `_peak` + two `_instrument` CW scalars — the same
-        // requires-idiom as the JvD Lorentzian block below.
+        // Every CW profile requires U, V, W and the two `_instrument` CW scalars, the TCH pair X
+        // and Y too — the same requires-idiom as the JvD Lorentzian block below. A `_peak`
+        // parameter of another CW profile is refused by name with the type (crysta ADR-0080:
+        // each profile carries only its own parameters).
+        const CwlProfileSlots slots = cwl_profile_slots(peak_type);
         for (const char* tag : kCwlPeakTags) {
             if (!block_has_tag(block, tag)) {
                 fail_schema(where, "missing-family-tag",
                             "_peak.type '" + peak_type + "' requires " + tag);
             }
+        }
+        for (const char* tag : kCwlLorentzTags) {
+            if (slots.lorentz_xy && !block_has_tag(block, tag)) {
+                fail_schema(where, "missing-family-tag",
+                            "_peak.type '" + peak_type + "' requires " + tag);
+            }
+        }
+        const auto forbid_profile = [&](const char* tag, bool carried) {
+            if (!carried && block_has_tag(block, tag)) {
+                fail_domain(where, "tag-of-other-profile",
+                            std::string("tag ") + tag + " is not a parameter of _peak.type '" +
+                                peak_type + "': each profile carries only its own parameters");
+            }
+        };
+        for (const char* tag : kCwlLorentzTags) {
+            forbid_profile(tag, slots.lorentz_xy);
+        }
+        for (const char* tag : {"_peak.mixing_eta_0", "_peak.mixing_eta_1"}) {
+            forbid_profile(tag, slots.mixing_eta);
+        }
+        for (const char* tag : {"_peak.asym_fcj_1", "_peak.asym_fcj_2"}) {
+            forbid_profile(tag, slots.fcj);
+        }
+        for (const char* tag : {"_peak.asym_beba_a0", "_peak.asym_beba_b0", "_peak.asym_beba_a1",
+                                "_peak.asym_beba_b1", "_peak.asym_beba_limit"}) {
+            forbid_profile(tag, slots.beba);
         }
         for (const char* tag : kCwlInstrumentTags) {
             if (!block_has_tag(block, tag)) {
@@ -1265,7 +1292,7 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
     // dispatch for the absent case).
     experiment.peak.type =
         resolved.declared.value_or(resolved.mode == BeamModeEnum::CONSTANT_WAVELENGTH
-                                       ? std::string(kPeakCwlPseudoVoigt)
+                                       ? std::string(kPeakCwlDefault)
                                        : std::string(kPeakJorgensen));
     if (resolved.beam_declared) {
         experiment.experiment_type.beam_mode = resolved.mode;
@@ -1328,21 +1355,24 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
     experiment.peak.cutoff_fwhm = to_double(block.require("_peak.cutoff_fwhm", where), where);
 
     if (resolved.mode == BeamModeEnum::CONSTANT_WAVELENGTH) {
-        // The seven family-`cwl` scalars — presence already proven by the registry, so the require
-        // inside can only fail on a value-level defect (malformed number, out-of-range value).
+        // The required family-`cwl` scalars — presence already proven by the registry, so the
+        // require inside can only fail on a value-level defect (malformed number, out-of-range
+        // value).
+        const CwlProfileSlots slots = cwl_profile_slots(resolved.peak_type);
         experiment.peak.broad_gauss_u =
             require_spec_parameter(block, spec::peak_broad_gauss_u, where);
         experiment.peak.broad_gauss_v =
             require_spec_parameter(block, spec::peak_broad_gauss_v, where);
         experiment.peak.broad_gauss_w =
             require_spec_parameter(block, spec::peak_broad_gauss_w, where);
-        experiment.peak.broad_lorentz_x =
-            require_spec_parameter(block, spec::peak_broad_lorentz_x, where);
-        experiment.peak.broad_lorentz_y =
-            require_spec_parameter(block, spec::peak_broad_lorentz_y, where);
-        // The asymmetry coefficients the declared rung carries, optional with
-        // diffraction-lib's default 0 — engaged exactly on that rung, never on another (a
-        // coefficient of another profile is not read, as crysta's loader does not read it).
+        if (slots.lorentz_xy) {
+            experiment.peak.broad_lorentz_x =
+                require_spec_parameter(block, spec::peak_broad_lorentz_x, where);
+            experiment.peak.broad_lorentz_y =
+                require_spec_parameter(block, spec::peak_broad_lorentz_y, where);
+        }
+        // The mixing and asymmetry coefficients the declared profile carries, optional with
+        // default 0 — engaged exactly on that profile (another profile's is refused above).
         const auto optional_zero = [&](const ParameterSpec& spec, double fallback = 0.0) {
             std::optional<Parameter> found = find_spec_parameter(block, spec, where);
             if (!found) {
@@ -1352,10 +1382,14 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
             }
             return found;
         };
-        if (resolved.peak_type == kPeakCwlFcj) {
+        if (slots.mixing_eta) {
+            experiment.peak.mixing_eta_0 = optional_zero(spec::peak_mixing_eta_0);
+            experiment.peak.mixing_eta_1 = optional_zero(spec::peak_mixing_eta_1);
+        }
+        if (slots.fcj) {
             experiment.peak.asym_fcj_1 = optional_zero(spec::peak_asym_fcj_1);
             experiment.peak.asym_fcj_2 = optional_zero(spec::peak_asym_fcj_2);
-        } else if (resolved.peak_type == kPeakCwlBeba) {
+        } else if (slots.beba) {
             experiment.peak.asym_beba_a0 = optional_zero(spec::peak_asym_beba_a0);
             experiment.peak.asym_beba_b0 = optional_zero(spec::peak_asym_beba_b0);
             experiment.peak.asym_beba_a1 = optional_zero(spec::peak_asym_beba_a1);
@@ -1969,6 +2003,12 @@ auto parameter_slots(ProjectT& project) {
             if (experiment.peak.broad_lorentz_y) {
                 peak("broad_lorentz_y", &*experiment.peak.broad_lorentz_y);
             }
+            if (experiment.peak.mixing_eta_0) {
+                peak("mixing_eta_0", &*experiment.peak.mixing_eta_0);
+            }
+            if (experiment.peak.mixing_eta_1) {
+                peak("mixing_eta_1", &*experiment.peak.mixing_eta_1);
+            }
             // The asymmetry coefficients the declared rung carries. Each slot is named by its
             // storage member, never by the parameter's descriptor, which a native caller may leave
             // null.
@@ -2290,8 +2330,8 @@ const std::vector<CifExperimentItemRule>& experiment_cif_item_rules() {
         {"_peak.broad_gauss_u", {"_easydiffraction_peak.broad_gauss_u"}, "cwl", "0.01"},
         {"_peak.broad_gauss_v", {"_easydiffraction_peak.broad_gauss_v"}, "cwl", "-0.01"},
         {"_peak.broad_gauss_w", {"_easydiffraction_peak.broad_gauss_w"}, "cwl", "0.02"},
-        {"_peak.broad_lorentz_x", {"_easydiffraction_peak.broad_lorentz_x"}, "cwl", "0.0"},
-        {"_peak.broad_lorentz_y", {"_easydiffraction_peak.broad_lorentz_y"}, "cwl", "0.0"},
+        {"_peak.broad_lorentz_x", {"_easydiffraction_peak.broad_lorentz_x"}, "cwl-tch", "0.0"},
+        {"_peak.broad_lorentz_y", {"_easydiffraction_peak.broad_lorentz_y"}, "cwl-tch", "0.0"},
         // The CW asymmetry mixins, filled only on the rung that carries them.
         {"_peak.asym_fcj_1", {"_easydiffraction_peak.asym_fcj_1"}, "cwl-fcj", "0.0"},
         {"_peak.asym_fcj_2", {"_easydiffraction_peak.asym_fcj_2"}, "cwl-fcj", "0.0"},
@@ -2492,7 +2532,7 @@ Block translate_experiment_cif(const Block& in) {
     if (out.find("_peak.type") == nullptr) {
         if (const std::string* beam = out.find("_experiment_type.beam_mode")) {
             if (*beam == kBeamModeCwl) {
-                out.items.emplace_back("_peak.type", kPeakCwlPseudoVoigt);
+                out.items.emplace_back("_peak.type", kPeakCwlDefault);
             } else if (*beam == kBeamModeTof) {
                 out.items.emplace_back("_peak.type", kPeakJorgensen);
             }
@@ -2517,10 +2557,12 @@ Block translate_experiment_cif(const Block& in) {
             continue;
         }
         const std::string family = rule.family;
+        // A CW rule fills only a slot the selector's profile carries (crysta ADR-0080).
+        const CwlProfileSlots slots = cwl_profile_slots(selector);
         if ((family == "cwl" && fills_cwl) || (family == "tof" && fills_tof) ||
             (family == "tof-jvd" && fills_jvd) ||
-            (family == "cwl-fcj" && selector == kPeakCwlFcj) ||
-            (family == "cwl-beba" && selector == kPeakCwlBeba)) {
+            (family == "cwl-tch" && fills_cwl && slots.lorentz_xy) ||
+            (family == "cwl-fcj" && slots.fcj) || (family == "cwl-beba" && slots.beba)) {
             out.items.emplace_back(rule.edi, rule.fallback);
         }
     }

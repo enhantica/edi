@@ -2710,11 +2710,14 @@ enum class ScatteringTypeEnum : std::uint8_t { BRAGG, TOTAL };
 enum class PeakProfileTypeEnum : std::uint8_t {
     TOF_JORGENSEN,
     TOF_JORGENSEN_VON_DREELE,
-    CWL_PSEUDO_VOIGT,
-    // Diffraction-lib's members, verbatim.
-    CWL_THOMPSON_COX_HASTINGS,
-    CWL_PSEUDO_VOIGT_BERAR_BALDINOZZI_ASYMMETRY,
+    // The constant-wavelength family (crysta ADR-0080), named for what each profile is.
+    CWL_TCH_PSEUDO_VOIGT,
+    CWL_TCH_PSEUDO_VOIGT_FCJ,
+    CWL_PSEUDO_VOIGT_BERAR_BALDINOZZI,
     TOF_PSEUDO_VOIGT,
+    CWL_GAUSSIAN,
+    CWL_LORENTZIAN,
+    CWL_PSEUDO_VOIGT,
 };
 
 // Verbatim tokens (the `.edi` spellings; the CW beam mode has a SPACE and is quoted on write).
@@ -2734,13 +2737,34 @@ inline const char* token(PeakProfileTypeEnum value) {
     switch (value) {
         case PeakProfileTypeEnum::TOF_JORGENSEN: return "tof-jorgensen";
         case PeakProfileTypeEnum::TOF_JORGENSEN_VON_DREELE: return "tof-jorgensen-von-dreele";
+        case PeakProfileTypeEnum::CWL_GAUSSIAN: return "cwl-gaussian";
+        case PeakProfileTypeEnum::CWL_LORENTZIAN: return "cwl-lorentzian";
         case PeakProfileTypeEnum::CWL_PSEUDO_VOIGT: return "cwl-pseudo-voigt";
-        case PeakProfileTypeEnum::CWL_THOMPSON_COX_HASTINGS: return "cwl-thompson-cox-hastings";
-        case PeakProfileTypeEnum::CWL_PSEUDO_VOIGT_BERAR_BALDINOZZI_ASYMMETRY:
-            return "cwl-pseudo-voigt-berar-baldinozzi-asymmetry";
+        case PeakProfileTypeEnum::CWL_PSEUDO_VOIGT_BERAR_BALDINOZZI:
+            return "cwl-pseudo-voigt-berar-baldinozzi";
+        case PeakProfileTypeEnum::CWL_TCH_PSEUDO_VOIGT: return "cwl-tch-pseudo-voigt";
+        case PeakProfileTypeEnum::CWL_TCH_PSEUDO_VOIGT_FCJ: return "cwl-tch-pseudo-voigt-fcj";
         case PeakProfileTypeEnum::TOF_PSEUDO_VOIGT: return "tof-pseudo-voigt";
     }
     return "tof-jorgensen";
+}
+
+// The constant-wavelength profile family (crysta ADR-0080): which optional `_peak` slots a CW
+// profile token carries. U, V, W belong to every one. A registered extension token keeps the
+// family default, the TCH pseudo-Voigt.
+struct CwlProfileSlots {
+    bool lorentz_xy = false;  // broad_lorentz_x/y: the TCH pair
+    bool mixing_eta = false;  // mixing_eta_0/1: the two pseudo-Voigts
+    bool fcj = false;         // asym_fcj_1/2
+    bool beba = false;        // asym_beba_a0/b0/a1/b1 and asym_beba_limit
+};
+inline CwlProfileSlots cwl_profile_slots(const std::string& token) {
+    CwlProfileSlots slots;
+    slots.beba = token == "cwl-pseudo-voigt-berar-baldinozzi";
+    slots.mixing_eta = slots.beba || token == "cwl-pseudo-voigt";
+    slots.fcj = token == "cwl-tch-pseudo-voigt-fcj";
+    slots.lorentz_xy = !slots.mixing_eta && token != "cwl-gaussian" && token != "cwl-lorentzian";
+    return slots;
 }
 
 // The experiment-type category: four presence-tracked axes (std::optional — absent means the
@@ -2872,12 +2896,14 @@ struct PeakBase {
     // TOF Lorentzian (JvD) block; all zero for a pure Jorgensen experiment.
     Parameter broad_lorentz_gamma_0, broad_lorentz_gamma_1, broad_lorentz_gamma_2;
     Parameter broad_lorentz_size, broad_lorentz_strain;
-    // CW rung-0 block (Caglioti U/V/W + Lorentz X/Y), presence-tracked.
+    // CW block, presence-tracked and engaged only on the `_peak.type` that carries each slot
+    // (cwl_profile_slots): Caglioti U/V/W on every CW profile, the TCH Lorentz X/Y, and the
+    // pseudo-Voigt mixing eta = eta_0 + eta_1 2theta.
     std::optional<Parameter> broad_gauss_u, broad_gauss_v, broad_gauss_w;
     std::optional<Parameter> broad_lorentz_x, broad_lorentz_y;
-    // The CW asymmetry coefficients, presence-tracked like the block above and engaged only on
-    // the `_peak.type` that carries them — Finger-Cox-Jephcoat (S/L, D/L) on
-    // `cwl-thompson-cox-hastings`, Berar-Baldinozzi on `cwl-pseudo-voigt-berar-baldinozzi-asymmetry`.
+    std::optional<Parameter> mixing_eta_0, mixing_eta_1;
+    // The CW asymmetry coefficients, likewise — Finger-Cox-Jephcoat (S/L, D/L) on
+    // `cwl-tch-pseudo-voigt-fcj`, Berar-Baldinozzi on `cwl-pseudo-voigt-berar-baldinozzi`.
     std::optional<Parameter> asym_fcj_1, asym_fcj_2;
     std::optional<Parameter> asym_beba_a0, asym_beba_b0, asym_beba_a1, asym_beba_b1;
     std::optional<Parameter> asym_beba_limit;  // FullProf AsyLim, deg; default 180
@@ -4233,8 +4259,8 @@ static_assert(detail::one_entry_per_column(ScatteringSourceCategory::columns, Sc
 struct PeakCategory {
     using Owner = PeakBase;
     static constexpr const char* name = "_peak";
-    static constexpr auto columns = std::tuple{&PeakBase::type, &PeakBase::cutoff_fwhm, &PeakBase::rise_alpha_0, &PeakBase::rise_alpha_1, &PeakBase::decay_beta_0, &PeakBase::decay_beta_1, &PeakBase::broad_gauss_sigma_0, &PeakBase::broad_gauss_sigma_1, &PeakBase::broad_gauss_sigma_2, &PeakBase::broad_gauss_size, &PeakBase::broad_gauss_strain, &PeakBase::broad_lorentz_gamma_0, &PeakBase::broad_lorentz_gamma_1, &PeakBase::broad_lorentz_gamma_2, &PeakBase::broad_lorentz_size, &PeakBase::broad_lorentz_strain, &PeakBase::broad_gauss_u, &PeakBase::broad_gauss_v, &PeakBase::broad_gauss_w, &PeakBase::broad_lorentz_x, &PeakBase::broad_lorentz_y, &PeakBase::asym_fcj_1, &PeakBase::asym_fcj_2, &PeakBase::asym_beba_a0, &PeakBase::asym_beba_b0, &PeakBase::asym_beba_a1, &PeakBase::asym_beba_b1, &PeakBase::asym_beba_limit};
-    static constexpr std::array items{"type", "cutoff_fwhm", "rise_alpha_0", "rise_alpha_1", "decay_beta_0", "decay_beta_1", "broad_gauss_sigma_0", "broad_gauss_sigma_1", "broad_gauss_sigma_2", "broad_gauss_size", "broad_gauss_strain", "broad_lorentz_gamma_0", "broad_lorentz_gamma_1", "broad_lorentz_gamma_2", "broad_lorentz_size", "broad_lorentz_strain", "broad_gauss_u", "broad_gauss_v", "broad_gauss_w", "broad_lorentz_x", "broad_lorentz_y", "asym_fcj_1", "asym_fcj_2", "asym_beba_a0", "asym_beba_b0", "asym_beba_a1", "asym_beba_b1", "asym_beba_limit"};
+    static constexpr auto columns = std::tuple{&PeakBase::type, &PeakBase::cutoff_fwhm, &PeakBase::rise_alpha_0, &PeakBase::rise_alpha_1, &PeakBase::decay_beta_0, &PeakBase::decay_beta_1, &PeakBase::broad_gauss_sigma_0, &PeakBase::broad_gauss_sigma_1, &PeakBase::broad_gauss_sigma_2, &PeakBase::broad_gauss_size, &PeakBase::broad_gauss_strain, &PeakBase::broad_lorentz_gamma_0, &PeakBase::broad_lorentz_gamma_1, &PeakBase::broad_lorentz_gamma_2, &PeakBase::broad_lorentz_size, &PeakBase::broad_lorentz_strain, &PeakBase::broad_gauss_u, &PeakBase::broad_gauss_v, &PeakBase::broad_gauss_w, &PeakBase::broad_lorentz_x, &PeakBase::broad_lorentz_y, &PeakBase::mixing_eta_0, &PeakBase::mixing_eta_1, &PeakBase::asym_fcj_1, &PeakBase::asym_fcj_2, &PeakBase::asym_beba_a0, &PeakBase::asym_beba_b0, &PeakBase::asym_beba_a1, &PeakBase::asym_beba_b1, &PeakBase::asym_beba_limit};
+    static constexpr std::array items{"type", "cutoff_fwhm", "rise_alpha_0", "rise_alpha_1", "decay_beta_0", "decay_beta_1", "broad_gauss_sigma_0", "broad_gauss_sigma_1", "broad_gauss_sigma_2", "broad_gauss_size", "broad_gauss_strain", "broad_lorentz_gamma_0", "broad_lorentz_gamma_1", "broad_lorentz_gamma_2", "broad_lorentz_size", "broad_lorentz_strain", "broad_gauss_u", "broad_gauss_v", "broad_gauss_w", "broad_lorentz_x", "broad_lorentz_y", "mixing_eta_0", "mixing_eta_1", "asym_fcj_1", "asym_fcj_2", "asym_beba_a0", "asym_beba_b0", "asym_beba_a1", "asym_beba_b1", "asym_beba_limit"};
     static constexpr std::array legacy{"_easydiffraction_peak"};
 };
 static_assert(detail::one_entry_per_column(PeakCategory::columns, PeakCategory::items));
@@ -4551,6 +4577,8 @@ inline std::vector<Parameter*> PeakBase::parameters() {
     detail::push_optional(out, broad_gauss_w);
     detail::push_optional(out, broad_lorentz_x);
     detail::push_optional(out, broad_lorentz_y);
+    detail::push_optional(out, mixing_eta_0);
+    detail::push_optional(out, mixing_eta_1);
     detail::push_optional(out, asym_fcj_1);
     detail::push_optional(out, asym_fcj_2);
     detail::push_optional(out, asym_beba_a0);
