@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import enum
+import hashlib
 import importlib.util
 import inspect
 import json
@@ -25,7 +26,9 @@ MODEL_HEADER = ROOT / 'core/include/edi/model.hpp'
 BASELINE = Path(__file__).with_name('c11_t48_surface_baseline.json')
 REQUIRED_REFERENCE = Path(__file__).with_name('c11_t48_required_surface.json')
 CRYSTA_SOURCE_SHA = ROOT / 'build/crysta-src/CRYSTA_SOURCE_SHA'
-BASE_SHA = '21b41862eac907b165b187e856ef45db7a14ae52'
+# ADR-0011 partitions this retained pre-sweep universe into kept and removed paths.
+# Its JSON 'base' field is historical provenance; no Git object is resolved.
+BASELINE_SHA256 = '7afbb58d7c01d0a9e2193a17611b62f77ad8dcf28df1ec08fa5528f43851101e'
 REQUIRED_POST_BASE_REMOVED_PATHS = {
     'AtomSite.free_parameters',
     'BackgroundPoint.free_parameters',
@@ -431,7 +434,8 @@ def _required_end_state() -> set[str]:
 
 
 def _baseline_paths() -> set[str]:
-    document = json.loads(BASELINE.read_text(encoding='utf-8'))
+    content = BASELINE.read_bytes()
+    document = json.loads(content)
     assert document['schema'] == 1, ' I1: the frozen surface baseline must use schema one'
     assert document['protected_tier'] == 'tests/unit/**', (
         ' I1: the frozen surface baseline must identify its protected tier'
@@ -440,8 +444,8 @@ def _baseline_paths() -> set[str]:
     assert document['module'] == 'edi', (
         ' I1: the frozen surface baseline must identify the edi module'
     )
-    assert document['base'] == BASE_SHA, (
-        ' I1: the frozen surface baseline must identify the committed base'
+    assert hashlib.sha256(content).hexdigest() == BASELINE_SHA256, (
+        'C11-T48 I1: retained surface baseline content must stay byte-identical'
     )
     paths = set(document['names'])
     paths.update(
@@ -450,6 +454,24 @@ def _baseline_paths() -> set[str]:
         for member in members
     )
     return paths
+
+
+@pytest.mark.parametrize('damage', ['drop-name', 'drop-member', 'invent-member'])
+def test_c11_t48_retained_baseline_cannot_shrink_or_gain_paths(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, damage: str
+) -> None:
+    document = json.loads(BASELINE.read_text(encoding='utf-8'))
+    if damage == 'drop-name':
+        document['names'].remove('Cell')
+    elif damage == 'drop-member':
+        document['members']['Cell'].remove('length_a')
+    else:
+        document['members']['Cell'].append('invented_member')
+    damaged = tmp_path / 'damaged-baseline.json'
+    damaged.write_text(json.dumps(document), encoding='utf-8')
+    monkeypatch.setitem(globals(), 'BASELINE', damaged)
+    with pytest.raises(AssertionError, match='C11-T48 I1: retained surface baseline content'):
+        _baseline_paths()
 
 
 def _classification_paths(manifest: dict[str, Any]) -> set[str]:
