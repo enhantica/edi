@@ -9,9 +9,9 @@ crysta has one, and otherwise from the tested packages of crysta's pull-request 
 commit (I8). `--check` is the ship step: a pin whose build
 has no release, or differs from it, exits 1.
 
-The `crysta-sdk-pin` task and the scheduled update workflow run this on a desk or a hosted runner,
-where `gh` is installed; the CI fleet never runs it. Only the pin lines change. Every refusal
-exits 1 naming its cause.
+The `crysta-sdk-pin` task runs this on a desk and the scheduled update workflow on a runner; both
+read crysta with curl and a token, and a desk without one exported uses gh's login. Only the pin
+lines change. Every refusal exits 1 naming its cause.
 """
 
 from __future__ import annotations
@@ -46,28 +46,30 @@ def token() -> str:
     return os.environ.get('GITHUB_TOKEN') or os.environ.get('GH_TOKEN') or ''
 
 
-def gh(*args: str, absent_ok: bool = False) -> bytes | None:
-    """Read crysta through `gh`: the pin is written on a hosted runner or a desk, not the fleet.
-
-    With ``absent_ok`` a 404, and only a 404, returns None: what was asked for does not exist.
-    """
-    env = {**os.environ, 'GH_TOKEN': token()}
-    r = subprocess.run(['gh', 'api', *args], capture_output=True, check=False, env=env)
-    if r.returncode:
-        why = r.stderr.decode(errors='replace')[:200]
-        if absent_ok and 'HTTP 404' in why:
-            return None
-        refuse(f'gh api {args[-1]} failed ({r.returncode}): {why}')
-    return r.stdout
-
-
-def run_digests(sha: str) -> dict[str, str]:
-    """Return each platform's sha256 from crysta's pull-request run at ``sha``."""
-    if not token():  # crysta_sdk reads crysta with curl and a token; a desk has gh's own login
+def ensure_token() -> None:
+    """Use gh's own login on a desk that exported no token; a runner always passes one."""
+    if not token():
         login = subprocess.run(
             ['gh', 'auth', 'token'], capture_output=True, check=False, text=True
         )
         os.environ['GH_TOKEN'] = login.stdout.strip()
+
+
+def read(url: str, *, accept: str, absent_ok: bool = False) -> bytes | None:
+    """GET ``url`` from crysta with curl and a token (crysta_sdk.curl).
+
+    With ``absent_ok`` a 404, and only a 404, returns None: what was asked for does not exist.
+    """
+    ensure_token()
+    try:
+        return crysta_sdk.curl(url, accept=accept, absent_ok=absent_ok)
+    except crysta_sdk.RefusedError as refusal:
+        refuse(str(refusal))
+
+
+def run_digests(sha: str) -> dict[str, str]:
+    """Return each platform's sha256 from crysta's pull-request run at ``sha``."""
+    ensure_token()
     digests = {}
     try:
         for platform in PLATFORMS:
@@ -83,7 +85,7 @@ def run_digests(sha: str) -> dict[str, str]:
 def pin_digests(sha: str, *, released: bool = False) -> dict[str, str]:
     """Return each platform's sha256 for build-<sha>: its release's, else its run's packages'."""
     tag = f'build-{sha}'
-    found = gh(f'repos/enhantica/crysta/releases/tags/{tag}', absent_ok=True)
+    found = read(f'{crysta_sdk.API}/releases/tags/{tag}', accept=crysta_sdk.JSON, absent_ok=True)
     if found is None:
         if released:
             refuse(f'crysta has no release {tag}: dispatch its sdk-publish.yml for {sha}')
@@ -98,7 +100,7 @@ def pin_digests(sha: str, *, released: bool = False) -> dict[str, str]:
         if digest.startswith('sha256:'):
             digest = digest[len('sha256:') :]
         elif asset and side:
-            text = gh('-H', 'Accept: application/octet-stream', side['url']).decode()
+            text = read(side['url'], accept='application/octet-stream').decode()
             digest = text.split()[0] if text.split() else ''
         if not re.fullmatch(r'[0-9a-f]{64}', digest):
             refuse(f'release {tag} gives no sha256 for {name}')
