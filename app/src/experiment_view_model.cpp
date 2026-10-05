@@ -122,6 +122,11 @@ void ExperimentViewModel::setName(const QString& name) {
     setLastError(editor_.apply(edi::Edit::rename_experiment(project, experiment, name.toStdString()), true));
 }
 
+void ExperimentViewModel::setRange(double start, double end, double step) {
+    edi::ExperimentBase& experiment = experiment_;
+    setLastError(editor_.apply(edi::Edit::data_range(experiment, start, end, step), false));
+}
+
 void ExperimentViewModel::setPeakType(const QString& token) {
     if (token == peak_type_) {
         return;

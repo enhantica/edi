@@ -2,6 +2,7 @@
 #include "project_view_model.hpp"
 
 #include <QMetaObject>
+#include <algorithm>
 
 #include "edi/edits.hpp"
 #include "edi/io.hpp"
@@ -23,12 +24,20 @@ void StructureListModel::setStructures(const QList<StructureViewModel*>& structu
     setTableRows(rows);
 }
 
-ExperimentListModel::ExperimentListModel(QObject* parent) : RowTableModel({"name", "experiment"}, parent) {}
+ExperimentListModel::ExperimentListModel(QObject* parent)
+    : RowTableModel({"name", "experiment", "fitOutcome"}, parent) {}
 
-void ExperimentListModel::setExperiments(const QList<ExperimentViewModel*>& experiments) {
+void ExperimentListModel::setExperiments(const QList<ExperimentViewModel*>& experiments, const edi::Project& project) {
+    // A joint fit records each bank's share (`_fit_result_bank`); a single fit records none and fitted the first.
+    const QString outcome = recorded_outcome(project.fit_result);
+    const bool joint = std::any_of(project.experiments.begin(), project.experiments.end(),
+                                   [](const auto& experiment) { return experiment->fit_prof_wr_factor.has_value(); });
     QList<Row> rows;
-    for (ExperimentViewModel* experiment : experiments) {
-        rows.append({experiment, {experiment->name(), QVariant::fromValue<QObject*>(experiment)}});
+    for (int i = 0; i < experiments.size(); ++i) {
+        ExperimentViewModel* experiment = experiments[i];
+        const bool fitted = joint ? experiment->experiment()->fit_prof_wr_factor.has_value() : i == 0;
+        rows.append({experiment,
+                     {experiment->name(), QVariant::fromValue<QObject*>(experiment), fitted ? outcome : QString()}});
     }
     setTableRows(rows);
 }
@@ -78,6 +87,7 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     published_structure_ = currentStructure();
     published_experiment_ = currentExperiment();
     published_can_load_structure_ = canLoadStructure();
+    published_can_create_experiment_ = canCreateExperiment();
     worker_ = std::make_unique<edi::work::Worker>([this](edi::work::Delivery delivery) {
         QMetaObject::invokeMethod(this, std::move(delivery), Qt::QueuedConnection);
     });
@@ -107,8 +117,9 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     // early), as is a fit start state the loaded project already holds; its undo is one level, so a
     // second fit in a row is the same entry.
     const auto note_fit = [this] {
-        if (fit_->canUndo() && (undo_history_.empty() || undo_history_.back().has_value())) {
-            undo_history_.emplace_back(std::nullopt);
+        if (fit_->canUndo() &&
+            (undo_history_.empty() || !std::holds_alternative<std::monostate>(undo_history_.back()))) {
+            undo_history_.emplace_back(std::monostate{});
         }
         syncUndo();
     };
@@ -253,8 +264,106 @@ bool ProjectViewModel::loadExperiments(const QList<QUrl>& files) {
         emit refused(error);
         return false;
     }
+    noteAddedExperiments(project.experiments.size() - paths.size());
     setCurrentExperimentIndex(static_cast<int>(experiment_models_.size()) - 1);
     return true;
+}
+
+bool ProjectViewModel::canCreateExperiment() const {
+    return std::all_of(project_->experiments.begin(), project_->experiments.end(),
+                       [](const auto& experiment) { return experiment->calculation_only; });
+}
+
+bool ProjectViewModel::createExperiment() {
+    edi::Project& project = *project_;
+    // The first free name of the form experiment1, experiment2, …
+    std::string name;
+    for (int n = 1; name.empty(); ++n) {
+        const std::string candidate = "experiment" + std::to_string(n);
+        const bool held = std::any_of(project.experiments.begin(), project.experiments.end(), [&candidate](const auto& item) {
+            return edi::KeyTraits<edi::BraggPdExperiment>::canonical(item->name) ==
+                   edi::KeyTraits<edi::BraggPdExperiment>::canonical(candidate);
+        });
+        name = held ? std::string() : candidate;
+    }
+    const std::string structure = project.structures.empty() ? std::string() : project.structures.front()->name;
+    QString error;
+    try {
+        error = apply(edi::Edit::create_experiment(project, edi::simulation_experiment(name, {}, structure)), true);
+    } catch (const std::exception& refusal) {
+        error = QString::fromUtf8(refusal.what());
+        setLastError(error);
+    }
+    if (!error.isEmpty()) {
+        emit refused(error);
+        return false;
+    }
+    noteAddedExperiments(project.experiments.size() - 1);
+    setCurrentExperimentIndex(static_cast<int>(experiment_models_.size()) - 1);
+    return true;
+}
+
+bool ProjectViewModel::setExperimentType(int index, const QString& axis, const QString& token) {
+    if (index < 0 || index >= experiment_models_.size()) {
+        return false;
+    }
+    edi::Project& project = *project_;
+    const edi::ExperimentBase& experiment = *project.experiments[static_cast<std::size_t>(index)];
+    edi::ExperimentTypeTokens type{edi::token(experiment.experiment_type.effective_sample_form()),
+                                   edi::token(experiment.effective_beam_mode()),
+                                   edi::token(experiment.experiment_type.effective_radiation_probe()),
+                                   edi::token(experiment.experiment_type.effective_scattering_type())};
+    const std::string value = token.toStdString();
+    if (axis == QLatin1String("sampleForm")) {
+        type.sample_form = value;
+    } else if (axis == QLatin1String("beamMode")) {
+        type.beam_mode = value;
+    } else if (axis == QLatin1String("radiationProbe")) {
+        type.radiation_probe = value;
+    } else if (axis == QLatin1String("scatteringType")) {
+        type.scattering_type = value;
+    } else {
+        return false;
+    }
+    const std::string structure = experiment.linked_structure.structure_id;
+    QString error;
+    try {
+        edi::BraggPdExperiment replacement = edi::simulation_experiment(experiment.name, type, structure);
+        // Within one beam mode the grid stays as it was set.
+        if (replacement.effective_beam_mode() == experiment.effective_beam_mode() && experiment.data.has_value()) {
+            replacement.data = experiment.data;
+        }
+        const edi::ExperimentBase* before = &experiment;
+        error = apply(edi::Edit::replace_experiment(project, experiment, std::move(replacement)), true);
+        if (error.isEmpty()) {
+            // Undo of the experiment's creation removes it in its new type.
+            const edi::ExperimentBase* after = project.experiments[static_cast<std::size_t>(index)].get();
+            for (UndoRecord& record : undo_history_) {
+                if (auto* added = std::get_if<AddedExperiments>(&record)) {
+                    std::replace(added->experiments.begin(), added->experiments.end(), before, after);
+                }
+            }
+        }
+    } catch (const std::exception& refusal) {
+        error = QString::fromUtf8(refusal.what());
+        setLastError(error);
+    }
+    if (!error.isEmpty()) {
+        emit refused(error);
+        return false;
+    }
+    return true;
+}
+
+void ProjectViewModel::noteAddedExperiments(std::size_t before) {
+    AddedExperiments added;
+    for (std::size_t i = before; i < project_->experiments.size(); ++i) {
+        added.experiments.push_back(project_->experiments[i].get());
+    }
+    if (!added.experiments.empty()) {
+        undo_history_.emplace_back(std::move(added));
+        syncUndo();
+    }
 }
 
 void ProjectViewModel::removeStructure(int index) {
@@ -339,10 +448,14 @@ void ProjectViewModel::undo() {
     // removed or renamed since) leaves it in place, with the refusal as the message. A fit's undo can drop
     // its own entry on the way (its start state is gone once restored), so only a record still there goes.
     const std::size_t depth = undo_history_.size();
-    const bool undone =
-        undo_history_.back().has_value()
-            ? apply(edi::Edit::restore_relations(*project_, *undo_history_.back()), true).isEmpty()
-            : fit_->undo();
+    bool undone = false;
+    if (const auto* relations = std::get_if<edi::RelationsUndo>(&undo_history_.back())) {
+        undone = apply(edi::Edit::restore_relations(*project_, *relations), true).isEmpty();
+    } else if (const auto* added = std::get_if<AddedExperiments>(&undo_history_.back())) {
+        undone = apply(edi::Edit::erase_experiments(*project_, added->experiments), true).isEmpty();
+    } else {
+        undone = fit_->undo();
+    }
     if (undone && undo_history_.size() == depth) {
         undo_history_.pop_back();
     }
@@ -354,7 +467,7 @@ void ProjectViewModel::syncUndo() {
     // (undone, or replaced by a load) is no longer undoable; while a fit runs its start state only reads as
     // unavailable, so the entry stays, and a refused fit leaves it as it was.
     const bool running = fit_ != nullptr && fit_->running();
-    while (!running && !undo_history_.empty() && !undo_history_.back().has_value() &&
+    while (!running && !undo_history_.empty() && std::holds_alternative<std::monostate>(undo_history_.back()) &&
            (fit_ == nullptr || !fit_->canUndo())) {
         undo_history_.pop_back();
     }
@@ -404,7 +517,7 @@ void ProjectViewModel::publish(bool structural) {
         experiment->sync();
     }
     structure_list_->setStructures(structure_models_);
-    experiment_list_->setExperiments(experiment_models_);
+    experiment_list_->setExperiments(experiment_models_, *project_);
     analysis_->sync();
     syncParameterTable(false);  // the report is refreshed below, once everything it reads is published
     publishMetadata();
@@ -518,7 +631,7 @@ void ProjectViewModel::syncBlocks() {
         experiment_models_ = next;
     }
     structure_list_->setStructures(structure_models_);
-    experiment_list_->setExperiments(experiment_models_);
+    experiment_list_->setExperiments(experiment_models_, *project_);
     const int structures = static_cast<int>(structure_models_.size());
     const int experiments = static_cast<int>(experiment_models_.size());
     if (current_structure_ >= structures) {
@@ -532,6 +645,10 @@ void ProjectViewModel::syncBlocks() {
         if (canLoadStructure() != published_can_load_structure_) {
             published_can_load_structure_ = canLoadStructure();
             emit canLoadStructureChanged();
+        }
+        if (canCreateExperiment() != published_can_create_experiment_) {
+            published_can_create_experiment_ = canCreateExperiment();
+            emit canCreateExperimentChanged();
         }
     }
     for (QObject* model : gone) {

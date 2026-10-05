@@ -12,8 +12,11 @@ import EasyApplication.Gui.Components as EaComponents
 import edi.app
 
 // Experiments (N) (easydiffractionbeta Pages/Experiment/SideBarBasic/Experiments.qml): the project's
-// experiments, one current; experiments enter only from `.edi` block files declaring their
-// type, whenever a project is open — an edi project holds several.
+// experiments, one current, each with how the last fit ended on it (Fit) and the file its data is in; under
+// the table the selected experiment's type (ExperimentTypeGroup), then Load experiment (`.edi` block files,
+// several at once, each with its type, data and parameters) and Create experiment (a new experiment without
+// data, a simulation). A row without data has a Load data… button in its File cell, disabled until plain data
+// files load. Create and Load are each one undoable step.
 EaElements.GroupBox {
     id: group
 
@@ -42,9 +45,18 @@ EaElements.GroupBox {
                     width: EaStyle.Sizes.tableRowHeight
                 }
                 EaComponents.TableViewLabel {
+                    width: EaStyle.Sizes.tableRowHeight
+                    text: qsTr("Fit")
+                }
+                EaComponents.TableViewLabel {
                     flexibleWidth: true
                     horizontalAlignment: Text.AlignLeft
-                    text: qsTr("Name")
+                    text: qsTr("Datablock")
+                }
+                EaComponents.TableViewLabel {
+                    width: AppSizes.fileColumnWidth
+                    horizontalAlignment: Text.AlignLeft
+                    text: qsTr("File")
                 }
                 EaComponents.TableViewLabel {
                     width: AppSizes.iconColumnWidth
@@ -57,6 +69,7 @@ EaElements.GroupBox {
                 required property int index
                 required property string name
                 required property ExperimentViewModel experiment
+                required property string fitOutcome
 
                 objectName: `experiments.row.${index}`
                 color: group.project && group.project.currentExperimentIndex === index ? EaStyle.Colors.tableHighlight : (index % 2 ? EaStyle.Colors.themeBackgroundHovered2 : EaStyle.Colors.themeBackgroundHovered1)
@@ -74,15 +87,43 @@ EaElements.GroupBox {
                     iconColor: AppColors.experiment(row.index)
                     toolTip: qsTr("Measured pattern color")
                 }
+                // How the project's last fit ended on this experiment; empty when it has no result.
+                IconCell {
+                    objectName: `experiments.fit.${row.index}`
+                    icon: FitOutcomes.icon(row.fitOutcome)
+                    iconColor: String(FitOutcomes.color(row.fitOutcome))
+                    toolTip: FitOutcomes.word(row.fitOutcome)
+                }
                 // The datablock name, editable: a refused rename returns the cell to the stored name and shows why.
                 // Editing a name also makes its row current, as a click on the row does.
                 TextCell {
                     objectName: `experiments.name.${row.index}`
-                    width: table.headerLabelItems.length > 2 ? table.headerLabelItems[2].width : 0
+                    width: table.headerLabelItems.length > 3 ? table.headerLabelItems[3].width : 0
                     value: row.name
                     onActiveFocusChanged: if (activeFocus)
                         group.project.currentExperimentIndex = row.index
                     onCommitted: text => row.experiment.name = text
+                }
+                // The data's file: the experiment's own `.edi`, which holds its data; Load data… without data.
+                Item {
+                    width: AppSizes.fileColumnWidth
+                    height: parent ? parent.height : 0
+
+                    EaComponents.TableViewLabel {
+                        visible: !row.experiment.calculationOnly
+                        width: parent.width
+                        horizontalAlignment: Text.AlignLeft
+                        elide: Text.ElideMiddle
+                        text: `${row.name}.edi`
+                    }
+                    EaElements.Button {
+                        objectName: `experiments.loadData.${row.index}`
+                        visible: row.experiment.calculationOnly
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: parent.width
+                        enabled: false
+                        text: qsTr("Load data…")
+                    }
                 }
                 EaComponents.TableViewButton {
                     objectName: `experiments.remove.${row.index}`
@@ -93,8 +134,13 @@ EaElements.GroupBox {
             }
         }
 
-        // Load and Define manually side by side, as easydiffractionbeta's; defining an experiment by hand is
-        // not implemented, so its button is disabled (edi ADR-0017 §4).
+        ExperimentTypeGroup {
+            visible: group.project !== null && group.project.currentExperiment !== null
+            project: group.project
+            experiment: group.project ? group.project.currentExperiment : null
+            experimentIndex: group.project ? group.project.currentExperimentIndex : -1
+        }
+
         Row {
             spacing: EaStyle.Sizes.fontPixelSize
 
@@ -102,7 +148,8 @@ EaElements.GroupBox {
                 objectName: "experiments.load"
                 enabled: group.project !== null
                 fontIcon: "upload"
-                text: qsTr("Load experiment(s) from file(s)")
+                text: qsTr("Load experiment")
+                ToolTip.text: qsTr("Load experiments from .edi files, each with its type, data and parameters")
                 // In the browser the files come through the page (edi ADR-0023).
                 onClicked: {
                     if (WebFiles.available) {
@@ -114,10 +161,12 @@ EaElements.GroupBox {
                 }
             }
             EaElements.SideBarButton {
-                objectName: "experiments.define"
-                enabled: false
+                objectName: "experiments.create"
+                enabled: group.project !== null && group.project.canCreateExperiment
                 fontIcon: "plus-circle"
-                text: qsTr("Define experiment manually")
+                text: qsTr("Create experiment")
+                ToolTip.text: enabled ? qsTr("Add an experiment without data, to calculate its pattern") : qsTr("The project's experiments carry measured data; an experiment without data cannot join them")
+                onClicked: group.project.createExperiment()
             }
         }
     }

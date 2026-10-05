@@ -84,6 +84,9 @@ class ExperimentViewModel : public QObject {
                         ProjectEditor& editor, ParameterRegistry& registry, QObject* parent);
 
     QString name() const { return name_; }
+    // The calculation grid of an experiment without measured data (edi::Edit::data_range): its start,
+    // end and step; refused, with `lastError`, for one with data.
+    Q_INVOKABLE void setRange(double start, double end, double step);
     void setName(const QString& name);
     SampleForm sampleForm() const;
     BeamMode beamMode() const;

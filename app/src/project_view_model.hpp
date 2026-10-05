@@ -11,6 +11,7 @@
 #include <optional>
 #include <string>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "analysis_view_model.hpp"
@@ -42,7 +43,9 @@ class StructureListModel : public RowTableModel {
     void setStructures(const QList<StructureViewModel*>& structures);
 };
 
-// The project's experiments: roles `name`, `experiment` (ExperimentViewModel).
+// The project's experiments: roles `name`, `experiment` (ExperimentViewModel) and `fitOutcome`, the outcome
+// key of the project's last fit (recorded_outcome) on each experiment it fitted, else empty: the first
+// experiment after a single fit, every bank of a joint fit.
 class ExperimentListModel : public RowTableModel {
     Q_OBJECT
     QML_ELEMENT
@@ -50,7 +53,7 @@ class ExperimentListModel : public RowTableModel {
 
    public:
     explicit ExperimentListModel(QObject* parent);
-    void setExperiments(const QList<ExperimentViewModel*>& experiments);
+    void setExperiments(const QList<ExperimentViewModel*>& experiments, const edi::Project& project);
 };
 
 // The open project. It owns the core Project and is the editor every write goes through: the core
@@ -81,6 +84,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_PROPERTY(edi_app::StructureViewModel* currentStructure READ currentStructure NOTIFY currentStructureChanged)
     Q_PROPERTY(edi_app::ExperimentViewModel* currentExperiment READ currentExperiment NOTIFY currentExperimentChanged)
     Q_PROPERTY(bool canLoadStructure READ canLoadStructure NOTIFY canLoadStructureChanged)
+    // Create experiment adds an experiment without data: refused while the project's experiments carry
+    // measured data (a project calculates or fits as a whole).
+    Q_PROPERTY(bool canCreateExperiment READ canCreateExperiment NOTIFY canCreateExperimentChanged)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
     // The app bar's Undo (edi ADR-0024): the newest recorded change — an edit of the aliases or
     // constraints, or a fit — is undone, so they undo in the order they were made.
@@ -123,6 +129,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     StructureViewModel* currentStructure() const { return structure_models_.value(current_structure_); }
     ExperimentViewModel* currentExperiment() const { return experiment_models_.value(current_experiment_); }
     bool canLoadStructure() const { return project_->structures.empty(); }
+    bool canCreateExperiment() const;
     QString lastError() const { return last_error_; }
     bool calculating() const { return calculating_; }
     StructureViewOptions* structureViewOptions() const { return structure_view_options_; }
@@ -143,6 +150,13 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_INVOKABLE bool loadExperiments(const QList<QUrl>& files);
     Q_INVOKABLE void removeStructure(int index);
     Q_INVOKABLE void removeExperiment(int index);
+    // A new experiment without data (edi::simulation_experiment), selected: powder, constant wavelength,
+    // neutron, Bragg, linked to the first structure. One undoable step, as a load of experiments is.
+    Q_INVOKABLE bool createExperiment();
+    // One type axis ("sampleForm", "beamMode", "radiationProbe", "scatteringType") of an experiment without
+    // data set to `token`: the experiment is made anew with that type, keeping its name, its link and,
+    // within one beam mode, its range.
+    Q_INVOKABLE bool setExperimentType(int index, const QString& axis, const QString& token);
     // The place of the structure of this name in the project, or -1: its colour (edi ADR-0017 §8).
     Q_INVOKABLE int structureIndex(const QString& name) const;
 
@@ -168,6 +182,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void currentExperimentIndexChanged();
     void currentExperimentChanged();
     void canLoadStructureChanged();
+    void canCreateExperimentChanged();
     void lastErrorChanged();
     void canUndoChanged();
     void refused(const QString& message);
@@ -207,9 +222,14 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     ParameterTableModel* parameters_;
     AnalysisViewModel* analysis_;
     FitViewModel* fit_ = nullptr;
-    // The undo history, oldest first: an edit of the relations (its RelationsUndo), or a fit (none: the
-    // fit's own start state is what undo_fit restores).
-    std::vector<std::optional<edi::RelationsUndo>> undo_history_;
+    // The undo history, oldest first: a fit (none: the fit's own start state is what undo_fit restores), an
+    // edit of the relations (its RelationsUndo), or experiments added by Create or Load experiment.
+    struct AddedExperiments {
+        std::vector<const edi::ExperimentBase*> experiments;
+    };
+    using UndoRecord = std::variant<std::monostate, edi::RelationsUndo, AddedExperiments>;
+    std::vector<UndoRecord> undo_history_;
+    void noteAddedExperiments(std::size_t before);
     bool can_undo_ = false;
     void syncUndo();
     BlockText* metadata_text_;
@@ -239,6 +259,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     int published_structure_index_ = -1;
     int published_experiment_index_ = -1;
     bool published_can_load_structure_ = false;
+    bool published_can_create_experiment_ = false;
 };
 
 }  // namespace edi_app

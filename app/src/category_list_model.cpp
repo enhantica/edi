@@ -45,12 +45,16 @@ CategoryPresentation category_presentation(const QString& id) {
 namespace {
 // The sidebar's order where it differs from the core's page order (edi ADR-0017 §3): each first id is shown
 // directly before the second. Presentation only: the core's order (the Analysis table, the files) stands.
+// A category shown elsewhere has no sidebar group: the experiment type is edited in the Experiments explorer.
 std::vector<const edi::Category*> presentation_order(const std::vector<edi::Category>& categories) {
     static const std::pair<const char*, const char*> kShownBefore[] = {{"background", "instrument"},
                                                                        {"excluded_region", "linked_structure"}};
+    static const char* const kShownElsewhere[] = {"experiment_type"};
     std::vector<const edi::Category*> ordered;
     for (const edi::Category& category : categories) {
-        ordered.push_back(&category);
+        if (std::find(std::begin(kShownElsewhere), std::end(kShownElsewhere), category.id) == std::end(kShownElsewhere)) {
+            ordered.push_back(&category);
+        }
     }
     const auto position = [&ordered](const char* id) {
         for (std::size_t i = 0; i < ordered.size(); ++i) {

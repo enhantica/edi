@@ -19,7 +19,6 @@ WorkflowPage {
 
     // Each category's content, by `.edi` category id.
     readonly property var contents: ({
-            "experiment_type": experimentTypeContent,
             "data": rangeContent,
             "data_range": rangeContent,
             "instrument": instrumentContent,
@@ -87,7 +86,7 @@ WorkflowPage {
             source: page.experiment ? page.experiment.text : null
         }
     }
-    // One block selector for Basic, Extras and Text (edi ADR-0017 §7).
+    // One block selector in the main view's tab bar (edi ADR-0017 §7).
     blockSelectorShown: true
     blocks: project ? project.experiments : null
     blocksTextRole: "name"
@@ -97,12 +96,6 @@ WorkflowPage {
     continueText: qsTr("Continue")
     onContinueClicked: AppState.open(AppState.Page.Analysis)
 
-    Component {
-        id: experimentTypeContent
-        ExperimentTypeGroup {
-            experiment: page.experiment
-        }
-    }
     Component {
         id: rangeContent
         MeasuredRangeGroup {
