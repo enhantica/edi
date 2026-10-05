@@ -1,82 +1,25 @@
-# BEER ferrite/austenite reference with independent bank scales
+# BEER behavior inputs and archived authoring capture
 
-The two tutorial expressions `n2_ferrite_scale = s2_ferrite_scale` and
-`n2_austenite_scale = s2_austenite_scale` are omitted. Every other physics,
-data, structure, free-parameter declaration and joint-fitting statement is
-unchanged. Both N2 scales remain free. The original constrained capture remains in this repository's Git history.
+Only two-phase/two-bank load, joint fit, independent phase scales and exact
+save/reopen behavior are tested here. No parameter, Rwp, profile, scale or
+offset is compared with CrySPY. The historical CrySPY capture is retained as
+input provenance only; it is no longer an agreement oracle. Its offset
+expectation and convention artifact were removed.
 
-The independent source is diffraction-lib commit
-`0d9f10e412a0cd08d4dd0af95845dd9bb597dcdf`, easydiffraction 0.19.1 and
-CrySPY 0.12.1. The original tutorial digest is
-`107c04c39dd0ba4cbdf8030e29194604f6b1709e059f59290159ceb11002662e`.
-Measured data come from easyscience/diffraction commit
-`35af7e9bf469a1ee4ecc889aff2279440b020c8a`; archive digest
+The owner's replacement FullProf project and authoring outputs are archived
+in edi's `knowledge/fitting/fullprof/pd-neut-tof_duplex-beer_pseudo-voigt/`;
+its all-fixed twin is under `knowledge/verification/fullprof/` with the same
+id. Those artifacts are not used by these tests. Activation is deferred until
+shared site-parameter constraints are available. Both owner data files are
+byte-identical to the measured BEER files already retained in `data/`.
+
+The existing `projects/initial` vehicle has two Fe structures and two TOF
+banks, with four independent free phase scales. Values merely initialize the
+model; no captured result supplies a correctness expectation. Forty background
+points are free in its first fit and fixed in its second. The remaining free
+parameter count is derived from the model's declarations. The gates require
+convergence, finite scales, improved residuals and exact persistence.
+
+Measured source: easyscience/diffraction commit
+`35af7e9bf469a1ee4ecc889aff2279440b020c8a`, archive SHA256
 `68bdc067bda10fa07bfa9546375fa1ac85dd575add401c6b813cbd066cdb7d5e`.
-
-One authoring invocation of edi's visible `author_beer.py` executes both
-stages in memory with `--without-scale-constraints`. Its pre-fit boundary
-requires that exactly the two known expressions were omitted, there are no
-active constraints, and all 56 parameters (40 backgrounds plus 16 others)
-are free. It performs the initial fit once, fixes only backgrounds, then
-performs the second fit once. It omits rendering and reuses the verified
-archive. No saved-stage recovery or repeat fit occurred. Tests consume saved
-artifacts and never execute diffraction-lib. The precise repository-relative
-command, all package versions and raw capture digest are in reference.json.
-
-`capture_beer.py` freezes the raw initial, stage-1 and stage-2 Edi trees.
-Its included-window Rwp uses only saved external rows with calc_status=incl:
-sqrt(sum(((measured-calculated)/sigma)^2) / sum((measured/sigma)^2)). The
-library's reported Rwp uses a different excluded-row basis; both quantities
-remain labelled in reference.json. The authoring command and captured outputs are recorded in `reference.json`
-and `reference-run/`.
-
-`generate_beer.py` transcribes the saved inputs to schema 3, embeds the
-original measured columns at full precision, applies the tutorial's zero-
-error-to-one convention, and omits four optional zero-valued size/strain
-terms absent from crysta's dictionary. Unused alias declarations stay in the
-raw capture; they are omitted from the unconstrained active model.
-
-CrySPY's TOF scale prefactor omits sin(theta_bank); FullProf's convention
-carries it. Therefore every phase scale value and its own SU map by
-1/sin(theta_bank), using only the fixed scattering angle in the external
-capture. Both BEER banks declare 2 theta = 90 degrees, giving sqrt(2). No
-factor comes from crysta output. Every other parameter and the raw capture
-stay unchanged by the conversion. The mapping gate also exercises a
-60-degree scattering-angle witness (factor two).
-
-The initial model has 56 free parameters; the second-stage corpus model
-has 16, including separate ferrite and austenite scales in each bank. The
-joint gate uses the declared `_fitting_mode.type joint` and `analysis.fit()`.
-Every fitted parameter is compared against its own external one-SU bound,
-with scale bounds converted consistently. Rwp has no reported uncertainty;
-five percent relative permits independent optimizer termination. No
-parameter is omitted or given a wider numerical tolerance.
-
-Project id: pd-neut-tof_ferrite-austenite-beer_joint.
-
-
-CrySPY 0.12.1 computes TOF profile widths at each data point's d(t), whereas
-FullProf's reflection-width convention uses d_hkl. These functions give a
-later asymmetric profile even though both analytic reflection centres are
-zero + dtt1*d_hkl. There is no universal calibration mapping: the displacement
-depends on the bank's widths, reflection mixture, grid and weights.
-
-`author_beer_offsets.py` derives the effective displacement using only the
-captured CrySPY 0.12.1 functions and reference values. On all 2810 included
-rows per bank it constructs both conventions for all 16 saved reflections
-from both phases, with external F-squared values, cubic multiplicities and
-independent phase scales. It minimizes the inverse-variance weighted squared
-profile difference with only one displacement varying. Measured intensities
-and crysta/edi outputs never enter this calculation. The reflection-width
-identity control gives zero displacement. The command, generator/function
-hashes, input hashes, numerical package versions and control results are in
-`offset-convention.json`; no reference calculator runs during a test.
-
-The signed shift is **minus** that later-profile displacement. The gate
-therefore compares an offset with **raw reference minus signed shift**, still
-within that offset's unchanged one-SU bound. The independently derived signed
-shifts in microseconds (N2, S2) are (-0.163575880, -0.161091629) for stage 1
-and (-0.163576124, -0.161091935) for stage 2. Raw `reference.json` is unchanged.
-Every other expectation keeps its previous value and one-SU bound, with only
-phase scale units converted as described above. The verification page records
-this convention finding; the agreement gate uses the frozen derived artifact.

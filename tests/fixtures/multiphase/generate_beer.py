@@ -144,7 +144,7 @@ def main():
             {
                 'schema': 1,
                 'source': {
-                    'engine': 'diffraction-lib 0.19.1 / CrySPY 0.12.1',
+                    'engine': 'declared project invariant',
                     'artifact': 'PROVENANCE.md',
                     'provenance': 'PROVENANCE.md',
                 },
@@ -155,12 +155,6 @@ def main():
                         'tol_abs': 0,
                         'tol_rel': None,
                     },
-                    'rwp': {
-                        'value': ref['stages'][-1]['active_rwp'],
-                        'kind': 'reference',
-                        'tol_abs': None,
-                        'tol_rel': 0.05,
-                    },
                 },
             },
             indent=2,
@@ -168,23 +162,9 @@ def main():
         + '\n'
     )
     (case / 'PROVENANCE.md').write_text(
-        'Independent BEER ferrite/austenite two-bank joint-fit reference: diffraction-lib '
-        '0d9f10e412a0cd08d4dd0af95845dd9bb597dcdf, default CrySPY 0.12.1.\n'
-        'The visible author_beer.py captures the tutorial; reference.json and raw Edi output '
-        'live in edi tests/fixtures/multiphase/beer. No test runs diffraction-lib.\n'
-        'This corpus starts from the saved first fit with backgrounds fixed, then performs '
-        'the second fit with all 16 remaining free parameters. Separate system gates execute '
-        'both stages and compare every parameter within its own standard uncertainty.\n\n'
-        'Rwp has no reported uncertainty; five percent relative permits independent optimizer '
-        'termination while forbidding material fit-quality loss. Parameter bounds remain one SU.\n'
-        'Schema changes to 3; measured columns come from the original archive at full precision. '
-        'Zero measured error becomes one exactly as in the tutorial loader. First-stage Edi '
-        'rounding is retained. Each bank phase scale and its SU map by 1/sin(theta_bank), '
-        'using only the fixed bank geometry in the external reference. The two tutorial '
-        'cross-bank scale constraints are omitted in this authoring variant. '
-        'CrySPY calculator/minimizer declarations '
-        'are retained as provenance; '
-        'crysta resolves its own backend on load.\n'
+        'BEER joint-fit behavior vehicle. Only its sixteen declared non-background '
+        'free parameters are an invariant expectation. Captured values initialize '
+        'the model; no external Rwp, parameter or offset agreement is active.\n'
     )
 
 

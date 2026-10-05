@@ -1,42 +1,13 @@
 """Static independent BEER expectations and project copies; no reference engine imports."""
 
 import hashlib
-import json
 import shutil
 from pathlib import Path
 
 import numpy as np
 
-from . import generate_beer
-
 HOME = Path(__file__).with_name('beer')
 PROJECT_ID = 'pd-neut-tof_ferrite-austenite-beer_joint'
-
-
-def scale_factor(reference, bank):
-    return generate_beer.scale_factor(reference, bank)
-
-
-def mapped_parameters(reference, stage):
-    return generate_beer.mapped_parameters(reference, stage)
-
-
-def reference():
-    return json.loads((HOME / 'reference.json').read_text())
-
-
-def agreement_parameters(ref, stage_index):
-    """Map only scale units and the independently captured width-convention offset."""
-    correction = json.loads((HOME / 'offset-convention.json').read_text())
-    if ref != reference() or correction['reference_sha256'] != (
-        hashlib.sha256((HOME / 'reference.json').read_bytes()).hexdigest()
-    ):
-        raise ValueError('BEER offset corrections require their exact independent reference')
-    parameters = mapped_parameters(ref, ref['stages'][stage_index])
-    for bank, record in correction['stages'][stage_index].items():
-        key = f'{bank}.instrument.d_to_tof_offset'
-        parameters[key]['value'] -= record['signed_shift_us']
-    return parameters
 
 
 def tree_digests(home):

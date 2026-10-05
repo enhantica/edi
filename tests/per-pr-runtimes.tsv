@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-05T13:52:56Z
+# measured_utc = 2026-10-05T14:09:55Z
 #
-# Recorded from: tests-seq30-edi-after.log (2 node(s) measured once, 5872 banked, 0 stale row(s) dropped)
-# Collected tests: 6211; with a reported duration: 3846
+# Recorded from: tests-seq31-edi-after.log (2 node(s) measured once, 5869 banked, 5 stale row(s) dropped)
+# Collected tests: 6207; with a reported duration: 3844
 # Module-scoped fixture costs recorded: 14
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 6211
+# inventory_python = 6207
 # inventory_cpp = 232
-# inventory_measured = 5874
-# inventory_unmeasured = 569
+# inventory_measured = 5871
+# inventory_unmeasured = 568
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_projects_open_and_populate_pages
@@ -2419,11 +2419,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e05_t1_physical_domain.p
 0.000	tests/integration/py/test_multiphase_app_contract.py::test_linked_structure_rows_use_available_names_and_add_remove_disable_actions
 0.000	tests/integration/py/test_multiphase_app_contract.py::test_shared_block_selector_has_bounded_square_icon_steps_and_file_labels
 0.000	tests/integration/py/test_multiphase_app_contract.py::test_structure_loading_is_not_capped_at_one_and_chart_retains_phase_identity
-UNMEASURED:failed-in-this-run	tests/system/py/test_beer_multiphase.py::test_beer_cli_id_and_verification_page_use_the_committed_external_inputs
-1.120	tests/system/py/test_beer_multiphase.py::test_beer_joint_fit_recovers_both_phases_with_every_external_uncertainty
-0.010	tests/system/py/test_beer_multiphase.py::test_beer_offset_convention_is_external_signed_and_preserves_every_su
-0.010	tests/system/py/test_beer_multiphase.py::test_beer_reference_binds_both_banks_and_every_reported_uncertainty
-0.000	tests/system/py/test_beer_multiphase.py::test_beer_scale_convention_uses_only_reference_geometry_and_maps_each_uncertainty
+1.360	tests/system/py/test_beer_multiphase.py::test_beer_joint_fit_preserves_both_phases_and_independent_bank_scales
 0.930	tests/system/py/test_beer_multiphase.py::test_beer_two_phases_and_independent_bank_scales_survive_two_save_cycles
 0.000	tests/system/py/test_c06_t6_fitting_corpus.py::test_corpus_absent_at_pin_is_a_named_transition_state[corpus-present]
 0.060	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[background-cecoal]
