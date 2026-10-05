@@ -83,6 +83,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_PROPERTY(edi_app::ExperimentViewModel* currentExperiment READ currentExperiment NOTIFY currentExperimentChanged)
     Q_PROPERTY(bool canLoadStructure READ canLoadStructure NOTIFY canLoadStructureChanged)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
+    // The app bar's Undo (edi ADR-0024): the newest recorded change — an edit of the aliases or
+    // constraints, or a fit — is undone, so they undo in the order they were made.
+    Q_PROPERTY(bool canUndo READ canUndo NOTIFY canUndoChanged)
     // A calculation is in flight or owed (edi ADR-0020): the pattern, the texts and the report show the last
     // published one until `recalculated`.
     Q_PROPERTY(bool calculating READ calculating NOTIFY calculatingChanged)
@@ -146,6 +149,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_INVOKABLE int structureIndex(const QString& name) const;
 
     QString apply(const edi::Edit& change, bool structural) override;
+    QString apply_relation_edit(const edi::Edit& change) override;
+    bool canUndo() const { return can_undo_; }
+    Q_INVOKABLE void undo();
 
     // , the fit's three owner-thread steps (FitViewModel): the project took a fit's result — every view
     // publishes it, the pattern included, in one step; a frame of a running fit is drawn; the patterns go back
@@ -165,6 +171,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void currentExperimentChanged();
     void canLoadStructureChanged();
     void lastErrorChanged();
+    void canUndoChanged();
     void refused(const QString& message);
     void pathChanged();
     void modifiedChanged();
@@ -202,6 +209,11 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     ParameterTableModel* parameters_;
     AnalysisViewModel* analysis_;
     FitViewModel* fit_ = nullptr;
+    // The undo history, oldest first: an edit of the relations (its RelationsUndo), or a fit (none: the
+    // fit's own start state is what undo_fit restores).
+    std::vector<std::optional<edi::RelationsUndo>> undo_history_;
+    bool can_undo_ = false;
+    void syncUndo();
     BlockText* metadata_text_;
     BlockText* project_text_;
     ReportViewModel* report_;

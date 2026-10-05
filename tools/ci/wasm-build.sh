@@ -38,6 +38,10 @@ fi
 # the native build's; Emscripten's toolchain names its own.
 unset CC CXX CFLAGS CXXFLAGS CPPFLAGS LDFLAGS DEBUG_CFLAGS DEBUG_CXXFLAGS DEBUG_CPPFLAGS
 unset CMAKE_CXX_COMPILER_LAUNCHER CMAKE_C_COMPILER_LAUNCHER
+# With a compiler cache configured (CI's .github/actions/ccache), Emscripten runs its clang through it.
+if [ -n "${CCACHE_DIR:-}" ] && command -v ccache >/dev/null 2>&1; then
+  export EM_COMPILER_WRAPPER=ccache
+fi
 # The app environment hosts Qt's build tools only. Without CONDA_PREFIX, crysta's package config takes Eigen from
 # Eigen3_DIR (the wasm one) instead of looking for it in that environment.
 HOST="$CONDA_PREFIX"

@@ -53,7 +53,8 @@ nav:
           - dev/adrs/0021-pattern-presentation.md
           - dev/adrs/0022-structure-scene.md
           - dev/adrs/0023-web-build.md
-          - dev/adrs/0024-several-structures-and-linked-structures.md
+          - dev/adrs/0024-parameter-aliases-and-constraints.md
+          - dev/adrs/0025-several-structures-and-linked-structures.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md
@@ -76,6 +77,7 @@ nav:
           - dev/verification/pd-neut-cwl_PbSO4_basic.ipynb
           - dev/verification/pd-neut-cwl_PbSO4_beba-asymmetry.ipynb
           - dev/verification/pd-neut-cwl_Y2O3_isotropic-adp.ipynb
+          - dev/verification/pd-neut-cwl_cosio-d20_biso-tied.ipynb
           - dev/verification/pd-neut-tof_Fe_pseudo-voigt.ipynb
           - dev/verification/pd-neut-tof_ferrite-austenite_beer_joint.ipynb
           - dev/verification/pd-neut-tof_NCAF_jorgensen-von-dreele.ipynb

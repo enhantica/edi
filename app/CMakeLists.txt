@@ -97,7 +97,9 @@ qt_add_qml_module(edi_app_module
         qml/Globals/Preferences.qml
         qml/Globals/SideBarGroups.qml
         qml/Globals/TypedInput.qml
+        qml/Pages/Analysis/AliasesGroup.qml
         qml/Pages/Analysis/AnalysisPage.qml
+        qml/Pages/Analysis/ConstraintsGroup.qml
         qml/Pages/Analysis/ExperimentSelectorGroup.qml
         qml/Pages/Analysis/FitStartGroup.qml
         qml/Pages/Analysis/FittingGroup.qml

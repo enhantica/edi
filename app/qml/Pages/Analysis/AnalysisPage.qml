@@ -23,6 +23,8 @@ WorkflowPage {
     readonly property var contents: ({
             "minimizer": minimizerContent,
             "fitting_mode": fittingModeContent,
+            "alias": aliasesContent,
+            "constraint": constraintsContent,
             "joint_fit": jointFitContent,
             "sequential_fit": sequentialFitContent,
             "sequential_fit_extract": sequentialExtractContent,
@@ -86,6 +88,18 @@ WorkflowPage {
     Component {
         id: fittingModeContent
         FittingModeGroup {
+            analysis: page.analysis
+        }
+    }
+    Component {
+        id: aliasesContent
+        AliasesGroup {
+            analysis: page.analysis
+        }
+    }
+    Component {
+        id: constraintsContent
+        ConstraintsGroup {
             analysis: page.analysis
         }
     }

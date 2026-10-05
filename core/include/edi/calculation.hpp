@@ -38,6 +38,11 @@ struct WorkStamps {
     std::uint64_t structures_generation = 0;
     std::shared_ptr<const detail::EditRecord> edits;
     std::uint64_t edits_at = 0;
+    // The alias and constraint collections and their encoding (edi ADR-0024): a declaration write
+    // supersedes a result taken before it.
+    std::shared_ptr<const detail::Membership> aliases;
+    std::shared_ptr<const detail::Membership> constraints;
+    std::string relations;
 };
 
 // A copy of the project to calculate on, and the stamps of the live project it was copied from.
@@ -63,6 +68,9 @@ struct CalculationResult {
     std::vector<PowderReflnDataBase> refln;
     // Per structure: its computed geometry, or none where crysta refused it.
     std::vector<std::optional<StructureGeometry>> geometry;
+    // Each dependent's value as the calculation completed it, by unique name (edi ADR-0024): publish
+    // writes them with the arrays they were calculated from.
+    std::vector<std::pair<std::string, double>> completed;
 };
 
 enum class PublishOutcome : std::uint8_t {

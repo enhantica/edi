@@ -45,7 +45,26 @@ TestCase {
     function visibleControl(name) { return Ui.control(Probe, appWindow, name); }
     function click(name) { Ui.click(test, Probe, appWindow, name); }
 
+    function paneGroup(root, name) {
+        if (!root || !root.visible) return null;
+        if (root.objectName === name && Ui.inPane(Ui.target(root))) return root;
+        const children = root.children || [];
+        for (let index = 0; index < children.length; ++index) {
+            const found = paneGroup(children[index], name);
+            if (found) return found;
+        }
+        return null;
+    }
+
     function reveal(group, field) {
+        // Owner 2026-10-04 lengthened Basic. Discover only its current horizontal
+        // pane, scroll a below-fold header into view, then keep the strict input path.
+        tryVerify(() => {
+            const header = paneGroup(Ui.page(appWindow), "group." + group);
+            if (!header || !Ui.inPane(Ui.target(header))) return false;
+            Ui.scrollIntoView(Ui.target(header));
+            return visibleControl("group." + group) !== null;
+        }, 2000, "owner editability: the current pane's category can be scrolled into view: " + group);
         Ui.expandGroup(test, Probe, appWindow, "group." + group);
         tryVerify(() => visibleControl(field) !== null, 2000,
                   "owner amendments: expanded category exposes its fields: " + field);
@@ -136,7 +155,7 @@ TestCase {
             {page: "structure", tier: "basic", group: "atom_site", fields: ["atomSite.label.0", "atomSite.typeSymbol.0"]},
             {page: "structure", tier: "extras", group: "scattering_length", fields: ["scatteringLength.lengthFm.0"]},
             {page: "experiment", tier: "basic", group: "background", fields: ["background.position.0"]},
-            {page: "experiment", tier: "extras", group: "excluded_region", fields: ["excludedRegion.start.0", "excludedRegion.end.0"]},
+            {page: "experiment", tier: "basic", group: "excluded_region", fields: ["excludedRegion.start.0", "excludedRegion.end.0"]},
             {page: "experiment", tier: "extras", group: "preferred_orientation", fields: ["preferredOrientation.indexH.0", "preferredOrientation.indexK.0", "preferredOrientation.indexL.0"]},
             {page: "analysis", tier: "extras", group: "minimizer", fields: ["minimizer.maxIterations", "minimizer.chiSquareTolerance"]},
             {page: "experiment", tier: "extras", group: "peak", fields: ["peak.cutoff_fwhm"]}
@@ -205,7 +224,7 @@ TestCase {
         same(tokens(background.model), ["line-segment", "chebyshev", "polynomial"],
              ": exactly the computable background families are offered; reserved families stay hidden");
         same(Probe.rows(e.categories).map(r => r.categoryId),
-             ["experiment_type", "data", "background", "instrument", "peak", "linked_structure", "excluded_region", "absorption", "preferred_orientation", "scattering_source"],
+             ["experiment_type", "data", "background", "instrument", "peak", "excluded_region", "linked_structure", "absorption", "preferred_orientation", "scattering_source"],
              "owner category record: experiment groups are exactly the admitted edi categories");
         e.peakType = "cwl-thompson-cox-hastings";
         reveal("peak", "peak.asym_fcj_1");
@@ -225,7 +244,7 @@ TestCase {
         //  D11 adds the view-only Appearance group to Structure Extras.
         renderedCategories(["space_group", "cell", "atom_site"], ["scattering_length", "appearance"]);
         click("appBar.tab.experiment");
-        renderedCategories(["experiment_type", "background", "instrument", "peak", "linked_structure"],
-                           ["data", "excluded_region", "absorption", "preferred_orientation", "scattering_source", "peak"]);
+        renderedCategories(["experiment_type", "background", "instrument", "peak", "excluded_region", "linked_structure"],
+                           ["data", "absorption", "preferred_orientation", "scattering_source", "peak"]);
     }
 }

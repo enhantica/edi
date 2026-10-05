@@ -1,4 +1,4 @@
-# ADR-0024 — Several structures and linked structures
+# ADR-0025 — Several structures and linked structures
 
 - **Status:** Proposed
 - **Date:** 2026-10-05

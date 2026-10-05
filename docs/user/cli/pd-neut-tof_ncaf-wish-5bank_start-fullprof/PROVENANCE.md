@@ -38,3 +38,8 @@ FullProf's 538.77 to 612.48 even from FullProf's own start.
 
 The same FullProf references as `pd-neut-tof_ncaf-wish-5bank_start-5` (`kind: reference`, FullProf's σ as tolerance),
 and regression pins from the check run above.
+
+**Follower free flags removed.** Al1, Na1 and F3 sit on `x,x,x`, where y and z follow x, and the structure flagged all
+three axes free. A free flag on a dependent is ignored with a warning and saved bare, so every load warned about the
+two follower flags; the structure now flags x alone. The free set is unchanged and the project still reproduces its
+pins (`tools/checks/cli_projects.py --project`).

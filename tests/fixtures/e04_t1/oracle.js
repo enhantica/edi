@@ -960,9 +960,9 @@ var frozen = {
       "loaderWarning": "Warning: unsupported _minimizer.type \"crysta (lm)\" - using crysta",
       "files": {
         "project.edi": "d230f1049d75c2b5b01c2b848e4d9287086c69ddf191d3881fccf0e1a38064df",
-        "structures/cosio.edi": "342f2074cf64d77c6085c8879cda36c3b8913890d161cc537027d2a2720c2dd6",
+        "structures/cosio.edi": "1b3afde2d3a8184d6cb9789fa3fc8fa5dd026756a51e44a2cca6b80b9df8103a",
         "experiments/d20.edi": "55ea976b34dffea45b1eb379a3f358d4afef7df9e3331fa3ced46fd63229949c",
-        "analysis/analysis.edi": "4173d5771cb2dd4cab3ccfc87b59289508d5060ec84e3c24c760a3cccb28aba0"
+        "analysis/analysis.edi": "fde9a40134aaf6794cde3e396a01067e1018d78871c394d4646c95052416f726"
       }
     },
     {
@@ -1072,9 +1072,9 @@ var frozen = {
       "loaderWarning": "",
       "files": {
         "project.edi": "90b4453599694b4beb76074b1b1f9b2944e36b551345d6ba1b1b1e72e2b2bc1a",
-        "structures/cosio.edi": "ffa28715457129c99865a0ef6d3a70273e5d89e35138591c41cb691a942d0e44",
+        "structures/cosio.edi": "4538c66b979d5783c2c3b5ba8c06494a54efeea3fc83c5488e89d5a10c0bb899",
         "experiments/d20.edi": "7053aa291373fc6df17e3d2ced5008a098ef314f65e06a1204f6d0ecbb1ae518",
-        "analysis/analysis.edi": "27bb721e7c73a9d4dcd33568eee2df6febf65cea949c611f6b26bbbd9f8d7dcc"
+        "analysis/analysis.edi": "b732d6abb6017d11a7f25d30349975e45b2ba72a25cf13f8c702376ea4d6bbf9"
       }
     },
     {
@@ -1291,7 +1291,7 @@ var frozen = {
       "loaderWarning": "",
       "files": {
         "project.edi": "b0b564c63fa39e8369bd89bfba31e0288e5fd6bfb9ec737c537d7b0054c73e96",
-        "structures/ncaf.edi": "e82cb95b0026e4bd5bbfcade8895353cd7cec44267a26f12aa6d13c2bb5a46c0",
+        "structures/ncaf.edi": "1f231ef2dc1ec210d95b9f52452dacb6102b7c515b6af603f205199a3aaf0e1d",
         "experiments/wish_2_9.edi": "761e2bed99259c0c0e679bdbfa5455671422ea953774f5450ba3edff6bd2200b",
         "experiments/wish_4_7.edi": "e63425979da16bed1c0cb0061700d1855a5847fb48e5ce0477bf293284cf204e",
         "experiments/wish_5_6.edi": "bb48d4b9c197737a2d35ef406dd3257bbe20dde70a6907bec5d14c8fd2e591a1",
@@ -1350,7 +1350,7 @@ var frozen = {
       "loaderWarning": "",
       "files": {
         "project.edi": "95a8dc39779c96a985966891e022ae4e4b01cfc96057dbfa7414b2d873ec3e3a",
-        "structures/ncaf.edi": "e82cb95b0026e4bd5bbfcade8895353cd7cec44267a26f12aa6d13c2bb5a46c0",
+        "structures/ncaf.edi": "1f231ef2dc1ec210d95b9f52452dacb6102b7c515b6af603f205199a3aaf0e1d",
         "experiments/wish_1_10.edi": "6893edefb924126beb3817b349dc4f263ff11308172d7cfff70dd9b003b6b67c",
         "experiments/wish_2_9.edi": "cf1953881302612f1dd7f659ac76026c2f75dfd929f6a846b7c0c822328eef19",
         "experiments/wish_3_8.edi": "58437073a03edf8861f09c22d0ddc85637268b35e189f76dc430b62068af0bfa",
@@ -1411,7 +1411,7 @@ var frozen = {
       "loaderWarning": "",
       "files": {
         "project.edi": "d305abe73a4c83fdefaed9cfe71f0d0739853328190d81cf6ac2f77252dfa136",
-        "structures/ncaf.edi": "8b1305fdc49077d997d1f5d2a604e7ccfbaf59cc369491a619e273b5cdbfa102",
+        "structures/ncaf.edi": "44fe96e2d76e9a75815b831c6d060773e6129c8589aa5da5cd7e5b9e6b853eee",
         "experiments/wish_1_10.edi": "1daf13e94e0fde89c44822d226109b527c2bde097c33b8f20465d6e83ba7b1d5",
         "experiments/wish_2_9.edi": "7258aadc1cef7d305d237f7c5e031ee27251f0756159b61ad726cb24bfed435b",
         "experiments/wish_3_8.edi": "947f6b21e94bdfcf541ef46896b7fed26b91512da0c54084b429b75e24dbc05c",

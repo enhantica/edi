@@ -44,6 +44,173 @@ void SequentialExtractListModel::sync() {
     setTableRows(rows);
 }
 
+// ---- AliasListModel -----------------------------------------------------------------------------
+
+namespace {
+template <typename Row>
+bool holds_id(const edi::ItemVec<Row>& rows, const std::string& id) {
+    for (const auto& row : rows) {
+        if (row->id.value() == id) {
+            return true;
+        }
+    }
+    return false;
+}
+}  // namespace
+
+AliasListModel::AliasListModel(edi::Project& project, ProjectEditor& editor, QObject* parent)
+    : RowTableModel({"id", "parameter"}, parent), project_(project), editor_(editor) {
+    sync();
+}
+
+void AliasListModel::sync() {
+    QList<Row> rows;
+    for (const auto& alias : project_.aliases) {
+        rows.append({alias.get(),
+                     {QString::fromStdString(alias->id.value()),
+                      QString::fromStdString(alias->parameter_unique_name.value())}});
+    }
+    setTableRows(rows);
+    QStringList names;
+    for (const edi::NamedParameter& named : edi::named_parameters(project_)) {
+        names.append(QString::fromStdString(named.unique_name));
+    }
+    if (names != parameter_names_) {
+        parameter_names_ = names;
+        emit parameterNamesChanged();
+    }
+}
+
+bool AliasListModel::setText(int row, const QString& role, const QString& value) {
+    auto* alias = const_cast<edi::ParameterAlias*>(static_cast<const edi::ParameterAlias*>(keyAt(row)));
+    if (alias == nullptr) {
+        return false;
+    }
+    const std::string text = value.toStdString();
+    if (role == QLatin1String("id")) {
+        return editor_.apply_relation_edit(edi::Edit::rename_alias(*alias, text)).isEmpty();
+    }
+    if (role == QLatin1String("parameter")) {
+        return editor_.apply_relation_edit(edi::Edit::assign(alias->parameter_unique_name, text)).isEmpty();
+    }
+    return false;
+}
+
+void AliasListModel::append() {
+    edi::Project& project = project_;
+    edi::ParameterAlias alias;
+    alias.id = unused_name("alias_", [&project](const std::string& id) { return holds_id(project.aliases, id); });
+    // The first parameter no alias names yet, else the first parameter.
+    for (const edi::NamedParameter& named : edi::named_parameters(project)) {
+        bool aliased = false;
+        for (const auto& existing : project.aliases) {
+            aliased = aliased || existing->parameter_unique_name.value() == named.unique_name;
+        }
+        if (!aliased) {
+            alias.parameter_unique_name = named.unique_name;
+            break;
+        }
+    }
+    editor_.apply_relation_edit(edi::Edit::append(project.aliases, std::move(alias)));
+}
+
+void AliasListModel::duplicate(int row) {
+    const auto* source = static_cast<const edi::ParameterAlias*>(keyAt(row));
+    if (source == nullptr) {
+        return;
+    }
+    edi::Project& project = project_;
+    edi::ParameterAlias copy = *source;
+    copy.id = unused_name(source->id.value() + "_", [&project](const std::string& id) { return holds_id(project.aliases, id); });
+    editor_.apply_relation_edit(edi::Edit::append(project.aliases, std::move(copy)));
+}
+
+void AliasListModel::remove(int row) {
+    if (keyAt(row) == nullptr) {
+        return;
+    }
+    edi::Project& project = project_;
+    editor_.apply_relation_edit(edi::Edit::erase(project.aliases, static_cast<std::size_t>(row)));
+}
+
+// ---- ConstraintListModel ------------------------------------------------------------------------
+
+ConstraintListModel::ConstraintListModel(edi::Project& project, ProjectEditor& editor, QObject* parent)
+    : RowTableModel({"id", "expression", "enabled"}, parent), project_(project), editor_(editor) {
+    sync();
+}
+
+void ConstraintListModel::sync() {
+    QList<Row> rows;
+    for (const auto& constraint : project_.constraints) {
+        rows.append({constraint.get(),
+                     {QString::fromStdString(constraint->id.value()),
+                      QString::fromStdString(constraint->expression.value()), constraint->enabled.get()}});
+    }
+    setTableRows(rows);
+}
+
+bool ConstraintListModel::setRole(int row, const QString& role, const QVariant& value) {
+    return role == QLatin1String("enabled") ? setEnabled(row, value.toBool()) : setText(row, role, value.toString());
+}
+
+bool ConstraintListModel::setText(int row, const QString& role, const QString& value) {
+    auto* constraint =
+        const_cast<edi::ParameterConstraint*>(static_cast<const edi::ParameterConstraint*>(keyAt(row)));
+    if (constraint == nullptr) {
+        return false;
+    }
+    const std::string text = value.toStdString();
+    if (role == QLatin1String("id")) {
+        return editor_.apply_relation_edit(edi::Edit::rename_constraint(*constraint, text)).isEmpty();
+    }
+    if (role == QLatin1String("expression")) {
+        return editor_.apply_relation_edit(edi::Edit::assign(constraint->expression, text)).isEmpty();
+    }
+    return false;
+}
+
+bool ConstraintListModel::setEnabled(int row, bool enabled) {
+    auto* constraint =
+        const_cast<edi::ParameterConstraint*>(static_cast<const edi::ParameterConstraint*>(keyAt(row)));
+    if (constraint == nullptr) {
+        return false;
+    }
+    return editor_.apply_relation_edit(edi::Edit::assign(constraint->enabled, enabled)).isEmpty();
+}
+
+void ConstraintListModel::append() {
+    edi::Project& project = project_;
+    edi::ParameterConstraint constraint;
+    constraint.id =
+        unused_name("constraint_", [&project](const std::string& id) { return holds_id(project.constraints, id); });
+    // A starting expression from the first two aliases, for the user to edit.
+    if (project.aliases.size() >= 2) {
+        constraint.expression = project.aliases[1]->id.value() + " = " + project.aliases[0]->id.value();
+    }
+    editor_.apply_relation_edit(edi::Edit::append(project.constraints, std::move(constraint)));
+}
+
+void ConstraintListModel::duplicate(int row) {
+    const auto* source = static_cast<const edi::ParameterConstraint*>(keyAt(row));
+    if (source == nullptr) {
+        return;
+    }
+    edi::Project& project = project_;
+    edi::ParameterConstraint copy = *source;
+    copy.id = unused_name(source->id.value() + "_",
+                          [&project](const std::string& id) { return holds_id(project.constraints, id); });
+    editor_.apply_relation_edit(edi::Edit::append(project.constraints, std::move(copy)));
+}
+
+void ConstraintListModel::remove(int row) {
+    if (keyAt(row) == nullptr) {
+        return;
+    }
+    edi::Project& project = project_;
+    editor_.apply_relation_edit(edi::Edit::erase(project.constraints, static_cast<std::size_t>(row)));
+}
+
 // ---- FitStartListModel --------------------------------------------------------------------------
 
 FitStartListModel::FitStartListModel(const edi::Project& project, QObject* parent)
@@ -97,6 +264,8 @@ AnalysisViewModel::AnalysisViewModel(edi::Project& project, ProjectEditor& edito
       sequential_fit_(new SequentialFitViewModel(project, this)),
       sequential_extract_(new SequentialExtractListModel(project, this)),
       fit_start_(new FitStartListModel(project, this)),
+      aliases_(new AliasListModel(project, editor, this)),
+      constraints_(new ConstraintListModel(project, editor, this)),
       categories_(new CategoryListModel(this)),
       text_(new BlockText([saved] { return saved("analysis/analysis.edi"); }, this)) {
     fitting_mode_options_->setOptions(edi::supported_fitting_modes(), "single");
@@ -175,6 +344,8 @@ void AnalysisViewModel::sync() {
     sequential_fit_->sync();
     sequential_extract_->sync();
     fit_start_->sync();
+    aliases_->sync();
+    constraints_->sync();
     categories_->setCategories(edi::analysis_categories(project_));
 }
 

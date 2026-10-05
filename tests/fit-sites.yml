@@ -80,3 +80,6 @@ sites:
   # asserted, using the independent Bragg dilation truth table, never fitted values.
   - file: tests/system/py/test_fit_participants.py
     case: multiphase-scales
+
+  - file: tests/integration/py/test_constraint_fit.py
+    case: constraint-covariance

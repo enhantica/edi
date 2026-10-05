@@ -74,11 +74,20 @@ struct KeyedView {
     }
 };
 
+// After an admitted change to a collection's items (ADL; a no-op by default). The relation
+// collections re-mark the project's parameters through crysta (bindings.cpp).
+template <typename Owner, typename T, typename KeyClass>
+void after_change(const KeyedView<Owner, T, KeyClass>& /*view*/) {}
+
 using StructuresView = KeyedView<Project, Structure, Structure>;
 using ExperimentsView = KeyedView<Project, BraggPdExperiment, ExperimentBase>;
 using AtomSitesView = KeyedView<Structure, AtomSite, AtomSite>;
 using PrefOrientsView = KeyedView<ExperimentBase, PrefOrient, PrefOrient>;
 using LinkedStructuresView = KeyedView<ExperimentBase, LinkedStructure, LinkedStructure>;
+using AliasesView = KeyedView<Project, ParameterAlias, ParameterAlias>;
+using ConstraintsView = KeyedView<Project, ParameterConstraint, ParameterConstraint>;
+void after_change(const AliasesView& view);
+void after_change(const ConstraintsView& view);
 
 // A texture row is admitted only when its key names one of the experiment's linked structures
 // (the loader's rule), before it is installed; one link without an id admits any key.
@@ -121,6 +130,8 @@ using ExperimentsIter = KeyedIter<Project, BraggPdExperiment, ExperimentBase>;
 using AtomSitesIter = KeyedIter<Structure, AtomSite, AtomSite>;
 using PrefOrientsIter = KeyedIter<ExperimentBase, PrefOrient, PrefOrient>;
 using LinkedStructuresIter = KeyedIter<ExperimentBase, LinkedStructure, LinkedStructure>;
+using AliasesIter = KeyedIter<Project, ParameterAlias, ParameterAlias>;
+using ConstraintsIter = KeyedIter<Project, ParameterConstraint, ParameterConstraint>;
 
 // Positional live view over the background (R12 committed `id` -> list position, so it is not a
 // keyed category; internal-only registration).

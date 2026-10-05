@@ -138,6 +138,8 @@ def test_c33_lif_counter_is_derived_from_filename_difference():
     after.discard('pd-neut-cwl_LBCO_preferred-orientation')
     #  owns the additional polarized page;  still owns exactly its baseline page.
     after.discard('pd-xray-cwl_LiF_single_polarization')
+    # ADR-0078 adds its separately gated tied-Biso page; keep this task's delta exact.
+    after.discard('pd-neut-cwl_cosio-d20_biso-tied')
     assert before <= after and after - before == {PAGE}, (
         ' C33 filename difference must contain exactly the owned LiF single page'
     )

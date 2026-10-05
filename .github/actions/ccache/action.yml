@@ -1,0 +1,33 @@
+name: Compiler cache
+description: >-
+  Turns ccache on for the job's CMake builds, in ~/.cache/edi-ccache, and gives the prefix of the cache key the job
+  keeps that directory under: the runner, the crysta pin and pixi.lock (which fixes the compilers).
+inputs:
+  max-size:
+    description: ccache's size limit for this job (GitHub keeps 10 GB of caches per repository).
+    required: true
+outputs:
+  key-prefix:
+    description: The cache key up to the run, for restore-keys.
+    value: ${{ steps.settings.outputs.prefix }}
+runs:
+  using: composite
+  steps:
+    - id: settings
+      shell: bash
+      run: |
+        dir="$HOME/.cache/edi-ccache"
+        mkdir -p "$dir"
+        {
+          echo "CCACHE_DIR=$dir"
+          echo "CCACHE_MAXSIZE=${{ inputs.max-size }}"
+          # A hosted runner installs the environment afresh each run, so compilers are checked by content, not by
+          # timestamp. No base_dir: it would make source paths relative, and the tests find their fixtures from
+          # __FILE__. The checkout's path is the same on every run, so absolute paths still hit.
+          echo "CCACHE_COMPILERCHECK=content"
+          echo "CMAKE_C_COMPILER_LAUNCHER=ccache"
+          echo "CMAKE_CXX_COMPILER_LAUNCHER=ccache"
+        } >> "$GITHUB_ENV"
+        pin="$(sed -n 's/^CRYSTA_SDK_TAG = "build-\([0-9a-f]\{12\}\).*/\1/p' pixi.toml | head -n 1)"
+        lock="$(shasum -a 256 pixi.lock | cut -c1-12)"
+        echo "prefix=${RUNNER_OS}-${RUNNER_ARCH}-crysta-${pin}-lock-${lock}-" >> "$GITHUB_OUTPUT"

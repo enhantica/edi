@@ -13,6 +13,8 @@ from typing import Any
 import edi
 import pytest
 
+from tests.fixtures.ncaf_free_flags import canonicalize
+
 ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / 'tests/fixtures/e02_t2_ncaf_5bank'
 PROJECT = FIXTURE / 'project'
@@ -181,8 +183,36 @@ class _StructureProjectView:
         self.experiments: tuple[()] = ()
 
 
-def _reference_structure() -> dict[str, object]:
+def _canonical_project_reference() -> dict[str, object]:
     reference = _load_json('crysta_reference.json')
+    names = {
+        f'structure.atom_sites[{site}].fract_{axis}'
+        for site in ('Al1', 'Na1', 'F3')
+        for axis in ('y', 'z')
+    }
+    found = set()
+    for row in reference['parameters']:
+        if row[0] in names:
+            assert row[2] == 0.0001, (
+                'the follower mapping must retain the historical uncertainty witness'
+            )
+            assert row[3] is True, (
+                'the follower mapping must retain the historical free-flag witness'
+            )
+            row[2], row[3] = 0.0, False
+            found.add(row[0])
+    assert found == names, (
+        'the canonical follower mapping applies to exactly six historical coordinates'
+    )
+    return reference
+
+
+def _reference_structure(*, canonical_followers=False) -> dict[str, object]:
+    reference = (
+        _canonical_project_reference()
+        if canonical_followers
+        else _load_json('crysta_reference.json')
+    )
     parameters = [
         [path, value, esd]
         for path, value, esd, _free in reference['parameters']
@@ -241,6 +271,23 @@ def _tree_bytes(root: Path) -> dict[str, bytes]:
 
 
 def test_e02_t2_frozen_fixture_and_independent_references_are_locked() -> None:
+    text = (PROJECT / 'structures/ncaf.edi').read_text()
+    assert canonicalize(text) == text, (
+        'the canonical NCAF fixture must keep only its independent x flags'
+    )
+    for site in ('Al1', 'Na1', 'F3'):
+        row = next(line.split() for line in text.splitlines() if line.startswith(site + ' '))
+        assert '(' in row[2], 'cleanup must keep each independent x coordinate free'
+        assert '(' not in row[3], 'the dependent y coordinate must be stored bare'
+        assert '(' not in row[4], 'the dependent z coordinate must be stored bare'
+    for damage in (
+        text.replace('Al1 ', 'Other ', 1),
+        text + next(line for line in text.splitlines(keepends=True) if line.startswith('Al1 ')),
+        text.replace('0.25193(10)', '0.25193', 1),
+        text.replace('0.25193 0.25193', '0.25194 0.25193', 1),
+    ):
+        with pytest.raises(ValueError, match='NCAF'):
+            canonicalize(damage)
     manifest = _load_json('manifest.json')
     assert manifest['schema'] == 2
     assert manifest['crysta'] == {
@@ -275,7 +322,7 @@ def test_e02_t2_frozen_fixture_and_independent_references_are_locked() -> None:
 def test_e02_t2_project_load_matches_pinned_crysta_loader_parameter_sets() -> None:
     loaded = edi.Project.load(PROJECT)
     actual = _project_snapshot(loaded)
-    expected = _load_json('crysta_reference.json')
+    expected = _canonical_project_reference()
     # The independently compiled pre-hierarchy C++ snapshot carries the JvD-only Lorentz slots as
     # fixed zeros even for pure Jorgensen banks. I15 makes those illegal union members absent from
     # the concrete Python type; derive that exclusion from the reference's own peak selector.
@@ -296,7 +343,7 @@ def test_e02_t2_project_load_matches_pinned_crysta_loader_parameter_sets() -> No
     expected['parameters'] = [row for row in expected['parameters'] if row[0] not in excluded]
     assert actual == expected, (
         'the live Edi load must match the independent pre-hierarchy reference after removing only '
-        'reference-proven illegal union members'
+        'reference-proven illegal union members and canonical follower metadata'
     )
 
 
@@ -305,8 +352,8 @@ def test_e02_t2_cif_and_edi_structures_are_model_equivalent(method_name: str) ->
     from_edi = edi.Project.load(PROJECT).structure
     source = CIF.read_text(encoding='utf-8') if method_name == 'from_cif_str' else CIF
     from_cif = getattr(edi.StructureFactory, method_name)(source)
-    assert _structure_snapshot(from_edi) == _reference_structure(), (
-        'the frozen EDI project must still match its independent pre-task Crysta snapshot'
+    assert _structure_snapshot(from_edi) == _reference_structure(canonical_followers=True), (
+        'the EDI project must retain its frozen physical values with canonical follower metadata'
     )
     assert _structure_snapshot(from_cif) == _reference_structure(), (
         'both CIF entry points must parse the real IUCr NCAF twin into the independent snapshot'
