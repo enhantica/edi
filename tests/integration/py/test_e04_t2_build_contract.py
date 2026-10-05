@@ -180,6 +180,12 @@ def expanded_jobs():
 def test_ci_job_names_state_area_and_platform_and_share_matrices():
     rows = expanded_jobs()
     names = {name for _, name, _ in rows}
+    from tests.integration.py.test_e09_t75_native_workflow import (  # noqa: PLC0415
+        jobs,
+        public_profile,
+    )
+
+    public = public_profile(jobs())
     required = {
         'pin currency',
         'native · Linux',
@@ -198,14 +204,21 @@ def test_ci_job_names_state_area_and_platform_and_share_matrices():
         'lint',
         'audit',
         'changes',
-        'pages',
     }
+    if public:
+        pages = yaml.safe_load((ROOT / '.github/workflows/pages.yml').read_text())
+        assert {job.get('name') for job in pages['jobs'].values()} == {
+            'build the site',
+            'deploy the site',
+        }, 'the separate Pages workflow retains the named build and deployment jobs'
+    else:
+        required.add('pages')
     assert names == required, (
         f'note 18: CI job display names identify area/platform: {names ^ required}'
     )
     for area in ('native', 'core', 'app', 'cli-python', 'cli-native'):
         keys = {key for key, name, _ in rows if name in {area + ' · Linux', area + ' · macOS'}}
-        expected = 2 if area in {'native', 'core'} else 1
+        expected = 2 if area in {'native', 'core'} and not public else 1
         assert len(keys) == expected, (
             f'{area} uses the declared per-platform jobs or shared matrix'
         )
