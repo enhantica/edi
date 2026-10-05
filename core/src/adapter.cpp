@@ -1625,6 +1625,11 @@ void store_geometry(Structure& structure, const Project* project = nullptr) {
 
 WindowGeometry window_geometry(const Structure& structure, const ViewWindow& window) {
     WindowGeometry out;
+    // crysta's window check first, so a refused window applies no relation and writes nothing.
+    crysta::ViewWindow checked;
+    checked.min = window.min;
+    checked.max = window.max;
+    crysta::require_view_window(checked);
     const Project* project = relations_applied(structure);
     // The inputs are read before the computation, so a write during it leaves the result stale.
     detail::GeometrySource source{detail::geometry_inputs(structure)};
