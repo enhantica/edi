@@ -1,0 +1,147 @@
+"""Dependent covariance and write-back against rational normal equations."""
+
+import json
+import math
+import runpy
+import subprocess
+from pathlib import Path
+
+import edi as engine
+import numpy as np
+import pytest
+
+from conftest import corpus_case_dir
+from tests.system.py import test_e09_t58_cli_persistence as persistence
+
+ROOT = Path(__file__).resolve().parents[3]
+FIXTURE = ROOT / 'tests/fixtures/constraint_expressions'
+MATERIALIZE = runpy.run_path(str(FIXTURE / 'project.py'))['materialize']
+REFERENCE = json.loads((FIXTURE / 'covariance.json').read_text())
+ALIASES = [
+    ('a', 'bank.background.1.coef'),
+    ('b', 'bank.background.2.coef'),
+    ('c', 'bank.background.3.coef'),
+]
+
+
+def undo_saved(project, destination):
+    project.save_as(destination)
+    result = subprocess.run(
+        [*persistence._local_cli(), 'undo', str(destination)],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=10,
+    )
+    assert result.returncode == 0, (
+        'the existing undo CLI must restore the persisted constrained fit: ' + result.stderr
+    )
+    return engine.Project.load(destination)
+
+
+def coefficient_project():
+    return engine.Project.load(corpus_case_dir('constraint-covariance') / 'project')
+
+
+def test_full_covariance_reaches_dependent_writeback_and_undo(tmp_path):
+    project = coefficient_project()
+    assert len(project.free_parameters) == 2, (
+        'the dependent LINEAR coefficient must have no descent column'
+    )
+    assert REFERENCE['covariance'][0][1] != 0, (
+        'the independent least-squares witness must carry cross-covariance'
+    )
+    assert not math.isclose(
+        REFERENCE['dependent_variance'], REFERENCE['diagonal_only_variance'], rel_tol=0.05
+    ), 'discarding covariance must measurably change the dependent uncertainty'
+    project.analysis.fit()
+    terms = dict(zip(('base', 'ramp', 'curve'), project.experiment.background_terms, strict=True))
+    for name, expected in zip(('base', 'ramp', 'curve'), (5, 2, 3), strict=True):
+        assert terms[name].coef.value == pytest.approx(expected, abs=2e-5), (
+            'the constrained polynomial fit must recover the independent rational solution'
+        )
+    assert terms['curve'].coef.value == terms['base'].coef.value - terms['ramp'].coef.value, (
+        'fit write-back must satisfy the declared relation exactly'
+    )
+    expected_sigma = math.sqrt(REFERENCE['dependent_variance'])
+    assert terms['curve'].coef.uncertainty == pytest.approx(expected_sigma, rel=2e-4, abs=1e-8), (
+        'dependent uncertainty must retain the independently derived off-diagonal covariance'
+    )
+    for index, name in enumerate(('base', 'ramp')):
+        assert terms[name].coef.uncertainty == pytest.approx(
+            math.sqrt(REFERENCE['covariance'][index][index]), rel=2e-4
+        ), (
+            'independent uncertainties must use the rational normal equations '
+            'and the independent degrees of freedom'
+        )
+    assert not terms['curve'].coef.free, (
+        'a participating LINEAR dependent must remain outside every solve'
+    )
+    project.save_as(tmp_path / 'saved')
+    text = (tmp_path / 'saved/analysis/analysis.edi').read_text()
+    assert '_fit_parameter.id' in text, 'the fit must persist its independent start rows'
+    fit_rows = [
+        line.split()[0]
+        for line in text.splitlines()
+        if line.startswith(('bank.background', 'experiment.background'))
+    ]
+    assert len(fit_rows) == 2, 'only the two independent coefficients may own fit-start rows'
+    assert not any('.3.coef' in row or '[2]' in row for row in fit_rows), (
+        'a dependent must never acquire an independent fit-start row'
+    )
+    project = undo_saved(project, tmp_path / 'undone')
+    terms = dict(zip(('base', 'ramp', 'curve'), project.experiment.background_terms, strict=True))
+    assert terms['base'].coef.value == 4, 'undo must restore the first independent start'
+    assert terms['ramp'].coef.value == 1, 'undo must restore both independent starts'
+    assert terms['curve'].coef.value == 3, (
+        'undo must recompute the non-identity dependent from restored independents'
+    )
+
+
+def test_independent_covariance_generator_reproduces_the_committed_reference():
+    actual = runpy.run_path(str(FIXTURE / 'generate.py'))['reference']()
+    assert actual == REFERENCE, (
+        'the covariance fixture must remain reproducible without either engine'
+    )
+
+
+def test_disabled_relation_stays_inactive_during_fit_and_can_be_reenabled(tmp_path):
+    project = coefficient_project()
+    relation = project.analysis.constraints['c']
+    relation.enabled = False
+    terms = project.experiment.background_terms
+    terms[2].coef.value = 4.25
+    t = np.asarray(REFERENCE['x']) / 40 - 1
+    expected = np.linalg.lstsq(
+        np.column_stack((np.ones_like(t), t)),
+        np.asarray(REFERENCE['observed']) - 4.25 * t * t,
+        rcond=None,
+    )[0]
+    project.analysis.fit()
+    assert terms[2].coef.value == pytest.approx(4.25, abs=0, rel=0), (
+        'a disabled relation must not be applied during trials or fit write-back'
+    )
+    assert np.allclose([terms[0].coef.value, terms[1].coef.value], expected, atol=2e-5), (
+        'disabled fitting must match the independent ordinary linear least-squares reference'
+    )
+    assert len(project.analysis.constraints) == 1, 'fitting must retain the disabled declaration'
+    project = undo_saved(project, tmp_path / 'undone')
+    terms = project.experiment.background_terms
+    relation = project.analysis.constraints['c']
+    assert not project.analysis.constraints['c'].enabled, (
+        'fit undo must not reactivate a disabled relation'
+    )
+    assert [terms[0].coef.value, terms[1].coef.value] == [4, 1], (
+        'fit undo must restore the independent starts while the relation remains disabled'
+    )
+    assert terms[2].coef.value == pytest.approx(4.25, abs=0, rel=0), (
+        'fit undo must retain the ordinary fixed target of a disabled relation'
+    )
+    relation.enabled = True
+    project.analysis.fit()
+    assert terms[2].coef.value == terms[0].coef.value - terms[1].coef.value, (
+        'reenabling before a fit must restore the relation through all fit paths'
+    )
+    assert terms[2].coef.value == pytest.approx(3, abs=2e-5), (
+        'the reenabled fit must recover the independent constrained solution'
+    )

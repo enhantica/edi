@@ -133,9 +133,9 @@ void FitViewModel::cancel() {
     }
 }
 
-void FitViewModel::undo() {
+bool FitViewModel::undo() {
     if (running_ || !can_undo_) {
-        return;
+        return false;
     }
     // Through the project's one write door, as an edit: the restore, then the calculation of the pre-fit
     // state on the worker (edi::Edit::undo_fit). The fit items describe a fit the model no longer holds.
@@ -143,7 +143,9 @@ void FitViewModel::undo() {
     if (owner_.apply(edi::Edit::undo_fit(project), false).isEmpty()) {
         setProgress(QString(), QString(), QString());
         results_->clear();
+        return true;
     }
+    return false;
 }
 
 void FitViewModel::sync() {
@@ -225,8 +227,10 @@ void FitViewModel::ended(const edi::FitReport& report) {
 void FitViewModel::setRunning(bool running) {
     if (running != running_) {
         running_ = running;
-        emit runningChanged();
+        // canUndo is settled before the change is announced, so a listener reading both sees one state:
+        // when a fit ends, the start state it can undo is already back.
         sync();
+        emit runningChanged();
     }
 }
 

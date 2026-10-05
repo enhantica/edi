@@ -103,6 +103,19 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     hooks.calculated = [this](std::uint64_t /*generation*/) { emit calculationFinished(); };
     preview_ = std::make_unique<edi::LivePreview>(*project_, *worker_, std::move(hooks));
     fit_ = new FitViewModel(*project_, *worker_, *this, this);
+    // A fit is the newest undoable change once it ends with a result (finished, cancelled or stopped
+    // early), as is a fit start state the loaded project already holds; its undo is one level, so a
+    // second fit in a row is the same entry.
+    const auto note_fit = [this] {
+        if (fit_->canUndo() && (undo_history_.empty() || undo_history_.back().has_value())) {
+            undo_history_.emplace_back(std::nullopt);
+        }
+        syncUndo();
+    };
+    connect(fit_, &FitViewModel::finished, this, note_fit);
+    connect(fit_, &FitViewModel::canUndoChanged, this, [this] { syncUndo(); });
+    connect(fit_, &FitViewModel::runningChanged, this, [this] { syncUndo(); });
+    note_fit();
     preview_->recalculate();
     publishCalculating();
 }
@@ -305,6 +318,53 @@ QString ProjectViewModel::apply(const edi::Edit& change, bool structural) {
     return {};
 }
 
+QString ProjectViewModel::apply_relation_edit(const edi::Edit& change) {
+    edi::RelationsUndo before = edi::capture_relations(*project_);
+    const QString refusal = apply(change, true);
+    if (refusal.isEmpty()) {
+        // The door's completion has run: what the edit changed is now known.
+        edi::keep_changed(before, *project_);
+        undo_history_.emplace_back(std::move(before));
+        syncUndo();
+    }
+    return refusal;
+}
+
+void ProjectViewModel::undo() {
+    syncUndo();
+    if (!can_undo_) {
+        return;
+    }
+    // The newest record is kept until its reversal succeeds: a refused restore (a parameter it names was
+    // removed or renamed since) leaves it in place, with the refusal as the message. A fit's undo can drop
+    // its own entry on the way (its start state is gone once restored), so only a record still there goes.
+    const std::size_t depth = undo_history_.size();
+    const bool undone =
+        undo_history_.back().has_value()
+            ? apply(edi::Edit::restore_relations(*project_, *undo_history_.back()), true).isEmpty()
+            : fit_->undo();
+    if (undone && undo_history_.size() == depth) {
+        undo_history_.pop_back();
+    }
+    syncUndo();
+}
+
+void ProjectViewModel::syncUndo() {
+    // Nothing is undone while a fit runs, as nothing is edited then. A fit entry whose start state is gone
+    // (undone, or replaced by a load) is no longer undoable; while a fit runs its start state only reads as
+    // unavailable, so the entry stays, and a refused fit leaves it as it was.
+    const bool running = fit_ != nullptr && fit_->running();
+    while (!running && !undo_history_.empty() && !undo_history_.back().has_value() &&
+           (fit_ == nullptr || !fit_->canUndo())) {
+        undo_history_.pop_back();
+    }
+    const bool can_undo = !running && !undo_history_.empty();
+    if (can_undo != can_undo_) {
+        can_undo_ = can_undo;
+        emit canUndoChanged();
+    }
+}
+
 void ProjectViewModel::setModified(bool modified) {
     if (modified != modified_) {
         modified_ = modified;
@@ -388,14 +448,7 @@ void ProjectViewModel::completeSymmetry() {
     // load and after every edit the model's dependents are re-derived from its independent values, through
     // the completion a fit itself applies. A structure crysta cannot resolve keeps what it holds — the
     // calculation says why.
-    for (const auto& structure : project_->structures) {
-        try {
-            edi::complete_model_cell(*structure);
-            edi::complete_model_positions(*structure);
-        } catch (const std::exception&) {
-            continue;
-        }
-    }
+    edi::apply_relations(*project_);
 }
 
 void ProjectViewModel::syncParameterTable(bool refresh_report) {

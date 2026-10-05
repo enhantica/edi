@@ -26,8 +26,8 @@ _atom_site.multiplicity
 _atom_site.occupancy
 _atom_site.adp_iso
 _atom_site.adp_type
-Co1 Co 0. 0. 0. a 4 1. 0.01 Biso
-Co2 Co 0.279() 0.25 0.985() c 4 1. 0.01() Biso
+Co1 Co 0. 0. 0. a 4 1. 0.01() Biso
+Co2 Co 0.279() 0.25 0.985() c 4 1. 0.01 Biso
 Si Si 0.094() 0.25 0.429() c 4 1. 0.01() Biso
 O1 O 0.091() 0.25 0.771() c 4 1. 0.01() Biso
 O2 O 0.448() 0.25 0.217() c 4 1. 0.01() Biso

@@ -11,6 +11,18 @@ ROOT = Path(__file__).resolve().parents[3]
 def test_cli_scan_contains_the_original_inputs():
     expected = json.loads((ROOT / 'tests/fixtures/c11_t62/scan-inputs.json').read_text())['files']
     project = ROOT / 'docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project'
+    extension = json.loads(
+        (ROOT / 'tests/fixtures/constraint_expressions/byte-pins.json').read_text()
+    )['cases']['repo:docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project']
+    public = json.loads(
+        (ROOT / 'tests/fixtures/e04_t12_public_release/saved-metadata.json').read_text()
+    )['repo:docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project']
+    assert public['prior_input_sha256'] == expected, (
+        'the metadata witness must retain every original owner scan identity'
+    )
+    assert extension['before']['input_sha256'] == public['input_sha256'], (
+        'the relation extension must retain the complete reviewed metadata-only witness'
+    )
     for relative, digest in expected.items():
         path = project / relative
         assert path.is_file(), f' scope 1: vendored CLI scan is missing original input {relative}'
@@ -19,6 +31,8 @@ def test_cli_scan_contains_the_original_inputs():
         )
         adaptation = adaptations.get(path.relative_to(ROOT).as_posix())
         expected_digest = digest
+        if relative in {'analysis/analysis.edi', 'structures/cosio.edi'}:
+            expected_digest = extension['after_input_sha256'][relative]
         if adaptation:
             assert adaptation['before_sha256'] == digest, (
                 'the scan metadata adaptation must retain the original owner input identity'

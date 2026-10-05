@@ -41,3 +41,9 @@ offline acceptance command, not a newly added CI test or a costly shared fixture
 The paired-input check and comparison refusal tests run in CI within their tier
 bounds. Frozen FullProf profile and downward-prefix controls remain in crysta;
 no acceptance command executes fp2k.
+
+**Re-pinned with the constraint restored.** The project now declares the CoSiO tutorial's aliases and
+`biso_Co2 = biso_Co1`. Co1 Biso is free from the tutorial's declared start, 0.3 (the copy had it fixed at 0.01), Co2
+Biso follows it, and the stale fit-start row of Co2's Biso is gone. The terminal reduced χ² moved 4.805953672 →
+4.800664903, still at 4 iterations, measured by `tools/checks/cli_projects.py --project` against crysta `91a319e2`,
+`OMP_NUM_THREADS=1`. `n_free` did not move: one Co Biso is free before and after.

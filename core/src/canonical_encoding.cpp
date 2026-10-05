@@ -4,10 +4,12 @@
 #include <bit>
 #include <cstdint>
 #include <cstdio>
+#include <map>
 #include <optional>
 #include <string>
 #include <vector>
 
+#include "edi/categories.hpp"
 #include "edi/model.hpp"
 #include "parameter_paths.hpp"  // kPeakSlots: the peak[] slot order the encoding walks
 
@@ -266,10 +268,11 @@ std::string canonical_encoding(const Project& project) {
 
 std::string geometry_inputs(const Structure& structure) {
     // Crysta's geometry inputs and no other field: the space group, the six cell values, the site
-    // rows with each site's id, type symbol, ADP type, coordinates, occupancy and ADP, and `geom`.
-    // The structure's name, its scattering lengths and a site's Wyckoff letter are pattern inputs
-    // only, so put_structure is not reused here: a write to one of them must leave the geometry
-    // current.
+    // rows with each site's id, type symbol, Wyckoff letter, ADP type, coordinates, occupancy and
+    // ADP, and `geom`. The letter is one because a geometry read applies the relations, and the
+    // letter selects a site's symmetry relation. The structure's name and its scattering lengths are
+    // pattern inputs only, so put_structure is not reused here: a write to one of them must leave
+    // the geometry current.
     //
     // Each input is encoded with the identity of its last write. Every one of them records its
     // own writes — a parameter's value, a text field, a site's id, `geom`'s two values, and the
@@ -293,6 +296,7 @@ std::string geometry_inputs(const Structure& structure) {
         put_text(out, site.id);
         put_u64(out, site.id.written());
         put_written(out, site.type_symbol);
+        put_written(out, site.wyckoff_letter);
         put_written(out, site.adp_type);
         for (const Parameter* value :
              {&site.fract_x, &site.fract_y, &site.fract_z, &site.occupancy, &site.adp_iso}) {
@@ -367,6 +371,42 @@ std::string calculation_inputs(const ItemVec<Structure>& structures,
     if (experiment.data) {
         put_u64(out, experiment.data->epoch.value());
         put_u64(out, experiment.data->written.value());
+    }
+    return out;
+}
+
+
+std::string relation_inputs(const ItemVec<ParameterAlias>& aliases,
+                            const ItemVec<ParameterConstraint>& constraints) {
+    std::string out;
+    put_u64(out, aliases.generation());
+    put_u64(out, aliases.size());
+    for (const auto& alias : aliases) {
+        put_text(out, alias->id.value());
+        put_written(out, alias->parameter_unique_name);
+    }
+    put_u64(out, constraints.generation());
+    put_u64(out, constraints.size());
+    for (const auto& constraint : constraints) {
+        put_text(out, constraint->id.value());
+        put_written(out, constraint->expression);
+        put_u64(out, constraint->enabled.get() ? 1 : 0);
+        put_u64(out, constraint->enabled.written());
+    }
+    // An expression reads only aliases, so the parameters they name are every source a relation has,
+    // in any block or bank. Each one's value and last write are inputs of whatever the relations reach.
+    if (const Project* project = aliases.host(); project != nullptr && !aliases.empty()) {
+        std::map<std::string, const Parameter*> by_name;
+        for (const NamedParameter& named : named_parameters(*project)) {
+            by_name.emplace(named.unique_name, named.parameter);
+        }
+        for (const auto& alias : aliases) {
+            const auto found = by_name.find(alias->parameter_unique_name.value());
+            put_u64(out, found != by_name.end() ? 1 : 0);
+            if (found != by_name.end()) {
+                put_written(out, found->second->value);
+            }
+        }
     }
     return out;
 }

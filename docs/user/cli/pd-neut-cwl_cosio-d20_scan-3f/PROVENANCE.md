@@ -37,3 +37,9 @@ reflection during its fit, went 3.887746 → 3.887590 at 10 iterations, measured
 `tools/checks/cli_projects.py` on crysta `adb3b700`. The other two files did not move.
 The 299.394 K pin moved at the 8th significant digit with it (4.382171604 → 4.382171634) and was
 re-pinned to its record value.
+
+**Re-pinned with the constraint restored.** The project declares the tutorial's aliases and `biso_Co2 = biso_Co1`
+again, as its crysta source does: Co1 Biso is refined and Co2 Biso follows it, where before Co1 was fixed and Co2
+refined alone. The pins moved: 52.345 K 4.784745 → 4.824059, 299.394 K 4.382172 → 4.428567, 497.379 K 3.887590 →
+3.888231 (4, 6 and 12 iterations; the last was 10), measured by `tools/checks/cli_projects.py` against crysta
+`91a319e2`, `OMP_NUM_THREADS=1`. `n_free` did not move.

@@ -4,6 +4,7 @@
 
 #include <QObject>
 #include <QString>
+#include <QStringList>
 #include <QtQml/qqmlregistration.h>
 
 #include "block_text.hpp"
@@ -45,6 +46,62 @@ class SequentialExtractListModel : public RowTableModel {
 
    private:
     const edi::Project& project_;
+};
+
+// The declared parameter aliases (`_alias`): `id`, editable as text, and `parameter`, the unique name of
+// the parameter it stands for, chosen from `parameterNames`; append, duplicate and remove as the atom sites
+// do.
+class AliasListModel : public RowTableModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to the analysis")
+    // Every refinable parameter of the project, by unique name, in the slot walk's order.
+    Q_PROPERTY(QStringList parameterNames READ parameterNames NOTIFY parameterNamesChanged)
+
+   public:
+    AliasListModel(edi::Project& project, ProjectEditor& editor, QObject* parent);
+    void sync();
+    QStringList parameterNames() const { return parameter_names_; }
+    Q_INVOKABLE bool setText(int row, const QString& role, const QString& value);
+    Q_INVOKABLE void append();
+    Q_INVOKABLE void duplicate(int row);
+    Q_INVOKABLE void remove(int row);
+
+   signals:
+    void parameterNamesChanged();
+
+   protected:
+    bool setRole(int row, const QString& role, const QVariant& value) override { return setText(row, role, value.toString()); }
+
+   private:
+    edi::Project& project_;
+    ProjectEditor& editor_;
+    QStringList parameter_names_;
+};
+
+// The declared constraints (`_constraint`): `id` and `expression`, editable as text, and `enabled` (a
+// disabled constraint stays in the project and is not applied); append, duplicate and remove as the
+// aliases.
+class ConstraintListModel : public RowTableModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to the analysis")
+
+   public:
+    ConstraintListModel(edi::Project& project, ProjectEditor& editor, QObject* parent);
+    void sync();
+    Q_INVOKABLE bool setText(int row, const QString& role, const QString& value);
+    Q_INVOKABLE bool setEnabled(int row, bool enabled);
+    Q_INVOKABLE void append();
+    Q_INVOKABLE void duplicate(int row);
+    Q_INVOKABLE void remove(int row);
+
+   protected:
+    bool setRole(int row, const QString& role, const QVariant& value) override;
+
+   private:
+    edi::Project& project_;
+    ProjectEditor& editor_;
 };
 
 // The persisted pre-fit start state (`_fit_parameter`, read-only: a fit writes it, undo restores it):
@@ -119,6 +176,8 @@ class AnalysisViewModel : public QObject {
     Q_PROPERTY(edi_app::SequentialFitViewModel* sequentialFit READ sequentialFit CONSTANT)
     Q_PROPERTY(edi_app::SequentialExtractListModel* sequentialExtract READ sequentialExtract CONSTANT)
     Q_PROPERTY(edi_app::FitStartListModel* fitStart READ fitStart CONSTANT)
+    Q_PROPERTY(edi_app::AliasListModel* aliases READ aliases CONSTANT)
+    Q_PROPERTY(edi_app::ConstraintListModel* constraints READ constraints CONSTANT)
     Q_PROPERTY(edi_app::CategoryListModel* categories READ categories CONSTANT)
     Q_PROPERTY(edi_app::BlockText* text READ text CONSTANT)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
@@ -146,6 +205,8 @@ class AnalysisViewModel : public QObject {
     SequentialFitViewModel* sequentialFit() const { return sequential_fit_; }
     SequentialExtractListModel* sequentialExtract() const { return sequential_extract_; }
     FitStartListModel* fitStart() const { return fit_start_; }
+    AliasListModel* aliases() const { return aliases_; }
+    ConstraintListModel* constraints() const { return constraints_; }
     CategoryListModel* categories() const { return categories_; }
     BlockText* text() const { return text_; }
     QString lastError() const { return last_error_; }
@@ -175,6 +236,8 @@ class AnalysisViewModel : public QObject {
     SequentialFitViewModel* sequential_fit_;
     SequentialExtractListModel* sequential_extract_;
     FitStartListModel* fit_start_;
+    AliasListModel* aliases_;
+    ConstraintListModel* constraints_;
     CategoryListModel* categories_;
     BlockText* text_;
 };

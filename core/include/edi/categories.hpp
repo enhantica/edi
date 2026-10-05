@@ -9,6 +9,7 @@
 // CW experiment stores the fourteen TOF peak terms). A field outside its profile's set is hidden
 // while fixed and shown, marked, while free (I15). A field symmetry fixes or ties to another is
 // shown and marked not refinable (edi ADR-0019): a page shows it disabled, with its implied value.
+// So is a field a declared constraint sets (ADR-0024), from the dependence crysta marks it with.
 
 #include <cstddef>
 #include <map>
@@ -37,6 +38,20 @@ struct Category {
 };
 
 namespace detail {
+
+// A field crysta marks dependent (symmetry or a declared constraint, ADR-0024) is not refinable,
+// whichever category shows it.
+inline void mark_dependents(std::vector<Category>& categories) {
+    for (Category& category : categories) {
+        for (std::vector<CategoryField>* fields : {&category.fields, &category.asymmetry}) {
+            for (CategoryField& field : *fields) {
+                if (field.parameter != nullptr && field.parameter->dependence != Dependence::Independent) {
+                    field.refinable = false;
+                }
+            }
+        }
+    }
+}
 
 // The TOF peak coefficients in the crysta writer's `.edi` order, and their storage.
 inline std::vector<std::pair<const char*, Parameter PeakBase::*>> tof_peak_fields() {
@@ -204,6 +219,7 @@ inline std::vector<Category> experiment_categories(ExperimentBase& experiment) {
     if (experiment.carried_reflections.has_value()) {
         categories.push_back({"refln", true, experiment.carried_reflections->rows.size()});
     }
+    detail::mark_dependents(categories);
     return categories;
 }
 
@@ -237,6 +253,7 @@ inline std::vector<Category> structure_categories(Structure& structure) {
     }
     categories.push_back(sites);
     categories.push_back({"scattering_length", true, structure.scattering_lengths_fm.size()});
+    detail::mark_dependents(categories);
     return categories;
 }
 
@@ -248,12 +265,38 @@ struct FitStartRow {
 };
 std::vector<FitStartRow> fit_start_rows(const Project& project);
 
+// A refinable parameter by its diffraction-lib unique name (`<datablock>.<category>[.<entry>].<name>`,
+// the `_alias.parameter_unique_name` spelling), in the slot walk's order: the parameters a new alias
+// can name. A dependent is left out, since its relation sets it. Defined beside the walk (io.cpp).
+struct NamedParameter {
+    std::string unique_name;
+    const Parameter* parameter = nullptr;
+};
+std::vector<NamedParameter> named_parameters(const Project& project);
+
+// The dependents (each parameter a relation sets), by unique name, in the slot walk's order.
+std::vector<NamedParameter> named_dependents(const Project& project);
+
+// The same walk over a project being written: each refinable parameter by its unique name.
+struct NamedSlot {
+    std::string unique_name;
+    Parameter* parameter = nullptr;
+};
+std::vector<NamedSlot> named_slots(Project& project);
+
 // The analysis categories shown (D-i): the minimizer and the fitting mode always; the scan declaration
 // in a scan mode. Every loop the block writes is shown as its own category ("loop in .edi — table in
 // gui"): the joint weights always (the writer writes them in every mode; admitted in joint mode only),
 // the scan extraction rules and the fit start state when there are any.
 inline std::vector<Category> analysis_categories(const Project& project) {
     std::vector<Category> categories{{"minimizer"}, {"fitting_mode"}};
+    // The declared aliases and constraints, in diffraction-lib's analysis order.
+    if (!project.aliases.empty()) {
+        categories.push_back({"alias", true, project.aliases.size()});
+    }
+    if (!project.constraints.empty()) {
+        categories.push_back({"constraint", true, project.constraints.size()});
+    }
     Category joint{"joint_fit", true, project.experiments.size()};
     joint.admitted = project.fitting_mode == "joint";
     categories.push_back(joint);

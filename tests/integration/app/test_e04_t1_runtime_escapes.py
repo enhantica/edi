@@ -34,8 +34,11 @@ def runner():
     return binary
 
 
-def test_owner_amendments_execute_in_the_production_qml_host():
-    run = subprocess.run(
+@pytest.fixture(scope='module')
+def owner_amendment_run():
+    # One real Qt host supplies all independently required boundary receipts.
+    # Record its launch and GUI exercise once with the module-cost instrument.
+    return subprocess.run(
         [str(runner()), '-input', str(APP_TESTS / 'tst_e04_t1_amendments.qml'), '-o', '-,txt'],
         env={**os.environ, 'QT_QPA_PLATFORM': 'offscreen', 'QT_QUICK_BACKEND': 'software'},
         capture_output=True,
@@ -43,12 +46,33 @@ def test_owner_amendments_execute_in_the_production_qml_host():
         timeout=60,
         check=False,
     )
+
+
+def test_owner_amendments_execute_in_the_production_qml_host(owner_amendment_run):
+    run = owner_amendment_run
     output = run.stdout + run.stderr
     assert run.returncode == 0, (
         f'owner amendments: editability, X-rays and categories work in the real app: {output}'
     )
     assert 'E04T1OwnerAmendments' in output and '0 failed' in output, (
         'owner amendments: a zero-test run cannot attest the new QML acceptance cases'
+    )
+
+
+@pytest.mark.parametrize(
+    'boundary',
+    [
+        'test_library_settable_scalars_and_derived_readonly',
+        'test_library_settable_table_columns_reach_core',
+        'test_settable_fields_are_editable_in_the_page',
+        'test_visible_xray_and_background_selectors_and_no_split_groups',
+    ],
+)
+def test_owner_amendment_receipts_cover_every_original_gui_boundary(owner_amendment_run, boundary):
+    output = owner_amendment_run.stdout + owner_amendment_run.stderr
+    assert f'PASS   : edi_app::E04T1OwnerAmendments::{boundary}()' in output, (
+        'each original GUI boundary must actually execute and pass in the production host: '
+        + boundary
     )
 
 

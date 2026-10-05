@@ -14,6 +14,15 @@ produced by edi or crysta.
 
 ## Powder, Neutron, Constant Wavelength
 
+### Co2SiO4 structure
+
+- [pd-neut-cwl CoSiO Biso tied](pd-neut-cwl_cosio-d20_biso-tied.ipynb) –
+  **pseudo-Voigt** profile on the D20 pattern at 497 K, first as FullProf's
+  converged fit with every parameter fixed, then fitted from FullProf's
+  start with the **constraint** `biso_Co2 = biso_Co1` (FullProf ties the two
+  with a shared codeword): both Biso come out equal and within five combined
+  standard uncertainties of FullProf's.
+
 ### LaB6 structure
 
 - [pd-neut-cwl LaB6 basic](pd-neut-cwl_LaB6_basic.ipynb) –

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import importlib
 import os
@@ -23,6 +24,7 @@ from conftest import (
     project_record_without_fields,
     project_tree_parts,
 )
+from tests.fixtures.ncaf_free_flags import canonicalize
 
 ROOT = Path(__file__).resolve().parents[3]
 LIB = importlib.import_module('edi')
@@ -94,6 +96,8 @@ def _stage_project(destination: Path, *, starting_uncertainty: str = '40') -> Pa
 def _stage_positional_project(destination: Path) -> Path:
     case = _crysta_root() / 'tests/fitting/ncaf-wish-3bank-s5'
     shutil.copytree(case / 'project', destination)
+    structure = destination / 'structures/ncaf.edi'
+    structure.write_text(canonicalize(structure.read_text()))
     bounded = (case / 'bounded-analysis/analysis.edi').read_text(encoding='utf-8')
     assert '_minimizer.max_iterations 2' in bounded, (
         'the positional-basic witness must retain its independently declared bounded fit'
@@ -407,7 +411,7 @@ def _assert_edi_axis_snapshot_roundtrip(tmp_path: Path, kinds: tuple[str, ...]) 
     fitted = _stage_positional_project(tmp_path / 'axis-priors')
     structure_file = fitted / 'structures/ncaf.edi'
     structure = structure_file.read_text(encoding='utf-8')
-    original = 'Al1 Al 0.25193(10) 0.25193(10) 0.25193(10) a 8'
+    original = 'Al1 Al 0.25193(10) 0.25193 0.25193 a 8'
     assert structure.count(original) == 1, (
         'F1 prior-state witness must replace exactly the declared tied Al1 site'
     )
@@ -415,21 +419,28 @@ def _assert_edi_axis_snapshot_roundtrip(tmp_path: Path, kinds: tuple[str, ...]) 
     structure_file.write_text(
         structure.replace(original, f'Al1 Al {tokens} a 8'), encoding='utf-8'
     )
-    before = _axis_state(fitted)
+    with (
+        pytest.warns(UserWarning, match='crysta.domain.dependent_free_ignored')
+        if any(kind != 'fixed' for kind in kinds[1:])
+        else contextlib.nullcontext()
+    ):
+        before = _axis_state(fitted)
     for axis, kind in zip(before, kinds, strict=True):
-        assert before[axis][0] == 0.25193 and before[axis][2] is (kind != 'fixed'), (
-            'F1 each EDI prior token must load its exact declared value and free flag'
-        )
+        assert before[axis][0] == 0.25193 and before[axis][2] is (
+            kind != 'fixed' and axis == 'fract_x'
+        ), 'F1 each EDI prior token must load its exact declared value and free flag'
         if kind != 'fixed':
             assert before[axis][1] == uncertainties[kind], (
                 'F1/F2 each free-axis bracket must retain its declared optional uncertainty'
             )
+    LIB.Project.load(fitted).save()
+    before = _axis_state(fitted)
     record = _run(
         _local_cli(), 'fit', str(fitted), '--verbosity', 'full', '--report', 'machine'
     ).stdout
     after_fit = _axis_state(fitted)
-    assert any(after_fit[axis][0] != before[axis][0] for axis in before), (
-        'F1 prior-state witness must actually move the tied basic before undo'
+    assert any(after_fit[axis][0] != before[axis][0] for axis in before) is before['fract_x'][2], (
+        'only a free independent x leader may move the tied coordinate during fitting'
     )
     assert all(after_fit[axis][2] is before[axis][2] for axis in before), (
         'F1 fitting and saving must preserve each tied axis free flag'
@@ -438,9 +449,9 @@ def _assert_edi_axis_snapshot_roundtrip(tmp_path: Path, kinds: tuple[str, ...]) 
     assert len(snapshot_ids) == len(set(snapshot_ids)) == _machine_number(record, 'n_free'), (
         'F1 persisted snapshot must contain exactly one unique row per fitted basic'
     )
-    assert sum(name.startswith('structure.Al1.fract_') for name in snapshot_ids) == 1, (
-        'F1 the tied Al1 basic must occupy one snapshot row rather than its axis count'
-    )
+    assert sum(name.startswith('structure.Al1.fract_') for name in snapshot_ids) == int(
+        before['fract_x'][2]
+    ), 'F1 the tied Al1 basic must occupy one snapshot row rather than its axis count'
     first = _run(_local_cli(), 'undo', str(fitted))
     restored = _axis_state(fitted)
     before_second = _tree_bytes(fitted)
@@ -568,7 +579,7 @@ def _stage_result_axes(destination: Path, tokens: tuple[str, ...]) -> Path:
     staged = _stage_positional_project(destination)
     path = staged / 'structures/ncaf.edi'
     text = path.read_text(encoding='utf-8')
-    original = 'Al1 Al 0.25193(10) 0.25193(10) 0.25193(10) a 8'
+    original = 'Al1 Al 0.25193(10) 0.25193 0.25193 a 8'
     assert text.count(original) == 1, 'the result witness must replace exactly the tied Al1 site'
     path.write_text(text.replace(original, f'Al1 Al {" ".join(tokens)} a 8'), encoding='utf-8')
     return staged
@@ -589,17 +600,26 @@ def test_edi_tied_result_uncertainty_reaches_every_free_axis(
     staged = _stage_result_axes(
         tmp_path / 'input', tuple('0.25193' + suffixes[kind] for kind in kinds)
     )
+    project = LIB.Project.load(staged)
+    project.save()
     before = _axis_state(staged)
     project = LIB.Project.load(staged)
     result = project.fit_joint()
     keys = [key for key in result.uncertainty if 'Al1' in key and '.fract_' in key]
-    assert len(keys) == 1, 'the returned result must identify exactly one Al1 basic'
-    expected = float(result.uncertainty[keys[0]])
-    record = LIB.machine_report(project, result, LIB.VerbosityEnum.FULL)
-    reported = _machine_number(record, 'param.Al1.fract_x.uncertainty')
-    assert reported == pytest.approx(expected, rel=1e-9, abs=1e-15), (
-        'F1 returned uncertainty and machine record must represent the same fitted basic'
+    assert len(keys) == int(before['fract_x'][2]), (
+        'the returned result may name a tied basic only when its independent x is free'
     )
+    expected = float(result.uncertainty[keys[0]]) if keys else before['fract_x'][1]
+    record = LIB.machine_report(project, result, LIB.VerbosityEnum.FULL)
+    if keys:
+        reported = _machine_number(record, 'param.Al1.fract_x.uncertainty')
+        assert reported == pytest.approx(expected, rel=1e-9, abs=1e-15), (
+            'the returned uncertainty and machine record must represent the same independent basic'
+        )
+    else:
+        assert 'param.Al1.fract_x.uncertainty=' not in record, (
+            'an ignored follower flag must never appear as a solved uncertainty column'
+        )
     assert all(expected != before[axis][1] for axis in before if before[axis][2]), (
         'F1 every free-axis seed must differ from the fitted uncertainty in this witness'
     )
@@ -615,7 +635,7 @@ def test_edi_tied_result_uncertainty_reaches_every_free_axis(
     for axis, prior in before.items():
         parameter = getattr(site, axis)
         assert parameter.free is prior[2], 'F1 result landing must retain declared free flags'
-        if prior[2]:
+        if prior[2] or (mode == 'memory' and keys):
             assert parameter.uncertainty == pytest.approx(expected, rel=1e-9, abs=1e-15), (
                 f'F1 {mode} must carry the fitted uncertainty on every declared-free tied axis: '
                 f'{axis}, {kinds}, expected {expected}, got {parameter.uncertainty}'
@@ -643,17 +663,13 @@ def test_edi_first_fit_refuses_conflicting_tied_uncertainties(
     engine = subprocess.run(
         [str(_crysta_cli()), *arguments], capture_output=True, text=True, check=False, timeout=30
     )
-    assert engine.returncode != 0 and 'uncertaint' in engine.stderr.lower(), (
-        'F1 the independent engine must refuse the genuinely conflicting initial declarations: '
-        + engine.stdout
-        + engine.stderr
+    assert engine.returncode == 0 and 'dependent_free_ignored' in engine.stderr, (
+        'the engine must warn and ignore conflicting follower flags while retaining the x leader'
     )
     edi = subprocess.run(
         [*_local_cli(), *arguments], capture_output=True, text=True, check=False, timeout=30
     )
-    assert edi.returncode != 0 and 'uncertaint' in edi.stderr.lower(), (
-        'F1 edi must retain the engine refusal of conflicting initial tied declarations: '
-        + edi.stdout
-        + edi.stderr
+    assert edi.returncode == 0 and 'dependent_free_ignored' in edi.stderr, (
+        'edi must warn and ignore conflicting follower flags without redirecting their leader'
     )
     assert _tree_bytes(staged) == before, 'a refused fit must not change the input project'

@@ -1,0 +1,13 @@
+_edi.schema_version 3
+_fitting_mode.type single
+_minimizer.max_iterations 80
+loop_
+_alias.id
+_alias.parameter_unique_name
+a phase.atom_site.A.adp_iso
+b phase.atom_site.B.adp_iso
+c bank.instrument.calib_twotheta_offset
+loop_
+_constraint.expression
+"c = b/10"
+"b = 2*a + 1"

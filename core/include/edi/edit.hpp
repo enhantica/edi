@@ -6,8 +6,10 @@
 //
 // An Edit is one model operation that is all-or-nothing: it throws its refusal having written
 // nothing, or it completes. The door therefore has nothing to undo, and it promises no undo: it takes
-// an Edit and nothing else. An Edit is made only by the operations below — it cannot be made from a
-// callable — so a change that writes and then throws cannot be passed to the door. The set is closed
+// an Edit and nothing else. An undo is itself an Edit, built from a record taken before the change:
+// undo_fit from a fit's start state, restore_relations from an edit of the relations (RelationsUndo).
+// An Edit is made only by the operations below — it cannot be made from a callable — so a change that
+// writes and then throws cannot be passed to the door. The set is closed
 // and lives here; an operation the app needs is added here, with the rule that makes it whole:
 //   - one assignment (`assign`): it cannot fail;
 //   - a validated setter (the named ones, the ids' among them): it checks first, with the library's
@@ -37,8 +39,55 @@
 #include "edi/model.hpp"
 #include "edi/parameter_walk.hpp"
 #include "edi/selectors.hpp"
+#include "edi/categories.hpp"
 
 namespace edi {
+
+// edi ADR-0024: an edit of the declared relations, as undo restores it. The alias and constraint rows
+// before the edit, and the state then of every parameter the edit changed (a dependent's implied value,
+// a free flag a new relation cleared, an uncertainty), each by its unique name. Taken with
+// capture_relations before the edit and narrowed with keep_changed after it, as undo_fit's capture is
+// taken at a fit's start.
+struct RelationsUndo {
+    struct ParameterState {
+        std::string unique_name;
+        double value = 0.0;
+        std::optional<double> uncertainty;
+        bool free = false;
+    };
+    std::vector<ParameterAlias> aliases;
+    std::vector<ParameterConstraint> constraints;
+    std::vector<ParameterState> parameters;
+};
+
+inline RelationsUndo capture_relations(Project& project) {
+    RelationsUndo before;
+    for (const auto& alias : project.aliases) {
+        before.aliases.push_back(*alias);
+    }
+    for (const auto& constraint : project.constraints) {
+        before.constraints.push_back(*constraint);
+    }
+    for (const NamedSlot& slot : named_slots(project)) {
+        before.parameters.push_back({slot.unique_name, slot.parameter->value.get(),
+                                     slot.parameter->uncertainty.get(), slot.parameter->free.get()});
+    }
+    return before;
+}
+
+// After the edit: keeps only the parameters whose state it changed.
+inline void keep_changed(RelationsUndo& before, Project& project) {
+    std::map<std::string, const Parameter*> now;
+    for (const NamedSlot& slot : named_slots(project)) {
+        now.emplace(slot.unique_name, slot.parameter);
+    }
+    std::erase_if(before.parameters, [&now](const RelationsUndo::ParameterState& state) {
+        const auto found = now.find(state.unique_name);
+        return found != now.end() && found->second->value.get() == state.value &&
+               found->second->uncertainty.get() == state.uncertainty &&
+               found->second->free.get() == state.free;
+    });
+}
 
 class Edit {
    public:
@@ -141,6 +190,19 @@ class Edit {
             row.structure_id = id;
         });
     }
+    // An alias's or a constraint's id, which keys it in the project's collection.
+    static Edit rename_alias(ParameterAlias& alias, std::string id) {
+        return Edit([&alias, id = std::move(id)] {
+            require_model_owner<ParameterAlias>(alias.id, "the alias");
+            alias.id = id;
+        });
+    }
+    static Edit rename_constraint(ParameterConstraint& constraint, std::string id) {
+        return Edit([&constraint, id = std::move(id)] {
+            require_model_owner<ParameterConstraint>(constraint.id, "the constraint");
+            constraint.id = id;
+        });
+    }
     static Edit rename_scattering_length(Structure& structure, std::string from, std::string to) {
         return Edit([&structure, from = std::move(from), to = std::move(to)] {
             edi::rename_scattering_length(structure, from, to);
@@ -149,14 +211,20 @@ class Edit {
 
     // --- Rows -------------------------------------------------------------------------------------
     // One row added to, or removed from, one of the model's collections, by its own row type: atom
-    // sites, background points and texture rows are added; those, structures and experiments are
-    // removed. `erase` refuses a row that is not there.
+    // sites, background points, texture rows, aliases and constraints are added; those, structures and
+    // experiments are removed. `erase` refuses a row that is not there.
     static Edit append(ItemVec<AtomSite>& rows, AtomSite row) { return appending(rows, std::move(row)); }
     static Edit append(ItemVec<LineSegment>& rows, LineSegment row) { return appending(rows, std::move(row)); }
     static Edit append(ItemVec<PrefOrient>& rows, PrefOrient row) { return appending(rows, std::move(row)); }
+    static Edit append(ItemVec<ParameterAlias>& rows, ParameterAlias row) { return appending(rows, std::move(row)); }
+    static Edit append(ItemVec<ParameterConstraint>& rows, ParameterConstraint row) {
+        return appending(rows, std::move(row));
+    }
     static Edit erase(ItemVec<AtomSite>& rows, std::size_t index) { return erasing(rows, index); }
     static Edit erase(ItemVec<LineSegment>& rows, std::size_t index) { return erasing(rows, index); }
     static Edit erase(ItemVec<PrefOrient>& rows, std::size_t index) { return erasing(rows, index); }
+    static Edit erase(ItemVec<ParameterAlias>& rows, std::size_t index) { return erasing(rows, index); }
+    static Edit erase(ItemVec<ParameterConstraint>& rows, std::size_t index) { return erasing(rows, index); }
     static Edit erase(ItemVec<Structure>& rows, std::size_t index) { return erasing(rows, index); }
     static Edit erase(ItemVec<BraggPdExperiment>& rows, std::size_t index) { return erasing(rows, index); }
     // An excluded region: its row added at the end, removed, or one of its two bounds assigned. The
@@ -223,6 +291,43 @@ class Edit {
                 all.push_back(std::make_shared<BraggPdExperiment>(experiment));
             }
             project.experiments.assign(std::move(all));
+        });
+    }
+
+    // An edit of the relations undone (edi ADR-0024): the alias and constraint rows as they were, and each
+    // parameter the edit changed back to its state then. Every parameter is resolved first, so one whose
+    // row was removed since refuses with nothing written; the rows were admitted before, so the
+    // assignments cannot refuse. The door's completion then re-derives every mark and implied value.
+    static Edit restore_relations(Project& project, RelationsUndo before) {
+        return Edit([&project, before = std::move(before)] {
+            std::map<std::string, Parameter*> by_name;
+            for (const NamedSlot& slot : named_slots(project)) {
+                by_name.emplace(slot.unique_name, slot.parameter);
+            }
+            std::vector<std::pair<Parameter*, const RelationsUndo::ParameterState*>> targets;
+            for (const RelationsUndo::ParameterState& state : before.parameters) {
+                const auto found = by_name.find(state.unique_name);
+                if (found == by_name.end()) {
+                    throw std::invalid_argument("undo: the parameter '" + state.unique_name +
+                                                "' is no longer in the project");
+                }
+                targets.emplace_back(found->second, &state);
+            }
+            std::vector<std::shared_ptr<ParameterAlias>> aliases;
+            for (const ParameterAlias& row : before.aliases) {
+                aliases.push_back(std::make_shared<ParameterAlias>(row));
+            }
+            std::vector<std::shared_ptr<ParameterConstraint>> constraints;
+            for (const ParameterConstraint& row : before.constraints) {
+                constraints.push_back(std::make_shared<ParameterConstraint>(row));
+            }
+            project.aliases.assign(std::move(aliases));
+            project.constraints.assign(std::move(constraints));
+            for (const auto& [parameter, state] : targets) {
+                parameter->value = state->value;
+                parameter->uncertainty = state->uncertainty;
+                parameter->free = state->free;
+            }
         });
     }
 

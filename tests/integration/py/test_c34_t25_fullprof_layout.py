@@ -449,10 +449,11 @@ def test_no_unaccounted_project_homes_or_invented_instruments():
         'pd-xray-cwl_lif_single',
         'pd-xray-cwl_lif_single-polarization',
         'pd-neut-cwl_lbco-hrpt_preferred-orientation',
+        'pd-neut-cwl_cosio-d20_biso-tied',
     }
     for home, names in [
         ('verification', set(BASE) | added_verification_projects),
-        ('fitting', FITTING),
+        ('fitting', FITTING | {'pd-neut-cwl_cosio-d20_biso-tied'}),
     ]:
         root = ROOT / f'knowledge/{home}/fullprof'
         assert root.is_dir(), ' both FullProf homes must exist'

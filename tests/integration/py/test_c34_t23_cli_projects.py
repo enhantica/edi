@@ -23,6 +23,8 @@ import pytest
 import yaml
 from mkdocs.config import load_config
 
+from tests.fixtures.constraint_expressions.cosio_seed_bytes import legacy_seed
+from tests.fixtures.constraint_expressions.ncaf_follower_bytes import historical_followers
 from tests.integration.py.ci_runner_contract import self_hosted_runners
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -121,7 +123,10 @@ def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id):
                     '_minimizer.type crysta' if line.startswith('_minimizer.type ') else line
                     for line in expected_lines
                 ]
-            assert retained_lines(path.read_text()) == expected_lines, (
+            contents = path.read_bytes()
+            if project_id == 'cosio-d20-scan-3f':
+                contents = legacy_seed('analysis/analysis.edi', contents)
+            assert retained_lines(contents.decode()) == expected_lines, (
                 ' seed adaptation changes only the seven declared minimizers to crysta; '
                 ' descent/tolerance additions remain the only other permitted changes'
             )
@@ -159,6 +164,20 @@ def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id):
             ).hexdigest()
             assert restored == expected[name], (
                 ' calculator adaptation retains every other byte of the original seed'
+            )
+            continue
+        if (project_id, name) in {
+            ('cosio-d20-scan-3f', 'project/structures/cosio.edi'),
+            ('ncaf-wish-3bank-s5', 'project/structures/ncaf.edi'),
+        }:
+            filename = name.removeprefix('project/')
+            transform = legacy_seed if project_id.startswith('cosio') else historical_followers
+            raw = transform(filename, path.read_bytes())
+            restored = hashlib.sha1(
+                b'blob ' + str(len(raw)).encode() + b'\0' + raw, usedforsecurity=False
+            ).hexdigest()
+            assert restored == expected[name], (
+                'only the declared Co Biso or NCAF follower flags may alter a seed structure'
             )
             continue
         assert blob_id(path) == expected[name], (

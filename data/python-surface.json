@@ -77,11 +77,141 @@
      "verdict": "public"
     }
    },
+   "Alias": {
+    "id": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Alias.id",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "param": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Alias.param",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "parameter_unique_name": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Alias.parameter_unique_name",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "parameters": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Alias.parameters",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "Aliases": {
+    "add": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CategoryCollection.add",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "clear": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.clear",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "create": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Aliases.create",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "items": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.items",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "keys": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.keys",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "names": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.names",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "remove": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.remove",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "values": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.values",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
    "Analysis": {
+    "aliases": {
+     "need": {
+      "by": "deviation",
+      "ref": "D76",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "calculate": {
      "need": {
       "by": "counterpart",
       "ref": "Analysis.calculate",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "constraints": {
+     "need": {
+      "by": "deviation",
+      "ref": "D76",
       "verdict": "keep"
      },
      "reason": "C",
@@ -211,7 +341,7 @@
     "add": {
      "need": {
       "by": "counterpart",
-      "ref": "CategoryCollection.add",
+      "ref": "AtomSites.add",
       "verdict": "keep"
      },
      "reason": "C",
@@ -220,7 +350,7 @@
     "clear": {
      "need": {
       "by": "counterpart",
-      "ref": "CollectionBase.clear",
+      "ref": "CategoryCollection.clear",
       "verdict": "keep"
      },
      "reason": "C",
@@ -652,6 +782,163 @@
      "need": {
       "by": "counterpart",
       "ref": "CategoryItem.parameters",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "Constraint": {
+    "enabled": {
+     "need": {
+      "by": "deviation",
+      "ref": "D76",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "expression": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Constraint.expression",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "id": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Constraint.id",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "lhs_alias": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Constraint.lhs_alias",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "rhs_expr": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Constraint.rhs_expr",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "Constraints": {
+    "add": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CategoryCollection.add",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "clear": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CategoryCollection.clear",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "create": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Constraints.create",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "disable": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Constraints.disable",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "enable": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Constraints.enable",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "enabled": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Constraints.enabled",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "items": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.items",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "keys": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.keys",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "names": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.names",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "remove": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.remove",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "show": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Constraints.show",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "values": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.values",
       "verdict": "keep"
      },
      "reason": "C",
@@ -2286,6 +2573,15 @@
      "reason": "C",
      "verdict": "public"
     },
+    "symmetry_constrained": {
+     "need": {
+      "by": "counterpart",
+      "ref": "GenericParameter.symmetry_constrained",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "uncertainty": {
      "need": {
       "by": "deviation",
@@ -2299,6 +2595,15 @@
      "need": {
       "by": "counterpart",
       "ref": "GenericNumericDescriptor.units",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "user_constrained": {
+     "need": {
+      "by": "counterpart",
+      "ref": "GenericParameter.user_constrained",
       "verdict": "keep"
      },
      "reason": "C",
@@ -4602,6 +4907,24 @@
     "reason": "C",
     "verdict": "public"
    },
+   "Alias": {
+    "need": {
+     "by": "counterpart",
+     "ref": "Alias",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "Aliases": {
+    "need": {
+     "by": "counterpart",
+     "ref": "Aliases",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
    "Analysis": {
     "need": {
      "by": "counterpart",
@@ -4669,6 +4992,24 @@
     "need": {
      "by": "counterpart",
      "ref": "Cell",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "Constraint": {
+    "need": {
+     "by": "counterpart",
+     "ref": "Constraint",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "Constraints": {
+    "need": {
+     "by": "counterpart",
+     "ref": "Constraints",
      "verdict": "keep"
     },
     "reason": "C",
@@ -5371,10 +5712,34 @@
     "supported_tags"
    ]
   },
+  "Alias": {
+   "kind": "class",
+   "members": [
+    "id",
+    "param",
+    "parameter_unique_name",
+    "parameters"
+   ]
+  },
+  "Aliases": {
+   "kind": "class",
+   "members": [
+    "add",
+    "clear",
+    "create",
+    "items",
+    "keys",
+    "names",
+    "remove",
+    "values"
+   ]
+  },
   "Analysis": {
    "kind": "class",
    "members": [
+    "aliases",
     "calculate",
+    "constraints",
     "descent",
     "fit",
     "fitting_mode"
@@ -5472,6 +5837,33 @@
     "length_b",
     "length_c",
     "parameters"
+   ]
+  },
+  "Constraint": {
+   "kind": "class",
+   "members": [
+    "enabled",
+    "expression",
+    "id",
+    "lhs_alias",
+    "rhs_expr"
+   ]
+  },
+  "Constraints": {
+   "kind": "class",
+   "members": [
+    "add",
+    "clear",
+    "create",
+    "disable",
+    "enable",
+    "enabled",
+    "items",
+    "keys",
+    "names",
+    "remove",
+    "show",
+    "values"
    ]
   },
   "CwlInstrumentBase": {
@@ -5793,8 +6185,10 @@
     "name",
     "start_uncertainty",
     "start_value",
+    "symmetry_constrained",
     "uncertainty",
     "units",
+    "user_constrained",
     "value"
    ]
   },

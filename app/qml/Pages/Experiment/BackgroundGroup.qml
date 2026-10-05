@@ -46,8 +46,8 @@ Column {
 
             EaComponents.TableView {
                 objectName: "background.list"
-                // At most five rows, then it scrolls (the owner; edi ADR-0017 §3).
-                maxRowCountShow: 5
+                // At most four rows, then it scrolls (the owner, 2026-10-04; edi ADR-0017 §3).
+                maxRowCountShow: 4
                 defaultInfoText: qsTr("No background points")
                 model: group.points
 

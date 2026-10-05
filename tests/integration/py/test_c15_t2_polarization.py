@@ -218,6 +218,8 @@ def test_c33_owned_page_is_the_measured_filename_difference():
     baseline = json.loads((FIXTURE / 'page-baseline.json').read_text())
     before = set(baseline['before_pages'])
     after = {p.stem for p in (ROOT / 'docs/dev/verification').glob('*.py')}
+    # ADR-0078 adds its separately gated tied-Biso page; keep this task's delta exact.
+    after.discard('pd-neut-cwl_cosio-d20_biso-tied')
     assert before <= after and after - before == {'pd-xray-cwl_LiF_single_polarization'}, (
         ' C33 filename difference must contain exactly its owned polarization page'
     )

@@ -36,14 +36,14 @@ EaComponents.ApplicationWindow {
             ToolTip.text: qsTr("Save current state of the project")
             onClicked: window.saveProject()
         },
-        // Undo of a fit: enabled while the model holds a fit's start state, after a finished or cancelled fit; it
-        // restores the pre-fit state (edi undo_fit, one level).
+        // Undo: the newest recorded change, an edit of the aliases or constraints or a fit, in the order they
+        // were made (edi ADR-0024); a fit restores its pre-fit state (edi undo_fit, one level).
         EaElements.ToolButton {
             objectName: "appBar.button.undo"
-            enabled: Session.project !== null && Session.project.fit.canUndo
+            enabled: Session.project !== null && Session.project.canUndo
             fontIcon: "undo"
-            ToolTip.text: qsTr("Undo the last fit")
-            onClicked: Session.project.fit.undo()
+            ToolTip.text: qsTr("Undo the last change")
+            onClicked: Session.project.undo()
         },
         EaElements.ToolButton {
             objectName: "appBar.button.redo"

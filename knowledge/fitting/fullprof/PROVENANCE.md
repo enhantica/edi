@@ -10,6 +10,7 @@ block. Every project here has a verification twin under the same id in the verif
 
 | id | what it fits | origin |
 | --- | --- | --- |
+| `pd-neut-cwl_cosio-d20_biso-tied` | Co2SiO4 (D20, 497 K), Biso of Co1 and Co2 tied as one parameter, CW | the CoSiO D20 FullProf start with the Co Biso tie, a reference for constraints |
 | `pd-neut-cwl_lab6-11b-echidna_tch-fcj` | LaB6 (11B), TCH (x) FCJ, CW | owner-authored fit (edi #74) |
 | `pd-neut-cwl_yap-spodi_3k` | YAlO3 + Al2O3, two phases, CW | owner-supplied (first proposed as edi PR #75) |
 | `pd-neut-tof_cecoal-polaris_chebyshev` | CeCoAl3, Chebyshev background, TOF | FullProf `Examples/` |

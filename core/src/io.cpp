@@ -1837,78 +1837,102 @@ int fixed_round_trip_ndec(double value) {
     return 340;
 }
 
-// The fit-state slot walk: one (id, Parameter*) pair per refinable scalar, in crysta's
-// storage/dictionary order, mirroring crysta's core/fit_state.hpp byte-for-byte (the id grammar
-// is the shared `.edi` `_fit_parameter.id` schema; the two writers must emit identical rows for
-// one project). One walk serves writer and loader, so the two cannot drift.
+// The parameter slot walk: per refinable scalar, its `_fit_parameter.id` slot, its diffraction-lib
+// unique name (`<datablock>.<category>[.<entry>].<name>`, the `_alias.parameter_unique_name`
+// spelling) and the parameter, in crysta's storage/dictionary order, mirroring crysta's
+// core/fit_state.hpp byte-for-byte (the slot grammar is the shared `.edi` `_fit_parameter.id`
+// schema; the two writers must emit identical rows for one project). One walk serves writer and
+// loader, and both spellings, so they cannot drift.
+template <typename ParameterPtr>
+struct ParameterSlot {
+    std::string id;
+    std::string unique_name;
+    ParameterPtr parameter;
+};
+
 template <typename ProjectT>
-auto fit_state_slots(ProjectT& project) {
+auto parameter_slots(ProjectT& project) {
     using ParameterPtr = decltype(&project.structures.front()->cell.length_a);
-    std::vector<std::pair<std::string, ParameterPtr>> slots;
+    std::vector<ParameterSlot<ParameterPtr>> slots;
+    const auto add = [&slots](std::string id, std::string unique_name, ParameterPtr parameter) {
+        slots.push_back({std::move(id), std::move(unique_name), parameter});
+    };
     for (auto& structure_item : project.structures) {
         auto& structure = *structure_item;
-        slots.emplace_back("structure.cell.length_a", &structure.cell.length_a);
-        slots.emplace_back("structure.cell.length_b", &structure.cell.length_b);
-        slots.emplace_back("structure.cell.length_c", &structure.cell.length_c);
-        slots.emplace_back("structure.cell.angle_alpha", &structure.cell.angle_alpha);
-        slots.emplace_back("structure.cell.angle_beta", &structure.cell.angle_beta);
-        slots.emplace_back("structure.cell.angle_gamma", &structure.cell.angle_gamma);
+        const std::string block = datablock_key(structure.name.value(), "structure");
+        const auto cell = [&](const char* name, ParameterPtr parameter) {
+            add(std::string("structure.cell.") + name, block + ".cell." + name, parameter);
+        };
+        cell("length_a", &structure.cell.length_a);
+        cell("length_b", &structure.cell.length_b);
+        cell("length_c", &structure.cell.length_c);
+        cell("angle_alpha", &structure.cell.angle_alpha);
+        cell("angle_beta", &structure.cell.angle_beta);
+        cell("angle_gamma", &structure.cell.angle_gamma);
         for (auto& site_item : structure.atom_sites) {
             auto& site = *site_item;
-            const std::string prefix = "structure." + site.id + ".";
-            slots.emplace_back(prefix + "fract_x", &site.fract_x);
-            slots.emplace_back(prefix + "fract_y", &site.fract_y);
-            slots.emplace_back(prefix + "fract_z", &site.fract_z);
-            slots.emplace_back(prefix + "occupancy", &site.occupancy);
-            slots.emplace_back(prefix + "adp_iso", &site.adp_iso);
+            const std::string prefix = "structure." + site.id.value() + ".";
+            const std::string unique = block + ".atom_site." + site.id.value() + ".";
+            add(prefix + "fract_x", unique + "fract_x", &site.fract_x);
+            add(prefix + "fract_y", unique + "fract_y", &site.fract_y);
+            add(prefix + "fract_z", unique + "fract_z", &site.fract_z);
+            add(prefix + "occupancy", unique + "occupancy", &site.occupancy);
+            add(prefix + "adp_iso", unique + "adp_iso", &site.adp_iso);
         }
     }
     for (auto& experiment_item : project.experiments) {
         auto& experiment = *experiment_item;
         // ADR-0016: the canonical datablock key, as crysta's writer composes it.
         const std::string prefix = datablock_key(experiment.name, "experiment") + ".";
+        // An experiment with no structure link names its scale by the project's structure, as
+        // crysta's walk does (structure_link_id).
+        const std::string linked = experiment.linked_structure.structure_id;
+        const std::string link = datablock_key(
+            linked.empty() && !project.structures.empty() ? project.structures.front()->name.value() : linked,
+            "structure");
+        const auto peak = [&](const std::string& name, ParameterPtr parameter) {
+            add(prefix + name, prefix + "peak." + name, parameter);
+        };
+        const auto instrument = [&](const std::string& name, ParameterPtr parameter) {
+            add(prefix + name, prefix + "instrument." + name, parameter);
+        };
+        const auto absorption = [&](const std::string& name, ParameterPtr parameter) {
+            add(prefix + name, prefix + "absorption." + name, parameter);
+        };
         if (experiment.effective_beam_mode() == BeamModeEnum::TIME_OF_FLIGHT) {
-            slots.emplace_back(prefix + "rise_alpha_0", &experiment.peak.rise_alpha_0);
-            slots.emplace_back(prefix + "rise_alpha_1", &experiment.peak.rise_alpha_1);
-            slots.emplace_back(prefix + "decay_beta_0", &experiment.peak.decay_beta_0);
-            slots.emplace_back(prefix + "decay_beta_1", &experiment.peak.decay_beta_1);
-            slots.emplace_back(prefix + "broad_gauss_sigma_0", &experiment.peak.broad_gauss_sigma_0);
-            slots.emplace_back(prefix + "broad_gauss_sigma_1", &experiment.peak.broad_gauss_sigma_1);
-            slots.emplace_back(prefix + "broad_gauss_sigma_2", &experiment.peak.broad_gauss_sigma_2);
-            slots.emplace_back(prefix + "broad_gauss_size", &experiment.peak.broad_gauss_size);
-            slots.emplace_back(prefix + "broad_gauss_strain", &experiment.peak.broad_gauss_strain);
-            slots.emplace_back(prefix + "broad_lorentz_gamma_0",
-                               &experiment.peak.broad_lorentz_gamma_0);
-            slots.emplace_back(prefix + "broad_lorentz_gamma_1",
-                               &experiment.peak.broad_lorentz_gamma_1);
-            slots.emplace_back(prefix + "broad_lorentz_gamma_2",
-                               &experiment.peak.broad_lorentz_gamma_2);
-            slots.emplace_back(prefix + "broad_lorentz_size", &experiment.peak.broad_lorentz_size);
-            slots.emplace_back(prefix + "broad_lorentz_strain",
-                               &experiment.peak.broad_lorentz_strain);
-            slots.emplace_back(prefix + "calib_d_to_tof_offset",
-                               &experiment.instrument.calib_d_to_tof_offset);
-            slots.emplace_back(prefix + "calib_d_to_tof_linear",
-                               &experiment.instrument.calib_d_to_tof_linear);
-            slots.emplace_back(prefix + "calib_d_to_tof_quadratic",
-                               &experiment.instrument.calib_d_to_tof_quadratic);
-            slots.emplace_back(prefix + "calib_d_to_tof_reciprocal",
-                               &experiment.instrument.calib_d_to_tof_reciprocal);
+            peak("rise_alpha_0", &experiment.peak.rise_alpha_0);
+            peak("rise_alpha_1", &experiment.peak.rise_alpha_1);
+            peak("decay_beta_0", &experiment.peak.decay_beta_0);
+            peak("decay_beta_1", &experiment.peak.decay_beta_1);
+            peak("broad_gauss_sigma_0", &experiment.peak.broad_gauss_sigma_0);
+            peak("broad_gauss_sigma_1", &experiment.peak.broad_gauss_sigma_1);
+            peak("broad_gauss_sigma_2", &experiment.peak.broad_gauss_sigma_2);
+            peak("broad_gauss_size", &experiment.peak.broad_gauss_size);
+            peak("broad_gauss_strain", &experiment.peak.broad_gauss_strain);
+            peak("broad_lorentz_gamma_0", &experiment.peak.broad_lorentz_gamma_0);
+            peak("broad_lorentz_gamma_1", &experiment.peak.broad_lorentz_gamma_1);
+            peak("broad_lorentz_gamma_2", &experiment.peak.broad_lorentz_gamma_2);
+            peak("broad_lorentz_size", &experiment.peak.broad_lorentz_size);
+            peak("broad_lorentz_strain", &experiment.peak.broad_lorentz_strain);
+            instrument("calib_d_to_tof_offset", &experiment.instrument.calib_d_to_tof_offset);
+            instrument("calib_d_to_tof_linear", &experiment.instrument.calib_d_to_tof_linear);
+            instrument("calib_d_to_tof_quadratic", &experiment.instrument.calib_d_to_tof_quadratic);
+            instrument("calib_d_to_tof_reciprocal", &experiment.instrument.calib_d_to_tof_reciprocal);
         } else {
             if (experiment.peak.broad_gauss_u) {
-                slots.emplace_back(prefix + "broad_gauss_u", &*experiment.peak.broad_gauss_u);
+                peak("broad_gauss_u", &*experiment.peak.broad_gauss_u);
             }
             if (experiment.peak.broad_gauss_v) {
-                slots.emplace_back(prefix + "broad_gauss_v", &*experiment.peak.broad_gauss_v);
+                peak("broad_gauss_v", &*experiment.peak.broad_gauss_v);
             }
             if (experiment.peak.broad_gauss_w) {
-                slots.emplace_back(prefix + "broad_gauss_w", &*experiment.peak.broad_gauss_w);
+                peak("broad_gauss_w", &*experiment.peak.broad_gauss_w);
             }
             if (experiment.peak.broad_lorentz_x) {
-                slots.emplace_back(prefix + "broad_lorentz_x", &*experiment.peak.broad_lorentz_x);
+                peak("broad_lorentz_x", &*experiment.peak.broad_lorentz_x);
             }
             if (experiment.peak.broad_lorentz_y) {
-                slots.emplace_back(prefix + "broad_lorentz_y", &*experiment.peak.broad_lorentz_y);
+                peak("broad_lorentz_y", &*experiment.peak.broad_lorentz_y);
             }
             // The asymmetry coefficients the declared rung carries. Each slot is named by its
             // storage member, never by the parameter's descriptor, which a native caller may leave
@@ -1923,16 +1947,14 @@ auto fit_state_slots(ProjectT& project) {
                   Named{"asym_beba_b1", &experiment.peak.asym_beba_b1},
                   Named{"asym_beba_limit", &experiment.peak.asym_beba_limit}}) {
                 if (*asym) {
-                    slots.emplace_back(prefix + name, &**asym);
+                    peak(name, &**asym);
                 }
             }
             if (experiment.instrument.calib_twotheta_offset) {
-                slots.emplace_back(prefix + "calib_twotheta_offset",
-                                   &*experiment.instrument.calib_twotheta_offset);
+                instrument("calib_twotheta_offset", &*experiment.instrument.calib_twotheta_offset);
             }
             if (experiment.instrument.setup_wavelength) {
-                slots.emplace_back(prefix + "setup_wavelength",
-                                   &*experiment.instrument.setup_wavelength);
+                instrument("setup_wavelength", &*experiment.instrument.setup_wavelength);
             }
             // Crysta's instrument[2]/[3], after the pair (its storage order);: then the X-ray
             // polarization pair, its instrument[4]/[5].
@@ -1944,38 +1966,53 @@ auto fit_state_slots(ProjectT& project) {
                   Named{"setup_monochromator_twotheta",
                         &experiment.instrument.setup_monochromator_twotheta}}) {
                 if (*shift) {
-                    slots.emplace_back(prefix + name, &**shift);
+                    instrument(name, &**shift);
                 }
             }
         }
-        slots.emplace_back(prefix + "scale", &experiment.linked_structure.scale);
+        add(prefix + "scale", prefix + "linked_structure." + link + ".scale", &experiment.linked_structure.scale);
         if (experiment.absorption.abscor1) {
-            slots.emplace_back(prefix + "abscor1", &*experiment.absorption.abscor1);
+            absorption("abscor1", &*experiment.absorption.abscor1);
         }
         if (experiment.absorption.abscor2) {
-            slots.emplace_back(prefix + "abscor2", &*experiment.absorption.abscor2);
+            absorption("abscor2", &*experiment.absorption.abscor2);
         }
         if (experiment.absorption.mu_r) {
-            slots.emplace_back(prefix + "mu_r", &*experiment.absorption.mu_r);
+            absorption("mu_r", &*experiment.absorption.mu_r);
         }
         // The preferred-orientation pair, crysta fit_state.hpp's order (after absorption).
         for (auto& row : experiment.preferred_orientation) {
-            slots.emplace_back(prefix + "march_r", &row->march_r);
-            slots.emplace_back(prefix + "march_random_fract", &row->march_random_fract);
+            const std::string texture = prefix + "preferred_orientation." + row->structure_id.value() + ".";
+            add(prefix + "march_r", texture + "march_r", &row->march_r);
+            add(prefix + "march_random_fract", texture + "march_random_fract", &row->march_random_fract);
         }
         // The declared model's parameters by row (crysta fit_state.hpp) — the line-segment
         // intensities, or a polynomial or Chebyshev model's coefficients.
         if (experiment.background_type == "line-segment") {
             for (std::size_t index = 0; index < experiment.background.size(); ++index) {
-                slots.emplace_back(prefix + "background[" + std::to_string(index) + "]",
-                                   &experiment.background[index]->intensity);
+                // The written `_background.id` is the row ordinal, from 1.
+                add(prefix + "background[" + std::to_string(index) + "]",
+                    prefix + "background." + std::to_string(index + 1) + ".intensity",
+                    &experiment.background[index]->intensity);
             }
         } else {
             for (std::size_t index = 0; index < experiment.background_terms.size(); ++index) {
-                slots.emplace_back(prefix + "background[" + std::to_string(index) + "]",
-                                   &experiment.background_terms[index]->coef);
+                add(prefix + "background[" + std::to_string(index) + "]",
+                    prefix + "background." + std::to_string(index + 1) + ".coef",
+                    &experiment.background_terms[index]->coef);
             }
         }
+    }
+    return slots;
+}
+
+// The `_fit_parameter` slot spelling of the walk above: (id, parameter) per refinable scalar.
+template <typename ProjectT>
+auto fit_state_slots(ProjectT& project) {
+    using ParameterPtr = decltype(&project.structures.front()->cell.length_a);
+    std::vector<std::pair<std::string, ParameterPtr>> slots;
+    for (auto& slot : parameter_slots(project)) {
+        slots.emplace_back(std::move(slot.id), slot.parameter);
     }
     return slots;
 }
@@ -2832,6 +2869,61 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
                 project.sequential_fit.extract.push_back(std::move(rule));
             }
         }
+        if (const Loop* aliases = block.loop_with("_alias.id")) {
+            for (const auto& row : aliases->rows) {
+                ParameterAlias alias;
+                alias.id = loop_cell(*aliases, row, "_alias.id", analysis_file.string());
+                alias.parameter_unique_name = loop_cell(*aliases, row, "_alias.parameter_unique_name",
+                                                        analysis_file.string());
+                project.aliases.push_back(std::move(alias));
+            }
+        }
+        if (const Loop* constraints = block.loop_with("_constraint.expression")) {
+            const bool has_id = constraints->column("_constraint.id") >= 0;
+            for (const auto& row : constraints->rows) {
+                ParameterConstraint constraint;
+                constraint.expression =
+                    loop_cell(*constraints, row, "_constraint.expression", analysis_file.string());
+                // An omitted id is the text left of the '=', as diffraction-lib and crysta read it;
+                // crysta then checks the whole constraint (refresh_relations below).
+                std::string id;
+                if (has_id) {
+                    id = loop_cell(*constraints, row, "_constraint.id", analysis_file.string());
+                } else {
+                    const std::string& text = constraint.expression.value();
+                    const std::size_t equals = text.find('=');
+                    id = equals == std::string::npos ? std::string() : text.substr(0, equals);
+                    id.erase(0, id.find_first_not_of(" \t"));
+                    id.erase(id.find_last_not_of(" \t") + 1);
+                    // crysta's reader refuses the same two rows with the same codes.
+                    const auto refuse = [&analysis_file](const char* code, std::string message) {
+                        throw DomainValidationError({Diagnostic{code, Severity::Error,
+                                                                analysis_file.string(),
+                                                                std::move(message), {}, "crysta"}});
+                    };
+                    if (id.empty()) {
+                        refuse("crysta.domain.constraint_syntax",
+                               "constraint '" + std::to_string(project.constraints.size() + 1) +
+                                   "': a constraint is '<alias> = <expression>', and '" + text +
+                                   "' names no alias left of an '='");
+                    }
+                    for (const auto& other : project.constraints) {
+                        if (other->id.value() == id) {
+                            refuse("crysta.domain.constraint_target",
+                                   "parameter '" + id + "' is set by two constraints, '" +
+                                       other->expression.value() + "' and '" + text + "'");
+                        }
+                    }
+                }
+                constraint.id = id;
+                if (constraints->column("_constraint.enabled") >= 0) {  // absent: every constraint applies
+                    constraint.enabled = strict_bool(
+                        loop_cell(*constraints, row, "_constraint.enabled", analysis_file.string()),
+                        "_constraint.enabled");
+                }
+                project.constraints.push_back(std::move(constraint));
+            }
+        }
         if (is_scan_fitting_mode(project.fitting_mode) && !project.sequential_fit.declared()) {
             throw IoError("_fitting_mode.type is '" + project.fitting_mode +
                           "' but no _sequential_fit.data_dir is declared - a scan fit needs the "
@@ -3258,6 +3350,9 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
             warn(message.str());
         }
     }
+    // The declared and symmetry relations, as crysta reads them: refused when they cannot hold,
+    // every parameter marked, a dependent's free flag cleared with a warning.
+    refresh_relations(project, warn);
     return project;
 }
 
@@ -3320,6 +3415,34 @@ std::vector<FitStartRow> fit_start_rows(const Project& project) {
     return rows;
 }
 
+std::vector<NamedParameter> named_parameters(const Project& project) {
+    std::vector<NamedParameter> named;
+    for (const auto& slot : parameter_slots(project)) {
+        if (slot.parameter->dependence == Dependence::Independent) {
+            named.push_back({slot.unique_name, slot.parameter});
+        }
+    }
+    return named;
+}
+
+std::vector<NamedParameter> named_dependents(const Project& project) {
+    std::vector<NamedParameter> named;
+    for (const auto& slot : parameter_slots(project)) {
+        if (slot.parameter->dependence != Dependence::Independent) {
+            named.push_back({slot.unique_name, slot.parameter});
+        }
+    }
+    return named;
+}
+
+std::vector<NamedSlot> named_slots(Project& project) {
+    std::vector<NamedSlot> named;
+    for (const auto& slot : parameter_slots(project)) {
+        named.push_back({slot.unique_name, slot.parameter});
+    }
+    return named;
+}
+
 UndoFitOutcome undo_fit(Project& project) {
     const UndoFitOutcome outcome = restore_fit_start(project);
     if (!outcome.was_no_op) {
@@ -3360,8 +3483,10 @@ UndoFitOutcome restore_fit_start(Project& project) {
         // never touches a fixed axis's uncertainty presence — an undone model matches the
         // pre-fit state on every axis. A no-op undo changes NOTHING, so the second undo stays
         // idempotent by construction.
-        complete_model_cell(project.structure());
         restore_positional_dependents(project.structure(), restored);
+        // Every dependent follows its restored independents through crysta's applier and gets
+        // back the e.s.d. it held before the fit.
+        restore_dependents(project);
         clear_fit_result(project);  // The undone fit's result goes with it
     }
     return outcome;
@@ -3416,7 +3541,7 @@ void save_project(const Project& project, const std::string& directory) {
     }
     try {
         save_project_via_crysta(project, directory);
-    } catch (const IoError&) {
+    } catch (const IoError&) {  // a coded refusal (a ValidationError) keeps its codes
         throw;
     } catch (const std::exception& error) {
         throw IoError(error.what());

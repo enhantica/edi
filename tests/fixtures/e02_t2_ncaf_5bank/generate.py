@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import runpy
 import shutil
 import subprocess
 import tempfile
@@ -82,6 +83,11 @@ def copy_project() -> None:
         destination = PROJECT / relative
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(SOURCE_PROJECT / relative, destination)
+        if relative == 'structures/ncaf.edi':
+            canonicalize = runpy.run_path(str(ROOT / 'tests/fixtures/ncaf_free_flags.py'))[
+                'canonicalize'
+            ]
+            destination.write_text(canonicalize(destination.read_text()))
     for source in sorted((SOURCE_PROJECT / 'experiments').glob('*.edi')):
         destination = PROJECT / 'experiments' / source.name
         destination.parent.mkdir(parents=True, exist_ok=True)

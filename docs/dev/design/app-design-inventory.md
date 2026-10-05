@@ -25,8 +25,8 @@ the UI test's tolerance.
 | Home → Home | logo, wordmark, version, Start, links | — | — |
 | Project → Project | Description: name, title, description, where the project is, what it holds, load warnings | Get started · Examples · Recent projects | `project.edi` |
 | Model → Structure | structure view (Qt Quick 3D) | Structures · `space_group` · `cell` · `atom_site` (ADP columns included) · Extras `scattering_length` | the structure's `.edi` |
-| Experiment → Experiment | chart (placeholder) | Experiments · `experiment_type` · `data` · `instrument` · `peak` · `background` · `linked_structure` · Extras `peak` (`cutoff_fwhm`) · `excluded_region` · `absorption` · `preferred_orientation` · `scattering_source` | the experiment's `.edi` |
-| Analysis → Analysis | chart (placeholder) | experiment selector · Parameters · Fitting (all three untitled and fixed open) · Extras `minimizer` · `fitting_mode` · `joint_fit` (+ `sequential_fit`, `sequential_fit_extract`, `fit_parameter`) | `analysis/analysis.edi` |
+| Experiment → Experiment | chart (placeholder) | Experiments · `experiment_type` · `data` · `instrument` · `peak` · `background` · `linked_structure` · `excluded_region` · Extras `peak` (`cutoff_fwhm`) · `absorption` · `preferred_orientation` · `scattering_source` | the experiment's `.edi` |
+| Analysis → Analysis | chart (placeholder) | experiment selector · Parameters · Fitting (all three untitled and fixed open) · Extras `minimizer` · `fitting_mode` · `alias` · `constraint` (when declared) · `joint_fit` (+ `sequential_fit`, `sequential_fit_extract`, `fit_parameter`) | `analysis/analysis.edi` |
 | Summary → Report | the report as rich text | Export summary (disabled) | every project file |
 
 Each sidebar group except the named block lists, the Project actions and the Analysis parameter table

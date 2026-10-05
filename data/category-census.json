@@ -368,6 +368,70 @@
       "row": "SequentialExtractRule"
     },
     {
+      "name": "_alias",
+      "form": "loop",
+      "columns": [
+        {
+          "member": "ParameterAlias::id",
+          "type": "ItemKey",
+          "items": [
+            "id"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
+        },
+        {
+          "member": "ParameterAlias::parameter_unique_name",
+          "type": "detail::WrittenText",
+          "items": [
+            "parameter_unique_name"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
+        }
+      ],
+      "row": "ParameterAlias"
+    },
+    {
+      "name": "_constraint",
+      "form": "loop",
+      "columns": [
+        {
+          "member": "ParameterConstraint::id",
+          "type": "ItemKey",
+          "items": [
+            "id"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
+        },
+        {
+          "member": "ParameterConstraint::expression",
+          "type": "detail::WrittenText",
+          "items": [
+            "expression"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
+        },
+        {
+          "member": "ParameterConstraint::enabled",
+          "type": "detail::Written<bool>",
+          "items": [
+            "enabled"
+          ],
+          "storage": [
+            "crysta::Column<std::uint8_t>"
+          ]
+        }
+      ],
+      "row": "ParameterConstraint"
+    },
+    {
       "name": "_cell",
       "form": "one row",
       "columns": [
@@ -1868,8 +1932,33 @@
       "not_storage": "a parameter: the cells of one parameter column bundle"
     },
     {
-      "member": "KeyedBase::host_",
+      "member": "Parameter::dependence",
+      "type": "Dependence",
+      "not_storage": "a parameter: the cells of one parameter column bundle"
+    },
+    {
+      "member": "ProjectLink::project",
       "type": "Project*",
+      "not_storage": "the revocable record through which nested collections reach their project"
+    },
+    {
+      "member": "ProjectAnchor::link_",
+      "type": "std::shared_ptr<ProjectLink>",
+      "not_storage": "a project's own link record, made on construction, cleared on destruction"
+    },
+    {
+      "member": "ProjectAnchor::outer_",
+      "type": "Project*",
+      "not_storage": "a project's own link record, made on construction, cleared on destruction"
+    },
+    {
+      "member": "ProjectTail::owner_",
+      "type": "Project*",
+      "not_storage": "a project's last member, linking its collections after a build or assignment"
+    },
+    {
+      "member": "KeyedBase::host_link_",
+      "type": "std::shared_ptr<const ProjectLink>",
       "not_storage": "the base of the table class"
     },
     {
@@ -2856,6 +2945,26 @@
       "not_storage": "what a stored geometry was computed from"
     },
     {
+      "member": "GeometrySource::owner",
+      "type": "std::shared_ptr<const ProjectLink>",
+      "not_storage": "what a stored geometry was computed from"
+    },
+    {
+      "member": "GeometrySource::aliases",
+      "type": "std::shared_ptr<const Membership>",
+      "not_storage": "what a stored geometry was computed from"
+    },
+    {
+      "member": "GeometrySource::constraints",
+      "type": "std::shared_ptr<const Membership>",
+      "not_storage": "what a stored geometry was computed from"
+    },
+    {
+      "member": "GeometrySource::relations",
+      "type": "std::string",
+      "not_storage": "what a stored geometry was computed from"
+    },
+    {
       "member": "EditLog::record_",
       "type": "std::shared_ptr<EditRecord>",
       "not_storage": "a project's handle on its editor record"
@@ -2883,6 +2992,26 @@
     {
       "member": "ComputedSource::edits_at",
       "type": "std::uint64_t",
+      "not_storage": "what an experiment's computed categories were computed from"
+    },
+    {
+      "member": "ComputedSource::owner",
+      "type": "std::shared_ptr<const ProjectLink>",
+      "not_storage": "what an experiment's computed categories were computed from"
+    },
+    {
+      "member": "ComputedSource::aliases",
+      "type": "std::shared_ptr<const Membership>",
+      "not_storage": "what an experiment's computed categories were computed from"
+    },
+    {
+      "member": "ComputedSource::constraints",
+      "type": "std::shared_ptr<const Membership>",
+      "not_storage": "what an experiment's computed categories were computed from"
+    },
+    {
+      "member": "ComputedSource::relations",
+      "type": "std::string",
       "not_storage": "what an experiment's computed categories were computed from"
     },
     {
@@ -3323,6 +3452,31 @@
       "category": "_sequential_fit_extract"
     },
     {
+      "member": "ParameterAlias::id",
+      "type": "ItemKey",
+      "category": "_alias"
+    },
+    {
+      "member": "ParameterAlias::parameter_unique_name",
+      "type": "detail::WrittenText",
+      "category": "_alias"
+    },
+    {
+      "member": "ParameterConstraint::id",
+      "type": "ItemKey",
+      "category": "_constraint"
+    },
+    {
+      "member": "ParameterConstraint::expression",
+      "type": "detail::WrittenText",
+      "category": "_constraint"
+    },
+    {
+      "member": "ParameterConstraint::enabled",
+      "type": "detail::Written<bool>",
+      "category": "_constraint"
+    },
+    {
       "member": "SequentialFitConfig::data_dir",
       "type": "std::string",
       "category": "_sequential_fit"
@@ -3509,6 +3663,20 @@
       ]
     },
     {
+      "member": "Project::aliases",
+      "type": "ItemVec<ParameterAlias>",
+      "holds": [
+        "_alias"
+      ]
+    },
+    {
+      "member": "Project::constraints",
+      "type": "ItemVec<ParameterConstraint>",
+      "holds": [
+        "_constraint"
+      ]
+    },
+    {
       "member": "Project::fit_result",
       "type": "FitResultRecord",
       "holds": [
@@ -3524,11 +3692,19 @@
       "member": "Project::edits_",
       "type": "detail::EditLog",
       "not_storage": "the project's editor record"
+    },
+    {
+      "member": "Project::tail_",
+      "type": "detail::ProjectTail",
+      "not_storage": "the project's last member, which links its collections to its record"
     }
   ],
   "file_categories": {
     "_absorption": [
       "_absorption"
+    ],
+    "_alias": [
+      "_alias"
     ],
     "_atom_site": [
       "_atom_site"
@@ -3544,6 +3720,9 @@
     ],
     "_cell": [
       "_cell"
+    ],
+    "_constraint": [
+      "_constraint"
     ],
     "_data": [
       "_data"

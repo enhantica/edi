@@ -95,6 +95,8 @@ The decisions it rests on, unchanged here:
   | `refln` | Reflections | ✓ | `list` |
   | `minimizer` | Minimizer | | `level-down-alt` |
   | `fitting_mode` | Fitting mode | | `sliders-h` |
+  | `alias` | Aliases | ✓ | `tag` |
+  | `constraint` | Constraints | ✓ | `equals` |
   | `joint_fit` | **Joint-fit weights** (was *Joint fit*) | ✓ | `link` |
   | `sequential_fit` | Sequential fit | | `list-ol` |
   | `sequential_fit_extract` | **Scan extraction rules** (was *Scan extraction*) | ✓ | `filter` |
@@ -111,13 +113,14 @@ The decisions it rests on, unchanged here:
 - **Order:** groups follow the core's page order of categories, except where the app lists a different one
   (`presentation_order` in `app/src/category_list_model.cpp`; presentation only — the Analysis table and the
   files keep the core's order): on Experiment → Basic **Background is shown directly above Instrument**
-  (the owner, 2026-09-29), giving block selector · Experiments · Experiment type · Background · Instrument ·
-  Peak profile · Linked structures.
+  (the owner, 2026-09-29) and **Linked structures last** (the owner, 2026-10-04, when Excluded regions moved to
+  Basic), giving block selector · Experiments · Experiment type · Background · Instrument · Peak profile ·
+  Excluded regions · Linked structures.
 - **Measured data is on Extras** (the owner, 2026-09-29), not Basic: its summary fields and data table are
   the first group of Experiment → Extras, above Peak profile's Extras part (the core's order among the Extras
   groups puts it first). Sidebar only: the core's category order, the files and the Analysis table are
   unchanged. Calculation range (a calculation-only experiment's grid) stays on Basic.
-- **Background** shows at most five table rows, then scrolls (`maxRowCountShow`, as the other tables);
+- **Background** shows at most four table rows (the owner, 2026-10-04; five before), then scrolls (`maxRowCountShow`, as the other tables);
   Append new point and Reset to autodetected background stay below it.
 - **The last group a tab shows draws no bottom border** (idea 11). The base's `GroupBox` takes `last` from its
   parent's last child, which in a column with a `Repeater` is the last delegate whether it is shown or not

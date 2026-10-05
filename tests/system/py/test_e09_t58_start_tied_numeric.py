@@ -12,6 +12,7 @@ from pathlib import Path
 import edi
 import pytest
 
+from tests.fixtures.constraint_expressions.legacy_start_tied import restore_legacy_companions
 from tests.system.py.test_e09_t58_cli_persistence import (
     _stage_positional_project,  # noqa: PLC2701 - shared independent corpus staging
 )
@@ -50,6 +51,9 @@ print(json.dumps({'prior': prior, 'restored': restored}, allow_nan=False))
 
 def _with_snapshot(destination: Path, payload: str) -> Path:
     project = _stage_positional_project(destination)
+    # Exercise the still-readable legacy column with an explicit legacy free set.
+    # The current NCAF examples intentionally have no free y/z companions (ADR-0078).
+    restore_legacy_companions(project)
     analysis = project / 'analysis/analysis.edi'
     text = analysis.read_text(encoding='utf-8')
     assert '_fit_parameter.' not in text, 'the independent seed must have no prior snapshot'

@@ -15,3 +15,8 @@ The expected values keep the `kind` their source gave them: crysta-produced fit 
 **regression pins** — they gate drift, not correctness — and only values marked `reference` come
 from outside every engine under test. The source case's own `PROVENANCE.md` in crysta says which
 is which and why.
+
+**Follower free flags removed.** Al1, Na1 and F3 sit on `x,x,x`, where y and z follow x, and the structure flagged all
+three axes free. A free flag on a dependent is ignored with a warning and saved bare, so every load warned about the
+two follower flags; the structure now flags x alone. The free set is unchanged and the project still reproduces its
+pins (`tools/checks/cli_projects.py --project`).

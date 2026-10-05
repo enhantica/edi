@@ -25,13 +25,15 @@ CategoryPresentation category_presentation(const QString& id) {
         {QStringLiteral("peak"), {T::Basic, "Peak profile", "shapes", true}},
         {QStringLiteral("background"), {T::Basic, "Background", "wave-square"}},
         {QStringLiteral("linked_structure"), {T::Basic, "Linked structures", "layer-group"}},
-        {QStringLiteral("excluded_region"), {T::Extras, "Excluded regions", "eraser"}},
+        {QStringLiteral("excluded_region"), {T::Basic, "Excluded regions", "eraser"}},  // owner, 2026-10-04
         {QStringLiteral("absorption"), {T::Extras, "Absorption", "tint"}},
         {QStringLiteral("preferred_orientation"), {T::Extras, "Preferred orientations", "compass"}},
         {QStringLiteral("scattering_source"), {T::Extras, "Scattering source", "atom"}},
         {QStringLiteral("refln"), {T::Extras, "Reflections", "list"}},
         {QStringLiteral("minimizer"), {T::Extras, "Minimizer", "level-down-alt"}},
         {QStringLiteral("fitting_mode"), {T::Extras, "Fitting mode", "sliders-h"}},
+        {QStringLiteral("alias"), {T::Extras, "Aliases", "tag"}},
+        {QStringLiteral("constraint"), {T::Extras, "Constraints", "equals"}},
         {QStringLiteral("joint_fit"), {T::Extras, "Joint-fit weights", "link"}},
         {QStringLiteral("sequential_fit"), {T::Extras, "Sequential fit", "list-ol"}},
         {QStringLiteral("sequential_fit_extract"), {T::Extras, "Scan extraction rules", "filter"}},
@@ -44,7 +46,8 @@ namespace {
 // The sidebar's order where it differs from the core's page order (edi ADR-0017 §3): each first id is shown
 // directly before the second. Presentation only: the core's order (the Analysis table, the files) stands.
 std::vector<const edi::Category*> presentation_order(const std::vector<edi::Category>& categories) {
-    static const std::pair<const char*, const char*> kShownBefore[] = {{"background", "instrument"}};
+    static const std::pair<const char*, const char*> kShownBefore[] = {{"background", "instrument"},
+                                                                       {"excluded_region", "linked_structure"}};
     std::vector<const edi::Category*> ordered;
     for (const edi::Category& category : categories) {
         ordered.push_back(&category);

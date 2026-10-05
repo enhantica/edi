@@ -391,7 +391,8 @@ std::vector<ParameterEntry> parameter_entries(Project& project) {
             fields.insert(fields.end(), category.asymmetry.begin(), category.asymmetry.end());
             for (std::size_t i = 0; i < fields.size(); ++i) {
                 const CategoryField& field = fields[i];
-                ParameterEntry entry{field.parameter, "", "experiment", experiment->name, category.id, "", field.name};
+                ParameterEntry entry{field.parameter, "", "experiment", experiment->name, category.id, "", field.name,
+                                     field.refinable};
                 std::string label = field.name;
                 std::string spelled = prefix + category.id + "." + field.name;
                 if (category.id == "background") {
