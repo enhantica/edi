@@ -871,6 +871,21 @@ refuses to write its bank rows into it.
   pattern chart's). A click on a point shows that dataset, on every page; a line marks the shown one. Above 5000
   points the chart draws, per x bucket, only the lowest and the highest, so every excursion stays visible. The tab
   is disabled in a project that is not a scan.
+- **Running a scan.** In the sequential or independent mode Start fitting runs crysta's driver from the template on the
+  worker (`edi::FitJob`, the scan entry points of the core), which writes `analysis/results.csv` as it fits each file;
+  the template itself is left as it was. A fresh run first sets the previous results aside, and Undo writes them
+  back. Stop fitting keeps the rows written so far, and the button then reads Continue fitting, which fits only the
+  files without a row (the driver resumes from the file); an edit of the template turns it back into Start fitting.
+  While a scan runs the status bar's bar fills by files, with *count · percent · file* inside, and the ok and fail
+  counts, the time, the time left and the last χ² beside it. Joint is not offered in a project that declares a scan.
+- **Follow** is on when a scan starts and enabled only while one runs: the pattern tab then shows each file as it is
+  fitted, its data with the pattern calculated at its fitted values, drawn by the job after the file's row is
+  written. Choosing a dataset turns it off; pressing it turns it on again.
+- **The template dataset** (`_sequential_fit.template_file`): a single fit on a shown dataset makes its result the
+  template and that dataset the template dataset. Its entry in the selector and its row in the Experiments table
+  carry the word *template* in the accent blue. A scan project opens on it, else on the first dataset.
+- **Out of date.** An edit of the template after a scan leaves the results shown and marks them *out of date* in
+  the status bar's summary and on the Evolution tab until the next run replaces them.
 - **After a scan** the status bar's summary reads *outcome · fitted/files · N ok · N fail · χ² min–max*, a fail count
   above zero in red, and the results window shows the run as a whole: Overall status, files fitted, converged,
   failed and the χ² range, with *Show evolution*, which opens the Evolution tab. The outcome is the worst file's:

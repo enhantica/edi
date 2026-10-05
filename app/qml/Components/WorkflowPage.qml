@@ -43,6 +43,9 @@ EaComponents.ContentPage {
     property string blockCurrentOutcome: ""
     // Every entry in the first block's colour (a scan's datasets).
     property bool blockOneColour: false
+    // The role marking the template dataset, and whether the shown block is it (BlockSelector).
+    property string blockTemplateRole: ""
+    property bool blockCurrentTemplate: false
     signal blockActivated(int index)
 
     // Shows one of the main area's tabs (the base's tab bar is the main content's first child).
@@ -122,6 +125,8 @@ EaComponents.ContentPage {
             outcomeRole: page.blockOutcomeRole
             currentOutcome: page.blockCurrentOutcome
             oneColour: page.blockOneColour
+            templateRole: page.blockTemplateRole
+            currentTemplate: page.blockCurrentTemplate
             onBlockActivated: index => page.blockActivated(index)
         }
 

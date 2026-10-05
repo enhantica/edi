@@ -98,6 +98,8 @@ WorkflowPage {
     blockOutcomeRole: evolutionShown ? "" : "fitOutcome"
     blockCurrentOutcome: experiment && !evolutionShown ? experiment.fitOutcome : ""
     blockOneColour: project !== null && project.scan
+    blockTemplateRole: project !== null && project.scan && !evolutionShown ? "isTemplate" : ""
+    blockCurrentTemplate: project !== null && project.scan && !evolutionShown && project.currentExperimentIndex === project.templateIndex
     blockIndex: evolutionShown ? (evolution ? evolution.currentParameter : -1) : project ? project.currentExperimentIndex : -1
     onBlockActivated: index => {
         if (page.evolutionShown)

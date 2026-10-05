@@ -36,6 +36,10 @@ Row {
     property string currentOutcome: ""
     // Every entry in the first block's colour: a scan's datasets are one experiment's.
     property bool oneColour: false
+    // The blocks' role that marks the template dataset (a scan's `isTemplate`) and whether the shown one is it: its
+    // line carries the word "template" in the accent blue, before its name, which the line elides when long.
+    property string templateRole: ""
+    property bool currentTemplate: false
 
     // A step to the previous or next block, as a pick in the box; no step past either end.
     function step(offset) {
@@ -58,7 +62,7 @@ Row {
 
         // A block's line, in the Experiments table's column order: its number, its icon in its colour, its fit
         // outcome, its name, on one centre line (IconLine, §10).
-        function segments(index, name, nameColor, outcome) {
+        function segments(index, name, nameColor, outcome, isTemplate) {
             if (index < 0)
                 return [];
             const slot = {
@@ -79,7 +83,12 @@ Row {
                 "text": name,
                 "color": nameColor
             };
-            return row.outcomeRole !== "" ? [number, icon, slot, label] : [number, icon, label];
+            const lead = row.outcomeRole !== "" ? [number, icon, slot] : [number, icon];
+            const tag = {
+                "text": qsTr("template"),
+                "color": EaStyle.Colors.themeAccent
+            };
+            return lead.concat(isTemplate ? [tag, label] : [label]);
         }
 
         objectName: row.objectName ? `${row.objectName}.box` : ""
@@ -103,7 +112,7 @@ Row {
             IconLine {
                 x: EaStyle.Sizes.fontPixelSize * 0.75
                 anchors.verticalCenter: parent.verticalCenter
-                segments: selector.segments(selector.currentIndex, selector.currentText, selector.foregroundColor, row.currentOutcome)
+                segments: selector.segments(selector.currentIndex, selector.currentText, selector.foregroundColor, row.currentOutcome, row.currentTemplate)
                 // A long name is cut in the middle, so both its ends still tell blocks apart.
                 maximumWidth: Math.max(1, parent.width - x)
                 elide: Text.ElideMiddle
@@ -138,7 +147,7 @@ Row {
 
                 IconLine {
                     anchors.verticalCenter: parent.verticalCenter
-                    segments: selector.segments(entry.index, entry.text, EaStyle.Colors.themeForeground, row.outcomeRole !== "" ? entry.model[row.outcomeRole] : "")
+                    segments: selector.segments(entry.index, entry.text, EaStyle.Colors.themeForeground, row.outcomeRole !== "" ? entry.model[row.outcomeRole] : "", row.templateRole !== "" && entry.model[row.templateRole] === true)
                     maximumWidth: Math.max(1, parent.width)
                     elide: Text.ElideMiddle
                 }

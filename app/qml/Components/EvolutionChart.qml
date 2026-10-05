@@ -212,7 +212,8 @@ Item {
         objectName: "evolution.title.y"
         rotation: -90
         color: EaStyle.Colors.chartLabels
-        x: chart.sideMargin + (chart.titleGutter - width) / 2
+        // Centred in the margin, clear of the tick labels, which Qt Graphs lets reach into the plot's left margin.
+        x: (chart.sideMargin - width) / 2
         y: plot.y + (plot.height - height) / 2
         text: chart.evolution ? chart.evolution.yTitle : ""
     }
@@ -222,6 +223,16 @@ Item {
         y: chart.height - chart.em - chart.xTitleHeight + (chart.xTitleHeight - height) / 2
         color: EaStyle.Colors.chartLabels
         text: chart.evolution ? chart.evolution.xTitle : ""
+    }
+    // Results the template has changed since stay drawn, marked out of date until the next run.
+    EaElements.Label {
+        objectName: "evolution.outOfDate"
+        anchors.right: plot.right
+        anchors.bottom: plot.top
+        anchors.bottomMargin: chart.em * 0.5
+        visible: chart.project !== null && chart.project.fit.outOfDate
+        color: EaStyle.Colors.orange
+        text: qsTr("Out of date: the template changed after this run")
     }
     EaElements.Label {
         anchors.centerIn: plot

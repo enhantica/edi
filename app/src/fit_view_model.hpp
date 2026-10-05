@@ -84,6 +84,14 @@ class FitViewModel : public QObject {
     Q_PROPERTY(QString status READ status NOTIFY statusChanged)
     Q_PROPERTY(QString outcome READ outcome NOTIFY outcomeChanged)
     Q_PROPERTY(edi_app::FitResultListModel* results READ results CONSTANT)
+    // A running scan (S3): the share of its files fitted, the bar's text (count, percent, the file just fitted) and
+    // the time left at the pace so far.
+    Q_PROPERTY(double scanProgress READ scanProgress NOTIFY scanProgressChanged)
+    Q_PROPERTY(QString scanText READ scanText NOTIFY scanTextChanged)
+    Q_PROPERTY(QString eta READ eta NOTIFY etaChanged)
+    // The template changed after the scan results were written: they stay shown, marked out of date, until the
+    // next run replaces them (edi ADR-0017 §19).
+    Q_PROPERTY(bool outOfDate READ outOfDate NOTIFY outOfDateChanged)
     // A scan's summary (scan projects): `scanFiles` reads "fitted/files", then the ok and fail counts.
     Q_PROPERTY(bool scanSummary READ scanSummary NOTIFY scanSummaryChanged)
     Q_PROPERTY(QString scanFiles READ scanFiles NOTIFY scanFilesChanged)
@@ -95,8 +103,14 @@ class FitViewModel : public QObject {
     ~FitViewModel() override;
 
     bool running() const { return running_; }
-    bool continuable() const { return false; }
-    bool scanning() const { return false; }
+    bool continuable() const { return continuable_; }
+    bool scanning() const { return scanning_; }
+    double scanProgress() const { return scan_.files > 0 ? static_cast<double>(scan_.fitted) / scan_.files : 0.0; }
+    QString scanText() const { return scan_text_; }
+    QString eta() const { return eta_; }
+    bool outOfDate() const { return out_of_date_; }
+    // The files the scan has fitted (C++ only: the demo waits on it).
+    int scanFitted() const { return scan_.fitted; }
     bool following() const { return following_; }
     void setFollowing(bool following);
     bool available() const { return available_; }
@@ -108,12 +122,15 @@ class FitViewModel : public QObject {
     QString status() const { return status_; }
     QString outcome() const { return outcome_; }
     FitResultListModel* results() const { return results_; }
-    bool scanSummary() const { return scan_.fitted > 0; }
+    // The last run was the scan's (a single fit on a dataset since then shows its own summary).
+    bool scanSummary() const { return scan_.fitted > 0 && scan_last_; }
     QString scanFiles() const { return QStringLiteral("%1/%2").arg(scan_.fitted).arg(scan_.files); }
     int scanOk() const { return scan_.ok; }
     int scanFailed() const { return scan_.failed; }
     // A scan project's results: the status bar's summary and the results window show the run as a whole.
     void showScan(const edi::ScanDatasets& datasets, const edi::ScanResults& results);
+    // The template was edited: a stopped scan is started afresh, not continued.
+    void noteTemplateEdit();
 
     Q_INVOKABLE void start();
     Q_INVOKABLE void cancel();
@@ -141,6 +158,12 @@ class FitViewModel : public QObject {
     void scanFilesChanged();
     void scanOkChanged();
     void scanFailedChanged();
+    void scanProgressChanged();
+    void scanTextChanged();
+    void etaChanged();
+    void outOfDateChanged();
+    // A scan ended with its rows on disk (finished or stopped): the pop-up.
+    void scanFinished();
     // A fit ended with a result the project now holds (finished, cancelled or stopped early): the pop-up.
     void finished();
     // A fit was refused or failed; the project is unchanged.
@@ -152,6 +175,13 @@ class FitViewModel : public QObject {
     void frame(const edi::FitFrame& frame);
     void showFrame();
     void ended(const edi::FitReport& report);
+    void scanStarted(const edi::ScanPreamble& preamble);
+    void fileCompleted(const edi::ScanFileRecord& record);
+    void scanEnded(const edi::FitReport& report);
+    void setScanning(bool scanning);
+    void setContinuable(bool continuable);
+    void setOutOfDate(bool out_of_date);
+    void setScanCounts(const ScanSummary& counts, const QString& file);
     void setRunning(bool running);
     void setProgress(const QString& iterations, const QString& goodness, const QString& status,
                      const QString& outcome = QString());
@@ -173,6 +203,10 @@ class FitViewModel : public QObject {
     QElapsedTimer clock_;
     QTimer clock_timer_;
     bool running_ = false, available_ = false, can_undo_ = false, following_ = true;
+    bool scanning_ = false, continuable_ = false, out_of_date_ = false, scan_last_ = true;
+    // The running scan: the files already fitted when it started (a continued scan), for its pace.
+    int scan_resumed_ = 0;
+    QString scan_text_, eta_;
     double chi_before_ = 0.0;
     QString unavailable_reason_, iterations_, elapsed_, goodness_of_fit_, status_, outcome_;
 };

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "demo_driver.hpp"
 
+#include <algorithm>
+
 #include <QCoreApplication>
 #include <QFile>
 #include <QGuiApplication>
@@ -206,8 +208,26 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                     + QStringList{experiment, basic, "expand:group.experiments"}});
     steps_.push_back({"t16-51-scan-list", {blocks}});
     steps_.push_back({"t16-52-scan-dataset-5", {"key:Escape", "show:experiments.list:4", "experiments.row.4"}});
+    // A scan run from the app on the 162-file example: running (the S3 bar, Follow on), stopped part way,
+    // continued to the end, and the Evolution tab after it.
+    steps_.push_back({"t16-60-scan-ready", QStringList{"resize:1280x960"} + start
+                                               + open_example("pd-neut-cwl_cosio-d20_scan-162f")
+                                               + QStringList{analysis, basic, "reveal:fitting.start"}});
+    steps_.push_back({"t16-61-scan-running", {"fitting.start", "wait-files:40", "capture-now"}});
+    steps_.push_back({"t16-62-scan-stopped", {"fitting.start", "wait-fit"}});
+    steps_.push_back({"t16-63-scan-continue", {"choose:OK"}});
+    steps_.push_back({"t16-64-scan-done", {"fitting.start", "wait-fit"}});
+    steps_.push_back({"t16-65-scan-evolution", {"choose:OK", "mainArea.analysis.tab.evolution"}});
+    steps_.push_back({"t16-66-scan-experiment", {experiment, basic, "expand:group.experiments"}});
+    // After the scan: the single mode (a template edit) marks the results out of date on the status bar and the
+    // Evolution tab; a single fit on the shown dataset makes it the template dataset, tagged in the lists.
+    steps_.push_back({"t16-67-scan-out-of-date", {analysis, extras, "expand:group.fitting_mode", "fittingMode.type",
+                                                   "choose:single", basic, "mainArea.analysis.tab.evolution"}});
+    steps_.push_back({"t16-68-single-fit-on-dataset",
+                      {"mainArea.analysis.tab.fitting", "reveal:fitting.start", "fitting.start", "wait-fit"}});
+    steps_.push_back({"t16-69-template-dataset", {"choose:OK", experiment, basic, "show:experiments.list:161"}});
     steps_.push_back({"t16-40-created-saved-reopened",
-                      start + open_example("pd-xray-cwl_lif") + QStringList{experiment, basic, "expand:group.experiments",
+                      QStringList{"resize:1280x768"} + start + open_example("pd-xray-cwl_lif") + QStringList{experiment, basic, "expand:group.experiments",
                       "experiments.create", "save-as:created", "open-project:created", experiment, "mainArea.blocks.box",
                        "choose:experiment1 · experiment1.edi", text, "scroll-to:text.view:_data_range"}});
     if (!only.isEmpty()) {
@@ -247,12 +267,19 @@ void DemoDriver::next_action() {
             wait_fit_then([this] { settle_then([this] { next_action(); }); });
             return;
         }
+        // A running scan keeps the worker busy, so its step is captured unsettled (capture-now).
+        if (action.startsWith(QLatin1String("wait-files:"))) {
+            wait_fit_then([this] { next_action(); }, 0, action.mid(11).toInt());
+            return;
+        }
         if (!perform(action)) {
             return;  // fail() has ended the run
         }
         park_pointer();
-        // What the action opened is drawn before the next; a step captured unsettled does not wait for it.
-        if (unsettled) {
+        // What the action opened is drawn before the next; a step captured unsettled does not wait for it, nor
+        // does an action a wait follows (a fit keeps the window changing until it ends).
+        const bool waits = action_ < step.actions.size() && step.actions.at(action_).startsWith(QLatin1String("wait-"));
+        if (unsettled || waits) {
             QTimer::singleShot(kSettleIntervalMs, this, [this] { next_action(); });
         } else {
             settle_then([this] { next_action(); });
@@ -278,11 +305,12 @@ void DemoDriver::next_action() {
     settle_then(save);
 }
 
-void DemoDriver::wait_fit_then(std::function<void()> next, int waited_ms) {
+void DemoDriver::wait_fit_then(std::function<void()> next, int waited_ms, int files) {
     QQmlEngine* engine = qmlEngine(window_.contentItem());
     auto* session = engine ? engine->singletonInstance<Session*>("edi.app", "Session") : nullptr;
-    const bool running = session != nullptr && session->project() != nullptr && session->project()->fit()->running();
-    if (!running) {
+    const FitViewModel* fit = session != nullptr && session->project() != nullptr ? session->project()->fit() : nullptr;
+    const bool running = fit != nullptr && fit->running();
+    if (!running || (files >= 0 && fit->scanFitted() >= files)) {
         next();
         return;
     }
@@ -290,11 +318,31 @@ void DemoDriver::wait_fit_then(std::function<void()> next, int waited_ms) {
         fail(QStringLiteral("step %1: the fit did not end within %2 ms").arg(steps_[current_].image).arg(kFitWaitMs));
         return;
     }
-    QTimer::singleShot(kSettleIntervalMs * 5, this,
-                       [this, next, waited_ms] { wait_fit_then(next, waited_ms + kSettleIntervalMs * 5); });
+    QTimer::singleShot(kSettleIntervalMs * 5, this, [this, next, waited_ms, files] {
+        wait_fit_then(next, waited_ms + kSettleIntervalMs * 5, files);
+    });
 }
 
 bool DemoDriver::perform(const QString& action) {
+    // Scrolls the view a control is in until the control shows (a sidebar column longer than the window).
+    if (action.startsWith(QLatin1String("reveal:"))) {
+        QQuickItem* item = find(action.mid(7), false);
+        for (QQuickItem* view = item != nullptr ? item->parentItem() : nullptr; view != nullptr; view = view->parentItem()) {
+            // The first view that scrolls vertically (a swipe view's list scrolls sideways).
+            auto* content = view->inherits("QQuickFlickable") ? view->property("contentItem").value<QQuickItem*>() : nullptr;
+            if (content != nullptr && view->property("contentHeight").toDouble() > view->height()) {
+                const double top = item->mapToItem(content, QPointF(0, 0)).y();
+                const double most = std::max(0.0, view->property("contentHeight").toDouble() - view->height());
+                view->setProperty("contentY", std::clamp(top - view->height() / 2, 0.0, most));
+                return true;
+            }
+        }
+        if (item == nullptr) {
+            fail(QStringLiteral("step %1: cannot reveal '%2'").arg(steps_[current_].image, action.mid(7)));
+            return false;
+        }
+        return true;  // nothing around it scrolls: it shows as it is
+    }
     if (action.startsWith(QLatin1String("key:"))) {
         const QKeyCombination key = QKeySequence::fromString(action.mid(4))[0];
         QKeyEvent press(QEvent::KeyPress, key.key(), key.keyboardModifiers());
@@ -568,13 +616,18 @@ void DemoDriver::settle_then(std::function<void()> next) {
             next();
             return;
         }
-        previous_frame_ = frame;
         if (++settle_attempts_ > kSettleMaxAttempts) {
-            fail(QStringLiteral("step %1 did not settle within %2 ms")
+            // The last two frames, to see what kept changing.
+            previous_frame_.save(output_dir_.filePath(steps_[current_].image + QStringLiteral("-unsettled-a.png")));
+            frame.save(output_dir_.filePath(steps_[current_].image + QStringLiteral("-unsettled-b.png")));
+            fail(QStringLiteral("step %1 did not settle within %2 ms (%3)")
                      .arg(steps_[current_].image)
-                     .arg(kSettleIntervalMs * kSettleMaxAttempts));
+                     .arg(kSettleIntervalMs * kSettleMaxAttempts)
+                     .arg(calculating ? QStringLiteral("a calculation is in flight")
+                                      : QStringLiteral("the window kept changing")));
             return;
         }
+        previous_frame_ = frame;
         QTimer::singleShot(kSettleIntervalMs, this, *poll);
     };
     QTimer::singleShot(kSettleIntervalMs, this, *poll);

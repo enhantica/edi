@@ -6,6 +6,7 @@
 #include <QList>
 #include <QStringList>
 #include <QObject>
+#include <QTimer>
 #include <QString>
 #include <QUrl>
 #include <QtQml/qqmlregistration.h>
@@ -65,6 +66,7 @@ class ExperimentListModel : public RowTableModel {
         QString file;
         QString outcome;
         QStringList extracted;
+        bool is_template = false;
     };
     void setDatasets(ExperimentViewModel* experiment, const QList<Dataset>& datasets);
 };
@@ -105,6 +107,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // rule, with its unit ("temperature (K)").
     Q_PROPERTY(bool scan READ scan CONSTANT)
     Q_PROPERTY(QStringList scanColumns READ scanColumns CONSTANT)
+    // The template dataset's place among the datasets (`_sequential_fit.template_file`), or -1.
+    Q_PROPERTY(int templateIndex READ templateIndex NOTIFY templateIndexChanged)
     // The Evolution tab: a fitted parameter across the scan's datasets (scan projects).
     Q_PROPERTY(edi_app::EvolutionViewModel* evolution READ evolution CONSTANT)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
@@ -154,6 +158,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool scan() const { return scan_; }
     QStringList scanColumns() const { return scan_columns_; }
     EvolutionViewModel* evolution() const { return evolution_; }
+    int templateIndex() const;
     QString lastError() const { return last_error_; }
     bool calculating() const { return calculating_; }
     StructureViewOptions* structureViewOptions() const { return structure_view_options_; }
@@ -195,6 +200,13 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void publishFit();
     void showFitFrame(const edi::FitFrame& frame);
     void restorePatterns();
+    // A scan run's owner-thread steps (FitViewModel): before it starts, the template back in the model and, for
+    // a fresh run, the previous results set aside, which Undo restores; each file it fits; the file it shows while
+    // followed; its end, after which the shown dataset is viewed again from the rows on disk.
+    QString prepareScan(bool fresh);
+    void scanFileFitted();
+    void showScanFrame(const std::string& file, const edi::FitFrame& frame);
+    void scanEnded();
 
    signals:
     void nameChanged();
@@ -219,6 +231,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // every one it runs, a superseded one included, in order, each before its publication or rejection. What
     // counts the calculations an input costs (the owner's one-calculation rule).
     void calculationStarted();
+    void templateIndexChanged();
     void calculationFinished();
 
    private:
@@ -251,7 +264,15 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     struct AddedExperiments {
         std::vector<const edi::ExperimentBase*> experiments;
     };
-    using UndoRecord = std::variant<std::monostate, edi::RelationsUndo, AddedExperiments>;
+    // A fresh scan run: the results files it cleared, as they were (absent: there was none).
+    struct ScanRun {
+        std::optional<std::string> results, provenance;
+    };
+    using UndoRecord = std::variant<std::monostate, edi::RelationsUndo, AddedExperiments, ScanRun>;
+    bool restoreScanRun(const ScanRun& run);
+    void reloadScanResults();
+    // The views a scan run updates as its files are fitted, at most a few times a second.
+    QTimer scan_sync_timer_;
     std::vector<UndoRecord> undo_history_;
     void noteAddedExperiments(std::size_t before);
     bool can_undo_ = false;

@@ -20,6 +20,8 @@ Item {
     property alias outcomeRole: selector.outcomeRole
     property alias currentOutcome: selector.currentOutcome
     property alias oneColour: selector.oneColour
+    property alias templateRole: selector.templateRole
+    property alias currentTemplate: selector.currentTemplate
     signal blockActivated(int index)
 
     // The main area's width and its tab bar's height.

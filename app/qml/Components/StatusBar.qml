@@ -137,6 +137,12 @@ EaElements.StatusBar {
         id: fitArea
 
         readonly property bool running: bar.fit !== null && bar.fit.running
+        readonly property bool scanning: bar.fit !== null && bar.fit.scanning
+        // The ok and fail counts, a fail count above zero in red.
+        function counts() {
+            const fail = qsTr("%1 fail").arg(bar.fit.scanFailed);
+            return [qsTr("%1 ok").arg(bar.fit.scanOk), bar.fit.scanFailed > 0 ? `<font color="${EaStyle.Colors.red}">${fail}</font>` : fail];
+        }
         readonly property string chi: bar.fit && bar.fit.goodnessOfFit !== "" ? `χ² ${bar.fit.goodnessOfFit}` : ""
         readonly property string iterations: bar.fit && bar.fit.iterations !== "" ? qsTr("it %1").arg(bar.fit.iterations) : ""
 
@@ -163,9 +169,11 @@ EaElements.StatusBar {
             visible: fitArea.running
             width: EaStyle.Sizes.fontPixelSize * 20
             anchors.verticalCenter: parent.verticalCenter
-            indeterminate: true
+            // A scan fills the bar by its files (S3); a single fit, whose length is unknown, with stripes.
+            indeterminate: !fitArea.scanning
+            fraction: fitArea.scanning ? bar.fit.scanProgress : 0
             fontFamily: EaStyle.Fonts.ptMono.name
-            text: fitArea.joined([qsTr("fitting"), fitArea.iterations])
+            text: fitArea.scanning ? bar.fit.scanText : fitArea.joined([qsTr("fitting"), fitArea.iterations])
         }
         FitOutcomeLabel {
             objectName: "statusBar.fit.outcome"
@@ -190,13 +198,25 @@ EaElements.StatusBar {
             text: {
                 if (!bar.fit)
                     return "";
+                // One order everywhere: progress, the ok and fail counts, time, χ².
+                if (fitArea.scanning)
+                    return fitArea.joined(fitArea.counts().concat([bar.fit.elapsed, bar.fit.eta !== "" ? qsTr("eta %1").arg(bar.fit.eta) : "", fitArea.chi]));
                 if (fitArea.running)
                     return fitArea.joined([bar.fit.elapsed, fitArea.chi]);
-                // A scan's summary: files, then the ok and fail counts (a fail count above zero in red), time, χ².
-                const fail = qsTr("%1 fail").arg(bar.fit.scanFailed);
-                const rest = bar.fit.scanSummary ? fitArea.joined([bar.fit.scanFiles, qsTr("%1 ok").arg(bar.fit.scanOk), bar.fit.scanFailed > 0 ? `<font color="${EaStyle.Colors.red}">${fail}</font>` : fail, bar.fit.elapsed, fitArea.chi]) : fitArea.joined([fitArea.iterations, bar.fit.elapsed, fitArea.chi]);
+                // A scan's summary: files, then the ok and fail counts, time, χ².
+                const rest = bar.fit.scanSummary ? fitArea.joined([bar.fit.scanFiles].concat(fitArea.counts(), [bar.fit.elapsed, fitArea.chi])) : fitArea.joined([fitArea.iterations, bar.fit.elapsed, fitArea.chi]);
                 return rest === "" ? "" : FitOutcomes.separator.trim() + " " + rest;
             }
+        }
+        // Scan results the template has changed since stay, marked out of date until the next run replaces them.
+        Text {
+            objectName: "statusBar.fit.outOfDate"
+            anchors.verticalCenter: parent.verticalCenter
+            visible: !fitArea.running && bar.fit !== null && bar.fit.outOfDate
+            font.family: EaStyle.Fonts.ptMono.name
+            font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.9
+            color: EaStyle.Colors.orange
+            text: FitOutcomes.separator.trim() + " " + qsTr("out of date")
         }
     }
 

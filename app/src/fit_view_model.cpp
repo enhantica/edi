@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "fit_view_model.hpp"
 
+#include <QFileInfo>
 #include <algorithm>
 #include <cmath>
 
@@ -205,6 +206,16 @@ FitViewModel::FitViewModel(edi::Project& project, edi::work::Worker& worker, Pro
     hooks.iterated = [this](const edi::IterationRecord& record) { iterated(record); };
     hooks.frame = [this](const edi::FitFrame& shown) { frame(shown); };
     hooks.finished = [this](const edi::FitReport& report) { ended(report); };
+    hooks.scan_started = [this](const edi::ScanPreamble& preamble) { scanStarted(preamble); };
+    hooks.file_completed = [this](const edi::ScanFileRecord& record) { fileCompleted(record); };
+    hooks.file_frame = [this](const std::string& file, const edi::FitFrame& shown) {
+        if (following_) {
+            owner_.showScanFrame(file, shown);
+        }
+        if (job_) {
+            job_->frame_shown();
+        }
+    };
     job_ = std::make_unique<edi::FitJob>(project_, worker, std::move(hooks));
     showRecord();
     sync();
@@ -224,11 +235,21 @@ void FitViewModel::showRecord() {
 
 void FitViewModel::showScan(const edi::ScanDatasets& datasets, const edi::ScanResults& results) {
     scan_ = ScanSummary::of(datasets, results);
+    // Results read from disk are the template's until it is edited (noteTemplateEdit).
+    setOutOfDate(false);
     emit scanSummaryChanged();
     emit scanFilesChanged();
     emit scanOkChanged();
     emit scanFailedChanged();
+    emit scanProgressChanged();
+    // After a single fit on a dataset the status bar and the results window keep that fit's own.
+    if (!scan_last_) {
+        return;
+    }
     if (scan_.fitted == 0) {
+        setProgress(QString(), QString(), QString());
+        setElapsed(QString());
+        results_->clear();
         return;
     }
     // The driver's results record no time.
@@ -250,7 +271,29 @@ void FitViewModel::start() {
     if (!job_ || running_ || !available_) {
         return;
     }
+    // A scan runs from the template; a fresh one clears the previous results first (Undo restores them), a
+    // continued one fits only the files without a row.
+    const bool scan = edi::is_scan_fitting_mode(edi::effective_fitting_mode(project_));
+    if (scan) {
+        const QString error = owner_.prepareScan(!continuable_);
+        if (!error.isEmpty()) {
+            emit refused(error);
+            return;
+        }
+        setFollowing(true);
+        job_->follow(true);
+    }
     if (job_->start()) {
+        if (scan_last_ != scan) {
+            scan_last_ = scan;
+            emit scanSummaryChanged();
+        }
+        if (scan) {
+            scan_resumed_ = 0;
+            setScanning(true);
+            setContinuable(false);
+            setScanCounts(scan_, QString());
+        }
         results_->clear();
         clock_.start();
         clock_timer_.start();
@@ -283,11 +326,17 @@ bool FitViewModel::undo() {
 }
 
 void FitViewModel::sync() {
+    // A scan mode runs only in a project whose scan resolves to datasets (the template's data files).
     const QString mode = QString::fromStdString(edi::effective_fitting_mode(project_));
-    const bool available = mode == QLatin1String("single") || mode == QLatin1String("joint");
+    const bool scan = edi::is_scan_fitting_mode(mode.toStdString());
+    const bool available = mode == QLatin1String("single") || mode == QLatin1String("joint") ||
+                           (scan && owner_.scan());
     const QString reason =
         available ? QString()
-                  : tr("Start fitting runs the single and joint fitting modes; this project's is %1").arg(mode);
+        : scan    ? tr("This project's %1 mode needs a scan: a data directory with matching files").arg(mode)
+                  : tr("Start fitting runs the single, joint, sequential and independent fitting modes; this "
+                       "project's is %1")
+                        .arg(mode);
     if (available != available_) {
         available_ = available;
         emit availableChanged();
@@ -332,11 +381,115 @@ void FitViewModel::showFrame() {
     }
 }
 
+void FitViewModel::scanStarted(const edi::ScanPreamble& preamble) {
+    ScanSummary counts;
+    counts.files = preamble.total_files;
+    counts.fitted = static_cast<int>(preamble.completed_rows.size());
+    for (const edi::ScanFileRecord& row : preamble.completed_rows) {
+        ++(row.converged ? counts.ok : counts.failed);
+    }
+    scan_resumed_ = counts.fitted;
+    setScanCounts(counts, preamble.completed_rows.empty()
+                              ? QString()
+                              : QString::fromStdString(preamble.completed_rows.back().file_name));
+    if (!preamble.completed_rows.empty()) {
+        setProgress(QString(), chi(preamble.completed_rows.back().reduced_chi_square), tr("Running"));
+    }
+}
+
+void FitViewModel::fileCompleted(const edi::ScanFileRecord& record) {
+    ScanSummary counts = scan_;
+    ++counts.fitted;
+    ++(record.converged ? counts.ok : counts.failed);
+    setScanCounts(counts, QString::fromStdString(record.file_name));
+    setProgress(QString(), chi(record.reduced_chi_square), tr("Running"));
+    owner_.scanFileFitted();
+}
+
+void FitViewModel::setScanCounts(const ScanSummary& counts, const QString& file) {
+    scan_.files = counts.files;
+    scan_.fitted = counts.fitted;
+    scan_.ok = counts.ok;
+    scan_.failed = counts.failed;
+    emit scanSummaryChanged();
+    emit scanFilesChanged();
+    emit scanOkChanged();
+    emit scanFailedChanged();
+    emit scanProgressChanged();
+    const int percent = scan_.files > 0 ? static_cast<int>(100.0 * scan_.fitted / scan_.files) : 0;
+    QStringList parts{QStringLiteral("%1/%2").arg(scan_.fitted).arg(scan_.files), QStringLiteral("%1%").arg(percent)};
+    if (!file.isEmpty()) {
+        parts.append(QFileInfo(file).completeBaseName());
+    }
+    const QString text = parts.join(QStringLiteral(" · "));
+    if (text != scan_text_) {
+        scan_text_ = text;
+        emit scanTextChanged();
+    }
+    // The time left at this run's pace: the files it fitted so far over the time they took.
+    const int done = scan_.fitted - scan_resumed_;
+    QString eta;
+    if (scanning_ && done > 0 && scan_.files > scan_.fitted) {
+        const double seconds = static_cast<double>(clock_.elapsed()) / 1000.0;
+        eta = duration(seconds / done * (scan_.files - scan_.fitted));
+    }
+    if (eta != eta_) {
+        eta_ = eta;
+        emit etaChanged();
+    }
+}
+
+void FitViewModel::setScanning(bool scanning) {
+    if (scanning != scanning_) {
+        scanning_ = scanning;
+        emit scanningChanged();
+    }
+}
+
+void FitViewModel::setContinuable(bool continuable) {
+    if (continuable != continuable_) {
+        continuable_ = continuable;
+        emit continuableChanged();
+    }
+}
+
+void FitViewModel::noteTemplateEdit() {
+    setContinuable(false);
+    setOutOfDate(scan_.fitted > 0);
+}
+
+void FitViewModel::setOutOfDate(bool out_of_date) {
+    if (out_of_date != out_of_date_) {
+        out_of_date_ = out_of_date;
+        emit outOfDateChanged();
+    }
+}
+
+void FitViewModel::scanEnded(const edi::FitReport& report) {
+    setScanning(false);
+    owner_.scanEnded();
+    // Stopped part way: Continue fitting fits the files left.
+    setContinuable(report.status == edi::FitStatus::CANCELLED && scan_.fitted > 0 && scan_.fitted < scan_.files);
+    if (scan_.fitted > 0) {
+        setElapsed(duration(static_cast<double>(clock_.elapsed()) / 1000.0));
+    }
+    if (report.status == edi::FitStatus::ERROR) {
+        emit refused(QString::fromStdString(report.refusal));
+        return;
+    }
+    emit scanFinished();
+}
+
 void FitViewModel::ended(const edi::FitReport& report) {
     // The last delivery: a frame still waiting is older than what follows, and is dropped.
     frame_timer_.stop();
     clock_timer_.stop();
     pending_frame_.reset();
+    if (scanning_) {
+        setRunning(false);
+        scanEnded(report);
+        return;
+    }
     setRunning(false);
     if (report.adopted()) {
         // The table, the χ², the chart and the texts all come from this one result, in this one step.
@@ -372,6 +525,9 @@ void FitViewModel::setRunning(bool running) {
 }
 
 void FitViewModel::setFollowing(bool following) {
+    if (job_) {
+        job_->follow(following);
+    }
     if (following != following_) {
         following_ = following;
         emit followingChanged();

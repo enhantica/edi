@@ -66,7 +66,8 @@ class DemoDriver : public QObject {
     void park_pointer();
     bool click(const QString& object_name);
     void settle_then(std::function<void()> next);
-    void wait_fit_then(std::function<void()> next, int waited_ms = 0);
+    // Waits until the fit has ended or, with `files`, until a running scan has fitted that many files.
+    void wait_fit_then(std::function<void()> next, int waited_ms = 0, int files = -1);
     void fail(const QString& message);
 
     QQuickWindow& window_;

@@ -91,6 +91,7 @@ EaElements.GroupBox {
                 required property string fitOutcome
                 required property string file
                 required property var extracted
+                required property bool isTemplate
 
                 objectName: `experiments.row.${index}`
                 color: group.project && group.project.currentExperimentIndex === index ? EaStyle.Colors.tableHighlight : (index % 2 ? EaStyle.Colors.themeBackgroundHovered2 : EaStyle.Colors.themeBackgroundHovered1)
@@ -128,18 +129,28 @@ EaElements.GroupBox {
                         group.project.currentExperimentIndex = row.index
                     onCommitted: text => row.experiment.name = text
                 }
-                // The data's file: the experiment's own `.edi`, which holds its data, or a scan dataset's data file;
-                // Load data… without data.
+                // The data's file: the experiment's own `.edi`, which holds its data, or a scan dataset's data file,
+                // the template dataset's with the word "template" in the accent blue; Load data… without data.
                 Item {
                     width: group.scan ? AppSizes.datasetFileColumnWidth : AppSizes.fileColumnWidth
                     height: parent ? parent.height : 0
 
                     EaComponents.TableViewLabel {
                         visible: group.scan || (row.experiment !== null && !row.experiment.calculationOnly)
-                        width: parent.width
+                        width: parent.width - (templateTag.visible ? templateTag.width : 0)
                         horizontalAlignment: Text.AlignLeft
                         elide: Text.ElideMiddle
                         text: row.file
+                    }
+                    EaComponents.TableViewLabel {
+                        id: templateTag
+                        objectName: `experiments.template.${row.index}`
+                        visible: group.scan && row.isTemplate
+                        anchors.right: parent.right
+                        width: implicitWidth
+                        elide: Text.ElideNone
+                        color: EaStyle.Colors.themeAccent
+                        text: qsTr("template")
                     }
                     EaElements.Button {
                         objectName: `experiments.loadData.${row.index}`
