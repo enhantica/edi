@@ -123,6 +123,13 @@ void ExperimentViewModel::setName(const QString& name) {
     setLastError(editor_.apply(edi::Edit::rename_experiment(project, experiment, name.toStdString()), true));
 }
 
+void ExperimentViewModel::setFitOutcome(const QString& outcome) {
+    if (outcome != fit_outcome_) {
+        fit_outcome_ = outcome;
+        emit fitOutcomeChanged();
+    }
+}
+
 void ExperimentViewModel::setRange(double start, double end, double step) {
     edi::ExperimentBase& experiment = experiment_;
     setLastError(editor_.apply(edi::Edit::data_range(experiment, start, end, step), false));

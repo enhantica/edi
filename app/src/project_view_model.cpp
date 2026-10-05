@@ -47,9 +47,10 @@ void ExperimentListModel::setExperiments(const QList<ExperimentViewModel*>& expe
     for (int i = 0; i < experiments.size(); ++i) {
         ExperimentViewModel* experiment = experiments[i];
         const bool fitted = joint ? experiment->experiment()->fit_prof_wr_factor.has_value() : i == 0;
+        experiment->setFitOutcome(fitted ? outcome : QString());
         rows.append({experiment,
                      {experiment->name(), block_label(experiment->name(), QStringLiteral("experiment")),
-                      QVariant::fromValue<QObject*>(experiment), fitted ? outcome : QString()}});
+                      QVariant::fromValue<QObject*>(experiment), experiment->fitOutcome()}});
     }
     setTableRows(rows);
 }

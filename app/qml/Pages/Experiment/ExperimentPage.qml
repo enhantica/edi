@@ -91,6 +91,8 @@ WorkflowPage {
     blocks: project ? project.experiments : null
     blocksTextRole: "label"
     blockKind: "experiment"
+    blockOutcomeRole: "fitOutcome"
+    blockCurrentOutcome: experiment ? experiment.fitOutcome : ""
     blockIndex: project ? project.currentExperimentIndex : -1
     onBlockActivated: index => page.project.currentExperimentIndex = index
     continueText: qsTr("Continue")
