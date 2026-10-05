@@ -1576,12 +1576,13 @@ Project* project_holding(const Structure& structure) {
 }
 
 // Before a geometry is computed for a project-owned structure, its relations set the coordinates and the
-// cell, as a calculation sets them (edi ADR-0024); a relation that cannot hold refuses with crysta's code.
+// cell, as a calculation sets them (edi ADR-0024). A relation that cannot hold, or a value outside its
+// range, refuses the read with crysta's code and leaves the model as it was.
 Project* relations_applied(const Structure& structure) {
     Project* project = project_holding(structure);
     if (project != nullptr) {
         refresh_relations(*project);
-        apply_relations(*project);
+        complete_relations(*project);
     }
     return project;
 }
@@ -1920,14 +1921,22 @@ void refresh_relations(Project& project, const WarningSink& warn) {
     mark_dependents(project, crysta::compile_relations(*converted->project, false), warn);
 }
 
+void complete_relations(Project& project) {
+    if (project.structures.empty()) {
+        return;
+    }
+    // crysta completes a converted copy, so a refusal leaves this model as it was.
+    RelationProject converted = relation_project(project);
+    copy_dependents(*converted.project, project, Completion::Values);
+    mark_dependents(project, crysta::compile_relations(*converted.project, false), {});
+}
+
 bool apply_relations(Project& project) {
     if (project.structures.empty()) {
         return false;
     }
     try {
-        RelationProject converted = relation_project(project);
-        copy_dependents(*converted.project, project, Completion::Values);
-        mark_dependents(project, crysta::compile_relations(*converted.project, false), {});
+        complete_relations(project);
         return true;
     } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — a calculation says why
         return false;

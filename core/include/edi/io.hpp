@@ -125,6 +125,11 @@ void refresh_relations(Project& project, const WarningSink& warn = {});
 // nothing when the model cannot be converted or its relations do not hold; a calculation says why.
 bool apply_relations(Project& project);
 
+// The same, refusing instead: crysta's refusal (a relation that cannot hold, a value outside its
+// range) propagates, and the model is unchanged. A read that needs the completed values, such as a
+// geometry, calls it.
+void complete_relations(Project& project);
+
 // Undo's half: apply_relations, then each dependent's e.s.d. back to the one it held before the
 // fit (kept in memory by the fit's write-back, or seeded by the loader from a legacy file).
 void restore_dependents(Project& project);
