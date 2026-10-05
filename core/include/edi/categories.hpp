@@ -266,7 +266,8 @@ struct FitStartRow {
 std::vector<FitStartRow> fit_start_rows(const Project& project);
 
 // A refinable parameter by its diffraction-lib unique name (`<datablock>.<category>[.<entry>].<name>`,
-// the `_alias.parameter_unique_name` spelling), in the slot walk's order. Defined beside the walk (io.cpp).
+// the `_alias.parameter_unique_name` spelling), in the slot walk's order: the parameters a new alias
+// can name. A dependent is left out, since its relation sets it. Defined beside the walk (io.cpp).
 struct NamedParameter {
     std::string unique_name;
     const Parameter* parameter = nullptr;

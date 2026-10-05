@@ -3413,7 +3413,9 @@ std::vector<FitStartRow> fit_start_rows(const Project& project) {
 std::vector<NamedParameter> named_parameters(const Project& project) {
     std::vector<NamedParameter> named;
     for (const auto& slot : parameter_slots(project)) {
-        named.push_back({slot.unique_name, slot.parameter});
+        if (slot.parameter->dependence == Dependence::Independent) {
+            named.push_back({slot.unique_name, slot.parameter});
+        }
     }
     return named;
 }
