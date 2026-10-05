@@ -445,7 +445,7 @@ def _baseline_paths() -> set[str]:
         ' I1: the frozen surface baseline must identify the edi module'
     )
     assert hashlib.sha256(content).hexdigest() == BASELINE_SHA256, (
-        'C11-T48 I1: retained surface baseline content must stay byte-identical'
+        'Retained surface baseline content must stay byte-identical'
     )
     paths = set(document['names'])
     paths.update(
@@ -470,7 +470,7 @@ def test_c11_t48_retained_baseline_cannot_shrink_or_gain_paths(
     damaged = tmp_path / 'damaged-baseline.json'
     damaged.write_text(json.dumps(document, indent=2) + '\n', encoding='utf-8')
     monkeypatch.setitem(globals(), 'BASELINE', damaged)
-    with pytest.raises(AssertionError, match='C11-T48 I1: retained surface baseline content'):
+    with pytest.raises(AssertionError, match='Retained surface baseline content'):
         _baseline_paths()
 
 
