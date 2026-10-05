@@ -39,8 +39,7 @@ void write_text(const std::filesystem::path& path, const std::string& text) {
     output << text;
 }
 
-edi::Project populated_project(edi::Structure structure,
-                               edi::BraggPdExperiment experiment) {
+edi::Project populated_project(edi::Structure structure, edi::BraggPdExperiment experiment) {
     edi::Project project;
     project.structures.clear();
     project.experiments.clear();
@@ -70,8 +69,7 @@ struct TempTree {
 };
 
 TempTree temp_tree(const std::string& leaf) {
-    const std::filesystem::path path =
-        std::filesystem::temp_directory_path() / ("edi--" + leaf);
+    const std::filesystem::path path = std::filesystem::temp_directory_path() / ("edi--" + leaf);
     std::filesystem::remove_all(path);
     return TempTree{path};
 }
@@ -80,9 +78,10 @@ TempTree temp_tree(const std::string& leaf) {
 
 TEST_CASE("E09-T55 entity readers accept dot-form and classic CIF structures") {
     const std::filesystem::path fixtures = repo_root() / "tests/fixtures";
-    const edi::Structure dot = edi::structure_from_edi_text(
-        read_text(fixtures / "c11_t4_cw_selection/structure.edi"));
-    CHECK_MESSAGE(dot.name == "ncaf", "the dot-form structure must retain its data-block identity");
+    const edi::Structure dot =
+        edi::structure_from_edi_text(read_text(fixtures / "c11_t4_cw_selection/structure.edi"));
+    CHECK_MESSAGE(dot.name == "ncaf",
+                  "the dot-form structure must retain its data-block identity");
     CHECK_MESSAGE(dot.space_group.name_h_m == "I 21 3",
                   "the dot-form structure must retain its Hermann-Mauguin setting");
     CHECK_MESSAGE(dot.atom_sites.size() == 6,
@@ -92,7 +91,8 @@ TEST_CASE("E09-T55 entity readers accept dot-form and classic CIF structures") {
 
     const edi::Structure classic = edi::structure_from_edi_text(
         read_text(fixtures / "e02_t2_ncaf_5bank/published_cod_1000236.cif"));
-    CHECK_MESSAGE(!classic.name.empty(), "the classic CIF structure must retain its data-block identity");
+    CHECK_MESSAGE(!classic.name.empty(),
+                  "the classic CIF structure must retain its data-block identity");
     CHECK_MESSAGE(!classic.space_group.name_h_m.empty(),
                   "the classic CIF structure must resolve a space-group name");
     CHECK_MESSAGE(!classic.atom_sites.empty(), "the classic CIF atom loop must produce sites");
@@ -104,8 +104,7 @@ TEST_CASE("E09-T55 entity readers accept dot-form and classic CIF structures") {
 }
 
 TEST_CASE("E09-T55 experiment reader accepts both implemented beam families") {
-    const std::filesystem::path cases =
-        repo_root() / "tests/fixtures/c11_t4_cw_selection/cases";
+    const std::filesystem::path cases = repo_root() / "tests/fixtures/c11_t4_cw_selection/cases";
     const edi::BraggPdExperiment cwl =
         edi::experiment_from_edi_text(read_text(cases / "cwl_valid.edi"));
     CHECK_MESSAGE(cwl.effective_beam_mode() == edi::BeamModeEnum::CONSTANT_WAVELENGTH,
@@ -172,8 +171,9 @@ _pd_meas.intensity_total_su
                     "classic CIF translation must retain upstream Caglioti U");
     CHECK_MESSAGE(experiment.peak.broad_gauss_u->value == doctest::Approx(0.0834),
                   "Caglioti U must equal the frozen diffraction-lib reference");
-    CHECK_MESSAGE(experiment.linked_structure.structure_id == "Si",
-                  "an absent classic phase block must use diffraction-lib's documented Si default");
+    CHECK_MESSAGE(
+        experiment.linked_structure().structure_id == "Si",
+        "an absent classic phase block must use diffraction-lib's documented Si default");
     REQUIRE_MESSAGE(experiment.background.size() == 1,
                     "classic CIF translation must retain the line-segment background loop");
     CHECK_MESSAGE((experiment.background[0]->position == 10.0 &&
@@ -187,8 +187,7 @@ _pd_meas.intensity_total_su
 }
 
 TEST_CASE("E09-T55 experiment reader refuses every committed selector-family crossing") {
-    const std::filesystem::path cases =
-        repo_root() / "tests/fixtures/c11_t4_cw_selection/cases";
+    const std::filesystem::path cases = repo_root() / "tests/fixtures/c11_t4_cw_selection/cases";
     const std::vector<std::pair<std::string, std::string>> refusals{
         {"cwl_with_tof_beam.edi", "beam"},
         {"tof_with_cwl_beam.edi", "beam"},
@@ -218,14 +217,16 @@ TEST_CASE("E09-T55 CW experiment reader requires every independently declared pr
         repo_root() / "tests/fixtures/c11_t4_cw_selection/cases/cwl_valid.edi";
     const std::string source = read_text(source_path);
     const std::vector<std::string> tags{
-        "_peak.broad_gauss_u", "_peak.broad_gauss_v", "_peak.broad_gauss_w",
-        "_peak.broad_lorentz_x", "_peak.broad_lorentz_y",
-        "_instrument.calib_twotheta_offset", "_instrument.setup_wavelength",
+        "_peak.broad_gauss_u",          "_peak.broad_gauss_v",
+        "_peak.broad_gauss_w",          "_peak.broad_lorentz_x",
+        "_peak.broad_lorentz_y",        "_instrument.calib_twotheta_offset",
+        "_instrument.setup_wavelength",
     };
     for (const std::string& tag : tags) {
         const std::size_t begin = source.find(tag + " ");
-        REQUIRE_MESSAGE(begin != std::string::npos,
-                        "the committed CW fixture must carry each independently declared required tag");
+        REQUIRE_MESSAGE(
+            begin != std::string::npos,
+            "the committed CW fixture must carry each independently declared required tag");
         const std::size_t end = source.find('\n', begin);
         std::string missing = source;
         missing.erase(begin, end - begin + 1);
@@ -234,10 +235,11 @@ TEST_CASE("E09-T55 CW experiment reader requires every independently declared pr
     }
 }
 
+// clang-format off
 TEST_CASE("E09-T55 project loader covers multi-bank, absent, and explicit-none absorption shapes") {
+    // clang-format on
     const std::filesystem::path fixtures = repo_root() / "tests/fixtures";
-    const edi::Project five = edi::load_project(
-        (fixtures / "e02_t2_ncaf_5bank/project").string());
+    const edi::Project five = edi::load_project((fixtures / "e02_t2_ncaf_5bank/project").string());
     CHECK_MESSAGE(five.structures.size() == 1,
                   "the NCAF fixture must retain its single declared structure");
     CHECK_MESSAGE(five.experiments.size() == 5,
@@ -245,15 +247,15 @@ TEST_CASE("E09-T55 project loader covers multi-bank, absent, and explicit-none a
     CHECK_MESSAGE(five.fitting_mode == "joint",
                   "the five-bank analysis fixture must retain joint fitting mode");
 
-    const edi::Project absent = edi::load_project(
-        (fixtures / "c09_t6_ncaf_5bank_absorption/key_absent_project").string());
+    const edi::Project absent =
+        edi::load_project((fixtures / "c09_t6_ncaf_5bank_absorption/key_absent_project").string());
     CHECK_MESSAGE(absent.experiment().absorption.type == "none",
                   "an absent absorption selector must load as the canonical none type");
     CHECK_MESSAGE(!absent.experiment().absorption.abscor1.has_value(),
                   "an absent absorption body must not synthesize ABSCOR1");
 
-    const edi::Project explicit_none = edi::load_project(
-        (fixtures / "c09_t6_ncaf_5bank_absorption/type_none_project").string());
+    const edi::Project explicit_none =
+        edi::load_project((fixtures / "c09_t6_ncaf_5bank_absorption/type_none_project").string());
     REQUIRE_MESSAGE(explicit_none.experiment().absorption.type.has_value(),
                     "an explicit none absorption selector must remain present");
     CHECK_MESSAGE(*explicit_none.experiment().absorption.type == "none",
@@ -292,9 +294,9 @@ TEST_CASE("E09-T55 constant-wavelength project writer preserves typed axes and o
     edi::save_project(project, temporary.path.string());
     edi::save_project(project, temporary.path.string());
     const edi::Project restored = edi::load_project(temporary.path.string());
-    CHECK_MESSAGE(restored.experiment().effective_beam_mode() ==
-                      edi::BeamModeEnum::CONSTANT_WAVELENGTH,
-                  "the CW writer must retain the typed beam mode");
+    CHECK_MESSAGE(
+        restored.experiment().effective_beam_mode() == edi::BeamModeEnum::CONSTANT_WAVELENGTH,
+        "the CW writer must retain the typed beam mode");
     REQUIRE_MESSAGE(restored.experiment().data.has_value(),
                     "the CW writer must retain embedded observations");
     CHECK_MESSAGE(restored.experiment().data->two_theta.has_value(),
@@ -305,8 +307,9 @@ TEST_CASE("E09-T55 constant-wavelength project writer preserves typed axes and o
                   "the CW writer must retain excluded-region pairs");
     REQUIRE_MESSAGE(restored.experiment().peak.broad_gauss_u.has_value(),
                     "the CW writer must retain Caglioti U");
-    CHECK_MESSAGE(restored.experiment().peak.broad_gauss_u->uncertainty == doctest::Approx(1.0e-40),
-                  "the CW writer must retain an independently specified nonzero uncertainty");
+    CHECK_MESSAGE(
+        restored.experiment().peak.broad_gauss_u->uncertainty == doctest::Approx(1.0e-40),
+        "the CW writer must retain an independently specified nonzero uncertainty");
     CHECK_MESSAGE(restored.experiment().peak.broad_gauss_u->free,
                   "the CW writer must retain an independently specified free flag");
 }
@@ -320,14 +323,15 @@ TEST_CASE("E09-T55 writer refuses calculation-only and ragged CW observations") 
 
     project.experiment().calculation_only = true;
     TempTree calculation = temp_tree("calculation-only-refusal");
-    check_io_error([&] { edi::save_project(project, calculation.path.string()); }, "calculation-only",
+    check_io_error([&] { edi::save_project(project, calculation.path.string()); },
+                   "calculation-only",
                    "a generated calculation grid must never be persisted as observations");
 
     project = populated_project(std::move(structure), std::move(experiment));
     REQUIRE_MESSAGE(project.experiment().data.has_value(),
                     "the committed CW fixture must carry observations before the ragged mutation");
-    auto ragged_values = static_cast<const std::vector<double>&>(
-        project.experiment().data->intensity_meas);
+    auto ragged_values =
+        static_cast<const std::vector<double>&>(project.experiment().data->intensity_meas);
     ragged_values.pop_back();
     project.experiment().data->intensity_meas = std::move(ragged_values);
     TempTree ragged = temp_tree("ragged-cwl-refusal");
@@ -339,13 +343,15 @@ TEST_CASE("E09-T55 writer refuses calculation-only and ragged CW observations") 
         edi::experiment_from_edi_text(read_text(fixtures / "cases/cwl_valid.edi")));
     project.experiment().peak.broad_gauss_u.reset();
     TempTree incomplete = temp_tree("incomplete-cwl-refusal");
-    check_io_error([&] { edi::save_project(project, incomplete.path.string()); }, "missing required field",
+    check_io_error([&] { edi::save_project(project, incomplete.path.string()); },
+                   "missing required field",
                    "a programmatic CW model missing a required field must fail closed on write");
 }
 
 TEST_CASE("E09-T55 project metadata refreshes its public modification timestamp") {
     edi::ProjectMetadata metadata;
-    CHECK_MESSAGE(!metadata.created.empty(), "project metadata must carry a construction timestamp");
+    CHECK_MESSAGE(!metadata.created.empty(),
+                  "project metadata must carry a construction timestamp");
     CHECK_MESSAGE(!metadata.last_modified.empty(),
                   "project metadata must carry a last-modified timestamp");
     const std::string before = metadata.last_modified;
@@ -361,9 +367,10 @@ TEST_CASE("E09-T55 declared data ranges select calculation mode and reject ambig
     REQUIRE_MESSAGE(data_loop != std::string::npos,
                     "the committed CW fixture must carry the measured-loop mutation seam");
     std::string ranged = measured.substr(0, data_loop);
-    ranged += "_data_range.two_theta_min 10\n"
-              "_data_range.two_theta_max 20\n"
-              "_data_range.two_theta_step 5\n";
+    ranged +=
+        "_data_range.two_theta_min 10\n"
+        "_data_range.two_theta_max 20\n"
+        "_data_range.two_theta_step 5\n";
     const edi::BraggPdExperiment calculation = edi::experiment_from_edi_text(ranged);
     CHECK_MESSAGE(calculation.calculation_only,
                   "a complete declared range must select calculation-only mode");
@@ -372,9 +379,9 @@ TEST_CASE("E09-T55 declared data ranges select calculation mode and reject ambig
     const std::vector<double> expected_axis{10.0, 15.0, 20.0};
     CHECK_MESSAGE(calculation.data->axis() == expected_axis,
                   "the generated axis must follow the independently declared min/max/step");
-    CHECK_MESSAGE((calculation.data->intensity_meas.empty() &&
-                   calculation.data->intensity_meas_su.empty()),
-                  "a generated range must not fabricate observations");
+    CHECK_MESSAGE(
+        (calculation.data->intensity_meas.empty() && calculation.data->intensity_meas_su.empty()),
+        "a generated range must not fabricate observations");
 
     std::string unusable = ranged;
     const std::size_t step = unusable.find("_data_range.two_theta_step 5");
@@ -384,11 +391,14 @@ TEST_CASE("E09-T55 declared data ranges select calculation mode and reject ambig
                      "_data_range.two_theta_step 0");
     check_io_error([&] { static_cast<void>(edi::experiment_from_edi_text(unusable)); }, "step",
                    "an unusable declared range must fail closed");
-    check_io_error([&] {
-        static_cast<void>(edi::experiment_from_edi_text(
-            measured + "_data_range.two_theta_min 10\n_data_range.two_theta_max 20\n"
-                       "_data_range.two_theta_step 5\n"));
-    }, "declares both", "a block must not declare observations and a calculation range together");
+    check_io_error(
+        [&] {
+            static_cast<void>(edi::experiment_from_edi_text(
+                measured +
+                "_data_range.two_theta_min 10\n_data_range.two_theta_max 20\n"
+                "_data_range.two_theta_step 5\n"));
+        },
+        "declares both", "a block must not declare observations and a calculation range together");
 
     std::string partial = measured.substr(0, data_loop);
     partial += "_data_range.two_theta_min 10\n";
@@ -398,8 +408,7 @@ TEST_CASE("E09-T55 declared data ranges select calculation mode and reject ambig
     TempTree all_range = temp_tree("range-project");
     std::filesystem::create_directories(all_range.path / "structures");
     std::filesystem::create_directories(all_range.path / "experiments");
-    std::filesystem::copy_file(fixtures / "structure.edi",
-                               all_range.path / "structures/ncaf.edi");
+    std::filesystem::copy_file(fixtures / "structure.edi", all_range.path / "structures/ncaf.edi");
     write_text(all_range.path / "experiments/range.edi", ranged);
     const edi::Project range_project = edi::load_project(all_range.path.string());
     CHECK_MESSAGE(range_project.experiment().calculation_only,
@@ -416,23 +425,32 @@ TEST_CASE("E09-T55 project I/O fails closed before partial state escapes") {
     check_io_error([&] { static_cast<void>(edi::load_project("/definitely/not/an/edi/project")); },
                    "project directory", "a missing project directory must fail closed");
 
-    edi::Project multi = edi::load_project(
-        (fixtures / "c09_t6_ncaf_5bank_absorption/type_none_project").string());
-    // : before, fixture setup duplicated the first key. After, a distinct
-    // second structure reaches the unchanged multi-structure publication refusal.
+    edi::Project multi =
+        edi::load_project((fixtures / "c09_t6_ncaf_5bank_absorption/type_none_project").string());
+    // Several named structures are now representable; save and reload must keep both.
     auto second_structure = *multi.structures.front();
     second_structure.name = "second-structure";
     multi.structures.push_back(second_structure);
-    TempTree destination = temp_tree("multi-structure-refusal");
-    check_io_error([&] { edi::save_project(multi, destination.path.string()); }, "multi-structure",
-                   "the writer must refuse a project it cannot represent without data loss");
-    CHECK_MESSAGE(!std::filesystem::exists(destination.path),
-                  "a refused multi-structure save must not touch its destination");
+    TempTree destination = temp_tree("multi-structure-save");
+    edi::save_project(multi, destination.path.string());
+    const auto carried = edi::load_project(destination.path.string());
+    REQUIRE_MESSAGE(carried.structures.size() == 2,
+                    "A multi-structure save must preserve every named structure");
+    for (std::size_t i = 0; i < multi.structures.size(); ++i) {
+        CHECK_MESSAGE(carried.structures[i]->name == multi.structures[i]->name,
+                      "A multi-structure save must preserve each structure identity");
+        CHECK_MESSAGE(
+            carried.structures[i]->atom_sites.size() == multi.structures[i]->atom_sites.size(),
+            "A multi-structure save must preserve each structure's sites");
+        CHECK_MESSAGE(
+            carried.structures[i]->cell.length_a.value == multi.structures[i]->cell.length_a.value,
+            "A multi-structure save must preserve each structure's cell");
+    }
 }
 
 TEST_CASE("E09-T55 STAR parser failures retain their validation tier") {
-    const std::string valid = read_text(
-        repo_root() / "tests/fixtures/c11_t4_cw_selection/structure.edi");
+    const std::string valid =
+        read_text(repo_root() / "tests/fixtures/c11_t4_cw_selection/structure.edi");
     const auto replacing = [&valid](const std::string& before, const std::string& after) {
         std::string changed = valid;
         const std::size_t offset = changed.find(before);
@@ -469,9 +487,8 @@ TEST_CASE("E09-T55 STAR parser failures retain their validation tier") {
     const std::string outside =
         replacing("Ca Ca 0.4661 0 0.25 b 1 0.90 Biso", "Ca Ca 0.4661 0 0.25 b 2 0.90 Biso");
     const edi::Structure parsed = edi::structure_from_edi_text(outside);
-    CHECK_MESSAGE(
-        parsed.atom_sites.front()->occupancy.value == 2.0,
-        " entity reader preserves finite out-of-range occupancy without clamping");
+    CHECK_MESSAGE(parsed.atom_sites.front()->occupancy.value == 2.0,
+                  " entity reader preserves finite out-of-range occupancy without clamping");
     TempTree input = temp_tree("range-warning");
     std::filesystem::create_directories(input.path / "structures");
     std::filesystem::create_directories(input.path / "experiments");
@@ -523,15 +540,16 @@ TEST_CASE("E09-T55 experiment schema mutations fail at their declared boundary")
          "chebyshev background cannot contain line-segment fields"},
         {replace_one("_background.type line-segment", "_background.type mystery"),
          "unknown _background.type"},
-        {replace_one("_data.intensity_meas_su", "_data.unmodelled_su"),
-         "missing required column"},
+        {replace_one("_data.intensity_meas_su", "_data.unmodelled_su"), "missing required column"},
         {replace_one("18.25 1 0 1", "18.25 1 0 0"), "non-positive"},
-        {replace_one("_experiment_type.sample_form powder",
-                     "_experiment_type.sample_form liquid"), "not a known token"},
+        {replace_one("_experiment_type.sample_form powder", "_experiment_type.sample_form liquid"),
+         "not a known token"},
         {replace_one("_experiment_type.radiation_probe neutron",
-                     "_experiment_type.radiation_probe electron"), "not a known token"},
+                     "_experiment_type.radiation_probe electron"),
+         "not a known token"},
         {replace_one("_experiment_type.scattering_type bragg",
-                     "_experiment_type.scattering_type diffuse"), "not a known token"},
+                     "_experiment_type.scattering_type diffuse"),
+         "not a known token"},
     };
     for (const auto& [source, fragment] : refusals) {
         check_io_error([&] { static_cast<void>(edi::experiment_from_edi_text(source)); }, fragment,
@@ -573,8 +591,8 @@ TEST_CASE("E09-T55 experiment schema mutations fail at their declared boundary")
 }
 
 TEST_CASE("E09-T55 structure schema handles optional identity and ADP branches") {
-    const std::string valid = read_text(
-        repo_root() / "tests/fixtures/c11_t4_cw_selection/structure.edi");
+    const std::string valid =
+        read_text(repo_root() / "tests/fixtures/c11_t4_cw_selection/structure.edi");
     const auto replacing = [&valid](const std::string& before, const std::string& after) {
         std::string changed = valid;
         const std::size_t offset = changed.find(before);
@@ -589,31 +607,32 @@ TEST_CASE("E09-T55 structure schema handles optional identity and ADP branches")
                   "_space_group.coord_system_code 1\n_space_group.it_number 199"));
     CHECK_MESSAGE(numbered.space_group.it_number == 199,
                   "a valid independently declared IT number must remain present");
-    check_io_error([&] {
-        static_cast<void>(edi::structure_from_edi_text(
-            replacing("_space_group.coord_system_code 1",
-                      "_space_group.coord_system_code 1\n_space_group.it_number 999")));
-    }, "not an IT number", "an out-of-range IT number must fail closed");
+    check_io_error(
+        [&] {
+            static_cast<void>(edi::structure_from_edi_text(
+                replacing("_space_group.coord_system_code 1",
+                          "_space_group.coord_system_code 1\n_space_group.it_number 999")));
+        },
+        "not an IT number", "an out-of-range IT number must fail closed");
 
     const edi::Structure uiso = edi::structure_from_edi_text(
-        replacing("Ca Ca 0.4661 0 0.25 b 1 0.90 Biso",
-                  "Ca Ca 0.4661 0 0.25 b 1 0.01 Uiso"));
+        replacing("Ca Ca 0.4661 0 0.25 b 1 0.90 Biso", "Ca Ca 0.4661 0 0.25 b 1 0.01 Uiso"));
     CHECK_MESSAGE(uiso.atom_sites.front()->adp_type == "Biso",
                   "a Uiso source must be stored in the model's Biso representation");
     CHECK_MESSAGE(uiso.atom_sites.front()->adp_iso.value ==
-                      doctest::Approx(0.01 * 8.0 * 3.141592653589793238 *
-                                      3.141592653589793238),
+                      doctest::Approx(0.01 * 8.0 * 3.141592653589793238 * 3.141592653589793238),
                   "Uiso must use the independently defined B=8*pi^2*U conversion");
-    check_io_error([&] {
-        static_cast<void>(edi::structure_from_edi_text(
-            replacing("Ca Ca 0.4661 0 0.25 b 1 0.90 Biso",
-                      "Ca Ca 0.4661 0 0.25 b 1 0.90 Uani")));
-    }, "not readable", "an anisotropic ADP token must not be misread as isotropic B");
+    check_io_error(
+        [&] {
+            static_cast<void>(edi::structure_from_edi_text(replacing(
+                "Ca Ca 0.4661 0 0.25 b 1 0.90 Biso", "Ca Ca 0.4661 0 0.25 b 1 0.90 Uani")));
+        },
+        "not readable", "an anisotropic ADP token must not be misread as isotropic B");
 }
 
 TEST_CASE("E09-T55 background and measured loops reject partial plausible shapes") {
-    const std::string valid = read_text(
-        repo_root() / "tests/fixtures/c11_t4_cw_selection/cases/cwl_valid.edi");
+    const std::string valid =
+        read_text(repo_root() / "tests/fixtures/c11_t4_cw_selection/cases/cwl_valid.edi");
     const std::size_t background_begin = valid.find("loop_\n_background.id");
     const std::size_t data_begin = valid.find("loop_\n_data.two_theta");
     REQUIRE_MESSAGE((background_begin != std::string::npos && data_begin != std::string::npos),
@@ -624,8 +643,7 @@ TEST_CASE("E09-T55 background and measured loops reject partial plausible shapes
         return changed;
     };
     const std::vector<std::pair<std::string, std::string>> background_refusals{
-        {with_background("_background.position 10\n_background.intensity 169"),
-         "must be a loop"},
+        {with_background("_background.position 10\n_background.intensity 169"), "must be a loop"},
         {with_background("loop_\n_background.id\n_background.position\n1 10\n2 90"),
          "requires a loop declaring both"},
         {with_background("loop_\n_background.id\n_background.position\n1 10\n"
@@ -638,8 +656,9 @@ TEST_CASE("E09-T55 background and measured loops reject partial plausible shapes
     }
 
     std::string split_data = valid.substr(0, data_begin);
-    split_data += "loop_\n_data.two_theta\n_data.id\n10 1\n"
-                  "loop_\n_data.intensity_meas\n_data.intensity_meas_su\n100 1\n";
+    split_data +=
+        "loop_\n_data.two_theta\n_data.id\n10 1\n"
+        "loop_\n_data.intensity_meas\n_data.intensity_meas_su\n100 1\n";
     check_io_error([&] { static_cast<void>(edi::experiment_from_edi_text(split_data)); },
                    "split across multiple loops",
                    "measured columns split across loops must fail closed");
@@ -670,10 +689,11 @@ TEST_CASE("E09-T55 TOF writer refuses ragged observations") {
     edi::Project project = populated_project(
         edi::structure_from_edi_text(read_text(fixtures / "structure.edi")),
         edi::experiment_from_edi_text(read_text(fixtures / "cases/tof_valid.edi")));
-    REQUIRE_MESSAGE(project.experiment().data.has_value(),
-                    "the committed TOF fixture must carry observations before the ragged mutation");
-    auto ragged_values = static_cast<const std::vector<double>&>(
-        project.experiment().data->intensity_meas_su);
+    REQUIRE_MESSAGE(
+        project.experiment().data.has_value(),
+        "the committed TOF fixture must carry observations before the ragged mutation");
+    auto ragged_values =
+        static_cast<const std::vector<double>&>(project.experiment().data->intensity_meas_su);
     ragged_values.pop_back();
     project.experiment().data->intensity_meas_su = std::move(ragged_values);
     TempTree ragged = temp_tree("ragged-tof-refusal");
@@ -720,7 +740,8 @@ TEST_CASE("E09-T55 project loader rejects a zero analysis bound") {
 TEST_CASE("E09-T55 JVD selector requires every Lorentzian profile field") {
     const std::filesystem::path source_path =
         repo_root() /
-        "tests/fixtures/c09_t6_ncaf_5bank_absorption/expected/desired_writer/jvd_absorption/experiments/wish_2_9.edi";
+        "tests/fixtures/c09_t6_ncaf_5bank_absorption/expected/desired_writer/jvd_absorption/"
+        "experiments/wish_2_9.edi";
     const std::string source = read_text(source_path);
     const std::string tag = "_peak.broad_lorentz_gamma_0";
     const std::size_t begin = source.find(tag + " ");
@@ -743,8 +764,8 @@ TEST_CASE("E09-T55 live peak registration is idempotent and mode-specific") {
 }
 
 TEST_CASE("E09-T55 refinement refuses a measured pattern wholly removed by exclusions") {
-    edi::Project project = edi::load_project(
-        (repo_root() / "tests/fixtures/e02_t2_ncaf_5bank/project").string());
+    edi::Project project =
+        edi::load_project((repo_root() / "tests/fixtures/e02_t2_ncaf_5bank/project").string());
     project.experiment().excluded_regions = {{-1.0e9, 1.0e9}};
 
     bool raised = false;
@@ -752,8 +773,9 @@ TEST_CASE("E09-T55 refinement refuses a measured pattern wholly removed by exclu
         static_cast<void>(project.fit({10000.0, 20000.0}, {1.0, 1.0}, {1.0, 1.0}));
     } catch (const std::invalid_argument& error) {
         raised = true;
-        CHECK_MESSAGE(std::string(error.what()).find("no measured data remains") != std::string::npos,
-                      "a fully excluded measured pattern must identify the empty masked input");
+        CHECK_MESSAGE(
+            std::string(error.what()).find("no measured data remains") != std::string::npos,
+            "a fully excluded measured pattern must identify the empty masked input");
     }
     CHECK_MESSAGE(raised,
                   "a fully excluded measured pattern must fail before entering the minimizer");

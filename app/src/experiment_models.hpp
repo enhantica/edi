@@ -2,6 +2,7 @@
 #ifndef EDI_APP_EXPERIMENT_MODELS_HPP
 #define EDI_APP_EXPERIMENT_MODELS_HPP
 
+#include <QStringList>
 #include <QtQml/qqmlregistration.h>
 #include <functional>
 
@@ -107,8 +108,54 @@ class ExcludedRegionListModel : public RowTableModel {
     ProjectEditor& editor_;
 };
 
+// The experiment's linked structures (phases): roles `structureId`, `scale` (ParameterItem), `enabled` and
+// `colorIndex` (the structure's place in the project, its colour). `structureNames` lists the project's
+// structures, the choices of a row's name. A row is added naming a structure not yet linked, removed while
+// another remains, and disabled — kept and saved, but neither calculated nor fitted.
+class LinkedStructureListModel : public RowTableModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to an experiment")
+    Q_PROPERTY(QStringList structureNames READ structureNames NOTIFY structureNamesChanged)
+    Q_PROPERTY(bool canAppend READ canAppend NOTIFY canAppendChanged)
+    Q_PROPERTY(bool canRemove READ canRemove NOTIFY canRemoveChanged)
+
+   public:
+    LinkedStructureListModel(edi::Project& project, edi::ExperimentBase& experiment, ProjectEditor& editor,
+                             ParameterRegistry& registry, QObject* parent);
+    void sync();
+    QStringList structureNames() const { return structure_names_; }
+    bool canAppend() const { return can_append_; }
+    bool canRemove() const { return can_remove_; }
+    Q_INVOKABLE bool setStructureId(int row, const QString& id);
+    Q_INVOKABLE bool setEnabled(int row, bool enabled);
+    Q_INVOKABLE void append();
+    Q_INVOKABLE void remove(int row);
+
+   protected:
+    bool setRole(int row, const QString& role, const QVariant& value) override {
+        return role == QLatin1String("structureId") ? setStructureId(row, value.toString())
+               : role == QLatin1String("enabled")   ? setEnabled(row, value.toBool())
+                                                    : false;
+    }
+
+   signals:
+    void structureNamesChanged();
+    void canAppendChanged();
+    void canRemoveChanged();
+
+   private:
+    edi::Project& project_;
+    edi::ExperimentBase& experiment_;
+    ProjectEditor& editor_;
+    ParameterRegistry& registry_;
+    QStringList structure_names_;
+    bool can_append_ = false;
+    bool can_remove_ = false;
+};
+
 // The preferred-orientation rows: `structureId`, the texture axis `indexH/K/L` (the library's bounds,
-// edits.hpp), and `marchR`, `marchRandomFract` (ParameterItems); at most one row.
+// edits.hpp), and `marchR`, `marchRandomFract` (ParameterItems); one row per textured linked structure.
 class PrefOrientListModel : public RowTableModel {
     Q_OBJECT
     QML_ELEMENT

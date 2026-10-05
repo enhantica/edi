@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #pragma once
 
+#include <algorithm>
 #include <cstddef>
 #include <memory>
 #include <string>
@@ -82,15 +83,21 @@ using StructuresView = KeyedView<Project, Structure, Structure>;
 using ExperimentsView = KeyedView<Project, BraggPdExperiment, ExperimentBase>;
 using AtomSitesView = KeyedView<Structure, AtomSite, AtomSite>;
 using PrefOrientsView = KeyedView<ExperimentBase, PrefOrient, PrefOrient>;
+using LinkedStructuresView = KeyedView<ExperimentBase, LinkedStructure, LinkedStructure>;
 using AliasesView = KeyedView<Project, ParameterAlias, ParameterAlias>;
 using ConstraintsView = KeyedView<Project, ParameterConstraint, ParameterConstraint>;
 void after_change(const AliasesView& view);
 void after_change(const ConstraintsView& view);
 
-// A texture row is admitted only when its key names the experiment's linked
-// structure (the loader's rule), before it is installed.
+// A texture row is admitted only when its key names one of the experiment's linked structures
+// (the loader's rule), before it is installed; one link without an id admits any key.
 inline void validate_insert(const PrefOrientsView& view, const PrefOrient& row) {
-    const std::string& linked = view.owner->linked_structure.structure_id;
+    const ItemVec<LinkedStructure>& links = view.owner->linked_structures;
+    const bool one_unnamed = links.size() == 1 && links.front()->structure_id.empty();
+    const bool named = std::any_of(links.begin(), links.end(), [&](const auto& link) {
+        return link->structure_id.value() == row.structure_id.value();
+    });
+    const std::string linked = links.size() == 1 ? links.front()->structure_id.value() : std::string();
     for (const int index : {row.index_h, row.index_k, row.index_l}) {
         if (index > kPreferredOrientationAxisBound || index < -kPreferredOrientationAxisBound) {
             fail_domain("experiment '" + view.owner->name + "'", "preferred-orientation-domain",
@@ -98,7 +105,7 @@ inline void validate_insert(const PrefOrientsView& view, const PrefOrient& row) 
                             std::to_string(kPreferredOrientationAxisBound));  // review-4 F2
         }
     }
-    if (row.structure_id.empty() || (!linked.empty() && row.structure_id != linked)) {
+    if (row.structure_id.empty() || (!one_unnamed && !named)) {
         fail_domain("experiment '" + view.owner->name + "'", "preferred-orientation-structure",
                     "_preferred_orientation.structure_id '" + row.structure_id +
                         "' does not name the linked structure '" + linked + "'");
@@ -122,6 +129,7 @@ using StructuresIter = KeyedIter<Project, Structure, Structure>;
 using ExperimentsIter = KeyedIter<Project, BraggPdExperiment, ExperimentBase>;
 using AtomSitesIter = KeyedIter<Structure, AtomSite, AtomSite>;
 using PrefOrientsIter = KeyedIter<ExperimentBase, PrefOrient, PrefOrient>;
+using LinkedStructuresIter = KeyedIter<ExperimentBase, LinkedStructure, LinkedStructure>;
 using AliasesIter = KeyedIter<Project, ParameterAlias, ParameterAlias>;
 using ConstraintsIter = KeyedIter<Project, ParameterConstraint, ParameterConstraint>;
 

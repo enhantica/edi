@@ -83,11 +83,7 @@ inline void capture_holders(Measurements& out, bool dependants = true) {
         out, "plain-linked-structure", [] { return edi::LinkedStructure(); },
         [](const auto& p) { return Ticks{p.epoch.value(), 0, 0}; },
         {
-            {"key-equal",
-             [](auto& p) {
-                 std::string& held = p.structure_id;
-                 held = "";
-             }},
+            {"key-equal", [](auto& p) { p.structure_id = p.structure_id.value(); }},
             {"key-changed", [](auto& p) { p.structure_id = "another-structure"; }},
         });
     holder_routes(

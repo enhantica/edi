@@ -7,9 +7,9 @@ namespace e04_t9 {
 // The engine's own setting map supplies every dependent value. For example a
 // cubic length edit must compare with the cubic reference b=c=a, not a strained cell.
 inline void reference_length_a(crysta::Project& reference, double length) {
-    auto& cell = reference.structure.cell.parameters;
+    auto& cell = reference.structure().cell.parameters;
     cell[0].set_value(length);
-    const auto freedom = crysta::cell_freedom(reference.structure.space_group.get());
+    const auto freedom = crysta::cell_freedom(reference.structure().space_group.get());
     std::array<double, 6> independent{};
     for (std::size_t axis = 0; axis < independent.size(); ++axis)
         independent[axis] = cell[axis].value();

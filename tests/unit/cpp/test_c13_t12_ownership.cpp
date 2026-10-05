@@ -247,19 +247,16 @@ void ownership(Collection initial, Key key) {
     }
     SUBCASE("whole item copy before scalar payload") {
         collision([&] { object(items[0]) = object(items[1]); }, before[1]);
-        CHECK_MESSAGE(names() == before,
-                      " refused whole-item assignment preserves both keys");
+        CHECK_MESSAGE(names() == before, " refused whole-item assignment preserves both keys");
         CHECK_MESSAGE(payload(object(items[0])) == original_payload,
                       " refused whole-item assignment changes no scalar payload");
     }
     SUBCASE("bulk assignment and old membership") {
         auto first = items[0];
         collision([&] { items.assign({first, first}); }, before[0]);
-        CHECK_MESSAGE(names() == before,
-                      " failed bulk admission preserves original storage");
+        CHECK_MESSAGE(names() == before, " failed bulk admission preserves original storage");
         collision([&] { key(object(items[1])) = before[0]; }, before[0]);
-        CHECK_MESSAGE(names() == before,
-                      " failed bulk admission retains original membership");
+        CHECK_MESSAGE(names() == before, " failed bulk admission retains original membership");
     }
     SUBCASE("deep collection copy") {
         Collection copy(items);
@@ -276,8 +273,7 @@ void ownership(Collection initial, Key key) {
     }
     SUBCASE("moving attached item retains source membership") {
         auto detached(std::move(object(items[0])));
-        CHECK_MESSAGE(names() == before,
-                      " moving an attached item leaves its source key intact");
+        CHECK_MESSAGE(names() == before, " moving an attached item leaves its source key intact");
         key(detached) = before[1];
         collision([&] { key(object(items[0])) = before[1]; }, before[1]);
     }
@@ -333,10 +329,9 @@ void refused_moves(Collection items, Key key) {
     CHECK_MESSAGE((std::string(key(object(items[0]))) == before[0] &&
                    std::string(key(object(items[1]))) == before[1]),
                   " refused move preserves both identities");
-    CHECK_MESSAGE(
-        (payload(object(items[0])) == original_payload &&
-         payload(object(items[1])) == sibling_payload),
-        " refused move preserves every populated string vector and nested payload");
+    CHECK_MESSAGE((payload(object(items[0])) == original_payload &&
+                   payload(object(items[1])) == sibling_payload),
+                  " refused move preserves every populated string vector and nested payload");
     collision([&] { key(object(items[1])) = before[0]; }, before[0]);
     CHECK_MESSAGE(std::string(key(object(items[1]))) == before[1],
                   " refused move retains parent membership");
@@ -370,9 +365,8 @@ void checked_members(Collection& items, Key key) {
             const auto original = std::string(key(object(items[i])));
             const auto sibling = std::string(key(object(items[(i + 1) % items.size()])));
             collision([&] { key(object(items[i])) = sibling; }, sibling);
-            CHECK_MESSAGE(
-                std::string(key(object(items[i]))) == original,
-                " post-allocation-failure sibling rename remains checked and atomic");
+            CHECK_MESSAGE(std::string(key(object(items[i]))) == original,
+                          " post-allocation-failure sibling rename remains checked and atomic");
         }
         child_membership(object(items[i]));
     }
@@ -440,9 +434,8 @@ void allocation_commit_points(Collection initial, Key key, int first, int last) 
                     contents(target, key) == before,
                     " each allocation failure preserves complete previous target storage");
                 for (auto& old : held)
-                    CHECK_MESSAGE(
-                        key(object(old)).attached(),
-                        " allocation refusal preserves retained old-item ownership");
+                    CHECK_MESSAGE(key(object(old)).attached(),
+                                  " allocation refusal preserves retained old-item ownership");
             } else
                 completed = true;
             CHECK_MESSAGE(contents(source, key) == source_before,
@@ -455,8 +448,7 @@ void allocation_commit_points(Collection initial, Key key, int first, int last) 
             if (completed) break;
         }
         CHECK_MESSAGE(failures > 0, " each allocation witness actually injects a failure");
-        CHECK_MESSAGE(completed,
-                      " bounded allocation sweep reaches the successful control");
+        CHECK_MESSAGE(completed, " bounded allocation sweep reaches the successful control");
     }
 }
 
@@ -515,12 +507,10 @@ void persistent_recovery(Collection initial, Key key, bool erase) {
                           " persistent refusal reaches the allocation vehicle");
             std::vector<const void*> addresses;
             for (auto& item : target) addresses.push_back(&object(item));
-            CHECK_MESSAGE(
-                addresses == old_addresses,
-                " persistent copy or erase failure preserves ORIGINAL object lifetimes");
-            CHECK_MESSAGE(
-                contents(target, key) == before,
-                " persistent copy or erase failure preserves complete old payload");
+            CHECK_MESSAGE(addresses == old_addresses,
+                          " persistent copy or erase failure preserves ORIGINAL object lifetimes");
+            CHECK_MESSAGE(contents(target, key) == before,
+                          " persistent copy or erase failure preserves complete old payload");
             // A failed lifetime assertion must not dereference a dangling witness.
             if (addresses == old_addresses) {
                 for (std::size_t i = 0; i < held.size(); ++i) {
@@ -556,12 +546,10 @@ void persistent_recovery(Collection initial, Key key, bool erase) {
         CHECK_MESSAGE(failed_operations > 0,
                       " populated owner copy executes injected persistent failures");
     } else if (failed_operations == 0) {
-        CHECK_MESSAGE(
-            c13_t12_fault::calls == 0,
-            " erase without an injected failure must prove no allocation was attempted");
+        CHECK_MESSAGE(c13_t12_fault::calls == 0,
+                      " erase without an injected failure must prove no allocation was attempted");
     }
-    CHECK_MESSAGE(completed,
-                  " persistent sweep also reaches a successful operation control");
+    CHECK_MESSAGE(completed, " persistent sweep also reaches a successful operation control");
 }
 
 // Review-6 F2 before: named-refusal witnesses used ordinary ASCII identities.
@@ -590,8 +578,7 @@ void printable_collision(Action action, const std::string& expected) {
                                    [](unsigned char ch) { return ch < 32 || ch == 127; }),
                       " identity refusal contains no raw control bytes");
     }
-    CHECK_MESSAGE(refused,
-                  " arbitrary in-memory duplicate still refuses at the chosen entry");
+    CHECK_MESSAGE(refused, " arbitrary in-memory duplicate still refuses at the chosen entry");
 }
 template <class Collection, class Key>
 void arbitrary_id_entries(Collection initial, Key key) {
@@ -616,9 +603,8 @@ void arbitrary_id_entries(Collection initial, Key key) {
             CHECK_MESSAGE(foreign.empty(),
                           " named foreign-owner refusal preserves the empty destination");
         }
-        CHECK_MESSAGE(
-            contents(items, key) == before,
-            " all arbitrary-id refusal entries preserve original ids and payload");
+        CHECK_MESSAGE(contents(items, key) == before,
+                      " all arbitrary-id refusal entries preserve original ids and payload");
         CHECK_MESSAGE((key(object(items[0])).attached() && key(object(items[1])).attached()),
                       " arbitrary-id refusal retains both original memberships");
     }
@@ -636,8 +622,7 @@ template <class K>
 void no_raw_key_escape() {
     CHECK_MESSAGE((!std::is_convertible_v<K&, std::string&>),
                   " no mutable string reference may escape a key");
-    CHECK_MESSAGE(!mutable_character<K>,
-                  " character writes cannot bypass collection admission");
+    CHECK_MESSAGE(!mutable_character<K>, " character writes cannot bypass collection admission");
 }
 }  // namespace
 #include "edi/model.hpp"
@@ -661,8 +646,7 @@ void lifecycle(Key key) {
     SUBCASE("shared live ownership refused") {
         edi::ItemVec<T> other;
         collision([&] { other.push_back(held); }, "first");
-        CHECK_MESSAGE(other.empty(),
-                      " failed shared admission cannot partially attach storage");
+        CHECK_MESSAGE(other.empty(), " failed shared admission cannot partially attach storage");
     }
     SUBCASE("erase detaches") {
         items.erase_at(0);
@@ -730,20 +714,20 @@ TEST_CASE("C13-T12 native Project and Structure copies reattach every keyed memb
     source.structures = pair<edi::Structure>([](auto& value) -> auto& { return value.name; });
     source.experiments =
         pair<edi::BraggPdExperiment>([](auto& value) -> auto& { return value.name; });
-    source.structure().atom_sites =
+    source.structures.front()->atom_sites =
         pair<edi::AtomSite>([](auto& value) -> auto& { return value.id; });
     edi::Project copy(source);
-    source.structure().atom_sites[0]->id = "source-only";
-    CHECK_MESSAGE(std::string(copy.structure().atom_sites[0]->id) == "first",
+    source.structures.front()->atom_sites[0]->id = "source-only";
+    CHECK_MESSAGE(std::string(copy.structures.front()->atom_sites[0]->id) == "first",
                   " copied Project retains independent site identities");
-    collision([&] { copy.structure().atom_sites[1]->id = "first"; }, "first");
+    collision([&] { copy.structures.front()->atom_sites[1]->id = "first"; }, "first");
     collision([&] { copy.structures[1]->name = "first"; }, "first");
     collision([&] { copy.experiments[1]->name = "first"; }, "first");
-    edi::Structure structure(copy.structure());
+    edi::Structure structure(*copy.structures.front());
     collision([&] { structure.atom_sites[1]->id = "first"; }, "first");
     edi::Project assigned;
     assigned = source;
-    collision([&] { assigned.structure().atom_sites[1]->id = "source-only"; }, "source-only");
+    collision([&] { assigned.structures.front()->atom_sites[1]->id = "source-only"; }, "source-only");
     edi::Project moved(std::move(assigned));
     collision([&] { moved.experiments[1]->name = "first"; }, "first");
 }
@@ -819,9 +803,8 @@ TEST_CASE("C13-T12 native edi extract ids cross the delegated save domain seam")
                                                           {"a' b\" c", "a' b\" c"}}) {
         object(project.sequential_fit.extract[0]).id = bad;
         collision([&] { edi::save_project(project, (root / "control").string()); }, named_id);
-        CHECK_MESSAGE(
-            snapshot() == before,
-            " edi adapter must refuse invalid extract ids before publishing any bytes");
+        CHECK_MESSAGE(snapshot() == before,
+                      " edi adapter must refuse invalid extract ids before publishing any bytes");
     }
 }
 
@@ -912,12 +895,10 @@ TEST_CASE("C13-T12 every writer family reaches the shared encoder domain") {
                 const std::string message(error.what());
                 CHECK_MESSAGE(message.find(category) != std::string::npos,
                               " encoder refusal names the family that reached it");
-                CHECK_MESSAGE(
-                    message.find(diagnostic) != std::string::npos,
-                    " encoder refusal names the supplied forbidden byte or quote rule");
+                CHECK_MESSAGE(message.find(diagnostic) != std::string::npos,
+                              " encoder refusal names the supplied forbidden byte or quote rule");
             }
-            CHECK_MESSAGE(refused,
-                          " shared encoder refuses each supplied decoded value directly");
+            CHECK_MESSAGE(refused, " shared encoder refuses each supplied decoded value directly");
         }
         for (const auto& [value, expected] :
              std::vector<std::pair<std::string, std::string>>{{"_phase", "'_phase'"},
@@ -1023,9 +1004,8 @@ TEST_CASE("C13-T12 printable refusals at native app edit helpers") {
                             expected);
         auto duplicate = *project.experiments[0];
         printable_collision([&] { edi::add_loaded_experiment(project, duplicate); }, expected);
-        CHECK_MESSAGE(
-            contents(project.experiments, names) == banks,
-            " app experiment rename and add refusals preserve both original banks");
+        CHECK_MESSAGE(contents(project.experiments, names) == banks,
+                      " app experiment rename and add refusals preserve both original banks");
     }
 }
 
@@ -1035,13 +1015,15 @@ TEST_CASE("C13-T12 printable refusal at the joint fit site and bank collision") 
         edi::AtomSite site;
         site.id = id;
         structure.atom_sites.push_back(site);
+        edi::Project project;
+        *project.structures.front() = structure;
         edi::ItemVec<edi::BraggPdExperiment> banks;
         edi::BraggPdExperiment bank;
         bank.name = id;
         banks.push_back(bank);
         std::vector<edi::PdDataBase> patterns(1);
-        printable_collision(
-            [&] { edi::detail::validate_joint_request(structure, banks, patterns); }, expected);
+        printable_collision([&] { edi::detail::validate_joint_request(project, banks, patterns); },
+                            expected);
     }
 }
 
@@ -1082,9 +1064,8 @@ TEST_CASE("C13-T12 app experiment helper admits canonical self rename") {
         project.experiments.push_back(sibling);
         collision([&] { edi::rename_experiment(project, *project.experiments[1], from); },
                   "experiment");
-        CHECK_MESSAGE(
-            std::string(project.experiments[1]->name) == "sibling",
-            " canonical collision with a distinct sibling still refuses atomically");
+        CHECK_MESSAGE(std::string(project.experiments[1]->name) == "sibling",
+                      " canonical collision with a distinct sibling still refuses atomically");
     }
 }
 
@@ -1120,9 +1101,8 @@ TEST_CASE("C13-T12 printable refusal at experiment batch load") {
         edi::Project project;
         project.experiments.clear();
         const auto control = edi::load_experiment_edi_files(project, {file});
-        REQUIRE_MESSAGE(
-            (control.size() == 1 && std::string(control[0].name) == id),
-            " arbitrary datablock name actually reaches experiment batch admission");
+        REQUIRE_MESSAGE((control.size() == 1 && std::string(control[0].name) == id),
+                        " arbitrary datablock name actually reaches experiment batch admission");
         printable_collision([&] { (void)edi::load_experiment_edi_files(project, {file, file}); },
                             expected);
         edi::add_loaded_experiment(project, control[0]);

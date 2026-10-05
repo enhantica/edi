@@ -677,6 +677,15 @@
      "reason": "C",
      "verdict": "public"
     },
+    "linked_structures": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PdExperimentBase.linked_structures",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "name": {
      "need": {
       "by": "counterpart",
@@ -1658,6 +1667,15 @@
      "reason": "C",
      "verdict": "public"
     },
+    "linked_structures": {
+     "need": {
+      "by": "deviation",
+      "ref": "D50",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "name": {
      "need": {
       "by": "counterpart",
@@ -2452,6 +2470,15 @@
     }
    },
    "LinkedStructure": {
+    "enabled": {
+     "need": {
+      "by": "deviation",
+      "ref": "D77",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "parameters": {
      "need": {
       "by": "counterpart",
@@ -2478,6 +2505,80 @@
      },
      "reason": "C",
      "verdict": "public"
+    }
+   },
+   "LinkedStructures": {
+    "add": {
+     "reason": "C",
+     "verdict": "public",
+     "need": {
+      "by": "counterpart",
+      "ref": "CategoryCollection.add",
+      "verdict": "keep"
+     }
+    },
+    "clear": {
+     "reason": "C",
+     "verdict": "public",
+     "need": {
+      "by": "counterpart",
+      "ref": "CategoryCollection.clear",
+      "verdict": "keep"
+     }
+    },
+    "create": {
+     "reason": "C",
+     "verdict": "public",
+     "need": {
+      "by": "counterpart",
+      "ref": "CategoryCollection.create",
+      "verdict": "keep"
+     }
+    },
+    "items": {
+     "reason": "C",
+     "verdict": "public",
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.items",
+      "verdict": "keep"
+     }
+    },
+    "keys": {
+     "reason": "C",
+     "verdict": "public",
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.keys",
+      "verdict": "keep"
+     }
+    },
+    "names": {
+     "reason": "C",
+     "verdict": "public",
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.names",
+      "verdict": "keep"
+     }
+    },
+    "remove": {
+     "reason": "C",
+     "verdict": "public",
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.remove",
+      "verdict": "keep"
+     }
+    },
+    "values": {
+     "reason": "C",
+     "verdict": "public",
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.values",
+      "verdict": "keep"
+     }
     }
    },
    "NoAbsorption": {
@@ -2799,6 +2900,15 @@
      "need": {
       "by": "deviation",
       "ref": "D50",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "linked_structures": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PdExperimentBase.linked_structures",
       "verdict": "keep"
      },
      "reason": "C",
@@ -3824,6 +3934,15 @@
      "verdict": "public"
     },
     "linked_structure": {
+     "need": {
+      "by": "deviation",
+      "ref": "D50",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "linked_structures": {
      "need": {
       "by": "deviation",
       "ref": "D50",
@@ -5258,6 +5377,15 @@
     "reason": "C",
     "verdict": "public"
    },
+   "LinkedStructures": {
+    "reason": "C",
+    "verdict": "public",
+    "need": {
+     "by": "counterpart",
+     "ref": "LinkedStructures",
+     "verdict": "keep"
+    }
+   },
    "NoAbsorption": {
     "need": {
      "by": "counterpart",
@@ -5820,6 +5948,7 @@
     "experiment_type",
     "instrument",
     "linked_structure",
+    "linked_structures",
     "name",
     "parameters",
     "peak",
@@ -6001,6 +6130,7 @@
     "dataset_weight",
     "experiment_type",
     "linked_structure",
+    "linked_structures",
     "name",
     "parameters"
    ]
@@ -6162,9 +6292,23 @@
   "LinkedStructure": {
    "kind": "class",
    "members": [
+    "enabled",
     "parameters",
     "scale",
     "structure_id"
+   ]
+  },
+  "LinkedStructures": {
+   "kind": "class",
+   "members": [
+    "add",
+    "clear",
+    "create",
+    "items",
+    "keys",
+    "names",
+    "remove",
+    "values"
    ]
   },
   "NoAbsorption": {
@@ -6225,6 +6369,7 @@
     "excluded_regions",
     "experiment_type",
     "linked_structure",
+    "linked_structures",
     "name",
     "parameters",
     "peak",
@@ -6412,6 +6557,7 @@
     "dataset_weight",
     "experiment_type",
     "linked_structure",
+    "linked_structures",
     "name",
     "parameters"
    ]

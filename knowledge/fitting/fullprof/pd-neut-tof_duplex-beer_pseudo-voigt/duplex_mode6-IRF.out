@@ -1,0 +1,2136 @@
+
+
+        **********************************************************
+        ** PROGRAM FullProf.2k (Version 8.40 - Feb2026-ILL JRC) **
+        **********************************************************
+                       M U L T I -- P A T T E R N                 
+            Rietveld, Profile Matching & Integrated Intensity     
+                 Refinement of X-ray and/or Neutron Data
+
+
+    Date: 05/10/2026  Time: 15:59:21.698                              
+
+ => PCR file code: duplex_mode6-IRF
+ => DAT file code: Duplex_in_HR_for_IRF -> Relative contribution: 0.5000                                                            
+ => DAT file code: Duplex_in_HR_for_IRF -> Relative contribution: 0.5000                                                            
+
+ ==> CONDITIONS OF THIS RUN FOR PATTERN No.:  1
+
+ => Global Refinement of neutron powder data                                                                                        
+ => Neutron Time-Of-Flight data                                                                                                     
+ => Abcisa variable is T.O.F. in microsecs
+ => Title:Duplex high-resolution
+
+ => Number of phases:    2
+ => Number of excluded regions:    2
+ => Number of scattering factors supplied:    0
+ => March-Dollase model for preferred orientation
+ => Conventional weights: w=1.0/Variance(yobs)
+ => Asymmetry correction as in J.Appl.Cryst. 26,128(1993)
+ => Background linearly interpolated between the   31 points given
+ => The    7th default profile function was selected
+ => T-C-H Pseudo-Voigt function for Time-of-flight
+    This function is supposedly appropriate for pulse-shaping TOF machines 
+
+
+ ==> CONDITIONS OF THIS RUN FOR PATTERN No.:  2
+
+ => Global Refinement of neutron powder data                                                                                        
+ => Neutron Time-Of-Flight data                                                                                                     
+ => Abcisa variable is T.O.F. in microsecs
+ => Title:Duplex high-resolution
+
+ => Number of phases:    2
+ => Number of excluded regions:    2
+ => Number of scattering factors supplied:    0
+ => March-Dollase model for preferred orientation
+ => Conventional weights: w=1.0/Variance(yobs)
+ => Asymmetry correction as in J.Appl.Cryst. 26,128(1993)
+ => Background linearly interpolated between the   31 points given
+ => The    7th default profile function was selected
+ => T-C-H Pseudo-Voigt function for Time-of-flight
+    This function is supposedly appropriate for pulse-shaping TOF machines 
+
+
+ ==> INPUT/OUTPUT OPTIONS:
+
+ => Output Obs and Calc intensities on last cycle
+ => Generate file *.PRF for plot
+ => Output Integrated Intensities
+ => Output Obs and Calc intensities on last cycle
+ => Generate file *.PRF for plot
+ => Output Integrated Intensities
+ => Output Correlation Matrix
+ => Generate new input file *.PCR
+
+ => X-Y type of data: 2theta/TOF/E(Kev) Intens sigma for pattern:  1
+ => Plot pattern at each cycle
+ => Absorption correction type: 2
+ => Base of peaks: 2.0*HW*   12.00
+
+ => X-Y type of data: 2theta/TOF/E(Kev) Intens sigma for pattern:  2
+ => Plot pattern at each cycle
+ => Absorption correction type: 2
+ => Base of peaks: 2.0*HW*   12.00
+
+ => Number of cycles:   10
+ => Relaxation factors ==>    for coordinates:  0.50
+ => for anisotropic temperature factors:  0.50
+ => for halfwidth/strain/size/further parameters:  0.10
+ => for lattice constants and propagation vectors:  0.50
+ => EPS-value for convergence:    0.1
+ => Background ==> 
+    Position   Intensity
+    40111.88        0.02      161.00
+    41193.57        0.15      171.00
+    42041.38        0.18      181.00
+    42713.77        0.20      191.00
+    44409.39        0.19      201.00
+    45198.73        0.21      211.00
+    46251.19        0.19      221.00
+    49350.07        0.22      231.00
+    51289.68        0.20      241.00
+    55245.20        0.20      251.00
+    55679.71        0.23      261.00
+    56383.91        0.24      271.00
+    58956.18        0.29      281.00
+    61536.46        0.31      291.00
+    63768.05        0.32      301.00
+    65581.21        0.30      311.00
+    70183.85        0.26      321.00
+    71787.82        0.23      331.00
+    78343.11        0.22      341.00
+    80016.80        0.17      351.00
+
+    98141.85        0.24      361.00
+    99262.23        0.43      371.00
+   100985.85        0.44      381.00
+   101933.85        0.34      391.00
+   108656.03        0.53      401.00
+   110896.75        0.95      411.00
+   113137.48        1.17      421.00
+   114430.20        1.12      431.00
+   116929.48        0.92      441.00
+   119428.74        0.69      451.00
+   134506.34        0.07        0.00
+
+ 
+ => Background height fixed to        0.07 at point (in excluded region):    134506.34
+
+ => Excluded regions for Pattern#  1
+    From     to
+  20000.0000  40000.0000
+ 130000.0000 180000.0000
+
+ => Background ==> 
+    Position   Intensity
+    40111.88        0.03      461.00
+    41193.57        0.17      471.00
+    42041.38        0.21      481.00
+    42713.77        0.20      491.00
+    44409.39        0.21      501.00
+    45198.73        0.25      511.00
+    46251.19        0.18      521.00
+    49350.07        0.22      531.00
+    51289.68        0.20      541.00
+    55245.20        0.20      551.00
+    55679.71        0.25      561.00
+    56383.91        0.24      571.00
+    58956.18        0.28      581.00
+    61536.46        0.30      591.00
+    63768.05        0.34      601.00
+    65581.21        0.28      611.00
+    70183.85        0.25      621.00
+    71787.82        0.24      631.00
+    78343.11        0.22      641.00
+    80016.80        0.18      651.00
+
+    98141.85        0.23      661.00
+    99262.23        0.43      671.00
+   100985.85        0.45      681.00
+   101933.85        0.35      691.00
+   108656.03        0.53      701.00
+   110896.75        0.94      711.00
+   113137.48        1.16      721.00
+   114430.20        1.06      731.00
+   116929.48        0.96      741.00
+   119428.74        0.69      751.00
+   134506.34        0.07        0.00
+
+ 
+ => Background height fixed to        0.07 at point (in excluded region):    134506.34
+
+ => Excluded regions for Pattern#  2
+    From     to
+  20000.0000  40000.0000
+ 130000.0000 180000.0000
+
+ => Number of Least-Squares parameters varied:    75
+
+ =>--------------------------->
+ =>------->  PATTERN number:  1
+ =>--------------------------->
+ => Global parameters and codes ==>
+ => Zero-point:   -10.2918   21.0000
+ => D-spacing to T.O.F. coefficient dtt1 and code:  54902.188     0.000
+ => D-spacing to T.O.F. coefficient dtt2 and code:      0.000     0.000
+ => D-spacing to T.O.F. coefficient dtt_1OverD and code:      0.000     0.000
+ => T.O.F. 2theta average detector angle      :     90.000
+
+ => Reading Intensity data  =>>
+
+ -> No recognizable heading in input data file X,Y,sigma
+    First 6 lines are considered as COMMENTS (except for TSAMP keyword)
+ -> COMMENT: # Duplex in HR for IRF S2 bank                                                                                                      
+ -> COMMENT: # normalised to "./vanadium_mode6/"                                                                                                 
+ -> COMMENT: # DIFC = 54902.18695 [µs/Å] L = 153.580 [m] two_theta = 90.00 [deg]                                                               
+ -> COMMENT: # tof [µs]               Y [counts]               E [counts]                                                                       
+ -> COMMENT: 4.009452341631884337e+04 1.544661548684439370e-03 1.544661548684439370e-03                                                          
+ -> COMMENT: 4.012637730271166947e+04 0.000000000000000000e+00 0.000000000000000000e+00                                                          
+ ==> T.O.F. range, and number of points:
+    TOFmin:   40158.230469  TOFmax:  135592.468750
+    No. of points:   2997
+
+ =>--------------------------->
+ =>------->  PATTERN number:  2
+ =>--------------------------->
+ => Global parameters and codes ==>
+ => Zero-point:    -2.0907   31.0000
+ => D-spacing to T.O.F. coefficient dtt1 and code:  54902.188     0.000
+ => D-spacing to T.O.F. coefficient dtt2 and code:      0.000     0.000
+ => D-spacing to T.O.F. coefficient dtt_1OverD and code:      0.000     0.000
+ => T.O.F. 2theta average detector angle      :     90.000
+
+ => Reading Intensity data  =>>
+
+ -> No recognizable heading in input data file X,Y,sigma
+    First 6 lines are considered as COMMENTS (except for TSAMP keyword)
+ -> COMMENT: # Duplex in HR for IRF N2 bank                                                                                                      
+ -> COMMENT: # normalised to "./vanadium_mode6/"                                                                                                 
+ -> COMMENT: # DIFC = 54902.18695 [µs/Å] L = 153.580 [m] two_theta = 90.00 [deg]                                                               
+ -> COMMENT: # tof [µs]               Y [counts]               E [counts]                                                                       
+ -> COMMENT: 4.009452341631884337e+04 1.532892255343687171e-01 9.475827774067137332e-02                                                          
+ -> COMMENT: 4.012637730271166947e+04 0.000000000000000000e+00 0.000000000000000000e+00                                                          
+ ==> T.O.F. range, and number of points:
+    TOFmin:   40158.230469  TOFmax:  135592.468750
+    No. of points:   2997
+ --------------------------------------------------------------------------------
+ => Phase  No. 1
+      ferrite                                                               
+ --------------------------------------------------------------------------------
+ =>-------> Pattern#  1
+ => Crystal Structure Refinement
+ => Preferred orientation vector:   0.0000  0.0000  1.0000
+ =>-------> Pattern#  2
+ => Crystal Structure Refinement
+ => Preferred orientation vector:   0.0000  0.0000  1.0000
+
+ =>-------> Data for PHASE: 1
+ => Number of atoms:    1
+ => Number of distance  constraints:    0
+ => Number of angle     constraints:    0
+
+ => Symmetry information on space group: I m -3 m            
+ -> The multiplicity of the general position is:  96
+ -> The space group is Centric (-1 at origin)   
+ -> Lattice type  I: { 000; 1/2 1/2 1/2 }+                         
+ -> Reduced set of symmetry operators:
+
+  No.  IT   Symmetry symbol    Rotation part     Associated Translation
+   1: ( 1)   1            -->     ( x, y, z) + {  0.0000  0.0000  0.0000}
+   2: ( 4)   2 ( x, 0, 0) -->     ( x,-y,-z) + {  0.0000  0.0000  0.0000}
+   3: ( 3)   2 ( 0, y, 0) -->     (-x, y,-z) + {  0.0000  0.0000  0.0000}
+   4: ( 2)   2 ( 0, 0, z) -->     (-x,-y, z) + {  0.0000  0.0000  0.0000}
+   5: ( 9)  3- ( x, x, x) -->     ( y, z, x) + {  0.0000  0.0000  0.0000}
+   6: (12)  3- (-x, x,-x) -->     (-y,-z, x) + {  0.0000  0.0000  0.0000}
+   7: (11)  3- (-x,-x, x) -->     ( y,-z,-x) + {  0.0000  0.0000  0.0000}
+   8: (10)  3- ( x,-x,-x) -->     (-y, z,-x) + {  0.0000  0.0000  0.0000}
+   9: ( 5)  3+ ( x, x, x) -->     ( z, x, y) + {  0.0000  0.0000  0.0000}
+  10: ( 8)  3+ (-x,-x, x) -->     (-z, x,-y) + {  0.0000  0.0000  0.0000}
+  11: ( 7)  3+ ( x,-x,-x) -->     (-z,-x, y) + {  0.0000  0.0000  0.0000}
+  12: ( 6)  3+ (-x, x,-x) -->     ( z,-x,-y) + {  0.0000  0.0000  0.0000}
+  13: (14)   2 ( x,-x, 0) -->     (-y,-x,-z) + {  0.0000  0.0000  0.0000}
+  14: (15)  4- ( 0, 0, z) -->     ( y,-x, z) + {  0.0000  0.0000  0.0000}
+  15: (16)  4+ ( 0, 0, z) -->     (-y, x, z) + {  0.0000  0.0000  0.0000}
+  16: (13)   2 ( x, x, 0) -->     ( y, x,-z) + {  0.0000  0.0000  0.0000}
+  17: (24)   2 (-x, 0, x) -->     (-z,-y,-x) + {  0.0000  0.0000  0.0000}
+  18: (21)  4+ ( 0, y, 0) -->     ( z, y,-x) + {  0.0000  0.0000  0.0000}
+  19: (22)   2 ( x, 0, x) -->     ( z,-y, x) + {  0.0000  0.0000  0.0000}
+  20: (23)  4- ( 0, y, 0) -->     (-z, y, x) + {  0.0000  0.0000  0.0000}
+  21: (19)   2 ( 0, y,-y) -->     (-x,-z,-y) + {  0.0000  0.0000  0.0000}
+  22: (18)   2 ( 0, y, y) -->     (-x, z, y) + {  0.0000  0.0000  0.0000}
+  23: (17)  4- ( x, 0, 0) -->     ( x, z,-y) + {  0.0000  0.0000  0.0000}
+  24: (20)  4+ ( x, 0, 0) -->     ( x,-z, y) + {  0.0000  0.0000  0.0000}
+
+
+        Information on Space Group: 
+        --------------------------- 
+
+ =>   Number of Space group: 229
+ =>  Hermann-Mauguin Symbol: I m -3 m
+ =>             Hall Symbol: -I 4 2 3
+ =>            Setting Type: IT (Generated from Hermann-Mauguin symbol)
+ =>          Crystal System: Cubic
+ =>              Laue Class: m-3m
+ =>             Point Group: m-3m
+ =>         Bravais Lattice: I
+ =>          Lattice Symbol: cI
+ =>  Reduced Number of S.O.:  24
+ =>    General multiplicity:  96
+ =>          Centrosymmetry: Centric (-1 at origin)
+ =>  Generators (exc. -1&L):   3
+ =>         Asymmetric unit:  0.000 <= x <=  0.500
+                              0.000 <= y <=  0.500
+                              0.000 <= z <=  0.250
+ => Centring vectors:  1
+ => Latt( 1): (1/2,1/2,1/2)                                                                         
+
+ => List of all Symmetry Operators and Symmetry Symbols
+
+ => SYMM(  1): x,y,z                             Symbol: 1
+ => SYMM(  2): x,-y,-z                           Symbol: 2 x,0,0
+ => SYMM(  3): -x,y,-z                           Symbol: 2 0,y,0
+ => SYMM(  4): -x,-y,z                           Symbol: 2 0,0,z
+ => SYMM(  5): y,z,x                             Symbol: 3- x,x,x
+ => SYMM(  6): -y,-z,x                           Symbol: 3+ x,-x,x
+ => SYMM(  7): y,-z,-x                           Symbol: 3+ x,x,-x
+ => SYMM(  8): -y,z,-x                           Symbol: 3- x,-x,-x
+ => SYMM(  9): z,x,y                             Symbol: 3+ x,x,x
+ => SYMM( 10): -z,x,-y                           Symbol: 3- x,x,-x
+ => SYMM( 11): -z,-x,y                           Symbol: 3+ x,-x,-x
+ => SYMM( 12): z,-x,-y                           Symbol: 3- x,-x,x
+ => SYMM( 13): y,x,z                             Symbol: m x,x,z
+ => SYMM( 14): -y,x,-z                           Symbol: -4- 0,0,z; 0,0,0
+ => SYMM( 15): y,-x,-z                           Symbol: -4+ 0,0,z; 0,0,0
+ => SYMM( 16): -y,-x,z                           Symbol: m x,-x,z
+ => SYMM( 17): z,y,x                             Symbol: m x,y,x
+ => SYMM( 18): -z,-y,x                           Symbol: -4+ 0,y,0; 0,0,0
+ => SYMM( 19): -z,y,-x                           Symbol: m x,y,-x
+ => SYMM( 20): z,-y,-x                           Symbol: -4- 0,y,0; 0,0,0
+ => SYMM( 21): x,z,y                             Symbol: m x,y,y
+ => SYMM( 22): x,-z,-y                           Symbol: m x,y,-y
+ => SYMM( 23): -x,-z,y                           Symbol: -4- x,0,0; 0,0,0
+ => SYMM( 24): -x,z,-y                           Symbol: -4+ x,0,0; 0,0,0
+ => SYMM( 25): -x,-y,-z                          Symbol: -1 0,0,0
+ => SYMM( 26): -x,y,z                            Symbol: m 0,y,z
+ => SYMM( 27): x,-y,z                            Symbol: m x,0,z
+ => SYMM( 28): x,y,-z                            Symbol: m x,y,0
+ => SYMM( 29): -y,-z,-x                          Symbol: -3- x,x,x; 0,0,0
+ => SYMM( 30): y,z,-x                            Symbol: -3+ x,-x,x; 0,0,0
+ => SYMM( 31): -y,z,x                            Symbol: -3+ x,x,-x; 0,0,0
+ => SYMM( 32): y,-z,x                            Symbol: -3- x,-x,-x; 0,0,0
+ => SYMM( 33): -z,-x,-y                          Symbol: -3+ x,x,x; 0,0,0
+ => SYMM( 34): z,-x,y                            Symbol: -3- x,x,-x; 0,0,0
+ => SYMM( 35): z,x,-y                            Symbol: -3+ x,-x,-x; 0,0,0
+ => SYMM( 36): -z,x,y                            Symbol: -3- x,-x,x; 0,0,0
+ => SYMM( 37): -y,-x,-z                          Symbol: 2 x,-x,0
+ => SYMM( 38): y,-x,z                            Symbol: 4- 0,0,z
+ => SYMM( 39): -y,x,z                            Symbol: 4+ 0,0,z
+ => SYMM( 40): y,x,-z                            Symbol: 2 x,x,0
+ => SYMM( 41): -z,-y,-x                          Symbol: 2 x,0,-x
+ => SYMM( 42): z,y,-x                            Symbol: 4+ 0,y,0
+ => SYMM( 43): z,-y,x                            Symbol: 2 x,0,x
+ => SYMM( 44): -z,y,x                            Symbol: 4- 0,y,0
+ => SYMM( 45): -x,-z,-y                          Symbol: 2 0,y,-y
+ => SYMM( 46): -x,z,y                            Symbol: 2 0,y,y
+ => SYMM( 47): x,z,-y                            Symbol: 4- x,0,0
+ => SYMM( 48): x,-z,y                            Symbol: 4+ x,0,0
+ => SYMM( 49): x+1/2,y+1/2,z+1/2                 Symbol: t (1/2,1/2,1/2)
+ => SYMM( 50): x+1/2,-y+1/2,-z+1/2               Symbol: 2 (1/2,0,0) x,1/4,1/4
+ => SYMM( 51): -x+1/2,y+1/2,-z+1/2               Symbol: 2 (0,1/2,0) 1/4,y,1/4
+ => SYMM( 52): -x+1/2,-y+1/2,z+1/2               Symbol: 2 (0,0,1/2) 1/4,1/4,z
+ => SYMM( 53): y+1/2,z+1/2,x+1/2                 Symbol: 3- (1/2,1/2,1/2) x,x,x
+ => SYMM( 54): -y+1/2,-z+1/2,x+1/2               Symbol: 3+ (1/6,-1/6,1/6) x,-x+1/3,x+1/3
+ => SYMM( 55): y+1/2,-z+1/2,-x+1/2               Symbol: 3+ (1/6,1/6,-1/6) x,x-1/3,-x+2/3
+ => SYMM( 56): -y+1/2,z+1/2,-x+1/2               Symbol: 3- (-1/6,1/6,1/6) x,-x+2/3,-x+1/3
+ => SYMM( 57): z+1/2,x+1/2,y+1/2                 Symbol: 3+ (1/2,1/2,1/2) x,x,x
+ => SYMM( 58): -z+1/2,x+1/2,-y+1/2               Symbol: 3- (1/6,1/6,-1/6) x,x+1/3,-x+1/3
+ => SYMM( 59): -z+1/2,-x+1/2,y+1/2               Symbol: 3+ (-1/6,1/6,1/6) x,-x+1/3,-x+2/3
+ => SYMM( 60): z+1/2,-x+1/2,-y+1/2               Symbol: 3- (1/6,-1/6,1/6) x,-x+2/3,x-1/3
+ => SYMM( 61): y+1/2,x+1/2,z+1/2                 Symbol: n (1/2,1/2,1/2) x,x,z
+ => SYMM( 62): -y+1/2,x+1/2,-z+1/2               Symbol: -4- 0,1/2,z; 0,1/2,1/4
+ => SYMM( 63): y+1/2,-x+1/2,-z+1/2               Symbol: -4+ 1/2,0,z; 1/2,0,1/4
+ => SYMM( 64): -y+1/2,-x+1/2,z+1/2               Symbol: c x,-x+1/2,z
+ => SYMM( 65): z+1/2,y+1/2,x+1/2                 Symbol: n (1/2,1/2,1/2) x,y,x
+ => SYMM( 66): -z+1/2,-y+1/2,x+1/2               Symbol: -4+ 0,y,1/2; 0,1/4,1/2
+ => SYMM( 67): -z+1/2,y+1/2,-x+1/2               Symbol: b x,y,-x+1/2
+ => SYMM( 68): z+1/2,-y+1/2,-x+1/2               Symbol: -4- 1/2,y,0; 1/2,1/4,0
+ => SYMM( 69): x+1/2,z+1/2,y+1/2                 Symbol: n (1/2,1/2,1/2) x,y,y
+ => SYMM( 70): x+1/2,-z+1/2,-y+1/2               Symbol: a x,y,-y+1/2
+ => SYMM( 71): -x+1/2,-z+1/2,y+1/2               Symbol: -4- x,0,1/2; 1/4,0,1/2
+ => SYMM( 72): -x+1/2,z+1/2,-y+1/2               Symbol: -4+ x,1/2,0; 1/4,1/2,0
+ => SYMM( 73): -x+1/2,-y+1/2,-z+1/2              Symbol: -1 1/4,1/4,1/4
+ => SYMM( 74): -x+1/2,y+1/2,z+1/2                Symbol: n (0,1/2,1/2) 1/4,y,z
+ => SYMM( 75): x+1/2,-y+1/2,z+1/2                Symbol: n (1/2,0,1/2) x,1/4,z
+ => SYMM( 76): x+1/2,y+1/2,-z+1/2                Symbol: n (1/2,1/2,0) x,y,1/4
+ => SYMM( 77): -y+1/2,-z+1/2,-x+1/2              Symbol: -3- x,x,x; 1/4,1/4,1/4
+ => SYMM( 78): y+1/2,z+1/2,-x+1/2                Symbol: -3+ x,-x+1,x-1; 3/4,1/4,-1/4
+ => SYMM( 79): -y+1/2,z+1/2,x+1/2                Symbol: -3+ x,x+1,-x; -1/4,3/4,1/4
+ => SYMM( 80): y+1/2,-z+1/2,x+1/2                Symbol: -3- x,-x,-x+1; 1/4,-1/4,3/4
+ => SYMM( 81): -z+1/2,-x+1/2,-y+1/2              Symbol: -3+ x,x,x; 1/4,1/4,1/4
+ => SYMM( 82): z+1/2,-x+1/2,y+1/2                Symbol: -3- x,x-1,-x+1; 3/4,-1/4,1/4
+ => SYMM( 83): z+1/2,x+1/2,-y+1/2                Symbol: -3+ x,-x+1,-x; 1/4,3/4,-1/4
+ => SYMM( 84): -z+1/2,x+1/2,y+1/2                Symbol: -3- x,-x,x+1; -1/4,1/4,3/4
+ => SYMM( 85): -y+1/2,-x+1/2,-z+1/2              Symbol: 2 x,-x+1/2,1/4
+ => SYMM( 86): y+1/2,-x+1/2,z+1/2                Symbol: 4- (0,0,1/2) 1/2,0,z
+ => SYMM( 87): -y+1/2,x+1/2,z+1/2                Symbol: 4+ (0,0,1/2) 0,1/2,z
+ => SYMM( 88): y+1/2,x+1/2,-z+1/2                Symbol: 2 (1/2,1/2,0) x,x,1/4
+ => SYMM( 89): -z+1/2,-y+1/2,-x+1/2              Symbol: 2 x,1/4,-x+1/2
+ => SYMM( 90): z+1/2,y+1/2,-x+1/2                Symbol: 4+ (0,1/2,0) 1/2,y,0
+ => SYMM( 91): z+1/2,-y+1/2,x+1/2                Symbol: 2 (1/2,0,1/2) x,1/4,x
+ => SYMM( 92): -z+1/2,y+1/2,x+1/2                Symbol: 4- (0,1/2,0) 0,y,1/2
+ => SYMM( 93): -x+1/2,-z+1/2,-y+1/2              Symbol: 2 1/4,y,-y+1/2
+ => SYMM( 94): -x+1/2,z+1/2,y+1/2                Symbol: 2 (0,1/2,1/2) 1/4,y,y
+ => SYMM( 95): x+1/2,z+1/2,-y+1/2                Symbol: 4- (1/2,0,0) x,1/2,0
+ => SYMM( 96): x+1/2,-z+1/2,y+1/2                Symbol: 4+ (1/2,0,0) x,0,1/2
+
+ => Special Wyckoff Positions for I m -3 m
+ 
+    Multp     Site        Representative Coordinates (centring translations excluded)
+     48       k              x,x,z               x,-x,-z             -x,x,-z                                 
+                             -x,-x,z             x,z,x               -x,-z,x                                 
+                             x,-z,-x             -x,z,-x             z,x,x                                   
+                             -z,x,-x             -z,-x,x             z,-x,-x                                 
+                             -x,-x,-z            -x,x,z              x,-x,z                                  
+                             x,x,-z              -x,-z,-x            x,z,-x                                  
+                             -x,z,x              x,-z,x              -z,-x,-x                                
+                             z,-x,x              z,x,-x              -z,x,x                                  
+ 
+     48       j              0,y,z               0,-y,-z             0,y,-z                                  
+                             0,-y,z              y,z,0               -y,-z,0                                 
+                             y,-z,0              -y,z,0              z,0,y                                   
+                             -z,0,-y             -z,0,y              z,0,-y                                  
+                             y,0,z               -y,0,-z             y,0,-z                                  
+                             -y,0,z              z,y,0               -z,-y,0                                 
+                             -z,y,0              z,-y,0              0,z,y                                   
+                             0,-z,-y             0,-z,y              0,z,-y                                  
+ 
+     48       i              1/4,y,-y+1/2        1/4,-y,y+1/2        3/4,y,y+1/2                             
+                             3/4,-y,-y+1/2       y,-y+1/2,1/4        -y,y+1/2,1/4                            
+                             y,y+1/2,3/4         -y,-y+1/2,3/4       -y+1/2,1/4,y                            
+                             y+1/2,1/4,-y        y+1/2,3/4,y         -y+1/2,3/4,-y                           
+                             y,1/4,-y+1/2        -y,1/4,y+1/2        y,3/4,y+1/2                             
+                             -y,3/4,-y+1/2       -y+1/2,y,1/4        y+1/2,-y,1/4                            
+                             y+1/2,y,3/4         -y+1/2,-y,3/4       1/4,-y+1/2,y                            
+                             1/4,y+1/2,-y        3/4,y+1/2,y         3/4,-y+1/2,-y                           
+ 
+     24       h              0,y,y               0,-y,-y             0,y,-y                                  
+                             0,-y,y              y,y,0               -y,-y,0                                 
+                             y,-y,0              -y,y,0              y,0,y                                   
+                             -y,0,-y             -y,0,y              y,0,-y                                  
+ 
+     24       g              x,0,1/2             -x,0,1/2            0,1/2,x                                 
+                             0,1/2,-x            1/2,x,0             1/2,-x,0                                
+                             0,x,1/2             0,-x,1/2            1/2,0,x                                 
+                             1/2,0,-x            x,1/2,0             -x,1/2,0                                
+ 
+     16       f              x,x,x               x,-x,-x             -x,x,-x                                 
+                             -x,-x,x             -x,-x,-x            -x,x,x                                  
+                             x,-x,x              x,x,-x                                                      
+ 
+     12       e              x,0,0               -x,0,0              0,0,x                                   
+                             0,0,-x              0,x,0               0,-x,0                                  
+ 
+     12       d              1/4,0,1/2           3/4,0,1/2           0,1/2,1/4                               
+                             0,1/2,3/4           1/2,1/4,0           1/2,3/4,0                               
+ 
+      8       c              1/4,1/4,1/4         1/4,3/4,3/4         3/4,1/4,3/4                             
+                             3/4,3/4,1/4                                                                     
+ 
+      6       b              0,1/2,1/2           1/2,1/2,0           1/2,0,1/2                               
+ 
+      2       a              0,0,0                                                                           
+ 
+
+ => Initial parameters ==>
+ Atom    Ntyp                  X         Y         Z         B         occ.         in  fin  Spc  Mult
+                             B11       B22       B33       B12       B13       B23
+ Fe     FE                 0.00000   0.00000   0.00000   1.71513   0.02083           0    0    0    2
+                 Codes:    0.00000   0.00000   0.00000  81.00000   0.00000
+
+ => It is assumed that THE FIRST GIVEN SITE plus all the other atoms 
+    occupying THE SAME POSITION have a total full occupation (no vacancies!)
+  (if this is not the case, change the order of atoms to obtain correct values for the content of the unit cell)
+    The given occupation factors have been obtained mutiplying m/M by   0.0208
+      -> Atom: FE  ,  Chemical element: FE  Atomic Mass:    55.8470
+ => The given value of ATZ is        111.66 the program has calculated:         111.66
+    The value of ATZ given in the input PCR file will be used for quantitative analysis
+ => The chemical content of the unit cell is: 
+       2.0000 FE     
+ => The normalized site occupation numbers in % are: 
+     100.0000 Fe       
+ => The density (volumic mass) of the compound is:    7.716 g/cm3
+
+ =>-------> PROFILE PARAMETERS FOR PATTERN:  1
+
+ => Overall scale factor       :    401.463    
+ => T.O.F. Extinction parameter:      0.00000
+ => Overall temperature  factor:      0.00000
+ => T.O.F. Gaussian variances Sig-2, Sig-1, Sig-0, Sig-Q:    311.70410  1283.63867   893.63971     0.00000
+ => T.O.F. Isotropic Gaussian Size (Z1=G-Size)  :      0.00000
+ => T.O.F. Lorentzian FWHM Gam-2, Gam-1, Gam-0:      0.00000     0.00000     5.03300
+ => T.O.F. Isotropic Lorentzian strain and size parameters (LStr,LSiz):      0.00000     0.00000
+ => Direct cell parameters:    2.8860   2.8860   2.8860  90.0000  90.0000  90.0000
+ => Preferred orientation parameters:    1.0000   0.0000
+ => T.O.F. Peak shape parameter for pV_TOF (yet unused):      0.00000     0.00000     0.00000     0.00000
+ => Model-dependent Strain parameters s2,s1,s0:      0.00000     0.00000     0.00000
+
+
+ ==> CODEWORDS FOR PROFILE PARAMETERS of PATTERN#  1
+
+ => Codeword  - Scale Factor:     61.00000
+ => Codeword  - T.O.F. Extinction parameter:      0.00000
+ => Codeword  - Overall temperature factor:      0.00000
+ => Codewords - T.O.F. Gaussian variances Sig-2, Sig-1, Sig-0, Sig-Q:     41.00000    11.00000    51.00000     0.00000
+ => Codewords - T.O.F. Isotropic Gaussian Size (G-Size)  :      0.00000
+ => Codewords - T.O.F. Lorentzian FWHM Gam-2, Gam-1, Gam-0:      0.00000     0.00000   101.00000
+ => Codewords - T.O.F. Isotropic Lorentzian strain and size parameters (LStr,LSiz):      0.00000     0.00000
+ => Codewords - Direct cell parameters:      0.00000     0.00000     0.00000     0.00000     0.00000     0.00000
+ => Codewords - Preferred orientation parameters:      0.00000     0.00000
+ => Codewords - T.O.F. Peak shape parameter for TOF_pV (unused):      0.00000     0.00000     0.00000     0.00000
+=> Codewords - Model-dependent Strain parameters s2,s1,s0:      0.00000     0.00000     0.00000
+
+
+ => Cell constraints according to Laue symmetry: m-3m 
+
+        Metric information:
+        -------------------
+
+ => Direct cell parameters:
+
+         a =       2.8860      b =       2.8860      c =       2.8860
+     alpha =       90.000   beta =       90.000  gamma =       90.000
+                        Direct Cell Volume =      24.0375
+
+ => Reciprocal cell parameters:
+
+         a*=     0.346500      b*=     0.346500      c*=     0.346500
+     alpha*=       90.000   beta*=       90.000  gamma*=       90.000
+                    Reciprocal Cell Volume =   0.04160170
+
+ => Direct and Reciprocal Metric Tensors:
+
+                   GD                                       GR
+      8.3290      0.0000      0.0000          0.120062    0.000000    0.000000
+      0.0000      8.3290      0.0000          0.000000    0.120062    0.000000
+      0.0000      0.0000      8.3290          0.000000    0.000000    0.120062
+
+ =>  Cartesian frame: x // a; z is along c*; y is within the ab-plane   
+
+     Crystal_to_Orthonormal_Matrix              Orthonormal_to_Crystal Matrix
+              Cr_Orth_cel                               Orth_Cr_cel  
+      2.8860      0.0000      0.0000          0.346500   -0.000000   -0.000000
+      0.0000      2.8860      0.0000          0.000000    0.346500   -0.000000
+      0.0000      0.0000      2.8860          0.000000    0.000000    0.346500
+
+     Busing-Levy B-matrix: Hc=B.H            Inverse of the Busing-Levy B-matrix
+                BL_M                                      BL_Minv  
+    0.346500    0.000000    0.000000            2.8860     -0.0000     -0.0000
+    0.000000    0.346500   -0.000000            0.0000      2.8860      0.0000
+    0.000000    0.000000    0.346500            0.0000      0.0000      2.8860
+
+ =>-------> PROFILE PARAMETERS FOR PATTERN:  2
+
+ => Overall scale factor       :    403.595    
+ => T.O.F. Extinction parameter:      0.00000
+ => Overall temperature  factor:      0.00000
+ => T.O.F. Gaussian variances Sig-2, Sig-1, Sig-0, Sig-Q:    325.25861  1249.56787   914.61768     0.00000
+ => T.O.F. Isotropic Gaussian Size (Z1=G-Size)  :      0.00000
+ => T.O.F. Lorentzian FWHM Gam-2, Gam-1, Gam-0:      0.00000     0.00000     5.02790
+ => T.O.F. Isotropic Lorentzian strain and size parameters (LStr,LSiz):      0.00000     0.00000
+ => Direct cell parameters:    2.8860   2.8860   2.8860  90.0000  90.0000  90.0000
+ => Preferred orientation parameters:    1.0000   0.0000
+ => T.O.F. Peak shape parameter for pV_TOF (yet unused):      0.00000     0.00000     0.00000     0.00000
+ => Model-dependent Strain parameters s2,s1,s0:      0.00000     0.00000     0.00000
+
+
+ ==> CODEWORDS FOR PROFILE PARAMETERS of PATTERN#  2
+
+ => Codeword  - Scale Factor:     91.00000
+ => Codeword  - T.O.F. Extinction parameter:      0.00000
+ => Codeword  - Overall temperature factor:      0.00000
+ => Codewords - T.O.F. Gaussian variances Sig-2, Sig-1, Sig-0, Sig-Q:    111.00000   121.00000   151.00000     0.00000
+ => Codewords - T.O.F. Isotropic Gaussian Size (G-Size)  :      0.00000
+ => Codewords - T.O.F. Lorentzian FWHM Gam-2, Gam-1, Gam-0:      0.00000     0.00000   141.00000
+ => Codewords - T.O.F. Isotropic Lorentzian strain and size parameters (LStr,LSiz):      0.00000     0.00000
+ => Codewords - Direct cell parameters:      0.00000     0.00000     0.00000     0.00000     0.00000     0.00000
+ => Codewords - Preferred orientation parameters:      0.00000     0.00000
+ => Codewords - T.O.F. Peak shape parameter for TOF_pV (unused):      0.00000     0.00000     0.00000     0.00000
+=> Codewords - Model-dependent Strain parameters s2,s1,s0:      0.00000     0.00000     0.00000
+
+
+ => Cell constraints according to Laue symmetry: m-3m 
+
+ => Laue symmetry m-3m  will be used to generate HKL for pattern#   1
+ => Reflections generated between S(1/d)min:  0.4049 A-1 and S(1/d)max:  1.7198 A-1
+ =>                                    dmax:  2.4697 A   and      dmin:  0.5815 A
+ => The number of reflections generated is:     13
+ => The max. scatt. variable (gen.ref.) is:    135592.4688
+ => Scattering coefficients from internal table
+
+ => Scattering lengths:
+
+ FE     0.9450
+
+ => Laue symmetry m-3m  will be used to generate HKL for pattern#   2
+ => Reflections generated between S(1/d)min:  0.4049 A-1 and S(1/d)max:  1.7198 A-1
+ =>                                    dmax:  2.4697 A   and      dmin:  0.5815 A
+ => The number of reflections generated is:     13
+ => The max. scatt. variable (gen.ref.) is:    135592.4688
+ => Scattering coefficients from internal table
+
+ => Scattering lengths:
+
+ FE     0.9450
+ --------------------------------------------------------------------------------
+ => Phase  No. 2
+      austenite                                                             
+ --------------------------------------------------------------------------------
+ =>-------> Pattern#  1
+ => Crystal Structure Refinement
+ => Preferred orientation vector:   0.0000  0.0000  1.0000
+ =>-------> Pattern#  2
+ => Crystal Structure Refinement
+ => Preferred orientation vector:   0.0000  0.0000  1.0000
+
+ =>-------> Data for PHASE: 2
+ => Number of atoms:    1
+ => Number of distance  constraints:    0
+ => Number of angle     constraints:    0
+
+ => Symmetry information on space group: F m -3 m            
+ -> The multiplicity of the general position is: 192
+ -> The space group is Centric (-1 at origin)   
+ -> Lattice type  F: { 000;  0  1/2 1/2; 1/2  0  1/2; 1/2 1/2  0 }+
+ -> Reduced set of symmetry operators:
+
+  No.  IT   Symmetry symbol    Rotation part     Associated Translation
+   1: ( 1)   1            -->     ( x, y, z) + {  0.0000  0.0000  0.0000}
+   2: ( 4)   2 ( x, 0, 0) -->     ( x,-y,-z) + {  0.0000  0.0000  0.0000}
+   3: ( 3)   2 ( 0, y, 0) -->     (-x, y,-z) + {  0.0000  0.0000  0.0000}
+   4: ( 2)   2 ( 0, 0, z) -->     (-x,-y, z) + {  0.0000  0.0000  0.0000}
+   5: ( 9)  3- ( x, x, x) -->     ( y, z, x) + {  0.0000  0.0000  0.0000}
+   6: (12)  3- (-x, x,-x) -->     (-y,-z, x) + {  0.0000  0.0000  0.0000}
+   7: (11)  3- (-x,-x, x) -->     ( y,-z,-x) + {  0.0000  0.0000  0.0000}
+   8: (10)  3- ( x,-x,-x) -->     (-y, z,-x) + {  0.0000  0.0000  0.0000}
+   9: ( 5)  3+ ( x, x, x) -->     ( z, x, y) + {  0.0000  0.0000  0.0000}
+  10: ( 8)  3+ (-x,-x, x) -->     (-z, x,-y) + {  0.0000  0.0000  0.0000}
+  11: ( 7)  3+ ( x,-x,-x) -->     (-z,-x, y) + {  0.0000  0.0000  0.0000}
+  12: ( 6)  3+ (-x, x,-x) -->     ( z,-x,-y) + {  0.0000  0.0000  0.0000}
+  13: (14)   2 ( x,-x, 0) -->     (-y,-x,-z) + {  0.0000  0.0000  0.0000}
+  14: (15)  4- ( 0, 0, z) -->     ( y,-x, z) + {  0.0000  0.0000  0.0000}
+  15: (16)  4+ ( 0, 0, z) -->     (-y, x, z) + {  0.0000  0.0000  0.0000}
+  16: (13)   2 ( x, x, 0) -->     ( y, x,-z) + {  0.0000  0.0000  0.0000}
+  17: (24)   2 (-x, 0, x) -->     (-z,-y,-x) + {  0.0000  0.0000  0.0000}
+  18: (21)  4+ ( 0, y, 0) -->     ( z, y,-x) + {  0.0000  0.0000  0.0000}
+  19: (22)   2 ( x, 0, x) -->     ( z,-y, x) + {  0.0000  0.0000  0.0000}
+  20: (23)  4- ( 0, y, 0) -->     (-z, y, x) + {  0.0000  0.0000  0.0000}
+  21: (19)   2 ( 0, y,-y) -->     (-x,-z,-y) + {  0.0000  0.0000  0.0000}
+  22: (18)   2 ( 0, y, y) -->     (-x, z, y) + {  0.0000  0.0000  0.0000}
+  23: (17)  4- ( x, 0, 0) -->     ( x, z,-y) + {  0.0000  0.0000  0.0000}
+  24: (20)  4+ ( x, 0, 0) -->     ( x,-z, y) + {  0.0000  0.0000  0.0000}
+
+
+        Information on Space Group: 
+        --------------------------- 
+
+ =>   Number of Space group: 225
+ =>  Hermann-Mauguin Symbol: F m -3 m
+ =>             Hall Symbol: -F 4 2 3
+ =>            Setting Type: IT (Generated from Hermann-Mauguin symbol)
+ =>          Crystal System: Cubic
+ =>              Laue Class: m-3m
+ =>             Point Group: m-3m
+ =>         Bravais Lattice: F
+ =>          Lattice Symbol: cF
+ =>  Reduced Number of S.O.:  24
+ =>    General multiplicity: 192
+ =>          Centrosymmetry: Centric (-1 at origin)
+ =>  Generators (exc. -1&L):   3
+ =>         Asymmetric unit:  0.000 <= x <=  0.500
+                              0.000 <= y <=  0.250
+                              0.000 <= z <=  0.250
+ => Centring vectors:  3
+ => Latt( 1): (1/2,1/2,0)                          => Latt( 2): (1/2,0,1/2)                         
+ => Latt( 3): (0,1/2,1/2)                                                                           
+
+ => List of all Symmetry Operators and Symmetry Symbols
+
+ => SYMM(  1): x,y,z                             Symbol: 1
+ => SYMM(  2): x,-y,-z                           Symbol: 2 x,0,0
+ => SYMM(  3): -x,y,-z                           Symbol: 2 0,y,0
+ => SYMM(  4): -x,-y,z                           Symbol: 2 0,0,z
+ => SYMM(  5): y,z,x                             Symbol: 3- x,x,x
+ => SYMM(  6): -y,-z,x                           Symbol: 3+ x,-x,x
+ => SYMM(  7): y,-z,-x                           Symbol: 3+ x,x,-x
+ => SYMM(  8): -y,z,-x                           Symbol: 3- x,-x,-x
+ => SYMM(  9): z,x,y                             Symbol: 3+ x,x,x
+ => SYMM( 10): -z,x,-y                           Symbol: 3- x,x,-x
+ => SYMM( 11): -z,-x,y                           Symbol: 3+ x,-x,-x
+ => SYMM( 12): z,-x,-y                           Symbol: 3- x,-x,x
+ => SYMM( 13): y,x,z                             Symbol: m x,x,z
+ => SYMM( 14): -y,x,-z                           Symbol: -4- 0,0,z; 0,0,0
+ => SYMM( 15): y,-x,-z                           Symbol: -4+ 0,0,z; 0,0,0
+ => SYMM( 16): -y,-x,z                           Symbol: m x,-x,z
+ => SYMM( 17): z,y,x                             Symbol: m x,y,x
+ => SYMM( 18): -z,-y,x                           Symbol: -4+ 0,y,0; 0,0,0
+ => SYMM( 19): -z,y,-x                           Symbol: m x,y,-x
+ => SYMM( 20): z,-y,-x                           Symbol: -4- 0,y,0; 0,0,0
+ => SYMM( 21): x,z,y                             Symbol: m x,y,y
+ => SYMM( 22): x,-z,-y                           Symbol: m x,y,-y
+ => SYMM( 23): -x,-z,y                           Symbol: -4- x,0,0; 0,0,0
+ => SYMM( 24): -x,z,-y                           Symbol: -4+ x,0,0; 0,0,0
+ => SYMM( 25): -x,-y,-z                          Symbol: -1 0,0,0
+ => SYMM( 26): -x,y,z                            Symbol: m 0,y,z
+ => SYMM( 27): x,-y,z                            Symbol: m x,0,z
+ => SYMM( 28): x,y,-z                            Symbol: m x,y,0
+ => SYMM( 29): -y,-z,-x                          Symbol: -3- x,x,x; 0,0,0
+ => SYMM( 30): y,z,-x                            Symbol: -3+ x,-x,x; 0,0,0
+ => SYMM( 31): -y,z,x                            Symbol: -3+ x,x,-x; 0,0,0
+ => SYMM( 32): y,-z,x                            Symbol: -3- x,-x,-x; 0,0,0
+ => SYMM( 33): -z,-x,-y                          Symbol: -3+ x,x,x; 0,0,0
+ => SYMM( 34): z,-x,y                            Symbol: -3- x,x,-x; 0,0,0
+ => SYMM( 35): z,x,-y                            Symbol: -3+ x,-x,-x; 0,0,0
+ => SYMM( 36): -z,x,y                            Symbol: -3- x,-x,x; 0,0,0
+ => SYMM( 37): -y,-x,-z                          Symbol: 2 x,-x,0
+ => SYMM( 38): y,-x,z                            Symbol: 4- 0,0,z
+ => SYMM( 39): -y,x,z                            Symbol: 4+ 0,0,z
+ => SYMM( 40): y,x,-z                            Symbol: 2 x,x,0
+ => SYMM( 41): -z,-y,-x                          Symbol: 2 x,0,-x
+ => SYMM( 42): z,y,-x                            Symbol: 4+ 0,y,0
+ => SYMM( 43): z,-y,x                            Symbol: 2 x,0,x
+ => SYMM( 44): -z,y,x                            Symbol: 4- 0,y,0
+ => SYMM( 45): -x,-z,-y                          Symbol: 2 0,y,-y
+ => SYMM( 46): -x,z,y                            Symbol: 2 0,y,y
+ => SYMM( 47): x,z,-y                            Symbol: 4- x,0,0
+ => SYMM( 48): x,-z,y                            Symbol: 4+ x,0,0
+ => SYMM( 49): x+1/2,y+1/2,z                     Symbol: t (1/2,1/2,0)
+ => SYMM( 50): x+1/2,-y+1/2,-z                   Symbol: 2 (1/2,0,0) x,1/4,0
+ => SYMM( 51): -x+1/2,y+1/2,-z                   Symbol: 2 (0,1/2,0) 1/4,y,0
+ => SYMM( 52): -x+1/2,-y+1/2,z                   Symbol: 2 1/4,1/4,z
+ => SYMM( 53): y+1/2,z+1/2,x                     Symbol: 3- (1/3,1/3,1/3) x,x-1/6,x-1/3
+ => SYMM( 54): -y+1/2,-z+1/2,x                   Symbol: 3+ x,-x+1/2,x
+ => SYMM( 55): y+1/2,-z+1/2,-x                   Symbol: 3+ (1/3,1/3,-1/3) x,x-1/6,-x+1/3
+ => SYMM( 56): -y+1/2,z+1/2,-x                   Symbol: 3- x,-x+1/2,-x
+ => SYMM( 57): z+1/2,x+1/2,y                     Symbol: 3+ (1/3,1/3,1/3) x,x+1/6,x-1/6
+ => SYMM( 58): -z+1/2,x+1/2,-y                   Symbol: 3- (1/3,1/3,-1/3) x,x+1/6,-x+1/6
+ => SYMM( 59): -z+1/2,-x+1/2,y                   Symbol: 3+ x,-x+1/2,-x+1/2
+ => SYMM( 60): z+1/2,-x+1/2,-y                   Symbol: 3- x,-x+1/2,x-1/2
+ => SYMM( 61): y+1/2,x+1/2,z                     Symbol: n (1/2,1/2,0) x,x,z
+ => SYMM( 62): -y+1/2,x+1/2,-z                   Symbol: -4- 0,1/2,z; 0,1/2,0
+ => SYMM( 63): y+1/2,-x+1/2,-z                   Symbol: -4+ 1/2,0,z; 1/2,0,0
+ => SYMM( 64): -y+1/2,-x+1/2,z                   Symbol: m x,-x+1/2,z
+ => SYMM( 65): z+1/2,y+1/2,x                     Symbol: g (1/4,1/2,1/4) x,y,x-1/4
+ => SYMM( 66): -z+1/2,-y+1/2,x                   Symbol: -4+ 1/4,y,1/4; 1/4,1/4,1/4
+ => SYMM( 67): -z+1/2,y+1/2,-x                   Symbol: g (1/4,1/2,-1/4) x,y,-x+1/4
+ => SYMM( 68): z+1/2,-y+1/2,-x                   Symbol: -4- 1/4,y,-1/4; 1/4,1/4,-1/4
+ => SYMM( 69): x+1/2,z+1/2,y                     Symbol: g (1/2,1/4,1/4) x,y,y-1/4
+ => SYMM( 70): x+1/2,-z+1/2,-y                   Symbol: g (1/2,1/4,-1/4) x,y,-y+1/4
+ => SYMM( 71): -x+1/2,-z+1/2,y                   Symbol: -4- x,1/4,1/4; 1/4,1/4,1/4
+ => SYMM( 72): -x+1/2,z+1/2,-y                   Symbol: -4+ x,1/4,-1/4; 1/4,1/4,-1/4
+ => SYMM( 73): -x+1/2,-y+1/2,-z                  Symbol: -1 1/4,1/4,0
+ => SYMM( 74): -x+1/2,y+1/2,z                    Symbol: b 1/4,y,z
+ => SYMM( 75): x+1/2,-y+1/2,z                    Symbol: a x,1/4,z
+ => SYMM( 76): x+1/2,y+1/2,-z                    Symbol: n (1/2,1/2,0) x,y,0
+ => SYMM( 77): -y+1/2,-z+1/2,-x                  Symbol: -3- x,x+1/2,x; 0,1/2,0
+ => SYMM( 78): y+1/2,z+1/2,-x                    Symbol: -3+ x,-x+1/2,x-1; 1/2,0,-1/2
+ => SYMM( 79): -y+1/2,z+1/2,x                    Symbol: -3+ x,x+1/2,-x; 0,1/2,0
+ => SYMM( 80): y+1/2,-z+1/2,x                    Symbol: -3- x,-x+1/2,-x+1; 1/2,0,1/2
+ => SYMM( 81): -z+1/2,-x+1/2,-y                  Symbol: -3+ x,x-1/2,x-1/2; 1/2,0,0
+ => SYMM( 82): z+1/2,-x+1/2,y                    Symbol: -3- x,x-1/2,-x+1/2; 1/2,0,0
+ => SYMM( 83): z+1/2,x+1/2,-y                    Symbol: -3+ x,-x+1/2,-x-1/2; 0,1/2,-1/2
+ => SYMM( 84): -z+1/2,x+1/2,y                    Symbol: -3- x,-x+1/2,x+1/2; 0,1/2,1/2
+ => SYMM( 85): -y+1/2,-x+1/2,-z                  Symbol: 2 x,-x+1/2,0
+ => SYMM( 86): y+1/2,-x+1/2,z                    Symbol: 4- 1/2,0,z
+ => SYMM( 87): -y+1/2,x+1/2,z                    Symbol: 4+ 0,1/2,z
+ => SYMM( 88): y+1/2,x+1/2,-z                    Symbol: 2 (1/2,1/2,0) x,x,0
+ => SYMM( 89): -z+1/2,-y+1/2,-x                  Symbol: 2 (1/4,0,-1/4) x,1/4,-x+1/4
+ => SYMM( 90): z+1/2,y+1/2,-x                    Symbol: 4+ (0,1/2,0) 1/4,y,-1/4
+ => SYMM( 91): z+1/2,-y+1/2,x                    Symbol: 2 (1/4,0,1/4) x,1/4,x-1/4
+ => SYMM( 92): -z+1/2,y+1/2,x                    Symbol: 4- (0,1/2,0) 1/4,y,1/4
+ => SYMM( 93): -x+1/2,-z+1/2,-y                  Symbol: 2 (0,1/4,-1/4) 1/4,y,-y+1/4
+ => SYMM( 94): -x+1/2,z+1/2,y                    Symbol: 2 (0,1/4,1/4) 1/4,y,y-1/4
+ => SYMM( 95): x+1/2,z+1/2,-y                    Symbol: 4- (1/2,0,0) x,1/4,-1/4
+ => SYMM( 96): x+1/2,-z+1/2,y                    Symbol: 4+ (1/2,0,0) x,1/4,1/4
+ => SYMM( 97): x+1/2,y,z+1/2                     Symbol: t (1/2,0,1/2)
+ => SYMM( 98): x+1/2,-y,-z+1/2                   Symbol: 2 (1/2,0,0) x,0,1/4
+ => SYMM( 99): -x+1/2,y,-z+1/2                   Symbol: 2 1/4,y,1/4
+ => SYMM(100): -x+1/2,-y,z+1/2                   Symbol: 2 (0,0,1/2) 1/4,0,z
+ => SYMM(101): y+1/2,z,x+1/2                     Symbol: 3- (1/3,1/3,1/3) x,x-1/6,x+1/6
+ => SYMM(102): -y+1/2,-z,x+1/2                   Symbol: 3+ (1/3,-1/3,1/3) x,-x+1/6,x+1/6
+ => SYMM(103): y+1/2,-z,-x+1/2                   Symbol: 3+ x,x-1/2,-x+1/2
+ => SYMM(104): -y+1/2,z,-x+1/2                   Symbol: 3- x,-x+1/2,-x+1/2
+ => SYMM(105): z+1/2,x,y+1/2                     Symbol: 3+ (1/3,1/3,1/3) x,x-1/3,x-1/6
+ => SYMM(106): -z+1/2,x,-y+1/2                   Symbol: 3- x,x,-x+1/2
+ => SYMM(107): -z+1/2,-x,y+1/2                   Symbol: 3+ x,-x,-x+1/2
+ => SYMM(108): z+1/2,-x,-y+1/2                   Symbol: 3- (1/3,-1/3,1/3) x,-x+1/3,x-1/6
+ => SYMM(109): y+1/2,x,z+1/2                     Symbol: g (1/4,1/4,1/2) x,x-1/4,z
+ => SYMM(110): -y+1/2,x,-z+1/2                   Symbol: -4- 1/4,1/4,z; 1/4,1/4,1/4
+ => SYMM(111): y+1/2,-x,-z+1/2                   Symbol: -4+ 1/4,-1/4,z; 1/4,-1/4,1/4
+ => SYMM(112): -y+1/2,-x,z+1/2                   Symbol: g (1/4,-1/4,1/2) x,-x+1/4,z
+ => SYMM(113): z+1/2,y,x+1/2                     Symbol: n (1/2,0,1/2) x,y,x
+ => SYMM(114): -z+1/2,-y,x+1/2                   Symbol: -4+ 0,y,1/2; 0,0,1/2
+ => SYMM(115): -z+1/2,y,-x+1/2                   Symbol: m x,y,-x+1/2
+ => SYMM(116): z+1/2,-y,-x+1/2                   Symbol: -4- 1/2,y,0; 1/2,0,0
+ => SYMM(117): x+1/2,z,y+1/2                     Symbol: g (1/2,1/4,1/4) x,y,y+1/4
+ => SYMM(118): x+1/2,-z,-y+1/2                   Symbol: g (1/2,-1/4,1/4) x,y,-y+1/4
+ => SYMM(119): -x+1/2,-z,y+1/2                   Symbol: -4- x,-1/4,1/4; 1/4,-1/4,1/4
+ => SYMM(120): -x+1/2,z,-y+1/2                   Symbol: -4+ x,1/4,1/4; 1/4,1/4,1/4
+ => SYMM(121): -x+1/2,-y,-z+1/2                  Symbol: -1 1/4,0,1/4
+ => SYMM(122): -x+1/2,y,z+1/2                    Symbol: c 1/4,y,z
+ => SYMM(123): x+1/2,-y,z+1/2                    Symbol: n (1/2,0,1/2) x,0,z
+ => SYMM(124): x+1/2,y,-z+1/2                    Symbol: a x,y,1/4
+ => SYMM(125): -y+1/2,-z,-x+1/2                  Symbol: -3- x,x-1/2,x-1/2; 1/2,0,0
+ => SYMM(126): y+1/2,z,-x+1/2                    Symbol: -3+ x,-x+1/2,x-1/2; 1/2,0,0
+ => SYMM(127): -y+1/2,z,x+1/2                    Symbol: -3+ x,x+1/2,-x+1/2; 0,1/2,1/2
+ => SYMM(128): y+1/2,-z,x+1/2                    Symbol: -3- x,-x-1/2,-x+1/2; 0,-1/2,1/2
+ => SYMM(129): -z+1/2,-x,-y+1/2                  Symbol: -3+ x,x,x+1/2; 0,0,1/2
+ => SYMM(130): z+1/2,-x,y+1/2                    Symbol: -3- x,x-1,-x+1/2; 1/2,-1/2,0
+ => SYMM(131): z+1/2,x,-y+1/2                    Symbol: -3+ x,-x+1,-x+1/2; 1/2,1/2,0
+ => SYMM(132): -z+1/2,x,y+1/2                    Symbol: -3- x,-x,x+1/2; 0,0,1/2
+ => SYMM(133): -y+1/2,-x,-z+1/2                  Symbol: 2 (1/4,-1/4,0) x,-x+1/4,1/4
+ => SYMM(134): y+1/2,-x,z+1/2                    Symbol: 4- (0,0,1/2) 1/4,-1/4,z
+ => SYMM(135): -y+1/2,x,z+1/2                    Symbol: 4+ (0,0,1/2) 1/4,1/4,z
+ => SYMM(136): y+1/2,x,-z+1/2                    Symbol: 2 (1/4,1/4,0) x,x-1/4,1/4
+ => SYMM(137): -z+1/2,-y,-x+1/2                  Symbol: 2 x,0,-x+1/2
+ => SYMM(138): z+1/2,y,-x+1/2                    Symbol: 4+ 1/2,y,0
+ => SYMM(139): z+1/2,-y,x+1/2                    Symbol: 2 (1/2,0,1/2) x,0,x
+ => SYMM(140): -z+1/2,y,x+1/2                    Symbol: 4- 0,y,1/2
+ => SYMM(141): -x+1/2,-z,-y+1/2                  Symbol: 2 (0,-1/4,1/4) 1/4,y,-y+1/4
+ => SYMM(142): -x+1/2,z,y+1/2                    Symbol: 2 (0,1/4,1/4) 1/4,y,y+1/4
+ => SYMM(143): x+1/2,z,-y+1/2                    Symbol: 4- (1/2,0,0) x,1/4,1/4
+ => SYMM(144): x+1/2,-z,y+1/2                    Symbol: 4+ (1/2,0,0) x,-1/4,1/4
+ => SYMM(145): x,y+1/2,z+1/2                     Symbol: t (0,1/2,1/2)
+ => SYMM(146): x,-y+1/2,-z+1/2                   Symbol: 2 x,1/4,1/4
+ => SYMM(147): -x,y+1/2,-z+1/2                   Symbol: 2 (0,1/2,0) 0,y,1/4
+ => SYMM(148): -x,-y+1/2,z+1/2                   Symbol: 2 (0,0,1/2) 0,1/4,z
+ => SYMM(149): y,z+1/2,x+1/2                     Symbol: 3- (1/3,1/3,1/3) x,x+1/3,x+1/6
+ => SYMM(150): -y,-z+1/2,x+1/2                   Symbol: 3+ x,-x,x+1/2
+ => SYMM(151): y,-z+1/2,-x+1/2                   Symbol: 3+ x,x,-x+1/2
+ => SYMM(152): -y,z+1/2,-x+1/2                   Symbol: 3- (-1/3,1/3,1/3) x,-x+1/3,-x+1/6
+ => SYMM(153): z,x+1/2,y+1/2                     Symbol: 3+ (1/3,1/3,1/3) x,x+1/6,x+1/3
+ => SYMM(154): -z,x+1/2,-y+1/2                   Symbol: 3- x,x+1/2,-x
+ => SYMM(155): -z,-x+1/2,y+1/2                   Symbol: 3+ (-1/3,1/3,1/3) x,-x+1/6,-x+1/3
+ => SYMM(156): z,-x+1/2,-y+1/2                   Symbol: 3- x,-x+1/2,x
+ => SYMM(157): y,x+1/2,z+1/2                     Symbol: g (1/4,1/4,1/2) x,x+1/4,z
+ => SYMM(158): -y,x+1/2,-z+1/2                   Symbol: -4- -1/4,1/4,z; -1/4,1/4,1/4
+ => SYMM(159): y,-x+1/2,-z+1/2                   Symbol: -4+ 1/4,1/4,z; 1/4,1/4,1/4
+ => SYMM(160): -y,-x+1/2,z+1/2                   Symbol: g (-1/4,1/4,1/2) x,-x+1/4,z
+ => SYMM(161): z,y+1/2,x+1/2                     Symbol: g (1/4,1/2,1/4) x,y,x+1/4
+ => SYMM(162): -z,-y+1/2,x+1/2                   Symbol: -4+ -1/4,y,1/4; -1/4,1/4,1/4
+ => SYMM(163): -z,y+1/2,-x+1/2                   Symbol: g (-1/4,1/2,1/4) x,y,-x+1/4
+ => SYMM(164): z,-y+1/2,-x+1/2                   Symbol: -4- 1/4,y,1/4; 1/4,1/4,1/4
+ => SYMM(165): x,z+1/2,y+1/2                     Symbol: n (0,1/2,1/2) x,y,y
+ => SYMM(166): x,-z+1/2,-y+1/2                   Symbol: m x,y,-y+1/2
+ => SYMM(167): -x,-z+1/2,y+1/2                   Symbol: -4- x,0,1/2; 0,0,1/2
+ => SYMM(168): -x,z+1/2,-y+1/2                   Symbol: -4+ x,1/2,0; 0,1/2,0
+ => SYMM(169): -x,-y+1/2,-z+1/2                  Symbol: -1 0,1/4,1/4
+ => SYMM(170): -x,y+1/2,z+1/2                    Symbol: n (0,1/2,1/2) 0,y,z
+ => SYMM(171): x,-y+1/2,z+1/2                    Symbol: c x,1/4,z
+ => SYMM(172): x,y+1/2,-z+1/2                    Symbol: b x,y,1/4
+ => SYMM(173): -y,-z+1/2,-x+1/2                  Symbol: -3- x,x,x+1/2; 0,0,1/2
+ => SYMM(174): y,z+1/2,-x+1/2                    Symbol: -3+ x,-x+1,x-1/2; 1/2,1/2,0
+ => SYMM(175): -y,z+1/2,x+1/2                    Symbol: -3+ x,x+1,-x-1/2; -1/2,1/2,0
+ => SYMM(176): y,-z+1/2,x+1/2                    Symbol: -3- x,-x,-x+1/2; 0,0,1/2
+ => SYMM(177): -z,-x+1/2,-y+1/2                  Symbol: -3+ x,x+1/2,x; 0,1/2,0
+ => SYMM(178): z,-x+1/2,y+1/2                    Symbol: -3- x,x-1/2,-x+1; 1/2,0,1/2
+ => SYMM(179): z,x+1/2,-y+1/2                    Symbol: -3+ x,-x+1/2,-x; 0,1/2,0
+ => SYMM(180): -z,x+1/2,y+1/2                    Symbol: -3- x,-x-1/2,x+1; -1/2,0,1/2
+ => SYMM(181): -y,-x+1/2,-z+1/2                  Symbol: 2 (-1/4,1/4,0) x,-x+1/4,1/4
+ => SYMM(182): y,-x+1/2,z+1/2                    Symbol: 4- (0,0,1/2) 1/4,1/4,z
+ => SYMM(183): -y,x+1/2,z+1/2                    Symbol: 4+ (0,0,1/2) -1/4,1/4,z
+ => SYMM(184): y,x+1/2,-z+1/2                    Symbol: 2 (1/4,1/4,0) x,x+1/4,1/4
+ => SYMM(185): -z,-y+1/2,-x+1/2                  Symbol: 2 (-1/4,0,1/4) x,1/4,-x+1/4
+ => SYMM(186): z,y+1/2,-x+1/2                    Symbol: 4+ (0,1/2,0) 1/4,y,1/4
+ => SYMM(187): z,-y+1/2,x+1/2                    Symbol: 2 (1/4,0,1/4) x,1/4,x+1/4
+ => SYMM(188): -z,y+1/2,x+1/2                    Symbol: 4- (0,1/2,0) -1/4,y,1/4
+ => SYMM(189): -x,-z+1/2,-y+1/2                  Symbol: 2 0,y,-y+1/2
+ => SYMM(190): -x,z+1/2,y+1/2                    Symbol: 2 (0,1/2,1/2) 0,y,y
+ => SYMM(191): x,z+1/2,-y+1/2                    Symbol: 4- x,1/2,0
+ => SYMM(192): x,-z+1/2,y+1/2                    Symbol: 4+ x,0,1/2
+
+ => Special Wyckoff Positions for F m -3 m
+ 
+    Multp     Site        Representative Coordinates (centring translations excluded)
+     96       k              x,x,z               x,-x,-z             -x,x,-z                                 
+                             -x,-x,z             x,z,x               -x,-z,x                                 
+                             x,-z,-x             -x,z,-x             z,x,x                                   
+                             -z,x,-x             -z,-x,x             z,-x,-x                                 
+                             -x,-x,-z            -x,x,z              x,-x,z                                  
+                             x,x,-z              -x,-z,-x            x,z,-x                                  
+                             -x,z,x              x,-z,x              -z,-x,-x                                
+                             z,-x,x              z,x,-x              -z,x,x                                  
+ 
+     96       j              0,y,z               0,-y,-z             0,y,-z                                  
+                             0,-y,z              y,z,0               -y,-z,0                                 
+                             y,-z,0              -y,z,0              z,0,y                                   
+                             -z,0,-y             -z,0,y              z,0,-y                                  
+                             y,0,z               -y,0,-z             y,0,-z                                  
+                             -y,0,z              z,y,0               -z,-y,0                                 
+                             -z,y,0              z,-y,0              0,z,y                                   
+                             0,-z,-y             0,-z,y              0,z,-y                                  
+ 
+     48       i              1/2,y,y             1/2,-y,-y           1/2,y,-y                                
+                             1/2,-y,y            y,y,1/2             -y,-y,1/2                               
+                             y,-y,1/2            -y,y,1/2            y,1/2,y                                 
+                             -y,1/2,-y           -y,1/2,y            y,1/2,-y                                
+ 
+     48       h              0,y,y               0,-y,-y             0,y,-y                                  
+                             0,-y,y              y,y,0               -y,-y,0                                 
+                             y,-y,0              -y,y,0              y,0,y                                   
+                             -y,0,-y             -y,0,y              y,0,-y                                  
+ 
+     48       g              x,1/4,1/4           -x,1/4,3/4          1/4,1/4,x                               
+                             1/4,3/4,-x          1/4,x,1/4           3/4,-x,1/4                              
+                             -x,3/4,3/4          x,3/4,1/4           3/4,3/4,-x                              
+                             3/4,1/4,x           3/4,-x,3/4          1/4,x,3/4                               
+ 
+     32       f              x,x,x               x,-x,-x             -x,x,-x                                 
+                             -x,-x,x             -x,-x,-x            -x,x,x                                  
+                             x,-x,x              x,x,-x                                                      
+ 
+     24       e              x,0,0               -x,0,0              0,0,x                                   
+                             0,0,-x              0,x,0               0,-x,0                                  
+ 
+     24       d              0,1/4,1/4           0,1/4,3/4           1/4,1/4,0                               
+                             1/4,3/4,0           1/4,0,1/4           3/4,0,1/4                               
+ 
+      8       c              1/4,1/4,1/4         3/4,3/4,3/4                                                 
+ 
+      4       b              1/2,1/2,1/2                                                                     
+ 
+      4       a              0,0,0                                                                           
+ 
+
+ => Initial parameters ==>
+ Atom    Ntyp                  X         Y         Z         B         occ.         in  fin  Spc  Mult
+                             B11       B22       B33       B12       B13       B23
+ Fe     FE                 0.00000   0.00000   0.00000   1.71513   0.02083           0    0    0    4
+                 Codes:    0.00000   0.00000   0.00000  81.00000   0.00000
+
+ => It is assumed that THE FIRST GIVEN SITE plus all the other atoms 
+    occupying THE SAME POSITION have a total full occupation (no vacancies!)
+  (if this is not the case, change the order of atoms to obtain correct values for the content of the unit cell)
+    The given occupation factors have been obtained mutiplying m/M by   0.0208
+      -> Atom: FE  ,  Chemical element: FE  Atomic Mass:    55.8470
+ => The given value of ATZ is        223.32 the program has calculated:         223.32
+    The value of ATZ given in the input PCR file will be used for quantitative analysis
+ => The chemical content of the unit cell is: 
+       4.0000 FE     
+ => The normalized site occupation numbers in % are: 
+     100.0000 Fe       
+ => The density (volumic mass) of the compound is:    7.649 g/cm3
+
+ =>-------> PROFILE PARAMETERS FOR PATTERN:  1
+
+ => Overall scale factor       :    96.1703    
+ => T.O.F. Extinction parameter:      0.00000
+ => Overall temperature  factor:      0.00000
+ => T.O.F. Gaussian variances Sig-2, Sig-1, Sig-0, Sig-Q:    311.70761  1283.61877   893.66351     0.00000
+ => T.O.F. Isotropic Gaussian Size (Z1=G-Size)  :      0.00000
+ => T.O.F. Lorentzian FWHM Gam-2, Gam-1, Gam-0:      0.00000     0.00000     5.03300
+ => T.O.F. Isotropic Lorentzian strain and size parameters (LStr,LSiz):      0.00000     0.00000
+ => Direct cell parameters:    3.6468   3.6468   3.6468  90.0000  90.0000  90.0000
+ => Preferred orientation parameters:    1.0000   0.0000
+ => T.O.F. Peak shape parameter for pV_TOF (yet unused):      0.00000     0.00000     0.00000     0.00000
+ => Model-dependent Strain parameters s2,s1,s0:      0.00000     0.00000     0.00000
+
+
+ ==> CODEWORDS FOR PROFILE PARAMETERS of PATTERN#  1
+
+ => Codeword  - Scale Factor:     71.00000
+ => Codeword  - T.O.F. Extinction parameter:      0.00000
+ => Codeword  - Overall temperature factor:      0.00000
+ => Codewords - T.O.F. Gaussian variances Sig-2, Sig-1, Sig-0, Sig-Q:     41.00000    11.00000    51.00000     0.00000
+ => Codewords - T.O.F. Isotropic Gaussian Size (G-Size)  :      0.00000
+ => Codewords - T.O.F. Lorentzian FWHM Gam-2, Gam-1, Gam-0:      0.00000     0.00000   101.00000
+ => Codewords - T.O.F. Isotropic Lorentzian strain and size parameters (LStr,LSiz):      0.00000     0.00000
+ => Codewords - Direct cell parameters:      0.00000     0.00000     0.00000     0.00000     0.00000     0.00000
+ => Codewords - Preferred orientation parameters:      0.00000     0.00000
+ => Codewords - T.O.F. Peak shape parameter for TOF_pV (unused):      0.00000     0.00000     0.00000     0.00000
+=> Codewords - Model-dependent Strain parameters s2,s1,s0:      0.00000     0.00000     0.00000
+
+
+ => Cell constraints according to Laue symmetry: m-3m 
+
+        Metric information:
+        -------------------
+
+ => Direct cell parameters:
+
+         a =       3.6468      b =       3.6468      c =       3.6468
+     alpha =       90.000   beta =       90.000  gamma =       90.000
+                        Direct Cell Volume =      48.4993
+
+ => Reciprocal cell parameters:
+
+         a*=     0.274213      b*=     0.274213      c*=     0.274213
+     alpha*=       90.000   beta*=       90.000  gamma*=       90.000
+                    Reciprocal Cell Volume =   0.02061884
+
+ => Direct and Reciprocal Metric Tensors:
+
+                   GD                                       GR
+     13.2992      0.0000      0.0000          0.075193    0.000000    0.000000
+      0.0000     13.2992      0.0000          0.000000    0.075193    0.000000
+      0.0000      0.0000     13.2992          0.000000    0.000000    0.075193
+
+ =>  Cartesian frame: x // a; z is along c*; y is within the ab-plane   
+
+     Crystal_to_Orthonormal_Matrix              Orthonormal_to_Crystal Matrix
+              Cr_Orth_cel                               Orth_Cr_cel  
+      3.6468      0.0000      0.0000          0.274213   -0.000000   -0.000000
+      0.0000      3.6468      0.0000          0.000000    0.274213   -0.000000
+      0.0000      0.0000      3.6468          0.000000    0.000000    0.274213
+
+     Busing-Levy B-matrix: Hc=B.H            Inverse of the Busing-Levy B-matrix
+                BL_M                                      BL_Minv  
+    0.274213    0.000000    0.000000            3.6468     -0.0000     -0.0000
+    0.000000    0.274213   -0.000000            0.0000      3.6468      0.0000
+    0.000000    0.000000    0.274213            0.0000      0.0000      3.6468
+
+ =>-------> PROFILE PARAMETERS FOR PATTERN:  2
+
+ => Overall scale factor       :    95.8679    
+ => T.O.F. Extinction parameter:      0.00000
+ => Overall temperature  factor:      0.00000
+ => T.O.F. Gaussian variances Sig-2, Sig-1, Sig-0, Sig-Q:    325.25259  1249.38965   914.47662     0.00000
+ => T.O.F. Isotropic Gaussian Size (Z1=G-Size)  :      0.00000
+ => T.O.F. Lorentzian FWHM Gam-2, Gam-1, Gam-0:      0.00000     0.00000     5.02890
+ => T.O.F. Isotropic Lorentzian strain and size parameters (LStr,LSiz):      0.00000     0.00000
+ => Direct cell parameters:    3.6468   3.6468   3.6468  90.0000  90.0000  90.0000
+ => Preferred orientation parameters:    1.0000   0.0000
+ => T.O.F. Peak shape parameter for pV_TOF (yet unused):      0.00000     0.00000     0.00000     0.00000
+ => Model-dependent Strain parameters s2,s1,s0:      0.00000     0.00000     0.00000
+
+
+ ==> CODEWORDS FOR PROFILE PARAMETERS of PATTERN#  2
+
+ => Codeword  - Scale Factor:    131.00000
+ => Codeword  - T.O.F. Extinction parameter:      0.00000
+ => Codeword  - Overall temperature factor:      0.00000
+ => Codewords - T.O.F. Gaussian variances Sig-2, Sig-1, Sig-0, Sig-Q:    111.00000   121.00000   151.00000     0.00000
+ => Codewords - T.O.F. Isotropic Gaussian Size (G-Size)  :      0.00000
+ => Codewords - T.O.F. Lorentzian FWHM Gam-2, Gam-1, Gam-0:      0.00000     0.00000   141.00000
+ => Codewords - T.O.F. Isotropic Lorentzian strain and size parameters (LStr,LSiz):      0.00000     0.00000
+ => Codewords - Direct cell parameters:      0.00000     0.00000     0.00000     0.00000     0.00000     0.00000
+ => Codewords - Preferred orientation parameters:      0.00000     0.00000
+ => Codewords - T.O.F. Peak shape parameter for TOF_pV (unused):      0.00000     0.00000     0.00000     0.00000
+=> Codewords - Model-dependent Strain parameters s2,s1,s0:      0.00000     0.00000     0.00000
+
+
+ => Cell constraints according to Laue symmetry: m-3m 
+
+ => Laue symmetry m-3m  will be used to generate HKL for pattern#   1
+ => Reflections generated between S(1/d)min:  0.4049 A-1 and S(1/d)max:  1.7198 A-1
+ =>                                    dmax:  2.4697 A   and      dmin:  0.5815 A
+ => The number of reflections generated is:     15
+ => The max. scatt. variable (gen.ref.) is:    135592.4688
+ => Scattering coefficients from internal table
+
+ => Scattering lengths:
+
+
+ => Laue symmetry m-3m  will be used to generate HKL for pattern#   2
+ => Reflections generated between S(1/d)min:  0.4049 A-1 and S(1/d)max:  1.7198 A-1
+ =>                                    dmax:  2.4697 A   and      dmin:  0.5815 A
+ => The number of reflections generated is:     15
+ => The max. scatt. variable (gen.ref.) is:    135592.4688
+ => Scattering coefficients from internal table
+
+ => Scattering lengths:
+
+
+     --------------------------------------------------------------
+      SYMBOLIC NAMES AND INITIAL VALUES OF PARAMETERS TO BE VARIED:
+     --------------------------------------------------------------
+
+      ->  Parameter number    1   -> Symbolic Name:                                     Sig-1_ph1_pat1     1283.6387    
+      ->  Parameter number    2   -> Symbolic Name:                                          Zero_pat1    -10.291830    
+      ->  Parameter number    3   -> Symbolic Name:                                          Zero_pat2    -2.0907300    
+      ->  Parameter number    4   -> Symbolic Name:                                     Sig-2_ph1_pat1     311.70410    
+      ->  Parameter number    5   -> Symbolic Name:                                     Sig-0_ph1_pat1     893.63971    
+      ->  Parameter number    6   -> Symbolic Name:                                     Scale_ph1_pat1     401.46289    
+      ->  Parameter number    7   -> Symbolic Name:                                     Scale_ph2_pat1     96.170311    
+      ->  Parameter number    8   -> Symbolic Name:                                        Biso_Fe_ph1     1.7151300    
+      ->  Parameter number    9   -> Symbolic Name:                                     Scale_ph1_pat2     403.59479    
+      ->  Parameter number   10   -> Symbolic Name:                                     Gam-0_ph1_pat1     5.0330000    
+      ->  Parameter number   11   -> Symbolic Name:                                     Sig-2_ph1_pat2     325.25861    
+      ->  Parameter number   12   -> Symbolic Name:                                     Sig-1_ph1_pat2     1249.5679    
+      ->  Parameter number   13   -> Symbolic Name:                                     Scale_ph2_pat2     95.867928    
+      ->  Parameter number   14   -> Symbolic Name:                                     Gam-0_ph1_pat2     5.0279002    
+      ->  Parameter number   15   -> Symbolic Name:                                     Sig-0_ph1_pat2     914.61768    
+      ->  Parameter number   16   -> Symbolic Name:                                         Bck_0_pat1    0.16700000E-01
+      ->  Parameter number   17   -> Symbolic Name:                                         Bck_1_pat1    0.14850000    
+      ->  Parameter number   18   -> Symbolic Name:                                         Bck_2_pat1    0.18480000    
+      ->  Parameter number   19   -> Symbolic Name:                                         Bck_3_pat1    0.19750001    
+      ->  Parameter number   20   -> Symbolic Name:                                         Bck_4_pat1    0.18910000    
+      ->  Parameter number   21   -> Symbolic Name:                                         Bck_5_pat1    0.21470000    
+      ->  Parameter number   22   -> Symbolic Name:                                         Bck_6_pat1    0.18870001    
+      ->  Parameter number   23   -> Symbolic Name:                                         Bck_7_pat1    0.21940000    
+      ->  Parameter number   24   -> Symbolic Name:                                         Bck_8_pat1    0.19910000    
+      ->  Parameter number   25   -> Symbolic Name:                                         Bck_9_pat1    0.19810000    
+      ->  Parameter number   26   -> Symbolic Name:                                        Bck_10_pat1    0.22759999    
+      ->  Parameter number   27   -> Symbolic Name:                                        Bck_11_pat1    0.24390000    
+      ->  Parameter number   28   -> Symbolic Name:                                        Bck_12_pat1    0.29069999    
+      ->  Parameter number   29   -> Symbolic Name:                                        Bck_13_pat1    0.30669999    
+      ->  Parameter number   30   -> Symbolic Name:                                        Bck_14_pat1    0.32420000    
+      ->  Parameter number   31   -> Symbolic Name:                                        Bck_15_pat1    0.29730001    
+      ->  Parameter number   32   -> Symbolic Name:                                        Bck_16_pat1    0.25749999    
+      ->  Parameter number   33   -> Symbolic Name:                                        Bck_17_pat1    0.23210000    
+      ->  Parameter number   34   -> Symbolic Name:                                        Bck_18_pat1    0.21580000    
+      ->  Parameter number   35   -> Symbolic Name:                                        Bck_19_pat1    0.16940001    
+      ->  Parameter number   36   -> Symbolic Name:                                        Bck_20_pat1    0.23999999    
+      ->  Parameter number   37   -> Symbolic Name:                                        Bck_21_pat1    0.43349999    
+      ->  Parameter number   38   -> Symbolic Name:                                        Bck_22_pat1    0.43750000    
+      ->  Parameter number   39   -> Symbolic Name:                                        Bck_23_pat1    0.34270000    
+      ->  Parameter number   40   -> Symbolic Name:                                        Bck_24_pat1    0.53390002    
+      ->  Parameter number   41   -> Symbolic Name:                                        Bck_25_pat1    0.95370001    
+      ->  Parameter number   42   -> Symbolic Name:                                        Bck_26_pat1     1.1668000    
+      ->  Parameter number   43   -> Symbolic Name:                                        Bck_27_pat1     1.1164000    
+      ->  Parameter number   44   -> Symbolic Name:                                        Bck_28_pat1    0.91610003    
+      ->  Parameter number   45   -> Symbolic Name:                                        Bck_29_pat1    0.68849999    
+      ->  Parameter number   46   -> Symbolic Name:                                         Bck_0_pat2    0.25800001E-01
+      ->  Parameter number   47   -> Symbolic Name:                                         Bck_1_pat2    0.17479999    
+      ->  Parameter number   48   -> Symbolic Name:                                         Bck_2_pat2    0.20980000    
+      ->  Parameter number   49   -> Symbolic Name:                                         Bck_3_pat2    0.20260000    
+      ->  Parameter number   50   -> Symbolic Name:                                         Bck_4_pat2    0.21370000    
+      ->  Parameter number   51   -> Symbolic Name:                                         Bck_5_pat2    0.25420001    
+      ->  Parameter number   52   -> Symbolic Name:                                         Bck_6_pat2    0.18060000    
+      ->  Parameter number   53   -> Symbolic Name:                                         Bck_7_pat2    0.22420000    
+      ->  Parameter number   54   -> Symbolic Name:                                         Bck_8_pat2    0.20440000    
+      ->  Parameter number   55   -> Symbolic Name:                                         Bck_9_pat2    0.19910000    
+      ->  Parameter number   56   -> Symbolic Name:                                        Bck_10_pat2    0.24590001    
+      ->  Parameter number   57   -> Symbolic Name:                                        Bck_11_pat2    0.23970000    
+      ->  Parameter number   58   -> Symbolic Name:                                        Bck_12_pat2    0.28070000    
+      ->  Parameter number   59   -> Symbolic Name:                                        Bck_13_pat2    0.30289999    
+      ->  Parameter number   60   -> Symbolic Name:                                        Bck_14_pat2    0.33520001    
+      ->  Parameter number   61   -> Symbolic Name:                                        Bck_15_pat2    0.27669999    
+      ->  Parameter number   62   -> Symbolic Name:                                        Bck_16_pat2    0.25420001    
+      ->  Parameter number   63   -> Symbolic Name:                                        Bck_17_pat2    0.23660000    
+      ->  Parameter number   64   -> Symbolic Name:                                        Bck_18_pat2    0.22330000    
+      ->  Parameter number   65   -> Symbolic Name:                                        Bck_19_pat2    0.17610000    
+      ->  Parameter number   66   -> Symbolic Name:                                        Bck_20_pat2    0.23450001    
+      ->  Parameter number   67   -> Symbolic Name:                                        Bck_21_pat2    0.42629999    
+      ->  Parameter number   68   -> Symbolic Name:                                        Bck_22_pat2    0.44549999    
+      ->  Parameter number   69   -> Symbolic Name:                                        Bck_23_pat2    0.34639999    
+      ->  Parameter number   70   -> Symbolic Name:                                        Bck_24_pat2    0.52990001    
+      ->  Parameter number   71   -> Symbolic Name:                                        Bck_25_pat2    0.94139999    
+      ->  Parameter number   72   -> Symbolic Name:                                        Bck_26_pat2     1.1562999    
+      ->  Parameter number   73   -> Symbolic Name:                                        Bck_27_pat2     1.0577000    
+      ->  Parameter number   74   -> Symbolic Name:                                        Bck_28_pat2    0.96170002    
+      ->  Parameter number   75   -> Symbolic Name:                                        Bck_29_pat2    0.68559998    
+  
+ 
+ => No optimization for routine tasks
+ ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+ => CYCLE No.:    1
+ ------------------------------------------------------------------------------------------------------------------------------------
+ => Phase  1 Name: ferrite
+ ------------------------------------------------------------------------------------------------------------------------------------
+ => New parameters, shifts, and standard deviations
+
+ Atom        x       dx      sx       y       dy      sy       z       dz      sz       B       dB      sB      occ.    docc.   socc.
+
+ Fe       0.00000 0.00000 0.00000  0.00000 0.00000 0.00000  0.00000 0.00000 0.00000  1.71513 0.00000 0.01666  0.02083 0.00000 0.00000
+
+ ==> PROFILE PARAMETERS FOR PATTERN#  1
+
+ => Overall scale factor       :    401.463745117     0.000861133     2.162075281
+ => T.O.F. Extinction parameter:     0.000000    0.000000    0.000000
+ => Overall temperature  factor:     0.000000    0.000000    0.000000
+ => T.O.F. Gaussian variances Sig-2, Sig-1, Sig-0: 
+       311.707245    0.003138   22.111452
+      1283.621948   -0.016728  111.218941
+       893.654297    0.014611  111.377541
+
+ => T.O.F. Gaussian variance Sig-Q:     0.000000    0.000000    0.000000
+ => T.O.F. Isotropic Gaussian strain parameter (G-strain)::      0.00000     0.00000     0.00000
+ => T.O.F. Isotropic Gaussian  Size  parameter (G-size)  ::      0.00000     0.00000     0.00000
+ => T.O.F. Anisotropic Lorentzian  Size  parameter (Ani-LorSize)  ::      0.00000     0.00000     0.00000
+ => T.O.F. Lorentzian FWHM Gam-2, Gam-1, Gam-0: 
+         0.000000    0.000000    0.000000
+         0.000000    0.000000    0.000000
+         5.033041    0.000041    0.391590
+
+ => T.O.F. Isotropic Lorentzian strain and size parameters (LStr,LSiz): 
+         0.000000    0.000000    0.000000
+         0.000000    0.000000    0.000000
+
+ => Model-dependent Strain parameters s2,s1,s0: 
+         0.000000    0.000000    0.000000
+         0.000000    0.000000    0.000000
+         0.000000    0.000000    0.000000
+
+ => Direct cell parameters: 
+        2.886000    0.000000    0.000000
+        2.886000    0.000000    0.000000
+        2.886000    0.000000    0.000000
+       90.000000    0.000000    0.000000
+       90.000000    0.000000    0.000000
+       90.000000    0.000000    0.000000
+
+ => Preferred orientation parameters: 
+         1.000000    0.000000    0.000000
+         0.000000    0.000000    0.000000
+
+ => T.O.F. Peak shape parameters for TOF_pV (unused): 
+        0.000000    0.000000    0.000000
+        0.000000    0.000000    0.000000
+        0.000000    0.000000    0.000000
+        0.000000    0.000000    0.000000
+
+ => Absorption parameters: 
+       0.000000  0.000000  0.000000
+       0.000000  0.000000  0.000000
+
+ ==> PROFILE PARAMETERS FOR PATTERN#  2
+
+ => Overall scale factor       :    403.594787598     0.000009807     2.171180010
+ => T.O.F. Extinction parameter:     0.000000    0.000000    0.000000
+ => Overall temperature  factor:     0.000000    0.000000    0.000000
+ => T.O.F. Gaussian variances Sig-2, Sig-1, Sig-0: 
+       325.255157   -0.003458   22.317825
+      1249.421753   -0.146153  112.284866
+       914.509216   -0.108439  112.449272
+
+ => T.O.F. Gaussian variance Sig-Q:     0.000000    0.000000    0.000000
+ => T.O.F. Isotropic Gaussian strain parameter (G-strain)::      0.00000     0.00000     0.00000
+ => T.O.F. Isotropic Gaussian  Size  parameter (G-size)  ::      0.00000     0.00000     0.00000
+ => T.O.F. Anisotropic Lorentzian  Size  parameter (Ani-LorSize)  ::      0.00000     0.00000     0.00000
+ => T.O.F. Lorentzian FWHM Gam-2, Gam-1, Gam-0: 
+         0.000000    0.000000    0.000000
+         0.000000    0.000000    0.000000
+         5.028535    0.000635    0.393048
+
+ => T.O.F. Isotropic Lorentzian strain and size parameters (LStr,LSiz): 
+         0.000000    0.000000    0.000000
+         0.000000    0.000000    0.000000
+
+ => Model-dependent Strain parameters s2,s1,s0: 
+         0.000000    0.000000    0.000000
+         0.000000    0.000000    0.000000
+         0.000000    0.000000    0.000000
+
+ => Direct cell parameters: 
+        2.886000    0.000000    0.000000
+        2.886000    0.000000    0.000000
+        2.886000    0.000000    0.000000
+       90.000000    0.000000    0.000000
+       90.000000    0.000000    0.000000
+       90.000000    0.000000    0.000000
+
+ => Preferred orientation parameters: 
+         1.000000    0.000000    0.000000
+         0.000000    0.000000    0.000000
+
+ => T.O.F. Peak shape parameters for TOF_pV (unused): 
+        0.000000    0.000000    0.000000
+        0.000000    0.000000    0.000000
+        0.000000    0.000000    0.000000
+        0.000000    0.000000    0.000000
+
+ => Absorption parameters: 
+       0.000000  0.000000  0.000000
+       0.000000  0.000000  0.000000
+ ------------------------------------------------------------------------------------------------------------------------------------
+ => Phase  2 Name: austenite
+ ------------------------------------------------------------------------------------------------------------------------------------
+ => New parameters, shifts, and standard deviations
+
+ Atom        x       dx      sx       y       dy      sy       z       dz      sz       B       dB      sB      occ.    docc.   socc.
+
+ Fe       0.00000 0.00000 0.00000  0.00000 0.00000 0.00000  0.00000 0.00000 0.00000  1.71513 0.00000 0.01666  0.02083 0.00000 0.00000
+
+ ==> PROFILE PARAMETERS FOR PATTERN#  1
+
+ => Overall scale factor       :     96.170562744     0.000254058     0.449066430
+ => T.O.F. Extinction parameter:     0.000000    0.000000    0.000000
+ => Overall temperature  factor:     0.000000    0.000000    0.000000
+ => T.O.F. Gaussian variances Sig-2, Sig-1, Sig-0: 
+       311.710754    0.003138   22.111452
+      1283.602051   -0.016728  111.218941
+       893.678101    0.014611  111.377541
+
+ => T.O.F. Gaussian variance Sig-Q:     0.000000    0.000000    0.000000
+ => T.O.F. Isotropic Gaussian strain parameter (G-strain)::      0.00000     0.00000     0.00000
+ => T.O.F. Isotropic Gaussian  Size  parameter (G-size)  ::      0.00000     0.00000     0.00000
+ => T.O.F. Anisotropic Lorentzian  Size  parameter (Ani-LorSize)  ::      0.00000     0.00000     0.00000
+ => T.O.F. Lorentzian FWHM Gam-2, Gam-1, Gam-0: 
+         0.000000    0.000000    0.000000
+         0.000000    0.000000    0.000000
+         5.033041    0.000041    0.391590
+
+ => T.O.F. Isotropic Lorentzian strain and size parameters (LStr,LSiz): 
+         0.000000    0.000000    0.000000
+         0.000000    0.000000    0.000000
+
+ => Model-dependent Strain parameters s2,s1,s0: 
+         0.000000    0.000000    0.000000
+         0.000000    0.000000    0.000000
+         0.000000    0.000000    0.000000
+
+ => Direct cell parameters: 
+        3.646800    0.000000    0.000000
+        3.646800    0.000000    0.000000
+        3.646800    0.000000    0.000000
+       90.000000    0.000000    0.000000
+       90.000000    0.000000    0.000000
+       90.000000    0.000000    0.000000
+
+ => Preferred orientation parameters: 
+         1.000000    0.000000    0.000000
+         0.000000    0.000000    0.000000
+
+ => T.O.F. Peak shape parameters for TOF_pV (unused): 
+        0.000000    0.000000    0.000000
+        0.000000    0.000000    0.000000
+        0.000000    0.000000    0.000000
+        0.000000    0.000000    0.000000
+
+ => Absorption parameters: 
+       0.000000  0.000000  0.000000
+       0.000000  0.000000  0.000000
+
+ ==> PROFILE PARAMETERS FOR PATTERN#  2
+
+ => Overall scale factor       :     95.868385315     0.000456740     0.448092431
+ => T.O.F. Extinction parameter:     0.000000    0.000000    0.000000
+ => Overall temperature  factor:     0.000000    0.000000    0.000000
+ => T.O.F. Gaussian variances Sig-2, Sig-1, Sig-0: 
+       325.249146   -0.003458   22.317825
+      1249.243530   -0.146153  112.284866
+       914.368164   -0.108439  112.449272
+
+ => T.O.F. Gaussian variance Sig-Q:     0.000000    0.000000    0.000000
+ => T.O.F. Isotropic Gaussian strain parameter (G-strain)::      0.00000     0.00000     0.00000
+ => T.O.F. Isotropic Gaussian  Size  parameter (G-size)  ::      0.00000     0.00000     0.00000
+ => T.O.F. Anisotropic Lorentzian  Size  parameter (Ani-LorSize)  ::      0.00000     0.00000     0.00000
+ => T.O.F. Lorentzian FWHM Gam-2, Gam-1, Gam-0: 
+         0.000000    0.000000    0.000000
+         0.000000    0.000000    0.000000
+         5.029535    0.000635    0.393048
+
+ => T.O.F. Isotropic Lorentzian strain and size parameters (LStr,LSiz): 
+         0.000000    0.000000    0.000000
+         0.000000    0.000000    0.000000
+
+ => Model-dependent Strain parameters s2,s1,s0: 
+         0.000000    0.000000    0.000000
+         0.000000    0.000000    0.000000
+         0.000000    0.000000    0.000000
+
+ => Direct cell parameters: 
+        3.646800    0.000000    0.000000
+        3.646800    0.000000    0.000000
+        3.646800    0.000000    0.000000
+       90.000000    0.000000    0.000000
+       90.000000    0.000000    0.000000
+       90.000000    0.000000    0.000000
+
+ => Preferred orientation parameters: 
+         1.000000    0.000000    0.000000
+         0.000000    0.000000    0.000000
+
+ => T.O.F. Peak shape parameters for TOF_pV (unused): 
+        0.000000    0.000000    0.000000
+        0.000000    0.000000    0.000000
+        0.000000    0.000000    0.000000
+        0.000000    0.000000    0.000000
+
+ => Absorption parameters: 
+       0.000000  0.000000  0.000000
+       0.000000  0.000000  0.000000
+
+ ==> GLOBAL PARAMETERS FOR PATTERN#  1
+
+
+ => Zero-point:   -10.2905    0.0013    0.2313
+ => Background Parameters (linear interpolation)  ==>
+        0.169253E-01   0.225260E-03   0.955974E-01
+        0.148443      -0.566888E-04   0.111394    
+        0.184811       0.109320E-04   0.122921    
+        0.197497      -0.251573E-05   0.665329E-01
+        0.189096      -0.415624E-05   0.546731E-01
+        0.214692      -0.762818E-05   0.565183E-01
+        0.188691      -0.887478E-05   0.312239E-01
+        0.219387      -0.134358E-04   0.262402E-01
+        0.199118       0.177031E-04   0.201187E-01
+        0.198109       0.938662E-05   0.210589E-01
+        0.227615       0.146032E-04   0.499803E-01
+        0.243913       0.125413E-04   0.282899E-01
+        0.290687      -0.125531E-04   0.254461E-01
+        0.306718       0.182805E-04   0.280561E-01
+        0.324207       0.710220E-05   0.321529E-01
+        0.297289      -0.109449E-04   0.231862E-01
+        0.257504       0.377290E-05   0.202368E-01
+        0.232090      -0.960706E-05   0.138654E-01
+        0.215810       0.987059E-05   0.125889E-01
+        0.169394      -0.628609E-05   0.780091E-02
+        0.239999      -0.112292E-05   0.854447E-02
+        0.433494      -0.603522E-05   0.316411E-01
+        0.437492      -0.793559E-05   0.329306E-01
+        0.342705       0.536666E-05   0.172840E-01
+        0.533897      -0.259595E-05   0.216355E-01
+        0.953706       0.619844E-05   0.513200E-01
+         1.16681       0.124580E-04   0.761314E-01
+         1.11639      -0.134562E-04   0.699109E-01
+        0.916126       0.264680E-04   0.521494E-01
+        0.688470      -0.302750E-04   0.238858E-01
+        0.692000E-01    0.00000        0.00000    
+
+ => T.O.F.- dtt1       (    TOFo=dtt1*dsp     ):  54902.19      0.00      0.00
+ => T.O.F.- dtt2       (TOF=TOFo+dtt2*dsp*dsp ):      0.00      0.00      0.00
+ => T.O.F.- dtt_1OverD (TOF=TOF+dtt_1overD/dsp):      0.00      0.00      0.00
+
+ ==> RELIABILITY FACTORS WITH ALL NON-EXCLUDED POINTS FOR PATTERN:  1
+
+ => R-Factors:   5.17      7.20     Chi2:  14.1     DW-Stat.:  0.3292   Patt#:  1
+ => Expected :            1.92                                1.9095
+ => Deviance :  115.         Dev*:  0.2657E-01
+ => GoF-index:  3.7         Sqrt(Residual/N)
+ => N-P+C:  2783
+
+ =>    SumYdif       SumYobs      SumYcal      SumwYobsSQ     Residual    Condition
+      810.5        0.1568E+05    0.1535E+05    0.7571E+07    0.3930E+05    0.8884E+09
+
+
+ => Conventional Rietveld Rp,Rwp,Re and Chi2:   5.53      7.56      2.01      14.12    
+ => (Values obtained using Ynet, but true sigma(y))
+ =>  SumYnet, Sum(w Ynet**2):     0.1466E+05    0.6868E+07
+
+
+ ==> RELIABILITY FACTORS FOR POINTS WITH BRAGG CONTRIBUTIONS FOR PATTERN:  1
+
+ => R-Factors:   5.04      7.02     Chi2:  25.3     DW-Stat.:  0.3597   Patt#:
+ => Expected :            1.39                                1.8889
+ => Deviance :  107.         Dev*:  0.5066E-01
+ => GoF-index:  5.0         Sqrt(Residual/N)
+ => N-P+C:  1421
+
+ =>    SumYdif       SumYobs      SumYcal      SumwYobsSQ     Residual    Condition
+      768.9        0.1526E+05    0.1492E+05    0.7305E+07    0.3596E+05    0.8884E+09
+
+
+ => Conventional Rietveld Rp,Rwp,Re and Chi2:   5.24      7.24      1.44      25.31    
+ => (Values obtained using Ynet, but true sigma(y))
+ =>  SumYnet, Sum(w Ynet**2):     0.1466E+05    0.6865E+07
+
+
+ ==> GLOBAL PARAMETERS FOR PATTERN#  2
+
+
+ => Zero-point:    -2.0891    0.0016    0.2314
+ => Background Parameters (linear interpolation)  ==>
+        0.253883E-01  -0.411652E-03   0.128748    
+        0.174945       0.145137E-03   0.117903    
+        0.209766      -0.337632E-04   0.133322    
+        0.202616       0.157928E-04   0.713765E-01
+        0.213735       0.353103E-04   0.564390E-01
+        0.254235       0.351343E-04   0.623936E-01
+        0.180572      -0.276387E-04   0.305415E-01
+        0.224192      -0.764080E-05   0.265393E-01
+        0.204400      -0.287501E-06   0.207278E-01
+        0.199123       0.234394E-04   0.215725E-01
+        0.245940       0.403098E-04   0.515134E-01
+        0.239660      -0.397289E-04   0.281243E-01
+        0.280662      -0.378432E-04   0.252212E-01
+        0.302864      -0.361692E-04   0.278517E-01
+        0.335233       0.327048E-04   0.325284E-01
+        0.276620      -0.796880E-04   0.220802E-01
+        0.254157      -0.434169E-04   0.198379E-01
+        0.236590      -0.950578E-05   0.141152E-01
+        0.223316       0.156160E-04   0.130083E-01
+        0.176107       0.672189E-05   0.802091E-02
+        0.234458      -0.418114E-04   0.851950E-02
+        0.426267      -0.331370E-04   0.312085E-01
+        0.445546       0.464314E-04   0.335916E-01
+        0.346426       0.256112E-04   0.172770E-01
+        0.529873      -0.273392E-04   0.214578E-01
+        0.941366      -0.344606E-04   0.512697E-01
+         1.15625      -0.451481E-04   0.752990E-01
+         1.05743      -0.270754E-03   0.679160E-01
+        0.961733       0.332274E-04   0.542521E-01
+        0.685556      -0.442444E-04   0.239246E-01
+        0.692000E-01    0.00000        0.00000    
+
+ => T.O.F.- dtt1       (    TOFo=dtt1*dsp     ):  54902.19      0.00      0.00
+ => T.O.F.- dtt2       (TOF=TOFo+dtt2*dsp*dsp ):      0.00      0.00      0.00
+ => T.O.F.- dtt_1OverD (TOF=TOF+dtt_1overD/dsp):      0.00      0.00      0.00
+
+ ==> RELIABILITY FACTORS WITH ALL NON-EXCLUDED POINTS FOR PATTERN:  2
+
+ => R-Factors:   4.80      7.06     Chi2:  13.5     DW-Stat.:  0.3498   Patt#:  2
+ => Expected :            1.92                                1.9095
+ => Deviance :  110.         Dev*:  0.2558E-01
+ => GoF-index:  3.6         Sqrt(Residual/N)
+ => N-P+C:  2783
+
+ =>    SumYdif       SumYobs      SumYcal      SumwYobsSQ     Residual    Condition
+      753.9        0.1569E+05    0.1536E+05    0.7523E+07    0.3755E+05    0.8884E+09
+
+
+ => Conventional Rietveld Rp,Rwp,Re and Chi2:   5.14      7.42      2.02      13.49    
+ => (Values obtained using Ynet, but true sigma(y))
+ =>  SumYnet, Sum(w Ynet**2):     0.1467E+05    0.6822E+07
+
+
+ ==> RELIABILITY FACTORS FOR POINTS WITH BRAGG CONTRIBUTIONS FOR PATTERN:  2
+
+ => R-Factors:   4.66      6.84     Chi2:  23.9     DW-Stat.:  0.3872   Patt#:
+ => Expected :            1.40                                1.8889
+ => Deviance :  102.         Dev*:  0.4885E-01
+ => GoF-index:  4.8         Sqrt(Residual/N)
+ => N-P+C:  1422
+
+ =>    SumYdif       SumYobs      SumYcal      SumwYobsSQ     Residual    Condition
+      711.5        0.1527E+05    0.1494E+05    0.7258E+07    0.3393E+05    0.8884E+09
+
+
+ => Conventional Rietveld Rp,Rwp,Re and Chi2:   4.85      7.05      1.44      23.86    
+ => (Values obtained using Ynet, but true sigma(y))
+ =>  SumYnet, Sum(w Ynet**2):     0.1467E+05    0.6819E+07
+
+
+ => Global user-weigthed Chi2 (Bragg contrib.):   24.6    
+
+ => ---------> Pattern#  1
+ => Phase:  1
+ =>    Bragg R-factor:  4.33    
+ =>    RF-factor     :  4.46    
+ => Phase:  2
+ =>    Bragg R-factor:  2.71    
+ =>    RF-factor     :  4.39    
+
+ => ---------> Pattern#  2
+ => Phase:  1
+ =>    Bragg R-factor:  4.27    
+ =>    RF-factor     :  5.27    
+ => Phase:  2
+ =>    Bragg R-factor:  2.10    
+ =>    RF-factor     :  3.86    
+
+
+   Standard deviations have to be multiplied by: 3.3513
+   (correlated residuals) See references:
+  -J.F.Berar & P.Lelann, J. Appl. Cryst. 24, 1-5 (1991) 
+  -J.F.Berar, Acc. in Pow. Diff. II,NIST Sp.Pub. 846, 63(1992) 
+
+
+
+   Standard deviations have to be multiplied by: 3.4676
+   (correlated residuals) See references:
+  -J.F.Berar & P.Lelann, J. Appl. Cryst. 24, 1-5 (1991) 
+  -J.F.Berar, Acc. in Pow. Diff. II,NIST Sp.Pub. 846, 63(1992) 
+
+ ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+ => CYCLE No.:    1
+ =>  Convergence reached at this CYCLE !!!!
+ =>  Parameter shifts set to zero
+ ------------------------------------------------------------------------------------------------------------------------------------
+ => Phase  1 Name: ferrite
+ ------------------------------------------------------------------------------------------------------------------------------------
+ => New parameters, shifts, and standard deviations
+
+ Atom        x       dx      sx       y       dy      sy       z       dz      sz       B       dB      sB      occ.    docc.   socc.
+
+ Fe       0.00000 0.00000 0.00000  0.00000 0.00000 0.00000  0.00000 0.00000 0.00000  1.71513 0.00000 0.01666  0.02083 0.00000 0.00000
+
+ ==> PROFILE PARAMETERS FOR PATTERN#  1
+
+ => Overall scale factor       :    401.463745117     0.000000000     2.162075281
+ => T.O.F. Extinction parameter:     0.000000    0.000000    0.000000
+ => Overall temperature  factor:     0.000000    0.000000    0.000000
+ => T.O.F. Gaussian variances Sig-2, Sig-1, Sig-0: 
+       311.707245    0.000000   22.111452
+      1283.621948    0.000000  111.218941
+       893.654297    0.000000  111.377541
+
+ => T.O.F. Gaussian variance Sig-Q:     0.000000    0.000000    0.000000
+ => T.O.F. Isotropic Gaussian strain parameter (G-strain)::      0.00000     0.00000     0.00000
+ => T.O.F. Isotropic Gaussian  Size  parameter (G-size)  ::      0.00000     0.00000     0.00000
+ => T.O.F. Anisotropic Lorentzian  Size  parameter (Ani-LorSize)  ::      0.00000     0.00000     0.00000
+ => T.O.F. Lorentzian FWHM Gam-2, Gam-1, Gam-0: 
+         0.000000    0.000000    0.000000
+         0.000000    0.000000    0.000000
+         5.033041    0.000000    0.391590
+
+ => T.O.F. Isotropic Lorentzian strain and size parameters (LStr,LSiz): 
+         0.000000    0.000000    0.000000
+         0.000000    0.000000    0.000000
+
+ => Model-dependent Strain parameters s2,s1,s0: 
+         0.000000    0.000000    0.000000
+         0.000000    0.000000    0.000000
+         0.000000    0.000000    0.000000
+
+ => Direct cell parameters: 
+        2.886000    0.000000    0.000000
+        2.886000    0.000000    0.000000
+        2.886000    0.000000    0.000000
+       90.000000    0.000000    0.000000
+       90.000000    0.000000    0.000000
+       90.000000    0.000000    0.000000
+
+ => Preferred orientation parameters: 
+         1.000000    0.000000    0.000000
+         0.000000    0.000000    0.000000
+
+ => T.O.F. Peak shape parameters for TOF_pV (unused): 
+        0.000000    0.000000    0.000000
+        0.000000    0.000000    0.000000
+        0.000000    0.000000    0.000000
+        0.000000    0.000000    0.000000
+
+ => Absorption parameters: 
+       0.000000  0.000000  0.000000
+       0.000000  0.000000  0.000000
+
+ ==> PROFILE PARAMETERS FOR PATTERN#  2
+
+ => Overall scale factor       :    403.594787598     0.000000000     2.171180010
+ => T.O.F. Extinction parameter:     0.000000    0.000000    0.000000
+ => Overall temperature  factor:     0.000000    0.000000    0.000000
+ => T.O.F. Gaussian variances Sig-2, Sig-1, Sig-0: 
+       325.255157    0.000000   22.317825
+      1249.421753    0.000000  112.284866
+       914.509216    0.000000  112.449272
+
+ => T.O.F. Gaussian variance Sig-Q:     0.000000    0.000000    0.000000
+ => T.O.F. Isotropic Gaussian strain parameter (G-strain)::      0.00000     0.00000     0.00000
+ => T.O.F. Isotropic Gaussian  Size  parameter (G-size)  ::      0.00000     0.00000     0.00000
+ => T.O.F. Anisotropic Lorentzian  Size  parameter (Ani-LorSize)  ::      0.00000     0.00000     0.00000
+ => T.O.F. Lorentzian FWHM Gam-2, Gam-1, Gam-0: 
+         0.000000    0.000000    0.000000
+         0.000000    0.000000    0.000000
+         5.028535    0.000000    0.393048
+
+ => T.O.F. Isotropic Lorentzian strain and size parameters (LStr,LSiz): 
+         0.000000    0.000000    0.000000
+         0.000000    0.000000    0.000000
+
+ => Model-dependent Strain parameters s2,s1,s0: 
+         0.000000    0.000000    0.000000
+         0.000000    0.000000    0.000000
+         0.000000    0.000000    0.000000
+
+ => Direct cell parameters: 
+        2.886000    0.000000    0.000000
+        2.886000    0.000000    0.000000
+        2.886000    0.000000    0.000000
+       90.000000    0.000000    0.000000
+       90.000000    0.000000    0.000000
+       90.000000    0.000000    0.000000
+
+ => Preferred orientation parameters: 
+         1.000000    0.000000    0.000000
+         0.000000    0.000000    0.000000
+
+ => T.O.F. Peak shape parameters for TOF_pV (unused): 
+        0.000000    0.000000    0.000000
+        0.000000    0.000000    0.000000
+        0.000000    0.000000    0.000000
+        0.000000    0.000000    0.000000
+
+ => Absorption parameters: 
+       0.000000  0.000000  0.000000
+       0.000000  0.000000  0.000000
+ ------------------------------------------------------------------------------------------------------------------------------------
+ => Phase  2 Name: austenite
+ ------------------------------------------------------------------------------------------------------------------------------------
+ => New parameters, shifts, and standard deviations
+
+ Atom        x       dx      sx       y       dy      sy       z       dz      sz       B       dB      sB      occ.    docc.   socc.
+
+ Fe       0.00000 0.00000 0.00000  0.00000 0.00000 0.00000  0.00000 0.00000 0.00000  1.71513 0.00000 0.01666  0.02083 0.00000 0.00000
+
+ ==> PROFILE PARAMETERS FOR PATTERN#  1
+
+ => Overall scale factor       :     96.170562744     0.000000000     0.449066430
+ => T.O.F. Extinction parameter:     0.000000    0.000000    0.000000
+ => Overall temperature  factor:     0.000000    0.000000    0.000000
+ => T.O.F. Gaussian variances Sig-2, Sig-1, Sig-0: 
+       311.710754    0.000000   22.111452
+      1283.602051    0.000000  111.218941
+       893.678101    0.000000  111.377541
+
+ => T.O.F. Gaussian variance Sig-Q:     0.000000    0.000000    0.000000
+ => T.O.F. Isotropic Gaussian strain parameter (G-strain)::      0.00000     0.00000     0.00000
+ => T.O.F. Isotropic Gaussian  Size  parameter (G-size)  ::      0.00000     0.00000     0.00000
+ => T.O.F. Anisotropic Lorentzian  Size  parameter (Ani-LorSize)  ::      0.00000     0.00000     0.00000
+ => T.O.F. Lorentzian FWHM Gam-2, Gam-1, Gam-0: 
+         0.000000    0.000000    0.000000
+         0.000000    0.000000    0.000000
+         5.033041    0.000000    0.391590
+
+ => T.O.F. Isotropic Lorentzian strain and size parameters (LStr,LSiz): 
+         0.000000    0.000000    0.000000
+         0.000000    0.000000    0.000000
+
+ => Model-dependent Strain parameters s2,s1,s0: 
+         0.000000    0.000000    0.000000
+         0.000000    0.000000    0.000000
+         0.000000    0.000000    0.000000
+
+ => Direct cell parameters: 
+        3.646800    0.000000    0.000000
+        3.646800    0.000000    0.000000
+        3.646800    0.000000    0.000000
+       90.000000    0.000000    0.000000
+       90.000000    0.000000    0.000000
+       90.000000    0.000000    0.000000
+
+ => Preferred orientation parameters: 
+         1.000000    0.000000    0.000000
+         0.000000    0.000000    0.000000
+
+ => T.O.F. Peak shape parameters for TOF_pV (unused): 
+        0.000000    0.000000    0.000000
+        0.000000    0.000000    0.000000
+        0.000000    0.000000    0.000000
+        0.000000    0.000000    0.000000
+
+ => Absorption parameters: 
+       0.000000  0.000000  0.000000
+       0.000000  0.000000  0.000000
+
+ ==> PROFILE PARAMETERS FOR PATTERN#  2
+
+ => Overall scale factor       :     95.868385315     0.000000000     0.448092431
+ => T.O.F. Extinction parameter:     0.000000    0.000000    0.000000
+ => Overall temperature  factor:     0.000000    0.000000    0.000000
+ => T.O.F. Gaussian variances Sig-2, Sig-1, Sig-0: 
+       325.249146    0.000000   22.317825
+      1249.243530    0.000000  112.284866
+       914.368164    0.000000  112.449272
+
+ => T.O.F. Gaussian variance Sig-Q:     0.000000    0.000000    0.000000
+ => T.O.F. Isotropic Gaussian strain parameter (G-strain)::      0.00000     0.00000     0.00000
+ => T.O.F. Isotropic Gaussian  Size  parameter (G-size)  ::      0.00000     0.00000     0.00000
+ => T.O.F. Anisotropic Lorentzian  Size  parameter (Ani-LorSize)  ::      0.00000     0.00000     0.00000
+ => T.O.F. Lorentzian FWHM Gam-2, Gam-1, Gam-0: 
+         0.000000    0.000000    0.000000
+         0.000000    0.000000    0.000000
+         5.029535    0.000000    0.393048
+
+ => T.O.F. Isotropic Lorentzian strain and size parameters (LStr,LSiz): 
+         0.000000    0.000000    0.000000
+         0.000000    0.000000    0.000000
+
+ => Model-dependent Strain parameters s2,s1,s0: 
+         0.000000    0.000000    0.000000
+         0.000000    0.000000    0.000000
+         0.000000    0.000000    0.000000
+
+ => Direct cell parameters: 
+        3.646800    0.000000    0.000000
+        3.646800    0.000000    0.000000
+        3.646800    0.000000    0.000000
+       90.000000    0.000000    0.000000
+       90.000000    0.000000    0.000000
+       90.000000    0.000000    0.000000
+
+ => Preferred orientation parameters: 
+         1.000000    0.000000    0.000000
+         0.000000    0.000000    0.000000
+
+ => T.O.F. Peak shape parameters for TOF_pV (unused): 
+        0.000000    0.000000    0.000000
+        0.000000    0.000000    0.000000
+        0.000000    0.000000    0.000000
+        0.000000    0.000000    0.000000
+
+ => Absorption parameters: 
+       0.000000  0.000000  0.000000
+       0.000000  0.000000  0.000000
+
+ ==> GLOBAL PARAMETERS FOR PATTERN#  1
+
+
+ => Zero-point:   -10.2905    0.0000    0.2313
+ => Background Parameters (linear interpolation)  ==>
+        0.169253E-01    0.00000       0.955974E-01
+        0.148443        0.00000       0.111394    
+        0.184811        0.00000       0.122921    
+        0.197497        0.00000       0.665329E-01
+        0.189096        0.00000       0.546731E-01
+        0.214692        0.00000       0.565183E-01
+        0.188691        0.00000       0.312239E-01
+        0.219387        0.00000       0.262402E-01
+        0.199118        0.00000       0.201187E-01
+        0.198109        0.00000       0.210589E-01
+        0.227615        0.00000       0.499803E-01
+        0.243913        0.00000       0.282899E-01
+        0.290687        0.00000       0.254461E-01
+        0.306718        0.00000       0.280561E-01
+        0.324207        0.00000       0.321529E-01
+        0.297289        0.00000       0.231862E-01
+        0.257504        0.00000       0.202368E-01
+        0.232090        0.00000       0.138654E-01
+        0.215810        0.00000       0.125889E-01
+        0.169394        0.00000       0.780091E-02
+        0.239999        0.00000       0.854447E-02
+        0.433494        0.00000       0.316411E-01
+        0.437492        0.00000       0.329306E-01
+        0.342705        0.00000       0.172840E-01
+        0.533897        0.00000       0.216355E-01
+        0.953706        0.00000       0.513200E-01
+         1.16681        0.00000       0.761314E-01
+         1.11639        0.00000       0.699109E-01
+        0.916126        0.00000       0.521494E-01
+        0.688470        0.00000       0.238858E-01
+        0.692000E-01    0.00000        0.00000    
+
+ => T.O.F.- dtt1       (    TOFo=dtt1*dsp     ):  54902.19      0.00      0.00
+ => T.O.F.- dtt2       (TOF=TOFo+dtt2*dsp*dsp ):      0.00      0.00      0.00
+ => T.O.F.- dtt_1OverD (TOF=TOF+dtt_1overD/dsp):      0.00      0.00      0.00
+
+ ==> RELIABILITY FACTORS WITH ALL NON-EXCLUDED POINTS FOR PATTERN:  1
+
+ => R-Factors:   5.17      7.20     Chi2:  14.1     DW-Stat.:  0.3292   Patt#:  1
+ => Expected :            1.92                                1.9095
+ => Deviance :  115.         Dev*:  0.2657E-01
+ => GoF-index:  3.7         Sqrt(Residual/N)
+ => N-P+C:  2783
+
+ =>    SumYdif       SumYobs      SumYcal      SumwYobsSQ     Residual    Condition
+      810.5        0.1568E+05    0.1535E+05    0.7571E+07    0.3930E+05    0.8884E+09
+
+
+ => Conventional Rietveld Rp,Rwp,Re and Chi2:   5.53      7.56      2.01      14.12    
+ => (Values obtained using Ynet, but true sigma(y))
+ =>  SumYnet, Sum(w Ynet**2):     0.1466E+05    0.6868E+07
+
+ => N-sigma of the GoF:      489.453
+
+ ==> RELIABILITY FACTORS FOR POINTS WITH BRAGG CONTRIBUTIONS FOR PATTERN:  1
+
+ => R-Factors:   5.04      7.02     Chi2:  25.3     DW-Stat.:  0.3597   Patt#:
+ => Expected :            1.39                                1.8889
+ => Deviance :  107.         Dev*:  0.5066E-01
+ => GoF-index:  5.0         Sqrt(Residual/N)
+ => N-P+C:  1421
+
+ =>    SumYdif       SumYobs      SumYcal      SumwYobsSQ     Residual    Condition
+      768.9        0.1526E+05    0.1492E+05    0.7305E+07    0.3596E+05    0.8884E+09
+
+
+ => Conventional Rietveld Rp,Rwp,Re and Chi2:   5.24      7.24      1.44      25.31    
+ => (Values obtained using Ynet, but true sigma(y))
+ =>  SumYnet, Sum(w Ynet**2):     0.1466E+05    0.6865E+07
+
+ => N-sigma of the GoF:      647.907
+
+ ==> GLOBAL PARAMETERS FOR PATTERN#  2
+
+
+ => Zero-point:    -2.0891    0.0000    0.2314
+ => Background Parameters (linear interpolation)  ==>
+        0.253883E-01    0.00000       0.128748    
+        0.174945        0.00000       0.117903    
+        0.209766        0.00000       0.133322    
+        0.202616        0.00000       0.713765E-01
+        0.213735        0.00000       0.564390E-01
+        0.254235        0.00000       0.623936E-01
+        0.180572        0.00000       0.305415E-01
+        0.224192        0.00000       0.265393E-01
+        0.204400        0.00000       0.207278E-01
+        0.199123        0.00000       0.215725E-01
+        0.245940        0.00000       0.515134E-01
+        0.239660        0.00000       0.281243E-01
+        0.280662        0.00000       0.252212E-01
+        0.302864        0.00000       0.278517E-01
+        0.335233        0.00000       0.325284E-01
+        0.276620        0.00000       0.220802E-01
+        0.254157        0.00000       0.198379E-01
+        0.236590        0.00000       0.141152E-01
+        0.223316        0.00000       0.130083E-01
+        0.176107        0.00000       0.802091E-02
+        0.234458        0.00000       0.851950E-02
+        0.426267        0.00000       0.312085E-01
+        0.445546        0.00000       0.335916E-01
+        0.346426        0.00000       0.172770E-01
+        0.529873        0.00000       0.214578E-01
+        0.941366        0.00000       0.512697E-01
+         1.15625        0.00000       0.752990E-01
+         1.05743        0.00000       0.679160E-01
+        0.961733        0.00000       0.542521E-01
+        0.685556        0.00000       0.239246E-01
+        0.692000E-01    0.00000        0.00000    
+
+ => T.O.F.- dtt1       (    TOFo=dtt1*dsp     ):  54902.19      0.00      0.00
+ => T.O.F.- dtt2       (TOF=TOFo+dtt2*dsp*dsp ):      0.00      0.00      0.00
+ => T.O.F.- dtt_1OverD (TOF=TOF+dtt_1overD/dsp):      0.00      0.00      0.00
+
+ ==> RELIABILITY FACTORS WITH ALL NON-EXCLUDED POINTS FOR PATTERN:  2
+
+ => R-Factors:   4.80      7.06     Chi2:  13.5     DW-Stat.:  0.3498   Patt#:  2
+ => Expected :            1.92                                1.9095
+ => Deviance :  110.         Dev*:  0.2558E-01
+ => GoF-index:  3.6         Sqrt(Residual/N)
+ => N-P+C:  2783
+
+ =>    SumYdif       SumYobs      SumYcal      SumwYobsSQ     Residual    Condition
+      753.9        0.1569E+05    0.1536E+05    0.7523E+07    0.3755E+05    0.8884E+09
+
+
+ => Conventional Rietveld Rp,Rwp,Re and Chi2:   5.14      7.42      2.02      13.49    
+ => (Values obtained using Ynet, but true sigma(y))
+ =>  SumYnet, Sum(w Ynet**2):     0.1467E+05    0.6822E+07
+
+ => N-sigma of the GoF:      465.973
+
+ ==> RELIABILITY FACTORS FOR POINTS WITH BRAGG CONTRIBUTIONS FOR PATTERN:  2
+
+ => R-Factors:   4.66      6.84     Chi2:  23.9     DW-Stat.:  0.3872   Patt#:
+ => Expected :            1.40                                1.8889
+ => Deviance :  102.         Dev*:  0.4885E-01
+ => GoF-index:  4.8         Sqrt(Residual/N)
+ => N-P+C:  1422
+
+ =>    SumYdif       SumYobs      SumYcal      SumwYobsSQ     Residual    Condition
+      711.5        0.1527E+05    0.1494E+05    0.7258E+07    0.3393E+05    0.8884E+09
+
+
+ => Conventional Rietveld Rp,Rwp,Re and Chi2:   4.85      7.05      1.44      23.86    
+ => (Values obtained using Ynet, but true sigma(y))
+ =>  SumYnet, Sum(w Ynet**2):     0.1467E+05    0.6819E+07
+
+ => N-sigma of the GoF:      609.491
+
+ => Global user-weigthed Chi2 (Bragg contrib.):   27.0    
+
+ => ---------> Pattern#  1
+ => Phase:  1
+ =>    Bragg R-factor:  4.33    
+ =>    RF-factor     :  4.46    
+ => Phase:  2
+ =>    Bragg R-factor:  2.71    
+ =>    RF-factor     :  4.39    
+
+ => ---------> Pattern#  2
+ => Phase:  1
+ =>    Bragg R-factor:  4.27    
+ =>    RF-factor     :  5.27    
+ => Phase:  2
+ =>    Bragg R-factor:  2.10    
+ =>    RF-factor     :  3.86    
+
+
+ => Parameters with Correlation greater that 50% ==>
+ -> Correlation of parameter:                                     Sig-2_ph1_pat1      with:                                     Sig-0_ph1_pat1  ->   90%
+ -> Correlation of parameter:                                     Scale_ph1_pat1      with:                                        Biso_Fe_ph1  ->   62%
+ -> Correlation of parameter:                                     Scale_ph2_pat1      with:                                        Biso_Fe_ph1  ->   64%
+ -> Correlation of parameter:                                        Biso_Fe_ph1      with:                                     Scale_ph1_pat2  ->   62%
+ -> Correlation of parameter:                                        Biso_Fe_ph1      with:                                     Scale_ph2_pat2  ->   64%
+ -> Correlation of parameter:                                     Sig-2_ph1_pat2      with:                                     Sig-0_ph1_pat2  ->   90%
+
+ --------------------------------------------------------------------------------------------------------------------------------------------------------
+ Pattern#  1 Phase No.:   1 Phase name: ferrite
+ --------------------------------------------------------------------------------------------------------------------------------------------------------
+
+   No.  Code     H   K   L  Mult     Hw     2theta/TOF      Icalc       Iobs      Sigma    HwG     HwL     ETA     d-hkl     CORR
+
+      1   1      3   2   1    48   101.700   42346.934     4067.2     5291.1     60.139  99.004   5.033   0.066  0.771316  1.000000
+      2   1      2   2   2     8   106.275   45739.918     1133.7     1305.5      8.262 103.579   5.033   0.064  0.833116  1.000000
+      3   1      3   1   0    24   112.619   50105.566     6018.2     6874.7     24.684 109.923   5.033   0.060  0.912633  1.000000
+      4   1      2   2   0    12   122.027   56019.727     5777.5     6158.2     18.307 119.330   5.033   0.056  1.020355  1.000000
+      5   1      2   1   1    24   137.483   64686.012    25243.2    25048.9     50.388 134.785   5.033   0.049  1.178205  1.000000
+      6   1      2   0   0     6   167.839   79223.859    17450.2    16098.4     20.826 165.139   5.033   0.041  1.443000  1.000000
+      7   1      1   1   0    12   256.819  112039.453   171587.6   177287.6    134.048 254.116   5.033   0.027  2.040710  1.000000
+
+ --------------------------------------------------------------------------------------------------------------------------------------------------------
+ Pattern#  1 Phase No.:   2 Phase name: austenite
+ --------------------------------------------------------------------------------------------------------------------------------------------------------
+
+   No.  Code     H   K   L  Mult     Hw     2theta/TOF      Icalc       Iobs      Sigma    HwG     HwL     ETA     d-hkl     CORR
+
+      1   1      4   2   2    24    99.806   40869.188     1519.4     2176.3     46.652  97.111   5.033   0.068  0.744400  1.000000
+      2   1      4   2   0    24   104.935   44769.953     2833.6     3601.2     25.570 102.239   5.033   0.064  0.815449  1.000000
+      3   1      3   3   1    24   106.545   45933.000     3348.9     3883.0     23.260 103.849   5.033   0.063  0.836633  1.000000
+      4   1      4   0   0     6   112.542   50054.324     1432.7     1574.4      5.993 109.846   5.033   0.060  0.911700  1.000000
+      5   1      2   2   2     8   125.037   57797.754     4396.1     4454.8     12.762 122.340   5.033   0.054  1.052740  1.000000
+      6   1      3   1   1    24   129.535   60367.793    16741.6    17434.8     41.925 126.837   5.033   0.052  1.099552  1.000000
+      7   1      2   2   0    12   149.549   70787.508    19207.0    18076.5     29.173 146.850   5.033   0.045  1.289339  1.000000
+      8   1      2   0   0     6   221.169  100108.648    49736.9    49974.0     38.977 218.467   5.033   0.031  1.823400  1.000000
+      9   1      1   1   1     8   268.179  115595.508   125765.1   127786.5    103.362 265.476   5.033   0.025  2.105481  1.000000
+
+     -----------------------------------------------------
+     BRAGG R-Factors and weight fractions for Pattern #  1
+     -----------------------------------------------------
+
+ => Phase:  1     ferrite
+ => Bragg R-factor:   4.15       Vol:   24.037( 0.000)  Fract(%):   50.85( 0.33)
+ => Rf-factor=  4.51             ATZ:         111.658   Brindley:  1.0000
+
+ => Phase:  2     austenite
+ => Bragg R-factor:   2.73       Vol:   48.499( 0.000)  Fract(%):   49.15( 0.29)
+ => Rf-factor=  4.43             ATZ:         223.317   Brindley:  1.0000
+
+ --------------------------------------------------------------------------------------------------------------------------------------------------------
+ Pattern#  2 Phase No.:   1 Phase name: ferrite
+ --------------------------------------------------------------------------------------------------------------------------------------------------------
+
+   No.  Code     H   K   L  Mult     Hw     2theta/TOF      Icalc       Iobs      Sigma    HwG     HwL     ETA     d-hkl     CORR
+
+      1   1      3   2   1    48   101.851   42346.934     4088.9     5660.1     63.983  99.158   5.028   0.066  0.771316  1.000000
+      2   1      2   2   2     8   106.375   45739.918     1139.8     1338.6      8.597 103.682   5.028   0.064  0.833116  1.000000
+      3   1      3   1   0    24   112.667   50105.566     6050.2     7314.0     25.351 109.973   5.028   0.060  0.912633  1.000000
+      4   1      2   2   0    12   122.029   56019.727     5808.2     6164.5     18.352 119.335   5.028   0.055  1.020355  1.000000
+      5   1      2   1   1    24   137.476   64686.012    25377.2    25272.1     50.619 134.781   5.028   0.049  1.178205  1.000000
+      6   1      2   0   0     6   167.984   79223.859    17542.9    16113.3     21.044 165.287   5.028   0.040  1.443000  1.000000
+      7   1      1   1   0    12   258.059  112039.453   172498.5   177805.4    135.233 255.359   5.028   0.026  2.040710  1.000000
+
+ --------------------------------------------------------------------------------------------------------------------------------------------------------
+ Pattern#  2 Phase No.:   2 Phase name: austenite
+ --------------------------------------------------------------------------------------------------------------------------------------------------------
+
+   No.  Code     H   K   L  Mult     Hw     2theta/TOF      Icalc       Iobs      Sigma    HwG     HwL     ETA     d-hkl     CORR
+
+      1   1      4   2   2    24    99.975   40869.188     1514.6     1832.1     52.576  97.282   5.029   0.068  0.744400  1.000000
+      2   1      4   2   0    24   105.043   44769.953     2824.7     3764.1     27.001 102.349   5.029   0.064  0.815449  1.000000
+      3   1      3   3   1    24   106.636   45933.000     3338.4     3873.5     23.223 103.942   5.029   0.063  0.836633  1.000000
+      4   1      4   0   0     6   112.583   50054.324     1428.2     1671.0      6.657 109.889   5.029   0.060  0.911700  1.000000
+      5   1      2   2   2     8   125.024   57797.754     4382.3     4366.8     12.484 122.329   5.029   0.054  1.052740  1.000000
+      6   1      3   1   1    24   129.516   60367.793    16689.0    16744.5     40.245 126.820   5.029   0.052  1.099552  1.000000
+      7   1      2   2   0    12   149.572   70787.508    19146.7    18429.0     29.776 146.876   5.029   0.045  1.289339  1.000000
+      8   1      2   0   0     6   221.885  100108.648    49580.6    49683.3     39.010 219.186   5.029   0.031  1.823400  1.000000
+      9   1      1   1   1     8   269.585  115595.508   125370.4   127215.8    103.383 266.885   5.029   0.025  2.105481  1.000000
+
+     -----------------------------------------------------
+     BRAGG R-Factors and weight fractions for Pattern #  2
+     -----------------------------------------------------
+
+ => Phase:  1     ferrite
+ => Bragg R-factor:   4.27       Vol:   24.037( 0.000)  Fract(%):   51.06( 0.33)
+ => Rf-factor=  5.27             ATZ:         111.658   Brindley:  1.0000
+
+ => Phase:  2     austenite
+ => Bragg R-factor:   2.10       Vol:   48.499( 0.000)  Fract(%):   48.94( 0.29)
+ => Rf-factor=  3.86             ATZ:         223.317   Brindley:  1.0000
+
+     -----------------------------------------------------------------
+      SYMBOLIC NAMES AND FINAL VALUES AND SIGMA OF REFINED PARAMETERS:
+     -----------------------------------------------------------------
+
+      ->  Parameter number    1 :                                     Sig-1_ph1_pat1     1283.6219    ( +/-     111.21894     )
+      ->  Parameter number    2 :                                          Zero_pat1    -10.290547    ( +/-    0.23128124     )
+      ->  Parameter number    3 :                                          Zero_pat2    -2.0891216    ( +/-    0.23138537     )
+      ->  Parameter number    4 :                                     Sig-2_ph1_pat1     311.70724    ( +/-     22.111452     )
+      ->  Parameter number    5 :                                     Sig-0_ph1_pat1     893.65430    ( +/-     111.37754     )
+      ->  Parameter number    6 :                                     Scale_ph1_pat1     401.46375    ( +/-     2.1620753     )
+      ->  Parameter number    7 :                                     Scale_ph2_pat1     96.170563    ( +/-    0.44906643     )
+      ->  Parameter number    8 :                                        Biso_Fe_ph1     1.7151345    ( +/-    0.16660035E-01 )
+      ->  Parameter number    9 :                                     Scale_ph1_pat2     403.59479    ( +/-     2.1711800     )
+      ->  Parameter number   10 :                                     Gam-0_ph1_pat1     5.0330410    ( +/-    0.39159027     )
+      ->  Parameter number   11 :                                     Sig-2_ph1_pat2     325.25516    ( +/-     22.317825     )
+      ->  Parameter number   12 :                                     Sig-1_ph1_pat2     1249.4218    ( +/-     112.28487     )
+      ->  Parameter number   13 :                                     Scale_ph2_pat2     95.868385    ( +/-    0.44809243     )
+      ->  Parameter number   14 :                                     Gam-0_ph1_pat2     5.0285354    ( +/-    0.39304805     )
+      ->  Parameter number   15 :                                     Sig-0_ph1_pat2     914.50922    ( +/-     112.44927     )
+      ->  Parameter number   16 :                                         Bck_0_pat1    0.16925260E-01( +/-    0.95597386E-01 )
+      ->  Parameter number   17 :                                         Bck_1_pat1    0.14844331    ( +/-    0.11139420     )
+      ->  Parameter number   18 :                                         Bck_2_pat1    0.18481094    ( +/-    0.12292063     )
+      ->  Parameter number   19 :                                         Bck_3_pat1    0.19749749    ( +/-    0.66532895E-01 )
+      ->  Parameter number   20 :                                         Bck_4_pat1    0.18909584    ( +/-    0.54673083E-01 )
+      ->  Parameter number   21 :                                         Bck_5_pat1    0.21469237    ( +/-    0.56518283E-01 )
+      ->  Parameter number   22 :                                         Bck_6_pat1    0.18869112    ( +/-    0.31223906E-01 )
+      ->  Parameter number   23 :                                         Bck_7_pat1    0.21938656    ( +/-    0.26240153E-01 )
+      ->  Parameter number   24 :                                         Bck_8_pat1    0.19911771    ( +/-    0.20118708E-01 )
+      ->  Parameter number   25 :                                         Bck_9_pat1    0.19810939    ( +/-    0.21058947E-01 )
+      ->  Parameter number   26 :                                        Bck_10_pat1    0.22761460    ( +/-    0.49980320E-01 )
+      ->  Parameter number   27 :                                        Bck_11_pat1    0.24391255    ( +/-    0.28289938E-01 )
+      ->  Parameter number   28 :                                        Bck_12_pat1    0.29068744    ( +/-    0.25446149E-01 )
+      ->  Parameter number   29 :                                        Bck_13_pat1    0.30671826    ( +/-    0.28056052E-01 )
+      ->  Parameter number   30 :                                        Bck_14_pat1    0.32420710    ( +/-    0.32152887E-01 )
+      ->  Parameter number   31 :                                        Bck_15_pat1    0.29728907    ( +/-    0.23186199E-01 )
+      ->  Parameter number   32 :                                        Bck_16_pat1    0.25750378    ( +/-    0.20236816E-01 )
+      ->  Parameter number   33 :                                        Bck_17_pat1    0.23209038    ( +/-    0.13865373E-01 )
+      ->  Parameter number   34 :                                        Bck_18_pat1    0.21580987    ( +/-    0.12588914E-01 )
+      ->  Parameter number   35 :                                        Bck_19_pat1    0.16939372    ( +/-    0.78009130E-02 )
+      ->  Parameter number   36 :                                        Bck_20_pat1    0.23999888    ( +/-    0.85444655E-02 )
+      ->  Parameter number   37 :                                        Bck_21_pat1    0.43349394    ( +/-    0.31641107E-01 )
+      ->  Parameter number   38 :                                        Bck_22_pat1    0.43749207    ( +/-    0.32930575E-01 )
+      ->  Parameter number   39 :                                        Bck_23_pat1    0.34270537    ( +/-    0.17284010E-01 )
+      ->  Parameter number   40 :                                        Bck_24_pat1    0.53389740    ( +/-    0.21635490E-01 )
+      ->  Parameter number   41 :                                        Bck_25_pat1    0.95370620    ( +/-    0.51319979E-01 )
+      ->  Parameter number   42 :                                        Bck_26_pat1     1.1668125    ( +/-    0.76131396E-01 )
+      ->  Parameter number   43 :                                        Bck_27_pat1     1.1163865    ( +/-    0.69910869E-01 )
+      ->  Parameter number   44 :                                        Bck_28_pat1    0.91612649    ( +/-    0.52149422E-01 )
+      ->  Parameter number   45 :                                        Bck_29_pat1    0.68846971    ( +/-    0.23885846E-01 )
+      ->  Parameter number   46 :                                         Bck_0_pat2    0.25388349E-01( +/-    0.12874849     )
+      ->  Parameter number   47 :                                         Bck_1_pat2    0.17494513    ( +/-    0.11790251     )
+      ->  Parameter number   48 :                                         Bck_2_pat2    0.20976624    ( +/-    0.13332154     )
+      ->  Parameter number   49 :                                         Bck_3_pat2    0.20261580    ( +/-    0.71376488E-01 )
+      ->  Parameter number   50 :                                         Bck_4_pat2    0.21373531    ( +/-    0.56438982E-01 )
+      ->  Parameter number   51 :                                         Bck_5_pat2    0.25423515    ( +/-    0.62393572E-01 )
+      ->  Parameter number   52 :                                         Bck_6_pat2    0.18057236    ( +/-    0.30541521E-01 )
+      ->  Parameter number   53 :                                         Bck_7_pat2    0.22419235    ( +/-    0.26539262E-01 )
+      ->  Parameter number   54 :                                         Bck_8_pat2    0.20439972    ( +/-    0.20727828E-01 )
+      ->  Parameter number   55 :                                         Bck_9_pat2    0.19912344    ( +/-    0.21572469E-01 )
+      ->  Parameter number   56 :                                        Bck_10_pat2    0.24594031    ( +/-    0.51513389E-01 )
+      ->  Parameter number   57 :                                        Bck_11_pat2    0.23966028    ( +/-    0.28124252E-01 )
+      ->  Parameter number   58 :                                        Bck_12_pat2    0.28066215    ( +/-    0.25221234E-01 )
+      ->  Parameter number   59 :                                        Bck_13_pat2    0.30286381    ( +/-    0.27851673E-01 )
+      ->  Parameter number   60 :                                        Bck_14_pat2    0.33523270    ( +/-    0.32528404E-01 )
+      ->  Parameter number   61 :                                        Bck_15_pat2    0.27662030    ( +/-    0.22080185E-01 )
+      ->  Parameter number   62 :                                        Bck_16_pat2    0.25415659    ( +/-    0.19837912E-01 )
+      ->  Parameter number   63 :                                        Bck_17_pat2    0.23659049    ( +/-    0.14115191E-01 )
+      ->  Parameter number   64 :                                        Bck_18_pat2    0.22331561    ( +/-    0.13008302E-01 )
+      ->  Parameter number   65 :                                        Bck_19_pat2    0.17610672    ( +/-    0.80209114E-02 )
+      ->  Parameter number   66 :                                        Bck_20_pat2    0.23445819    ( +/-    0.85194986E-02 )
+      ->  Parameter number   67 :                                        Bck_21_pat2    0.42626685    ( +/-    0.31208523E-01 )
+      ->  Parameter number   68 :                                        Bck_22_pat2    0.44554642    ( +/-    0.33591617E-01 )
+      ->  Parameter number   69 :                                        Bck_23_pat2    0.34642559    ( +/-    0.17276967E-01 )
+      ->  Parameter number   70 :                                        Bck_24_pat2    0.52987266    ( +/-    0.21457803E-01 )
+      ->  Parameter number   71 :                                        Bck_25_pat2    0.94136554    ( +/-    0.51269662E-01 )
+      ->  Parameter number   72 :                                        Bck_26_pat2     1.1562548    ( +/-    0.75298980E-01 )
+      ->  Parameter number   73 :                                        Bck_27_pat2     1.0574293    ( +/-    0.67915998E-01 )
+      ->  Parameter number   74 :                                        Bck_28_pat2    0.96173322    ( +/-    0.54252062E-01 )
+      ->  Parameter number   75 :                                        Bck_29_pat2    0.68555576    ( +/-    0.23924615E-01 )
+
+ ------------------------------------------------------------------
+ => Number of bytes for floating point variables: 4
+ => Dimensions of dynamic allocated arrays in this run of FullProf:
+ ------------------------------------------------------------------
+
+ => Total approximate array memory (dynamic + static): 139116078 bytes
+
+    MaxPOINT=    80000 Max.num. of points(+int. Inten.)/diffraction pattern       
+    MaxREFLT=    25000 Max.num. of reflections/diffraction pattern               
+    MaxPARAM=      500 Max.num. of refinable parameters                          
+    MaxOVERL=     9000 Max.num. of overlapping reflections                       
+
+ ----------------------------------------------------------
+ => Number of bytes for floating point arrays: 4
+ => Dimensions of fixed arrays in this release of FullProf:
+ ----------------------------------------------------------
+
+    NPATT   =       80 Max.num. of powder diffraction patterns                    
+    NATS    =      830 Max.num. of atoms (all kind) in asymmetric unit            
+    MPAR    =     1800 Max.num. of non atomic parameters/phase                    
+    IEXCL   =       30 Max.num. of excluded regions                               
+    IBACP   =      377 Max.num. of background points for interpolation            
+    NPHT    =       16 Max.num. of phases                                         
+    NMAGM   =        8 Max.num. of rotation-matrices sets for magnetic structure  
+    NBASIS  =       12 Max.num. of basis functions associated to a single atom    
+    NIREPS  =        9 Max.num. of irreducible representations to be combined     
+    N_EQ    =      384 Max.num. of user-supplied symmetry operators/propagation vectors
+    NGL     =      400 Max.num. of global parameters/diffraction pattern          
+    N_LINC  =       50 Max.num. of global linear restraints                        
+    NAT_P   =       80 Max.num. of atomic parameters per atom                     
+    NCONST  =     3500 Max.num. of slack constraints per phase                    
+    N_SPE   =       30 Max.num. of different chemical species                     
+    N_FORM  =       60 Max.num. of scattering factor values in a table            
+    NPR     =      150 Max.num. of points defining a numerical profile            
+    INPR    =       25 Max.num. of different numerical peak shapes                
+    NPRC    =      150 Max.num. of terms in the table for correcting intensities  
+    NSOL    =       10 Max.num. of solutions to be stored in Montecarlo searchs   
+
+ 
+              CPU Time:     0.984 seconds
+                            0.016 minutes
+
+ => Run finished at:     Date: 05/10/2026  Time: 15:59:22.674                              

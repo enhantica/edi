@@ -45,7 +45,7 @@ TEST_CASE("E09-T55 migrated owner-shape silicon pattern crosses space-group vali
     silicon.scattering_lengths_fm = {{"Si", 4.1491}};
     project.structures.clear();
     project.structures.push_back(std::move(silicon));
-    project.experiment().linked_structure.structure_id = "si";
+    project.experiment().linked_structure().structure_id = "si";
     REQUIRE_MESSAGE(project.experiment().data.has_value(),
                     "the migrated owner-shape assertion requires measured data");
     project.calculate();

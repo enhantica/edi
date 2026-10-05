@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
             }
             // A real fit request also needs a legal free column unrelated to polarization.
             if (endpoint == "single-fit" || endpoint == "joint-fit")
-                p.experiment().linked_structure.scale.free = true;
+                p.experiment().linked_structure().scale.free = true;
             std::cout << "VEHICLE " << route << '\n' << std::flush;
         } else if (route == "native") {
             auto& e = target.experiment();

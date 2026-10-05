@@ -35,7 +35,8 @@ TEST_CASE("E09-T55 human report renders the documented stream and summary facts"
     check_contains(single_header, "edi fit: project demo, 100 pts fitted / 120 loaded, 3 free",
                    "the single-bank header must distinguish fitted and loaded point counts");
     check_contains(single_header, "0.2500", "the stream header must include the pre-fit Rwp");
-    check_contains(single_header, "2.5000", "the stream header must include pre-fit reduced chi-square");
+    check_contains(single_header, "2.5000",
+                   "the stream header must include pre-fit reduced chi-square");
 
     edi::FitPreamble joint = single;
     joint.joint = true;
@@ -79,7 +80,8 @@ TEST_CASE("E09-T55 report tables retain identity paths, starts, uncertainties, a
     check_contains(table, "1.00000", "an explicitly recorded pre-fit value must be displayed");
     check_contains(table, "2.00000", "the refined value must be displayed");
     check_contains(table, "0.25000", "the engine-provided uncertainty must be displayed");
-    check_contains(table, "100.0% ↑", "the change column must use the documented start denominator");
+    check_contains(table, "100.0% ↑",
+                   "the change column must use the documented start denominator");
     check_contains(table, "structure.cell.length_a",
                    "the table must include every refined structural identity path");
 
@@ -124,7 +126,8 @@ TEST_CASE("E09-T55 iteration and machine reports preserve engine-carried facts")
     check_contains(machine, "record=fit", "the machine fit must identify its record kind");
     check_contains(machine, "status=max_iter", "the machine fit must retain its terminal status");
     check_contains(machine, "mode=joint", "a result with bank metrics must identify joint mode");
-    check_contains(machine, "param.scale.value=2", "the machine fit must use engine parameter labels");
+    check_contains(machine, "param.scale.value=2",
+                   "the machine fit must use engine parameter labels");
     check_contains(machine, "unevaluable_trials=8",
                    "the machine fit must retain total boundary-contact diagnostics");
     CHECK_MESSAGE(edi::machine_report(project, outcome, edi::VerbosityEnum::OFF).empty(),
@@ -145,15 +148,18 @@ TEST_CASE("E09-T55 model collections expose all parameters and only the free sub
     project.experiment().instrument.setup_wavelength = edi::Parameter{1.54};
     project.experiment().absorption.abscor1 = edi::Parameter{0.2};
     std::vector<edi::Parameter*> all = project.parameters();
-    CHECK_MESSAGE(all.size() > 20,
-                  "the project parameter view must include structural and experiment category leaves");
+    CHECK_MESSAGE(
+        all.size() > 20,
+        "the project parameter view must include structural and experiment category leaves");
     project.structure().cell.length_a.free = true;
     project.structure().atom_sites[0]->occupancy.free = true;
     project.experiment().background[1]->intensity.free = true;
     const std::vector<edi::Parameter*> free = project.free_parameters();
-    CHECK_MESSAGE(free.size() == 3, "the project free-parameter view must filter by the free flag");
-    CHECK_MESSAGE(std::find(free.begin(), free.end(), &project.structure().cell.length_a) != free.end(),
-                  "the free view must retain a free cell parameter");
+    CHECK_MESSAGE(free.size() == 3,
+                  "the project free-parameter view must filter by the free flag");
+    CHECK_MESSAGE(
+        std::find(free.begin(), free.end(), &project.structure().cell.length_a) != free.end(),
+        "the free view must retain a free cell parameter");
     CHECK_MESSAGE(std::find(free.begin(), free.end(),
                             &project.experiment().background[1]->intensity) != free.end(),
                   "the free view must retain a free background parameter");
@@ -242,7 +248,7 @@ TEST_CASE("E09-T55 adapter conversion preserves the complete TOF experiment layo
     source.instrument.calib_d_to_tof_linear = {20000.0, 0.16, false};
     source.instrument.calib_d_to_tof_quadratic = {-2.0, 0.17, true};
     source.instrument.calib_d_to_tof_reciprocal = {0.5, 0.18, false};
-    source.linked_structure.scale = {1.7, 0.19, true};
+    source.linked_structure().scale = {1.7, 0.19, true};
     source.instrument.setup_twotheta_bank.value = 137.2;
     source.peak.cutoff_fwhm = 17.5;
     source.absorption.type = "cylinder";
@@ -264,10 +270,10 @@ TEST_CASE("E09-T55 adapter conversion preserves the complete TOF experiment layo
                   "the TOF adapter must preserve the independently specified profile order");
     REQUIRE_MESSAGE(converted.instrument.size() == 4,
                     "the TOF adapter must preserve all four calibration terms");
-    CHECK_MESSAGE((converted.instrument[0].value() == -1.0 &&
-                   converted.instrument[3].value() == 0.5),
-                  "the TOF adapter must preserve calibration order and values");
-    CHECK_MESSAGE((converted.scale.value() == 1.7 && converted.scale.free()),
+    CHECK_MESSAGE(
+        (converted.instrument[0].value() == -1.0 && converted.instrument[3].value() == 0.5),
+        "the TOF adapter must preserve calibration order and values");
+    CHECK_MESSAGE((converted.scale().value() == 1.7 && converted.scale().free()),
                   "the adapter must preserve linked-structure scale state");
     REQUIRE_MESSAGE(converted.background.size() == 1,
                     "the adapter must preserve every background point");
@@ -277,9 +283,9 @@ TEST_CASE("E09-T55 adapter conversion preserves the complete TOF experiment layo
     CHECK_MESSAGE((converted.absorption.size() == 2 && converted.absorption[0].value() == 0.2 &&
                    converted.absorption[1].value() == 0.3),
                   "the adapter must preserve the two-term absorption body");
-    CHECK_MESSAGE((converted.dataset_weight == 2.5 &&
-                   converted.excluded_regions == source.excluded_regions),
-                  "the adapter must preserve joint-fit weight and exclusion masks");
+    CHECK_MESSAGE(
+        (converted.dataset_weight == 2.5 && converted.excluded_regions == source.excluded_regions),
+        "the adapter must preserve joint-fit weight and exclusion masks");
 }
 
 TEST_CASE("E09-T55 adapter conversion preserves CW layout and refuses incomplete models") {
@@ -295,7 +301,7 @@ TEST_CASE("E09-T55 adapter conversion preserves CW layout and refuses incomplete
     source.instrument.setup_wavelength = edi::Parameter{1.54, 0.07, false};
     source.instrument.calib_sample_displacement = edi::Parameter{0.12, 0.008, true};
     source.instrument.calib_sample_transparency = edi::Parameter{-0.23, 0.009, false};
-    source.linked_structure.scale = {2.0, 0.08, true};
+    source.linked_structure().scale = {2.0, 0.08, true};
     source.background.push_back(edi::LineSegment{});
     source.background[0]->position = 40.0;
     source.background[0]->intensity = {100.0, 1.0, false};
@@ -309,13 +315,13 @@ TEST_CASE("E09-T55 adapter conversion preserves CW layout and refuses incomplete
                     "the CW adapter must preserve exactly the U/V/W/X/Y profile layout");
     CHECK_MESSAGE((converted.peak[0].value() == 1.0 && converted.peak[4].value() == 5.0),
                   "the CW adapter must preserve U/V/W/X/Y order and values");
-    REQUIRE_MESSAGE(converted.instrument.size() == 4,
-                    "the CW adapter must preserve offset/wavelength/displacement/transparency layout");
-    CHECK_MESSAGE((converted.instrument[0].value() == -0.5 &&
-                   converted.instrument[1].value() == 1.54 &&
-                   converted.instrument[2].value() == 0.12 &&
-                   converted.instrument[3].value() == -0.23),
-                  "the CW adapter must preserve all four instrument slots in declared order");
+    REQUIRE_MESSAGE(
+        converted.instrument.size() == 4,
+        "the CW adapter must preserve offset/wavelength/displacement/transparency layout");
+    CHECK_MESSAGE(
+        (converted.instrument[0].value() == -0.5 && converted.instrument[1].value() == 1.54 &&
+         converted.instrument[2].value() == 0.12 && converted.instrument[3].value() == -0.23),
+        "the CW adapter must preserve all four instrument slots in declared order");
 
     source.peak.broad_gauss_w.reset();
     bool raised = false;

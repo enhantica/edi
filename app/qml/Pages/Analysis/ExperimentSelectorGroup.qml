@@ -23,7 +23,7 @@ EaElements.GroupBox {
     BlockSelector {
         objectName: "analysis.experiment"
         blocks: group.project ? group.project.experiments : null
-        blocksTextRole: "name"
+        blocksTextRole: "label"
         blockKind: "experiment"
         blockIndex: group.project ? group.project.currentExperimentIndex : -1
         onBlockActivated: index => group.project.currentExperimentIndex = index

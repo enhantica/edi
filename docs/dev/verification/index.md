@@ -95,6 +95,12 @@ produced by edi or crysta.
   the **non-convoluted pseudo-Voigt** profile (`tof-pseudo-voigt`,
   FullProf "Npr=7"), no back-to-back exponentials.
 
+### Ferrite and austenite, two phases
+
+- [pd-neut-tof ferrite and austenite, BEER joint](pd-neut-tof_ferrite-austenite_beer_joint.ipynb) –
+  **two phases summed** in each of two banks, calculated and fitted jointly; no reference
+  comparison yet (the owner's FullProf project comes with shared-parameter constraints).
+
 ### NCAF structure
 
 - [pd-neut-tof NCAF Jorgensen-Von Dreele (Gaussian)](pd-neut-tof_NCAF_jorgensen-von-dreele.ipynb)

@@ -190,6 +190,13 @@ class Edit {
             row.structure_id = id;
         });
     }
+    // The structure a linked-structure row names, which keys the row in its experiment's collection.
+    static Edit link_structure(LinkedStructure& row, std::string id) {
+        return Edit([&row, id = std::move(id)] {
+            require_model_owner<LinkedStructure>(row.structure_id, "the linked structure");
+            row.structure_id = id;
+        });
+    }
     // An alias's or a constraint's id, which keys it in the project's collection.
     static Edit rename_alias(ParameterAlias& alias, std::string id) {
         return Edit([&alias, id = std::move(id)] {
@@ -211,11 +218,14 @@ class Edit {
 
     // --- Rows -------------------------------------------------------------------------------------
     // One row added to, or removed from, one of the model's collections, by its own row type: atom
-    // sites, background points, texture rows, aliases and constraints are added; those, structures and
-    // experiments are removed. `erase` refuses a row that is not there.
+    // sites, background points, texture rows, linked structures, aliases and constraints are added;
+    // those, structures and experiments are removed. `erase` refuses a row that is not there.
     static Edit append(ItemVec<AtomSite>& rows, AtomSite row) { return appending(rows, std::move(row)); }
     static Edit append(ItemVec<LineSegment>& rows, LineSegment row) { return appending(rows, std::move(row)); }
     static Edit append(ItemVec<PrefOrient>& rows, PrefOrient row) { return appending(rows, std::move(row)); }
+    static Edit append(ItemVec<LinkedStructure>& rows, LinkedStructure row) {
+        return appending(rows, std::move(row));
+    }
     static Edit append(ItemVec<ParameterAlias>& rows, ParameterAlias row) { return appending(rows, std::move(row)); }
     static Edit append(ItemVec<ParameterConstraint>& rows, ParameterConstraint row) {
         return appending(rows, std::move(row));
@@ -223,6 +233,7 @@ class Edit {
     static Edit erase(ItemVec<AtomSite>& rows, std::size_t index) { return erasing(rows, index); }
     static Edit erase(ItemVec<LineSegment>& rows, std::size_t index) { return erasing(rows, index); }
     static Edit erase(ItemVec<PrefOrient>& rows, std::size_t index) { return erasing(rows, index); }
+    static Edit erase(ItemVec<LinkedStructure>& rows, std::size_t index) { return erasing(rows, index); }
     static Edit erase(ItemVec<ParameterAlias>& rows, std::size_t index) { return erasing(rows, index); }
     static Edit erase(ItemVec<ParameterConstraint>& rows, std::size_t index) { return erasing(rows, index); }
     static Edit erase(ItemVec<Structure>& rows, std::size_t index) { return erasing(rows, index); }
@@ -267,7 +278,7 @@ class Edit {
     }
 
     // --- Loaded blocks ----------------------------------------------------------------------------
-    // A loaded structure added (add_loaded_structure's rule: an edi project holds one).
+    // A loaded structure added (add_loaded_structure's rule: its name is not taken).
     static Edit add_structure(Project& project, Structure structure) {
         return Edit([&project, structure = std::make_shared<Structure>(std::move(structure))] {
             add_loaded_structure(project, *structure);

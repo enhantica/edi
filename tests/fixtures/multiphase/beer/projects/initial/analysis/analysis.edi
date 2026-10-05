@@ -1,0 +1,13 @@
+_edi.schema_version 3
+
+_fitting_mode.type joint
+
+_minimizer.type "lmfit (leastsq)"
+_minimizer.max_iterations 1000
+_minimizer.chi_square_tolerance 1e-8
+
+loop_
+_joint_fit.experiment_id
+_joint_fit.weight
+expt_s2 0.5
+expt_n2 0.5

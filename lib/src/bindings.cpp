@@ -16,6 +16,7 @@
 #include <nanobind/stl/unique_ptr.h>
 #include <nanobind/stl/variant.h>
 #include <nanobind/stl/vector.h>
+#include <type_traits>
 
 #include <array>
 #include <atomic>
@@ -825,7 +826,7 @@ static edi::Dependence dependence_now(edi::Parameter& parameter) {
 }
 
 // The Python object that owns a parameter's storage: its keyed row (a site, a background point or term,
-// a texture row) or, for a block field, its structure or experiment. None when the project holds none.
+// a texture row, a linked structure) or, for a block field, its structure or experiment. None when the project holds none.
 static nb::object owner_of(edi::Project& project, const edi::Parameter* parameter) {
     const auto holds = [parameter](auto& node) {
         for (const edi::Parameter* held : node.parameters()) {
@@ -851,6 +852,11 @@ static nb::object owner_of(edi::Project& project, const edi::Parameter* paramete
                 return nb::cast(row);
             }
         }
+        for (const std::shared_ptr<edi::LinkedStructure>& link : experiment->linked_structures) {
+            if (holds(*link)) {
+                return nb::cast(link);
+            }
+        }
         for (const std::shared_ptr<edi::LineSegment>& point : experiment->background) {
             if (holds(*point)) {
                 return nb::cast(point);
@@ -861,8 +867,7 @@ static nb::object owner_of(edi::Project& project, const edi::Parameter* paramete
                 return nb::cast(term);
             }
         }
-        if (holds(experiment->peak) || holds(experiment->instrument) || holds(experiment->linked_structure) ||
-            holds(experiment->absorption)) {
+        if (holds(experiment->peak) || holds(experiment->instrument) || holds(experiment->absorption)) {
             return nb::cast(experiment);
         }
     }
@@ -992,6 +997,18 @@ static void def_keyed_collection(nb::class_<View>& view_cls, nb::class_<Iter>& i
                 const std::ptrdiff_t at = self.find_first(name);
                 if (at < 0) {
                     throw nb::key_error(name.c_str());
+                }
+                if constexpr (std::is_same_v<View, edi::views::StructuresView>) {
+                    // A structure an experiment links stays: removing it would leave the link naming
+                    // nothing. Remove the link first.
+                    for (const auto& experiment : self.owner->experiments) {
+                        for (const auto& link : experiment->linked_structures) {
+                            if (link->structure_id.value() == name) {
+                                throw std::invalid_argument("structure '" + name + "' is linked by experiment '" +
+                                                            experiment->name + "'; remove that link first");
+                            }
+                        }
+                    }
                 }
                 self.vec().erase_at(static_cast<std::size_t>(at));
                 after_change(self);
@@ -2263,12 +2280,41 @@ NB_MODULE(_edi, m) {
                                       &edi::InstrumentBase::setup_monochromator_twotheta,
                                       edi::spec::instrument_monochromator_twotheta);
 
-    // The linked-structure category.
+    // One linked structure (phase): the structure it names, its scale and whether it takes part.
     nb::class_<edi::LinkedStructure> linked_structure(m, "LinkedStructure");
     linked_structure.def("__setattr__", renewing_setattr<edi::LinkedStructure>({}, renew_epoch), nb::arg("name"), nb::arg("value").none());
-    linked_structure.def(nb::init<>())
-        .def_rw("structure_id", &edi::LinkedStructure::structure_id);
+    linked_structure.def(nb::new_([]() { return std::make_shared<edi::LinkedStructure>(); }))
+        // ADR-0016: assigning is a rename the owning experiment admits.
+        .def_prop_rw(
+            "structure_id", [](const edi::LinkedStructure& self) { return self.structure_id.value(); },
+            [](edi::LinkedStructure& self, std::string value) { self.structure_id = std::move(value); })
+        .def_prop_rw(
+            "enabled", [](const edi::LinkedStructure& self) { return self.enabled.get(); },
+            [](edi::LinkedStructure& self, bool value) { self.enabled = value; },
+            "Whether the phase takes part: a disabled link is kept and saved, but neither calculated "
+            "nor fitted.");
     def_parameter_field(linked_structure, "scale", &edi::LinkedStructure::scale);
+
+    // The experiment's linked structures (phases), keyed by structure_id (R15).
+    nb::class_<edi::views::LinkedStructuresView> linked_structures_view(
+        m, "LinkedStructures",
+        "Live keyed collection of an experiment's linked structures (key: structure_id).");
+    nb::class_<edi::views::LinkedStructuresIter> linked_structures_iter(m, "_LinkedStructuresIterator");
+    def_keyed_collection<edi::views::LinkedStructuresView, edi::views::LinkedStructuresIter, edi::LinkedStructure>(
+        linked_structures_view, linked_structures_iter);
+    linked_structures_view.def(
+        "create",
+        [](edi::views::LinkedStructuresView& self, nb::kwargs kwargs) {
+            // Upstream CategoryCollection.create, as AtomSites.create.
+            auto built = std::make_shared<edi::LinkedStructure>();
+            nb::object obj = nb::cast(built);
+            for (auto kv : kwargs) {
+                nb::setattr(obj, kv.first, kv.second);
+            }
+            const std::string key = built->structure_id;
+            self.set_item(key, std::move(built));
+        },
+        "Link a structure from keyword attributes (structure_id, scale, enabled) and add it.");
 
     // The absorption category — the FullProf ABSCOR pair, presence-tracked (parity doc records
     // why the spellings stay).
@@ -2332,7 +2378,27 @@ NB_MODULE(_edi, m) {
             "name", [](const edi::ExperimentBase& self) { return self.name.value(); },
             [](edi::ExperimentBase& self, std::string value) { self.name = std::move(value); })
         .def_rw("experiment_type", &edi::ExperimentBase::experiment_type)
-        .def_rw("linked_structure", &edi::ExperimentBase::linked_structure)
+        .def_prop_rw(
+            "linked_structure",
+            [](edi::ExperimentBase& self) {
+                self.linked_structure();  // refuses a bank of no or several links
+                return self.linked_structures.front();
+            },
+            [](edi::ExperimentBase& self, const edi::LinkedStructure& value) {
+                // The single-phase shortcut: the one link takes the value's fields.
+                edi::LinkedStructure& only = self.linked_structure();
+                only.structure_id = value.structure_id.value();
+                only.scale = value.scale;
+                only.enabled = value.enabled.get();
+            },
+            "The one linked structure (the single-phase shortcut); refused when the experiment links several.")
+        .def_prop_ro(
+            "linked_structures",
+            [](edi::ExperimentBase& self) {
+                return edi::views::LinkedStructuresView{&self, &edi::ExperimentBase::linked_structures,
+                                                        &edi::LinkedStructure::structure_id};
+            },
+            nb::keep_alive<0, 1>(), "The linked structures (phases), keyed by structure_id.")
         .def_rw("dataset_weight", &edi::ExperimentBase::dataset_weight);
 
     // The abstract intermediates: the powder base homes the pd-shared members exactly where upstream

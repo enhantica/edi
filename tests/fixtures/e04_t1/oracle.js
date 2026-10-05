@@ -1971,6 +1971,80 @@ var frozen = {
         "experiments/cu_ka.edi": "9fb985ff9604f1beb98a6cfedb721b154b9819d7f816bcc159b033db3d2b09d8",
         "analysis/analysis.edi": "76917b3672c7268e7fee9fb901c0ed8ffdd5ffcf29c6fc1083d470ad5b501e72"
       }
+    },
+    {
+      "id": "pd-neut-tof_ferrite-austenite-beer_joint",
+      "path": "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project",
+      "metadata": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_metadata.name": "beer_mcstas"
+      },
+      "analysis": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_fitting_mode.type": "joint",
+        "_minimizer.type": "lmfit (leastsq)",
+        "_minimizer.max_iterations": {
+          "value": 1000.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_minimizer.chi_square_tolerance": {
+          "value": 1e-08,
+          "free": false,
+          "uncertainty": 0.0
+        }
+      },
+      "structures": [
+        {
+          "name": "austenite",
+          "atoms": 1,
+          "cellA": 3.6468,
+          "spaceGroup": "F m -3 m",
+          "cell": [
+            3.6468,
+            3.6468,
+            3.6468,
+            90.0,
+            90.0,
+            90.0
+          ]
+        },
+        {
+          "name": "ferrite",
+          "atoms": 1,
+          "cellA": 2.886,
+          "spaceGroup": "I m -3 m",
+          "cell": [
+            2.886,
+            2.886,
+            2.886,
+            90.0,
+            90.0,
+            90.0
+          ]
+        }
+      ],
+      "experiments": [
+        "expt_n2",
+        "expt_s2"
+      ],
+      "loaderWarning": "Warning: unsupported _calculator.type \"cryspy\" - using crysta\nWarning: unsupported _minimizer.type \"lmfit (leastsq)\" - using crysta",
+      "files": {
+        "project.edi": "f7afd0f1cf662c51d11e80cec521b9d40993f11c66590448c6c8077ee31ac8a1",
+        "structures/austenite.edi": "f69da3e935c3893b6dff3bfd902e3338c63f33a3cd043e47096f9932280331b3",
+        "structures/ferrite.edi": "500fcf2007cefefb4b4477e10006596520d8e1cb8e61945d0791ff14ef27521c",
+        "experiments/expt_n2.edi": "6e8f4ac836219d4ba503ff5583823b1d12eb523f788e16c03d86b2b5d2bacdda",
+        "experiments/expt_s2.edi": "948b6f720ed6d72a5d5f0c5b8b06cae3dca6159f4f9e6edd56739110a2f2290a",
+        "analysis/analysis.edi": "b9bf3cbba3d67f97f4e361606f39650fe14313635d32e5176f3269e6692f28dd"
+      }
     }
   ],
   "corpus": [
@@ -3810,6 +3884,234 @@ var frozen = {
           "value": -10.29183,
           "free": false,
           "uncertainty": 0.0
+        },
+        "_instrument.calib_d_to_tof_linear": {
+          "value": 54902.1875,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_d_to_tof_quadratic": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_d_to_tof_reciprocal": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_absorption.type": "none",
+        "_background.type": "line-segment"
+      },
+      "loops": {}
+    },
+    {
+      "project": "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project",
+      "experiment": "expt_n2",
+      "sha256": "6e8f4ac836219d4ba503ff5583823b1d12eb523f788e16c03d86b2b5d2bacdda",
+      "peakType": "tof-pseudo-voigt",
+      "mode": "tof",
+      "peakFields": [
+        "broad_gauss_sigma_0",
+        "broad_gauss_sigma_1",
+        "broad_gauss_sigma_2",
+        "broad_gauss_size",
+        "broad_gauss_strain",
+        "broad_lorentz_gamma_0",
+        "broad_lorentz_gamma_1",
+        "broad_lorentz_gamma_2",
+        "broad_lorentz_size",
+        "broad_lorentz_strain"
+      ],
+      "unusedFreeFields": [],
+      "instrumentFields": [
+        "setup_twotheta_bank",
+        "calib_d_to_tof_offset",
+        "calib_d_to_tof_linear",
+        "calib_d_to_tof_quadratic",
+        "calib_d_to_tof_reciprocal"
+      ],
+      "range": [
+        40094.52341631884,
+        135592.47482202607,
+        31.85388639283096,
+        2999
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.beam_mode": "time-of-flight",
+        "_experiment_type.radiation_probe": "neutron",
+        "_experiment_type.scattering_type": "bragg",
+        "_diffrn.ambient_temperature": "?",
+        "_diffrn.ambient_pressure": "?",
+        "_diffrn.ambient_magnetic_field": "?",
+        "_diffrn.ambient_electric_field": "?",
+        "_calculator.type": "cryspy",
+        "_scattering_source.neutron_scattering_length": "sears1992",
+        "_peak.broad_lorentz_gamma_0": {
+          "value": 5.0279,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_lorentz_gamma_1": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_gamma_2": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_sigma_0": {
+          "value": 914.6177,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_sigma_1": {
+          "value": 1249.5679,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_sigma_2": {
+          "value": 325.2586,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.cutoff_fwhm": {
+          "value": 12.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.type": "tof-pseudo-voigt",
+        "_instrument.setup_twotheta_bank": {
+          "value": 90.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_d_to_tof_offset": {
+          "value": -2.09073,
+          "free": true,
+          "uncertainty": null
+        },
+        "_instrument.calib_d_to_tof_linear": {
+          "value": 54902.1875,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_d_to_tof_quadratic": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_d_to_tof_reciprocal": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_absorption.type": "none",
+        "_background.type": "line-segment"
+      },
+      "loops": {}
+    },
+    {
+      "project": "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project",
+      "experiment": "expt_s2",
+      "sha256": "948b6f720ed6d72a5d5f0c5b8b06cae3dca6159f4f9e6edd56739110a2f2290a",
+      "peakType": "tof-pseudo-voigt",
+      "mode": "tof",
+      "peakFields": [
+        "broad_gauss_sigma_0",
+        "broad_gauss_sigma_1",
+        "broad_gauss_sigma_2",
+        "broad_gauss_size",
+        "broad_gauss_strain",
+        "broad_lorentz_gamma_0",
+        "broad_lorentz_gamma_1",
+        "broad_lorentz_gamma_2",
+        "broad_lorentz_size",
+        "broad_lorentz_strain"
+      ],
+      "unusedFreeFields": [],
+      "instrumentFields": [
+        "setup_twotheta_bank",
+        "calib_d_to_tof_offset",
+        "calib_d_to_tof_linear",
+        "calib_d_to_tof_quadratic",
+        "calib_d_to_tof_reciprocal"
+      ],
+      "range": [
+        40094.52341631884,
+        135592.47482202607,
+        31.85388639283096,
+        2999
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.beam_mode": "time-of-flight",
+        "_experiment_type.radiation_probe": "neutron",
+        "_experiment_type.scattering_type": "bragg",
+        "_diffrn.ambient_temperature": "?",
+        "_diffrn.ambient_pressure": "?",
+        "_diffrn.ambient_magnetic_field": "?",
+        "_diffrn.ambient_electric_field": "?",
+        "_calculator.type": "cryspy",
+        "_scattering_source.neutron_scattering_length": "sears1992",
+        "_peak.broad_lorentz_gamma_0": {
+          "value": 5.033,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_lorentz_gamma_1": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_gamma_2": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_sigma_0": {
+          "value": 893.6397,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_sigma_1": {
+          "value": 1283.6387,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_sigma_2": {
+          "value": 311.7041,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.cutoff_fwhm": {
+          "value": 12.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.type": "tof-pseudo-voigt",
+        "_instrument.setup_twotheta_bank": {
+          "value": 90.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_d_to_tof_offset": {
+          "value": -10.29183,
+          "free": true,
+          "uncertainty": null
         },
         "_instrument.calib_d_to_tof_linear": {
           "value": 54902.1875,

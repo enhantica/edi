@@ -48,6 +48,9 @@ class ParameterItem : public QObject {
     Q_PROPERTY(int blockIndex READ blockIndex NOTIFY blockIndexChanged)
     Q_PROPERTY(QString categoryIcon READ categoryIcon CONSTANT)
     Q_PROPERTY(QString elementSymbol READ elementSymbol NOTIFY elementSymbolChanged)
+    // For a parameter one phase owns (its scale, its texture) in a project of several structures, the place
+    // of that structure in the project's list (its colour); -1 otherwise.
+    Q_PROPERTY(int phaseIndex READ phaseIndex NOTIFY phaseIndexChanged)
 
    public:
     enum Field { ValueField = 1, UncertaintyField = 2, FreeField = 4 };
@@ -87,10 +90,12 @@ class ParameterItem : public QObject {
     int blockIndex() const { return block_index_; }
     QString categoryIcon() const { return category_icon_; }
     QString elementSymbol() const { return element_symbol_; }
+    int phaseIndex() const { return phase_index_; }
     // Set by the registry at each rebuild: a block's place and a site's element can change while the
     // parameter stays shown.
     void setBlockIndex(int index);
     void setElementSymbol(const QString& symbol);
+    void setPhaseIndex(int index);
 
     const edi::Parameter* parameter() const { return parameter_; }
     // Emit a signal for each field whose core value differs from the last published one; returns
@@ -107,6 +112,7 @@ class ParameterItem : public QObject {
     void lastErrorChanged();
     void blockIndexChanged();
     void elementSymbolChanged();
+    void phaseIndexChanged();
 
    private:
     void setLastError(const QString& error);
@@ -122,6 +128,7 @@ class ParameterItem : public QObject {
         short_name_, category_icon_, element_symbol_;
     double minimum_, maximum_;
     int block_index_ = -1;
+    int phase_index_ = -1;
 };
 
 }  // namespace edi_app

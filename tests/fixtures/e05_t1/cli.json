@@ -27060,6 +27060,724 @@
       ],
       "edi_sha": "96bf58742e585691c25d7c36bbd77a40ab1cf80e",
       "crysta_build_commit": "1e6f501b3c1d15517122a3286fa53dc9d5d17fee"
+    },
+    {
+      "id": "pd-neut-tof_ferrite-austenite-beer_joint",
+      "path": "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project",
+      "mode": "joint",
+      "minimizer": "crysta (ladder)",
+      "inputs_sha256": {
+        "analysis/analysis.edi": "b9bf3cbba3d67f97f4e361606f39650fe14313635d32e5176f3269e6692f28dd",
+        "experiments/expt_n2.edi": "d4120e1f08229d5454b9f8adbb776c6dd85292f96ab8f5b9e8940b4ebd096cd1",
+        "experiments/expt_s2.edi": "8e53f72146027cd8fcddf300656b8a7568b5d37f0d99f8bc30a14e4bec612c29",
+        "project.edi": "f7afd0f1cf662c51d11e80cec521b9d40993f11c66590448c6c8077ee31ac8a1",
+        "structures/austenite.edi": "c6c7ed62fbdae12e38dbe046c87daea47a7dd90c00204e9ca5192cee24fe75c4",
+        "structures/ferrite.edi": "0e480192a8a22bbab539176d0d4d4ce2248b7bdcc3c2c6d53b023db0bba6c330"
+      },
+      "record": {
+        "schema": "8",
+        "record": "fit",
+        "status": "done",
+        "mode": "joint",
+        "converged": "true",
+        "n_points_loaded": "5998",
+        "n_points_fitted": "5620",
+        "n_free": "56",
+        "iterations": "7",
+        "reduced_chi_square": "6.417669803",
+        "rwp": "0.06878576521",
+        "descent": "ladder",
+        "fast_descent": "false",
+        "linear_snap": "false",
+        "guarded_linear_snap": "false",
+        "linear_snap_attempts": "0",
+        "linear_snap_rejections": "0",
+        "linear_snap_guard_residual_evaluations": "0",
+        "multistart_prune": "false",
+        "multistart_probes_started": "0",
+        "multistart_probes_pruned": "0",
+        "multistart_probe_iterations": "0",
+        "multistart_survivor": "none",
+        "unevaluable_trials": "0",
+        "terminal_unevaluable_trials": "0",
+        "nonfinite_trials": "0",
+        "terminal_nonfinite_trials": "0",
+        "bound_active_columns": "none",
+        "zero_jacobian_columns": "none",
+        "elapsed_ms": "389.879",
+        "bank.expt_n2.n_points": "2810",
+        "bank.expt_n2.rwp": "0.0680463788",
+        "bank.expt_n2.chi_square": "34833.80374",
+        "bank.expt_s2.n_points": "2810",
+        "bank.expt_s2.rwp": "0.06951269696",
+        "bank.expt_s2.chi_square": "36582.02582",
+        "iter.1.rwp": "0.1101152255",
+        "iter.1.reduced_chi_square": "16.44655598",
+        "iter.1.unevaluable_trials": "0",
+        "iter.1.elapsed_ms": "137.598",
+        "iter.2.rwp": "0.0690797058",
+        "iter.2.reduced_chi_square": "6.472635949",
+        "iter.2.unevaluable_trials": "0",
+        "iter.2.elapsed_ms": "158.512",
+        "iter.3.rwp": "0.06878909004",
+        "iter.3.reduced_chi_square": "6.418290226",
+        "iter.3.unevaluable_trials": "0",
+        "iter.3.elapsed_ms": "179.362",
+        "iter.4.rwp": "0.06878581438",
+        "iter.4.reduced_chi_square": "6.417678976",
+        "iter.4.unevaluable_trials": "0",
+        "iter.4.elapsed_ms": "200.335",
+        "iter.5.rwp": "0.0687857659",
+        "iter.5.reduced_chi_square": "6.417669931",
+        "iter.5.unevaluable_trials": "0",
+        "iter.5.elapsed_ms": "221.446",
+        "iter.6.rwp": "0.06878576522",
+        "iter.6.reduced_chi_square": "6.417669804",
+        "iter.6.unevaluable_trials": "0",
+        "iter.6.elapsed_ms": "243.380",
+        "iter.7.rwp": "0.06878576521",
+        "iter.7.reduced_chi_square": "6.417669803",
+        "iter.7.unevaluable_trials": "0",
+        "iter.7.elapsed_ms": "368.664",
+        "param.austenite.Fe.adp_iso.value": "1.712863736",
+        "param.austenite.Fe.adp_iso.uncertainty": "0.01188336908",
+        "param.expt_n2.austenite.scale.value": "95.90085283",
+        "param.expt_n2.austenite.scale.uncertainty": "0.2689763321",
+        "param.expt_n2.background[0].value": "0.1901969915",
+        "param.expt_n2.background[0].uncertainty": "0.02431618975",
+        "param.expt_n2.background[10].value": "0.1582919376",
+        "param.expt_n2.background[10].uncertainty": "0.004389523308",
+        "param.expt_n2.background[11].value": "0.2219341874",
+        "param.expt_n2.background[11].uncertainty": "0.004950150098",
+        "param.expt_n2.background[12].value": "0.3600634389",
+        "param.expt_n2.background[12].uncertainty": "0.009083458933",
+        "param.expt_n2.background[13].value": "0.409269928",
+        "param.expt_n2.background[13].uncertainty": "0.00971569891",
+        "param.expt_n2.background[14].value": "0.3462620336",
+        "param.expt_n2.background[14].uncertainty": "0.009750695437",
+        "param.expt_n2.background[15].value": "0.5763695783",
+        "param.expt_n2.background[15].uncertainty": "0.01301203553",
+        "param.expt_n2.background[16].value": "1.00306856",
+        "param.expt_n2.background[16].uncertainty": "0.03277518935",
+        "param.expt_n2.background[17].value": "1.18111485",
+        "param.expt_n2.background[17].uncertainty": "0.03369698504",
+        "param.expt_n2.background[18].value": "0.886639184",
+        "param.expt_n2.background[18].uncertainty": "0.01668149634",
+        "param.expt_n2.background[19].value": "0.01629538839",
+        "param.expt_n2.background[19].uncertainty": "0.02831693286",
+        "param.expt_n2.background[1].value": "0.2064828923",
+        "param.expt_n2.background[1].uncertainty": "0.009734534752",
+        "param.expt_n2.background[2].value": "0.2028490443",
+        "param.expt_n2.background[2].uncertainty": "0.009828102279",
+        "param.expt_n2.background[3].value": "0.1936129872",
+        "param.expt_n2.background[3].uncertainty": "0.008928006336",
+        "param.expt_n2.background[4].value": "0.273663939",
+        "param.expt_n2.background[4].uncertainty": "0.01003399203",
+        "param.expt_n2.background[5].value": "0.3202210746",
+        "param.expt_n2.background[5].uncertainty": "0.01033709935",
+        "param.expt_n2.background[6].value": "0.2560080166",
+        "param.expt_n2.background[6].uncertainty": "0.007284073417",
+        "param.expt_n2.background[7].value": "0.2340252487",
+        "param.expt_n2.background[7].uncertainty": "0.00671637603",
+        "param.expt_n2.background[8].value": "0.2151359788",
+        "param.expt_n2.background[8].uncertainty": "0.006081095559",
+        "param.expt_n2.background[9].value": "0.2270089772",
+        "param.expt_n2.background[9].uncertainty": "0.005860677272",
+        "param.expt_n2.broad_gauss_sigma_0.value": "917.7052754",
+        "param.expt_n2.broad_gauss_sigma_0.uncertainty": "57.2790401",
+        "param.expt_n2.broad_gauss_sigma_1.value": "1230.696202",
+        "param.expt_n2.broad_gauss_sigma_1.uncertainty": "57.25206137",
+        "param.expt_n2.broad_gauss_sigma_2.value": "328.3034408",
+        "param.expt_n2.broad_gauss_sigma_2.uncertainty": "11.38466409",
+        "param.expt_n2.broad_lorentz_gamma_0.value": "5.257903002",
+        "param.expt_n2.broad_lorentz_gamma_0.uncertainty": "0.1879347965",
+        "param.expt_n2.calib_d_to_tof_offset.value": "-2.096511063",
+        "param.expt_n2.calib_d_to_tof_offset.uncertainty": "0.1181952398",
+        "param.expt_n2.ferrite.scale.value": "403.7639924",
+        "param.expt_n2.ferrite.scale.uncertainty": "1.34037262",
+        "param.expt_s2.austenite.scale.value": "96.20159999",
+        "param.expt_s2.austenite.scale.uncertainty": "0.2694914213",
+        "param.expt_s2.background[0].value": "0.1666107109",
+        "param.expt_s2.background[0].uncertainty": "0.02315864627",
+        "param.expt_s2.background[10].value": "0.1569352478",
+        "param.expt_s2.background[10].uncertainty": "0.004338186793",
+        "param.expt_s2.background[11].value": "0.2259527071",
+        "param.expt_s2.background[11].uncertainty": "0.004983735851",
+        "param.expt_s2.background[12].value": "0.3647858341",
+        "param.expt_s2.background[12].uncertainty": "0.009167790725",
+        "param.expt_s2.background[13].value": "0.405342694",
+        "param.expt_s2.background[13].uncertainty": "0.009628123844",
+        "param.expt_s2.background[14].value": "0.3428049207",
+        "param.expt_s2.background[14].uncertainty": "0.009750117479",
+        "param.expt_s2.background[15].value": "0.584403968",
+        "param.expt_s2.background[15].uncertainty": "0.01324238341",
+        "param.expt_s2.background[16].value": "1.021585188",
+        "param.expt_s2.background[16].uncertainty": "0.03286198711",
+        "param.expt_s2.background[17].value": "1.216235774",
+        "param.expt_s2.background[17].uncertainty": "0.0340863499",
+        "param.expt_s2.background[18].value": "0.877430588",
+        "param.expt_s2.background[18].uncertainty": "0.0165029349",
+        "param.expt_s2.background[19].value": "0.03156777875",
+        "param.expt_s2.background[19].uncertainty": "0.02872284061",
+        "param.expt_s2.background[1].value": "0.207248957",
+        "param.expt_s2.background[1].uncertainty": "0.009709010767",
+        "param.expt_s2.background[2].value": "0.1975942273",
+        "param.expt_s2.background[2].uncertainty": "0.009570197362",
+        "param.expt_s2.background[3].value": "0.1900496264",
+        "param.expt_s2.background[3].uncertainty": "0.008792913131",
+        "param.expt_s2.background[4].value": "0.2831345078",
+        "param.expt_s2.background[4].uncertainty": "0.01011160219",
+        "param.expt_s2.background[5].value": "0.3177713676",
+        "param.expt_s2.background[5].uncertainty": "0.01040125695",
+        "param.expt_s2.background[6].value": "0.2719072406",
+        "param.expt_s2.background[6].uncertainty": "0.007585920723",
+        "param.expt_s2.background[7].value": "0.2267885618",
+        "param.expt_s2.background[7].uncertainty": "0.006625393616",
+        "param.expt_s2.background[8].value": "0.2098441245",
+        "param.expt_s2.background[8].uncertainty": "0.005872694024",
+        "param.expt_s2.background[9].value": "0.2155844707",
+        "param.expt_s2.background[9].uncertainty": "0.005632705795",
+        "param.expt_s2.broad_gauss_sigma_0.value": "894.4351518",
+        "param.expt_s2.broad_gauss_sigma_0.uncertainty": "56.77574661",
+        "param.expt_s2.broad_gauss_sigma_1.value": "1271.865188",
+        "param.expt_s2.broad_gauss_sigma_1.uncertainty": "56.74882604",
+        "param.expt_s2.broad_gauss_sigma_2.value": "314.15638",
+        "param.expt_s2.broad_gauss_sigma_2.uncertainty": "11.28679769",
+        "param.expt_s2.broad_lorentz_gamma_0.value": "5.239425473",
+        "param.expt_s2.broad_lorentz_gamma_0.uncertainty": "0.1871354524",
+        "param.expt_s2.calib_d_to_tof_offset.value": "-10.29404473",
+        "param.expt_s2.calib_d_to_tof_offset.uncertainty": "0.1181575843",
+        "param.expt_s2.ferrite.scale.value": "401.6116788",
+        "param.expt_s2.ferrite.scale.uncertainty": "1.336055234",
+        "param.ferrite.Fe.adp_iso.value": "1.719291868",
+        "param.ferrite.Fe.adp_iso.uncertainty": "0.01268901489"
+      },
+      "stderr": "Warning: unsupported _calculator.type \"cryspy\" - using crysta\nWarning: unsupported _minimizer.type \"lmfit (leastsq)\" - using crysta\n",
+      "parameters": [
+        {
+          "value": 3.6468,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 3.6468,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 3.6468,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 90.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 90.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 90.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.7128637356433631,
+          "uncertainty": 0.011883369078028932,
+          "free": true
+        },
+        {
+          "value": 2.886,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 2.886,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 2.886,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 90.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 90.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 90.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.7192918675288396,
+          "uncertainty": 0.012689014886012007,
+          "free": true
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 917.7052754393499,
+          "uncertainty": 57.279040104821746,
+          "free": true
+        },
+        {
+          "value": 1230.696202359645,
+          "uncertainty": 57.2520613663192,
+          "free": true
+        },
+        {
+          "value": 328.30344079818457,
+          "uncertainty": 11.384664091798603,
+          "free": true
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 5.257903001821915,
+          "uncertainty": 0.18793479653085104,
+          "free": true
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": -2.096511062983259,
+          "uncertainty": 0.11819523975128035,
+          "free": true
+        },
+        {
+          "value": 54902.18695,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 90.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 403.76399244199877,
+          "uncertainty": 1.3403726201243487,
+          "free": true
+        },
+        {
+          "value": 95.90085283238464,
+          "uncertainty": 0.2689763321164069,
+          "free": true
+        },
+        {
+          "value": 0.19019699152747332,
+          "uncertainty": 0.024316189751252153,
+          "free": true
+        },
+        {
+          "value": 0.20648289234277364,
+          "uncertainty": 0.009734534752286821,
+          "free": true
+        },
+        {
+          "value": 0.20284904431905557,
+          "uncertainty": 0.009828102279184181,
+          "free": true
+        },
+        {
+          "value": 0.19361298723074158,
+          "uncertainty": 0.008928006335878374,
+          "free": true
+        },
+        {
+          "value": 0.27366393903013947,
+          "uncertainty": 0.010033992028293854,
+          "free": true
+        },
+        {
+          "value": 0.32022107457961735,
+          "uncertainty": 0.010337099345232685,
+          "free": true
+        },
+        {
+          "value": 0.2560080165724727,
+          "uncertainty": 0.007284073416863158,
+          "free": true
+        },
+        {
+          "value": 0.23402524866322613,
+          "uncertainty": 0.006716376029705161,
+          "free": true
+        },
+        {
+          "value": 0.21513597877852145,
+          "uncertainty": 0.006081095558990947,
+          "free": true
+        },
+        {
+          "value": 0.22700897717715696,
+          "uncertainty": 0.005860677271883119,
+          "free": true
+        },
+        {
+          "value": 0.1582919375682586,
+          "uncertainty": 0.004389523307834592,
+          "free": true
+        },
+        {
+          "value": 0.22193418739764417,
+          "uncertainty": 0.004950150097809571,
+          "free": true
+        },
+        {
+          "value": 0.3600634388841996,
+          "uncertainty": 0.009083458932567566,
+          "free": true
+        },
+        {
+          "value": 0.4092699279997468,
+          "uncertainty": 0.009715698910267542,
+          "free": true
+        },
+        {
+          "value": 0.34626203355694934,
+          "uncertainty": 0.009750695436856086,
+          "free": true
+        },
+        {
+          "value": 0.5763695782680902,
+          "uncertainty": 0.013012035530448716,
+          "free": true
+        },
+        {
+          "value": 1.003068560295606,
+          "uncertainty": 0.032775189353483836,
+          "free": true
+        },
+        {
+          "value": 1.1811148499752226,
+          "uncertainty": 0.03369698504475079,
+          "free": true
+        },
+        {
+          "value": 0.8866391840212708,
+          "uncertainty": 0.016681496341000034,
+          "free": true
+        },
+        {
+          "value": 0.01629538839390361,
+          "uncertainty": 0.02831693285679543,
+          "free": true
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 894.4351517853185,
+          "uncertainty": 56.77574661283933,
+          "free": true
+        },
+        {
+          "value": 1271.865188171607,
+          "uncertainty": 56.748826037887035,
+          "free": true
+        },
+        {
+          "value": 314.15638004995714,
+          "uncertainty": 11.286797689981594,
+          "free": true
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 5.239425473049047,
+          "uncertainty": 0.18713545242081564,
+          "free": true
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": -10.29404472863263,
+          "uncertainty": 0.11815758433257531,
+          "free": true
+        },
+        {
+          "value": 54902.18695,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 90.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 401.61167876447735,
+          "uncertainty": 1.3360552338008738,
+          "free": true
+        },
+        {
+          "value": 96.2015999925773,
+          "uncertainty": 0.26949142130841625,
+          "free": true
+        },
+        {
+          "value": 0.16661071090021387,
+          "uncertainty": 0.023158646271303818,
+          "free": true
+        },
+        {
+          "value": 0.20724895700380638,
+          "uncertainty": 0.009709010766931866,
+          "free": true
+        },
+        {
+          "value": 0.19759422734648965,
+          "uncertainty": 0.0095701973617097,
+          "free": true
+        },
+        {
+          "value": 0.19004962642561887,
+          "uncertainty": 0.008792913130835567,
+          "free": true
+        },
+        {
+          "value": 0.2831345077925207,
+          "uncertainty": 0.010111602187375017,
+          "free": true
+        },
+        {
+          "value": 0.31777136755290214,
+          "uncertainty": 0.010401256951990451,
+          "free": true
+        },
+        {
+          "value": 0.2719072405686851,
+          "uncertainty": 0.007585920722617199,
+          "free": true
+        },
+        {
+          "value": 0.22678856179458576,
+          "uncertainty": 0.006625393615708531,
+          "free": true
+        },
+        {
+          "value": 0.20984412445335887,
+          "uncertainty": 0.005872694023655012,
+          "free": true
+        },
+        {
+          "value": 0.21558447065886402,
+          "uncertainty": 0.005632705794947297,
+          "free": true
+        },
+        {
+          "value": 0.15693524781531298,
+          "uncertainty": 0.004338186792592001,
+          "free": true
+        },
+        {
+          "value": 0.22595270709340518,
+          "uncertainty": 0.0049837358507508695,
+          "free": true
+        },
+        {
+          "value": 0.3647858341174237,
+          "uncertainty": 0.00916779072528264,
+          "free": true
+        },
+        {
+          "value": 0.4053426940410969,
+          "uncertainty": 0.009628123843905746,
+          "free": true
+        },
+        {
+          "value": 0.3428049206611234,
+          "uncertainty": 0.009750117478763108,
+          "free": true
+        },
+        {
+          "value": 0.5844039679998371,
+          "uncertainty": 0.013242383407255507,
+          "free": true
+        },
+        {
+          "value": 1.0215851876985398,
+          "uncertainty": 0.03286198711224271,
+          "free": true
+        },
+        {
+          "value": 1.216235774226414,
+          "uncertainty": 0.03408634990197156,
+          "free": true
+        },
+        {
+          "value": 0.8774305880420928,
+          "uncertainty": 0.01650293490030345,
+          "free": true
+        },
+        {
+          "value": 0.031567778747804254,
+          "uncertainty": 0.028722840614737347,
+          "free": true
+        }
+      ],
+      "edi_sha": "2bcd3620d3170d4f74c4e6dada9ed70fb7e3ff70",
+      "crysta_build_commit": "bea3cd1dcdd9c22dc3e2e28769e8ebd7e3b5c291",
+      "authoring_input": "tests/fixtures/multiphase/beer/projects/initial"
     }
   ]
 }

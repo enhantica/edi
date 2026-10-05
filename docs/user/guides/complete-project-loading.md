@@ -18,7 +18,10 @@ contents select which contract each experiment satisfies:
 - declared **`_data_range.<axis>_min/_max/_step`** values mean a **calculation** experiment: a
   grid is generated, carries no observation, and the fit entry points refuse it;
 - declaring **neither, or both**, is a load-time `edi.IoError` naming the offending file — as is
-  a project with no experiments at all, or more than one structure.
+  a project with no experiments at all, or a linked structure that names no structure of the project.
+
+A project may hold several structures, one `structures/<name>.edi` file each; an experiment's
+`_linked_structure` loop names the ones its pattern sums, each with its own scale.
 
 Any violation throws **never** a partially-populated `Project`. That is the boundary that makes a
 silent partial project unrepresentable: after a fit-ready load, refinement cannot fail for a data

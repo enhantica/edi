@@ -387,18 +387,27 @@ void seed_positional_start_companions(
     if (rows.empty()) {
         return;
     }
-    Structure& s = project.structure();
-    const crysta::Structure engine = to_crysta_structure(s);
-    const crysta::PositionalConstraints constraints = engine.positional_constraints();
-    const auto& positions = constraints.sites();
-    std::map<const Parameter*, std::pair<std::size_t, std::size_t>> homes;
-    for (std::size_t i = 0; i < s.atom_sites.size(); ++i) {
-        const crysta::SpecialPosition& position = positions[i].second;
-        Parameter* const fract[3] = {&s.atom_sites[i]->fract_x, &s.atom_sites[i]->fract_y,
-                                     &s.atom_sites[i]->fract_z};
-        for (std::size_t axis = 0; axis < 3; ++axis) {
-            if (position.axis_is_basic(axis)) {
-                homes.emplace(fract[axis], std::make_pair(i, axis));
+    // Every structure's tied coordinates: where each row's parameter sits (structure, site, axis).
+    struct Home {
+        std::size_t structure;
+        std::size_t site;
+        std::size_t axis;
+    };
+    std::vector<crysta::PositionalConstraints> constraints;
+    constraints.reserve(project.structures.size());
+    std::map<const Parameter*, Home> homes;
+    for (std::size_t k = 0; k < project.structures.size(); ++k) {
+        Structure& s = *project.structures[k];
+        constraints.push_back(to_crysta_structure(s).positional_constraints());
+        const auto& positions = constraints.back().sites();
+        for (std::size_t i = 0; i < s.atom_sites.size(); ++i) {
+            const crysta::SpecialPosition& position = positions[i].second;
+            Parameter* const fract[3] = {&s.atom_sites[i]->fract_x, &s.atom_sites[i]->fract_y,
+                                         &s.atom_sites[i]->fract_z};
+            for (std::size_t axis = 0; axis < 3; ++axis) {
+                if (position.axis_is_basic(axis)) {
+                    homes.emplace(fract[axis], Home{k, i, axis});
+                }
             }
         }
     }
@@ -422,9 +431,10 @@ void seed_positional_start_companions(
             }
             continue;
         }
-        const std::size_t site_index = home->second.first;
-        const std::size_t row_axis = home->second.second;
-        const crysta::SpecialPosition& position = positions[site_index].second;
+        Structure& s = *project.structures[home->second.structure];
+        const std::size_t site_index = home->second.site;
+        const std::size_t row_axis = home->second.axis;
+        const crysta::SpecialPosition& position = constraints[home->second.structure].sites()[site_index].second;
         const std::size_t local = position.axis_basic_index(row_axis);
         Parameter* const fract[3] = {&s.atom_sites[site_index]->fract_x,
                                      &s.atom_sites[site_index]->fract_y,
@@ -494,6 +504,23 @@ void seed_positional_start_companions(
 
 namespace {
 
+// Every structure of the model as crysta's, in order: name and declared scattering lengths included.
+// Each is built in place (a crysta structure never moves) and the list copied once, at its size.
+std::vector<crysta::Structure> to_crysta_structures(const Project& model) {
+    std::vector<std::unique_ptr<crysta::Structure>> built;
+    built.reserve(model.structures.size());
+    for (const auto& structure : model.structures) {
+        // NOLINTNEXTLINE(modernize-make-unique) — make_unique would move the built prvalue
+        built.emplace_back(new crysta::Structure(to_crysta_structure(*structure)));
+        built.back()->scattering_lengths_fm = structure->scattering_lengths_fm;
+    }
+    const auto values = std::views::transform(
+        built, [](const std::unique_ptr<crysta::Structure>& structure) -> const crysta::Structure& {
+            return *structure;
+        });
+    return std::vector<crysta::Structure>(values.begin(), values.end());
+}
+
 crysta::Project build_crysta_project(const Structure& structure, const ExperimentBase& experiment) {
     return crysta::Project(to_crysta_structure(structure), detail::to_crysta_experiment(experiment));
 }
@@ -551,7 +578,7 @@ using Index = std::map<std::string, Slot>;
 // `cproject` must already be in its FINAL storage: these pointers alias its members.
 Index build_index(Project& model, crysta::Project& cproject) {
     Index index;
-    crysta::Structure& cstructure = cproject.structure;
+    crysta::Structure& cstructure = cproject.structure();
     crysta::ExperimentBase& cexperiment = cproject.experiment();
 
     Cell& cell = model.structure().cell;
@@ -589,7 +616,7 @@ Index build_index(Project& model, crysta::Project& cproject) {
     index.emplace("experiment.instrument.calib_d_to_tof_reciprocal",
                   Slot{&cexperiment.instrument[3], &experiment.instrument.calib_d_to_tof_reciprocal});
     index.emplace("experiment.linked_structure.scale",
-                  Slot{&cexperiment.scale, &experiment.linked_structure.scale});
+                  Slot{&cexperiment.scale(), &experiment.linked_structure().scale});
     for (std::size_t i = 0; i < experiment.background.size(); ++i) {
         index.emplace(
             "experiment.background[" + std::to_string(i) + "].intensity",
@@ -615,13 +642,12 @@ Index build_index(Project& model, crysta::Project& cproject) {
                       Slot{&cexperiment.absorption[0], &*experiment.absorption.mu_r});
     }
     // The one preferred-orientation row, crysta's [march_r, march_random_fract] layout.
-    if (experiment.preferred_orientation.size() != 0 &&
-        cexperiment.preferred_orientation.size() == 2) {
+    if (experiment.preferred_orientation.size() != 0 && cexperiment.texture() != nullptr) {
         PrefOrient& row = *experiment.preferred_orientation[0];
         index.emplace("experiment.preferred_orientation[0].march_r",
-                      Slot{&cexperiment.preferred_orientation[0], &row.march_r});
+                      Slot{cexperiment.texture()->march.data(), &row.march_r});
         index.emplace("experiment.preferred_orientation[0].march_random_fract",
-                      Slot{&cexperiment.preferred_orientation[1], &row.march_random_fract});
+                      Slot{cexperiment.texture()->march.data() + 1, &row.march_random_fract});
     }
     return index;
 }
@@ -702,7 +728,7 @@ void validate_index(const Project& model, const Index& index, crysta::Project& c
             // a canonical addressable layout (cell.parameters[i], dictionary order) — so the six
             // slots are proven by ADDRESS IDENTITY instead, which detects any cell transposition
             // outright; the value check below then proves the completion put the mapped value there.
-            if (engine != &cproject.structure.cell.parameters[*cell_index]) {
+            if (engine != &cproject.structure().cell.parameters[*cell_index]) {
                 throw std::invalid_argument(
                     "edi cached model: index validation failed — path '" + paths[i] +
                     "' does not address its dictionary-order engine cell slot");
@@ -912,10 +938,7 @@ void save_project_via_crysta(const Project& model, const std::string& directory)
             built.absorption.clear();
         }
     }
-    crysta::Project cproject(to_crysta_structure(model.structure()),
-                             experiment_list(built_experiments));
-    cproject.structure.name = model.structure().name;
-    cproject.structure.scattering_lengths_fm = model.structure().scattering_lengths_fm;
+    crysta::Project cproject(to_crysta_structures(model), experiment_list(built_experiments));
     cproject.fitting_mode =
         crysta::model_token_from_file(crysta::TokenField::FittingMode,
                                       crysta::BeamModeEnum::TimeOfFlight, model.fitting_mode);
@@ -976,13 +999,12 @@ void save_project_via_crysta(const Project& model, const std::string& directory)
     // carry its own prior state (lossless undo), but the persisted _fit_parameter loop keeps
     // only the designated axis's row — the representative when free, else the first free
     // axis — the same rule capture and landing use in both products.
-    {
-        const crysta::PositionalConstraints constraints =
-            cproject.structure.positional_constraints();
+    for (crysta::Structure& cstructure : cproject.structures) {
+        const crysta::PositionalConstraints constraints = cstructure.positional_constraints();
         const auto& positions = constraints.sites();
-        for (std::size_t i = 0; i < cproject.structure.atom_sites.size(); ++i) {
+        for (std::size_t i = 0; i < cstructure.atom_sites.size(); ++i) {
             const crysta::SpecialPosition& position = positions[i].second;
-            crysta::AtomSite& site = cproject.structure.atom_sites[i];
+            crysta::AtomSite& site = cstructure.atom_sites[i];
             bool seen[3] = {false, false, false};
             int designated[3] = {-1, -1, -1};
             for (std::size_t axis = 0; axis < 3; ++axis) {
@@ -1033,8 +1055,9 @@ void save_project_via_crysta(const Project& model, const std::string& directory)
         }
         for (std::size_t index = 0; index < current.size(); ++index) {
             if (!current[index]) {
-                crysta::Parameter& scale = cproject.experiments[index].scale;
-                scale.set_value(scale.value());
+                for (crysta::LinkedStructure& link : cproject.experiments[index].linked_structures) {
+                    link.scale.set_value(link.scale.value());
+                }
             }
         }
     }
@@ -1042,16 +1065,19 @@ void save_project_via_crysta(const Project& model, const std::string& directory)
     // current. The engine structure calculates them here (the bank calculation above already
     // did, when it ran), or — when edi's are not current — an equal-value write to one of their
     // inputs stales any the engine holds, and crysta's writer leaves them out.
-    if (model.structure().geometry_current()) {
-        if (crysta::geometry_state(cproject.structure) != crysta::ComputedState::Current) {
-            try {
-                crysta::calculate_structure(cproject.structure);
-            } catch (const std::invalid_argument&) {  // NOLINT(bugprone-empty-catch) — uncomputed
+    for (std::size_t index = 0; index < model.structures.size(); ++index) {
+        crysta::Structure& cstructure = cproject.structures.at(index);
+        if (model.structures[index]->geometry_current()) {
+            if (crysta::geometry_state(cstructure) != crysta::ComputedState::Current) {
+                try {
+                    crysta::calculate_structure(cstructure);
+                } catch (const std::invalid_argument&) {  // NOLINT(bugprone-empty-catch) — uncomputed
+                }
             }
+        } else {
+            crysta::Geom& geom = cstructure.geom;
+            geom.bond_distance_inc = std::optional<double>(geom.bond_distance_inc.get());
         }
-    } else {
-        crysta::Geom& geom = cproject.structure.geom;
-        geom.bond_distance_inc = std::optional<double>(geom.bond_distance_inc.get());
     }
     try {
         crysta::save_project(cproject, directory);
@@ -1140,6 +1166,17 @@ std::vector<crysta::AtomSite> to_crysta_atom_sites(const ItemVec<AtomSite>& atom
     }
     return sites;
 }
+
+namespace {
+// The engine experiment is built around one scale. It is seeded from the first row, and
+// apply_post_build_fields then writes every link, so no phase is dropped.
+const LinkedStructure& seed_link(const ExperimentBase& e) {
+    if (e.linked_structures.empty()) {
+        throw std::out_of_range("experiment '" + e.name.value() + "' links no structure");
+    }
+    return *e.linked_structures[0];
+}
+}  // namespace
 
 // Fields the public TofJorgensenExperiment builder has no setter for, applied to the built
 // experiment. They are plain public members of crysta::ExperimentBase, so this needs no
@@ -1245,33 +1282,50 @@ void apply_post_build_fields(const ExperimentBase& e, crysta::ExperimentBase& bu
         built.absorption.push_back(
             param(e.absorption.mu_r.value_or(Parameter{}), crysta::CORRECTION, "mu_r"));
     }
-    // The one preferred-orientation row crosses as crysta's layout —
-    // [march_r, march_random_fract], the fixed axis and the structure it names. crysta's loader
-    // refuses a second row and a TOF row; a hand-built model reaching here with either fails
-    // closed rather than silently dropping one.
-    built.preferred_orientation.clear();
-    if (e.preferred_orientation.size() > 1 ||
-        (e.preferred_orientation.size() == 1 &&
-         built.kind != crysta::BeamModeEnum::ConstantWavelength)) {
-        throw std::invalid_argument("experiment '" + e.name +
-                                    "': preferred orientation takes one row, on a "
-                                    "constant-wavelength experiment");
-    }
-    if (e.preferred_orientation.size() == 1) {
-        const PrefOrient& row = *e.preferred_orientation[0];
-        // Review-2 F1: the row's key must name the structure it changes — a key mutated after
-        // insertion is refused here, before any calculation or save crosses the boundary.
-        // An experiment that declares no linked structure cannot prove the key, so it refuses too.
-        if (e.linked_structure.structure_id.empty()) {
-            fail_domain("experiment '" + e.name + "'", "preferred-orientation-structure",
-                        "_preferred_orientation.structure_id '" + row.structure_id +
-                            "' cannot be proven: the experiment declares no linked structure");
+    // The linked structures (phases) cross row by row: id, scale and whether each takes part. The
+    // first keeps the scale the experiment was built with; every other is converted the same way.
+    std::vector<crysta::LinkedStructure> links;
+    links.reserve(e.linked_structures.size());
+    for (const auto& link : e.linked_structures) {
+        if (links.empty() && !built.linked_structures.empty()) {
+            crysta::LinkedStructure first(built.linked_structures.at(0));
+            first.structure_id = link->structure_id.value();
+            first.enabled = link->enabled.get();
+            links.push_back(first);
+        } else {
+            links.emplace_back(link->structure_id.value(),
+                               param(link->scale, crysta::SCALE, "scale"), link->enabled.get());
         }
-        if (row.structure_id != e.linked_structure.structure_id) {
+    }
+    built.linked_structures.assign(links);
+    // Every preferred-orientation row crosses as crysta's layout — [march_r, march_random_fract],
+    // the fixed axis and the structure it names. crysta's loader refuses a TOF row; a hand-built
+    // model reaching here with one fails closed rather than silently dropping it.
+    std::vector<crysta::PreferredOrientation> textures;
+    if (e.preferred_orientation.size() != 0 && built.kind != crysta::BeamModeEnum::ConstantWavelength) {
+        throw std::invalid_argument("experiment '" + e.name +
+                                    "': preferred orientation is constant-wavelength only");
+    }
+    for (const auto& item : e.preferred_orientation) {
+        const PrefOrient& row = *item;
+        // Review-2 F1: the row's key must name a structure it changes — a key mutated after
+        // insertion is refused here, before any calculation or save crosses the boundary.
+        const bool linked = std::any_of(
+            e.linked_structures.begin(), e.linked_structures.end(), [&](const auto& link) {
+                return !link->structure_id.value().empty() &&
+                       link->structure_id.value() == row.structure_id.value();
+            });
+        if (!linked) {
+            const std::string first =
+                e.linked_structures.size() == 1 ? e.linked_structure().structure_id.value() : std::string();
+            if (first.empty() && e.linked_structures.size() == 1) {
+                fail_domain("experiment '" + e.name + "'", "preferred-orientation-structure",
+                            "_preferred_orientation.structure_id '" + row.structure_id.value() +
+                                "' cannot be proven: the experiment declares no linked structure");
+            }
             fail_domain("experiment '" + e.name + "'", "preferred-orientation-structure",
-                        "_preferred_orientation.structure_id '" + row.structure_id +
-                            "' does not name the linked structure '" +
-                            e.linked_structure.structure_id + "'");
+                        "_preferred_orientation.structure_id '" + row.structure_id.value() +
+                            "' does not name the linked structure '" + first + "'");
         }
         // Review-3 F1: the domain, as a structured error before anything crosses (crysta's own
         // boundary repeats it): finite r > 0, finite f in [0, 1], a nonzero axis.
@@ -1289,12 +1343,11 @@ void apply_post_build_fields(const ExperimentBase& e, crysta::ExperimentBase& bu
                         "lie within the Miller-index bound " +
                             std::to_string(kPreferredOrientationAxisBound));
         }
-        built.preferred_orientation.push_back(param(row.march_r, crysta::CORRECTION, "march_r"));
-        built.preferred_orientation.push_back(
-            param(row.march_random_fract, crysta::CORRECTION, "march_random_fract"));
-        built.preferred_orientation_axis = {row.index_h, row.index_k, row.index_l};
-        built.preferred_orientation_structure_id = row.structure_id;
+        textures.emplace_back(row.structure_id.value(), param(row.march_r, crysta::CORRECTION, "march_r"),
+                              param(row.march_random_fract, crysta::CORRECTION, "march_random_fract"),
+                              std::array<int, 3>{row.index_h, row.index_k, row.index_l});
     }
+    built.preferred_orientations.assign(textures);
 }
 
 // The CW conversion: crysta has no named CW builder at b9aee906, so the adapter uses the public
@@ -1372,7 +1425,7 @@ crysta::BraggPdExperiment to_crysta_cwl_experiment(const ExperimentBase& e) {
                                 param(point->intensity, crysta::BACKGROUND, "intensity"));
     }
     crysta::BraggPdExperiment built(std::move(peak), std::move(instrument),
-                             param(e.linked_structure.scale, crysta::SCALE, "scale"), std::move(background));
+                             param(seed_link(e).scale, crysta::SCALE, "scale"), std::move(background));
     built.cutoff_fwhm = e.peak.cutoff_fwhm;
     built.kind = crysta::BeamModeEnum::ConstantWavelength;  // before the post-build fill: the
     // TOF-only abscor guard reads it
@@ -1441,7 +1494,7 @@ crysta::BraggPdExperiment to_crysta_experiment(const ExperimentBase& e) {
         .dtt1(state(e.instrument.calib_d_to_tof_linear))
         .dtt2(state(e.instrument.calib_d_to_tof_quadratic))
         .d_to_tof_reciprocal(state(e.instrument.calib_d_to_tof_reciprocal))
-        .scale(state(e.linked_structure.scale))
+        .scale(state(seed_link(e).scale))
         .setup_twotheta_bank(e.instrument.setup_twotheta_bank.value)
         .cutoff_fwhm(e.peak.cutoff_fwhm);
 
@@ -1832,7 +1885,8 @@ RelationProject relation_project(const Project& model) {
     for (const auto& bank_item : model.experiments) {
         build_on_heap(converted.banks, *bank_item);
     }
-    converted.project = std::make_unique<crysta::Project>(to_crysta_structure(model.structure()),
+    // Every structure of the project (its phases), so each one's relations are compiled.
+    converted.project = std::make_unique<crysta::Project>(to_crysta_structures(model),
                                                           experiment_list(converted.banks));
     fill_crysta_relations(model, *converted.project);
     return converted;
@@ -2013,16 +2067,14 @@ std::string absorption_registry_token(BeamModeEnum mode, const std::string& file
 
 std::string engine_model_dump(const Project& project) {
     const BuiltExperiments banks = calculation_banks(project.experiments);
-    crysta::Project engine(to_crysta_structure(project.structure()), experiment_list(banks));
-    engine.structure.scattering_lengths_fm = project.structure().scattering_lengths_fm;
+    crysta::Project engine(to_crysta_structures(project), experiment_list(banks));
     fill_crysta_relations(project, engine);
     return crysta::model_dump(engine);
 }
 
 bool engine_folds_reflections(const Project& project) {
     const BuiltExperiments banks = calculation_banks(project.experiments);
-    const crysta::Project engine(to_crysta_structure(project.structure()),
-                                 experiment_list(banks));
+    const crysta::Project engine(to_crysta_structures(project), experiment_list(banks));
     return crysta::folds_reflections(engine);
 }
 
@@ -2041,8 +2093,7 @@ void Project::publish_calculation() {
             structures.record(), edits_.record(), edits_.record()->epoch.value(), link(), aliases.record(),
             constraints.record(), detail::relation_inputs(aliases, constraints)}));
     }
-    crysta::Project engine(to_crysta_structure(structure()), experiment_list(banks));
-    engine.structure.scattering_lengths_fm = structure().scattering_lengths_fm;
+    crysta::Project engine(to_crysta_structures(*this), experiment_list(banks));
     fill_crysta_relations(*this, engine);
 
     std::vector<PdDataBase> data;
@@ -2437,7 +2488,9 @@ std::vector<std::string> identity_paths(const IterationCallback& subscriber,
 // completion pass, because the pattern must describe the model a SAVE would serialise. The three paths share
 // one function rather than three agreeing copies: a fourth entry point cannot forget a step it never spells.
 void publish_fit_state(Project& project, crysta::Project& converted) {
-    rebalance_positional_fit_state(project.structure());  // review-9 F1: lossless snapshot hand-off
+    for (const auto& structure : project.structures) {  // every structure (phase)
+        rebalance_positional_fit_state(*structure);  // review-9 F1: lossless snapshot hand-off
+    }
     // Every dependent as crysta completed it on the fit's own project (Wyckoff followers, cell
     // siblings and constrained parameters), values and e.s.d.s.
     copy_dependents(converted, project, Completion::ValuesAndUncertainties);
@@ -2574,15 +2627,31 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
     // structured ValueError, never a partial/silent result. The model is written only on success.
     // The checks themselves are edi-side policy (fit_policy.cpp).
     validate_descent(descent, "edi fit");
-    detail::validate_fit_request(grid, observed, sigma, structure());
+    detail::validate_fit_request(grid, observed, sigma, *this);
     try {
         // Stateless rebuild-per-fit: the same single crysta-touching build path
         // (build_crysta_project + select_scattering) the forward accessors use — no persistent
         // CachedForwardModel (a later C09 slice), and nothing here forecloses it.
-        crysta::Project project = build_crysta_project(structure(), experiment());
+        // A project of several structures (phases), or an experiment that disables its one link, fits
+        // through crysta's phase-sum residual over every structure; any other through the
+        // single-structure residual, as before.
+        const bool phases = structures.size() > 1 || experiment().linked_structures.size() != 1 ||
+                            !experiment().linked_structure().enabled.get();
+        crysta::Project project = [&]() -> crysta::Project {
+            if (phases) {
+                return crysta::Project(to_crysta_structures(*this),
+                                       std::vector<crysta::BraggPdExperiment>{detail::to_crysta_experiment(experiment())});
+            }
+            return build_crysta_project(structure(), experiment());
+        }();
         fill_crysta_relations(*this, project);
+        // The atom-site rule on exactly this fit's participants: the selected bank's enabled phases.
+        detail::require_populated_participants(project, "edi fit");
+        if (phases) {
+            // The phase-sum residual reads the measured pattern from the experiment, and masks it itself.
+            project.experiment().data = crysta::PdDataBase(grid, observed, sigma);
+        }
         const std::size_t considered = project.collect_parameters().size();  // _fit_result
-        crysta::NeutronScattering scattering = select_scattering(structure());
         make_fit_ready(project.experiment());
 
         // Measured pattern -> mask the model's excluded regions, exactly as the crysta CLI does
@@ -2607,142 +2676,151 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
                 "edi fit: no free parameters (mark parameters refinable via their free flags)");
         }
 
+        const auto finish = [&](auto& provider) -> FitResultBase {
+
+            // Pre-fit values, captured from the provider BEFORE the minimizer runs — the same
+            // labels()/values() pairing the crysta CLI uses to build its own start column. Held as raw
+            // engine labels here and translated below through the same resolver as the refined values,
+            // so `start` and `values` end up sharing one key set and no engine label escapes.
+            std::map<std::string, double> start_by_label;
+            {
+                const std::vector<std::string> labels = provider.labels();
+                const std::vector<double> values = provider.values();
+                for (std::size_t index = 0; index < labels.size() && index < values.size(); ++index) {
+                    start_by_label[labels[index]] = values[index];
+                }
+            }
+
+            // dof for the per-iteration reduced chi-square, from the MASKED length — the same
+            // denominator crysta's own record uses.
+            const double dof = detail::reduced_chi_square_dof(provider.n_data(), provider.labels().size());
+            // Pre-fit record: the initial model's Rwp/reduced-chi2 at the start params, via crysta's
+            // shared residual seam — no fit, no numerics change. Always computed (engine-side, not a
+            // host crossing) so the post-hoc report can render the starting row; the streamed surface
+            // additionally gets it in the preamble below.
+            const crysta::IterationRecord crysta_pre_fit = crysta::pre_fit_record(provider, dof);
+            const IterationRecord pre_fit{crysta_pre_fit.iteration, crysta_pre_fit.rwp,
+                                          crysta_pre_fit.reduced_chi_square, crysta_pre_fit.elapsed_ms,
+                                          crysta_pre_fit.unevaluable_trials};
+            // Preamble: fired ONCE here — after the provider is built (so the counts are
+            // known) and the pre-fit is evaluated, BEFORE the LM loop. Empty callback => no host
+            // crossing. Single-bank path: `banks` empty, mode single (mirrors crysta).
+            if (on_start) {
+                on_start(FitPreamble{/*joint=*/false, /*banks=*/{}, n_points_loaded, provider.n_data(),
+                                     provider.n_free(), pre_fit});
+            }
+            const std::vector<std::string> paths =
+                identity_paths(on_iteration, provider.labels(), [this](const std::string& label) {
+                    return detail::resolve_project_label(*this, experiment(), label);
+                });
+            const auto fit_start = std::chrono::steady_clock::now();
+            crysta::IterationHistoryCollector collector(dof, fit_start);
+            // The subscriber is composed ON TOP of the always-on collector, so history exists whether
+            // or not anyone subscribed, and an absent subscriber crosses no host boundary at all.
+            // (F-bound) /: the project's declared `_minimizer.*` conditions — the iteration budget
+            // (absent: the historical 50 cap), the descent and the chi-square stop. A declared
+            // descent or tolerance goes through crysta's registry entry point (DescentRequest, id
+            // validated above); a project declaring neither keeps the historical direct call
+            // byte-for-byte, so the default path cannot move a number by construction. The request's
+            // seed/polish pair mirrors `separable_linear=true` exactly (crysta descent.hpp: the
+            // ordinary provider overloads set both from it).
+            crysta::DescentRequest request =
+                declared_request(descent, minimizer_max_iterations, minimizer_chi_square_tolerance);
+            const crysta::FitResultBase result = [&] {
+                if (descent.empty() && minimizer_chi_square_tolerance <= 0.0) {
+                    return crysta::fit_problem(
+                        provider, /*separable_linear=*/true, request.max_iterations,
+                        collector.callback(to_engine_callback(on_iteration, dof, fit_start, paths)),
+                        should_cancel);  // The cooperative cancel
+                }
+                request.on_iteration =
+                    collector.callback(to_engine_callback(on_iteration, dof, fit_start, paths));
+                request.should_cancel = should_cancel;
+                return crysta::fit_problem(provider, request);
+            }();
+            const double elapsed_ms = std::chrono::duration<double, std::milli>(
+                                          std::chrono::steady_clock::now() - fit_start)
+                                          .count();
+
+            // Translate EVERY crysta result label to an edi-owned parameter (path + write-back target)
+            // FIRST, total and fail-closed: an unmapped/unknown label is a structured error, never a
+            // silent drop or a raw-label passthrough. Only once the whole result resolves do we build the
+            // edi-owned FitResultBase and apply the model write-back — so no crysta engine label ever
+            // crosses the `import edi` boundary and a partial/garbled result can never mutate the model.
+            std::vector<detail::RefinedValue> refined;
+            refined.reserve(result.values.size());
+            for (const auto& [label, value] : result.values) {
+                std::optional<detail::ResolvedParameter> resolved =
+                    detail::resolve_project_label(*this, experiment(), label);
+                if (!resolved) {
+                    throw std::invalid_argument(
+                        "edi fit: crysta result label '" + label +
+                        "' does not resolve to an edi model parameter (unmapped engine label)");
+                }
+                const auto found = result.uncertainty.find(label);
+                refined.push_back({std::move(*resolved), value,
+                                   found != result.uncertainty.end() ? found->second : 0.0});
+            }
+
+            FitResultBase outcome;
+            outcome.rwp = result.rwp;
+            outcome.reduced_chi_square = result.reduced_chi_square;
+            outcome.iterations = result.iterations;
+            outcome.converged = result.converged;
+            outcome.n_points_loaded = n_points_loaded;
+            outcome.n_points_fitted = provider.n_data();
+            outcome.iterations_history = to_edi(collector.history());
+            outcome.pre_fit = pre_fit;
+            outcome.elapsed_ms = elapsed_ms;
+            outcome.status = to_edi(crysta::classify_fit_status(result));
+            // The engine's boundary-contact counters, verbatim — never recomputed and never
+            // defaulted: a zero here is the engine's zero, not edi's.
+            outcome.unevaluable_trials = result.unevaluable_trials;
+            outcome.terminal_unevaluable_trials = result.terminal_unevaluable_trials;
+            // Engine-keyed copies for the machine record (see FitResultBase::engine_values).
+            outcome.engine_values = result.values;
+            outcome.engine_uncertainty = result.uncertainty;
+            outcome.descent = result.descent;
+            outcome.reflections_folded = result.reflections_folded;
+            outcome.structure_factor_evaluations = result.structure_factor_evaluations;
+            // Key the result by the edi-owned identity path (no crysta label leaked).
+            for (const detail::RefinedValue& item : refined) {
+                outcome.values[item.resolved.path] = item.value;
+                outcome.uncertainty[item.resolved.path] = item.uncertainty;
+            }
+            // The pre-fit values, translated through the SAME resolver so `start` is keyed identically
+            // to `values`. A label that resolved above always resolves here (same model, same grammar).
+            for (const auto& [label, value] : start_by_label) {
+                std::optional<detail::ResolvedParameter> resolved =
+                    detail::resolve_project_label(*this, experiment(), label);
+                if (resolved) {
+                    outcome.start[resolved->path] = value;
+                }
+            }
+            // `banks` stays EMPTY on the single-bank path: crysta reports no per-bank block for a
+            // single-file fit, and fabricating one from the global metrics would be edi inventing a
+            // number the engine never produced.
+
+            // Write the refined value/esd back onto the edi model Parameters (all labels resolved above).
+            detail::write_back(refined);
+            crysta::write_fit_result_into(project, result);  // crysta completes the dependents
+            publish_fit_state(*this, project);
+            record_fit_result(*this, outcome, considered);
+            return outcome;
+        };
+        if (phases) {
+            crysta::PhaseSumResidual provider(project);
+            return finish(provider);
+        }
         // Delegate the ENTIRE LM loop to crysta's public minimizer at the CLI defaults
         // (separable_linear, max_iter 50, CutoffPolicy::Off, SolverRung::Lm, chi2/param tol) — the
         // defaults fit_problem already carries, so the fit is bit-comparable to the CLI oracle.
+        // The one structure's declared scattering lengths; a phase fit reads each phase's own.
+        crysta::NeutronScattering scattering = select_scattering(structure());
         crysta::PowderBraggResidual provider(project, scattering, std::move(measured),
                                              experiment().instrument.setup_twotheta_bank.value, experiment().peak.cutoff_fwhm,
                                              std::move(free));
-
-        // Pre-fit values, captured from the provider BEFORE the minimizer runs — the same
-        // labels()/values() pairing the crysta CLI uses to build its own start column. Held as raw
-        // engine labels here and translated below through the same resolver as the refined values,
-        // so `start` and `values` end up sharing one key set and no engine label escapes.
-        std::map<std::string, double> start_by_label;
-        {
-            const std::vector<std::string> labels = provider.labels();
-            const std::vector<double> values = provider.values();
-            for (std::size_t index = 0; index < labels.size() && index < values.size(); ++index) {
-                start_by_label[labels[index]] = values[index];
-            }
-        }
-
-        // dof for the per-iteration reduced chi-square, from the MASKED length — the same
-        // denominator crysta's own record uses.
-        const double dof = detail::reduced_chi_square_dof(provider.n_data(), provider.labels().size());
-        // Pre-fit record: the initial model's Rwp/reduced-chi2 at the start params, via crysta's
-        // shared residual seam — no fit, no numerics change. Always computed (engine-side, not a
-        // host crossing) so the post-hoc report can render the starting row; the streamed surface
-        // additionally gets it in the preamble below.
-        const crysta::IterationRecord crysta_pre_fit = crysta::pre_fit_record(provider, dof);
-        const IterationRecord pre_fit{crysta_pre_fit.iteration, crysta_pre_fit.rwp,
-                                      crysta_pre_fit.reduced_chi_square, crysta_pre_fit.elapsed_ms,
-                                      crysta_pre_fit.unevaluable_trials};
-        // Preamble: fired ONCE here — after the provider is built (so the counts are
-        // known) and the pre-fit is evaluated, BEFORE the LM loop. Empty callback => no host
-        // crossing. Single-bank path: `banks` empty, mode single (mirrors crysta).
-        if (on_start) {
-            on_start(FitPreamble{/*joint=*/false, /*banks=*/{}, n_points_loaded, provider.n_data(),
-                                 provider.n_free(), pre_fit});
-        }
-        const std::vector<std::string> paths =
-            identity_paths(on_iteration, provider.labels(), [this](const std::string& label) {
-                return detail::resolve_label(structure(), experiment(), label);
-            });
-        const auto fit_start = std::chrono::steady_clock::now();
-        crysta::IterationHistoryCollector collector(dof, fit_start);
-        // The subscriber is composed ON TOP of the always-on collector, so history exists whether
-        // or not anyone subscribed, and an absent subscriber crosses no host boundary at all.
-        // (F-bound) /: the project's declared `_minimizer.*` conditions — the iteration budget
-        // (absent: the historical 50 cap), the descent and the chi-square stop. A declared
-        // descent or tolerance goes through crysta's registry entry point (DescentRequest, id
-        // validated above); a project declaring neither keeps the historical direct call
-        // byte-for-byte, so the default path cannot move a number by construction. The request's
-        // seed/polish pair mirrors `separable_linear=true` exactly (crysta descent.hpp: the
-        // ordinary provider overloads set both from it).
-        crysta::DescentRequest request =
-            declared_request(descent, minimizer_max_iterations, minimizer_chi_square_tolerance);
-        const crysta::FitResultBase result = [&] {
-            if (descent.empty() && minimizer_chi_square_tolerance <= 0.0) {
-                return crysta::fit_problem(
-                    provider, /*separable_linear=*/true, request.max_iterations,
-                    collector.callback(to_engine_callback(on_iteration, dof, fit_start, paths)),
-                    should_cancel);  // The cooperative cancel
-            }
-            request.on_iteration =
-                collector.callback(to_engine_callback(on_iteration, dof, fit_start, paths));
-            request.should_cancel = should_cancel;
-            return crysta::fit_problem(provider, request);
-        }();
-        const double elapsed_ms = std::chrono::duration<double, std::milli>(
-                                      std::chrono::steady_clock::now() - fit_start)
-                                      .count();
-
-        // Translate EVERY crysta result label to an edi-owned parameter (path + write-back target)
-        // FIRST, total and fail-closed: an unmapped/unknown label is a structured error, never a
-        // silent drop or a raw-label passthrough. Only once the whole result resolves do we build the
-        // edi-owned FitResultBase and apply the model write-back — so no crysta engine label ever
-        // crosses the `import edi` boundary and a partial/garbled result can never mutate the model.
-        std::vector<detail::RefinedValue> refined;
-        refined.reserve(result.values.size());
-        for (const auto& [label, value] : result.values) {
-            std::optional<detail::ResolvedParameter> resolved =
-                detail::resolve_label(structure(), experiment(), label);
-            if (!resolved) {
-                throw std::invalid_argument(
-                    "edi fit: crysta result label '" + label +
-                    "' does not resolve to an edi model parameter (unmapped engine label)");
-            }
-            const auto found = result.uncertainty.find(label);
-            refined.push_back({std::move(*resolved), value,
-                               found != result.uncertainty.end() ? found->second : 0.0});
-        }
-
-        FitResultBase outcome;
-        outcome.rwp = result.rwp;
-        outcome.reduced_chi_square = result.reduced_chi_square;
-        outcome.iterations = result.iterations;
-        outcome.converged = result.converged;
-        outcome.n_points_loaded = n_points_loaded;
-        outcome.n_points_fitted = provider.n_data();
-        outcome.iterations_history = to_edi(collector.history());
-        outcome.pre_fit = pre_fit;
-        outcome.elapsed_ms = elapsed_ms;
-        outcome.status = to_edi(crysta::classify_fit_status(result));
-        // The engine's boundary-contact counters, verbatim — never recomputed and never
-        // defaulted: a zero here is the engine's zero, not edi's.
-        outcome.unevaluable_trials = result.unevaluable_trials;
-        outcome.terminal_unevaluable_trials = result.terminal_unevaluable_trials;
-        // Engine-keyed copies for the machine record (see FitResultBase::engine_values).
-        outcome.engine_values = result.values;
-        outcome.engine_uncertainty = result.uncertainty;
-        outcome.descent = result.descent;
-        outcome.reflections_folded = result.reflections_folded;
-        outcome.structure_factor_evaluations = result.structure_factor_evaluations;
-        // Key the result by the edi-owned identity path (no crysta label leaked).
-        for (const detail::RefinedValue& item : refined) {
-            outcome.values[item.resolved.path] = item.value;
-            outcome.uncertainty[item.resolved.path] = item.uncertainty;
-        }
-        // The pre-fit values, translated through the SAME resolver so `start` is keyed identically
-        // to `values`. A label that resolved above always resolves here (same model, same grammar).
-        for (const auto& [label, value] : start_by_label) {
-            std::optional<detail::ResolvedParameter> resolved =
-                detail::resolve_label(structure(), experiment(), label);
-            if (resolved) {
-                outcome.start[resolved->path] = value;
-            }
-        }
-        // `banks` stays EMPTY on the single-bank path: crysta reports no per-bank block for a
-        // single-file fit, and fabricating one from the global metrics would be edi inventing a
-        // number the engine never produced.
-
-        // Write the refined value/esd back onto the edi model Parameters (all labels resolved above).
-        detail::write_back(refined);
-        crysta::write_fit_result_into(project, result);  // crysta completes the dependents
-        publish_fit_state(*this, project);
-        record_fit_result(*this, outcome, considered);
-        return outcome;
+        return finish(provider);
     } catch (const std::invalid_argument&) {
         throw;  // already a clean, structured ValueError — surface as-is.
     } catch (const ValidationError&) {
@@ -2982,11 +3060,20 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         // structure and the template experiment, with the identity and declarations the
         // sequential driver reads (structure name and experiment name feed the results.csv
         // column grammar; the scan block and iteration bound are the declared inputs).
+        // The engine refuses a sequential or independent fit of several linked structures; this
+        // single-structure build would otherwise fit the first structure alone and ignore the rest.
+        if (structures.size() > 1 || experiment().linked_structures.size() != 1 ||
+            !experiment().linked_structure().enabled.get()) {
+            throw std::invalid_argument(
+                "edi fit_sequential: a sequential or independent fit with several linked structures is not "
+                "supported yet");
+        }
         crysta::Project cproject = build_crysta_project(structure(), experiment());
+        detail::require_populated_participants(cproject, "edi fit_sequential");
         fill_crysta_relations(*this, cproject);
         make_fit_ready(cproject.experiment());
-        cproject.structure.name = structure().name;
-        cproject.structure.scattering_lengths_fm = structure().scattering_lengths_fm;
+        cproject.structure().name = structure().name;
+        cproject.structure().scattering_lengths_fm = structure().scattering_lengths_fm;
         // Review-1 F4: forward the DECLARED mode, never a hard-coded one — pinning
         // "sequential" here would have run an `independent` project chained, silently answering
         // a different question than the project declares.
@@ -3168,7 +3255,7 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
     // engine contact, so a malformed request can never partially mutate the model (ADR-0003 pt 5).
     // The checks themselves are edi-side policy (fit_policy.cpp).
     validate_descent(descent, "edi fit_joint");
-    detail::validate_joint_request(structure(), experiments, patterns);
+    detail::validate_joint_request(*this, experiments, patterns);
     try {
         // Stateless rebuild-per-fit, the same shape as the single-bank path: one crysta Project over
         // the shared structure and EVERY loaded bank, so crysta's own free_from_model dispatches to
@@ -3179,13 +3266,34 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
         for (const auto& experiment_item : experiments) {
             make_fit_ready(build_on_heap(built, *experiment_item));
         }
-        crysta::Project project(to_crysta_structure(structure()), experiment_list(built));
+        // A project of several structures (phases), or a bank that disables its one link, fits through
+        // crysta's phase-sum residual over every structure; any other through the joint residual.
+        const bool phases =
+            structures.size() > 1 ||
+            std::any_of(experiments.begin(), experiments.end(), [](const auto& experiment) {
+                return experiment->linked_structures.size() != 1 || !experiment->linked_structure().enabled.get();
+            });
+        crysta::Project project = [&]() -> crysta::Project {
+            if (phases) {
+                return crysta::Project(to_crysta_structures(*this), experiment_list(built));
+            }
+            return crysta::Project(to_crysta_structure(structure()), experiment_list(built));
+        }();
         fill_crysta_relations(*this, project);
+        // The atom-site rule on exactly this fit's participants: every bank's enabled phases.
+        detail::require_populated_participants(project, "edi fit_joint");
+        if (phases) {
+            // The phase-sum residual reads each bank's measured pattern from its experiment, and masks
+            // it itself.
+            for (std::size_t bank = 0; bank < patterns.size(); ++bank) {
+                project.experiments[bank].data = crysta::PdDataBase(
+                    patterns[bank].axis(), patterns[bank].intensity_meas.get(), patterns[bank].intensity_meas_su.get());
+            }
+        }
         const std::size_t considered = project.collect_parameters().size();  // _fit_result
         project.fitting_mode = crysta::model_token_from_file(
             crysta::TokenField::FittingMode, crysta::BeamModeEnum::TimeOfFlight,
             fitting_mode.empty() ? std::string("joint") : fitting_mode);
-        crysta::NeutronScattering scattering = select_scattering(structure());
 
         // One masked pattern per bank, in `experiments` order. The joint residual's constructor does
         // NOT apply exclusions (only its from_model helper does, and that reads data embedded in the
@@ -3208,11 +3316,143 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
             measured.push_back(std::move(pattern));
         }
 
+        const auto finish = [&](auto& provider) -> FitResultBase {
+            if (provider.n_free() == 0) {
+                throw std::invalid_argument("edi fit_joint: no free parameters (mark parameters "
+                                            "refinable via their free flags)");
+            }
+
+            // Pre-fit values — captured before the minimizer, translated below (see the single bank
+            // path for the rationale). Joint labels carry their `<bank>.` prefix and resolve through
+            // resolve_joint_label, exactly as the refined values do.
+            std::map<std::string, double> start_by_label;
+            {
+                const std::vector<std::string> labels = provider.labels();
+                const std::vector<double> values = provider.values();
+                for (std::size_t index = 0; index < labels.size() && index < values.size(); ++index) {
+                    start_by_label[labels[index]] = values[index];
+                }
+            }
+
+            const double dof = detail::reduced_chi_square_dof(provider.n_data(), provider.n_free());
+            // Pre-fit record at the joint start params — the shared residual seam, no fit.
+            const crysta::IterationRecord crysta_pre_fit = crysta::pre_fit_record(provider, dof);
+            const IterationRecord pre_fit{crysta_pre_fit.iteration, crysta_pre_fit.rwp,
+                                          crysta_pre_fit.reduced_chi_square, crysta_pre_fit.elapsed_ms,
+                                          crysta_pre_fit.unevaluable_trials};
+            // Preamble: fired ONCE before the loop with the joint bank names + counts.
+            if (on_start) {
+                std::vector<std::string> bank_names;
+                bank_names.reserve(experiments.size());
+                for (const auto& bank_item : experiments) {
+                    bank_names.push_back(bank_item->name);
+                }
+                on_start(FitPreamble{/*joint=*/true, std::move(bank_names), n_points_loaded,
+                                     provider.n_data(), provider.n_free(), pre_fit});
+            }
+            const std::vector<std::string> paths =
+                identity_paths(on_iteration, provider.labels(), [this](const std::string& label) {
+                    return detail::resolve_joint_project_label(*this, label);
+                });
+            const auto fit_start = std::chrono::steady_clock::now();
+            crysta::IterationHistoryCollector collector(dof, fit_start);
+            // (F-bound) /: the same declared conditions and the same registry-or-historical
+            // split as the single-bank path above.
+            crysta::DescentRequest request =
+                declared_request(descent, minimizer_max_iterations, minimizer_chi_square_tolerance);
+            const crysta::FitResultBase result = [&] {
+                if (descent.empty() && minimizer_chi_square_tolerance <= 0.0) {
+                    return crysta::fit_problem(
+                        provider, /*separable_linear=*/true, request.max_iterations,
+                        collector.callback(to_engine_callback(on_iteration, dof, fit_start, paths)),
+                        should_cancel);  // The cooperative cancel
+                }
+                request.on_iteration =
+                    collector.callback(to_engine_callback(on_iteration, dof, fit_start, paths));
+                request.should_cancel = should_cancel;
+                return crysta::fit_problem(provider, request);
+            }();
+            const double elapsed_ms = std::chrono::duration<double, std::milli>(
+                                          std::chrono::steady_clock::now() - fit_start)
+                                          .count();
+
+            // Per-bank metrics, read from the provider while it is STILL ALIVE — it owns the per-bank
+            // sub-residuals and is destroyed when this scope ends, so this must happen here and cannot
+            // be recovered afterwards from the FitResultBase. Every number is the engine's; edi only
+            // renames the fields into its own value type.
+            std::vector<BankMetric> bank_metrics;
+            for (const crysta::BankMetric& metric : provider.bank_metrics(provider.values())) {
+                bank_metrics.push_back({metric.name, metric.n_points, metric.rwp, metric.chi_square});
+            }
+
+            // Translate EVERY joint label to an edi-owned parameter FIRST — total and fail-closed. Only
+            // once the whole result resolves is the outcome built and the model written, so no crysta
+            // label crosses the boundary and a partial/garbled result can never mutate the model.
+            std::vector<detail::RefinedValue> refined;
+            refined.reserve(result.values.size());
+            for (const auto& [label, value] : result.values) {
+                std::optional<detail::ResolvedParameter> resolved =
+                    detail::resolve_joint_project_label(*this, label);
+                if (!resolved) {
+                    throw std::invalid_argument(
+                        "edi fit_joint: crysta result label '" + label +
+                        "' does not resolve to an edi model parameter (unmapped engine label)");
+                }
+                const auto found = result.uncertainty.find(label);
+                refined.push_back({std::move(*resolved), value,
+                                   found != result.uncertainty.end() ? found->second : 0.0});
+            }
+
+            FitResultBase outcome;
+            outcome.rwp = result.rwp;
+            outcome.reduced_chi_square = result.reduced_chi_square;
+            outcome.iterations = result.iterations;
+            outcome.converged = result.converged;
+            outcome.banks = std::move(bank_metrics);
+            outcome.n_points_loaded = n_points_loaded;
+            outcome.n_points_fitted = provider.n_data();
+            outcome.iterations_history = to_edi(collector.history());
+            outcome.pre_fit = pre_fit;
+            outcome.elapsed_ms = elapsed_ms;
+            outcome.status = to_edi(crysta::classify_fit_status(result));
+            outcome.unevaluable_trials = result.unevaluable_trials;
+            outcome.terminal_unevaluable_trials = result.terminal_unevaluable_trials;
+            outcome.engine_values = result.values;
+            outcome.engine_uncertainty = result.uncertainty;
+            outcome.descent = result.descent;
+            outcome.reflections_folded = result.reflections_folded;
+            outcome.structure_factor_evaluations = result.structure_factor_evaluations;
+            for (const detail::RefinedValue& item : refined) {
+                outcome.values[item.resolved.path] = item.value;
+                outcome.uncertainty[item.resolved.path] = item.uncertainty;
+            }
+            for (const auto& [label, value] : start_by_label) {
+                std::optional<detail::ResolvedParameter> resolved =
+                    detail::resolve_joint_project_label(*this, label);
+                if (resolved) {
+                    outcome.start[resolved->path] = value;
+                }
+            }
+            detail::write_back(refined);
+            crysta::write_fit_result_into(project, result);  // crysta completes the dependents
+            publish_fit_state(*this, project);
+            record_fit_result(*this, outcome, considered);
+            // Before shared items this copied bank 0 into the single-bank mirror (the loader set it
+            // up that way), so `experiment` never reports stale values after a joint refinement.
+            // `experiment()` IS the first bank now, so nothing is copied back: that
+            // self-assignment was a write that staled bank 0's fresh calculation.
+            return outcome;
+        };
+        if (phases) {
+            crysta::PhaseSumResidual provider(project);
+            return finish(provider);
+        }
         // Delegate the ENTIRE joint LM loop to crysta's public minimizer at its documented defaults
         // (separable_linear, max_iter 50, CutoffPolicy::Off, SolverRung::Lm, chi2/param tolerances) —
         // the same settings `crysta fit <project> --rung lm` resolves to, so the fit is comparable to
         // the published path. The provider is move-only; it owns the per-bank sub-projects, built
         // from its own copy of the project.
+        crysta::NeutronScattering scattering = select_scattering(structure());  // the one structure's
         std::optional<crysta::JointBraggResidual> joint;
         try {
             joint.emplace(project, scattering, std::move(measured));
@@ -3220,132 +3460,7 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
             raise_coded(error);  // a relation between banks keeps its code
             throw;
         }
-        crysta::JointBraggResidual& provider = *joint;
-        if (provider.n_free() == 0) {
-            throw std::invalid_argument("edi fit_joint: no free parameters (mark parameters "
-                                        "refinable via their free flags)");
-        }
-
-        // Pre-fit values — captured before the minimizer, translated below (see the single bank
-        // path for the rationale). Joint labels carry their `<bank>.` prefix and resolve through
-        // resolve_joint_label, exactly as the refined values do.
-        std::map<std::string, double> start_by_label;
-        {
-            const std::vector<std::string> labels = provider.labels();
-            const std::vector<double> values = provider.values();
-            for (std::size_t index = 0; index < labels.size() && index < values.size(); ++index) {
-                start_by_label[labels[index]] = values[index];
-            }
-        }
-
-        const double dof = detail::reduced_chi_square_dof(provider.n_data(), provider.n_free());
-        // Pre-fit record at the joint start params — the shared residual seam, no fit.
-        const crysta::IterationRecord crysta_pre_fit = crysta::pre_fit_record(provider, dof);
-        const IterationRecord pre_fit{crysta_pre_fit.iteration, crysta_pre_fit.rwp,
-                                      crysta_pre_fit.reduced_chi_square, crysta_pre_fit.elapsed_ms,
-                                      crysta_pre_fit.unevaluable_trials};
-        // Preamble: fired ONCE before the loop with the joint bank names + counts.
-        if (on_start) {
-            std::vector<std::string> bank_names;
-            bank_names.reserve(experiments.size());
-            for (const auto& bank_item : experiments) {
-                bank_names.push_back(bank_item->name);
-            }
-            on_start(FitPreamble{/*joint=*/true, std::move(bank_names), n_points_loaded,
-                                 provider.n_data(), provider.n_free(), pre_fit});
-        }
-        const std::vector<std::string> paths =
-            identity_paths(on_iteration, provider.labels(), [this](const std::string& label) {
-                return detail::resolve_joint_label(structure(), experiments, label);
-            });
-        const auto fit_start = std::chrono::steady_clock::now();
-        crysta::IterationHistoryCollector collector(dof, fit_start);
-        // (F-bound) /: the same declared conditions and the same registry-or-historical
-        // split as the single-bank path above.
-        crysta::DescentRequest request =
-            declared_request(descent, minimizer_max_iterations, minimizer_chi_square_tolerance);
-        const crysta::FitResultBase result = [&] {
-            if (descent.empty() && minimizer_chi_square_tolerance <= 0.0) {
-                return crysta::fit_problem(
-                    provider, /*separable_linear=*/true, request.max_iterations,
-                    collector.callback(to_engine_callback(on_iteration, dof, fit_start, paths)),
-                    should_cancel);  // The cooperative cancel
-            }
-            request.on_iteration =
-                collector.callback(to_engine_callback(on_iteration, dof, fit_start, paths));
-            request.should_cancel = should_cancel;
-            return crysta::fit_problem(provider, request);
-        }();
-        const double elapsed_ms = std::chrono::duration<double, std::milli>(
-                                      std::chrono::steady_clock::now() - fit_start)
-                                      .count();
-
-        // Per-bank metrics, read from the provider while it is STILL ALIVE — it owns the per-bank
-        // sub-residuals and is destroyed when this scope ends, so this must happen here and cannot
-        // be recovered afterwards from the FitResultBase. Every number is the engine's; edi only
-        // renames the fields into its own value type.
-        std::vector<BankMetric> bank_metrics;
-        for (const crysta::BankMetric& metric : provider.bank_metrics(provider.values())) {
-            bank_metrics.push_back({metric.name, metric.n_points, metric.rwp, metric.chi_square});
-        }
-
-        // Translate EVERY joint label to an edi-owned parameter FIRST — total and fail-closed. Only
-        // once the whole result resolves is the outcome built and the model written, so no crysta
-        // label crosses the boundary and a partial/garbled result can never mutate the model.
-        std::vector<detail::RefinedValue> refined;
-        refined.reserve(result.values.size());
-        for (const auto& [label, value] : result.values) {
-            std::optional<detail::ResolvedParameter> resolved =
-                detail::resolve_joint_label(structure(), experiments, label);
-            if (!resolved) {
-                throw std::invalid_argument(
-                    "edi fit_joint: crysta result label '" + label +
-                    "' does not resolve to an edi model parameter (unmapped engine label)");
-            }
-            const auto found = result.uncertainty.find(label);
-            refined.push_back({std::move(*resolved), value,
-                               found != result.uncertainty.end() ? found->second : 0.0});
-        }
-
-        FitResultBase outcome;
-        outcome.rwp = result.rwp;
-        outcome.reduced_chi_square = result.reduced_chi_square;
-        outcome.iterations = result.iterations;
-        outcome.converged = result.converged;
-        outcome.banks = std::move(bank_metrics);
-        outcome.n_points_loaded = n_points_loaded;
-        outcome.n_points_fitted = provider.n_data();
-        outcome.iterations_history = to_edi(collector.history());
-        outcome.pre_fit = pre_fit;
-        outcome.elapsed_ms = elapsed_ms;
-        outcome.status = to_edi(crysta::classify_fit_status(result));
-        outcome.unevaluable_trials = result.unevaluable_trials;
-        outcome.terminal_unevaluable_trials = result.terminal_unevaluable_trials;
-        outcome.engine_values = result.values;
-        outcome.engine_uncertainty = result.uncertainty;
-        outcome.descent = result.descent;
-        outcome.reflections_folded = result.reflections_folded;
-        outcome.structure_factor_evaluations = result.structure_factor_evaluations;
-        for (const detail::RefinedValue& item : refined) {
-            outcome.values[item.resolved.path] = item.value;
-            outcome.uncertainty[item.resolved.path] = item.uncertainty;
-        }
-        for (const auto& [label, value] : start_by_label) {
-            std::optional<detail::ResolvedParameter> resolved =
-                detail::resolve_joint_label(structure(), experiments, label);
-            if (resolved) {
-                outcome.start[resolved->path] = value;
-            }
-        }
-        detail::write_back(refined);
-        crysta::write_fit_result_into(project, result);  // crysta completes the dependents
-        publish_fit_state(*this, project);
-        record_fit_result(*this, outcome, considered);
-        // Before shared items this copied bank 0 into the single-bank mirror (the loader set it
-        // up that way), so `experiment` never reports stale values after a joint refinement.
-        // `experiment()` IS the first bank now, so nothing is copied back: that
-        // self-assignment was a write that staled bank 0's fresh calculation.
-        return outcome;
+        return finish(*joint);
     } catch (const std::invalid_argument&) {
         throw;  // already a clean, structured ValueError — surface as-is.
     } catch (const ValidationError&) {
