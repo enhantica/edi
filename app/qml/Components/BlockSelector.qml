@@ -43,8 +43,8 @@ Row {
     }
 
     width: EaStyle.Sizes.sideBarContentWidth
-    // The gap between the fields of a group (the Cell group's), between each button and the box.
-    spacing: AppSizes.fieldSpacing
+    // The gap between buttons in a chart toolbar group, between the box and each button (owner, 2026-10-05).
+    spacing: AppSizes.toolbarSpacing
 
     SearchableComboBox {
         id: selector

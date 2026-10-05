@@ -197,6 +197,10 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"t16-28-cosio-experiment", {experiment, basic}});
     steps_.push_back({"t16-29-cosio-experiment-list", {blocks}});
     steps_.push_back({"t16-30-cosio-analysis", {close, analysis, basic}});
+    steps_.push_back({"t16-31-lbco-structure", start + open_example("pd-neut-cwl_lbco-hrpt_start-2")
+                                                   + QStringList{structure, basic}});
+    steps_.push_back({"t16-32-lbco-experiment", {experiment, basic}});
+    steps_.push_back({"t16-33-lbco-analysis", {analysis, basic}});
     steps_.push_back({"t16-40-created-saved-reopened",
                       start + open_example("pd-xray-cwl_lif") + QStringList{experiment, basic, "expand:group.experiments",
                       "experiments.create", "save-as:created", "open-project:created", experiment, "mainArea.blocks.box",

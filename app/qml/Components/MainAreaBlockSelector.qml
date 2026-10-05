@@ -51,7 +51,8 @@ Item {
         y: placement.height + placement.margin
         width: placement.areaWidth
         height: EaStyle.Sizes.borderThickness
-        color: EaStyle.Colors.appBorder
+        // The legend box's border colour.
+        color: EaStyle.Colors.chartGridLine
     }
 
     BlockSelector {
