@@ -19,7 +19,7 @@
 #
 # **Parameter uncertainties.** CrySPY reports each fitted value with its standard uncertainty
 # (`reference.json`). This page sets the values and compares patterns; a fit of the same
-# project is held to those values within their uncertainties, the scales after the sin θ
+# project is held to those values within one uncertainty each, the scales after the sin θ
 # conversion.
 #
 # **The bounds are labelled regression pins**: this page's own measured closeness with stated
@@ -77,6 +77,11 @@ def value(key: str) -> float:
     return float(CRYSPY_VALUES[key]['value'])
 
 
+def sin_theta(bank: str) -> float:
+    """Return sin θ of a bank, from the reference's geometry, never from the project under test."""
+    return math.sin(math.radians(value(f'{bank}.instrument.twotheta_bank') / 2))
+
+
 for name in project.structures.names:
     structure = project.structures[name]
     structure.cell.length_a.value = value(f'{name}.cell.length_a')
@@ -93,10 +98,9 @@ PROFILE_FIELDS = (
 )
 for bank in BANKS:
     experiment = project.experiments[bank]
-    theta = math.radians(experiment.instrument.setup_twotheta_bank.value / 2)
     for link in experiment.linked_structures:
         scale = value(f'{bank}.linked_structure.{link.structure_id}.scale')
-        link.scale.value = scale / math.sin(theta)
+        link.scale.value = scale / sin_theta(bank)
     for field in PROFILE_FIELDS:
         getattr(experiment.peak, field).value = value(f'{bank}.peak.{field}')
     experiment.instrument.calib_d_to_tof_offset.value = value(f'{bank}.instrument.d_to_tof_offset')
@@ -151,8 +155,9 @@ verify.assert_patterns_agree(
 # ## Fit from the tutorial's start and compare with CrySPY's fit
 #
 # The delivered project is fitted jointly from its starting values, as the tutorial's first
-# fit is. Every parameter CrySPY fitted must land within three of CrySPY's standard
-# uncertainties of CrySPY's value; a scale is compared after the sin θ conversion.
+# fit is. Every parameter CrySPY fitted must land within one of CrySPY's standard uncertainties
+# of CrySPY's value, as the agreement gates require; a scale is compared after the sin θ
+# conversion, with the bank angle taken from the reference.
 
 
 # %%
@@ -184,11 +189,9 @@ misses = []
 for key, record in REFERENCE['stages'][0]['parameters'].items():
     reference, uncertainty = float(record['value']), float(record['su'])
     if '.linked_structure.' in key:
-        theta = math.radians(
-            fitted.experiments[key.split('.')[0]].instrument.setup_twotheta_bank.value / 2
-        )
-        reference, uncertainty = reference / math.sin(theta), uncertainty / math.sin(theta)
+        factor = sin_theta(key.split('.')[0])
+        reference, uncertainty = reference / factor, uncertainty / factor
     actual = parameter(fitted, key).value
-    if abs(actual - reference) > 3 * uncertainty:
+    if abs(actual - reference) > uncertainty:
         misses.append(f'{key}: {actual:.6g} vs {reference:.6g} +/- {uncertainty:.2g}')
-assert not misses, '\n'.join(['outside three standard uncertainties:', *misses])  # noqa: S101
+assert not misses, '\n'.join(['outside one standard uncertainty:', *misses])  # noqa: S101
