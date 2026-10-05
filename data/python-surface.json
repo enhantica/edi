@@ -547,6 +547,15 @@
      "reason": "C",
      "verdict": "public"
     },
+    "linked_structures": {
+     "need": {
+      "by": "counterpart",
+      "ref": "LinkedStructures",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "name": {
      "need": {
       "by": "counterpart",
@@ -1371,6 +1380,15 @@
      "reason": "C",
      "verdict": "public"
     },
+    "linked_structures": {
+     "need": {
+      "by": "counterpart",
+      "ref": "LinkedStructures",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "name": {
      "need": {
       "by": "counterpart",
@@ -2165,6 +2183,15 @@
     }
    },
    "LinkedStructure": {
+    "enabled": {
+     "need": {
+      "by": "deviation",
+      "ref": "D76",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "parameters": {
      "need": {
       "by": "counterpart",
@@ -2494,6 +2521,15 @@
      "need": {
       "by": "deviation",
       "ref": "D50",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "linked_structures": {
+     "need": {
+      "by": "counterpart",
+      "ref": "LinkedStructures",
       "verdict": "keep"
      },
      "reason": "C",
@@ -3522,6 +3558,15 @@
      "need": {
       "by": "deviation",
       "ref": "D50",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "linked_structures": {
+     "need": {
+      "by": "counterpart",
+      "ref": "LinkedStructures",
       "verdict": "keep"
      },
      "reason": "C",
@@ -5455,6 +5500,7 @@
     "experiment_type",
     "instrument",
     "linked_structure",
+    "linked_structures",
     "name",
     "parameters",
     "peak",
@@ -5609,6 +5655,7 @@
     "dataset_weight",
     "experiment_type",
     "linked_structure",
+    "linked_structures",
     "name",
     "parameters"
    ]
@@ -5770,6 +5817,7 @@
   "LinkedStructure": {
    "kind": "class",
    "members": [
+    "enabled",
     "parameters",
     "scale",
     "structure_id"
@@ -5831,6 +5879,7 @@
     "excluded_regions",
     "experiment_type",
     "linked_structure",
+    "linked_structures",
     "name",
     "parameters",
     "peak",
@@ -6018,6 +6067,7 @@
     "dataset_weight",
     "experiment_type",
     "linked_structure",
+    "linked_structures",
     "name",
     "parameters"
    ]
