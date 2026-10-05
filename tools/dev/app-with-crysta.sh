@@ -31,8 +31,13 @@ for name in USER LANG LC_ALL PIXI_CACHE_DIR RATTLER_CACHE_DIR XDG_CACHE_HOME CCA
     [ -z "${!name:-}" ] || clean+=("$name=${!name}")
 done
 echo "app-with-crysta: building crysta from $src ($(git -C "$src" describe --always --dirty 2>/dev/null || echo 'no git')); crysta's tests are not run"
+# A fresh crysta checkout gets its `cpp-ci` environment without crysta's own Python package, whose
+# editable install would build all of crysta a second time; an existing environment is used as it is.
+if [ ! -d "$src/.pixi/envs/cpp-ci/conda-meta" ]; then
+    "${clean[@]}" "$pixi_bin" install --frozen --manifest-path "$src/pixi.toml" -e cpp-ci --skip crysta
+fi
 # shellcheck disable=SC2016  # expanded by the inner shell
-"${clean[@]}" "$pixi_bin" run --frozen --manifest-path "$src/pixi.toml" -e cpp-ci bash -euo pipefail -c '
+"${clean[@]}" "$pixi_bin" run --as-is --manifest-path "$src/pixi.toml" -e cpp-ci bash -euo pipefail -c '
     cmake -S "$1" -B "$2" -G Ninja -DCMAKE_BUILD_TYPE=Release -DCRYSTA_CXX_PACKAGE=ON -DCRYSTA_LTO=OFF \
         -DCMAKE_OSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-}" >/dev/null
     cmake --build "$2" --target crysta_core crysta_cli
