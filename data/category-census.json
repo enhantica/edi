@@ -1937,8 +1937,23 @@
       "not_storage": "a parameter: the cells of one parameter column bundle"
     },
     {
+      "member": "ProjectLink::project",
+      "type": "Project*",
+      "not_storage": "the revocable record through which nested collections reach their project"
+    },
+    {
+      "member": "ProjectSelfLink::link_",
+      "type": "std::shared_ptr<ProjectLink>",
+      "not_storage": "a project's own link record, cleared when the project is destroyed"
+    },
+    {
       "member": "KeyedBase::host_",
       "type": "Project*",
+      "not_storage": "the base of the table class"
+    },
+    {
+      "member": "KeyedBase::host_link_",
+      "type": "std::shared_ptr<const ProjectLink>",
       "not_storage": "the base of the table class"
     },
     {
@@ -3662,6 +3677,11 @@
       "member": "Project::edits_",
       "type": "detail::EditLog",
       "not_storage": "the project's editor record"
+    },
+    {
+      "member": "Project::self_link_",
+      "type": "detail::ProjectSelfLink",
+      "not_storage": "the project's revocable link its nested collections reach it through"
     }
   ],
   "file_categories": {

@@ -1706,6 +1706,7 @@ void Project::calculate() {
     // categories: no earlier result may stay readable beside a model the
     // calculation refused.
     adopt_experiments();
+    adopt_parameter_rows();
     const auto clear_banks = [this] {
         for (auto& bank_item : experiments) {
             if (bank_item->data.has_value()) {

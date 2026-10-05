@@ -3353,6 +3353,7 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
     // The declared and symmetry relations, as crysta reads them: refused when they cannot hold,
     // every parameter marked, a dependent's free flag cleared with a warning.
     refresh_relations(project, warn);
+    project.adopt_parameter_rows();
     return project;
 }
 

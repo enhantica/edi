@@ -1221,6 +1221,31 @@ class ItemKey;
 
 namespace detail {
 
+// A project's revocable reference to itself, as crysta's ProjectOwnerLink: one record per project
+// object, set to the project while it lives and cleared when it is destroyed. The nested collections a
+// project adopts (Project::adopt_parameter_rows) hold the record, so one that outlives its project
+// reads none.
+struct ProjectLink {
+    Project* project = nullptr;
+};
+
+// The project's end of the link: a copied or moved project makes its own record, and an assignment
+// keeps each side's.
+class ProjectSelfLink {
+   public:
+    ProjectSelfLink() : link_(std::make_shared<ProjectLink>()) {}
+    ProjectSelfLink(const ProjectSelfLink& /*other*/) : ProjectSelfLink() {}
+    ProjectSelfLink(ProjectSelfLink&& /*other*/) : ProjectSelfLink() {}
+    // NOLINTNEXTLINE(bugprone-unhandled-self-assignment,cert-oop54-cpp) — keeps its own record
+    ProjectSelfLink& operator=(const ProjectSelfLink& /*other*/) noexcept { return *this; }
+    ProjectSelfLink& operator=(ProjectSelfLink&& /*other*/) noexcept { return *this; }
+    ~ProjectSelfLink() { link_->project = nullptr; }
+    const std::shared_ptr<ProjectLink>& link() const noexcept { return link_; }
+
+   private:
+    std::shared_ptr<ProjectLink> link_;
+};
+
 // A keyed collection, as its members' ids see it.
 class KeyedBase {
    public:
@@ -1237,13 +1262,20 @@ class KeyedBase {
     // Admit renaming `key` — the id of one of this collection's items — to `next`, or throw. Returns
     // false when `key` is not stored here (a stale record): the caller renames as detached.
     virtual bool admit_rename(const ItemKey& key, const std::string& next) const = 0;
-    // The project whose `experiments` this collection is, once that project said so
-    // (Project::adopt_experiments); null for every other collection.
-    Project* host() const noexcept { return host_; }
+    // The project whose `experiments` (or relations, or structures) this collection is, once that
+    // project said so (Project::adopt_experiments); for a nested collection, the project that adopted
+    // it while that project lives (Project::adopt_parameter_rows); null otherwise.
+    Project* host() const noexcept {
+        if (host_ != nullptr) {
+            return host_;
+        }
+        return host_link_ ? host_link_->project : nullptr;
+    }
 
    private:
     friend class edi::Project;
     Project* host_ = nullptr;
+    std::shared_ptr<const ProjectLink> host_link_;
 };
 
 }  // namespace detail
@@ -3737,7 +3769,9 @@ class Project {
     Project()
         : structures(std::vector<ItemVec<Structure>::Ptr>{std::make_shared<Structure>()}),
           experiments(std::vector<ItemVec<BraggPdExperiment>::Ptr>{
-              std::make_shared<BraggPdExperiment>()}) {}
+              std::make_shared<BraggPdExperiment>()}) {
+        adopt_parameter_rows();
+    }
     // The copying (Structure, BraggPdExperiment) constructor is RETIRED at every exposure
     // layer — native included, not just the Python
     // overload. Population goes through the collections; deleted, not removed,
@@ -3939,6 +3973,7 @@ class Project {
         if (structures.empty()) {
             throw std::invalid_argument("edi Project: no structure (structures is empty)");
         }
+        adopt_parameter_rows();  // a structure handed out reaches this project (edi ADR-0024)
         return *structures.front();
     }
     const Structure& structure() const {
@@ -3951,6 +3986,7 @@ class Project {
         if (experiments.empty()) {
             throw std::invalid_argument("edi Project: no experiment (experiments is empty)");
         }
+        adopt_parameter_rows();
         return *experiments.front();
     }
     const BraggPdExperiment& experiment() const {
@@ -3984,17 +4020,25 @@ class Project {
         static_cast<detail::KeyedBase&>(constraints).host_ = this;
     }
     // The same for the collections that hold parameters (the structures and their sites, each
-    // experiment's background and texture rows), so a parameter handed out reaches this project
-    // through its row: its dependence mark is read as the relations are now (edi ADR-0024).
+    // experiment's background and texture rows), so a parameter or structure handed out reaches this
+    // project through its row: its dependence mark is read, and its geometry computed, as the
+    // relations are now (edi ADR-0024). Construction, the loader, calculate() and every surface
+    // that hands a structure or experiment out call it.
+    // The nested collections live in structures and experiments that can outlive the project, so they
+    // hold the project's revocable link rather than the project itself; a reader still checks that the
+    // project holds the parameter it reached (it may have been removed or moved since).
     void adopt_parameter_rows() noexcept {
+        self_link_.link()->project = this;
         static_cast<detail::KeyedBase&>(structures).host_ = this;
         for (const auto& structure_item : structures) {
-            static_cast<detail::KeyedBase&>(structure_item->atom_sites).host_ = this;
+            static_cast<detail::KeyedBase&>(structure_item->atom_sites).host_link_ = self_link_.link();
         }
         for (const auto& experiment_item : experiments) {
-            static_cast<detail::KeyedBase&>(experiment_item->background).host_ = this;
-            static_cast<detail::KeyedBase&>(experiment_item->background_terms).host_ = this;
-            static_cast<detail::KeyedBase&>(experiment_item->preferred_orientation).host_ = this;
+            static_cast<detail::KeyedBase&>(experiment_item->background).host_link_ = self_link_.link();
+            static_cast<detail::KeyedBase&>(experiment_item->background_terms).host_link_ =
+                self_link_.link();
+            static_cast<detail::KeyedBase&>(experiment_item->preferred_orientation).host_link_ =
+                self_link_.link();
         }
     }
 
@@ -4006,6 +4050,7 @@ class Project {
     // calculate()'s body: converts, calculates and publishes every bank, or throws first.
     void publish_calculation();
     detail::EditLog edits_;
+    detail::ProjectSelfLink self_link_;  // edi ADR-0024: what adopted nested collections hold
 };
 
 // ADR-0018: the schema of every non-loop category. Each names the category on file, the members

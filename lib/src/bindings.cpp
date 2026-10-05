@@ -591,6 +591,9 @@ static void def_parameter_walks(nb::class_<Class>& cls) {
     cls.def_prop_ro(
         "parameters",
         [](Class& self) {
+            if constexpr (std::is_same_v<Class, edi::Project>) {
+                self.adopt_parameter_rows();  // each handle reaches this project (edi ADR-0024)
+            }
             edi::detail::point_parameters(self);  // X12: each handle's row
             return self.parameters();
         },
@@ -605,6 +608,9 @@ static void def_free_parameters(nb::class_<Class>& cls) {
     cls.def_prop_ro(
         "free_parameters",
         [](Class& self) {
+            if constexpr (std::is_same_v<Class, edi::Project>) {
+                self.adopt_parameter_rows();  // each handle reaches this project (edi ADR-0024)
+            }
             edi::detail::point_parameters(self);  // X12: each handle's row
             return self.free_parameters();
         },
@@ -791,19 +797,35 @@ static void relations_changed(edi::Project& project) {
 }
 
 // The project a parameter handle belongs to, through the row it is attached to (X12); null for one no
-// project holds.
+// project holds. The row's collection names the project that adopted it, which may have been destroyed
+// (the link then reads none) or may no longer hold the row (removed, replaced or moved to another
+// project), so the project must still hold this very parameter.
 static edi::Project* project_of(const edi::Parameter& parameter) {
     const edi::detail::RowLink* link = parameter.category.get();
     const edi::detail::Membership* record = link != nullptr ? link->record() : nullptr;
-    return record != nullptr && record->owner != nullptr ? record->owner->host() : nullptr;
+    edi::Project* project =
+        record != nullptr && record->owner != nullptr ? record->owner->host() : nullptr;
+    if (project == nullptr) {
+        return nullptr;
+    }
+    for (const edi::NamedSlot& slot : edi::named_slots(*project)) {
+        if (slot.parameter == &parameter) {
+            return project;
+        }
+    }
+    return nullptr;
 }
 
 // A parameter's dependence as it is now. An edit that reaches no project (a space-group change) can
-// leave the marks behind, so the project's relations are refreshed first.
+// leave the marks behind, so the project's relations are refreshed first. A parameter no live project
+// holds (removed, moved, or its project destroyed) is set by no relation: its stored mark belongs to a
+// former project and is not consulted.
 static edi::Dependence dependence_now(const edi::Parameter& parameter) {
-    if (edi::Project* project = project_of(parameter)) {
-        warn_dependents(*project);
+    edi::Project* project = project_of(parameter);
+    if (project == nullptr) {
+        return edi::Dependence::Independent;
     }
+    warn_dependents(*project);
     return parameter.dependence;
 }
 
@@ -1273,6 +1295,7 @@ static void def_collection_views(nb::module_& m) {
                     if (slot.unique_name == self.parameter_unique_name.value()) {
                         // As an ordinary field getter returns it: attached to its row (X12), and
                         // keeping alive the object that owns its storage.
+                        project->adopt_parameter_rows();
                         edi::detail::point_parameters(*project);
                         nb::object owner = owner_of(*project, slot.parameter);
                         if (owner.is_none()) {
@@ -1610,6 +1633,7 @@ NB_MODULE(_edi, m) {
             "free", [](const edi::Parameter& p) { return p.free.get(); },
             [](edi::Parameter& p, bool free) {
                 refuse_detached(p);
+                (void)dependence_now(p);  // the marks as the relations are now
                 if (!edi::set_free(p, free)) {
                     const std::string name = p.spec != nullptr ? p.spec->name : std::string("parameter");
                     const std::string message =
