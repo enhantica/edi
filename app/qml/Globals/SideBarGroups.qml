@@ -3,6 +3,8 @@ pragma Singleton
 
 import QtQuick
 
+import edi.app
+
 // Where a sidebar group stands among the groups its tab shows (edi ADR-0017 §3): the last shown draws no
 // bottom border. The base's GroupBox takes its `last` from its parent's
 // last child, which in a column with a Repeater is the last delegate whether or not it is shown
@@ -12,8 +14,11 @@ import QtQuick
 // the order must not change with that.
 QtObject {
     // Each category group's open or closed state, by its tab and category id. Showing another block rebuilds
-    // the page's groups, and each new group opens or stays closed as its predecessor was left.
+    // the page's groups, and each new group opens or stays closed as its predecessor was left. Another project
+    // starts with every group closed again.
     property var openStates: ({})
+    readonly property var project: Session.project
+    onProjectChanged: openStates = {}
 
     function isOpen(key) {
         return openStates[key] === true;
