@@ -550,7 +550,7 @@
     "linked_structures": {
      "need": {
       "by": "counterpart",
-      "ref": "LinkedStructures",
+      "ref": "PdExperimentBase.linked_structures",
       "verdict": "keep"
      },
      "reason": "C",
@@ -1382,8 +1382,8 @@
     },
     "linked_structures": {
      "need": {
-      "by": "counterpart",
-      "ref": "LinkedStructures",
+      "by": "deviation",
+      "ref": "D50",
       "verdict": "keep"
      },
      "reason": "C",
@@ -2529,7 +2529,7 @@
     "linked_structures": {
      "need": {
       "by": "counterpart",
-      "ref": "LinkedStructures",
+      "ref": "PdExperimentBase.linked_structures",
       "verdict": "keep"
      },
      "reason": "C",
@@ -3565,8 +3565,8 @@
     },
     "linked_structures": {
      "need": {
-      "by": "counterpart",
-      "ref": "LinkedStructures",
+      "by": "deviation",
+      "ref": "D50",
       "verdict": "keep"
      },
      "reason": "C",
