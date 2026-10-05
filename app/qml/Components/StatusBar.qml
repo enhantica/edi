@@ -4,13 +4,15 @@ import QtQuick.Controls
 
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Globals as EaGlobals
+import EasyApplication.Gui.Animations as EaAnimations
 import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
 
 // The status bar of the workflow pages (easydiffractionbeta Components/StatusBar.qml); hidden on Home. The
-// fit items follow the last fit: its iterations, its reduced χ² before → after, and why it stopped. The last
-// item, always present, counts the messages (warnings and errors) and opens them (edi ADR-0017 §14).
+// first item, always present, counts the messages (warnings and errors) and opens them (edi ADR-0017 §14).
+// The fit area on the right follows the running fit and then summarises the last one (§17): progress, then
+// time, then χ², every item separated by FitOutcomes.separator.
 EaElements.StatusBar {
     id: bar
 
@@ -21,7 +23,8 @@ EaElements.StatusBar {
     // The items show their keys only when all of them fit with their keys in the bar's width; otherwise each
     // shows its icon and value (the owner, 2026-10-03). Measured from the items' own widths, so it holds for
     // any window size, font and value; the base's row margins and spacing are its own.
-    readonly property list<StatusBarItem> items: [projectItem, structuresItem, experimentsItem, calculatorItem, minimizerItem, parametersItem, fitIterationsItem, goodnessOfFitItem, fitStatusItem, warningsItem]
+    readonly property list<StatusBarItem> items: [warningsItem, projectItem, structuresItem, experimentsItem, calculatorItem, minimizerItem, parametersItem]
+    readonly property FitViewModel fit: project ? project.fit : null
     readonly property bool keysFit: {
         let width = 0;
         let shown = 0;
@@ -32,9 +35,22 @@ EaElements.StatusBar {
             }
         }
         const spacing = EaStyle.Sizes.fontPixelSize * 1.2;
-        return width + Math.max(0, shown - 1) * spacing <= bar.width - 2 * EaStyle.Sizes.fontPixelSize;
+        const fitWidth = fitArea.visible ? fitArea.width + spacing : 0;
+        return width + Math.max(0, shown - 1) * spacing + fitWidth <= bar.width - 2 * EaStyle.Sizes.fontPixelSize;
     }
 
+    StatusBarItem {
+        id: warningsItem
+        objectName: "statusBar.warnings"
+        showKey: bar.keysFit
+        keyIcon: "exclamation-triangle"
+        keyText: qsTr("Messages")
+        valueText: String(Session.loadWarnings ? Session.loadWarnings.unviewedCount : 0)
+        alert: Session.loadWarnings !== null && Session.loadWarnings.unviewedCount > 0
+        clickable: true
+        ToolTip.text: qsTr("Warnings and errors: click to see them")
+        onClicked: warningsDialog.open()
+    }
     StatusBarItem {
         id: projectItem
         objectName: "statusBar.project"
@@ -93,50 +109,70 @@ EaElements.StatusBar {
         valueText: bar.project ? qsTr("%1 (%2 free, %3 fixed)").arg(bar.project.parameters.count).arg(bar.project.parameters.freeCount).arg(bar.project.parameters.fixedCount) : ""
         ToolTip.text: qsTr("Number of parameters: total, free and fixed")
     }
-    StatusBarItem {
-        id: fitIterationsItem
-        objectName: "statusBar.fitIterations"
-        showKey: bar.keysFit
-        visible: bar.project !== null && valueText !== ""
-        keyIcon: "spinner"
-        keyText: qsTr("Fit iterations")
-        valueText: bar.project ? bar.project.fit.iterations : ""
-        ToolTip.text: qsTr("Number of iterations of the last fit")
-    }
-    StatusBarItem {
-        id: goodnessOfFitItem
-        objectName: "statusBar.goodnessOfFit"
-        showKey: bar.keysFit
-        visible: bar.project !== null && valueText !== ""
-        keyIcon: "thumbs-up"
-        keyText: qsTr("Goodness-of-fit")
-        valueText: bar.project ? bar.project.fit.goodnessOfFit : ""
-        ToolTip.text: valueText.includes("→") ? qsTr("Reduced χ² goodness-of-fit: before → after") : qsTr("Reduced χ² goodness-of-fit")
-    }
-    StatusBarItem {
-        id: fitStatusItem
-        objectName: "statusBar.fitStatus"
-        showKey: bar.keysFit
-        visible: bar.project !== null && valueText !== ""
-        keyIcon: "clipboard"
-        keyText: qsTr("Fit status")
-        valueText: bar.project ? bar.project.fit.status : ""
-        // The last fit's results table, also for a project opened with one.
-        clickable: bar.project !== null && bar.project.fit.results.count > 0
-        ToolTip.text: clickable ? qsTr("How the last fit ended: click to see its results") : qsTr("How the last fit ended")
-        onClicked: fitResultsDialog.open()
-    }
-    StatusBarItem {
-        id: warningsItem
-        objectName: "statusBar.warnings"
-        showKey: bar.keysFit
-        keyIcon: "exclamation-triangle"
-        keyText: qsTr("Messages")
-        valueText: String(Session.loadWarnings ? Session.loadWarnings.unviewedCount : 0)
-        alert: Session.loadWarnings !== null && Session.loadWarnings.unviewedCount > 0
-        clickable: true
-        ToolTip.text: qsTr("Warnings and errors: click to see them")
-        onClicked: warningsDialog.open()
+    // The fit area, right-aligned outside the base's row of items: the running fit's bar and live values, then
+    // the last fit's summary, which opens its results.
+    Row {
+        id: fitArea
+
+        readonly property bool running: bar.fit !== null && bar.fit.running
+        readonly property string chi: bar.fit && bar.fit.goodnessOfFit !== "" ? `χ² ${bar.fit.goodnessOfFit}` : ""
+        readonly property string iterations: bar.fit && bar.fit.iterations !== "" ? qsTr("it %1").arg(bar.fit.iterations) : ""
+
+        function joined(parts) {
+            return parts.filter(part => part !== "").join(FitOutcomes.separator);
+        }
+
+        objectName: "statusBar.fit"
+        parent: bar
+        anchors.right: parent.right
+        anchors.rightMargin: EaStyle.Sizes.fontPixelSize
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: EaStyle.Sizes.fontPixelSize * 0.75
+        visible: bar.fit !== null && (running || bar.fit.outcome !== "")
+
+        Rectangle {
+            width: EaStyle.Sizes.borderThickness
+            height: EaStyle.Sizes.fontPixelSize * 1.5
+            anchors.verticalCenter: parent.verticalCenter
+            color: EaStyle.Colors.appBarBorder
+        }
+        FitProgressBar {
+            objectName: "statusBar.fit.progress"
+            visible: fitArea.running
+            width: EaStyle.Sizes.fontPixelSize * 20
+            anchors.verticalCenter: parent.verticalCenter
+            indeterminate: true
+            fontFamily: EaStyle.Fonts.ptMono.name
+            text: fitArea.joined([qsTr("fitting"), fitArea.iterations])
+        }
+        FitOutcomeLabel {
+            objectName: "statusBar.fit.outcome"
+            visible: !fitArea.running && bar.fit !== null && bar.fit.outcome !== ""
+            anchors.verticalCenter: parent.verticalCenter
+            outcome: bar.fit ? bar.fit.outcome : ""
+            // The last fit's results table, also for a project opened with one.
+            clickable: bar.fit !== null && bar.fit.results.count > 0
+            toolTipText: clickable ? qsTr("%1: click to see the results").arg(FitOutcomes.meaning(outcome)) : FitOutcomes.meaning(outcome)
+            onClicked: fitResultsDialog.open()
+        }
+        Text {
+            objectName: "statusBar.fit.values"
+            anchors.verticalCenter: parent.verticalCenter
+            font.family: EaStyle.Fonts.ptMono.name
+            font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.9
+            color: EaStyle.Colors.themeForeground
+            Behavior on color {
+                EaAnimations.ThemeChange {}
+            }
+            text: {
+                if (!bar.fit)
+                    return "";
+                if (fitArea.running)
+                    return fitArea.joined([bar.fit.elapsed, fitArea.chi]);
+                const rest = fitArea.joined([fitArea.iterations, bar.fit.elapsed, fitArea.chi]);
+                return rest === "" ? "" : FitOutcomes.separator.trimStart() + rest;
+            }
+        }
     }
 
     WarningsDialog {

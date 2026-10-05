@@ -10,7 +10,8 @@ import EasyApplication.Gui.Components as EaComponents
 import edi.app
 
 // The fit has finished: diffraction-lib's "Least-squares fit results" table — numbered rows of an icon, the
-// metric and its value (FitResultListModel) — as the Messages dialog's framed table, as tall as its rows.
+// metric and its value (FitResultListModel) — as the Messages dialog's framed table, as tall as its rows. The
+// Overall status row shows the outcome as the status bar does (FitOutcomes): its icon, word and colour.
 // Opened when a fit ends with a result the project holds: finished, cancelled or stopped early; a refusal
 // opens the error dialog instead.
 AppDialog {
@@ -68,6 +69,7 @@ AppDialog {
                 required property string icon
                 required property string metric
                 required property string value
+                required property string outcome
 
                 EaComponents.TableViewLabel {
                     width: AppSizes.indexColumnWidth
@@ -75,8 +77,8 @@ AppDialog {
                     text: row.index + 1
                 }
                 IconCell {
-                    icon: row.icon
-                    iconColor: String(row.icon === "check-circle" ? EaStyle.Colors.green : row.icon === "times-circle" ? EaStyle.Colors.red : EaStyle.Colors.themeForegroundMinor)
+                    icon: row.outcome !== "" ? FitOutcomes.icon(row.outcome) : row.icon
+                    iconColor: String(row.outcome !== "" ? FitOutcomes.color(row.outcome) : EaStyle.Colors.themeForegroundMinor)
                 }
                 EaComponents.TableViewLabel {
                     objectName: `fit.results.metric.${row.index}`
@@ -89,7 +91,8 @@ AppDialog {
                     width: EaStyle.Sizes.fontPixelSize * 10
                     rightPadding: EaStyle.Sizes.fontPixelSize
                     horizontalAlignment: Text.AlignRight
-                    text: row.value
+                    color: row.outcome !== "" ? FitOutcomes.color(row.outcome) : EaStyle.Colors.themeForeground
+                    text: row.outcome !== "" ? FitOutcomes.word(row.outcome) : row.value
                 }
             }
         }

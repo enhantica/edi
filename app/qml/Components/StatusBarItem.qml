@@ -7,6 +7,8 @@ import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Animations as EaAnimations
 import EasyApplication.Gui.Elements as EaElements
 
+import edi.app
+
 // One status bar entry, as the base's StatusBarItem draws it (icon, key, value), with its value colour
 // kept BOUND to the theme. The base's item assigns the value's colour on every text change, which breaks
 // its binding, so after the first change the value kept the colour of the theme it was set under. Here a
@@ -90,7 +92,16 @@ Control {
         }
     }
 
-    background: Item {}
+    // A clickable item highlights on hover, as the fit area's outcome does (FitOutcomeLabel).
+    background: Item {
+        Rectangle {
+            anchors.fill: parent
+            anchors.margins: -control.font.pixelSize * 0.25
+            radius: 2
+            visible: control.clickable && hover.hovered
+            color: AppColors.hoverHighlight
+        }
+    }
 
     HoverHandler {
         id: hover

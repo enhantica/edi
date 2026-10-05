@@ -12,6 +12,9 @@ import edi.app
 QtObject {
     id: colors
 
+    // The hover highlight of a clickable status-bar item: the foreground at a tenth.
+    readonly property color hoverHighlight: Qt.rgba(EaStyle.Colors.themeForeground.r, EaStyle.Colors.themeForeground.g, EaStyle.Colors.themeForeground.b, 0.1)
+
     // A structure's colour by its place in the project: the base's model colours, as easydiffractionbeta
     // colours its models (orange, teal, pink), round again after the third.
     function structure(index) {

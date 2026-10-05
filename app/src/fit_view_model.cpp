@@ -21,13 +21,27 @@ edi::FitStatus status_of(const edi::FitResultRecord& result) {
     return result.success ? edi::FitStatus::DONE : edi::FitStatus::ERROR;
 }
 
-// Why the fit stopped, as the status bar names it.
+// How the fit ended: the outcome key (FitOutcomes.qml draws its icon and colour) and its word, the same in the
+// status bar and the results window.
+QString outcome_key(edi::FitStatus status) {
+    switch (status) {
+        case edi::FitStatus::DONE: return QStringLiteral("success");
+        case edi::FitStatus::MAX_ITER: return QStringLiteral("maxIterations");
+        case edi::FitStatus::NO_STEP: return QStringLiteral("noStep");
+        case edi::FitStatus::CANCELLED: return QStringLiteral("stopped");
+        case edi::FitStatus::SUPERSEDED: return QStringLiteral("superseded");
+        case edi::FitStatus::UNAVAILABLE:
+        case edi::FitStatus::ERROR: break;
+    }
+    return QStringLiteral("failed");
+}
+
 QString status_text(edi::FitStatus status) {
     switch (status) {
-        case edi::FitStatus::DONE: return FitViewModel::tr("Done");
+        case edi::FitStatus::DONE: return FitViewModel::tr("Success");
         case edi::FitStatus::MAX_ITER: return FitViewModel::tr("Max iterations");
         case edi::FitStatus::NO_STEP: return FitViewModel::tr("No step");
-        case edi::FitStatus::CANCELLED: return FitViewModel::tr("Cancelled");
+        case edi::FitStatus::CANCELLED: return FitViewModel::tr("Stopped");
         case edi::FitStatus::SUPERSEDED: return FitViewModel::tr("Superseded");
         case edi::FitStatus::UNAVAILABLE:
         case edi::FitStatus::ERROR: break;
@@ -35,11 +49,28 @@ QString status_text(edi::FitStatus status) {
     return FitViewModel::tr("Failed");
 }
 
+// A fit's time as the status bar shows it: tenths under a second, whole seconds under a minute, then
+// minutes and seconds.
+QString duration(double seconds) {
+    if (seconds < 1.0) {
+        return QStringLiteral("%1s").arg(seconds, 0, 'f', 1);
+    }
+    const auto whole = static_cast<qint64>(seconds + 0.5);
+    if (whole < 60) {
+        return QStringLiteral("%1s").arg(whole);
+    }
+    return QStringLiteral("%1m %2s").arg(whole / 60).arg(whole % 60, 2, 10, QLatin1Char('0'));
+}
+
 }  // namespace
+
+QString recorded_outcome(const edi::FitResultRecord& result) {
+    return result.held() ? outcome_key(status_of(result)) : QString();
+}
 
 // ---- FitResultListModel --------------------------------------------------------------------------
 
-FitResultListModel::FitResultListModel(QObject* parent) : RowTableModel({"icon", "metric", "value"}, parent) {}
+FitResultListModel::FitResultListModel(QObject* parent) : RowTableModel({"icon", "metric", "value", "outcome"}, parent) {}
 
 void FitResultListModel::setRecord(const edi::Project& project) {
     // diffraction-lib's rows (analysis/fit_helpers/reporting.py, _build_fit_results_rows), from the result the
@@ -51,8 +82,10 @@ void FitResultListModel::setRecord(const edi::Project& project) {
     }
     QList<Row> rows;
     int key = 0;
-    const auto row = [&rows, &key](const QString& icon, const QString& metric, const QString& value) {
-        rows.append({reinterpret_cast<const void*>(static_cast<std::uintptr_t>(++key)), {icon, metric, value}});
+    const auto row = [&rows, &key](const QString& icon, const QString& metric, const QString& value,
+                                   const QString& outcome = QString()) {
+        rows.append(
+            {reinterpret_cast<const void*>(static_cast<std::uintptr_t>(++key)), {icon, metric, value, outcome}});
     };
     // The descent that produced the result, never the one selected since; a record written before it was kept
     // names the engine only.
@@ -60,8 +93,7 @@ void FitResultListModel::setRecord(const edi::Project& project) {
     row(QStringLiteral("flask"), tr("Minimizer"),
         descent.isEmpty() ? QStringLiteral("crysta") : QStringLiteral("crysta (%1)").arg(descent));
     const edi::FitStatus status = status_of(result);
-    row(result.success ? QStringLiteral("check-circle") : QStringLiteral("times-circle"), tr("Overall status"),
-        result.success ? tr("success") : status_text(status).toLower());
+    row(QString(), tr("Overall status"), status_text(status), outcome_key(status));
     row(QStringLiteral("stopwatch"), tr("Fitting time (seconds)"), QString::number(result.fitting_time, 'f', 2));
     row(QStringLiteral("redo"), tr("Iterations"), QString::number(result.iterations));
     row(QStringLiteral("ruler"), tr("Goodness-of-fit (reduced χ²)"), chi(result.reduced_chi_square));
@@ -88,6 +120,9 @@ FitViewModel::FitViewModel(edi::Project& project, edi::work::Worker& worker, Pro
     frame_timer_.setSingleShot(true);
     frame_timer_.setInterval(16);
     connect(&frame_timer_, &QTimer::timeout, this, &FitViewModel::showFrame);
+    clock_timer_.setInterval(1000);
+    connect(&clock_timer_, &QTimer::timeout, this,
+            [this] { setElapsed(duration(static_cast<double>(clock_.elapsed()) / 1000.0)); });
     edi::FitJob::Hooks hooks;
     hooks.started = [this](const edi::FitPreamble& preamble) { started(preamble); };
     hooks.iterated = [this](const edi::IterationRecord& record) { iterated(record); };
@@ -104,7 +139,9 @@ void FitViewModel::showRecord() {
         return;
     }
     // A reopened project knows its last fit's χ², not the one before it.
-    setProgress(QString::number(result.iterations), chi(result.reduced_chi_square), status_text(status_of(result)));
+    setProgress(QString::number(result.iterations), chi(result.reduced_chi_square), status_text(status_of(result)),
+                recorded_outcome(result));
+    setElapsed(duration(result.fitting_time));
     results_->setRecord(project_);
 }
 
@@ -112,6 +149,7 @@ FitViewModel::~FitViewModel() { close(); }
 
 void FitViewModel::close() {
     frame_timer_.stop();
+    clock_timer_.stop();
     pending_frame_.reset();
     job_.reset();
 }
@@ -122,6 +160,9 @@ void FitViewModel::start() {
     }
     if (job_->start()) {
         results_->clear();
+        clock_.start();
+        clock_timer_.start();
+        setElapsed(duration(0.0));
         setRunning(true);
         setProgress(QString(), QString(), tr("Running"));
     }
@@ -142,6 +183,7 @@ bool FitViewModel::undo() {
     edi::Project& project = project_;
     if (owner_.apply(edi::Edit::undo_fit(project), false).isEmpty()) {
         setProgress(QString(), QString(), QString());
+        setElapsed(QString());
         results_->clear();
         return true;
     }
@@ -201,6 +243,7 @@ void FitViewModel::showFrame() {
 void FitViewModel::ended(const edi::FitReport& report) {
     // The last delivery: a frame still waiting is older than what follows, and is dropped.
     frame_timer_.stop();
+    clock_timer_.stop();
     pending_frame_.reset();
     setRunning(false);
     if (report.adopted()) {
@@ -209,7 +252,8 @@ void FitViewModel::ended(const edi::FitReport& report) {
         const edi::FitResultBase& result = *report.result;
         setProgress(QString::number(result.iterations),
                     QStringLiteral("%1 → %2").arg(chi(result.pre_fit.reduced_chi_square), chi(result.reduced_chi_square)),
-                    status_text(report.status));
+                    status_text(report.status), outcome_key(report.status));
+        setElapsed(duration(result.fitting_time));
         results_->setRecord(project_);
         sync();
         emit finished();
@@ -217,7 +261,8 @@ void FitViewModel::ended(const edi::FitReport& report) {
     }
     // Nothing was written: the chart goes back to what the project holds.
     owner_.restorePatterns();
-    setProgress(QString(), QString(), status_text(report.status));
+    setProgress(QString(), QString(), status_text(report.status), outcome_key(report.status));
+    setElapsed(duration(static_cast<double>(clock_.elapsed()) / 1000.0));
     sync();
     if (report.status == edi::FitStatus::ERROR) {
         emit refused(QString::fromStdString(report.refusal));
@@ -234,7 +279,22 @@ void FitViewModel::setRunning(bool running) {
     }
 }
 
-void FitViewModel::setProgress(const QString& iterations, const QString& goodness, const QString& status) {
+void FitViewModel::setFollowing(bool following) {
+    if (following != following_) {
+        following_ = following;
+        emit followingChanged();
+    }
+}
+
+void FitViewModel::setElapsed(const QString& elapsed) {
+    if (elapsed != elapsed_) {
+        elapsed_ = elapsed;
+        emit elapsedChanged();
+    }
+}
+
+void FitViewModel::setProgress(const QString& iterations, const QString& goodness, const QString& status,
+                               const QString& outcome) {
     if (iterations != iterations_) {
         iterations_ = iterations;
         emit iterationsChanged();
@@ -246,6 +306,10 @@ void FitViewModel::setProgress(const QString& iterations, const QString& goodnes
     if (status != status_) {
         status_ = status;
         emit statusChanged();
+    }
+    if (outcome != outcome_) {
+        outcome_ = outcome;
+        emit outcomeChanged();
     }
 }
 

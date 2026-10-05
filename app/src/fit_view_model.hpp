@@ -2,6 +2,7 @@
 #ifndef EDI_APP_FIT_VIEW_MODEL_HPP
 #define EDI_APP_FIT_VIEW_MODEL_HPP
 
+#include <QElapsedTimer>
 #include <QObject>
 #include <QString>
 #include <QTimer>
@@ -18,8 +19,13 @@ namespace edi_app {
 
 class ProjectViewModel;
 
+// How a recorded fit ended, as the outcome key the app draws (FitOutcomes.qml): "success", "maxIterations",
+// "noStep", "stopped", "superseded" or "failed"; empty when the project holds no result.
+QString recorded_outcome(const edi::FitResultRecord& result);
+
 // The last fit's results, as diffraction-lib's "Least-squares fit results" table: roles
-// `icon` (a font icon), `metric` and `value`, from the fit's final result.
+// `icon` (a font icon), `metric`, `value` and `outcome` (the outcome key on the Overall status row, else
+// empty), from the fit's final result.
 class FitResultListModel : public RowTableModel {
     Q_OBJECT
     QML_ELEMENT
@@ -39,17 +45,26 @@ class FitViewModel : public QObject {
     Q_OBJECT
     QML_ELEMENT
     QML_UNCREATABLE("Belongs to a project")
-    // A fit is running: Start fitting is Cancel fitting.
+    // A fit is running: Start fitting is Stop fitting.
     Q_PROPERTY(bool running READ running NOTIFY runningChanged)
+    // A scan stopped part way: Start fitting reads Continue fitting. False until scans run in the app.
+    Q_PROPERTY(bool continuable READ continuable NOTIFY continuableChanged)
+    // A scan is running: Follow is enabled. `following`: the pattern tab shows the file being fitted.
+    Q_PROPERTY(bool scanning READ scanning NOTIFY scanningChanged)
+    Q_PROPERTY(bool following READ following WRITE setFollowing NOTIFY followingChanged)
     // The project's fitting mode is one Start fitting runs (single, joint); otherwise `unavailableReason`.
     Q_PROPERTY(bool available READ available NOTIFY availableChanged)
     Q_PROPERTY(QString unavailableReason READ unavailableReason NOTIFY unavailableReasonChanged)
     // The model holds a fit's start state (`_fit_parameter`): the app bar's Undo restores it.
     Q_PROPERTY(bool canUndo READ canUndo NOTIFY canUndoChanged)
-    // The status bar's fit items: empty before the first fit and after an undo.
+    // The status bar's fit area: empty before the first fit and after an undo. `elapsed` is the running
+    // fit's time, then the fit's own; `status` is the outcome's word, "Running" while a fit runs; `outcome`
+    // is its key (recorded_outcome), empty while a fit runs.
     Q_PROPERTY(QString iterations READ iterations NOTIFY iterationsChanged)
+    Q_PROPERTY(QString elapsed READ elapsed NOTIFY elapsedChanged)
     Q_PROPERTY(QString goodnessOfFit READ goodnessOfFit NOTIFY goodnessOfFitChanged)
     Q_PROPERTY(QString status READ status NOTIFY statusChanged)
+    Q_PROPERTY(QString outcome READ outcome NOTIFY outcomeChanged)
     Q_PROPERTY(edi_app::FitResultListModel* results READ results CONSTANT)
 
    public:
@@ -57,12 +72,18 @@ class FitViewModel : public QObject {
     ~FitViewModel() override;
 
     bool running() const { return running_; }
+    bool continuable() const { return false; }
+    bool scanning() const { return false; }
+    bool following() const { return following_; }
+    void setFollowing(bool following);
     bool available() const { return available_; }
     QString unavailableReason() const { return unavailable_reason_; }
     bool canUndo() const { return can_undo_; }
     QString iterations() const { return iterations_; }
+    QString elapsed() const { return elapsed_; }
     QString goodnessOfFit() const { return goodness_of_fit_; }
     QString status() const { return status_; }
+    QString outcome() const { return outcome_; }
     FitResultListModel* results() const { return results_; }
 
     Q_INVOKABLE void start();
@@ -76,12 +97,17 @@ class FitViewModel : public QObject {
 
    signals:
     void runningChanged();
+    void continuableChanged();
+    void scanningChanged();
+    void followingChanged();
     void availableChanged();
     void unavailableReasonChanged();
     void canUndoChanged();
     void iterationsChanged();
+    void elapsedChanged();
     void goodnessOfFitChanged();
     void statusChanged();
+    void outcomeChanged();
     // A fit ended with a result the project now holds (finished, cancelled or stopped early): the pop-up.
     void finished();
     // A fit was refused or failed; the project is unchanged.
@@ -94,7 +120,9 @@ class FitViewModel : public QObject {
     void showFrame();
     void ended(const edi::FitReport& report);
     void setRunning(bool running);
-    void setProgress(const QString& iterations, const QString& goodness, const QString& status);
+    void setProgress(const QString& iterations, const QString& goodness, const QString& status,
+                     const QString& outcome = QString());
+    void setElapsed(const QString& elapsed);
     // The status bar's fit items and the results table from the result the project records (a project
     // opened with one).
     void showRecord();
@@ -107,9 +135,12 @@ class FitViewModel : public QObject {
     // once this one is shown).
     std::optional<edi::FitFrame> pending_frame_;
     QTimer frame_timer_;
-    bool running_ = false, available_ = false, can_undo_ = false;
+    // The running fit's clock, shown once a second.
+    QElapsedTimer clock_;
+    QTimer clock_timer_;
+    bool running_ = false, available_ = false, can_undo_ = false, following_ = true;
     double chi_before_ = 0.0;
-    QString unavailable_reason_, iterations_, goodness_of_fit_, status_;
+    QString unavailable_reason_, iterations_, elapsed_, goodness_of_fit_, status_, outcome_;
 };
 
 }  // namespace edi_app
