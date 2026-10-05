@@ -19,7 +19,7 @@ set(EDI_APP_DATE "${EDI_APP_GIT_DATE}")
 configure_file(src/app_build_info.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/app_build_info.hpp @ONLY)
 
 # Singletons are marked before the module is declared: qt_add_qml_module reads the property then.
-set_source_files_properties(qml/Globals/AppState.qml qml/Globals/FieldTitles.qml qml/Globals/ParameterNames.qml
+set_source_files_properties(qml/Globals/AppState.qml qml/Globals/FieldTitles.qml qml/Globals/FitOutcomes.qml qml/Globals/ParameterNames.qml
                             qml/Globals/Preferences.qml qml/Globals/SideBarGroups.qml qml/Globals/TypedInput.qml
                             qml/Style/AppColors.qml qml/Style/AppSizes.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 qt_add_library(edi_app_module STATIC)
@@ -66,6 +66,8 @@ qt_add_qml_module(edi_app_module
         qml/Components/AppPreferencesDialog.qml
         qml/Components/BlockSelector.qml
         qml/Components/CategoryGroup.qml
+        qml/Components/FitOutcomeLabel.qml
+        qml/Components/FitProgressBar.qml
         qml/Components/FitResultsDialog.qml
         qml/Components/ChartLegend.qml
         qml/Components/ChartToolButton.qml
@@ -73,10 +75,12 @@ qt_add_qml_module(edi_app_module
         qml/Components/IconCell.qml
         qml/Components/IconLine.qml
         qml/Components/IconTabButton.qml
+        qml/Components/MainAreaBlockSelector.qml
         qml/Components/ParameterCell.qml
         qml/Components/ParameterField.qml
         qml/Components/ParameterGrid.qml
         qml/Components/PatternChart.qml
+        qml/Components/SearchableComboBox.qml
         qml/Components/SelectorField.qml
         qml/Components/StatusBar.qml
         qml/Components/StatusBarItem.qml
@@ -93,6 +97,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/WorkflowPage.qml
         qml/Globals/AppState.qml
         qml/Globals/FieldTitles.qml
+        qml/Globals/FitOutcomes.qml
         qml/Globals/ParameterNames.qml
         qml/Globals/Preferences.qml
         qml/Globals/SideBarGroups.qml
@@ -100,7 +105,6 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Analysis/AliasesGroup.qml
         qml/Pages/Analysis/AnalysisPage.qml
         qml/Pages/Analysis/ConstraintsGroup.qml
-        qml/Pages/Analysis/ExperimentSelectorGroup.qml
         qml/Pages/Analysis/FitStartGroup.qml
         qml/Pages/Analysis/FittingGroup.qml
         qml/Pages/Analysis/FittingModeGroup.qml

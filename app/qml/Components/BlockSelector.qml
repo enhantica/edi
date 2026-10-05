@@ -9,10 +9,11 @@ import EasyApplication.Gui.Elements as EaElements
 import edi.app
 
 // The compact block selector (easydiffractionbeta Pages/*/SideBarText/Models.qml, Experiments.qml): the page's
-// blocks in a combo box one sidebar content wide, the shown one current (edi ADR-0017 §7). Each block reads as
+// blocks in a combo box, the shown one current, placed in the main view's tab bar (MainAreaBlockSelector; edi
+// ADR-0017 §7). Each block reads as
 // there — its number, its icon in its colour (§8), its name, on one centre line (§10) — in the box and in the
 // list.
-EaElements.ComboBox {
+SearchableComboBox {
     id: selector
 
     // The blocks (a model with a `textRole`), their kind ("structure" or "experiment"), the shown one, and the
@@ -63,6 +64,9 @@ EaElements.ComboBox {
             x: EaStyle.Sizes.fontPixelSize * 0.75
             anchors.verticalCenter: parent.verticalCenter
             segments: selector.segments(selector.currentIndex, selector.currentText, selector.foregroundColor)
+            // A long name is cut in the middle, so both its ends still tell blocks apart.
+            maximumWidth: Math.max(1, parent.width - x)
+            elide: Text.ElideMiddle
         }
     }
 
@@ -74,7 +78,8 @@ EaElements.ComboBox {
         required property var model
 
         width: entry.parent !== null ? entry.parent.width : 0
-        height: EaStyle.Sizes.comboBoxHeight
+        height: visible ? EaStyle.Sizes.comboBoxHeight : 0
+        visible: selector.matches(text)
         // The base's padding of 16 on every side leaves a content area of no height in a row this tall; its
         // Label draws past that, but a clipped line would show nothing, so the line gets the row's full height
         // (edi ADR-0017 §10).
@@ -90,6 +95,8 @@ EaElements.ComboBox {
             IconLine {
                 anchors.verticalCenter: parent.verticalCenter
                 segments: selector.segments(entry.index, entry.text, EaStyle.Colors.themeForeground)
+                maximumWidth: Math.max(1, parent.width)
+                elide: Text.ElideMiddle
             }
         }
     }

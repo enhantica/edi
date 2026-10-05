@@ -21,6 +21,19 @@ Item {
     property real pixelSize: EaStyle.Sizes.fontPixelSize
     property color textColor: EaStyle.Colors.themeForeground
     property real spacing: pixelSize * 0.5
+    // A width the line must not exceed (0: none): its last text piece is then elided, by `elide`.
+    property real maximumWidth: 0
+    property int elide: Text.ElideRight
+
+    // The width of every piece before the last, with their spacing: what the last piece leaves room for.
+    readonly property real leadingWidth: {
+        let width = 0;
+        for (let i = 0; i < pieces.count - 1; ++i) {
+            const piece = pieces.itemAt(i);
+            width += piece ? piece.implicitWidth + spacing : 0;
+        }
+        return width;
+    }
 
     // The centre line, from the line's top: the text baseline, less half a capital's height.
     readonly property real centreY: textMetrics.ascent + capital.tightBoundingRect.y + capital.tightBoundingRect.height / 2
@@ -45,11 +58,14 @@ Item {
         spacing: line.spacing
 
         Repeater {
+            id: pieces
             model: line.segments
             delegate: EaElements.Label {
                 id: piece
 
+                required property int index
                 required property var modelData
+                readonly property bool elided: line.maximumWidth > 0 && !isIcon && index === line.segments.length - 1
                 readonly property bool isIcon: modelData.icon !== undefined
                 // The drawn glyph's middle, from the piece's top (none measured: its baseline).
                 readonly property real inkMiddle: ink.tightBoundingRect.height > 0 ? baselineOffset + ink.tightBoundingRect.y + ink.tightBoundingRect.height / 2 : baselineOffset
@@ -60,6 +76,8 @@ Item {
                 font.pixelSize: line.pixelSize
                 color: modelData.color ?? line.textColor
                 text: isIcon ? modelData.icon : modelData.text
+                width: elided ? Math.max(0, Math.min(implicitWidth, line.maximumWidth - line.leadingWidth)) : implicitWidth
+                elide: elided ? line.elide : Text.ElideNone
                 y: isIcon ? line.centreY - inkMiddle : textMetrics.ascent - baselineOffset
 
                 TextMetrics {

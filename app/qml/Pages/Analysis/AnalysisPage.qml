@@ -4,14 +4,13 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 
-import EasyApplication.Gui.Elements as EaElements
 import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
 
-// The Analysis page (easydiffractionbeta Pages/Analysis): the chart's place in the main area; the
-// experiment selector, the parameter table and Fitting in Basic; the analysis block's `.edi`
-// categories in Extras (packet §2b (iv), §15.6); analysis.edi in Text.
+// The Analysis page (easydiffractionbeta Pages/Analysis): the chart's place in the main area, with the
+// experiment selector in its tab bar; the parameter table and Fitting in Main; the analysis block's `.edi`
+// categories in Extra (packet §2b (iv), §15.6); analysis.edi in Text.
 WorkflowPage {
     id: page
 
@@ -34,7 +33,7 @@ WorkflowPage {
     pageName: "analysis"
     defaultInfo: project ? "" : qsTr("No analysis done")
     mainTabs: [
-        EaElements.TabButton {
+        IconTabButton {
             objectName: "mainArea.analysis.tab.fitting"
             text: qsTr("Fitting")
         }
@@ -49,9 +48,6 @@ WorkflowPage {
     textEnabled: analysis !== null
     basicItem: Component {
         EaComponents.SideBarColumn {
-            ExperimentSelectorGroup {
-                project: page.project
-            }
             // The fitted inputs are not edited while a fit runs.
             ParametersGroup {
                 project: page.project
@@ -76,6 +72,14 @@ WorkflowPage {
             source: page.analysis ? page.analysis.text : null
         }
     }
+    // The same selector as the Experiment page's, over the one current experiment the project holds, so
+    // choosing here or there is one choice (edi ADR-0017 §7).
+    blockSelectorShown: true
+    blocks: project ? project.experiments : null
+    blocksTextRole: "name"
+    blockKind: "experiment"
+    blockIndex: project ? project.currentExperimentIndex : -1
+    onBlockActivated: index => page.project.currentExperimentIndex = index
     continueText: qsTr("Continue")
     onContinueClicked: AppState.open(AppState.Page.Report)
 

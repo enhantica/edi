@@ -10,10 +10,10 @@ import EasyApplication.Gui.Components as EaComponents
 import edi.app
 
 // A workflow page's frame (easydiffractionbeta Pages/*/PageStructure.qml): the main view with its tabs
-// on the left, the Basic / Extras / Text sidebar on the right, and Continue at the bottom. A page with a
-// block list (Structure, Experiment) shows one compact block selector under the sidebar's tabs, above every
-// tab's content, never folded (edi ADR-0017 §7): the base's SideBar has no place for it, so it is a child of
-// the SideBar placed under the tab bar, and the tabs' view starts below it.
+// on the left, the Main / Extra / Text sidebar on the right, and Continue at the bottom. A page with a
+// block list (Structure, Experiment, Analysis) shows one compact block selector in the main view's tab bar,
+// right-aligned (MainAreaBlockSelector; edi ADR-0017 §7), while the project holds a block of its kind; the
+// tabs shorten to stay clear of it.
 EaComponents.ContentPage {
     id: page
 
@@ -50,6 +50,7 @@ EaComponents.ContentPage {
                 child.visible = Qt.binding(() => !textLoader.SwipeView.isCurrentItem);
         }
         page.placeSideBar();
+        page.fitTabs();
         sideBar.continueButton.anchors.bottomMargin = Qt.binding(() => EaStyle.Sizes.fontPixelSize);
     }
 
@@ -97,8 +98,42 @@ EaComponents.ContentPage {
         }
     }
 
+    // The main view's tabs share the tab bar's row with the block selector: each tab's name is elided to its
+    // share of the width the selector leaves (IconTabButton.maximumWidth).
+    function fitTabs() {
+        const tabs = mainContent.tabs;
+        const free = mainContent.width - blockSelector.reservedWidth;
+        for (let i = 0; i < tabs.length; ++i) {
+            if (tabs[i].maximumWidth !== undefined)
+                tabs[i].maximumWidth = blockSelector.visible ? free / tabs.length : 0;
+        }
+    }
+
     mainView: EaComponents.MainContent {
         id: mainContent
+
+        onWidthChanged: page.fitTabs()
+
+        MainAreaBlockSelector {
+            id: blockSelector
+            visible: page.blockSelectorShown && page.blocks !== null && page.blocks.count > 0
+            areaWidth: mainContent.width
+            blocks: page.blocks
+            blocksTextRole: page.blocksTextRole
+            blockKind: page.blockKind
+            blockIndex: page.blockIndex
+            onBlockActivated: index => page.blockActivated(index)
+            onReservedWidthChanged: page.fitTabs()
+            onVisibleChanged: page.fitTabs()
+        }
+
+        // The tabs' view (the base's SwipeView, the main area's second child, anchored under the tab bar)
+        // starts below the selector when the selector sits under the tab bar.
+        Binding {
+            target: mainContent.children.length > 1 ? mainContent.children[1].anchors : null
+            property: "topMargin"
+            value: blockSelector.reservedHeight
+        }
     }
 
     sideBar: EaComponents.SideBar {
@@ -106,13 +141,12 @@ EaComponents.ContentPage {
 
         tabs: [
             EaElements.TabButton {
-                id: basicTab
                 objectName: "sideBar.tab.basic"
-                text: qsTr("Basic")
+                text: qsTr("Main")
             },
             EaElements.TabButton {
                 objectName: "sideBar.tab.extras"
-                text: qsTr("Extras")
+                text: qsTr("Extra")
                 enabled: page.extrasEnabled
             },
             EaElements.TabButton {
@@ -146,43 +180,6 @@ EaComponents.ContentPage {
         continueButton.showBackground: true
         continueButton.radius: sideBar.continueButton.height / 2
         continueButton.width: (sideBar.continueButton.contentItem && sideBar.continueButton.contentItem.children.length > 0 ? sideBar.continueButton.contentItem.children[0].width : 0) + 2 * EaStyle.Sizes.fontPixelSize
-
-        BlockSelector {
-            id: blockSelector
-            objectName: "sideBar.blocks"
-            visible: page.blockSelectorShown
-            x: EaStyle.Sizes.sideBarPadding
-            // As the Text tab's selector sat: one font unit under the tab bar.
-            y: (basicTab.TabBar.tabBar ? basicTab.TabBar.tabBar.height : 0) + EaStyle.Sizes.fontPixelSize
-            blocks: page.blocks
-            blocksTextRole: page.blocksTextRole
-            blockKind: page.blockKind
-            blockIndex: page.blockIndex
-            onBlockActivated: index => page.blockActivated(index)
-        }
-
-        // On every tab the selector closes with the bottom border a group draws (the base GroupBox's: a line of
-        // the border colour, a font unit under its content, across the sidebar); the tabs' view starts right
-        // under it (edi ADR-0017 §7).
-        Rectangle {
-            objectName: "sideBar.blocks.border"
-            visible: page.blockSelectorShown
-            y: blockSelector.y + blockSelector.height + EaStyle.Sizes.fontPixelSize - height
-            width: parent.width
-            height: EaStyle.Sizes.borderThickness
-            color: EaStyle.Colors.appBorder
-            Behavior on color {
-                EaAnimations.ThemeChange {}
-            }
-        }
-
-        // The tabs' view (the base's SwipeView, anchored under the tab bar) starts a font unit under the
-        // selector on every tab, right under its border.
-        Binding {
-            target: basicLoader.SwipeView.view ? basicLoader.SwipeView.view.anchors : null
-            property: "topMargin"
-            value: !page.blockSelectorShown ? 0 : 2 * EaStyle.Sizes.fontPixelSize + blockSelector.height
-        }
 
         // On the Text tab the tabs' view reaches the bottom of the sidebar, so the text view can run down to it
         // with Continue kept in its place, drawn over the text with the base's fade (edi ADR-0017 §7). The base

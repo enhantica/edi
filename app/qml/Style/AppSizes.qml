@@ -28,6 +28,7 @@ QtObject {
     readonly property real iconColumnWidth: unit * 2.5        // a table's action-button column
     readonly property real dataIndexColumnWidth: unit * 3.5   // a data table's row number (up to 5 digits)
     readonly property real dataColumnWidth: unit * 6          // a data table's value column
+    readonly property real fileColumnWidth: unit * 7          // an explorer table's file column
     readonly property real descriptionNameColumnWidth: unit * 10
     readonly property real descriptionInnerSpacing: unit * 0.85
     readonly property real descriptionOuterSpacing: unit * 1.5
@@ -39,6 +40,9 @@ QtObject {
     readonly property real textViewMinimumHeight: unit * 5
     readonly property real textViewContinueClearance: EaStyle.Sizes.sideBarButtonHeight + unit * 0.5
     readonly property real reportPadding: unit * 2.5
+    // Below this main-area width the block selector leaves the tab bar's row for a row of its own under it
+    // (MainAreaBlockSelector): at half the width it would no longer show a usual block name.
+    readonly property real mainAreaSelectorBreak: unit * 36
     // The messages dialog's fixed width (edi ADR-0017 §14): about the Preferences dialog's.
     readonly property real messagesDialogContentWidth: unit * 38
     // The About dialog's component table, as wide as the messages dialog and about ten rows high, and the
