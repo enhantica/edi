@@ -62,15 +62,27 @@ def test_full_ci_consumers_run_on_every_event_and_only_skip_core_only_repairs():
             )
 
 
-def test_pages_stays_disabled_and_webapp_keeps_default_retention():
+def test_pages_visibility_and_webapp_default_retention_follow_the_public_profile():
     jobs = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())['jobs']
     if public_profile(jobs):
         pages = yaml.safe_load((ROOT / '.github/workflows/pages.yml').read_text())['jobs']
+        assert set(pages) == {'build', 'deploy'} and all(job['steps'] for job in pages.values()), (
+            'public Pages retains both real build and deployment jobs'
+        )
+        for event in ('push', 'workflow_dispatch'):
+            assert active(pages['build'], event), 'public Pages builds on each site event'
+            assert active(pages['deploy'], event), 'public Pages deploys on each site event'
+            assert not active(pages['deploy'], event, repository_private=True), (
+                'the publicly visible site deploys only from a public repository'
+            )
+        assert not active(pages['build'], 'pull_request', fork=True), (
+            'Pages private SDK acquisition retains the fork credential boundary'
+        )
     else:
         pages = {'pages': jobs['pages']}
-    assert pages and all(job.get('if') is False and job['steps'] for job in pages.values()), (
-        'retain every Pages build and deployment job but disable them on every event'
-    )
+        assert all(job.get('if') is False and job['steps'] for job in pages.values()), (
+            'private CI retains Pages steps with deployment explicitly disabled'
+        )
     uploads = [
         step
         for step in jobs['app-wasm']['steps']
@@ -80,5 +92,5 @@ def test_pages_stays_disabled_and_webapp_keeps_default_retention():
         'every full run uploads the webapp with repository default retention'
     )
     assert not any('pages' in job.get('needs', []) for job in jobs.values()), (
-        'the disabled Pages job cannot block another CI job'
+        'site publication must not block another CI job'
     )

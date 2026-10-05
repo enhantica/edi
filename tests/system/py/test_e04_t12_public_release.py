@@ -18,6 +18,7 @@ import struct
 import subprocess
 import sys
 import tarfile
+import time
 import tomllib
 import zipfile
 import zlib
@@ -27,6 +28,8 @@ from pathlib import Path
 import pytest
 import yaml
 from compression import zstd
+
+from tests.fixtures.e09_t75_workflow import active
 
 ROOT = Path(__file__).resolve().parents[3]
 ORACLE = json.loads((ROOT / 'tests/fixtures/e04_t12_public_release/oracle.json').read_text())
@@ -516,7 +519,7 @@ def test_private_token_guards_still_refuse_forks_after_public_switch(defect):
             'github.event.pull_request.head.repo.fork == false }}',
         }[defect]
     assert public_token_findings(damaged), (
-        'core-only skips and disabled Pages must never mask a fork token or environment escape'
+        'core-only skips and Pages publication must never mask a fork token or environment escape'
     )
 
 
@@ -620,7 +623,7 @@ def test_webapp_artifact_allowance_refuses_native_object_escapes(defect):
     )
 
 
-def test_pages_builds_docs_and_reserves_unlisted_webapp():
+def test_pages_builds_docs_and_publishes_the_linked_webapp():
     pages = [doc for _, doc in workflows() if 'actions/deploy-pages' in json.dumps(doc)]
     assert pages, 'the public site needs a GitHub Pages deployment workflow'
     serialized = json.dumps(pages)
@@ -628,13 +631,66 @@ def test_pages_builds_docs_and_reserves_unlisted_webapp():
         'Pages must build the docs from this source tree'
     )
     assert 'actions/upload-pages-artifact' in serialized and 'webapp' in serialized, (
-        'the published Pages artifact must include the reserved webapp directory'
+        'the published Pages artifact must include the real webapp directory'
     )
     config = yaml.load((ROOT / 'mkdocs.yml').read_text(), Loader=yaml.BaseLoader)
-    assert 'webapp' not in json.dumps(config.get('nav', [])), (
-        'the app folder is served but remains absent from the public docs navigation'
+    assert 'webapp' in json.dumps(config.get('nav', [])), (
+        'the public docs navigation must link the visible web app'
+    )
+    assert all(
+        '/webapp/' in (ROOT / path).read_text() for path in ('docs/index.md', 'docs/user/index.md')
+    ), 'the landing and user documentation must link the public web app'
+    assert 'wasm-build' in serialized and 'docs-webapp.sh build/wasm/site site' in serialized, (
+        'Pages must build the real wasm app and place its output in the uploaded docs site'
+    )
+    for doc in pages:
+        steps = doc['jobs']['build']['steps']
+        operations = ('wasm-toolchain', 'wasm-build', 'docs-webapp.sh', 'upload-pages-artifact')
+        positions = []
+        for operation in operations:
+            matches = [
+                i
+                for i, step in enumerate(steps)
+                if operation in str(step.get('run', '')) + str(step.get('uses', ''))
+            ]
+            assert len(matches) == 1, 'Pages requires one real publication operation: ' + operation
+            index = matches[0]
+            assert active(steps[index], 'push') and not steps[index].get('continue-on-error'), (
+                'each Pages publication operation must execute and propagate its failure'
+            )
+            positions.append(index)
+        assert positions == sorted(positions), (
+            'Pages installs, builds and places the real app before uploading its site'
+        )
+        assert doc['jobs']['deploy'].get('needs') in ('build', ['build']), (
+            'Pages deploy waits for the completed combined documentation and webapp artifact'
+        )
+    assert 'noindex' not in serialized and 'Disallow: /webapp/' not in serialized, (
+        'the published site must not hide the web app from indexing'
     )
     assert 'site_url' in config, 'the public docs must declare their published canonical URL'
+
+
+@pytest.mark.parametrize('defect', ['missing-build', 'disabled-placement', 'upload-first'])
+def test_pages_publication_rejects_missing_or_bypassed_real_app(defect, monkeypatch):
+    import copy  # noqa: PLC0415
+
+    test_pages_builds_docs_and_publishes_the_linked_webapp()
+    damaged = copy.deepcopy(workflows())
+    pages = next(doc for name, doc in damaged if name == 'pages.yml')
+    steps = pages['jobs']['build']['steps']
+    if defect == 'missing-build':
+        steps[:] = [step for step in steps if 'wasm-build' not in step.get('run', '')]
+    elif defect == 'disabled-placement':
+        next(step for step in steps if 'docs-webapp.sh' in step.get('run', ''))['if'] = 'false'
+    else:
+        index = next(
+            i for i, step in enumerate(steps) if 'upload-pages-artifact' in step.get('uses', '')
+        )
+        steps.insert(0, steps.pop(index))
+    monkeypatch.setattr(sys.modules[__name__], 'workflows', lambda: damaged)
+    with pytest.raises(AssertionError):
+        test_pages_builds_docs_and_publishes_the_linked_webapp()
 
 
 def script(name):
@@ -962,17 +1018,27 @@ def secret_findings(entries):
     ]
 
 
-def test_secret_scanner_checks_the_prepared_tree():
+def test_independent_secret_predicate_checks_every_decoded_member():
     findings = secret_findings(publication_texts())
     assert not findings, (
         'the independent publication check must reject credentials in decoded members: '
         + ', '.join(findings[:20])
     )
+
+
+def test_secret_scanner_checks_the_prepared_tree():
+    deadline = time.monotonic() + 5
     scanner = script('scan.py')
     try:
-        # Leave room for the independent predicate within the existing system
-        # tier's five-second bound. A slow/incomplete scan cannot certify a tree.
-        result = run(sys.executable, str(scanner), '--tree', str(ROOT), timeout=3)
+        # This node performs one complete production scan. The separate independent
+        # predicate above keeps its own full-tree obligation and runtime attribution.
+        result = run(
+            sys.executable,
+            str(scanner),
+            '--tree',
+            str(ROOT),
+            timeout=max(0, deadline - time.monotonic()),
+        )
     except subprocess.TimeoutExpired:
         pytest.fail('the full publication scanner must complete within the system-test budget')
     require_success(result, 'the final release secrets scan must inspect the entire prepared tree')

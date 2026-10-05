@@ -78,7 +78,7 @@ class RemoteFixture:
             text=True,
         )
 
-    def run(self, script, *args):
+    def run(self, script, *args, timeout=2):
         result = subprocess.run(
             ['bash', str(self.edi / 'tools/ci' / script), *args],
             cwd=self.edi,
@@ -86,7 +86,7 @@ class RemoteFixture:
             capture_output=True,
             text=True,
             check=False,
-            timeout=2,
+            timeout=timeout,
         )
 
         assert_no_swallowed_refusal(self.edi.parent, result.returncode == 0)
