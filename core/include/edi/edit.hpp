@@ -391,6 +391,37 @@ class Edit {
         });
     }
 
+    // A scan dataset shown in the model (the app's dataset view): the experiment's measured data replaced by the
+    // dataset's, and each named parameter given its value and uncertainty (a fitted dataset's results row, or the
+    // template's). Every name is resolved first; one the model does not have is left out, as a results column of
+    // a parameter the template no longer has. The writes are assignments, which cannot fail.
+    struct ScanValue {
+        std::string unique_name;
+        double value = 0.0;
+        std::optional<double> uncertainty;
+    };
+    static Edit scan_view(Project& project, ExperimentBase& experiment, std::vector<ScanValue> values, PdDataBase data) {
+        auto shown = std::make_shared<PdDataBase>(std::move(data));
+        return Edit([&project, &experiment, values = std::move(values), shown] {
+            std::map<std::string, Parameter*> by_name;
+            for (const NamedSlot& slot : named_slots(project)) {
+                by_name.emplace(slot.unique_name, slot.parameter);
+            }
+            std::vector<std::pair<Parameter*, const ScanValue*>> targets;
+            for (const ScanValue& value : values) {
+                if (const auto found = by_name.find(value.unique_name); found != by_name.end()) {
+                    targets.emplace_back(found->second, &value);
+                }
+            }
+            experiment.data = *shown;
+            experiment.calculation_only = false;
+            for (const auto& [parameter, value] : targets) {
+                parameter->value = value->value;
+                parameter->uncertainty = value->uncertainty;
+            }
+        });
+    }
+
     // An edit of the relations undone (edi ADR-0024): the alias and constraint rows as they were, and each
     // parameter the edit changed back to its state then. Every parameter is resolved first, so one whose
     // row was removed since refuses with nothing written; the rows were admitted before, so the
