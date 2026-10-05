@@ -85,7 +85,7 @@ WorkflowPage {
     // One block selector for Basic, Extras and Text (edi ADR-0017 §7).
     blockSelectorShown: true
     blocks: project ? project.structures : null
-    blocksTextRole: "name"
+    blocksTextRole: "label"
     blockKind: "structure"
     blockIndex: project ? project.currentStructureIndex : -1
     onBlockActivated: index => page.project.currentStructureIndex = index

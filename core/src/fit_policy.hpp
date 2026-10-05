@@ -5,29 +5,34 @@
 // edi-side refinement policy (lifted verbatim out of adapter.cpp): what a refinement request is
 // REFUSED for before any engine contact (ADR-0003 pt 5 — a structured error, never a partial or
 // silent result), the site-identity rule, the bounds a fit runs under, and how a resolved result
-// is written back onto the model. Everything here operates on edi value types only, so it sits on
-// edi's side of the ADR-0003 line and is unit-testable without the engine. core/src-private
-// (never installed): these are the adapter's own rules, not product surface. The one-call
-// `Project::fit*` sourcing overloads are defined in fit_policy.cpp for the same reason — they
-// read the model's embedded data and delegate; they touch no crysta type.
+// is written back onto the model. Everything here operates on edi value types, except
+// require_populated_participants: which structures take part in a fit is the engine's answer, so
+// that one rule reads the crysta project the fit builds. core/src-private (never installed): these
+// are the adapter's own rules, not product surface. The one-call `Project::fit*` sourcing overloads
+// are defined in fit_policy.cpp too; they read the model's embedded data and delegate.
 
 #include <cstddef>
 #include <vector>
 
+#include "crysta/model.hpp"
 #include "edi/model.hpp"
 #include "parameter_paths.hpp"
 
 namespace edi::detail {
 
-// Project::fit(grid, observed, sigma, ...) boundary checks: empty or ragged measured data, a
-// structure with no atom sites.
+// Project::fit(grid, observed, sigma, ...) boundary checks: empty or ragged measured data. The atom-site
+// rule is require_populated_participants, on the project the fit builds.
 void validate_fit_request(const std::vector<double>& grid, const std::vector<double>& observed,
-                             const std::vector<double>& sigma, const Structure& structure);
+                             const std::vector<double>& sigma, const Project& project);
+
+// The atom-site rule on exactly a fit's participants: every structure an enabled link of the fitted
+// banks names, resolved by crysta on the project the fit builds. Refused by name otherwise.
+void require_populated_participants(const crysta::Project& project, const char* surface);
 
 // Project::fit_joint(patterns, ...) boundary checks: no experiments, a pattern/bank count
-// mismatch, no atom sites, an unusable bank identity (empty / delimiter / duplicate / site-colliding
+// mismatch, an unusable bank identity (empty / delimiter / duplicate / site-colliding
 // name), empty or ragged per-bank data. `PdDataBase::axis()` fails closed on none-or-both.
-void validate_joint_request(const Structure& structure,
+void validate_joint_request(const Project& project,
                             const ItemVec<BraggPdExperiment>& experiments,
                             const std::vector<PdDataBase>& patterns);
 

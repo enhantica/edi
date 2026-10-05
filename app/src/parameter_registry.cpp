@@ -72,9 +72,35 @@ void ParameterRegistry::refreshElements(const edi::Project& project) {
             }
         }
     }
+    // A phase's scale and texture take the colour of the structure they belong to, when there are several.
+    std::unordered_map<const edi::Parameter*, int> phase;
+    if (project.structures.size() > 1) {
+        std::unordered_map<std::string, int> place;
+        int index = 0;
+        for (const auto& structure : project.structures) {
+            place.emplace(structure->name.value(), index++);
+        }
+        const auto owned = [&](const edi::ItemKey& structure_id, const edi::Parameter* parameter) {
+            const auto found = place.find(structure_id.value());
+            if (found != place.end()) {
+                phase.emplace(parameter, found->second);
+            }
+        };
+        for (const auto& experiment : project.experiments) {
+            for (const auto& link : experiment->linked_structures) {
+                owned(link->structure_id, &link->scale);
+            }
+            for (const auto& row : experiment->preferred_orientation) {
+                owned(row->structure_id, &row->march_r);
+                owned(row->structure_id, &row->march_random_fract);
+            }
+        }
+    }
     for (ParameterItem* item : items_) {
         const auto site = element.find(item->parameter());
         item->setElementSymbol(site != element.end() ? QString::fromStdString(site->second) : QString());
+        const auto owner = phase.find(item->parameter());
+        item->setPhaseIndex(owner != phase.end() ? owner->second : -1);
     }
 }
 

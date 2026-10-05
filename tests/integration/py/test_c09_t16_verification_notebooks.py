@@ -176,6 +176,33 @@ def _assert_calculated_candidate_flow(page: str, tree: ast.Module) -> None:
         'verify.restrict_to_included(project.experiment, project.experiment.data.intensity_calc)',
         mode='eval',
     ).body
+    if ast.dump(binding.value) != ast.dump(expected):
+        # Several-bank pages select the row once and use that same row for the
+        # inclusion mask and calculated intensity; oracle/cross-bank swaps refuse.
+        loops = [
+            loop for loop in ast.walk(tree) if isinstance(loop, ast.For) and binding in loop.body
+        ]
+        assert len(loops) == 1 and isinstance(loops[0].target, ast.Name), (
+            f'{page}: calculated candidate must have one enclosing bank iteration'
+        )
+        loop = loops[0]
+        selections = [
+            node
+            for node in loop.body
+            if isinstance(node, ast.Assign)
+            and node.lineno < binding.lineno
+            and any(
+                isinstance(target, ast.Name) and target.id == 'experiment'
+                for target in node.targets
+            )
+        ]
+        selected = ast.parse(f'project.experiments[{loop.target.id}]', mode='eval').body
+        assert len(selections) == 1 and ast.dump(selections[0].value) == ast.dump(selected), (
+            f'{page}: calculated candidate must select the current project bank'
+        )
+        expected = ast.parse(
+            'verify.restrict_to_included(experiment, experiment.data.intensity_calc)', mode='eval'
+        ).body
     assert ast.dump(binding.value) == ast.dump(expected), (
         f'{page}: calculated candidate must consume the project experiment calculated pattern'
     )
@@ -284,8 +311,9 @@ def _assert_fullprof_reference_flow(  # noqa: PLR0914
 
 
 def test_verification_sources_generate_stripped_notebooks_on_demand() -> None:
-    expected_sources = {f'{page}.py' for page in PAGES | RELATION_PAGES}
-    expected_notebooks = {f'{page}.ipynb' for page in PAGES | RELATION_PAGES}
+    pages = set(PAGES) | set(RELATION_PAGES) | {'pd-neut-tof_ferrite-austenite_beer_joint'}
+    expected_sources = {f'{page}.py' for page in pages}
+    expected_notebooks = {f'{page}.ipynb' for page in pages}
     actual_sources = {path.name for path in VERIFICATION.glob('*.py')}
 
     assert (VERIFICATION / 'index.md').is_file(), 'the verification page index must be present'

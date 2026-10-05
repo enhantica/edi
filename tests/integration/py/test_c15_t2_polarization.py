@@ -217,6 +217,8 @@ def test_frozen_reference_and_author_run_remain_independent():
 def test_c33_owned_page_is_the_measured_filename_difference():
     baseline = json.loads((FIXTURE / 'page-baseline.json').read_text())
     before = set(baseline['before_pages'])
+    # The independently gated two-bank verification page is now retained prior art.
+    before.add('pd-neut-tof_ferrite-austenite_beer_joint')
     after = {p.stem for p in (ROOT / 'docs/dev/verification').glob('*.py')}
     # ADR-0078 adds its separately gated tied-Biso page; keep this task's delta exact.
     after.discard('pd-neut-cwl_cosio-d20_biso-tied')

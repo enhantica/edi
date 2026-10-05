@@ -76,7 +76,7 @@ WorkflowPage {
     // choosing here or there is one choice (edi ADR-0017 §7).
     blockSelectorShown: true
     blocks: project ? project.experiments : null
-    blocksTextRole: "name"
+    blocksTextRole: "label"
     blockKind: "experiment"
     blockIndex: project ? project.currentExperimentIndex : -1
     onBlockActivated: index => page.project.currentExperimentIndex = index

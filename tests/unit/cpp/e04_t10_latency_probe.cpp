@@ -36,7 +36,7 @@ int main(int argc,char** argv) {
             auto live=large?e04_t10_fixture::generated():edi::load_project(e04_t10_fixture::t1);
             phase=large?"G1 independent geometry":"T1 independent geometry";
             auto reference=crysta::load_project(e04_t10_fixture::t1);
-            if(large) { const auto generated=crysta::structure_from_edi_text(e04_t10_fixture::generated_text());reference.structure=generated; }
+            if(large) { const auto generated=crysta::structure_from_edi_text(e04_t10_fixture::generated_text());reference.structure()=generated; }
             phase=large?"G1 current geometry":"T1 current geometry";
             live.structure().current_geometry();
             const double base=live.structure().atom_sites[0]->fract_x.value;
@@ -44,8 +44,8 @@ int main(int argc,char** argv) {
             std::map<double,Expected> expected;
             phase=large?"G1 independent requested states":"T1 independent requested states";
             for(const double value:{base+.001,base+.002}) {
-                reference.structure.atom_sites[0].fract[0].set_value(value);
-                const auto& rows=crysta::current(reference.structure).expanded_atom_sites;
+                reference.structure().atom_sites[0].fract[0].set_value(value);
+                const auto& rows=crysta::current(reference.structure()).expanded_atom_sites;
                 auto& e=expected[value];
                 for(std::size_t i=0;i<rows.size();++i) {e.x.push_back(rows.cartn_x[i]);e.y.push_back(rows.cartn_y[i]);e.z.push_back(rows.cartn_z[i]);}
             }

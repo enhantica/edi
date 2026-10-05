@@ -19,14 +19,18 @@ EaElements.GroupBox {
     property Component fallback: null
 
     readonly property string categoryId: model.categoryId
+    // The key its open or closed state is kept by, across the blocks the page shows.
+    readonly property string openKey: `${shownTier}:${categoryId}`
 
     // A Basic category with an Extras part has a group in each tab; `contents` is the tab's own.
     readonly property bool shown: model.tier === shownTier || (shownTier === "Extras" && model.extrasPart)
 
     objectName: `group.${categoryId}`
     visible: shown
-    // Folded by default, as every foldable group (the base's default); the tab's last shown one has no bottom
-    // border (edi ADR-0017 §3; SideBarGroups).
+    // Folded at first, as every foldable group (the base's default), then as the user left it, also when the
+    // page shows another block; the tab's last shown one has no bottom border (edi ADR-0017 §3; SideBarGroups).
+    collapsed: !SideBarGroups.isOpen(openKey)
+    onCollapsedChanged: SideBarGroups.setOpen(openKey, !collapsed)
     last: SideBarGroups.isLast(group)
     title: model.isLoop ? `${model.title} (${model.itemCount})` : model.title
     icon: model.icon

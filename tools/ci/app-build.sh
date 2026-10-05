@@ -30,17 +30,23 @@ _sha256() {
         exit 1
     fi
 }
-bash tools/ci/build-crysta.sh
 # The crysta prefix build-crysta.sh installed for this environment (its ENV_SUFFIX rule). In the
 # crysta->edi consumer-contract direction (CRYSTA_SDK_DIR), link that candidate SDK, exactly as
 # core-build.sh does: an app linked against the pinned prefix while edi's core follows the co-branch would
 # verify a crysta the change never ran against. The prefix is part of the build identity below, so
-# switching direction configures build/app fresh.
-ENV_NAME="${PIXI_ENVIRONMENT_NAME:-$(basename "${CONDA_PREFIX:-default}")}"
-case "$ENV_NAME" in default | "") ENV_SUFFIX="" ;; *) ENV_SUFFIX="-$ENV_NAME" ;; esac
-CRYSTA_PREFIX="$ROOT/build/crysta-prefix$ENV_SUFFIX"
-if [ -n "${CRYSTA_SDK_DIR:-}" ]; then
-    CRYSTA_PREFIX="$ROOT/build/crysta-consumer-prefix$ENV_SUFFIX"
+# switching direction configures build/app fresh. EDI_CRYSTA_PREFIX is a local crysta build that
+# tools/dev/app-with-crysta.sh made; it is for development only and refused in CI.
+if [ -n "${EDI_CRYSTA_PREFIX:-}" ]; then
+    [ -z "${CI:-}" ] || { echo "app-build: EDI_CRYSTA_PREFIX is for local development; CI links the pinned SDK" >&2; exit 1; }
+    CRYSTA_PREFIX="$EDI_CRYSTA_PREFIX"
+else
+    bash tools/ci/build-crysta.sh
+    ENV_NAME="${PIXI_ENVIRONMENT_NAME:-$(basename "${CONDA_PREFIX:-default}")}"
+    case "$ENV_NAME" in default | "") ENV_SUFFIX="" ;; *) ENV_SUFFIX="-$ENV_NAME" ;; esac
+    CRYSTA_PREFIX="$ROOT/build/crysta-prefix$ENV_SUFFIX"
+    if [ -n "${CRYSTA_SDK_DIR:-}" ]; then
+        CRYSTA_PREFIX="$ROOT/build/crysta-consumer-prefix$ENV_SUFFIX"
+    fi
 fi
 args=(-S . -B build/app -G Ninja -DCMAKE_BUILD_TYPE=Release
       -DEDI_BUILD_APP=ON -DEDI_BUILD_BINDINGS=OFF

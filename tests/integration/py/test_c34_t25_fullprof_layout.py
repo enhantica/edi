@@ -452,8 +452,14 @@ def test_no_unaccounted_project_homes_or_invented_instruments():
         'pd-neut-cwl_cosio-d20_biso-tied',
     }
     for home, names in [
-        ('verification', set(BASE) | added_verification_projects),
-        ('fitting', FITTING | {'pd-neut-cwl_cosio-d20_biso-tied'}),
+        (
+            'verification',
+            set(BASE) | added_verification_projects | {'pd-neut-tof_duplex-beer_pseudo-voigt'},
+        ),
+        (
+            'fitting',
+            FITTING | {'pd-neut-tof_duplex-beer_pseudo-voigt', 'pd-neut-cwl_cosio-d20_biso-tied'},
+        ),
     ]:
         root = ROOT / f'knowledge/{home}/fullprof'
         assert root.is_dir(), ' both FullProf homes must exist'

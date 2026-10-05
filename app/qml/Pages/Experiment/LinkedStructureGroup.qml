@@ -5,83 +5,120 @@ import QtQuick
 import QtQuick.Controls
 
 import EasyApplication.Gui.Style as EaStyle
+import EasyApplication.Gui.Elements as EaElements
 import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
 
-// `linked_structure` (easydiffractionbeta's Associated phases; edi's singular category, packet
-// D-g): the structure this experiment calculates and its scale. A loop in `.edi`, so a table ("loop in
-// .edi — table in gui"), with its one row while edi calculates one structure per
-// experiment (multiphase is not implemented). As easydiffractionbeta's Associated phases, each row shows the
-// linked structure's icon in that structure's colour before its label (edi ADR-0017 §8), and a remove button,
-// disabled: an experiment keeps its one linked structure.
-EaComponents.TableView {
-    id: table
+// `linked_structure` (easydiffractionbeta's Associated phases): the structures (phases) this experiment's
+// pattern sums, each with its scale. A loop in `.edi`, so a table. As easydiffractionbeta's Associated phases,
+// each row shows the structure's icon in that structure's colour before its name (edi ADR-0017 §8). The name
+// is picked from the project's structures; a row can be added for a structure not yet linked, removed while
+// another remains, and switched off: a disabled row is kept and saved but neither calculated nor fitted.
+Column {
+    id: group
 
     property ExperimentViewModel experiment: null
     property ProjectViewModel project: null
-    // The linked structure's place in the project (its colour); the count re-reads it as structures come and go.
-    readonly property int structureIndex: table.project && table.experiment && table.project.structures.count >= 0 ? table.project.structureIndex(table.experiment.linkedStructureId) : -1
+    readonly property LinkedStructureListModel rows: experiment ? experiment.linkedStructures : null
 
-    objectName: "linkedStructure.list"
-    defaultInfoText: qsTr("No linked structure")
-    model: experiment ? 1 : 0
+    spacing: AppSizes.groupContentSpacing
 
-    header: EaComponents.TableViewHeader {
-        EaComponents.TableViewLabel {
-            width: AppSizes.indexColumnWidth
-            text: qsTr("No.")
+    EaComponents.TableView {
+        id: table
+
+        objectName: "linkedStructure.list"
+        defaultInfoText: qsTr("No linked structure")
+        model: group.rows
+
+        header: EaComponents.TableViewHeader {
+            EaComponents.TableViewLabel {
+                width: AppSizes.indexColumnWidth
+                text: qsTr("No.")
+            }
+            EaComponents.TableViewLabel {
+                width: EaStyle.Sizes.tableRowHeight
+            }
+            EaComponents.TableViewLabel {
+                flexibleWidth: true
+                horizontalAlignment: Text.AlignLeft
+                text: qsTr("structure")
+            }
+            EaComponents.TableViewLabel {
+                width: EaStyle.Sizes.fontPixelSize * 8
+                text: qsTr("scale")
+            }
+            EaComponents.TableViewLabel {
+                width: AppSizes.iconColumnWidth
+            }
+            EaComponents.TableViewLabel {
+                width: AppSizes.iconColumnWidth
+            }
         }
-        EaComponents.TableViewLabel {
-            width: EaStyle.Sizes.tableRowHeight
-        }
-        EaComponents.TableViewLabel {
-            flexibleWidth: true
-            horizontalAlignment: Text.AlignLeft
-            text: qsTr("structure")
-        }
-        EaComponents.TableViewLabel {
-            width: EaStyle.Sizes.fontPixelSize * 8
-            text: qsTr("scale")
-        }
-        EaComponents.TableViewLabel {
-            width: AppSizes.iconColumnWidth
+
+        delegate: EaComponents.TableViewDelegate {
+            id: row
+
+            required property int index
+            required property string structureId
+            required property int colorIndex
+            // `scale` and `enabled` are Item properties, so these two roles are read through the model.
+            required property var model
+
+            EaComponents.TableViewLabel {
+                width: AppSizes.indexColumnWidth
+                color: EaStyle.Colors.themeForegroundMinor
+                text: row.index + 1
+            }
+            IconCell {
+                objectName: `linkedStructure.color.${row.index}`
+                icon: "layer-group"
+                iconColor: AppColors.structure(row.colorIndex)
+                toolTip: qsTr("Calculated pattern color")
+            }
+            // The structure, picked from the project's structures as the aliases table picks a parameter.
+            EaComponents.TableViewComboBox {
+                objectName: `linkedStructure.structureId.${row.index}`
+                width: table.headerLabelItems.length > 2 ? table.headerLabelItems[2].width : 0
+                enabled: row.model.enabled
+                model: group.rows ? group.rows.structureNames : []
+                currentIndex: group.rows ? group.rows.structureNames.indexOf(row.structureId) : -1
+                displayText: row.structureId
+                ToolTip.text: row.structureId
+                onActivated: index => {
+                    group.rows.setStructureId(row.index, group.rows.structureNames[index]);
+                    currentIndex = Qt.binding(() => group.rows ? group.rows.structureNames.indexOf(row.structureId) : -1);
+                }
+            }
+            ParameterCell {
+                objectName: `linkedStructure.scale.${row.index}`
+                width: EaStyle.Sizes.fontPixelSize * 8
+                enabled: row.model.enabled
+                item: row.model.scale
+            }
+            // Disabled as a constraint is: kept and saved, but neither calculated nor fitted.
+            EaComponents.TableViewButton {
+                objectName: `linkedStructure.enabled.${row.index}`
+                fontIcon: row.model.enabled ? "toggle-on" : "toggle-off"
+                ToolTip.text: row.model.enabled ? qsTr("Disable this linked structure") : qsTr("Enable this linked structure")
+                onClicked: group.rows.setEnabled(row.index, !row.model.enabled)
+            }
+            EaComponents.TableViewButton {
+                objectName: `linkedStructure.remove.${row.index}`
+                enabled: group.rows !== null && group.rows.canRemove
+                fontIcon: "minus-circle"
+                ToolTip.text: qsTr("Remove this linked structure")
+                onClicked: group.rows.remove(row.index)
+            }
         }
     }
 
-    delegate: EaComponents.TableViewDelegate {
-        id: row
-
-        required property int index
-
-        EaComponents.TableViewLabel {
-            width: AppSizes.indexColumnWidth
-            color: EaStyle.Colors.themeForegroundMinor
-            text: row.index + 1
-        }
-        IconCell {
-            objectName: `linkedStructure.color.${row.index}`
-            icon: "layer-group"
-            iconColor: AppColors.structure(table.structureIndex)
-            toolTip: qsTr("Calculated pattern color")
-        }
-        TextCell {
-            objectName: "linkedStructure.structureId"
-            width: table.headerLabelItems.length > 2 ? table.headerLabelItems[2].width : 0
-            horizontalAlignment: Text.AlignLeft
-            value: table.experiment ? table.experiment.linkedStructureId : ""
-            onCommitted: text => table.experiment.linkedStructureId = text
-        }
-        ParameterCell {
-            objectName: "linked_structure.scale"
-            width: EaStyle.Sizes.fontPixelSize * 8
-            item: table.experiment ? table.experiment.scale : null
-        }
-        EaComponents.TableViewButton {
-            objectName: `linkedStructure.remove.${row.index}`
-            enabled: false
-            fontIcon: "minus-circle"
-            ToolTip.text: qsTr("Remove this linked structure")
-        }
+    EaElements.SideBarButton {
+        objectName: "linkedStructure.append"
+        wide: true
+        enabled: group.rows !== null && group.rows.canAppend
+        fontIcon: "plus-circle"
+        text: qsTr("Add linked structure")
+        onClicked: group.rows.append()
     }
 }

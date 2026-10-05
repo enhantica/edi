@@ -182,7 +182,7 @@ def main():
     for case in cases:
         if args.only and case['id'] not in args.only:
             continue
-        path = root / case['path']
+        path = root / case.get('authoring_input', case['path'])
         for relative, expected in case['inputs_sha256'].items():
             if hashlib.sha256((path / relative).read_bytes()).hexdigest() != expected:
                 raise RuntimeError('independent count input changed: ' + case['id'])

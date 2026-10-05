@@ -136,11 +136,11 @@ doctest = "*"
 # tools/ci/build-crysta.sh reads them from this file. Only an update PR or a paired PR moves them.
 [target.osx-arm64.activation.env]
 MACOSX_DEPLOYMENT_TARGET = '13.4'
-CRYSTA_SDK_TAG = "build-b3a7008bce77096b2e802f0d728ab2ccb95f9822"
+CRYSTA_SDK_TAG = "build-f4221bc90ac521ca86c5f8e4ce2f6933a8cdc71d"
 CRYSTA_SDK_SHA256 = "0000000000000000000000000000000000000000000000000000000000000000"
 
 [target.linux-64.activation.env]
-CRYSTA_SDK_TAG = "build-b3a7008bce77096b2e802f0d728ab2ccb95f9822"
+CRYSTA_SDK_TAG = "build-f4221bc90ac521ca86c5f8e4ce2f6933a8cdc71d"
 CRYSTA_SDK_SHA256 = "0000000000000000000000000000000000000000000000000000000000000000"
 
 [target.linux-64.dependencies]
@@ -231,6 +231,9 @@ app-build = { cmd = ["bash", "tools/ci/app-build.sh"] }
 app = { cmd = "EDI_APP_TARGETS=edi_app bash tools/ci/app-build.sh && bash tools/ci/app-run.sh" }
 # Start the already-built app with no build and no network check.
 app-run = { cmd = ["bash", "tools/ci/app-run.sh"] }
+# Development only: build crysta from a local checkout, link the app to it and start it
+# (`pixi run -e app app-with-crysta ../crysta`; docs/dev/local-crysta.md).
+app-with-crysta = { cmd = ["bash", "tools/dev/app-with-crysta.sh"] }
 # Run the app's Qt Quick Test tier with the runner app-build built (refuses a vacuous run).
 app-test = { cmd = ["bash", "tools/ci/app-test.sh"], depends-on = [{ task = "app-build", environment = "app" }] }
 # The drawn cases (tests/unit/app/tst_*_drawn.qml) on the capture platform, where Qt Quick 3D draws; by hand while

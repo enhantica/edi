@@ -173,7 +173,10 @@ int main(int argc, char** argv) {
     experiment.instrument.calib_d_to_tof_offset = {-11.3, 0.15, true};
     experiment.instrument.calib_d_to_tof_linear = {20123.4, 0.16, false};
     experiment.instrument.calib_d_to_tof_quadratic = {-1.375, 0.17, true};
-    experiment.linked_structure.scale = {1.7, 0.18, false};
+    auto linked = std::make_shared<edi::LinkedStructure>();
+    linked->structure_id = "probe";
+    linked->scale = {1.7, 0.18, false};
+    experiment.linked_structures.push_back(std::move(linked));
     experiment.instrument.setup_twotheta_bank.value = 137.2;
     experiment.peak.cutoff_fwhm = 17.5;
     edi::LineSegment background;
@@ -192,7 +195,7 @@ int main(int argc, char** argv) {
     if (converted.instrument.size() == 4) {
         require_parameter(converted.instrument[3], 0.0, 0.0, false, "fixed reciprocal mapping");
     }
-    require_parameter(converted.scale, 1.7, 0.18, false, "scale mapping");
+    require_parameter(converted.scale(), 1.7, 0.18, false, "scale mapping");
     require(converted.background.size() == 1, "background count");
     require(converted.background[0].position == 10000.0, "background position");
     require_parameter(converted.background[0].intensity, 2.0, 0.19, true,

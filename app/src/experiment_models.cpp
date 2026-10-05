@@ -159,6 +159,90 @@ void ExcludedRegionListModel::remove(int row) {
 
 // ---- PrefOrientListModel ------------------------------------------------------------------------
 
+// ---- LinkedStructureListModel --------------------------------------------------------------------
+
+LinkedStructureListModel::LinkedStructureListModel(edi::Project& project, edi::ExperimentBase& experiment,
+                                                   ProjectEditor& editor, ParameterRegistry& registry,
+                                                   QObject* parent)
+    : RowTableModel({"structureId", "scale", "enabled", "colorIndex"}, parent),
+      project_(project),
+      experiment_(experiment),
+      editor_(editor),
+      registry_(registry) {
+    sync();
+}
+
+void LinkedStructureListModel::sync() {
+    QStringList names;
+    for (const auto& structure : project_.structures) {
+        names.append(QString::fromStdString(edi::datablock_key(structure->name, "structure")));
+    }
+    if (names != structure_names_) {
+        structure_names_ = names;
+        emit structureNamesChanged();
+    }
+    QList<Row> rows;
+    for (const auto& link : experiment_.linked_structures) {
+        const QString id = QString::fromStdString(link->structure_id.value());
+        rows.append({link.get(),
+                     {id, parameter_role(registry_, &link->scale), link->enabled.get(),
+                      static_cast<int>(names.indexOf(id))}});
+    }
+    setTableRows(rows);
+    const auto linked = [this](const QString& name) {
+        return std::any_of(experiment_.linked_structures.begin(), experiment_.linked_structures.end(),
+                           [&](const auto& link) { return QString::fromStdString(link->structure_id.value()) == name; });
+    };
+    const bool can_append = std::any_of(names.begin(), names.end(), [&](const QString& name) { return !linked(name); });
+    if (can_append != can_append_) {
+        can_append_ = can_append;
+        emit canAppendChanged();
+    }
+    const bool can_remove = experiment_.linked_structures.size() > 1;
+    if (can_remove != can_remove_) {
+        can_remove_ = can_remove;
+        emit canRemoveChanged();
+    }
+}
+
+bool LinkedStructureListModel::setStructureId(int row, const QString& id) {
+    auto* link = const_cast<edi::LinkedStructure*>(static_cast<const edi::LinkedStructure*>(keyAt(row)));
+    return link != nullptr &&
+           editor_.apply(edi::Edit::link_structure(*link, id.toStdString()), true).isEmpty();
+}
+
+bool LinkedStructureListModel::setEnabled(int row, bool enabled) {
+    auto* link = const_cast<edi::LinkedStructure*>(static_cast<const edi::LinkedStructure*>(keyAt(row)));
+    return link != nullptr && editor_.apply(edi::Edit::assign(link->enabled, enabled), true).isEmpty();
+}
+
+void LinkedStructureListModel::append() {
+    if (!canAppend()) {
+        return;
+    }
+    // The first structure the experiment does not link yet, at scale 1.
+    for (const QString& name : structure_names_) {
+        const bool linked = std::any_of(
+            experiment_.linked_structures.begin(), experiment_.linked_structures.end(),
+            [&](const auto& link) { return QString::fromStdString(link->structure_id.value()) == name; });
+        if (!linked) {
+            edi::LinkedStructure link;
+            link.structure_id = name.toStdString();
+            editor_.apply(edi::Edit::append(experiment_.linked_structures, std::move(link)), true);
+            return;
+        }
+    }
+}
+
+void LinkedStructureListModel::remove(int row) {
+    if (!canRemove() || keyAt(row) == nullptr) {
+        return;
+    }
+    editor_.apply(edi::Edit::erase(experiment_.linked_structures, static_cast<std::size_t>(row)), true);
+}
+
+// ---- PrefOrientListModel -------------------------------------------------------------------------
+
 PrefOrientListModel::PrefOrientListModel(edi::ExperimentBase& experiment, ProjectEditor& editor,
                                          ParameterRegistry& registry, QObject* parent)
     : RowTableModel({"structureId", "indexH", "indexK", "indexL", "marchR", "marchRandomFract"}, parent),
@@ -177,7 +261,12 @@ void PrefOrientListModel::sync() {
                       parameter_role(registry_, &row->march_r), parameter_role(registry_, &row->march_random_fract)}});
     }
     setTableRows(rows);
-    const bool can_append = experiment_.preferred_orientation.size() == 0;
+    // A row can be added while a linked structure has none.
+    const bool can_append = std::any_of(
+        experiment_.linked_structures.begin(), experiment_.linked_structures.end(), [this](const auto& link) {
+            return std::none_of(experiment_.preferred_orientation.begin(), experiment_.preferred_orientation.end(),
+                                [&](const auto& row) { return row->structure_id.value() == link->structure_id.value(); });
+        });
     if (can_append != can_append_) {
         can_append_ = can_append;
         emit canAppendChanged();
@@ -206,9 +295,18 @@ void PrefOrientListModel::append() {
         return;
     }
     edi::ExperimentBase& experiment = experiment_;
-    edi::PrefOrient row;
-    row.structure_id = experiment.linked_structure.structure_id;
-    editor_.apply(edi::Edit::append(experiment.preferred_orientation, std::move(row)), true);
+    // The first linked structure without a row.
+    for (const auto& link : experiment.linked_structures) {
+        const bool textured =
+            std::any_of(experiment.preferred_orientation.begin(), experiment.preferred_orientation.end(),
+                        [&](const auto& row) { return row->structure_id.value() == link->structure_id.value(); });
+        if (!textured) {
+            edi::PrefOrient row;
+            row.structure_id = link->structure_id.value();
+            editor_.apply(edi::Edit::append(experiment.preferred_orientation, std::move(row)), true);
+            return;
+        }
+    }
 }
 
 void PrefOrientListModel::remove(int row) {

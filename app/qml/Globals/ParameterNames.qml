@@ -36,7 +36,7 @@ QtObject {
         if (!item)
             return [];
         const minor = EaStyle.Colors.themeForegroundMinor;
-        const categoryColor = item.elementSymbol !== "" ? AppColors.element(item.elementSymbol) : minor;
+        const categoryColor = item.elementSymbol !== "" ? AppColors.element(item.elementSymbol) : item.phaseIndex >= 0 ? AppColors.structure(item.phaseIndex) : minor;
         const pieces = [
             {
                 "icon": names.blockIcon(item.blockKind),

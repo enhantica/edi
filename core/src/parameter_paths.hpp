@@ -49,8 +49,20 @@ std::optional<ResolvedParameter> resolve_instrument_label(ExperimentBase& experi
                                                           const std::string& label,
                                                           const std::string& path_prefix);
 // Resolve the SHARED STRUCTURAL half (cell, per-site coordinates / Biso / occupancy, by site label).
+// `root` is the structure's path root (structure_root).
 std::optional<ResolvedParameter> resolve_structural_label(Structure& structure,
-                                                          const std::string& label);
+                                                          const std::string& label,
+                                                          const std::string& root = "structure.");
+// A structure's path root: `structure.` in a project of one structure, else `structures[<name>].`.
+std::string structure_root(const Project& project, const Structure& structure);
+// The seam of a project of several structures (phases), one experiment: a `<structure>.` prefixed label
+// names that structure's parameter, its link's scale or its texture row; anything else is resolve_label's.
+std::optional<ResolvedParameter> resolve_project_label(Project& project, ExperimentBase& experiment,
+                                                       const std::string& label);
+// The joint seam of a project of several structures: `<bank>.<structure>.scale` (and texture) is that
+// bank's link, `<bank>.<field>` its instrument, `<structure>.<label>` a structure's parameter; anything
+// else is resolve_joint_label's.
+std::optional<ResolvedParameter> resolve_joint_project_label(Project& project, const std::string& label);
 // The SINGLE-BANK seam: unprefixed instrument labels, then the structural half.
 std::optional<ResolvedParameter> resolve_label(Structure& structure, ExperimentBase& experiment,
                                                const std::string& label);

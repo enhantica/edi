@@ -69,6 +69,18 @@ sites:
   - file: tests/integration/py/test_e05_t1_metric_admission.py
     case: lif-xray-s1
 
+  - file: tests/system/py/test_multiphase.py
+    case: multiphase-scales
+
+
+  - file: tests/system/py/test_beer_multiphase.py
+    case: beer-ferrite-austenite
+
+  # Active-participant variants of the two-phase scale vehicle; only admission is
+  # asserted, using the independent Bragg dilation truth table, never fitted values.
+  - file: tests/system/py/test_fit_participants.py
+    case: multiphase-scales
+
   - file: tests/integration/py/test_constraint_fit.py
     case: constraint-covariance
   - file: tests/system/py/test_scan_driver_resume.py
