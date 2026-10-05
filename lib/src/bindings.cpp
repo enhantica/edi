@@ -1279,6 +1279,11 @@ static void def_collection_views(nb::module_& m) {
             })
         .def_prop_ro("parameter_unique_name",
                      [](const edi::ParameterAlias& self) { return self.parameter_unique_name.value(); })
+        // diffraction-lib Alias.parameters lists the descriptors the alias owns. Here `parameters` lists
+        // refinable parameters, and an alias has none: its id and target name are text.
+        .def_prop_ro(
+            "parameters", [](const edi::ParameterAlias& /*self*/) { return std::vector<edi::Parameter*>{}; },
+            "The alias's own refinable parameters: none (diffraction-lib Alias.parameters).")
         .def_prop_ro(
             "param",
             [](const edi::ParameterAlias& self) -> nb::object {

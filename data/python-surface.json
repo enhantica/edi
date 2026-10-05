@@ -104,6 +104,15 @@
      },
      "reason": "C",
      "verdict": "public"
+    },
+    "parameters": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Alias.parameters",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
     }
    },
    "Aliases": {
@@ -5708,7 +5717,8 @@
    "members": [
     "id",
     "param",
-    "parameter_unique_name"
+    "parameter_unique_name",
+    "parameters"
    ]
   },
   "Aliases": {
