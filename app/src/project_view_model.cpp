@@ -114,6 +114,7 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     };
     connect(fit_, &FitViewModel::finished, this, note_fit);
     connect(fit_, &FitViewModel::canUndoChanged, this, [this] { syncUndo(); });
+    connect(fit_, &FitViewModel::runningChanged, this, [this] { syncUndo(); });
     note_fit();
     preview_->recalculate();
     publishCalculating();
@@ -334,23 +335,30 @@ void ProjectViewModel::undo() {
     if (!can_undo_) {
         return;
     }
-    std::optional<edi::RelationsUndo> entry = std::move(undo_history_.back());
-    undo_history_.pop_back();
-    if (entry.has_value()) {
-        apply(edi::Edit::restore_relations(*project_, std::move(*entry)), true);
-    } else {
-        fit_->undo();
+    // The newest record is kept until its reversal succeeds: a refused restore (a parameter it names was
+    // removed or renamed since) leaves it in place, with the refusal as the message. A fit's undo can drop
+    // its own entry on the way (its start state is gone once restored), so only a record still there goes.
+    const std::size_t depth = undo_history_.size();
+    const bool undone =
+        undo_history_.back().has_value()
+            ? apply(edi::Edit::restore_relations(*project_, *undo_history_.back()), true).isEmpty()
+            : fit_->undo();
+    if (undone && undo_history_.size() == depth) {
+        undo_history_.pop_back();
     }
     syncUndo();
 }
 
 void ProjectViewModel::syncUndo() {
-    // A fit entry whose start state is gone (undone, or replaced by a load) is no longer undoable.
-    while (!undo_history_.empty() && !undo_history_.back().has_value() &&
+    // Nothing is undone while a fit runs, as nothing is edited then. A fit entry whose start state is gone
+    // (undone, or replaced by a load) is no longer undoable; while a fit runs its start state only reads as
+    // unavailable, so the entry stays, and a refused fit leaves it as it was.
+    const bool running = fit_ != nullptr && fit_->running();
+    while (!running && !undo_history_.empty() && !undo_history_.back().has_value() &&
            (fit_ == nullptr || !fit_->canUndo())) {
         undo_history_.pop_back();
     }
-    const bool can_undo = !undo_history_.empty();
+    const bool can_undo = !running && !undo_history_.empty();
     if (can_undo != can_undo_) {
         can_undo_ = can_undo;
         emit canUndoChanged();

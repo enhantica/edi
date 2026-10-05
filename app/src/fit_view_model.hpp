@@ -67,7 +67,8 @@ class FitViewModel : public QObject {
 
     Q_INVOKABLE void start();
     Q_INVOKABLE void cancel();
-    Q_INVOKABLE void undo();
+    // Whether the fit's start state was restored (refused while a fit runs or when there is none).
+    Q_INVOKABLE bool undo();
     // After every publication of the project: what the mode and the start state allow now.
     void sync();
     // The project closes: the fit stops and delivers nothing more. Before the worker goes.
