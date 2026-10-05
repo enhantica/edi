@@ -15,6 +15,8 @@ from pathlib import Path
 import edi
 import pytest
 
+from tests.fixtures.c34_t28_baseline.generate_bytes import observe
+
 
 def _sample_project() -> edi.Project:
     """A tiny two-bank project built purely in memory (no file, no oracle values)."""
@@ -112,37 +114,82 @@ def test_edi_project_save_reload_is_a_representation_fixed_point(tmp_path: Path)
         )
 
 
-def test_multi_structure_save_refuses_and_leaves_the_destination_untouched(tmp_path: Path) -> None:
-    """A multi-structure Project must refuse to save, atomically (review-4 finding 3).
-
-    ``save_project`` persists exactly one ``structures/*.edi`` and ``load`` refuses more than
-    one, so saving a two-structure project would silently drop every structure after the first —
-    persisted-state data loss, not the documented first-element shortcut. The refusal must land
-    BEFORE the destination is touched: an existing saved project stays byte-identical.
-    """
+def test_multiple_structures_and_their_links_survive_two_save_cycles(tmp_path: Path) -> None:
+    """Several structure blocks persist independently, including equal site ids."""
     project = _sample_project()
-    destination = tmp_path / 'demo-project'
-    project.save_as(destination)
-    saved_bytes = {
-        path.relative_to(destination): path.read_bytes()
-        for path in sorted(destination.rglob('*'))
-        if path.is_file()
-    }
-
     second = edi.Structure()
     second.name = 'demo_two'
     second.space_group.name_h_m = 'P 1'
+    second.cell.length_a = edi.Parameter(6.25)
+    second.cell.length_b = edi.Parameter(7.5)
+    second.cell.length_c = edi.Parameter(8.75)
+    site = edi.AtomSite()
+    site.id = 'Na1'
+    site.type_symbol = 'Cl'
+    site.wyckoff_letter = 'a'
+    site.fract_x = edi.Parameter(0.375, 0.002, True)
+    site.fract_y = edi.Parameter(0.125)
+    site.fract_z = edi.Parameter(0.625)
+    second.atom_sites.add(site)
     project.structures.add(second)
+    for index, experiment in enumerate(project.experiments):
+        link = edi.LinkedStructure()
+        link.structure_id = 'demo_two'
+        link.scale = edi.Parameter(0.375 + index, 0.025 if index == 0 else 0.0, index == 0)
+        link.enabled = index == 0
+        experiment.linked_structures.add(link)
+    first = tmp_path / 'first'
+    second_save = tmp_path / 'second'
+    project.save_as(first)
+    restored = edi.Project.load(first)
+    assert set(restored.structures.keys()) == {'demo', 'demo_two'}, (
+        'Saving several structures must retain every separately keyed structure'
+    )
+    assert _triplet(restored.structures['demo'].atom_sites['Na1'].fract_x) == (
+        0.25,
+        0.001,
+        True,
+    ), 'A site id in the first structure must retain the first structure parameter'
+    assert _triplet(restored.structures['demo_two'].atom_sites['Na1'].fract_x) == (
+        0.375,
+        0.002,
+        True,
+    ), 'The same site id in another structure must retain its independent parameter'
+    assert restored.structures['demo_two'].cell.length_a.value == 6.25, (
+        'Saving multiple structures must preserve the second cell independently'
+    )
+    for index, experiment in enumerate(restored.experiments):
+        links = {link.structure_id: link for link in experiment.linked_structures}
+        assert set(links) == {'demo', 'demo_two'}, (
+            'Each bank must retain both linked structures through project loading'
+        )
+        assert _triplet(links['demo_two'].scale) == (
+            0.375 + index, 0.025 if index == 0 else 0.0, index == 0
+        ), (
+            'Each bank phase scale must retain its own value, uncertainty and free flag'
+        )
+        assert links['demo_two'].enabled == (index == 0), (
+            'A disabled link must remain present with its persisted participation flag'
+        )
+    restored.save_as(second_save)
 
-    with pytest.raises(edi.IoError, match='multi-structure'):
-        project.save_as(destination)
+    def files(directory):
+        return {
+            path.relative_to(directory): path.read_bytes()
+            for path in directory.rglob('*')
+            if path.is_file()
+        }
 
-    after_bytes = {
-        path.relative_to(destination): path.read_bytes()
-        for path in sorted(destination.rglob('*'))
-        if path.is_file()
-    }
-    assert after_bytes == saved_bytes
+    # Prescribe the same clock input through the shared byte-witness producer;
+    # compare complete saved files, including metadata, without masking output.
+    canonical_first = tmp_path / 'canonical_first'
+    canonical_second = tmp_path / 'canonical_second'
+    observe(first, canonical_first)
+    observe(second_save, canonical_second)
+    assert files(canonical_first) == files(canonical_second), (
+        'The full multi-structure project must reach a byte-exact fixed point '
+        'with a prescribed clock'
+    )
 
 
 def test_malformed_input_fails_closed_with_structured_diagnostics(tmp_path: Path) -> None:

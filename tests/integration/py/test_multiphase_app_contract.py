@@ -11,12 +11,31 @@ def code(path):
     return re.sub(r'/\*.*?\*/|//[^\n]*', '', text, flags=re.DOTALL)
 
 
-def test_shared_block_selector_has_bounded_plain_arrow_steps_and_file_labels():
+def test_shared_block_selector_has_bounded_square_icon_steps_and_file_labels():
     selector = code('app/qml/Components/BlockSelector.qml')
     model = code('app/src/project_view_model.cpp')
-    assert '▲' in selector and '▼' in selector, (
-        'The shared selector needs the plain up and down arrows'
+    assert 'arrow-circle-up' in selector and 'arrow-circle-down' in selector, (
+        'The shared selector must use the circled arrow style of Continue'
     )
+    buttons = re.findall(r'EaElements.SideBarButton\s*\{(.*?)\n    \}', selector, re.DOTALL)
+    assert len(buttons) == 2, 'Both steps must use the regular sidebar button component'
+    assert all(
+        'width: EaStyle.Sizes.comboBoxHeight' in button
+        and 'height: EaStyle.Sizes.comboBoxHeight' in button
+        for button in buttons
+    ), 'Both selector buttons must be square at the regular combobox height'
+    assert 'spacing: AppSizes.fieldSpacing' in selector, (
+        'The selector must use the shared spacing of group fields'
+    )
+    assert all(
+        label in selector
+        for label in (
+            'Previous experiment',
+            'Previous structure',
+            'Next experiment',
+            'Next structure',
+        )
+    ), 'Both stepping controls must retain tooltips for each browsed block kind'
     assert len(re.findall(r'enabled\s*:', selector)) >= 2, (
         'Both stepping controls must bind their enabled state'
     )
@@ -30,15 +49,31 @@ def test_shared_block_selector_has_bounded_plain_arrow_steps_and_file_labels():
         'Arrows and combobox picks must use the same selection signal'
     )
     assert '·' in selector + model and (
-        'fileName' in selector + model or 'filename' in selector + model
+        'fileName' in selector + model
+        or 'filename' in selector + model
+        or 'key + QStringLiteral(".edi")' in model
     ), 'Selector labels must combine datablock and file names'
-    for path in (
-        'app/qml/Pages/Analysis/ExperimentSelectorGroup.qml',
-        'app/qml/Pages/Experiment/ExperimentPage.qml',
-        'app/qml/Pages/Structure/StructurePage.qml',
-    ):
-        assert 'BlockSelector' in code(path), (
-            'All three pages must retain the shared browsing control'
+    assert 'BlockSelector' in code('app/qml/Pages/Analysis/ExperimentSelectorGroup.qml'), (
+        'Analysis must retain the shared experiment browsing control'
+    )
+    workflow = code('app/qml/Components/WorkflowPage.qml')
+    assert 'BlockSelector {' in workflow and 'visible: page.blockSelectorShown' in workflow, (
+        'The shared workflow sidebar must host the enabled block selector'
+    )
+    assert all(binding in workflow for binding in (
+        'blocks: page.blocks', 'blockKind: page.blockKind', 'blockIndex: page.blockIndex',
+        'onBlockActivated: index => page.blockActivated(index)',
+    )), 'The shared selector must forward the page collection, selection and activation'
+    for kind, collection in (('Experiment', 'experiments'), ('Structure', 'structures')):
+        page = code(f'app/qml/Pages/{kind}/{kind}Page.qml')
+        assert 'WorkflowPage {' in page and 'blockSelectorShown: true' in page, (
+            'Both browsing pages must enable the shared workflow selector'
+        )
+        assert f'blocks: project ? project.{collection} : null' in page, (
+            'Each browsing page must supply its own complete block collection'
+        )
+        assert f'onBlockActivated: index => page.project.current{kind}Index = index' in page, (
+            'Each browsing page must apply shared selector activation to its own selection'
         )
 
 
@@ -51,7 +86,9 @@ def test_linked_structure_rows_use_available_names_and_add_remove_disable_action
         'The linked-phase table must bind the complete collection'
     )
     assert re.search(
-        r'onClicked[^\n]*(?:add|create)|onTriggered[^\n]*(?:add|create)', text, re.IGNORECASE
+        r'onClicked[^\n]*(?:add|create|append)|onTriggered[^\n]*(?:add|create|append)',
+        text,
+        re.IGNORECASE,
     ), 'Linked phases need a live add action'
     assert re.search(r'onClicked[^\n]*remove|onTriggered[^\n]*remove', text, re.IGNORECASE), (
         'Linked phases need a live remove action'

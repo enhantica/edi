@@ -243,7 +243,14 @@ def test_every_preserved_public_declaration_keeps_its_compiler_type(tmp_path, st
     actual = compiler_surface(tmp_path, ROOT / PREFIX, standard_headers)
     assert baseline, ' T7 the compiler must expose a nonempty frozen public API'
     allowed = allowed_changes()
-    missing = sorted(row for row in baseline - actual if row[:2] not in allowed)
+    transitions, _ = multiphase_declaration_transition()
+    assert transitions <= baseline, (
+        'The multiphase migration must retain its immutable prior declarations'
+    )
+    require_multiphase_declarations(actual)
+    missing = sorted(
+        row for row in baseline - actual if row[:2] not in allowed and row not in transitions
+    )
     assert not missing, (
         ' I20/T7 every preserved field, base, alias, overload, reference return and '
         'noexcept signature must retain its frozen compiler type: ' + repr(missing)
@@ -310,3 +317,59 @@ def test_native_contract_detects_reference_and_exception_drift(
     assert any(row[:2] not in allowed_changes() for row in missing), (
         ' T8 the member-type exception cannot hide a preserved native contract change'
     )
+
+
+def multiphase_declaration_transition():
+    # Exact old -> new declarations, never a blanket member-name exemption.
+    # The constructor mask is a labelled post-feature REGRESSION PIN measured
+    # by the existing independent Clang witness on the keyed-row representation.
+    return {
+        ('edi::ExperimentBase', 'linked_structure', 'FieldDecl', 'LinkedStructure'),
+        ('edi::LinkedStructure', 'structure_id', 'FieldDecl', 'std::string'),
+        ('edi::C34ContractTraits', 'traits_32', 'FieldDecl', 'char[3454]'),
+    }, {
+        ('edi::ExperimentBase', 'linked_structure', 'CXXMethodDecl', 'LinkedStructure &()'),
+        (
+            'edi::ExperimentBase',
+            'linked_structure',
+            'CXXMethodDecl',
+            'const LinkedStructure &() const',
+        ),
+        ('edi::ExperimentBase', 'linked_structures', 'FieldDecl', 'ItemVec<LinkedStructure>'),
+        ('edi::LinkedStructure', 'structure_id', 'FieldDecl', 'ItemKey'),
+        ('edi::C34ContractTraits', 'traits_32', 'FieldDecl', 'char[126]'),
+    }
+
+
+def require_multiphase_declarations(actual):
+    _, replacements = multiphase_declaration_transition()
+    assert replacements <= actual, (
+        'The multiphase migration must provide every exact keyed-row type, reference overload '
+        'and labelled constructor-trait regression pin: ' + repr(sorted(replacements - actual))
+    )
+
+
+@pytest.mark.parametrize(
+    'damage', ['missing-row', 'mutable-value', 'const-value', 'key-type', 'traits']
+)
+def test_multiphase_transition_never_exempts_its_replacement_contract(damage):
+    _, declarations = multiphase_declaration_transition()
+    require_multiphase_declarations(declarations)
+    changed = set(declarations)
+    index = {
+        'missing-row': ('linked_structures', 'ItemVec<LinkedStructure>'),
+        'mutable-value': ('linked_structure', 'LinkedStructure &()'),
+        'const-value': ('linked_structure', 'const LinkedStructure &() const'),
+        'key-type': ('structure_id', 'ItemKey'),
+        'traits': ('traits_32', 'char[126]'),
+    }
+    member, signature = index[damage]
+    original = next(row for row in changed if row[1] == member and row[3] == signature)
+    changed.remove(original)
+    if damage != 'missing-row':
+        changed.add((
+            *original[:3],
+            signature.replace('&', '') if '&' in signature else 'wrong-type',
+        ))
+    with pytest.raises(AssertionError, match='every exact keyed-row type'):
+        require_multiphase_declarations(changed)

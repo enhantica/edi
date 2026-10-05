@@ -217,6 +217,8 @@ def test_frozen_reference_and_author_run_remain_independent():
 def test_c33_owned_page_is_the_measured_filename_difference():
     baseline = json.loads((FIXTURE / 'page-baseline.json').read_text())
     before = set(baseline['before_pages'])
+    # The independently gated two-bank verification page is now retained prior art.
+    before.add('pd-neut-tof_ferrite-austenite_beer_joint')
     after = {p.stem for p in (ROOT / 'docs/dev/verification').glob('*.py')}
     assert before <= after and after - before == {'pd-xray-cwl_LiF_single_polarization'}, (
         ' C33 filename difference must contain exactly its owned polarization page'

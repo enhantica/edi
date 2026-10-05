@@ -40,7 +40,7 @@ def test_beer_reference_binds_both_banks_and_every_reported_uncertainty():
         )
     assert len(ref['stages']) == 2, 'The BEER reference must retain both tutorial stages'
     assert ref['reference_variant'] == 'unconstrained-independent-bank-scales', (
-        'C12-T4 must compare independently free bank scales, per owner record 3d7db65f6'
+        'The BEER agreement reference must compare independently free bank scales'
     )
     assert all(s['success'] for s in ref['stages']), (
         'The BEER reference must preserve both successful tutorial fit stages'
@@ -133,7 +133,7 @@ def test_beer_two_phases_and_independent_bank_scales_survive_two_save_cycles(tmp
         )
         text = (saved / 'analysis/analysis.edi').read_text()
         assert '_constraint.' not in text, (
-            'C12-T4 unconstrained BEER save cycles must not create cross-bank scale constraints'
+            'Unconstrained BEER save cycles must not create cross-bank scale constraints'
         )
         for experiment in project.experiments:
             for phase in ('ferrite', 'austenite'):

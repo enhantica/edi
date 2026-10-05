@@ -195,7 +195,7 @@ int main(int argc, char** argv) {
     if (converted.instrument.size() == 4) {
         require_parameter(converted.instrument[3], 0.0, 0.0, false, "fixed reciprocal mapping");
     }
-    require_parameter(converted.scale, 1.7, 0.18, false, "scale mapping");
+    require_parameter(converted.scale(), 1.7, 0.18, false, "scale mapping");
     require(converted.background.size() == 1, "background count");
     require(converted.background[0].position == 10000.0, "background position");
     require_parameter(converted.background[0].intensity, 2.0, 0.19, true,

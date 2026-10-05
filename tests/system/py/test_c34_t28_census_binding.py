@@ -31,7 +31,6 @@ ONE_ROW = {
     'ExperimentType': '_experiment_type',
     'PeakBase': '_peak',
     'InstrumentBase': '_instrument',
-    'LinkedStructure': '_linked_structure',
     'AbsorptionBase': '_absorption',
     'SequentialFitConfig': '_sequential_fit',
     'ProjectMetadata': '_metadata',
@@ -188,6 +187,10 @@ def require_census(record, independent):
                 and len(categories[name]) == 1
                 and categories[name][0]['form'] == 'one row'
             ), ' I14/I21 non-loop parameter blocks and categories are one row: ' + name
+    assert 'LinkedStructure' not in owners or (
+        len(categories.get('_linked_structure', [])) == 1
+        and categories['_linked_structure'][0]['form'] == 'loop'
+    ), 'Multiphase links must be a loop with one row per linked structure'
     require_member_classifications(record, categories)
 
 

@@ -132,6 +132,8 @@ def test_lif_page_uses_byte_identical_fullprof_calculation_without_a_fit():
 
 def test_c33_lif_counter_is_derived_from_filename_difference():
     before = set(MANIFEST['before_pages'])
+    # The independently gated two-bank verification page is now retained prior art.
+    before.add('pd-neut-tof_ferrite-austenite_beer_joint')
     after = {p.stem for p in (ROOT / 'docs/dev/verification').glob('*.py')}
     after.discard('pd-neut-cwl_LBCO_preferred-orientation')
     #  owns the additional polarized page;  still owns exactly its baseline page.
@@ -142,13 +144,16 @@ def test_c33_lif_counter_is_derived_from_filename_difference():
 
 
 @pytest.mark.parametrize('escape', ['oracle-assignment', 'other-experiment', 'no-calculation'])
-def test_shared_candidate_flow_rejects_oracle_and_wrong_calculation(escape):
+@pytest.mark.parametrize(
+    'vehicle', ['pd-neut-cwl_LaB6_basic', 'pd-neut-tof_ferrite-austenite_beer_joint']
+)
+def test_shared_candidate_flow_rejects_oracle_and_wrong_calculation(escape, vehicle):
     # Sweep the existing shared-flow consumers before exercising the LiF-family substitution.
     pages = ROOT / 'docs/dev/verification'
     for path in pages.glob('*.py'):
         if path.stem != 'pd-neut-cwl_PbSO4_beba-asymmetry':
             _assert_calculated_candidate_flow(path.stem, ast.parse(path.read_text()))
-    tree = ast.parse((pages / 'pd-neut-cwl_LaB6_basic.py').read_text())
+    tree = ast.parse((pages / (vehicle + '.py')).read_text())
     for node in ast.walk(tree):
         if isinstance(node, ast.Assign) and any(
             isinstance(target, ast.Name) and target.id == 'calc_ed_crysta'

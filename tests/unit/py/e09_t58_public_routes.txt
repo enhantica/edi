@@ -581,3 +581,8 @@ PolynomialTerm	other-public
 PolynomialTerm.coef	other-public
 PolynomialTerm.order	other-public
 PolynomialTerm.parameters	other-public
+BraggPdExperiment.linked_structures	other-public
+ExperimentBase.linked_structures	other-public
+LinkedStructure.enabled	other-public
+PdExperimentBase.linked_structures	other-public
+ScExperimentBase.linked_structures	other-public

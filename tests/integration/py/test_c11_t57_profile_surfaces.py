@@ -135,6 +135,8 @@ def test_c33_filename_difference_adds_exactly_the_owned_pages():
         'pd-neut-tof_NCAF_jorgensen-von-dreele',
     }
     expected = {row['page'] for row in MANIFEST['pages'].values()}
+    # The independently gated two-bank verification page is now retained prior art.
+    before.add('pd-neut-tof_ferrite-austenite_beer_joint')
     after = {path.stem for path in (ROOT / 'docs/dev/verification').glob('*.py')}
     #  adds its independently gated page; preserve the  set obligation.
     after.discard('pd-xray-cwl_LiF_single')

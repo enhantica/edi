@@ -23,12 +23,28 @@ ROOT = Path(__file__).resolve().parents[3]
 HERE = Path(__file__).resolve().parent
 
 
-def main():
+def arguments():
     args = argparse.ArgumentParser(description=__doc__)
     args.add_argument(
         '--only', help='append one newly registered project; retain existing oracles'
     )
+    args.add_argument(
+        '--input-project', help='author one new registered case from its independent fixture input'
+    )
     args = args.parse_args()
+    if args.input_project and not args.only:
+        raise ValueError('an independent authoring input requires exactly one new registered case')
+    authored = (ROOT / args.input_project).resolve() if args.input_project else None
+    if authored is not None:
+        authored.relative_to(ROOT)
+        if not (authored / 'project.edi').is_file():
+            raise ValueError('the independent authoring input must be a complete local project')
+    args.input_path = authored
+    return args
+
+
+def main():
+    args = arguments()
     linked_engine_source = (
         (Path(sys.modules['edi._edi'].__file__).resolve().parents[2] / '.crysta-linked-sha')
         .read_text()
@@ -51,7 +67,7 @@ def main():
         for entry in registry['projects']:
             if args.only and entry['id'] != args.only:
                 continue
-            source = ROOT / 'docs/user/cli' / entry['id'] / 'project'
+            source = args.input_path or ROOT / 'docs/user/cli' / entry['id'] / 'project'
             mode = str(edi.Project.load(str(source)).fitting_mode)
             if mode not in {'single', 'joint'}:
                 continue
@@ -123,6 +139,22 @@ runpy.run_module('edi', run_name='__main__')
                     else {}
                 ),
             })
+    write_artifacts(manifest, args.only, args.input_path)
+    print(f'CLI oracle complete: {len(manifest["cases"])} projects', flush=True)
+
+
+def write_artifacts(manifest, case_id=None, authoring_input=None):
+    """Write captured records; validate a new independent input without another fit."""
+    if authoring_input is not None:
+        row = next(row for row in manifest['cases'] if row['id'] == case_id)
+        inputs = {
+            p.relative_to(authoring_input).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
+            for p in sorted(authoring_input.rglob('*')) if p.is_file()
+        }
+        if inputs != row['inputs_sha256']:
+            raise ValueError('captured CLI inputs must match the independent authoring project')
+        row['path'] = f'docs/user/cli/{case_id}/project'
+        row['authoring_input'] = authoring_input.relative_to(ROOT).as_posix()
     (HERE / 'cli.json').write_text(json.dumps(manifest, indent=2) + '\n')
     # Standard-library-only C++ expectations, usable without JSON or Qt in the core tier.
     lines = [
@@ -147,7 +179,6 @@ runpy.run_module('edi', run_name='__main__')
         )
     lines.extend(['}; }', '}'])
     (HERE / 'cli.hpp').write_text('\n'.join(lines) + '\n')
-    print(f'CLI oracle complete: {len(manifest["cases"])} projects', flush=True)
 
 
 if __name__ == '__main__':
