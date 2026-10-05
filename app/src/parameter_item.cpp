@@ -93,6 +93,13 @@ void ParameterItem::setElementSymbol(const QString& symbol) {
     }
 }
 
+void ParameterItem::setPhaseIndex(int index) {
+    if (phase_index_ != index) {
+        phase_index_ = index;
+        emit phaseIndexChanged();
+    }
+}
+
 void ParameterItem::setRefinable(bool refinable) {
     if (refinable_ != refinable) {
         refinable_ = refinable;
