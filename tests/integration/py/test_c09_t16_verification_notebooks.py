@@ -207,7 +207,7 @@ def _assert_fullprof_reference_flow(  # noqa: PLR0914
         {'FULLPROF_PRF_FILE'},
         {'FULLPROF_BAC_FILE'},
         {'TWIN_ZERO' if page in RELATION_PAGES else 'FULLPROF_ZERO'},
-    ]
+    ], 'C09-T16 each verification source must retain its declared FullProf zero reference flow'
 
     assignments = [
         node

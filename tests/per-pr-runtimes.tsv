@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-05T12:43:25Z
+# measured_utc = 2026-10-05T13:04:49Z
 #
-# Recorded from: edi18-app-receipts.log (5 node(s) measured once, 6017 banked, 0 stale row(s) dropped)
+# Recorded from: notebook-message.log (1 node(s) measured once, 6021 banked, 0 stale row(s) dropped)
 # Collected tests: 6597; with a reported duration: 3938
 # Module-scoped fixture costs recorded: 14
 #
@@ -97,7 +97,7 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_ui_compare.py::t
 0.030	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[None-100]
 0.030	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[None-383.2]
 0.220	tests/integration/py/test_c09_t16_verification_notebooks.py::test_ci_runs_notebooks_for_every_result_changing_surface
-0.050	tests/integration/py/test_c09_t16_verification_notebooks.py::test_fullprof_files_resolve_and_feed_every_page_comparison
+0.080	tests/integration/py/test_c09_t16_verification_notebooks.py::test_fullprof_files_resolve_and_feed_every_page_comparison
 0.020	tests/integration/py/test_c09_t16_verification_notebooks.py::test_pixi_notebook_tasks_form_the_local_execution_gate
 0.180	tests/integration/py/test_c09_t16_verification_notebooks.py::test_verification_sources_generate_stripped_notebooks_on_demand
 0.000	tests/integration/py/test_c11_t26_graded_start_corpus.py::test_c11_t26_hidden_consumer_contains_no_live_fit_or_calculation
