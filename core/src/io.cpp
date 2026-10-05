@@ -1884,7 +1884,12 @@ auto parameter_slots(ProjectT& project) {
         auto& experiment = *experiment_item;
         // ADR-0016: the canonical datablock key, as crysta's writer composes it.
         const std::string prefix = datablock_key(experiment.name, "experiment") + ".";
-        const std::string link = datablock_key(experiment.linked_structure.structure_id, "structure");
+        // An experiment with no structure link names its scale by the project's structure, as
+        // crysta's walk does (structure_link_id).
+        const std::string linked = experiment.linked_structure.structure_id;
+        const std::string link = datablock_key(
+            linked.empty() && !project.structures.empty() ? project.structures.front()->name.value() : linked,
+            "structure");
         const auto peak = [&](const std::string& name, ParameterPtr parameter) {
             add(prefix + name, prefix + "peak." + name, parameter);
         };
