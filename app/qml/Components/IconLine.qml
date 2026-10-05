@@ -15,8 +15,9 @@ import EasyApplication.Gui.Elements as EaElements
 Item {
     id: line
 
-    // The pieces, in order: {icon: <Font Awesome name>, color, slot} or {text, color, bold}; a piece without a
-    // colour takes `textColor`, and an icon with `slot` is one icon wide, drawn or not (a fit-outcome column).
+    // The pieces, in order: {icon: <Font Awesome name>, color, slot, ring} or {text, color, bold}; a piece without
+    // a colour takes `textColor`, an icon with `slot` is one icon wide, drawn or not (a fit-outcome column), and
+    // one with `ring` is drawn as a hollow circle of the icons' size (FitOutcomes' "Not fitted").
     property var segments: []
     property real pixelSize: EaStyle.Sizes.fontPixelSize
     property color textColor: EaStyle.Colors.themeForeground
@@ -79,6 +80,20 @@ Item {
                 width: elided ? Math.max(0, Math.min(implicitWidth, line.maximumWidth - line.leadingWidth)) : modelData.slot ? line.pixelSize * 1.15 : implicitWidth
                 elide: elided ? line.elide : Text.ElideNone
                 y: isIcon ? line.centreY - inkMiddle : textMetrics.ascent - baselineOffset
+
+                Rectangle {
+                    readonly property real diameter: line.pixelSize * 0.85
+
+                    visible: piece.modelData.ring === true
+                    x: (piece.width - diameter) / 2
+                    y: line.centreY - piece.y - diameter / 2
+                    width: diameter
+                    height: diameter
+                    radius: diameter / 2
+                    color: "transparent"
+                    border.color: piece.color
+                    border.width: Math.max(1, diameter / 8)
+                }
 
                 TextMetrics {
                     id: ink

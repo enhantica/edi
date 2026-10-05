@@ -89,11 +89,12 @@ EaElements.GroupBox {
                     iconColor: AppColors.experiment(row.index)
                     toolTip: qsTr("Measured pattern color")
                 }
-                // How the project's last fit ended on this experiment; empty when it has no result.
+                // How the project's last fit ended on this experiment; "Not fitted" when it took no part.
                 IconCell {
                     objectName: `experiments.fit.${row.index}`
                     icon: FitOutcomes.icon(row.fitOutcome)
                     iconColor: String(FitOutcomes.color(row.fitOutcome))
+                    ring: FitOutcomes.ring(row.fitOutcome)
                     toolTip: FitOutcomes.word(row.fitOutcome)
                 }
                 // The datablock name, editable: a refused rename returns the cell to the stored name and shows why.

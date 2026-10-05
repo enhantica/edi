@@ -7,7 +7,9 @@ import EasyApplication.Gui.Style as EaStyle
 
 // How a fit ended, drawn one way everywhere (edi ADR-0017 §17): the status bar's summary, the results window's
 // Overall status row and the Fit column of the experiment lists all take the icon, word and colour of an
-// outcome key (FitViewModel.outcome, recorded_outcome) from here. A scan's outcome is its worst file's.
+// outcome key (FitViewModel.outcome, recorded_outcome) from here. A scan's outcome is its worst file's. An
+// experiment the last fit did not take part in (an empty key) is "Not fitted": a hollow circle in the minor colour,
+// drawn rather than taken from the icon font, whose solid face has no hollow circle (`ring`).
 QtObject {
     // The separator between the fit area's items, inside and beside the progress bar.
     readonly property string separator: " · "
@@ -29,8 +31,15 @@ QtObject {
         return "";
     }
 
+    // Whether the outcome is drawn as the hollow "Not fitted" circle.
+    function ring(key) {
+        return key === "";
+    }
+
     function word(key) {
         switch (key) {
+        case "":
+            return qsTr("Not fitted");
         case "success":
             return qsTr("Success");
         case "maxIterations":
@@ -50,6 +59,8 @@ QtObject {
     // What the outcome means, for a tooltip.
     function meaning(key) {
         switch (key) {
+        case "":
+            return qsTr("Not fitted yet");
         case "success":
             return qsTr("The fit converged");
         case "maxIterations":
