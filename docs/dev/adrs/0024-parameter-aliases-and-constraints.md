@@ -36,7 +36,10 @@ through crysta (ADR-0019 already reads crysta for the symmetry ties).
    `crysta.domain.dependent_free_ignored`; setting one free warns the same way and changes nothing.
 5. **Values and e.s.d.s.** After any edit the app runs crysta's applier (`apply_relations`). A Python edit of the
    relations writes no value: it leaves the computed categories stale, and the next read or calculation applies the
-   relations before it computes anything, the geometry included. After a fit, the dependents' values and e.s.d.s are
+   relations before it computes anything, the geometry included. A structure or parameter reaches its project through
+   a link the project installs when it is built, loaded or calculated and whenever it hands a structure or parameter
+   out; the link is cleared when the project is destroyed, and a reader checks that the project still holds what it
+   reached. One no live project holds is set by no relation. After a fit, the dependents' values and e.s.d.s are
    copied back from crysta by unique name, each dependent's previous e.s.d. kept in memory so undo restores it.
 6. **Python.** diffraction-lib's names: `Alias` (`id`, `parameter_unique_name`, `param`), `Aliases.create(id=,
    param=)`, `Constraint` (`id`, `expression`, `lhs_alias`, `rhs_expr`), `Constraints.create(expression=, id=None)`,
@@ -46,11 +49,14 @@ through crysta (ADR-0019 already reads crysta for the symmetry ties).
    returns the parameter as the ordinary field getters do: attached to its row and keeping its owner alive.
 7. **Currentness.** The alias and constraint rows are inputs of every computed category and of stored geometry: a
    declaration write, an equal rewrite included, makes them stale, and a calculation or fit result taken before it is
-   not published (`relation_inputs` in the canonical encoding, beside the calculation and geometry inputs).
+   not published (`relation_inputs` in the canonical encoding, beside the calculation and geometry inputs). A
+   calculation's result carries each dependent's value as its relations gave it, and publication writes those values
+   with the computed categories.
 8. **Undo.** Each app edit of the relations records the rows before it and every parameter state it changed. The app
    bar's Undo restores the newest recorded change, so relation edits and fits undo in the order they were made. A
    relation undo is an `Edit` built from that record (`restore_relations`), as a fit's is built from its start state
-   (`undo_fit`); a parameter removed since refuses it with nothing written.
+   (`undo_fit`); a parameter removed since refuses it with nothing written. A record is dropped only when its restore
+   succeeds, so a refused undo keeps it, and Undo is disabled while a fit runs.
 
 ## Consequences
 
