@@ -2235,7 +2235,7 @@
      "verdict": "public",
      "need": {
       "by": "counterpart",
-      "ref": "CollectionBase.clear",
+      "ref": "CategoryCollection.clear",
       "verdict": "keep"
      }
     },
