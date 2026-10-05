@@ -413,7 +413,9 @@ def test_alias_creation_refuses_foreign_handles_and_duplicate_ids(tmp_path):
 def test_space_group_edit_refreshes_dependence_and_clears_a_stale_free_flag(tmp_path):
     project = engine.Project.load(MATERIALIZE(tmp_path / 'triclinic'))
     cubic = engine.Project.load(MATERIALIZE(tmp_path / 'cubic', symmetry=True))
-    original = project.structure.space_group
+    # A category read is a retained handle, not a snapshot (ADR-0012).
+    # Save the immutable identity so restoration really removes the cubic relations.
+    original = project.structure.space_group.name_h_m
     project.structure.cell.length_b.free = True
     project.structure.space_group = cubic.structure.space_group
     with pytest.warns(UserWarning, match='crysta.domain.dependent_free_ignored'):
@@ -427,7 +429,10 @@ def test_space_group_edit_refreshes_dependence_and_clears_a_stale_free_flag(tmp_
     assert not project.structure.cell.length_a.free, (
         'refreshing symmetry must never redirect the stale flag to its leader'
     )
-    project.structure.space_group = original
+    project.structure.space_group.name_h_m = original
+    assert project.structure.space_group.name_h_m == 'P 1', (
+        'restoration must actually return the declaration to the independent triclinic group'
+    )
     project.analysis.calculate()
     assert not project.structure.cell.length_b.symmetry_constrained, (
         'removing the symmetry relation must clear its stale dependence mark'

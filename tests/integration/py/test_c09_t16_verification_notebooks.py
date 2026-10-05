@@ -39,6 +39,8 @@ PAGES = {
     ),
     'pd-neut-tof_NCAF_jorgensen-von-dreele': ('pd-neut-tof_ncaf-wish_jorgensen-von-dreele'),
 }
+# ADR-0078's independent tied fit and fixed twin extend the historical CW corpus.
+RELATION_PAGES = {'pd-neut-cwl_cosio-d20_biso-tied': 'pd-neut-cwl_cosio-d20_biso-tied'}
 
 
 def _run(
@@ -204,7 +206,7 @@ def _assert_fullprof_reference_flow(  # noqa: PLR0914
         {'FULLPROF_PROJECT_DIR'},
         {'FULLPROF_PRF_FILE'},
         {'FULLPROF_BAC_FILE'},
-        {'FULLPROF_ZERO'},
+        {'TWIN_ZERO' if page in RELATION_PAGES else 'FULLPROF_ZERO'},
     ]
 
     assignments = [
@@ -282,8 +284,8 @@ def _assert_fullprof_reference_flow(  # noqa: PLR0914
 
 
 def test_verification_sources_generate_stripped_notebooks_on_demand() -> None:
-    expected_sources = {f'{page}.py' for page in PAGES}
-    expected_notebooks = {f'{page}.ipynb' for page in PAGES}
+    expected_sources = {f'{page}.py' for page in PAGES | RELATION_PAGES}
+    expected_notebooks = {f'{page}.ipynb' for page in PAGES | RELATION_PAGES}
     actual_sources = {path.name for path in VERIFICATION.glob('*.py')}
 
     assert (VERIFICATION / 'index.md').is_file(), 'the verification page index must be present'
@@ -327,7 +329,7 @@ def test_verification_sources_generate_stripped_notebooks_on_demand() -> None:
         'every derived verification notebook must be ignored until generated on demand'
     )
 
-    for page in sorted(PAGES):
+    for page in sorted(PAGES | RELATION_PAGES):
         notebook = jupytext.read(VERIFICATION / f'{page}.py', fmt='py:percent')
         code_cells = [cell for cell in notebook.cells if cell.cell_type == 'code']
         assert code_cells, f'{page}.ipynb must generate executable cells'
@@ -354,7 +356,7 @@ def test_verification_sources_generate_stripped_notebooks_on_demand() -> None:
 def test_fullprof_files_resolve_and_feed_every_page_comparison() -> None:
     tracked = set(_run('git', 'ls-files').stdout.splitlines())
 
-    for page, expected_project in PAGES.items():
+    for page, expected_project in (PAGES | RELATION_PAGES).items():
         source_path = VERIFICATION / f'{page}.py'
         tree = ast.parse(source_path.read_text(), filename=str(source_path))
         _assert_reference_files(page, expected_project, tree, tracked)

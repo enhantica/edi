@@ -94,13 +94,10 @@ def test_real_publication_probe_reports_all_datasets_scenarios_and_requested_sta
         text=True,
         timeout=10,
     )
-    from tests.integration.py.test_e09_t75_native_workflow import (  # noqa: PLC0415 - defer cross-module test wiring
-        jobs,
-        public_profile,
-    )
-
     banked = json.loads(bank.read_text())['machines'].get(table['machine'])
-    if public_profile(jobs()) and not banked:
+    # The table carries the measured machine's identity (ADR-0020); a local
+    # hand run stays manual even when this checkout declares hosted CI jobs.
+    if not table['machine'].startswith('hand:') and not banked:
         assert compared.returncode != 0 and 'a CI machine is banked before it gates' in (
             compared.stdout + compared.stderr
         ), 'hosted latency reporting must retain the explicit unbanked-machine refusal'

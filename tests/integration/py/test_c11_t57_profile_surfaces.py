@@ -141,6 +141,8 @@ def test_c33_filename_difference_adds_exactly_the_owned_pages():
     #  owns its added page; keep 's original page obligation exact.
     after.discard('pd-xray-cwl_LiF_single_polarization')
     after.discard('pd-neut-cwl_LBCO_preferred-orientation')
+    # ADR-0078 adds its separately gated tied-Biso page; keep this task's delta exact.
+    after.discard('pd-neut-cwl_cosio-d20_biso-tied')
     assert after - before == expected and before <= after, (
         ' C33 counter must derive from exactly the three owned added filenames'
     )

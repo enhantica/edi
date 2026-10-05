@@ -38,8 +38,9 @@ def test_cosio_scan_projects_restore_the_constraint_and_execute(case):
         'both restored scan projects must remain in the executing registry'
     )
     atom_file = next((folder / 'structures').glob('*.edi'))
-    co1 = next(line for line in atom_file.read_text().splitlines() if line.startswith('Co1 '))
-    assert '(' in co1.split()[-1], 'restoring the tie must leave the Co1 Biso leader free'
+    tables = runpy.run_path(str(ROOT / 'tests/fixtures/e04_t1/generate.py'))['tables']
+    co1 = next(row for row in tables(atom_file)['atom_site'] if row['id'] == 'Co1')
+    assert co1['adp_iso']['free'], 'restoring the tie must leave the Co1 Biso leader free'
 
 
 def test_tied_biso_notebook_executes_its_fullprof_comparison_and_fit():
