@@ -286,7 +286,7 @@ bool ProjectViewModel::createExperiment() {
         });
         name = held ? std::string() : candidate;
     }
-    const std::string structure = project.structures.empty() ? std::string() : project.structures.front()->name;
+    const std::string structure = project.structures.empty() ? std::string() : std::string(project.structures.front()->name);
     QString error;
     try {
         error = apply(edi::Edit::create_experiment(project, edi::simulation_experiment(name, {}, structure)), true);
