@@ -14,18 +14,20 @@ _diffrn.ambient_electric_field ?
 
 _calculator.type cryspy
 
-_peak.broad_lorentz_gamma_0 0.()
-_peak.broad_lorentz_gamma_1 0.
-_peak.broad_lorentz_gamma_2 0.
-_peak.broad_gauss_sigma_0 300.()
-_peak.broad_gauss_sigma_1 1200.()
-_peak.broad_gauss_sigma_2 900.()
-_peak.cutoff_fwhm 0.
+_scattering_source.neutron_scattering_length sears1992
+
+_peak.broad_lorentz_gamma_0 5.0330()
+_peak.broad_lorentz_gamma_1 0.0000
+_peak.broad_lorentz_gamma_2 0.0000
+_peak.broad_gauss_sigma_0 893.6397()
+_peak.broad_gauss_sigma_1 1283.6387()
+_peak.broad_gauss_sigma_2 311.7041()
+_peak.cutoff_fwhm 12.00
 _peak.type tof-pseudo-voigt
 
 _instrument.setup_twotheta_bank 90.
-_instrument.calib_d_to_tof_offset 0.()
-_instrument.calib_d_to_tof_linear 54902.18695
+_instrument.calib_d_to_tof_offset -10.29183()
+_instrument.calib_d_to_tof_linear 54902.18750
 _instrument.calib_d_to_tof_quadratic 0.
 _instrument.calib_d_to_tof_reciprocal 0.
 
@@ -34,15 +36,15 @@ _absorption.type none
 loop_
 _linked_structure.structure_id
 _linked_structure.scale
-ferrite 403.0508652763321038()
-austenite 96.16652224137047256()
+ferrite 401.4629()
+austenite 96.17031()
 
 loop_
 _excluded_region.id
 _excluded_region.start
 _excluded_region.end
-1 0. 40500
-2 130000 180000
+1 20000.00 40158.2305
+2 130000.00 180000.00
 
 _background.type line-segment
 
@@ -50,26 +52,37 @@ loop_
 _background.id
 _background.position
 _background.intensity
-1 40094.5234 0.00154466()
-2 48089.8489 0.16817014()
-3 51976.023 0.18318367()
-4 54301.3567 0.17817316()
-5 58729.047 0.29094956()
-6 62710.7828 0.30386739()
-7 67711.8429 0.25309999()
-8 73158.8575 0.22572611()
-9 76439.8078 0.2032409()
-10 81249.7446 0.19452525()
-11 85263.3343 0.17296749()
-12 96157.3635 0.24903232()
-13 98132.3044 0.34181849()
-14 102368.8713 0.39038896()
-15 104248.2506 0.36119925()
-16 108771.5025 0.62066501()
-17 111606.4984 1.22400007()
-18 112721.3844 1.32442095()
-19 115715.6497 1.12710852()
-20 135592.4748 0.00951552()
+1 40111.8789 0.0167()
+2 41193.5664 0.1485()
+3 42041.3750 0.1848()
+4 42713.7734 0.1975()
+5 44409.3945 0.1891()
+6 45198.7344 0.2147()
+7 46251.1875 0.1887()
+8 49350.0742 0.2194()
+9 51289.6836 0.1991()
+10 55245.1992 0.1981()
+11 55679.7070 0.2276()
+12 56383.9102 0.2439()
+13 58956.1797 0.2907()
+14 61536.4570 0.3067()
+15 63768.0469 0.3242()
+16 65581.2109 0.2973()
+17 70183.8516 0.2575()
+18 71787.8203 0.2321()
+19 78343.1094 0.2158()
+20 80016.8047 0.1694()
+21 98141.8516 0.2400()
+22 99262.2344 0.4335()
+23 100985.8516 0.4375()
+24 101933.8516 0.3427()
+25 108656.0312 0.5339()
+26 110896.7500 0.9537()
+27 113137.4844 1.1668()
+28 114430.2031 1.1164()
+29 116929.4844 0.9161()
+30 119428.7422 0.6885()
+31 134506.3438 0.0692
 
 loop_
 _data.time_of_flight

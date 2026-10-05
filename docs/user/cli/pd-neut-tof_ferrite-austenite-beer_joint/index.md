@@ -1,8 +1,8 @@
 ---
 title: Ferrite and austenite on BEER, joint
 description: >-
-  Two Fe phases, ferrite and austenite, against two BEER (ESS) time-of-flight neutron banks, fitted jointly with
-  each phase's scale tied across the banks.
+  Two Fe phases, ferrite and austenite, against two BEER (ESS) time-of-flight neutron banks, fitted jointly from
+  the starting values of a FullProf project, each phase's scale free in each bank.
 ---
 
 # Ferrite and austenite on BEER, joint
@@ -21,6 +21,8 @@ from its Examples list.
 
 ## What is checked
 
-`expected.json` holds CrySPY's result for the first fit, an independent reference
-([PROVENANCE.md](PROVENANCE.md)). CI and `pixi run verify` run this project through `python -m edi` and compare
-its Rwp with CrySPY's (`tools/checks/cli_projects.py`).
+The starting values are those of the owner's FullProf project for these data ([PROVENANCE.md](PROVENANCE.md)).
+CI and `pixi run verify` run this project through `python -m edi` (`tools/checks/cli_projects.py`) and check its
+number of free parameters against FullProf's, and its Rwp, reduced chi-square and iteration count against
+regression pins. The fitted values are not compared with FullProf's yet: FullProf shares one B iso between the two
+Fe sites, and edi cannot express that constraint yet.
