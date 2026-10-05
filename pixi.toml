@@ -133,12 +133,12 @@ doctest = "*"
 # tools/ci/build-crysta.sh reads them from this file. Only an update PR or a paired PR moves them.
 [target.osx-arm64.activation.env]
 MACOSX_DEPLOYMENT_TARGET = '13.4'
-CRYSTA_SDK_TAG = "build-83b77cc211892462e57c873f75c4fede3ff59249"
-CRYSTA_SDK_SHA256 = "dca877bfd54d65a4f2941087547e6bc990c51ccc3c45de168acca6eaa122b203"
+CRYSTA_SDK_TAG = "build-ba4b89c2dcfb7bab2a5362fcd6b9335154447cf1"
+CRYSTA_SDK_SHA256 = "0000000000000000000000000000000000000000000000000000000000000000"
 
 [target.linux-64.activation.env]
-CRYSTA_SDK_TAG = "build-83b77cc211892462e57c873f75c4fede3ff59249"
-CRYSTA_SDK_SHA256 = "85db7acbec9afcc5961e060502cc40edf0a13e2dd067044a34ef7c145403366e"
+CRYSTA_SDK_TAG = "build-ba4b89c2dcfb7bab2a5362fcd6b9335154447cf1"
+CRYSTA_SDK_SHA256 = "d73d4132520cc39b74ca3123913d2cfc3fe171d3307a7e25981c9d929d17588e"
 
 [target.linux-64.dependencies]
 clangxx = "22.*"
