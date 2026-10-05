@@ -3162,6 +3162,7 @@ NB_MODULE(_edi, m) {
                 // The model is the single source of truth — no grid, bank, cutoff or
                 // scattering argument exists; the result is read from
                 // experiment.data.intensity_calc.
+                relations_changed(self);  // a stale free flag on a dependent warns, as crysta's does
                 nb::gil_scoped_release nogil;
                 self.calculate();
             },
@@ -3175,6 +3176,7 @@ NB_MODULE(_edi, m) {
             [](edi::Project& self, const std::optional<nb::callable>& on_iteration,
                const std::optional<nb::callable>& on_start,
                const std::optional<nb::callable>& should_cancel) {
+                relations_changed(self);
                 return fit_with_callbacks(
                     on_iteration, on_start, should_cancel,
                     [&](const edi::IterationCallback& cb, const edi::PreambleCallback& pre,
@@ -3197,6 +3199,7 @@ NB_MODULE(_edi, m) {
             [](edi::Project& self, const std::optional<nb::callable>& on_iteration,
                const std::optional<nb::callable>& on_start,
                const std::optional<nb::callable>& should_cancel) {
+                relations_changed(self);
                 return fit_with_callbacks(
                     on_iteration, on_start, should_cancel,
                     [&](const edi::IterationCallback& cb, const edi::PreambleCallback& pre,
@@ -3219,6 +3222,7 @@ NB_MODULE(_edi, m) {
                const std::optional<nb::callable>& on_scan_start,
                const std::optional<nb::callable>& on_file_complete,
                const std::optional<nb::callable>& should_cancel) {
+                relations_changed(self);
                 return fit_with_scan_callbacks(
                     on_iteration, on_start, on_scan_start, on_file_complete, should_cancel,
                     [&](const edi::IterationCallback& cb, const edi::PreambleCallback& pre,
@@ -3253,6 +3257,7 @@ NB_MODULE(_edi, m) {
                const std::optional<nb::callable>& on_scan_start,
                const std::optional<nb::callable>& on_file_complete,
                const std::optional<nb::callable>& should_cancel) {
+                relations_changed(self);
                 return fit_with_scan_callbacks(
                     on_iteration, on_start, on_scan_start, on_file_complete, should_cancel,
                     [&](const edi::IterationCallback& cb, const edi::PreambleCallback& pre,
