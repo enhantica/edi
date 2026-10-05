@@ -1912,12 +1912,41 @@ NB_MODULE(_edi, m) {
                                       &edi::InstrumentBase::setup_monochromator_twotheta,
                                       edi::spec::instrument_monochromator_twotheta);
 
-    // The linked-structure category.
+    // One linked structure (phase): the structure it names, its scale and whether it takes part.
     nb::class_<edi::LinkedStructure> linked_structure(m, "LinkedStructure");
     linked_structure.def("__setattr__", renewing_setattr<edi::LinkedStructure>({}, renew_epoch), nb::arg("name"), nb::arg("value").none());
-    linked_structure.def(nb::init<>())
-        .def_rw("structure_id", &edi::LinkedStructure::structure_id);
+    linked_structure.def(nb::new_([]() { return std::make_shared<edi::LinkedStructure>(); }))
+        // ADR-0016: assigning is a rename the owning experiment admits.
+        .def_prop_rw(
+            "structure_id", [](const edi::LinkedStructure& self) { return self.structure_id.value(); },
+            [](edi::LinkedStructure& self, std::string value) { self.structure_id = std::move(value); })
+        .def_prop_rw(
+            "enabled", [](const edi::LinkedStructure& self) { return self.enabled.get(); },
+            [](edi::LinkedStructure& self, bool value) { self.enabled = value; },
+            "Whether the phase takes part: a disabled link is kept and saved, but neither calculated "
+            "nor fitted.");
     def_parameter_field(linked_structure, "scale", &edi::LinkedStructure::scale);
+
+    // The experiment's linked structures (phases), keyed by structure_id (R15).
+    nb::class_<edi::views::LinkedStructuresView> linked_structures_view(
+        m, "LinkedStructures",
+        "Live keyed collection of an experiment's linked structures (key: structure_id).");
+    nb::class_<edi::views::LinkedStructuresIter> linked_structures_iter(m, "_LinkedStructuresIterator");
+    def_keyed_collection<edi::views::LinkedStructuresView, edi::views::LinkedStructuresIter, edi::LinkedStructure>(
+        linked_structures_view, linked_structures_iter);
+    linked_structures_view.def(
+        "create",
+        [](edi::views::LinkedStructuresView& self, nb::kwargs kwargs) {
+            // Upstream CategoryCollection.create, as AtomSites.create.
+            auto built = std::make_shared<edi::LinkedStructure>();
+            nb::object obj = nb::cast(built);
+            for (auto kv : kwargs) {
+                nb::setattr(obj, kv.first, kv.second);
+            }
+            const std::string key = built->structure_id;
+            self.set_item(key, std::move(built));
+        },
+        "Link a structure from keyword attributes (structure_id, scale, enabled) and add it.");
 
     // The absorption category — the FullProf ABSCOR pair, presence-tracked (parity doc records
     // why the spellings stay).
@@ -1981,7 +2010,24 @@ NB_MODULE(_edi, m) {
             "name", [](const edi::ExperimentBase& self) { return self.name.value(); },
             [](edi::ExperimentBase& self, std::string value) { self.name = std::move(value); })
         .def_rw("experiment_type", &edi::ExperimentBase::experiment_type)
-        .def_rw("linked_structure", &edi::ExperimentBase::linked_structure)
+        .def_prop_rw(
+            "linked_structure",
+            [](edi::ExperimentBase& self) { return self.linked_structures.front(); },
+            [](edi::ExperimentBase& self, const edi::LinkedStructure& value) {
+                // The single-phase shortcut: the first link takes the value's fields.
+                edi::LinkedStructure& first = self.linked_structure();
+                first.structure_id = value.structure_id.value();
+                first.scale = value.scale;
+                first.enabled = value.enabled.get();
+            },
+            "The first linked structure (the single-phase shortcut).")
+        .def_prop_ro(
+            "linked_structures",
+            [](edi::ExperimentBase& self) {
+                return edi::views::LinkedStructuresView{&self, &edi::ExperimentBase::linked_structures,
+                                                        &edi::LinkedStructure::structure_id};
+            },
+            nb::keep_alive<0, 1>(), "The linked structures (phases), keyed by structure_id.")
         .def_rw("dataset_weight", &edi::ExperimentBase::dataset_weight);
 
     // The abstract intermediates: the powder base homes the pd-shared members exactly where upstream

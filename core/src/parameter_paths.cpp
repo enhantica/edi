@@ -80,7 +80,7 @@ std::optional<ResolvedParameter> resolve_instrument_label(ExperimentBase& experi
                                  path_prefix + "background[" + std::to_string(index) + "].intensity"};
     }
     if (label == "scale") {
-        return ResolvedParameter{&experiment.linked_structure.scale,
+        return ResolvedParameter{&experiment.linked_structure().scale,
                                  path_prefix + "linked_structure.scale"};
     }
     // Crysta emits the preferred-orientation pair under its leaf names; the one row (crysta
@@ -230,7 +230,8 @@ std::optional<ResolvedParameter> resolve_instrument_label(ExperimentBase& experi
 // Resolve the SHARED STRUCTURAL half — the quantities crysta emits once per fit, unprefixed, for
 // both the single-bank and joint layouts (cell length, positional basics, per-site Biso/occupancy).
 std::optional<ResolvedParameter> resolve_structural_label(Structure& structure,
-                                                          const std::string& label) {
+                                                          const std::string& label,
+                                                          const std::string& root) {
     // All six cell labels crysta's free-set builder can emit (cell_symmetry.cpp kLabels). Mapping
     // cell_a alone was fact 5's gap: a Pnma cell_b/cell_c — or any non-cubic independent
     // edge/angle — died at the unmapped-label refusal. crysta only ever emits the INDEPENDENT
@@ -246,7 +247,7 @@ std::optional<ResolvedParameter> resolve_structural_label(Structure& structure,
     };
     if (const auto it = kCell.find(label); it != kCell.end()) {
         return ResolvedParameter{&(structure.cell.*(it->second.first)),
-                                 std::string("structure.cell.") + it->second.second};
+                                 root + "cell." + it->second.second};
     }
     const std::size_t dot = label.rfind('.');
     if (dot != std::string::npos) {
@@ -256,7 +257,7 @@ std::optional<ResolvedParameter> resolve_structural_label(Structure& structure,
             AtomSite& atom = *atom_item;
             if (atom.id != site) continue;
             // Sites are addressed by their edi label (stable across model edits), not list position.
-            const std::string base = "structure.atom_sites[" + atom.id + "].";
+            const std::string base = root + "atom_sites[" + atom.id + "].";
             if (field == "fract_x") return ResolvedParameter{&atom.fract_x, base + "fract_x"};
             if (field == "fract_y") return ResolvedParameter{&atom.fract_y, base + "fract_y"};
             if (field == "fract_z") return ResolvedParameter{&atom.fract_z, base + "fract_z"};
@@ -267,6 +268,106 @@ std::optional<ResolvedParameter> resolve_structural_label(Structure& structure,
         }
     }
     return std::nullopt;
+}
+
+std::string structure_root(const Project& project, const Structure& structure) {
+    return project.structures.size() > 1 ? "structures[" + datablock_key(structure.name, "structure") + "]."
+                                         : std::string("structure.");
+}
+
+namespace {
+// The structure a `<structure>.` prefix names in a project of several structures, and the rest.
+std::optional<std::pair<Structure*, std::string>> split_structure(Project& project, const std::string& label) {
+    if (project.structures.size() < 2) {
+        return std::nullopt;
+    }
+    for (const auto& item : project.structures) {
+        const std::string key = datablock_key(item->name, "structure");
+        if (label.size() > key.size() + 1 && label.compare(0, key.size(), key) == 0 && label[key.size()] == '.') {
+            return std::make_pair(item.get(), label.substr(key.size() + 1));
+        }
+    }
+    return std::nullopt;
+}
+
+// A phase-owned label of `experiment` (paths under `root`): `<structure>.scale` is its link's scale,
+// `<structure>.march_*` its texture row's.
+std::optional<ResolvedParameter> resolve_phase_label(Project& project, ExperimentBase& experiment,
+                                                     const std::string& root, const std::string& label) {
+    const auto split = split_structure(project, label);
+    if (!split) {
+        return std::nullopt;
+    }
+    const std::string key = datablock_key(split->first->name, "structure");
+    const std::string& rest = split->second;
+    if (rest == "scale") {
+        for (const auto& link : experiment.linked_structures) {
+            if (datablock_key(link->structure_id, "structure") == key) {
+                return ResolvedParameter{&link->scale, root + "linked_structures[" + link->structure_id.value() + "].scale"};
+            }
+        }
+    }
+    if (rest == "march_r" || rest == "march_random_fract") {
+        for (std::size_t row = 0; row < experiment.preferred_orientation.size(); ++row) {
+            PrefOrient& texture = *experiment.preferred_orientation[row];
+            if (datablock_key(texture.structure_id, "structure") == key) {
+                return ResolvedParameter{rest == "march_r" ? &texture.march_r : &texture.march_random_fract,
+                                         root + "preferred_orientation[" + std::to_string(row) + "]." + rest};
+            }
+        }
+    }
+    return std::nullopt;
+}
+
+// A structural label of a project of several structures: `<structure>.<label>`.
+std::optional<ResolvedParameter> resolve_prefixed_structural(Project& project, const std::string& label) {
+    const auto split = split_structure(project, label);
+    if (!split) {
+        return std::nullopt;
+    }
+    return resolve_structural_label(*split->first, split->second, structure_root(project, *split->first));
+}
+}  // namespace
+
+std::optional<ResolvedParameter> resolve_project_label(Project& project, ExperimentBase& experiment,
+                                                       const std::string& label) {
+    if (auto phase = resolve_phase_label(project, experiment, "experiment.", label)) {
+        return phase;
+    }
+    if (auto structural = resolve_prefixed_structural(project, label)) {
+        return structural;
+    }
+    return resolve_label(project.structure(), experiment, label);
+}
+
+std::optional<ResolvedParameter> resolve_joint_project_label(Project& project, const std::string& label) {
+    if (project.structures.size() > 1) {
+        // A bank's own label `<bank>.<rest>`, the longest bank name first.
+        std::vector<ExperimentBase*> banks;
+        for (const auto& item : project.experiments) {
+            banks.push_back(item.get());
+        }
+        std::sort(banks.begin(), banks.end(),
+                  [](const ExperimentBase* a, const ExperimentBase* b) { return a->name.value().size() > b->name.value().size(); });
+        for (ExperimentBase* bank : banks) {
+            const std::string name = datablock_key(bank->name, "experiment");
+            if (label.size() <= name.size() + 1 || label.compare(0, name.size(), name) != 0 || label[name.size()] != '.') {
+                continue;
+            }
+            const std::string rest = label.substr(name.size() + 1);
+            const std::string root = "experiments[" + bank->name.value() + "].";
+            if (auto phase = resolve_phase_label(project, *bank, root, rest)) {
+                return phase;
+            }
+            if (auto instrument = resolve_instrument_label(*bank, rest, root)) {
+                return instrument;
+            }
+        }
+        if (auto structural = resolve_prefixed_structural(project, label)) {
+            return structural;
+        }
+    }
+    return resolve_joint_label(project.structure(), project.experiments, label);
 }
 
 // Translate a crysta free_from_model label (residual.cpp grammar) into the edi model parameter +
@@ -370,14 +471,16 @@ std::vector<ParameterEntry> parameter_entries(Project& project) {
                 const CategoryField& field = category.fields[i];
                 ParameterEntry entry{field.parameter, "", "structure", structure->name, category.id, "", field.name,
                                      field.refinable};
+                const std::string root = detail::structure_root(project, *structure);
                 if (category.id == "atom_site") {
                     entry.row_label = structure->atom_sites[i / 5]->id;
-                    entry.path = path_of(detail::resolve_structural_label(*structure, entry.row_label + "." + field.name),
-                                         field.parameter,
-                                         "structure.atom_sites[" + entry.row_label + "]." + field.name);
+                    entry.path = path_of(
+                        detail::resolve_structural_label(*structure, entry.row_label + "." + field.name, root),
+                        field.parameter, root + "atom_sites[" + entry.row_label + "]." + field.name);
                 } else {
-                    entry.path = path_of(detail::resolve_structural_label(*structure, category.id + "_" + field.name),
-                                         field.parameter, "structure." + category.id + "." + field.name);
+                    entry.path = path_of(
+                        detail::resolve_structural_label(*structure, category.id + "_" + field.name, root),
+                        field.parameter, root + category.id + "." + field.name);
                 }
                 entries.push_back(entry);
             }
@@ -403,9 +506,16 @@ std::vector<ParameterEntry> parameter_entries(Project& project) {
                     spelled = prefix + "preferred_orientation[" + entry.row_label + "]." + field.name;
                 } else if (category.id == "linked_structure") {
                     // A loop category as the two above: its one field per row is that row's scale (the
-                    // app names a loop row's parameter by its row, edi ADR-0017 §8).
-                    entry.row_label = std::to_string(i);
+                    // app names a loop row's parameter by its row, edi ADR-0017 §8). In a project of
+                    // several structures each row, and its path, is named by its structure.
                     label = "scale";
+                    if (project.structures.size() > 1) {
+                        entry.row_label = experiment->linked_structures[i]->structure_id.value();
+                        entry.path = prefix + "linked_structures[" + entry.row_label + "].scale";
+                        entries.push_back(entry);
+                        continue;
+                    }
+                    entry.row_label = std::to_string(i);
                 }
                 entry.path = path_of(detail::resolve_instrument_label(*experiment, label, prefix), field.parameter,
                                      spelled);

@@ -31,7 +31,8 @@ namespace edi_app {
 
 class ParameterRegistry;
 
-// The project's structures: roles `name`, `structure` (StructureViewModel), `colorIndex`.
+// The project's structures: roles `name`, `label` (`name · file`, the file the structure is saved as),
+// `structure` (StructureViewModel), `colorIndex`.
 class StructureListModel : public RowTableModel {
     Q_OBJECT
     QML_ELEMENT
@@ -42,7 +43,7 @@ class StructureListModel : public RowTableModel {
     void setStructures(const QList<StructureViewModel*>& structures);
 };
 
-// The project's experiments: roles `name`, `experiment` (ExperimentViewModel).
+// The project's experiments: roles `name`, `label` (`name · file`), `experiment` (ExperimentViewModel).
 class ExperimentListModel : public RowTableModel {
     Q_OBJECT
     QML_ELEMENT
@@ -119,7 +120,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void setCurrentExperimentIndex(int index);
     StructureViewModel* currentStructure() const { return structure_models_.value(current_structure_); }
     ExperimentViewModel* currentExperiment() const { return experiment_models_.value(current_experiment_); }
-    bool canLoadStructure() const { return project_->structures.empty(); }
+    // A project holds any number of structures (phases); loading one is always possible.
+    bool canLoadStructure() const { return true; }
     QString lastError() const { return last_error_; }
     bool calculating() const { return calculating_; }
     StructureViewOptions* structureViewOptions() const { return structure_view_options_; }

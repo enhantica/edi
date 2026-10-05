@@ -141,6 +141,13 @@ class Edit {
             row.structure_id = id;
         });
     }
+    // The structure a linked-structure row names, which keys the row in its experiment's collection.
+    static Edit link_structure(LinkedStructure& row, std::string id) {
+        return Edit([&row, id = std::move(id)] {
+            require_model_owner<LinkedStructure>(row.structure_id, "the linked structure");
+            row.structure_id = id;
+        });
+    }
     static Edit rename_scattering_length(Structure& structure, std::string from, std::string to) {
         return Edit([&structure, from = std::move(from), to = std::move(to)] {
             edi::rename_scattering_length(structure, from, to);
@@ -149,14 +156,18 @@ class Edit {
 
     // --- Rows -------------------------------------------------------------------------------------
     // One row added to, or removed from, one of the model's collections, by its own row type: atom
-    // sites, background points and texture rows are added; those, structures and experiments are
-    // removed. `erase` refuses a row that is not there.
+    // sites, background points, texture rows and linked structures are added; those, structures and
+    // experiments are removed. `erase` refuses a row that is not there.
     static Edit append(ItemVec<AtomSite>& rows, AtomSite row) { return appending(rows, std::move(row)); }
     static Edit append(ItemVec<LineSegment>& rows, LineSegment row) { return appending(rows, std::move(row)); }
     static Edit append(ItemVec<PrefOrient>& rows, PrefOrient row) { return appending(rows, std::move(row)); }
+    static Edit append(ItemVec<LinkedStructure>& rows, LinkedStructure row) {
+        return appending(rows, std::move(row));
+    }
     static Edit erase(ItemVec<AtomSite>& rows, std::size_t index) { return erasing(rows, index); }
     static Edit erase(ItemVec<LineSegment>& rows, std::size_t index) { return erasing(rows, index); }
     static Edit erase(ItemVec<PrefOrient>& rows, std::size_t index) { return erasing(rows, index); }
+    static Edit erase(ItemVec<LinkedStructure>& rows, std::size_t index) { return erasing(rows, index); }
     static Edit erase(ItemVec<Structure>& rows, std::size_t index) { return erasing(rows, index); }
     static Edit erase(ItemVec<BraggPdExperiment>& rows, std::size_t index) { return erasing(rows, index); }
     // An excluded region: its row added at the end, removed, or one of its two bounds assigned. The
@@ -199,7 +210,7 @@ class Edit {
     }
 
     // --- Loaded blocks ----------------------------------------------------------------------------
-    // A loaded structure added (add_loaded_structure's rule: an edi project holds one).
+    // A loaded structure added (add_loaded_structure's rule: its name is not taken).
     static Edit add_structure(Project& project, Structure structure) {
         return Edit([&project, structure = std::make_shared<Structure>(std::move(structure))] {
             add_loaded_structure(project, *structure);

@@ -78,7 +78,9 @@ void put_experiment(std::string& out, const ExperimentBase& experiment, Scope sc
     put_parameter(out, experiment.instrument.calib_d_to_tof_linear, scope);
     put_parameter(out, experiment.instrument.calib_d_to_tof_quadratic, scope);
     put_parameter(out, experiment.instrument.calib_d_to_tof_reciprocal, scope);
-    put_parameter(out, experiment.linked_structure.scale, scope);
+    for (const auto& link : experiment.linked_structures) {  // one scale per linked structure
+        put_parameter(out, link->scale, scope);
+    }
     put_u64(out, experiment.background.size());
     for (const auto& point_item : experiment.background) {
         const LineSegment& point = *point_item;
@@ -155,7 +157,14 @@ void put_experiment(std::string& out, const ExperimentBase& experiment, Scope sc
     put_optional_parameter(out, experiment.instrument.calib_sample_transparency, scope);
     put_optional_parameter(out, experiment.instrument.setup_polarization_coefficient, scope);
     put_optional_parameter(out, experiment.instrument.setup_monochromator_twotheta, scope);
-    put_text(out, experiment.linked_structure.structure_id);
+    // Each link's structure, and whether it takes part (written only when it can differ from
+    // the one link of a single-phase experiment).
+    for (const auto& link : experiment.linked_structures) {
+        put_text(out, link->structure_id);
+        if (experiment.linked_structures.size() > 1 || !link->enabled.get()) {
+            put_text(out, link->enabled.get() ? "enabled" : "disabled");
+        }
+    }
     if (scope == Scope::Everything) {
         put_double(out, experiment.dataset_weight);  // joint-fit weighting, never a calculation input
     }
@@ -351,10 +360,13 @@ std::string calculation_inputs(const ItemVec<Structure>& structures,
     }
     for (const std::uint64_t epoch :
          {experiment.epoch.value(), experiment.experiment_type.epoch.value(),
-          experiment.peak.epoch.value(), experiment.instrument.epoch.value(),
-          experiment.linked_structure.epoch.value(), experiment.absorption.epoch.value()}) {
+          experiment.peak.epoch.value(), experiment.instrument.epoch.value()}) {
         put_u64(out, epoch);
     }
+    for (const auto& link : experiment.linked_structures) {
+        put_u64(out, link->epoch.value());
+    }
+    put_u64(out, experiment.absorption.epoch.value());
     for (const auto& point : experiment.background) {
         put_u64(out, point->epoch.value());
     }
@@ -381,7 +393,6 @@ template class OneRow<ExperimentTypeCategory>;
 template class OneRow<ScatteringSourceCategory>;
 template class OneRow<PeakCategory>;
 template class OneRow<InstrumentCategory>;
-template class OneRow<LinkedStructureCategory>;
 template class OneRow<AbsorptionCategory>;
 template class OneRow<BackgroundCategory>;
 template class OneRow<JointFitCategory>;

@@ -603,7 +603,7 @@ const std::set<std::string>& known_covered_tags() {
         "_instrument.setup_polarization_coefficient", "_instrument.setup_twotheta_bank",
         "_instrument.setup_wavelength",
         // _linked_structure
-        "_linked_structure.scale", "_linked_structure.structure_id",
+        "_linked_structure.enabled", "_linked_structure.scale", "_linked_structure.structure_id",
         // _preferred_orientation (diffraction-lib's category, CW only)
         "_preferred_orientation.index_h", "_preferred_orientation.index_k",
         "_preferred_orientation.index_l", "_preferred_orientation.march_r",
@@ -1563,17 +1563,35 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
     if (linked == nullptr || linked->rows.empty()) {
         fail_schema(where, "missing-linked-structure-loop", "missing _linked_structure loop");
     }
-    experiment.linked_structure.structure_id = loop_cell(*linked, linked->rows.front(), "_linked_structure.structure_id",
-                                        where);
-    read_into(experiment.linked_structure.scale,
-              parse_parameter(loop_cell(*linked, linked->rows.front(),
-                                        spec::linked_structure_scale.edi_names[0], where),
-                              where),
-              where);
+    // Every row is a linked structure (phase) with its scale and an optional enabled flag (absent
+    // = taking part).
+    std::vector<std::shared_ptr<LinkedStructure>> links;
+    for (const std::vector<std::string>& row : linked->rows) {
+        auto link = std::make_shared<LinkedStructure>();
+        link->structure_id = loop_cell(*linked, row, "_linked_structure.structure_id", where);
+        read_into(link->scale,
+                  parse_parameter(loop_cell(*linked, row, spec::linked_structure_scale.edi_names[0], where),
+                                  where),
+                  where);
+        if (linked->column("_linked_structure.enabled") >= 0) {
+            const std::string token = loop_cell(*linked, row, "_linked_structure.enabled", where);
+            if (token != "true" && token != "false") {
+                fail_schema(where, "invalid-linked-structure-enabled",
+                            "_linked_structure.enabled is '" + token + "', expected true or false");
+            }
+            link->enabled = token == "true";
+        }
+        links.push_back(std::move(link));
+    }
+    try {
+        experiment.linked_structures.assign(std::move(links));
+    } catch (const std::invalid_argument& error) {
+        fail_domain(where, "duplicate-id", error.what());
+    }
 
-    // ADR-0068: the optional one-row `_preferred_orientation` loop, keyed by the linked
-    // structure, constant wavelength only — the same refusals crysta's loader makes, so both
-    // loaders accept the same inputs.
+    // ADR-0068: the optional `_preferred_orientation` loop, one row per textured linked
+    // structure, keyed by it, constant wavelength only — the same refusals crysta's loader makes,
+    // so both loaders accept the same inputs.
     {
         static const std::vector<std::string> po_tags{
             "_preferred_orientation.structure_id", "_preferred_orientation.march_r",
@@ -1594,21 +1612,24 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
                 fail_domain(where, "preferred-orientation-not-cw",
                             "preferred orientation is constant-wavelength only");
             }
-            if (po->rows.size() != 1) {
-                fail_domain(where, "preferred-orientation-rows",
-                            "expected exactly one _preferred_orientation row (one linked "
-                            "structure)");
-            }
-            const std::vector<std::string>& row = po->rows.front();
             const auto has = [&](const std::string& tag) { return po->column(tag) >= 0; };
+            for (const std::vector<std::string>& row : po->rows) {
             auto item = std::make_shared<PrefOrient>();
             item->structure_id =
                 has(po_tags[0]) ? loop_cell(*po, row, po_tags[0], where) : std::string();
-            if (item->structure_id != experiment.linked_structure.structure_id) {
+            const bool linked_id = std::any_of(
+                experiment.linked_structures.begin(), experiment.linked_structures.end(),
+                [&](const std::shared_ptr<LinkedStructure>& link) {
+                    return link->structure_id.value() == item->structure_id.value();
+                });
+            if (!linked_id) {
                 fail_domain(where, "preferred-orientation-structure",
-                            "_preferred_orientation.structure_id '" + item->structure_id +
+                            "_preferred_orientation.structure_id '" + item->structure_id.value() +
                                 "' does not name the linked structure '" +
-                                experiment.linked_structure.structure_id + "'");
+                                (experiment.linked_structures.size() == 1
+                                     ? experiment.linked_structure().structure_id.value()
+                                     : std::string()) +
+                                "'");
             }
             if (has(po_tags[1])) {
                 read_into(item->march_r, parse_parameter(loop_cell(*po, row, po_tags[1], where), where),
@@ -1643,7 +1664,12 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
                 fail_domain(where, "preferred-orientation-axis",
                             "the texture axis [0 0 0] has no direction");
             }
-            experiment.preferred_orientation.push_back(std::move(item));
+            try {
+                experiment.preferred_orientation.push_back(std::move(item));
+            } catch (const std::invalid_argument& error) {
+                fail_domain(where, "duplicate-id", error.what());
+            }
+            }
         }
     }
 
@@ -1845,17 +1871,23 @@ template <typename ProjectT>
 auto fit_state_slots(ProjectT& project) {
     using ParameterPtr = decltype(&project.structures.front()->cell.length_a);
     std::vector<std::pair<std::string, ParameterPtr>> slots;
+    // Several structures name each one's slots by its datablock key, as crysta's fit_state.hpp; one
+    // structure keeps `structure.`.
+    const bool several_structures = project.structures.size() > 1;
     for (auto& structure_item : project.structures) {
         auto& structure = *structure_item;
-        slots.emplace_back("structure.cell.length_a", &structure.cell.length_a);
-        slots.emplace_back("structure.cell.length_b", &structure.cell.length_b);
-        slots.emplace_back("structure.cell.length_c", &structure.cell.length_c);
-        slots.emplace_back("structure.cell.angle_alpha", &structure.cell.angle_alpha);
-        slots.emplace_back("structure.cell.angle_beta", &structure.cell.angle_beta);
-        slots.emplace_back("structure.cell.angle_gamma", &structure.cell.angle_gamma);
+        const std::string base = several_structures
+                                     ? "structure." + datablock_key(structure.name, "structure") + "."
+                                     : std::string("structure.");
+        slots.emplace_back(base + "cell.length_a", &structure.cell.length_a);
+        slots.emplace_back(base + "cell.length_b", &structure.cell.length_b);
+        slots.emplace_back(base + "cell.length_c", &structure.cell.length_c);
+        slots.emplace_back(base + "cell.angle_alpha", &structure.cell.angle_alpha);
+        slots.emplace_back(base + "cell.angle_beta", &structure.cell.angle_beta);
+        slots.emplace_back(base + "cell.angle_gamma", &structure.cell.angle_gamma);
         for (auto& site_item : structure.atom_sites) {
             auto& site = *site_item;
-            const std::string prefix = "structure." + site.id + ".";
+            const std::string prefix = base + site.id + ".";
             slots.emplace_back(prefix + "fract_x", &site.fract_x);
             slots.emplace_back(prefix + "fract_y", &site.fract_y);
             slots.emplace_back(prefix + "fract_z", &site.fract_z);
@@ -1948,7 +1980,14 @@ auto fit_state_slots(ProjectT& project) {
                 }
             }
         }
-        slots.emplace_back(prefix + "scale", &experiment.linked_structure.scale);
+        // One scale per linked structure; several links name theirs by structure.
+        const bool several_links = experiment.linked_structures.size() > 1;
+        const auto phase_prefix = [&](const std::string& structure_id) {
+            return several_links ? prefix + datablock_key(structure_id, "structure") + "." : prefix;
+        };
+        for (auto& link : experiment.linked_structures) {
+            slots.emplace_back(phase_prefix(link->structure_id) + "scale", &link->scale);
+        }
         if (experiment.absorption.abscor1) {
             slots.emplace_back(prefix + "abscor1", &*experiment.absorption.abscor1);
         }
@@ -1960,8 +1999,9 @@ auto fit_state_slots(ProjectT& project) {
         }
         // The preferred-orientation pair, crysta fit_state.hpp's order (after absorption).
         for (auto& row : experiment.preferred_orientation) {
-            slots.emplace_back(prefix + "march_r", &row->march_r);
-            slots.emplace_back(prefix + "march_random_fract", &row->march_random_fract);
+            slots.emplace_back(phase_prefix(row->structure_id) + "march_r", &row->march_r);
+            slots.emplace_back(phase_prefix(row->structure_id) + "march_random_fract",
+                               &row->march_random_fract);
         }
         // The declared model's parameters by row (crysta fit_state.hpp) — the line-segment
         // intensities, or a polynomial or Chebyshev model's coefficients.
@@ -2565,10 +2605,13 @@ std::vector<BraggPdExperiment> load_experiment_edi_files(const Project& project,
 }
 
 void add_loaded_structure(Project& project, Structure structure) {
-    if (!project.structures.empty()) {
-        throw IoError("the project already holds structure '" +
-                      detail::printable_id(project.structures[0]->name) +
-                      "' - an edi project holds one structure");
+    if (std::any_of(project.structures.begin(), project.structures.end(),
+                    [&](const std::shared_ptr<Structure>& held) {
+                        return datablock_key(held->name, "structure") ==
+                               datablock_key(structure.name, "structure");
+                    })) {
+        throw IoError("a structure named '" + detail::printable_id(structure.name) +
+                      "' is already in the project");
     }
     project.structures.push_back(std::move(structure));
 }
@@ -2658,18 +2701,26 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
     if (structure_files.empty()) {
         throw IoError("project has no structures/*.edi: " + directory);
     }
-    if (structure_files.size() > 1) {
-        throw IoError("multiple structures are not supported yet: " + directory);
-    }
-
     Project project;
     // The loader REPLACES the default-constructed placeholders wholesale — a seeded default
     // surviving next to loaded banks would be a phantom nameless block.
     project.structures.clear();
     project.experiments.clear();
-    project.structures.push_back(structure_from_block(
-        parse_block(read_file(structure_files.front().string()), structure_files.front().string()),
-        structure_files.front().string()));
+    // Every structure file is a structure (phase), in file order; two declaring one name refuse.
+    for (const fs::path& file : structure_files) {
+        Structure structure =
+            structure_from_block(parse_block(read_file(file.string()), file.string()), file.string());
+        if (std::any_of(project.structures.begin(), project.structures.end(),
+                        [&](const std::shared_ptr<Structure>& held) {
+                            return datablock_key(held->name, "structure") ==
+                                   datablock_key(structure.name, "structure");
+                        })) {
+            throw IoError("two structure files declare the datablock '" +
+                          datablock_key(structure.name, "structure") + "' (" + file.string() +
+                          "): a project's structures need distinct names");
+        }
+        project.structures.push_back(std::move(structure));
+    }
 
     // One-loader ruling, PROJECT-level: the project's contents select ONE mode — every
     // experiment declares measured data (a fit-ready project) or every experiment declares a
@@ -3388,19 +3439,13 @@ void clear_fit_result(Project& project) {
 }
 
 void save_project(const Project& project, const std::string& directory) {
-    // Edi's writer body is RETIRED — edi does not write, it asks crysta to. The one
-    // edi-specific refusal stays here (a crysta::Project holds one structure, so a silent
-    // structures[0] pick would be persisted-state data loss); every other validation, the
-    // staging and the atomic publish are crysta's writer's own.
-    if (project.structures.size() > 1) {
-        throw IoError("cannot save a project with " + std::to_string(project.structures.size()) +
-                      " structures: multi-structure persistence is not implemented yet");
-    }
+    // Edi's writer body is RETIRED — edi does not write, it asks crysta to: every structure, every
+    // validation, the staging and the atomic publish are crysta's writer's own.
     // Review r63 F-b: refuse a datablock name carrying a reserved fit-identity delimiter BEFORE
     // any conversion or write — `.`, `[` and `]` are structural in the shared `_fit_parameter`
     // id grammar (`<exp>.<label>`, `<exp>.background[<i>]`), so a name containing them would
-    // make its parameters unaddressable. Input validation, beside the multi-structure refusal —
-    // the two things this shell owns; serialization stays crysta's.
+    // make its parameters unaddressable. Input validation, the one thing this shell owns;
+    // serialization stays crysta's.
     const auto refuse_reserved_name = [](const std::string& name, const char* role) {
         if (name.find_first_of(".[]") != std::string::npos) {
             throw IoError(std::string(role) + " datablock name '" + detail::printable_id(name) +

@@ -13,22 +13,35 @@ namespace edi_app {
 
 // ---- StructureListModel / ExperimentListModel ---------------------------------------------------
 
-StructureListModel::StructureListModel(QObject* parent) : RowTableModel({"name", "structure", "colorIndex"}, parent) {}
+namespace {
+// A block's selector entry: its name, a dot, and the file it is saved as in the project.
+QString block_label(const QString& name, const QString& fallback) {
+    const QString key = name.isEmpty() ? fallback : name;
+    return key + QStringLiteral(" · ") + key + QStringLiteral(".edi");
+}
+}  // namespace
+
+StructureListModel::StructureListModel(QObject* parent)
+    : RowTableModel({"name", "label", "structure", "colorIndex"}, parent) {}
 
 void StructureListModel::setStructures(const QList<StructureViewModel*>& structures) {
     QList<Row> rows;
     for (int i = 0; i < structures.size(); ++i) {
-        rows.append({structures[i], {structures[i]->name(), QVariant::fromValue<QObject*>(structures[i]), i}});
+        rows.append({structures[i],
+                     {structures[i]->name(), block_label(structures[i]->name(), QStringLiteral("structure")),
+                      QVariant::fromValue<QObject*>(structures[i]), i}});
     }
     setTableRows(rows);
 }
 
-ExperimentListModel::ExperimentListModel(QObject* parent) : RowTableModel({"name", "experiment"}, parent) {}
+ExperimentListModel::ExperimentListModel(QObject* parent) : RowTableModel({"name", "label", "experiment"}, parent) {}
 
 void ExperimentListModel::setExperiments(const QList<ExperimentViewModel*>& experiments) {
     QList<Row> rows;
     for (ExperimentViewModel* experiment : experiments) {
-        rows.append({experiment, {experiment->name(), QVariant::fromValue<QObject*>(experiment)}});
+        rows.append({experiment,
+                     {experiment->name(), block_label(experiment->name(), QStringLiteral("experiment")),
+                      QVariant::fromValue<QObject*>(experiment)}});
     }
     setTableRows(rows);
 }

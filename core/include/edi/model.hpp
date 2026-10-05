@@ -2821,11 +2821,13 @@ struct InstrumentBase {
     detail::CategoryRow table_row;
 };
 
-// The linked-structure category (`_linked_structure.*`): which structure this bank refines
-// against, and its scale.
-struct LinkedStructure {
-    std::string structure_id;  // linked structure datablock id (e.g. "ncaf")
+// One row of the `_linked_structure` loop: a structure (phase) the experiment's pattern sums, its
+// scale, and whether it takes part. A disabled link is kept and saved but neither calculated nor
+// fitted. Keyed by the structure's datablock name.
+struct LinkedStructure : std::enable_shared_from_this<LinkedStructure> {
+    ItemKey structure_id;  // Owned by the experiment's linked_structures (e.g. "ncaf")
     Parameter scale{1.0};
+    detail::Written<bool> enabled{true};
 
     LinkedStructure() { scale.spec = &spec::linked_structure_scale; }
 
@@ -2834,8 +2836,6 @@ struct LinkedStructure {
     detail::RowLink row;
     // This row's identity as a calculation input.
     detail::Epoch epoch;
-    // ADR-0018: the row of this object's non-loop categories.
-    detail::CategoryRow table_row;
 };
 
 // The absorption category — the per-bank FullProf ABSCOR pair behind the `_absorption.*`
@@ -2897,6 +2897,25 @@ struct CarriedLoop {
     detail::Written<std::vector<std::vector<std::string>>> rows;
 };
 
+// A linked structure is keyed by the structure it links, compared as a datablock name.
+template <>
+struct KeyTraits<LinkedStructure> {
+    static ItemKey& key(LinkedStructure& row) { return row.structure_id; }
+    static const ItemKey& key(const LinkedStructure& row) { return row.structure_id; }
+    static std::string canonical(const std::string& id) { return datablock_key(id, "structure"); }
+    static const char* category() { return "linked structure"; }
+};
+
+// A linked structure is a row of its experiment's `linked_structures`.
+template <>
+struct RowTraits<LinkedStructure> {
+    static void link(LinkedStructure& row, const std::shared_ptr<detail::Membership>& record) noexcept {
+        row.row.link(record);
+    }
+    static void unlink(LinkedStructure& row) noexcept { row.row.unlink(); }
+    static const detail::RowLink* primary(const LinkedStructure& row) noexcept { return &row.row; }
+};
+
 // ADR-0016: a texture row is keyed by the structure it corrects.
 template <>
 struct KeyTraits<PrefOrient> {
@@ -2917,6 +2936,17 @@ struct RowTraits<PrefOrient> {
 };
 
 }  // namespace edi
+
+// ADR-0018: the columns of the `_linked_structure` table.
+namespace crysta {
+template <>
+struct RowSchema<edi::LinkedStructure> {
+    static constexpr const char* name = "_linked_structure";
+    static constexpr auto fields = std::tuple{&edi::LinkedStructure::structure_id, &edi::LinkedStructure::scale, &edi::LinkedStructure::enabled};
+    static constexpr std::array items{"structure_id", "scale", "enabled"};
+    static constexpr std::array legacy{"_easydiffraction_sc_crystal_block", "_sc_crystal_block", "_pd_phase_block"};
+};
+}  // namespace crysta
 
 // ADR-0018: the columns of the `_preferred_orientation` table.
 namespace crysta {
@@ -3057,9 +3087,15 @@ struct ExperimentBase : std::enable_shared_from_this<ExperimentBase> {
     std::optional<std::string> neutron_scattering_length;
     PeakBase peak;
     InstrumentBase instrument;
-    LinkedStructure linked_structure;
+    // The structures (phases) this experiment's pattern sums, one row for a single phase; a new
+    // experiment links one unnamed structure.
+    ItemVec<LinkedStructure> linked_structures{
+        std::vector<std::shared_ptr<LinkedStructure>>{std::make_shared<LinkedStructure>()}};
+    // The first link: the single-phase shortcut (throws when the experiment links none).
+    LinkedStructure& linked_structure();
+    const LinkedStructure& linked_structure() const;
     AbsorptionBase absorption;
-    ItemVec<PrefOrient> preferred_orientation;  // At most one row (one linked structure)
+    ItemVec<PrefOrient> preferred_orientation;  // One row per textured linked structure
     ItemVec<LineSegment> background;  // Shared items, deep-copied with the experiment
     // The declared background model (`_background.type`), the one selector: `line-segment`
     // computes from `background`, `chebyshev` (FullProf Nba -5) and
@@ -3205,21 +3241,19 @@ struct KeyTraits<BraggPdExperiment> {
 };
 
 // An experiment is a row of the project's `experiments`; its parameter categories are the peak, the
-// instrument, the linked structure and the absorption (its background and texture rows are rows of
-// their own collections).
+// instrument and the absorption (its linked-structure, background and texture rows are rows of their
+// own collections).
 template <>
 struct RowTraits<BraggPdExperiment> {
     static void link(BraggPdExperiment& experiment,
                      const std::shared_ptr<detail::Membership>& record) noexcept {
         experiment.peak.row.link(record);
         experiment.instrument.row.link(record);
-        experiment.linked_structure.row.link(record);
         experiment.absorption.row.link(record);
     }
     static void unlink(BraggPdExperiment& experiment) noexcept {
         experiment.peak.row.unlink();
         experiment.instrument.row.unlink();
-        experiment.linked_structure.row.unlink();
         experiment.absorption.row.unlink();
     }
     static const detail::RowLink* primary(const BraggPdExperiment& experiment) noexcept {
@@ -3975,15 +4009,6 @@ struct InstrumentCategory {
 };
 static_assert(detail::one_entry_per_column(InstrumentCategory::columns, InstrumentCategory::items));
 
-struct LinkedStructureCategory {
-    using Owner = LinkedStructure;
-    static constexpr const char* name = "_linked_structure";
-    static constexpr auto columns = std::tuple{&LinkedStructure::structure_id, &LinkedStructure::scale};
-    static constexpr std::array items{"structure_id", "scale"};
-    static constexpr std::array legacy{"_easydiffraction_sc_crystal_block", "_sc_crystal_block", "_pd_phase_block"};
-};
-static_assert(detail::one_entry_per_column(LinkedStructureCategory::columns, LinkedStructureCategory::items));
-
 struct AbsorptionCategory {
     using Owner = AbsorptionBase;
     static constexpr const char* name = "_absorption";
@@ -4322,7 +4347,9 @@ inline std::vector<Parameter*> ExperimentBase::parameters() {
     for (Parameter* parameter : instrument.parameters()) {
         out.push_back(parameter);
     }
-    out.push_back(&linked_structure.scale);
+    for (const std::shared_ptr<LinkedStructure>& link : linked_structures) {
+        out.push_back(&link->scale);
+    }
     for (Parameter* parameter : absorption.parameters()) {
         out.push_back(parameter);
     }
@@ -4338,6 +4365,18 @@ inline std::vector<Parameter*> ExperimentBase::parameters() {
         out.push_back(&term->coef);
     }
     return out;
+}
+inline LinkedStructure& ExperimentBase::linked_structure() {
+    if (linked_structures.empty()) {
+        throw std::out_of_range("experiment '" + name.value() + "' links no structure");
+    }
+    return *linked_structures.front();
+}
+inline const LinkedStructure& ExperimentBase::linked_structure() const {
+    if (linked_structures.empty()) {
+        throw std::out_of_range("experiment '" + name.value() + "' links no structure");
+    }
+    return *linked_structures.front();
 }
 inline std::vector<Parameter*> ExperimentBase::free_parameters() {
     return detail::free_of(parameters());
@@ -4356,7 +4395,46 @@ inline std::vector<Parameter*> Project::parameters() {
     }
     return out;
 }
-inline std::vector<Parameter*> Project::free_parameters() { return detail::free_of(parameters()); }
+// The free parameters a fit refines: what no enabled phase reads is left out — a disabled link's
+// scale and texture, and every parameter of a structure no enabled link names (crysta's rule).
+inline std::vector<Parameter*> Project::free_parameters() {
+    std::vector<const Parameter*> idle;
+    std::vector<std::string> used;
+    for (const std::shared_ptr<BraggPdExperiment>& experiment : experiments) {
+        for (const std::shared_ptr<LinkedStructure>& link : experiment->linked_structures) {
+            const std::string key = datablock_key(link->structure_id, "structure");
+            if (link->enabled.get()) {
+                used.push_back(structures.size() == 1 && experiment->linked_structures.size() == 1
+                                   ? datablock_key(structures.front()->name, "structure")
+                                   : key);
+                continue;
+            }
+            idle.push_back(&link->scale);
+            for (const std::shared_ptr<PrefOrient>& row : experiment->preferred_orientation) {
+                if (datablock_key(row->structure_id, "structure") == key) {
+                    idle.push_back(&row->march_r);
+                    idle.push_back(&row->march_random_fract);
+                }
+            }
+        }
+    }
+    if (!experiments.empty()) {
+        for (const std::shared_ptr<Structure>& structure : structures) {
+            if (std::find(used.begin(), used.end(), datablock_key(structure->name, "structure")) == used.end()) {
+                for (Parameter* parameter : structure->parameters()) {
+                    idle.push_back(parameter);
+                }
+            }
+        }
+    }
+    std::vector<Parameter*> out;
+    for (Parameter* parameter : detail::free_of(parameters())) {
+        if (std::find(idle.begin(), idle.end(), parameter) == idle.end()) {
+            out.push_back(parameter);
+        }
+    }
+    return out;
+}
 
 // Point every parameter a node holds at its category's row link, so its Python handle answers
 // `is_attached` and refuses writes once the row is removed. Each Python path that hands out a
@@ -4387,7 +4465,9 @@ inline void point_parameters(Structure& structure) {
 inline void point_parameters(ExperimentBase& experiment) {
     point_parameters(experiment.peak);
     point_parameters(experiment.instrument);
-    point_parameters(experiment.linked_structure);
+    for (const std::shared_ptr<LinkedStructure>& link : experiment.linked_structures) {
+        point_parameters(*link);
+    }
     point_parameters(experiment.absorption);
     for (const std::shared_ptr<PrefOrient>& row : experiment.preferred_orientation) {
         point_parameters(*row);

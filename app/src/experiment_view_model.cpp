@@ -49,6 +49,7 @@ ExperimentViewModel::ExperimentViewModel(SavedFile saved, edi::Project& project,
       excluded_regions_(new ExcludedRegionListModel(experiment, editor, this)),
       reflections_(new ReflectionListModel(experiment, this)),
       preferred_orientation_(new PrefOrientListModel(experiment, editor, registry, this)),
+      linked_structures_(new LinkedStructureListModel(project, experiment, editor, registry, this)),
       scattering_source_(new ScatteringSourceViewModel(experiment, editor, this)),
       measured_range_(new RangeViewModel(experiment, this)),
       pattern_(new PatternModel(experiment, this)),
@@ -145,8 +146,7 @@ void ExperimentViewModel::setCutoffFwhm(double cutoff) {
 
 void ExperimentViewModel::setLinkedStructureId(const QString& id) {
     edi::ExperimentBase& experiment = experiment_;
-    setLastError(
-        editor_.apply(edi::Edit::assign(experiment.linked_structure.structure_id, id.toStdString()), false));
+    setLastError(editor_.apply(edi::Edit::link_structure(experiment.linked_structure(), id.toStdString()), false));
 }
 
 void ExperimentViewModel::setDatasetWeight(double weight) {
@@ -177,10 +177,10 @@ void ExperimentViewModel::sync() {
     update(absorption_type_, QString::fromStdString(experiment_.absorption.type.value_or("none")),
            &ExperimentViewModel::absorptionTypeChanged);
     update(cutoff_fwhm_, experiment_.peak.cutoff_fwhm, &ExperimentViewModel::cutoffFwhmChanged);
-    update(linked_structure_id_, QString::fromStdString(experiment_.linked_structure.structure_id),
+    update(linked_structure_id_, QString::fromStdString(experiment_.linked_structure().structure_id.value()),
            &ExperimentViewModel::linkedStructureIdChanged);
     update(dataset_weight_, experiment_.dataset_weight, &ExperimentViewModel::datasetWeightChanged);
-    update(scale_, registry_.find(&experiment_.linked_structure.scale), &ExperimentViewModel::scaleChanged);
+    update(scale_, registry_.find(&experiment_.linked_structure().scale), &ExperimentViewModel::scaleChanged);
     // `data` is a loop in `.edi` — its points — though the core's category list counts no rows for it; the
     // sidebar titles it as a loop, with the number of measured points (edi ADR-0017 §3).
     measured_range_->sync();
@@ -203,6 +203,7 @@ void ExperimentViewModel::sync() {
     excluded_regions_->sync();
     reflections_->sync();
     preferred_orientation_->sync();
+    linked_structures_->sync();
     scattering_source_->sync();
 }
 

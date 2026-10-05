@@ -1,0 +1,5 @@
+_edi.schema_version 3
+
+_metadata.name             beer_ferrite_austenite
+_metadata.title            "Ferrite and austenite, BEER (two phases, two banks)"
+_metadata.description      "Duplex steel measured at two BEER detector banks: two structures in one joint fit, from the calibrate-beer-ess tutorial"

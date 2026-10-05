@@ -184,8 +184,11 @@ inline std::vector<Category> experiment_categories(ExperimentBase& experiment) {
         }
         categories.push_back(background);
     }
-    Category linked{"linked_structure", true, 1};
-    linked.fields.push_back({"scale", &experiment.linked_structure.scale, true});
+    // One row per linked structure (phase), each with its scale.
+    Category linked{"linked_structure", true, experiment.linked_structures.size()};
+    for (const auto& link : experiment.linked_structures) {
+        linked.fields.push_back({"scale", &link->scale, true});
+    }
     categories.push_back(linked);
     categories.push_back({"excluded_region", true, experiment.excluded_regions.size()});
     categories.push_back(absorption_category(experiment));

@@ -64,6 +64,7 @@ class ExperimentViewModel : public QObject {
     Q_PROPERTY(edi_app::ExcludedRegionListModel* excludedRegions READ excludedRegions CONSTANT)
     Q_PROPERTY(edi_app::ReflectionListModel* reflections READ reflections CONSTANT)
     Q_PROPERTY(edi_app::PrefOrientListModel* preferredOrientation READ preferredOrientation CONSTANT)
+    Q_PROPERTY(edi_app::LinkedStructureListModel* linkedStructures READ linkedStructures CONSTANT)
     Q_PROPERTY(edi_app::ScatteringSourceViewModel* scatteringSource READ scatteringSource CONSTANT)
     Q_PROPERTY(edi_app::RangeViewModel* measuredRange READ measuredRange CONSTANT)
     Q_PROPERTY(edi_app::PatternModel* pattern READ pattern CONSTANT)
@@ -122,6 +123,7 @@ class ExperimentViewModel : public QObject {
     ExcludedRegionListModel* excludedRegions() const { return excluded_regions_; }
     ReflectionListModel* reflections() const { return reflections_; }
     PrefOrientListModel* preferredOrientation() const { return preferred_orientation_; }
+    LinkedStructureListModel* linkedStructures() const { return linked_structures_; }
     ScatteringSourceViewModel* scatteringSource() const { return scattering_source_; }
     RangeViewModel* measuredRange() const { return measured_range_; }
     PatternModel* pattern() const { return pattern_; }
@@ -178,6 +180,7 @@ class ExperimentViewModel : public QObject {
     ExcludedRegionListModel* excluded_regions_;
     ReflectionListModel* reflections_;
     PrefOrientListModel* preferred_orientation_;
+    LinkedStructureListModel* linked_structures_;
     ScatteringSourceViewModel* scattering_source_;
     RangeViewModel* measured_range_;
     PatternModel* pattern_;
