@@ -15,8 +15,8 @@ import EasyApplication.Gui.Elements as EaElements
 Item {
     id: line
 
-    // The pieces, in order: {icon: <Font Awesome name>, color} or {text, color, bold}; a piece without a colour
-    // takes `textColor`.
+    // The pieces, in order: {icon: <Font Awesome name>, color, slot} or {text, color, bold}; a piece without a
+    // colour takes `textColor`, and an icon with `slot` is one icon wide, drawn or not (a fit-outcome column).
     property var segments: []
     property real pixelSize: EaStyle.Sizes.fontPixelSize
     property color textColor: EaStyle.Colors.themeForeground
@@ -30,7 +30,7 @@ Item {
         let width = 0;
         for (let i = 0; i < pieces.count - 1; ++i) {
             const piece = pieces.itemAt(i);
-            width += piece ? piece.implicitWidth + spacing : 0;
+            width += piece ? piece.width + spacing : 0;
         }
         return width;
     }
@@ -76,7 +76,7 @@ Item {
                 font.pixelSize: line.pixelSize
                 color: modelData.color ?? line.textColor
                 text: isIcon ? modelData.icon : modelData.text
-                width: elided ? Math.max(0, Math.min(implicitWidth, line.maximumWidth - line.leadingWidth)) : implicitWidth
+                width: elided ? Math.max(0, Math.min(implicitWidth, line.maximumWidth - line.leadingWidth)) : modelData.slot ? line.pixelSize * 1.15 : implicitWidth
                 elide: elided ? line.elide : Text.ElideNone
                 y: isIcon ? line.centreY - inkMiddle : textMetrics.ascent - baselineOffset
 

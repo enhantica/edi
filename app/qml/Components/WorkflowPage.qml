@@ -10,9 +10,8 @@ import edi.app
 
 // A workflow page's frame (easydiffractionbeta Pages/*/PageStructure.qml): the main view with its tabs
 // on the left, the Main / Extra / Text sidebar on the right, and Continue at the bottom. A page with a
-// block list (Structure, Experiment, Analysis) shows one compact block selector in the main view's tab bar,
-// right-aligned (MainAreaBlockSelector; edi ADR-0017 §7), while the project holds a block of its kind; the
-// tabs shorten to stay clear of it.
+// block list (Structure, Experiment, Analysis) shows one compact block selector as a row at the top of the main
+// area, under its tab bar (MainAreaBlockSelector; edi ADR-0017 §7), while the project holds a block of its kind.
 EaComponents.ContentPage {
     id: page
 
@@ -37,6 +36,9 @@ EaComponents.ContentPage {
     property string blocksTextRole: ""
     property string blockKind: ""
     property int blockIndex: 0
+    // The blocks' fit-outcome role and the shown block's outcome (experiments; BlockSelector).
+    property string blockOutcomeRole: ""
+    property string blockCurrentOutcome: ""
     signal blockActivated(int index)
 
     // The base's fade above Continue, in the sidebar's colour, reads as a shadow over the Text tab's text view,
@@ -49,7 +51,6 @@ EaComponents.ContentPage {
                 child.visible = Qt.binding(() => !textLoader.SwipeView.isCurrentItem);
         }
         page.placeSideBar();
-        page.fitTabs();
         sideBar.continueButton.anchors.bottomMargin = Qt.binding(() => EaStyle.Sizes.fontPixelSize);
     }
 
@@ -97,21 +98,8 @@ EaComponents.ContentPage {
         }
     }
 
-    // The main view's tabs share the tab bar's row with the block selector: each tab's name is elided to its
-    // share of the width the selector leaves (IconTabButton.maximumWidth).
-    function fitTabs() {
-        const tabs = mainContent.tabs;
-        const free = mainContent.width - blockSelector.reservedWidth;
-        for (let i = 0; i < tabs.length; ++i) {
-            if (tabs[i].maximumWidth !== undefined)
-                tabs[i].maximumWidth = blockSelector.visible ? free / tabs.length : 0;
-        }
-    }
-
     mainView: EaComponents.MainContent {
         id: mainContent
-
-        onWidthChanged: page.fitTabs()
 
         MainAreaBlockSelector {
             id: blockSelector
@@ -121,13 +109,13 @@ EaComponents.ContentPage {
             blocksTextRole: page.blocksTextRole
             blockKind: page.blockKind
             blockIndex: page.blockIndex
+            outcomeRole: page.blockOutcomeRole
+            currentOutcome: page.blockCurrentOutcome
             onBlockActivated: index => page.blockActivated(index)
-            onReservedWidthChanged: page.fitTabs()
-            onVisibleChanged: page.fitTabs()
         }
 
         // The tabs' view (the base's SwipeView, the main area's second child, anchored under the tab bar)
-        // starts below the selector when the selector sits under the tab bar.
+        // starts below the selector.
         Binding {
             target: mainContent.children.length > 1 ? mainContent.children[1].anchors : null
             property: "topMargin"
