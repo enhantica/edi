@@ -8,7 +8,7 @@ import pytest
 import yaml
 
 from tests.fixtures.e09_t75_workflow import reached
-from tests.integration.py.ci_runner_contract import self_hosted_runners
+from tests.integration.py.ci_runner_contract import platform_job, self_hosted_runners
 
 ROOT = Path(__file__).resolve().parents[3]
 CONSUMERS = ['audit', 'core', 'notebooks', 'cli-python', 'docs', 'app']
@@ -113,42 +113,36 @@ def test_d6_one_unfiltered_native_matrix_uploads_the_prescribed_artifacts():
             'osx-arm64',
         }, 'the public native matrix must compile against both independently prescribed SDKs'
         return
-    producer_boundary(native)
-    assert 'if' not in native, (
-        ' I34 default native production must run on every event without path filters'
-    )
-    assert native.get('needs') in ('changes', ['changes']), (
-        ' D6 native producer must use the one changes resolution'
-    )
-    legs = native['strategy']['matrix']['include']
-    assert len(legs) == 2, ' D6 only linux-64 and osx-arm64 native builds are supported'
+    producers = [platform_job(data, 'native', sdk) for sdk in ('linux-64', 'osx-arm64')]
+    legs = [leg for job in producers for leg in job['strategy']['matrix']['include']]
+    assert len(legs) == 2, 'native production covers exactly the two supported platforms'
     assert {leg.get('sdk') for leg in legs} == {'linux-64', 'osx-arm64'}, (
-        ' D6 producer matrix must select the independently prescribed SDK platforms'
+        'native production retains both independently prescribed SDK platforms'
     )
-    runners = {tuple(leg['runner']) for leg in legs}
-    assert runners == {('self-hosted', 'Linux', 'X64'), ('self-hosted', 'macOS', 'ARM64')}, (
-        ' D6 default native producer must compile once on each supported platform'
-    )
-    uploads = [
-        step
-        for step in native['steps']
-        if step.get('uses', '').startswith('actions/upload-artifact@')
-    ]
-    assert len(uploads) == 1, ' D6 each native matrix leg must upload its single build'
-    upload = uploads[0]['with']
-    assert upload['name'] == 'edi-native-${{ matrix.sdk }}', (
-        ' D6 artifact names must use the prescribed native prefix'
-    )
-    # The execution gate below observes the selected files; a directory upload is valid.
-    assert 'edi-native' in str(upload['path']), (
-        ' D6 native upload must preserve executable bits through tar and include identity metadata'
-    )
-    assert str(upload.get('retention-days')) == '1', (
-        ' D6 native artifacts expire in one day and all-job reruns replace them'
-    )
-    assert upload.get('overwrite') is True, (
-        ' D6 native artifacts expire in one day and all-job reruns replace them'
-    )
+    assert {tuple(leg['runner']) for leg in legs} == {
+        ('self-hosted', 'Linux', 'X64'),
+        ('self-hosted', 'macOS', 'ARM64'),
+    }, 'native production compiles once on each supported platform'
+    for job in producers:
+        producer_boundary(job)
+        assert 'if' not in job, 'default native production runs on every event without filters'
+        assert job.get('needs') in ('changes', ['changes']), (
+            'each native producer uses the common source resolution'
+        )
+        upload = next(
+            step['with']
+            for step in job['steps']
+            if step.get('uses', '').startswith('actions/upload-artifact@')
+        )
+        assert upload['name'] == 'edi-native-${{ matrix.sdk }}', (
+            'native artifact names retain the prescribed platform prefix'
+        )
+        assert 'edi-native' in str(upload['path']), (
+            'native uploads preserve executable bits through tar and include identity metadata'
+        )
+        assert str(upload.get('retention-days')) == '1' and upload.get('overwrite') is True, (
+            'native artifacts expire in one day and all-job reruns replace them'
+        )
 
 
 @pytest.mark.parametrize('consumer', CONSUMERS)
@@ -161,8 +155,16 @@ def test_d6_every_default_native_consumer_waits_downloads_and_selects_artifact_m
     needs = job.get('needs', [])
     if isinstance(needs, str):
         needs = [needs]
-    assert set(needs) == {'changes', 'native'}, (
-        ' D6 every native consumer must wait for its build and source resolution'
+    platforms = {runner[1] for runner in self_hosted_runners(job)}
+    producers = {'native' if platform == 'Linux' else 'native-macos' for platform in platforms}
+    cores = (
+        {'core' if platform == 'Linux' else 'core-macos' for platform in platforms}
+        if consumer != 'core'
+        else set()
+    )
+    assert set(needs) == {'changes', *producers, *cores}, (
+        'every native consumer waits for its own platform builds and source resolution; '
+        'downstream consumers also wait for those platforms core tests'
     )
     assert str(job.get('env', {}).get('EDI_NATIVE_ARTIFACT')) == '1', (
         ' D6 all implicit core-build dependencies in every consumer'
@@ -213,6 +215,7 @@ FIRST_USE = {
     'cli-python': 'cli-projects',
     'docs': 'notebook-exec-ci',
     'app': 'app-build',
+    'app-wasm': 'wasm-check',
 }
 
 
@@ -295,7 +298,7 @@ def test_d6_explicit_restore_runs_between_exact_download_and_first_native_use(co
     if public_profile(data):
         public_build_boundary(data, consumer, platform)
         return
-    job = {**data[consumer], '_consumer': consumer}
+    job = {**platform_job(data, consumer, platform), '_consumer': consumer}
     consumer_boundary(job, platform)
 
 

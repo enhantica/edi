@@ -1,38 +1,76 @@
-# edi's CI for a public repository, on GitHub-hosted runners.
-#
-# A job that builds against crysta needs a read token for crysta's prebuilt SDK, so it runs only for
-# events from this repository (never a fork's pull request) and in the reviewed `crysta-sdk`
-# environment, which holds the app key. A fork's pull request runs the jobs that need no token, and
-# the pin-currency job without its token steps.
-# Each job builds the native code itself: no artifact carries crysta's object code, and no
-# artifact is named after a runner. The latency bank runs on the self-hosted fleet, by dispatch
-# only (bank-latency.yml).
+# edi CI — monorepo, path-filtered per surface (enhantica/templates).
+# Jobs degrade gracefully while a surface has no code yet, so the pipeline is green
+# from the first (pre-code) commit and tightens as surfaces land.
+
 name: CI
 
 on:
+  # The push trigger is the ON-MERGE gate. branches: [main] replaces branches-ignore — the old
+  # shape ran every branch push AND its PR in different concurrency groups (the push keyed on
+  # ref, the PR on number), doubling every run on the org's single Linux runner; with main-only
+  # pushes no PR event exists for the same ref, so merges coalesce in one group as a side
+  # effect.
   push:
     branches: [main]
+  # A pull-request run starts on one event only, a draft-to-ready transition, which
+  # tools/agent-os/ci-request.py makes at a committed lane row and at the ship head. A push to the PR branch,
+  # opening and reopening start nothing.
   pull_request:
     types: [ready_for_review]
   workflow_dispatch:
+    inputs:
+      # ADR-0020 §5: the `core` jobs also measure this ref's latencies ten times on their runners and
+      # upload the bank rows, which a lane then commits to tests/latency-bank.json.
+      bank_latency:
+        description: Bank the pattern chart's latencies on the core jobs' runners
+        type: boolean
+        default: false
+      # ADR-0017 §16: `app · macOS` also runs the structure view's drawn cases on the runner's GPU and uploads
+      # their frame and update times, which a lane then commits.
+      bank_frames:
+        description: Measure the structure view's frame and update times on the macOS runner's GPU
+        type: boolean
+        default: false
+      # A repair round's fast signal: changes, pin currency, native and core (and the dispatch-only cli-native
+      # placeholder). It skips required jobs, so the merge guard refuses its head.
+      core_only:
+        description: Run only the native builds and the core test jobs (not evidence)
+        type: boolean
+        default: false
 
+# One concurrent run per branch/PR; newest wins.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: read
-  pull-requests: read
+  pull-requests: read # dorny/paths-filter lists PR files via the API on pull_request events
 
+# Job names say WHAT and WHERE: every platform-specific job is `<area> · <platform>`, one platform matrix per
+# area, Linux and macOS as equals (Windows joins the matrices when edi declares win-64): core, cli-python,
+# cli-native (a dispatch-only placeholder), app; the rest run once: changes, lint, audit, notebooks, docs,
+# and app · WebAssembly.
 jobs:
+  # ---- What changed? (drives the per-surface jobs) --------------------------------
   changes:
     name: changes
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, Linux, X64]
+    # A DISPATCHED run is a FULL run: the dispatcher — crysta's post-merge backstop, or a person —
+    # cannot tell the path filter what changed, and a filter evaluated on main against main sees at
+    # most the last commit. So every surface reads `true` on workflow_dispatch and the filter governs
+    # push and pull_request only. No required job is path-filtered any more; the one remaining filter
+    # conditions the app job's non-gate recovery step.
     outputs:
       app_build: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.app_build == 'true' }}
+      # tools/ci/crysta-source.sh outputs the pinned sha (ADR-0017), which each job carries as CRYSTA_SOURCE_SHA
+      # for provenance. The run builds that pin, except a paired run whose pin is stale, which builds the paired
+      # crysta branch's head (tools/ci/crysta_sdk.py fetch). Whether the pin is current is the `pin currency`
+      # job's question alone.
       crysta_sha: ${{ steps.crysta-source.outputs.sha }}
     steps:
       - uses: actions/checkout@v5
+      # The pin is read by edi's one contract (tools/ci/crysta_sdk.py, TOML), in the locked env
       - uses: ./.github/actions/setup-pixi
       - name: Read the crysta pin
         id: crysta-source
@@ -41,18 +79,22 @@ jobs:
         id: filter
         with:
           filters: |
+            # The app build script alone: its stale-toolchain recovery check runs when it changes.
             app_build: ['tools/ci/app-build.sh']
 
+  # ---- Is the pin current? ---------------- The one required check on the pin itself. Current is: paired, the
+  # pin is the same-named crysta branch's head; unpaired, it has landed on crysta main or is edi main's pin. A
+  # pull request is paired when that crysta branch carries commits crysta main lacks; a branch that merely
+  # exists pairs nothing. A stale pin is reported, as a warning on the run, and does not fail the job: the
+  # final CI evidence and the merge refuse it. The job fails when the pin or the answer cannot be read.
   pin-currency:
     name: pin currency
-    # Unconditional on every event (a stale pin never passes by a skipped job); the two steps that use
-    # the token are what a fork's pull request skips, so the token never reaches it.
-    environment: crysta-sdk
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, Linux, X64]
     steps:
       - uses: actions/checkout@v5
+      # Every crysta token is read-only. `actions: read` lets a job take the pinned build from crysta's
+      # pull-request run when that build has no release yet (I12; edi ADR-0017 §4).
       - name: Mint a crysta installation token
-        if: github.event.pull_request.head.repo.fork == false
         id: crysta-token
         uses: actions/create-github-app-token@v2
         with:
@@ -62,16 +104,17 @@ jobs:
           repositories: crysta
           permission-contents: read
           permission-actions: read
+      # the currency check reads the pin through edi's one contract, in the locked env, like `changes`
       - uses: ./.github/actions/setup-pixi
       - name: Check the crysta pin is current
-        if: github.event.pull_request.head.repo.fork == false
         env:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
         run: pixi run bash tools/ci/crysta-source.sh --currency
 
   lint:
     name: lint
-    runs-on: ubuntu-24.04
+    if: ${{ !inputs.core_only }}
+    runs-on: [self-hosted, Linux, X64]
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-pixi
@@ -80,17 +123,26 @@ jobs:
           pixi run check
           pixi run format-check
           pixi run entity-path-check
+      # Verify-full members no PR job ran before.
       - name: Static policy checks (weakref, tutorial exclusions, generated regions)
         run: |
           pixi run weakref-policy
           pixi run tutorial-exclusions
           pixi run generated-regions
-          pixi run category-census-check
+          pixi run category-census-check  # ADR-0018: one schema per category
 
+  # ---- edi's native code, built ONCE per platform per run (I34) -------------- core-build (build/ci: edi_core, the
+  # `_edi` module, the easydiffraction CLI, the probes) and the C++ tier's edi_tests in the same tree, proven to
+  # load, packed with the manifest that binds it to this run, commit, platform, workspace, crysta pin and the crysta
+  # it linked (tools/ci/edi_native.py), and uploaded. That crysta is the pin, or in a paired run at a stale pin the
+  # paired crysta branch's head as this job found it; every consumer of the artifact builds the crysta it linked.
+  # Every consumer job downloads its platform's artifact and restores and validates it (EDI_NATIVE_ARTIFACT=1)
+  # instead of compiling: two compiles of the default configuration per run, where there were eleven.
+  # native and core are one job per platform, sharing their steps (YAML anchors), so each platform's core tests
+  # start on that platform's own native build instead of waiting for both; the job names are the contract's
+  # (`native · Linux`, `core · macOS`, ...).
   native:
     name: native · ${{ matrix.platform }}
-    if: github.event.pull_request.head.repo.fork == false
-    environment: crysta-sdk
     needs: changes
     env:
       CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
@@ -99,13 +151,10 @@ jobs:
       matrix:
         include:
           - platform: Linux
-            runner: ubuntu-24.04
+            runner: [self-hosted, Linux, X64]
             sdk: linux-64
-          - platform: macOS
-            runner: macos-15
-            sdk: osx-arm64
     runs-on: ${{ matrix.runner }}
-    steps:
+    steps: &native-steps
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-pixi
       - name: Mint a crysta installation token
@@ -123,20 +172,55 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
           EDI_CORE_TARGETS: edi_tests
-      - name: C++ unit tests
-        run: pixi run --skip-deps cpp-test
+      - name: Prove and pack the native tree
+        run: pixi run python tools/ci/edi_native.py pack --out "$RUNNER_TEMP/edi-native"
+      - name: Upload the native artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: edi-native-${{ matrix.sdk }}
+          path: |
+            ${{ runner.temp }}/edi-native/edi-native.tar
+            ${{ runner.temp }}/edi-native/edi-native.json
+          retention-days: 1
+          overwrite: true
+          if-no-files-found: error
 
-  audit:
-    name: audit
-    if: github.event.pull_request.head.repo.fork == false
-    environment: crysta-sdk
+  native-macos:
+    name: native · ${{ matrix.platform }}
     needs: changes
-    runs-on: ubuntu-24.04
     env:
       CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macOS
+            runner: [self-hosted, macOS, ARM64]
+            sdk: osx-arm64
+    runs-on: ${{ matrix.runner }}
+    steps: *native-steps
+
+  # ---- Manifest-equality gate: the runtime manifest must equal the live collection --
+  audit:
+    # The runtime manifest must equal the live collection on every PR and push. Deliberately
+    # unconditional — no `if:`, no path filter (it needs
+    # `changes`, which always runs, only for the run's crysta source — ): a
+    # required check that can be skipped never reports, and a manifest can be invalidated
+    # from any path that adds, removes or moves a test. The audit COLLECTS the suite and collection
+    # imports `edi._edi`, so `per-pr-audit` depends on core-build and this job needs the crysta token.
+    name: audit
+    if: ${{ !inputs.core_only }}
+    # After the core tests, which take the runners first; a core failure cancels the run before these
+    # start.
+    needs: [changes, native, core]
+    runs-on: [self-hosted, Linux, X64]
+    env:
+      CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
+      EDI_NATIVE_ARTIFACT: 1  # Restore the native build, never compile it (I34)
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-pixi
+      # The crysta App token (D4's mirror — see the core job's mint step for the full note).
       - name: Mint a crysta installation token
         id: crysta-token
         uses: actions/create-github-app-token@v2
@@ -147,7 +231,12 @@ jobs:
           repositories: crysta
           permission-contents: read
           permission-actions: read
-      - name: Build the native code
+      - name: Download this run's native artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: edi-native-linux-64
+          path: ${{ runner.temp }}/edi-native
+      - name: Restore and validate the native artifact
         run: pixi run core-build
         env:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
@@ -156,29 +245,42 @@ jobs:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
         run: pixi run per-pr-audit
 
+  # ---- The core: the restored native build, the consumer proof and the declared test group (formerly build-core, test
+  # and verify-macos). The macOS leg runs on pull requests too (three macOS-only defects once reached main unseen); the
+  # org has ONE macOS runner, so PR runs serialize on it.
   core:
     name: core · ${{ matrix.platform }}
-    if: github.event.pull_request.head.repo.fork == false
-    environment: crysta-sdk
-    needs: changes
+    needs: [changes, native]
     env:
       CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
+      EDI_NATIVE_ARTIFACT: 1  # Restore the native build, never compile it (I34)
+    # The cross-surface hidden suite gates EVERY surface's scaffold contract (tree, import, core+cli
+    # build, app-host structure, CI routing), so it runs for any surface, the tests themselves, or a
+    # change to the shared build/test env.
     strategy:
       fail-fast: false
       matrix:
         include:
           - platform: Linux
-            runner: ubuntu-24.04
+            runner: [self-hosted, Linux, X64]
             sdk: linux-64
-          - platform: macOS
-            runner: macos-15
-            sdk: osx-arm64
     runs-on: ${{ matrix.runner }}
-    steps:
+    # `actions: write` for the cancel step below; contents read as the workflow grants.
+    permissions:
+      contents: read
+      actions: write
+    steps: &core-steps
+      # fetch-depth: 0 — the `unit/py` tier contains a gate that reads HISTORY (`git ls-tree` at a
+      # committed anchor), which a depth-1 checkout lacks (`fatal: not a tree object`); edi is small,
+      # so a full clone is the honest and cheap option rather than a guessed `--deepen`.
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup-pixi
+      # D4's mirror (crysta ci.yml D4): both repos are PRIVATE and the repo-scoped job token cannot read
+      # crysta, so every step that can run build-crysta.sh gets a short-lived App installation token narrowed
+      # to crysta, on Linux and macOS alike. ⚠ THE KEY IS NOT THE TOKEN: ENHANTICA_APP_KEY is the App's
+      # non-expiring org-wide minting authority; each token minted from it is ~1 h and read-only on crysta.
       - name: Mint a crysta installation token
         id: crysta-token
         uses: actions/create-github-app-token@v2
@@ -189,20 +291,50 @@ jobs:
           repositories: crysta
           permission-contents: read
           permission-actions: read
-      - name: Build the native code
+      - name: Download this run's native artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: edi-native-${{ matrix.sdk }}
+          path: ${{ runner.temp }}/edi-native
+      - name: Restore and validate the native artifact
         run: pixi run core-build
         env:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
       - name: The crysta consumer proof
+        # crysta-consumer depends on core-build, which resolves the private crysta main: the token as above
+        # (on edi main both ran in one step that carried it).
         run: pixi run crysta-consumer
         env:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
+      # The built extension's surface and CLI vocabulary checks.
       - name: Python surface and CLI vocabulary checks
         run: |
           pixi run --skip-deps python-surface-superset
           pixi run --skip-deps python-surface-check
           pixi run --skip-deps cli-vocabulary-check
+      # ADR-0020 §5: banking, on a dispatch with `bank_latency` only. The ratchet's rows are per machine, the
+      # runner's name: these steps run the latency probe ten times on this runner and upload its rows; a lane
+      # commits them. They are written outside the checkout (`--out`), so the committed bank the tests below
+      # read is untouched: this run is compared with what was committed before it, never with rows it wrote,
+      # and a runner with no committed row stays refused. Two Linux runners share this job's labels and a
+      # dispatch reaches one of them: the artifact's name says which, and a further dispatch reaches the
+      # other.
+      - name: Bank this runner's latency medians (dispatch only)
+        if: github.event_name == 'workflow_dispatch' && inputs.bank_latency
+        run: pixi run --skip-deps python tools/ci/latency_bank.py --run --out "$RUNNER_TEMP/latency-bank-rows.json"
+      - name: Upload this runner's bank rows (dispatch only)
+        if: github.event_name == 'workflow_dispatch' && inputs.bank_latency
+        uses: actions/upload-artifact@v5
+        with:
+          name: latency-bank-${{ runner.name }}
+          path: ${{ runner.temp }}/latency-bank-rows.json
+          overwrite: true
       - name: Tests (declared group)
+        # The DECLARED groups (tests/test-groups.json) — the group task is the selection surface, so
+        # the declaration cannot drift from what CI runs. `group-quick` composes the quick
+        # selection (pytest over tests/unit, tests/integration, tests/system) + the C++ tier, the same
+        # surface `pixi run verify` drives locally; on a pull request `group-quick`, on merge `group-full`
+        # (the groups are named for WHEN they run); equal on test selection.
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             pixi run group-quick
@@ -211,29 +343,67 @@ jobs:
           fi
         env:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
+      # ADR-0020 §3: the worker calculates on a snapshot while the owner thread uses the live project, with
+      # no global lock around crysta. ThreadSanitizer witnesses it, with crysta built from the pinned source
+      # under the sanitizer (the prebuilt SDK is not instrumented). Linux only.
       - name: The two-thread witness (ThreadSanitizer)
         if: matrix.platform == 'Linux'
         run: pixi run --skip-deps tsan-worker
         env:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
+      # A core failure ends the run, so the red arrives in minutes and no runner spends time on a head that is
+      # already red. A cancelled run is never evidence: the merge guard proves every required job's success at the
+      # head (ci-evidence.py), so a cancelled or skipped job refuses that head.
+      - name: Cancel the run after a core failure
+        if: failure()
+        run: |
+          curl -fsS -X POST -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
 
-  notebooks:
-    name: notebooks
-    # Runs for every result-changing surface, so no job condition: the steps that use the crysta
-    # token, and the run that needs their build, carry the fork guard (a fork's pull request skips
-    # this job anyway, through the native job it needs).
-    environment: crysta-sdk
-    # After the native build of this run: the notebooks wait for the shared pin to build, as the
-    # private CI's notebooks do. Each job still builds its own tree (no artifact carries crysta).
-    needs: [changes, native]
+  core-macos:
+    name: core · ${{ matrix.platform }}
+    needs: [changes, native-macos]
     env:
       CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
-    runs-on: ubuntu-24.04
+      EDI_NATIVE_ARTIFACT: 1  # Restore the native build, never compile it (I34)
+    # The cross-surface hidden suite gates EVERY surface's scaffold contract (tree, import, core+cli
+    # build, app-host structure, CI routing), so it runs for any surface, the tests themselves, or a
+    # change to the shared build/test env.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macOS
+            runner: [self-hosted, macOS, ARM64]
+            sdk: osx-arm64
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      actions: write
+    steps: *core-steps
+
+  # The verification-notebook GATE: the in-notebook FullProf assertions must run for EVERY input that
+  # can change their result — the engine/adapter/pin (`core`), the Python surface and helpers
+  # (`lib`), the toolchain/lock (`buildenv`), and the pages/references/ mkdocs config (`docs`). `pixi
+  # run notebook-tests` restores the run's native build (its core-build dependency) and executes all
+  # pages without mutating the tree.
+  notebooks:
+    name: notebooks
+    if: ${{ !inputs.core_only }}
+    # After the core tests, which take the runners first; a core failure cancels the run before these
+    # start.
+    needs: [changes, native, core]
+    env:
+      CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
+      EDI_NATIVE_ARTIFACT: 1  # Restore the native build, never compile it (I34)
+    runs-on: [self-hosted, Linux, X64]
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-pixi
+      # The crysta App token (D4's mirror — see the core job's mint step for the full note).
       - name: Mint a crysta installation token
-        if: github.event.pull_request.head.repo.fork == false
         id: crysta-token
         uses: actions/create-github-app-token@v2
         with:
@@ -243,38 +413,49 @@ jobs:
           repositories: crysta
           permission-contents: read
           permission-actions: read
-      - name: Build the native code
-        if: github.event.pull_request.head.repo.fork == false
+      - name: Download this run's native artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: edi-native-linux-64
+          path: ${{ runner.temp }}/edi-native
+      - name: Restore and validate the native artifact
         run: pixi run core-build
         env:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
       - name: Execute the verification notebooks
-        if: github.event.pull_request.head.repo.fork == false
         run: pixi run notebook-tests
         env:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
 
+  # The CLI projects through Python (formerly `cli-projects`): every project in
+  # docs/user/cli/projects.yml's executing set runs through `python -m edi fit` and is compared with its
+  # expected.json — the same `pixi run cli-projects` both verify chains run. Deliberately NOT
+  # path-filtered: a project's result depends on the engine, the Python surface, the toolchain, the
+  # project files and the runner itself, and the whole set takes about 20 s.
   cli-python:
     name: cli-python · ${{ matrix.platform }}
-    if: github.event.pull_request.head.repo.fork == false
-    environment: crysta-sdk
-    needs: changes
+    if: ${{ !inputs.core_only }}
+    # After the core tests, which take the runners first; a core failure cancels the run before these
+    # start.
+    needs: [changes, native, native-macos, core, core-macos]
     env:
       CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
+      EDI_NATIVE_ARTIFACT: 1  # Restore the native build, never compile it (I34)
     strategy:
       fail-fast: false
       matrix:
         include:
           - platform: Linux
-            runner: ubuntu-24.04
+            runner: [self-hosted, Linux, X64]
             sdk: linux-64
           - platform: macOS
-            runner: macos-15
+            runner: [self-hosted, macOS, ARM64]
             sdk: osx-arm64
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-pixi
+      # The crysta App token (D4's mirror — see the core job's mint step for the full note).
       - name: Mint a crysta installation token
         id: crysta-token
         uses: actions/create-github-app-token@v2
@@ -285,7 +466,12 @@ jobs:
           repositories: crysta
           permission-contents: read
           permission-actions: read
-      - name: Build the native code
+      - name: Download this run's native artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: edi-native-${{ matrix.sdk }}
+          path: ${{ runner.temp }}/edi-native
+      - name: Restore and validate the native artifact
         run: pixi run core-build
         env:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
@@ -294,9 +480,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
 
+  # The same projects through the native `easydiffraction` binary, so the two CLI routes can be compared
+  # (owner, 2026-09-28). A PLACEHOLDER until that route is exercised: it runs only on manual dispatch and
+  # checks nothing.
   cli-native:
     name: cli-native · ${{ matrix.platform }}
     if: github.event_name == 'workflow_dispatch'
+    # Wired to the run's crysta source like every other non-infrastructure job, so the route it will
+    # exercise inherits the one resolution when it stops being a placeholder.
     needs: changes
     env:
       CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
@@ -305,9 +496,9 @@ jobs:
       matrix:
         include:
           - platform: Linux
-            runner: ubuntu-24.04
+            runner: [self-hosted, Linux, X64]
           - platform: macOS
-            runner: macos-15
+            runner: [self-hosted, macOS, ARM64]
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Native CLI placeholder
@@ -315,17 +506,23 @@ jobs:
 
   docs:
     name: docs
-    if: github.event.pull_request.head.repo.fork == false
-    environment: crysta-sdk
-    needs: changes
+    if: ${{ !inputs.core_only }}
+    # After the core tests, which take the runners first; a core failure cancels the run before these
+    # start.
+    needs: [changes, native, core]
     env:
       CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
-    runs-on: ubuntu-24.04
+      EDI_NATIVE_ARTIFACT: 1  # Restore the native build, never compile it (I34)
+    runs-on: [self-hosted, Linux, X64]
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-pixi
+      # Rendering layer, not the gate (the notebooks job above gates): regenerate the
+      # notebooks from their jupytext sources and execute them so the published site renders
+      # executed outputs (plots, tables), then build strictly.
       - name: Prepare notebooks
         run: pixi run notebook-prepare
+      # The crysta App token (D4's mirror — see the core job's mint step for the full note).
       - name: Mint a crysta installation token
         id: crysta-token
         uses: actions/create-github-app-token@v2
@@ -336,7 +533,12 @@ jobs:
           repositories: crysta
           permission-contents: read
           permission-actions: read
-      - name: Build the native code
+      - name: Download this run's native artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: edi-native-linux-64
+          path: ${{ runner.temp }}/edi-native
+      - name: Restore and validate the native artifact
         run: pixi run core-build
         env:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
@@ -346,23 +548,39 @@ jobs:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
       - name: Strict docs build
         run: pixi run docs-build
+      # The rendered site, for the Pages assembly (the `pages` job adds the web app under /webapp/).
+      - name: Upload the rendered site
+        uses: actions/upload-artifact@v4
+        with:
+          name: edi-docs-site
+          path: site
+          if-no-files-found: error
 
+  # ---- The desktop app (edi ADR-0015) --------------------------------- The core (the app group's
+  # Python tests import it) is the run's restored native build; the app host is built ONCE per job, and
+  # every check then runs against those as its own named step and never rebuilds. The UI test runs even
+  # when an earlier check failed; its images and similarity maps are uploaded on a failure
+  # (easydiffractionbeta's "Upload … GUI tests screenshots" step). Build speed (note 21): the compiles go
+  # through ccache (the app environment's launcher) with its cache outside the workspace, since the
+  # checkout's clean removes build/. crysta is the pinned SDK (ADR-0017), never compiled here.
   app:
     name: app · ${{ matrix.platform }}
-    if: github.event.pull_request.head.repo.fork == false
-    environment: crysta-sdk
-    needs: changes
+    if: ${{ !inputs.core_only }}
+    # After the core tests, which take the runners first; a core failure cancels the run before these
+    # start.
+    needs: [changes, native, native-macos, core, core-macos]
     env:
       CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
+      EDI_NATIVE_ARTIFACT: 1  # Restore the native build, never compile it (I34)
     strategy:
       fail-fast: false
       matrix:
         include:
           - platform: Linux
-            runner: ubuntu-24.04
+            runner: [self-hosted, Linux, X64]
             sdk: linux-64
           - platform: macOS
-            runner: macos-15
+            runner: [self-hosted, macOS, ARM64]
             sdk: osx-arm64
     runs-on: ${{ matrix.runner }}
     steps:
@@ -370,6 +588,7 @@ jobs:
         with:
           fetch-depth: 0  # the app's version line is `git describe`
       - uses: ./.github/actions/setup-pixi
+      # The crysta App token (D4's mirror — see the core job's mint step for the full note).
       - name: Mint a crysta installation token
         id: crysta-token
         uses: actions/create-github-app-token@v2
@@ -381,12 +600,19 @@ jobs:
           permission-contents: read
           permission-actions: read
       - name: Prepare the persistent build caches
+        # The self-hosted runners keep their disk, so the cache survives the checkout's clean; $HOME differs
+        # per runner, so the paths go to $GITHUB_ENV here rather than as a literal job-level env.
         run: |
           echo "CCACHE_DIR=$HOME/.cache/edi-ccache" >> "$GITHUB_ENV"
           echo "CCACHE_MAXSIZE=5G" >> "$GITHUB_ENV"
           mkdir -p "$HOME/.cache/edi-ccache"
           CCACHE_DIR="$HOME/.cache/edi-ccache" pixi run -e app ccache --zero-stats
-      - name: Build the native code
+      - name: Download this run's native artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: edi-native-${{ matrix.sdk }}
+          path: ${{ runner.temp }}/edi-native
+      - name: Restore and validate the native artifact
         run: pixi run core-build
         env:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
@@ -396,15 +622,41 @@ jobs:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
       - name: Compiler cache statistics
         run: pixi run -e app ccache --show-stats
+      # Each check runs on the one build above with --skip-deps (run on their own, the same tasks build
+      # first).
       - name: qmllint over edi's QML (zero warnings)
         run: pixi run -e app --skip-deps app-lint
       - name: qmlformat changes nothing
         run: pixi run -e app --skip-deps app-format-check
+      # ADR-0017 §16: the structure view's frame and update times on GPU hardware, on a dispatch with
+      # `bank_frames` only, on the macOS runner. The drawn cases run ten times on cocoa, which needs a logged-in
+      # window session: the script names the session it found and refuses without one, and the owner's Mac by
+      # hand (the same task) is then the fallback. Each run's table is in the latency tables' schema; their
+      # medians are compared with this runner's committed app rows (the first run has none and only banks), and
+      # the rows a lane commits are written outside the checkout and outside the tables' directory, as
+      # `bank_latency`'s are. Each table names the commit the runner was built from, which must be this
+      # checkout's. A software renderer's rows are refused banking. No pull-request run reaches it.
+      - name: The structure view's frame and update times (dispatch only, macOS)
+        if: github.event_name == 'workflow_dispatch' && inputs.bank_frames && matrix.platform == 'macOS'
+        run: >-
+          pixi run -e app --skip-deps app-bank-frames --tables "$RUNNER_TEMP/structure-frames"
+          --out "$RUNNER_TEMP/structure-frames-bank-rows.json"
+      - name: Upload the structure view's frame tables and bank rows (dispatch only, macOS)
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.bank_frames && matrix.platform == 'macOS'
+        uses: actions/upload-artifact@v5
+        with:
+          name: structure-frames-${{ runner.name }}-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/structure-frames
+            ${{ runner.temp }}/structure-frames-bank-rows.json
+          if-no-files-found: warn
+      # Disabled by the owner: this step does not run. Re-enabling is a revert of this change.
       - name: The app's Qt Quick Test tier
         if: false
         run: pixi run -e app --skip-deps app-test
       - name: The app group's Python tests (tests/integration/app)
         run: pixi run --skip-deps group-app
+      # Disabled by the owner: these two steps do not run. Re-enabling is a revert of this change.
       - name: The UI test against the one committed image set
         if: false
         run: pixi run -e app --skip-deps app-ui-test
@@ -417,17 +669,107 @@ jobs:
             build/app/ui-actual
             build/app/ui-diff
           if-no-files-found: ignore
+      # Last, and only when app-build.sh changed (note 21): a fresh configure replaces build/app, so
+      # this step is a second full build. The checkout starts clean, so without it the job never meets
+      # a build/app left by another environment's compilers.
       - name: app-build recovers a build/app configured under another toolchain
         if: needs.changes.outputs.app_build == 'true'
         run: pixi run -e app --skip-deps app-build-recovery
         env:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
 
+  # ---- The app as a WebAssembly site (edi ADR-0023) --------------------- Both Qt wasm kits, the start page
+  # and the service-worker shim, packed as one site folder and uploaded as the
+  # `edi-webapp` artifact, unpacked as `enhantica.github.io/edi/webapp/`. The toolchain (Emscripten, Qt's wasm
+  # kits, Eigen) installs once into the runner's ~/.cache/edi-wasm, which survives the checkout's clean, and is
+  # reused while its pins are unchanged. crysta is compiled for wasm from the pinned SDK's source, per kit.
   app-wasm:
     name: app · WebAssembly
-    if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-24.04
+    if: ${{ !inputs.core_only }}
+    # After the core tests on Linux: the core tests take the Linux runners first.
+    needs: [changes, native, core]
+    runs-on: [self-hosted, Linux, X64]
+    env:
+      CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
+      EDI_NATIVE_ARTIFACT: 1  # the checks' tests import edi: the run's native build, restored, never compiled
     steps:
       - uses: actions/checkout@v5
-      - name: WASM build placeholder
-        run: echo "WASM target activates after the gui-components Phase I (base G01/G02)."
+        with:
+          fetch-depth: 0  # the app's version line is `git describe`
+      - uses: ./.github/actions/setup-pixi
+      # The crysta App token (D4's mirror — see the core job's mint step for the full note).
+      - name: Mint a crysta installation token
+        id: crysta-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.ENHANTICA_APP_ID }}
+          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          owner: enhantica
+          repositories: crysta
+          permission-contents: read
+          permission-actions: read
+      - name: Download this run's native artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: edi-native-linux-64
+          path: ${{ runner.temp }}/edi-native
+      # The pinned crysta SDK and its source (the wasm builds compile that source), with the native build.
+      - name: Restore and validate the native artifact
+        run: pixi run core-build
+        env:
+          GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
+      - name: Install the WebAssembly toolchain  # Emscripten, Qt's wasm kits, Eigen, Chrome; cached on the runner
+        run: pixi run -e app wasm-toolchain
+      - name: Build both kits and pack the site
+        run: pixi run -e app --skip-deps wasm-build
+      - name: Upload the site
+        uses: actions/upload-artifact@v4
+        with:
+          name: edi-webapp
+          path: build/wasm/site
+          if-no-files-found: error
+          # The repository's default retention, not the one day of the native artifact: the owner downloads it.
+      # The wasm crysta CLI's fit against the native reference, the zip's contents, and the app in headless Chrome
+      # for each build (the desktop app tests stay disabled; these are the web app's own).
+      - name: Check the site in the browser
+        run: >-
+          pixi run --skip-deps wasm-check "$RUNNER_TEMP/edi-webapp-checks" tests/system/manual/e04_t11_browser.mjs
+          tests/system/py/test_e04_t11_wasm_fit.py tests/system/py/test_e04_t11_wasm_delivery.py
+      - name: Upload the browser checks' screenshots and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: edi-webapp-checks
+          path: ${{ runner.temp }}/edi-webapp-checks
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # ---- The Pages site: the docs with the web app under /webapp/ ---------- The rendered docs and the web app's
+  # folder, joined as one static site: the app at /webapp/, linked from no page (unlisted). Uploaded as `edi-pages`;
+  # deploying it to GitHub Pages waits for edi to be public. Switched off until further notice: kept with its steps,
+  # run on no event, not a required job; re-enabling it, by removing this `if`, is the owner's decision.
+  pages:
+    name: pages
+    if: false
+    needs: [docs, app-wasm]
+    runs-on: [self-hosted, Linux, X64]
+    steps:
+      - uses: actions/checkout@v5
+      - name: Download the rendered docs
+        uses: actions/download-artifact@v5
+        with:
+          name: edi-docs-site
+          path: site
+      - name: Download the web app
+        uses: actions/download-artifact@v5
+        with:
+          name: edi-webapp
+          path: ${{ runner.temp }}/edi-webapp
+      - name: Place the web app at /webapp/
+        run: bash tools/ci/docs-webapp.sh "$RUNNER_TEMP/edi-webapp" site
+      - name: Upload the Pages site
+        uses: actions/upload-artifact@v4
+        with:
+          name: edi-pages
+          path: site
+          if-no-files-found: error

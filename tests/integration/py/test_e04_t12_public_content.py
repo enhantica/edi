@@ -213,14 +213,43 @@ def test_e04_t12_initial_one_commit_tree_is_checked(tmp_path):
     )
 
 
-def test_e04_t12_content_ci_checks_pushes_and_pr_text():
+def test_e04_t12_content_ci_checks_pushes_and_pr_text(tmp_path):
     observe_content_workflows(ROOT)
+    prepared = tmp_path / 'tools/public-release/github/workflows'
+    installed = tmp_path / '.github/workflows'
+    for folder in (prepared, installed):
+        folder.mkdir(parents=True)
+        (folder / 'content.yml').write_bytes((ROOT / '.github/workflows/content.yml').read_bytes())
+    observe_content_workflows(tmp_path)
+    path = installed / 'content.yml'
+    original = path.read_text()
+    for damage in ('trigger', 'checker', 'head', 'title', 'body', 'base'):
+        document = yaml.safe_load(original)
+        if damage == 'trigger':
+            document.get('on', document.get(True)).pop('pull_request')
+        else:
+            before = {
+                'checker': CONTRACT['script'],
+                'head': 'pull_request.head.sha',
+                'title': '--title',
+                'body': '--body-file',
+                'base': '--base',
+            }[damage]
+            document = yaml.safe_load(original.replace(before, 'missing-input'))
+        path.write_text(yaml.safe_dump(document))
+        with pytest.raises(AssertionError):
+            observe_content_workflows(tmp_path)
+        path.write_text(original)
+    path.unlink()
+    with pytest.raises(AssertionError):
+        observe_content_workflows(tmp_path)
 
 
 def observe_content_workflows(root):
     prepared = root / 'tools/public-release/github/workflows'
     installed = root / '.github/workflows'
-    folders = [prepared] if prepared.is_dir() else [installed]
+    folders = [folder for folder in (prepared, installed) if folder.is_dir()]
+    assert folders, 'content CI must exist in the prepared or installed workflow tree'
     for folder in folders:
         workflows = [yaml.safe_load(path.read_text()) for path in folder.glob('*.yml')]
         matches = [

@@ -1,0 +1,62 @@
+# Unit-tier coverage of both languages, by dispatch: the text reports are uploaded and summarised.
+name: Coverage (C++ and Python)
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  coverage:
+    name: unit coverage, both languages (Linux)
+    if: github.event_name == 'workflow_dispatch'
+    environment: crysta-sdk
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-pixi
+      - name: Mint a crysta installation token
+        id: crysta-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.ENHANTICA_APP_ID }}
+          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          owner: enhantica
+          repositories: crysta
+          permission-contents: read
+          permission-actions: read
+      - name: C++ unit coverage (clang -O0 + LLVM source-based)
+        run: pixi run cpp-coverage-unit
+        env:
+          GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
+      - name: Python coverage (pytest-cov over lib/edi, unit tier)
+        run: pixi run py-cov-unit | tee build/py-coverage-report.txt
+        env:
+          GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
+      - name: Upload both reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-coverage
+          path: |
+            build/coverage-unit/coverage-report.txt
+            build/py-coverage-report.txt
+          if-no-files-found: error
+      - name: Job summary
+        run: |
+          {
+            echo '## C++ unit-tier coverage'
+            echo '```'
+            cat build/coverage-unit/coverage-report.txt
+            echo '```'
+            echo '## Python coverage (lib/edi)'
+            echo '```'
+            tail -n 40 build/py-coverage-report.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
