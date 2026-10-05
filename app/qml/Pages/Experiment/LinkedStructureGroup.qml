@@ -62,9 +62,9 @@ Column {
 
             required property int index
             required property string structureId
-            required property ParameterItem scale
-            required property bool enabled
             required property int colorIndex
+            // `scale` and `enabled` are Item properties, so these two roles are read through the model.
+            required property var model
 
             EaComponents.TableViewLabel {
                 width: AppSizes.indexColumnWidth
@@ -92,12 +92,12 @@ Column {
             ParameterCell {
                 objectName: `linkedStructure.scale.${row.index}`
                 width: EaStyle.Sizes.fontPixelSize * 8
-                item: row.scale
+                item: row.model.scale
             }
             EaComponents.TableViewCheckBox {
                 objectName: `linkedStructure.enabled.${row.index}`
                 width: EaStyle.Sizes.fontPixelSize * 2.5
-                checked: row.enabled
+                checked: row.model.enabled
                 ToolTip.text: qsTr("Use this structure in the calculation and the fit")
                 onToggled: group.rows.setEnabled(row.index, checked)
             }
