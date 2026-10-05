@@ -2,7 +2,9 @@
 #ifndef EDI_APP_PROJECT_VIEW_MODEL_HPP
 #define EDI_APP_PROJECT_VIEW_MODEL_HPP
 
+#include <QHash>
 #include <QList>
+#include <QStringList>
 #include <QObject>
 #include <QString>
 #include <QUrl>
@@ -18,6 +20,7 @@
 #include "block_text.hpp"
 #include "edi/live_preview.hpp"
 #include "edi/model.hpp"
+#include "edi/scan.hpp"
 #include "edi/worker.hpp"
 #include "experiment_view_model.hpp"
 #include "fit_view_model.hpp"
@@ -44,9 +47,11 @@ class StructureListModel : public RowTableModel {
     void setStructures(const QList<StructureViewModel*>& structures);
 };
 
-// The project's experiments: roles `name`, `label` (`name · file`), `experiment` (ExperimentViewModel) and
+// The project's experiments: roles `name`, `label` (`name · file`), `experiment` (ExperimentViewModel),
 // `fitOutcome`, the outcome key of the project's last fit (recorded_outcome) on each experiment it fitted, else
-// empty: the first experiment after a single fit, every bank of a joint fit.
+// empty: the first experiment after a single fit, every bank of a joint fit; `file`, the file its data is in; and
+// `extracted`, its scan values with their units. In a scan project the rows are the scan's datasets instead
+// (setDatasets): each the template experiment over one data file, with that file's results.csv outcome.
 class ExperimentListModel : public RowTableModel {
     Q_OBJECT
     QML_ELEMENT
@@ -55,6 +60,12 @@ class ExperimentListModel : public RowTableModel {
    public:
     explicit ExperimentListModel(QObject* parent);
     void setExperiments(const QList<ExperimentViewModel*>& experiments, const edi::Project& project);
+    struct Dataset {
+        QString file;
+        QString outcome;
+        QStringList extracted;
+    };
+    void setDatasets(ExperimentViewModel* experiment, const QList<Dataset>& datasets);
 };
 
 // The open project. It owns the core Project and is the editor every write goes through: the core
@@ -88,6 +99,11 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Create experiment adds an experiment without data: refused while the project's experiments carry
     // measured data (a project calculates or fits as a whole).
     Q_PROPERTY(bool canCreateExperiment READ canCreateExperiment NOTIFY canCreateExperimentChanged)
+    // A scan project (sequential or independent mode over a declared scan): its experiment list is the scan's
+    // datasets, and the current experiment index the shown dataset. `scanColumns`: one heading per extract
+    // rule, with its unit ("temperature (K)").
+    Q_PROPERTY(bool scan READ scan CONSTANT)
+    Q_PROPERTY(QStringList scanColumns READ scanColumns CONSTANT)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
     // The app bar's Undo (edi ADR-0024): the newest recorded change — an edit of the aliases or
     // constraints, or a fit — is undone, so they undo in the order they were made.
@@ -125,13 +141,15 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     ReportViewModel* report() const { return report_; }
     int currentStructureIndex() const { return current_structure_; }
     void setCurrentStructureIndex(int index);
-    int currentExperimentIndex() const { return current_experiment_; }
+    int currentExperimentIndex() const { return scan_ ? current_dataset_ : current_experiment_; }
     void setCurrentExperimentIndex(int index);
     StructureViewModel* currentStructure() const { return structure_models_.value(current_structure_); }
     ExperimentViewModel* currentExperiment() const { return experiment_models_.value(current_experiment_); }
     // A project holds any number of structures (phases); loading one is always possible.
     bool canLoadStructure() const { return true; }
     bool canCreateExperiment() const;
+    bool scan() const { return scan_; }
+    QStringList scanColumns() const { return scan_columns_; }
     QString lastError() const { return last_error_; }
     bool calculating() const { return calculating_; }
     StructureViewOptions* structureViewOptions() const { return structure_view_options_; }
@@ -240,6 +258,20 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     StructureViewOptions* structure_view_options_;
     int current_structure_ = -1;
     int current_experiment_ = -1;
+    // A scan project's datasets: the listing, the results the driver wrote, the values read from each file once
+    // shown, the dataset shown, and the template the dataset views are made from, kept until an edit makes the
+    // shown state the template (edi ADR-0017 §19).
+    bool scan_ = false;
+    QStringList scan_columns_;
+    edi::ScanDatasets scan_datasets_;
+    edi::ScanResults scan_results_;
+    QHash<QString, QStringList> scan_extracted_;
+    int current_dataset_ = -1;
+    std::optional<edi::Project> scan_template_;
+    bool applying_view_ = false;
+    void loadScan();
+    void viewDataset(int index);
+    void syncDatasets();
     struct SavedFiles {
         std::vector<std::pair<std::string, std::string>> files;
         std::string refusal;

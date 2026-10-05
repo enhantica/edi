@@ -201,6 +201,11 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                    + QStringList{structure, basic}});
     steps_.push_back({"t16-32-lbco-experiment", {experiment, basic}});
     steps_.push_back({"t16-33-lbco-analysis", {analysis, basic}});
+    // A scan's datasets as experiments: the bundled 162-file example, before any scan has been fitted.
+    steps_.push_back({"t16-50-scan-experiment", start + open_example("pd-neut-cwl_cosio-d20_scan-162f")
+                                                    + QStringList{experiment, basic, "expand:group.experiments"}});
+    steps_.push_back({"t16-51-scan-list", {blocks}});
+    steps_.push_back({"t16-52-scan-dataset-5", {"key:Escape", "show:experiments.list:4", "experiments.row.4"}});
     steps_.push_back({"t16-40-created-saved-reopened",
                       start + open_example("pd-xray-cwl_lif") + QStringList{experiment, basic, "expand:group.experiments",
                       "experiments.create", "save-as:created", "open-project:created", experiment, "mainArea.blocks.box",

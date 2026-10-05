@@ -19,6 +19,7 @@ Item {
     property alias blockIndex: selector.blockIndex
     property alias outcomeRole: selector.outcomeRole
     property alias currentOutcome: selector.currentOutcome
+    property alias oneColour: selector.oneColour
     signal blockActivated(int index)
 
     // The main area's width and its tab bar's height.

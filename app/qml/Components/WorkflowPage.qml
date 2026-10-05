@@ -41,6 +41,8 @@ EaComponents.ContentPage {
     // The blocks' fit-outcome role and the shown block's outcome (experiments; BlockSelector).
     property string blockOutcomeRole: ""
     property string blockCurrentOutcome: ""
+    // Every entry in the first block's colour (a scan's datasets).
+    property bool blockOneColour: false
     signal blockActivated(int index)
 
     // The base's fade above Continue, in the sidebar's colour, reads as a shadow over the Text tab's text view,
@@ -114,6 +116,7 @@ EaComponents.ContentPage {
             blockIndex: page.blockIndex
             outcomeRole: page.blockOutcomeRole
             currentOutcome: page.blockCurrentOutcome
+            oneColour: page.blockOneColour
             onBlockActivated: index => page.blockActivated(index)
         }
 

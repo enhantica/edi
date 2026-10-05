@@ -34,6 +34,8 @@ Row {
     // The blocks' fit-outcome role (experiments: `fitOutcome`) and the shown block's outcome; empty: no slot.
     property string outcomeRole: ""
     property string currentOutcome: ""
+    // Every entry in the first block's colour: a scan's datasets are one experiment's.
+    property bool oneColour: false
 
     // A step to the previous or next block, as a pick in the box; no step past either end.
     function step(offset) {
@@ -71,7 +73,7 @@ Row {
             };
             const icon = {
                 "icon": ParameterNames.blockIcon(selector.blockKind),
-                "color": AppColors.block(selector.blockKind, index)
+                "color": AppColors.block(selector.blockKind, row.oneColour ? 0 : index)
             };
             const label = {
                 "text": name,

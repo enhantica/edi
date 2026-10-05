@@ -844,6 +844,24 @@ refuses to write its bank rows into it.
 - **A project calculates or fits as a whole** (the loader's rule): Create experiment is disabled while the project's
   experiments carry measured data.
 
+### 19. A scan's datasets
+
+(the owner, 2026-10-05)
+
+- **A scan project lists its datasets as experiments**: in the block selector and the Experiments table, one row per
+  data file the scan fits (`edi::scan_datasets`, crysta's own file list, in fitting order), each the template
+  experiment over that file. A selector line reads `datablock · file · value unit`; the table's columns are No. · Fit
+  · Datablock · File · one per extract rule with its unit, with no colour column and no remove button. Every entry is
+  in the experiment's colour. The status bar counts the datasets, its tooltip *1 template experiment, N datasets*.
+- **Showing a dataset** loads its measured points, read from its file when it is shown and never before, into the
+  model with the template's parameters, and, for a dataset the scan has fitted, its fitted values and
+  uncertainties from `analysis/results.csv` (`Edit::scan_view`); the pages then show that dataset and the pattern
+  calculated from it. A project opens on the first dataset. Showing a dataset is not an edit of the project.
+- **An edit while a dataset is shown goes to the template**, seeded from that dataset (the packet's Scope 2): the
+  shown state becomes the template the next dataset views start from.
+- **A dataset's Fit outcome** is its results row's: *Success* when the driver's `fit_result.success` is true, *Failed*
+  otherwise; *Not fitted* without a row. Its extracted values come from its row, or from its file once shown.
+
 ## Consequences
 
 - The design choices the owner makes by eye are reviewable against a written rule; the phase-2 reviewer checks

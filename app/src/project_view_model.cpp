@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "project_view_model.hpp"
 
+#include <QHash>
 #include <QMetaObject>
 #include <algorithm>
 
@@ -36,7 +37,7 @@ void StructureListModel::setStructures(const QList<StructureViewModel*>& structu
 }
 
 ExperimentListModel::ExperimentListModel(QObject* parent)
-    : RowTableModel({"name", "label", "experiment", "fitOutcome"}, parent) {}
+    : RowTableModel({"name", "label", "experiment", "fitOutcome", "file", "extracted"}, parent) {}
 
 void ExperimentListModel::setExperiments(const QList<ExperimentViewModel*>& experiments, const edi::Project& project) {
     // A joint fit records each bank's share (`_fit_result_bank`); a single fit records none and fitted the first.
@@ -50,7 +51,27 @@ void ExperimentListModel::setExperiments(const QList<ExperimentViewModel*>& expe
         experiment->setFitOutcome(fitted ? outcome : QString());
         rows.append({experiment,
                      {experiment->name(), block_label(experiment->name(), QStringLiteral("experiment")),
-                      QVariant::fromValue<QObject*>(experiment), experiment->fitOutcome()}});
+                      QVariant::fromValue<QObject*>(experiment), experiment->fitOutcome(),
+                      experiment->name() + QStringLiteral(".edi"), QStringList()}});
+    }
+    setTableRows(rows);
+}
+
+void ExperimentListModel::setDatasets(ExperimentViewModel* experiment, const QList<Dataset>& datasets) {
+    QList<Row> rows;
+    const QString name = experiment != nullptr ? experiment->name() : QString();
+    for (int i = 0; i < datasets.size(); ++i) {
+        const Dataset& dataset = datasets[i];
+        QString label = name + QStringLiteral(" · ") + dataset.file;
+        for (const QString& value : dataset.extracted) {
+            if (!value.isEmpty()) {
+                label += QStringLiteral(" · ") + value;
+            }
+        }
+        // A dataset row is keyed by its place in the scan: one template experiment shows them all.
+        rows.append({reinterpret_cast<const void*>(static_cast<std::uintptr_t>(i + 1)),
+                     {name, label, QVariant::fromValue<QObject*>(experiment), dataset.outcome, dataset.file,
+                      dataset.extracted}});
     }
     setTableRows(rows);
 }
@@ -86,6 +107,7 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
             return text;
         },
         this);
+    loadScan();
     syncBlocks();
     report_ = new ReportViewModel(*this, this);
     current_structure_ = structure_models_.isEmpty() ? -1 : 0;
@@ -140,6 +162,10 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     connect(fit_, &FitViewModel::canUndoChanged, this, [this] { syncUndo(); });
     connect(fit_, &FitViewModel::runningChanged, this, [this] { syncUndo(); });
     note_fit();
+    // A scan project opens on its first dataset (the template dataset, once projects record one).
+    if (scan_ && !scan_datasets_.files.empty()) {
+        viewDataset(0);
+    }
     preview_->recalculate();
     publishCalculating();
 }
@@ -190,6 +216,10 @@ void ProjectViewModel::setCurrentStructureIndex(int index) {
 }
 
 void ProjectViewModel::setCurrentExperimentIndex(int index) {
+    if (scan_) {
+        viewDataset(index);
+        return;
+    }
     if (index != current_experiment_ && index >= -1 && index < experiment_models_.size()) {
         current_experiment_ = index;
         publishCurrent();
@@ -208,8 +238,8 @@ void ProjectViewModel::publishCurrent() {
     if (currentExperiment() != published_experiment_) {
         syncParameterTable();  // a scan mode lists the selected experiment's parameters; before the signals
     }
-    if (current_experiment_ != published_experiment_index_) {
-        published_experiment_index_ = current_experiment_;
+    if (currentExperimentIndex() != published_experiment_index_) {
+        published_experiment_index_ = currentExperimentIndex();
         emit currentExperimentIndexChanged();
     }
     if (currentExperiment() != published_experiment_) {
@@ -370,6 +400,135 @@ bool ProjectViewModel::setExperimentType(int index, const QString& axis, const Q
     return true;
 }
 
+void ProjectViewModel::loadScan() {
+    const edi::Project& project = *project_;
+    scan_ = project.sequential_fit.declared() && project.experiments.size() == 1 &&
+            edi::is_scan_fitting_mode(edi::effective_fitting_mode(project));
+    if (!scan_) {
+        return;
+    }
+    for (const auto& rule : project.sequential_fit.extract) {
+        const QString id = QString::fromStdString(rule->id.value());
+        const QString unit = QString::fromStdString(edi::scan_target_unit(rule->target));
+        scan_columns_.append(unit.isEmpty() ? id : QStringLiteral("%1 (%2)").arg(id, unit));
+    }
+    try {
+        scan_datasets_ = edi::scan_datasets(project);
+    } catch (const std::exception& refusal) {
+        setLastError(QString::fromUtf8(refusal.what()));
+    }
+    scan_results_ = edi::read_scan_results(project);
+}
+
+void ProjectViewModel::syncDatasets() {
+    if (!scan_) {
+        experiment_list_->setExperiments(experiment_models_, *project_);
+        return;
+    }
+    // A results row: file_path, reduced χ², success, iterations, then one cell per extract rule.
+    constexpr std::size_t kSuccessColumn = 2, kFirstExtractColumn = 4;
+    const std::size_t rules = project_->sequential_fit.extract.size();
+    QStringList units;
+    for (const auto& rule : project_->sequential_fit.extract) {
+        units.append(QString::fromStdString(edi::scan_target_unit(rule->target)));
+    }
+    QList<ExperimentListModel::Dataset> rows;
+    rows.reserve(static_cast<qsizetype>(scan_datasets_.files.size()));
+    for (const std::string& file : scan_datasets_.files) {
+        ExperimentListModel::Dataset dataset;
+        dataset.file = QString::fromStdString(file);
+        QStringList values = scan_extracted_.value(dataset.file);
+        if (const auto row = scan_results_.rows.find(file); row != scan_results_.rows.end()) {
+            dataset.outcome = row->second[kSuccessColumn] == "True" ? QStringLiteral("success") : QStringLiteral("failed");
+            values.clear();
+            for (std::size_t rule = 0; rule < rules && kFirstExtractColumn + rule < row->second.size(); ++rule) {
+                values.append(QString::fromStdString(row->second[kFirstExtractColumn + rule]));
+            }
+        }
+        for (qsizetype i = 0; i < values.size(); ++i) {
+            if (!values[i].isEmpty() && i < units.size() && !units[i].isEmpty()) {
+                values[i] += QStringLiteral(" ") + units[i];
+            }
+        }
+        dataset.extracted = values;
+        rows.append(dataset);
+    }
+    // The shown dataset's outcome is the experiment's own in the selector box.
+    if (ExperimentViewModel* experiment = experiment_models_.value(0)) {
+        experiment->setFitOutcome(current_dataset_ >= 0 && current_dataset_ < rows.size() ? rows[current_dataset_].outcome
+                                                                                          : QString());
+    }
+    experiment_list_->setDatasets(experiment_models_.value(0), rows);
+}
+
+void ProjectViewModel::viewDataset(int index) {
+    if (index < 0 || index >= static_cast<int>(scan_datasets_.files.size()) || index == current_dataset_ ||
+        experiment_models_.isEmpty() || (fit_ != nullptr && fit_->running())) {
+        return;
+    }
+    const std::string& file = scan_datasets_.files[static_cast<std::size_t>(index)];
+    const QString name = QString::fromStdString(file);
+    if (!scan_template_) {
+        scan_template_ = *project_;
+    }
+    // Every parameter at the template's state, then a fitted dataset's results-row values over it.
+    std::vector<edi::Edit::ScanValue> values;
+    for (const edi::NamedSlot& slot : edi::named_slots(*scan_template_)) {
+        values.push_back({slot.unique_name, slot.parameter->value.get(), slot.parameter->uncertainty.get()});
+    }
+    const auto row = scan_results_.rows.find(file);
+    if (row != scan_results_.rows.end()) {
+        std::map<std::string, std::size_t> column;
+        for (std::size_t i = 0; i < scan_results_.header.size(); ++i) {
+            column.emplace(scan_results_.header[i], i);
+        }
+        for (edi::Edit::ScanValue& value : values) {
+            bool ok = false;
+            if (const auto found = column.find(value.unique_name); found != column.end()) {
+                const double read = QString::fromStdString(row->second[found->second]).toDouble(&ok);
+                if (ok) {
+                    value.value = read;
+                }
+            }
+            if (const auto found = column.find(value.unique_name + ".uncertainty"); found != column.end()) {
+                const double read = QString::fromStdString(row->second[found->second]).toDouble(&ok);
+                value.uncertainty = ok ? std::optional<double>(read) : std::nullopt;
+            }
+        }
+    }
+    edi::Project& project = *project_;
+    edi::PdDataBase data;
+    try {
+        data = edi::read_scan_dataset(scan_datasets_.directory, file, project.experiment().effective_beam_mode());
+        if (row == scan_results_.rows.end() && !scan_extracted_.contains(name)) {
+            QStringList extracted;
+            for (const std::string& value : edi::scan_extract_values(project, scan_datasets_.directory, file)) {
+                extracted.append(QString::fromStdString(value));
+            }
+            scan_extracted_.insert(name, extracted);
+        }
+    } catch (const std::exception& refusal) {
+        const QString error = QString::fromUtf8(refusal.what());
+        setLastError(error);
+        emit refused(error);
+        return;
+    }
+    // Showing a dataset is not an edit: the project's modified state stays as it was.
+    const bool modified = modified_;
+    applying_view_ = true;
+    const QString error =
+        apply(edi::Edit::scan_view(project, project.experiment(), std::move(values), std::move(data)), false);
+    applying_view_ = false;
+    setModified(modified);
+    if (!error.isEmpty()) {
+        emit refused(error);
+        return;
+    }
+    current_dataset_ = index;
+    syncDatasets();
+    publishCurrent();
+}
+
 void ProjectViewModel::noteAddedExperiments(std::size_t before) {
     AddedExperiments added;
     for (std::size_t i = before; i < project_->experiments.size(); ++i) {
@@ -441,6 +600,11 @@ QString ProjectViewModel::apply(const edi::Edit& change, bool structural) {
         const QString message = tr("The project cannot be edited while a fit is running");
         setLastError(message);
         return message;
+    }
+    // An edit while a scan dataset is shown makes the shown state the template, seeded from that dataset
+    // (edi ADR-0017 §19): the next dataset view starts from it.
+    if (!applying_view_) {
+        scan_template_.reset();
     }
     pending_structural_ = structural;
     try {
@@ -546,7 +710,7 @@ void ProjectViewModel::publish(bool structural) {
         experiment->sync();
     }
     structure_list_->setStructures(structure_models_);
-    experiment_list_->setExperiments(experiment_models_, *project_);
+    syncDatasets();
     analysis_->sync();
     syncParameterTable(false);  // the report is refreshed below, once everything it reads is published
     publishMetadata();
@@ -660,7 +824,7 @@ void ProjectViewModel::syncBlocks() {
         experiment_models_ = next;
     }
     structure_list_->setStructures(structure_models_);
-    experiment_list_->setExperiments(experiment_models_, *project_);
+    syncDatasets();
     const int structures = static_cast<int>(structure_models_.size());
     const int experiments = static_cast<int>(experiment_models_.size());
     if (current_structure_ >= structures) {

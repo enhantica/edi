@@ -29,6 +29,7 @@ QtObject {
     readonly property real dataIndexColumnWidth: unit * 3.5   // a data table's row number (up to 5 digits)
     readonly property real dataColumnWidth: unit * 6          // a data table's value column
     readonly property real fileColumnWidth: unit * 7          // an explorer table's file column
+    readonly property real datasetFileColumnWidth: unit * 11  // a scan's data file name (01_101_101p9130.dat)
     readonly property real descriptionNameColumnWidth: unit * 10
     readonly property real descriptionInnerSpacing: unit * 0.85
     readonly property real descriptionOuterSpacing: unit * 1.5

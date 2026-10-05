@@ -21,6 +21,15 @@ EaElements.GroupBox {
     id: group
 
     property ProjectViewModel project: null
+    // A scan project lists its datasets: No. · Fit · Datablock · File · one column per extract rule, with no
+    // colour column and no remove button (one template experiment shows them all).
+    readonly property bool scan: project !== null && project.scan
+    // The table lays a row's cells out by their place among the header's, so the value columns are fixed
+    // cells, two at most, a column with no rule having no width.
+    readonly property var scanColumns: project ? project.scanColumns : []
+    function valueWidth(column) {
+        return column < group.scanColumns.length ? AppSizes.dataColumnWidth * 1.4 : 0;
+    }
 
     objectName: "group.experiments"
     title: qsTr("Experiments (%1)").arg(project ? project.experiments.count : 0)
@@ -44,7 +53,7 @@ EaElements.GroupBox {
                     text: qsTr("No.")
                 }
                 EaComponents.TableViewLabel {
-                    width: EaStyle.Sizes.tableRowHeight
+                    width: group.scan ? 0 : EaStyle.Sizes.tableRowHeight
                 }
                 EaComponents.TableViewLabel {
                     width: EaStyle.Sizes.tableRowHeight
@@ -56,12 +65,20 @@ EaElements.GroupBox {
                     text: qsTr("Datablock")
                 }
                 EaComponents.TableViewLabel {
-                    width: AppSizes.fileColumnWidth
+                    width: group.scan ? AppSizes.datasetFileColumnWidth : AppSizes.fileColumnWidth
                     horizontalAlignment: Text.AlignLeft
                     text: qsTr("File")
                 }
                 EaComponents.TableViewLabel {
-                    width: AppSizes.iconColumnWidth
+                    width: group.valueWidth(0)
+                    text: group.scanColumns.length > 0 ? group.scanColumns[0] : ""
+                }
+                EaComponents.TableViewLabel {
+                    width: group.valueWidth(1)
+                    text: group.scanColumns.length > 1 ? group.scanColumns[1] : ""
+                }
+                EaComponents.TableViewLabel {
+                    width: group.scan ? 0 : AppSizes.iconColumnWidth
                 }
             }
 
@@ -72,6 +89,8 @@ EaElements.GroupBox {
                 required property string name
                 required property ExperimentViewModel experiment
                 required property string fitOutcome
+                required property string file
+                required property var extracted
 
                 objectName: `experiments.row.${index}`
                 color: group.project && group.project.currentExperimentIndex === index ? EaStyle.Colors.tableHighlight : (index % 2 ? EaStyle.Colors.themeBackgroundHovered2 : EaStyle.Colors.themeBackgroundHovered1)
@@ -85,6 +104,8 @@ EaElements.GroupBox {
                 // The block's icon in its colour (easydiffractionbeta's colour column; ADR-0017 §8).
                 IconCell {
                     objectName: `experiments.color.${row.index}`
+                    visible: !group.scan
+                    width: group.scan ? 0 : EaStyle.Sizes.tableRowHeight
                     icon: "microscope"
                     iconColor: AppColors.experiment(row.index)
                     toolTip: qsTr("Measured pattern color")
@@ -107,29 +128,41 @@ EaElements.GroupBox {
                         group.project.currentExperimentIndex = row.index
                     onCommitted: text => row.experiment.name = text
                 }
-                // The data's file: the experiment's own `.edi`, which holds its data; Load data… without data.
+                // The data's file: the experiment's own `.edi`, which holds its data, or a scan dataset's data file;
+                // Load data… without data.
                 Item {
-                    width: AppSizes.fileColumnWidth
+                    width: group.scan ? AppSizes.datasetFileColumnWidth : AppSizes.fileColumnWidth
                     height: parent ? parent.height : 0
 
                     EaComponents.TableViewLabel {
-                        visible: row.experiment !== null && !row.experiment.calculationOnly
+                        visible: group.scan || (row.experiment !== null && !row.experiment.calculationOnly)
                         width: parent.width
                         horizontalAlignment: Text.AlignLeft
                         elide: Text.ElideMiddle
-                        text: `${row.name}.edi`
+                        text: row.file
                     }
                     EaElements.Button {
                         objectName: `experiments.loadData.${row.index}`
-                        visible: row.experiment !== null && row.experiment.calculationOnly
+                        visible: !group.scan && row.experiment !== null && row.experiment.calculationOnly
                         anchors.verticalCenter: parent.verticalCenter
                         width: parent.width
                         enabled: false
                         text: qsTr("Load data…")
                     }
                 }
+                // What the scan's extract rules take from the dataset, with their units.
+                EaComponents.TableViewLabel {
+                    width: group.valueWidth(0)
+                    text: row.extracted && row.extracted.length > 0 ? row.extracted[0] : ""
+                }
+                EaComponents.TableViewLabel {
+                    width: group.valueWidth(1)
+                    text: row.extracted && row.extracted.length > 1 ? row.extracted[1] : ""
+                }
                 EaComponents.TableViewButton {
                     objectName: `experiments.remove.${row.index}`
+                    visible: !group.scan
+                    width: group.scan ? 0 : AppSizes.iconColumnWidth
                     fontIcon: "minus-circle"
                     ToolTip.text: qsTr("Remove this experiment")
                     onClicked: group.project.removeExperiment(row.index)

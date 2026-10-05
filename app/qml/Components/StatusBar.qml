@@ -97,7 +97,7 @@ EaElements.StatusBar {
         keyIcon: "microscope"
         keyText: qsTr("Experiments")
         valueText: bar.project ? bar.project.experiments.count : ""
-        ToolTip.text: qsTr("Number of experiments")
+        ToolTip.text: bar.project && bar.project.scan ? qsTr("1 template experiment, %1 datasets").arg(bar.project.experiments.count) : qsTr("Number of experiments")
     }
     StatusBarItem {
         id: calculatorItem
