@@ -126,6 +126,18 @@ TestCase {
         tryVerify(() => !project.calculating, 10000, "The preserved relation Undo must settle");
         compare(RelationUndoObserver.state(project), before, "Undo after a refused fit must restore the original relation state");
     }
+    function test_prior_fit_undo_control() {
+        const project = Session.project;
+        verify(RelationUndoObserver.prepareFit(project), "The control needs an independent fit parameter");
+        const before = RelationUndoObserver.state(project);
+        project.fit.start();
+        verify(project.fit.running, "The successful undo control must start a real fit");
+        tryVerify(() => !project.fit.running, 10000, "The control fit must finish");
+        verify(project.canUndo, "A successful fit must offer Undo");
+        project.undo();
+        tryVerify(() => !project.calculating, 10000, "The successful fit Undo must settle");
+        compare(RelationUndoObserver.state(project), before, "Successful fit Undo restores the independently captured start state");
+    }
     function test_refused_fit_keeps_previous_fit_record() {
         const project = Session.project;
         verify(RelationUndoObserver.prepareFit(project), "The fit history control needs an independent parameter");
