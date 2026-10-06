@@ -108,9 +108,8 @@ Column {
             SearchableComboBox {
                 objectName: `atomSite.typeSymbol.${row.index}`
                 width: group.typeWidth
-                height: EaStyle.Sizes.tableRowHeight
-                topInset: 0
-                bottomInset: 0
+                inTable: true
+                anchors.verticalCenter: parent.verticalCenter
                 searchThreshold: 0
                 model: ApplicationInfo.elementSymbols
                 currentIndex: ApplicationInfo.elementSymbols.indexOf(row.typeSymbol)

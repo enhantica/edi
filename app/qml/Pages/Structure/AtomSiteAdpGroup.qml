@@ -103,9 +103,8 @@ Column {
             SearchableComboBox {
                 objectName: `atomSiteAdp.type.${row.index}`
                 width: group.typeWidth
-                height: EaStyle.Sizes.tableRowHeight
-                topInset: 0
-                bottomInset: 0
+                inTable: true
+                anchors.verticalCenter: parent.verticalCenter
                 model: group.adps ? group.adps.types : []
                 currentIndex: group.adps ? group.adps.types.indexOf(row.adpType) : -1
                 onActivated: index => {
