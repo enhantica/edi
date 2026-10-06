@@ -42,7 +42,10 @@ folders the pages read**, keyed by edi folder. Those folders' occupancies alread
 convention, so their FullProf files are the upstream bytes (`y2o3.dat` renamed to its `.pcr` stem)
 except Y2O3's regenerated `.sum`; each folder's `PROVENANCE.md` is the only file added. The LBCO
 preferred-orientation folder is copied at `0d9f10e4`, whose `.prf`/`.sum` are a later FullProf 8.40 run
-of the same inputs than the corpus pin carries (its own `PROVENANCE.md`).
+of the same inputs than the corpus pin carries (its own `PROVENANCE.md`). The Y2O3 beta-ADP folder
+(`pd-neut-cwl_y2o3_beta-adp`, the anisotropic reference of the page `pd-neut-cwl_Y2O3_beta-adp`) is copied at
+`0d9f10e4` too, every file the upstream bytes, written by FullProf 7.95 (its own `PROVENANCE.md` records how a
+FullProf 8.40 replay compares).
 
 License: the diffraction-lib-derived folders originate in the diffraction-lib repository
 (BSD-3-Clause); see `tests/fixtures/diffraction-lib-LICENSE`.

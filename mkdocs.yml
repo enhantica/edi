@@ -77,6 +77,7 @@ nav:
           - dev/verification/pd-neut-cwl_PbSO4_basic.ipynb
           - dev/verification/pd-neut-cwl_PbSO4_beba-asymmetry.ipynb
           - dev/verification/pd-neut-cwl_Y2O3_isotropic-adp.ipynb
+          - dev/verification/pd-neut-cwl_Y2O3_beta-adp.ipynb
           - dev/verification/pd-neut-cwl_cosio-d20_biso-tied.ipynb
           - dev/verification/pd-neut-tof_Fe_pseudo-voigt.ipynb
           - dev/verification/pd-neut-tof_ferrite-austenite_beer_joint.ipynb
@@ -113,6 +114,7 @@ nav:
           - user/cli/pd-neut-tof_ceo2-pearl_polynomial/index.md
           - user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/index.md
           - user/cli/pd-xray-cwl_lif_single/index.md
+          - user/cli/pd-neut-cwl_y2o3_beta-adp/index.md
       - Guides:
           - user/guides/complete-project-loading.md
       - Tutorials:
