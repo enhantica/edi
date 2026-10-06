@@ -79,10 +79,11 @@ class ApplicationInfo : public QObject {
     // EasyDiffraction project's first year to the current release's.
     QString developerYearsFrom() const { return QStringLiteral("2019"); }
     QString developerYearsTo() const { return QStringLiteral("2026"); }
-    // ADR-0017 §8, ADR-0022 §4: an element's colour from a type symbol — the core table's Jmol colour of
-    // edi::element_of(typeSymbol) — or `fallback` for an element the table does not have. The app holds no
-    // element colour of its own.
-    Q_INVOKABLE QColor elementColor(const QString& typeSymbol, const QColor& fallback) const;
+    // ADR-0017 §8, ADR-0022 §4: an element's colour from a type symbol — the core table's colour of
+    // edi::element_of(typeSymbol) in `scheme` ("jmol" or "vesta", the structure view's) — or `fallback` for an
+    // element the table does not have. The app holds no element colour of its own.
+    Q_INVOKABLE QColor elementColor(const QString& typeSymbol, const QColor& fallback,
+                                    const QString& scheme = QStringLiteral("jmol")) const;
 };
 
 #endif  // EDI_APP_APP_INFO_HPP

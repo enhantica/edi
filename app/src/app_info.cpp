@@ -79,8 +79,8 @@ QStringList ApplicationInfo::componentColumn(int column) {
     return values;
 }
 
-QColor ApplicationInfo::elementColor(const QString& typeSymbol, const QColor& fallback) const {
-    const edi::ElementColor found =
-        edi::element_color(edi::element_of(typeSymbol.toStdString()), edi::ColorScheme::Jmol);
+QColor ApplicationInfo::elementColor(const QString& typeSymbol, const QColor& fallback, const QString& scheme) const {
+    const edi::ColorScheme colors = scheme == QLatin1String("vesta") ? edi::ColorScheme::Vesta : edi::ColorScheme::Jmol;
+    const edi::ElementColor found = edi::element_color(edi::element_of(typeSymbol.toStdString()), colors);
     return found.known ? QColor(found.color.r, found.color.g, found.color.b) : fallback;
 }
