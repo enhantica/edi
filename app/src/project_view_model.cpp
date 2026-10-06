@@ -542,13 +542,14 @@ void ProjectViewModel::viewDataset(int index) {
         }
         for (edi::Edit::ScanValue& value : values) {
             bool ok = false;
-            if (const auto found = column.find(value.unique_name); found != column.end()) {
+            const std::string name = edi::scan_results_column(value.unique_name);
+            if (const auto found = column.find(name); found != column.end()) {
                 const double read = QString::fromStdString(row->second[found->second]).toDouble(&ok);
                 if (ok) {
                     value.value = read;
                 }
             }
-            if (const auto found = column.find(value.unique_name + ".uncertainty"); found != column.end()) {
+            if (const auto found = column.find(name + ".uncertainty"); found != column.end()) {
                 const double read = QString::fromStdString(row->second[found->second]).toDouble(&ok);
                 value.uncertainty = ok ? std::optional<double>(read) : std::nullopt;
             }

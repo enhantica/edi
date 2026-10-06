@@ -1000,6 +1000,21 @@ void set_scan_template_file(Project& project, const std::string& file) {
     project.sequential_fit.template_file = file;
 }
 
+std::string scan_results_column(const std::string& unique_name) {
+    const std::string category = ".instrument.";
+    const std::size_t at = unique_name.find(category);
+    if (at == std::string::npos) {
+        return unique_name;
+    }
+    const std::size_t field = at + category.size();
+    for (const std::string prefix : {"calib_", "setup_"}) {
+        if (unique_name.compare(field, prefix.size(), prefix) == 0) {
+            return unique_name.substr(0, field) + unique_name.substr(field + prefix.size());
+        }
+    }
+    return unique_name;
+}
+
 std::string scan_target_unit(const std::string& target) {
     return target == "diffrn.ambient_temperature" ? std::string("K") : std::string();
 }

@@ -49,6 +49,10 @@ void check_scan_template_file(const Project& project, const std::string& file);
 /// it, and `_sequential_fit.template_file` names it. No parameter changes; a refusal changes nothing.
 void set_scan_template_file(Project& project, const std::string& file);
 
+/// The `analysis/results.csv` column of a parameter's unique name: the same name, except that an instrument
+/// parameter drops its `calib_` or `setup_` prefix, as diffraction-lib's results name it (`d20.instrument.twotheta_offset`).
+std::string scan_results_column(const std::string& unique_name);
+
 /// The unit of an extract rule's target, as a column heading shows it (`K` for a temperature), or empty.
 std::string scan_target_unit(const std::string& target);
 

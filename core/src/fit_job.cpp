@@ -133,7 +133,7 @@ FitFrame scan_frame_of(Project& preview, const std::string& directory, const std
             column.emplace(last.header[i], i);
         }
         for (const NamedSlot& slot : named_slots(preview)) {
-            const auto found = column.find(slot.unique_name);
+            const auto found = column.find(scan_results_column(slot.unique_name));
             if (found != column.end()) {
                 slot.parameter->value = std::stod(row->second[found->second]);
             }
