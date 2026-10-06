@@ -2,6 +2,13 @@
 var frozen = {
   "source": "diffraction-lib 0ffba46f declarations +  §2b D-a..D-j + CLI files",
   "profiles": {
+    "cwl-pseudo-voigt": [
+      "broad_gauss_u",
+      "broad_gauss_v",
+      "broad_gauss_w",
+      "mixing_eta_0",
+      "mixing_eta_1"
+    ],
     "cwl-tch-pseudo-voigt": [
       "broad_gauss_u",
       "broad_gauss_v",
@@ -963,6 +970,118 @@ var frozen = {
         "structures/cosio.edi": "1b3afde2d3a8184d6cb9789fa3fc8fa5dd026756a51e44a2cca6b80b9df8103a",
         "experiments/d20.edi": "0c97d871957341359beee76e7029f77d1bf0ed4eb8e4709733fe794fe3516a1c",
         "analysis/analysis.edi": "fde9a40134aaf6794cde3e396a01067e1018d78871c394d4646c95052416f726"
+      }
+    },
+    {
+      "id": "pd-neut-cwl_cosio-d20_scan-162f",
+      "path": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project",
+      "metadata": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_metadata.name": "cosio_d20_scan_162f",
+        "_metadata.title": "Co2SiO4 D20 cooling scan, 162 files",
+        "_metadata.description": "The cooling run of the D20 scan, 497.4 K down to 50.4 K",
+        "_metadata.created": "09 Sep 2026 07:33:40",
+        "_metadata.last_modified": "23 Sep 2026 14:06:27",
+        "_metadata.timestamp": "2026-09-09T07:34:35+00:00",
+        "_rendering_plot.type": "auto",
+        "_report.cif": "false",
+        "_report.html": "true",
+        "_report.tex": "false",
+        "_report.pdf": "false",
+        "_report.html_offline": "false",
+        "_rendering_table.type": "auto",
+        "_rendering_structure.type": "auto",
+        "_structure_view.show_labels": "false",
+        "_structure_view.show_moments": "true",
+        "_structure_view.range_a_min": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_structure_view.range_a_max": {
+          "value": 1.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_structure_view.range_b_min": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_structure_view.range_b_max": {
+          "value": 1.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_structure_view.range_c_min": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_structure_view.range_c_max": {
+          "value": 1.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_structure_style.atom_view": "adp",
+        "_structure_style.color_scheme": "jmol",
+        "_structure_style.adp_probability": {
+          "value": 0.99,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_structure_style.atom_scale": {
+          "value": 0.3,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_verbosity.fit": "short"
+      },
+      "analysis": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_fitting_mode.type": "sequential",
+        "_minimizer.max_iterations": {
+          "value": 1000.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_sequential_fit.data_dir": "experiments/d20_scan",
+        "_sequential_fit.file_pattern": "*.dat",
+        "_sequential_fit.reverse": "false"
+      },
+      "structures": [
+        {
+          "name": "cosio",
+          "atoms": 6,
+          "cellA": 10.335842071204308,
+          "spaceGroup": "P n m a",
+          "cell": [
+            10.335842071204308,
+            6.029694577103228,
+            4.797569862624058,
+            90.0,
+            90.0,
+            90.0
+          ]
+        }
+      ],
+      "experiments": [
+        "d20"
+      ],
+      "loaderWarning": "",
+      "files": {
+        "project.edi": "873fda837296755c4b0586a54c1b3a838044393f2136bb45e3f69a6e7b3d5bdf",
+        "structures/cosio.edi": "4538c66b979d5783c2c3b5ba8c06494a54efeea3fc83c5488e89d5a10c0bb899",
+        "experiments/d20.edi": "7053aa291373fc6df17e3d2ced5008a098ef314f65e06a1204f6d0ecbb1ae518",
+        "analysis/analysis.edi": "b732d6abb6017d11a7f25d30349975e45b2ba72a25cf13f8c702376ea4d6bbf9"
       }
     },
     {
@@ -2120,6 +2239,88 @@ var frozen = {
     }
   ],
   "corpus": [
+    {
+      "project": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project",
+      "experiment": "d20",
+      "sha256": "7053aa291373fc6df17e3d2ced5008a098ef314f65e06a1204f6d0ecbb1ae518",
+      "peakType": "cwl-pseudo-voigt",
+      "mode": "cwl",
+      "peakFields": [
+        "broad_gauss_u",
+        "broad_gauss_v",
+        "broad_gauss_w",
+        "mixing_eta_0",
+        "mixing_eta_1"
+      ],
+      "unusedFreeFields": [
+        "broad_lorentz_y"
+      ],
+      "instrumentFields": [
+        "setup_wavelength",
+        "calib_twotheta_offset"
+      ],
+      "range": [
+        0.0953,
+        150.8953,
+        0.10013280212483398,
+        1507
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.beam_mode": "constant wavelength",
+        "_experiment_type.radiation_probe": "neutron",
+        "_experiment_type.scattering_type": "bragg",
+        "_peak.broad_gauss_u": {
+          "value": 0.23091065335098124,
+          "free": true,
+          "uncertainty": 0.00783695876908295
+        },
+        "_peak.broad_gauss_v": {
+          "value": -0.5140245672916492,
+          "free": true,
+          "uncertainty": 0.01687653105597828
+        },
+        "_peak.broad_gauss_w": {
+          "value": 0.37261626098763034,
+          "free": true,
+          "uncertainty": 0.010527576747697052
+        },
+        "_peak.broad_lorentz_x": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_y": {
+          "value": 0.012941642271138643,
+          "free": true,
+          "uncertainty": 0.005158706509940048
+        },
+        "_peak.cutoff_fwhm": {
+          "value": 8.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.type": "cwl-pseudo-voigt",
+        "_instrument.setup_wavelength": {
+          "value": 1.87,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_twotheta_offset": {
+          "value": 0.2900788119975914,
+          "free": true,
+          "uncertainty": 0.0022671137191298996
+        },
+        "_absorption.type": "none",
+        "_background.type": "line-segment"
+      },
+      "loops": {}
+    },
     {
       "project": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project",
       "experiment": "d20",

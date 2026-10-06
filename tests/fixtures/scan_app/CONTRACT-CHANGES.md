@@ -45,6 +45,13 @@ restart of completed fits.
 
 | Completed Follow observation | The added pending-start case expected the busy-only Following flag to remain true at completion. | At completion Follow is inactive; preserve the latest followed dataset selection and its independent displayed payload hash instead of confusing an idle control with the completed data outcome. |
 
+| Simulation Save As | The loader accepted a declared calculation-only range, but Save As had to refuse. | Save As and reopen preserve every declared min/max/step, regenerate the independent axis and retain absent measured columns; the immutable historical compatibility archive remains unchanged. |
+| Completed resume on Python and CLI | Even newly produced failed results reported an unavailable cause. | Recover each recorded cause by terminal dataset identity with reordered results/provenance and a changed bound; results without legacy provenance still report unknown. The independent column and terminal metric checks remain. |
+| Registered example input oracles | Frozen project and display cases covered the older registry. | Regenerate both through the visible text-only generators, covering every registry entry in order, including the cooling and full scan examples, with input hashes and every read-only display family. |
+| Example image inventory | The older registry defined the required exact example image set. | Keep exact coverage of the expanded registry and mapped captures; report the missing or unexpected filenames explicitly. A missing cooling-run capture remains a coverage failure. |
+| App scientific observers | Direct access to the project structure field failed against the current SDK. | The main integration supplies the public structure accessor and walks the declared structure collection; compile all three affected observer translation units against the merged SDK. |
+| Example profile generator | The text-only generator recognized the previous constant-wavelength profile family. | Include the new pseudo-Voigt examples with the independent Caglioti and mixing declarations, so regenerating the complete registry also works after the profile-family integration. |
+
 New observers have live disconnected, constant or wrong-state controls. Reset and Continue still
 use the actual app/core/worker; optimizer entries bind the fitted file and measured payload.
 The scale actor remains unthrottled and its bounds remain unchanged.

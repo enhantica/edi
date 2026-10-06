@@ -37,6 +37,8 @@ B2B = ['rise_alpha_0', 'rise_alpha_1', 'decay_beta_0', 'decay_beta_1']
 FCJ = ['asym_fcj_1', 'asym_fcj_2']
 BEBA = ['asym_beba_a0', 'asym_beba_b0', 'asym_beba_a1', 'asym_beba_b1', 'asym_beba_limit']
 PROFILES = {
+    # FullProf Npr 5: Caglioti U/V/W and eta0 + eta1 * two-theta.
+    'cwl-pseudo-voigt': CW[:3] + ['mixing_eta_0', 'mixing_eta_1'],
     'cwl-tch-pseudo-voigt': CW,
     'cwl-tch-pseudo-voigt-fcj': CW + FCJ,
     'cwl-pseudo-voigt-berar-baldinozzi': CW[:3] + ['mixing_eta_0', 'mixing_eta_1'] + BEBA,

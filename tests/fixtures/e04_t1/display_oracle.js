@@ -10,6 +10,9 @@ var frozen = {
     "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project/structures/cosio.edi": "1b3afde2d3a8184d6cb9789fa3fc8fa5dd026756a51e44a2cca6b80b9df8103a",
     "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project/experiments/d20.edi": "0c97d871957341359beee76e7029f77d1bf0ed4eb8e4709733fe794fe3516a1c",
     "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project/analysis/analysis.edi": "fde9a40134aaf6794cde3e396a01067e1018d78871c394d4646c95052416f726",
+    "docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project/structures/cosio.edi": "4538c66b979d5783c2c3b5ba8c06494a54efeea3fc83c5488e89d5a10c0bb899",
+    "docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project/experiments/d20.edi": "7053aa291373fc6df17e3d2ced5008a098ef314f65e06a1204f6d0ecbb1ae518",
+    "docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project/analysis/analysis.edi": "b732d6abb6017d11a7f25d30349975e45b2ba72a25cf13f8c702376ea4d6bbf9",
     "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/structures/cosio.edi": "4538c66b979d5783c2c3b5ba8c06494a54efeea3fc83c5488e89d5a10c0bb899",
     "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/experiments/d20.edi": "53ba4c8c28755334c633f23040fa411149d66294dc102862918ff461b09eca73",
     "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/analysis/analysis.edi": "b732d6abb6017d11a7f25d30349975e45b2ba72a25cf13f8c702376ea4d6bbf9",
@@ -430,6 +433,141 @@ var frozen = {
     {
       "tag": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project:engines",
       "path": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project",
+      "page": "analysis",
+      "tier": "extras",
+      "group": "engines",
+      "selection": null,
+      "fields": [
+        [
+          "statusBar.calculator",
+          "crysta",
+          "label"
+        ],
+        [
+          "statusBar.minimizer",
+          "crysta",
+          "label"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project:space_group:cosio",
+      "path": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project",
+      "page": "structure",
+      "tier": "basic",
+      "group": "space_group",
+      "selection": "cosio",
+      "fields": [
+        [
+          "spaceGroup.crystalSystem",
+          "orthorhombic",
+          "readonly"
+        ],
+        [
+          "spaceGroup.itNumber",
+          "62",
+          "text"
+        ],
+        [
+          "spaceGroup.nameHM",
+          "P n m a",
+          "text"
+        ],
+        [
+          "spaceGroup.coordSystemCode",
+          "abc",
+          "text"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project:experiment_type:d20",
+      "path": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "experiment_type",
+      "selection": "d20",
+      "fields": [
+        [
+          "experimentType.sampleForm",
+          "powder",
+          "disabled"
+        ],
+        [
+          "experimentType.beamMode",
+          "constant wavelength",
+          "disabled"
+        ],
+        [
+          "experimentType.radiationProbe",
+          "neutron",
+          "disabled"
+        ],
+        [
+          "experimentType.scatteringType",
+          "bragg",
+          "disabled"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project:data:d20",
+      "path": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project",
+      "page": "experiment",
+      "tier": "extras",
+      "group": "data",
+      "selection": "d20",
+      "fields": [
+        [
+          "range.minimum",
+          0.0953,
+          "number"
+        ],
+        [
+          "range.maximum",
+          150.8953,
+          "number"
+        ],
+        [
+          "range.step",
+          "0.1\u20130.2",
+          "readonly"
+        ],
+        [
+          "range.points",
+          1507,
+          "number"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project:sequential_fit",
+      "path": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project",
+      "page": "analysis",
+      "tier": "extras",
+      "group": "sequential_fit",
+      "selection": null,
+      "fields": [
+        [
+          "sequentialFit.dataDir",
+          "experiments/d20_scan",
+          "readonly"
+        ],
+        [
+          "sequentialFit.filePattern",
+          "*.dat",
+          "readonly"
+        ],
+        [
+          "sequentialFit.reverse",
+          "false",
+          "readonly"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project:engines",
+      "path": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project",
       "page": "analysis",
       "tier": "extras",
       "group": "engines",
