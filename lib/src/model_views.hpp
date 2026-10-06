@@ -40,6 +40,7 @@ struct PeakNode {
                                         "', but the experiment's peak type is '" + current +
                                         "'; read experiment.peak again");
         }
+        edi::canonicalize_peak_specs(experiment->peak);  // every handle carries its slot's metadata
         return experiment->peak;
     }
     std::vector<edi::Parameter*> parameters() const { return storage().parameters(); }

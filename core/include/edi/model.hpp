@@ -4702,7 +4702,7 @@ namespace detail {
 inline std::vector<Parameter*> free_of(std::vector<Parameter*> all) {
     std::vector<Parameter*> free;
     for (Parameter* parameter : all) {
-        if (parameter->free && !is_fixed_setting(parameter->spec)) {
+        if (parameter->free) {
             free.push_back(parameter);
         }
     }
@@ -4834,49 +4834,79 @@ inline std::string effective_peak_type(const ExperimentBase& experiment) {
                                                                               : "tof-jorgensen");
 }
 
+namespace detail {
+// The constant-wavelength peak slots: each field, the metadata its parameter carries, and its tag.
+struct CwlPeakSlot {
+    OptionalParameter PeakBase::* field;
+    const ParameterSpec* spec;
+    const char* tag;
+};
+inline const std::array<CwlPeakSlot, 14>& cwl_peak_slots() {
+    static const std::array<CwlPeakSlot, 14> slots_table{{
+        {&PeakBase::broad_gauss_u, &spec::peak_broad_gauss_u, "_peak.broad_gauss_u"},
+        {&PeakBase::broad_gauss_v, &spec::peak_broad_gauss_v, "_peak.broad_gauss_v"},
+        {&PeakBase::broad_gauss_w, &spec::peak_broad_gauss_w, "_peak.broad_gauss_w"},
+        {&PeakBase::broad_lorentz_x, &spec::peak_broad_lorentz_x, "_peak.broad_lorentz_x"},
+        {&PeakBase::broad_lorentz_y, &spec::peak_broad_lorentz_y, "_peak.broad_lorentz_y"},
+        {&PeakBase::mixing_eta_0, &spec::peak_mixing_eta_0, "_peak.mixing_eta_0"},
+        {&PeakBase::mixing_eta_1, &spec::peak_mixing_eta_1, "_peak.mixing_eta_1"},
+        {&PeakBase::asym_fcj_1, &spec::peak_asym_fcj_1, "_peak.asym_fcj_1"},
+        {&PeakBase::asym_fcj_2, &spec::peak_asym_fcj_2, "_peak.asym_fcj_2"},
+        {&PeakBase::asym_beba_a0, &spec::peak_asym_beba_a0, "_peak.asym_beba_a0"},
+        {&PeakBase::asym_beba_b0, &spec::peak_asym_beba_b0, "_peak.asym_beba_b0"},
+        {&PeakBase::asym_beba_a1, &spec::peak_asym_beba_a1, "_peak.asym_beba_a1"},
+        {&PeakBase::asym_beba_b1, &spec::peak_asym_beba_b1, "_peak.asym_beba_b1"},
+        {&PeakBase::asym_beba_limit, &spec::peak_asym_beba_limit, "_peak.asym_beba_limit"},
+    }};
+    return slots_table;
+}
+}  // namespace detail
+
+// A peak slot's metadata is the slot's own: a parameter without any takes it, so every handle to the
+// slot classes it as the slot is (the limit angle fixed, a coefficient refinable). One carrying
+// another slot's metadata is refused by peak_slots_mismatch.
+inline void canonicalize_peak_specs(PeakBase& peak) {
+    for (const detail::CwlPeakSlot& slot : detail::cwl_peak_slots()) {
+        OptionalParameter& field = peak.*slot.field;
+        if (field.has_value() && field->spec == nullptr) {
+            field->spec = slot.spec;
+        }
+    }
+}
+
 // The constant-wavelength token/slot rule: an experiment holds no peak slot its declared profile
 // does not carry, and every one the profile requires (U, V, W, and X, Y on the TCH pair). A carried
-// optional slot (the mixing and the asymmetry) may be absent and reads as its default. Empty when the
-// block fits, else what is wrong. The conversion for calculation, fitting and saving and the free walks
-// refuse a block that does not, so no slot is dropped or read as another profile's.
+// optional slot (the mixing and the asymmetry) may be absent and reads as its default. A slot's
+// parameter carries no other slot's metadata. Empty when the block fits, else what is wrong. The
+// conversion for calculation, fitting and saving and the free walks refuse a block that does not, so
+// no slot is dropped, read as another profile's, or classed by another slot's metadata.
 inline std::string peak_slots_mismatch(const ExperimentBase& experiment) {
     if (experiment.effective_beam_mode() != BeamModeEnum::CONSTANT_WAVELENGTH) {
         return {};
     }
     const std::string declared = effective_peak_type(experiment);
     const CwlProfileSlots profile = cwl_profile_slots(declared);
-    const PeakBase& peak = experiment.peak;
-    struct Slot {
-        const OptionalParameter* field;
-        bool carried;
-        bool required;
-        const char* tag;
-    };
-    const Slot all[] = {
-        {&peak.broad_gauss_u, true, true, "_peak.broad_gauss_u"},
-        {&peak.broad_gauss_v, true, true, "_peak.broad_gauss_v"},
-        {&peak.broad_gauss_w, true, true, "_peak.broad_gauss_w"},
-        {&peak.broad_lorentz_x, profile.lorentz_xy, profile.lorentz_xy, "_peak.broad_lorentz_x"},
-        {&peak.broad_lorentz_y, profile.lorentz_xy, profile.lorentz_xy, "_peak.broad_lorentz_y"},
-        {&peak.mixing_eta_0, profile.mixing_eta, false, "_peak.mixing_eta_0"},
-        {&peak.mixing_eta_1, profile.mixing_eta, false, "_peak.mixing_eta_1"},
-        {&peak.asym_fcj_1, profile.fcj, false, "_peak.asym_fcj_1"},
-        {&peak.asym_fcj_2, profile.fcj, false, "_peak.asym_fcj_2"},
-        {&peak.asym_beba_a0, profile.beba, false, "_peak.asym_beba_a0"},
-        {&peak.asym_beba_b0, profile.beba, false, "_peak.asym_beba_b0"},
-        {&peak.asym_beba_a1, profile.beba, false, "_peak.asym_beba_a1"},
-        {&peak.asym_beba_b1, profile.beba, false, "_peak.asym_beba_b1"},
-        {&peak.asym_beba_limit, profile.beba, false, "_peak.asym_beba_limit"},
-    };
-    for (const Slot& slot : all) {
-        if (slot.field->has_value() && !slot.carried) {
-            return "experiment '" + experiment.name.value() + "': " + slot.tag +
-                   " is not a parameter of _peak.type '" + declared +
+    const std::string where = "experiment '" + experiment.name.value() + "': ";
+    for (const detail::CwlPeakSlot& slot : detail::cwl_peak_slots()) {
+        const OptionalParameter& field = experiment.peak.*slot.field;
+        const std::string tag = slot.tag;
+        const bool lorentz = tag == "_peak.broad_lorentz_x" || tag == "_peak.broad_lorentz_y";
+        const bool carried = tag.rfind("_peak.broad_gauss_", 0) == 0 ? true
+                             : lorentz                                  ? profile.lorentz_xy
+                             : tag.rfind("_peak.mixing_eta_", 0) == 0   ? profile.mixing_eta
+                             : tag.rfind("_peak.asym_fcj_", 0) == 0     ? profile.fcj
+                                                                        : profile.beba;
+        const bool required = tag.rfind("_peak.broad_gauss_", 0) == 0 || (lorentz && profile.lorentz_xy);
+        if (field.has_value() && !carried) {
+            return where + tag + " is not a parameter of _peak.type '" + declared +
                    "': each profile carries only its own parameters";
         }
-        if (!slot.field->has_value() && slot.required) {
-            return "experiment '" + experiment.name.value() + "': _peak.type '" + declared + "' requires " +
-                   slot.tag;
+        if (!field.has_value() && required) {
+            return where + "_peak.type '" + declared + "' requires " + tag;
+        }
+        if (field.has_value() && field->spec != nullptr && field->spec != slot.spec) {
+            return where + "the parameter in " + tag + " carries the metadata of '" + field->spec->name +
+                   "', another parameter";
         }
     }
     return {};
@@ -4887,8 +4917,14 @@ inline void require_peak_slots_fit_type(const ExperimentBase& experiment) {
     }
 }
 inline std::vector<Parameter*> ExperimentBase::free_parameters() {
+    canonicalize_peak_specs(peak);
     require_peak_slots_fit_type(*this);
-    return detail::free_of(parameters());
+    std::vector<Parameter*> out = detail::free_of(parameters());
+    // The limit angle is a fixed setting (is_fixed_setting), known by its slot whatever it carries.
+    if (peak.asym_beba_limit) {
+        std::erase(out, &*peak.asym_beba_limit);
+    }
+    return out;
 }
 inline std::vector<Parameter*> Project::parameters() {
     std::vector<Parameter*> out;
@@ -4908,6 +4944,7 @@ inline std::vector<Parameter*> Project::parameters() {
 // scale and texture, and every parameter of a structure no enabled link names (crysta's rule).
 inline std::vector<Parameter*> Project::free_parameters() {
     for (const std::shared_ptr<BraggPdExperiment>& experiment : experiments) {
+        canonicalize_peak_specs(experiment->peak);
         require_peak_slots_fit_type(*experiment);
     }
     std::vector<const Parameter*> idle;
@@ -4928,6 +4965,11 @@ inline std::vector<Parameter*> Project::free_parameters() {
                     idle.push_back(&row->march_random_fract);
                 }
             }
+        }
+    }
+    for (const std::shared_ptr<BraggPdExperiment>& experiment : experiments) {
+        if (experiment->peak.asym_beba_limit) {  // a fixed setting, known by its slot
+            idle.push_back(&*experiment->peak.asym_beba_limit);
         }
     }
     if (!experiments.empty()) {
