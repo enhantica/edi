@@ -672,6 +672,8 @@ void scan_contract_layer_receipt(const QList<QPointF>& points, const QList<doubl
 void scan_contract_work(const std::string& file, const crysta::Project& project) {
     if (active && QThread::currentThread() == qApp->thread()) worker_off_owner = false;
     if (!work_stream.is_open()) return;
+    // The public entry dispatches a scan before its first dataset is populated.
+    if (!project.experiment().data.get()) return;
     const auto& data = *project.experiment().data.get();
     QCryptographicHash hash(QCryptographicHash::Sha256);
     for (const auto* values : {&data.grid, &data.intensity, &data.sigma})
@@ -760,7 +762,7 @@ int main(int argc, char** argv) {
         else if (command == "io-rollback")
             answer = io_rollback(path, argv[3], std::stoi(argv[4]));
         else if (command == "mixed")
-            answer = mixed_generation(path);
+            answer = mixed_generation(path, argc > 3 ? argv[3] : "value");
         else if (command == "gestures")
             answer = gesture_accidents(path, argv[3]);
         else if (command == "live-zoom")

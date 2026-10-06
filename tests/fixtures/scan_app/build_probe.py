@@ -88,11 +88,24 @@ def snapshot(root, build, fixture):
 
 def observe_fit(library, build, wrapper_names, optimizer, objcopy):
     members = subprocess.check_output(['llvm-ar', 't', str(library)], text=True).splitlines()
-    if members.count('fit.cpp.o') != 1:
-        raise RuntimeError('Fit identity actor must reach one compiled native optimizer object')
+    definitions = subprocess.check_output(
+        ['llvm-nm', '-A', '--defined-only', str(library)], text=True
+    ).splitlines()
+    found = [line for line in definitions if line.split()[-1:] == [optimizer]]
+    if len(found) != 1:
+        raise RuntimeError('Fit identity actor must reach one compiled native entry definition')
+    member = [
+        name
+        for name in members
+        if any(
+            token in found[0] for token in (':' + name + ':', '(' + name + '):', '[' + name + ']:')
+        )
+    ]
+    if len(member) != 1:
+        raise RuntimeError('Fit identity actor must bind its actual archive member')
     fit_object = build / 'observed_fit.o'
     with fit_object.open('wb') as output:
-        run(['llvm-ar', 'p', str(library), 'fit.cpp.o'], stdout=output)
+        run(['llvm-ar', 'p', str(library), member[0]], stdout=output)
     real_fit = next(name for name in wrapper_names if 'scan_contract_real_fit' in name)
     run([objcopy, '--redefine-sym=' + optimizer + '=' + real_fit, str(fit_object)])
     return fit_object

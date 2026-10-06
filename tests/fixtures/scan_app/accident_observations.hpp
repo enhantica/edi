@@ -28,7 +28,7 @@ QJsonObject scientific_state(edi_app::ProjectViewModel& view) {
 }
 QJsonObject pending_action(const std::string& path, const std::string& action) {
     auto view = load(path);
-    if (action == "fit") {
+    if (action == "start-fitting") {
         view->analysis()->setFittingMode("single");
         settled(*view);
     }
@@ -50,7 +50,7 @@ QJsonObject pending_action(const std::string& path, const std::string& action) {
                                        [&](const QString& reason) { refusal = reason; });
     bool admitted = false;
     const bool before_stale = view->fit()->outOfDate();
-    if (action == "fit") {
+    if (action == "start-fitting") {
         stage = "pending-fit";
         view->fit()->start();
         admitted = view->fit()->running();
@@ -89,7 +89,7 @@ QJsonObject pending_action(const std::string& path, const std::string& action) {
     }
     while (read_release.tryAcquire()) {
     }
-    if (action == "fit" && !admitted) run(*view, "settled-fit", 0);
+    if (action == "start-fitting" && !admitted) run(*view, "settled-fit", 0);
     QObject::disconnect(connection);
     return {{"blocked", blocked},
             {"pending", pending},
@@ -182,13 +182,21 @@ QJsonObject io_rollback(const std::string& path, const std::string& action, int 
             {"beforeState", before_state},
             {"afterState", scientific_state(*view)}};
 }
-QJsonObject mixed_generation(const std::string& path) {
+QJsonObject mixed_generation(const std::string& path, const std::string& edit) {
     auto view = load(path);
     const auto first = run(*view, "mixed-prefix", 1);
     const auto prefix = contents(path, "analysis/results.csv");
-    const double value = cell_item(*view)->value();
-    cell_item(*view)->setValue(value + 0.001);
-    const QString edit_error = cell_item(*view)->lastError();
+    QString edit_error;
+    if (edit == "free") {
+        cell_item(*view)->setFree(!cell_item(*view)->isFree());
+        edit_error = cell_item(*view)->lastError();
+    } else if (edit == "setting") {
+        view->analysis()->setMaxIterations(view->analysis()->maxIterations() + 1);
+        edit_error = view->analysis()->lastError();
+    } else {
+        cell_item(*view)->setValue(cell_item(*view)->value() + 0.001);
+        edit_error = cell_item(*view)->lastError();
+    }
     settled(*view);
     const auto continued = run(*view, "mixed-continue", 0);
     const auto mixed = scientific_state(*view);
