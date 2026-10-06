@@ -14,13 +14,14 @@ namespace edi_app {
 
 namespace {
 // A peak field's family, its sidebar row (edi ADR-0017 §5): 0 the back-to-back exponentials, 1 the Gaussian
-// broadening, 2 the Lorentzian, 3 any other.
+// broadening with the CW profile's two shape fields (U V W, then X Y or eta0 eta1, on one row), 2 the TOF
+// Lorentzian, 3 any other.
 int peak_family(const std::string& name) {
     const auto starts = [&name](const char* prefix) { return name.rfind(prefix, 0) == 0; };
     if (starts("rise_") || starts("decay_")) {
         return 0;
     }
-    if (starts("broad_gauss_")) {
+    if (starts("broad_gauss_") || starts("mixing_eta_") || name == "broad_lorentz_x" || name == "broad_lorentz_y") {
         return 1;
     }
     if (starts("broad_lorentz_")) {
@@ -57,7 +58,12 @@ ExperimentViewModel::ExperimentViewModel(SavedFile saved, edi::Project& project,
     capturePattern();  // the measured data shows before the first calculation is published
     // The options follow the experiment's type, which is read-only, so they are set once.
     const edi::BeamModeEnum mode = experiment_.effective_beam_mode();
-    peak_type_options_->setOptions(edi::supported_peak_profiles(mode));
+    const std::vector<std::string> profiles = edi::supported_peak_profiles(mode);
+    std::vector<std::string> profile_labels;
+    for (const std::string& profile : profiles) {
+        profile_labels.push_back(edi::peak_profile_label(profile));
+    }
+    peak_type_options_->setOptions(profiles, edi::default_peak_profile(mode), profile_labels);
     absorption_type_options_->setOptions(edi::supported_absorption_families(mode));
     background_type_options_->setOptions(edi::supported_background_types());
     for (int family = 0; family < 4; ++family) {
@@ -175,9 +181,7 @@ void ExperimentViewModel::sync() {
         }
     };
     update(name_, QString::fromStdString(experiment_.name), &ExperimentViewModel::nameChanged);
-    const std::string default_profile = experiment_.effective_beam_mode() == edi::BeamModeEnum::CONSTANT_WAVELENGTH
-                                            ? "cwl-pseudo-voigt"
-                                            : "tof-jorgensen";
+    const std::string default_profile = edi::default_peak_profile(experiment_.effective_beam_mode());
     update(peak_type_, QString::fromStdString(experiment_.peak.type.value_or(default_profile)),
            &ExperimentViewModel::peakTypeChanged);
     update(absorption_type_, QString::fromStdString(experiment_.absorption.type.value_or("none")),

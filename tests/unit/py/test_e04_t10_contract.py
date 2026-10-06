@@ -8,6 +8,8 @@ from pathlib import Path
 
 import pytest
 
+from conftest import crysta_reference_prefix, crysta_reference_source
+
 ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / 'tests/fixtures/e04_t10'
 
@@ -51,9 +53,8 @@ def test_product_table_equals_independent_published_rows():
 
 def test_covalent_column_equals_pinned_crysta_bond_source():
     candidates = [
-        ROOT / 'build/crysta-src/data/elements/covalent-radii.tsv',
-        ROOT / 'build/crysta-sdk/share/crysta/data/elements/covalent-radii.tsv',
-        ROOT / 'build/crysta-prefix/share/crysta/data/elements/covalent-radii.tsv',
+        crysta_reference_source() / 'data/elements/covalent-radii.tsv',
+        crysta_reference_prefix() / 'share/crysta/data/elements/covalent-radii.tsv',
     ]
     source = next((path for path in candidates if path.is_file()), None)
     assert source is not None, ' I6 the pinned SDK source must expose its covalent table'

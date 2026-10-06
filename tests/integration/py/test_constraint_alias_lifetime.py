@@ -23,6 +23,7 @@ CHILD = r"""
 import gc
 import sys
 import edi
+from tests.fixtures.constraint_expressions.project import unlink_structure
 
 project = edi.Project.load(sys.argv[1])
 handle = project.analysis.aliases['held'].param
@@ -41,6 +42,7 @@ else:
     elif kind == 'site':
         project.structure.atom_sites.remove('A')
     elif kind == 'cell':
+        unlink_structure(project, 'phase')
         project.structures.remove('phase')
     elif kind == 'background':
         project.experiments.remove('bank')
@@ -89,6 +91,7 @@ RETAINED_CHILD = r"""
 import gc
 import sys
 import edi
+from tests.fixtures.constraint_expressions.project import unlink_structure
 
 project = edi.Project.load(sys.argv[1])
 kind, route, flag = sys.argv[2:]
@@ -100,11 +103,14 @@ if route == 'destroy':
     del project
 elif route == 'remove':
     collection = project.structures if kind in ('site', 'cell') else project.experiments
+    if kind in ('site', 'cell'):
+        unlink_structure(project, held.name)
     collection.remove(held.name)
 elif route == 'replace':
     replacement = edi.Project.load(sys.argv[1])
     if kind in ('site', 'cell'):
         item = replacement.structures[0]
+        unlink_structure(replacement, item.name)
         replacement.structures.remove(item.name)
         project.structures.add(item)
     else:
@@ -113,6 +119,8 @@ elif route == 'replace':
         project.experiments.add(item)
 elif route == 'transfer':
     collection = project.structures if kind in ('site', 'cell') else project.experiments
+    if kind in ('site', 'cell'):
+        unlink_structure(project, held.name)
     collection.remove(held.name)
     new_owner = edi.Project.load(sys.argv[1])
     new_owner.analysis.constraints.remove('held')

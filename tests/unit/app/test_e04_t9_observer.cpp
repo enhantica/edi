@@ -74,7 +74,7 @@ class ChartOracle final : public QObject {
         }
         for (double position : columns.refln().position) ticks.append(position);
         return {{"x",axis},{"meas",measured},{"su",su},{"calc",calc},{"bkg",bkg},{"resid",residual},{"ticks",ticks},
-                {"maximum",maximum(columns.data().intensity_calc)}, {"length",project.structure.cell.parameters[0].value()}};
+                {"maximum",maximum(columns.data().intensity_calc)}, {"length",project.structure().cell.parameters[0].value()}};
     }
     Q_INVOKABLE double calculationBaselineMs(const QString& path, double length) const {
         auto project = edi::load_project(path.toStdString());

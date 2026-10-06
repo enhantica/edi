@@ -38,7 +38,7 @@ La La a Biso 0 0 0 1 0.5
     axis = 'two_theta' if cw else 'time_of_flight'
     mode = 'constant wavelength' if cw else 'time-of-flight'
     instrument = (
-        """_peak.type cwl-pseudo-voigt
+        """_peak.type cwl-tch-pseudo-voigt
 _peak.broad_gauss_u 0
 _peak.broad_gauss_v 0
 _peak.broad_gauss_w 0.01

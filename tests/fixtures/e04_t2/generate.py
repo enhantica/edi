@@ -72,5 +72,25 @@ def generate():
     (Path(__file__).parent / 'loops.json').write_text(json.dumps(output, indent=2) + '\n')
 
 
+def generate_profile_adaptation():
+    """Freeze one replacement-model input identity; retain the original loop oracle."""
+    relative = 'docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project/experiments/d1a.edi'
+    frozen = json.loads((Path(__file__).parent / 'loops.json').read_text())
+    original = {row['sha256'] for row in frozen['loops'] if row['file'] == relative}
+    if len(original) != 1:
+        raise ValueError('The original PbSO4 loop oracle must name one complete input digest')
+    output = {
+        'classification': 'Replacement-model input identity: regression pin, not numerical oracle',
+        'authority': 'ADR-0080 retires the TCH + BeBa model',
+        'file': relative,
+        'before_sha256': original.pop(),
+        'after_sha256': hashlib.sha256((ROOT / relative).read_bytes()).hexdigest(),
+        'after_selector': 'cwl-pseudo-voigt-berar-baldinozzi',
+    }
+    (Path(__file__).parent / 'replacement-input.json').write_text(
+        json.dumps(output, indent=2) + '\n'
+    )
+
+
 if __name__ == '__main__':
     generate()

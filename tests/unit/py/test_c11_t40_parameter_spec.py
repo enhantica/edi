@@ -18,7 +18,7 @@ def _cw_project():
     experiment = edi.BraggPdExperiment()
     experiment.name = 'cw_bank'
     experiment.experiment_type.beam_mode = edi.BeamModeEnum.CONSTANT_WAVELENGTH
-    experiment.peak.type = edi.PeakProfileTypeEnum.CWL_PSEUDO_VOIGT
+    experiment.peak.type = edi.PeakProfileTypeEnum.CWL_TCH_PSEUDO_VOIGT
     experiment.peak.cutoff_fwhm = 8.0
     experiment.peak.broad_gauss_u = edi.Parameter(0.1)
     experiment.peak.broad_gauss_v = edi.Parameter(-0.05)

@@ -1,0 +1,29 @@
+data_bank
+_edi.schema_version 3
+_experiment_type.beam_mode "constant wavelength"
+_scattering_source.neutron_scattering_length sears1992
+_peak.type cwl-tch-pseudo-voigt
+_peak.broad_gauss_u 0.061
+_peak.broad_gauss_v -0.027
+_peak.broad_gauss_w 0.085
+_peak.cutoff_fwhm 8
+_instrument.setup_wavelength 1.54
+_instrument.calib_twotheta_offset 0
+_peak.broad_lorentz_x .023
+_peak.broad_lorentz_y .047
+
+loop_
+_linked_structure.structure_id
+_linked_structure.scale
+phase 1
+loop_
+_data.two_theta
+_data.intensity_meas
+_data.intensity_meas_su
+21.796411551427312 0 1
+21.968278674999606 0 1
+22.108636825916982 0 1
+22.197434839762668 0 1
+22.274775045370202 0 1
+22.412268744228037 0 1
+22.569813607502642 0 1

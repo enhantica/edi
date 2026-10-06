@@ -9,7 +9,7 @@ _experiment_type.scattering_type bragg
 
 _calculator.type cryspy
 
-_peak.type cwl-thompson-cox-hastings
+_peak.type cwl-tch-pseudo-voigt-fcj
 _peak.broad_gauss_u 0.143431
 _peak.broad_gauss_v -0.52314
 _peak.broad_gauss_w 0.590412

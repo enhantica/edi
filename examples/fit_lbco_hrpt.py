@@ -175,7 +175,7 @@ def build_project() -> edi.Project:
     experiment = ExperimentFactory.from_dict({
         'experiment_type': {'beam_mode': 'constant wavelength'},
         'peak': {
-            'type': 'cwl-pseudo-voigt',
+            'type': 'cwl-tch-pseudo-voigt',
             'cutoff_fwhm': 30.0,
             'broad_gauss_u': {'value': 0.1, 'free': False},
             'broad_gauss_v': {'value': -0.1, 'free': False},

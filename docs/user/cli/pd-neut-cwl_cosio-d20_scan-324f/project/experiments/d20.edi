@@ -13,7 +13,7 @@ _peak.broad_gauss_w 0.37261626098763034(0.0105275767476970521)
 _peak.broad_lorentz_x 0
 _peak.broad_lorentz_y 0.012941642271138643(0.0051587065099400484)
 _peak.cutoff_fwhm 8
-_peak.type cwl-pseudo-voigt
+_peak.type cwl-tch-pseudo-voigt
 
 _instrument.setup_wavelength 1.87
 _instrument.calib_twotheta_offset 0.2900788119975914(0.00226711371912989958)

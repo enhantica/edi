@@ -80,15 +80,44 @@ def public_declarations(text):
             continue
         if not active:
             continue
-        match = re.match(r'([| `-]*)(.*)', line)
-        depth, entry = len(match[1]) // 2, match[2]
+        entry = line.lstrip('| `-')
+        depth = (len(line) - len(entry)) // 2
         while scopes and scopes[-1]['depth'] >= depth:
             scopes.pop()
-        namespace = re.match(
-            r'NamespaceDecl .+\b([A-Za-z_]\w+)\s*$',
-            entry.removesuffix(' nested').removesuffix(' inline'),
+        # Every AST line must close its completed scopes, including template
+        # wrappers. Only admitted declaration kinds need signature parsing.
+        if not entry.startswith((
+            'NamespaceDecl ',
+            'CXXRecordDecl ',
+            'AccessSpecDecl ',
+            'public ',
+            'FunctionDecl ',
+            'CXXMethodDecl ',
+            'CXXConstructorDecl ',
+            'CXXDestructorDecl ',
+            'CXXConversionDecl ',
+            'TypeAliasDecl ',
+            'TypedefDecl ',
+            'VarDecl ',
+            'FieldDecl ',
+            'FunctionTemplateDecl ',
+            'TypeAliasTemplateDecl ',
+            'FriendDecl ',
+        )):
+            continue
+        namespace = (
+            re.match(
+                r'NamespaceDecl .+\b([A-Za-z_]\w+)\s*$',
+                entry.removesuffix(' nested').removesuffix(' inline'),
+            )
+            if entry.startswith('NamespaceDecl ')
+            else None
         )
-        record = re.match(r'CXXRecordDecl .+\b(class|struct) (\w+) definition$', entry)
+        record = (
+            re.match(r'CXXRecordDecl .+\b(class|struct) (\w+) definition$', entry)
+            if entry.startswith('CXXRecordDecl ')
+            else None
+        )
         if namespace:
             scopes.append({'depth': depth, 'name': namespace[1], 'access': None})
         elif record:
@@ -238,8 +267,18 @@ def frozen_headers(directory):
     return directory / PREFIX
 
 
-def test_every_preserved_public_declaration_keeps_its_compiler_type(tmp_path, standard_headers):
-    baseline = compiler_surface(tmp_path, frozen_headers(tmp_path), standard_headers)
+@pytest.fixture(scope='module')
+def frozen_surface(tmp_path_factory, standard_headers):
+    # One independent compiler read serves all consumers of the same immutable
+    # archive. Production and mutated declarations still compile separately.
+    directory = tmp_path_factory.mktemp('c34-frozen-native-surface')
+    return compiler_surface(directory, frozen_headers(directory), standard_headers)
+
+
+def test_every_preserved_public_declaration_keeps_its_compiler_type(
+    tmp_path, standard_headers, frozen_surface
+):
+    baseline = frozen_surface
     actual = compiler_surface(tmp_path, ROOT / PREFIX, standard_headers)
     assert baseline, ' T7 the compiler must expose a nonempty frozen public API'
     allowed = allowed_changes()
@@ -248,13 +287,36 @@ def test_every_preserved_public_declaration_keeps_its_compiler_type(tmp_path, st
         'The multiphase migration must retain its immutable prior declarations'
     )
     require_multiphase_declarations(actual)
+    optional_before, optional_after = optional_slot_declaration_transition(baseline)
+    assert optional_before, (
+        'The lifetime amendment must reach the immutable original optional parameter fields'
+    )
+    assert optional_after <= actual, (
+        'The lifetime amendment permits only the exact optional parameter storage transition'
+    )
     missing = sorted(
-        row for row in baseline - actual if row[:2] not in allowed and row not in transitions
+        row
+        for row in baseline - actual
+        if row[:2] not in allowed and row not in transitions and row not in optional_before
     )
     assert not missing, (
         ' I20/T7 every preserved field, base, alias, overload, reference return and '
         'noexcept signature must retain its frozen compiler type: ' + repr(missing)
     )
+
+
+def optional_slot_declaration_transition(baseline):
+    # The existing one-row optional parameter fields
+    # share detached-cell ownership. Derive
+    # the old fields from the immutable archive, never from the current header.
+    owners = {'edi::PeakBase', 'edi::InstrumentBase', 'edi::AbsorptionBase'}
+    before = {
+        row
+        for row in baseline
+        if row[0] in owners and row[2:] == ('FieldDecl', 'std::optional<Parameter>')
+    }
+    after = {(*row[:3], 'OptionalParameter') for row in before}
+    return before, after
 
 
 def allowed_changes():
@@ -303,10 +365,10 @@ MUTATIONS = [
     ('header', 'before', 'after'), MUTATIONS, ids=['axis-by-value', 'attachment-may-throw']
 )
 def test_native_contract_detects_reference_and_exception_drift(
-    tmp_path, header, before, after, standard_headers
+    tmp_path, header, before, after, standard_headers, frozen_surface
 ):
     include = frozen_headers(tmp_path)
-    expected = compiler_surface(tmp_path, include, standard_headers)
+    expected = frozen_surface
     path = tmp_path / header
     text = path.read_text()
     assert before in text, ' T7 the mutation must reach its frozen declaration'

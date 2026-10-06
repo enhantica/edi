@@ -95,6 +95,19 @@ the diagnostic, display the effective `crysta` minimizer, and preserve the store
 legacy token in Text. Qt warnings are still fatal.
 If the visible warning is modal, its close control is `warning.dismiss`.
 
+The YAP example's warning expectation changes from empty to exactly:
+`Warning: structures[Al2O3].atom_sites[Al1].adp_iso = -0.13591 is outside its admissible range [0, 10]; loaded as saved (a fit may leave a value there)`.
+The Al1 Biso is retained from `knowledge/fitting/fullprof/pd-neut-cwl_yap-spodi_3k/yap_3k.pcr`
+and `asymmetry-off.inp`, also stored in that CLI project's `structures/Al2O3.edi`.
+The declared ADP range is [0, 10]. `generate.py` requires this exact saved Biso
+before freezing its diagnostic for `pd-neut-cwl_yap-spodi_3k` only. The other
+examples keep their original expectations; the existing native stderr, app
+warning-list and rendered-dialog comparisons remain exact.
+Regenerate this warning alone with
+`python tests/fixtures/e04_t1/generate.py --loader-warning-only pd-neut-cwl_yap-spodi_3k`;
+the generator refuses changed inputs for the selected project and preserves
+every other oracle field.
+
 Library-settable properties and table roles are writable through the typed
 view-model and the visible editor. `StructureViewModel.scatteringLengths` is a
 typed model with `typeSymbol` and `lengthFm` roles. The stable UI targets added

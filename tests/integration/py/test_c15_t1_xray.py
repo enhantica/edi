@@ -140,20 +140,25 @@ def test_c33_lif_counter_is_derived_from_filename_difference():
     after.discard('pd-xray-cwl_LiF_single_polarization')
     # ADR-0078 adds its separately gated tied-Biso page; keep this task's delta exact.
     after.discard('pd-neut-cwl_cosio-d20_biso-tied')
+    # profile contract's separately gated two-phase page is retained prior art.
+    after.discard('pd-neut-cwl_YAP_multiphase')
     assert before <= after and after - before == {PAGE}, (
         ' C33 filename difference must contain exactly the owned LiF single page'
     )
 
 
 @pytest.mark.parametrize('escape', ['oracle-assignment', 'other-experiment', 'no-calculation'])
-@pytest.mark.parametrize(
-    'vehicle', ['pd-neut-cwl_LaB6_basic', 'pd-neut-tof_ferrite-austenite_beer_joint']
-)
+@pytest.mark.parametrize('vehicle', ['pd-neut-cwl_LaB6_basic', 'pd-neut-cwl_YAP_multiphase'])
 def test_shared_candidate_flow_rejects_oracle_and_wrong_calculation(escape, vehicle):
     # Sweep the existing shared-flow consumers before exercising the LiF-family substitution.
     pages = ROOT / 'docs/dev/verification'
     for path in pages.glob('*.py'):
-        if path.stem != 'pd-neut-cwl_PbSO4_beba-asymmetry':
+        # BEER now fits measured data; its owner FullProf value gates cover that
+        # model. YAP replaces its retired Bragg-pattern substitution vehicle.
+        if path.stem not in {
+            'pd-neut-cwl_PbSO4_beba-asymmetry',
+            'pd-neut-tof_ferrite-austenite_beer_joint',
+        }:
             _assert_calculated_candidate_flow(path.stem, ast.parse(path.read_text()))
     tree = ast.parse((pages / (vehicle + '.py')).read_text())
     for node in ast.walk(tree):
