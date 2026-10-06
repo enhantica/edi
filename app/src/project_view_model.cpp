@@ -603,25 +603,6 @@ QString ProjectViewModel::prepareScan(bool fresh) {
     if (fit_ != nullptr && fit_->running()) {
         return tr("A fit is running");
     }
-    // The template back in the model, with its own data, while a dataset is shown.
-    if (scan_template_) {
-        std::vector<edi::Edit::ScanValue> values;
-        for (const edi::NamedSlot& slot : edi::named_slots(*scan_template_)) {
-            values.push_back({slot.unique_name, slot.parameter->value.get(), slot.parameter->uncertainty.get()});
-        }
-        const bool modified = modified_;
-        applying_view_ = true;
-        const QString error = apply(
-            edi::Edit::scan_view(*project_, project_->experiment(), std::move(values),
-                                 scan_template_->experiment().data.value_or(edi::PdDataBase{})),
-            false);
-        applying_view_ = false;
-        setModified(modified);
-        if (!error.isEmpty()) {
-            return error;
-        }
-        scan_template_.reset();
-    }
     if (!fresh) {
         return {};
     }

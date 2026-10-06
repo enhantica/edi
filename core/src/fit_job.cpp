@@ -214,11 +214,12 @@ FitJob::~FitJob() {
     }
 }
 
-bool FitJob::start() {
+bool FitJob::start(const Project* scan_template) {
     if (state_->ticket != 0) {
         return false;
     }
-    auto snapshot = std::make_shared<WorkSnapshot>(snapshot_for_work(state_->live));
+    auto snapshot =
+        std::make_shared<WorkSnapshot>(snapshot_for_work(scan_template != nullptr ? *scan_template : state_->live));
     auto inputs = std::make_shared<FitInputs>(inputs_of(state_->live));
     state_->frame_wanted.store(true, std::memory_order_release);
     const std::shared_ptr<State> self = state_;

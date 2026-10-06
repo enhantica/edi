@@ -210,10 +210,12 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void publishFit();
     void showFitFrame(const edi::FitFrame& frame);
     void restorePatterns();
-    // A scan run's owner-thread steps (FitViewModel): before it starts, the template back in the model and, for
-    // a fresh run, the previous results set aside, which Undo restores; each file it fits; the file it shows while
-    // followed; its end, after which the shown dataset is viewed again from the rows on disk.
+    // A scan run's owner-thread steps (FitViewModel): before a fresh run, the previous results set aside, which
+    // Undo restores; each file it fits; the file it shows while followed; its end, after which the shown dataset is
+    // viewed again from the rows on disk. The shown dataset stays in the model while the scan runs from the template.
     QString prepareScan(bool fresh);
+    // The template a scan runs from: the stored one while a dataset is shown, else none (the model is the template).
+    const edi::Project* scanTemplate() const { return scan_template_ ? &*scan_template_ : nullptr; }
     void scanFileFitted();
     void showScanFrame(const std::string& file, const edi::FitFrame& frame);
     void scanEnded();

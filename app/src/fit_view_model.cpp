@@ -285,7 +285,7 @@ void FitViewModel::start() {
         setFollowing(true);
         job_->follow(true);
     }
-    if (job_->start()) {
+    if (job_->start(scan ? owner_.scanTemplate() : nullptr)) {
         if (scan_last_ != scan) {
             scan_last_ = scan;
             emit scanSummaryChanged();

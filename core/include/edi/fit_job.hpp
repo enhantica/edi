@@ -80,7 +80,8 @@ class FitJob {
 
     // Fits the live project as it is now. False, and nothing starts, while a fit is running. A scan resumes
     // from the rows results.csv holds (crysta's driver); the caller clears them for a fresh run.
-    bool start();
+    // `scan_template`, for a scan: the template to fit from when the live project shows one of its datasets.
+    bool start(const Project* scan_template = nullptr);
     // Asks a running fit to stop at crysta's next check; it still ends with `finished`.
     void cancel();
     // The owner has shown the last frame: the job may calculate the next.
