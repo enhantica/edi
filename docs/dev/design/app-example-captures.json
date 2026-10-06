@@ -141,15 +141,16 @@
   },
   {
     "image": "17-experiment-profile-selector.png",
-    "sha256": "8a4771eccb681d014deeff831c415c480db1102e6179dd2e116f30173c54278b",
+    "sha256": "01809fd6ed10a8b2e10c1540885a09fcd67737053b4b3af65cc81b0324318472",
     "checks": {
       "8": "the main tab reads the microscope icon in the experiment colour and the experiment name, no word (hrpt)",
-      "18": "withdrawn; final feedback: the profile list opens over a group with no subheading"
+      "18": "withdrawn; final feedback: the profile list opens over a group with no subheading",
+      "3": "the profile list names each profile in full: Gaussian, Lorentzian, Pseudo-Voigt, Pseudo-Voigt + Bérar–Baldinozzi asymmetry, Thompson–Cox–Hastings pseudo-Voigt (TCH), and the TCH with Finger–Cox–Jephcoat asymmetry (FCJ)"
     }
   },
   {
     "image": "18-experiment-tch.png",
-    "sha256": "b26a635f1293b87d04610fe47101f75e71d1c32a2341127ffe9cfaced585e9f3",
+    "sha256": "3edd85e5d252546f02d16d7d5c274a6a245e951b74b6315b9ef2e90879fc80a1",
     "checks": {
       "18": "withdrawn; final feedback: Thompson-Cox-Hastings shows U V W, then X Y, then asym fcj1 fcj2, a row per family, with no \"Broadening\" or \"Asymmetry\" subheading"
     }
@@ -303,20 +304,20 @@
   },
   {
     "image": "ex-pd-neut-cwl_pbso4_beba-asymmetry.png",
-    "sha256": "4be957d9932fd22eafaaece01826fd8b4a0f81b0ab21040c2756d0773e3f9e97",
+    "sha256": "1254d25f8845c438f57f91bf8fd7dbc686b3ade42b4b90dd9a23612806ea6bb2",
     "checks": {
       "8": "the main tab reads the microscope icon in the experiment colour and the experiment name, no word",
       "9": "the block selector (number, coloured icon, name) sits above the groups, under the tab bar, on Basic",
-      "18": "Peak profile (cwl-pseudo-voigt-berar-baldinozzi) has no subheading; its fields run U V W, then Eta0 Eta1, then A0 B0 A1 B1 AsyLim on the asymmetry row"
+      "18": "Peak profile (cwl-pseudo-voigt-berar-baldinozzi) has no subheading; its fields run U V W Eta0 Eta1 on one row, then A0 B0 A1 B1 AsyLim on the asymmetry row, AsyLim editable with no fit toggle"
     }
   },
   {
     "image": "ex-pd-neut-cwl_yap-spodi_3k.png",
-    "sha256": "ee0b1d1ce4f89cf440a51225401a0f708bc03160e737763e2f1ae7b24d866f9d",
+    "sha256": "ecc321f3e9257db09fc81654a8d9c239341551d6d2d98ada599ccfbc1cc3abe1",
     "checks": {
       "8": "the main tab reads the microscope icon in the experiment colour and the experiment name, no word",
       "9": "the block selector (number, coloured icon, name) sits above the groups, under the tab bar, on Basic",
-      "18": "Peak profile (cwl-pseudo-voigt-berar-baldinozzi) has no subheading; its fields run U V W, then Eta0 Eta1, then A0 B0 A1 B1 AsyLim on the asymmetry row; the chart shows a row of Bragg ticks for each of the two structures"
+      "18": "Peak profile (cwl-pseudo-voigt-berar-baldinozzi) has no subheading; its fields run U V W Eta0 Eta1 on one row, then A0 B0 A1 B1 AsyLim on the asymmetry row, AsyLim editable with no fit toggle; the chart shows a row of Bragg ticks for each of the two structures"
     }
   },
   {
