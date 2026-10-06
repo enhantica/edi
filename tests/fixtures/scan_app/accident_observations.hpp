@@ -125,6 +125,7 @@ QJsonObject pending_action(const std::string& path, const std::string& action) {
             {"free", cell_item(*view)->isFree()},
             {"bound", view->analysis()->maxIterations()},
             {"nativeInputs", native_fit_inputs},
+            {"measuredHash", measured_pattern_hash(*view)},
             {"beforeStale", before_stale},
             {"after", scientific_state(*view)},
             {"files", result_files(path)}};
@@ -186,7 +187,8 @@ QJsonObject io_rollback(const std::string& path, const std::string& action, int 
     if (refusal.isEmpty()) refusal = view->lastError();
     const auto after = result_files(path);
     QJsonArray retained;
-    QDirIterator entries(QString::fromStdString(path), QDir::Files, QDirIterator::Subdirectories);
+    QDirIterator entries(QString::fromStdString(path), QDir::Files | QDir::Hidden,
+                         QDirIterator::Subdirectories);
     while (entries.hasNext()) {
         QFile stored(entries.next());
         if (stored.open(QIODevice::ReadOnly))

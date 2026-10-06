@@ -35,6 +35,16 @@ restart of completed fits.
 | Completed resume cause | All unsuccessful retained rows reported an unavailable cause. | A recorded terminal cause is recovered by that file's provenance identity even with reordered ledger rows and a changed iteration bound; absent legacy provenance still reports unknown. |
 | Locale-free scan classification | The bounded decision walker read the classifier from the driver translation unit. | Read its actual shared scan-file header, retaining every reachable-callee, unresolved-edge and locale-query negative control through the accepted-number conversion seam. |
 
+| Public template dataset input | The complete public-route survey lacked the newly exposed template file property. | Classify it explicitly as project-level model input naming the template dataset; every calculation and Fit operation remains subject to the project-only signature guard. |
+
+| Durable recovery addresses | The failure actor searched visible files only, omitting hidden recovery folders. | Search visible and hidden files recursively; require every prior output digest to remain on disk, including set-aside recovery addresses, after both operation and rollback fail. |
+| Selected payload read receipt | The lazy-open observer counted only open-family records, omitting stdio fopen reads. | Count open, fopen and freopen families at their resolved dataset addresses; explicitly require the initially shown payload and retain the four-address read-ahead bound. |
+| Evolution partition boundary | The added small-column witness used exact integer division for bucket boundaries. | The labelled partition regression pin uses IEEE double division, matching its declared floating-point partition; every point's scientific value, uncertainty and dataset identity still use independent CSV closed forms. |
+
+| Pending scan selection | The added scan-start case assumed the pre-run manual choice would remain selected. | Preserve Start's established automatic Follow: require the latest followed dataset and its independently hashed displayed measurement, plus each optimizer's own file and payload, after the older blocked read returns. |
+
+| Completed Follow observation | The added pending-start case expected the busy-only Following flag to remain true at completion. | At completion Follow is inactive; preserve the latest followed dataset selection and its independent displayed payload hash instead of confusing an idle control with the completed data outcome. |
+
 New observers have live disconnected, constant or wrong-state controls. Reset and Continue still
 use the actual app/core/worker; optimizer entries bind the fitted file and measured payload.
 The scale actor remains unthrottled and its bounds remain unchanged.
