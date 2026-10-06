@@ -625,7 +625,7 @@ bool ProjectViewModel::createStructure() {
     }
     // easydiffractionbeta's default phase (easyDiffractionApp/Logic/Model.py, _DEFAULT_CIF_BLOCK), under the new name.
     const std::string text = "data_" + name +
-                             "\n\n_space_group.name_h_m \"P b n m\"\n\n"
+                             "\n\n_edi.schema_version 3\n\n_space_group.name_h_m \"P b n m\"\n\n"
                              "_cell.length_a 10.\n_cell.length_b 6.\n_cell.length_c 5.\n"
                              "_cell.angle_alpha 90.\n_cell.angle_beta 90.\n_cell.angle_gamma 90.\n\n"
                              "loop_\n_atom_site.id\n_atom_site.type_symbol\n_atom_site.fract_x\n_atom_site.fract_y\n"
