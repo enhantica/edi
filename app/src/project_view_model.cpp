@@ -5,6 +5,8 @@
 #include <QHash>
 #include <QMetaObject>
 #include <QPointer>
+#include <QTemporaryDir>
+#include <QFile>
 #include <QtConcurrent/QtConcurrentRun>
 #include <algorithm>
 #include <map>
@@ -97,6 +99,13 @@ void ExperimentListModel::setDatasets(ExperimentViewModel* experiment, const QLi
                      dataset_values(experiment, datasets[i])});
     }
     setTableRows(rows);
+}
+
+QVariant ExperimentListModel::data(const QModelIndex& index, int role) const {
+    if (shown_ && index.isValid()) {
+        shown_(index.row());
+    }
+    return RowTableModel::data(index, role);
 }
 
 void ExperimentListModel::setDataset(int index, ExperimentViewModel* experiment, const Dataset& dataset) {
@@ -490,9 +499,12 @@ void ProjectViewModel::loadScan() {
         scan_session_->assumeIdentity(ScanSession::templateIdentity(project));
     }
     syncScanAdmission();
-    if (scan_) {
-        scan_session_->startMetadata(project);
-    }
+    // A dataset row a view shows gets its extract values read, if its results row has none.
+    experiment_list_->setShownHook([this](int row) {
+        if (scan_) {
+            scan_session_->want(row);
+        }
+    });
 }
 
 void ProjectViewModel::syncScanAdmission() {
@@ -1103,9 +1115,6 @@ QString ProjectViewModel::saveTo(const QString& directory) {
         }
         scan_refusal_ = scan_session_->load(*project_);
         syncScanAdmission();
-        if (scan_) {
-            scan_session_->startMetadata(*project_);
-        }
         showScanResults();
     }
     // The saved project's last-modified time advanced: its metadata and every text a save writes show it.

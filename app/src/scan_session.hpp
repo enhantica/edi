@@ -19,7 +19,7 @@ namespace edi_app {
 // A scan project's results, kept small whatever the scan's length (edi ADR-0026): the datasets (the file list), the
 // checked index of `analysis/results.csv` with one small entry per dataset (rows are read at their offsets, never
 // kept), the provenance of the last run (`analysis/scan-run.json`: which template produced the results, its time and
-// outcome) and the extracted values of unfitted datasets, read in the background a batch at a time.
+// outcome) and the extracted values of unfitted datasets, read in the background when a view shows them.
 class ScanSession : public QObject {
     Q_OBJECT
 
@@ -75,8 +75,9 @@ class ScanSession : public QObject {
 
     // The extracted values of a dataset: its row's, or those read in the background; nullptr while unknown.
     const std::vector<std::string>* extracted(int dataset) const;
-    // Reads the extracted values of the unfitted datasets in the background, in order; `loaded` reports each batch.
-    void startMetadata(const edi::Project& project);
+    // A dataset a view shows: its extracted values are read in the background if it has none yet, with the others
+    // asked for in the same turn, one read per file; `metadataLoaded` reports them. Only what is shown is read.
+    void want(int dataset);
     void stopMetadata();
 
    signals:
@@ -88,7 +89,11 @@ class ScanSession : public QObject {
     edi::ScanResultIndex index_;
     Run run_;
     std::vector<std::optional<std::vector<std::string>>> metadata_;
+    std::vector<bool> asked_;
+    std::vector<int> wanted_;
+    std::shared_ptr<const edi::Project> source_;  // what the files' extract rules are read with
     std::shared_ptr<std::atomic<bool>> metadata_stop_;
+    void readWanted();
 };
 
 }  // namespace edi_app

@@ -104,6 +104,9 @@ QString ScanSession::load(const edi::Project& project) {
     }
     places_ = edi::scan_places(datasets_);
     metadata_.assign(datasets_.files.size(), std::nullopt);
+    asked_.assign(datasets_.files.size(), false);
+    wanted_.clear();
+    source_ = std::make_shared<const edi::Project>(project);
     run_ = {};
     try {
         if (const std::optional<std::string> bytes = read_file(analysis_dir(project) / "scan-run.json")) {
@@ -333,63 +336,63 @@ const std::vector<std::string>* ScanSession::extracted(int dataset) const {
     return metadata_[dataset] ? &*metadata_[dataset] : nullptr;
 }
 
-void ScanSession::startMetadata(const edi::Project& project) {
-    stopMetadata();
-    if (project.sequential_fit.extract.empty()) {
+void ScanSession::want(int dataset) {
+    if (dataset < 0 || dataset >= static_cast<int>(asked_.size()) || asked_[static_cast<std::size_t>(dataset)] ||
+        index_.rows[static_cast<std::size_t>(dataset)].offset >= 0 || source_ == nullptr ||
+        source_->sequential_fit.extract.empty()) {
         return;
     }
-    std::vector<int> wanted;
-    for (std::size_t i = 0; i < datasets_.files.size(); ++i) {
-        if (index_.rows[i].offset < 0 && !metadata_[i]) {
-            wanted.push_back(static_cast<int>(i));
-        }
+    asked_[static_cast<std::size_t>(dataset)] = true;
+    if (wanted_.empty()) {
+        QMetaObject::invokeMethod(this, &ScanSession::readWanted, Qt::QueuedConnection);
     }
-    if (wanted.empty()) {
+    wanted_.push_back(dataset);
+}
+
+void ScanSession::readWanted() {
+    if (wanted_.empty()) {
         return;
     }
-    auto stop = std::make_shared<std::atomic<bool>>(false);
-    metadata_stop_ = stop;
-    auto source = std::make_shared<edi::Project>(project);
-    const edi::ScanDatasets datasets = datasets_;
-    // Each file is read once, for its extract rules only, a batch reported at a time. The batches are handed to the
-    // application object and reach this session only while it exists.
+    if (!metadata_stop_) {
+        metadata_stop_ = std::make_shared<std::atomic<bool>>(false);
+    }
+    const std::shared_ptr<std::atomic<bool>> stop = metadata_stop_;
+    const std::shared_ptr<const edi::Project> source = source_;
+    const std::string directory = datasets_.directory;
+    std::vector<std::pair<int, std::string>> wanted;
+    for (const int dataset : wanted_) {
+        wanted.emplace_back(dataset, datasets_.files[static_cast<std::size_t>(dataset)]);
+    }
+    wanted_.clear();
+    // Each shown file is read once, for its extract rules only; the values reach this session only while it exists.
     const QPointer<ScanSession> self(this);
-    (void)QtConcurrent::run([self, stop, source, datasets, wanted] {
-        constexpr std::size_t kBatch = 64;
-        std::vector<std::pair<int, std::vector<std::string>>> batch;
-        const auto flush = [&] {
-            if (batch.empty()) {
-                return;
-            }
-            QMetaObject::invokeMethod(
-                QCoreApplication::instance(),
-                [self, stop, done = std::move(batch)]() mutable {
-                    if (self.isNull() || stop->load()) {
-                        return;
-                    }
-                    for (auto& [dataset, values] : done) {
-                        self->metadata_[static_cast<std::size_t>(dataset)] = std::move(values);
-                    }
-                    emit self->metadataLoaded(done.front().first, done.back().first);
-                },
-                Qt::QueuedConnection);
-            batch.clear();
-        };
-        for (const int dataset : wanted) {
+    (void)QtConcurrent::run([self, stop, source, directory, wanted = std::move(wanted)] {
+        std::vector<std::pair<int, std::vector<std::string>>> done;
+        for (const auto& [dataset, file] : wanted) {
             if (stop->load()) {
                 return;
             }
             try {
-                batch.emplace_back(dataset, edi::scan_extract_values(*source, datasets.directory,
-                                                                     datasets.files[static_cast<std::size_t>(dataset)]));
+                done.emplace_back(dataset, edi::scan_extract_values(*source, directory, file));
             } catch (const std::exception&) {
-                batch.emplace_back(dataset, std::vector<std::string>());
-            }
-            if (batch.size() >= kBatch) {
-                flush();
+                done.emplace_back(dataset, std::vector<std::string>());
             }
         }
-        flush();
+        QMetaObject::invokeMethod(
+            QCoreApplication::instance(),
+            [self, stop, done = std::move(done)]() mutable {
+                if (self.isNull() || stop->load() || done.empty()) {
+                    return;
+                }
+                int first = done.front().first, last = first;
+                for (auto& [dataset, values] : done) {
+                    self->metadata_[static_cast<std::size_t>(dataset)] = std::move(values);
+                    first = std::min(first, dataset);
+                    last = std::max(last, dataset);
+                }
+                emit self->metadataLoaded(first, last);
+            },
+            Qt::QueuedConnection);
     });
 }
 

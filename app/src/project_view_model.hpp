@@ -6,10 +6,12 @@
 #include <QList>
 #include <QStringList>
 #include <QObject>
+#include <QTemporaryDir>
 #include <QTimer>
 #include <QString>
 #include <QUrl>
 #include <QtQml/qqmlregistration.h>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -77,12 +79,17 @@ class ExperimentListModel : public RowTableModel {
     void setDataset(int index, ExperimentViewModel* experiment, const Dataset& dataset);
     QStringList columns() const { return columns_; }
     void setColumns(const QStringList& columns);
+    // Called with each row a view reads (a scan's datasets): the owner loads what the row still lacks, so only shown
+    // rows are read.
+    void setShownHook(std::function<void(int)> shown) { shown_ = std::move(shown); }
+    QVariant data(const QModelIndex& index, int role) const override;
 
    signals:
     void columnsChanged();
 
    private:
     QStringList columns_;
+    std::function<void(int)> shown_;
 };
 
 // The open project. It owns the core Project and is the editor every write goes through: the core
@@ -333,7 +340,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool applying_view_ = false;
     bool applying_setting_ = false;
     // The newest dataset view asked for: a projection read off the GUI thread applies only while it is the newest.
-    std::uint64_t view_request_ = 0;
+    std::uint64_t view_request_ = 0, view_applied_ = 0;
     // The identity of the template a run is fitting from (ScanSession::templateIdentity), for its provenance.
     std::string run_identity_;
     void loadScan();
