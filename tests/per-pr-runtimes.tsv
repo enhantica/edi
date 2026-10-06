@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-05T22:21:40Z
+# measured_utc = 2026-10-06T00:42:10Z
 #
-# Recorded from: tests-seq5-edi-changed.log (6 node(s) measured once, 6212 banked, 0 stale row(s) dropped)
-# Collected tests: 6872; with a reported duration: 4118
+# Recorded from: tests-seq5-edi-repair-measure.log (6 node(s) measured once, 6213 banked, 3 stale row(s) dropped)
+# Collected tests: 6875; with a reported duration: 4120
 # Module-scoped fixture costs recorded: 16
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 6872
+# inventory_python = 6875
 # inventory_cpp = 287
-# inventory_measured = 6216
+# inventory_measured = 6219
 # inventory_unmeasured = 943
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
@@ -98,6 +98,9 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_ui_compare.py::t
 0.030	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[None-383.2]
 0.100	tests/integration/py/test_c09_t16_verification_notebooks.py::test_ci_runs_notebooks_for_every_result_changing_surface
 0.050	tests/integration/py/test_c09_t16_verification_notebooks.py::test_fullprof_files_resolve_and_feed_every_page_comparison
+0.010	tests/integration/py/test_c09_t16_verification_notebooks.py::test_owner_added_bank_flow_refuses_wrong_reference_or_candidate[candidate-oracle]
+0.000	tests/integration/py/test_c09_t16_verification_notebooks.py::test_owner_added_bank_flow_refuses_wrong_reference_or_candidate[other-bank]
+0.010	tests/integration/py/test_c09_t16_verification_notebooks.py::test_owner_added_bank_flow_refuses_wrong_reference_or_candidate[reference-candidate]
 0.020	tests/integration/py/test_c09_t16_verification_notebooks.py::test_pixi_notebook_tasks_form_the_local_execution_gate
 0.160	tests/integration/py/test_c09_t16_verification_notebooks.py::test_verification_sources_generate_stripped_notebooks_on_demand
 0.000	tests/integration/py/test_c11_t26_graded_start_corpus.py::test_c11_t26_hidden_consumer_contains_no_live_fit_or_calculation
@@ -887,9 +890,9 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_ui_compare.py::t
 0.030	tests/integration/py/test_c15_t1_xray.py::test_shared_candidate_flow_rejects_oracle_and_wrong_calculation[pd-neut-cwl_LaB6_basic-no-calculation]
 0.030	tests/integration/py/test_c15_t1_xray.py::test_shared_candidate_flow_rejects_oracle_and_wrong_calculation[pd-neut-cwl_LaB6_basic-oracle-assignment]
 0.030	tests/integration/py/test_c15_t1_xray.py::test_shared_candidate_flow_rejects_oracle_and_wrong_calculation[pd-neut-cwl_LaB6_basic-other-experiment]
-0.030	tests/integration/py/test_c15_t1_xray.py::test_shared_candidate_flow_rejects_oracle_and_wrong_calculation[pd-neut-tof_ferrite-austenite_beer_joint-no-calculation]
-0.030	tests/integration/py/test_c15_t1_xray.py::test_shared_candidate_flow_rejects_oracle_and_wrong_calculation[pd-neut-tof_ferrite-austenite_beer_joint-oracle-assignment]
-0.030	tests/integration/py/test_c15_t1_xray.py::test_shared_candidate_flow_rejects_oracle_and_wrong_calculation[pd-neut-tof_ferrite-austenite_beer_joint-other-experiment]
+0.030	tests/integration/py/test_c15_t1_xray.py::test_shared_candidate_flow_rejects_oracle_and_wrong_calculation[pd-neut-cwl_YAP_multiphase-no-calculation]
+0.030	tests/integration/py/test_c15_t1_xray.py::test_shared_candidate_flow_rejects_oracle_and_wrong_calculation[pd-neut-cwl_YAP_multiphase-oracle-assignment]
+0.030	tests/integration/py/test_c15_t1_xray.py::test_shared_candidate_flow_rejects_oracle_and_wrong_calculation[pd-neut-cwl_YAP_multiphase-other-experiment]
 0.000	tests/integration/py/test_c15_t1_xray.py::test_source_selectors_refuse_wrong_radiation_and_unknown_names[neutron-xray_dispersion-sasaki1989]
 0.000	tests/integration/py/test_c15_t1_xray.py::test_source_selectors_refuse_wrong_radiation_and_unknown_names[neutron-xray_form_factor-it1992]
 0.000	tests/integration/py/test_c15_t1_xray.py::test_source_selectors_refuse_wrong_radiation_and_unknown_names[unknown-source-xray_dispersion-sasaki1989]

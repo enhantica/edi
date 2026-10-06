@@ -333,10 +333,13 @@ def test_c22_t22_edi_entrypoint_inventory_is_mechanical() -> None:
 
 
 def test_c22_t22_edi_build_links_no_nested_blas_runtime() -> None:
-    artifacts = [ROOT / 'build/ci/cli/easydiffraction']
-    artifacts.extend(
-        path for path in (ROOT / 'build/ci/python/edi').glob('_edi*') if path.is_file()
+    build = (
+        ROOT
+        / 'build'
+        / ('ci-consumer' if os.environ.get('EDI_USE_CONSUMER_BUILD') == '1' else 'ci')
     )
+    artifacts = [build / 'cli/easydiffraction']
+    artifacts.extend(path for path in (build / 'python/edi').glob('_edi*') if path.is_file())
     assert len(artifacts) >= 2, (
         'core-build must expose the edi CLI and extension for the nested-runtime inventory'
     )

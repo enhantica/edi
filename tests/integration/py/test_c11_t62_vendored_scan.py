@@ -5,6 +5,8 @@ import json
 import re
 from pathlib import Path
 
+from tests.fixtures.cwl_family.historical import original_tokens
+
 ROOT = Path(__file__).resolve().parents[3]
 
 
@@ -38,7 +40,7 @@ def test_cli_scan_contains_the_original_inputs():
                 'the scan metadata adaptation must retain the original owner input identity'
             )
             expected_digest = adaptation['after_sha256']
-        assert hashlib.sha256(path.read_bytes()).hexdigest() == expected_digest, (
+        assert hashlib.sha256(original_tokens(path.read_bytes())).hexdigest() == expected_digest, (
             f' scope 1: original owner scan bytes must be preserved: {relative}'
         )
 

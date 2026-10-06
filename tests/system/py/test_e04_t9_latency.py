@@ -17,7 +17,8 @@ def publication_measurements(tmp_path_factory):
     # Match 's statistical-experiment fixture: retain the complete real
     # probe and account its cost once through the existing module-cost instrument.
     tmp_path = tmp_path_factory.mktemp('-measurements')
-    probe = ROOT / 'build/ci/core/e04_t9_latency_probe'
+    build = 'ci-consumer' if os.environ.get('EDI_USE_CONSUMER_BUILD') == '1' else 'ci'
+    probe = ROOT / 'build' / build / 'core' / 'e04_t9_latency_probe'
     assert probe.is_file(), ' P7 the hidden latency oracle must be built into the core gate'
     env = dict(
         os.environ,

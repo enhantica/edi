@@ -1,4 +1,4 @@
-"""Exact token translation for immutable pre-C11-T63 TCH byte witnesses."""
+"""Exact token translation for immutable pre-profile contract TCH byte witnesses."""
 
 import re
 
@@ -24,3 +24,13 @@ def current_tokens(contents):
             contents,
         )
     return contents
+
+
+def current_surface_path(path):
+    """Translate only original frozen TCH class owners, after its digest check."""
+    owner, separator, member = path.partition('.')
+    renamed = {
+        'CwlPseudoVoigt': 'CwlTchPseudoVoigt',
+        'CwlThompsonCoxHastings': 'CwlTchPseudoVoigtFcj',
+    }
+    return renamed.get(owner, owner) + separator + member

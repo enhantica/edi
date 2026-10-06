@@ -147,5 +147,5 @@ def test_c33_filename_difference_adds_exactly_the_owned_pages():
     # ADR-0078 adds its separately gated tied-Biso page; keep this task's delta exact.
     after.discard('pd-neut-cwl_cosio-d20_biso-tied')
     assert after - before == expected and before <= after, (
-        ' C33 counter must derive from the owned asymmetry pages and C11-T63 YAP addition'
+        ' C33 counter must derive from the owned asymmetry pages and profile contract YAP addition'
     )

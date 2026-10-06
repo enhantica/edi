@@ -218,12 +218,14 @@ TEST_CASE("E04-T10 gate 1 every CLI scene equals independently loaded crysta geo
         INFO(path);
         auto reference = crysta::load_project(path);
         auto live = edi::load_project(path);
-        REQUIRE_MESSAGE(live.structures.size() == 1,
+        REQUIRE_MESSAGE(live.structures.size() == reference.structures.size(),
                         " gate 1 every loaded structure has a reference");
         for (std::size_t si = 0; si < live.structures.size(); ++si) {
             auto& s = *live.structures[si];
             s.current_geometry();
-            const auto& g = crysta::current(reference.structure());
+            REQUIRE_MESSAGE(s.name == reference.structures[si].name,
+                            "Every scene must select the identically named reference phase");
+            const auto& g = crysta::current(reference.structures[si]);
             const auto& rows = g.expanded_atom_sites;
             const auto capture = edi::capture_scene(s);
             const auto scene = edi::present_structure(capture, {});

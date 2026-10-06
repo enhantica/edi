@@ -20,6 +20,9 @@ IDENTITIES = {
     'I m -3 m': (229, 'cubic'),
     'I 21 3': (199, 'cubic'),
     'P n m a': (62, 'orthorhombic'),
+    # Independent owner FullProf output gives the number and crystal system.
+    'P b n m': (62, 'orthorhombic'),
+    'R -3 c': (167, 'trigonal'),
     'P m m a': (51, 'orthorhombic'),
 }
 

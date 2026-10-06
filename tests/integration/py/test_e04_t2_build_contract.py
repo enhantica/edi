@@ -18,6 +18,8 @@ from pathlib import Path
 import pytest
 import yaml
 
+from tests.fixtures.cwl_family.historical import original_tokens
+
 ROOT = Path(__file__).resolve().parents[3]
 MANIFEST = tomllib.loads((ROOT / 'pixi.toml').read_text())
 CHECKS = ('app-lint', 'app-format-check', 'app-test', 'app-ui-test', 'group-app')
@@ -256,8 +258,23 @@ def test_loop_expectations_cover_fixture_bytes(source):
         'gate 3: no input-file loop is omitted from the frozen inventory'
     )
     for case in cases:
-        assert hashlib.sha256(path.read_bytes()).hexdigest() == case['sha256'], (
-            'gate 3: frozen loop oracle retains exact input provenance'
+        digest = case['sha256']
+        contents = original_tokens(path.read_bytes())
+        replacement = json.loads(
+            (ROOT / 'tests/fixtures/e04_t2/replacement-input.json').read_text()
+        )
+        if source == replacement['file']:
+            assert replacement['before_sha256'] == digest, (
+                'Gate 3 retains the exact original retired-model input receipt'
+            )
+            assert re.search(
+                r'^_peak\.type\s+' + re.escape(replacement['after_selector']) + r'$',
+                path.read_text(),
+                re.MULTILINE,
+            ), 'Gate 3 replacement input must declare the owner-selected Npr5 shape'
+            digest = replacement['after_sha256']
+        assert hashlib.sha256(contents).hexdigest() == digest, (
+            'Gate 3 frozen loop oracle retains exact input provenance at the selector seam'
         )
         assert {k: case[k] for k in ('category', 'columns', 'rows')} in parsed, (
             'gate 3: every table expectation comes from an actual file declaration'

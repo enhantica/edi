@@ -12,8 +12,10 @@ from pathlib import Path
 import edi as engine
 import pytest
 
+from conftest import crysta_reference_source
+
 ROOT = Path(__file__).resolve().parents[3]
-CORPUS = ROOT / 'build/crysta-src/tests/fitting'
+CORPUS = crysta_reference_source() / 'tests/fitting'
 # Explicit pairs avoid asking the writer under test to manufacture its own inputs.
 VALUES = [
     pytest.param(None, None, id='absent'),

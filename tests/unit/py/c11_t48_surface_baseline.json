@@ -184,7 +184,7 @@
       "type"
     ],
     "PeakProfileType": [
-      "CWL_TCH_PSEUDO_VOIGT",
+      "CWL_PSEUDO_VOIGT",
       "TOF_JORGENSEN",
       "TOF_JORGENSEN_VON_DREELE"
     ],

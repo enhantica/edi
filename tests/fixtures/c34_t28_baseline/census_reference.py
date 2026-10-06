@@ -116,7 +116,7 @@ def inventory(
         if sdk_include is not None:
             includes.insert(0, sdk_include)
         if os.environ.get('CRYSTA_SDK_DIR'):
-            includes.insert(0, Path(os.environ['CRYSTA_SDK_DIR']) / 'include')
+            includes.insert(1, Path(os.environ['CRYSTA_SDK_DIR']) / 'include')
         for path in includes:
             command += ['-I', str(path)]
         result = subprocess.run(

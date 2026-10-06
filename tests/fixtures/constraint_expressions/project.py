@@ -107,3 +107,11 @@ phase {0 if polynomial else 1}
 {background}
 {data}""")
     return root
+
+
+def unlink_structure(project, name):
+    """profile contract: remove links before exercising the structure's legal exit."""
+    for experiment in project.experiments:
+        for link in list(experiment.linked_structures):
+            if link.structure_id == name:
+                experiment.linked_structures.remove(name)

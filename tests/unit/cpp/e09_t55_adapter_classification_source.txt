@@ -951,7 +951,7 @@ crysta::BraggPdExperiment to_crysta_cwl_experiment(const ExperimentBase& e) {
     apply_post_build_fields(e, built);
     built.kind = crysta::BeamModeEnum::ConstantWavelength;
     if (!e.peak.type) {
-        built.peak_type = "cwl-tch-pseudo-voigt";  // never leave the TOF default on a CW experiment
+        built.peak_type = "cwl-pseudo-voigt";  // never leave the TOF default on a CW experiment
     }
     return built;
 }
