@@ -2351,6 +2351,8 @@ const std::vector<CifExperimentItemRule>& experiment_cif_item_rules() {
         {"_peak.asym_beba_b0", {"_easydiffraction_peak.asym_beba_b0"}, "cwl-beba", "0.0"},
         {"_peak.asym_beba_a1", {"_easydiffraction_peak.asym_beba_a1"}, "cwl-beba", "0.0"},
         {"_peak.asym_beba_b1", {"_easydiffraction_peak.asym_beba_b1"}, "cwl-beba", "0.0"},
+        // The limit angle: the loader reads an absent one as 180, so no fallback is filled.
+        {"_peak.asym_beba_limit", {"_easydiffraction_peak.asym_beba_limit"}},
         // TOF broadening (tof_mixins)
         {"_peak.broad_gauss_sigma_0", {"_easydiffraction_peak.broad_gauss_sigma_0"}, "tof",
          "7.0"},
