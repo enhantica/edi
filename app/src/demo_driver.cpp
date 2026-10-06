@@ -151,6 +151,8 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, QObject*
     steps_.push_back({"c13-07-space-group-pattern", {"appBar.tab.experiment"}});
     steps_.push_back({"c13-08-space-group-number", {"appBar.tab.structure", "spaceGroup.itNumber", "key:Ctrl+A",
                                                     "type:225", "key:Return"}});
+    // A number outside 1-230, typed: red, and not applied.
+    steps_.push_back({"c13-09-space-group-number-invalid", {"spaceGroup.itNumber", "key:Ctrl+A", "type:999"}});
     // ... then ideas no capture above shows (edi ADR-0017): the Experiment type grid three
     // wide (§2), and Measured data's one increment where the steps are equal (§6; t2-12 shows the range) ...
     steps_.push_back({"t4-01-experiment-type", open_example("pd-neut-cwl_lbco-hrpt_start-2")
