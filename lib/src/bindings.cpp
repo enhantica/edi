@@ -171,6 +171,11 @@ static auto renewing_setattr(std::vector<std::string> non_inputs, Renew renew) {
 static constexpr auto renew_epoch = [](auto& object) { object.epoch = edi::detail::Epoch(); };
 // A view's category's identity renews.
 static constexpr auto renew_storage = [](auto& view) { view.storage().epoch = edi::detail::Epoch(); };
+// A peak view renews the experiment's peak even when it presents an earlier profile, so its type can
+// still be switched back.
+static constexpr auto renew_peak = [](edi::views::PeakNode& view) {
+    view.experiment->peak.epoch = edi::detail::Epoch();
+};
 
 static nb::tuple names_tuple(std::span<const char* const> names) {
     nb::list out;
@@ -2052,12 +2057,12 @@ NB_MODULE(_edi, m) {
 
     // The peak-profile category: typed selector + TOF/CW parameter blocks (CW presence-tracked).
     nb::class_<edi::views::PeakNode> peak(m, "PeakBase");
-    peak.def("__setattr__", renewing_setattr<edi::views::PeakNode>({}, renew_storage), nb::arg("name"), nb::arg("value").none());
+    peak.def("__setattr__", renewing_setattr<edi::views::PeakNode>({}, renew_peak), nb::arg("name"), nb::arg("value").none());
     peak.def(
         "show_supported",
         [](edi::views::PeakNode& self) {
             const std::string current =
-                self.storage().type.value_or(std::string("tof-jorgensen"));
+                self.experiment->peak.type.value_or(std::string("tof-jorgensen"));
             const nb::object print = nb::module_::import_("builtins").attr("print");
             print("Supported peak types");
             for (nb::handle tag : active_tags(*g_peak_registry)) {
@@ -2072,10 +2077,10 @@ NB_MODULE(_edi, m) {
             [](edi::views::PeakNode& self) -> nb::object {
                 // The three shipped kernels keep their enum spelling (crysta parity); a
                 // registered extension token reads back verbatim (seam 20); absent is None.
-                if (!self.storage().type) {
+                if (!self.experiment->peak.type) {
                     return nb::none();
                 }
-                const std::string& stored = *self.storage().type;
+                const std::string& stored = *self.experiment->peak.type;
                 if (stored == "tof-jorgensen") {
                     return nb::cast(edi::PeakProfileTypeEnum::TOF_JORGENSEN);
                 }
@@ -2099,8 +2104,12 @@ NB_MODULE(_edi, m) {
             [](edi::views::PeakNode& self, nb::object value) {
                 // The selector accepts any REGISTERED token (seam 20 / I15 — registration-live),
                 // the enum, or None (presence-tracked); an unknown token refuses fail-closed.
+                // Every switch reshapes the block to the slots the new profile carries, as the
+                // app's select_peak_profile does. The beam mode is not checked here: it may be
+                // declared after the type, and the loader refuses a contradiction.
+                edi::PeakBase& peak = self.experiment->peak;
                 if (!value || value.is_none()) {
-                    self.storage().type = std::nullopt;
+                    peak.type = std::nullopt;
                     return;
                 }
                 if (nb::isinstance<nb::str>(value)) {
@@ -2111,15 +2120,17 @@ NB_MODULE(_edi, m) {
                             "' is neither a shipped profile token nor a registered extension "
                             "(register it via PeakFactory.register)");
                     }
-                    self.storage().type = token;
+                    peak.type = token;
+                    edi::conform_peak_slots(peak, token);
                     return;
                 }
-                self.storage().type =
-                    std::string(edi::token(nb::cast<edi::PeakProfileTypeEnum>(value)));
+                const std::string token(edi::token(nb::cast<edi::PeakProfileTypeEnum>(value)));
+                peak.type = token;
+                edi::conform_peak_slots(peak, token);
             })
         .def_prop_rw(
-            "cutoff_fwhm", [](edi::views::PeakNode& self) { return self.storage().cutoff_fwhm; },
-            [](edi::views::PeakNode& self, double value) { self.storage().cutoff_fwhm = value; });
+            "cutoff_fwhm", [](edi::views::PeakNode& self) { return self.experiment->peak.cutoff_fwhm; },
+            [](edi::views::PeakNode& self, double value) { self.experiment->peak.cutoff_fwhm = value; });
 
     nb::class_<edi::views::TofJorgensen, edi::views::PeakNode> tof_jorgensen(m, "TofJorgensen");
     tof_jorgensen.def(nb::init<edi::ExperimentBase*>(), "experiment"_a, nb::keep_alive<1, 2>());

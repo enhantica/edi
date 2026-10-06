@@ -118,9 +118,12 @@ void select_peak_profile(ExperimentBase& experiment, const std::string& token) {
                                          : "time-of-flight") +
                                     " profile; this experiment's beam mode is " + edi::token(mode));
     }
-    PeakBase& peak = experiment.peak;
-    peak.type = token;
-    if (mode != BeamModeEnum::CONSTANT_WAVELENGTH) {
+    experiment.peak.type = token;
+    conform_peak_slots(experiment.peak, token);
+}
+
+void conform_peak_slots(PeakBase& peak, const std::string& token) {
+    if (peak_type_beam_mode(token) != BeamModeEnum::CONSTANT_WAVELENGTH) {
         return;
     }
     // The slots the new CW profile carries, U, V, W on every one.

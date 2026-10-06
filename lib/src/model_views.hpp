@@ -26,7 +26,22 @@ struct PeakNode {
     edi::ExperimentBase* experiment;
     explicit PeakNode(edi::ExperimentBase* experiment) : experiment(experiment) {}
     virtual ~PeakNode() = default;
-    edi::PeakBase& storage() const { return experiment->peak; }
+    // The profile this class presents, or null for one that presents any (the abstract node, a
+    // registered extension).
+    virtual const char* profile() const { return nullptr; }
+    // The peak's fields, through a view of the experiment's current profile only: a view held
+    // across a profile switch, or a class built over an experiment of another profile, would
+    // otherwise read or write slots the profile does not carry.
+    edi::PeakBase& storage() const {
+        const char* own = profile();
+        const std::string current = experiment->peak.type.value_or(std::string("tof-jorgensen"));
+        if (own != nullptr && current != own) {
+            throw std::invalid_argument("this view presents peak type '" + std::string(own) +
+                                        "', but the experiment's peak type is '" + current +
+                                        "'; read experiment.peak again");
+        }
+        return experiment->peak;
+    }
     std::vector<edi::Parameter*> parameters() const { return storage().parameters(); }
 };
 

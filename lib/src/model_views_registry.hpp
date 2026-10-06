@@ -13,39 +13,48 @@ namespace edi::views {
 
 struct TofJorgensen : PeakNode {
     using PeakNode::PeakNode;
+    const char* profile() const override { return "tof-jorgensen"; }
 };
 
 struct TofJorgensenVonDreele final : TofJorgensen {
     using TofJorgensen::TofJorgensen;
+    const char* profile() const override { return "tof-jorgensen-von-dreele"; }
 };
 
 // The constant-wavelength profiles and the TOF pseudo-Voigt.
 struct CwlGaussian final : PeakNode {
     using PeakNode::PeakNode;
+    const char* profile() const override { return "cwl-gaussian"; }
 };
 
 struct CwlLorentzian final : PeakNode {
     using PeakNode::PeakNode;
+    const char* profile() const override { return "cwl-lorentzian"; }
 };
 
 struct CwlPseudoVoigt final : PeakNode {
     using PeakNode::PeakNode;
+    const char* profile() const override { return "cwl-pseudo-voigt"; }
 };
 
 struct CwlPseudoVoigtBerarBaldinozzi final : PeakNode {
     using PeakNode::PeakNode;
+    const char* profile() const override { return "cwl-pseudo-voigt-berar-baldinozzi"; }
 };
 
 struct CwlTchPseudoVoigt final : PeakNode {
     using PeakNode::PeakNode;
+    const char* profile() const override { return "cwl-tch-pseudo-voigt"; }
 };
 
 struct CwlTchPseudoVoigtFcj final : PeakNode {
     using PeakNode::PeakNode;
+    const char* profile() const override { return "cwl-tch-pseudo-voigt-fcj"; }
 };
 
 struct TofPseudoVoigt final : PeakNode {
     using PeakNode::PeakNode;
+    const char* profile() const override { return "tof-pseudo-voigt"; }
 };
 
 inline const bool tof_jorgensen_registered = PeakFactory::register_type(

@@ -1394,6 +1394,27 @@ crysta::BraggPdExperiment to_crysta_cwl_experiment(const ExperimentBase& e, bool
     };
     const std::string declared = e.peak.type.value_or("cwl-tch-pseudo-voigt");
     const CwlProfileSlots slots = cwl_profile_slots(declared);
+    // A slot the declared profile does not carry would be left out here, so a calculation, a fit
+    // and a save would each drop it without a word. It is refused instead; a profile is switched
+    // with select_peak_profile, which reshapes the block.
+    const auto foreign = [&](const std::optional<Parameter>& field, bool carried, const char* tag) {
+        if (field.has_value() && !carried) {
+            throw std::invalid_argument("experiment '" + e.name + "': " + tag +
+                                        " is not a parameter of _peak.type '" + declared +
+                                        "': each profile carries only its own parameters");
+        }
+    };
+    foreign(e.peak.broad_lorentz_x, slots.lorentz_xy, "_peak.broad_lorentz_x");
+    foreign(e.peak.broad_lorentz_y, slots.lorentz_xy, "_peak.broad_lorentz_y");
+    foreign(e.peak.mixing_eta_0, slots.mixing_eta, "_peak.mixing_eta_0");
+    foreign(e.peak.mixing_eta_1, slots.mixing_eta, "_peak.mixing_eta_1");
+    foreign(e.peak.asym_fcj_1, slots.fcj, "_peak.asym_fcj_1");
+    foreign(e.peak.asym_fcj_2, slots.fcj, "_peak.asym_fcj_2");
+    foreign(e.peak.asym_beba_a0, slots.beba, "_peak.asym_beba_a0");
+    foreign(e.peak.asym_beba_b0, slots.beba, "_peak.asym_beba_b0");
+    foreign(e.peak.asym_beba_a1, slots.beba, "_peak.asym_beba_a1");
+    foreign(e.peak.asym_beba_b1, slots.beba, "_peak.asym_beba_b1");
+    foreign(e.peak.asym_beba_limit, slots.beba, "_peak.asym_beba_limit");
     if (slots.lorentz_xy) {
         peak.push_back(param(required(e.peak.broad_lorentz_x, "peak.broad_lorentz_x"), crysta::PROFILE, "broad_lorentz_x"));
         peak.push_back(param(required(e.peak.broad_lorentz_y, "peak.broad_lorentz_y"), crysta::PROFILE, "broad_lorentz_y"));

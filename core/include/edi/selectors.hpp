@@ -114,6 +114,10 @@ std::vector<std::string> supported_descents();
 // limit 180) and drops the ones it does not; fields both profiles share keep their values and free
 // flags.
 void select_peak_profile(ExperimentBase& experiment, const std::string& token);
+// The peak block reshaped to what a constant-wavelength token carries: the slots it keeps stay as
+// they are, the ones it adds start at their defaults, the rest are cleared. Nothing for a TOF token,
+// whose block is the whole family. select_peak_profile and the Python `peak.type` setter call it.
+void conform_peak_slots(PeakBase& peak, const std::string& token);
 // Switch the absorption family within the experiment's beam mode, with the Python
 // AbsorptionBase.type setter's vocabulary and messages (a TOF "cylinder-hewat" is its "cylinder"),
 // then apply the family contract (apply_absorption_family).
