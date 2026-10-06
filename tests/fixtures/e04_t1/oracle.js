@@ -2052,7 +2052,8 @@ var frozen = {
           "free": false,
           "uncertainty": 0.0
         },
-        "_metadata.name": "beer_mcstas"
+        "_metadata.name": "beer_mcstas",
+        "_metadata.title": "Ferrite and austenite, BEER (ESS, McStas), two phases in two banks"
       },
       "analysis": {
         "_edi.schema_version": {
@@ -2109,7 +2110,7 @@ var frozen = {
       ],
       "loaderWarning": "Warning: unsupported _calculator.type \"cryspy\" - using crysta\nWarning: unsupported _minimizer.type \"lmfit (leastsq)\" - using crysta",
       "files": {
-        "project.edi": "f7afd0f1cf662c51d11e80cec521b9d40993f11c66590448c6c8077ee31ac8a1",
+        "project.edi": "d190c5040e2190f0e76c223373752abd50eaf6302d266a7237df6a019c1c3c9e",
         "structures/austenite.edi": "6b3eb1dab5b142687ed34263f04986ab3474bedfcaf9ce0d0ee7831f69929c93",
         "structures/ferrite.edi": "500fcf2007cefefb4b4477e10006596520d8e1cb8e61945d0791ff14ef27521c",
         "experiments/expt_n2.edi": "6e8f4ac836219d4ba503ff5583823b1d12eb523f788e16c03d86b2b5d2bacdda",
