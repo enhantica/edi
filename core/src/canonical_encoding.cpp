@@ -438,6 +438,7 @@ template class OneRow<InstrumentCategory>;
 template class OneRow<AbsorptionCategory>;
 template class OneRow<BackgroundCategory>;
 template class OneRow<JointFitCategory>;
+template class OneRow<DataSourceCategory>;
 template class OneRow<DataRangeCategory>;
 template class OneRow<FittingModeCategory>;
 template class OneRow<MinimizerCategory>;

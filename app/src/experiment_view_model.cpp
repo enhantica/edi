@@ -258,14 +258,10 @@ void ExperimentViewModel::markPatternStale() {
     }
 }
 
-void ExperimentViewModel::setLoadState(bool can_load_data, const QString& data_file) {
+void ExperimentViewModel::setCanLoadData(bool can_load_data) {
     if (can_load_data != can_load_data_) {
         can_load_data_ = can_load_data;
         emit canLoadDataChanged();
-    }
-    if (data_file != data_file_) {
-        data_file_ = data_file;
-        emit dataFileChanged();
     }
 }
 
