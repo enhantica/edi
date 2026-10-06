@@ -1153,9 +1153,8 @@ QString ProjectViewModel::apply(const edi::Edit& change, bool structural) {
             promoted.experiment().calculation_only = scan_template_->experiment().calculation_only;
             scan_template_ = std::move(promoted);
         }
-        if (!applying_setting_) {
-            markTemplateChanged();
-        }
+        // The results' outdated state follows any change of the template's identity, the minimizer's settings included.
+        markTemplateChanged();
     }
     setLastError({});
     setModified(true);
