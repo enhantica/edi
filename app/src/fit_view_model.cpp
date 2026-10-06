@@ -246,9 +246,9 @@ void FitViewModel::start() {
     if (!job_ || running_ || !available_) {
         return;
     }
-    // A chosen dataset still being read: the model still shows the one before, which is not the one to fit.
-    if (const QString pending = owner_.pendingRefusal(); !pending.isEmpty()) {
-        emit refused(pending);
+    // A chosen dataset still being read is read now: the fit is of the dataset shown, never the one before.
+    if (const QString refusal = owner_.settleView(); !refusal.isEmpty()) {
+        emit refused(refusal);
         return;
     }
     // A scan runs from the template. With no dataset fitted it starts afresh (the previous result files, if any, go
