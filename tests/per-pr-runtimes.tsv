@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-06T07:03:04Z
+# measured_utc = 2026-10-06T07:33:56Z
 #
-# Recorded from: tests-seq14-edi-migration.log (4 node(s) measured once, 7825 banked, 0 stale row(s) dropped)
-# Collected tests: 8504; with a reported duration: 4234
-# Module-scoped fixture costs recorded: 17
+# Recorded from: tests-seq17-measured.log (3 node(s) measured once, 7829 banked, 0 stale row(s) dropped)
+# Collected tests: 8507; with a reported duration: 4235
+# Module-scoped fixture costs recorded: 18
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 8504
+# inventory_python = 8507
 # inventory_cpp = 295
-# inventory_measured = 7829
+# inventory_measured = 7832
 # inventory_unmeasured = 970
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
@@ -6422,6 +6422,9 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_cwl_cli.py::test_each_cw_prof
 UNMEASURED:failed-in-this-run	tests/system/py/test_cwl_cli.py::test_each_cw_profile_is_selectable_from_the_cli[cwl-pseudo-voigt]
 UNMEASURED:failed-in-this-run	tests/system/py/test_cwl_cli.py::test_each_cw_profile_is_selectable_from_the_cli[cwl-tch-pseudo-voigt-fcj]
 UNMEASURED:failed-in-this-run	tests/system/py/test_cwl_cli.py::test_each_cw_profile_is_selectable_from_the_cli[cwl-tch-pseudo-voigt]
+0.000	tests/system/py/test_cwl_live_parameter_count.py::test_live_value_publication_preserves_parameter_population[experiment-asymmetry]
+0.000	tests/system/py/test_cwl_live_parameter_count.py::test_live_value_publication_preserves_parameter_population[experiment-fields]
+0.001	tests/system/py/test_cwl_live_parameter_count.py::test_live_value_publication_preserves_parameter_population[second-structure]
 0.740	tests/system/py/test_cwl_token_migration.py::test_no_tracked_file_keeps_a_retired_cw_token
 0.000	tests/system/py/test_cwl_token_migration.py::test_retained_capture_exception_requires_exact_bytes_and_location[changed-input]
 0.000	tests/system/py/test_cwl_token_migration.py::test_retained_capture_exception_requires_exact_bytes_and_location[copied-path]
@@ -8849,6 +8852,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 3.252	tests/system/py/test_c34_t28_census_binding.py
 # module-cost: 0.011	tests/system/py/test_c34_t28_census_escapes.py
 # module-cost: 1.059	tests/system/py/test_c34_t28_native_surface.py
+# module-cost: 1.269	tests/system/py/test_cwl_live_parameter_count.py
 # module-cost: 22.953	tests/system/py/test_e04_t10_latency.py
 # module-cost: 0.663	tests/system/py/test_e04_t12_public_release.py
 # module-cost: 110.331	tests/system/py/test_e04_t9_latency.py
