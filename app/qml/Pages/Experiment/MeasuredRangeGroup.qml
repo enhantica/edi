@@ -89,7 +89,6 @@ Column {
         header: EaComponents.TableViewHeader {
             EaComponents.TableViewLabel {
                 width: AppSizes.dataIndexColumnWidth
-                text: qsTr("No.")
             }
             EaComponents.TableViewLabel {
                 flexibleWidth: true

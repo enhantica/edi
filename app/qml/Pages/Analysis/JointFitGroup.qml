@@ -26,7 +26,6 @@ EaComponents.TableView {
     header: EaComponents.TableViewHeader {
         EaComponents.TableViewLabel {
             width: AppSizes.indexColumnWidth
-            text: qsTr("No.")
         }
         EaComponents.TableViewLabel {
             width: EaStyle.Sizes.tableRowHeight
