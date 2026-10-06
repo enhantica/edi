@@ -36,3 +36,10 @@ analytical project declaration as `profiles.py`. It captures no engine output.
 The native cases first accept a valid TCH input, then exercise public calculate,
 fit, free-set and save admission after a raw token/block mismatch. Peak-specific
 refusal is required; an unrelated exception cannot satisfy the gate.
+
+`limit_setting.json` records the independent fixed-angle contract: FullProf's
+Line 8 setup setting and the owner's AsyLim input are separate from the four
+asymmetry coefficient/codeword pairs. The pinned upstream category metadata
+defines the four coefficients and exposes no limit entry; it is not claimed to
+contain an explicit false flag for an absent entry. Switch gates preserve the
+non-default limit value, keep it fixed, and retain every coefficient's free-state.

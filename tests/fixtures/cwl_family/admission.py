@@ -18,6 +18,8 @@ CASES = [
     if i not in owners
 ]
 DECLARATIONS = [(token, group, field) for token, group in CASES for field in GROUPS[group][0]]
+# Independent FullProf fixed-setup line and upstream metadata: limit_setting.json.
+SETTINGS = frozenset({'asym_beba_limit'})
 FIELDS = tuple(field for fields, _ in GROUPS.values() for field in fields)
 
 

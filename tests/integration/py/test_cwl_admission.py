@@ -111,8 +111,11 @@ def test_every_directed_cw_switch_reshapes_slots_and_roundtrips(tmp_path, source
         parameter.value = (
             160 if field == 'asym_beba_limit' else (0.0031 if field.endswith('_1') else 0.031)
         )
-        parameter.uncertainty = 0.001
-        parameter.free = True
+        if field not in admission.SETTINGS:
+            parameter.uncertainty = 0.001
+            parameter.free = True
+        else:
+            parameter.free = False
     old_peak.type = target
     peak = project.experiments[0].peak
     expected = set(admission.owned_fields(target))
@@ -125,8 +128,11 @@ def test_every_directed_cw_switch_reshapes_slots_and_roundtrips(tmp_path, source
         parameter.value = (
             160 if field == 'asym_beba_limit' else (0.0031 if field.endswith('_1') else 0.031)
         )
-        parameter.uncertainty = 0.001
-        parameter.free = True
+        if field not in admission.SETTINGS:
+            parameter.uncertainty = 0.001
+            parameter.free = True
+        else:
+            parameter.free = False
     project.analysis.calculate()
     before = np.asarray(project.experiments[0].data.intensity_calc).copy()
     assert np.isfinite(before).all(), 'Every switched CW profile calculates finite samples'
@@ -147,8 +153,13 @@ def test_every_directed_cw_switch_reshapes_slots_and_roundtrips(tmp_path, source
         err_msg='Switch save/reload must retain every calculated sample',
     )
     for field in expected:
-        assert getattr(reopened.experiments[0].peak, field).free, (
-            'Switch save/reload must retain the target slots free state'
+        loaded = getattr(reopened.experiments[0].peak, field)
+        assert loaded.value == getattr(peak, field).value, (
+            'Switch save/reload retains every supplied target value including the fixed limit'
+        )
+        assert loaded.free == (field not in admission.SETTINGS), (
+            'Switch save/reload retains coefficient free-state '
+            'and the independent fixed-limit contract'
         )
 
 
