@@ -114,7 +114,8 @@ class FitViewModel : public QObject {
     // The files the scan has fitted, of all its files.
     int scanFitted() const { return scan_.fitted; }
     int scanTotal() const { return scan_.files; }
-    bool following() const { return following_; }
+    // Follow is on only while a scan runs: off before one, after one and in the single and joint modes.
+    bool following() const { return scanning_ && following_; }
     void setFollowing(bool following);
     bool available() const { return available_; }
     QString unavailableReason() const { return unavailable_reason_; }

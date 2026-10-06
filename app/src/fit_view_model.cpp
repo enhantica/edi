@@ -447,6 +447,7 @@ void FitViewModel::setScanning(bool scanning) {
     if (scanning != scanning_) {
         scanning_ = scanning;
         emit scanningChanged();
+        emit followingChanged();
     }
 }
 

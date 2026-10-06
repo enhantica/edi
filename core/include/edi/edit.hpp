@@ -140,8 +140,16 @@ class Edit {
             project.metadata.last_modified = time;
         });
     }
+    // A project that declares a scan fits its one template experiment against each file: joint is refused there.
     static Edit fitting_mode(Project& project, std::string mode) {
-        return Edit([&project, mode = std::move(mode)] { set_fitting_mode(project, mode); });
+        return Edit([&project, mode = std::move(mode)] {
+            if (mode == "joint" && project.sequential_fit.declared()) {
+                throw std::invalid_argument(
+                    "joint fitting is not available in a project that declares a scan (_sequential_fit): its datasets "
+                    "are fitted one at a time against the template experiment");
+            }
+            set_fitting_mode(project, mode);
+        });
     }
     static Edit descent(Project& project, std::string id) {
         return Edit([&project, id = std::move(id)] { set_descent(project, id); });

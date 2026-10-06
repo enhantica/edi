@@ -284,10 +284,6 @@ void AnalysisViewModel::setFittingMode(const QString& mode) {
         return;
     }
     edi::Project& project = project_;
-    if (mode == QLatin1String("joint") && project.sequential_fit.declared()) {
-        setLastError(tr("A project that declares a scan cannot fit jointly"));
-        return;
-    }
     setLastError(editor_.apply(edi::Edit::fitting_mode(project, mode.toStdString()), false));
 }
 

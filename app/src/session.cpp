@@ -150,7 +150,46 @@ bool Session::openProject(const QUrl& directory) {
                          .arg(directory.toString()));
         return false;
     }
-    return open(directory.toLocalFile(), {});
+    // A project in a folder this user may not write (a read-only tree) runs in a temporary copy, as an example does,
+    // so a fit never writes into it; Save As writes the project where the user chooses.
+    const QString source = directory.toLocalFile();
+    const QFileInfo folder(source), analysis(source + QStringLiteral("/analysis"));
+    if (folder.isDir() && (!folder.isWritable() || (analysis.exists() && !analysis.isWritable()))) {
+        if (extracted_ == nullptr || !extracted_->isValid()) {
+            extracted_ = std::make_unique<QTemporaryDir>();
+        }
+        if (!extracted_->isValid()) {
+            setLastError(QStringLiteral("cannot create a temporary copy of %1: %2").arg(source, extracted_->errorString()));
+            return false;
+        }
+        const QString target = extracted_->filePath(QStringLiteral("read-only/") + folder.fileName());
+        QDir(target).removeRecursively();
+        if (!copyTree(source, target)) {
+            setLastError(QStringLiteral("cannot make a temporary copy of %1").arg(source));
+            return false;
+        }
+        if (!open(target, {})) {
+            return false;
+        }
+        read_only_copy_ = true;
+        emit needsSaveAsChanged();
+        return true;
+    }
+    return open(source, {});
+}
+
+bool Session::copyTree(const QString& source, const QString& target) {
+    QDirIterator files(source, QDir::Files, QDirIterator::Subdirectories);
+    while (files.hasNext()) {
+        const QString file = files.next();
+        const QString destination = target + file.mid(source.size());
+        QDir().mkpath(QFileInfo(destination).absolutePath());
+        if (!QFile::copy(file, destination)) {
+            return false;
+        }
+        QFile::setPermissions(destination, QFile::ReadOwner | QFile::WriteOwner);
+    }
+    return true;
 }
 
 QString Session::projectLocation() const {
@@ -166,7 +205,7 @@ QString Session::projectLocation() const {
 }
 
 bool Session::needsSaveAs() const {
-    return project_ != nullptr && (project_->path().isEmpty() || !opened_example_.isEmpty());
+    return project_ != nullptr && (project_->path().isEmpty() || !opened_example_.isEmpty() || read_only_copy_);
 }
 
 bool Session::save() {
@@ -192,7 +231,8 @@ bool Session::saveAs(const QUrl& directory) {
     if (!error.isEmpty()) {
         return false;
     }
-    // Saved where the user chose, the project is no longer the example's temporary copy.
+    // Saved where the user chose, the project is no longer the example's or the read-only tree's temporary copy.
+    read_only_copy_ = false;
     if (!opened_example_.isEmpty()) {
         opened_example_.clear();
         emit openedExampleChanged();
@@ -290,6 +330,7 @@ bool Session::open(const QString& directory, const QString& example) {
 }
 
 void Session::replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example) {
+    read_only_copy_ = false;
     // Every piece of the session's state — the project, its load warnings, the example it came from,
     // the cleared error — is in place before any consumer is told, so a handler of one signal reads
     // the new state of the others; then each property signals only if it changed.

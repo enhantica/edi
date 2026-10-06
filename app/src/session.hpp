@@ -147,6 +147,9 @@ class Session : public QObject {
     WarningListModel* warnings_;
     std::unique_ptr<QTemporaryDir> extracted_;
     QString opened_example_;
+    // The open project is a temporary copy of a folder this user may not write: Save As is its way out.
+    bool read_only_copy_ = false;
+    bool copyTree(const QString& source, const QString& target);
 };
 
 }  // namespace edi_app
