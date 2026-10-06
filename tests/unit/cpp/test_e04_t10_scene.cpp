@@ -295,7 +295,7 @@ TEST_CASE("E04-T10 gate 1 every CLI scene equals independently loaded crysta geo
                                                                     : rows.occupancy[rr] / total),
                         " I5 independent relative occupancy or equal zero-total share reaches "
                         "every part");
-                    const auto& refsites = reference.structure().atom_sites;
+                    const auto& refsites = reference.structures[si].atom_sites;
                     auto site = std::find_if(refsites.begin(), refsites.end(), [&](const auto& q) {
                         return q.site_id == rows.atom_site_id[rr];
                     });
