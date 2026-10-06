@@ -21,14 +21,16 @@ EaElements.ParamTextField {
     property string typedRefusal: ""
     readonly property string refusal: typedRefusal !== "" ? typedRefusal : item !== null ? item.lastError : ""
     readonly property bool refinable: item === null || item.refinable
+    // A fixed setting is edited but never fitted: no fit toggle.
+    readonly property bool canFit: refinable && (item === null || item.fittable)
 
     enabled: refinable
     parameter: item ? {
         "value": item.value,
         "error": item.hasUncertainty ? item.uncertainty : 0,
         "enabled": field.refinable,
-        "fittable": field.refinable,
-        "fit": item.free && field.refinable,
+        "fittable": field.canFit,
+        "fit": item.free && field.canFit,
         "category": item.category,
         "name": item.name,
         "shortPrettyName": field.label,

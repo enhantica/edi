@@ -14,13 +14,13 @@ namespace edi_app {
 
 namespace {
 // A peak field's family, its sidebar row (edi ADR-0017 §5): 0 the back-to-back exponentials, 1 the Gaussian
-// broadening, 2 the Lorentzian, 3 any other.
+// broadening with the pseudo-Voigt mixing (U V W, eta0 eta1 on one row), 2 the Lorentzian, 3 any other.
 int peak_family(const std::string& name) {
     const auto starts = [&name](const char* prefix) { return name.rfind(prefix, 0) == 0; };
     if (starts("rise_") || starts("decay_")) {
         return 0;
     }
-    if (starts("broad_gauss_")) {
+    if (starts("broad_gauss_") || starts("mixing_eta_")) {
         return 1;
     }
     if (starts("broad_lorentz_")) {

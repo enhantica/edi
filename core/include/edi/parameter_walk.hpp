@@ -23,6 +23,7 @@ struct ParameterEntry {
     std::string row_label;   // an atom id or a row index for loop categories; empty otherwise
     std::string name;        // the `.edi` item name
     bool refinable = true;   // false: symmetry fixes or ties it (categories.hpp); shown, never fitted
+    bool fittable = true;    // false: a fixed setting (categories.hpp); editable, never fitted
 };
 
 // Every shown parameter of the project (the union of the categories' shown fields, §2b (iv), I15)

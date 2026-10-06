@@ -26,6 +26,7 @@ struct CategoryField {
     Parameter* parameter = nullptr;  // the model field
     bool used_by_profile = true;     // false: outside the profile's set, shown because it is free
     bool refinable = true;           // false: symmetry fixes it or ties it to another parameter
+    bool fittable = true;            // false: a fixed setting (is_fixed_setting): editable, never fitted
 };
 
 struct Category {
@@ -124,7 +125,7 @@ inline Category peak_category(ExperimentBase& experiment) {
         detail::add_optional(category.asymmetry, "asym_beba_b1", peak.asym_beba_b1);
         detail::add_optional(category.asymmetry, "asym_beba_limit", peak.asym_beba_limit);
         if (peak.asym_beba_limit) {
-            category.asymmetry.back().refinable = false;  // a fixed setting (is_fixed_setting)
+            category.asymmetry.back().fittable = false;  // a fixed setting (is_fixed_setting)
         }
         for (const auto& [name, member] : detail::tof_peak_fields()) {  // inert on CW: only if free
             detail::add_if_shown(category.fields, name, peak.*member, false);

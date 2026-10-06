@@ -77,9 +77,10 @@ std::string peak_profile_label(const std::string& token) {
         {"cwl-gaussian", "Gaussian"},
         {"cwl-lorentzian", "Lorentzian"},
         {"cwl-pseudo-voigt", "Pseudo-Voigt"},
-        {"cwl-pseudo-voigt-berar-baldinozzi", "Pseudo-Voigt + Bérar–Baldinozzi"},
-        {"cwl-tch-pseudo-voigt", "TCH pseudo-Voigt"},
-        {"cwl-tch-pseudo-voigt-fcj", "TCH pseudo-Voigt + FCJ"},
+        {"cwl-pseudo-voigt-berar-baldinozzi", "Pseudo-Voigt + Bérar–Baldinozzi asymmetry"},
+        {"cwl-tch-pseudo-voigt", "Thompson–Cox–Hastings pseudo-Voigt (TCH)"},
+        {"cwl-tch-pseudo-voigt-fcj",
+         "Thompson–Cox–Hastings pseudo-Voigt (TCH) + Finger–Cox–Jephcoat asymmetry (FCJ)"},
     };
     for (const auto& [known, label] : labels) {
         if (known == token) {

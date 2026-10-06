@@ -59,6 +59,7 @@ ParameterItem::ParameterItem(const edi::ParameterEntry& entry, ProjectEditor& ed
       uncertainty_(entry.parameter->uncertainty),
       free_(entry.parameter->free),
       refinable_(entry.refinable),
+      fittable_(entry.fittable),
       path_(QString::fromStdString(entry.path)),
       block_kind_(QString::fromStdString(entry.block_kind)),
       block_name_(QString::fromStdString(entry.block_name)),
@@ -125,6 +126,10 @@ void ParameterItem::setValue(double value) {
 void ParameterItem::setFree(bool free) {
     if (!refinable_) {
         setLastError(symmetry_refusal());
+        return;
+    }
+    if (!fittable_) {
+        setLastError(tr("this is a fixed setting, never fitted"));
         return;
     }
     edi::Parameter* parameter = parameter_;
