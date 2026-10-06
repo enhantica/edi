@@ -367,10 +367,6 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     ExperimentListModel::Dataset datasetRow(int index) const;
     // The template, or the model when no dataset view holds one apart.
     const edi::Project& scanTemplateOrModel() const { return scan_template_ ? *scan_template_ : *project_; }
-    edi::Project& mutableScanTemplate() { return scan_template_ ? *scan_template_ : *project_; }
-    // The earlier results a refit of a completed scan starts from, for that run.
-    std::unique_ptr<QTemporaryDir> scan_seed_;
-    void clearScanSeed();
     // The results' outdated state, from their provenance against the template.
     void syncOutOfDate();
     void markTemplateChanged();

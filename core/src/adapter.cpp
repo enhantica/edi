@@ -3375,7 +3375,6 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         // under `path`, the scratch directory that receives what the fit writes.
         const std::filesystem::path data_root(scan_data_root.empty() ? path : scan_data_root);
         cproject.scan_data_root = scan_data_root;
-        cproject.scan_seed_results = scan_seed_results;
         const std::filesystem::path csv_path = project_root / "analysis" / "results.csv";
         bool preamble_delivered = false;
         if (on_scan_start) {

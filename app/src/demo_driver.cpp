@@ -217,8 +217,6 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"t16-62-scan-stopped", {"fitting.start", "wait-fit"}});
     steps_.push_back({"t16-63-scan-continue", {"choose:OK"}});
     steps_.push_back({"t16-64-scan-done", {"fitting.start", "wait-fit"}});
-    // Start again after a completed scan: every dataset is fitted again from its own result.
-    steps_.push_back({"t16-64a-scan-refit", {"choose:OK", "fitting.start", "wait-fit"}});
     steps_.push_back({"t16-65-scan-evolution", {"choose:OK", "mainArea.analysis.tab.evolution"}});
     steps_.push_back({"t16-66-scan-experiment", {experiment, basic, "expand:group.experiments"}});
     // After the scan: the single mode (a setting: the results stay current); a single fit on the shown dataset makes
