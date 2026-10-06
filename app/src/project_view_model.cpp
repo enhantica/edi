@@ -645,6 +645,7 @@ void ProjectViewModel::viewDataset(int index, bool refresh) {
     try {
         row = scan_session_->row(*project_, index);
     } catch (const std::exception& refusal) {
+        view_applied_ = request;
         const QString error = QString::fromUtf8(refusal.what());
         setLastError(error);
         emit refused(error);
@@ -685,6 +686,7 @@ void ProjectViewModel::viewDataset(int index, bool refresh) {
             },
             Qt::QueuedConnection);
     });
+    publishCalculating();
     // The selection moves at once; the model follows when the read arrives.
     if (index != current_dataset_) {
         current_dataset_ = index;
@@ -694,12 +696,18 @@ void ProjectViewModel::viewDataset(int index, bool refresh) {
 }
 
 void ProjectViewModel::applyDatasetView(std::uint64_t request, int index, DatasetView view) {
-    if (request != view_request_ || !scan_ || (fit_ != nullptr && fit_->running() && !fit_->scanning())) {
+    if (request != view_request_) {
+        return;
+    }
+    view_applied_ = request;
+    if (!scan_ || (fit_ != nullptr && fit_->running() && !fit_->scanning())) {
+        publishCalculating();
         return;
     }
     if (!view.data) {
         setLastError(view.error);
         emit refused(view.error);
+        publishCalculating();
         return;
     }
     edi::Project& project = *project_;
@@ -712,6 +720,7 @@ void ProjectViewModel::applyDatasetView(std::uint64_t request, int index, Datase
     setModified(modified);
     if (!error.isEmpty()) {
         emit refused(error);
+        publishCalculating();
         return;
     }
     current_dataset_ = index;
@@ -1315,7 +1324,8 @@ void ProjectViewModel::published(const edi::PreviewResult& result) {
 }
 
 void ProjectViewModel::publishCalculating() {
-    const bool calculating = preview_ != nullptr && preview_->busy();
+    // A dataset view on its way is a calculation too: the shown state is not the newest until it arrives.
+    const bool calculating = (preview_ != nullptr && preview_->busy()) || view_applied_ != view_request_;
     if (calculating != calculating_) {
         calculating_ = calculating;
         emit calculatingChanged();
