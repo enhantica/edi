@@ -30,7 +30,7 @@ import edi
 import pytest
 
 
-def pytest_configure(config) -> None:
+def pytest_configure() -> None:
     """Parent options have been parsed; nested pytest owns its own arguments.
 
     Inheriting the parent's basetemp destroys its scratch directory. Inherited

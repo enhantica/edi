@@ -39,7 +39,7 @@ def run_parent(tmp_path, option, escape):
         "    test = child / 'test_child.py'\n"
         '    test.write_text("def test_child_witness(): print(\'child-witness-ran\')\\n")\n'
         "    result = subprocess.run([sys.executable, '-m', 'pytest', '-s', '-q', str(test)], "
-        'cwd=child, capture_output=True, text=True)\n'
+        'cwd=child, capture_output=True, text=True, check=False)\n'
         "    assert result.returncode == 0, 'Nested pytest: the child oracle must execute'\n"
         "    assert 'child-witness-ran' in result.stdout, "
         "'Nested pytest: parent selectors must not suppress the child witness'\n"
@@ -69,6 +69,7 @@ def run_parent(tmp_path, option, escape):
         ],
         cwd=parent,
         env=environment,
+        check=False,
         capture_output=True,
         text=True,
         timeout=10,
