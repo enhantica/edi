@@ -11,8 +11,9 @@ import edi.app
 
 // The status bar of the workflow pages (easydiffractionbeta Components/StatusBar.qml); hidden on Home. The
 // first item, always present, counts the messages (warnings and errors) and opens them (edi ADR-0017 §14).
-// The fit area on the right follows the running fit and then summarises the last one (§17): progress, then
-// time, then χ², every item separated by FitOutcomes.separator.
+// The fit area on the right follows the running fit and then summarises the last one (§17): the live values (time,
+// then χ², every item separated by FitOutcomes.separator) with the progress bar at the far right, which stays put while
+// their width changes.
 EaElements.StatusBar {
     id: bar
 
@@ -164,17 +165,6 @@ EaElements.StatusBar {
             anchors.verticalCenter: parent.verticalCenter
             color: EaStyle.Colors.appBarBorder
         }
-        FitProgressBar {
-            objectName: "statusBar.fit.progress"
-            visible: fitArea.running
-            width: EaStyle.Sizes.fontPixelSize * 20
-            anchors.verticalCenter: parent.verticalCenter
-            // A scan fills the bar by its files (S3); a single fit, whose length is unknown, with stripes.
-            indeterminate: bar.fit === null || !bar.fit.scanning
-            fraction: bar.fit !== null && bar.fit.scanning && bar.fit.scanTotal > 0 ? bar.fit.scanFitted / bar.fit.scanTotal : 0
-            fontFamily: EaStyle.Fonts.ptMono.name
-            text: fitArea.scanning ? bar.fit.scanText : fitArea.joined([qsTr("fitting"), fitArea.iterations])
-        }
         FitOutcomeLabel {
             objectName: "statusBar.fit.outcome"
             visible: !fitArea.running && bar.fit !== null && bar.fit.outcome !== ""
@@ -225,6 +215,18 @@ EaElements.StatusBar {
             font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.9
             color: EaStyle.Colors.orange
             text: qsTr("out of date")
+        }
+        // Last, at the far right: the live values before it change width, and the bar stays where it is.
+        FitProgressBar {
+            objectName: "statusBar.fit.progress"
+            visible: fitArea.running
+            width: EaStyle.Sizes.fontPixelSize * 20
+            anchors.verticalCenter: parent.verticalCenter
+            // A scan fills the bar by its files (S3); a single fit, whose length is unknown, with stripes.
+            indeterminate: bar.fit === null || !bar.fit.scanning
+            fraction: bar.fit !== null && bar.fit.scanning && bar.fit.scanTotal > 0 ? bar.fit.scanFitted / bar.fit.scanTotal : 0
+            fontFamily: EaStyle.Fonts.ptMono.name
+            text: fitArea.scanning ? bar.fit.scanText : fitArea.joined([qsTr("fitting"), fitArea.iterations])
         }
     }
 
