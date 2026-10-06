@@ -99,6 +99,7 @@ NOT_MODEL = {
     'CwlProfileSlots': 'the peak slots a CW profile token carries, read from the token',
     'OptionalParameter': 'one optional parameter, kept detached once removed (ADR-0012)',
     'ParameterCell': 'an optional parameter and the link it reports once removed',
+    'CwlPeakSlot': 'a row of the CW peak slot table: field, metadata and tag',
     'StructureGeometry': 'the computed structure categories, published whole',
     'WindowGeometry': 'a geometry computed for a view window',
     'IterationRecord': 'a fit report',

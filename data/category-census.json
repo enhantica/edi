@@ -3781,6 +3781,21 @@
       "member": "Project::tail_",
       "type": "detail::ProjectTail",
       "not_storage": "the project's last member, which links its collections to its record"
+    },
+    {
+      "member": "CwlPeakSlot::field",
+      "type": "OptionalParameter PeakBase::*",
+      "not_storage": "a row of the CW peak slot table: field, metadata and tag"
+    },
+    {
+      "member": "CwlPeakSlot::spec",
+      "type": "const ParameterSpec*",
+      "not_storage": "a row of the CW peak slot table: field, metadata and tag"
+    },
+    {
+      "member": "CwlPeakSlot::tag",
+      "type": "const char*",
+      "not_storage": "a row of the CW peak slot table: field, metadata and tag"
     }
   ],
   "file_categories": {
