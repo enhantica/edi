@@ -203,14 +203,12 @@ Item {
             border.color: EaStyle.Colors.chartAxis
             border.width: 1
         }
-        // A click shows the dataset of the nearest point within a few pixels; a drag zooms to its box, the wheel about
-        // the pointer (one notch away multiplies the x span by 0.8, as on the pattern chart), a right click resets.
+        // A left click shows the dataset of the nearest point within a few pixels. A drag past the threshold is the
+        // box handler's, so it zooms and never also clicks; a box flat in either direction is refused. The wheel
+        // zooms about the pointer (one notch away multiplies the x span by 0.8, as on the pattern chart); a right
+        // click resets and selects nothing.
         MouseArea {
             id: pointer
-
-            property real pressX: 0
-            property real pressY: 0
-            readonly property bool dragging: pressed && pressedButtons & Qt.LeftButton && (Math.abs(mouseX - pressX) > chart.em * 0.3 || Math.abs(mouseY - pressY) > chart.em * 0.3)
 
             function xAt(px: real): real {
                 return axisX.min + px / width * (axisX.max - axisX.min);
@@ -218,26 +216,16 @@ Item {
             function yAt(py: real): real {
                 return axisY.max - py / height * (axisY.max - axisY.min);
             }
+            // A zoom is admitted only with finite, increasing ends on both axes.
+            function zoomTo(range: list<real>) {
+                if (range.every(value => isFinite(value)) && range[1] > range[0] && range[3] > range[2])
+                    chart.zoom = range;
+            }
 
             objectName: "evolution.pointer"
             anchors.fill: parent
-            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            acceptedButtons: Qt.LeftButton
             cursorShape: Qt.PointingHandCursor
-            onPressed: mouse => {
-                pressX = mouse.x;
-                pressY = mouse.y;
-            }
-            function moved(mouse): bool {
-                return Math.abs(mouse.x - pressX) > chart.em * 0.3 || Math.abs(mouse.y - pressY) > chart.em * 0.3;
-            }
-
-            onReleased: mouse => {
-                if (mouse.button === Qt.RightButton)
-                    chart.zoom = [];
-                else if (moved(mouse))
-                    chart.zoom = [Math.min(xAt(pressX), xAt(mouse.x)), Math.max(xAt(pressX), xAt(mouse.x)), Math.min(yAt(pressY), yAt(mouse.y)), Math.max(yAt(pressY), yAt(mouse.y))];
-            }
-            // A click selects; a drag's release zooms (above), and its click finds a point only under the release.
             onClicked: mouse => {
                 const reach = chart.em * 0.6;
                 const dataset = chart.evolution.datasetAt(axisX.min + mouse.x / width * (axisX.max - axisX.min), axisY.max - mouse.y / height * (axisY.max - axisY.min), reach / width * (axisX.max - axisX.min), reach / height * (axisY.max - axisY.min));
@@ -249,17 +237,47 @@ Item {
                     return;
                 const anchor = xAt(wheel.x);
                 const factor = Math.pow(0.8, wheel.angleDelta.y / 120);
-                chart.zoom = [anchor - (anchor - axisX.min) * factor, anchor + (axisX.max - anchor) * factor, axisY.min, axisY.max];
+                zoomTo([anchor - (anchor - axisX.min) * factor, anchor + (axisX.max - anchor) * factor, axisY.min, axisY.max]);
+            }
+
+            DragHandler {
+                id: box
+
+                property point from
+                property point to
+
+                objectName: "evolution.zoom.drag"
+                target: null
+                acceptedButtons: Qt.LeftButton
+                dragThreshold: chart.em * 0.3
+                onActiveChanged: {
+                    if (active) {
+                        from = centroid.pressPosition;
+                        to = centroid.position;
+                        return;
+                    }
+                    if (Math.abs(to.x - from.x) > dragThreshold && Math.abs(to.y - from.y) > dragThreshold)
+                        pointer.zoomTo([Math.min(pointer.xAt(from.x), pointer.xAt(to.x)), Math.max(pointer.xAt(from.x), pointer.xAt(to.x)), Math.min(pointer.yAt(from.y), pointer.yAt(to.y)), Math.max(pointer.yAt(from.y), pointer.yAt(to.y))]);
+                }
+                onCentroidChanged: {
+                    if (active)
+                        to = centroid.position;
+                }
+            }
+            TapHandler {
+                objectName: "evolution.zoom.reset"
+                acceptedButtons: Qt.RightButton
+                onTapped: chart.zoom = []
             }
 
             // The box being dragged, as the pattern chart draws it.
             Rectangle {
                 objectName: "evolution.zoom.box"
-                visible: pointer.dragging
-                x: Math.min(pointer.pressX, pointer.mouseX)
-                y: Math.min(pointer.pressY, pointer.mouseY)
-                width: Math.abs(pointer.mouseX - pointer.pressX)
-                height: Math.abs(pointer.mouseY - pointer.pressY)
+                visible: box.active
+                x: Math.min(box.from.x, box.to.x)
+                y: Math.min(box.from.y, box.to.y)
+                width: Math.abs(box.to.x - box.from.x)
+                height: Math.abs(box.to.y - box.from.y)
                 color: "transparent"
                 border.color: EaStyle.Colors.appBorder
                 border.width: EaStyle.Sizes.borderThickness

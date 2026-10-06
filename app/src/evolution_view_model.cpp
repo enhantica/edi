@@ -9,6 +9,22 @@
 
 namespace edi_app {
 
+namespace {
+
+// A point is drawn only when it and its error bar's ends are finite numbers.
+bool drawable(double x, double y, double error) {
+    return std::isfinite(x) && std::isfinite(y) && std::isfinite(error) && error >= 0.0 && std::isfinite(y - error) &&
+           std::isfinite(y + error);
+}
+
+// `value` moved by `pad`, or left where it is when that would leave the finite numbers.
+double padded(double value, double pad) {
+    const double moved = value + pad;
+    return std::isfinite(moved) ? moved : value;
+}
+
+}  // namespace
+
 EvolutionParameterListModel::EvolutionParameterListModel(QObject* parent) : RowTableModel({"name", "label"}, parent) {}
 
 void EvolutionParameterListModel::setNames(const QStringList& names) {
@@ -26,7 +42,10 @@ void EvolutionViewModel::setScan(const ScanSession* session, const edi::Project*
                                  const QString& extracted_title) {
     session_ = session;
     project_ = project;
-    extracted_title_ = extracted_title;
+    if (extracted_title != extracted_title_) {
+        extracted_title_ = extracted_title;
+        emit xTitleChanged();
+    }
     syncNames();
     rebuild();
 }
@@ -90,8 +109,8 @@ void EvolutionViewModel::addRow(int dataset, const std::vector<std::string>& cel
         point.dataset = dataset;
         const std::optional<double> x = xOf(dataset, &extracted);
         if (!x || !edi::parse_scan_number(cells[parameter.value], point.y) ||
-            !edi::parse_scan_number(cells[parameter.uncertainty], point.error) || !std::isfinite(point.y) ||
-            !std::isfinite(point.error) || point.error < 0.0) {
+            !edi::parse_scan_number(cells[parameter.uncertainty], point.error) ||
+            !drawable(*x, point.y, point.error)) {
             return;
         }
         point.x = *x;
@@ -120,6 +139,8 @@ void EvolutionViewModel::setCurrentParameter(int index) {
 void EvolutionViewModel::setXMode(int mode) {
     if (mode != x_mode_ && (mode == 0 || mode == 1)) {
         x_mode_ = mode;
+        emit xModeChanged();
+        emit xTitleChanged();
         rebuild();
     }
 }
@@ -147,69 +168,85 @@ void EvolutionViewModel::rebuild() {
         // uncertainty below zero) leaves its point out.
         session_->column(*project_, names_[current_].toStdString(), [this](int dataset, double value, double error) {
             const std::optional<double> x = xOf(dataset, session_->extracted(dataset));
-            if (x && std::isfinite(value) && std::isfinite(error) && error >= 0.0) {
+            if (x && drawable(*x, value, error)) {
                 points_.push_back({*x, value, error, dataset});
+                // Thinned as it grows: a long scan never holds all its points at once.
+                if (points_.size() > 4 * static_cast<std::size_t>(kThinningLimit)) {
+                    thin();
+                }
             }
         });
     }
     finish();
 }
 
+void EvolutionViewModel::thin() {
+    // Above the limit: per x bucket only the lowest and the highest point, so every excursion stays visible. The
+    // shares are taken on halved values, so the widest finite x range does not overflow.
+    if (points_.size() <= static_cast<std::size_t>(kThinningLimit)) {
+        return;
+    }
+    const auto [low, high] =
+        std::minmax_element(points_.begin(), points_.end(), [](const Point& a, const Point& b) { return a.x < b.x; });
+    const double x0 = low->x / 2.0, span = high->x / 2.0 - low->x / 2.0;
+    const int buckets = kThinningLimit / 2;
+    std::vector<int> lowest(buckets, -1), highest(buckets, -1);
+    for (std::size_t i = 0; i < points_.size(); ++i) {
+        const double share = span > 0.0 ? (points_[i].x / 2.0 - x0) / span : 0.0;
+        const int bucket = std::isfinite(share) ? std::min(buckets - 1, static_cast<int>(std::clamp(share, 0.0, 1.0) * buckets)) : 0;
+        if (lowest[bucket] < 0 || points_[i].y < points_[static_cast<std::size_t>(lowest[bucket])].y) {
+            lowest[bucket] = static_cast<int>(i);
+        }
+        if (highest[bucket] < 0 || points_[i].y > points_[static_cast<std::size_t>(highest[bucket])].y) {
+            highest[bucket] = static_cast<int>(i);
+        }
+    }
+    std::vector<Point> kept;
+    for (int bucket = 0; bucket < buckets; ++bucket) {
+        for (const int i : {lowest[bucket], highest[bucket]}) {
+            if (i >= 0 && (kept.empty() || kept.back().dataset != points_[static_cast<std::size_t>(i)].dataset)) {
+                kept.push_back(points_[static_cast<std::size_t>(i)]);
+            }
+        }
+    }
+    points_ = std::move(kept);
+}
+
 void EvolutionViewModel::finish() {
-    // Above the limit: per x bucket only the lowest and the highest point, so every excursion stays visible.
-    if (points_.size() > static_cast<std::size_t>(kThinningLimit)) {
-        const auto [low, high] = std::minmax_element(points_.begin(), points_.end(),
-                                                     [](const Point& a, const Point& b) { return a.x < b.x; });
-        const double x0 = low->x, span = std::max(high->x - low->x, std::numeric_limits<double>::min());
-        const int buckets = kThinningLimit / 2;
-        std::vector<int> lowest(buckets, -1), highest(buckets, -1);
-        for (std::size_t i = 0; i < points_.size(); ++i) {
-            const double share = std::clamp((points_[i].x - x0) / span, 0.0, 1.0);
-            const int bucket = std::min(buckets - 1, static_cast<int>(share * buckets));
-            if (lowest[bucket] < 0 || points_[i].y < points_[static_cast<std::size_t>(lowest[bucket])].y) {
-                lowest[bucket] = static_cast<int>(i);
-            }
-            if (highest[bucket] < 0 || points_[i].y > points_[static_cast<std::size_t>(highest[bucket])].y) {
-                highest[bucket] = static_cast<int>(i);
-            }
-        }
-        std::vector<Point> kept;
-        for (int bucket = 0; bucket < buckets; ++bucket) {
-            for (const int i : {lowest[bucket], highest[bucket]}) {
-                if (i >= 0 && (kept.empty() || kept.back().dataset != points_[static_cast<std::size_t>(i)].dataset)) {
-                    kept.push_back(points_[static_cast<std::size_t>(i)]);
-                }
-            }
-        }
-        points_ = std::move(kept);
-    }
-    if (points_.empty()) {
-        x_min_ = 0.0, x_max_ = 1.0, y_min_ = 0.0, y_max_ = 1.0;
-    } else {
-        x_min_ = y_min_ = std::numeric_limits<double>::infinity();
-        x_max_ = y_max_ = -std::numeric_limits<double>::infinity();
+    thin();
+    double x_min = 0.0, x_max = 1.0, y_min = 0.0, y_max = 1.0;
+    if (!points_.empty()) {
+        x_min = y_min = std::numeric_limits<double>::infinity();
+        x_max = y_max = -std::numeric_limits<double>::infinity();
         for (const Point& point : points_) {
-            x_min_ = std::min(x_min_, point.x);
-            x_max_ = std::max(x_max_, point.x);
-            y_min_ = std::min(y_min_, point.y - point.error);
-            y_max_ = std::max(y_max_, point.y + point.error);
+            x_min = std::min(x_min, point.x);
+            x_max = std::max(x_max, point.x);
+            y_min = std::min(y_min, point.y - point.error);
+            y_max = std::max(y_max, point.y + point.error);
         }
-        const double x_pad = std::max((x_max_ - x_min_) * 0.03, 0.5);
-        const double y_pad = std::max((y_max_ - y_min_) * 0.08, std::abs(y_max_) * 1e-6 + 1e-12);
-        x_min_ -= x_pad;
-        x_max_ += x_pad;
-        y_min_ -= y_pad;
-        y_max_ += y_pad;
+        // The margins from halved values, so a range near the largest finite numbers does not overflow.
+        const double x_pad = std::max((x_max / 2.0 - x_min / 2.0) * 0.06, 0.5);
+        const double y_pad = std::max((y_max / 2.0 - y_min / 2.0) * 0.16, std::abs(y_max) * 1e-6 + 1e-12);
+        x_min = padded(x_min, -x_pad);
+        x_max = padded(x_max, x_pad);
+        y_min = padded(y_min, -y_pad);
+        y_max = padded(y_max, y_pad);
     }
-    emit currentParameterChanged();
-    emit xModeChanged();
-    emit xTitleChanged();
-    emit yTitleChanged();
-    emit xMinChanged();
-    emit xMaxChanged();
-    emit yMinChanged();
-    emit yMaxChanged();
-    emit countChanged();
+    // Only what changed is announced: a viewport the user zoomed stays as it is while rows arrive.
+    const auto update = [this](double& field, double value, void (EvolutionViewModel::*signal)()) {
+        if (value != field) {
+            field = value;
+            emit(this->*signal)();
+        }
+    };
+    update(x_min_, x_min, &EvolutionViewModel::xMinChanged);
+    update(x_max_, x_max, &EvolutionViewModel::xMaxChanged);
+    update(y_min_, y_min, &EvolutionViewModel::yMinChanged);
+    update(y_max_, y_max, &EvolutionViewModel::yMaxChanged);
+    if (static_cast<int>(points_.size()) != published_count_) {
+        published_count_ = static_cast<int>(points_.size());
+        emit countChanged();
+    }
     draw();
 }
 

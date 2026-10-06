@@ -106,6 +106,9 @@ class EvolutionViewModel : public QObject {
    private:
     // Lists the recorded parameters again; whether the list changed. The shown one stays, else the first.
     bool syncNames();
+    // Thins the points above the drawing limit (per x bucket the lowest and the highest).
+    void thin();
+    int published_count_ = 0;
     struct Point {
         double x = 0.0, y = 0.0, error = 0.0;
         int dataset = -1;
