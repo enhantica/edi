@@ -50,6 +50,7 @@ void require_absorption_uses_public_value_cache_behavior(const edi::Project& sou
         edi::detail::to_crysta_cell(source.structure().cell),
         crysta::resolve_space_group(source.structure().space_group.name_h_m),
         edi::detail::to_crysta_atom_sites(source.structure().atom_sites));
+    structure.name = source.structure().name.value();
     crysta::Project project(std::move(structure), edi::detail::to_crysta_experiment(experiment));
     const crysta::NeutronScattering scattering =
         source.structure().scattering_lengths_fm.empty()

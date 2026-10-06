@@ -77,3 +77,7 @@ intended probe link before checking every original conversion value. The generat
 large-geometry reference relinks its retained banks to the explicitly generated
 structure after replacement; all independent requested-state bits, fifty samples
 and five warmups remain unchanged.
+
+The absorption-cache reference keeps the source structure's explicit identity,
+so its converted experiment still links that independent structure. All original
+parameter values, cache-stamp predicates and pattern-change bounds stay fixed.
