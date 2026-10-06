@@ -153,6 +153,10 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, QObject*
                                                     "type:225", "key:Return"}});
     // A number outside 1-230, typed: red, and not applied.
     steps_.push_back({"c13-09-space-group-number-invalid", {"spaceGroup.itNumber", "key:Ctrl+A", "type:999"}});
+    // The diagnostics view, from Preferences > Develop, then both dialogs closed.
+    steps_.push_back({"c13-10-diagnostics", {"key:Escape", "appBar.button.preferences", "preferences.tab.develop",
+                                             "preferences.diagnostics"}});
+    steps_.push_back({"c13-11-diagnostics-closed", {"choose:OK", "choose:OK"}});
     // ... then ideas no capture above shows (edi ADR-0017): the Experiment type grid three
     // wide (§2), and Measured data's one increment where the steps are equal (§6; t2-12 shows the range) ...
     steps_.push_back({"t4-01-experiment-type", open_example("pd-neut-cwl_lbco-hrpt_start-2")
