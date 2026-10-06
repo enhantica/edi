@@ -52,8 +52,8 @@ class ExperimentViewModel : public QObject {
     Q_PROPERTY(bool calculationOnly READ calculationOnly CONSTANT)
     // Load data… reads a plain-data file into this experiment: only one made with Create experiment (an
     // experiment loaded from `.edi` has its data). `dataFile`: the file its data was last loaded from, or empty.
-    Q_PROPERTY(bool canLoadData READ canLoadData NOTIFY loadStateChanged)
-    Q_PROPERTY(QString dataFile READ dataFile NOTIFY loadStateChanged)
+    Q_PROPERTY(bool canLoadData READ canLoadData NOTIFY canLoadDataChanged)
+    Q_PROPERTY(QString dataFile READ dataFile NOTIFY dataFileChanged)
     Q_PROPERTY(edi_app::CategoryListModel* categories READ categories CONSTANT)
     Q_PROPERTY(edi_app::ParameterListModel* instrument READ instrument CONSTANT)
     Q_PROPERTY(edi_app::ParameterListModel* peak READ peak CONSTANT)
@@ -162,7 +162,8 @@ class ExperimentViewModel : public QObject {
 
    signals:
     void nameChanged();
-    void loadStateChanged();
+    void canLoadDataChanged();
+    void dataFileChanged();
     void fitOutcomeChanged();
     void peakTypeChanged();
     void absorptionTypeChanged();
