@@ -543,6 +543,64 @@ QString ScanSession::putRunFile(const edi::Project& project, const std::optional
     return {};
 }
 
+QString ScanSession::swapRunFile(const edi::Project& project, const std::optional<std::string>& bytes,
+                                 std::string& kept) {
+    const fs::path record = analysis_dir(project) / kResultFiles[2];
+    const fs::path aside = set_aside_dir(project, fresh_name("run"));
+    std::error_code error;
+    const bool present = fs::exists(record, error);
+    try {
+        fs::create_directories(aside);
+        if (present) {
+            move_file(record, aside / kResultFiles[2]);
+        }
+    } catch (const std::exception& refusal) {
+        drop_set_aside(aside);
+        return QString::fromUtf8(refusal.what());
+    }
+    try {
+        put_file(record, bytes);
+    } catch (const std::exception& refusal) {
+        if (present) {
+            try {
+                move_file(aside / kResultFiles[2], record);
+            } catch (const std::exception&) {
+                return QStringLiteral("%1; the run record is kept in %2")
+                    .arg(QString::fromUtf8(refusal.what()), QString::fromStdString(aside.string()));
+            }
+        }
+        drop_set_aside(aside);
+        return QString::fromUtf8(refusal.what());
+    }
+    kept = aside.string();
+    readRun(project);
+    return {};
+}
+
+void ScanSession::dropRunFile(const std::string& kept) {
+    drop_set_aside(fs::path(kept));
+}
+
+QString ScanSession::restoreRunFile(const edi::Project& project, const std::string& kept) {
+    const fs::path record = analysis_dir(project) / kResultFiles[2];
+    const fs::path aside(kept);
+    try {
+        std::error_code error;
+        if (fs::exists(aside / kResultFiles[2], error)) {
+            move_file(aside / kResultFiles[2], record);  // replaces the earlier record in one step
+        } else {
+            put_file(record, std::nullopt);  // there was none before the swap
+        }
+    } catch (const std::exception& refusal) {
+        readRun(project);
+        return QStringLiteral("%1; the newer run record is kept in %2")
+            .arg(QString::fromUtf8(refusal.what()), QString::fromStdString(aside.string()));
+    }
+    drop_set_aside(aside);
+    readRun(project);
+    return {};
+}
+
 const std::vector<std::string>* ScanSession::extracted(int dataset) const {
     if (dataset < 0 || dataset >= static_cast<int>(datasets_.files.size())) {
         return nullptr;

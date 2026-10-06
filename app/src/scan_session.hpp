@@ -86,6 +86,13 @@ class ScanSession : public QObject {
     // The provenance file's bytes (absent: none) in `bytes`; false when it is there but cannot be read.
     bool runFile(const edi::Project& project, std::optional<std::string>& bytes) const;
     QString putRunFile(const edi::Project& project, const std::optional<std::string>& bytes);
+    // The provenance file replaced by `bytes` (none: removed), the record it replaces first moved into its own
+    // set-aside directory, `kept`, so it stays on disk. A refusal changes nothing (or says where the record was kept).
+    // The swap is then committed (dropRunFile) or undone (restoreRunFile).
+    QString swapRunFile(const edi::Project& project, const std::optional<std::string>& bytes, std::string& kept);
+    static void dropRunFile(const std::string& kept);
+    // The record a swap set aside put back in one step; a refusal leaves it in `kept` and says so.
+    QString restoreRunFile(const edi::Project& project, const std::string& kept);
 
     // The extracted values of a dataset: its row's, or those read in the background; nullptr while unknown or
     // when the read failed (`metadataError` says why).

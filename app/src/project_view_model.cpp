@@ -1225,24 +1225,44 @@ void ProjectViewModel::undo() {
     } else if (const auto* run = std::get_if<ScanRun>(&undo_history_.back())) {
         undone = restoreScanRun(*run);
     } else {
-        // A single fit on a scan dataset made it the template and the last fit. Its Undo writes the run record as it
-        // was first: if that fails nothing is undone and the step stays, to be tried again. A record that could not
-        // be read when the fit started is left as it is.
-        std::optional<std::string> now;
-        bool restored_run = false;
-        if (fit_template_undo_ && fit_template_undo_->run_file_known && scan_session_->runFile(*project_, now)) {
-            if (const QString refusal = scan_session_->putRunFile(*project_, fit_template_undo_->run_file);
-                !refusal.isEmpty()) {
-                setLastError(refusal);
-                emit refused(refusal);
-                syncUndo();
+        // A single fit on a scan dataset made it the template and the last fit. Its Undo is refused, with nothing
+        // changed, while the model's dataset is still being read, and when the run record is there but cannot be
+        // read. Otherwise the record as it was first replaces the current one, which is kept aside until the fit is
+        // undone: if that fails, the current one goes back (or stays aside, named in the refusal). A failure leaves
+        // the step, to be tried again. A record that could not be read when the fit started is left as it is.
+        const auto refuse = [this](const QString& refusal) {
+            setLastError(refusal);
+            emit refused(refusal);
+            syncUndo();
+        };
+        if (const QString pending = pendingRefusal(); !pending.isEmpty()) {
+            refuse(pending);
+            return;
+        }
+        std::string kept;
+        bool swapped = false;
+        if (fit_template_undo_ && fit_template_undo_->run_file_known) {
+            std::optional<std::string> now;
+            if (!scan_session_->runFile(*project_, now)) {
+                refuse(tr("The scan's run record (analysis/scan-run.json) cannot be read, so the fit is not undone"));
                 return;
             }
-            restored_run = true;
+            if (const QString refusal = scan_session_->swapRunFile(*project_, fit_template_undo_->run_file, kept);
+                !refusal.isEmpty()) {
+                refuse(refusal);
+                return;
+            }
+            swapped = true;
         }
         undone = fit_->undo();
-        if (!undone && restored_run) {
-            scan_session_->putRunFile(*project_, now);  // the fit stays: so does the record saying it came last
+        if (swapped && undone) {
+            ScanSession::dropRunFile(kept);
+        } else if (swapped) {
+            // The fit stays: so does the record saying it came last.
+            if (const QString refusal = scan_session_->restoreRunFile(*project_, kept); !refusal.isEmpty()) {
+                setLastError(refusal);
+                emit refused(refusal);
+            }
         }
         if (undone && fit_template_undo_) {
             project_->sequential_fit.template_file = fit_template_undo_->template_file;
