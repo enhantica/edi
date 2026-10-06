@@ -263,8 +263,11 @@ Item {
                     return;
                 const anchor = xAt(wheel.x);
                 const factor = Math.pow(0.8, wheel.angleDelta.y / 120);
-                // Only a zoom with finite, non-empty spans on both axes.
-                if (!(isFinite(anchor) && isFinite((axisX.max - axisX.min) * factor) && (axisX.max - axisX.min) * factor > 0 && isFinite(axisY.max - axisY.min) && axisY.max > axisY.min))
+                // Only a viewport whose ends are finite and increasing, with finite spans on both axes; otherwise the
+                // zoom stays as it was (a step that rounds both ends together, or one past the largest number).
+                const left = anchor - (anchor - axisX.min) * factor;
+                const right = anchor + (axisX.max - anchor) * factor;
+                if (!(isFinite(left) && isFinite(right) && right > left && isFinite(right - left) && axisY.max > axisY.min && isFinite(axisY.max - axisY.min)))
                     return;
                 chart.zoom = [anchor - (anchor - axisX.min) * factor, anchor + (axisX.max - anchor) * factor, axisY.min, axisY.max];
             }
