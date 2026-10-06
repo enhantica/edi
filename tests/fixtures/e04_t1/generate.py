@@ -229,7 +229,7 @@ def generate():
                 'instrumentFields': [
                     name
                     for name in INSTRUMENT[mode]
-                    if name not in ('calib_sample_displacement', 'calib_sample_transparency')
+                    if name not in {'calib_sample_displacement', 'calib_sample_transparency'}
                     or '_instrument.' + name in fields
                 ]
                 + [
