@@ -1,5 +1,7 @@
 """Regenerate exact serialized inputs shared by pre-change and renamed captures."""
 
+import hashlib
+import json
 import shutil
 from pathlib import Path
 
@@ -23,6 +25,12 @@ def generate():
                     '_peak.broad_lorentz_x 0\n_peak.broad_lorentz_y 0\n', ''
                 )
             )
+
+    hashes = {
+        path.relative_to(ROOT).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in sorted(ROOT.rglob('*.edi'))
+    }
+    (ROOT.parent / 'rename-input-sha256.json').write_text(json.dumps(hashes, indent=2) + '\n')
 
 
 if __name__ == '__main__':

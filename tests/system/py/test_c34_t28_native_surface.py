@@ -306,8 +306,8 @@ def test_every_preserved_public_declaration_keeps_its_compiler_type(
 
 
 def optional_slot_declaration_transition(baseline):
-    # Committed C11-T63 decision 1719cac94 and edi ADR-0012: the existing
-    # one-row optional parameter fields share detached-cell ownership. Derive
+    # Under ADR-0012, the existing one-row optional parameter fields
+    # share detached-cell ownership. Derive
     # the old fields from the immutable archive, never from the current header.
     owners = {'edi::PeakBase', 'edi::InstrumentBase', 'edi::AbsorptionBase'}
     before = {

@@ -1,5 +1,7 @@
 """Independent isolated cubic reflection and normalized Npr line shapes."""
 
+import hashlib
+import json
 import math
 import re
 from pathlib import Path
@@ -106,3 +108,19 @@ def retired_hits(paths):
         for path in paths
         if path.is_file() and pattern.search(path.read_bytes().decode('utf-8', errors='ignore'))
     ]
+
+
+def migration_hits(paths, root):
+    fixture = root / 'tests/fixtures/cwl_family'
+    hashes = json.loads((fixture / 'rename-input-sha256.json').read_text())
+    historical = fixture / 'rename_inputs/fcj/experiments/bank.edi'
+    return retired_hits([
+        path
+        for path in paths
+        if not (
+            path == historical
+            and path.is_file()
+            and not path.is_symlink()
+            and hashlib.sha256(path.read_bytes()).hexdigest() == hashes['fcj/experiments/bank.edi']
+        )
+    ])

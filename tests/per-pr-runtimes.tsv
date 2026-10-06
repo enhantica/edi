@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-06T05:51:25Z
+# measured_utc = 2026-10-06T07:03:04Z
 #
-# Recorded from: focused native admission controls and actual durations tests-seq14-current-native.log
-# Collected tests: 8501; with a reported duration: 4233
+# Recorded from: tests-seq14-edi-migration.log (4 node(s) measured once, 7825 banked, 0 stale row(s) dropped)
+# Collected tests: 8504; with a reported duration: 4234
 # Module-scoped fixture costs recorded: 17
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 8501
+# inventory_python = 8504
 # inventory_cpp = 295
-# inventory_measured = 7825
-# inventory_unmeasured = 971
+# inventory_measured = 7829
+# inventory_unmeasured = 970
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_projects_open_and_populate_pages
@@ -6422,7 +6422,10 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_cwl_cli.py::test_each_cw_prof
 UNMEASURED:failed-in-this-run	tests/system/py/test_cwl_cli.py::test_each_cw_profile_is_selectable_from_the_cli[cwl-pseudo-voigt]
 UNMEASURED:failed-in-this-run	tests/system/py/test_cwl_cli.py::test_each_cw_profile_is_selectable_from_the_cli[cwl-tch-pseudo-voigt-fcj]
 UNMEASURED:failed-in-this-run	tests/system/py/test_cwl_cli.py::test_each_cw_profile_is_selectable_from_the_cli[cwl-tch-pseudo-voigt]
-UNMEASURED:failed-in-this-run	tests/system/py/test_cwl_token_migration.py::test_no_tracked_file_keeps_a_retired_cw_token
+0.740	tests/system/py/test_cwl_token_migration.py::test_no_tracked_file_keeps_a_retired_cw_token
+0.000	tests/system/py/test_cwl_token_migration.py::test_retained_capture_exception_requires_exact_bytes_and_location[changed-input]
+0.000	tests/system/py/test_cwl_token_migration.py::test_retained_capture_exception_requires_exact_bytes_and_location[copied-path]
+0.000	tests/system/py/test_cwl_token_migration.py::test_retained_capture_exception_requires_exact_bytes_and_location[extra-token]
 0.000	tests/system/py/test_cwl_token_migration.py::test_retired_token_scan_detects_each_planted_spelling
 0.000	tests/system/py/test_e02_fullprof_parity.py::test_corpus_fullprof_loader_follows_manifest_hash_not_directory_order
 1.520	tests/system/py/test_e02_fullprof_parity.py::test_e02_fitted_corpus_project_agrees_with_independent_fullprof_profile
