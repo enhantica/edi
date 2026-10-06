@@ -136,10 +136,10 @@ The decisions it rests on, unchanged here:
 A button easydiffractionbeta had, or the owner asks for, whose function edi does not have yet, is **shown and
 disabled** rather than left out, so the layout is final:
 
-- **Define structure manually** beside **Load structure from file** in Structures, two half-width buttons in a
-  row, the second with the `plus-circle` icon, as easydiffractionbeta's (idea 13). Experiments has **Load
-  experiment** and **Create experiment** in the same places (§18).
-- **Load data…** in the File cell of an experiment without data, until plain data files load (§18).
+- **Create structure** (easydiffractionbeta's Define structure manually, now implemented, §18) beside **Load
+  structure from file** in Structures, two half-width buttons in a row, the second with the `plus-circle` icon, as
+  easydiffractionbeta's (idea 13). Experiments has **Load experiment** and **Create experiment** in the same
+  places (§18).
 - **Reset to autodetected background** beside **Append new point** in Background, `undo-alt` icon
   (idea 17).
 - **Open project from URL…** in Project → Basic → Get started, `link` icon (the owner, 2026-09-29, idea
@@ -841,13 +841,27 @@ refuses to write its bank rows into it.
 
 - **Load experiment** loads `.edi` experiment files, several at once, each with its type, data and parameters.
   **Create experiment** adds a new experiment without data, selected, named `experiment1`, `experiment2`, …:
-  powder, constant wavelength, neutron, Bragg, linked to the project's structure. Each is one step of the app bar's
-  Undo.
+  powder, constant wavelength, neutron, Bragg, linked to every structure of the project. Each is one step of the
+  app bar's Undo.
 - **An experiment without data is a simulation**: its pattern is calculated over a grid whose start, end and step
-  (2θ or TOF) are editable, from defaults per beam mode (2θ 10–150° by 0.05°, TOF 2000–20000 µs by 10 µs). Its
-  File cell shows **Load data…**, disabled until plain data files load.
-- **A project calculates or fits as a whole** (the loader's rule): Create experiment is disabled while the project's
-  experiments carry measured data.
+  (2θ or TOF) are editable, from defaults per beam mode (2θ 10–150° by 0.05°, TOF 2000–20000 µs by 10 µs).
+- **Load data…** (the owner, 2026-10-06) is in the File cell of an experiment made with Create
+  experiment, until data is loaded into it; an experiment loaded from `.edi` has its data and no such button. It
+  opens a file dialog for *Data files (\*.xye \*.xy \*.dat \*.txt \*.csv)* or *All files*, or the browser's file
+  chooser in the web app, and reads the file with crysta's plain-data reader (crysta ADR-0081): two or three
+  columns `x y [σ]`, x in the experiment's unit (2θ in degrees, TOF in µs). The rows replace the simulation's
+  grid; the range fields stay, disabled, showing the data's start, end and step, and the type selectors lock.
+  Instrument, peak, background and excluded regions stay as they were. An experiment still named `experimentN`
+  takes the file's name without its extension, and the File column shows the file's name. A second load replaces
+  the data; each load is one Undo step, which puts back what was there before. One message in the status bar's
+  Messages says how many points were read and what the reader skipped or changed. The data is saved in the
+  experiment's `.edi`, so the project never needs the file again.
+- **Experiments with and without data mix** (the owner, 2026-10-06): Create experiment is always available outside
+  a scan project. A calculation covers every experiment; a fit leaves out those without data.
+- **Create structure** adds a structure named `structure1`, `structure2`, … holding easydiffractionbeta's default
+  phase (`_DEFAULT_CIF_BLOCK`: P b n m, a = 10, b = 6, c = 5 Å, angles 90°, one O site at 0 0 0, occupancy 1,
+  B_iso 0), selected and linked to no experiment. A new experiment links every structure. **Removing a structure**
+  removes every experiment's link to it in the same Undo step, with a message naming the experiments.
 
 ### 19. A scan's datasets
 

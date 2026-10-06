@@ -121,6 +121,7 @@ nav:
       - Guides:
           - user/guides/complete-project-loading.md
           - user/guides/sequential-fitting-in-the-app.md
+          - user/guides/projects-from-scratch-in-the-app.md
       - Tutorials:
           - user/tutorials/index.md
           - user/tutorials/refine-cosio-d20-tscan.ipynb
