@@ -255,13 +255,16 @@ void ProjectViewModel::setCurrentExperimentIndex(int index) {
         if (fit_ != nullptr && fit_->scanning()) {
             fit_->setFollowing(false);
             if (index >= 0 && index < static_cast<int>(scan_datasets_.files.size()) && index != current_dataset_) {
-                // The model is the scan's while it runs: the chart shows the chosen file's measured points on a copy
-                // of the template, and the dataset is viewed in full when the run ends.
+                // The model cannot be edited while the scan runs: the chart shows the chosen file, calculated on a
+                // copy of the template, and the dataset is viewed in full when the run ends.
                 try {
                     edi::Project shown = scan_template_ ? *scan_template_ : *project_;
                     shown.experiment().data = edi::read_scan_dataset(
                         scan_datasets_.directory, scan_datasets_.files[static_cast<std::size_t>(index)],
                         shown.experiment().effective_beam_mode());
+                    // The pattern is the copy's own calculation, over the chosen file's points.
+                    edi::apply_relations(shown);
+                    shown.calculate();
                     showFitFrame(edi::FitFrame{edi::capture_pattern(shown, 0)});
                 } catch (const std::exception& refusal) {
                     setLastError(QString::fromUtf8(refusal.what()));
