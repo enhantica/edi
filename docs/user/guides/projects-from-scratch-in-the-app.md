@@ -38,9 +38,9 @@ and step, and the experiment's type can no longer change. Its instrument, peak, 
 excluded regions stay as they were. An experiment still called `experimentN` takes the file's name;
 a name you gave it stays.
 
-Loading another file replaces the data. **Undo** takes a load back, to the simulation or to the
-data before. Saving stores the data in the experiment's `.edi` file, so the project no longer needs
-the file you loaded.
+The File cell then shows the file's name; clicking it loads another file in place of the data.
+**Undo** takes a load back, to the simulation or to the data before. Saving stores the data in the
+experiment's `.edi` file, so the project no longer needs the file you loaded.
 
 ## Experiments with and without data
 
