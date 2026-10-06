@@ -1093,16 +1093,32 @@ std::pair<std::size_t, ScanResultIndex::Row> scan_row_facts(const Project& /*pro
     return {found->second, std::move(row)};
 }
 
-ScanResultIndex index_scan_results(const Project& project, const ScanDatasets& datasets) {
+ScanResultIndex index_scan_results(const Project& project, const ScanDatasets& datasets, bool writing) {
     ScanResultIndex index;
     index.rows.resize(datasets.files.size());
-    std::ifstream input(scan_results_path(project), std::ios::binary);
+    const auto refused = [&datasets](const std::string& why) {
+        ScanResultIndex error;
+        error.error = "analysis/results.csv: " + why;
+        error.rows.resize(datasets.files.size());
+        return error;
+    };
+    // Only a file that is not there is no results; one that is there must read whole: a header, and complete
+    // rows. A line still being written is expected only while a run writes (`writing`).
+    const std::filesystem::path path = scan_results_path(project);
+    std::error_code status;
+    if (!std::filesystem::exists(path, status)) {
+        return status ? refused("cannot tell whether it exists: " + status.message()) : index;
+    }
+    std::ifstream input(path, std::ios::binary);
     if (!input) {
-        return index;
+        return refused("cannot be read");
     }
     std::string line;
-    if (!std::getline(input, line) || input.eof()) {
-        return index;  // nothing, or a header still being written
+    if (!std::getline(input, line)) {
+        return refused("is empty");
+    }
+    if (input.eof()) {
+        return writing ? index : refused("its header is not complete");
     }
     try {
         index.header = split_scan_row(line);
@@ -1113,7 +1129,10 @@ ScanResultIndex index_scan_results(const Project& project, const ScanDatasets& d
         const auto reasons = ledger_terminations(scan_results_path(project).parent_path() / "results-provenance.csv");
         while (std::getline(input, line)) {
             if (input.eof()) {
-                break;  // no line break: a row still being written
+                if (writing) {
+                    break;  // no line break: a row still being written
+                }
+                throw std::invalid_argument("analysis/results.csv: its last row is not complete");
             }
             const std::int64_t next = input.tellg();
             const std::vector<std::string> cells = split_scan_row(line);
@@ -1132,10 +1151,10 @@ ScanResultIndex index_scan_results(const Project& project, const ScanDatasets& d
             index.end = next;
         }
     } catch (const std::exception& refusal) {
-        ScanResultIndex refused;
-        refused.error = refusal.what();
-        refused.rows.resize(datasets.files.size());
-        return refused;
+        ScanResultIndex error;
+        error.error = refusal.what();
+        error.rows.resize(datasets.files.size());
+        return error;
     }
     return index;
 }
@@ -3486,9 +3505,11 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
                 file_history->push_back(record);
             };
         const std::filesystem::path ledger_path = project_root / "analysis" / "results-provenance.csv";
+        auto completed_files = std::make_shared<std::size_t>(0);
         const crysta::FileCompleteCallback engine_file_complete =
-            [file_history, last_file_history, ledger_path,
+            [file_history, last_file_history, ledger_path, completed_files,
              &on_file_complete](const std::vector<std::string>& row) {
+                ++*completed_files;
                 std::swap(*last_file_history, *file_history);
                 file_history->clear();
                 if (on_file_complete) {
@@ -3530,24 +3551,24 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         // recover it from), and the facts that describe a SOLVE must not be invented for a call
         // that performed none: no wall-clock time, and no iterations, which is also the only
         // value consistent with the empty history such a call produces.
-        const bool recovered_no_op = std::isnan(result.rwp);
+        // crysta recovers the terminal result from its row (Rwp unavailable) when the terminal file
+        // was not fitted by this call: on a completed scan, or after a gap filled before a file
+        // fitted earlier. Its history is that file's and not known now, so none is reported, and
+        // its iterations are the row's. Whether this call solved anything is its own completed
+        // files, not the terminal record: fitting time is real when any file was fitted, none
+        // otherwise (reading the CSV is not fitting time).
+        const bool recovered = std::isnan(result.rwp);
+        const bool solved = *completed_files > 0 || !recovered;
         FitResultBase outcome;
-        // A recovered no-op ran no solve, so it has no history and reports the CSV's recorded
-        // terminal iteration count; a real scan reports the steps it actually took, which is
-        // exactly the history's length.
-        if (!recovered_no_op) {
+        if (!recovered) {
             outcome.iterations_history = result.cancelled ? *file_history : *last_file_history;
         }
         outcome.rwp = result.rwp;
         outcome.reduced_chi_square = result.reduced_chi_square;
-        outcome.iterations = recovered_no_op
-                                 ? result.iterations
-                                 : static_cast<int>(outcome.iterations_history.size());
+        outcome.iterations = recovered ? result.iterations
+                                       : static_cast<int>(outcome.iterations_history.size());
         outcome.converged = result.converged;
-        // ZERO, not NaN: unlike `rwp` — which is genuinely unknown because results.csv has no
-        // column to recover it from — the fitting time of a call that ran no solve is a known
-        // fact, and it is none. Wall-clock spent loading and reading the CSV is not fitting time.
-        outcome.elapsed_ms = recovered_no_op ? 0.0 : elapsed_ms;
+        outcome.elapsed_ms = solved ? elapsed_ms : 0.0;
         outcome.status = to_edi(crysta::classify_fit_status(result));
         outcome.unevaluable_trials = result.unevaluable_trials;
         outcome.terminal_unevaluable_trials = result.terminal_unevaluable_trials;

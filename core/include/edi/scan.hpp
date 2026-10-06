@@ -73,7 +73,9 @@ struct ScanResultIndex {
     std::int64_t end = 0;       ///< the offset after the last complete row (0: no file)
     std::size_t fitted = 0;     ///< datasets with a row
 };
-ScanResultIndex index_scan_results(const Project& project, const ScanDatasets& datasets);
+/// A results file that is there must read whole; `writing`: a run is appending to it, so a last line still being
+/// written is left out rather than refused.
+ScanResultIndex index_scan_results(const Project& project, const ScanDatasets& datasets, bool writing = false);
 
 /// Checks one row's cells against an accepted index's header (as `index_scan_results` checks a row) and returns its
 /// facts with the place of the dataset it names; throws, saying why, for a row that does not belong.
