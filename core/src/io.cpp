@@ -3689,7 +3689,18 @@ class ScratchSave {
                               fs::temp_directory_path().string());
             }
         }
-        save_project(project, (root_ / "project").string());
+        // The save starts from a source holding only the project record. Seeded from the project's own
+        // directory it would copy every file there, a scan's data included, to write a few small texts.
+        const fs::path source = root_ / "source";
+        fs::create_directories(source);
+        if (!project.path.empty()) {
+            std::error_code absent;
+            fs::copy_file(fs::path(project.path) / "project.edi", source / "project.edi", absent);
+        }
+        Project unseeded = project;
+        unseeded.path = source.string();
+        unseeded.scan_data_root.clear();
+        save_project(unseeded, (root_ / "project").string());
     }
     ~ScratchSave() {
         std::error_code ignored;
