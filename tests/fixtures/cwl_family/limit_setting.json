@@ -18,10 +18,10 @@
     "header_line_1based": 10,
     "AsyLim": 160.0,
     "asymmetry_codewords": [
-      361,
-      371,
-      391,
-      401
+      361.0,
+      371.0,
+      391.0,
+      401.0
     ]
   },
   "upstream_peak_metadata": {
