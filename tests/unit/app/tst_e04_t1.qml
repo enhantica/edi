@@ -191,7 +191,7 @@ TestCase {
             ordered(peakRows.map(r => r.parameter.name).sort(), wanted.slice().sort(), "I15: no inert storage fields, no hidden free parameters");
             peakRows.forEach(row => {
                 const frozen = expected.scalars["_peak." + row.parameter.name];
-                verify(frozen !== undefined, "I7: displayed peak field has an independent fixture value");
+                verify(frozen !== undefined, "I7: displayed peak field has an independent fixture value: " + expected.id + ":" + row.parameter.name);
                 compare(row.parameter.value, frozen.value, "I7: displayed value equals project text");
                 compare(row.parameter.free, frozen.free, "I7: displayed free flag equals bracket rule");
                 compare(row.usedByProfile, !expected.unusedFreeFields.includes(row.parameter.name), "I15: unused free storage is explicitly marked");
@@ -278,13 +278,17 @@ TestCase {
         compare(project.modified, true, " saving: a successful edit marks the project modified");
         onlyEvents(objectWatch, ["modifiedChanged", "calculatingChanged"], "I3/I9: edit changes dirty state and queued calculation activity only");
         compare((Probe.events(objectWatch).modifiedChanged || []).length, 1, "I3: first edit notifies the dirty flag exactly once");
-        onlyEvents(experimentWatch, [], "I3: a parameter write cannot refresh the whole experiment");
+        onlyEvents(experimentWatch, ["patternWentStale"], "I3/I9: edit publishes only the dependent pattern staleness signal");
+        compare((Probe.events(experimentWatch).patternWentStale || []).length, 1, "I9: one edit stales the pattern exactly once");
         const events = onlyEvents(tableWatch, ["dataChanged"], "I3: one table update, no reset/layout change");
         compare(events.dataChanged[0].first, targetRow, "I3: changed row starts at edited parameter");
         compare(events.dataChanged[0].last, targetRow, "I3: no other row is invalidated");
         ordered(events.dataChanged[0].roles, [Probe.roleNumber(project.parameters, "value")], "I3: only the changed value role is invalidated");
         tryVerify(() => Probe.events(patternWatch).dataChanged !== undefined, 5000, "I3/I9: a coalesced edit publishes a recalculated pattern");
-        const patternEvents = onlyEvents(patternWatch, ["dataChanged", "staleChanged"], "I3: recalculation updates values and currentness without resetting axes");
+        const patternEvents = Probe.events(patternWatch);
+        ordered(Object.keys(patternEvents).sort(), ["dataChanged", "staleChanged"], "I3/I9: recalculation changes only pattern values and currentness");
+        compare(patternEvents.dataChanged.length, 1, "I3: one recalculation publishes values exactly once");
+        compare(patternEvents.staleChanged.length, 2, "I9: one edit transitions current to stale and back to current");
         ordered(patternEvents.dataChanged[0].roles, [Probe.roleNumber(project.currentExperiment.pattern, "intensityCalc")], "I3: recalculation only invalidates intensityCalc");
         Probe.clearWatches();
         const noOp = Probe.watch(target);

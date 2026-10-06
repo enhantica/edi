@@ -2066,9 +2066,7 @@ var frozen = {
       "unusedFreeFields": [],
       "instrumentFields": [
         "setup_wavelength",
-        "calib_twotheta_offset",
-        "calib_sample_displacement",
-        "calib_sample_transparency"
+        "calib_twotheta_offset"
       ],
       "range": [
         0.0953,
@@ -2148,9 +2146,7 @@ var frozen = {
       "unusedFreeFields": [],
       "instrumentFields": [
         "setup_wavelength",
-        "calib_twotheta_offset",
-        "calib_sample_displacement",
-        "calib_sample_transparency"
+        "calib_twotheta_offset"
       ],
       "range": [
         0.0953,
@@ -2235,9 +2231,7 @@ var frozen = {
       "unusedFreeFields": [],
       "instrumentFields": [
         "setup_wavelength",
-        "calib_twotheta_offset",
-        "calib_sample_displacement",
-        "calib_sample_transparency"
+        "calib_twotheta_offset"
       ],
       "range": [
         8.0953,
@@ -2573,9 +2567,7 @@ var frozen = {
       "unusedFreeFields": [],
       "instrumentFields": [
         "setup_wavelength",
-        "calib_twotheta_offset",
-        "calib_sample_displacement",
-        "calib_sample_transparency"
+        "calib_twotheta_offset"
       ],
       "range": [
         8.0953,
@@ -2777,9 +2769,7 @@ var frozen = {
       "unusedFreeFields": [],
       "instrumentFields": [
         "setup_wavelength",
-        "calib_twotheta_offset",
-        "calib_sample_displacement",
-        "calib_sample_transparency"
+        "calib_twotheta_offset"
       ],
       "range": [
         3.86396,
@@ -2867,9 +2857,7 @@ var frozen = {
       "unusedFreeFields": [],
       "instrumentFields": [
         "setup_wavelength",
-        "calib_twotheta_offset",
-        "calib_sample_displacement",
-        "calib_sample_transparency"
+        "calib_twotheta_offset"
       ],
       "range": [
         10.0,
@@ -3118,9 +3106,7 @@ var frozen = {
       "unusedFreeFields": [],
       "instrumentFields": [
         "setup_wavelength",
-        "calib_twotheta_offset",
-        "calib_sample_displacement",
-        "calib_sample_transparency"
+        "calib_twotheta_offset"
       ],
       "range": [
         10.0,
@@ -3204,9 +3190,7 @@ var frozen = {
       "unusedFreeFields": [],
       "instrumentFields": [
         "setup_wavelength",
-        "calib_twotheta_offset",
-        "calib_sample_displacement",
-        "calib_sample_transparency"
+        "calib_twotheta_offset"
       ],
       "range": [
         10.0,
@@ -4035,7 +4019,27 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_absorption.type": "none",
-        "_background.type": "line-segment"
+        "_background.type": "line-segment",
+        "_peak.broad_gauss_size": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_strain": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        },
+        "_peak.broad_lorentz_size": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        },
+        "_peak.broad_lorentz_strain": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        }
       },
       "loops": {}
     },
@@ -4149,7 +4153,27 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_absorption.type": "none",
-        "_background.type": "line-segment"
+        "_background.type": "line-segment",
+        "_peak.broad_gauss_size": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_strain": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        },
+        "_peak.broad_lorentz_size": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        },
+        "_peak.broad_lorentz_strain": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        }
       },
       "loops": {}
     },
@@ -7160,8 +7184,6 @@ var frozen = {
       "instrumentFields": [
         "setup_wavelength",
         "calib_twotheta_offset",
-        "calib_sample_displacement",
-        "calib_sample_transparency",
         "setup_polarization_coefficient",
         "setup_monochromator_twotheta"
       ],

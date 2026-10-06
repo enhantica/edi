@@ -197,6 +197,18 @@ def generate():
             profile = fields['_peak.type']
             mode = 'cwl' if profile.startswith('cwl-') else 'tof'
             expected = list(PROFILES[profile])
+            # Unmodified CrySPY b37f9f3 powder_diffraction_tof.py calc_sigma/
+            # calc_sigma_gamma defaults the optional size and strain terms to zero.
+            for name in (
+                'broad_gauss_size',
+                'broad_gauss_strain',
+                'broad_lorentz_size',
+                'broad_lorentz_strain',
+            ):
+                if name in expected:
+                    fields.setdefault(
+                        '_peak.' + name, {'value': 0.0, 'free': False, 'uncertainty': None}
+                    )
             unused = [
                 name
                 for name in CW + B2B + GAUSS + LORENTZ + FCJ + BEBA
@@ -214,7 +226,12 @@ def generate():
                 'unusedFreeFields': unused,
                 #  extends the prior input oracle: keep the two CW
                 # fields, then the independently declared polarization pair.
-                'instrumentFields': INSTRUMENT[mode]
+                'instrumentFields': [
+                    name
+                    for name in INSTRUMENT[mode]
+                    if name not in ('calib_sample_displacement', 'calib_sample_transparency')
+                    or '_instrument.' + name in fields
+                ]
                 + [
                     name
                     for name in ('setup_polarization_coefficient', 'setup_monochromator_twotheta')
