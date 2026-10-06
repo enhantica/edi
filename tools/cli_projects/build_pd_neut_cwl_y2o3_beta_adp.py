@@ -58,7 +58,7 @@ EXPERIMENT = """data_y2o3
 _edi.schema_version 3
 _experiment_type.beam_mode "constant wavelength"
 _scattering_source.neutron_scattering_length sears1992
-_peak.type cwl-pseudo-voigt
+_peak.type cwl-tch-pseudo-voigt
 _peak.cutoff_fwhm 20.0
 _peak.broad_gauss_u 0.036631
 _peak.broad_gauss_v -0.068345
