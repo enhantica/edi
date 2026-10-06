@@ -124,13 +124,13 @@ TestCase {
                 tag: "atom-view-light",
                 appearance: true,
                 dark: false,
-                entries: ["covalent", "vdw", "ionic"]
+                entries: ["covalent", "vdw", "ionic", "adp"]
             },
             {
                 tag: "atom-view-dark",
                 appearance: true,
                 dark: true,
-                entries: ["covalent", "vdw", "ionic"]
+                entries: ["covalent", "vdw", "ionic", "adp"]
             }
         ];
     }

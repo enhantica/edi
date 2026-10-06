@@ -18,7 +18,7 @@ def test_changing_space_group_replaces_old_setting_and_resolves_identity(route):
         'Editing either identity field must set the new Hermann-Mauguin name'
     )
     assert group.it_number == 62, 'Editing the space-group name must resolve its IT number'
-    assert group.coord_system_code in {'', '-'}, (
+    assert group.coord_system_code == 'abc', (
         'A new space group must use its own default coordinate-system code'
     )
 
