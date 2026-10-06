@@ -919,6 +919,7 @@ PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, co
     data.intensity_meas_su = std::move(read.sigma);
     load.experiment.data = std::move(data);
     load.experiment.calculation_only = false;
+    load.experiment.data_file = load.file_name;
     if (take_file_name) {
         // The file's stem, with anything a datablock name cannot hold made an underscore.
         std::string stem = std::filesystem::path(path).stem().string();
@@ -1596,7 +1597,8 @@ const Parameter& seed_scale(const ExperimentBase& e, bool for_relations) {
 //                 `tof-jorgensen`, under which a bracketed Lorentzian coefficient is REJECTED, so
 //                 omitting this silently changes the free set (or hard-errors);
 //   absorption    the per-bank ABSCOR1/ABSCOR2 pair; absent/0 means mu*R = 0, i.e. A == 1;
-//   dataset_weight, excluded_regions  the per-bank joint weight and mask.
+//   dataset_weight, excluded_regions  the per-bank joint weight and mask;
+//   data_file     the plain-data file the measured data came from, which the save writes back.
 void apply_post_build_fields(const ExperimentBase& e, crysta::ExperimentBase& built) {
     built.name = e.name;
     // Each token below crosses through crysta's converter (crossed, above).
@@ -1637,6 +1639,7 @@ void apply_post_build_fields(const ExperimentBase& e, crysta::ExperimentBase& bu
     built.neutron_scattering_length = crossed(crysta::TokenField::NeutronScatteringLength, built,
                                               e.neutron_scattering_length.value_or(""));
     built.dataset_weight = e.dataset_weight;
+    built.data_file = e.data_file;
     built.excluded_regions = e.excluded_regions;
     // The declared background model, its constants and its terms, through crysta's converter like
     // every token; crysta refuses a model holding another type's rows or constants.

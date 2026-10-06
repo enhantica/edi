@@ -856,7 +856,8 @@ refuses to write its bank rows into it.
   takes the file's name without its extension, and the File column shows the file's name. A second load replaces
   the data; each load is one Undo step, which puts back what was there before. One message in the status bar's
   Messages says how many points were read and what the reader skipped or changed. The data is saved in the
-  experiment's `.edi`, so the project never needs the file again.
+  experiment's `.edi`, so the project never needs the file again, and the file's name with it
+  (`_data_source.file_name`), so the File column shows it after the project is opened again.
 - **Experiments with and without data mix** (the owner, 2026-10-06): Create experiment is always available outside
   a scan project. A calculation covers every experiment; a fit leaves out those without data.
 - **Create structure** adds a structure named `structure1`, `structure2`, … holding easydiffractionbeta's default

@@ -461,11 +461,10 @@ bool ProjectViewModel::setExperimentType(int index, const QString& axis, const Q
         }
         const edi::ExperimentBase* before = &experiment;
         const bool created = created_.contains(before);
-        const QString data_file = data_files_.contains(before) ? data_files_.at(before) : QString();
         error = apply(edi::Edit::replace_experiment(project, experiment, std::move(replacement)), true);
         if (error.isEmpty()) {
             // Undo of the experiment's creation removes it in its new type.
-            experimentReplaced(before, project.experiments[static_cast<std::size_t>(index)].get(), created, data_file);
+            experimentReplaced(before, project.experiments[static_cast<std::size_t>(index)].get(), created);
             syncDatasets();
         }
     } catch (const std::exception& refusal) {
@@ -480,7 +479,7 @@ bool ProjectViewModel::setExperimentType(int index, const QString& axis, const Q
 }
 
 void ProjectViewModel::experimentReplaced(const edi::ExperimentBase* before, const edi::ExperimentBase* after,
-                                          bool created, const QString& data_file) {
+                                          bool created) {
     for (UndoRecord& record : undo_history_) {
         if (auto* added = std::get_if<AddedExperiments>(&record)) {
             std::replace(added->experiments.begin(), added->experiments.end(), before, after);
@@ -492,14 +491,10 @@ void ProjectViewModel::experimentReplaced(const edi::ExperimentBase* before, con
             }
         }
     }
-    // The edit's own publication has already dropped `before`'s entries (syncLoadState): they come from the caller.
+    // The edit's own publication has already dropped `before`'s entry (syncLoadState): it comes from the caller.
     created_.erase(before);
-    data_files_.erase(before);
     if (created) {
         created_.insert(after);
-    }
-    if (!data_file.isEmpty()) {
-        data_files_[after] = data_file;
     }
     syncLoadState();
 }
@@ -511,15 +506,12 @@ void ProjectViewModel::syncLoadState() {
         held.insert(experiment.get());
     }
     std::erase_if(created_, [&held](const edi::ExperimentBase* experiment) { return !held.contains(experiment); });
-    std::erase_if(data_files_, [&held](const auto& entry) { return !held.contains(entry.first); });
     for (ExperimentViewModel* model : experiment_models_) {
-        const auto file = data_files_.find(model->experiment());
-        model->setLoadState(created_.contains(model->experiment()),
-                            file != data_files_.end() ? file->second : QString());
+        model->setCanLoadData(created_.contains(model->experiment()));
     }
 }
 
-QString ProjectViewModel::replaceData(int index, edi::BraggPdExperiment replacement, const QString& data_file) {
+QString ProjectViewModel::replaceData(int index, edi::BraggPdExperiment replacement) {
     edi::Project& project = *project_;
     const edi::ExperimentBase* before = project.experiments[static_cast<std::size_t>(index)].get();
     const bool created = created_.contains(before);
@@ -533,7 +525,7 @@ QString ProjectViewModel::replaceData(int index, edi::BraggPdExperiment replacem
     if (!error.isEmpty()) {
         return error;
     }
-    experimentReplaced(before, project.experiments[static_cast<std::size_t>(index)].get(), created, data_file);
+    experimentReplaced(before, project.experiments[static_cast<std::size_t>(index)].get(), created);
     syncDatasets();
     return {};
 }
@@ -576,10 +568,9 @@ bool ProjectViewModel::loadData(int index, const QUrl& file) {
         }
     }
     const QString file_name = QString::fromStdString(load.file_name);
-    LoadedData record{nullptr, std::make_shared<const edi::BraggPdExperiment>(experiment),
-                      data_files_.contains(&experiment) ? data_files_.at(&experiment) : QString()};
+    LoadedData record{nullptr, std::make_shared<const edi::BraggPdExperiment>(experiment)};
     const QString loaded_name = QString::fromStdString(load.experiment.name);
-    if (const QString error = replaceData(index, std::move(load.experiment), file_name); !error.isEmpty()) {
+    if (const QString error = replaceData(index, std::move(load.experiment)); !error.isEmpty()) {
         return refuse(error);
     }
     record.experiment = project.experiments[static_cast<std::size_t>(index)].get();
@@ -1415,7 +1406,7 @@ void ProjectViewModel::undo() {
         } else {
             const LoadedData record = *loaded;
             const QString error = replaceData(static_cast<int>(found - project_->experiments.begin()),
-                                              edi::BraggPdExperiment(*record.before), record.before_file);
+                                              edi::BraggPdExperiment(*record.before));
             undone = error.isEmpty();
         }
     } else if (const auto* structures = std::get_if<edi::StructuresUndo>(&undo_history_.back())) {

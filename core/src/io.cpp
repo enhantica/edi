@@ -603,6 +603,8 @@ const std::set<std::string>& known_covered_tags() {
         "_instrument.calib_twotheta_offset", "_instrument.setup_monochromator_twotheta",
         "_instrument.setup_polarization_coefficient", "_instrument.setup_twotheta_bank",
         "_instrument.setup_wavelength",
+        // _data_source (the plain-data file the measured data was read from)
+        "_data_source.file_name",
         // _linked_structure
         "_linked_structure.enabled", "_linked_structure.scale", "_linked_structure.structure_id",
         // _preferred_orientation (diffraction-lib's category, CW only)
@@ -1360,6 +1362,9 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
         (item == ScatteringSourceItem::XRAY_FORM_FACTOR  ? experiment.xray_form_factor
          : item == ScatteringSourceItem::XRAY_DISPERSION ? experiment.xray_dispersion
                                                          : experiment.neutron_scattering_length) = *value;
+    }
+    if (const std::string* file = block.find("_data_source.file_name")) {
+        experiment.data_file = *file;
     }
     validate_experiment_selectors(block, resolved.peak_type, resolved.mode, where);
     experiment.peak.cutoff_fwhm = to_double(block.require("_peak.cutoff_fwhm", where), where);

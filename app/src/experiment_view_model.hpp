@@ -51,9 +51,9 @@ class ExperimentViewModel : public QObject {
     Q_PROPERTY(double datasetWeight READ datasetWeight WRITE setDatasetWeight NOTIFY datasetWeightChanged)
     Q_PROPERTY(bool calculationOnly READ calculationOnly CONSTANT)
     // Load data… reads a plain-data file into this experiment: only one made with Create experiment (an
-    // experiment loaded from `.edi` has its data). `dataFile`: the file its data was last loaded from, or empty.
+    // experiment loaded from `.edi` has its data). `dataFile`: the plain-data file its data came from, or empty.
     Q_PROPERTY(bool canLoadData READ canLoadData NOTIFY canLoadDataChanged)
-    Q_PROPERTY(QString dataFile READ dataFile NOTIFY dataFileChanged)
+    Q_PROPERTY(QString dataFile READ dataFile CONSTANT)
     Q_PROPERTY(edi_app::CategoryListModel* categories READ categories CONSTANT)
     Q_PROPERTY(edi_app::ParameterListModel* instrument READ instrument CONSTANT)
     Q_PROPERTY(edi_app::ParameterListModel* peak READ peak CONSTANT)
@@ -122,9 +122,9 @@ class ExperimentViewModel : public QObject {
     void setDatasetWeight(double weight);
     bool calculationOnly() const { return experiment_.calculation_only; }
     bool canLoadData() const { return can_load_data_; }
-    QString dataFile() const { return data_file_; }
+    QString dataFile() const { return QString::fromStdString(experiment_.data_file); }
     // Set by the project, which knows how the experiment was made.
-    void setLoadState(bool can_load_data, const QString& data_file);
+    void setCanLoadData(bool can_load_data);
     CategoryListModel* categories() const { return categories_; }
     ParameterListModel* instrument() const { return instrument_; }
     ParameterListModel* peak() const { return peak_; }
@@ -163,7 +163,6 @@ class ExperimentViewModel : public QObject {
    signals:
     void nameChanged();
     void canLoadDataChanged();
-    void dataFileChanged();
     void fitOutcomeChanged();
     void peakTypeChanged();
     void absorptionTypeChanged();
@@ -183,7 +182,6 @@ class ExperimentViewModel : public QObject {
     edi::ExperimentBase& experiment_;
     ProjectEditor& editor_;
     bool can_load_data_ = false;
-    QString data_file_;
     ParameterRegistry& registry_;
     QString name_, peak_type_, absorption_type_, linked_structure_id_, last_error_, fit_outcome_;
     double cutoff_fwhm_ = 0.0, dataset_weight_ = 1.0;
