@@ -1069,8 +1069,9 @@ std::pair<std::size_t, ScanResultIndex::Row> scan_row_facts(const Project& /*pro
         refuse("names a file that is not one of the scan's");
     }
     ScanResultIndex::Row row;
-    if (!parse_scan_number(cells[index.chi], row.reduced_chi_square) || !std::isfinite(row.reduced_chi_square)) {
-        refuse("has no finite reduced chi-square");
+    if (!parse_scan_number(cells[index.chi], row.reduced_chi_square) || !std::isfinite(row.reduced_chi_square) ||
+        row.reduced_chi_square < 0.0) {
+        refuse("has no finite, non-negative reduced chi-square");
     }
     const std::string& success = cells[index.success];
     if (success != "True" && success != "False") {
