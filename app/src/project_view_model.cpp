@@ -747,7 +747,6 @@ void ProjectViewModel::markTemplateChanged() {
     if (!scan_) {
         return;
     }
-    fit_->noteTemplateEdit();
     syncOutOfDate();
 }
 
@@ -779,6 +778,30 @@ QString ProjectViewModel::prepareScan(bool fresh) {
     return {};
 }
 
+QString ProjectViewModel::resetScan() {
+    if (fit_ != nullptr && fit_->running()) {
+        return tr("A fit is running");
+    }
+    if (scan_session_ == nullptr) {
+        return scanRefusal();
+    }
+    // Every dataset's fit result goes, as one Undo step: the result files are set aside, absent ones included, and
+    // the datasets read as unfitted.
+    ScanRun run;
+    if (const QString refusal = scan_session_->takeFiles(*project_, run.files); !refusal.isEmpty()) {
+        setLastError(refusal);
+        return refusal;
+    }
+    undo_history_.emplace_back(std::move(run));
+    syncUndo();
+    setModified(true);
+    reloadScanResults();
+    if (current_dataset_ >= 0) {
+        viewDataset(current_dataset_, true);
+    }
+    return {};
+}
+
 bool ProjectViewModel::restoreScanRun(const ScanRun& run) {
     if (fit_ != nullptr && fit_->running()) {
         return false;
@@ -790,9 +813,12 @@ bool ProjectViewModel::restoreScanRun(const ScanRun& run) {
         return false;
     }
     setModified(true);
-    fit_->noteTemplateEdit();  // a stopped run that was undone is not continued
     scan_refusal_ = scan_session_->load(*project_);
     reloadScanResults();
+    // The shown dataset as its row on disk now gives it.
+    if (current_dataset_ >= 0) {
+        viewDataset(current_dataset_, true);
+    }
     return true;
 }
 

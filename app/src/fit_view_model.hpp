@@ -64,8 +64,10 @@ class FitViewModel : public QObject {
     QML_UNCREATABLE("Belongs to a project")
     // A fit is running: Start fitting is Stop fitting.
     Q_PROPERTY(bool running READ running NOTIFY runningChanged)
-    // A scan stopped part way: Start fitting reads Continue fitting. False until scans run in the app.
+    // A scan project with some datasets fitted and some not: Start fitting reads Continue fitting, and fits from
+    // the first unfitted one. `canReset`: Reset fits can clear the scan's fit results (one Undo step).
     Q_PROPERTY(bool continuable READ continuable NOTIFY continuableChanged)
+    Q_PROPERTY(bool canReset READ canReset NOTIFY canResetChanged)
     // A scan is running: Follow is enabled. `following`: the pattern tab shows the file being fitted.
     Q_PROPERTY(bool scanning READ scanning NOTIFY scanningChanged)
     Q_PROPERTY(bool following READ following WRITE setFollowing NOTIFY followingChanged)
@@ -105,6 +107,7 @@ class FitViewModel : public QObject {
 
     bool running() const { return running_; }
     bool continuable() const { return continuable_; }
+    bool canReset() const { return can_reset_; }
     bool scanning() const { return scanning_; }
     double scanProgress() const { return scan_.files > 0 ? static_cast<double>(scan_.fitted) / scan_.files : 0.0; }
     QString scanText() const { return scan_text_; }
@@ -133,13 +136,13 @@ class FitViewModel : public QObject {
     // A scan project's results: the status bar's summary and the results window show the run as a whole, unless
     // `scan_last` is false (a single fit on a dataset came after the run, and its own record is shown).
     void showScan(const ScanSummary& summary, bool scan_last);
-    // The template was edited: a stopped scan is started afresh, not continued.
-    void noteTemplateEdit();
     // The scan results came from another template than the one held now (the owner compares their provenance).
     void setOutOfDate(bool out_of_date);
 
     Q_INVOKABLE void start();
     Q_INVOKABLE void cancel();
+    // Clears every dataset's fit result in a scan project (one Undo step), so the next Start fits them all.
+    Q_INVOKABLE void reset();
     // Whether the fit's start state was restored (refused while a fit runs or when there is none).
     Q_INVOKABLE bool undo();
     // After every publication of the project: what the mode and the start state allow now.
@@ -150,6 +153,7 @@ class FitViewModel : public QObject {
    signals:
     void runningChanged();
     void continuableChanged();
+    void canResetChanged();
     void scanningChanged();
     void followingChanged();
     void availableChanged();
@@ -188,6 +192,8 @@ class FitViewModel : public QObject {
     void scanEnded(const edi::FitReport& report);
     void setScanning(bool scanning);
     void setContinuable(bool continuable);
+    // Continue fitting and Reset fits from the scan's fitted count and the mode.
+    void syncScanState();
     void setScanCounts(const ScanSummary& counts, const QString& file);
     void setRunning(bool running);
     void setProgress(const QString& iterations, const QString& goodness, const QString& status,
@@ -210,6 +216,7 @@ class FitViewModel : public QObject {
     QElapsedTimer clock_;
     QTimer clock_timer_;
     bool running_ = false, available_ = false, can_undo_ = false, following_ = true;
+    bool can_reset_ = false;
     bool scanning_ = false, continuable_ = false, out_of_date_ = false, scan_last_ = true;
     // The running scan: the files already fitted when it started (a continued scan), for its pace.
     int scan_resumed_ = 0;

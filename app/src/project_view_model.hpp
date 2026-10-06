@@ -225,6 +225,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Undo restores; each file it fits; the file it shows while followed; its end, after which the shown dataset is
     // viewed again from the rows on disk. The shown dataset stays in the model while the scan runs from the template.
     QString prepareScan(bool fresh);
+    // Reset fits (FitViewModel::reset): every dataset's fit result cleared, one Undo step; the refusal, if any.
+    QString resetScan();
     // The template a scan runs from: the stored one while a dataset is shown, else none (the model is the template).
     const edi::Project* scanTemplate() const { return scan_template_ ? &*scan_template_ : nullptr; }
     void scanFileFitted(const edi::ScanFileRecord& record);

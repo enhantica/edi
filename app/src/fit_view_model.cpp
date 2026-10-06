@@ -204,6 +204,7 @@ void FitViewModel::showRecord() {
 void FitViewModel::showScan(const ScanSummary& summary, bool scan_last) {
     scan_ = summary;
     scan_last_ = scan_last;
+    sync();
     emit scanSummaryChanged();
     emit scanFilesChanged();
     emit scanOkChanged();
@@ -241,11 +242,11 @@ void FitViewModel::start() {
     if (!job_ || running_ || !available_) {
         return;
     }
-    // A scan runs from the template; a fresh one clears the previous results first (Undo restores them), a
-    // continued one fits only the files without a row.
+    // A scan runs from the template. With no dataset fitted it starts afresh (the previous result files, if any, go
+    // to Undo); otherwise it continues from the first dataset without a row (edi ADR-0017 §17).
     const bool scan = edi::is_scan_fitting_mode(edi::effective_fitting_mode(project_));
     if (scan) {
-        const QString error = owner_.prepareScan(!continuable_);
+        const QString error = owner_.prepareScan(scan_.fitted == 0);
         if (!error.isEmpty()) {
             emit refused(error);
             return;
@@ -261,7 +262,6 @@ void FitViewModel::start() {
         if (scan) {
             scan_resumed_ = 0;
             setScanning(true);
-            setContinuable(false);
             setScanCounts(scan_, QString());
         }
         results_->clear();
@@ -296,6 +296,7 @@ bool FitViewModel::undo() {
 }
 
 void FitViewModel::sync() {
+    syncScanState();
     // A scan mode runs only in a project whose scan resolves to datasets of one template experiment; a declared
     // scan is never fitted jointly, whatever mode the project was saved with.
     const QString mode = QString::fromStdString(edi::effective_fitting_mode(project_));
@@ -304,6 +305,9 @@ void FitViewModel::sync() {
     QString reason;
     if (scan) {
         reason = owner_.scanRefusal();
+        if (reason.isEmpty() && !running_ && scan_.files > 0 && scan_.fitted >= scan_.files) {
+            reason = tr("Every dataset is fitted: Reset fits to fit them again");
+        }
     } else if (mode == QLatin1String("joint") && declared) {
         reason = tr("This project declares a scan (_sequential_fit): its datasets are fitted in the sequential or "
                     "independent mode, not jointly");
@@ -390,6 +394,7 @@ void FitViewModel::setScanCounts(const ScanSummary& counts, const QString& file)
     scan_.fitted = counts.fitted;
     scan_.ok = counts.ok;
     scan_.failed = counts.failed;
+    sync();
     emit scanSummaryChanged();
     emit scanFilesChanged();
     emit scanOkChanged();
@@ -435,7 +440,26 @@ void FitViewModel::setContinuable(bool continuable) {
     }
 }
 
-void FitViewModel::noteTemplateEdit() { setContinuable(false); }
+void FitViewModel::reset() {
+    if (running_ || !can_reset_) {
+        return;
+    }
+    if (const QString error = owner_.resetScan(); !error.isEmpty()) {
+        emit refused(error);
+    }
+}
+
+void FitViewModel::syncScanState() {
+    // In a scan project the fit button follows the datasets' fits (owner, 2026-10-06): Start fitting while none is
+    // fitted, Continue fitting while some are not, unavailable once all are; Reset fits clears them.
+    const bool scan = edi::is_scan_fitting_mode(edi::effective_fitting_mode(project_)) && owner_.scan();
+    setContinuable(scan && scan_.fitted > 0 && scan_.fitted < scan_.files);
+    const bool can_reset = scan && !running_ && scan_.fitted > 0;
+    if (can_reset != can_reset_) {
+        can_reset_ = can_reset;
+        emit canResetChanged();
+    }
+}
 
 void FitViewModel::setOutOfDate(bool out_of_date) {
     if (out_of_date != out_of_date_) {
@@ -449,8 +473,6 @@ void FitViewModel::scanEnded(const edi::FitReport& report) {
     const double seconds = static_cast<double>(clock_.elapsed()) / 1000.0;
     // The owner reads the rows on disk again and shows the run's summary, its own end and time included.
     owner_.scanEnded(report.status, seconds);
-    // Stopped part way: Continue fitting fits the files left.
-    setContinuable(report.status == edi::FitStatus::CANCELLED && scan_.fitted > 0 && scan_.fitted < scan_.files);
     if (report.status == edi::FitStatus::ERROR) {
         emit refused(QString::fromStdString(report.refusal));
         return;
