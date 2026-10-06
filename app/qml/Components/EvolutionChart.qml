@@ -34,10 +34,6 @@ Item {
     readonly property real xTitleHeight: Math.round(em * 1.7)
     // The zoomed ranges, [xMin, xMax, yMin, yMax]; empty: the whole data.
     property list<real> zoom: []
-    readonly property real xLow: zoom.length === 4 ? zoom[0] : (evolution ? evolution.xMin : 0)
-    readonly property real xHigh: zoom.length === 4 ? zoom[1] : (evolution ? evolution.xMax : 1)
-    readonly property real yLow: zoom.length === 4 ? zoom[2] : (evolution ? evolution.yMin : 0)
-    readonly property real yHigh: zoom.length === 4 ? zoom[3] : (evolution ? evolution.yMax : 1)
 
     // A round step giving about `count` ticks over a span: 1, 2 or 5 times a power of ten.
     function niceStep(span, count) {
@@ -110,8 +106,8 @@ Item {
         }
         axisX: ValueAxis {
             id: axisX
-            min: chart.xLow
-            max: chart.xHigh
+            min: chart.evolution ? chart.evolution.xMin : 0
+            max: chart.evolution ? chart.evolution.xMax : 1
             tickInterval: chart.niceStep(max - min, 8)
             tickAnchor: 0
             lineVisible: false
@@ -120,8 +116,8 @@ Item {
         }
         axisY: ValueAxis {
             id: axisY
-            min: chart.yLow
-            max: chart.yHigh
+            min: chart.evolution ? chart.evolution.yMin : 0
+            max: chart.evolution ? chart.evolution.yMax : 1
             tickInterval: chart.niceStep(max - min, 6)
             tickAnchor: 0
             lineVisible: false
@@ -231,17 +227,22 @@ Item {
                 pressX = mouse.x;
                 pressY = mouse.y;
             }
+            function moved(mouse): bool {
+                return Math.abs(mouse.x - pressX) > chart.em * 0.3 || Math.abs(mouse.y - pressY) > chart.em * 0.3;
+            }
+
             onReleased: mouse => {
-                if (mouse.button === Qt.RightButton) {
+                if (mouse.button === Qt.RightButton)
                     chart.zoom = [];
-                } else if (Math.abs(mouse.x - pressX) > chart.em * 0.3 || Math.abs(mouse.y - pressY) > chart.em * 0.3) {
+                else if (moved(mouse))
                     chart.zoom = [Math.min(xAt(pressX), xAt(mouse.x)), Math.max(xAt(pressX), xAt(mouse.x)), Math.min(yAt(pressY), yAt(mouse.y)), Math.max(yAt(pressY), yAt(mouse.y))];
-                } else {
-                    const reach = chart.em * 0.6;
-                    const dataset = chart.evolution.datasetAt(xAt(mouse.x), yAt(mouse.y), reach / width * (axisX.max - axisX.min), reach / height * (axisY.max - axisY.min));
-                    if (dataset >= 0)
-                        chart.project.currentExperimentIndex = dataset;
-                }
+            }
+            // A click selects; a drag's release zooms (above), and its click finds a point only under the release.
+            onClicked: mouse => {
+                const reach = chart.em * 0.6;
+                const dataset = chart.evolution.datasetAt(axisX.min + mouse.x / width * (axisX.max - axisX.min), axisY.max - mouse.y / height * (axisY.max - axisY.min), reach / width * (axisX.max - axisX.min), reach / height * (axisY.max - axisY.min));
+                if (dataset >= 0)
+                    chart.project.currentExperimentIndex = dataset;
             }
             onWheel: wheel => {
                 if (wheel.angleDelta.y === 0)
@@ -271,6 +272,32 @@ Item {
                 }
             }
         }
+    }
+
+    // A zoom holds the axes at its box until it is reset; the axes then follow the data's ranges again.
+    Binding {
+        target: axisX
+        property: "min"
+        value: chart.zoom.length === 4 ? chart.zoom[0] : 0
+        when: chart.zoom.length === 4
+    }
+    Binding {
+        target: axisX
+        property: "max"
+        value: chart.zoom.length === 4 ? chart.zoom[1] : 1
+        when: chart.zoom.length === 4
+    }
+    Binding {
+        target: axisY
+        property: "min"
+        value: chart.zoom.length === 4 ? chart.zoom[2] : 0
+        when: chart.zoom.length === 4
+    }
+    Binding {
+        target: axisY
+        property: "max"
+        value: chart.zoom.length === 4 ? chart.zoom[3] : 1
+        when: chart.zoom.length === 4
     }
 
     // Another parameter or x axis is drawn at its whole range.
