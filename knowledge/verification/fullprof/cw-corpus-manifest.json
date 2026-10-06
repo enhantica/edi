@@ -65,6 +65,14 @@
       "pbso4.prf": "sha256:071e2b81921e0c47b12819db5a65ec3cc2efa92d914bb46746cb7c3faa35107b",
       "pbso4.sum": "sha256:42128272cb26869839a4b7a406c8a34e38c0f70ddb83eb6f671246587e65158b"
     },
+    "pd-neut-cwl_y2o3_beta-adp": {
+      "PROVENANCE.md": "sha256:a25659b6d1ab6004b5f266d3b3ce83d0d551fc1068813113276815ab4d25227e",
+      "y2o3.bac": "sha256:63c4b14fb2a38aaea0f753413aae03903e04a8045c914160f79ee955944593c5",
+      "y2o3.dat": "sha256:0b3bc38ed073536f503a27776704853e735b6aaaaaa4bdbd4af8146bfd2bbf61",
+      "y2o3.pcr": "sha256:42a7e816ac4609c00112dca15e4030b94688d53dbd802771dfcb645aa760e2e0",
+      "y2o3.prf": "sha256:52d13e5a517015487ab4a1160fe9444679b8c314663a6225cffc76a49836ac9e",
+      "y2o3.sum": "sha256:0ef96e229c309d4f3bb948f649c920194696063e0d67956f348eb35b2729868e"
+    },
     "pd-neut-cwl_y2o3_isotropic-adp": {
       "PROVENANCE.md": "sha256:bc99bc69e5b7a7dd0a624bf667757f7962f40ba5bf9035de171d0bba530dcf71",
       "y2o3_isotropic_adp.bac": "sha256:a0e3fbdd25c98e65cd3123f9ec445015a4ec14a57707026bb23e6986a8e9e3eb",
