@@ -75,6 +75,12 @@ ParameterItem::ParameterItem(const edi::ParameterEntry& entry, ProjectEditor& ed
     if (short_name_.isEmpty()) {
         short_name_ = display_name_;
     }
+    // The FCJ asymmetry under FullProf's names (owner, 2026-10-06); its spec keeps diffraction-lib's.
+    if (spec == &edi::spec::peak_asym_fcj_1) {
+        short_name_ = QStringLiteral("S/L");
+    } else if (spec == &edi::spec::peak_asym_fcj_2) {
+        short_name_ = QStringLiteral("D/L");
+    }
     minimum_ = spec != nullptr ? spec->range.min : -std::numeric_limits<double>::infinity();
     maximum_ = spec != nullptr ? spec->range.max : std::numeric_limits<double>::infinity();
     category_icon_ = QString::fromUtf8(category_presentation(category_).icon);
