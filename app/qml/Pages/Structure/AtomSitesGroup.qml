@@ -10,15 +10,18 @@ import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
 
-// `atom_site` (easydiffractionbeta Pages/Model/SideBarBasic/AtomSite.qml and AtomSiteAdp.qml, merged:
-// the ADP columns belong to the category, packet §15.6): label, type, coordinates, Wyckoff letter,
-// occupancy, ADP type and Biso; append, duplicate and remove as the library's AtomSites do.
+// `atom_site` (easydiffractionbeta Pages/Model/SideBarBasic/AtomSite.qml): label, the type with its atom icon,
+// coordinates, Wyckoff letter and occupancy; append, duplicate and remove as the library's AtomSites do. The ADP
+// columns are the Atomic displacement group's (the owner, 2026-10-06).
 Column {
     id: group
 
     property StructureViewModel structure: null
     readonly property AtomSiteListModel sites: structure ? structure.atomSites : null
-    readonly property real coordinateWidth: EaStyle.Sizes.fontPixelSize * 3.5
+    // easydiffractionbeta's widths (AtomSite.qml): the label takes what the others leave.
+    readonly property real coordinateWidth: EaStyle.Sizes.fontPixelSize * 4.8
+    readonly property real typeWidth: EaStyle.Sizes.fontPixelSize * 4.5
+    readonly property real wyckoffWidth: EaStyle.Sizes.fontPixelSize * 2.5
 
     spacing: AppSizes.groupContentSpacing
 
@@ -31,17 +34,16 @@ Column {
         header: EaComponents.TableViewHeader {
             EaComponents.TableViewLabel {
                 width: AppSizes.indexColumnWidth
-                text: qsTr("No.")
-            }
-            EaComponents.TableViewLabel {
-                width: EaStyle.Sizes.tableRowHeight
             }
             EaComponents.TableViewLabel {
                 flexibleWidth: true
                 text: qsTr("label")
             }
             EaComponents.TableViewLabel {
-                width: EaStyle.Sizes.fontPixelSize * 2.5
+                width: AppSizes.atomIconColumnWidth
+            }
+            EaComponents.TableViewLabel {
+                width: group.typeWidth
                 text: qsTr("type")
             }
             EaComponents.TableViewLabel {
@@ -57,20 +59,12 @@ Column {
                 text: "z"
             }
             EaComponents.TableViewLabel {
-                width: EaStyle.Sizes.fontPixelSize * 2
-                text: qsTr("WP")
+                width: group.wyckoffWidth
+                text: qsTr("WL")
             }
             EaComponents.TableViewLabel {
-                width: EaStyle.Sizes.fontPixelSize * 3
+                width: group.coordinateWidth
                 text: qsTr("occ")
-            }
-            EaComponents.TableViewLabel {
-                width: EaStyle.Sizes.fontPixelSize * 2.75
-                text: qsTr("ADP")
-            }
-            EaComponents.TableViewLabel {
-                width: EaStyle.Sizes.fontPixelSize * 3
-                text: qsTr("iso")
             }
             EaComponents.TableViewLabel {
                 width: AppSizes.iconColumnWidth
@@ -84,37 +78,48 @@ Column {
             required property string label
             required property string typeSymbol
             required property string wyckoffLetter
-            required property string adpType
             required property ParameterItem fractX
             required property ParameterItem fractY
             required property ParameterItem fractZ
             required property ParameterItem occupancy
-            required property ParameterItem adpIso
 
             EaComponents.TableViewLabel {
                 width: AppSizes.indexColumnWidth
                 color: EaStyle.Colors.themeForegroundMinor
                 text: row.index + 1
             }
-            // The site's atom icon in its element's colour, as the Analysis page's parameter names carry it (the owner,
-            // 2026-10-03): the category icon its parameters hold, the element colour of its type.
+            TextCell {
+                objectName: `atomSite.label.${row.index}`
+                width: table.headerLabelItems.length > 1 ? table.headerLabelItems[1].width : 0
+                value: row.label
+                onCommitted: text => group.sites.setText(row.index, "label", text)
+            }
+            // The site's atom icon in its element's colour, next to its type, as the Analysis page's parameter
+            // names carry it (the owner, 2026-10-03 and 2026-10-06).
             IconCell {
                 objectName: `atomSite.icon.${row.index}`
+                width: AppSizes.atomIconColumnWidth
                 icon: row.fractX ? row.fractX.categoryIcon : ""
                 iconColor: AppColors.element(row.typeSymbol)
                 toolTip: row.typeSymbol
             }
-            TextCell {
-                objectName: `atomSite.label.${row.index}`
-                width: table.headerLabelItems.length > 2 ? table.headerLabelItems[2].width : 0
-                value: row.label
-                onCommitted: text => group.sites.setText(row.index, "label", text)
-            }
-            TextCell {
+            // The type picked from the element table or typed into the list's search field (the owner,
+            // 2026-10-06); a type outside the table, as a file may declare it ("Co2+", "157Gd"), is shown as it is.
+            SearchableComboBox {
                 objectName: `atomSite.typeSymbol.${row.index}`
-                width: EaStyle.Sizes.fontPixelSize * 2.5
-                value: row.typeSymbol
-                onCommitted: text => group.sites.setText(row.index, "typeSymbol", text)
+                width: group.typeWidth
+                height: EaStyle.Sizes.tableRowHeight
+                topInset: 0
+                bottomInset: 0
+                searchThreshold: 0
+                model: ApplicationInfo.elementSymbols
+                currentIndex: ApplicationInfo.elementSymbols.indexOf(row.typeSymbol)
+                displayText: row.typeSymbol
+                popup.width: Math.max(width, EaStyle.Sizes.fontPixelSize * 8)
+                onActivated: index => {
+                    group.sites.setText(row.index, "typeSymbol", textAt(index));
+                    currentIndex = Qt.binding(() => ApplicationInfo.elementSymbols.indexOf(row.typeSymbol));
+                }
             }
             ParameterCell {
                 objectName: `atomSite.fractX.${row.index}`
@@ -133,25 +138,14 @@ Column {
             }
             TextCell {
                 objectName: `atomSite.wyckoffLetter.${row.index}`
-                width: EaStyle.Sizes.fontPixelSize * 2
+                width: group.wyckoffWidth
                 value: row.wyckoffLetter
                 onCommitted: text => group.sites.setText(row.index, "wyckoffLetter", text)
             }
             ParameterCell {
                 objectName: `atomSite.occupancy.${row.index}`
-                width: EaStyle.Sizes.fontPixelSize * 3
+                width: group.coordinateWidth
                 item: row.occupancy
-            }
-            TextCell {
-                objectName: `atomSite.adpType.${row.index}`
-                width: EaStyle.Sizes.fontPixelSize * 2.75
-                value: row.adpType
-                onCommitted: text => group.sites.setText(row.index, "adpType", text)
-            }
-            ParameterCell {
-                objectName: `atomSite.adpIso.${row.index}`
-                width: EaStyle.Sizes.fontPixelSize * 3
-                item: row.adpIso
             }
             EaComponents.TableViewButton {
                 objectName: `atomSite.remove.${row.index}`

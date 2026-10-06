@@ -79,6 +79,14 @@ QStringList ApplicationInfo::componentColumn(int column) {
     return values;
 }
 
+QStringList ApplicationInfo::elementSymbols() const {
+    QStringList symbols;
+    for (const edi::ElementStyle& style : edi::element_style_table()) {
+        symbols.append(QString::fromStdString(style.symbol));
+    }
+    return symbols;
+}
+
 QColor ApplicationInfo::elementColor(const QString& typeSymbol, const QColor& fallback, const QString& scheme) const {
     const edi::ColorScheme colors = scheme == QLatin1String("vesta") ? edi::ColorScheme::Vesta : edi::ColorScheme::Jmol;
     const edi::ElementColor found = edi::element_color(edi::element_of(typeSymbol.toStdString()), colors);

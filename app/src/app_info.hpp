@@ -33,6 +33,8 @@ class ApplicationInfo : public QObject {
     Q_PROPERTY(QString copyrightHolder READ copyrightHolder CONSTANT)
     Q_PROPERTY(QString developerYearsFrom READ developerYearsFrom CONSTANT)
     Q_PROPERTY(QString developerYearsTo READ developerYearsTo CONSTANT)
+    // The element symbols of the core's element table, H to Og: what an atom-type picker lists.
+    Q_PROPERTY(QStringList elementSymbols READ elementSymbols CONSTANT)
 
    public:
     explicit ApplicationInfo(QObject* parent = nullptr) : QObject(parent) {}
@@ -82,6 +84,7 @@ class ApplicationInfo : public QObject {
     // ADR-0017 §8, ADR-0022 §4: an element's colour from a type symbol — the core table's colour of
     // edi::element_of(typeSymbol) in `scheme` ("jmol" or "vesta", the structure view's) — or `fallback` for an
     // element the table does not have. The app holds no element colour of its own.
+    QStringList elementSymbols() const;
     Q_INVOKABLE QColor elementColor(const QString& typeSymbol, const QColor& fallback,
                                     const QString& scheme = QStringLiteral("jmol")) const;
 };
