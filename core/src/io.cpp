@@ -16,6 +16,7 @@
 #include "edi/edits.hpp"
 #include "edi/scan.hpp"
 #include "edi/selectors.hpp"
+#include "edi/symmetry.hpp"
 #include "edi/worker.hpp"
 #include "identity_bridge.hpp"  // Crysta's identity rules, via the adapter
 
@@ -2343,8 +2344,8 @@ Structure structure_from_cif_block(const Block& block, const std::string& where)
                   where);
         // The isotropic value in the type the file gives it: B_iso_or_equiv as Biso, else
         // U_iso_or_equiv as Uiso. A site with a tensor row takes the row's type unless
-        // _atom_site_adp_type declares it isotropic; its adp_iso is then the equivalent value,
-        // which the calculation recomputes from the tensor.
+        // _atom_site_adp_type declares it isotropic; its adp_iso is then the tensor's equivalent
+        // value, set below once the structure is complete.
         const int b_iso_column = loop->column("_atom_site_B_iso_or_equiv");
         const int u_iso_column = loop->column("_atom_site_U_iso_or_equiv");
         const int type_column = loop->column("_atom_site_adp_type");
@@ -2376,6 +2377,10 @@ Structure structure_from_cif_block(const Block& block, const std::string& where)
         }
         site.adp_type = type;
         structure.atom_sites.push_back(std::move(site));
+    }
+    // A file may give a tensor without U_iso_or_equiv: the equivalent value comes from it.
+    if (!structure.atom_site_aniso.empty()) {
+        sync_atom_site_aniso(structure);
     }
     return structure;
 }
