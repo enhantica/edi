@@ -5,6 +5,7 @@
 #include <functional>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 static std::filesystem::path admission_root() {
     return std::filesystem::path(__FILE__)
@@ -70,6 +71,13 @@ TEST_CASE("CW native fit admits only a matching token and slot block") {
     auto control = edi::load_project((admission_root() / "tch").string());
     CHECK_NOTHROW_MESSAGE(control.calculate(),
                           "A native admission witness must first accept its valid TCH control");
+    control.experiment().data->intensity_meas =
+        std::vector<double>(control.experiment().data->axis().size(), 1.0);
+    control.experiment().peak.broad_lorentz_x->free = true;
+    control.minimizer_max_iterations = 1;
+    CHECK_NOTHROW_MESSAGE(
+        control.fit(),
+        "A native fit refusal needs a successful fit of its valid free TCH control");
     const auto destination =
         std::filesystem::temp_directory_path() /
         ("cwl-admission-edi-fit-" + std::to_string(reinterpret_cast<std::uintptr_t>(&control)));
@@ -90,6 +98,10 @@ TEST_CASE("CW native save admits only a matching token and slot block") {
     const auto destination =
         std::filesystem::temp_directory_path() /
         ("cwl-admission-edi-save-" + std::to_string(reinterpret_cast<std::uintptr_t>(&control)));
+    CHECK_NOTHROW_MESSAGE(
+        edi::save_project(control, (destination / "valid").string()),
+        "A native save refusal needs successful persistence of its valid TCH control");
+    std::filesystem::remove_all(destination);
     for (int damage = 0; damage < 13; ++damage) {
         CAPTURE(damage);
         auto project = admission_model(damage);
