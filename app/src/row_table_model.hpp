@@ -38,6 +38,8 @@ class RowTableModel : public QAbstractListModel {
     Qt::ItemFlags flags(const QModelIndex& index) const override;
     // The value of a role by name (C++ only: the QML contract carries no QVariant, I2).
     QVariant get(int row, const QString& role) const;
+    // A role's value as text, for QML that shows a few rows without a view over all of them.
+    Q_INVOKABLE QString text(int row, const QString& role) const { return get(row, role).toString(); }
 
    signals:
     void countChanged();
