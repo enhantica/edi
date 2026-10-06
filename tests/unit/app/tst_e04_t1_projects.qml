@@ -69,7 +69,8 @@ TestCase {
         verify(Session.hasProject, "I19: selected project opens: " + expected.id + " " + Session.lastError);
         const project = Session.project;
         compare(project.name, expected.metadata["_metadata.name"], "I19: opened metadata belongs to the selected project");
-        compare(project.title, expected.metadata["_metadata.title"], "I19: title comes from project.edi");
+        compare(project.title, expected.metadata["_metadata.title"] ?? "Untitled Project",
+                "I19: title follows declared metadata or the UI default regression pin");
         same(Probe.rows(project.structures).map(r => r.name).sort(),
              expected.structures.map(r => r.name).sort(), "I19: every structure is loaded");
         same(Probe.rows(project.experiments).map(r => r.name).sort(),

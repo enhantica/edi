@@ -127,7 +127,8 @@ TestCase {
         const events = Probe.events(handle);
         compare((events.nameHMChanged || []).length, 1, "I3: edited space-group name emits once");
         compare((events.crystalSystemChanged || []).length, 1, "I3: dependent derived crystal system emits once");
-        verify(!events.coordSystemCodeChanged, "I3: unrelated setting is not re-notified");
+        compare((events.coordSystemCodeChanged || []).length, 1,
+                "owner 2026-10-06: switching to P1 notifies its new empty default setting once");
     }
     function test_library_settable_table_columns_reach_core() {
         const p = open("editable-project");
@@ -168,7 +169,7 @@ TestCase {
                 tryVerify(() => visibleControl(name) !== null, 2000,
                           "owner editability: each editor is exposed after group expansion: " + name);
                 const control = visibleControl(name);
-                verify(control !== null && control.enabled && control.readOnly === false,
+                verify(control !== null && control.enabled && control.readOnly !== true,
                        "owner editability: each library-settable field is an enabled editor, not just a writable VM: " + name);
             });
         });
@@ -235,14 +236,14 @@ TestCase {
         click("appBar.tab.structure");
         click("sideBar.tab.basic");
         same(Probe.rows(p.currentStructure.categories).map(r => r.categoryId),
-             ["space_group", "cell", "atom_site", "scattering_length"],
-             "owner category record: ADP never creates a separate category");
-        reveal("atom_site", "atomSite.adpIso.0");
-        const atoms = visibleControl("group.atom_site");
-        verify(Ui.find(atoms, "atomSite.adpIso.0") !== null,
-               "owner category record: ADP is visibly inside Atom sites");
+             ["space_group", "cell", "atom_site", "atom_site_aniso", "scattering_length"],
+             "owner 2026-10-06: Atomic displacement is a separate category");
+        reveal("atom_site_aniso", "atomSiteAdp.iso.0");
+        const atoms = visibleControl("group.atom_site_aniso");
+        verify(Ui.find(atoms, "atomSiteAdp.iso.0") !== null,
+               "owner 2026-10-06: ADP is visibly inside Atomic displacement");
         //  D11 adds the view-only Appearance group to Structure Extras.
-        renderedCategories(["space_group", "cell", "atom_site"], ["scattering_length", "appearance"]);
+        renderedCategories(["space_group", "cell", "atom_site", "atom_site_aniso"], ["scattering_length", "appearance"]);
         click("appBar.tab.experiment");
         renderedCategories(["experiment_type", "background", "instrument", "peak", "excluded_region", "linked_structure"],
                            ["data", "absorption", "preferred_orientation", "scattering_source", "peak"]);

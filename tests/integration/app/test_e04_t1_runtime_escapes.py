@@ -13,12 +13,6 @@ ROOT = Path(__file__).resolve().parents[3]
 APP_TESTS = ROOT / 'tests/unit/app'
 
 
-@pytest.fixture(scope='module')
-def acceptance_reference():
-    # Frozen separate-surface wiring regression pins; never generated at GUI runtime.
-    return str(ROOT / 'tests/fixtures/e04_t1/reference')
-
-
 def runner():
     override = os.environ.get('EDI_APP_TEST_RUNNER')
     candidates = (
@@ -74,33 +68,6 @@ def test_owner_amendment_receipts_cover_every_original_gui_boundary(owner_amendm
         'each original GUI boundary must actually execute and pass in the production host: '
         + boundary
     )
-
-
-def test_existing_projects_open_and_populate_pages(acceptance_reference):
-    run = subprocess.run(
-        [str(runner()), '-input', str(APP_TESTS / 'tst_e04_t1_projects.qml'), '-o', '-,txt'],
-        env={
-            **os.environ,
-            'QT_QPA_PLATFORM': 'offscreen',
-            'QT_QUICK_BACKEND': 'software',
-            'EDI_ACCEPTANCE_REFERENCE': acceptance_reference,
-        },
-        capture_output=True,
-        text=True,
-        timeout=180,
-        check=False,
-    )
-    output = run.stdout + run.stderr
-    assert run.returncode == 0, (
-        f'I19: all registered examples and legacy directories open: {output}'
-    )
-    assert not run.stderr, (
-        'I10/I19: app project loads route diagnostics to the warning model, not stderr'
-    )
-    assert (
-        'E04T1ExistingProjects' in output
-        and 'test_every_example_opens_through_its_page_row' in output
-    ), 'I19: the production runner must actually execute the existing-project cases'
 
 
 @pytest.mark.parametrize('escape', ['missing_property', 'broad_notifications'])

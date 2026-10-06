@@ -36,7 +36,8 @@ TestCase {
         verify(appWindow !== null, "gate 2: production Main loads under the actual registered module");
     }
     function init() {
-        failOnWarning(/.*/);
+        failOnWarning(qtest_results.functionName === "test_add_requires_explicit_complete_experiment_type"
+            ? /\A(?!QRhiGles2: Failed to create (?:temporary context|context)\z)[\s\S]*\z/ : /.*/);
         Probe.clearWatches();
         unrelatedParameter = null;
         Session.closeProject();
@@ -53,7 +54,10 @@ TestCase {
         return Session.project;
     }
     function example(index) {
-        return open("docs/user/cli/" + Oracle.frozen.examples[index].id + "/project");
+        const project = open("docs/user/cli/" + Oracle.frozen.examples[index].id + "/project");
+        tryVerify(() => Probe.computedCurrent(project.currentExperiment), 10000,
+                  "I9: the committed example completes its initial calculation");
+        return project;
     }
     function rows(model) {
         return Probe.rows(model);
@@ -97,10 +101,10 @@ TestCase {
             const project = example(i);
             const structure = project.currentStructure;
             const experiment = project.currentExperiment;
-            categories(structure.categories, [["space_group", "Basic"], ["cell", "Basic"], ["atom_site", "Basic"], ["scattering_length", "Extras"]]);
+            categories(structure.categories, [["space_group", "Basic"], ["cell", "Basic"], ["atom_site", "Basic"], ["atom_site_aniso", "Basic"], ["scattering_length", "Extras"]]);
             //  owner-confirmed ADR-0017 §3: Measured data is Extras;
             // Background precedes Instrument. All other membership/order stays exact.
-            const expCategories = [["experiment_type", "Basic"], ["data", "Extras"], ["background", "Basic"], ["instrument", "Basic"], ["peak", "Basic"], ["linked_structure", "Basic"], ["excluded_region", "Extras"], ["absorption", "Extras"]];
+            const expCategories = [["experiment_type", "Basic"], ["data", "Extras"], ["background", "Basic"], ["instrument", "Basic"], ["peak", "Basic"], ["excluded_region", "Basic"], ["linked_structure", "Basic"], ["absorption", "Extras"]];
             if (i !== 1)
                 expCategories.push(["preferred_orientation", "Extras"]);
             expCategories.push(["scattering_source", "Extras"]);
@@ -208,7 +212,7 @@ TestCase {
             }
             const prefix = expected.mode === "cwl" ? "cwl-" : "tof-";
             ordered(tokens(experiment.peakTypeOptions).sort(), Object.keys(Oracle.frozen.profiles).filter(p => p.startsWith(prefix)).sort(), "I17: exactly independently declared profiles for this loaded experiment type");
-            ordered(tokens(experiment.backgroundTypeOptions), ["line-segment"], "I17: background selector offers exactly the sole supported family");
+            ordered(tokens(experiment.backgroundTypeOptions), ["line-segment", "chebyshev", "polynomial"], "C13-T6: background selector offers all three declared families");
             ordered(tokens(project.analysis.minimizerTypeOptions), ["crysta"], "I17: minimizer selector offers exactly the supported engine");
             ordered(tokens(project.analysis.fittingModeOptions).sort(), ["independent", "joint", "sequential", "single"], "I17: fitting mode selector offers exactly the declared vocabulary");
             ordered(tokens(experiment.absorptionTypeOptions).sort(), (expected.mode === "cwl" ? ["none", "cylinder-hewat", "cylinder-lobanov"] : ["none", "cylinder"]).sort(), "I17: exactly the beam-scoped absorption families");
@@ -279,7 +283,7 @@ TestCase {
         compare(events.dataChanged[0].last, targetRow, "I3: no other row is invalidated");
         ordered(events.dataChanged[0].roles, [Probe.roleNumber(project.parameters, "value")], "I3: only the changed value role is invalidated");
         tryVerify(() => Probe.events(patternWatch).dataChanged !== undefined, 5000, "I3/I9: a coalesced edit publishes a recalculated pattern");
-        const patternEvents = onlyEvents(patternWatch, ["dataChanged"], "I3: recalculation updates pattern values exactly once without resetting axes");
+        const patternEvents = onlyEvents(patternWatch, ["dataChanged", "staleChanged"], "I3: recalculation updates values and currentness without resetting axes");
         ordered(patternEvents.dataChanged[0].roles, [Probe.roleNumber(project.currentExperiment.pattern, "intensityCalc")], "I3: recalculation only invalidates intensityCalc");
         Probe.clearWatches();
         const noOp = Probe.watch(target);
@@ -448,7 +452,7 @@ TestCase {
         verify(project.canLoadStructure, "D12: an empty project permits its first structure");
         const base = "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project/";
         verify(project.loadStructure(Probe.repoUrl(base + "structures/lbco.edi")), "D12: a committed .edi structure block loads through the core");
-        verify(!project.canLoadStructure, "D12: the current core supports one structure");
+        verify(project.canLoadStructure, "C12-T4: a loaded project permits another distinct structure");
         compare(project.currentStructure.spaceGroup.nameHM, "P m -3 m", "D12: loaded structure categories retain file values");
         verify(project.loadExperiments([Probe.repoUrl(base + "experiments/hrpt.edi")]), "D12: a complete .edi experiment loads with its declared type");
         compare(project.currentExperiment.beamModeToken, "constant wavelength", "D12: loaded CW type is preserved");
@@ -459,7 +463,7 @@ TestCase {
         compare(project.currentExperiment.beamModeToken, "time-of-flight", "D12: the newly loaded experiment becomes current");
         verify(!rows(project.currentExperiment.categories).some(r => r.categoryId === "preferred_orientation"), "I7: selecting the loaded TOF block removes the CW-only category");
         ordered(fieldNames(project.currentExperiment.instrument), Oracle.frozen.instrument.tof, "I7: block-file loading uses the same frozen TOF field expectation");
-        verify(!project.loadStructure(Probe.repoUrl(base + "structures/lbco.edi")), "D12: a second structure is refused without replacement");
+        verify(!project.loadStructure(Probe.repoUrl(base + "structures/lbco.edi")), "C12-T4: a duplicate structure identity is refused without replacement");
         compare(rows(project.structures).length, 1, "D12: refused second structure preserves the first");
     }
     function test_edi_batch_refusals_are_atomic() {

@@ -53,8 +53,8 @@ TestCase {
             tryVerify(function() { return Probe.computedCurrent(experiment); }, 10000,
                       ": the scattering-length setup must recalculate before the equal write");
         }
-        verify(Probe.computedCurrent(experiment),
-               ": an equal-write witness must start with current computed categories");
+        tryVerify(() => Probe.computedCurrent(experiment), 10000,
+                  "C34-T26: an equal-write witness must await the initial calculation");
 
         const background = experiment.background;
         const excluded = experiment.excludedRegions;
