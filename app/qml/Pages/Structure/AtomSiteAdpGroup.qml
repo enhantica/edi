@@ -126,6 +126,7 @@ Column {
                     objectName: `atomSiteAdp.ani11.${row.index}`
                     anchors.fill: parent
                     visible: row.anisotropic && !!row.ani11
+                    enabled: row.anisotropic && !!row.ani11 && refinable
                     item: row.ani11 ? row.ani11 : null
                 }
             }
@@ -137,6 +138,7 @@ Column {
                     objectName: `atomSiteAdp.ani22.${row.index}`
                     anchors.fill: parent
                     visible: row.anisotropic && !!row.ani22
+                    enabled: row.anisotropic && !!row.ani22 && refinable
                     item: row.ani22 ? row.ani22 : null
                 }
             }
@@ -148,6 +150,7 @@ Column {
                     objectName: `atomSiteAdp.ani33.${row.index}`
                     anchors.fill: parent
                     visible: row.anisotropic && !!row.ani33
+                    enabled: row.anisotropic && !!row.ani33 && refinable
                     item: row.ani33 ? row.ani33 : null
                 }
             }
@@ -159,6 +162,7 @@ Column {
                     objectName: `atomSiteAdp.ani12.${row.index}`
                     anchors.fill: parent
                     visible: row.anisotropic && !!row.ani12
+                    enabled: row.anisotropic && !!row.ani12 && refinable
                     item: row.ani12 ? row.ani12 : null
                 }
             }
@@ -170,6 +174,7 @@ Column {
                     objectName: `atomSiteAdp.ani13.${row.index}`
                     anchors.fill: parent
                     visible: row.anisotropic && !!row.ani13
+                    enabled: row.anisotropic && !!row.ani13 && refinable
                     item: row.ani13 ? row.ani13 : null
                 }
             }
@@ -181,6 +186,7 @@ Column {
                     objectName: `atomSiteAdp.ani23.${row.index}`
                     anchors.fill: parent
                     visible: row.anisotropic && !!row.ani23
+                    enabled: row.anisotropic && !!row.ani23 && refinable
                     item: row.ani23 ? row.ani23 : null
                 }
             }
