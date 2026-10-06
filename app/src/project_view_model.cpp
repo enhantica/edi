@@ -186,13 +186,6 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     connect(fit_, &FitViewModel::canUndoChanged, this, [this] { syncUndo(); });
     connect(fit_, &FitViewModel::runningChanged, this, [this] { syncUndo(); });
     note_fit();
-    follow_timer_.setSingleShot(true);
-    follow_timer_.setInterval(200);
-    connect(&follow_timer_, &QTimer::timeout, this, [this] {
-        if (fit_ != nullptr && fit_->following() && follow_index_ >= 0) {
-            viewDataset(follow_index_);
-        }
-    });
     scan_sync_timer_.setSingleShot(true);
     scan_sync_timer_.setInterval(250);
     connect(&scan_sync_timer_, &QTimer::timeout, this, [this] {
@@ -707,13 +700,9 @@ int ProjectViewModel::datasetIndex(const std::string& file) const {
 }
 
 void ProjectViewModel::followScanFile(const std::string& file) {
-    const int index = datasetIndex(file);
-    if (index < 0) {
-        return;
-    }
-    follow_index_ = index;
-    if (!follow_timer_.isActive()) {
-        follow_timer_.start();
+    // Each file as it is fitted: a lookup by name and one file read, so a long scan stays flat per file.
+    if (const int index = datasetIndex(file); index >= 0) {
+        viewDataset(index);
     }
 }
 
@@ -726,8 +715,6 @@ void ProjectViewModel::showScanFrame(const std::string& file, const edi::FitFram
 
 void ProjectViewModel::scanEnded() {
     scan_sync_timer_.stop();
-    follow_timer_.stop();
-    follow_index_ = -1;
     reloadScanResults();
     // The shown dataset as the rows on disk now give it.
     const int shown = current_dataset_;
