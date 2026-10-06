@@ -1,4 +1,4 @@
-"""Append explicit Npr and profile contract collection routes; preserve every prior row."""
+"""Append explicit Npr profile and linked-structure collection routes; preserve every prior row."""
 
 from pathlib import Path
 
@@ -35,7 +35,7 @@ if __name__ == '__main__':
                 raise ValueError(message)
             if route not in rows:
                 additions.append(f'{route}\tother-public\n')
-    # profile contract: collection management is other-public, as with Structures/Experiments.
+    # Collection management is other-public, as with Structures/Experiments.
     collection_routes = (
         'LinkedStructures',
         *(

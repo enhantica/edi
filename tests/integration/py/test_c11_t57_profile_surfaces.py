@@ -139,13 +139,13 @@ def test_c33_filename_difference_adds_exactly_the_owned_pages():
     before.add('pd-neut-tof_ferrite-austenite_beer_joint')
     expected.add('pd-neut-cwl_YAP_multiphase')
     after = {path.stem for path in (ROOT / 'docs/dev/verification').glob('*.py')}
-    #  adds its independently gated page; preserve the  set obligation.
+    # The single-phase page has its own gates; preserve the asymmetry page delta.
     after.discard('pd-xray-cwl_LiF_single')
-    #  owns its added page; keep 's original page obligation exact.
+    # Additional polarization and orientation pages have their own gates.
     after.discard('pd-xray-cwl_LiF_single_polarization')
     after.discard('pd-neut-cwl_LBCO_preferred-orientation')
     # ADR-0078 adds its separately gated tied-Biso page; keep this task's delta exact.
     after.discard('pd-neut-cwl_cosio-d20_biso-tied')
     assert after - before == expected and before <= after, (
-        ' C33 counter must derive from the owned asymmetry pages and profile contract YAP addition'
+        'Verification page delta must include the asymmetry pages and the YAP addition'
     )
