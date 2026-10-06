@@ -212,8 +212,10 @@ Item {
 
             property real pressX: 0
             property real pressY: 0
-            readonly property real threshold: chart.em * 0.3
-            readonly property bool dragging: pressed && (pressedButtons & Qt.LeftButton) && (Math.abs(mouseX - pressX) > threshold || Math.abs(mouseY - pressY) > threshold)
+            // Whether a click may pick a point: a press arms it only for the left button, and a move past the
+            // threshold disarms it, so a drag or a right click selects nothing (the Binding below hands it to the model).
+            property bool picking: true
+            readonly property bool dragging: pressed && (pressedButtons & Qt.LeftButton) && (Math.abs(mouseX - pressX) > chart.em * 0.3 || Math.abs(mouseY - pressY) > chart.em * 0.3)
 
             function xAt(px: real): real {
                 return axisX.min + px / width * (axisX.max - axisX.min);
@@ -221,10 +223,8 @@ Item {
             function yAt(py: real): real {
                 return axisY.max - py / height * (axisY.max - axisY.min);
             }
-            // A zoom is admitted only with finite, increasing ends and finite spans on both axes.
-            function zoomTo(range: list<real>) {
-                if (range.every(value => isFinite(value)) && range[1] > range[0] && range[3] > range[2] && isFinite(range[1] - range[0]) && isFinite(range[3] - range[2]))
-                    chart.zoom = range;
+            function moved(mouse): bool {
+                return Math.abs(mouse.x - pressX) > chart.em * 0.3 || Math.abs(mouse.y - pressY) > chart.em * 0.3;
             }
 
             objectName: "evolution.pointer"
@@ -234,20 +234,22 @@ Item {
             onPressed: mouse => {
                 pressX = mouse.x;
                 pressY = mouse.y;
-                chart.evolution.setPicking(mouse.button === Qt.LeftButton);
+                picking = mouse.button === Qt.LeftButton;
             }
             onPositionChanged: mouse => {
-                if (Math.abs(mouse.x - pressX) > threshold || Math.abs(mouse.y - pressY) > threshold)
-                    chart.evolution.setPicking(false);
+                if (moved(mouse))
+                    picking = false;
             }
+            // A zoom is taken only with increasing ends and finite spans on both axes.
             onReleased: mouse => {
                 if (mouse.button === Qt.RightButton) {
-                    chart.evolution.setPicking(false);
+                    picking = false;
                     chart.zoom = [];
-                } else if (Math.abs(mouse.x - pressX) > threshold || Math.abs(mouse.y - pressY) > threshold) {
-                    chart.evolution.setPicking(false);
-                    if (Math.abs(mouse.x - pressX) > threshold && Math.abs(mouse.y - pressY) > threshold)
-                        zoomTo([Math.min(xAt(pressX), xAt(mouse.x)), Math.max(xAt(pressX), xAt(mouse.x)), Math.min(yAt(pressY), yAt(mouse.y)), Math.max(yAt(pressY), yAt(mouse.y))]);
+                } else if (moved(mouse)) {
+                    picking = false;
+                    const box = [Math.min(xAt(pressX), xAt(mouse.x)), Math.max(xAt(pressX), xAt(mouse.x)), Math.min(yAt(pressY), yAt(mouse.y)), Math.max(yAt(pressY), yAt(mouse.y))];
+                    if (Math.abs(mouse.x - pressX) > chart.em * 0.3 && Math.abs(mouse.y - pressY) > chart.em * 0.3 && box[1] > box[0] && box[3] > box[2] && isFinite(box[1] - box[0]) && isFinite(box[3] - box[2]))
+                        chart.zoom = box;
                 }
             }
             onClicked: mouse => {
@@ -261,7 +263,17 @@ Item {
                     return;
                 const anchor = xAt(wheel.x);
                 const factor = Math.pow(0.8, wheel.angleDelta.y / 120);
-                zoomTo([anchor - (anchor - axisX.min) * factor, anchor + (axisX.max - anchor) * factor, axisY.min, axisY.max]);
+                // Only a zoom with finite, non-empty spans on both axes.
+                if (!(isFinite(anchor) && isFinite((axisX.max - axisX.min) * factor) && (axisX.max - axisX.min) * factor > 0 && isFinite(axisY.max - axisY.min) && axisY.max > axisY.min))
+                    return;
+                chart.zoom = [anchor - (anchor - axisX.min) * factor, anchor + (axisX.max - anchor) * factor, axisY.min, axisY.max];
+            }
+
+            Binding {
+                target: chart.evolution
+                property: "picking"
+                value: pointer.picking
+                when: chart.evolution !== null
             }
 
             // The box being dragged, as the pattern chart draws it.

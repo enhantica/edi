@@ -42,6 +42,9 @@ class EvolutionViewModel : public QObject {
     Q_PROPERTY(int currentParameter READ currentParameter WRITE setCurrentParameter NOTIFY currentParameterChanged)
     // 0: x is the extracted value; 1: x is the file's place in the scan, from 1.
     Q_PROPERTY(int xMode READ xMode WRITE setXMode NOTIFY xModeChanged)
+    // Whether the next datasetAt picks: a pointer gesture that is not a plain left click (a drag, a right click) turns
+    // it off, so it selects nothing.
+    Q_PROPERTY(bool picking READ picking WRITE setPicking NOTIFY pickingChanged)
     Q_PROPERTY(QStringList xModes READ xModes CONSTANT)
     Q_PROPERTY(QString xTitle READ xTitle NOTIFY xTitleChanged)
     Q_PROPERTY(QString yTitle READ yTitle NOTIFY yTitleChanged)
@@ -89,13 +92,18 @@ class EvolutionViewModel : public QObject {
     Q_INVOKABLE int datasetAt(double x, double y, double x_tolerance, double y_tolerance) const;
     // The x of a dataset's drawn point, or NaN when it has none.
     Q_INVOKABLE double datasetX(int dataset) const;
-    // Whether the next datasetAt picks: a pointer gesture that is not a plain left click (a drag, a right click) turns
-    // it off, so it selects nothing.
-    Q_INVOKABLE void setPicking(bool picking) { picking_ = picking; }
+    bool picking() const { return picking_; }
+    void setPicking(bool picking) {
+        if (picking_ != picking) {
+            picking_ = picking;
+            emit pickingChanged();
+        }
+    }
 
    signals:
     void currentParameterChanged();
     void xModeChanged();
+    void pickingChanged();
     void xTitleChanged();
     void yTitleChanged();
     void xMinChanged();
