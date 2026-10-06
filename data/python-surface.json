@@ -245,7 +245,6 @@
      "verdict": "public"
     },
     "template_file": {
-     "closes": "E04-T16",
      "need": {
       "by": "deviation",
       "ref": "D78",

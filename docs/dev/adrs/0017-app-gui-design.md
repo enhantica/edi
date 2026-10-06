@@ -863,9 +863,9 @@ refuses to write its bank rows into it.
   uncertainties from `analysis/results.csv` (`Edit::scan_view`); the pages then show that dataset and the pattern
   calculated from it. A project opens on the first dataset. Showing a dataset is not an edit of the project.
 - **The template is held apart from the shown dataset.** An admitted edit of the experiment or the structures while a
-  dataset is shown makes the shown values the template's, over the template's own data file (the packet's Scope 2); a
-  project-wide setting (name, title, description, fitting mode, minimizer) goes to the template unchanged otherwise. A
-  save writes the template, never a dataset's data; a refused edit changes nothing.
+  dataset is shown makes the shown values the template's, over the template's own data file; a project-wide setting
+  (name, title, description, fitting mode, minimizer) goes to the template unchanged otherwise. A save writes the
+  template, never a dataset's data; a refused edit changes nothing.
 - **A dataset's Fit outcome** comes from its results row: *Success* when it converged; otherwise *Max iterations* when
   its iteration count reached the bound, else *No step*; *Not fitted* without a row. Its extracted values come from
   its row, or from its file when a view shows its entry.
