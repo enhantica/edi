@@ -191,6 +191,6 @@ Column {
         width: EaStyle.Sizes.sideBarContentWidth
         wrapMode: Text.WordWrap
         color: EaStyle.Colors.themeForegroundMinor
-        text: qsTr("Draft: only Biso is calculated yet. Uiso, Bani, Uani and beta are shown to try the table; the calculation uses each site's Biso, and these types are not saved.")
+        text: qsTr("Draft: only Biso is calculated and saved. Uiso, Bani, Uani and beta are shown here to try the table: the calculation still uses each site's Biso, and these types are not saved or written to the Text tab. They come with the anisotropic ADP support.")
     }
 }
