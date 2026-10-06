@@ -55,6 +55,7 @@ nav:
           - dev/adrs/0023-web-build.md
           - dev/adrs/0024-parameter-aliases-and-constraints.md
           - dev/adrs/0025-several-structures-and-linked-structures.md
+          - dev/adrs/0026-anisotropic-displacement-parameters.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md
