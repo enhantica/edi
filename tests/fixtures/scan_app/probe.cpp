@@ -611,12 +611,17 @@ void scan_contract_file_completed(const std::string& file) {
     if (count >= 1001 && count <= 2000) early_times.push_back(seconds);
     if (count >= 99001 && count <= 100000) late_times.push_back(seconds);
     if (count == 100000) peak_end = peak_memory();
+    // The benchmark observes the normal worker/GUI queue. Functional Stop/Follow
+    // actors synchronize below; the scale witness never drains or throttles it.
+    if (stage == "scale") {
+        if (count == 1000) peak_1000 = peak_memory();
+        return;
+    }
     if (!active) return;
     QMetaObject::invokeMethod(
         qApp,
         [file, count] {
             if (!active) return;
-            if (count == 1000) peak_1000 = peak_memory();
             if (completed <= 162)
                 events.append(QJsonObject{{"file", QString::fromStdString(file)},
                                           {"stage", QString::fromStdString(stage)},

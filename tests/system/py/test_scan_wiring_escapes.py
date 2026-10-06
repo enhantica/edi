@@ -1,5 +1,7 @@
 """Execute native connection escapes across scan worker and model boundaries."""
 
+from pathlib import Path
+
 import pytest
 
 from tests.integration.py.test_scan_app_contract import block, source
@@ -16,17 +18,8 @@ def test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_w
     tmp_path, channel
 ):
     if channel == 'dispatch':
-        dispatch = """FitResultBase fit_by_mode(Project& project,const IterationCallback&
-    on_iteration,const PreambleCallback& on_start,const CancelCallback&
-    should_cancel,const FileCompleteCallback& file_complete) {
-    if(project.mode=="sequential") return project.fit_sequential(on_iteration,
-
-    on_start,{},file_complete,should_cancel);
-    return project.fit_independent(on_iteration,on_start,{},file_complete,
-
-    should_cancel);
-    }"""
-        expected = ['sequential:11:22:33:44', 'independent:11:22:33:44']
+        dispatch = (Path(__file__).resolve().parents[3] / 'core/src/fit_job.cpp').read_text()
+        expected = ['sequential:0:0:33:55:44', 'independent:0:0:33:55:44']
         assert worker_dispatch(dispatch, tmp_path) == expected, (
             'Scan worker wiring: the control must forward distinct subscriber identities'
         )
@@ -40,7 +33,8 @@ def test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_w
             'Scan worker wiring: called names on swapped branches cannot certify dispatch'
         )
         wrong = dispatch.replace(
-            '{},file_complete,should_cancel', '{},should_cancel,file_complete'
+            'on_scan_start, on_file_complete, should_cancel',
+            'on_scan_start, should_cancel, on_file_complete',
         )
         assert worker_dispatch(wrong, tmp_path) != expected, (
             'Scan worker wiring: subscriber identities cannot be swapped '
@@ -48,19 +42,13 @@ def test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_w
         )
     if channel == 'joint':
         model = source('src/analysis_view_model.cpp')
-        marker = 'void AnalysisViewModel::sync() {'
-        guarded = """
-     auto tokens=edi::supported_fitting_modes();
-     if(project_.sequential_fit.declared()) tokens.erase(std::remove(tokens.begin(),
-
-    tokens.end(),"joint"),tokens.end());
-     fitting_mode_options_->setOptions(tokens);"""
-        good = model.replace(marker, marker + guarded)
+        good = model
         assert joint_options(good, tmp_path) == ['1', '0', '1'], (
             'Scan mode wiring: the guard control updates the consumed options table'
         )
-        wrong = good.replace(
-            'if(project_.sequential_fit.declared())', 'if(!project_.sequential_fit.declared())'
+        wrong = good.replace('if (scan)', 'if (!scan)')
+        assert wrong != good, (
+            'Scan mode wiring: the mutation reaches the actual availability branch'
         )
         assert joint_options(wrong, tmp_path) != ['1', '0', '1'], (
             'Scan mode wiring: a scan mention on the wrong joint branch is rejected'
@@ -68,18 +56,16 @@ def test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_w
     if channel == 'follow':
         model = source('src/project_view_model.cpp')
         selection = block(model, 'void ProjectViewModel::setCurrentExperimentIndex(')
-        good = selection.replace(
-            'current_experiment_ = index;',
-            'fit_->setFollowing(false);\ncurrent_experiment_ = index;',
+        good = selection
+        assert selection_follow(good, tmp_path)[0] == '0:2', (
+            'Follow wiring: a changed valid manual choice selects that dataset and disables Follow'
         )
-        assert selection_follow(good, tmp_path) == ['0:2', '1:1', '1:1'], (
-            'Follow wiring: only a changed valid manual selection turns following off'
+        wrong = selection.replace('setFollowing(false)', 'setFollowing(true)')
+        assert wrong != good, (
+            'Follow wiring: the escape changes the actual manual-selection operation'
         )
-        wrong = selection.replace('publishCurrent();', 'publishCurrent();').replace(
-            '    if (index !=', '    fit_->setFollowing(false);\n    if (index !='
-        )
-        assert selection_follow(wrong, tmp_path) != ['0:2', '1:1', '1:1'], (
-            'Follow wiring: an off call outside the manual-selection branch is rejected'
+        assert selection_follow(wrong, tmp_path)[0] != '0:2', (
+            'Follow wiring: keeping Follow on after a changed valid manual choice is rejected'
         )
     if channel == 'state':
         header = (

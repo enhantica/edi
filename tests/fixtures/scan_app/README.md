@@ -37,9 +37,14 @@ library and header path, including when a prior build cache points somewhere els
 QML witnesses traverse both QObject ownership and the actual visual item tree, force the list's
 public layout operation, and invoke its enum-valued positioning method through Qt's JavaScript
 bridge. The host selects Qt's Null rendering backend; no graphics driver or display is required.
-The peak at file 1000 includes its GUI delivery; the final peak includes completed-run result
-handling. Native read receipts also reject jumps beyond the four upcoming unselected files.
+The scale peak at file 1000 is sampled at the native completion boundary without throttling
+GUI delivery; the final peak includes completed-run result handling. Native read receipts also reject jumps beyond the four upcoming unselected files.
 
 Archive and symbol observation uses the declared llvm-tools executables exclusively; ambient
 ar, nm and objcopy cannot become undeclared runtime dependencies. Synthetic payload links are
 partitioned among seed files to remain below filesystem link-count limits.
+
+The scale observation never synchronizes native completion with GUI delivery: peak memory at
+the actual 1000-file boundary and after the final GUI drain includes the production queue. Only
+the functional Stop/Follow actor uses a synchronous handoff to place a user action at its named
+file boundary.

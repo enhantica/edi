@@ -433,12 +433,12 @@ def assert_scan_status(text):
 
 };const qsTr=x=>x;
 const FitOutcomes={separator:' | '};
-const bar={fit:{running:true,scanning:true,ok:7,fail:2,elapsed:'TIME',
+const bar={fit:{running:true,scanning:true,ok:7,fail:2,scanOk:7,scanFailed:2,elapsed:'TIME',
 
-eta:'ETA',chi:'CHI',goodnessOfFit:'CHI',completed:3,total:8,fraction:0.375,
+eta:'ETA',chi:'CHI',goodnessOfFit:'CHI',completed:9,total:24,fraction:0.375,
 
-percent:37.5,iterations:'13',outcome:'success'}};
-const fitArea={};"""
+percent:37.5,scanFitted:9,scanTotal:24,iterations:'13',outcome:'success'}};
+const fitArea={};const EaStyle={Colors:{red:'red'}};"""
     running = property_value(area, 'running')
     states = [(True, True), (True, False), (False, True)]
     prop = 'fraction' if re.search(r'(?m)^\s*fraction:', progress) else 'value'
@@ -477,10 +477,18 @@ const fitArea={};"""
     # Execute the text that is actually displayed, not an unused facts array.
     state = (
         context
-        + 'fitArea.running=true;'
+        + 'bar.fit.scanning=true;bar.fit.running=true;fitArea.running=true;'
+        + 'fitArea.scanning=('
+        + property_value(area, 'scanning')
+        + ');'
         + block(area, 'function joined(').replace('function joined', 'fitArea.joined = function')
         + ';'
     )
+    if 'function counts(' in area:
+        state += (
+            block(area, 'function counts(').replace('function counts', 'fitArea.counts = function')
+            + ';'
+        )
     for name in ('chi', 'iterations'):
         state += 'fitArea.' + name + '=(' + property_value(area, name) + ');'
     shown = evaluate(property_value(values, 'text'), state)
@@ -1022,8 +1030,16 @@ def test_status_observer_rejects_wrong_progress_polarity_fill_producer_and_unuse
     for key, (old, new) in zip(
         ['polarity', 'fill', 'producer', 'facts'],
         [
-            ('indeterminate: !bar.fit.scanning', 'indeterminate: bar.fit.scanning'),
-            ('bar.fit.completed / bar.fit.total', 'bar.fit.completed'),
+            (
+                property_value(item(good, 'statusBar.fit.progress'), 'indeterminate'),
+                'bar.fit.scanning',
+            ),
+            (
+                property_value(item(good, 'statusBar.fit.progress'), 'fraction')
+                if 'fraction:' in item(good, 'statusBar.fit.progress')
+                else property_value(item(good, 'statusBar.fit.progress'), 'value'),
+                '1',
+            ),
             ('bar.fit !== null && bar.fit.running', 'false'),
             (
                 (

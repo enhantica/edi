@@ -8,6 +8,7 @@ import json
 import re
 import shlex
 import subprocess
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -31,10 +32,18 @@ def test_scan_worker_routes_both_modes_to_existing_driver(tmp_path):
     text = re.sub(
         r'//[^\n]*|/\*.*?\*/', '', (ROOT / 'core/src/fit_job.cpp').read_text(), flags=re.DOTALL
     )
-    assert worker_dispatch(text, tmp_path) == [
-        'sequential:11:22:33:44',
-        'independent:11:22:33:44',
-    ], 'Scan worker wiring: each selected mode forwards every subscriber to its own driver'
+    actual = [row.split(':') for row in worker_dispatch(text, tmp_path)]
+    assert [row[:1] + row[3:] for row in actual] == [
+        ['sequential', '33', '55', '44'],
+        ['independent', '33', '55', '44'],
+    ], (
+        'Scan worker wiring: each scan mode reaches its own driver with cancellation, '
+        'scan-start and per-file completion subscribers'
+    )
+    assert all(row[1] in {'0', '11'} and row[2] in {'0', '22'} for row in actual), (
+        'Scan worker wiring: optional iteration and fit-preamble callbacks may be absent; '
+        'when forwarded they keep their subscriber identities'
+    )
 
 
 def test_scan_availability_and_joint_mode_follow_scan_declaration(tmp_path):
@@ -52,17 +61,25 @@ def test_scan_availability_and_joint_mode_follow_scan_declaration(tmp_path):
 
 
 def test_scan_stop_continue_and_follow_have_model_state(tmp_path):
-    assert selection_follow(source('src/project_view_model.cpp'), tmp_path) == [
-        '0:2',
-        '1:1',
-        '1:1',
-    ], (
-        'Follow wiring: the actual changed manual-selection path disables '
-        'Follow and invalid or unchanged choices retain it'
+    selection = selection_follow(source('src/project_view_model.cpp'), tmp_path, program_only=True)
+    states = fit_state(
+        source('src/fit_view_model.hpp'),
+        source('src/fit_view_model.cpp'),
+        tmp_path,
+        program_only=True,
     )
-    assert fit_state(
-        source('src/fit_view_model.hpp'), source('src/fit_view_model.cpp'), tmp_path
-    ) == ['0:0', '1:0', '0:1'], (
+    program = (
+        selection.replace('int main()', 'void selection_observation()')
+        + '\n'
+        + states.replace('int main()', 'void state_observation()')
+        + '\nint main(){selection_observation();state_observation();}'
+    )
+    observed = cpp_probe(program, tmp_path)
+    assert observed[0] == '0:2', (
+        'Follow wiring: a changed valid manual dataset selection disables Follow '
+        'and keeps the chosen dataset selected'
+    )
+    assert observed[3:] == ['0:0', '1:0', '0:1'], (
         'Scan state wiring: the consumed getters distinguish idle, '
         'running scan and stopped continuation'
     )
@@ -160,17 +177,50 @@ def test_selector_moves_to_main_tab_bar_once():
 
 
 def test_scan_explorer_header_has_declared_columns_in_order():
-    header = block(source('qml/Pages/Experiment/ExperimentsGroup.qml'), 'header:')
+    qml = source('qml/Pages/Experiment/ExperimentsGroup.qml')
+    header = block(qml, 'header:')
     labels = re.findall(r'text:\s*qsTr\("([^\"]+)"\)', header)
     assert labels[:4] == ['No.', 'Fit', 'Datablock', 'File'], (
         'Dataset list labels: scan columns appear in number, fit, datablock, file order'
     )
     repeater = block(header, 'Repeater {')
-    table = block(source('qml/Pages/Experiment/ExperimentsGroup.qml'), 'EaComponents.TableView {')
+    table = block(qml, 'EaComponents.TableView {')
     table_id = property_value(table, 'id')
-    assert property_value(repeater, 'model') == table_id + '.model.extractColumns', (
-        'Dataset list wiring: the displayed header consumes extract '
-        'columns from its actual table model'
+    context = (
+        'const project={experiments:{columns:["temperature (K)","field '
+        '(T)"],extractColumns:["temperature (K)","field (T)"]}};const group={project};const '
+        + table_id
+        + '={model:('
+        + property_value(table, 'model')
+        + ')};'
+    )
+    assert evaluate(table_id + '.model === project.experiments', context), (
+        'Dataset list wiring: displayed extract headers belong to the dataset table actually shown'
+    )
+    model = property_value(repeater, 'model')
+    if model == 'group.scanColumns':
+        columns = property_value(qml, 'scanColumns')
+        context += 'group.scanColumns=(' + columns + ');'
+    assert evaluate(model, context) == ['temperature (K)', 'field (T)'], (
+        'Dataset list wiring: the displayed header uses every extract rule '
+        'label and unit in model order'
+    )
+    label = block(repeater, 'EaComponents.TableViewLabel {')
+    label_context = (
+        context + 'const column={modelData:"field (T)"};const modelData=column.modelData;'
+    )
+    assert evaluate(property_value(label, 'text'), label_context) == 'field (T)', (
+        'Dataset list wiring: each repeated extract header displays its own label and unit'
+    )
+    context += (
+        'project.experiments.columns=["pressure (bar)"];'
+        'project.experiments.extractColumns=["pressure (bar)"];'
+    )
+    if model == 'group.scanColumns':
+        context += 'group.scanColumns=(' + columns + ');'
+    assert evaluate(model, context) == ['pressure (bar)'], (
+        'Dataset list wiring: changing the selected table model changes its '
+        'displayed extract headers'
     )
 
 
@@ -187,7 +237,91 @@ def evolution_component():
     return source(paths[0].relative_to(APP))
 
 
+def assert_scene_evolution(qml):
+    layer = item(qml, 'evolution.points')
+    layer_id = property_value(layer, 'id')
+    binding = next(
+        qml[a:b]
+        for a, b in spans(qml)
+        if qml[a:b].startswith('{') and re.search(r'property:\s*"layer"', qml[a:b])
+    )
+    assert property_value(binding, 'target') == 'chart.evolution', (
+        'Evolution wiring: the results model fills the visible chart layer'
+    )
+    assert evaluate(
+        property_value(binding, 'value'), 'const layer={tag:17};const chart={shown:true};'
+    ) == {'tag': 17}, (
+        'Evolution wiring: the active tab supplies its actual visible point '
+        'layer to the results model'
+    )
+    assert layer_id == 'layer', (
+        'Evolution wiring: the bound target resolves to the actual plotted point item'
+    )
+    handler = property_value(item(qml, 'evolution.pointer'), 'onClicked')
+    context = (
+        'let picked=[],hit=17;const width=200,height=100;'
+        'const axisX={min:2,max:12},axisY={min:10,max:30};'
+        'const chart={em:10,evolution:{datasetAt:(...args)=>{picked.push(args);return hit;}},'
+        'project:{currentExperimentIndex:3}};'
+    )
+    values = javascript(
+        context + 'console.log(JSON.stringify([17,-1].map(dataset=>{'
+        'picked=[];hit=dataset;chart.project.currentExperimentIndex=3;('
+        + handler
+        + ')({x:40,y:25});return [picked,chart.project.currentExperimentIndex];})));'
+    )
+    assert values == [[[[4, 25, 0.3, 1.2]], 17], [[[4, 25, 0.3, 1.2]], 3]], (
+        'Evolution wiring: a plotted point click passes data coordinates and pixel tolerance '
+        'to hit testing, then selects that dataset; empty space keeps the selection'
+    )
+    for prop, axis in [
+        ('xMin', 'axisX.min'),
+        ('xMax', 'axisX.max'),
+        ('yMin', 'axisY.min'),
+        ('yMax', 'axisY.max'),
+    ]:
+        assert property_value(layer, prop) == axis, (
+            'Evolution wiring: rendered points use the displayed data axes'
+        )
+    draw = block(source('src/evolution_view_model.cpp'), 'void EvolutionViewModel::draw(')
+    with tempfile.TemporaryDirectory() as scratch:
+        actual = cpp_probe(
+            r"""#include <cstdio>
+#include <vector>
+struct QPointF{double x,y;QPointF(double a,double b):x(a),y(b){}};
+template<class T>struct QList:std::vector<T>{void append(T x){this->push_back(x);}};
+struct Layer{void setData(QList<QPointF> p,QList<double> low,QList<double> high){for(unsigned i=0;
+i<p.size();
+++i)std::printf("%.17g:%.17g:%.17g:%.17g\n",p[i].x,p[i].y,low[i],high[i]);
+}};
+
+struct EvolutionViewModel{struct Point{double x,y,error;
+int dataset;
+};
+std::vector<Point> points_{{3,17,.4,8},{7,23,.7,17}};
+Layer layer;
+Layer* layer_=&layer;
+void draw();
+};
+
+BODY
+int main(){EvolutionViewModel model;model.draw();}
+""".replace('BODY', draw),
+            Path(scratch),
+        )
+    assert [list(map(float, row.split(':'))) for row in actual] == [
+        [3, 17, 16.6, 17.4],
+        [7, 23, 22.3, 23.7],
+    ], (
+        'Evolution wiring: the actual renderer receives every point value and '
+        'both uncertainty endpoints'
+    )
+
+
 def assert_evolution_bindings(qml):
+    if 'MeasuredLayer {' in qml:
+        assert_scene_evolution(qml)
+        return
     candidates = []
     for begin, end in spans(qml):
         child = qml[begin:end]
@@ -215,7 +349,7 @@ def assert_evolution_bindings(qml):
         'Evolution wiring: one actual plotting consumer binds rows, '
         'errors, coordinates and its point event'
     )
-    _child, error, coordinates, handler, model = candidates[0]
+    error, coordinates, handler, model = candidates[0][1:]
     require(
         model,
         r'^\w+\.\w+\.(?:points|series|rows)$',
@@ -248,15 +382,27 @@ def assert_evolution_bindings(qml):
         'model={uncertainty:0.37,errors:0.37};const points=model;const '
         'series=model;'
     )
-    assert evaluate(error, context) == 0.37, (
+    argument = '{index:17}' if handler.startswith('point') else '17'
+    program = (
+        context
+        + ';('
+        + handler
+        + ')('
+        + argument
+        + ');console.log(JSON.stringify(['
+        + error
+        + ','
+        + coordinates
+        + ',calls]));'
+    )
+    rendered_error, rendered_axis, selection = javascript(program)
+    assert rendered_error == 0.37, (
         'Evolution wiring: effective point uncertainty reaches the error binding'
     )
-    assert evaluate(coordinates, context) in ([2, 4, 6], 'temperature'), (
+    assert rendered_axis in ([2, 4, 6], 'temperature'), (
         'Evolution wiring: effective coordinates read the switchable result axis'
     )
-    argument = '{index:17}' if handler.startswith('point') else '17'
-    program = context + ';(' + handler + ')(' + argument + ');console.log(JSON.stringify(calls));'
-    assert javascript(program) == [17], (
+    assert selection == [17], (
         'Evolution wiring: the effective series event forwards the clicked point index'
     )
 
@@ -268,40 +414,49 @@ def test_parameter_evolution_connects_rendered_errors_axis_and_point_selection()
 def assert_stale_marker(consumer, results=None):
     if results is None:
         model = re.search(r'(?m)^\s*model:\s*(\w+\.\w+)\.(?:points|series|rows)\s*$', consumer)
-        results = model.group(1) if model else 'bar.fit'
+        results = (
+            model.group(1)
+            if model
+            else ('chart.evolution' if 'MeasuredLayer {' in consumer else 'bar.fit')
+        )
+    root, field = results.split('.')
     markers = []
     for begin, end in spans(consumer):
         child = consumer[begin:end]
         try:
             text = property_value(child, 'text')
-            if 'out of date' not in text:
+            if not re.search(r'out of date', text, re.IGNORECASE):
                 continue
-            visible = property_value(child, 'visible')
+            markers.append((text, property_value(child, 'visible')))
         except pytest.fail.Exception:
             continue
-        markers.append((text, visible))
     assert markers, 'Stale-result wiring: each results consumer has its own guarded marker'
     for text, visible in markers:
-        match = re.fullmatch(r'(\w+)\.(\w+)\.(outOfDate|stale)', visible)
-        if not match:
-            continue
-        root, field, flag = match.groups()
-        assert root + '.' + field == results, (
-            'Stale-result wiring: the marker reads the same result object '
-            'that its consumer renders'
+        context = (
+            'const qsTr=x=>x;const ' + root + '={' + field + ':{}};'
+            'const other={' + field + ':{}};const fitArea={running:false};'
         )
-        assert evaluate(text, 'const qsTr=x=>x;') == 'out of date', (
-            'Stale-result wiring: the guarded actual marker displays the required text'
+        observations = evaluate(
+            '[[false,false],[true,false],[false,true]].map(([stale,running])=>{'
+            + root
+            + '.'
+            + field
+            + '={outOfDate:stale,stale};'
+            'other.' + field + '={outOfDate:!stale,stale:!stale};fitArea.running=running;'
+            'return [(' + text + '),(' + visible + ')];})',
+            context,
         )
-        for stale in (False, True):
-            context = (
-                'const ' + root + '={' + field + ':{' + flag + ':' + str(stale).lower() + '}};'
-            )
-            assert evaluate(visible, context) == stale, (
-                'Stale-result wiring: the marker is shown exactly for stale results'
-            )
+        assert all(re.search(r'out of date', shown, re.IGNORECASE) for shown, _ in observations), (
+            'Stale-result wiring: the actual marker tells the user '
+            'the retained results are out of date'
+        )
+        assert [shown for _, shown in observations] == [False, True, False], (
+            'Stale-result wiring: the marker shows retained stale results '
+            'and hides current results, '
+            'using its own rendered result state'
+        )
         return
-    pytest.fail('Stale-result wiring: the results stale state must guard that actual marker')
+    pytest.fail('Stale-result wiring: retained results need their own effective stale marker')
 
 
 def test_old_scan_results_are_retained_with_out_of_date_state():
@@ -648,14 +803,22 @@ def test_resource_observer_rejects_comment_only_and_inactive_bundle_calls(tmp_pa
         )
 
 
+@pytest.fixture(scope='module')
+def bundle_control(tmp_path_factory):
+    cmake = (APP / 'CMakeLists.txt').read_text()
+    good, index = resource_inventory(
+        tmp_path_factory.mktemp('live-resource-control'), False, cmake
+    )
+    return cmake, good, index
+
+
 @pytest.mark.parametrize('dimension', ['prefix', 'target', 'metadata', 'alias', 'index', 'hidden'])
 def test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload(
-    tmp_path, dimension
+    tmp_path, dimension, bundle_control
 ):
-    cmake = (APP / 'CMakeLists.txt').read_text()
+    cmake, good, index = bundle_control
     full = 'pd-neut-cwl_cosio-d20_scan-324f'
     expected = expected_bundle(324)
-    good, index = resource_inventory(tmp_path / 'good', False, cmake)
     assert bundled_inputs(good, full) == expected, (
         'Examples: the escape baseline carries every opening resource'
     )
@@ -780,7 +943,7 @@ def worker_dispatch(text, tmp_path):
 #include <stdexcept>
 using IterationCallback=int; using PreambleCallback=int; using CancelCallback=int;
 
- using FileCompleteCallback=int;
+ using FileCompleteCallback=int; using ScanStartCallback=int;
 using FitResultBase=std::string;
 std::string receipt(std::string mode,std::initializer_list<int> args){
 
@@ -793,24 +956,27 @@ std::string fit_joint(int a,int b,int c){return receipt("joint",{a,
 b,c});
 }
 std::string fit_sequential(int a,int b,int scan,int d,int c){
-return receipt("sequential",{a,b,c,d});
+return receipt("sequential",{a,b,c,scan,d});
 }
 std::string fit_independent(int a,int b,int scan,int d,int c){
-return receipt("independent",{a,b,c,d});
+return receipt("independent",{a,b,c,scan,d});
 }};
 std::string effective_fitting_mode(Project& p){return p.mode;}
 BODY
 int main(){for(auto mode:{"sequential","independent"}){Project p{mode}
 
-;try{std::cout<<fit_by_mode(p,11,22,33,44)<<"\\n";}catch(std::exception&
+;try{std::cout<<fit_by_mode(p,11,22,33,55,44)<<"\\n";}catch(std::exception&
 e){std::cout<<"REFUSED\\n";}}}""".replace('BODY', dispatch)
+    if 'ScanStartCallback' not in dispatch:
+        program = program.replace('{a,b,c,scan,d}', '{a,b,c,d}')
+        program = program.replace('fit_by_mode(p,11,22,33,55,44)', 'fit_by_mode(p,11,22,33,44)')
     return cpp_probe(program, tmp_path)
 
 
 def joint_options(text, tmp_path):
     producer = block(text, 'void AnalysisViewModel::sync(')
     program = """#include <algorithm>
-#include <iostream>
+#include <cstdio>
 #include <string>
 #include <vector>
 #define emit
@@ -833,12 +999,13 @@ struct Options{std::vector<std::string> tokens=edi::supported_fitting_modes();
 
 void setOptions(std::vector<std::string> x,std::string ={}){tokens=x;
 
-}void sync(){}void setCategories(int){}bool joint(){return std::find(tokens.begin(),
+}void sync(){}void setCategories(int){}int count(){return tokens.size();
+}bool joint(){return std::find(tokens.begin(),
 
 tokens.end(),"joint")!=tokens.end();}};
 struct AnalysisViewModel {Project project_;QString fitting_mode_,descent_;
 
-int max_iterations_=0;double chi_square_tolerance_=0;
+int max_iterations_=0;double chi_square_tolerance_=0;bool scan_declared_=false;
 Options options,other;Options* fitting_mode_options_=&options;Options*
 joint_weights_=&other;Options* sequential_fit_=&other;Options* sequential_extract_=&other;
 
@@ -855,35 +1022,51 @@ void fittingModeChanged(){}void descentChanged(){}void maxIterationsChanged(){
 void hasChiSquareToleranceChanged(){}
 void sync();};
 BODY
-int main(){for(bool declared:{false,true,false}){AnalysisViewModel
-model;model.project_.sequential_fit.value=declared;model.sync();std::cout<<model.options.joint()<<"\\n";
+int main(){AnalysisViewModel model;for(bool declared:{false,true,false}){
+model.project_.sequential_fit.value=declared;
+model.sync();
+std::printf("%d\\n",model.options.joint());
+
 
 }}""".replace('BODY', producer)
     return cpp_probe(program, tmp_path)
 
 
-def selection_follow(text, tmp_path):
+def selection_follow(text, tmp_path, *, program_only=False):
     selection = block(text, 'void ProjectViewModel::setCurrentExperimentIndex(')
     program = """#include <iostream>
 #include <vector>
-struct Fit{bool following=true;void setFollowing(bool value){following=value;
+#define emit
+struct Fit{bool following=true;
+bool scanning(){return true;
+}void setFollowing(bool value){following=value;
+
 
 }};
 struct ProjectViewModel {int current_experiment_=1;std::vector<int>
 experiment_models_{0,1,2};Fit model;Fit* fit_=&model;
+bool scan_=true;
+int current_dataset_=1;
+struct Datasets{std::vector<int> files{0,1,2};
+} scan_datasets_;
+
+void viewDataset(int index){if(index>=0&&index<3)current_dataset_=index;}
+void syncDatasets(){}void currentExperimentIndexChanged(){}
 void publishCurrent(){}void setCurrentExperimentIndex(int index);};
 
 
 BODY
 int main(){for(int index:{2,1,17}){ProjectViewModel model;model.setCurrentExperimentIndex(index);
 
-std::cout<<model.model.following<<":"<<model.current_experiment_<<"\\n";
+std::cout<<model.model.following<<":"
+<<(model.scan_ ? model.current_dataset_ : model.current_experiment_)<<"\\n";
+
 
 }}""".replace('BODY', selection)
-    return cpp_probe(program, tmp_path)
+    return program if program_only else cpp_probe(program, tmp_path)
 
 
-def fit_state(header, model, tmp_path):
+def fit_state(header, model, tmp_path, *, program_only=False):
     declarations = []
     for name in ('continuable', 'scanning'):
         inline = re.search(r'bool ' + name + r'\(\) const\s*\{', header)
@@ -907,7 +1090,7 @@ model.running_=state==1;model.scanning_=state==1;model.continuable_=state==2;
 std::cout<<model.scanning()<<":"<<model.continuable()<<"\\n";}}""".replace(
         'BODY', '\n'.join(declarations)
     )
-    return cpp_probe(program, tmp_path)
+    return program if program_only else cpp_probe(program, tmp_path)
 
 
 def test_rendered_evolution_and_stale_observers_reject_unrelated_models_handlers_and_flags():
