@@ -6,7 +6,7 @@
   and the ellipsoids are built; the Y2O3 beta page and its CLI project agree with FullProf
 - **Priority:** High
 - **Forward constraint (binding on new features):** a site's displacement stays in the type its file or its user
-  declared, and every conversion between types is crysta's (its ADR-0080). edi computes no conversion, no
+  declared, and every conversion between types is crysta's (its ADR-0081). edi computes no conversion, no
   site-symmetry tie and no equivalent value of its own.
 
 ## Context
