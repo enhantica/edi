@@ -107,7 +107,7 @@ inline Category peak_category(ExperimentBase& experiment) {
     Category category{"peak"};
     PeakBase& peak = experiment.peak;
     const bool constant_wavelength = experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH;
-    const std::string profile = peak.type.value_or(constant_wavelength ? "cwl-tch-pseudo-voigt" : "tof-jorgensen");
+    const std::string profile = effective_peak_type(experiment);
     if (constant_wavelength) {
         detail::add_optional(category.fields, "broad_gauss_u", peak.broad_gauss_u);
         detail::add_optional(category.fields, "broad_gauss_v", peak.broad_gauss_v);
@@ -123,6 +123,9 @@ inline Category peak_category(ExperimentBase& experiment) {
         detail::add_optional(category.asymmetry, "asym_beba_a1", peak.asym_beba_a1);
         detail::add_optional(category.asymmetry, "asym_beba_b1", peak.asym_beba_b1);
         detail::add_optional(category.asymmetry, "asym_beba_limit", peak.asym_beba_limit);
+        if (peak.asym_beba_limit) {
+            category.asymmetry.back().refinable = false;  // a fixed setting (is_fixed_setting)
+        }
         for (const auto& [name, member] : detail::tof_peak_fields()) {  // inert on CW: only if free
             detail::add_if_shown(category.fields, name, peak.*member, false);
         }

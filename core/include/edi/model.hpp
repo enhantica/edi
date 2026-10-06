@@ -4702,7 +4702,7 @@ namespace detail {
 inline std::vector<Parameter*> free_of(std::vector<Parameter*> all) {
     std::vector<Parameter*> free;
     for (Parameter* parameter : all) {
-        if (parameter->free) {
+        if (parameter->free && !is_fixed_setting(parameter->spec)) {
             free.push_back(parameter);
         }
     }
@@ -4826,40 +4826,57 @@ inline const LinkedStructure& ExperimentBase::linked_structure() const {
 // its declared profile carries. Empty when it does, else what is wrong. The conversion for
 // calculation, fitting and saving and the free walks refuse a block that does not, so no slot is
 // dropped or read as another profile's.
+// The profile an experiment's peak declares: its type, or the beam mode's default when it names none
+// (the TCH pseudo-Voigt for constant wavelength, Jorgensen for time of flight).
+inline std::string effective_peak_type(const ExperimentBase& experiment) {
+    return experiment.peak.type.value_or(
+        experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH ? "cwl-tch-pseudo-voigt"
+                                                                              : "tof-jorgensen");
+}
+
+// The constant-wavelength token/slot rule: an experiment holds no peak slot its declared profile
+// does not carry, and every one the profile requires (U, V, W, and X, Y on the TCH pair). A carried
+// optional slot (the mixing and the asymmetry) may be absent and reads as its default. Empty when the
+// block fits, else what is wrong. The conversion for calculation, fitting and saving and the free walks
+// refuse a block that does not, so no slot is dropped or read as another profile's.
 inline std::string peak_slots_mismatch(const ExperimentBase& experiment) {
     if (experiment.effective_beam_mode() != BeamModeEnum::CONSTANT_WAVELENGTH) {
         return {};
     }
-    const std::string declared = experiment.peak.type.value_or("cwl-tch-pseudo-voigt");
+    const std::string declared = effective_peak_type(experiment);
     const CwlProfileSlots profile = cwl_profile_slots(declared);
     const PeakBase& peak = experiment.peak;
     struct Slot {
         const OptionalParameter* field;
         bool carried;
+        bool required;
         const char* tag;
     };
     const Slot all[] = {
-        {&peak.broad_gauss_u, true, "_peak.broad_gauss_u"},
-        {&peak.broad_gauss_v, true, "_peak.broad_gauss_v"},
-        {&peak.broad_gauss_w, true, "_peak.broad_gauss_w"},
-        {&peak.broad_lorentz_x, profile.lorentz_xy, "_peak.broad_lorentz_x"},
-        {&peak.broad_lorentz_y, profile.lorentz_xy, "_peak.broad_lorentz_y"},
-        {&peak.mixing_eta_0, profile.mixing_eta, "_peak.mixing_eta_0"},
-        {&peak.mixing_eta_1, profile.mixing_eta, "_peak.mixing_eta_1"},
-        {&peak.asym_fcj_1, profile.fcj, "_peak.asym_fcj_1"},
-        {&peak.asym_fcj_2, profile.fcj, "_peak.asym_fcj_2"},
-        {&peak.asym_beba_a0, profile.beba, "_peak.asym_beba_a0"},
-        {&peak.asym_beba_b0, profile.beba, "_peak.asym_beba_b0"},
-        {&peak.asym_beba_a1, profile.beba, "_peak.asym_beba_a1"},
-        {&peak.asym_beba_b1, profile.beba, "_peak.asym_beba_b1"},
-        {&peak.asym_beba_limit, profile.beba, "_peak.asym_beba_limit"},
+        {&peak.broad_gauss_u, true, true, "_peak.broad_gauss_u"},
+        {&peak.broad_gauss_v, true, true, "_peak.broad_gauss_v"},
+        {&peak.broad_gauss_w, true, true, "_peak.broad_gauss_w"},
+        {&peak.broad_lorentz_x, profile.lorentz_xy, profile.lorentz_xy, "_peak.broad_lorentz_x"},
+        {&peak.broad_lorentz_y, profile.lorentz_xy, profile.lorentz_xy, "_peak.broad_lorentz_y"},
+        {&peak.mixing_eta_0, profile.mixing_eta, false, "_peak.mixing_eta_0"},
+        {&peak.mixing_eta_1, profile.mixing_eta, false, "_peak.mixing_eta_1"},
+        {&peak.asym_fcj_1, profile.fcj, false, "_peak.asym_fcj_1"},
+        {&peak.asym_fcj_2, profile.fcj, false, "_peak.asym_fcj_2"},
+        {&peak.asym_beba_a0, profile.beba, false, "_peak.asym_beba_a0"},
+        {&peak.asym_beba_b0, profile.beba, false, "_peak.asym_beba_b0"},
+        {&peak.asym_beba_a1, profile.beba, false, "_peak.asym_beba_a1"},
+        {&peak.asym_beba_b1, profile.beba, false, "_peak.asym_beba_b1"},
+        {&peak.asym_beba_limit, profile.beba, false, "_peak.asym_beba_limit"},
     };
     for (const Slot& slot : all) {
-        if (slot.field->has_value() != slot.carried) {
-            return "experiment '" + experiment.name.value() + "': " +
-                   (slot.carried ? "_peak.type '" + declared + "' requires " + slot.tag
-                                 : std::string(slot.tag) + " is not a parameter of _peak.type '" + declared +
-                                       "': each profile carries only its own parameters");
+        if (slot.field->has_value() && !slot.carried) {
+            return "experiment '" + experiment.name.value() + "': " + slot.tag +
+                   " is not a parameter of _peak.type '" + declared +
+                   "': each profile carries only its own parameters";
+        }
+        if (!slot.field->has_value() && slot.required) {
+            return "experiment '" + experiment.name.value() + "': _peak.type '" + declared + "' requires " +
+                   slot.tag;
         }
     }
     return {};

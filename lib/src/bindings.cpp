@@ -749,7 +749,7 @@ static nb::object star_datetime(const std::string& stored) {
 }
 
 static std::string peak_token_of(const edi::ExperimentBase& experiment) {
-    return experiment.peak.type.value_or(std::string("tof-jorgensen"));
+    return edi::effective_peak_type(experiment);
 }
 
 // One validation rule for the project name, whichever spelling sets it: a name lands in
@@ -1654,6 +1654,10 @@ NB_MODULE(_edi, m) {
             "free", [](const edi::Parameter& p) { return p.free.get(); },
             [](edi::Parameter& p, bool free) {
                 refuse_detached(p);
+                if (free && edi::is_fixed_setting(p.spec)) {
+                    throw std::invalid_argument(std::string(p.spec->name) +
+                                                " is a fixed setting, not a refinable parameter");
+                }
                 (void)dependence_now(p);  // the marks as the relations are now
                 if (!edi::set_free(p, free)) {
                     const std::string name = p.spec != nullptr ? p.spec->name : std::string("parameter");
@@ -2062,7 +2066,7 @@ NB_MODULE(_edi, m) {
         "show_supported",
         [](edi::views::PeakNode& self) {
             const std::string current =
-                self.experiment->peak.type.value_or(std::string("tof-jorgensen"));
+                edi::effective_peak_type(*self.experiment);
             const nb::object print = nb::module_::import_("builtins").attr("print");
             print("Supported peak types");
             for (nb::handle tag : active_tags(*g_peak_registry)) {
@@ -2109,7 +2113,9 @@ NB_MODULE(_edi, m) {
                 // declared after the type, and the loader refuses a contradiction.
                 edi::PeakBase& peak = self.experiment->peak;
                 if (!value || value.is_none()) {
+                    // No type: the beam mode's default, whose slots the block takes as any switch.
                     peak.type = std::nullopt;
+                    edi::conform_peak_slots(peak, edi::effective_peak_type(*self.experiment));
                     return;
                 }
                 if (nb::isinstance<nb::str>(value)) {
@@ -2127,7 +2133,8 @@ NB_MODULE(_edi, m) {
                 const std::string token(edi::token(nb::cast<edi::PeakProfileTypeEnum>(value)));
                 peak.type = token;
                 edi::conform_peak_slots(peak, token);
-            })
+            },
+            nb::for_setter(nb::arg("value").none()))
         .def_prop_rw(
             "cutoff_fwhm", [](edi::views::PeakNode& self) { return self.experiment->peak.cutoff_fwhm; },
             [](edi::views::PeakNode& self, double value) { self.experiment->peak.cutoff_fwhm = value; });

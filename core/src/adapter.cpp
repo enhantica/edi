@@ -1392,7 +1392,7 @@ crysta::BraggPdExperiment to_crysta_cwl_experiment(const ExperimentBase& e, bool
         value.value = fallback;
         peak.push_back(param(field ? *field : value, crysta::PROFILE, name));
     };
-    const std::string declared = e.peak.type.value_or("cwl-tch-pseudo-voigt");
+    const std::string declared = effective_peak_type(e);
     const CwlProfileSlots slots = cwl_profile_slots(declared);
     if (slots.lorentz_xy) {
         peak.push_back(param(required(e.peak.broad_lorentz_x, "peak.broad_lorentz_x"), crysta::PROFILE, "broad_lorentz_x"));

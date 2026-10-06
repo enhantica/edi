@@ -34,7 +34,7 @@ struct PeakNode {
     // otherwise read or write slots the profile does not carry.
     edi::PeakBase& storage() const {
         const char* own = profile();
-        const std::string current = experiment->peak.type.value_or(std::string("tof-jorgensen"));
+        const std::string current = edi::effective_peak_type(*experiment);
         if (own != nullptr && current != own) {
             throw std::invalid_argument("this view presents peak type '" + std::string(own) +
                                         "', but the experiment's peak type is '" + current +
@@ -61,7 +61,7 @@ class PeakFactory {
     // the historical TOF-Jorgensen path, exactly the loader's rule). Fails closed on a profile
     // no class registered.
     static std::unique_ptr<PeakNode> make(edi::ExperimentBase* experiment) {
-        const std::string type = experiment->peak.type.value_or(std::string("tof-jorgensen"));
+        const std::string type = edi::effective_peak_type(*experiment);
         const auto& all = table();
         const auto found = all.find(type);
         if (found == all.end() || !found->second.make) {
