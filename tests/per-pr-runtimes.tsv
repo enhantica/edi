@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-06T18:19:55Z
+# measured_utc = 2026-10-06T18:52:44Z
 #
-# Recorded from: e04-t18-tests-edi-red.log (33 node(s) measured once, 8226 banked, 0 stale row(s) dropped)
-# Collected tests: 9439; with a reported duration: 4580
+# Recorded from: e04-t18-tests-edi-red-banked-final.log (3 node(s) measured once, 8231 banked, 0 stale row(s) dropped)
+# Collected tests: 9440; with a reported duration: 4580
 # Module-scoped fixture costs recorded: 24
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 9439
+# inventory_python = 9440
 # inventory_cpp = 298
 # inventory_measured = 8231
-# inventory_unmeasured = 1506
+# inventory_unmeasured = 1507
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
 0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_cosio-d20_scan-162f]
@@ -7482,6 +7482,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_link_
 UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_load_lock_replace_and_single_step_undo[cwl]
 UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_load_lock_replace_and_single_step_undo[tof]
 UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_mixed_project_create_fit_measured_only_calculate_all
+UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_nonpositive_retention_escape_reaches_the_loaded_model
 UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_one_load_message_reports_constructed_counts[comma]
 UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_one_load_message_reports_constructed_counts[headers_malformed]
 UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_one_load_message_reports_constructed_counts[nonpositive]
