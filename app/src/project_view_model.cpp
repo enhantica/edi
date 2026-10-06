@@ -186,6 +186,13 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     connect(fit_, &FitViewModel::canUndoChanged, this, [this] { syncUndo(); });
     connect(fit_, &FitViewModel::runningChanged, this, [this] { syncUndo(); });
     note_fit();
+    follow_timer_.setSingleShot(true);
+    follow_timer_.setInterval(200);
+    connect(&follow_timer_, &QTimer::timeout, this, [this] {
+        if (fit_ != nullptr && fit_->following() && follow_index_ >= 0) {
+            viewDataset(follow_index_);
+        }
+    });
     scan_sync_timer_.setSingleShot(true);
     scan_sync_timer_.setInterval(250);
     connect(&scan_sync_timer_, &QTimer::timeout, this, [this] {
@@ -473,6 +480,9 @@ void ProjectViewModel::loadScan() {
     } catch (const std::exception& refusal) {
         setLastError(QString::fromUtf8(refusal.what()));
     }
+    for (std::size_t index = 0; index < scan_datasets_.files.size(); ++index) {
+        scan_index_.emplace(scan_datasets_.files[index], static_cast<int>(index));
+    }
     scan_results_ = edi::read_scan_results(project);
     evolution_->setScan(scan_datasets_, scan_results_, project.sequential_fit.extract.size(),
                         scan_columns_.value(0));
@@ -691,23 +701,33 @@ void ProjectViewModel::scanFileFitted() {
     }
 }
 
+int ProjectViewModel::datasetIndex(const std::string& file) const {
+    const auto found = scan_index_.find(file);
+    return found == scan_index_.end() ? -1 : found->second;
+}
+
 void ProjectViewModel::followScanFile(const std::string& file) {
-    const auto found = std::find(scan_datasets_.files.begin(), scan_datasets_.files.end(), file);
-    if (found != scan_datasets_.files.end()) {
-        viewDataset(static_cast<int>(found - scan_datasets_.files.begin()));
+    const int index = datasetIndex(file);
+    if (index < 0) {
+        return;
+    }
+    follow_index_ = index;
+    if (!follow_timer_.isActive()) {
+        follow_timer_.start();
     }
 }
 
 void ProjectViewModel::showScanFrame(const std::string& file, const edi::FitFrame& frame) {
     // The fitted file's pattern, calculated by the job, for the chart; the dataset itself is the one viewed.
-    const auto found = std::find(scan_datasets_.files.begin(), scan_datasets_.files.end(), file);
-    if (found != scan_datasets_.files.end() && static_cast<int>(found - scan_datasets_.files.begin()) == current_dataset_) {
+    if (datasetIndex(file) == current_dataset_ && current_dataset_ >= 0) {
         showFitFrame(frame);
     }
 }
 
 void ProjectViewModel::scanEnded() {
     scan_sync_timer_.stop();
+    follow_timer_.stop();
+    follow_index_ = -1;
     reloadScanResults();
     // The shown dataset as the rows on disk now give it.
     const int shown = current_dataset_;

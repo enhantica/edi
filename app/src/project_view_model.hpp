@@ -13,6 +13,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -286,6 +287,12 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void reloadScanResults();
     // The views a scan run updates as its files are fitted, at most a few times a second.
     QTimer scan_sync_timer_;
+    // Follow views the newest fitted file at most a few times a second, so a long scan never queues views.
+    QTimer follow_timer_;
+    int follow_index_ = -1;
+    // Each dataset's place by its file name, for the run's per-file events.
+    std::unordered_map<std::string, int> scan_index_;
+    int datasetIndex(const std::string& file) const;
     std::vector<UndoRecord> undo_history_;
     void noteAddedExperiments(std::size_t before);
     bool can_undo_ = false;
