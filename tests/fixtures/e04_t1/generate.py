@@ -8,6 +8,7 @@ No import of edi, and no screenshot is generated here.
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import re
@@ -137,7 +138,7 @@ def measured_range(path):
     return [values[0], values[-1], (values[-1] - values[0]) / (len(values) - 1), len(values)]
 
 
-def generate():
+def generate(warning_project=None):
     projects = []
     for entry in yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text())['projects']:
         project = ROOT / 'docs/user/cli' / entry['id'] / 'project'
@@ -177,6 +178,7 @@ def generate():
                 scalars(analysis) if analysis.exists() else {},
                 [scalars(file) for file in sorted((project / 'experiments').glob('*.edi'))],
                 scalars(project / 'project.edi'),
+                entry['id'],
             ),
             'files': {
                 str(p.relative_to(project)): hashlib.sha256(p.read_bytes()).hexdigest()
@@ -285,6 +287,8 @@ def generate():
         'corpus': corpus,
     }
     output = Path(__file__).parent / 'oracle.js'
+    if warning_project is not None:
+        data = warning_only_oracle(output, projects, warning_project)
     output.write_text(
         '// Independent category oracle. Regenerate only with generate.py.\nvar frozen = '
         + json.dumps(data, indent=2, ensure_ascii=False)
@@ -292,10 +296,34 @@ def generate():
     )
 
 
-def loader_warning(analysis, experiments, metadata):
+def warning_only_oracle(output, projects, project_id):
+    retained = json.loads(output.read_text().split('var frozen = ', 1)[1].rsplit(';', 1)[0])
+    previous = [row for row in retained['projects'] if row['id'] == project_id]
+    current = [row for row in projects if row['id'] == project_id]
+    if len(previous) != 1 or len(current) != 1:
+        raise ValueError('Warning-only generation requires one existing project id')
+    if previous[0]['files'] != current[0]['files']:
+        raise ValueError('Warning-only generation requires unchanged selected project inputs')
+    previous[0]['loaderWarning'] = current[0]['loaderWarning']
+    return retained
+
+
+def loader_warning(analysis, experiments, metadata, project_id=None):
     #  idea 26: independent file declarations determine calculator and
     # minimizer warning bodies. Never ask the loader to generate its own oracle.
     warnings = []
+    if project_id == 'pd-neut-cwl_yap-spodi_3k':
+        # The retained FullProf yap_3k.pcr Al1 Biso is negative. Preserve the
+        # saved value and require its exact diagnostic, only for this example.
+        path = ROOT / 'docs/user/cli' / project_id / 'project/structures/Al2O3.edi'
+        al1 = next(row for row in tables(path)['atom_site'] if row['id'] == 'Al1')
+        if al1['adp_iso']['value'] != -0.13591 or al1['adp_type'] != 'Biso':
+            raise ValueError('YAP warning witness must retain the FullProf Al1 Biso')
+        warnings.append(
+            'Warning: structures[Al2O3].atom_sites[Al1].adp_iso = -0.13591 '
+            'is outside its admissible range [0, 10]; loaded as saved '
+            '(a fit may leave a value there)'
+        )
     seen = set()
     for experiment in experiments:
         calculator = experiment.get('_calculator.type', 'crysta')
@@ -313,4 +341,6 @@ def loader_warning(analysis, experiments, metadata):
 
 
 if __name__ == '__main__':
-    generate()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--loader-warning-only', metavar='PROJECT_ID')
+    generate(parser.parse_args().loader_warning_only)
