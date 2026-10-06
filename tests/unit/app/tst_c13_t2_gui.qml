@@ -120,12 +120,19 @@ TestCase {
             tryVerify(() => Probe.rows(Session.project.currentStructure.atomSiteAdps)[0].adpType === type,
                       2000, "C13-T2: real ADP selection reaches the row model: " + type);
             const anisotropic = ["Bani", "Uani", "beta"].includes(type);
-            const iso = control(type === "Biso" ? "atomSiteAdp.iso.0" : "atomSiteAdp.isoPreview.0");
-            verify(iso !== null && iso.enabled === !anisotropic,
-                   "owner 2026-10-06: equivalent iso is disabled only for anisotropic types");
+            // Before: non-Biso selected a retired preview object. After: the same
+            // iso cell edits both scalar types and displays the tensor equivalent.
+            tryVerify(() => {
+                const iso = control("atomSiteAdp.iso.0");
+                return iso !== null && iso.enabled === !anisotropic;
+            }, 2000, "owner 2026-10-06: equivalent iso is disabled only for anisotropic types");
+            // La at the Pm-3m origin: cubic rotations equate all diagonals and
+            // mirrors fix off-diagonals to zero; only ani11 is independent.
             for (const component of ["11", "22", "33", "12", "13", "23"])
-                compare(control("atomSiteAdp.ani" + component + ".0").enabled, anisotropic,
-                        "owner 2026-10-06: tensor editability follows declared ADP type");
+                tryVerify(() => {
+                    const field = control("atomSiteAdp.ani" + component + ".0");
+                    return field !== null && field.enabled === (anisotropic && component === "11");
+                }, 2000, "cubic site symmetry: only the independent tensor component is editable");
         }
     }
     function test_atom_filter_recovers_from_red_and_commits_element() {
