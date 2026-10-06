@@ -1174,6 +1174,120 @@ struct Parameter {
     bool bound() const noexcept { return value.bound(); }
 };
 
+// An optional parameter of a one-row category (a peak profile slot, an instrument shift, an absorption
+// coefficient) with edi ADR-0012's detached-item lifetime. The parameter lives in its own cell, and
+// clearing or replacing the field keeps the old cell, detached, for as long as the field lives: a handle
+// to a removed slot keeps its last values and refuses writes, as a removed row's does, and never points
+// at storage a later value reuses. It reads like std::optional<Parameter>.
+class OptionalParameter {
+   public:
+    using value_type = Parameter;
+    OptionalParameter() = default;
+    OptionalParameter(std::nullopt_t /*none*/) noexcept {}  // NOLINT(google-explicit-constructor)
+    OptionalParameter(Parameter value) { engage(std::move(value)); }  // NOLINT(google-explicit-constructor)
+    OptionalParameter(const std::optional<Parameter>& value) {  // NOLINT(google-explicit-constructor)
+        if (value) {
+            engage(*value);
+        }
+    }
+    // A copy is a new cell with the source's values; nothing detached is copied.
+    OptionalParameter(const OptionalParameter& other) {
+        if (other.live_) {
+            engage(other.live_->parameter);
+        }
+    }
+    // A move takes the cells whole, so every handle stays where it was.
+    OptionalParameter(OptionalParameter&& other) noexcept = default;
+    ~OptionalParameter() = default;
+
+    // Assignments follow std::optional: an engaged field takes the value in place, so its handles stay
+    // attached; clearing it detaches them.
+    OptionalParameter& operator=(const OptionalParameter& other) {
+        if (this != &other) {
+            other.live_ ? assign(other.live_->parameter) : reset();
+        }
+        return *this;
+    }
+    OptionalParameter& operator=(OptionalParameter&& other) noexcept {
+        if (this != &other) {
+            reset();
+            live_ = std::move(other.live_);
+            for (std::shared_ptr<ParameterCell>& cell : other.retired_) {
+                retired_.push_back(std::move(cell));
+            }
+            other.retired_.clear();
+        }
+        return *this;
+    }
+    OptionalParameter& operator=(std::nullopt_t /*none*/) {
+        reset();
+        return *this;
+    }
+    OptionalParameter& operator=(Parameter value) {
+        assign(std::move(value));
+        return *this;
+    }
+    OptionalParameter& operator=(const std::optional<Parameter>& value) {
+        value ? assign(*value) : reset();
+        return *this;
+    }
+
+    bool has_value() const noexcept { return live_ != nullptr; }
+    explicit operator bool() const noexcept { return has_value(); }
+    Parameter& operator*() { return live_->parameter; }
+    const Parameter& operator*() const { return live_->parameter; }
+    Parameter* operator->() { return &live_->parameter; }
+    const Parameter* operator->() const { return &live_->parameter; }
+    Parameter& value() {
+        if (!live_) {
+            throw std::bad_optional_access();
+        }
+        return live_->parameter;
+    }
+    const Parameter& value() const {
+        if (!live_) {
+            throw std::bad_optional_access();
+        }
+        return live_->parameter;
+    }
+    Parameter value_or(const Parameter& fallback) const { return live_ ? live_->parameter : fallback; }
+
+    // Detaches the current parameter: its handles keep their last values and refuse writes.
+    void reset() {
+        if (!live_) {
+            return;
+        }
+        detail::RowLink& link = live_->removed;
+        link.link(std::make_shared<detail::Membership>());  // once held ...
+        link.unlink();                                       // ... and no longer: detached
+        live_->parameter.category.point_at(link);
+        retired_.push_back(std::move(live_));
+    }
+    template <typename... Args>
+    Parameter& emplace(Args&&... args) {
+        reset();
+        engage(Parameter(std::forward<Args>(args)...));
+        return live_->parameter;
+    }
+
+   private:
+    struct ParameterCell {
+        explicit ParameterCell(Parameter value) : parameter(std::move(value)) {}
+        Parameter parameter;
+        detail::RowLink removed;  // what a removed parameter's category points at
+    };
+    void engage(Parameter value) { live_ = std::make_shared<ParameterCell>(std::move(value)); }
+    void assign(Parameter value) {
+        if (live_) {
+            live_->parameter = std::move(value);
+        } else {
+            engage(std::move(value));
+        }
+    }
+    std::shared_ptr<ParameterCell> live_;
+    std::vector<std::shared_ptr<ParameterCell>> retired_;
+};
+
 // The free flag's rule (edi ADR-0024): a dependent stays dependent, so freeing one changes nothing and
 // answers false; the caller says so with crysta's `crysta.domain.dependent_free_ignored`.
 inline bool set_free(Parameter& parameter, bool free) {
@@ -1702,6 +1816,12 @@ inline void encode_cell(std::string& out, const Parameter& parameter) {
 }
 template <typename T>
 void encode_cell(std::string& out, const std::optional<T>& cell) {
+    out += cell.has_value() ? 'S' : '-';
+    if (cell.has_value()) {
+        encode_cell(out, *cell);
+    }
+}
+inline void encode_cell(std::string& out, const OptionalParameter& cell) {
     out += cell.has_value() ? 'S' : '-';
     if (cell.has_value()) {
         encode_cell(out, *cell);
@@ -2917,14 +3037,14 @@ struct PeakBase {
     // CW block, presence-tracked and engaged only on the `_peak.type` that carries each slot
     // (cwl_profile_slots): Caglioti U/V/W on every CW profile, the TCH Lorentz X/Y, and the
     // pseudo-Voigt mixing eta = eta_0 + eta_1 2theta.
-    std::optional<Parameter> broad_gauss_u, broad_gauss_v, broad_gauss_w;
-    std::optional<Parameter> broad_lorentz_x, broad_lorentz_y;
-    std::optional<Parameter> mixing_eta_0, mixing_eta_1;
+    OptionalParameter broad_gauss_u, broad_gauss_v, broad_gauss_w;
+    OptionalParameter broad_lorentz_x, broad_lorentz_y;
+    OptionalParameter mixing_eta_0, mixing_eta_1;
     // The CW asymmetry coefficients, likewise — Finger-Cox-Jephcoat (S/L, D/L) on
     // `cwl-tch-pseudo-voigt-fcj`, Berar-Baldinozzi on `cwl-pseudo-voigt-berar-baldinozzi`.
-    std::optional<Parameter> asym_fcj_1, asym_fcj_2;
-    std::optional<Parameter> asym_beba_a0, asym_beba_b0, asym_beba_a1, asym_beba_b1;
-    std::optional<Parameter> asym_beba_limit;  // FullProf AsyLim, deg; default 180
+    OptionalParameter asym_fcj_1, asym_fcj_2;
+    OptionalParameter asym_beba_a0, asym_beba_b0, asym_beba_a1, asym_beba_b1;
+    OptionalParameter asym_beba_limit;  // FullProf AsyLim, deg; default 180
 
     PeakBase();  // attaches the parameter specs (inline below)
 
@@ -2946,14 +3066,14 @@ struct InstrumentBase {
     Parameter calib_d_to_tof_offset, calib_d_to_tof_linear, calib_d_to_tof_quadratic,
         calib_d_to_tof_reciprocal;
     Parameter setup_twotheta_bank{152.827};
-    std::optional<Parameter> setup_wavelength, calib_twotheta_offset;
+    OptionalParameter setup_wavelength, calib_twotheta_offset;
     // The CW line shifts (SyCos, SySin), presence-tracked — absent is the loader's default 0 on
     // both sides, so a model that never declared them crosses exactly as before.
-    std::optional<Parameter> calib_sample_displacement, calib_sample_transparency;
+    OptionalParameter calib_sample_displacement, calib_sample_transparency;
     // The X-ray CW monochromator polarization (K, 2theta_m in degrees), presence-tracked. An X-ray CW
     // load engages both at upstream's default 0 (K = 0 is no correction); a neutron or TOF experiment
     // never carries them.
-    std::optional<Parameter> setup_polarization_coefficient, setup_monochromator_twotheta;
+    OptionalParameter setup_polarization_coefficient, setup_monochromator_twotheta;
 
     InstrumentBase();  // attaches the parameter specs (inline below)
 
@@ -2990,13 +3110,13 @@ struct LinkedStructure : std::enable_shared_from_this<LinkedStructure> {
 // (muR = ABSCOR1 * lambda, kernel-proven); ABSCOR2's lambda-power is unpinned in the engine, so
 // freeing it is a hard error there and its spelling deliberately stays FullProf's (parity doc).
 struct AbsorptionBase {
-    std::optional<Parameter> abscor1;
-    std::optional<Parameter> abscor2;
+    OptionalParameter abscor1;
+    OptionalParameter abscor2;
     // The CW cylinder body — muR = mu * R (R the cylinder RADIUS), evaluated by the engine at
     // each reflection's Bragg theta. A typed family's parameters exist iff the type says so:
     // TOF "cylinder" carries the ABSCOR pair, CW "cylinder-hewat"/"cylinder-lobanov" carry
     // mu_r, "none" carries nothing.
-    std::optional<Parameter> mu_r;
+    OptionalParameter mu_r;
     std::optional<std::string> type;  // `_absorption.type`, e.g. "cylinder" / "none"
 
     std::vector<Parameter*> parameters();  // the present family body, in order (R18)
@@ -4588,7 +4708,7 @@ inline std::vector<Parameter*> free_of(std::vector<Parameter*> all) {
     }
     return free;
 }
-inline void push_optional(std::vector<Parameter*>& out, std::optional<Parameter>& field) {
+inline void push_optional(std::vector<Parameter*>& out, OptionalParameter& field) {
     if (field) {
         out.push_back(&*field);
     }
@@ -4702,7 +4822,55 @@ inline const LinkedStructure& ExperimentBase::linked_structure() const {
     }
     return *linked_structures.front();
 }
+// The constant-wavelength token/slot rule (crysta ADR-0080): an experiment holds exactly the peak slots
+// its declared profile carries. Empty when it does, else what is wrong. The conversion for
+// calculation, fitting and saving and the free walks refuse a block that does not, so no slot is
+// dropped or read as another profile's.
+inline std::string peak_slots_mismatch(const ExperimentBase& experiment) {
+    if (experiment.effective_beam_mode() != BeamModeEnum::CONSTANT_WAVELENGTH) {
+        return {};
+    }
+    const std::string declared = experiment.peak.type.value_or("cwl-tch-pseudo-voigt");
+    const CwlProfileSlots profile = cwl_profile_slots(declared);
+    const PeakBase& peak = experiment.peak;
+    struct Slot {
+        const OptionalParameter* field;
+        bool carried;
+        const char* tag;
+    };
+    const Slot all[] = {
+        {&peak.broad_gauss_u, true, "_peak.broad_gauss_u"},
+        {&peak.broad_gauss_v, true, "_peak.broad_gauss_v"},
+        {&peak.broad_gauss_w, true, "_peak.broad_gauss_w"},
+        {&peak.broad_lorentz_x, profile.lorentz_xy, "_peak.broad_lorentz_x"},
+        {&peak.broad_lorentz_y, profile.lorentz_xy, "_peak.broad_lorentz_y"},
+        {&peak.mixing_eta_0, profile.mixing_eta, "_peak.mixing_eta_0"},
+        {&peak.mixing_eta_1, profile.mixing_eta, "_peak.mixing_eta_1"},
+        {&peak.asym_fcj_1, profile.fcj, "_peak.asym_fcj_1"},
+        {&peak.asym_fcj_2, profile.fcj, "_peak.asym_fcj_2"},
+        {&peak.asym_beba_a0, profile.beba, "_peak.asym_beba_a0"},
+        {&peak.asym_beba_b0, profile.beba, "_peak.asym_beba_b0"},
+        {&peak.asym_beba_a1, profile.beba, "_peak.asym_beba_a1"},
+        {&peak.asym_beba_b1, profile.beba, "_peak.asym_beba_b1"},
+        {&peak.asym_beba_limit, profile.beba, "_peak.asym_beba_limit"},
+    };
+    for (const Slot& slot : all) {
+        if (slot.field->has_value() != slot.carried) {
+            return "experiment '" + experiment.name.value() + "': " +
+                   (slot.carried ? "_peak.type '" + declared + "' requires " + slot.tag
+                                 : std::string(slot.tag) + " is not a parameter of _peak.type '" + declared +
+                                       "': each profile carries only its own parameters");
+        }
+    }
+    return {};
+}
+inline void require_peak_slots_fit_type(const ExperimentBase& experiment) {
+    if (const std::string mismatch = peak_slots_mismatch(experiment); !mismatch.empty()) {
+        throw std::invalid_argument(mismatch);
+    }
+}
 inline std::vector<Parameter*> ExperimentBase::free_parameters() {
+    require_peak_slots_fit_type(*this);
     return detail::free_of(parameters());
 }
 inline std::vector<Parameter*> Project::parameters() {
@@ -4722,6 +4890,9 @@ inline std::vector<Parameter*> Project::parameters() {
 // The free parameters a fit refines: what no enabled phase reads is left out — a disabled link's
 // scale and texture, and every parameter of a structure no enabled link names (crysta's rule).
 inline std::vector<Parameter*> Project::free_parameters() {
+    for (const std::shared_ptr<BraggPdExperiment>& experiment : experiments) {
+        require_peak_slots_fit_type(*experiment);
+    }
     std::vector<const Parameter*> idle;
     std::vector<std::string> used;
     for (const std::shared_ptr<BraggPdExperiment>& experiment : experiments) {

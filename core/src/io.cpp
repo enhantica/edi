@@ -2021,7 +2021,7 @@ auto parameter_slots(ProjectT& project) {
             // The asymmetry coefficients the declared rung carries. Each slot is named by its
             // storage member, never by the parameter's descriptor, which a native caller may leave
             // null.
-            using Named = std::pair<const char*, std::optional<Parameter>*>;
+            using Named = std::pair<const char*, OptionalParameter*>;
             for (const auto& [name, asym] :
                  {Named{"asym_fcj_1", &experiment.peak.asym_fcj_1},
                   Named{"asym_fcj_2", &experiment.peak.asym_fcj_2},

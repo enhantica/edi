@@ -65,7 +65,7 @@ void put_parameter(std::string& out, const Parameter& parameter, Scope scope) {
     }
 }
 
-void put_optional_parameter(std::string& out, const std::optional<Parameter>& parameter,
+void put_optional_parameter(std::string& out, const OptionalParameter& parameter,
                             Scope scope) {
     out += parameter ? 'P' : '-';  // presence encoded distinctly from a 0 value
     if (parameter) put_parameter(out, *parameter, scope);

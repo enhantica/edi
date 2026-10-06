@@ -33,7 +33,7 @@ std::optional<Parameter> defaulted(const ParameterSpec& spec, double value = 0.0
 
 // Engage `field` at its default when the new profile declares it and it is absent; drop it when the
 // profile does not declare it. An engaged field the profile keeps is left as it is (D-j).
-void keep_if(std::optional<Parameter>& field, bool declared, const ParameterSpec& spec,
+void keep_if(OptionalParameter& field, bool declared, const ParameterSpec& spec,
              double default_value = 0.0) {
     if (!declared) {
         field.reset();

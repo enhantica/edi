@@ -87,7 +87,7 @@ inline bool tof_profile_declares(const std::string& profile, const std::string& 
 }
 
 inline void add_optional(std::vector<CategoryField>& fields, const char* name,
-                         std::optional<Parameter>& field) {
+                         OptionalParameter& field) {
     if (field.has_value()) {
         fields.push_back({name, &*field, true});
     }

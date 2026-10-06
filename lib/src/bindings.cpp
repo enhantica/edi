@@ -236,7 +236,7 @@ static void assign_parameter_slot(edi::Parameter& field, const ParameterOrNumber
 // The optional twin: None disengages (unchanged); a number on an ENGAGED field updates its value
 // in place, on an absent field engages it with the slot's spec (the same engagement act as the
 // whole-Parameter path — a programmatically engaged parameter is never spec-less).
-static void assign_optional_parameter_slot(std::optional<edi::Parameter>& field,
+static void assign_optional_parameter_slot(edi::OptionalParameter& field,
                                            std::optional<ParameterOrNumber> incoming,
                                            const edi::ParameterSpec& spec, const char* name) {
     if (!incoming) {
@@ -284,14 +284,14 @@ static void def_parameter_field(nb::class_<Class>& cls, const char* name,
 // programmatically engaged CW/absorption parameter is never spec-less.
 template <typename Class>
 static void def_optional_parameter_field(nb::class_<Class>& cls, const char* name,
-                                         std::optional<edi::Parameter> Class::* member,
+                                         edi::OptionalParameter Class::* member,
                                          const edi::ParameterSpec& spec) {
     cls.def_prop_rw(
         name,
         // A REFERENCE into the engaged Parameter (None when absent), so nested writes reach the
         // C++ storage — the same S13 write-through convention as the required fields.
         [member](Class& self) -> edi::Parameter* {
-            std::optional<edi::Parameter>& field = self.*member;
+            edi::OptionalParameter& field = self.*member;
             if (!field) {
                 return nullptr;
             }
@@ -326,12 +326,12 @@ static void def_view_parameter_field(nb::class_<View, Extra...>& cls, const char
 
 template <typename View, typename Storage, typename... Extra>
 static void def_view_optional_parameter_field(nb::class_<View, Extra...>& cls, const char* name,
-                                              std::optional<edi::Parameter> Storage::* member,
+                                              edi::OptionalParameter Storage::* member,
                                               const edi::ParameterSpec& spec) {
     cls.def_prop_rw(
         name,
         [member](View& self) -> edi::Parameter* {
-            std::optional<edi::Parameter>& field = self.storage().*member;
+            edi::OptionalParameter& field = self.storage().*member;
             if (!field) {
                 return nullptr;
             }

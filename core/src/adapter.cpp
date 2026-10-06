@@ -1370,7 +1370,7 @@ void apply_post_build_fields(const ExperimentBase& e, crysta::ExperimentBase& bu
 // would catch one). A programmatic CW model with a missing field fails closed; a loaded one cannot
 // reach that error (the per-family registry requires all seven).
 crysta::BraggPdExperiment to_crysta_cwl_experiment(const ExperimentBase& e, bool for_relations) {
-    const auto required = [&](const std::optional<Parameter>& field,
+    const auto required = [&](const OptionalParameter& field,
                               const char* name) -> const Parameter& {
         if (!field.has_value()) {
             throw std::invalid_argument("constant-wavelength experiment '" + e.name +
@@ -1386,7 +1386,7 @@ crysta::BraggPdExperiment to_crysta_cwl_experiment(const ExperimentBase& e, bool
     // Every other slot the DECLARED profile carries, in crysta's dictionary order (its
     // peak_tags_for, ADR-0080) — exactly the slots crysta's loader would hold, whether or not a
     // programmatic model engaged them (an absent optional one takes the loader's default).
-    const auto slot = [&](const std::optional<Parameter>& field, const char* name,
+    const auto slot = [&](const OptionalParameter& field, const char* name,
                           double fallback) {
         Parameter value;
         value.value = fallback;
@@ -1394,27 +1394,6 @@ crysta::BraggPdExperiment to_crysta_cwl_experiment(const ExperimentBase& e, bool
     };
     const std::string declared = e.peak.type.value_or("cwl-tch-pseudo-voigt");
     const CwlProfileSlots slots = cwl_profile_slots(declared);
-    // A slot the declared profile does not carry would be left out here, so a calculation, a fit
-    // and a save would each drop it without a word. It is refused instead; a profile is switched
-    // with select_peak_profile, which reshapes the block.
-    const auto foreign = [&](const std::optional<Parameter>& field, bool carried, const char* tag) {
-        if (field.has_value() && !carried) {
-            throw std::invalid_argument("experiment '" + e.name + "': " + tag +
-                                        " is not a parameter of _peak.type '" + declared +
-                                        "': each profile carries only its own parameters");
-        }
-    };
-    foreign(e.peak.broad_lorentz_x, slots.lorentz_xy, "_peak.broad_lorentz_x");
-    foreign(e.peak.broad_lorentz_y, slots.lorentz_xy, "_peak.broad_lorentz_y");
-    foreign(e.peak.mixing_eta_0, slots.mixing_eta, "_peak.mixing_eta_0");
-    foreign(e.peak.mixing_eta_1, slots.mixing_eta, "_peak.mixing_eta_1");
-    foreign(e.peak.asym_fcj_1, slots.fcj, "_peak.asym_fcj_1");
-    foreign(e.peak.asym_fcj_2, slots.fcj, "_peak.asym_fcj_2");
-    foreign(e.peak.asym_beba_a0, slots.beba, "_peak.asym_beba_a0");
-    foreign(e.peak.asym_beba_b0, slots.beba, "_peak.asym_beba_b0");
-    foreign(e.peak.asym_beba_a1, slots.beba, "_peak.asym_beba_a1");
-    foreign(e.peak.asym_beba_b1, slots.beba, "_peak.asym_beba_b1");
-    foreign(e.peak.asym_beba_limit, slots.beba, "_peak.asym_beba_limit");
     if (slots.lorentz_xy) {
         peak.push_back(param(required(e.peak.broad_lorentz_x, "peak.broad_lorentz_x"), crysta::PROFILE, "broad_lorentz_x"));
         peak.push_back(param(required(e.peak.broad_lorentz_y, "peak.broad_lorentz_y"), crysta::PROFILE, "broad_lorentz_y"));
@@ -1432,6 +1411,9 @@ crysta::BraggPdExperiment to_crysta_cwl_experiment(const ExperimentBase& e, bool
         slot(e.peak.asym_beba_b1, "asym_beba_b1", 0.0);
         slot(e.peak.asym_beba_limit, "asym_beba_limit", 180.0);
     }
+    // Every other slot must be the declared profile's: one it does not carry would be dropped here,
+    // from a calculation, a fit and a save alike, so it is refused instead.
+    require_peak_slots_fit_type(e);
     std::vector<crysta::Parameter> instrument;
     instrument.reserve(6);
     instrument.push_back(param(required(e.instrument.calib_twotheta_offset, "instrument.calib_twotheta_offset"), crysta::CALIBRATION,
@@ -1490,9 +1472,9 @@ void require_polarization_family(const ExperimentBase& e) {
     // Review-3 F1: the member's identity is the storage slot checked, never the parameter's
     // descriptor, which a native caller may leave null or point at another parameter's spec.
     for (const auto& [name, slot] :
-         {std::pair<const char*, const std::optional<Parameter>*>{
+         {std::pair<const char*, const OptionalParameter*>{
               "setup_polarization_coefficient", &e.instrument.setup_polarization_coefficient},
-          std::pair<const char*, const std::optional<Parameter>*>{
+          std::pair<const char*, const OptionalParameter*>{
               "setup_monochromator_twotheta", &e.instrument.setup_monochromator_twotheta}}) {
         if (!*slot) {
             continue;

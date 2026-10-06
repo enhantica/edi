@@ -97,6 +97,8 @@ NOT_MODEL = {
     'ComputedSource': "what an experiment's computed categories were computed from",
     'ViewWindow': 'view state passed to a geometry read, never stored in the model',
     'CwlProfileSlots': 'the peak slots a CW profile token carries, read from the token',
+    'OptionalParameter': 'one optional parameter, kept detached once removed (ADR-0012)',
+    'ParameterCell': 'an optional parameter and the link it reports once removed',
     'StructureGeometry': 'the computed structure categories, published whole',
     'WindowGeometry': 'a geometry computed for a view window',
     'IterationRecord': 'a fit report',
@@ -168,7 +170,7 @@ COLUMN = re.compile(
 )
 CONTAINER = re.compile(r'\bstd::(?:vector|deque|list|map|set|unordered_map|unordered_set)\b')
 SCALAR = re.compile(
-    r'^(?:std::optional<)?(?:std::string|double|int|bool|\w+Enum)>?$|^std::optional<Parameter>$'
+    r'^(?:std::optional<)?(?:std::string|double|int|bool|\w+Enum)>?$|^std::optional<Parameter>$|^OptionalParameter$'
 )
 
 
