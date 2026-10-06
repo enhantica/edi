@@ -163,3 +163,11 @@ against edi `e6579e64` and pinned crysta SDK `build-417ffe01`. The generated
 axes and calculated arrays are unchanged; exactly the three experiment texts
 gain `_calculator.type crysta` and its block separator. All other saved-text
 bytes stay exact. Provenance: `<author-runs>/-seq8-generator.log`.
+
+Setting fields omitted from an input now display the resolved reference default.
+`generate_display.py` freezes the corpus defaults from unmodified CrySPY
+`b37f9f3148d2771c6d84ee91f57331676d93746f`,
+`function_2_space_group.get_default_it_coordinate_system_code_by_it_number`.
+Explicit file codes retain priority. The CW instrument inventory also retains
+the FullProf La11B6 corpus's displacement and transparency fields, mapped from
+`SyCos` and `SySin` in that case's `PROVENANCE.md`. Neither generator imports edi.

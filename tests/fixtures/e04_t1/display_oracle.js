@@ -2583,7 +2583,7 @@ var frozen = {
         ],
         [
           "spaceGroup.coordSystemCode",
-          "",
+          "abc",
           "text"
         ]
       ]
@@ -2693,7 +2693,7 @@ var frozen = {
         ],
         [
           "spaceGroup.coordSystemCode",
-          "",
+          "1",
           "text"
         ]
       ]
@@ -2803,7 +2803,7 @@ var frozen = {
         ],
         [
           "spaceGroup.coordSystemCode",
-          "",
+          "1",
           "text"
         ]
       ]
@@ -3223,7 +3223,7 @@ var frozen = {
         ],
         [
           "spaceGroup.coordSystemCode",
-          "",
+          "1",
           "text"
         ]
       ]
@@ -3443,7 +3443,7 @@ var frozen = {
         ],
         [
           "spaceGroup.coordSystemCode",
-          "",
+          "1",
           "text"
         ]
       ]

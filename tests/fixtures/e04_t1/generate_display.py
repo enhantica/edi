@@ -24,6 +24,13 @@ IDENTITIES = {
 }
 
 
+# CrySPY b37f9f3148d2771c6d84ee91f57331676d93746f,
+# function_2_space_group.get_default_it_coordinate_system_code_by_it_number:
+# ordinary orthorhombic settings use abc; these ordinary cubic settings use 1;
+# the double-origin Fd-3m reference uses 2. Explicit file codes still win.
+DEFAULT_COORDINATE_CODES = {51: 'abc', 62: 'abc', 199: '1', 221: '1', 225: '1', 227: '2', 229: '1'}
+
+
 def scalar_text(value):
     return str(value['value']).removesuffix('.0') if isinstance(value, dict) else value
 
@@ -84,7 +91,11 @@ def generate():
                     ['spaceGroup.nameHM', name, 'text'],
                     [
                         'spaceGroup.coordSystemCode',
-                        scalar_text(values.get('_space_group.coord_system_code', '')),
+                        scalar_text(
+                            values.get(
+                                '_space_group.coord_system_code', DEFAULT_COORDINATE_CODES[number]
+                            )
+                        ),
                         'text',
                     ],
                 ],

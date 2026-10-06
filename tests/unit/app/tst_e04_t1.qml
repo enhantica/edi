@@ -276,7 +276,8 @@ TestCase {
         onlyEvents(projectWatch, [], "I5: a parameter write cannot replace Session.project");
         //  ADR-0017 §13: the first edit sets only the dependent dirty flag.
         compare(project.modified, true, " saving: a successful edit marks the project modified");
-        onlyEvents(objectWatch, ["modifiedChanged"], "I3/: first edit changes only the project modified flag");
+        onlyEvents(objectWatch, ["modifiedChanged", "calculatingChanged"], "I3/I9: edit changes dirty state and queued calculation activity only");
+        compare((Probe.events(objectWatch).modifiedChanged || []).length, 1, "I3: first edit notifies the dirty flag exactly once");
         onlyEvents(experimentWatch, [], "I3: a parameter write cannot refresh the whole experiment");
         const events = onlyEvents(tableWatch, ["dataChanged"], "I3: one table update, no reset/layout change");
         compare(events.dataChanged[0].first, targetRow, "I3: changed row starts at edited parameter");
@@ -290,10 +291,10 @@ TestCase {
         const modifiedWatch = Probe.watch(project);
         target.value = 0.173;
         onlyEvents(noOp, [], "I3: assigning the same value emits nothing");
-        onlyEvents(modifiedWatch, [], "I3/: a no-op cannot re-notify the modified flag");
+        onlyEvents(modifiedWatch, ["calculatingChanged"], "I3/I9: an equal write may recalculate but cannot re-notify the dirty flag");
         target.value = 0.174;
         onlyEvents(noOp, ["valueChanged"], "I3: a later changed value still emits exactly once");
-        onlyEvents(modifiedWatch, [], "I3/: an already modified project cannot re-notify its dirty flag");
+        onlyEvents(modifiedWatch, ["calculatingChanged"], "I3/I9: a later edit may recalculate but cannot re-notify an already dirty flag");
     }
     function test_table_write_shares_parameter_identity() {
         const project = example(0);
