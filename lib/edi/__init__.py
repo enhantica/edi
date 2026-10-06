@@ -760,12 +760,13 @@ class StructureFactory:
             _reject_unknown(
                 group_spec, _SPACE_GROUP_KEYS, 'StructureFactory.from_dict space_group'
             )
+            # A number or a new name selects its group's default setting: a given code goes last.
+            if 'it_number' in group_spec:
+                structure.space_group.it_number = int(group_spec['it_number'])
             if 'name_h_m' in group_spec:
                 structure.space_group.name_h_m = group_spec['name_h_m']
             if 'coord_system_code' in group_spec:
                 structure.space_group.coord_system_code = group_spec['coord_system_code']
-            if 'it_number' in group_spec:
-                structure.space_group.it_number = int(group_spec['it_number'])
 
         cell = Cell()
         cell_spec = spec.get('cell', {})
