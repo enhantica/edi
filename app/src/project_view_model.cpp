@@ -255,8 +255,8 @@ void ProjectViewModel::setCurrentExperimentIndex(int index) {
         if (fit_ != nullptr && fit_->scanning()) {
             fit_->setFollowing(false);
             if (index >= 0 && index < static_cast<int>(scan_datasets_.files.size()) && index != current_dataset_) {
-                // The model cannot be edited while the scan runs: the chart shows the chosen file, calculated on a
-                // copy of the template, and the dataset is viewed in full when the run ends.
+                viewDataset(index);
+                // The worker is the scan's until it ends, so the chart's pattern is calculated here, on a copy.
                 try {
                     edi::Project shown = scan_template_ ? *scan_template_ : *project_;
                     shown.experiment().data = edi::read_scan_dataset(
@@ -269,9 +269,6 @@ void ProjectViewModel::setCurrentExperimentIndex(int index) {
                 } catch (const std::exception& refusal) {
                     setLastError(QString::fromUtf8(refusal.what()));
                 }
-                current_dataset_ = index;
-                syncDatasets();
-                emit currentExperimentIndexChanged();
             }
             return;
         }
@@ -534,8 +531,10 @@ void ProjectViewModel::syncDatasets() {
 }
 
 void ProjectViewModel::viewDataset(int index) {
+    // A scan writes nothing to the model, so its datasets can be shown while it runs; a single or joint fit's
+    // model is not touched.
     if (index < 0 || index >= static_cast<int>(scan_datasets_.files.size()) || index == current_dataset_ ||
-        experiment_models_.isEmpty() || (fit_ != nullptr && fit_->running())) {
+        experiment_models_.isEmpty() || (fit_ != nullptr && fit_->running() && !fit_->scanning())) {
         return;
     }
     const std::string& file = scan_datasets_.files[static_cast<std::size_t>(index)];
@@ -598,7 +597,15 @@ void ProjectViewModel::viewDataset(int index) {
         return;
     }
     current_dataset_ = index;
-    syncDatasets();
+    // While a scan runs the lists are brought up to date a few times a second, not once per file.
+    if (fit_ != nullptr && fit_->scanning()) {
+        if (!scan_sync_timer_.isActive()) {
+            scan_sync_timer_.start();
+        }
+        emit currentExperimentIndexChanged();
+    } else {
+        syncDatasets();
+    }
     publishCurrent();
 }
 
@@ -684,17 +691,18 @@ void ProjectViewModel::scanFileFitted() {
     }
 }
 
-void ProjectViewModel::showScanFrame(const std::string& file, const edi::FitFrame& frame) {
+void ProjectViewModel::followScanFile(const std::string& file) {
     const auto found = std::find(scan_datasets_.files.begin(), scan_datasets_.files.end(), file);
-    if (found == scan_datasets_.files.end()) {
-        return;
+    if (found != scan_datasets_.files.end()) {
+        viewDataset(static_cast<int>(found - scan_datasets_.files.begin()));
     }
-    // The chart shows the file just fitted; the model is viewed again when the run ends.
-    current_dataset_ = static_cast<int>(found - scan_datasets_.files.begin());
-    showFitFrame(frame);
-    emit currentExperimentIndexChanged();
-    if (!scan_sync_timer_.isActive()) {
-        scan_sync_timer_.start();
+}
+
+void ProjectViewModel::showScanFrame(const std::string& file, const edi::FitFrame& frame) {
+    // The fitted file's pattern, calculated by the job, for the chart; the dataset itself is the one viewed.
+    const auto found = std::find(scan_datasets_.files.begin(), scan_datasets_.files.end(), file);
+    if (found != scan_datasets_.files.end() && static_cast<int>(found - scan_datasets_.files.begin()) == current_dataset_) {
+        showFitFrame(frame);
     }
 }
 
@@ -774,7 +782,7 @@ QString ProjectViewModel::apply(const edi::Edit& change, bool structural) {
     // calculated on the worker and published only if no newer one exists by then. While a fit runs, the model
     // it fits is not edited. A write that reached the model anyway would make the fit publish nothing
     // (Superseded).
-    if (fit_ != nullptr && fit_->running()) {
+    if (fit_ != nullptr && fit_->running() && !(applying_view_ && fit_->scanning())) {
         const QString message = tr("The project cannot be edited while a fit is running");
         setLastError(message);
         return message;

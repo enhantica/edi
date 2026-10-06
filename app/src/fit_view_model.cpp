@@ -406,6 +406,9 @@ void FitViewModel::fileCompleted(const edi::ScanFileRecord& record) {
     setScanCounts(counts, QString::fromStdString(record.file_name));
     setProgress(QString(), chi(record.reduced_chi_square), tr("Running"));
     owner_.scanFileFitted();
+    if (following()) {
+        owner_.followScanFile(record.file_name);
+    }
 }
 
 void FitViewModel::setScanCounts(const ScanSummary& counts, const QString& file) {

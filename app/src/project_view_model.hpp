@@ -218,6 +218,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     const edi::Project* scanTemplate() const { return scan_template_ ? &*scan_template_ : nullptr; }
     void scanFileFitted();
     void showScanFrame(const std::string& file, const edi::FitFrame& frame);
+    void followScanFile(const std::string& file);
     void scanEnded();
 
    signals:
