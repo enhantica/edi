@@ -31,6 +31,7 @@ class DemoDriver : public QObject {
    private:
     // One image and the actions that lead to it, in order. An action is an objectName to click, or:
     //   key:<name>               press a key (QKeySequence spelling, e.g. key:Escape)
+    //   type:<text>              type the text, a key press per character, into what has the keyboard
     //   show:<view>:<row>        scroll a list view to a row, as a user would before clicking it
     //   choose:<text>            click the open popup's entry showing <text>
     //   load-experiments:<file>  load bundled .edi files through the view-model call the file
