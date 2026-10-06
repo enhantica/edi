@@ -98,6 +98,7 @@ EaElements.ComboBox {
 
         EaElements.TextField {
             objectName: "comboBox.search"
+            z: 2
             width: ListView.view ? ListView.view.width : 0
             height: control.searchable ? implicitHeight : 0
             visible: control.searchable
@@ -119,6 +120,8 @@ EaElements.ComboBox {
 
     Component.onCompleted: {
         control.popup.contentItem.header = searchHeader;
+        // The field stays at the top while the list scrolls: a long list opens at its current entry.
+        control.popup.contentItem.headerPositioning = ListView.OverlayHeader;
         // The field takes the keyboard while the list is open.
         control.popup.focus = Qt.binding(() => control.searchable);
     }
