@@ -90,7 +90,7 @@ public:
             return out;
         };
         if(QFileInfo(input).isDir()) {
-            auto project=crysta::load_project(input.toStdString());return read(project.structure);
+            auto project=crysta::load_project(input.toStdString());return read(project.structure());
         }
         auto structure=crysta::structure_from_edi_path(input.toStdString());return read(structure);
     }
