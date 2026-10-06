@@ -157,6 +157,10 @@ def test_every_directed_cw_switch_reshapes_slots_and_roundtrips(tmp_path, source
         assert loaded.value == getattr(peak, field).value, (
             'Switch save/reload retains every supplied target value including the fixed limit'
         )
+        if field not in admission.SETTINGS:
+            assert loaded.uncertainty == getattr(peak, field).uncertainty, (
+                'Switch save/reload retains each supplied coefficient uncertainty'
+            )
         assert loaded.free == (field not in admission.SETTINGS), (
             'Switch save/reload retains coefficient free-state '
             'and the independent fixed-limit contract'
@@ -172,7 +176,15 @@ def test_held_old_view_cannot_reengage_a_removed_slot(tmp_path, source, escape):
     peak = project.experiments[0].peak
     field = admission.owned_fields(source)[0]
     parameter = getattr(peak, field)
+    parameter.value = 0.23
+    previous = parameter.value
     peak.type = profiles.TOKENS[0]
+    assert not parameter.is_attached(), (
+        'A removed optional peak slot reports the detached lifetime of ADR-0012'
+    )
+    assert parameter.value == previous, (
+        'A detached optional peak handle retains its last readable value'
+    )
 
     def escape_write():
         if escape == 'old-view':
