@@ -97,7 +97,9 @@ TestCase {
             const name = field[0], expected = field[1], kind = field[2];
             const control = kind === "label" ? Ui.find(root, name) : findAny(root, name);
             verify(control !== null, "gate 3: every frozen display field exists in its selected group: " + name);
-            Ui.scrollIntoView(control);
+            verify(waitForPolish(appWindow, 2000), "gate 3: selected block layout settles before scrolling");
+            tryVerify(() => { Ui.scrollIntoView(control); return !Ui.moving(appWindow.contentItem) && Ui.rendered(control); },
+                      2000, "gate 3: the selected block field scrolls into its settled viewport");
             // Repeated blocks can show identical text without scheduling a frame.
             // Request one explicitly before retaining the rendering assertion.
             appWindow.update();

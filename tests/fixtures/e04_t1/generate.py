@@ -44,7 +44,14 @@ PROFILES = {
     'tof-pseudo-voigt': GAUSS + LORENTZ,
 }
 INSTRUMENT = {
-    'cwl': ['setup_wavelength', 'calib_twotheta_offset'],
+    # FullProf La11B6 corpus: SyCos/SySin are the declared displacement/
+    # transparency fields (the case's PROVENANCE.md maps the original PCR).
+    'cwl': [
+        'setup_wavelength',
+        'calib_twotheta_offset',
+        'calib_sample_displacement',
+        'calib_sample_transparency',
+    ],
     'tof': [
         'setup_twotheta_bank',
         'calib_d_to_tof_offset',
