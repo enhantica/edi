@@ -502,6 +502,11 @@ void seed_positional_start_companions(
     }
 }
 
+namespace detail {
+// The conversion for the project's relations, which also admits a bank with no link.
+crysta::BraggPdExperiment to_crysta_experiment(const ExperimentBase& e, bool for_relations);
+}  // namespace detail
+
 namespace {
 
 // Every structure of the model as crysta's, in order: name and declared scattering lengths included.
@@ -832,10 +837,11 @@ void cross_check_free_set(Project& model, const Index& index,
 using BuiltExperiments = std::vector<std::unique_ptr<crysta::BraggPdExperiment>>;
 
 // `experiment` converted, built in place on the heap and appended to `built`.
-crysta::BraggPdExperiment& build_on_heap(BuiltExperiments& built, const ExperimentBase& experiment) {
+crysta::BraggPdExperiment& build_on_heap(BuiltExperiments& built, const ExperimentBase& experiment,
+                                         bool for_relations = false) {
     // NOLINTNEXTLINE(modernize-make-unique) — make_unique would move the converted prvalue
     std::unique_ptr<crysta::BraggPdExperiment> owned(
-        new crysta::BraggPdExperiment(detail::to_crysta_experiment(experiment)));
+        new crysta::BraggPdExperiment(detail::to_crysta_experiment(experiment, for_relations)));
     built.push_back(std::move(owned));
     return *built.back();
 }
@@ -1169,12 +1175,18 @@ std::vector<crysta::AtomSite> to_crysta_atom_sites(const ItemVec<AtomSite>& atom
 
 namespace {
 // The engine experiment is built around one scale. It is seeded from the first row, and
-// apply_post_build_fields then writes every link, so no phase is dropped.
-const LinkedStructure& seed_link(const ExperimentBase& e) {
+// apply_post_build_fields then writes every link, so no phase is dropped. A bank with no link is
+// converted only for the project's relations, where it has no scale to name; any other conversion
+// refuses it.
+const Parameter& seed_scale(const ExperimentBase& e, bool for_relations) {
     if (e.linked_structures.empty()) {
+        if (for_relations) {
+            static const Parameter no_scale{};
+            return no_scale;
+        }
         throw std::out_of_range("experiment '" + e.name.value() + "' links no structure");
     }
-    return *e.linked_structures[0];
+    return e.linked_structures[0]->scale;
 }
 }  // namespace
 
@@ -1357,7 +1369,7 @@ void apply_post_build_fields(const ExperimentBase& e, crysta::ExperimentBase& bu
 // take. No value transformation happens here beyond marshalling (Fork 2's parity gate is what
 // would catch one). A programmatic CW model with a missing field fails closed; a loaded one cannot
 // reach that error (the per-family registry requires all seven).
-crysta::BraggPdExperiment to_crysta_cwl_experiment(const ExperimentBase& e) {
+crysta::BraggPdExperiment to_crysta_cwl_experiment(const ExperimentBase& e, bool for_relations) {
     const auto required = [&](const std::optional<Parameter>& field,
                               const char* name) -> const Parameter& {
         if (!field.has_value()) {
@@ -1431,7 +1443,7 @@ crysta::BraggPdExperiment to_crysta_cwl_experiment(const ExperimentBase& e) {
                                 param(point->intensity, crysta::BACKGROUND, "intensity"));
     }
     crysta::BraggPdExperiment built(std::move(peak), std::move(instrument),
-                             param(seed_link(e).scale, crysta::SCALE, "scale"), std::move(background));
+                             param(seed_scale(e, for_relations), crysta::SCALE, "scale"), std::move(background));
     built.cutoff_fwhm = e.peak.cutoff_fwhm;
     built.kind = crysta::BeamModeEnum::ConstantWavelength;  // before the post-build fill: the
     // TOF-only abscor guard reads it
@@ -1476,10 +1488,10 @@ void require_polarization_family(const ExperimentBase& e) {
     }
 }
 
-crysta::BraggPdExperiment to_crysta_experiment(const ExperimentBase& e) {
+crysta::BraggPdExperiment to_crysta_experiment(const ExperimentBase& e, bool for_relations) {
     require_polarization_family(e);
     if (e.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH) {
-        return to_crysta_cwl_experiment(e);
+        return to_crysta_cwl_experiment(e, for_relations);
     }
     crysta::TofJorgensenExperiment builder;
     builder.alpha0(state(e.peak.rise_alpha_0))
@@ -1500,7 +1512,7 @@ crysta::BraggPdExperiment to_crysta_experiment(const ExperimentBase& e) {
         .dtt1(state(e.instrument.calib_d_to_tof_linear))
         .dtt2(state(e.instrument.calib_d_to_tof_quadratic))
         .d_to_tof_reciprocal(state(e.instrument.calib_d_to_tof_reciprocal))
-        .scale(state(seed_link(e).scale))
+        .scale(state(seed_scale(e, for_relations)))
         .setup_twotheta_bank(e.instrument.setup_twotheta_bank.value)
         .cutoff_fwhm(e.peak.cutoff_fwhm);
 
@@ -1514,6 +1526,10 @@ crysta::BraggPdExperiment to_crysta_experiment(const ExperimentBase& e) {
     crysta::BraggPdExperiment built = builder.build();
     apply_post_build_fields(e, built);
     return crysta::BraggPdExperiment(built);  // a copy: an experiment never moves
+}
+
+crysta::BraggPdExperiment to_crysta_experiment(const ExperimentBase& e) {
+    return to_crysta_experiment(e, false);
 }
 
 }  // namespace detail
@@ -1887,13 +1903,20 @@ struct RelationProject {
 
 RelationProject relation_project(const Project& model) {
     RelationProject converted;
+    // Every structure of the project (its phases), so each one's relations are compiled.
+    std::vector<crysta::Structure> structures = to_crysta_structures(model);
     converted.banks.reserve(model.experiments.size());
     for (const auto& bank_item : model.experiments) {
-        build_on_heap(converted.banks, *bank_item);
+        crysta::BraggPdExperiment& built = build_on_heap(converted.banks, *bank_item, true);
+        // crysta's project needs every bank to link a structure. A bank with no link has no scale
+        // of its own, so here it links the first structure under a scale no edi parameter names.
+        if (bank_item->linked_structures.empty() && !structures.empty()) {
+            built.linked_structures.assign(std::vector<crysta::LinkedStructure>{crysta::LinkedStructure(
+                structures.front().name.value(), param(Parameter{}, crysta::SCALE, "scale"), true)});
+        }
     }
-    // Every structure of the project (its phases), so each one's relations are compiled.
-    converted.project = std::make_unique<crysta::Project>(to_crysta_structures(model),
-                                                          experiment_list(converted.banks));
+    converted.project =
+        std::make_unique<crysta::Project>(std::move(structures), experiment_list(converted.banks));
     fill_crysta_relations(model, *converted.project);
     return converted;
 }

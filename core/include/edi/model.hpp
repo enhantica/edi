@@ -4197,7 +4197,8 @@ inline void link_nested(Structure& structure, const std::shared_ptr<const Projec
 
 inline void link_nested(ExperimentBase& experiment, const std::shared_ptr<const ProjectLink>& link) noexcept {
     for (KeyedBase* collection : std::initializer_list<KeyedBase*>{
-             &experiment.background, &experiment.background_terms, &experiment.preferred_orientation}) {
+             &experiment.background, &experiment.background_terms, &experiment.preferred_orientation,
+             &experiment.linked_structures}) {
         collection->host_link_ = link;
     }
 }
