@@ -45,14 +45,26 @@ def assert_work(actual, expected, stage, common_hash=None):
 
 
 @pytest.fixture(scope='module')
-def execution(tmp_path_factory):
+def projection_execution(tmp_path_factory):
     root = tmp_path_factory.mktemp('scan-app-execution')
     library, preload = _build_native_observer(root)
     harness = Harness(root, library, preload)
     observed = {'harness': harness, 'root': root, 'modes': {}}
     full_observations(harness, root, observed)
-    transition_observations(harness, root, observed)
-    scale_observations(harness, root, observed)
+    return observed
+
+
+@pytest.fixture(scope='module')
+def transition_execution(projection_execution):
+    observed = projection_execution
+    transition_observations(observed['harness'], observed['root'], observed)
+    return observed
+
+
+@pytest.fixture(scope='module')
+def execution(transition_execution):
+    observed = transition_execution
+    scale_observations(observed['harness'], observed['root'], observed)
     return observed
 
 
@@ -82,6 +94,17 @@ def full_observations(harness, root, observed):
     observed['evolution'] = harness.invoke('evolution', projection)
     observed['click'] = harness.invoke('click', projection)
     observed['projectionRows'], observed['projectionFiles'] = csv_rows, names
+    declaration = analysis.read_text().split('_sequential_fit_extract.id\n', 1)[1]
+    extract_lines = declaration.split('\n\n', 1)[0].splitlines()
+    fields = ['id'] + [line.rsplit('.', 1)[1] for line in extract_lines if line.startswith('_')]
+    first_rule = dict(
+        zip(
+            fields,
+            next(line for line in extract_lines if not line.startswith('_')).split(),
+            strict=True,
+        )
+    )
+    observed['extractNames'] = (first_rule['target'], first_rule['id'])
     fallback = copy_project(SMALL, root / 'index-axis')
     analysis = fallback / 'analysis/analysis.edi'
     analysis.write_text(analysis.read_text().split('\nloop_\n_sequential_fit_extract.id')[0])
@@ -100,7 +123,28 @@ def transition_observations(harness, root, observed):
         (target / 'analysis/results.csv').write_text(
             csv_text(observed['modes'][mode]['reference'])
         )
-        observed[mode + '-flow'] = harness.invoke('flow', target, observe=True)
+        (target / 'analysis/results-provenance.csv').write_text(
+            'file_path,template\n' + files(target)[0].name + ',reset-undo-witness\n'
+        )
+        (target / 'analysis/scan-run.json').write_text(
+            json.dumps({
+                'template': 'reset-undo-witness',
+                'seconds': 1.375,
+                'outcome': 'maxIterations',
+                'last': 'scan',
+            })
+        )
+        expected_data = root / (mode + '-measured.json')
+        expected_data.write_text(
+            json.dumps({path.name: measured_hash(path) for path in files(target)})
+        )
+        observed[mode + '-flow'] = harness.invoke('flow', target, expected_data, observe=True)
+        holes = copy_project(FULL, root / (mode + '-holes'), mode, iterations=1)
+        prior = observed['modes'][mode]['reference']
+        (holes / 'analysis/results.csv').write_text(
+            csv_text([row for index, row in enumerate(prior) if index not in {17, 41, 115}])
+        )
+        observed[mode + '-holes'] = harness.invoke('run', holes, observe=True)
     unfitted = copy_project(FULL, root / 'unfitted')
     unfitted_cells = root / 'unfitted-cells.json'
     unfitted_cells.write_text(json.dumps([{'file_path': path.name} for path in files(unfitted)]))
@@ -260,7 +304,8 @@ def test_initial_dataset_and_labels_follow_template_and_independent_extract(exec
         )
 
 
-def test_evolution_all_parameter_values_errors_and_both_axes_equal_csv(execution):
+def test_evolution_all_parameter_values_errors_and_both_axes_equal_csv(projection_execution):
+    execution = projection_execution
     rows = execution['projectionRows']
     expected_names = {
         name.removesuffix('.uncertainty') for name in rows[0] if name.endswith('.uncertainty')
@@ -277,7 +322,9 @@ def test_evolution_all_parameter_values_errors_and_both_axes_equal_csv(execution
             )
             for index, point in enumerate(axis['points']):
                 row = rows[index]
-                x = float(row['temperature']) if axis['mode'] == 0 else index + 1
+                # Disk contract admits the extract target or its declared rule id.
+                extract = next(name for name in execution['extractNames'] if name in row)
+                x = float(row[extract]) if axis['mode'] == 0 else index + 1
                 y, error = float(row[name]), float(row[name + '.uncertainty'] or 0)
                 assert point == pytest.approx([x, y, y - error, y + error]), (
                     'Evolution tab: rendered x, y and error endpoints must project the disk CSV '
@@ -316,8 +363,24 @@ def test_evolution_point_click_changes_the_shared_selection(execution):
 
 
 @pytest.mark.parametrize('mode', MODES)
-def test_stop_undo_continue_and_template_edit_exercise_real_worker(execution, mode):
+def test_stop_undo_continue_and_template_edit_exercise_real_worker(transition_execution, mode):
+    execution = transition_execution
     flow = execution[mode + '-flow']
+    assert all(value is not None for value in flow['originalFiles'].values()), (
+        'Reset fits: its Undo witness starts with CSV, provenance and run-summary files present'
+    )
+    assert not flow['fitted']['available'], (
+        'Fit state: all fitted datasets disable Start without discarding result files'
+    )
+    assert all(value is None for value in flow['resetFiles'].values()), (
+        'Reset fits: every CSV, provenance and run-summary file must be cleared'
+    )
+    assert flow['resetState']['available'] and not flow['resetState']['continuable'], (
+        'Reset fits: no fitted datasets re-enables Start rather than Continue'
+    )
+    assert flow['resetRestored'] and not flow['restoredState']['available'], (
+        'Reset fits: one Undo restores every prior result byte and the completed fit state'
+    )
     assert flow['stop']['entered'] and flow['stop']['completed'] == 40, (
         'Stop and continue: Stop after file 40 must reach the real worker boundary'
     )
@@ -331,14 +394,21 @@ def test_stop_undo_continue_and_template_edit_exercise_real_worker(execution, mo
     assert flow['stop']['after']['canUndo'], (
         'Undo: a completed partial worker run must enable Undo'
     )
-    assert flow['undoRestored'], 'Undo: a partial run must restore the previous result bytes'
+    assert flow['undoRestored'], (
+        'Undo: a first partial run restores absence of all prior result files as one step'
+    )
+    assert flow['partialEdited']['available'] and flow['partialEdited']['continuable'], (
+        'Continue fitting: a template edit keeps a partial scan resumable '
+        'without clearing its prefix'
+    )
     assert flow['continue']['completed'] == 122 and flow['prefixKept'], (
-        'Stop and continue: continuation keeps the prefix and fits only files 41 through 162'
+        'Stop and continue: continuation keeps the prefix and fits only files 41 through 162; '
+        f'worker report: {flow["continue"]}'
     )
     expected = execution['modes'][mode]['files']
     assert_work(flow['work'], expected[40:], 'continue')
-    assert not flow['edited']['continuable'], (
-        'Result tagging: a template edit invalidates continuation'
+    assert not flow['edited']['available'] and not flow['blocked']['entered'], (
+        'Fit state: editing a completed scan keeps Start disabled until Reset fits'
     )
     assert (
         flow['editKept']
@@ -349,14 +419,41 @@ def test_stop_undo_continue_and_template_edit_exercise_real_worker(execution, mo
         'Result tagging: old CSV results remain visible with actual fit and Evolution '
         'out-of-date markers'
     )
+    assert all(value is None for value in flow['editResetFiles'].values()), (
+        'Reset fits: clearing stale results removes every result and provenance file'
+    )
+    assert flow['editResetRestored'] and flow['undoStale'], (
+        'Reset fits: one Undo restores the stale results and their template provenance'
+    )
     assert flow['restart']['completed'] == 162, (
-        'Stop and continue: a template edit makes the next Start refit the whole scan'
+        'Reset fits: clearing completed results makes Start refit all datasets from the template'
     )
     assert_work(flow['work'], expected, 'restart')
 
 
 @pytest.mark.parametrize('mode', MODES)
-def test_follow_tracks_worker_and_manual_selection_until_reenabled(execution, mode):
+def test_continue_starts_at_first_unfitted_and_skips_later_fitted_datasets(
+    transition_execution, mode
+):
+    actual = transition_execution[mode + '-holes']
+    assert actual['before']['available'] and actual['before']['continuable'], (
+        'Continue fitting: an incomplete scan stays enabled even when later datasets are fitted'
+    )
+    assert actual['entered'] and actual['completed'] == 3, (
+        'Continue fitting: only the three unfitted datasets reach the real worker; '
+        f'worker report: completed={actual["completed"]}, '
+        f'refusal={actual.get("refusal", "")}'
+    )
+    expected = transition_execution['modes'][mode]['files']
+    assert_work(actual['work'], [expected[index] for index in (17, 41, 115)], 'run')
+    assert not actual['after']['available'], (
+        'Continue fitting: completing the last missing datasets disables Start again'
+    )
+
+
+@pytest.mark.parametrize('mode', MODES)
+def test_follow_tracks_worker_and_manual_selection_until_reenabled(transition_execution, mode):
+    execution = transition_execution
     flow = execution[mode + '-flow']
     events = [event for event in flow.get('events', []) if event['stage'] == 'stop']
     assert len(events) == 40, (
@@ -366,6 +463,10 @@ def test_follow_tracks_worker_and_manual_selection_until_reenabled(execution, mo
     paths = execution['modes'][mode]['files']
     for index, event in enumerate(events):
         state = event['state']
+        assert event['projectionReady'], (
+            'Follow: each observation reaches its fitted count and independent '
+            'shown measured columns'
+        )
         expected = 17 if 13 <= index <= 20 else index
         assert state['scanning'] and state['running'], (
             'Follow: observations must occur while the actual worker scan runs'

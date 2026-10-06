@@ -60,6 +60,7 @@ std::atomic<int> completed{0};
 int stop_after = 0;
 bool exercise_follow = false;
 QJsonArray events;
+QJsonObject expected_measurements;
 std::vector<double> early_times, late_times;
 Clock::time_point previous;
 long peak_1000 = 0, peak_end = 0;
@@ -115,6 +116,8 @@ QJsonObject state(edi_app::ProjectViewModel& view) {
             {"canUndo", view.canUndo()},
             {"selected", view.currentExperimentIndex()},
             {"outcome", fit->outcome()},
+            {"unavailableReason", fit->unavailableReason()},
+            {"lastError", view.lastError()},
             {"scanFiles", fit->scanFiles()},
             {"ok", fit->scanOk()},
             {"failed", fit->scanFailed()}};
@@ -150,6 +153,18 @@ QJsonArray pattern(edi_app::ProjectViewModel& view) {
     return points;
 }
 
+QString measured_pattern_hash(edi_app::ProjectViewModel& view) {
+    const QJsonArray rows = pattern(view);
+    QCryptographicHash hash(QCryptographicHash::Sha256);
+    for (int column = 0; column < 3; ++column) {
+        std::vector<double> values;
+        for (const QJsonValue& row : rows) values.push_back(row.toArray()[column].toDouble());
+        hash.addData(QByteArray(reinterpret_cast<const char*>(values.data()),
+                                static_cast<qsizetype>(values.size() * sizeof(double))));
+    }
+    return QString::fromLatin1(hash.result().toHex());
+}
+
 QByteArray contents(const std::string& project, const char* relative) {
     QFile file(QString::fromStdString(project + "/" + relative));
     if (!file.open(QIODevice::ReadOnly)) return {};
@@ -167,17 +182,26 @@ QJsonObject run(edi_app::ProjectViewModel& view, const std::string& label, int l
     active = &view;
     QJsonObject before = state(view);
     bool entered = false;
+    QString refusal;
+    auto refusal_connection = QObject::connect(view.fit(), &edi_app::FitViewModel::refused,
+                                               [&](const QString& reason) { refusal = reason; });
     auto connection = QObject::connect(view.fit(), &edi_app::FitViewModel::runningChanged,
                                        [&] { entered = entered || view.fit()->running(); });
     view.fit()->start();
     const bool ended = until([&] { return !view.fit()->running(); }, 7200000);
     QObject::disconnect(connection);
+    const bool projected = !entered || until([&] {
+        return !view.calculating() && !view.currentExperiment()->pattern()->stale();
+    });
+    QObject::disconnect(refusal_connection);
     QJsonObject after = state(view);
     active = nullptr;
     return {{"before", before},
             {"after", after},
             {"entered", entered},
             {"ended", ended},
+            {"projected", projected},
+            {"refusal", refusal},
             {"completed", completed.load()},
             {"workerOffOwner", worker_off_owner.load()}};
 }
@@ -232,16 +256,44 @@ QJsonObject evolution(const std::string& path) {
     return {{"columns", columns}};
 }
 
+QJsonObject result_files(const std::string& path) {
+    QJsonObject files;
+    for (const char* name : {"results.csv", "results-provenance.csv", "scan-run.json"}) {
+        const QString relative = QStringLiteral("analysis/") + name;
+        files[name] =
+            QFileInfo::exists(QString::fromStdString(path) + "/" + relative)
+                ? QJsonValue(QString::fromUtf8(contents(path, relative.toUtf8().constData())))
+                : QJsonValue(QJsonValue::Null);
+    }
+    return files;
+}
+
 QJsonObject flow(const std::string& path) {
     auto view = load(path);
-    const QByteArray original = contents(path, "analysis/results.csv");
+    const QJsonObject original = result_files(path);
+    const QJsonObject fitted = state(*view);
+    // Owner 2026-10-06: a completed scan cannot restart. Reset, not Start,
+    // captures all old result files as one Undo transaction.
+    view->fit()->reset();
+    const QJsonObject reset_files = result_files(path), reset_state = state(*view);
+    view->undo();
+    const bool reset_restored = result_files(path) == original;
+    const QJsonObject restored_state = state(*view);
+    view->fit()->reset();
+    const QJsonObject before_first = result_files(path);
     auto first = run(*view, "stop", 40, true);
     const QByteArray partial = contents(path, "analysis/results.csv");
     view->undo();
-    const bool restored = contents(path, "analysis/results.csv") == original;
+    const bool restored = result_files(path) == before_first;
     QJsonObject undone = state(*view);
     auto second = run(*view, "stop-again", 40);
     const QByteArray prefix = contents(path, "analysis/results.csv");
+    if (view->parameters()->count()) {
+        auto* parameter = view->parameters()->get(0, "parameter").value<edi_app::ParameterItem*>();
+        if (parameter) parameter->setValue(parameter->value() + 0.001);
+    }
+    until([&] { return !view->calculating() && !view->currentExperiment()->pattern()->stale(); });
+    const QJsonObject partial_edited = state(*view);
     auto continued = run(*view, "continue", 0);
     const bool retained = contents(path, "analysis/results.csv").startsWith(prefix);
     const QByteArray before_edit = contents(path, "analysis/results.csv");
@@ -253,9 +305,9 @@ QJsonObject flow(const std::string& path) {
         auto* item = view->parameters()->get(0, "parameter").value<edi_app::ParameterItem*>();
         if (item) item->setValue(item->value() + 0.001);
     }
+    until([&] { return !view->calculating() && !view->currentExperiment()->pattern()->stale(); });
     QJsonObject edited = state(*view);
     bool stale_fit = view->fit()->property("outOfDate").toBool();
-    // The chart consumes the fit result's stale state, rather than owning another flag.
     QQmlEngine engine;
     edi_app::use_fresh_settings();
     edi_app::configure_engine(engine);
@@ -274,8 +326,23 @@ QJsonObject flow(const std::string& path) {
     const bool results_visible = !old_fit_rows.isEmpty() &&
                                  old_fit_rows == table(view->fit()->results()) &&
                                  !old_points.isEmpty() && old_points == layer_points;
+    auto blocked = run(*view, "completed-start", 0);
+    const QJsonObject edited_files = result_files(path);
+    view->fit()->reset();
+    const QJsonObject edit_reset_files = result_files(path), edit_reset_state = state(*view);
+    view->undo();
+    const bool edit_reset_restored = result_files(path) == edited_files;
+    const bool undo_stale = view->fit()->property("outOfDate").toBool();
+    view->fit()->reset();
     auto restarted = run(*view, "restart", 0);
-    return {{"stop", first},
+    return {{"originalFiles", original},
+            {"partialEdited", partial_edited},
+            {"fitted", fitted},
+            {"resetFiles", reset_files},
+            {"resetState", reset_state},
+            {"resetRestored", reset_restored},
+            {"restoredState", restored_state},
+            {"stop", first},
             {"partial", QString::fromUtf8(partial)},
             {"undoRestored", restored},
             {"undone", undone},
@@ -287,6 +354,11 @@ QJsonObject flow(const std::string& path) {
             {"staleFit", stale_fit},
             {"staleEvolution", stale_evolution},
             {"oldResultsVisible", results_visible},
+            {"blocked", blocked},
+            {"editResetFiles", edit_reset_files},
+            {"editResetState", edit_reset_state},
+            {"editResetRestored", edit_reset_restored},
+            {"undoStale", undo_stale},
             {"restart", restarted},
             {"events", events}};
 }
@@ -622,10 +694,25 @@ void scan_contract_file_completed(const std::string& file) {
         qApp,
         [file, count] {
             if (!active) return;
+            // F3 publishes measured data asynchronously. A calculated frame may
+            // require the worker's next iteration, so this functional actor waits
+            // only for the measured columns its Follow assertions actually judge.
+            const bool projection_ready = until(
+                [&] {
+                    if (active->fit()->scanFitted() < count) return false;
+                    if (!exercise_follow) return true;
+                    const QString selected = active->experiments()
+                                                 ->get(active->currentExperimentIndex(), "file")
+                                                 .toString();
+                    const QString expected = expected_measurements.value(selected).toString();
+                    return !expected.isEmpty() && measured_pattern_hash(*active) == expected;
+                },
+                5000);
             if (completed <= 162)
                 events.append(QJsonObject{{"file", QString::fromStdString(file)},
                                           {"stage", QString::fromStdString(stage)},
                                           {"state", state(*active)},
+                                          {"projectionReady", projection_ready},
                                           {"pattern", pattern(*active)}});
             if (exercise_follow && count == 13) active->setCurrentExperimentIndex(17);
             if (exercise_follow && count == 21) active->fit()->setFollowing(true);
@@ -735,9 +822,13 @@ int main(int argc, char** argv) {
             answer = inventory(path);
         else if (command == "evolution")
             answer = evolution(path);
-        else if (command == "flow")
+        else if (command == "flow") {
+            QFile expected(argv[3]);
+            if (!expected.open(QIODevice::ReadOnly))
+                throw std::runtime_error("Follow requires independent measured-file receipts");
+            expected_measurements = QJsonDocument::fromJson(expected.readAll()).object();
             answer = flow(path);
-        else if (command == "joint") {
+        } else if (command == "joint") {
             auto view = load(path);
             const QString original = view->analysis()->fittingMode();
             view->analysis()->setFittingMode("joint");

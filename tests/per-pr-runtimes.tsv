@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-06T00:51:19Z
+# measured_utc = 2026-10-06T07:37:06Z
 #
-# Recorded from: seq6-effective-final.log (15 node(s) measured once, 6486 banked, 0 stale row(s) dropped)
-# Collected tests: 7625; with a reported duration: 4385
-# Module-scoped fixture costs recorded: 5
+# Recorded from: e04-t16-tests-seq8-replay3.log (34 node(s) measured once, 6492 banked, 1 stale row(s) dropped)
+# Collected tests: 7645; with a reported duration: 4405
+# Module-scoped fixture costs recorded: 6
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 7625
+# inventory_python = 7645
 # inventory_cpp = 290
-# inventory_measured = 6501
-# inventory_unmeasured = 1414
+# inventory_measured = 6522
+# inventory_unmeasured = 1413
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_projects_open_and_populate_pages
@@ -3134,19 +3134,22 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c11_t62_cli_cancel.py::test_c
 1.170	tests/system/py/test_c11_t62_cli_cancel.py::test_sigint_cancels_live_cli_and_second_signal_exits[no-machine]
 1.120	tests/system/py/test_c11_t62_cli_cancel.py::test_sigint_cancels_live_cli_and_second_signal_exits[yes-human]
 1.110	tests/system/py/test_c11_t62_cli_cancel.py::test_sigint_cancels_live_cli_and_second_signal_exits[yes-machine]
-0.560	tests/system/py/test_c11_t62_native_scan_io.py::test_completion_precedes_opening_the_next_data_file
-1.170	tests/system/py/test_c11_t62_native_scan_io.py::test_dry_scan_has_no_extra_native_data_opens
-0.650	tests/system/py/test_c11_t62_native_scan_io.py::test_native_observer_reaches_the_real_data_reads
+0.500	tests/system/py/test_c11_t62_native_scan_io.py::test_completion_allows_only_four_upcoming_dataset_reads
+0.880	tests/system/py/test_c11_t62_native_scan_io.py::test_dry_scan_has_no_extra_native_data_opens
+0.422	tests/system/py/test_c11_t62_native_scan_io.py::test_native_observer_reaches_the_real_data_reads
 0.000	tests/system/py/test_c11_t62_progress_cost.py::test_csv_polling_watcher_is_removed
 0.040	tests/system/py/test_c11_t62_progress_cost.py::test_progress_work_per_file_stays_flat_through_5184_events
 0.340	tests/system/py/test_c11_t62_scan_contract.py::test_completion_event_arrives_before_the_next_files_iteration[independent]
 0.390	tests/system/py/test_c11_t62_scan_contract.py::test_completion_event_arrives_before_the_next_files_iteration[sequential]
-0.180	tests/system/py/test_c11_t62_scan_contract.py::test_direct_fit_cancellation_uses_the_same_python_contract[on_iteration-joint]
-0.180	tests/system/py/test_c11_t62_scan_contract.py::test_direct_fit_cancellation_uses_the_same_python_contract[on_iteration-single]
-0.090	tests/system/py/test_c11_t62_scan_contract.py::test_direct_fit_cancellation_uses_the_same_python_contract[on_start-joint]
-0.080	tests/system/py/test_c11_t62_scan_contract.py::test_direct_fit_cancellation_uses_the_same_python_contract[on_start-single]
-0.100	tests/system/py/test_c11_t62_scan_contract.py::test_direct_fit_cancellation_uses_the_same_python_contract[predicate-joint]
-0.160	tests/system/py/test_c11_t62_scan_contract.py::test_direct_fit_cancellation_uses_the_same_python_contract[predicate-single]
+0.060	tests/system/py/test_c11_t62_scan_contract.py::test_declared_scan_joint_refusal_precedes_every_cancellation_callback[on_iteration]
+0.070	tests/system/py/test_c11_t62_scan_contract.py::test_declared_scan_joint_refusal_precedes_every_cancellation_callback[on_start]
+0.070	tests/system/py/test_c11_t62_scan_contract.py::test_declared_scan_joint_refusal_precedes_every_cancellation_callback[predicate]
+0.140	tests/system/py/test_c11_t62_scan_contract.py::test_direct_fit_cancellation_uses_the_same_python_contract[on_iteration-joint]
+0.100	tests/system/py/test_c11_t62_scan_contract.py::test_direct_fit_cancellation_uses_the_same_python_contract[on_iteration-single]
+0.100	tests/system/py/test_c11_t62_scan_contract.py::test_direct_fit_cancellation_uses_the_same_python_contract[on_start-joint]
+0.120	tests/system/py/test_c11_t62_scan_contract.py::test_direct_fit_cancellation_uses_the_same_python_contract[on_start-single]
+0.150	tests/system/py/test_c11_t62_scan_contract.py::test_direct_fit_cancellation_uses_the_same_python_contract[predicate-joint]
+0.140	tests/system/py/test_c11_t62_scan_contract.py::test_direct_fit_cancellation_uses_the_same_python_contract[predicate-single]
 0.600	tests/system/py/test_c11_t62_scan_contract.py::test_dry_run_does_not_open_scan_data_for_copying[independent]
 0.600	tests/system/py/test_c11_t62_scan_contract.py::test_dry_run_does_not_open_scan_data_for_copying[sequential]
 0.180	tests/system/py/test_c11_t62_scan_contract.py::test_every_reachable_scan_boundary_observes_cancel_before_writeback[on_file_complete-1-keyboard-analysis-independent]
@@ -5758,6 +5761,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_scan_app_execution.py::test_1
 UNMEASURED:failed-in-this-run	tests/system/py/test_scan_app_execution.py::test_100000_file_reads_have_at_most_four_files_of_read_ahead
 UNMEASURED:failed-in-this-run	tests/system/py/test_scan_app_execution.py::test_100000_files_reach_the_actual_optimizer_without_retained_payload_growth
 UNMEASURED:failed-in-this-run	tests/system/py/test_scan_app_execution.py::test_bundle_scan_uses_temporary_copy_and_save_as_retains_results
+UNMEASURED:failed-in-this-run	tests/system/py/test_scan_app_execution.py::test_continue_starts_at_first_unfitted_and_skips_later_fitted_datasets[independent]
+UNMEASURED:failed-in-this-run	tests/system/py/test_scan_app_execution.py::test_continue_starts_at_first_unfitted_and_skips_later_fitted_datasets[sequential]
 UNMEASURED:failed-in-this-run	tests/system/py/test_scan_app_execution.py::test_every_162_file_csv_row_equals_the_independent_driver[0-independent]
 UNMEASURED:failed-in-this-run	tests/system/py/test_scan_app_execution.py::test_every_162_file_csv_row_equals_the_independent_driver[0-sequential]
 UNMEASURED:failed-in-this-run	tests/system/py/test_scan_app_execution.py::test_every_162_file_csv_row_equals_the_independent_driver[1-independent]
@@ -6082,7 +6087,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_scan_app_execution.py::test_e
 UNMEASURED:failed-in-this-run	tests/system/py/test_scan_app_execution.py::test_every_162_file_csv_row_equals_the_independent_driver[98-sequential]
 UNMEASURED:failed-in-this-run	tests/system/py/test_scan_app_execution.py::test_every_162_file_csv_row_equals_the_independent_driver[99-independent]
 UNMEASURED:failed-in-this-run	tests/system/py/test_scan_app_execution.py::test_every_162_file_csv_row_equals_the_independent_driver[99-sequential]
-UNMEASURED:failed-in-this-run	tests/system/py/test_scan_app_execution.py::test_evolution_all_parameter_values_errors_and_both_axes_equal_csv
+0.180	tests/system/py/test_scan_app_execution.py::test_evolution_all_parameter_values_errors_and_both_axes_equal_csv
 UNMEASURED:failed-in-this-run	tests/system/py/test_scan_app_execution.py::test_evolution_point_click_changes_the_shared_selection
 0.000	tests/system/py/test_scan_app_execution.py::test_evolution_without_extract_uses_one_based_file_index
 UNMEASURED:failed-in-this-run	tests/system/py/test_scan_app_execution.py::test_fitted_selection_projects_csv_values_errors_and_calculated_pattern[0]
@@ -6247,8 +6252,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_scan_app_execution.py::test_f
 UNMEASURED:failed-in-this-run	tests/system/py/test_scan_app_execution.py::test_fitted_selection_projects_csv_values_errors_and_calculated_pattern[98]
 UNMEASURED:failed-in-this-run	tests/system/py/test_scan_app_execution.py::test_fitted_selection_projects_csv_values_errors_and_calculated_pattern[99]
 UNMEASURED:failed-in-this-run	tests/system/py/test_scan_app_execution.py::test_fitted_selection_projects_csv_values_errors_and_calculated_pattern[9]
-UNMEASURED:failed-in-this-run	tests/system/py/test_scan_app_execution.py::test_follow_tracks_worker_and_manual_selection_until_reenabled[independent]
-UNMEASURED:failed-in-this-run	tests/system/py/test_scan_app_execution.py::test_follow_tracks_worker_and_manual_selection_until_reenabled[sequential]
+0.080	tests/system/py/test_scan_app_execution.py::test_follow_tracks_worker_and_manual_selection_until_reenabled[independent]
+0.210	tests/system/py/test_scan_app_execution.py::test_follow_tracks_worker_and_manual_selection_until_reenabled[sequential]
 UNMEASURED:failed-in-this-run	tests/system/py/test_scan_app_execution.py::test_initial_dataset_and_labels_follow_template_and_independent_extract
 UNMEASURED:failed-in-this-run	tests/system/py/test_scan_app_execution.py::test_joint_mode_cannot_be_selected_in_a_scan_project
 0.080	tests/system/py/test_scan_app_execution.py::test_large_evolution_thins_points_and_regression_bucket_partition_preserves_extrema
@@ -6437,6 +6442,21 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_scan_app_execution.py::test_t
 0.000	tests/system/py/test_scan_lazy_input.py::test_gate_rejects_an_exercised_read_all_files_before_fitting_escape[eager-load-openat]
 0.000	tests/system/py/test_scan_lazy_input.py::test_gate_rejects_an_exercised_read_all_files_before_fitting_escape[eager-load-relative]
 0.000	tests/system/py/test_scan_lazy_input.py::test_gate_rejects_an_exercised_read_all_files_before_fitting_escape[eager-load]
+0.740	tests/system/py/test_scan_owner_adjustments.py::test_evolution_gestures_change_the_displayed_axes_and_reset
+0.140	tests/system/py/test_scan_owner_adjustments.py::test_evolution_marker_survives_point_rebuild_and_pending_projection
+0.560	tests/system/py/test_scan_owner_adjustments.py::test_fit_and_reset_buttons_follow_effective_fit_state
+1.010	tests/system/py/test_scan_owner_adjustments.py::test_owner_observers_reject_live_disconnected_or_constant_consumers[axis]
+0.590	tests/system/py/test_scan_owner_adjustments.py::test_owner_observers_reject_live_disconnected_or_constant_consumers[button]
+0.910	tests/system/py/test_scan_owner_adjustments.py::test_owner_observers_reject_live_disconnected_or_constant_consumers[drag]
+0.310	tests/system/py/test_scan_owner_adjustments.py::test_owner_observers_reject_live_disconnected_or_constant_consumers[marker]
+0.450	tests/system/py/test_scan_owner_adjustments.py::test_owner_observers_reject_live_disconnected_or_constant_consumers[names]
+0.000	tests/system/py/test_scan_owner_adjustments.py::test_owner_observers_reject_live_disconnected_or_constant_consumers[progress]
+0.410	tests/system/py/test_scan_owner_adjustments.py::test_owner_observers_reject_live_disconnected_or_constant_consumers[repeat]
+0.860	tests/system/py/test_scan_owner_adjustments.py::test_owner_observers_reject_live_disconnected_or_constant_consumers[reset]
+0.910	tests/system/py/test_scan_owner_adjustments.py::test_owner_observers_reject_live_disconnected_or_constant_consumers[wheel]
+0.300	tests/system/py/test_scan_owner_adjustments.py::test_previous_and_next_repeat_the_effective_selection_step
+0.010	tests/system/py/test_scan_owner_adjustments.py::test_progress_remains_at_the_status_bar_far_right
+0.380	tests/system/py/test_scan_owner_adjustments.py::test_project_page_displays_bounded_names_and_the_middle_ellipsis
 0.630	tests/system/py/test_scan_projection_wiring_escapes.py::test_actual_stale_markers_reject_constant_or_other_result_state[chart]
 0.610	tests/system/py/test_scan_projection_wiring_escapes.py::test_actual_stale_markers_reject_constant_or_other_result_state[status]
 1.000	tests/system/py/test_scan_projection_wiring_escapes.py::test_header_observer_rejects_disconnected_model_and_displayed_labels[labels]
@@ -7958,6 +7978,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # and the stale-module integrity refusal.
 # module-cost: 0.256	tests/integration/py/test_scan_app_contract.py
 # module-cost: 0.344	tests/integration/py/test_scan_extended_contract.py
-# module-cost: 60.446	tests/system/py/test_scan_app_execution.py
+# module-cost: 0.228	tests/system/py/test_c11_t62_native_scan_io.py
+# module-cost: 112.644	tests/system/py/test_scan_app_execution.py
 # module-cost: 17.002	tests/system/py/test_scan_driver_resume.py
 # module-cost: 1.014	tests/system/py/test_scan_lazy_input.py

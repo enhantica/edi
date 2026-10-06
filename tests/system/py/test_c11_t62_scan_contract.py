@@ -153,6 +153,11 @@ def test_dry_run_does_not_open_scan_data_for_copying(tmp_path, mode):
 @pytest.mark.parametrize('cancel', ['predicate', 'on_start', 'on_iteration'])
 def test_direct_fit_cancellation_uses_the_same_python_contract(tmp_path, mode, cancel):
     target = _project(tmp_path, mode)
+    # Before: joint cancellation ran on a declared scan. F9 now refuses that
+    # boundary; retain the admitted direct-fit callback contract on a non-scan.
+    if mode == 'joint':
+        analysis = target / 'analysis/analysis.edi'
+        analysis.write_text(analysis.read_text().split('_sequential_fit.data_dir')[0])
     visited = []
 
     def interrupt(row):
@@ -169,6 +174,29 @@ def test_direct_fit_cancellation_uses_the_same_python_contract(tmp_path, mode, c
     )
     if cancel != 'predicate':
         assert visited, ' gate 6: cancellation control must reach the selected callback'
+
+
+@pytest.mark.parametrize('cancel', ['predicate', 'on_start', 'on_iteration'])
+def test_declared_scan_joint_refusal_precedes_every_cancellation_callback(tmp_path, cancel):
+    target = _project(tmp_path, 'joint')
+    before = {
+        path.relative_to(target): path.read_bytes() for path in target.rglob('*') if path.is_file()
+    }
+    calls = []
+
+    def interrupt(*args):
+        calls.append(args)
+        return True
+
+    kwargs = {'should_cancel': interrupt} if cancel == 'predicate' else {cancel: interrupt}
+    with pytest.raises(ValueError, match='declares a scan'):
+        edi.Project.load(target).analysis.fit(**kwargs)
+    assert not calls, (
+        'Scan admission: declared joint scans refuse before any cancellation or fit callback'
+    )
+    assert before == {
+        path.relative_to(target): path.read_bytes() for path in target.rglob('*') if path.is_file()
+    }, 'Scan admission: a refused joint scan preserves every source and result byte'
 
 
 @pytest.mark.parametrize('mode', ['sequential', 'independent'])
