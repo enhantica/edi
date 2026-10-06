@@ -126,6 +126,7 @@ def write_pin(sha: str) -> None:
     """Pin build-<sha> for every platform (the crysta-sdk-pin task)."""
     tag, digests = f'build-{sha}', pin_digests(sha)
     lines = (ROOT / 'pixi.toml').read_text(encoding='utf-8').split('\n')
+    note = '# crysta pack from a failed job, its package steps passed; failed:'
     for platform in PLATFORMS:  # only the pin lines change: every other byte of pixi.toml is kept
         header = f'[target.{platform}.activation.env]'
         if header not in lines:
@@ -143,6 +144,16 @@ def write_pin(sha: str) -> None:
             else:
                 last = max([k for k in range(h + 1, end) if lines[k].strip()] or [h])
                 lines.insert(last + 1, f'{key} = "{value}"')
+        # The pin's provenance: the failed steps of a job whose package was taken, else nothing.
+        end = next((k for k in range(h + 1, len(lines)) if lines[k].startswith('[')), len(lines))
+        for k in reversed([k for k in range(h + 1, end) if lines[k].startswith(note)]):
+            del lines[k]
+        failed = crysta_sdk.FAILED_STEPS.get((sha, platform))
+        if failed:
+            at = next(
+                k for k in range(h + 1, len(lines)) if lines[k].startswith('CRYSTA_SDK_SHA256')
+            )
+            lines.insert(at + 1, f'{note} {"; ".join(failed)}')
     (ROOT / 'pixi.toml').write_text('\n'.join(lines), encoding='utf-8')
     print(f'crysta-sdk-pin: pixi.toml pins {tag} for {", ".join(PLATFORMS)}')
 
