@@ -7,12 +7,12 @@ environment. The headless host observes model state and actual QML consumers; no
 The full 162-file CSV reference is produced by crysta's actual public Python `Project.fit` binding, rebuilt from its committed sources and
 linked to the same installed SDK as the app on the identical
 project bytes and mode. App/driver equality is a consistency invariant, not independent numerical
-correctness. C11-T43 remains the scientific reference. Measured columns come from independent
-ASCII parsing (scan_template/REFERENCE.md); CSV values, uncertainties, extracted values and order
+correctness. The saved scan project supplies the scientific reference inputs. Measured columns
+come from independent ASCII parsing (scan_template/REFERENCE.md); CSV values, uncertainties, extracted values and order
 come from the disk contract. Synthetic projection cells and extrema have closed-form values.
 No app-generated golden is used. Any future baseline artifact must be labelled a regression pin.
 
-The packet supplies the 100000-file scale bounds: peak after file 100000 <= 1.1 times peak after
+The 100000-file scale workload uses these bounds: peak after file 100000 <= 1.1 times peak after
 file 1000; the final 1000 median per-file time <= 1.2 times the 1001..2000 median; read-ahead <= 4.
 The generated scale data has a small measured grid and one variable background anchor.
 Every file reaches the native optimizer; this is not a simulated loop. Work identities, native

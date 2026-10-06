@@ -2,7 +2,7 @@ _edi.schema_version 2
 
 _metadata.name             cosio_d20_scan
 _metadata.title            "Co2SiO4 D20 three-temperature sequential scan"
-_metadata.description      "C11-T43 corpus project"
+_metadata.description      "Co2SiO4 D20 scan reference at three temperatures"
 _metadata.created          "09 Sep 2026 07:33:40"
 _metadata.last_modified    "09 Sep 2026 07:34:27"
 _metadata.timestamp        2026-09-09T07:34:35+00:00
