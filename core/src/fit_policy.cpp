@@ -42,6 +42,13 @@ void validate_fit_request(const std::vector<double>& grid, const std::vector<dou
 void validate_joint_request(const Project& project,
                             const ItemVec<BraggPdExperiment>& experiments,
                             const std::vector<PdDataBase>& patterns) {
+    // A project that declares a scan fits its one template against each file, never jointly: the
+    // app's mode edit refuses joint there, and a project loaded or built with both is refused here.
+    if (project.sequential_fit.declared()) {
+        throw std::invalid_argument(
+            "edi fit_joint: this project declares a scan (_sequential_fit); its datasets are fitted one "
+            "at a time against the template experiment, never jointly");
+    }
     if (experiments.empty()) {
         throw std::invalid_argument("edi fit_joint: project has no experiments (load a project "
                                     "directory, or use fit() for a single bank)");

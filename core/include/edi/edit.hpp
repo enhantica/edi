@@ -301,6 +301,7 @@ class Edit {
     static Edit add_experiments(Project& project, std::vector<BraggPdExperiment> experiments) {
         auto batch = std::make_shared<std::vector<BraggPdExperiment>>(std::move(experiments));
         return Edit([&project, batch] {
+            require_scan_template(project, project.experiments.size() + batch->size());
             std::vector<ItemVec<BraggPdExperiment>::Ptr> all(project.experiments.begin(), project.experiments.end());
             for (const BraggPdExperiment& experiment : *batch) {
                 const std::string key = KeyTraits<BraggPdExperiment>::canonical(experiment.name);
@@ -323,6 +324,7 @@ class Edit {
         auto created = std::make_shared<BraggPdExperiment>(std::move(experiment));
         return Edit([&project, created] {
             require_calculation_project(project);
+            require_scan_template(project, project.experiments.size() + 1);
             const std::string key = KeyTraits<BraggPdExperiment>::canonical(created->name);
             for (const auto& held : project.experiments) {
                 if (KeyTraits<BraggPdExperiment>::canonical(held->name) == key) {
@@ -386,6 +388,13 @@ class Edit {
                                                                                   : generated.time_of_flight) =
                 std::move(axis);
             experiment.data = std::move(generated);
+        });
+    }
+    // One experiment removed; a scan project keeps its template experiment.
+    static Edit erase_experiment(Project& project, std::size_t index) {
+        return Edit([&project, index] {
+            require_scan_template(project, project.experiments.size() - 1);
+            project.experiments.erase_at(index);
         });
     }
     // Experiments removed, all or none (an undo of their addition): each is found by identity first, so one
@@ -499,6 +508,15 @@ class Edit {
     template <typename Row>
     static Edit erasing(ItemVec<Row>& rows, std::size_t index) {
         return Edit([&rows, index] { rows.erase_at(index); });
+    }
+    // A project that declares a scan fits its one template experiment against each file (edi ADR-0017 §19): an
+    // edit that would leave it another number of experiments is refused.
+    static void require_scan_template(const Project& project, std::size_t experiments) {
+        if (project.sequential_fit.declared() && experiments != 1) {
+            throw std::invalid_argument(
+                "this project declares a scan (_sequential_fit), which fits one template experiment against each "
+                "file: an edit leaving it " + std::to_string(experiments) + " experiments is refused");
+        }
     }
     // Refuses an id whose item a collection other than the model's own ItemVec<Item> holds: a
     // caller's keyed type derived from a model type would bring its own rename rule (KeyTraits),
