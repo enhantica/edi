@@ -19,6 +19,7 @@ IDENTITIES = {
     'F d -3 m': (227, 'cubic'),
     'I m -3 m': (229, 'cubic'),
     'I 21 3': (199, 'cubic'),
+    'I a -3': (206, 'cubic'),
     'P n m a': (62, 'orthorhombic'),
     'P m m a': (51, 'orthorhombic'),
 }
@@ -28,7 +29,16 @@ IDENTITIES = {
 # function_2_space_group.get_default_it_coordinate_system_code_by_it_number:
 # ordinary orthorhombic settings use abc; these ordinary cubic settings use 1;
 # the double-origin Fd-3m reference uses 2. Explicit file codes still win.
-DEFAULT_COORDINATE_CODES = {51: 'abc', 62: 'abc', 199: '1', 221: '1', 225: '1', 227: '2', 229: '1'}
+DEFAULT_COORDINATE_CODES = {
+    51: 'abc',
+    62: 'abc',
+    199: '1',
+    206: '1',
+    221: '1',
+    225: '1',
+    227: '2',
+    229: '1',
+}
 
 
 def scalar_text(value):

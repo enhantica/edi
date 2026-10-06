@@ -52,12 +52,10 @@ TEST_CASE("C34-T27 same-object atom-site collection edits stay stale") {
         auto structure = geometry_fixture();
         structure.current_geometry();
         const auto window = edi::window_geometry(structure, {});
-        REQUIRE_MESSAGE(
-            structure.geometry_current(),
-            " fixture stored geometry starts current before a collection write");
-        REQUIRE_MESSAGE(
-            edi::window_geometry_current(structure, window),
-            " fixture window geometry starts current before a collection write");
+        REQUIRE_MESSAGE(structure.geometry_current(),
+                        " fixture stored geometry starts current before a collection write");
+        REQUIRE_MESSAGE(edi::window_geometry_current(structure, window),
+                        " fixture window geometry starts current before a collection write");
         const auto site = structure.atom_sites[0];
         if (route == "remove/readd") {
             structure.atom_sites.erase_at(0);
@@ -143,9 +141,10 @@ void check_alias_assignment(const std::string& route,
     project.structures.clear();
     project.structures.push_back(geometry_fixture());
     project.experiments.clear();
-    project.experiments.push_back(edi::experiment_from_edi_text(fixture_text(
-        "tests/fixtures/c11_t4_cw_selection/cases/cwl_valid.edi")));
+    project.experiments.push_back(edi::experiment_from_edi_text(
+        fixture_text("tests/fixtures/c11_t4_cw_selection/cases/cwl_valid.edi")));
     auto& structure = project.structure();
+    project.experiment().linked_structure().structure_id = structure.name;
     auto neighbour = std::make_shared<edi::AtomSite>(*structure.atom_sites[0]);
     neighbour->id = "Si2";
     neighbour->fract_x.value = 0.6;
@@ -179,7 +178,8 @@ void check_alias_assignment(const std::string& route,
 
 TEST_CASE("C34-T27 editor copy-assigns the live atom-site collection through an alias") {
     check_alias_assignment("copy", [](edi::Structure& structure) {
-        // An editor's pending collection can alias the live one when an unchanged edit is committed.
+        // An editor's pending collection can alias the live one when an unchanged edit is
+        // committed.
         const auto& pending = structure.atom_sites;
         structure.atom_sites = pending;
     });

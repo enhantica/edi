@@ -138,6 +138,8 @@ def test_c33_filename_difference_adds_exactly_the_owned_pages():
     # The independently gated two-bank verification page is now retained prior art.
     before.add('pd-neut-tof_ferrite-austenite_beer_joint')
     after = {path.stem for path in (ROOT / 'docs/dev/verification').glob('*.py')}
+    # ADR-0026 independently gates its beta-tensor verification page.
+    after.discard('pd-neut-cwl_Y2O3_beta-adp')
     #  adds its independently gated page; preserve the  set obligation.
     after.discard('pd-xray-cwl_LiF_single')
     #  owns its added page; keep 's original page obligation exact.

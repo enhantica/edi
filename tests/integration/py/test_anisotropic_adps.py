@@ -11,6 +11,8 @@ import edi as engine
 import numpy as np
 import pytest
 
+from conftest import project_record_datetime, tree_bytes_with_normalized_project_metadata
+
 ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / 'tests/fixtures/anisotropic_adps'
 ORACLE = json.loads((FIXTURE / 'numeric.json').read_text())
@@ -148,6 +150,7 @@ def test_each_declared_type_survives_load_and_two_saves(tmp_path, cell, kind):
     first = pattern(project)
     previous = None
     previous_files = None
+    previous_modified = None
     for generation in range(2):
         text = saved(project, tmp_path / f'saved-{generation}')
         rows = loop_rows(text, '_atom_site')
@@ -164,14 +167,20 @@ def test_each_declared_type_survives_load_and_two_saves(tmp_path, cell, kind):
             assert text == previous, (
                 'Repeated ADP save/load must retain byte-identical structure text'
             )
-        files = {
-            str(path.relative_to(tmp_path / f'saved-{generation}')): path.read_bytes()
-            for path in (tmp_path / f'saved-{generation}').rglob('*')
-            if path.is_file()
-        }
+        destination = tmp_path / f'saved-{generation}'
+        modified = project_record_datetime(
+            (destination / 'project.edi').read_bytes(), 'last_modified'
+        )
+        files = tree_bytes_with_normalized_project_metadata(destination, 'last_modified')
         if previous_files is not None:
-            assert files == previous_files, 'Repeated saves must retain the complete project bytes'
+            assert modified >= previous_modified, (
+                'Project persistence retains a monotone modification date'
+            )
+            assert files == previous_files, (
+                'Repeated saves must retain every project byte except the owned modification date'
+            )
         previous_files = files
+        previous_modified = modified
         previous = text
         project = engine.Project.load(tmp_path / f'saved-{generation}')
         assert project.structure.atom_sites[0].adp_type == kind, (

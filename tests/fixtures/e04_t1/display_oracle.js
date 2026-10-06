@@ -77,6 +77,9 @@ var frozen = {
     "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project/experiments/expt_n2.edi": "6e8f4ac836219d4ba503ff5583823b1d12eb523f788e16c03d86b2b5d2bacdda",
     "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project/experiments/expt_s2.edi": "948b6f720ed6d72a5d5f0c5b8b06cae3dca6159f4f9e6edd56739110a2f2290a",
     "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project/analysis/analysis.edi": "b9bf3cbba3d67f97f4e361606f39650fe14313635d32e5176f3269e6692f28dd",
+    "docs/user/cli/pd-neut-cwl_y2o3_beta-adp/project/structures/y2o3.edi": "dcacdbe2ddd6490b390aa7b4b36eeaf7e09d43b62f6b31b25a52121ffa295382",
+    "docs/user/cli/pd-neut-cwl_y2o3_beta-adp/project/experiments/y2o3.edi": "f848804c0238d76eb03f43f2a06688f52cf87d1caa8f38dbcf29e0402e755e1d",
+    "docs/user/cli/pd-neut-cwl_y2o3_beta-adp/project/analysis/analysis.edi": "64a5254af5f390f3c3a49e84affc9bd4a6a074d2fe50ea5f97e5864c444c7f71",
     "tests/fixtures/e04_t1/xray-project/structures/structure.edi": "3eafe9649956cbc14b8f4be0f687089c0c7234f32ecd48232d75fe93c8d5a166",
     "tests/fixtures/e04_t1/xray-project/experiments/experiment.edi": "7267387c514b8c53e7087f69b9b3d206742146e35e1ec459efdcd2aa98024c1c",
     "tests/fixtures/e04_t1/xray-project/analysis/analysis.edi": "7515093456b82f2f2b413642dc503ce3cf723cf0951d25bc23ddddc26ddafcce",
@@ -3181,6 +3184,116 @@ var frozen = {
     {
       "tag": "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project:engines",
       "path": "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project",
+      "page": "analysis",
+      "tier": "extras",
+      "group": "engines",
+      "selection": null,
+      "fields": [
+        [
+          "statusBar.calculator",
+          "crysta",
+          "label"
+        ],
+        [
+          "statusBar.minimizer",
+          "crysta",
+          "label"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_y2o3_beta-adp/project:space_group:y2o3",
+      "path": "docs/user/cli/pd-neut-cwl_y2o3_beta-adp/project",
+      "page": "structure",
+      "tier": "basic",
+      "group": "space_group",
+      "selection": "y2o3",
+      "fields": [
+        [
+          "spaceGroup.crystalSystem",
+          "cubic",
+          "readonly"
+        ],
+        [
+          "spaceGroup.itNumber",
+          "206",
+          "text"
+        ],
+        [
+          "spaceGroup.nameHM",
+          "I a -3",
+          "text"
+        ],
+        [
+          "spaceGroup.coordSystemCode",
+          "1",
+          "text"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_y2o3_beta-adp/project:experiment_type:y2o3",
+      "path": "docs/user/cli/pd-neut-cwl_y2o3_beta-adp/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "experiment_type",
+      "selection": "y2o3",
+      "fields": [
+        [
+          "experimentType.sampleForm",
+          "powder",
+          "disabled"
+        ],
+        [
+          "experimentType.beamMode",
+          "constant wavelength",
+          "disabled"
+        ],
+        [
+          "experimentType.radiationProbe",
+          "neutron",
+          "disabled"
+        ],
+        [
+          "experimentType.scatteringType",
+          "bragg",
+          "disabled"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_y2o3_beta-adp/project:data:y2o3",
+      "path": "docs/user/cli/pd-neut-cwl_y2o3_beta-adp/project",
+      "page": "experiment",
+      "tier": "extras",
+      "group": "data",
+      "selection": "y2o3",
+      "fields": [
+        [
+          "range.minimum",
+          0.95,
+          "number"
+        ],
+        [
+          "range.maximum",
+          153.9,
+          "number"
+        ],
+        [
+          "range.step",
+          0.05,
+          "number"
+        ],
+        [
+          "range.points",
+          3060,
+          "number"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_y2o3_beta-adp/project:engines",
+      "path": "docs/user/cli/pd-neut-cwl_y2o3_beta-adp/project",
       "page": "analysis",
       "tier": "extras",
       "group": "engines",

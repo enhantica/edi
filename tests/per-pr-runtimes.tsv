@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-06T14:49:11Z
+# measured_utc = 2026-10-06T18:47:44Z
 #
-# Recorded from: isolated-final-private.log (38 node(s) measured once, 6203 banked, 1 stale row(s) dropped)
-# Collected tests: 6901; with a reported duration: 4111
+# Recorded from: variants-measure.log (2 node(s) measured once, 6252 banked, 0 stale row(s) dropped)
+# Collected tests: 6906; with a reported duration: 4125
 # Module-scoped fixture costs recorded: 18
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 6901
-# inventory_cpp = 288
-# inventory_measured = 6241
-# inventory_unmeasured = 948
+# inventory_python = 6906
+# inventory_cpp = 291
+# inventory_measured = 6254
+# inventory_unmeasured = 943
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_atom_filter_recovers_from_red_and_commits_element]
@@ -53,6 +53,7 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.p
 0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_lbco-hrpt_start-2]
 0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_lbco-hrpt_start-4]
 0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_pbso4_beba-asymmetry]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_y2o3_beta-adp]
 0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_cecoal-polaris_chebyshev]
 0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_ceo2-pearl_polynomial]
 0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_diamond-dream_basic]
@@ -65,7 +66,7 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.p
 0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_si-sepd_start-2]
 0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_si-sepd_start-5]
 0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-xray-cwl_lif_single]
-0.000	tests/integration/app/test_e04_t1_projects.py::test_existing_projects_open_and_populate_pages
+0.004	tests/integration/app/test_e04_t1_projects.py::test_existing_projects_open_and_populate_pages
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_missing_property_fails_the_production_qmllint_import_context
 0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_owner_amendment_receipts_cover_every_original_gui_boundary[test_library_settable_scalars_and_derived_readonly]
 0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_owner_amendment_receipts_cover_every_original_gui_boundary[test_library_settable_table_columns_reach_core]
@@ -85,16 +86,16 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::tes
 UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_anisotropic_site_exposes_the_computed_isotropic_value[Bani]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_anisotropic_site_exposes_the_computed_isotropic_value[Uani]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_anisotropic_site_exposes_the_computed_isotropic_value[beta]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[Bani-hexagonal]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[Bani-monoclinic]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[Biso-hexagonal]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[Biso-monoclinic]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[Uani-hexagonal]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[Uani-monoclinic]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[Uiso-hexagonal]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[Uiso-monoclinic]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[beta-hexagonal]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[beta-monoclinic]
+0.080	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[Bani-hexagonal]
+0.110	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[Bani-monoclinic]
+0.080	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[Biso-hexagonal]
+0.100	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[Biso-monoclinic]
+0.090	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[Uani-hexagonal]
+0.110	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[Uani-monoclinic]
+0.080	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[Uiso-hexagonal]
+0.120	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[Uiso-monoclinic]
+0.080	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[beta-hexagonal]
+0.110	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[beta-monoclinic]
 0.000	tests/integration/py/test_anisotropic_adps.py::test_fullprof_reference_retains_the_upstream_bytes
 UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Bani-Bani]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Bani-Biso]
@@ -171,10 +172,10 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_shipment.py:
 0.030	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[None-100000000000000000000]
 0.030	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[None-100]
 0.030	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[None-383.2]
-0.100	tests/integration/py/test_c09_t16_verification_notebooks.py::test_ci_runs_notebooks_for_every_result_changing_surface
+0.140	tests/integration/py/test_c09_t16_verification_notebooks.py::test_ci_runs_notebooks_for_every_result_changing_surface
 0.050	tests/integration/py/test_c09_t16_verification_notebooks.py::test_fullprof_files_resolve_and_feed_every_page_comparison
 0.020	tests/integration/py/test_c09_t16_verification_notebooks.py::test_pixi_notebook_tasks_form_the_local_execution_gate
-0.160	tests/integration/py/test_c09_t16_verification_notebooks.py::test_verification_sources_generate_stripped_notebooks_on_demand
+0.260	tests/integration/py/test_c09_t16_verification_notebooks.py::test_verification_sources_generate_stripped_notebooks_on_demand
 0.000	tests/integration/py/test_c11_t26_graded_start_corpus.py::test_c11_t26_hidden_consumer_contains_no_live_fit_or_calculation
 0.130	tests/integration/py/test_c11_t40_epoch_and_substrate_integration.py::test_c11_t40_loader_refuses_unsupported_schema_epoch[1]
 0.090	tests/integration/py/test_c11_t40_epoch_and_substrate_integration.py::test_c11_t40_loader_refuses_unsupported_schema_epoch[5]
@@ -959,12 +960,12 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_shipment.py:
 0.000	tests/integration/py/test_c15_t1_xray.py::test_edi_adapter_preserves_complex_source_selected_intensity[sasaki1989-it1992]
 0.100	tests/integration/py/test_c15_t1_xray.py::test_edi_adapter_preserves_complex_source_selected_intensity[sasaki1989-wk1995]
 0.000	tests/integration/py/test_c15_t1_xray.py::test_lif_page_uses_byte_identical_fullprof_calculation_without_a_fit
-0.030	tests/integration/py/test_c15_t1_xray.py::test_shared_candidate_flow_rejects_oracle_and_wrong_calculation[pd-neut-cwl_LaB6_basic-no-calculation]
-0.030	tests/integration/py/test_c15_t1_xray.py::test_shared_candidate_flow_rejects_oracle_and_wrong_calculation[pd-neut-cwl_LaB6_basic-oracle-assignment]
+0.040	tests/integration/py/test_c15_t1_xray.py::test_shared_candidate_flow_rejects_oracle_and_wrong_calculation[pd-neut-cwl_LaB6_basic-no-calculation]
+0.050	tests/integration/py/test_c15_t1_xray.py::test_shared_candidate_flow_rejects_oracle_and_wrong_calculation[pd-neut-cwl_LaB6_basic-oracle-assignment]
 0.030	tests/integration/py/test_c15_t1_xray.py::test_shared_candidate_flow_rejects_oracle_and_wrong_calculation[pd-neut-cwl_LaB6_basic-other-experiment]
-0.030	tests/integration/py/test_c15_t1_xray.py::test_shared_candidate_flow_rejects_oracle_and_wrong_calculation[pd-neut-tof_ferrite-austenite_beer_joint-no-calculation]
-0.030	tests/integration/py/test_c15_t1_xray.py::test_shared_candidate_flow_rejects_oracle_and_wrong_calculation[pd-neut-tof_ferrite-austenite_beer_joint-oracle-assignment]
-0.030	tests/integration/py/test_c15_t1_xray.py::test_shared_candidate_flow_rejects_oracle_and_wrong_calculation[pd-neut-tof_ferrite-austenite_beer_joint-other-experiment]
+0.040	tests/integration/py/test_c15_t1_xray.py::test_shared_candidate_flow_rejects_oracle_and_wrong_calculation[pd-neut-tof_ferrite-austenite_beer_joint-no-calculation]
+0.040	tests/integration/py/test_c15_t1_xray.py::test_shared_candidate_flow_rejects_oracle_and_wrong_calculation[pd-neut-tof_ferrite-austenite_beer_joint-oracle-assignment]
+0.040	tests/integration/py/test_c15_t1_xray.py::test_shared_candidate_flow_rejects_oracle_and_wrong_calculation[pd-neut-tof_ferrite-austenite_beer_joint-other-experiment]
 0.000	tests/integration/py/test_c15_t1_xray.py::test_source_selectors_refuse_wrong_radiation_and_unknown_names[neutron-xray_dispersion-sasaki1989]
 0.000	tests/integration/py/test_c15_t1_xray.py::test_source_selectors_refuse_wrong_radiation_and_unknown_names[neutron-xray_form_factor-it1992]
 0.000	tests/integration/py/test_c15_t1_xray.py::test_source_selectors_refuse_wrong_radiation_and_unknown_names[unknown-source-xray_dispersion-sasaki1989]
@@ -2296,7 +2297,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e04_t5_calculator_save.p
 0.000	tests/integration/py/test_e05_t1_bank_identity.py::test_named_bank_oracle_refuses_field_identity_escapes[swapped-metrics]
 0.000	tests/integration/py/test_e05_t1_bank_identity.py::test_named_bank_oracle_refuses_field_identity_escapes[wrong-identity]
 0.000	tests/integration/py/test_e05_t1_bank_identity.py::test_named_bank_oracle_refuses_field_identity_escapes[wrong-points]
-0.540	tests/integration/py/test_e05_t1_fit_result.py::test_cli_fixture_inventory
+0.570	tests/integration/py/test_e05_t1_fit_result.py::test_cli_fixture_inventory
 0.000	tests/integration/py/test_e05_t1_fit_result.py::test_legacy_project_without_fit_result_keeps_model_state[pd-neut-cwl_cosio-d20_start-1]
 0.000	tests/integration/py/test_e05_t1_fit_result.py::test_legacy_project_without_fit_result_keeps_model_state[pd-neut-cwl_cosio-d20_start-4]
 0.000	tests/integration/py/test_e05_t1_fit_result.py::test_legacy_project_without_fit_result_keeps_model_state[pd-neut-cwl_lab6-11b-echidna_tch-fcj]
@@ -2304,6 +2305,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e04_t5_calculator_save.p
 0.000	tests/integration/py/test_e05_t1_fit_result.py::test_legacy_project_without_fit_result_keeps_model_state[pd-neut-cwl_lbco-hrpt_start-2]
 0.000	tests/integration/py/test_e05_t1_fit_result.py::test_legacy_project_without_fit_result_keeps_model_state[pd-neut-cwl_lbco-hrpt_start-4]
 0.010	tests/integration/py/test_e05_t1_fit_result.py::test_legacy_project_without_fit_result_keeps_model_state[pd-neut-cwl_pbso4_beba-asymmetry]
+0.010	tests/integration/py/test_e05_t1_fit_result.py::test_legacy_project_without_fit_result_keeps_model_state[pd-neut-cwl_y2o3_beta-adp]
 0.000	tests/integration/py/test_e05_t1_fit_result.py::test_legacy_project_without_fit_result_keeps_model_state[pd-neut-tof_cecoal-polaris_chebyshev]
 0.000	tests/integration/py/test_e05_t1_fit_result.py::test_legacy_project_without_fit_result_keeps_model_state[pd-neut-tof_ceo2-pearl_polynomial]
 0.000	tests/integration/py/test_e05_t1_fit_result.py::test_legacy_project_without_fit_result_keeps_model_state[pd-neut-tof_diamond-dream_basic]
@@ -2323,6 +2325,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e04_t5_calculator_save.p
 0.010	tests/integration/py/test_e05_t1_fit_result.py::test_persisted_cli_projection_survives_load_and_save[pd-neut-cwl_lbco-hrpt_start-2]
 0.010	tests/integration/py/test_e05_t1_fit_result.py::test_persisted_cli_projection_survives_load_and_save[pd-neut-cwl_lbco-hrpt_start-4]
 0.010	tests/integration/py/test_e05_t1_fit_result.py::test_persisted_cli_projection_survives_load_and_save[pd-neut-cwl_pbso4_beba-asymmetry]
+0.010	tests/integration/py/test_e05_t1_fit_result.py::test_persisted_cli_projection_survives_load_and_save[pd-neut-cwl_y2o3_beta-adp]
 0.010	tests/integration/py/test_e05_t1_fit_result.py::test_persisted_cli_projection_survives_load_and_save[pd-neut-tof_cecoal-polaris_chebyshev]
 0.010	tests/integration/py/test_e05_t1_fit_result.py::test_persisted_cli_projection_survives_load_and_save[pd-neut-tof_ceo2-pearl_polynomial]
 0.010	tests/integration/py/test_e05_t1_fit_result.py::test_persisted_cli_projection_survives_load_and_save[pd-neut-tof_diamond-dream_basic]
@@ -4351,6 +4354,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t22_sequential_progress.p
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.py::test_complete_manifest_dispatches_every_declared_variant[pd-neut-cwl_lab6-11b-echidna_tch-fcj]
 0.180	tests/system/py/test_c34_t24_cli_variants.py::test_complete_manifest_dispatches_every_declared_variant[pd-neut-cwl_lbco-hrpt_start-2]
 0.180	tests/system/py/test_c34_t24_cli_variants.py::test_complete_manifest_dispatches_every_declared_variant[pd-neut-cwl_lbco-hrpt_start-4]
+0.270	tests/system/py/test_c34_t24_cli_variants.py::test_complete_manifest_dispatches_every_declared_variant[pd-neut-cwl_y2o3_beta-adp]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.py::test_complete_manifest_dispatches_every_declared_variant[pd-neut-tof_cecoal-polaris_chebyshev]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.py::test_complete_manifest_dispatches_every_declared_variant[pd-neut-tof_ceo2-pearl_polynomial]
 0.190	tests/system/py/test_c34_t24_cli_variants.py::test_complete_manifest_dispatches_every_declared_variant[pd-neut-tof_diamond-dream_basic]
@@ -4382,6 +4386,7 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.p
 0.470	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-cwl_lbco-hrpt_start-4-2]
 0.470	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-cwl_lbco-hrpt_start-4-3]
 0.590	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-cwl_lbco-hrpt_start-4-4]
+0.640	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-cwl_y2o3_beta-adp-0]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-tof_cecoal-polaris_chebyshev-0]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-tof_ceo2-pearl_polynomial-0]
 0.420	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-tof_diamond-dream_basic-0]
@@ -5781,6 +5786,8 @@ UNMEASURED:expected-red in edi-replay.log on d068dde; no green runtime measured	
 0.001	tests/unit/cpp/test_c13_t12_ownership.cpp::C13-T12 printable refusals at native app edit helpers
 0.001	tests/unit/cpp/test_c13_t4_structure_key.cpp::C13-T4 adapter refuses raw March domains before conversion
 0.001	tests/unit/cpp/test_c13_t4_structure_key.cpp::C13-T4 adapter validates the raw texture structure key
+UNMEASURED:not-produced-by-this-run	tests/unit/cpp/test_c34_t27_geometry_edit_freshness.cpp::C34-T27 editor copy-assigns the live atom-site collection through an alias
+UNMEASURED:not-produced-by-this-run	tests/unit/cpp/test_c34_t27_geometry_edit_freshness.cpp::C34-T27 undo move-assigns the live atom-site collection through an alias
 0.001	tests/unit/cpp/test_c34_t28_column_owned_lifetimes.cpp::C34-T28 F23 atom cell reads survive empty detach and reused-id transitions
 0.000	tests/unit/cpp/test_c34_t28_column_owned_lifetimes.cpp::C34-T28 F23 background cell reads survive empty detach and reused-id transitions
 0.000	tests/unit/cpp/test_c34_t28_column_owned_lifetimes.cpp::C34-T28 F23 experiment cell reads survive empty detach and reused-id transitions
@@ -5892,6 +5899,7 @@ UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_transitions.cpp::Na
 0.040	tests/unit/cpp/test_constraint_transitions.cpp::Relation declaration writes revoke computed currentness without parameter writes
 0.072	tests/unit/cpp/test_constraint_transitions.cpp::Relation declaration writes supersede calculated publications atomically
 0.004	tests/unit/cpp/test_constraint_transitions.cpp::Unchanged relation declarations admit calculated publication
+UNMEASURED:not-produced-by-this-run	tests/unit/cpp/test_e04_t10_scene.cpp::E04-T10 gate 1 every CLI scene equals independently loaded crysta geometry
 0.030	tests/unit/cpp/test_e05_t1_fit_job.cpp::E05-T1 gate 3 engine checkpoint cancel retains partial values and undo
 0.036	tests/unit/cpp/test_e05_t1_fit_job.cpp::E05-T1 gate 3 joint engine checkpoint cancel retains partial values and undo
 0.011	tests/unit/cpp/test_e05_t1_fit_job.cpp::E05-T1 gate 3 joint worker token cancellation reaches a running fit
@@ -6063,12 +6071,12 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_c09_t17_seeded_scale_no_fit.py:
 0.000	tests/unit/py/test_c11_t35_descent_selector.py::test_cli_refuses_every_minimization_option_as_unknown[arguments4]
 0.000	tests/unit/py/test_c11_t35_descent_selector.py::test_cli_refuses_every_minimization_option_as_unknown[arguments5]
 0.000	tests/unit/py/test_c11_t35_descent_selector.py::test_fit_help_has_no_descent_listing_or_minimization_switch
-0.000	tests/unit/py/test_c11_t40_epoch_and_substrate.py::test_c11_t40_cif_adp_spellings_convert_and_prefer_b[b-from_cif_path]
-0.000	tests/unit/py/test_c11_t40_epoch_and_substrate.py::test_c11_t40_cif_adp_spellings_convert_and_prefer_b[b-from_cif_str]
-0.000	tests/unit/py/test_c11_t40_epoch_and_substrate.py::test_c11_t40_cif_adp_spellings_convert_and_prefer_b[b-preferred-over-u-from_cif_path]
-0.000	tests/unit/py/test_c11_t40_epoch_and_substrate.py::test_c11_t40_cif_adp_spellings_convert_and_prefer_b[b-preferred-over-u-from_cif_str]
-0.000	tests/unit/py/test_c11_t40_epoch_and_substrate.py::test_c11_t40_cif_adp_spellings_convert_and_prefer_b[u-from_cif_path]
-0.000	tests/unit/py/test_c11_t40_epoch_and_substrate.py::test_c11_t40_cif_adp_spellings_convert_and_prefer_b[u-from_cif_str]
+0.000	tests/unit/py/test_c11_t40_epoch_and_substrate.py::test_c11_t40_cif_adp_spellings_preserve_type_and_prefer_b[b-from_cif_path]
+0.000	tests/unit/py/test_c11_t40_epoch_and_substrate.py::test_c11_t40_cif_adp_spellings_preserve_type_and_prefer_b[b-from_cif_str]
+0.000	tests/unit/py/test_c11_t40_epoch_and_substrate.py::test_c11_t40_cif_adp_spellings_preserve_type_and_prefer_b[b-preferred-over-u-from_cif_path]
+0.000	tests/unit/py/test_c11_t40_epoch_and_substrate.py::test_c11_t40_cif_adp_spellings_preserve_type_and_prefer_b[b-preferred-over-u-from_cif_str]
+0.000	tests/unit/py/test_c11_t40_epoch_and_substrate.py::test_c11_t40_cif_adp_spellings_preserve_type_and_prefer_b[u-from_cif_path]
+0.000	tests/unit/py/test_c11_t40_epoch_and_substrate.py::test_c11_t40_cif_adp_spellings_preserve_type_and_prefer_b[u-from_cif_str]
 0.020	tests/unit/py/test_c11_t40_epoch_and_substrate.py::test_c11_t40_every_reachable_parameter_has_surviving_metadata
 0.020	tests/unit/py/test_c11_t40_epoch_and_substrate.py::test_c11_t40_validator_fires_at_python_factory_and_file_boundaries
 0.000	tests/unit/py/test_c11_t40_parameter_spec.py::test_c11_t40_bare_parameter_metadata_access_fails_closed
@@ -6322,8 +6330,8 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_constraint_app_structure.py::te
 0.000	tests/unit/py/test_e02_t2_io_parity.py::test_e02_t2_line_segment_body_requires_both_columns_in_one_loop[split-loops]
 0.000	tests/unit/py/test_e02_t2_io_parity.py::test_e02_t2_non_finite_numeric_is_rejected_without_partial_model
 0.040	tests/unit/py/test_e02_t2_io_parity.py::test_e02_t2_project_load_matches_pinned_crysta_loader_parameter_sets
-0.000	tests/unit/py/test_e02_t2_io_parity.py::test_e02_t2_published_cod_structure_matches_hand_pinned_values[from_cif_path]
-0.000	tests/unit/py/test_e02_t2_io_parity.py::test_e02_t2_published_cod_structure_matches_hand_pinned_values[from_cif_str]
+UNMEASURED:failed-in-this-run	tests/unit/py/test_e02_t2_io_parity.py::test_e02_t2_published_cod_structure_matches_hand_pinned_values[from_cif_path]
+UNMEASURED:failed-in-this-run	tests/unit/py/test_e02_t2_io_parity.py::test_e02_t2_published_cod_structure_matches_hand_pinned_values[from_cif_str]
 0.040	tests/unit/py/test_e02_t2_io_parity.py::test_e02_t2_save_as_rejects_duplicate_experiment_names_before_writing
 0.040	tests/unit/py/test_e02_t2_io_parity.py::test_e02_t2_save_as_rejects_entity_path_traversal_without_escape[experiment]
 0.040	tests/unit/py/test_e02_t2_io_parity.py::test_e02_t2_save_as_rejects_entity_path_traversal_without_escape[structure]
@@ -7177,7 +7185,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e04_t9_sanitizer.py::test_sanit
 0.020	tests/unit/py/test_e09_t58_project_only_inputs.py::test_declared_grid_is_the_grid_that_is_calculated
 0.020	tests/unit/py/test_e09_t58_project_only_inputs.py::test_declared_scattering_map_and_default_lookup_both_reach_calculation
 0.010	tests/unit/py/test_e09_t58_project_only_inputs.py::test_project_calculation_accepts_no_second_source_of_truth
-0.010	tests/unit/py/test_e09_t58_project_only_inputs.py::test_survey_is_complete_and_model_state_cannot_reenter_signatures
+0.000	tests/unit/py/test_e09_t58_project_only_inputs.py::test_survey_is_complete_and_model_state_cannot_reenter_signatures
 0.020	tests/unit/py/test_e09_t58_start_state_roundtrip.py::test_start_value_and_uncertainty_round_trip_through_the_single_loader
 0.010	tests/unit/py/test_e09_t58_writer_delegation.py::test_e09_t58_edi_project_save_has_one_delegating_writer_and_no_local_serializer
 0.030	tests/unit/py/test_e09_t74_ci_source_wiring.py::test_crysta_app_tokens_request_only_contents_read
@@ -7231,7 +7239,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # These rows mark and deselect NOTHING - kept for visibility
 # and the stale-module integrity refusal.
 # module-cost: 35.842	tests/integration/app/test_c13_t2_gui.py
-# module-cost: 198.742	tests/integration/app/test_e04_t1_projects.py
+# module-cost: 228.346	tests/integration/app/test_e04_t1_projects.py
 # module-cost: 20.089	tests/integration/app/test_e04_t1_runtime_escapes.py
 # module-cost: 1.914	tests/integration/py/test_e04_t12_name_allowance.py
 # module-cost: 0.192	tests/integration/py/test_e09_t75_sdk_consumer.py
