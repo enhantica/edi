@@ -2,6 +2,16 @@
 var frozen = {
   "source": "diffraction-lib 0ffba46f declarations +  §2b D-a..D-j + CLI files",
   "profiles": {
+    "cwl-gaussian": [
+      "broad_gauss_u",
+      "broad_gauss_v",
+      "broad_gauss_w"
+    ],
+    "cwl-lorentzian": [
+      "broad_gauss_u",
+      "broad_gauss_v",
+      "broad_gauss_w"
+    ],
     "cwl-pseudo-voigt": [
       "broad_gauss_u",
       "broad_gauss_v",
@@ -7403,6 +7413,7 @@ var frozen = {
         "broad_lorentz_y"
       ],
       "unusedFreeFields": [],
+      "peakDefaults": {},
       "instrumentFields": [
         "setup_wavelength",
         "calib_twotheta_offset"
@@ -7483,6 +7494,7 @@ var frozen = {
         "broad_lorentz_y"
       ],
       "unusedFreeFields": [],
+      "peakDefaults": {},
       "instrumentFields": [
         "setup_wavelength",
         "calib_twotheta_offset"
@@ -7563,6 +7575,7 @@ var frozen = {
         "broad_lorentz_y"
       ],
       "unusedFreeFields": [],
+      "peakDefaults": {},
       "instrumentFields": [
         "setup_wavelength",
         "calib_twotheta_offset"
@@ -7648,6 +7661,7 @@ var frozen = {
         "broad_lorentz_y"
       ],
       "unusedFreeFields": [],
+      "peakDefaults": {},
       "instrumentFields": [
         "setup_wavelength",
         "calib_twotheta_offset"
@@ -7984,6 +7998,7 @@ var frozen = {
         "broad_lorentz_y"
       ],
       "unusedFreeFields": [],
+      "peakDefaults": {},
       "instrumentFields": [
         "setup_wavelength",
         "calib_twotheta_offset"
@@ -8071,9 +8086,12 @@ var frozen = {
         "asym_fcj_2"
       ],
       "unusedFreeFields": [],
+      "peakDefaults": {},
       "instrumentFields": [
         "setup_wavelength",
-        "calib_twotheta_offset"
+        "calib_twotheta_offset",
+        "calib_sample_displacement",
+        "calib_sample_transparency"
       ],
       "range": [
         3.86396,
@@ -8184,6 +8202,7 @@ var frozen = {
         "asym_fcj_2"
       ],
       "unusedFreeFields": [],
+      "peakDefaults": {},
       "instrumentFields": [
         "setup_wavelength",
         "calib_twotheta_offset"
@@ -8272,6 +8291,7 @@ var frozen = {
         "broad_lorentz_y"
       ],
       "unusedFreeFields": [],
+      "peakDefaults": {},
       "instrumentFields": [
         "setup_wavelength",
         "calib_twotheta_offset"
@@ -8521,6 +8541,7 @@ var frozen = {
         "broad_lorentz_y"
       ],
       "unusedFreeFields": [],
+      "peakDefaults": {},
       "instrumentFields": [
         "setup_wavelength",
         "calib_twotheta_offset"
@@ -8605,6 +8626,7 @@ var frozen = {
         "asym_beba_limit"
       ],
       "unusedFreeFields": [],
+      "peakDefaults": {},
       "instrumentFields": [
         "setup_wavelength",
         "calib_twotheta_offset"
@@ -8714,6 +8736,7 @@ var frozen = {
         "asym_beba_limit"
       ],
       "unusedFreeFields": [],
+      "peakDefaults": {},
       "instrumentFields": [
         "setup_wavelength",
         "calib_twotheta_offset"
@@ -8831,6 +8854,7 @@ var frozen = {
         "broad_lorentz_strain"
       ],
       "unusedFreeFields": [],
+      "peakDefaults": {},
       "instrumentFields": [
         "setup_twotheta_bank",
         "calib_d_to_tof_offset",
@@ -9005,6 +9029,7 @@ var frozen = {
         "broad_lorentz_strain"
       ],
       "unusedFreeFields": [],
+      "peakDefaults": {},
       "instrumentFields": [
         "setup_twotheta_bank",
         "calib_d_to_tof_offset",
@@ -9169,6 +9194,7 @@ var frozen = {
         "broad_gauss_strain"
       ],
       "unusedFreeFields": [],
+      "peakDefaults": {},
       "instrumentFields": [
         "setup_twotheta_bank",
         "calib_d_to_tof_offset",
@@ -9313,6 +9339,7 @@ var frozen = {
         "broad_lorentz_strain"
       ],
       "unusedFreeFields": [],
+      "peakDefaults": {},
       "instrumentFields": [
         "setup_twotheta_bank",
         "calib_d_to_tof_offset",
@@ -9459,6 +9486,24 @@ var frozen = {
         "broad_lorentz_strain"
       ],
       "unusedFreeFields": [],
+      "peakDefaults": {
+        "broad_gauss_size": {
+          "value": 0.0,
+          "free": false
+        },
+        "broad_gauss_strain": {
+          "value": 0.0,
+          "free": false
+        },
+        "broad_lorentz_size": {
+          "value": 0.0,
+          "free": false
+        },
+        "broad_lorentz_strain": {
+          "value": 0.0,
+          "free": false
+        }
+      },
       "instrumentFields": [
         "setup_twotheta_bank",
         "calib_d_to_tof_offset",
@@ -9573,6 +9618,24 @@ var frozen = {
         "broad_lorentz_strain"
       ],
       "unusedFreeFields": [],
+      "peakDefaults": {
+        "broad_gauss_size": {
+          "value": 0.0,
+          "free": false
+        },
+        "broad_gauss_strain": {
+          "value": 0.0,
+          "free": false
+        },
+        "broad_lorentz_size": {
+          "value": 0.0,
+          "free": false
+        },
+        "broad_lorentz_strain": {
+          "value": 0.0,
+          "free": false
+        }
+      },
       "instrumentFields": [
         "setup_twotheta_bank",
         "calib_d_to_tof_offset",
@@ -9686,6 +9749,7 @@ var frozen = {
         "broad_gauss_strain"
       ],
       "unusedFreeFields": [],
+      "peakDefaults": {},
       "instrumentFields": [
         "setup_twotheta_bank",
         "calib_d_to_tof_offset",
@@ -9813,6 +9877,7 @@ var frozen = {
         "broad_gauss_strain"
       ],
       "unusedFreeFields": [],
+      "peakDefaults": {},
       "instrumentFields": [
         "setup_twotheta_bank",
         "calib_d_to_tof_offset",
@@ -9945,6 +10010,7 @@ var frozen = {
         "broad_lorentz_strain"
       ],
       "unusedFreeFields": [],
+      "peakDefaults": {},
       "instrumentFields": [
         "setup_twotheta_bank",
         "calib_d_to_tof_offset",
@@ -10112,6 +10178,7 @@ var frozen = {
         "broad_lorentz_strain"
       ],
       "unusedFreeFields": [],
+      "peakDefaults": {},
       "instrumentFields": [
         "setup_twotheta_bank",
         "calib_d_to_tof_offset",
@@ -10279,6 +10346,7 @@ var frozen = {
         "broad_lorentz_strain"
       ],
       "unusedFreeFields": [],
+      "peakDefaults": {},
       "instrumentFields": [
         "setup_twotheta_bank",
         "calib_d_to_tof_offset",
@@ -10446,6 +10514,7 @@ var frozen = {
         "broad_lorentz_strain"
       ],
       "unusedFreeFields": [],
+      "peakDefaults": {},
       "instrumentFields": [
         "setup_twotheta_bank",
         "calib_d_to_tof_offset",
@@ -10613,6 +10682,7 @@ var frozen = {
         "broad_lorentz_strain"
       ],
       "unusedFreeFields": [],
+      "peakDefaults": {},
       "instrumentFields": [
         "setup_twotheta_bank",
         "calib_d_to_tof_offset",
@@ -10780,6 +10850,7 @@ var frozen = {
         "broad_lorentz_strain"
       ],
       "unusedFreeFields": [],
+      "peakDefaults": {},
       "instrumentFields": [
         "setup_twotheta_bank",
         "calib_d_to_tof_offset",
@@ -10947,6 +11018,7 @@ var frozen = {
         "broad_lorentz_strain"
       ],
       "unusedFreeFields": [],
+      "peakDefaults": {},
       "instrumentFields": [
         "setup_twotheta_bank",
         "calib_d_to_tof_offset",
@@ -11114,6 +11186,7 @@ var frozen = {
         "broad_lorentz_strain"
       ],
       "unusedFreeFields": [],
+      "peakDefaults": {},
       "instrumentFields": [
         "setup_twotheta_bank",
         "calib_d_to_tof_offset",
@@ -11281,6 +11354,7 @@ var frozen = {
         "broad_lorentz_strain"
       ],
       "unusedFreeFields": [],
+      "peakDefaults": {},
       "instrumentFields": [
         "setup_twotheta_bank",
         "calib_d_to_tof_offset",
@@ -11448,6 +11522,7 @@ var frozen = {
         "broad_lorentz_strain"
       ],
       "unusedFreeFields": [],
+      "peakDefaults": {},
       "instrumentFields": [
         "setup_twotheta_bank",
         "calib_d_to_tof_offset",
@@ -11615,6 +11690,7 @@ var frozen = {
         "broad_lorentz_strain"
       ],
       "unusedFreeFields": [],
+      "peakDefaults": {},
       "instrumentFields": [
         "setup_twotheta_bank",
         "calib_d_to_tof_offset",
@@ -11782,6 +11858,7 @@ var frozen = {
         "broad_lorentz_strain"
       ],
       "unusedFreeFields": [],
+      "peakDefaults": {},
       "instrumentFields": [
         "setup_twotheta_bank",
         "calib_d_to_tof_offset",
@@ -11949,6 +12026,7 @@ var frozen = {
         "broad_lorentz_strain"
       ],
       "unusedFreeFields": [],
+      "peakDefaults": {},
       "instrumentFields": [
         "setup_twotheta_bank",
         "calib_d_to_tof_offset",
@@ -12116,6 +12194,7 @@ var frozen = {
         "broad_lorentz_strain"
       ],
       "unusedFreeFields": [],
+      "peakDefaults": {},
       "instrumentFields": [
         "setup_twotheta_bank",
         "calib_d_to_tof_offset",
@@ -12524,6 +12603,7 @@ var frozen = {
         "broad_lorentz_strain"
       ],
       "unusedFreeFields": [],
+      "peakDefaults": {},
       "instrumentFields": [
         "setup_twotheta_bank",
         "calib_d_to_tof_offset",
@@ -12672,6 +12752,7 @@ var frozen = {
         "broad_lorentz_y"
       ],
       "unusedFreeFields": [],
+      "peakDefaults": {},
       "instrumentFields": [
         "setup_wavelength",
         "calib_twotheta_offset",
@@ -12756,7 +12837,7 @@ var frozen = {
     {
       "project": "tests/fixtures/e04_t1/eta-project",
       "experiment": "experiment",
-      "sha256": "fcc55f9df37c8467321af009b90c0670f7523d3d3d0e30e5bc1be0d519d361c6",
+      "sha256": "a94c5639ffca3c53fd3d6db38eacda16568759cc78dcc4c79df5ccbcde636a35",
       "peakType": "cwl-pseudo-voigt",
       "mode": "cwl",
       "peakFields": [
@@ -12767,9 +12848,12 @@ var frozen = {
         "mixing_eta_1"
       ],
       "unusedFreeFields": [],
+      "peakDefaults": {},
       "instrumentFields": [
         "setup_wavelength",
-        "calib_twotheta_offset"
+        "calib_twotheta_offset",
+        "setup_polarization_coefficient",
+        "setup_monochromator_twotheta"
       ],
       "range": [
         20.25,
@@ -12821,6 +12905,16 @@ var frozen = {
         "_scattering_source.xray_form_factor": "it1992",
         "_scattering_source.xray_dispersion": "sasaki1989",
         "_background.type": "line-segment",
+        "_instrument.setup_polarization_coefficient": {
+          "value": 0.4,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_monochromator_twotheta": {
+          "value": 20.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
         "_peak.mixing_eta_0": {
           "value": 0.37,
           "free": false,
@@ -12828,6 +12922,170 @@ var frozen = {
         },
         "_peak.mixing_eta_1": {
           "value": 0.0023,
+          "free": false,
+          "uncertainty": 0.0
+        }
+      },
+      "loops": {}
+    },
+    {
+      "project": "tests/fixtures/e04_t1/gaussian-project",
+      "experiment": "experiment",
+      "sha256": "32bfd9823e869dc1a0ba8b4130cda3f5fb43c18b26e34fdca3330a6a3d693fea",
+      "peakType": "cwl-gaussian",
+      "mode": "cwl",
+      "peakFields": [
+        "broad_gauss_u",
+        "broad_gauss_v",
+        "broad_gauss_w"
+      ],
+      "unusedFreeFields": [],
+      "peakDefaults": {},
+      "instrumentFields": [
+        "setup_wavelength",
+        "calib_twotheta_offset",
+        "setup_polarization_coefficient",
+        "setup_monochromator_twotheta"
+      ],
+      "range": [
+        20.25,
+        80.25,
+        30.0,
+        3
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.radiation_probe": "xray",
+        "_experiment_type.scattering_type": "bragg",
+        "_experiment_type.beam_mode": "constant wavelength",
+        "_peak.type": "cwl-gaussian",
+        "_peak.broad_gauss_u": {
+          "value": 0.048457,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_v": {
+          "value": -0.083053,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_w": {
+          "value": 0.04,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.cutoff_fwhm": {
+          "value": 48.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_twotheta_offset": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_wavelength": {
+          "value": 1.54056,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_scattering_source.xray_form_factor": "it1992",
+        "_scattering_source.xray_dispersion": "sasaki1989",
+        "_background.type": "line-segment",
+        "_instrument.setup_polarization_coefficient": {
+          "value": 0.4,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_monochromator_twotheta": {
+          "value": 20.0,
+          "free": false,
+          "uncertainty": 0.0
+        }
+      },
+      "loops": {}
+    },
+    {
+      "project": "tests/fixtures/e04_t1/lorentzian-project",
+      "experiment": "experiment",
+      "sha256": "ef0df1539dcbfde3dd7f9db110433f11823e77092b43937f55ea651a5685aed2",
+      "peakType": "cwl-lorentzian",
+      "mode": "cwl",
+      "peakFields": [
+        "broad_gauss_u",
+        "broad_gauss_v",
+        "broad_gauss_w"
+      ],
+      "unusedFreeFields": [],
+      "peakDefaults": {},
+      "instrumentFields": [
+        "setup_wavelength",
+        "calib_twotheta_offset",
+        "setup_polarization_coefficient",
+        "setup_monochromator_twotheta"
+      ],
+      "range": [
+        20.25,
+        80.25,
+        30.0,
+        3
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.radiation_probe": "xray",
+        "_experiment_type.scattering_type": "bragg",
+        "_experiment_type.beam_mode": "constant wavelength",
+        "_peak.type": "cwl-lorentzian",
+        "_peak.broad_gauss_u": {
+          "value": 0.048457,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_v": {
+          "value": -0.083053,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_w": {
+          "value": 0.04,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.cutoff_fwhm": {
+          "value": 48.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_twotheta_offset": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_wavelength": {
+          "value": 1.54056,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_scattering_source.xray_form_factor": "it1992",
+        "_scattering_source.xray_dispersion": "sasaki1989",
+        "_background.type": "line-segment",
+        "_instrument.setup_polarization_coefficient": {
+          "value": 0.4,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_monochromator_twotheta": {
+          "value": 20.0,
           "free": false,
           "uncertainty": 0.0
         }

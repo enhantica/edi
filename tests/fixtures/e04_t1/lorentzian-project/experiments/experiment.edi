@@ -4,7 +4,7 @@ _experiment_type.sample_form powder
 _experiment_type.radiation_probe xray
 _experiment_type.scattering_type bragg
 _experiment_type.beam_mode "constant wavelength"
-_peak.type cwl-pseudo-voigt
+_peak.type cwl-lorentzian
 _peak.broad_gauss_u 0.048457
 _peak.broad_gauss_v -0.083053
 _peak.broad_gauss_w 0.04
@@ -34,5 +34,3 @@ _background.intensity
 80.25 0
 _instrument.setup_polarization_coefficient 0.4
 _instrument.setup_monochromator_twotheta 20
-_peak.mixing_eta_0 0.37
-_peak.mixing_eta_1 0.0023
