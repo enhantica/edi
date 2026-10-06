@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-06T21:12:06Z
+# measured_utc = 2026-10-06T21:58:31Z
 #
-# Recorded from: e04-t18-tests-seq6-stable-ids.log (8 node(s) measured once, 8309 banked, 8 stale row(s) dropped)
-# Collected tests: 9513; with a reported duration: 4618
-# Module-scoped fixture costs recorded: 25
+# Recorded from: e04-t18-tests-seq6-child-pytest-2.log (3 node(s) measured once, 8315 banked, 0 stale row(s) dropped)
+# Collected tests: 9516; with a reported duration: 4619
+# Module-scoped fixture costs recorded: 26
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 9513
+# inventory_python = 9516
 # inventory_cpp = 298
-# inventory_measured = 8315
+# inventory_measured = 8318
 # inventory_unmeasured = 1496
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
@@ -166,10 +166,10 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_ui_compare.py::t
 0.110	tests/integration/py/test_c11_t41_measurement_provenance.py::test_i5_stale_only_collection_reaches_banker_without_rerunning
 0.090	tests/integration/py/test_c11_t41_measurement_provenance.py::test_i5_the_cli_refuses_update_without_the_artifact
 0.000	tests/integration/py/test_c11_t41_measurement_provenance.py::test_i5_unreached_nodes_are_holed_not_zeroed
-0.040	tests/integration/py/test_c11_t48_one_loader.py::test_c11_t48_project_load_accepts_calculation_only_range_grid
-0.050	tests/integration/py/test_c11_t48_one_loader.py::test_c11_t48_project_load_is_the_only_loader_and_accepts_fit_ready_data
-0.010	tests/integration/py/test_c11_t48_one_loader.py::test_c11_t48_project_load_refuses_both_categories
-0.010	tests/integration/py/test_c11_t48_one_loader.py::test_c11_t48_project_load_refuses_mixed_data_and_range_project
+0.020	tests/integration/py/test_c11_t48_one_loader.py::test_c11_t48_project_load_accepts_calculation_only_range_grid
+0.070	tests/integration/py/test_c11_t48_one_loader.py::test_c11_t48_project_load_is_the_only_loader_and_accepts_fit_ready_data
+0.450	tests/integration/py/test_c11_t48_one_loader.py::test_c11_t48_project_load_preserves_mixed_data_and_range_project
+0.020	tests/integration/py/test_c11_t48_one_loader.py::test_c11_t48_project_load_refuses_both_categories
 0.000	tests/integration/py/test_c11_t48_one_loader.py::test_c11_t48_project_load_refuses_neither_category_and_names_file
 0.160	tests/integration/py/test_c11_t4_cw_selection_integration.py::test_c11_t4_ragged_programmatic_cw_pattern_is_a_structured_io_refusal
 0.541	tests/integration/py/test_c11_t52_consumer_source_contract.py::test_changed_live_source_cannot_select_a_stale_consumer_extension
@@ -7566,6 +7566,9 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_one_l
 UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_packet_escapes_reach_the_native_actions[load-source-reopen]
 UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_saved_data_is_self_contained_and_edi_load_cannot_replace_it[cwl]
 UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_saved_data_is_self_contained_and_edi_load_cannot_replace_it[tof]
+0.003	tests/system/py/test_pytest_child_environment.py::test_parent_options_do_not_reach_nested_pytest[basetemp]
+0.000	tests/system/py/test_pytest_child_environment.py::test_parent_options_do_not_reach_nested_pytest[keyword]
+0.000	tests/system/py/test_pytest_child_environment.py::test_parent_options_do_not_reach_nested_pytest[marker]
 0.140	tests/system/py/test_scan_accident_paths.py::test_an_externally_changed_indexed_row_never_becomes_a_template_value
 0.250	tests/system/py/test_scan_accident_paths.py::test_changing_the_iteration_limit_cannot_reclassify_a_retained_result
 0.620	tests/system/py/test_scan_accident_paths.py::test_continue_keeps_old_generation_marks_through_save_reopen_and_reset_undo[free]
@@ -9872,6 +9875,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 0.180	tests/system/py/test_e09_t75_native_execution.py
 # module-cost: 3.929	tests/system/py/test_fit_participants_native.py
 # module-cost: 138.021	tests/system/py/test_plain_data_app.py
+# module-cost: 25.957	tests/system/py/test_pytest_child_environment.py
 # module-cost: 0.543	tests/system/py/test_scan_accident_paths.py
 # module-cost: 112.644	tests/system/py/test_scan_app_execution.py
 # module-cost: 17.002	tests/system/py/test_scan_driver_resume.py
