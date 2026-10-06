@@ -739,7 +739,7 @@ Structure structure_from_block(const Block& block, const std::string& where) {
     if (loop == nullptr) {
         fail_schema(where, "missing-atom-site-loop", "missing _atom_site loop");
     }
-    // A site keeps the type its file declares (crysta ADR-0080): `adp_iso` is read in that type,
+    // A site keeps the type its file declares (crysta ADR-0081): `adp_iso` is read in that type,
     // and a file that declares none is Biso. An unknown type refuses.
     const int adp_type_column = loop->column("_atom_site.adp_type");
     for (const auto& row : loop->rows) {
@@ -2224,7 +2224,7 @@ Structure structure_from_cif_block(const Block& block, const std::string& where)
     }
 
     // The tensors, in the form the loop spells (U_ij, B_ij or beta_ij), keyed by site label;
-    // a site with one keeps it in that type (crysta ADR-0080).
+    // a site with one keeps it in that type (crysta ADR-0081).
     struct CifTensor {
         std::string type;
         AtomSiteAniso tensor;

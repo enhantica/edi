@@ -240,7 +240,7 @@ std::vector<ParameterTie> structure_ties(const Structure& s) {
             }
         }
     }
-    // The anisotropic tensors: crysta's site-symmetry ties (crysta ADR-0080 §5).
+    // The anisotropic tensors: crysta's site-symmetry ties (crysta ADR-0081 §5).
     for (const auto& tensor : s.atom_site_aniso) {
         const AtomSite* site = nullptr;
         for (const auto& candidate : s.atom_sites) {

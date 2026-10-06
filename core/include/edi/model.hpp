@@ -2346,7 +2346,7 @@ struct AtomSite : std::enable_shared_from_this<AtomSite> {
     detail::WrittenText type_symbol;
     detail::WrittenText wyckoff_letter = "";  // Wyckoff letter (optional; "" = general)
     // `_atom_site.adp_type`, the type the site's values are in: Biso, Uiso, Bani, Uani or beta
-    // (crysta ADR-0080). A file that declares none reads as Biso; a save writes it. A geometry
+    // (crysta ADR-0081). A file that declares none reads as Biso; a save writes it. A geometry
     // input: it records its own writes.
     detail::WrittenText adp_type = "Biso";
     Parameter fract_x;
@@ -2392,7 +2392,7 @@ struct RowTraits<AtomSite> {
     static const detail::RowLink* primary(const AtomSite& site) noexcept { return &site.row; }
 };
 
-// The ADP types a site can declare, and which of them hold a tensor (crysta ADR-0080).
+// The ADP types a site can declare, and which of them hold a tensor (crysta ADR-0081).
 inline bool is_adp_type(const std::string& type) {
     return type == "Biso" || type == "Uiso" || type == "Bani" || type == "Uani" || type == "beta";
 }
@@ -2580,7 +2580,7 @@ struct Structure : std::enable_shared_from_this<Structure> {
     SpaceGroup space_group;
     Cell cell;
     ItemVec<AtomSite> atom_sites;  // Shared items, deep-copied with the structure
-    // The anisotropic sites' tensors, one row per such site (crysta ADR-0080).
+    // The anisotropic sites' tensors, one row per such site (crysta ADR-0081).
     ItemVec<AtomSiteAniso> atom_site_aniso;
     // Element -> coherent bound neutron scattering length b_c (fm). Empty => the adapter uses crysta's
     // default table (load_neutron_scattering); a non-empty map overrides it (isotopes / custom lengths).

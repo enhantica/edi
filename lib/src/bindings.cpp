@@ -1746,7 +1746,7 @@ NB_MODULE(_edi, m) {
         .def_prop_rw(
             "wyckoff_letter", [](const edi::AtomSite& self) { return self.wyckoff_letter.value(); },
             [](edi::AtomSite& self, std::string value) { self.wyckoff_letter = std::move(value); })
-        // A new type converts the site's values (crysta ADR-0080). The tensor and the cell are
+        // A new type converts the site's values (crysta ADR-0081). The tensor and the cell are
         // the structure's, so a site no structure of a project holds changes only between the
         // two isotropic types.
         .def_prop_rw(

@@ -6,7 +6,7 @@
   and the ellipsoids are built; the Y2O3 beta page and its CLI project agree with FullProf
 - **Priority:** High
 - **Forward constraint (binding on new features):** a site's displacement stays in the type its file or its user
-  declared, and every conversion between types is crysta's (its ADR-0080). edi computes no conversion, no
+  declared, and every conversion between types is crysta's (its ADR-0081). edi computes no conversion, no
   site-symmetry tie and no equivalent value of its own.
 
 ## Context
@@ -14,7 +14,7 @@
 diffraction-lib offers five displacement types (`Biso`, `Uiso`, `Bani`, `Uani`, `beta`) and an `atom_site_aniso`
 category with one row per anisotropic site. Until now edi stored every site's displacement as B: it converted a
 declared `Uiso` at load, so a saved file lost the type, and it refused the anisotropic types. crysta now holds all
-five types and the tensor (crysta ADR-0080): it converts between them, ties the components a site's symmetry
+five types and the tensor (crysta ADR-0081): it converts between them, ties the components a site's symmetry
 fixes, and calculates and fits with them. edi has to carry the same model in its core, files, Python library and
 app.
 
@@ -48,6 +48,6 @@ app.
 
 | Alternative | Verdict (why rejected / deferred) |
 |---|---|
-| Convert in edi, with its own copy of the metric arithmetic | Rejected: two copies of one conversion drift, and crysta ADR-0080 makes U\* the only hub. |
+| Convert in edi, with its own copy of the metric arithmetic | Rejected: two copies of one conversion drift, and crysta ADR-0081 makes U\* the only hub. |
 | Keep storing B and convert at save | Rejected: the owner's rule is to stay in the type read until the user changes it. |
 | Six tensor columns on `AtomSite` | Rejected: diffraction-lib and CIF keep the tensor in its own loop, keyed by site. |
