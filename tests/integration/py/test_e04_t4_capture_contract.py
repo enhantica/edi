@@ -419,21 +419,48 @@ VERIFIED_CAPTURES: dict[str, dict[str, object]] = {
             'one row and X Y on the next',
         },
     },
+    # Independently inspected committed images: explicit mixing and both phase tick rows.
     'ex-pd-neut-cwl_pbso4_beba-asymmetry.png': {
-        'sha256': '86ec8c8dcd47bbd7ddeda382695227f1aed4c5f98a485786e69f7792e13ddac4',
+        'sha256': '4be957d9932fd22eafaaece01826fd8b4a0f81b0ab21040c2756d0773e3f9e97',
         'checks': {
-            '8': 'the main tab reads the microscope '
-            'icon in the experiment colour and '
-            'the experiment name, no word',
-            '9': 'the block selector (number, coloured '
-            'icon, name) sits above the groups, '
-            'under the tab bar, on Basic',
+            '8': 'the main tab reads the '
+            'microscope icon in the '
+            'experiment colour and '
+            'the experiment name, no '
+            'word',
+            '9': 'the block selector '
+            '(number, coloured icon, '
+            'name) sits above the '
+            'groups, under the tab '
+            'bar, on Basic',
             '18': 'Peak profile '
-            '(cwl-pseudo-voigt-berar-'
-            'baldinozzi-asymmetry) '
-            'has no subheading; its fields run U '
-            'V W, then X Y, then A0 B0 A1 B1 '
-            'AsyLim on the asymmetry row',
+            '(cwl-pseudo-voigt-berar-baldinozzi) '
+            'has no subheading; its '
+            'fields run U V W, then '
+            'Eta0 Eta1, then A0 B0 '
+            'A1 B1 AsyLim on the '
+            'asymmetry row',
+        },
+    },
+    'ex-pd-neut-cwl_yap-spodi_3k.png': {
+        'sha256': 'ee0b1d1ce4f89cf440a51225401a0f708bc03160e737763e2f1ae7b24d866f9d',
+        'checks': {
+            '8': 'the main tab reads the '
+            'microscope icon in the '
+            'experiment colour and the '
+            'experiment name, no word',
+            '9': 'the block selector (number, '
+            'coloured icon, name) sits above '
+            'the groups, under the tab bar, '
+            'on Basic',
+            '18': 'Peak profile '
+            '(cwl-pseudo-voigt-berar-baldinozzi) '
+            'has no subheading; its fields '
+            'run U V W, then Eta0 Eta1, then '
+            'A0 B0 A1 B1 AsyLim on the '
+            'asymmetry row; the chart shows '
+            'a row of Bragg ticks for each '
+            'of the two structures',
         },
     },
     'ex-pd-neut-tof_diamond-dream_basic.png': {

@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-06T00:42:10Z
+# measured_utc = 2026-10-06T02:44:03Z
 #
-# Recorded from: tests-seq5-edi-repair-measure.log (6 node(s) measured once, 6213 banked, 3 stale row(s) dropped)
-# Collected tests: 6875; with a reported duration: 4120
+# Recorded from: tests-seq7-measure.log (6 node(s) measured once, 6219 banked, 0 stale row(s) dropped)
+# Collected tests: 6881; with a reported duration: 4124
 # Module-scoped fixture costs recorded: 16
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 6875
+# inventory_python = 6881
 # inventory_cpp = 287
-# inventory_measured = 6219
+# inventory_measured = 6225
 # inventory_unmeasured = 943
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
@@ -4492,6 +4492,12 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.p
 0.510	tests/system/py/test_c34_t28_census_escapes.py::test_census_refuses_an_io_category_that_has_no_schema
 0.080	tests/system/py/test_c34_t28_census_reference.py::test_compiler_reference_observes_each_member_without_included_type_aliases[private]
 0.080	tests/system/py/test_c34_t28_census_reference.py::test_compiler_reference_observes_each_member_without_included_type_aliases[public]
+0.000	tests/system/py/test_c34_t28_frozen_api.py::test_adaptation_receipt_cannot_repin_changed_assertions[message]
+0.000	tests/system/py/test_c34_t28_frozen_api.py::test_adaptation_receipt_cannot_repin_changed_assertions[predicate]
+0.040	tests/system/py/test_c34_t28_frozen_api.py::test_adapted_witness_preserves_assertions_and_its_own_structure_link[message]
+0.020	tests/system/py/test_c34_t28_frozen_api.py::test_adapted_witness_preserves_assertions_and_its_own_structure_link[missing-link]
+0.050	tests/system/py/test_c34_t28_frozen_api.py::test_adapted_witness_preserves_assertions_and_its_own_structure_link[predicate]
+0.020	tests/system/py/test_c34_t28_frozen_api.py::test_adapted_witness_preserves_assertions_and_its_own_structure_link[wrong-link]
 0.050	tests/system/py/test_c34_t28_frozen_api.py::test_frozen_gate_cannot_lose_a_witness_by_discovering_only_live_files[delete]
 0.070	tests/system/py/test_c34_t28_frozen_api.py::test_frozen_gate_cannot_lose_a_witness_by_discovering_only_live_files[edit]
 0.060	tests/system/py/test_c34_t28_frozen_api.py::test_frozen_gate_cannot_lose_a_witness_by_discovering_only_live_files[rename]

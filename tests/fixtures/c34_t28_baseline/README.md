@@ -72,3 +72,21 @@ in experiment computed-currentness, structure geometry-currentness and the
 experiment epoch. The baseline includes unchanged dependants, including a
 changed optional value whose canonical calculation input stays equal; it never
 assumes that every native assignment renews an epoch.
+
+## Retained API witness adaptation
+
+The original public-release archive and its manifest remain unchanged. The receipt
+records exact replacements in the geometry freshness vehicle: formatting, a wrapped
+comment, and the link from its loaded experiment to the structure it actually creates.
+The latter replaces the imported experiment's unrelated structure identity. All
+original code tokens, assertion predicates and messages survive, apart from that
+single added fixture assignment. Every other archived witness stays byte-identical.
+
+Run `python tests/fixtures/c34_t28_baseline/api_witness_adaptation.py` to verify the
+fixed receipt against the archived original and the live source. The verifier never
+generates a pin from current source. The adapted digest is a syntactic regression
+receipt, not a scientific correctness reference. The gate additionally exercises
+changed predicates/messages, missing or wrong links, and receipt re-pinning attempts.
+
+The public-release fresh-history fixture includes this visible verifier and receipt,
+so its independent one-commit replay has the complete declared inputs.
