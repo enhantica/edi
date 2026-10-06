@@ -22,6 +22,7 @@
 #include <QSet>
 #include <QThread>
 #include <QTimer>
+#include <QWheelEvent>
 #include <QtQml>
 #include <algorithm>
 #include <atomic>
@@ -50,6 +51,9 @@
 #include "session.hpp"
 Q_IMPORT_QML_PLUGIN(edi_appPlugin)
 
+void scan_contract_arm_io(const std::string&, int);
+int scan_contract_disarm_io();
+
 namespace {
 using Clock = std::chrono::steady_clock;
 QJsonArray layer_points;
@@ -66,6 +70,10 @@ Clock::time_point previous;
 long peak_1000 = 0, peak_end = 0;
 std::size_t work_index = 0;
 std::atomic<bool> worker_off_owner{true};
+std::string held_read_path;
+QSemaphore read_entered, read_release;
+std::function<void(int)> completion_action;
+QJsonArray native_fit_inputs;
 
 long peak_memory() {
     rusage usage{};
@@ -642,7 +650,16 @@ QJsonObject prepare_scale(const std::string& path) {
     edi::save_project(project, path);
     return {{"prepared", true}};
 }
+#include "accident_observations.hpp"
 }  // namespace
+
+void scan_contract_before_dataset_read(const std::string& path) {
+    if (!held_read_path.empty() && std::filesystem::path(path).lexically_normal() ==
+                                       std::filesystem::path(held_read_path).lexically_normal()) {
+        read_entered.release();
+        read_release.acquire();
+    }
+}
 
 void scan_contract_layer_receipt(const QList<QPointF>& points, const QList<double>& low,
                                  const QList<double>& high) {
@@ -660,6 +677,8 @@ void scan_contract_work(const std::string& file, const crysta::Project& project)
     for (const auto* values : {&data.grid, &data.intensity, &data.sigma})
         hash.addData(QByteArray(reinterpret_cast<const char*>(values->data()),
                                 static_cast<qsizetype>(values->size() * sizeof(double))));
+    if (stage == "pending-fit" || stage == "settled-fit")
+        native_fit_inputs.append(QString::fromLatin1(hash.result().toHex()));
     work_stream << "entry\t" << stage << '\t' << ++work_index << '\t'
                 << hash.result().toHex().constData() << std::endl;
 }
@@ -714,6 +733,7 @@ void scan_contract_file_completed(const std::string& file) {
                                           {"state", state(*active)},
                                           {"projectionReady", projection_ready},
                                           {"pattern", pattern(*active)}});
+            if (completion_action) completion_action(count);
             if (exercise_follow && count == 13) active->setCurrentExperimentIndex(17);
             if (exercise_follow && count == 21) active->fit()->setFollowing(true);
             if (stop_after && count == stop_after) active->fit()->cancel();
@@ -733,7 +753,27 @@ int main(int argc, char** argv) {
     stage = command;
     QJsonObject answer;
     try {
-        if (command == "reference") {
+        if (command == "pending")
+            answer = pending_action(path, argv[3]);
+        else if (command == "reset-state")
+            answer = reset_state(path);
+        else if (command == "io-rollback")
+            answer = io_rollback(path, argv[3], std::stoi(argv[4]));
+        else if (command == "mixed")
+            answer = mixed_generation(path);
+        else if (command == "gestures")
+            answer = gesture_accidents(path, argv[3]);
+        else if (command == "live-zoom")
+            answer = live_zoom(path);
+        else if (command == "range-accident")
+            answer = range_accident(path, argv[3], argv[4], argc > 5 ? argv[5] : "core");
+        else if (command == "result-boundary")
+            answer = result_boundary(path);
+        else if (command == "outcome-settings")
+            answer = outcome_settings(path);
+        else if (command == "indexed-edit")
+            answer = indexed_edit(path);
+        else if (command == "reference") {
             auto project = crysta::load_project(path);
             crysta::fit_project(project);
             answer["csv"] = QString::fromUtf8(contents(path, "analysis/results.csv"));
