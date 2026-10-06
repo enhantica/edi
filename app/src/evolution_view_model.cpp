@@ -11,10 +11,12 @@ namespace edi_app {
 
 namespace {
 
-// A point is drawn only when it and its error bar's ends are finite numbers.
+// A point is drawn only when it and its error bar's ends are finite numbers within ±1e300, so every difference the
+// chart takes between them (its spans, ticks, hit tests and zoom boxes) is finite too.
 bool drawable(double x, double y, double error) {
-    return std::isfinite(x) && std::isfinite(y) && std::isfinite(error) && error >= 0.0 && std::isfinite(y - error) &&
-           std::isfinite(y + error);
+    constexpr double kLimit = 1e300;
+    return std::isfinite(x) && std::isfinite(y) && std::isfinite(error) && error >= 0.0 && std::abs(x) <= kLimit &&
+           std::abs(y - error) <= kLimit && std::abs(y + error) <= kLimit;
 }
 
 // The bucket of `x` among `buckets` over a range starting at `half_low` (halved values, so the widest finite range

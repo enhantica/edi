@@ -221,9 +221,9 @@ Item {
             function yAt(py: real): real {
                 return axisY.max - py / height * (axisY.max - axisY.min);
             }
-            // A zoom is admitted only with finite, increasing ends on both axes.
+            // A zoom is admitted only with finite, increasing ends and finite spans on both axes.
             function zoomTo(range: list<real>) {
-                if (range.every(value => isFinite(value)) && range[1] > range[0] && range[3] > range[2])
+                if (range.every(value => isFinite(value)) && range[1] > range[0] && range[3] > range[2] && isFinite(range[1] - range[0]) && isFinite(range[3] - range[2]))
                     chart.zoom = range;
             }
 
