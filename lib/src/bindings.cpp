@@ -2147,7 +2147,7 @@ NB_MODULE(_edi, m) {
     def_view_parameter_field(tof_jorgensen_von_dreele, "broad_lorentz_strain",
                              &edi::PeakBase::broad_lorentz_strain);
 
-    // The constant-wavelength profiles (crysta ADR-0080), each with only its own members: the
+    // The constant-wavelength profiles, each with only its own members: the
     // Caglioti U, V, W on every one, then the TCH X, Y or the pseudo-Voigt mixing, then the
     // asymmetry coefficients. The TOF pseudo-Voigt follows.
     const auto def_caglioti = [](auto& cls) {
@@ -2756,7 +2756,7 @@ NB_MODULE(_edi, m) {
     g_peak_registry = new nb::object(nb::dict());
     (*g_peak_registry)["tof-jorgensen"] = m.attr("TofJorgensen");
     (*g_peak_registry)["tof-jorgensen-von-dreele"] = m.attr("TofJorgensenVonDreele");
-    // The constant-wavelength profiles (crysta ADR-0080) and the TOF pseudo-Voigt, each with its
+    // The constant-wavelength profiles and the TOF pseudo-Voigt, each with its
     // class.
     (*g_peak_registry)["cwl-gaussian"] = m.attr("CwlGaussian");
     (*g_peak_registry)["cwl-lorentzian"] = m.attr("CwlLorentzian");

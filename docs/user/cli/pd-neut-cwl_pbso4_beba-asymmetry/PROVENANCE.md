@@ -8,7 +8,7 @@ count is a mean over its counters, so its variance is count / counters, which re
 vs its 1.95).
 
 **The profile is not FullProf's (2026-10-05).** FullProf's reference is a TCH pseudo-Voigt with Bérar-Baldinozzi
-asymmetry, a pair edi no longer carries (crysta ADR-0080). The project uses the pseudo-Voigt with Bérar-Baldinozzi
+asymmetry, a pair edi no longer carries. The project uses the pseudo-Voigt with Bérar-Baldinozzi
 (FullProf's Npr 5): FullProf's Gaussian widths U, V, W as starts, the mixing from `eta_0` 0.25 and `eta_1` 0, and
 FullProf's P1..P4 carried to the paper's coefficients through the map diffraction-lib issue 166 inferred,
 `(−P1 − 3·P2, −P2, −P3 − 3·P4, −P4)`, as starts. The widths, mixing, coefficients and scale are free (10

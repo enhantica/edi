@@ -284,7 +284,7 @@ inline const ParameterSpec peak_broad_lorentz_y{
     detail::kUnbounded, "broad_lorentz_y", "deg", "$Y$", "\\mathrm{deg}", detail::kLorentzY, detail::kLorentzYCif};
 
 // The pseudo-Voigt mixing eta = eta_0 + eta_1 2theta, 2theta in degrees (FullProf Eta0 and X of
-// Npr 5; crysta ADR-0080). No diffraction-lib counterpart.
+// Npr 5). No diffraction-lib counterpart.
 inline const ParameterSpec peak_mixing_eta_0{
     "peak", "mixing_eta_0", "none", "Pseudo-Voigt mixing at 2theta = 0",
     detail::kUnbounded, "Eta0", "", "$\\eta_0$", "", detail::kMixingEta0, {}};

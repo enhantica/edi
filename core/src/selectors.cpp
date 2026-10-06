@@ -123,7 +123,7 @@ void select_peak_profile(ExperimentBase& experiment, const std::string& token) {
     if (mode != BeamModeEnum::CONSTANT_WAVELENGTH) {
         return;
     }
-    // The slots the new CW profile carries (crysta ADR-0080), U, V, W on every one.
+    // The slots the new CW profile carries, U, V, W on every one.
     const CwlProfileSlots slots = cwl_profile_slots(token);
     keep_if(peak.broad_lorentz_x, slots.lorentz_xy, spec::peak_broad_lorentz_x);
     keep_if(peak.broad_lorentz_y, slots.lorentz_xy, spec::peak_broad_lorentz_y);

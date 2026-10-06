@@ -832,8 +832,8 @@ constexpr const char* kPeakJvd = "tof-jorgensen-von-dreele";
 
 // ---- experiment families -----------------------------------------------------------------
 //
-// The closed `_peak.type` token table, mirroring crysta's shipped grammar
-// (src/core/experiment_family.hpp, ADR-0080) — the token→(kind, implemented) rows. The default CW
+// The closed `_peak.type` token table, mirroring crysta's shipped grammar — the
+// token→(kind, implemented) rows. The default CW
 // profile is the TCH pseudo-Voigt. `implemented: false` means recognised-but-refused BY NAME: the
 // token is a known file, not a typo, and loading it is refused naming the token.
 constexpr const char* kPeakCwlDefault = "cwl-tch-pseudo-voigt";
@@ -976,8 +976,8 @@ void validate_experiment_selectors(const Block& block, const std::string& peak_t
         }
         // Every CW profile requires U, V, W and the two `_instrument` CW scalars, the TCH pair X
         // and Y too — the same requires-idiom as the JvD Lorentzian block below. A `_peak`
-        // parameter of another CW profile is refused by name with the type (crysta ADR-0080:
-        // each profile carries only its own parameters).
+        // parameter of another CW profile is refused by name with the type: each profile carries
+        // only its own parameters.
         const CwlProfileSlots slots = cwl_profile_slots(peak_type);
         for (const char* tag : kCwlPeakTags) {
             if (!block_has_tag(block, tag)) {
@@ -2557,7 +2557,7 @@ Block translate_experiment_cif(const Block& in) {
             continue;
         }
         const std::string family = rule.family;
-        // A CW rule fills only a slot the selector's profile carries (crysta ADR-0080).
+        // A CW rule fills only a slot the selector's profile carries.
         const CwlProfileSlots slots = cwl_profile_slots(selector);
         if ((family == "cwl" && fills_cwl) || (family == "tof" && fills_tof) ||
             (family == "tof-jvd" && fills_jvd) ||

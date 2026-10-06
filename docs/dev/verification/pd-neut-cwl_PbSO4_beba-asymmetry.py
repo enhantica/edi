@@ -15,7 +15,7 @@
 #
 # **The model changed on 2026-10-05.** Until then this page used the TCH pseudo-Voigt with
 # Bérar-Baldinozzi, diffraction-lib's model and FullProf's Npr 7 with asymmetry. That pair is
-# removed (crysta ADR-0080): Bérar-Baldinozzi now acts on the pseudo-Voigt, its usual partner.
+# removed: Bérar-Baldinozzi now acts on the pseudo-Voigt, its usual partner.
 # FullProf's reference is still the Npr 7 calculation, so no parameter set reproduces it exactly.
 # The page fits the pseudo-Voigt's widths, mixing and the four coefficients to FullProf's profile
 # and records how close the Npr 5 shape gets. It no longer uses diffraction-lib's model, so it no

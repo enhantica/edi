@@ -2710,7 +2710,7 @@ enum class ScatteringTypeEnum : std::uint8_t { BRAGG, TOTAL };
 enum class PeakProfileTypeEnum : std::uint8_t {
     TOF_JORGENSEN,
     TOF_JORGENSEN_VON_DREELE,
-    // The constant-wavelength family (crysta ADR-0080), named for what each profile is.
+    // The constant-wavelength family, named for what each profile is.
     CWL_TCH_PSEUDO_VOIGT,
     CWL_TCH_PSEUDO_VOIGT_FCJ,
     CWL_PSEUDO_VOIGT_BERAR_BALDINOZZI,
@@ -2749,7 +2749,7 @@ inline const char* token(PeakProfileTypeEnum value) {
     return "tof-jorgensen";
 }
 
-// The constant-wavelength profile family (crysta ADR-0080): which optional `_peak` slots a CW
+// The constant-wavelength profile family: which optional `_peak` slots a CW
 // profile token carries. U, V, W belong to every one. A registered extension token keeps the
 // family default, the TCH pseudo-Voigt.
 struct CwlProfileSlots {

@@ -19,7 +19,7 @@ struct TofJorgensenVonDreele final : TofJorgensen {
     using TofJorgensen::TofJorgensen;
 };
 
-// The constant-wavelength profiles (crysta ADR-0080) and the TOF pseudo-Voigt.
+// The constant-wavelength profiles and the TOF pseudo-Voigt.
 struct CwlGaussian final : PeakNode {
     using PeakNode::PeakNode;
 };

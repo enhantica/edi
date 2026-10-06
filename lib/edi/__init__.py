@@ -589,7 +589,7 @@ _TOF_INSTRUMENT_KEYS = frozenset({
 })
 _LINKED_STRUCTURE_KEYS = frozenset({'structure_id', 'scale'})
 
-# The constant-wavelength key family, mirroring the shipped crysta grammar (crysta ADR-0080): six
+# The constant-wavelength key family, mirroring the shipped crysta grammar: six
 # profiles, the TCH pseudo-Voigt the default; the beam modes are exactly 'time-of-flight' and
 # 'constant wavelength' (WITH a space), cross-checked against the peak-type family per the
 # four-case matrix. The CW peak/instrument key sets replace (never extend) the TOF ones when the
