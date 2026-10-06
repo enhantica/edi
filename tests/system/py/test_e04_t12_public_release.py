@@ -843,6 +843,8 @@ def one_commit_tree(tmp_path_factory):
         'tests/fixtures/c14_t4_neutron/freeze_page_pins.py',
         'tests/fixtures/c13_t12_ids/baseline.json',
         'tests/fixtures/e04_t12_public_release/history',
+        'tests/fixtures/c34_t28_baseline/api_witness_adaptation.py',
+        'tests/fixtures/c34_t28_baseline/api_witness_adaptation.json',
     ]
     listing = run('git', 'ls-files', 'tests')
     require_success(listing, 'the history fixture must enumerate retained API witnesses')

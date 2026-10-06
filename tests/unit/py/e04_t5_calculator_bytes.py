@@ -2,6 +2,8 @@
 
 import re
 
+from tests.fixtures.cwl_family.historical import original_tokens
+
 
 def without_calculator(name, saved):
     if not (name.startswith('experiments/') and name.endswith('.edi')):
@@ -13,4 +15,4 @@ def without_calculator(name, saved):
     assert len(re.findall(rb'(?m)^_calculator\.', saved)) == 1, (
         ' no extra or unsupported calculator declaration may escape the byte oracle'
     )
-    return saved.replace(declaration, b'', 1)
+    return original_tokens(saved.replace(declaration, b'', 1))

@@ -15,7 +15,7 @@ _peak.broad_gauss_w 0.1
 _peak.broad_lorentz_x 0
 _peak.broad_lorentz_y 0.001
 _peak.cutoff_fwhm 30
-_peak.type cwl-pseudo-voigt
+_peak.type cwl-tch-pseudo-voigt
 
 _instrument.setup_wavelength 1.494
 _instrument.calib_twotheta_offset 0.6

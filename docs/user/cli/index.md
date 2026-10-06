@@ -39,7 +39,8 @@ are independent references.
 | [pd-neut-tof_si-sepd_start-5](pd-neut-tof_si-sepd_start-5/index.md) | the same fit from start-5 |
 | [pd-neut-tof_diamond-dream_basic](pd-neut-tof_diamond-dream_basic/index.md) | diamond on DREAM (time of flight), scale only, against FullProf |
 | [pd-neut-cwl_lab6-echidna_fcj-asymmetry](pd-neut-cwl_lab6-echidna_fcj-asymmetry/index.md) | LaB6 on Echidna (constant wavelength), FCJ asymmetry, scale only, against FullProf |
-| [pd-neut-cwl_pbso4_beba-asymmetry](pd-neut-cwl_pbso4_beba-asymmetry/index.md) | PbSO4 on D1A (constant wavelength), Bérar-Baldinozzi asymmetry, scale only, against FullProf |
+| [pd-neut-cwl_pbso4_beba-asymmetry](pd-neut-cwl_pbso4_beba-asymmetry/index.md) | PbSO4 on D1A (constant wavelength), the pseudo-Voigt with Bérar-Baldinozzi asymmetry, profile and scale re-fitted |
+| [pd-neut-cwl_yap-spodi_3k](pd-neut-cwl_yap-spodi_3k/index.md) | YAlO3 and Al2O3 on SPODI (constant wavelength), two phases, pseudo-Voigt with Bérar-Baldinozzi, against FullProf |
 | [pd-neut-tof_fe_pseudo-voigt](pd-neut-tof_fe_pseudo-voigt/index.md) | ferrite on BEER (time of flight), TOF pseudo-Voigt, scale only, against FullProf |
 | [pd-neut-tof_cecoal-polaris_chebyshev](pd-neut-tof_cecoal-polaris_chebyshev/index.md) | CeCoAl3 on POLARIS (time of flight), Chebyshev background, 32 parameters, against FullProf |
 | [pd-neut-tof_ceo2-pearl_polynomial](pd-neut-tof_ceo2-pearl_polynomial/index.md) | CeO2 on PEARL (time of flight), polynomial background, 19 parameters, against FullProf |

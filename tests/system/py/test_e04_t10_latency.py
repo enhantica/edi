@@ -44,7 +44,8 @@ def structure_measurements(tmp_path_factory):
     # Its real cost is recorded as module-cost by the existing fixture instrument.
     # No sample count, requested-state observer or measurement is removed.
     tmp_path = tmp_path_factory.mktemp('-measurements')
-    probe = ROOT / 'build/ci/core/e04_t10_latency_probe'
+    build = 'ci-consumer' if os.environ.get('EDI_USE_CONSUMER_BUILD') == '1' else 'ci'
+    probe = ROOT / 'build' / build / 'core' / 'e04_t10_latency_probe'
     assert probe.is_file(), ' M2 hidden structure probe must be built into the core gate'
     env = dict(
         os.environ,

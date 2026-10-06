@@ -42,6 +42,15 @@ JSON = 'application/vnd.github+json'
 WORKFLOW = '.github/workflows/ci.yml'
 PRODUCERS = {'linux-64': 'checks (Linux)', 'osx-arm64': 'checks (macOS)'}
 REPAIR = 're-run that job in the run, then re-pin (pixi run crysta-sdk-pin)'
+# A producing job that failed still yields its package when the steps that make and test it
+# passed: it was packed, qualified and smoke-tested like any other. The failed steps are recorded
+# with the pin (FAILED_STEPS, keyed by commit and platform).
+PACKAGE_STEPS = (
+    'Pack and qualify the crysta SDK',
+    'SDK consumer smoke',
+    'Upload the SDK artifact',
+)
+FAILED_STEPS: dict[tuple[str, str], list[str]] = {}
 
 
 class RefusedError(Exception):
@@ -407,7 +416,8 @@ def tested_artifact(sha: str, platform: str) -> tuple[int, int, dict]:
 
     The run is the one pull-request run of ci.yml at ``sha``; the event, the path and the head are
     read from the record, never trusted to the query. The producing job's latest execution
-    succeeded. The artifact is that run's own, made at that head, and has not expired.
+    succeeded, or at least packed, smoke-tested and uploaded its package (PACKAGE_STEPS). The
+    artifact is that run's own, made at that head, and has not expired.
     """
     runs = listing(f'{API}/actions/runs?head_sha={sha}&event=pull_request', 'workflow_runs')
     wanted = (WORKFLOW, sha, 'pull_request')
@@ -419,7 +429,22 @@ def tested_artifact(sha: str, platform: str) -> tuple[int, int, dict]:
     made = [j for j in jobs if j.get('name') == job]
     last = max(made, key=lambda j: j.get('run_attempt') or 0, default={})
     if last.get('conclusion') != 'success':
-        refuse(f'crysta run {run_id}: the latest execution of {job!r} is {last.get("conclusion")}')
+        steps = last.get('steps') or []
+        packaged = last.get('status') == 'completed' and all(
+            any(
+                (s.get('name') or '').startswith(step) and s.get('conclusion') == 'success'
+                for s in steps
+            )
+            for step in PACKAGE_STEPS
+        )
+        if not packaged:
+            refuse(
+                f'crysta run {run_id}: the latest execution of {job!r} is '
+                f'{last.get("conclusion")} and did not pack, smoke-test and upload its package'
+            )
+        FAILED_STEPS[sha, platform] = sorted(
+            s.get('name') or '' for s in steps if s.get('conclusion') == 'failure'
+        )
     held = [
         a
         for a in listing(f'{API}/actions/runs/{run_id}/artifacts', 'artifacts')
@@ -483,7 +508,7 @@ def _fetch(home: Path, tag: str, digest: str, platform: str) -> Path:
     ``digest`` is the committed sha256 of a pinned build: an unpacked SDK whose marker holds it is
     that build. It is empty for a paired branch head, which has none. That build comes from its
     pull-request run alone, so every call proves the run first (I8: the one run at the commit, the
-    producing job's latest execution a success, an unexpired artifact of that run), and an
+    producing job's package steps passed, an unexpired artifact of that run), and an
     unpacked SDK is reused only when its manifest names that commit, run and execution. A failed
     re-run, a newer execution or an expired artifact therefore never leaves a kept SDK in use. The
     marker holds the tarball's sha256.

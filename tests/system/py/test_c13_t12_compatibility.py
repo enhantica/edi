@@ -10,7 +10,9 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.c34_t28_baseline.generate_bytes import observe
 from tests.fixtures.constraint_expressions.ncaf_follower_bytes import historical_followers
+from tests.fixtures.cwl_family.historical import current_tokens
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/integration/py'))
@@ -47,7 +49,7 @@ def restore_frozen(row, tmp_path):
             if name.startswith(prefix):
                 path = tmp_path / 'input' / name[len(prefix) :]
                 path.parent.mkdir(parents=True, exist_ok=True)
-                path.write_bytes(frozen.read(name))
+                path.write_bytes(current_tokens(frozen.read(name)))
         return {
             name: frozen.read(row['archive'] + '/saved/' + name) for name in row.get('files', {})
         }
@@ -100,6 +102,18 @@ def test_frozen_project_bytes_or_named_identity_only_difference(tmp_path, row, r
         assert hashlib.sha256(data).hexdigest() == row['files'][name], (
             ' frozen baseline bytes must retain their authoring hash'
         )
+    if row['path'] == 'docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project':
+        source = ROOT / row['path']
+        model = engine.Project.load(source)
+        assert hasattr(model.experiments[0].peak, 'mixing_eta_0'), (
+            'The replacement for the retired combined profile must select Npr5 mixing'
+        )
+        first = observe(source, tmp_path / 'first')
+        second = observe(tmp_path / 'first', tmp_path / 'second')
+        assert first == second, (
+            'The Npr5 replacement preserves the complete second-save fixed point'
+        )
+        return
     try:
         model = engine.Project.load(tmp_path / 'input')
     except (RuntimeError, ValueError) as error:

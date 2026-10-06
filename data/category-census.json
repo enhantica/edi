@@ -776,84 +776,98 @@
         },
         {
           "member": "PeakBase::broad_gauss_u",
-          "type": "std::optional<Parameter>",
+          "type": "OptionalParameter",
           "items": [
             "broad_gauss_u"
           ]
         },
         {
           "member": "PeakBase::broad_gauss_v",
-          "type": "std::optional<Parameter>",
+          "type": "OptionalParameter",
           "items": [
             "broad_gauss_v"
           ]
         },
         {
           "member": "PeakBase::broad_gauss_w",
-          "type": "std::optional<Parameter>",
+          "type": "OptionalParameter",
           "items": [
             "broad_gauss_w"
           ]
         },
         {
           "member": "PeakBase::broad_lorentz_x",
-          "type": "std::optional<Parameter>",
+          "type": "OptionalParameter",
           "items": [
             "broad_lorentz_x"
           ]
         },
         {
           "member": "PeakBase::broad_lorentz_y",
-          "type": "std::optional<Parameter>",
+          "type": "OptionalParameter",
           "items": [
             "broad_lorentz_y"
           ]
         },
         {
+          "member": "PeakBase::mixing_eta_0",
+          "type": "OptionalParameter",
+          "items": [
+            "mixing_eta_0"
+          ]
+        },
+        {
+          "member": "PeakBase::mixing_eta_1",
+          "type": "OptionalParameter",
+          "items": [
+            "mixing_eta_1"
+          ]
+        },
+        {
           "member": "PeakBase::asym_fcj_1",
-          "type": "std::optional<Parameter>",
+          "type": "OptionalParameter",
           "items": [
             "asym_fcj_1"
           ]
         },
         {
           "member": "PeakBase::asym_fcj_2",
-          "type": "std::optional<Parameter>",
+          "type": "OptionalParameter",
           "items": [
             "asym_fcj_2"
           ]
         },
         {
           "member": "PeakBase::asym_beba_a0",
-          "type": "std::optional<Parameter>",
+          "type": "OptionalParameter",
           "items": [
             "asym_beba_a0"
           ]
         },
         {
           "member": "PeakBase::asym_beba_b0",
-          "type": "std::optional<Parameter>",
+          "type": "OptionalParameter",
           "items": [
             "asym_beba_b0"
           ]
         },
         {
           "member": "PeakBase::asym_beba_a1",
-          "type": "std::optional<Parameter>",
+          "type": "OptionalParameter",
           "items": [
             "asym_beba_a1"
           ]
         },
         {
           "member": "PeakBase::asym_beba_b1",
-          "type": "std::optional<Parameter>",
+          "type": "OptionalParameter",
           "items": [
             "asym_beba_b1"
           ]
         },
         {
           "member": "PeakBase::asym_beba_limit",
-          "type": "std::optional<Parameter>",
+          "type": "OptionalParameter",
           "items": [
             "asym_beba_limit"
           ]
@@ -905,42 +919,42 @@
         },
         {
           "member": "InstrumentBase::setup_wavelength",
-          "type": "std::optional<Parameter>",
+          "type": "OptionalParameter",
           "items": [
             "setup_wavelength"
           ]
         },
         {
           "member": "InstrumentBase::calib_twotheta_offset",
-          "type": "std::optional<Parameter>",
+          "type": "OptionalParameter",
           "items": [
             "calib_twotheta_offset"
           ]
         },
         {
           "member": "InstrumentBase::calib_sample_displacement",
-          "type": "std::optional<Parameter>",
+          "type": "OptionalParameter",
           "items": [
             "calib_sample_displacement"
           ]
         },
         {
           "member": "InstrumentBase::calib_sample_transparency",
-          "type": "std::optional<Parameter>",
+          "type": "OptionalParameter",
           "items": [
             "calib_sample_transparency"
           ]
         },
         {
           "member": "InstrumentBase::setup_polarization_coefficient",
-          "type": "std::optional<Parameter>",
+          "type": "OptionalParameter",
           "items": [
             "setup_polarization_coefficient"
           ]
         },
         {
           "member": "InstrumentBase::setup_monochromator_twotheta",
-          "type": "std::optional<Parameter>",
+          "type": "OptionalParameter",
           "items": [
             "setup_monochromator_twotheta"
           ]
@@ -966,21 +980,21 @@
         },
         {
           "member": "AbsorptionBase::abscor1",
-          "type": "std::optional<Parameter>",
+          "type": "OptionalParameter",
           "items": [
             "abscor1"
           ]
         },
         {
           "member": "AbsorptionBase::abscor2",
-          "type": "std::optional<Parameter>",
+          "type": "OptionalParameter",
           "items": [
             "abscor2"
           ]
         },
         {
           "member": "AbsorptionBase::mu_r",
-          "type": "std::optional<Parameter>",
+          "type": "OptionalParameter",
           "items": [
             "mu_r"
           ]
@@ -1964,6 +1978,26 @@
       "not_storage": "a parameter: the cells of one parameter column bundle"
     },
     {
+      "member": "OptionalParameter::live_",
+      "type": "std::shared_ptr<ParameterCell>",
+      "not_storage": "one optional parameter, kept detached once removed (ADR-0012)"
+    },
+    {
+      "member": "OptionalParameter::retired_",
+      "type": "std::vector<std::shared_ptr<ParameterCell>>",
+      "not_storage": "one optional parameter, kept detached once removed (ADR-0012)"
+    },
+    {
+      "member": "ParameterCell::parameter",
+      "type": "Parameter",
+      "not_storage": "an optional parameter and the link it reports once removed"
+    },
+    {
+      "member": "ParameterCell::removed",
+      "type": "detail::RowLink",
+      "not_storage": "an optional parameter and the link it reports once removed"
+    },
+    {
       "member": "ProjectLink::project",
       "type": "Project*",
       "not_storage": "the revocable record through which nested collections reach their project"
@@ -2487,6 +2521,26 @@
       "part": "the row's identity as a calculation input"
     },
     {
+      "member": "CwlProfileSlots::lorentz_xy",
+      "type": "bool",
+      "not_storage": "the peak slots a CW profile token carries, read from the token"
+    },
+    {
+      "member": "CwlProfileSlots::mixing_eta",
+      "type": "bool",
+      "not_storage": "the peak slots a CW profile token carries, read from the token"
+    },
+    {
+      "member": "CwlProfileSlots::fcj",
+      "type": "bool",
+      "not_storage": "the peak slots a CW profile token carries, read from the token"
+    },
+    {
+      "member": "CwlProfileSlots::beba",
+      "type": "bool",
+      "not_storage": "the peak slots a CW profile token carries, read from the token"
+    },
+    {
       "member": "ExperimentType::sample_form",
       "type": "std::optional<SampleFormEnum>",
       "category": "_experiment_type"
@@ -2658,62 +2712,72 @@
     },
     {
       "member": "PeakBase::broad_gauss_u",
-      "type": "std::optional<Parameter>",
+      "type": "OptionalParameter",
       "category": "_peak"
     },
     {
       "member": "PeakBase::broad_gauss_v",
-      "type": "std::optional<Parameter>",
+      "type": "OptionalParameter",
       "category": "_peak"
     },
     {
       "member": "PeakBase::broad_gauss_w",
-      "type": "std::optional<Parameter>",
+      "type": "OptionalParameter",
       "category": "_peak"
     },
     {
       "member": "PeakBase::broad_lorentz_x",
-      "type": "std::optional<Parameter>",
+      "type": "OptionalParameter",
       "category": "_peak"
     },
     {
       "member": "PeakBase::broad_lorentz_y",
-      "type": "std::optional<Parameter>",
+      "type": "OptionalParameter",
+      "category": "_peak"
+    },
+    {
+      "member": "PeakBase::mixing_eta_0",
+      "type": "OptionalParameter",
+      "category": "_peak"
+    },
+    {
+      "member": "PeakBase::mixing_eta_1",
+      "type": "OptionalParameter",
       "category": "_peak"
     },
     {
       "member": "PeakBase::asym_fcj_1",
-      "type": "std::optional<Parameter>",
+      "type": "OptionalParameter",
       "category": "_peak"
     },
     {
       "member": "PeakBase::asym_fcj_2",
-      "type": "std::optional<Parameter>",
+      "type": "OptionalParameter",
       "category": "_peak"
     },
     {
       "member": "PeakBase::asym_beba_a0",
-      "type": "std::optional<Parameter>",
+      "type": "OptionalParameter",
       "category": "_peak"
     },
     {
       "member": "PeakBase::asym_beba_b0",
-      "type": "std::optional<Parameter>",
+      "type": "OptionalParameter",
       "category": "_peak"
     },
     {
       "member": "PeakBase::asym_beba_a1",
-      "type": "std::optional<Parameter>",
+      "type": "OptionalParameter",
       "category": "_peak"
     },
     {
       "member": "PeakBase::asym_beba_b1",
-      "type": "std::optional<Parameter>",
+      "type": "OptionalParameter",
       "category": "_peak"
     },
     {
       "member": "PeakBase::asym_beba_limit",
-      "type": "std::optional<Parameter>",
+      "type": "OptionalParameter",
       "category": "_peak"
     },
     {
@@ -2758,32 +2822,32 @@
     },
     {
       "member": "InstrumentBase::setup_wavelength",
-      "type": "std::optional<Parameter>",
+      "type": "OptionalParameter",
       "category": "_instrument"
     },
     {
       "member": "InstrumentBase::calib_twotheta_offset",
-      "type": "std::optional<Parameter>",
+      "type": "OptionalParameter",
       "category": "_instrument"
     },
     {
       "member": "InstrumentBase::calib_sample_displacement",
-      "type": "std::optional<Parameter>",
+      "type": "OptionalParameter",
       "category": "_instrument"
     },
     {
       "member": "InstrumentBase::calib_sample_transparency",
-      "type": "std::optional<Parameter>",
+      "type": "OptionalParameter",
       "category": "_instrument"
     },
     {
       "member": "InstrumentBase::setup_polarization_coefficient",
-      "type": "std::optional<Parameter>",
+      "type": "OptionalParameter",
       "category": "_instrument"
     },
     {
       "member": "InstrumentBase::setup_monochromator_twotheta",
-      "type": "std::optional<Parameter>",
+      "type": "OptionalParameter",
       "category": "_instrument"
     },
     {
@@ -2828,17 +2892,17 @@
     },
     {
       "member": "AbsorptionBase::abscor1",
-      "type": "std::optional<Parameter>",
+      "type": "OptionalParameter",
       "category": "_absorption"
     },
     {
       "member": "AbsorptionBase::abscor2",
-      "type": "std::optional<Parameter>",
+      "type": "OptionalParameter",
       "category": "_absorption"
     },
     {
       "member": "AbsorptionBase::mu_r",
-      "type": "std::optional<Parameter>",
+      "type": "OptionalParameter",
       "category": "_absorption"
     },
     {
@@ -3739,6 +3803,21 @@
       "member": "Project::tail_",
       "type": "detail::ProjectTail",
       "not_storage": "the project's last member, which links its collections to its record"
+    },
+    {
+      "member": "CwlPeakSlot::field",
+      "type": "OptionalParameter PeakBase::*",
+      "not_storage": "a row of the CW peak slot table: field, metadata and tag"
+    },
+    {
+      "member": "CwlPeakSlot::spec",
+      "type": "const ParameterSpec*",
+      "not_storage": "a row of the CW peak slot table: field, metadata and tag"
+    },
+    {
+      "member": "CwlPeakSlot::tag",
+      "type": "const char*",
+      "not_storage": "a row of the CW peak slot table: field, metadata and tag"
     }
   ],
   "file_categories": {

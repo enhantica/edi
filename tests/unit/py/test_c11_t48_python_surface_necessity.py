@@ -19,6 +19,9 @@ from typing import Any
 import edi
 import pytest
 
+from conftest import crysta_reference_source
+from tests.fixtures.cwl_family.historical import current_surface_path
+
 ROOT = Path(__file__).resolve().parents[3]
 MANIFEST = ROOT / 'data/python-surface.json'
 CHECKER = ROOT / 'tools/checks/python_surface.py'
@@ -114,11 +117,12 @@ INSTRUMENT_FIELDS = (
 
 def _project_path() -> Path:
     root_override = os.environ.get('EDI_CRYSTA_CORPUS_ROOT')
-    root = Path(root_override) if root_override else ROOT / 'build/crysta-src/tests/fitting'
-    source_sha = CRYSTA_SOURCE_SHA.read_text(encoding='utf-8').strip()
+    source = crysta_reference_source()
+    expected_root = source / 'tests/fitting'
+    root = Path(root_override) if root_override else expected_root
     assert (root / 'manifest.yml').is_file(), (
         f' requires the declared crysta fitting corpus at {root} '
-        f'(recorded crysta source {source_sha}); missing reference input is a failure, '
+        f'(verified linked crysta source {source}); missing reference input is a failure, '
         'never a skip'
     )
     case = root / 'ncaf-wish-3bank-s5'
@@ -405,7 +409,7 @@ def _surface_paths(module: ModuleType) -> set[str]:
         value = getattr(module, name)
         if inspect.isclass(value):
             paths.update(f'{name}.{member}' for member in dir(value) if not member.startswith('_'))
-    return paths
+    return {current_surface_path(path) for path in paths}
 
 
 def _required_end_state() -> set[str]:
@@ -453,7 +457,7 @@ def _baseline_paths() -> set[str]:
         for class_name, members in document['members'].items()
         for member in members
     )
-    return paths
+    return {current_surface_path(path) for path in paths}
 
 
 @pytest.mark.parametrize('damage', ['drop-name', 'drop-member', 'invent-member'])
@@ -489,7 +493,7 @@ def _classification_paths(manifest: dict[str, Any]) -> set[str]:
         if isinstance(members, dict)
         for member in members
     )
-    return paths
+    return {current_surface_path(path) for path in paths}
 
 
 def _partition_findings(

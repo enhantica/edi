@@ -108,12 +108,24 @@ void ParameterRegistry::refreshRefinable(edi::Project& project) {
     // What the space group leaves refinable (edi ADR-0019) follows an edit of the space group or of a
     // site's Wyckoff position, which changes no set of parameters: it is read again at every publish, from
     // the categories the walk itself reads, so the two never disagree.
+    // Every category the walk reads, experiments' too: an item missing here would turn refinable on the
+    // next publish, so a live edit could add a parameter the table did not list before.
     std::unordered_map<const edi::Parameter*, bool> refinable;
-    for (const auto& structure : project.structures) {
-        for (const edi::Category& category : edi::structure_categories(*structure)) {
-            for (const edi::CategoryField& field : category.fields) {
+    const auto note = [&refinable](const edi::Category& category) {
+        for (const auto* fields : {&category.fields, &category.asymmetry}) {
+            for (const edi::CategoryField& field : *fields) {
                 refinable.emplace(field.parameter, field.refinable);
             }
+        }
+    };
+    for (const auto& structure : project.structures) {
+        for (const edi::Category& category : edi::structure_categories(*structure)) {
+            note(category);
+        }
+    }
+    for (const auto& experiment : project.experiments) {
+        for (const edi::Category& category : edi::experiment_categories(*experiment)) {
+            note(category);
         }
     }
     for (ParameterItem* item : items_) {

@@ -44,9 +44,10 @@ projects:
     # page's list).
     executing: false
   - id: pd-neut-cwl_pbso4_beba-asymmetry
-    # A scale-only fit of a verification parameter set; executing once every feature its full .pcr fit needs exists (the C33 milestone
-    # page's list).
+    # The pseudo-Voigt with Berar-Baldinozzi re-fitted (profile, mixing, asymmetry, scale) since FullProf's TCH pair left edi.
     executing: false
+  - id: pd-neut-cwl_yap-spodi_3k
+    executing: true
   - id: pd-neut-tof_fe_pseudo-voigt
     # A scale-only fit of a verification parameter set; executing once every feature its full .pcr fit needs exists (the C33 milestone
     # page's list).

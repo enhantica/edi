@@ -1,0 +1,10 @@
+{
+  "source": "7a8eabf53084332a10b90991907d2040e5365b6a",
+  "engine_source": "b9f2267451adf1896463c706a87fea20790d28ac",
+  "kind": "regression-pin",
+  "platform": "Linux",
+  "pins": {
+    "tch": "YdEUYCg27T+CIg3yMX4dQPHOHEb/AzhA6rt6oa8zPkBpQqRdBls5QNovN/oFTSFAT4cn/svb8z8=",
+    "fcj": "PrLOUHqBHkA+xAm8QYgpQGhDFy6qbDBAUQ0yWQGTLEAADFPMRlgjQNchTM0ynwVAYFrPRMg83z8="
+  }
+}

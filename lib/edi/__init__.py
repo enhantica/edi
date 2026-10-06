@@ -163,13 +163,16 @@ from edi._edi import (  # noqa: E402 - the __path__ resolution above must run fi
     Cell,
     Constraint,
     Constraints,
+    CwlGaussian,
     CwlInstrumentBase,
+    CwlLorentzian,
     CwlPdInstrumentBase,
     CwlPdNeutronInstrument,
     CwlPdXrayInstrument,
     CwlPseudoVoigt,
-    CwlPseudoVoigtBerarBaldinozziAsymmetry,
-    CwlThompsonCoxHastings,
+    CwlPseudoVoigtBerarBaldinozzi,
+    CwlTchPseudoVoigt,
+    CwlTchPseudoVoigtFcj,
     CylinderHewatAbsorption,
     Diagnostic,
     DomainValidationError,
@@ -283,13 +286,16 @@ __all__ = [
     'Cell',
     'Constraint',
     'Constraints',
+    'CwlGaussian',
     'CwlInstrumentBase',
+    'CwlLorentzian',
     'CwlPdInstrumentBase',
     'CwlPdNeutronInstrument',
     'CwlPdXrayInstrument',
     'CwlPseudoVoigt',
-    'CwlPseudoVoigtBerarBaldinozziAsymmetry',
-    'CwlThompsonCoxHastings',
+    'CwlPseudoVoigtBerarBaldinozzi',
+    'CwlTchPseudoVoigt',
+    'CwlTchPseudoVoigtFcj',
     'CylinderHewatAbsorption',
     'Diagnostic',
     'DomainValidationError',
@@ -596,30 +602,39 @@ _TOF_INSTRUMENT_KEYS = frozenset({
 })
 _LINKED_STRUCTURE_KEYS = frozenset({'structure_id', 'scale'})
 
-# The constant-wavelength key family, mirroring the shipped crysta grammar at b9aee906: the
-# rung-0 token is 'cwl-pseudo-voigt'; the two reserved rung tokens are recognised-but-refused BY
-# NAME (Fork 3 (a) — accepting them would build a model edi's engine cannot compute); the beam
-# modes are exactly 'time-of-flight' and 'constant wavelength' (WITH a space), cross-checked
-# against the peak-type family per the four-case matrix. The CW peak/instrument key sets replace
-# (never extend) the TOF ones when the peak type selects CW — a TOF key on a CW spec is rejected
-# exactly as any other unknown key, and vice versa.
+# The constant-wavelength key family, mirroring the shipped crysta grammar: six
+# profiles, the TCH pseudo-Voigt the default; the beam modes are exactly 'time-of-flight' and
+# 'constant wavelength' (WITH a space), cross-checked against the peak-type family per the
+# four-case matrix. The CW peak/instrument key sets replace (never extend) the TOF ones when the
+# peak type selects CW — a TOF key on a CW spec is rejected exactly as any other unknown key, and
+# vice versa — and each CW profile adds only its own keys.
 _TOF_PEAK_TYPES = frozenset({'tof-jorgensen', 'tof-jorgensen-von-dreele', 'tof-pseudo-voigt'})
 _CW_PEAK_TYPES = frozenset({
+    'cwl-gaussian',
+    'cwl-lorentzian',
     'cwl-pseudo-voigt',
-    'cwl-thompson-cox-hastings',  # Finger-Cox-Jephcoat
-    'cwl-pseudo-voigt-berar-baldinozzi-asymmetry',  # Berar-Baldinozzi
+    'cwl-pseudo-voigt-berar-baldinozzi',
+    'cwl-tch-pseudo-voigt',
+    'cwl-tch-pseudo-voigt-fcj',
 })
 _RESERVED_CW_PEAK_TYPES = frozenset()
-# The asymmetry keys a CW rung carries (the typed-family rule), and their defaults.
-_CW_ASYMMETRY_KEYS = {
-    'cwl-thompson-cox-hastings': {'asym_fcj_1': 0.0, 'asym_fcj_2': 0.0},
-    'cwl-pseudo-voigt-berar-baldinozzi-asymmetry': {
+# The keys each CW profile carries beyond U, V, W (the typed-family rule), and their defaults.
+_TCH_KEYS = {'broad_lorentz_x': 0.0, 'broad_lorentz_y': 0.0}
+_MIXING_KEYS = {'mixing_eta_0': 0.0, 'mixing_eta_1': 0.0}
+_CW_PROFILE_KEYS = {
+    'cwl-gaussian': {},
+    'cwl-lorentzian': {},
+    'cwl-pseudo-voigt': _MIXING_KEYS,
+    'cwl-pseudo-voigt-berar-baldinozzi': {
+        **_MIXING_KEYS,
         'asym_beba_a0': 0.0,
         'asym_beba_b0': 0.0,
         'asym_beba_a1': 0.0,
         'asym_beba_b1': 0.0,
         'asym_beba_limit': 180.0,
     },
+    'cwl-tch-pseudo-voigt': _TCH_KEYS,
+    'cwl-tch-pseudo-voigt-fcj': {**_TCH_KEYS, 'asym_fcj_1': 0.0, 'asym_fcj_2': 0.0},
 }
 _BEAM_MODE_TOF = 'time-of-flight'
 _BEAM_MODE_CW = 'constant wavelength'
@@ -629,8 +644,6 @@ _CW_PEAK_KEYS = frozenset({
     'broad_gauss_u',
     'broad_gauss_v',
     'broad_gauss_w',
-    'broad_lorentz_x',
-    'broad_lorentz_y',
 })
 _CW_INSTRUMENT_KEYS = frozenset({'setup_wavelength', 'calib_twotheta_offset'})
 # The optional CW line shifts — accepted from a spec, never engaged by default.
@@ -644,11 +657,12 @@ _XRAY_POLARIZATION_KEYS = frozenset({
 _PEAK_PROFILE_BY_TOKEN = {
     'tof-jorgensen': PeakProfileTypeEnum.TOF_JORGENSEN,
     'tof-jorgensen-von-dreele': PeakProfileTypeEnum.TOF_JORGENSEN_VON_DREELE,
+    'cwl-gaussian': PeakProfileTypeEnum.CWL_GAUSSIAN,
+    'cwl-lorentzian': PeakProfileTypeEnum.CWL_LORENTZIAN,
     'cwl-pseudo-voigt': PeakProfileTypeEnum.CWL_PSEUDO_VOIGT,
-    'cwl-thompson-cox-hastings': PeakProfileTypeEnum.CWL_THOMPSON_COX_HASTINGS,
-    'cwl-pseudo-voigt-berar-baldinozzi-asymmetry': (
-        PeakProfileTypeEnum.CWL_PSEUDO_VOIGT_BERAR_BALDINOZZI_ASYMMETRY
-    ),
+    'cwl-pseudo-voigt-berar-baldinozzi': PeakProfileTypeEnum.CWL_PSEUDO_VOIGT_BERAR_BALDINOZZI,
+    'cwl-tch-pseudo-voigt': PeakProfileTypeEnum.CWL_TCH_PSEUDO_VOIGT,
+    'cwl-tch-pseudo-voigt-fcj': PeakProfileTypeEnum.CWL_TCH_PSEUDO_VOIGT_FCJ,
     'tof-pseudo-voigt': PeakProfileTypeEnum.TOF_PSEUDO_VOIGT,
 }
 _BEAM_MODE_BY_TOKEN = {
@@ -784,10 +798,10 @@ def _cw_instrument_keys(experiment):
 
 
 def _engage_cw_members(experiment, peak_type):
-    """Engage a CW experiment's members at their defaults, its rung's asymmetry slots included."""
+    """Engage a CW experiment's members at their defaults, its profile's own slots included."""
     for member in sorted(_CW_PEAK_KEYS - {'type', 'cutoff_fwhm'}):
         setattr(experiment.peak, member, Parameter(0.0))
-    for member, default in _CW_ASYMMETRY_KEYS.get(peak_type, {}).items():
+    for member, default in _CW_PROFILE_KEYS.get(peak_type, _TCH_KEYS).items():
         setattr(experiment.peak, member, Parameter(default))
     for member in sorted(_CW_INSTRUMENT_KEYS):
         setattr(experiment.instrument, member, Parameter(0.0))
@@ -882,7 +896,7 @@ class ExperimentFactory:
     The dict grammar IS the object grammar — ``experiment_type`` / ``peak`` /
     ``instrument`` / ``linked_structure`` / ``background``, with the four experiment-type axes
     given as their verbatim tokens and ``peak.type`` selecting the key family
-    (``'cwl-pseudo-voigt'`` swaps in the CW peak/instrument key sets, which REPLACE the TOF
+    (a ``'cwl-*'`` profile swaps in the CW peak/instrument key sets, which REPLACE the TOF
     ones). No factory default frees a parameter; freeing one is the caller's act.
     """
 
@@ -1005,15 +1019,15 @@ class ExperimentFactory:
 
         The from-scratch starting point: the same fail-closed resolution as
         ``from_dict``. An omitted ``peak_type`` is derived from ``beam_mode`` —
-        ``'constant wavelength'`` selects the CW rung 0, anything else the historical
-        ``tof-jorgensen``. A CW experiment starts with all five CW peak parameters and both CW
+        ``'constant wavelength'`` selects the TCH pseudo-Voigt, anything else the historical
+        ``tof-jorgensen``. A CW experiment starts with its profile's peak parameters and both CW
         instrument parameters present, fixed at 0.
         """
         peak_spec = {}
         if peak_type:
             peak_spec['type'] = peak_type
         elif beam_mode == _BEAM_MODE_CW:
-            peak_spec['type'] = 'cwl-pseudo-voigt'
+            peak_spec['type'] = 'cwl-tch-pseudo-voigt'
         else:
             peak_spec['type'] = 'tof-jorgensen'
         type_spec = {'beam_mode': beam_mode} if beam_mode else {}
@@ -1059,10 +1073,10 @@ class ExperimentFactory:
         # The key family is selected by the peak type: CW replaces (never extends) the TOF sets,
         # so a TOF key on a CW spec is rejected exactly as any other unknown key, and vice versa.
         if is_cw:
-            asymmetry = _CW_ASYMMETRY_KEYS.get(peak_type, {})
-            peak_keys = _CW_PEAK_KEYS | set(asymmetry)
+            own = _CW_PROFILE_KEYS.get(peak_type, _TCH_KEYS)
+            peak_keys = _CW_PEAK_KEYS | set(own)
             instrument_keys = _cw_instrument_keys(experiment)
-            for member, default in asymmetry.items():  # the rung's own slots, at their defaults
+            for member, default in own.items():  # the profile's own slots, at their defaults
                 setattr(experiment.peak, member, Parameter(default))
         else:
             peak_keys, instrument_keys = _TOF_PEAK_KEYS, _TOF_INSTRUMENT_KEYS

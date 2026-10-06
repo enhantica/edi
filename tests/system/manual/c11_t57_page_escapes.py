@@ -69,7 +69,7 @@ def exercise(kind):
                         for key, value in data['peak'].items()
                         if not key.startswith('asym_')
                     }
-                    data['peak']['type'] = 'cwl-pseudo-voigt'
+                    data['peak']['type'] = 'cwl-tch-pseudo-voigt'
                 text = (
                     '\n'.join(
                         [line for line in lines if not line.startswith('_peak.')]

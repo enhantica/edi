@@ -157,74 +157,81 @@ std::optional<ResolvedParameter> resolve_instrument_label(ExperimentBase& experi
     if (const auto it = kRequired.find(label); it != kRequired.end()) {
         return ResolvedParameter{&it->second.first(experiment), path_prefix + it->second.second};
     }
-    using OptionalField = std::optional<Parameter>& (*)(ExperimentBase&);
+    using OptionalField = OptionalParameter& (*)(ExperimentBase&);
     static const std::map<std::string, std::pair<OptionalField, const char*>> kPresenceTracked{
         {"calib_twotheta_offset",
-         {+[](ExperimentBase& e) -> std::optional<Parameter>& { return e.instrument.calib_twotheta_offset; },
+         {+[](ExperimentBase& e) -> OptionalParameter& { return e.instrument.calib_twotheta_offset; },
           "instrument.calib_twotheta_offset"}},
         {"setup_wavelength",
-         {+[](ExperimentBase& e) -> std::optional<Parameter>& { return e.instrument.setup_wavelength; },
+         {+[](ExperimentBase& e) -> OptionalParameter& { return e.instrument.setup_wavelength; },
           "instrument.setup_wavelength"}},
         // The CW line shifts, crysta's instrument[2]/[3].
         {"calib_sample_displacement",
-         {+[](ExperimentBase& e) -> std::optional<Parameter>& { return e.instrument.calib_sample_displacement; },
+         {+[](ExperimentBase& e) -> OptionalParameter& { return e.instrument.calib_sample_displacement; },
           "instrument.calib_sample_displacement"}},
         {"calib_sample_transparency",
-         {+[](ExperimentBase& e) -> std::optional<Parameter>& { return e.instrument.calib_sample_transparency; },
+         {+[](ExperimentBase& e) -> OptionalParameter& { return e.instrument.calib_sample_transparency; },
           "instrument.calib_sample_transparency"}},
         // The X-ray monochromator polarization, crysta's instrument[4]/[5].
         {"setup_polarization_coefficient",
-         {+[](ExperimentBase& e) -> std::optional<Parameter>& { return e.instrument.setup_polarization_coefficient; },
+         {+[](ExperimentBase& e) -> OptionalParameter& { return e.instrument.setup_polarization_coefficient; },
           "instrument.setup_polarization_coefficient"}},
         {"setup_monochromator_twotheta",
-         {+[](ExperimentBase& e) -> std::optional<Parameter>& { return e.instrument.setup_monochromator_twotheta; },
+         {+[](ExperimentBase& e) -> OptionalParameter& { return e.instrument.setup_monochromator_twotheta; },
           "instrument.setup_monochromator_twotheta"}},
         {"broad_gauss_u",
-         {+[](ExperimentBase& e) -> std::optional<Parameter>& { return e.peak.broad_gauss_u; },
+         {+[](ExperimentBase& e) -> OptionalParameter& { return e.peak.broad_gauss_u; },
           "peak.broad_gauss_u"}},
         {"broad_gauss_v",
-         {+[](ExperimentBase& e) -> std::optional<Parameter>& { return e.peak.broad_gauss_v; },
+         {+[](ExperimentBase& e) -> OptionalParameter& { return e.peak.broad_gauss_v; },
           "peak.broad_gauss_v"}},
         {"broad_gauss_w",
-         {+[](ExperimentBase& e) -> std::optional<Parameter>& { return e.peak.broad_gauss_w; },
+         {+[](ExperimentBase& e) -> OptionalParameter& { return e.peak.broad_gauss_w; },
           "peak.broad_gauss_w"}},
         {"broad_lorentz_x",
-         {+[](ExperimentBase& e) -> std::optional<Parameter>& { return e.peak.broad_lorentz_x; },
+         {+[](ExperimentBase& e) -> OptionalParameter& { return e.peak.broad_lorentz_x; },
           "peak.broad_lorentz_x"}},
         {"broad_lorentz_y",
-         {+[](ExperimentBase& e) -> std::optional<Parameter>& { return e.peak.broad_lorentz_y; },
+         {+[](ExperimentBase& e) -> OptionalParameter& { return e.peak.broad_lorentz_y; },
           "peak.broad_lorentz_y"}},
+        // The pseudo-Voigt mixing, present only on the profiles that carry it.
+        {"mixing_eta_0",
+         {+[](ExperimentBase& e) -> OptionalParameter& { return e.peak.mixing_eta_0; },
+          "peak.mixing_eta_0"}},
+        {"mixing_eta_1",
+         {+[](ExperimentBase& e) -> OptionalParameter& { return e.peak.mixing_eta_1; },
+          "peak.mixing_eta_1"}},
         // The CW asymmetry coefficients, present only on the rung that carries them.
         {"asym_fcj_1",
-         {+[](ExperimentBase& e) -> std::optional<Parameter>& { return e.peak.asym_fcj_1; },
+         {+[](ExperimentBase& e) -> OptionalParameter& { return e.peak.asym_fcj_1; },
           "peak.asym_fcj_1"}},
         {"asym_fcj_2",
-         {+[](ExperimentBase& e) -> std::optional<Parameter>& { return e.peak.asym_fcj_2; },
+         {+[](ExperimentBase& e) -> OptionalParameter& { return e.peak.asym_fcj_2; },
           "peak.asym_fcj_2"}},
         {"asym_beba_a0",
-         {+[](ExperimentBase& e) -> std::optional<Parameter>& { return e.peak.asym_beba_a0; },
+         {+[](ExperimentBase& e) -> OptionalParameter& { return e.peak.asym_beba_a0; },
           "peak.asym_beba_a0"}},
         {"asym_beba_b0",
-         {+[](ExperimentBase& e) -> std::optional<Parameter>& { return e.peak.asym_beba_b0; },
+         {+[](ExperimentBase& e) -> OptionalParameter& { return e.peak.asym_beba_b0; },
           "peak.asym_beba_b0"}},
         {"asym_beba_a1",
-         {+[](ExperimentBase& e) -> std::optional<Parameter>& { return e.peak.asym_beba_a1; },
+         {+[](ExperimentBase& e) -> OptionalParameter& { return e.peak.asym_beba_a1; },
           "peak.asym_beba_a1"}},
         {"asym_beba_b1",
-         {+[](ExperimentBase& e) -> std::optional<Parameter>& { return e.peak.asym_beba_b1; },
+         {+[](ExperimentBase& e) -> OptionalParameter& { return e.peak.asym_beba_b1; },
           "peak.asym_beba_b1"}},
         {"asym_beba_limit",
-         {+[](ExperimentBase& e) -> std::optional<Parameter>& { return e.peak.asym_beba_limit; },
+         {+[](ExperimentBase& e) -> OptionalParameter& { return e.peak.asym_beba_limit; },
           "peak.asym_beba_limit"}},
         {"abscor1",
-         {+[](ExperimentBase& e) -> std::optional<Parameter>& { return e.absorption.abscor1; },
+         {+[](ExperimentBase& e) -> OptionalParameter& { return e.absorption.abscor1; },
           "absorption.abscor1"}},
         {"mu_r",
-         {+[](ExperimentBase& e) -> std::optional<Parameter>& { return e.absorption.mu_r; },
+         {+[](ExperimentBase& e) -> OptionalParameter& { return e.absorption.mu_r; },
           "absorption.mu_r"}},
     };
     if (const auto it = kPresenceTracked.find(label); it != kPresenceTracked.end()) {
-        std::optional<Parameter>& field = it->second.first(experiment);
+        OptionalParameter& field = it->second.first(experiment);
         if (!field) return std::nullopt;
         return ResolvedParameter{&*field, path_prefix + it->second.second};
     }
@@ -486,7 +493,7 @@ std::vector<ParameterEntry> parameter_entries(Project& project) {
             for (std::size_t i = 0; i < category.fields.size(); ++i) {
                 const CategoryField& field = category.fields[i];
                 ParameterEntry entry{field.parameter, "", "structure", structure->name, category.id, "", field.name,
-                                     field.refinable};
+                                     field.refinable, field.fittable};
                 const std::string root = detail::structure_root(project, *structure);
                 if (category.id == "atom_site") {
                     entry.row_label = structure->atom_sites[i / 5]->id;
@@ -511,7 +518,7 @@ std::vector<ParameterEntry> parameter_entries(Project& project) {
             for (std::size_t i = 0; i < fields.size(); ++i) {
                 const CategoryField& field = fields[i];
                 ParameterEntry entry{field.parameter, "", "experiment", experiment->name, category.id, "", field.name,
-                                     field.refinable};
+                                     field.refinable, field.fittable};
                 std::string label = field.name;
                 std::string spelled = prefix + category.id + "." + field.name;
                 if (category.id == "background") {

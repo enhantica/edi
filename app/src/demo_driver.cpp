@@ -73,7 +73,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"17-experiment-profile-selector", QStringList{"choose:OK"}  // close the Preferences dialog
                                                             + open_example("pd-neut-cwl_lbco-hrpt_start-2")
                                                             + QStringList{experiment, basic, "group.peak", "peak.type"}});
-    steps_.push_back({"18-experiment-tch", {"choose:cwl-thompson-cox-hastings"}});
+    steps_.push_back({"18-experiment-tch", {"choose:Thompson–Cox–Hastings pseudo-Voigt (TCH) + Finger–Cox–Jephcoat asymmetry (FCJ)"}});
     steps_.push_back({"19-experiment-extras", {extras}});
     steps_.push_back({"20-experiment-tof", open_example("pd-neut-tof_si-sepd_start-2")
                                                + QStringList{experiment, basic, "group.peak"}});

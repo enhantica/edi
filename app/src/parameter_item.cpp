@@ -59,6 +59,7 @@ ParameterItem::ParameterItem(const edi::ParameterEntry& entry, ProjectEditor& ed
       uncertainty_(entry.parameter->uncertainty),
       free_(entry.parameter->free),
       refinable_(entry.refinable),
+      fittable_(entry.fittable),
       path_(QString::fromStdString(entry.path)),
       block_kind_(QString::fromStdString(entry.block_kind)),
       block_name_(QString::fromStdString(entry.block_name)),
@@ -73,6 +74,12 @@ ParameterItem::ParameterItem(const edi::ParameterEntry& entry, ProjectEditor& ed
     short_name_ = spec != nullptr ? plain_symbol(spec->latex_name) : QString();
     if (short_name_.isEmpty()) {
         short_name_ = display_name_;
+    }
+    // The FCJ asymmetry under FullProf's names (owner, 2026-10-06); its spec keeps diffraction-lib's.
+    if (spec == &edi::spec::peak_asym_fcj_1) {
+        short_name_ = QStringLiteral("S/L");
+    } else if (spec == &edi::spec::peak_asym_fcj_2) {
+        short_name_ = QStringLiteral("D/L");
     }
     minimum_ = spec != nullptr ? spec->range.min : -std::numeric_limits<double>::infinity();
     maximum_ = spec != nullptr ? spec->range.max : std::numeric_limits<double>::infinity();
@@ -125,6 +132,10 @@ void ParameterItem::setValue(double value) {
 void ParameterItem::setFree(bool free) {
     if (!refinable_) {
         setLastError(symmetry_refusal());
+        return;
+    }
+    if (!fittable_) {
+        setLastError(tr("this is a fixed setting, never fitted"));
         return;
     }
     edi::Parameter* parameter = parameter_;

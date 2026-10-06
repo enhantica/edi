@@ -51,7 +51,7 @@ def _project_path() -> Path:
     structure_text = '\n'.join(item.read_text(encoding='utf-8') for item in structures)
     experiment_text = '\n'.join(item.read_text(encoding='utf-8') for item in experiments)
     assert (
-        '_peak.type cwl-pseudo-voigt' in experiment_text
+        '_peak.type cwl-tch-pseudo-voigt' in experiment_text
         and '_instrument.setup_wavelength 1.494' in experiment_text
         and all(
             re.search(rf'^\s*{label}\s+{label}\s+', structure_text, re.MULTILINE)
@@ -116,7 +116,7 @@ def test_c11_t19_project_loads_complete_with_ruled_free_profile_shape() -> None:
     data = project.experiment.data
     assert data is not None
     assert len(data.two_theta) == len(data.intensity_meas) == len(data.intensity_meas_su) == 3098
-    assert project.experiment.peak.type == edi.PeakProfileTypeEnum.CWL_PSEUDO_VOIGT, (
+    assert project.experiment.peak.type == edi.PeakProfileTypeEnum.CWL_TCH_PSEUDO_VOIGT, (
         'the CW project must retain its exact peak selector'
     )
     assert float(project.experiment.instrument.setup_wavelength.value) == 1.494

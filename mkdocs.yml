@@ -78,6 +78,7 @@ nav:
           - dev/verification/pd-neut-cwl_LaB6_fcj-asymmetry.ipynb
           - dev/verification/pd-neut-cwl_PbSO4_basic.ipynb
           - dev/verification/pd-neut-cwl_PbSO4_beba-asymmetry.ipynb
+          - dev/verification/pd-neut-cwl_YAP_multiphase.ipynb
           - dev/verification/pd-neut-cwl_Y2O3_isotropic-adp.ipynb
           - dev/verification/pd-neut-cwl_cosio-d20_biso-tied.ipynb
           - dev/verification/pd-neut-tof_Fe_pseudo-voigt.ipynb
@@ -111,6 +112,7 @@ nav:
           - user/cli/pd-neut-tof_si-sepd_start-5/index.md
           - user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/index.md
           - user/cli/pd-neut-cwl_pbso4_beba-asymmetry/index.md
+          - user/cli/pd-neut-cwl_yap-spodi_3k/index.md
           - user/cli/pd-neut-tof_fe_pseudo-voigt/index.md
           - user/cli/pd-neut-tof_cecoal-polaris_chebyshev/index.md
           - user/cli/pd-neut-tof_ceo2-pearl_polynomial/index.md

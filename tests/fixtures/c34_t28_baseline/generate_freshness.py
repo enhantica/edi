@@ -14,6 +14,8 @@ import shutil
 import tempfile
 from pathlib import Path
 
+from tests.fixtures.cwl_family.historical import original_tokens
+
 from .generate_bytes import BASE, PACKAGE, corpus_root, hashes, require_baseline_closure
 
 HERE = Path(__file__).resolve().parent
@@ -47,7 +49,9 @@ if PACKAGE == 'edi':
 
 def input_hashes(directory):
     return {
-        p.relative_to(directory).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
+        p.relative_to(directory).as_posix(): hashlib.sha256(
+            original_tokens(p.read_bytes())
+        ).hexdigest()
         for p in sorted(directory.rglob('*'))
         if p.is_file()
     }

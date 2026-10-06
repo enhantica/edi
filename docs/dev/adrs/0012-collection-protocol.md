@@ -10,6 +10,11 @@ keeps its upsert semantics.
 **Amended:** a detached item is observably detached. Its parameters'
 `is_attached()` is false and their Python handles refuse writes, as crysta's row handles do (§1).
 
+**Amended:** an optional parameter of a one-row category (a peak profile slot, an instrument shift, an absorption
+coefficient) has the same lifetime. It lives in its own cell (`OptionalParameter`), and clearing it, by a profile
+switch or by assigning `None`, keeps the cell detached for as long as its category lives: a handle to it keeps its
+last values and refuses writes, and never reaches a parameter engaged later in the same field.
+
 **Amended ([ADR-0018](0018-one-column-table-for-every-category.md)):** a collection is a table. A collection
 stores the cells of its items in typed value columns (ADR-0018 §1), and an item keeps a read image of its cells,
 which a reference to a cell names. While a collection holds the item, each write to one of its cells also writes
