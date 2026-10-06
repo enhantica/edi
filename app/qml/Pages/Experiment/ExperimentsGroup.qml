@@ -251,6 +251,7 @@ EaElements.GroupBox {
             group.webRequest = WebFiles.openFiles(group.dataFilter, false);
         } else {
             dataDialog.experimentIndex = index;
+            dataDialog.project = group.project;
             dataDialog.open();
         }
     }
@@ -298,11 +299,19 @@ EaElements.GroupBox {
         onAccepted: group.project.loadExperiments(selectedFiles)
     }
 
+    // The dialog's answer goes to the experiment and the project it was opened for, and only while that project
+    // is still the open one.
     FileDialog {
         id: dataDialog
         property int experimentIndex: -1
+        property var project: null
         title: qsTr("Load measured data from a plain two- or three-column file")
         nameFilters: [qsTr("Data files (*.xye *.xy *.dat *.txt *.csv)"), qsTr("All files (*)")]
-        onAccepted: group.project.loadData(dataDialog.experimentIndex, dataDialog.selectedFile)
+        onAccepted: {
+            if (dataDialog.project !== null && dataDialog.project === group.project)
+                group.project.loadData(dataDialog.experimentIndex, dataDialog.selectedFile);
+            dataDialog.project = null;
+        }
+        onRejected: dataDialog.project = null
     }
 }
