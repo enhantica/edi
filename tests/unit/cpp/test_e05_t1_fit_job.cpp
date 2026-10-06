@@ -56,7 +56,7 @@ edi::Project small(const std::string& mode = "single") {
     experiment.linked_structure().scale.value = 1.0;
     experiment.instrument.setup_wavelength.emplace();
     experiment.instrument.setup_wavelength->value = 1.54;
-    experiment.peak.type = "cwl-pseudo-voigt";
+    experiment.peak.type = "cwl-tch-pseudo-voigt";
     experiment.peak.broad_gauss_u.emplace();
     experiment.peak.broad_gauss_u->value = 0;
     experiment.peak.broad_gauss_v.emplace();

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import copy
 import json
 import re
 import shlex
@@ -13,6 +14,7 @@ from typing import Any
 
 import jupytext
 import nbstripout
+import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
 VERIFICATION = ROOT / 'docs/dev/verification'
@@ -42,6 +44,7 @@ PAGES = {
 }
 # ADR-0078's independent tied fit and fixed twin extend the historical CW corpus.
 RELATION_PAGES = {'pd-neut-cwl_cosio-d20_biso-tied': 'pd-neut-cwl_cosio-d20_biso-tied'}
+EXTENSION_PAGES = {'pd-neut-cwl_YAP_multiphase': 'pd-neut-cwl_yap-spodi_3k'}
 
 
 def _run(
@@ -194,13 +197,19 @@ def _assert_calculated_candidate_flow(page: str, tree: ast.Module) -> None:
             for loop in ast.walk(tree)
             if isinstance(loop, ast.For) and any(node is binding for node in ast.walk(loop))
         ]
-        assert len(loops) == 1 and isinstance(loops[0].target, ast.Name), (
-            f'{page}: calculated candidate must have one enclosing bank iteration'
-        )
-        loop = loops[0]
+        if page == 'pd-neut-cwl_YAP_multiphase':
+            assert not loops, f'{page}: calculated candidate selects one declared bank'
+            body = tree.body
+            selected = ast.parse("project.experiments['spodi']", mode='eval').body
+        else:
+            assert len(loops) == 1 and isinstance(loops[0].target, ast.Name), (
+                f'{page}: calculated candidate must have one enclosing bank iteration'
+            )
+            body = loops[0].body
+            selected = ast.parse(f'project.experiments[{loops[0].target.id}]', mode='eval').body
         selections = [
             node
-            for node in loop.body
+            for node in body
             if isinstance(node, ast.Assign)
             and node.lineno < binding.lineno
             and any(
@@ -208,7 +217,6 @@ def _assert_calculated_candidate_flow(page: str, tree: ast.Module) -> None:
                 for target in node.targets
             )
         ]
-        selected = ast.parse(f'project.experiments[{loop.target.id}]', mode='eval').body
         assert len(selections) == 1 and ast.dump(selections[0].value) == ast.dump(selected), (
             f'{page}: calculated candidate must select the current project bank'
         )
@@ -232,6 +240,32 @@ def _assert_fullprof_reference_flow(  # noqa: PLR0914
     page: str, tree: ast.Module
 ) -> None:
     _assert_calculated_candidate_flow(page, tree)
+    if page == 'pd-neut-cwl_YAP_multiphase':
+        # This page names its included reference once; validate the exact provenance
+        # before expanding the alias for the same comparison-flow predicates.
+        aliases = [
+            node
+            for node in tree.body
+            if isinstance(node, ast.Assign)
+            and any(
+                isinstance(target, ast.Name) and target.id == 'reference'
+                for target in node.targets
+            )
+        ]
+        expected = ast.parse(
+            'verify.restrict_to_included(experiment, calc_fullprof)', mode='eval'
+        ).body
+        assert len(aliases) == 1 and ast.dump(aliases[0].value) == ast.dump(expected), (
+            'YAP reference must consume the loaded FullProf profile and the selected bank'
+        )
+        tree = copy.deepcopy(tree)
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.Name)
+                and node.id == 'reference'
+                and isinstance(node.ctx, ast.Load)
+            ):
+                node.id = 'calc_fullprof'
     expected_reference_candidates = {'calc_ed_crysta'}
     expected_cross_pairs: set[tuple[frozenset[str], frozenset[str]]] = set()
     if page == 'pd-neut-cwl_LaB6_absorption':
@@ -302,11 +336,16 @@ def _assert_fullprof_reference_flow(  # noqa: PLR0914
         triple = triples[0]
         reference = triple.elts[1]
         candidate = triple.elts[2]
+        validated_alias = (
+            page == 'pd-neut-cwl_YAP_multiphase'
+            and isinstance(reference, ast.Name)
+            and reference.id == 'calc_fullprof'
+        )
         if (
             isinstance(reference, ast.Call)
             and _call_name(reference) == 'verify.restrict_to_included'
             and 'calc_fullprof' in _names(reference)
-        ):
+        ) or validated_alias:
             candidate_names = _names(candidate)
             assert len(candidate_names) == 1, (
                 f'{page}: every FullProf assertion must name exactly one seeded candidate'
@@ -323,7 +362,12 @@ def _assert_fullprof_reference_flow(  # noqa: PLR0914
 
 
 def test_verification_sources_generate_stripped_notebooks_on_demand() -> None:
-    pages = set(PAGES) | set(RELATION_PAGES) | {'pd-neut-tof_ferrite-austenite_beer_joint'}
+    pages = (
+        set(PAGES)
+        | set(RELATION_PAGES)
+        | set(EXTENSION_PAGES)
+        | {'pd-neut-tof_ferrite-austenite_beer_joint'}
+    )
     expected_sources = {f'{page}.py' for page in pages}
     expected_notebooks = {f'{page}.ipynb' for page in pages}
     actual_sources = {path.name for path in VERIFICATION.glob('*.py')}
@@ -369,7 +413,7 @@ def test_verification_sources_generate_stripped_notebooks_on_demand() -> None:
         'every derived verification notebook must be ignored until generated on demand'
     )
 
-    for page in sorted(PAGES | RELATION_PAGES):
+    for page in sorted(PAGES | RELATION_PAGES | EXTENSION_PAGES):
         notebook = jupytext.read(VERIFICATION / f'{page}.py', fmt='py:percent')
         code_cells = [cell for cell in notebook.cells if cell.cell_type == 'code']
         assert code_cells, f'{page}.ipynb must generate executable cells'
@@ -396,7 +440,7 @@ def test_verification_sources_generate_stripped_notebooks_on_demand() -> None:
 def test_fullprof_files_resolve_and_feed_every_page_comparison() -> None:
     tracked = set(_run('git', 'ls-files').stdout.splitlines())
 
-    for page, expected_project in (PAGES | RELATION_PAGES).items():
+    for page, expected_project in (PAGES | RELATION_PAGES | EXTENSION_PAGES).items():
         source_path = VERIFICATION / f'{page}.py'
         tree = ast.parse(source_path.read_text(), filename=str(source_path))
         _assert_reference_files(page, expected_project, tree, tracked)
@@ -517,3 +561,24 @@ def test_ci_runs_notebooks_for_every_result_changing_surface() -> None:
     positions = [docs_job.find(command) for command in commands]
     assert all(position >= 0 for position in positions)
     assert positions == sorted(positions), 'docs must prepare, execute, then render notebooks'
+
+
+@pytest.mark.parametrize('escape', ['candidate-oracle', 'reference-candidate', 'other-bank'])
+def test_owner_added_bank_flow_refuses_wrong_reference_or_candidate(escape):
+    page = 'pd-neut-cwl_YAP_multiphase'
+    tree = ast.parse((VERIFICATION / (page + '.py')).read_text())
+    _assert_fullprof_reference_flow(page, tree)
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Assign) or len(node.targets) != 1:
+            continue
+        target = node.targets[0]
+        if not isinstance(target, ast.Name):
+            continue
+        if escape == 'candidate-oracle' and target.id == 'calc_ed_crysta':
+            node.value.args[1] = ast.Name(id='calc_fullprof', ctx=ast.Load())
+        elif escape == 'reference-candidate' and target.id == 'reference':
+            node.value.args[1] = ast.Name(id='calc_ed_crysta', ctx=ast.Load())
+        elif escape == 'other-bank' and target.id == 'experiment':
+            node.value = ast.parse("other.experiments['spodi']", mode='eval').body
+    with pytest.raises(AssertionError, match=r'calculated candidate|YAP reference'):
+        _assert_fullprof_reference_flow(page, tree)

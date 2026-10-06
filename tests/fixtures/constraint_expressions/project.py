@@ -90,7 +90,7 @@ _experiment_type.sample_form powder
 _experiment_type.radiation_probe neutron
 _experiment_type.scattering_type bragg
 _experiment_type.beam_mode "constant wavelength"
-_peak.type cwl-pseudo-voigt
+_peak.type cwl-tch-pseudo-voigt
 _peak.broad_gauss_u 0
 _peak.broad_gauss_v 0
 _peak.broad_gauss_w 0.15
@@ -107,3 +107,11 @@ phase {0 if polynomial else 1}
 {background}
 {data}""")
     return root
+
+
+def unlink_structure(project, name):
+    """profile contract: remove links before exercising the structure's legal exit."""
+    for experiment in project.experiments:
+        for link in list(experiment.linked_structures):
+            if link.structure_id == name:
+                experiment.linked_structures.remove(name)

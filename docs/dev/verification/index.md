@@ -17,7 +17,7 @@ produced by edi or crysta.
 ### Co2SiO4 structure
 
 - [pd-neut-cwl CoSiO Biso tied](pd-neut-cwl_cosio-d20_biso-tied.ipynb) –
-  **pseudo-Voigt** profile on the D20 pattern at 497 K, first as FullProf's
+  **TCH pseudo-Voigt** profile on the D20 pattern at 497 K, first as FullProf's
   converged fit with every parameter fixed, then fitted from FullProf's
   start with the **constraint** `biso_Co2 = biso_Co1` (FullProf ties the two
   with a shared codeword): both Biso come out equal and within five combined
@@ -26,7 +26,7 @@ produced by edi or crysta.
 ### LaB6 structure
 
 - [pd-neut-cwl LaB6 basic](pd-neut-cwl_LaB6_basic.ipynb) –
-  **pseudo-Voigt** profile, natural boron, no correction models
+  **TCH pseudo-Voigt** profile, natural boron, no correction models
   (FullProf "Npr=7" baseline).
 - [pd-neut-cwl LaB6 11B](pd-neut-cwl_LaB6_11B.ipynb) – the baseline
   pattern with the **11B isotope** (b_c = 6.65 fm from the `.pcr`'s
@@ -37,12 +37,12 @@ produced by edi or crysta.
   pointwise application comparison, both held against FullProf.
 - [pd-neut-cwl LaB6 FCJ asymmetry](pd-neut-cwl_LaB6_fcj-asymmetry.ipynb) –
   **TCH pseudo-Voigt ⊗ Finger-Cox-Jephcoat axial-divergence asymmetry**
-  (`cwl-thompson-cox-hastings`, S/L = D/L = 0.08).
+  (`cwl-tch-pseudo-voigt-fcj`, S/L = D/L = 0.08).
 
 ### LBCO structure
 
 - [pd-neut-cwl LBCO basic](pd-neut-cwl_LBCO_basic.ipynb) –
-  **pseudo-Voigt** profile with mixed La/Ba site occupancies and no
+  **TCH pseudo-Voigt** profile with mixed La/Ba site occupancies and no
   correction models.
 - [pd-neut-cwl LBCO preferred orientation](pd-neut-cwl_LBCO_preferred-orientation.ipynb)
   – the basic pattern with **March–Dollase preferred orientation**
@@ -52,19 +52,26 @@ produced by edi or crysta.
 ### PbSO4 structure
 
 - [pd-neut-cwl PbSO4 basic](pd-neut-cwl_PbSO4_basic.ipynb) –
-  **pseudo-Voigt** profile on the **orthorhombic Pnma** cell (all
+  **TCH pseudo-Voigt** profile on the **orthorhombic Pnma** cell (all
   three cell edges independent — the corpus's first non-cubic CW
   page), no correction models.
 - [pd-neut-cwl PbSO4 Bérar-Baldinozzi asymmetry](pd-neut-cwl_PbSO4_beba-asymmetry.ipynb)
-  – **pseudo-Voigt × Bérar-Baldinozzi asymmetry** against **cryspy**
-  (unfitted), and against FullProf only through diffraction-lib issue
-  166's inferred coefficient map or after an asymmetry-only fit, all at
-  one 180° limit angle.
+  – **pseudo-Voigt × Bérar-Baldinozzi asymmetry** (FullProf's Npr 5), its
+  widths, mixing and coefficients fitted to FullProf's TCH profile at one
+  180° limit angle. Since 2026-10-05 it no longer uses diffraction-lib's
+  model, so it no longer counts toward parity.
+
+### YAlO3 and Al2O3, two phases
+
+- [pd-neut-cwl YAP multiphase](pd-neut-cwl_YAP_multiphase.ipynb) – **two
+  phases summed** in one pattern, YAlO3 and corundum (`R -3 c`), with the
+  **pseudo-Voigt × Bérar-Baldinozzi asymmetry** (FullProf's Npr 5) shared by
+  both, against the owner's FullProf project at its own parameters.
 
 ### Y2O3 structure
 
 - [pd-neut-cwl Y2O3 isotropic ADPs](pd-neut-cwl_Y2O3_isotropic-adp.ipynb)
-  – pure-Gaussian **pseudo-Voigt** profile with isotropic ADPs and
+  – pure-Gaussian **TCH pseudo-Voigt** profile with isotropic ADPs and
   excluded regions.
 
 ## Powder, X-ray, Constant Wavelength
@@ -72,7 +79,7 @@ produced by edi or crysta.
 ### LiF structure
 
 - [pd-xray-cwl LiF single](pd-xray-cwl_LiF_single.ipynb) – Cu Kα₁
-  **pseudo-Voigt** baseline with no polarization or absorption, the scattering
+  **TCH pseudo-Voigt** baseline with no polarization or absorption, the scattering
   sources declared as FullProf-comparable (`it1992` f₀, `sasaki1989`
   dispersion).
 - [pd-xray-cwl LiF single polarization](pd-xray-cwl_LiF_single_polarization.ipynb)
@@ -98,8 +105,8 @@ produced by edi or crysta.
 ### Ferrite and austenite, two phases
 
 - [pd-neut-tof ferrite and austenite, BEER joint](pd-neut-tof_ferrite-austenite_beer_joint.ipynb) –
-  **two phases summed** in each of two banks, calculated and fitted jointly; no reference
-  comparison yet (the owner's FullProf project comes with shared-parameter constraints).
+  **two phases summed** in each of two banks, calculated and fitted jointly, one B iso shared by
+  both Fe sites as in the owner's FullProf project.
 
 ### NCAF structure
 

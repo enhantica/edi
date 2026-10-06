@@ -36,6 +36,8 @@ TestCase {
         verify(appWindow !== null, "gate 2: production Main loads under the actual registered module");
     }
     function init() {
+        // The alphabetically first actor opens a measured project and encounters
+        // Qt Graphs' one-time GLES2 context probe on the software host.
         failOnWarning(qtest_results.functionName === "test_add_requires_explicit_complete_experiment_type"
             ? /\A(?!QRhiGles2: Failed to create (?:temporary context|context)\z)[\s\S]*\z/ : /.*/);
         Probe.clearWatches();
@@ -49,7 +51,10 @@ TestCase {
         appWindow.destroy();
     }
     function open(path) {
-        Session.openProject(Probe.repoUrl(path));
+        const url = path.startsWith("tests/fixtures/")
+            ? Qt.resolvedUrl("../../fixtures/" + path.slice("tests/fixtures/".length))
+            : Probe.repoUrl(path);
+        Session.openProject(url);
         verify(Session.hasProject, "gate 3: committed project loads: " + path + " " + Session.lastError);
         return Session.project;
     }
@@ -104,7 +109,8 @@ TestCase {
             categories(structure.categories, [["space_group", "Basic"], ["cell", "Basic"], ["atom_site", "Basic"], ["atom_site_aniso", "Basic"], ["scattering_length", "Extras"]]);
             //  owner-confirmed ADR-0017 §3: Measured data is Extras;
             // Background precedes Instrument. All other membership/order stays exact.
-            const expCategories = [["experiment_type", "Basic"], ["data", "Extras"], ["background", "Basic"], ["instrument", "Basic"], ["peak", "Basic"], ["excluded_region", "Basic"], ["linked_structure", "Basic"], ["absorption", "Extras"]];
+            // ADR-0017 section 2 places type controls in the Experiments explorer.
+            const expCategories = [["data", "Extras"], ["background", "Basic"], ["instrument", "Basic"], ["peak", "Basic"], ["excluded_region", "Basic"], ["linked_structure", "Basic"], ["absorption", "Extras"]];
             if (i !== 1)
                 expCategories.push(["preferred_orientation", "Extras"]);
             expCategories.push(["scattering_source", "Extras"]);
@@ -190,8 +196,11 @@ TestCase {
             const wanted = expected.peakFields.concat(expected.unusedFreeFields);
             ordered(peakRows.map(r => r.parameter.name).sort(), wanted.slice().sort(), "I15: no inert storage fields, no hidden free parameters");
             peakRows.forEach(row => {
-                const frozen = expected.scalars["_peak." + row.parameter.name];
-                verify(frozen !== undefined, "I7: displayed peak field has an independent fixture value: " + expected.id + ":" + row.parameter.name);
+                const frozen = expected.scalars["_peak." + row.parameter.name]
+                    || expected.peakDefaults[row.parameter.name];
+                verify(frozen !== undefined,
+                       "Every displayed peak field has a saved input or declared neutral default: "
+                       + expected.project + " " + expected.experiment + " " + row.parameter.name);
                 compare(row.parameter.value, frozen.value, "I7: displayed value equals project text");
                 compare(row.parameter.free, frozen.free, "I7: displayed free flag equals bracket rule");
                 compare(row.usedByProfile, !expected.unusedFreeFields.includes(row.parameter.name), "I15: unused free storage is explicitly marked");
@@ -212,9 +221,15 @@ TestCase {
             }
             const prefix = expected.mode === "cwl" ? "cwl-" : "tof-";
             ordered(tokens(experiment.peakTypeOptions).sort(), Object.keys(Oracle.frozen.profiles).filter(p => p.startsWith(prefix)).sort(), "I17: exactly independently declared profiles for this loaded experiment type");
-            ordered(tokens(experiment.backgroundTypeOptions), ["line-segment", "chebyshev", "polynomial"], "C13-T6: background selector offers all three declared families");
+            ordered(tokens(experiment.backgroundTypeOptions), ["line-segment", "chebyshev", "polynomial"], "The background selector offers exactly the independently declared computable families");
             ordered(tokens(project.analysis.minimizerTypeOptions), ["crysta"], "I17: minimizer selector offers exactly the supported engine");
-            ordered(tokens(project.analysis.fittingModeOptions).sort(), ["independent", "joint", "sequential", "single"], "I17: fitting mode selector offers exactly the declared vocabulary");
+            const declaration = Oracle.frozen.projects.find(p => p.path === expected.project);
+            const scanDeclared = declaration !== undefined
+                && declaration.analysis["_sequential_fit.data_dir"] !== undefined;
+            const modes = scanDeclared ? ["independent", "sequential", "single"]
+                                       : ["independent", "joint", "sequential", "single"];
+            ordered(tokens(project.analysis.fittingModeOptions).sort(), modes,
+                    "The app offers joint only for inputs without a declared scan");
             ordered(tokens(experiment.absorptionTypeOptions).sort(), (expected.mode === "cwl" ? ["none", "cylinder-hewat", "cylinder-lobanov"] : ["none", "cylinder"]).sort(), "I17: exactly the beam-scoped absorption families");
             compare(experiment.beamModeToken, expected.mode === "cwl" ? "constant wavelength" : "time-of-flight", "seam 7: spaced token and effective undeclared beam mode");
         });
@@ -314,22 +329,30 @@ TestCase {
         let project = example(0);
         let exp = project.currentExperiment;
         const originalText = exp.text.text;
+        const originalProfile = exp.peakType;
         const before = rows(exp.peak).map(r => [r.parameter.name, r.parameter.value, r.parameter.free]);
-        exp.peakType = "cwl-thompson-cox-hastings";
+        exp.peakType = "cwl-tch-pseudo-voigt-fcj";
         ordered(fieldNames(exp.peakAsymmetry), ["asym_fcj_1", "asym_fcj_2"], "I17: FCJ fields engage");
         rows(exp.peakAsymmetry).forEach(r => {
             compare(r.parameter.value, 0, "I17: new FCJ field uses loader default");
             verify(!r.parameter.free, "I17: new FCJ field starts fixed");
         });
-        exp.peakType = "cwl-pseudo-voigt-berar-baldinozzi-asymmetry";
+        exp.peakType = originalProfile;
+        ordered(rows(exp.peak).map(r => [r.parameter.name, r.parameter.value, r.parameter.free]), before, "I17: the TCH and FCJ round trip retains every shared value and free flag");
+        tryVerify(() => exp.text.text.includes("_data.intensity_calc"), 5000, "I17: returning to TCH republishes its calculated writer text");
+        compare(exp.text.text, originalText, "I17: the TCH and FCJ round trip restores Experiment Text byte for byte");
+        exp.peakType = "cwl-pseudo-voigt-berar-baldinozzi";
         ordered(fieldNames(exp.peakAsymmetry), Oracle.frozen.profiles[exp.peakType].slice(5), "I17: BeBa replaces FCJ");
         compare(rows(exp.peakAsymmetry)[4].parameter.value, 180, "I17: BeBa limit loader default");
         verify(!exp.text.text.includes("_peak.asym_fcj_"), "I17: disengaged fields disappear from persisted Text");
-        exp.peakType = "cwl-pseudo-voigt";
-        ordered(rows(exp.peak).map(r => [r.parameter.name, r.parameter.value, r.parameter.free]), before, "I17 D-j: profile switches retain shared values and free flags");
+        // Crysta ADR-0080 section 4 reshapes each family to its owned slots.
+        // BeBa shares Caglioti U/V/W; TCH X/Y are removed and newly defaulted.
+        exp.peakType = originalProfile;
+        ordered(rows(exp.peak).slice(0, 3).map(r => [r.parameter.name, r.parameter.value, r.parameter.free]), before.slice(0, 3), "I17 D-j: BeBa and TCH retain their shared Caglioti values and free flags");
+        ordered(fieldNames(exp.peak), Oracle.frozen.profiles[originalProfile], "I17: returning to TCH restores exactly its own parameter slots");
+        verify(!exp.text.text.includes("_peak.mixing_eta_"), "I17: returning to TCH removes the pseudo-Voigt-only mixing slots");
         verify(!exp.text.text.includes("_data.intensity_calc"), "I17: the returned profile is stale until its queued recalculation publishes");
         tryVerify(() => exp.text.text.includes("_data.intensity_calc"), 5000, "I17: the queued recalculation republishes the computed experiment text");
-        compare(exp.text.text, originalText, "I17: profile round trip restores Experiment Text byte for byte");
         ["none", "cylinder-lobanov", "cylinder-hewat"].forEach(token => {
             exp.absorptionType = token;
             ordered(fieldNames(exp.absorption), token === "none" ? [] : ["mu_r"], "I17: absorption switches shown fields");
@@ -541,9 +564,9 @@ TestCase {
             });
             click("appBar.tab.experiment");
             click("sideBar.tab.basic");
-            Ui.expandGroup(test, Probe, appWindow, "group.experiment_type");
+            Ui.expandGroup(test, Probe, appWindow, "group.experiments");
             ["sampleForm", "beamMode", "radiationProbe", "scatteringType"].forEach(axis => {
-                tryVerify(() => visibleControl("experimentType." + axis) !== null, 2000, "owner seq 2: each immutable axis is exposed after group expansion: " + axis);
+                tryVerify(() => visibleControl("experimentType." + axis) !== null, 2000, "owner seq 2: each immutable axis is exposed in the Experiments explorer: " + axis);
                 const control = visibleControl("experimentType." + axis);
                 verify(control !== null, "owner seq 2: experiment axis is a visible combo box: " + axis);
                 verify(!control.enabled, "owner seq 2: loaded experiment type cannot be edited: " + axis);

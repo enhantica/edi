@@ -29,6 +29,9 @@ class ExperimentViewModel : public QObject {
     QML_ELEMENT
     QML_UNCREATABLE("Belongs to a project")
     Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged)
+    // How the project's last fit ended on this experiment (FitOutcomes key; empty when it fitted none): set by
+    // the project, which knows which experiments a fit took part.
+    Q_PROPERTY(QString fitOutcome READ fitOutcome NOTIFY fitOutcomeChanged)
     Q_PROPERTY(SampleForm sampleForm READ sampleForm CONSTANT)
     Q_PROPERTY(BeamMode beamMode READ beamMode CONSTANT)
     Q_PROPERTY(RadiationProbe radiationProbe READ radiationProbe CONSTANT)
@@ -85,6 +88,11 @@ class ExperimentViewModel : public QObject {
                         ProjectEditor& editor, ParameterRegistry& registry, QObject* parent);
 
     QString name() const { return name_; }
+    QString fitOutcome() const { return fit_outcome_; }
+    void setFitOutcome(const QString& outcome);
+    // The calculation grid of an experiment without measured data (edi::Edit::data_range): its start,
+    // end and step; refused, with `lastError`, for one with data.
+    Q_INVOKABLE void setRange(double start, double end, double step);
     void setName(const QString& name);
     SampleForm sampleForm() const;
     BeamMode beamMode() const;
@@ -146,6 +154,7 @@ class ExperimentViewModel : public QObject {
 
    signals:
     void nameChanged();
+    void fitOutcomeChanged();
     void peakTypeChanged();
     void absorptionTypeChanged();
     void cutoffFwhmChanged();
@@ -164,7 +173,7 @@ class ExperimentViewModel : public QObject {
     edi::ExperimentBase& experiment_;
     ProjectEditor& editor_;
     ParameterRegistry& registry_;
-    QString name_, peak_type_, absorption_type_, linked_structure_id_, last_error_;
+    QString name_, peak_type_, absorption_type_, linked_structure_id_, last_error_, fit_outcome_;
     double cutoff_fwhm_ = 0.0, dataset_weight_ = 1.0;
     OptionListModel* peak_type_options_;
     OptionListModel* absorption_type_options_;

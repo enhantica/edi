@@ -62,7 +62,7 @@ inline void capture_holders(Measurements& out, bool dependants = true) {
                  held = 20.0;
              }},
             {"cutoff-changed", [](auto& p) { p.cutoff_fwhm = 27.5; }},
-            {"selector-engage", [](auto& p) { p.type = "cwl-pseudo-voigt"; }},
+            {"selector-engage", [](auto& p) { p.type = "cwl-tch-pseudo-voigt"; }},
             {"parameter-engage", [](auto& p) { p.broad_gauss_u = edi::Parameter(0.137); }},
         });
     holder_routes(

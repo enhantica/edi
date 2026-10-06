@@ -17,7 +17,7 @@ inline std::string calculation_text(const std::string& structure) {
            "_experiment_type.beam_mode \"constant wavelength\"\n"
            "_experiment_type.radiation_probe neutron\n"
            "_experiment_type.scattering_type bragg\n_calculator.type crysta\n"
-           "_peak.type cwl-pseudo-voigt\n_peak.broad_gauss_u 0\n"
+           "_peak.type cwl-tch-pseudo-voigt\n_peak.broad_gauss_u 0\n"
            "_peak.broad_gauss_v 0\n_peak.broad_gauss_w 0.1\n"
            "_peak.broad_lorentz_x 0\n_peak.broad_lorentz_y 0\n_peak.cutoff_fwhm 12\n"
            "_instrument.setup_wavelength 1.54\n_instrument.calib_twotheta_offset 0\n"

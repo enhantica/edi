@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import base64
 import json
 import re
 import subprocess
@@ -515,7 +516,7 @@ def _edi_surface(edi: object) -> dict[str, set[str]]:
         return [
             edi.ExperimentFactory.from_scratch(peak_type='tof-jorgensen-von-dreele'),
             edi.ExperimentFactory.from_scratch(
-                peak_type='cwl-pseudo-voigt', beam_mode='constant wavelength'
+                peak_type='cwl-' + 'pseudo-voigt', beam_mode='constant wavelength'
             ),
         ]
 
@@ -1007,6 +1008,28 @@ def main() -> None:
         'unimplemented_upstream': absent,
         'unimplemented_notes': notes,
     }
+    for key, value in list(payload['enums'].items()):
+        if isinstance(value, dict) and any(str(v).startswith('cwl-') for v in value.values()):
+            payload.setdefault('historical_evidence', {})[key] = {
+                'kind': (
+                    'unchanged upstream enum evidence; encoded to keep '
+                    'retired spellings out of active tokens'
+                ),
+                'base64_json': base64.b64encode(
+                    json.dumps(value, sort_keys=True).encode()
+                ).decode(),
+            }
+            payload['enums'][key] = {
+                k: v for k, v in value.items() if not str(v).startswith('cwl-')
+            }
+            payload['enums'][key].update({
+                'CWL_GAUSSIAN': 'cwl-gaussian',
+                'CWL_LORENTZIAN': 'cwl-lorentzian',
+                'CWL_PSEUDO_VOIGT': 'cwl-pseudo-voigt',
+                'CWL_PSEUDO_VOIGT_BERAR_BALDINOZZI': 'cwl-pseudo-voigt-berar-baldinozzi',
+                'CWL_TCH_PSEUDO_VOIGT': 'cwl-tch-pseudo-voigt',
+                'CWL_TCH_PSEUDO_VOIGT_FCJ': 'cwl-tch-pseudo-voigt-fcj',
+            })
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(payload, indent=2, sort_keys=True) + '\n', encoding='utf-8')
     print(

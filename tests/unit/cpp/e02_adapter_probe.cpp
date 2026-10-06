@@ -46,10 +46,11 @@ void require_absorption_uses_public_value_cache_behavior(const edi::Project& sou
     experiment.absorption.abscor2 = edi::Parameter(0.0);
     experiment.absorption.type = "cylinder";
     experiment.peak.type = "tof-jorgensen-von-dreele";
-    crysta::Structure structure(edi::detail::to_crysta_cell(source.structure().cell),
-                                crysta::resolve_space_group(
-                                    source.structure().space_group.name_h_m),
-                                edi::detail::to_crysta_atom_sites(source.structure().atom_sites));
+    crysta::Structure structure(
+        edi::detail::to_crysta_cell(source.structure().cell),
+        crysta::resolve_space_group(source.structure().space_group.name_h_m),
+        edi::detail::to_crysta_atom_sites(source.structure().atom_sites));
+    structure.name = source.structure().name.value();
     crysta::Project project(std::move(structure), edi::detail::to_crysta_experiment(experiment));
     const crysta::NeutronScattering scattering =
         source.structure().scattering_lengths_fm.empty()
@@ -58,7 +59,7 @@ void require_absorption_uses_public_value_cache_behavior(const edi::Project& sou
     std::vector<double> grid(257);
     for (std::size_t i = 0; i < grid.size(); ++i) {
         grid[i] = 18000.0 + (76000.0 - 18000.0) * static_cast<double>(i) /
-                               static_cast<double>(grid.size() - 1);
+                                static_cast<double>(grid.size() - 1);
     }
     crysta::CachedForwardModel forward(project, scattering, grid,
                                        experiment.instrument.setup_twotheta_bank.value,
@@ -68,7 +69,8 @@ void require_absorption_uses_public_value_cache_behavior(const edi::Project& sou
     const std::uint64_t stamp_before = maximum_stamp(forward.structural_clocks());
     project.experiment().absorption.at(0).set_value(0.05);
     const std::uint64_t stamp_after = maximum_stamp(forward.structural_clocks());
-    require(stamp_after == stamp_before, "absorption must not click a value-cache structural stamp");
+    require(stamp_after == stamp_before,
+            "absorption must not click a value-cache structural stamp");
     const auto changed = forward.evaluate();
     require(forward.rebuilds() == 1, "absorption must add zero value-cache rebuilds");
     double maximum_relative_change = 0.0;
@@ -176,6 +178,7 @@ int main(int argc, char** argv) {
     auto linked = std::make_shared<edi::LinkedStructure>();
     linked->structure_id = "probe";
     linked->scale = {1.7, 0.18, false};
+    experiment.linked_structures.clear();
     experiment.linked_structures.push_back(std::move(linked));
     experiment.instrument.setup_twotheta_bank.value = 137.2;
     experiment.peak.cutoff_fwhm = 17.5;

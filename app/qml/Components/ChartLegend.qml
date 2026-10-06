@@ -18,9 +18,11 @@ Rectangle {
     // The name in the series' colour too, as a chart's legend shows it; the structure view's legend colours only
     // the mark, as a pale element colour (Ce, S) cannot be read on the view's background.
     property bool labelInColor: true
+    // The box is at least this tall, its rows centred in it (the structure legend: a toolbar control's height).
+    property real minimumHeight: 0
 
     width: column.width
-    height: column.height
+    height: Math.max(column.height, minimumHeight)
     color: EaStyle.Colors.mainContentBackgroundHalfTransparent
     border.color: EaStyle.Colors.chartGridLine
     border.width: EaStyle.Sizes.borderThickness
@@ -28,6 +30,7 @@ Rectangle {
     Column {
         id: column
 
+        anchors.verticalCenter: parent.verticalCenter
         leftPadding: EaStyle.Sizes.fontPixelSize
         rightPadding: EaStyle.Sizes.fontPixelSize
         topPadding: EaStyle.Sizes.fontPixelSize * 0.5

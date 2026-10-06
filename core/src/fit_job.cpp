@@ -2,6 +2,8 @@
 #include "edi/fit_job.hpp"
 
 #include <atomic>
+#include <filesystem>
+#include <fstream>
 #include <exception>
 #include <map>
 #include <stdexcept>
@@ -11,8 +13,10 @@
 #include <utility>
 
 #include "edi/calculation.hpp"
+#include "edi/categories.hpp"
 #include "edi/io.hpp"
 #include "edi/parameter_walk.hpp"
+#include "edi/scan.hpp"
 #include "edi/selectors.hpp"
 
 namespace edi {
@@ -62,11 +66,13 @@ struct Outcome {
     std::shared_ptr<Project> fitted;
     std::optional<FitResultBase> result;
     std::string refusal;
+    bool scan = false;
 };
 
 // Worker thread: the project's own fit entry for its mode, as the CLI's fit takes it (edi.Analysis.fit).
 FitResultBase fit_by_mode(Project& project, const IterationCallback& on_iteration, const PreambleCallback& on_start,
-                          const CancelCallback& should_cancel) {
+                          const CancelCallback& should_cancel, const ScanStartCallback& on_scan_start,
+                          const FileCompleteCallback& on_file_complete) {
     const std::string mode = effective_fitting_mode(project);
     if (mode == "single") {
         return project.fit(on_iteration, on_start, should_cancel);
@@ -74,8 +80,14 @@ FitResultBase fit_by_mode(Project& project, const IterationCallback& on_iteratio
     if (mode == "joint") {
         return project.fit_joint(on_iteration, on_start, should_cancel);
     }
-    throw std::invalid_argument("Start fitting runs the single and joint fitting modes; this project's is '" + mode +
-                                "'");
+    if (mode == "sequential") {
+        return project.fit_sequential({}, {}, on_scan_start, on_file_complete, should_cancel);
+    }
+    if (mode == "independent") {
+        return project.fit_independent({}, {}, on_scan_start, on_file_complete, should_cancel);
+    }
+    throw std::invalid_argument("Start fitting runs the single, joint, sequential and independent fitting modes; this "
+                                "project's is '" + mode + "'");
 }
 
 // Worker thread: `values` (identity path -> value) written onto the preview copy, its symmetry completed
@@ -108,6 +120,52 @@ FitFrame frame_of(Project& preview, const std::map<std::string, double>& values)
     }
     return frame;
 }
+// Worker thread: the scan's file just fitted, drawn on the preview copy: its measured data from the file, every
+// parameter at the values of the row the driver appended for it (the event's own cells, never the file's moving
+// tail), the pattern calculated. `header` is read from results.csv once. Empty when anything refuses.
+FitFrame scan_frame_of(Project& preview, const std::string& directory, const ScanFileRecord& record,
+                       std::vector<std::string>& header) {
+    FitFrame frame;
+    try {
+        if (header.empty()) {
+            std::ifstream input(std::filesystem::path(preview.path) / "analysis" / "results.csv");
+            std::string line;
+            if (!std::getline(input, line)) {
+                return {};
+            }
+            std::stringstream cells(line);
+            for (std::string cell; std::getline(cells, cell, ',');) {
+                header.push_back(cell);
+            }
+        }
+        if (record.cells.size() != header.size()) {
+            return {};
+        }
+        std::map<std::string, std::size_t> column;
+        for (std::size_t i = 0; i < header.size(); ++i) {
+            column.emplace(header[i], i);
+        }
+        for (const NamedSlot& slot : named_slots(preview)) {
+            const auto found = column.find(scan_results_column(slot.unique_name));
+            double value = 0.0;
+            if (found != column.end()) {
+                if (!parse_scan_number(record.cells[found->second], value)) {
+                    return {};
+                }
+                slot.parameter->value = value;
+            }
+        }
+        preview.experiment().data =
+            read_scan_dataset(directory, record.file_name, preview.experiment().effective_beam_mode());
+        preview.experiment().calculation_only = false;
+        apply_relations(preview);
+        preview.calculate();
+        frame.push_back(capture_pattern(preview, 0));
+    } catch (const std::exception&) {
+        return {};
+    }
+    return frame;
+}
 }  // namespace
 
 // Shared with the job and the deliveries on their way, so a delivery that arrives after the FitJob is
@@ -124,6 +182,8 @@ struct FitJob::State {
     work::Ticket ticket = 0;  // the running fit's job, or 0
     // Set by the owner when it has shown a frame, cleared by the worker when it emits one.
     std::atomic<bool> frame_wanted{true};
+    // A scan draws each file it fits (Follow).
+    std::atomic<bool> following{true};
 
     // Owner thread: the fit has ended. The live project takes its result only if nothing it depends on
     // was written since the snapshot; then the fitted parameters and the fitted pattern, together.
@@ -143,6 +203,9 @@ struct FitJob::State {
         } else if (report.result->status == FitStatus::ERROR) {
             report.status = FitStatus::ERROR;
             report.refusal = "the fit failed: crysta reported an error";
+        } else if (outcome.scan) {
+            // The scan's results are the rows on disk; the template is left as it was.
+            report.status = report.result->status;
         } else if (!unchanged_since(self->live, outcome.stamps) ||
                    inputs_of(self->live) != outcome.inputs ||
                    !copy_parameter_states(self->live, *outcome.fitted)) {
@@ -170,11 +233,12 @@ FitJob::~FitJob() {
     }
 }
 
-bool FitJob::start() {
+bool FitJob::start(const Project* scan_template) {
     if (state_->ticket != 0) {
         return false;
     }
-    auto snapshot = std::make_shared<WorkSnapshot>(snapshot_for_work(state_->live));
+    auto snapshot =
+        std::make_shared<WorkSnapshot>(snapshot_for_work(scan_template != nullptr ? *scan_template : state_->live));
     auto inputs = std::make_shared<FitInputs>(inputs_of(state_->live));
     state_->frame_wanted.store(true, std::memory_order_release);
     const std::shared_ptr<State> self = state_;
@@ -183,10 +247,21 @@ bool FitJob::start() {
             auto outcome = std::make_shared<Outcome>();
             outcome->stamps = snapshot->stamps;
             outcome->inputs = *inputs;
-            // The frames are drawn on a second copy, so the fit's own copy is touched by the fit alone.
+            outcome->scan = is_scan_fitting_mode(effective_fitting_mode(snapshot->project));
+            // The frames are drawn on a second copy, so the fit's own copy is touched by the fit alone. A scan
+            // fits other files' data than the template's, so it draws none.
             std::shared_ptr<Project> preview;
-            if (self->hooks.frame) {
+            if ((self->hooks.frame && !outcome->scan) || (self->hooks.file_frame && outcome->scan)) {
                 preview = std::make_shared<Project>(snapshot->project);
+            }
+            // The scan's data directory, resolved once, for the files it draws.
+            std::string directory;
+            if (outcome->scan && preview) {
+                try {
+                    directory = scan_datasets(snapshot->project).directory;
+                } catch (const std::exception&) {
+                    preview.reset();
+                }
             }
             const PreambleCallback on_start = [&self, &emit](const FitPreamble& preamble) {
                 emit([self, preamble] {
@@ -213,6 +288,34 @@ bool FitJob::start() {
                     }
                 }
             };
+            const ScanStartCallback on_scan_start = [&self, &emit](const ScanPreamble& preamble) {
+                emit([self, preamble] {
+                    if (self->open && self->hooks.scan_started) {
+                        self->hooks.scan_started(preamble);
+                    }
+                });
+            };
+            std::vector<std::string> header;
+            const FileCompleteCallback on_file_complete = [&self, &emit, &preview, &directory,
+                                                           &header](const ScanFileRecord& record) {
+                emit([self, record] {
+                    if (self->open && self->hooks.file_completed) {
+                        self->hooks.file_completed(record);
+                    }
+                });
+                if (preview && self->following.load(std::memory_order_acquire) &&
+                    self->frame_wanted.load(std::memory_order_acquire)) {
+                    FitFrame frame = scan_frame_of(*preview, directory, record, header);
+                    if (!frame.empty()) {
+                        self->frame_wanted.store(false, std::memory_order_release);
+                        emit([self, file = record.file_name, frame = std::move(frame)] {
+                            if (self->open && self->hooks.file_frame) {
+                                self->hooks.file_frame(file, frame);
+                            }
+                        });
+                    }
+                }
+            };
             int polls = 0;
             const CancelCallback should_cancel = [&self, &token, &polls] {
                 ++polls;
@@ -222,7 +325,8 @@ bool FitJob::start() {
                 return token.cancelled();
             };
             try {
-                outcome->result = fit_by_mode(snapshot->project, on_iteration, on_start, should_cancel);
+                outcome->result = fit_by_mode(snapshot->project, on_iteration, on_start, should_cancel, on_scan_start,
+                                              on_file_complete);
                 outcome->fitted = std::shared_ptr<Project>(snapshot, &snapshot->project);
             } catch (const std::exception& refusal) {
                 outcome->refusal = refusal.what();
@@ -241,6 +345,8 @@ void FitJob::cancel() {
 }
 
 void FitJob::frame_shown() { state_->frame_wanted.store(true, std::memory_order_release); }
+
+void FitJob::follow(bool on) { state_->following.store(on, std::memory_order_release); }
 
 bool FitJob::running() const noexcept { return state_->ticket != 0; }
 

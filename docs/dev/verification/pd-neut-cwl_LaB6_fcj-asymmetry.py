@@ -2,7 +2,7 @@
 # # LaB6 — powder neutron CW — FCJ asymmetry
 #
 # Verifies the LaB6 baseline with only the **Finger-Cox-Jephcoat axial-divergence
-# asymmetry** enabled (`cwl-thompson-cox-hastings`, `S_L` = `D_L` = 0.08 — the FullProf
+# asymmetry** enabled (`cwl-tch-pseudo-voigt-fcj`, `S_L` = `D_L` = 0.08 — the FullProf
 # reference's own values, fixed, as nothing fits them).
 #
 # **The kernel follows FullProf's own library.** The TCH pseudo-Voigt core is convolved with
@@ -97,7 +97,7 @@ experiment = ExperimentFactory.from_cif_str(f"""data_lab6
 _edi.schema_version 3
 _experiment_type.beam_mode "constant wavelength"
 _scattering_source.neutron_scattering_length sears1992
-_peak.type cwl-thompson-cox-hastings
+_peak.type cwl-tch-pseudo-voigt-fcj
 _peak.cutoff_fwhm {FULLPROF_WDT}
 _peak.broad_gauss_u {FULLPROF_U}
 _peak.broad_gauss_v {FULLPROF_V}

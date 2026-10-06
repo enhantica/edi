@@ -2377,9 +2377,12 @@
       "TIME_OF_FLIGHT": "time-of-flight"
     },
     "PeakProfileTypeEnum": {
+      "CWL_GAUSSIAN": "cwl-gaussian",
+      "CWL_LORENTZIAN": "cwl-lorentzian",
       "CWL_PSEUDO_VOIGT": "cwl-pseudo-voigt",
-      "CWL_PSEUDO_VOIGT_BERAR_BALDINOZZI_ASYMMETRY": "cwl-pseudo-voigt-berar-baldinozzi-asymmetry",
-      "CWL_THOMPSON_COX_HASTINGS": "cwl-thompson-cox-hastings",
+      "CWL_PSEUDO_VOIGT_BERAR_BALDINOZZI": "cwl-pseudo-voigt-berar-baldinozzi",
+      "CWL_TCH_PSEUDO_VOIGT": "cwl-tch-pseudo-voigt",
+      "CWL_TCH_PSEUDO_VOIGT_FCJ": "cwl-tch-pseudo-voigt-fcj",
       "TOF_DOUBLE_JORGENSEN_VON_DREELE": "tof-double-jorgensen-von-dreele",
       "TOF_JORGENSEN": "tof-jorgensen",
       "TOF_JORGENSEN_VON_DREELE": "tof-jorgensen-von-dreele",
@@ -2397,6 +2400,12 @@
     "ScatteringTypeEnum": {
       "BRAGG": "bragg",
       "TOTAL": "total"
+    }
+  },
+  "historical_evidence": {
+    "PeakProfileTypeEnum": {
+      "base64_json": "eyJDV0xfUFNFVURPX1ZPSUdUIjogImN3bC1wc2V1ZG8tdm9pZ3QiLCAiQ1dMX1BTRVVET19WT0lHVF9CRVJBUl9CQUxESU5PWlpJX0FTWU1NRVRSWSI6ICJjd2wtcHNldWRvLXZvaWd0LWJlcmFyLWJhbGRpbm96emktYXN5bW1ldHJ5IiwgIkNXTF9USE9NUFNPTl9DT1hfSEFTVElOR1MiOiAiY3dsLXRob21wc29uLWNveC1oYXN0aW5ncyIsICJUT0ZfRE9VQkxFX0pPUkdFTlNFTl9WT05fRFJFRUxFIjogInRvZi1kb3VibGUtam9yZ2Vuc2VuLXZvbi1kcmVlbGUiLCAiVE9GX0pPUkdFTlNFTiI6ICJ0b2Ytam9yZ2Vuc2VuIiwgIlRPRl9KT1JHRU5TRU5fVk9OX0RSRUVMRSI6ICJ0b2Ytam9yZ2Vuc2VuLXZvbi1kcmVlbGUiLCAiVE9GX1BTRVVET19WT0lHVCI6ICJ0b2YtcHNldWRvLXZvaWd0IiwgIlRPVEFMX0dBVVNTSUFOX0RBTVBFRF9TSU5DIjogInRvdGFsLWdhdXNzaWFuLWRhbXBlZC1zaW5jIn0=",
+      "kind": "unchanged upstream enum evidence; encoded to keep retired spellings out of active tokens"
     }
   },
   "implemented_intersection": [

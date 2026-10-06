@@ -12,7 +12,7 @@ namespace edi_app {
 
 // The options one selector offers: always the core's supported set for the block's type, never a
 // list written in the app. Roles `token` (the verbatim `.edi` token),
-// `label` (what the combo shows) and `isDefault`.
+// `label` (what the combo shows: the core's label for the token, else the token) and `isDefault`.
 class OptionListModel : public QAbstractListModel {
     Q_OBJECT
     QML_ELEMENT
@@ -24,8 +24,10 @@ class OptionListModel : public QAbstractListModel {
 
     explicit OptionListModel(QObject* parent = nullptr);
 
-    // Replace the options; the first is the default unless `default_token` names another.
-    void setOptions(const std::vector<std::string>& tokens, const std::string& default_token = {});
+    // Replace the options; the first is the default unless `default_token` names another, and
+    // `labels`, when given, is what the combo shows for each token in order.
+    void setOptions(const std::vector<std::string>& tokens, const std::string& default_token = {},
+                    const std::vector<std::string>& labels = {});
     int count() const { return static_cast<int>(tokens_.size()); }
     Q_INVOKABLE int indexOf(const QString& token) const { return static_cast<int>(tokens_.indexOf(token)); }
     Q_INVOKABLE QString tokenAt(int row) const { return row >= 0 && row < tokens_.size() ? tokens_.at(row) : QString(); }
@@ -39,6 +41,7 @@ class OptionListModel : public QAbstractListModel {
 
    private:
     QStringList tokens_;
+    QStringList labels_;
     QString default_token_;
 };
 

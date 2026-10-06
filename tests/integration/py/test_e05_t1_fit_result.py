@@ -74,7 +74,7 @@ def projection(case):
         'covariance_available': 'true',
         'exit_reason': record['status'],
         'prof_wr_factor': record['rwp'],
-        'profile_function': 'cwl-thompson-cox-hastings',
+        'profile_function': 'cwl-tch-pseudo-voigt-fcj',
         'background_function': declared_background(case),
     }
 

@@ -15,6 +15,8 @@ Item {
     property string icon: ""
     property string iconColor: ""
     property string toolTip: ""
+    // Drawn as a hollow circle instead of the icon (IconLine's `ring`).
+    property bool ring: false
 
     width: EaStyle.Sizes.tableRowHeight
     height: parent ? parent.height : EaStyle.Sizes.tableRowHeight
@@ -24,7 +26,9 @@ Item {
         segments: [
             {
                 "icon": cell.icon,
-                "color": cell.iconColor
+                "color": cell.iconColor,
+                "ring": cell.ring,
+                "slot": cell.ring
             }
         ]
     }

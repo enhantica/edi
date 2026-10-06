@@ -21,8 +21,9 @@ WorkflowPage {
     pageName: "report"
     defaultInfo: project ? "" : qsTr("No summary generated")
     mainTabs: [
-        EaElements.TabButton {
+        IconTabButton {
             objectName: "mainArea.report.tab.summary"
+            // The view's name, text only (edi ADR-0017 §2).
             text: qsTr("Summary")
         }
     ]

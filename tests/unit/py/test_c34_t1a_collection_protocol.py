@@ -11,6 +11,8 @@ from pathlib import Path
 import edi
 import pytest
 
+from tests.fixtures.constraint_expressions.project import unlink_structure
+
 ROOT = Path(__file__).resolve().parents[3]
 PROJECT = ROOT / 'tests/fixtures/e02_t2_ncaf_5bank/project'
 KEYED_KINDS = ('structures', 'experiments', 'atom_sites')
@@ -35,7 +37,7 @@ def _collection(project: edi.Project, kind: str) -> object:
     if kind == 'experiments':
         return project.experiments
     if kind == 'atom_sites':
-        return project.structure.atom_sites
+        return project.structures['ncaf'].atom_sites
     raise AssertionError(f' fixture named an unknown keyed collection kind: {kind}')
 
 
@@ -421,6 +423,8 @@ def test_c34_t1a_held_items_and_leaves_survive_every_collection_mutator(kind: st
         else held.adp_iso
     )
     assert held_leaf.is_attached(), f' live {kind} leaf must report attached'
+    if kind == 'structures':
+        unlink_structure(project, held_key)
     collection.remove(held_key)
     assert not held_leaf.is_attached(), f' removed {kind} leaf must report detached'
     with pytest.raises(RuntimeError, match='detached'):

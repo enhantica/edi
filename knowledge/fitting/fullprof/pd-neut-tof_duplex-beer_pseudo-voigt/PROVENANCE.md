@@ -1,9 +1,9 @@
-# BEER duplex FullProf archive, inactive
+# BEER duplex FullProf archive
 
 Owner-supplied BEER duplex project: ferrite and austenite, two neutron
-TOF banks at 90 degrees, Npr 7 pseudo-Voigt. This archive is INACTIVE: no
-test, fitting-corpus entry or verification page compares against it. It will
-be activated only when shared site-parameter constraints are available.
+TOF banks at 90 degrees, Npr 7 pseudo-Voigt. The CLI project
+`docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint` reproduces it, and
+the FullProf agreement tests compare its fit with this archive's `.sum`.
 
 FullProf.2k 8.40 (Feb2026-ILL JRC). Executable: `~/Applications/fullprof/fp2k`.
 One authoring-time invocation, in the fitting home:
@@ -19,8 +19,7 @@ The fully occupied austenite Fe site is 4a of F m -3 m: 4/192 = 1/48.
 Both owner Occ values are 0.02083, their five-decimal representation of 1/48;
 this is not a partial physical occupancy. No occupancy or scale was restated.
 Both Fe Biso parameters share code 81 in the fitting input and `.new`.
-That shared parameter constraint must be preserved when verification is
-activated; this archive does not activate it.
+The CLI project keeps that tie as a constraint, `biso_austenite = biso_ferrite`.
 
 SHA256 proves both owner data files byte-identical to the existing measured
 BEER data under `tests/fixtures/multiphase/beer/data/`. Both homes link to that

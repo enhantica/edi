@@ -53,18 +53,22 @@ The decisions it rests on, unchanged here:
 
 ### 2. The main area and the Experiment type group
 
-- **Main-area tab names** are the current block's icon and name, no word (ideas 6–8, then idea 23): Project
-  page the `archive` icon (the app bar's Project icon) in the tab's own text colour — a project has no
-  datablock colour, so the icon follows the tab's active and inactive colour as its text does — then the
-  project's name; Structure page the structure's `layer-group` icon in its colour (§8) and its name; Experiment
-  page the experiment's `microscope` icon in its colour and its name. With no block the tab reads the plain
-  word `Project`, `Structure` or `Experiment`, without an icon: an icon alone would not say what the empty tab
-  is. `Components/IconTabButton.qml` is the base's `TabButton` with its content drawn as one icon line (§10).
-  Analysis keeps `Fitting`.
-- **Experiment type** shows its type axes as a grid **three wide**, filled row by row — sample form, beam mode,
-  probe on the first row; scattering type on the second — so each name fits and two further axes have their
-  places (idea 14). Each box is `(sideBarContentWidth − 2 × fieldSpacing) / 3` wide; the rows are
-  `groupContentSpacing` apart.
+- **Main-area tab names name the view** (owner, 2026-10-05; until then they were the current block's icon and name,
+  ideas 6–8 and 23): **Project** on Project, **Structure** on Structure, **Pattern** on Experiment and Analysis (Analysis
+  had *Fitting*), **Summary** on Report; the Analysis tabs read Pattern, Evolution and, later, Correlations. The block
+  is named by the selector row above the view (§7). **Every tab is text only** (owner, 2026-10-05), in the main view
+  and the sidebar alike. `Components/IconTabButton.qml` is the base's `TabButton` with its content drawn as one icon
+  line (§10); without an icon it draws the name alone.
+- **Experiment type** sits in the Experiments explorer, between its table and its buttons (owner, 2026-10-05), and
+  has no sidebar group of its own. It shows the selected experiment's type axes as a grid **three wide**, filled
+  row by row: sample form, beam mode and probe on the first row; scattering type, dimensionality and
+  polarization on the second. Each box is `(sideBarContentWidth − 2 × fieldSpacing) / 3` wide; the rows are
+  `groupContentSpacing` apart. The four axes can be changed while the experiment has no measured data and are
+  fixed once it has. A change makes the experiment again with the new type, keeping its name, its linked
+  structure and, within one beam mode, its range. Dimensionality (1D) and polarization (None, shown for a
+  neutron probe only) are placeholders, disabled until implemented (§4).
+- **The sidebar tabs** read **Main · Extra · Text** (owner, 2026-10-05). Code keys them by a stable id
+  (`sideBar.tab.basic`, `sideBar.tab.extras`, `sideBar.tab.text`), never by the label.
 
 ### 3. Sidebar groups: titles, which one opens, borders
 
@@ -103,9 +107,9 @@ The decisions it rests on, unchanged here:
   | `fit_parameter` | **Fit start values** (was *Fit start state*) | ✓ | `history` |
 
   The block lists keep theirs: `Structures (N)` (`layer-group`) and `Experiments (N)` (`microscope`).
-- **All foldable groups start folded** (owner, 2026-09-29), on every page and tab: the block lists
-  (Structures, Experiments) and every category. **The one exception is Get started** on Project → Basic, which
-  starts open, as the first thing a new user needs (the owner, 2026-09-29). Idea 10 (the top group of Basic and Extras open by
+- **All foldable groups start folded** (owner, 2026-09-29), on every page and tab: every category. **The
+  exceptions are Get started** on Project → Main, which starts open, as the first thing a new user needs (the
+  owner, 2026-09-29), **and the block lists** (Structures, Experiments), open at the start (owner, 2026-10-05). Idea 10 (the top group of Basic and Extras open by
   default) is **withdrawn**, and with it the block lists' reopening for each new project. The base's
   auto-collapse is kept: opening a group folds the others on its tab. Groups that cannot fold — the shared
   block selector (§7), the untitled Analysis Parameters and Fitting groups, the Text tab's groups — are not
@@ -132,9 +136,10 @@ The decisions it rests on, unchanged here:
 A button easydiffractionbeta had, or the owner asks for, whose function edi does not have yet, is **shown and
 disabled** rather than left out, so the layout is final:
 
-- **Define structure manually** beside **Load structure from file** in Structures, and **Define experiment
-  manually** beside **Load experiment(s) from file(s)** in Experiments — two half-width buttons in a row, the
-  second with the `plus-circle` icon, as easydiffractionbeta's (idea 13).
+- **Define structure manually** beside **Load structure from file** in Structures, two half-width buttons in a
+  row, the second with the `plus-circle` icon, as easydiffractionbeta's (idea 13). Experiments has **Load
+  experiment** and **Create experiment** in the same places (§18).
+- **Load data…** in the File cell of an experiment without data, until plain data files load (§18).
 - **Reset to autodetected background** beside **Append new point** in Background, `undo-alt` icon
   (idea 17).
 - **Open project from URL…** in Project → Basic → Get started, `link` icon (the owner, 2026-09-29, idea
@@ -205,29 +210,32 @@ and `stepMaximum`.
 
 ### 7. The block selector and the Text tab
 
-- **One block selector per sidebar** on the Structure and Experiment pages (idea 9): a compact combo box one
-  sidebar content wide (`Components/BlockSelector.qml`, `objectName` `sideBar.blocks`) whose every line reads
-  as easydiffractionbeta's Text-tab selector — the block's number (minor colour), its icon in its colour (§8),
-  its name — under the sidebar's Basic / Extras / Text tab bar and above every tab's content, always shown and
-  never folded. It lists the page's blocks with the current one shown; choosing one makes it current on every
-  tab and in the block table. It sits one font unit under the tab bar, at the groups' left padding. The base's
-  `SideBar` has no place for such an item, so `WorkflowPage` makes it a child of the `SideBar`, placed under
-  the tab bar, and moves the top of the base's tab view down below it (a binding on the view's
-  `anchors.topMargin`) — one widget, not one per tab, and the base unmodified.
+- **One block selector per page, in a row at the top of the main area** (owner, 2026-10-05; it was under the
+  sidebar's tab bar before, and the main view's tab bar for one build): on the Structure, Experiment and Analysis
+  pages, under the main view's tab bar and above the chart toolbar, a row (`Components/MainAreaBlockSelector.qml`,
+  `objectName` `mainArea.blocks`) on the chart background: a compact combo box (`Components/BlockSelector.qml`),
+  then the previous and next buttons (held, they repeat at about the keyboard's rate, as the arrow keys do; owner,
+  2026-10-06), the last one's right edge on the right edge of the chart toolbar below
+  (which differs by page: each chart states it as `toolbarRightInset`). The chart toolbar's margin is above the
+  row, and one margin, the chart's own above its toolbar, separates it from the chart, with no line (the owner
+  compared the two, 2026-10-05); the row and the chart toolbar below it start at the main area's margin
+  (`AppSizes.mainAreaMargin`, 2 em, the pattern chart's room right of its plot areas; the owner, 2026-10-05); the box and the buttons are a toolbar group's spacing apart. The
+  charts give up that height. Every line of the box reads in the Experiments table's column order: the block's
+  number (minor colour), its icon in its colour (§8), for an experiment its fit outcome (§17), then its name, a
+  long one cut in the middle. The row is hidden while the project holds no block of the page's kind.
+- **Long lists are searchable** (owner, 2026-10-05): every combo box that lists project items (the block selector,
+  the alias parameter) is a `Components/SearchableComboBox.qml`, which puts a search field at the top of its list
+  when it holds more than 10 entries. The field filters by any part of an entry's text, ignoring case; Enter picks
+  the first entry left.
 - **Block selectors: one component, one shared current block** (the owner, 2026-09-29). Every selector that
   chooses among a project's blocks is a `BlockSelector` — the shared one on Structure and Experiment, and the
-  experiment selector at the top of Analysis → Basic (where it stays) — so all read number, coloured icon and
+  experiment selector of Analysis — so all read number, coloured icon and
   name, in the box and the list alike. Each reads and writes the project's one current index
   (`ProjectViewModel.currentExperimentIndex` / `currentStructureIndex`), never another selector, so choosing
   an experiment on the Experiment page makes it current on Analysis and the other way round; after a choice the
   box follows the shared index again. Structures are chosen on the Structure page only (its selector and its
   Structures table share `currentStructureIndex`). The Analysis parameter table lists every parameter of the
   project, so a change of experiment keeps a selected row that is still shown (§11).
-- **The selector closes with a group's bottom border on every tab** (the owner's reviews of 2026-09-29): the
-  line a category group draws — `borderThickness` high, `appBorder` colour, across the sidebar — one font unit
-  under the selector; the tab's content starts right under it — on Basic and Extras the first group's title, on
-  Text the text view's background, with no gap. The owner first had the line on Basic and Extras only; once the
-  text view filled the tab edge to edge, the Text tab took it too.
 - **One project at a time, so no project selector** (the owner, 2026-09-29): the app does not open several
   projects together, so the Project, Analysis and Report Text tabs — one block each — have no selector. No Text
   tab has a selector of its own: on Structure and Experiment the shared block selector serves it. The shared
@@ -296,8 +304,9 @@ the one its measured data takes in the pattern chart, and a structure's is the o
   icons and pretty labels: the block's icon in the block's colour; the category's icon (the sidebar group's,
   §3), for an atom site in its element's colour; the row — an atom's label, or a loop row's number counted
   from 1 (a background point, a preferred orientation, a linked structure: every loop category whose rows
-  carry parameters, by the core's `ParameterEntry::row_label`) — in the category icon's colour; the parameter's icon in the minor colour; then its short name in
-  bold (e.g. *[lbco] [atom] O [fill] **occ***). The parameter icons are easydiffractionbeta's by `.edi` name:
+  carry parameters, by the core's `ParameterEntry::row_label`) — in the category icon's colour; the parameter's icon in the minor colour; then its short name,
+  never bold (e.g. *[lbco] [atom] O [fill] occ*). In the parameter table the value is bold exactly when the parameter
+  is free (its vary box on), and regular otherwise (owner, 2026-10-05). The parameter icons are easydiffractionbeta's by `.edi` name:
   `length_*`, `angle_*` `ruler`; `fract_*` `map-marker-alt`; `occupancy` `fill`; `adp_*` `arrows-alt`; `scale`
   `weight`; `setup_wavelength` and `calib_d_to_tof_*` `radiation`, except `calib_d_to_tof_offset` and the other
   `calib_*` `arrows-alt-h`; `setup_twotheta_bank` `hashtag`; `broad_*`, `rise_*`, `decay_*` `shapes`;
@@ -315,7 +324,8 @@ The Project page's main area (`Pages/Project/DescriptionTab.qml`) lists, under t
 - **Structures (N)** and **Experiments (N)** — the count in brackets after the label, and as the value the
   datablock **names** (never file names: a block's file follows from its name, `structures/<name>.edi`),
   comma-separated, each after its block icon in its colour (§8), wrapping when they do not fit a line — as
-  easydiffractionbeta's *Model file: lbco.cif, coo.cif* (idea 22; `Pages/Project/BlockNames.qml`).
+  easydiffractionbeta's *Model file: lbco.cif, coo.cif* (idea 22; `Pages/Project/BlockNames.qml`). A list longer than
+  15 shows its first and last seven names with *…* between (a scan's datasets; owner, 2026-10-06).
 - No *Warnings* row: the loader's warnings are the status bar's messages (§14).
 
 ### 10. An icon before a name sits on the name's centre line
@@ -408,7 +418,7 @@ Saving is active:
   grey title and points/range line). Each row is a *warning* or an *error*. A new open replaces the list. A
   dismissed message leaves the list and stays away until it is raised again: a refusal is raised again by the
   next recalculation that is refused (after a model change); a load warning by the next open.
-- **The status bar's last item, always present**: the `exclamation-triangle` icon, the key *Messages*, and
+- **The status bar's first item, always present** (owner, 2026-10-05; it was the last before): the `exclamation-triangle` icon, the key *Messages*, and
   the number of messages **not viewed yet** (`WarningListModel.unviewedCount`; idea 24, *"the number of
   not-viewed warning messages"*), in the status bar's own style: in the theme's red while it is above 0, and
   0 in the normal value colour once the dialog has been opened, although the list keeps its messages until
@@ -505,13 +515,20 @@ code (`QtCharts1dTab.qml` and the base's `QtCharts1dBase.qml`; the owner, 2026-1
   other.
 - **Draw order.** The grid and borders, then the measured markers and their error bars, then the lines: measured,
   background, calculated on top. The legend, the excluded bands and the hover text are over the panes.
-- **Margins.** One gap of one em (the owner, 2026-10-02, after easydiffractionbeta's chart): from the toolbar
-  buttons' bottom to the main plot area's top border, from the chart's top to the toolbar, and below the x title;
-  and 2 em from the plot areas' right border to the chart's right edge.
+- **Margins.** One em (the owner, 2026-10-02, after easydiffractionbeta's chart) from the chart's top to the
+  toolbar and below the x title. The main area's margin, `AppSizes.mainAreaMargin` (2 em), from the plot areas'
+  right border to the chart's right edge, from the chart's left edge to the toolbar's drop-downs, and from the
+  toolbar buttons' bottom to the main plot area's top border (the owner, 2026-10-05).
 - **Toolbar.** A row of square buttons (2.5 em, with a fill and a border in the axis colour) that ends at the plot
   areas' right border: legend, hover coordinates, a spacer, pan, box zoom, reset (the Home icon, as the structure
-  view's), then a spacer and the y scale as a drop-down of linear, square root and log, in the toolbar drop-down
-  style (`ToolbarComboBox.qml`, §16) (the owner, 2026-10-02). The legend and
+  view's), Home last. The y scale is a drop-down of linear, square root and log at the chart's left, a margin in, in
+  the toolbar drop-down style (`ToolbarComboBox.qml`, §16) (the owner, 2026-10-02; moved left 2026-10-05), and right
+  of it the x axis, 2θ, time-of-flight or d-spacing, showing the experiment's own axis; it is disabled until the
+  axis can be switched (owner, 2026-10-05). Closed, each box names its axis, *y: linear* and *x: 2θ*, *x: TOF* or
+  *x: d*; its list keeps the plain choices (`ToolbarComboBox.closedTexts`). The controls are `AppSizes.toolbarControlSize` tall and
+  `AppSizes.toolbarSpacing` apart within a group.
+- **The legend's side** follows the x axis (owner, 2026-10-05): the top right of the main pane on a 2θ axis, the top
+  left on a time-of-flight or d-spacing axis, where the strong peaks are at the other end. The legend and
   the hover coordinates are on at the start; pan and box zoom exclude each other, and box zoom is on at the start. An
   icon is in the accent colour while hovered or checked. `ChartToolButton.qml` and `ChartLegend.qml` are shared
   with the structure view (§16), whose toolbar is a row of the same buttons; `ChartToolbar.qml` is the pattern
@@ -636,8 +653,8 @@ computes no geometry: it draws what `edi::present_structure` and `edi::scene_dra
   camera stands far back along the view direction: Qt's lighting takes each view ray from the camera's position,
   and from there the rays are parallel, as an orthographic camera's are in three.js, so every atom carries the
   same highlight.
-- **Placement.** Inside the view: the toolbar at the top right, one em from the top and right edges; the element
-  legend at the top left; the pointer hint at the bottom left (*drag = rotate*, *wheel = zoom*, *right-drag =
+- **Placement.** Inside the view: the toolbar at the top right, one em from the top edge and the main area's
+  margin (§15) from the right; the element legend at the top left, the same margin from the left; the pointer hint at the bottom left (*drag = rotate*, *wheel = zoom*, *right-drag =
   pan*, on three lines as diffraction-lib draws it); the download button at the bottom right; the hover label
   beside the pointer.
 - **Colours.** Every style colour is EasyApp's `EaStyle.Colors`, bound and never written as a literal, as
@@ -647,14 +664,15 @@ computes no geometry: it draws what `edi::present_structure` and `edi::scene_dra
   `themeForeground` over a halo of the background; the legend and hint panels `mainContentBackgroundHalfTransparent`
   with a `chartGridLine` border; the buttons' `chartAxis` border. A theme switch redraws once. The atom colours
   are diffraction-lib's palettes, the same in both themes.
-- **Toolbar.** diffraction-lib's modebar, as `ChartToolButton`s with the chart toolbar's spacing and spacer.
-  Camera: projection (`cube`; *Parallel (orthographic) view* or *Perspective view*), `a`, `b`, `c` (*View along a*,
+- **Toolbar.** diffraction-lib's modebar, as `ChartToolButton`s with the chart toolbar's spacing and spacer:
+  the features group first, then the camera group ending in Home at the right (owner, 2026-10-05). Camera: projection (`cube`; *Parallel (orthographic) view* or *Perspective view*), `a`, `b`, `c` (*View along a*,
   … — the letter in bold in its axis colour, a label on the button), reset (`home`, *Reset view*: the home view, the
   projection kept). Features, one button per feature the structure has, in diffraction-lib's order: atoms (`atom`;
   all, asymmetric unit, none — *Atoms: all / asymmetric unit / none*, or *Atoms: show / hide* with no atom outside
   the asymmetric unit), labels (`tag`), bonds (`link`, when crysta found a bond), cell (`vector-square`), axes
   (`location-arrow`); a structure with no site has only cell and axes. A feature that is on shows its icon in the
-  accent colour. Then the colour scheme as a drop-down (`jmol`, `vesta`) in the toolbar drop-down style
+  accent colour. The colour scheme is a drop-down (`jmol`, `vesta`) at the view's left, after the atoms legend
+  (whose box is at least a toolbar control tall), in the toolbar drop-down style
   (`ToolbarComboBox.qml`, shared with the pattern chart's y scale): the sidebar drop-downs' background, the base's
   translucent combo-box colour over the content background (the owner, 2026-10-02), at the buttons' height, as narrow as its
   widest entry with the arrow and the padding. *Download PNG*
@@ -775,29 +793,117 @@ refuses to write its bank rows into it.
 
 (the owner, 2026-10-02)
 
-- **Start fitting** (Analysis, Fitting group) runs the project's fit on the worker (ADR-0020 §9) and reads *Cancel
-  fitting*, with a stop icon, while it runs. For a scan mode (sequential, independent) it is disabled, and its
-  tooltip names the mode. While a fit runs the parameter table is disabled and every edit is refused.
+- **Start fitting** (Analysis, Fitting group) runs the project's fit on the worker (ADR-0020 §9) and reads **Stop
+  fitting**, with a stop icon, while it runs (owner, 2026-10-05; *Cancel fitting* before): a stop keeps the partial
+  result. In a scan project it follows the datasets' fits (owner, 2026-10-06; §19). While a fit runs the parameter
+  table is disabled and every edit is refused.
+- **Follow** sits to the right of Start fitting at the same width. It is enabled only while a scan runs and starts
+  on; while on, the pattern tab shows the file being fitted. In a scan project **Reset fits** sits between them, and
+  the three share the row in thirds.
 - **The chart follows the fit**: a frame of the current iteration's pattern at most once per display frame, then the
   fitted pattern when the fit ends. A fit that writes nothing puts back the pattern the project holds.
 - **The status bar's keys** (the owner, 2026-10-03): every item shows its key only while all the shown items fit the
   bar's width with their keys, measured from the items themselves; otherwise each shows its icon and value. (It
   replaced a fixed window-width threshold.)
-- **The status bar** gains easydiffractionbeta's three fit items, shown once a fit has run: *Fit iterations*,
-  *Goodness-of-fit* (reduced χ², before → after) and *Fit status*: *Running*, then *Done*, *Max iterations*, *No step*
-  or *Cancelled*. A stop that is not a convergence is shown there, not as an error.
+- **The status bar's fit area** (owner, 2026-10-05) is right-aligned after the items. While a fit runs it shows the
+  live values, then a progress bar (`Components/FitProgressBar.qml`) with its text inside at the far right, where the
+  values' changing width does not move it (owner, 2026-10-06): a single fit
+  fills the bar with moving stripes and reads `fitting · it 12`, then `4s · χ² 12.40 → 7.50`; a scan will fill it by
+  file count. After the run the bar and the live values go, and a summary stays: the outcome, then `it 23 · 7s · χ²
+  12.40 → 7.01`. One order everywhere: progress, then the counts, then time, then χ², every separator the same
+  ` · ` (`FitOutcomes.separator`).
+- **One look per fit outcome** (owner, 2026-10-05), from `Globals/FitOutcomes.qml` for every place that shows one
+  (the status-bar summary, the results window's Overall status row, the Experiments table's Fit column): *Success*
+  (green check circle), *Max iterations* and *No step* (amber exclamation circle; the result is kept), *Stopped*
+  (grey stop circle), *Superseded* (grey minus circle) and *Failed* (red cross circle). No underline; the summary's
+  outcome highlights on hover, as every clickable status-bar item does, and opens the results.
+- **The Fit column** of the Experiments table, and each experiment's line in the block selector, show the outcome
+  icon on each experiment the last fit fitted: the first after a single fit, every bank after a joint fit. Any
+  other experiment is *Not fitted*: a thin unfilled ring the size of the outcome icons, in the minor colour (owner,
+  2026-10-05). The icon font edi takes from the EasyApplication base is Font Awesome 5's solid face, which has no
+  hollow circle, so the ring is drawn (`FitOutcomes.ring`, `IconLine`).
 - **A fit-results pop-up** opens when a fit ends with a result (finished, cancelled or stopped early): diffraction-lib's
   "Least-squares fit results" table, numbered rows of an icon, the metric and its value — minimizer, overall status,
   fitting time (seconds), iterations, goodness-of-fit (reduced χ²), Rwp, and each bank's Rwp for a joint fit. The
   table is built from the result the project records (`_fit_result`), so a project opened with one shows its last
   fit too: the status bar's iterations, reduced χ² and stop reason, and the same table from the Fit status item,
-  which opens it on a click.
+  outcome, which opens it on a click.
 - **A refused or failed fit** shows its reason in a message dialog; the project is unchanged.
 - **A fitted value outside its admissible range** (the table's min and max) is kept, as the CLI keeps it, and shown in
   red with a tooltip naming the range, as diffraction-lib's table of fitted parameters does (the owner, 2026-10-02).
   Bounded fitting is.
 - **Undo** is the app bar's Undo arrow: enabled while the model holds a fit's start state (after a finished or
-  cancelled fit), it restores the pre-fit state (`undo_fit`, one level) and clears the fit items.
+  stopped fit), it restores the pre-fit state (`undo_fit`, one level) and clears the fit area.
+
+### 18. Creating experiments
+
+(the owner, 2026-10-05)
+
+- **Load experiment** loads `.edi` experiment files, several at once, each with its type, data and parameters.
+  **Create experiment** adds a new experiment without data, selected, named `experiment1`, `experiment2`, …:
+  powder, constant wavelength, neutron, Bragg, linked to the project's structure. Each is one step of the app bar's
+  Undo.
+- **An experiment without data is a simulation**: its pattern is calculated over a grid whose start, end and step
+  (2θ or TOF) are editable, from defaults per beam mode (2θ 10–150° by 0.05°, TOF 2000–20000 µs by 10 µs). Its
+  File cell shows **Load data…**, disabled until plain data files load.
+- **A project calculates or fits as a whole** (the loader's rule): Create experiment is disabled while the project's
+  experiments carry measured data.
+
+### 19. A scan's datasets
+
+(the owner, 2026-10-05)
+
+- **A scan project lists its datasets as experiments**: in the block selector and the Experiments table, one row per
+  data file the scan fits (`edi::scan_datasets`, crysta's own file list, in fitting order), each the template
+  experiment over that file. A selector line reads `datablock · file · value unit`; the table's columns are No. · Fit
+  · Datablock · File · one per extract rule with its unit, with no colour column and no remove button. Every entry is
+  in the experiment's colour. The status bar counts the datasets, its tooltip *1 template experiment, N datasets*.
+- **Showing a dataset** loads its measured points, read from its file when it is shown and never before, into the
+  model with the template's parameters, and, for a dataset the scan has fitted, its fitted values and
+  uncertainties from `analysis/results.csv` (`Edit::scan_view`); the pages then show that dataset and the pattern
+  calculated from it. A project opens on the first dataset. Showing a dataset is not an edit of the project.
+- **The template is held apart from the shown dataset.** An admitted edit of the experiment or the structures while a
+  dataset is shown makes the shown values the template's, over the template's own data file; a project-wide setting
+  (name, title, description, fitting mode, minimizer) goes to the template unchanged otherwise. A save writes the
+  template, never a dataset's data; a refused edit changes nothing.
+- **A dataset's Fit outcome** comes from its results row: *Success* when it converged; otherwise *Max iterations* when
+  its iteration count reached the bound, else *No step*; *Not fitted* without a row. Its extracted values come from
+  its row, or from its file when a view shows its entry.
+- **The Evolution tab** (Analysis, after Pattern; text only like every tab, §2) draws one fitted parameter across
+  the datasets (`Components/EvolutionChart.qml`, `EvolutionViewModel`): a point per fitted dataset with its
+  uncertainty as an error bar, drawn as the pattern chart draws measured points. The page's selector row keeps listing the
+  datasets, as on the Pattern tab; a selector in the chart's own toolbar, beside the x box, chooses among the
+  parameters `analysis/results.csv` records. x is the first extract rule's
+  value with its unit, or the file's place in the scan (the box at the chart's top left, *x: …* closed as the
+  pattern chart's). A click on a point shows that dataset, on every page; a line marks the shown one, placed from the
+  dataset's own x so it moves only when the shown dataset does (owner, 2026-10-06). The pointer zooms as on the
+  pattern chart, without its toolbar: a drag zooms to the box, the wheel or touchpad about the pointer, a right click
+  resets. Above 5000
+  points the chart draws, per x bucket, only the lowest and the highest, so every excursion stays visible. The tab
+  is disabled in a project that is not a scan.
+- **Running a scan.** In the sequential or independent mode Start fitting runs crysta's driver from the template on the
+  worker (`edi::FitJob`, the scan entry points of the core), which writes `analysis/results.csv` as it fits each file;
+  the template itself is left as it was. The button follows the datasets' fits (owner, 2026-10-06): **Start fitting**
+  while none is fitted, **Continue fitting** while some are not (after a Stop too), which fits from the first dataset
+  without a row (the driver resumes from the file), and **disabled** once every dataset is fitted, its tooltip saying
+  so. **Reset fits** clears every dataset's fit result, one Undo step that writes them back, and so enables Start
+  fitting again. Stop fitting keeps the rows written so far.
+  While a scan runs the status bar's bar fills by files, with *count · percent · file* inside, and the ok and fail
+  counts, the time, the time left and the last χ² beside it. Joint is not offered in a project that declares a scan.
+- **Follow** is on when a scan starts and enabled only while one runs: the pattern tab then shows each file as it is
+  fitted, its data with the pattern calculated at its fitted values, drawn by the job after the file's row is
+  written. Choosing a dataset turns it off; pressing it turns it on again.
+- **The template dataset** (`_sequential_fit.template_file`): a single fit on a shown dataset makes its result the
+  template and that dataset the template dataset. Its entry in the selector and its row in the Experiments table
+  carry the word *template* in the accent blue. A scan project opens on it, else on the first dataset.
+- **Out of date.** A run records which template it fitted from (`analysis/scan-run.json`); results from another
+  template than the one held now stay shown, marked *out of date* in the status bar's summary and on the Evolution
+  tab. The mark survives saving and reopening, and goes when a run of the current template replaces them.
+- **After a scan** the status bar's summary reads *outcome · fitted/files · N ok · N fail · χ² min–max*, a fail count
+  above zero in red, and the results window shows the run as a whole: Overall status, files fitted, converged,
+  failed, the fitting time and the χ² range, with *Show evolution*, which opens the Evolution tab. The outcome is the
+  run's own when it failed or was stopped, else Stopped while files are left, else the worst file's (Max iterations,
+  No step, Success). The time is recorded in `analysis/scan-run.json`; results no run of the app wrote show none.
 
 ## Consequences
 

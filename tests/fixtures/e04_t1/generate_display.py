@@ -21,6 +21,9 @@ IDENTITIES = {
     'I 21 3': (199, 'cubic'),
     'I a -3': (206, 'cubic'),
     'P n m a': (62, 'orthorhombic'),
+    # Independent owner FullProf output gives the number and crystal system.
+    'P b n m': (62, 'orthorhombic'),
+    'R -3 c': (167, 'trigonal'),
     'P m m a': (51, 'orthorhombic'),
 }
 
@@ -102,9 +105,9 @@ def generate():
                     [
                         'spaceGroup.coordSystemCode',
                         scalar_text(
-                            values.get(
-                                '_space_group.coord_system_code', DEFAULT_COORDINATE_CODES[number]
-                            )
+                            values['_space_group.coord_system_code']
+                            if '_space_group.coord_system_code' in values
+                            else DEFAULT_COORDINATE_CODES[number]
                         ),
                         'text',
                     ],

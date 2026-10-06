@@ -1,0 +1,23 @@
+data_YAlO3
+_edi.schema_version 3
+_cell.length_a 5.172418()
+_cell.length_b 5.32659()
+_cell.length_c 7.360847()
+_cell.angle_alpha 90
+_cell.angle_beta 90
+_cell.angle_gamma 90
+_space_group.name_h_m "P b n m"
+loop_
+_atom_site.id
+_atom_site.type_symbol
+_atom_site.wyckoff_letter
+_atom_site.fract_x
+_atom_site.fract_y
+_atom_site.fract_z
+_atom_site.occupancy
+_atom_site.adp_iso
+_atom_site.adp_type
+Y Y c 0.01241() 0.55406() 0.25 1 0.1181() Biso
+Al Al a 0.0 0.0 0.0 1 0.12582() Biso
+O1 O c -0.08385() -0.02195() 0.25 1 0.05559() Biso
+O2 O d 0.2047() 0.29483() 0.04427() 1 0.13975() Biso

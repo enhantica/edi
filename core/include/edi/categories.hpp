@@ -26,6 +26,7 @@ struct CategoryField {
     Parameter* parameter = nullptr;  // the model field
     bool used_by_profile = true;     // false: outside the profile's set, shown because it is free
     bool refinable = true;           // false: symmetry fixes it or ties it to another parameter
+    bool fittable = true;            // false: a fixed setting (is_fixed_setting): editable, never fitted
 };
 
 struct Category {
@@ -87,7 +88,7 @@ inline bool tof_profile_declares(const std::string& profile, const std::string& 
 }
 
 inline void add_optional(std::vector<CategoryField>& fields, const char* name,
-                         std::optional<Parameter>& field) {
+                         OptionalParameter& field) {
     if (field.has_value()) {
         fields.push_back({name, &*field, true});
     }
@@ -107,13 +108,15 @@ inline Category peak_category(ExperimentBase& experiment) {
     Category category{"peak"};
     PeakBase& peak = experiment.peak;
     const bool constant_wavelength = experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH;
-    const std::string profile = peak.type.value_or(constant_wavelength ? "cwl-pseudo-voigt" : "tof-jorgensen");
+    const std::string profile = effective_peak_type(experiment);
     if (constant_wavelength) {
         detail::add_optional(category.fields, "broad_gauss_u", peak.broad_gauss_u);
         detail::add_optional(category.fields, "broad_gauss_v", peak.broad_gauss_v);
         detail::add_optional(category.fields, "broad_gauss_w", peak.broad_gauss_w);
         detail::add_optional(category.fields, "broad_lorentz_x", peak.broad_lorentz_x);
         detail::add_optional(category.fields, "broad_lorentz_y", peak.broad_lorentz_y);
+        detail::add_optional(category.fields, "mixing_eta_0", peak.mixing_eta_0);
+        detail::add_optional(category.fields, "mixing_eta_1", peak.mixing_eta_1);
         detail::add_optional(category.asymmetry, "asym_fcj_1", peak.asym_fcj_1);
         detail::add_optional(category.asymmetry, "asym_fcj_2", peak.asym_fcj_2);
         detail::add_optional(category.asymmetry, "asym_beba_a0", peak.asym_beba_a0);
@@ -121,6 +124,9 @@ inline Category peak_category(ExperimentBase& experiment) {
         detail::add_optional(category.asymmetry, "asym_beba_a1", peak.asym_beba_a1);
         detail::add_optional(category.asymmetry, "asym_beba_b1", peak.asym_beba_b1);
         detail::add_optional(category.asymmetry, "asym_beba_limit", peak.asym_beba_limit);
+        if (peak.asym_beba_limit) {
+            category.asymmetry.back().fittable = false;  // a fixed setting (is_fixed_setting)
+        }
         for (const auto& [name, member] : detail::tof_peak_fields()) {  // inert on CW: only if free
             detail::add_if_shown(category.fields, name, peak.*member, false);
         }

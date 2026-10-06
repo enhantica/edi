@@ -4,14 +4,13 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 
-import EasyApplication.Gui.Elements as EaElements
 import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
 
-// The Analysis page (easydiffractionbeta Pages/Analysis): the chart's place in the main area; the
-// experiment selector, the parameter table and Fitting in Basic; the analysis block's `.edi`
-// categories in Extras (packet §2b (iv), §15.6); analysis.edi in Text.
+// The Analysis page (easydiffractionbeta Pages/Analysis): the chart's place in the main area, with the
+// experiment selector in its tab bar; the parameter table and Fitting in Main; the analysis block's `.edi`
+// categories in Extra (packet §2b (iv), §15.6); analysis.edi in Text.
 WorkflowPage {
     id: page
 
@@ -34,14 +33,27 @@ WorkflowPage {
     pageName: "analysis"
     defaultInfo: project ? "" : qsTr("No analysis done")
     mainTabs: [
-        EaElements.TabButton {
+        IconTabButton {
             objectName: "mainArea.analysis.tab.fitting"
-            text: qsTr("Fitting")
+            // The view's name, text only (edi ADR-0017 §2).
+            text: qsTr("Pattern")
+        },
+        // A fitted parameter across a scan's datasets (edi ADR-0017 §19); a scan project's only.
+        IconTabButton {
+            objectName: "mainArea.analysis.tab.evolution"
+            text: qsTr("Evolution")
+            enabled: page.project !== null && page.project.scan
         }
     ]
     mainItems: [
-        PatternChart {
+        ProjectPatternChart {
+            id: chartView
             experiment: page.experiment
+            shown: page.current && SwipeView.isCurrentItem
+        },
+        EvolutionChart {
+            id: evolutionChart
+            project: page.project
             shown: page.current && SwipeView.isCurrentItem
         }
     ]
@@ -49,9 +61,6 @@ WorkflowPage {
     textEnabled: analysis !== null
     basicItem: Component {
         EaComponents.SideBarColumn {
-            ExperimentSelectorGroup {
-                project: page.project
-            }
             // The fitted inputs are not edited while a fit runs.
             ParametersGroup {
                 project: page.project
@@ -74,6 +83,26 @@ WorkflowPage {
     textItem: Component {
         TextTab {
             source: page.analysis ? page.analysis.text : null
+        }
+    }
+    // The same selector as the Experiment page's, over the one current experiment the project holds, so
+    // choosing here or there is one choice (edi ADR-0017 §7).
+    blockSelectorShown: true
+    blockSelectorRightInset: chartView.toolbarRightInset
+    blocks: project ? project.experiments : null
+    blocksTextRole: "label"
+    blockKind: "experiment"
+    blockOutcomeRole: "fitOutcome"
+    blockCurrentOutcome: experiment ? experiment.fitOutcome : ""
+    blockOneColour: project !== null && project.scan
+    blockTemplateRole: project !== null && project.scan ? "isTemplate" : ""
+    blockCurrentTemplate: project !== null && project.scan && project.currentExperimentIndex === project.templateIndex
+    blockIndex: project ? project.currentExperimentIndex : -1
+    onBlockActivated: index => page.project.currentExperimentIndex = index
+    Connections {
+        target: AppState
+        function onEvolutionRequested() {
+            page.showMainTab(1);
         }
     }
     continueText: qsTr("Continue")

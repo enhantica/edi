@@ -31,6 +31,10 @@ IDEAS = set(range(1, 28))
 # list gains lif single; all per-idea observations below still hold.
 # The producer map supplies candidate observations, never its own certification;
 # all accepted observations and exact image bytes are independently pinned here.
+# Current profile captures were opened individually: full selector names,
+# U V W X Y on one TCH row with S/L D/L below, and U V W Eta0 Eta1 on one
+# BeBa row with an AsyLim value field and no adjacent fit toggle. Earlier pins
+# showed separate X/Y or eta rows and abbreviated FCJ labels.
 VERIFIED_CAPTURES: dict[str, dict[str, object]] = {
     '01-home.png': {
         'sha256': '9ccc7ac8480cfde64c766116d04f64ab275e1a5e7ba90e2b23e2bd68615d1618',
@@ -204,22 +208,23 @@ VERIFIED_CAPTURES: dict[str, dict[str, object]] = {
         },
     },
     '17-experiment-profile-selector.png': {
-        'sha256': '8a4771eccb681d014deeff831c415c480db1102e6179dd2e116f30173c54278b',
+        'sha256': '01809fd6ed10a8b2e10c1540885a09fcd67737053b4b3af65cc81b0324318472',
         'checks': {
-            '8': 'the main tab reads the microscope icon in '
-            'the experiment colour and the experiment '
-            'name, no word (hrpt)',
-            '18': 'withdrawn; final feedback: the profile '
-            'list opens over a group with no '
-            'subheading',
+            '8': 'the main tab reads the microscope icon in the experiment colour and '
+            'the experiment name, no word (hrpt)',
+            '18': 'withdrawn; final feedback: the profile list opens over a group with '
+            'no subheading',
+            '3': 'the profile list names each profile in full: Gaussian, Lorentzian, '
+            'Pseudo-Voigt, Pseudo-Voigt + Bérar\u2013Baldinozzi asymmetry, '
+            'Thompson\u2013Cox\u2013Hastings pseudo-Voigt (TCH), and the TCH with '
+            'Finger\u2013Cox\u2013Jephcoat asymmetry (FCJ)',
         },
     },
     '18-experiment-tch.png': {
-        'sha256': 'b26a635f1293b87d04610fe47101f75e71d1c32a2341127ffe9cfaced585e9f3',
+        'sha256': 'b2fffb665f81b7a6b94049e42a326ec4e166cdb02cf06fd238f5417b8ab458b5',
         'checks': {
-            '18': 'withdrawn; final feedback: Thompson-Cox-Hastings '
-            'shows U V W, then X Y, then asym fcj1 fcj2, a row per '
-            'family, with no "Broadening" or "Asymmetry" '
+            '18': 'withdrawn; final feedback: Thompson-Cox-Hastings shows U V W X Y on '
+            'one row, then S/L D/L, with no "Broadening" or "Asymmetry" '
             'subheading'
         },
     },
@@ -322,7 +327,7 @@ VERIFIED_CAPTURES: dict[str, dict[str, object]] = {
             '9': 'the block selector (number, coloured '
             'icon, name) sits above the groups, '
             'under the tab bar, on Basic',
-            '18': 'Peak profile (cwl-pseudo-voigt) has '
+            '18': 'Peak profile (cwl-tch-pseudo-voigt) has '
             'no subheading; its fields run U V W '
             'on one row and X Y on the next',
         },
@@ -336,7 +341,7 @@ VERIFIED_CAPTURES: dict[str, dict[str, object]] = {
             '9': 'the block selector (number, coloured '
             'icon, name) sits above the groups, '
             'under the tab bar, on Basic',
-            '18': 'Peak profile (cwl-pseudo-voigt) has no '
+            '18': 'Peak profile (cwl-tch-pseudo-voigt) has no '
             'subheading; its fields run U V W on '
             'one row and X Y on the next',
             '24': 'the Messages item counts 1 not-viewed '
@@ -353,7 +358,7 @@ VERIFIED_CAPTURES: dict[str, dict[str, object]] = {
             '9': 'the block selector (number, coloured '
             'icon, name) sits above the groups, '
             'under the tab bar, on Basic',
-            '18': 'Peak profile (cwl-pseudo-voigt) has no '
+            '18': 'Peak profile (cwl-tch-pseudo-voigt) has no '
             'subheading; its fields run U V W on '
             'one row and X Y on the next',
         },
@@ -367,7 +372,7 @@ VERIFIED_CAPTURES: dict[str, dict[str, object]] = {
             '9': 'the block selector (number, coloured '
             'icon, name) sits above the groups, '
             'under the tab bar, on Basic',
-            '18': 'Peak profile (cwl-pseudo-voigt) has no '
+            '18': 'Peak profile (cwl-tch-pseudo-voigt) has no '
             'subheading; its fields run U V W on '
             'one row and X Y on the next',
         },
@@ -384,7 +389,7 @@ VERIFIED_CAPTURES: dict[str, dict[str, object]] = {
             'above the groups, under the '
             'tab bar, on Basic',
             '18': 'Peak profile '
-            '(cwl-thompson-cox-hastings) '
+            '(cwl-tch-pseudo-voigt-fcj) '
             'has no subheading; its fields '
             'run U V W, then X Y, then '
             'asym fcj1 fcj2, a row per '
@@ -400,7 +405,7 @@ VERIFIED_CAPTURES: dict[str, dict[str, object]] = {
             '9': 'the block selector (number, coloured '
             'icon, name) sits above the groups, '
             'under the tab bar, on Basic',
-            '18': 'Peak profile (cwl-pseudo-voigt) has no '
+            '18': 'Peak profile (cwl-tch-pseudo-voigt) has no '
             'subheading; its fields run U V W on '
             'one row and X Y on the next',
         },
@@ -414,25 +419,35 @@ VERIFIED_CAPTURES: dict[str, dict[str, object]] = {
             '9': 'the block selector (number, coloured '
             'icon, name) sits above the groups, '
             'under the tab bar, on Basic',
-            '18': 'Peak profile (cwl-pseudo-voigt) has no '
+            '18': 'Peak profile (cwl-tch-pseudo-voigt) has no '
             'subheading; its fields run U V W on '
             'one row and X Y on the next',
         },
     },
+    # Independently inspected committed images: explicit mixing and both phase tick rows.
     'ex-pd-neut-cwl_pbso4_beba-asymmetry.png': {
-        'sha256': '86ec8c8dcd47bbd7ddeda382695227f1aed4c5f98a485786e69f7792e13ddac4',
+        'sha256': '1254d25f8845c438f57f91bf8fd7dbc686b3ade42b4b90dd9a23612806ea6bb2',
         'checks': {
-            '8': 'the main tab reads the microscope '
-            'icon in the experiment colour and '
+            '8': 'the main tab reads the microscope icon in the experiment colour and '
             'the experiment name, no word',
-            '9': 'the block selector (number, coloured '
-            'icon, name) sits above the groups, '
-            'under the tab bar, on Basic',
-            '18': 'Peak profile '
-            '(cwl-pseudo-voigt-berar-baldinozzi-asymmetry) '
-            'has no subheading; its fields run U '
-            'V W, then X Y, then A0 B0 A1 B1 '
-            'AsyLim on the asymmetry row',
+            '9': 'the block selector (number, coloured icon, name) sits above the '
+            'groups, under the tab bar, on Basic',
+            '18': 'Peak profile (cwl-pseudo-voigt-berar-baldinozzi) has no subheading; '
+            'its fields run U V W Eta0 Eta1 on one row, then A0 B0 A1 B1 AsyLim '
+            'on the asymmetry row, AsyLim editable with no fit toggle',
+        },
+    },
+    'ex-pd-neut-cwl_yap-spodi_3k.png': {
+        'sha256': 'ecc321f3e9257db09fc81654a8d9c239341551d6d2d98ada599ccfbc1cc3abe1',
+        'checks': {
+            '8': 'the main tab reads the microscope icon in the experiment colour and '
+            'the experiment name, no word',
+            '9': 'the block selector (number, coloured icon, name) sits above the '
+            'groups, under the tab bar, on Basic',
+            '18': 'Peak profile (cwl-pseudo-voigt-berar-baldinozzi) has no subheading; '
+            'its fields run U V W Eta0 Eta1 on one row, then A0 B0 A1 B1 AsyLim '
+            'on the asymmetry row, AsyLim editable with no fit toggle; the chart '
+            'shows a row of Bragg ticks for each of the two structures',
         },
     },
     'ex-pd-neut-tof_diamond-dream_basic.png': {
@@ -583,7 +598,7 @@ VERIFIED_CAPTURES: dict[str, dict[str, object]] = {
             'experiment colour and the experiment name, no word',
             '9': 'the block selector (number, coloured icon, name) sits '
             'above the groups, under the tab bar, on Basic',
-            '18': 'Peak profile (cwl-pseudo-voigt) has no subheading; '
+            '18': 'Peak profile (cwl-tch-pseudo-voigt) has no subheading; '
             'its fields run U V W on one row and X Y on the next',
             '15': 'a calculation-only experiment has "Calculation '
             'range" on Basic and no Measured data group',

@@ -73,8 +73,18 @@ TestCase {
                 "I19: title follows declared metadata or the UI default regression pin");
         same(Probe.rows(project.structures).map(r => r.name).sort(),
              expected.structures.map(r => r.name).sort(), "I19: every structure is loaded");
-        same(Probe.rows(project.experiments).map(r => r.name).sort(),
-             expected.experiments.slice().sort(), "I19: every experiment is loaded");
+        const datasets = expected.datasets || [];
+        if (datasets.length) {
+            verify(project.scan, "Scan examples expose their dataset catalogue");
+            same(Probe.rows(project.experiments).map(r => r.file), datasets.map(d => d.file),
+                 "Every independently inventoried scan filename appears once in scan order");
+            same(Probe.rows(project.experiments).map(r => r.name),
+                 datasets.map(() => expected.experiments[0]),
+                 "Every scan dataset retains its declared template experiment identity");
+        } else {
+            same(Probe.rows(project.experiments).map(r => r.name).sort(),
+                 expected.experiments.slice().sort(), "I19: every experiment is loaded");
+        }
         click("appBar.tab.project");
         click("sideBar.tab.text");
         textVisible(expected.metadata["_metadata.name"], "I19: Project Text renders loaded metadata");
@@ -91,13 +101,37 @@ TestCase {
             textVisible("_cell.length_a", "I19: Structure Text is populated by the loaded block");
         }
         const experiments = Probe.rows(project.experiments);
-        for (let i = 0; i < experiments.length; ++i) {
+        const selected = datasets.length
+            ? [...new Set([0, Math.floor(datasets.length / 2), datasets.length - 1])]
+            : experiments.map((_, index) => index);
+        for (const i of selected) {
             project.currentExperimentIndex = i;
+            tryCompare(project, "calculating", false, 5000,
+                       "A selected dataset finishes its lazy read and projection");
             const experiment = project.currentExperiment;
             const frozen = Oracle.frozen.corpus.find(c => c.project === expected.path && c.experiment === experiment.name);
             verify(frozen !== undefined, "I19: selected experiment has an independent file oracle");
             compare(experiment.peakType, frozen.peakType, "I19: loaded profile is preserved");
-            verify(experiment.measuredRange.points > 0, "I19: Experiment publishes the loaded measured data");
+            const range = datasets.length ? datasets[i].range : frozen.range;
+            tryCompare(experiment.measuredRange, "points", range[3], 5000,
+                       "The selected experiment publishes its independently measured point count");
+            fuzzyCompare(experiment.measuredRange.minimum, range[0], 1e-10,
+                         "The selected dataset displays the independent ASCII axis minimum");
+            fuzzyCompare(experiment.measuredRange.maximum, range[1], 1e-10,
+                         "The selected dataset displays the independent ASCII axis maximum");
+            if (datasets.length) {
+                const samples = datasets[i].samples;
+                tryVerify(() => {
+                    const rows = Probe.rows(experiment.pattern);
+                    return samples.every(sample => {
+                        const row = rows[sample.index];
+                        return row !== undefined
+                            && Math.abs(row.x - sample.values[0]) < 1e-9
+                            && Math.abs(row.intensityMeas - sample.values[1]) < 1e-9
+                            && Math.abs(row.intensityMeasSu - sample.values[2]) < 1e-9;
+                    });
+                }, 5000, "Selected datasets publish their own independent measured values and uncertainties");
+            }
             click("appBar.tab.experiment");
             click("sideBar.tab.text");
             textVisible("_peak.type", "I19: Experiment Text is populated by the loaded block");
@@ -130,7 +164,8 @@ TestCase {
         expected.experiments.forEach(name => {
             verify(text.includes(name), "owner final report record: data collection names every loaded experiment");
             const frozen = Oracle.frozen.corpus.find(c => c.project === expected.path && c.experiment === name);
-            frozen.range.forEach(value => verify(numbers.some(n => Math.abs(n - value) < 0.00005),
+            const reportRange = datasets.length ? datasets[selected[selected.length - 1]].range : frozen.range;
+            reportRange.forEach(value => verify(numbers.some(n => Math.abs(n - value) < 0.00005),
                                                  "owner final report record: measured range and point count come from committed experiment data"));
         });
         verify(text.includes("crysta"), "owner final report record: fit summary names the effective engine");

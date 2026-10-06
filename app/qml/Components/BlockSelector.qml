@@ -10,9 +10,11 @@ import EasyApplication.Gui.Elements as EaElements
 import edi.app
 
 // The compact block selector (easydiffractionbeta Pages/*/SideBarText/Models.qml, Experiments.qml): the page's
-// blocks in a combo box, the shown one current (edi ADR-0017 §7), with a previous and a next button to its right
-// that step through the list. Each block reads as there — its number, its icon in its colour (§8), its label
-// (`name · file`), on one centre line (§10) — in the box and in the list.
+// blocks in a combo box, the shown one current, as a row at the top of the main area (MainAreaBlockSelector; edi
+// ADR-0017 §7), with a previous and a next button on its right that step through the list. A long list has a
+// search field (SearchableComboBox). Each block reads as there — its number, its icon in its colour (§8), its label
+// (`name · file`), on one centre line (§10) — in the box and in the list. An experiment's line shows how the last
+// fit ended on it (FitOutcomes) before its name, as the Experiments table's Fit column does.
 Row {
     id: row
 
@@ -28,6 +30,16 @@ Row {
     readonly property alias count: selector.count
     readonly property alias currentText: selector.currentText
     readonly property alias popup: selector.popup
+    property alias backgroundColor: selector.backgroundColor
+    // The blocks' fit-outcome role (experiments: `fitOutcome`) and the shown block's outcome; empty: no slot.
+    property string outcomeRole: ""
+    property string currentOutcome: ""
+    // Every entry in the first block's colour: a scan's datasets are one experiment's.
+    property bool oneColour: false
+    // The blocks' role that marks the template dataset (a scan's `isTemplate`) and whether the shown one is it: its
+    // line carries the word "template" in the accent blue, before its name, which the line elides when long.
+    property string templateRole: ""
+    property bool currentTemplate: false
 
     // A step to the previous or next block, as a pick in the box; no step past either end.
     function step(offset) {
@@ -37,10 +49,10 @@ Row {
     }
 
     width: EaStyle.Sizes.sideBarContentWidth
-    // The gap between the fields of a group (the Cell group's), between the box and each button.
-    spacing: AppSizes.fieldSpacing
+    // The gap between buttons in a chart toolbar group, between the box and each button (owner, 2026-10-05).
+    spacing: AppSizes.toolbarSpacing
 
-    EaElements.ComboBox {
+    SearchableComboBox {
         id: selector
 
         property alias blocks: row.blocks
@@ -48,23 +60,35 @@ Row {
         property alias blockKind: row.blockKind
         property alias blockIndex: row.blockIndex
 
-        // A block's line: its number, its icon in its colour, its name, on one centre line (IconLine, §10).
-        function segments(index, name, nameColor) {
+        // A block's line, in the Experiments table's column order: its number, its icon in its colour, its fit
+        // outcome, its name, on one centre line (IconLine, §10).
+        function segments(index, name, nameColor, outcome, isTemplate) {
             if (index < 0)
                 return [];
+            const slot = {
+                "icon": FitOutcomes.icon(outcome),
+                "color": FitOutcomes.color(outcome),
+                "ring": FitOutcomes.ring(outcome),
+                "slot": true
+            };
             const number = {
                 "text": String(index + 1),
                 "color": EaStyle.Colors.themeForegroundMinor
             };
             const icon = {
                 "icon": ParameterNames.blockIcon(selector.blockKind),
-                "color": AppColors.block(selector.blockKind, index)
+                "color": AppColors.block(selector.blockKind, row.oneColour ? 0 : index)
             };
             const label = {
                 "text": name,
                 "color": nameColor
             };
-            return [number, icon, label];
+            const lead = row.outcomeRole !== "" ? [number, icon, slot] : [number, icon];
+            const tag = {
+                "text": qsTr("template"),
+                "color": EaStyle.Colors.themeAccent
+            };
+            return lead.concat(isTemplate ? [tag, label] : [label]);
         }
 
         objectName: row.objectName ? `${row.objectName}.box` : ""
@@ -88,7 +112,10 @@ Row {
             IconLine {
                 x: EaStyle.Sizes.fontPixelSize * 0.75
                 anchors.verticalCenter: parent.verticalCenter
-                segments: selector.segments(selector.currentIndex, selector.currentText, selector.foregroundColor)
+                segments: selector.segments(selector.currentIndex, selector.currentText, selector.foregroundColor, row.currentOutcome, row.currentTemplate)
+                // A long name is cut in the middle, so both its ends still tell blocks apart.
+                maximumWidth: Math.max(1, parent.width - x)
+                elide: Text.ElideMiddle
             }
         }
 
@@ -99,8 +126,13 @@ Row {
             required property int index
             required property var model
 
+            // Whether the entry passes the search. One that does not is folded to no height and not drawn; its `visible`
+            // is left to the list, which hides the entries of a closed one.
+            readonly property bool matching: selector.matches(text)
+
             width: entry.parent !== null ? entry.parent.width : 0
-            height: EaStyle.Sizes.comboBoxHeight
+            height: matching ? EaStyle.Sizes.comboBoxHeight : 0
+            opacity: matching ? 1 : 0
             // The base's padding of 16 on every side leaves a content area of no height in a row this tall; its
             // Label draws past that, but a clipped line would show nothing, so the line gets the row's full height
             // (edi ADR-0017 §10).
@@ -115,13 +147,16 @@ Row {
 
                 IconLine {
                     anchors.verticalCenter: parent.verticalCenter
-                    segments: selector.segments(entry.index, entry.text, EaStyle.Colors.themeForeground)
+                    segments: selector.segments(entry.index, entry.text, EaStyle.Colors.themeForeground, row.outcomeRole !== "" ? entry.model[row.outcomeRole] : "", row.templateRole !== "" && entry.model[row.templateRole] === true)
+                    maximumWidth: Math.max(1, parent.width)
+                    elide: Text.ElideMiddle
                 }
             }
         }
     }
 
-    // The previous and next buttons: the base's sidebar button, square, with the arrow icons Continue uses.
+    // The previous and next buttons, on the right: the base's sidebar button, square, with the arrow icons Continue
+    // uses. Held, they repeat at about the keyboard's rate, as the arrow keys do (Qt's button auto-repeat).
     EaElements.SideBarButton {
         id: up
 
@@ -131,7 +166,10 @@ Row {
         spacing: 0
         enabled: row.blockIndex > 0
         fontIcon: "arrow-circle-up"
-        ToolTip.text: row.blockKind === "experiment" ? qsTr("Previous experiment") : qsTr("Previous structure")
+        ToolTip.text: row.blockKind === "experiment" ? qsTr("Previous experiment") : row.blockKind === "parameter" ? qsTr("Previous parameter") : qsTr("Previous structure")
+        autoRepeat: true
+        autoRepeatDelay: 300
+        autoRepeatInterval: 50
         onClicked: row.step(-1)
     }
 
@@ -144,7 +182,10 @@ Row {
         spacing: 0
         enabled: row.blockIndex >= 0 && row.blockIndex < selector.count - 1
         fontIcon: "arrow-circle-down"
-        ToolTip.text: row.blockKind === "experiment" ? qsTr("Next experiment") : qsTr("Next structure")
+        ToolTip.text: row.blockKind === "experiment" ? qsTr("Next experiment") : row.blockKind === "parameter" ? qsTr("Next parameter") : qsTr("Next structure")
+        autoRepeat: true
+        autoRepeatDelay: 300
+        autoRepeatInterval: 50
         onClicked: row.step(1)
     }
 }

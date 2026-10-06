@@ -19,7 +19,6 @@ WorkflowPage {
 
     // Each category's content, by `.edi` category id.
     readonly property var contents: ({
-            "experiment_type": experimentTypeContent,
             "data": rangeContent,
             "data_range": rangeContent,
             "instrument": instrumentContent,
@@ -42,15 +41,13 @@ WorkflowPage {
     mainTabs: [
         IconTabButton {
             objectName: "mainArea.experiment.tab.chart"
-            // The experiment's icon in its colour, and its name; the word alone with no experiment (edi
-            // ADR-0017 §2).
-            fontIcon: page.experiment ? "microscope" : ""
-            iconColor: AppColors.experiment(page.project ? page.project.currentExperimentIndex : -1)
-            text: page.experiment ? page.experiment.name : qsTr("Experiment")
+            // The view's name, text only (edi ADR-0017 §2).
+            text: qsTr("Pattern")
         }
     ]
     mainItems: [
-        PatternChart {
+        ProjectPatternChart {
+            id: chartView
             experiment: page.experiment
             shown: page.current && SwipeView.isCurrentItem
         }
@@ -87,22 +84,22 @@ WorkflowPage {
             source: page.experiment ? page.experiment.text : null
         }
     }
-    // One block selector for Basic, Extras and Text (edi ADR-0017 §7).
+    // One block selector in the main view's tab bar (edi ADR-0017 §7).
     blockSelectorShown: true
+    blockSelectorRightInset: chartView.toolbarRightInset
     blocks: project ? project.experiments : null
     blocksTextRole: "label"
     blockKind: "experiment"
+    blockOutcomeRole: "fitOutcome"
+    blockCurrentOutcome: experiment ? experiment.fitOutcome : ""
+    blockOneColour: project !== null && project.scan
+    blockTemplateRole: project !== null && project.scan ? "isTemplate" : ""
+    blockCurrentTemplate: project !== null && project.scan && project.currentExperimentIndex === project.templateIndex
     blockIndex: project ? project.currentExperimentIndex : -1
     onBlockActivated: index => page.project.currentExperimentIndex = index
     continueText: qsTr("Continue")
     onContinueClicked: AppState.open(AppState.Page.Analysis)
 
-    Component {
-        id: experimentTypeContent
-        ExperimentTypeGroup {
-            experiment: page.experiment
-        }
-    }
     Component {
         id: rangeContent
         MeasuredRangeGroup {
