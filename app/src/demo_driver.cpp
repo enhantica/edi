@@ -133,6 +133,14 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, QObject*
                                                                                         : QStringList{};
         steps_.push_back({QStringLiteral("ex-") + id, theme + open_example(id) + QStringList{experiment, basic, "group.peak"}});
     }
+    // ... and the anisotropic ADP draft on the Structure page: the Atomic displacement group, a site shown as Uani,
+    // the ADP atom view with its probability, and the space-group name picker with its search field.
+    steps_.push_back({"c13-01-atomic-displacement", open_example("pd-neut-cwl_cosio-d20_start-1")
+                                                        + QStringList{"appBar.tab.structure", basic,
+                                                                      "group.atom_site_aniso"}});
+    steps_.push_back({"c13-02-adp-uani", {"atomSiteAdp.type.1", "choose:Uani"}});
+    steps_.push_back({"c13-03-adp-view", {extras, "group.appearance", "structure.appearance.atomView", "choose:adp"}});
+    steps_.push_back({"c13-04-space-group-name", {basic, "group.space_group", "spaceGroup.nameHM"}});
     // ... then ideas no capture above shows (edi ADR-0017): the Experiment type grid three
     // wide (§2), and Measured data's one increment where the steps are equal (§6; t2-12 shows the range) ...
     steps_.push_back({"t4-01-experiment-type", open_example("pd-neut-cwl_lbco-hrpt_start-2")
