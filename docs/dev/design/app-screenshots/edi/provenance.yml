@@ -230,3 +230,11 @@ reblessed:
     platform: Linux x86_64, QT_QPA_PLATFORM=xcb (Xwayland on headless Weston, Mesa llvmpipe OpenGL)
     images:
       - ex-pd-neut-cwl_cosio-d20_scan-162f.png
+  - produced_at: d8e861e78f8981b10c9a8d35f9656f92c216f87e
+    reason: >-
+      The Y2O3 beta-ADP project joins the examples, so its page is captured (new). Captured with edi built against
+      crysta 0e5a3ca4. Only this image is added; the run's other SSIM failures are pages this branch's GUI work changed,
+      left to the app UI test's return.
+    platform: Linux x86_64, QT_QPA_PLATFORM=xcb (Xwayland on headless Weston, Mesa llvmpipe OpenGL)
+    images:
+      - ex-pd-neut-cwl_y2o3_beta-adp.png
