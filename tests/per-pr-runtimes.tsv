@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-06T13:50:01Z
+# measured_utc = 2026-10-06T16:00:39Z
 #
-# Recorded from: e04-t16-tests-seq13-edi-after.log (11 node(s) measured once, 8192 banked, 0 stale row(s) dropped)
-# Collected tests: 9383; with a reported duration: 4579
+# Recorded from: e04-t16-tests-seq14-edi-banked.log (29 node(s) measured once, 8197 banked, 3 stale row(s) dropped)
+# Collected tests: 9406; with a reported duration: 4580
 # Module-scoped fixture costs recorded: 24
 #
 # Breaches are decided PER TIER against the table
@@ -29,13 +29,36 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 9383
+# inventory_python = 9406
 # inventory_cpp = 298
-# inventory_measured = 8202
-# inventory_unmeasured = 1479
+# inventory_measured = 8226
+# inventory_unmeasured = 1478
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_projects_open_and_populate_pages
+0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_cosio-d20_scan-162f]
+0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_cosio-d20_scan-324f]
+0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_cosio-d20_scan-3f]
+0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_cosio-d20_start-1]
+0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_cosio-d20_start-4]
+0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_lab6-11b-echidna_tch-fcj]
+0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_lab6-echidna_fcj-asymmetry]
+0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_lbco-hrpt_start-2]
+0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_lbco-hrpt_start-4]
+0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_pbso4_beba-asymmetry]
+0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_yap-spodi_3k]
+0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_cecoal-polaris_chebyshev]
+0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_ceo2-pearl_polynomial]
+0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_diamond-dream_basic]
+0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_fe_pseudo-voigt]
+0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_ferrite-austenite-beer_joint]
+0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_ncaf-wish-2bank_start-3]
+0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_ncaf-wish-3bank_start-5]
+0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_ncaf-wish-5bank_start-5]
+0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_ncaf-wish-5bank_start-fullprof]
+0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_si-sepd_start-2]
+0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_si-sepd_start-5]
+0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-xray-cwl_lif_single]
+0.003	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_projects_open_and_populate_pages
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_missing_property_fails_the_production_qmllint_import_context
 0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_owner_amendment_receipts_cover_every_original_gui_boundary[test_library_settable_scalars_and_derived_readonly]
 0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_owner_amendment_receipts_cover_every_original_gui_boundary[test_library_settable_table_columns_reach_core]
@@ -3694,8 +3717,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_supp
 0.000	tests/integration/py/test_e04_t1_app_contract.py::test_adr_records_the_decision_and_comparison_plan
 0.010	tests/integration/py/test_e04_t1_app_contract.py::test_app_reachability_observer_rejects_missing_group_or_checker[empty-checker]
 0.010	tests/integration/py/test_e04_t1_app_contract.py::test_app_reachability_observer_rejects_missing_group_or_checker[missing-edge]
-0.030	tests/integration/py/test_e04_t1_app_contract.py::test_existing_projects_oracle_covers_the_registry_without_filters
-0.030	tests/integration/py/test_e04_t1_app_contract.py::test_frozen_oracle_inputs_are_the_committed_fixture_bytes
+0.130	tests/integration/py/test_e04_t1_app_contract.py::test_existing_projects_oracle_covers_the_registry_without_filters
+0.040	tests/integration/py/test_e04_t1_app_contract.py::test_frozen_oracle_inputs_are_the_committed_fixture_bytes
 0.030	tests/integration/py/test_e04_t1_app_contract.py::test_local_and_ci_gates_reach_app_tests
 UNMEASURED:failed-in-this-run	tests/integration/py/test_e04_t1_app_contract.py::test_one_shared_labelled_regression_baseline_and_pairs
 0.020	tests/integration/py/test_e04_t1_app_contract.py::test_originals_remain_byte_identical
@@ -4797,9 +4820,9 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c11_t62_cli_cancel.py::test_c
 0.040	tests/system/py/test_c11_t62_progress_cost.py::test_progress_work_per_file_stays_flat_through_5184_events
 0.340	tests/system/py/test_c11_t62_scan_contract.py::test_completion_event_arrives_before_the_next_files_iteration[independent]
 0.390	tests/system/py/test_c11_t62_scan_contract.py::test_completion_event_arrives_before_the_next_files_iteration[sequential]
-0.060	tests/system/py/test_c11_t62_scan_contract.py::test_declared_scan_joint_refusal_precedes_every_cancellation_callback[on_iteration]
-0.070	tests/system/py/test_c11_t62_scan_contract.py::test_declared_scan_joint_refusal_precedes_every_cancellation_callback[on_start]
-0.070	tests/system/py/test_c11_t62_scan_contract.py::test_declared_scan_joint_refusal_precedes_every_cancellation_callback[predicate]
+0.090	tests/system/py/test_c11_t62_scan_contract.py::test_declared_scan_native_joint_preserves_the_cancellation_contract[on_iteration]
+0.090	tests/system/py/test_c11_t62_scan_contract.py::test_declared_scan_native_joint_preserves_the_cancellation_contract[on_start]
+0.100	tests/system/py/test_c11_t62_scan_contract.py::test_declared_scan_native_joint_preserves_the_cancellation_contract[predicate]
 0.140	tests/system/py/test_c11_t62_scan_contract.py::test_direct_fit_cancellation_uses_the_same_python_contract[on_iteration-joint]
 0.100	tests/system/py/test_c11_t62_scan_contract.py::test_direct_fit_cancellation_uses_the_same_python_contract[on_iteration-single]
 0.100	tests/system/py/test_c11_t62_scan_contract.py::test_direct_fit_cancellation_uses_the_same_python_contract[on_start-joint]
@@ -9722,7 +9745,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # unaffected; excluding one test only moves the cost to the next sibling).
 # These rows mark and deselect NOTHING - kept for visibility
 # and the stale-module integrity refusal.
-# module-cost: 14.897	tests/integration/app/test_e04_t1_runtime_escapes.py
+# module-cost: 211.397	tests/integration/app/test_e04_t1_runtime_escapes.py
 # module-cost: 1.914	tests/integration/py/test_e04_t12_name_allowance.py
 # module-cost: 0.192	tests/integration/py/test_e09_t75_sdk_consumer.py
 # module-cost: 0.256	tests/integration/py/test_scan_app_contract.py

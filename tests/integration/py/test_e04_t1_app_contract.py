@@ -463,6 +463,12 @@ def test_existing_projects_oracle_covers_the_registry_without_filters():
                 'gate 3: scan projects exercise every read-only scan field'
             )
     for project in oracle['projects']:
+        for dataset in project.get('datasets', []):
+            directory = project['analysis']['_sequential_fit.data_dir']
+            source = ROOT / project['path'] / directory / dataset['file']
+            assert hashlib.sha256(source.read_bytes()).hexdigest() == dataset['sha256'], (
+                'Dataset catalogue and ranges retain independent measured ASCII provenance'
+            )
         assert project['structures'] and project['experiments'], (
             'I19: each page-population witness contains real structures and experiments'
         )

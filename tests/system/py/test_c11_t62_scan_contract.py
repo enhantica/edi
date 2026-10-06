@@ -153,8 +153,8 @@ def test_dry_run_does_not_open_scan_data_for_copying(tmp_path, mode):
 @pytest.mark.parametrize('cancel', ['predicate', 'on_start', 'on_iteration'])
 def test_direct_fit_cancellation_uses_the_same_python_contract(tmp_path, mode, cancel):
     target = _project(tmp_path, mode)
-    # Before: joint cancellation ran on a declared scan. F9 now refuses that
-    # boundary; retain the admitted direct-fit callback contract on a non-scan.
+    # Preserve the ordinary non-scan joint route as well as the declared-scan
+    # native cancellation witnesses below; GUI scan mode admission is separate.
     if mode == 'joint':
         analysis = target / 'analysis/analysis.edi'
         analysis.write_text(analysis.read_text().split('_sequential_fit.data_dir')[0])
@@ -177,7 +177,7 @@ def test_direct_fit_cancellation_uses_the_same_python_contract(tmp_path, mode, c
 
 
 @pytest.mark.parametrize('cancel', ['predicate', 'on_start', 'on_iteration'])
-def test_declared_scan_joint_refusal_precedes_every_cancellation_callback(tmp_path, cancel):
+def test_declared_scan_native_joint_preserves_the_cancellation_contract(tmp_path, cancel):
     target = _project(tmp_path, 'joint')
     before = {
         path.relative_to(target): path.read_bytes() for path in target.rglob('*') if path.is_file()
@@ -186,17 +186,24 @@ def test_declared_scan_joint_refusal_precedes_every_cancellation_callback(tmp_pa
 
     def interrupt(*args):
         calls.append(args)
-        return True
+        if cancel == 'predicate':
+            return True
+        raise KeyboardInterrupt
 
     kwargs = {'should_cancel': interrupt} if cancel == 'predicate' else {cancel: interrupt}
-    with pytest.raises(ValueError, match='declares a scan'):
-        edi.Project.load(target).analysis.fit(**kwargs)
-    assert not calls, (
-        'Scan admission: declared joint scans refuse before any cancellation or fit callback'
+    try:
+        result = edi.Project.load(target).analysis.fit(**kwargs)
+    except KeyboardInterrupt:
+        pytest.fail(
+            'Native joint admission: every callback translates interruption to cancellation'
+        )
+    assert calls, 'Native joint admission: the declared-scan control reaches its selected callback'
+    assert result.status == edi.FitStatus.CANCELLED, (
+        'Native joint admission: a matching declared mode remains admitted and cancels cleanly'
     )
     assert before == {
         path.relative_to(target): path.read_bytes() for path in target.rglob('*') if path.is_file()
-    }, 'Scan admission: a refused joint scan preserves every source and result byte'
+    }, 'Native joint cancellation preserves every source and prior result byte without saving'
 
 
 @pytest.mark.parametrize('mode', ['sequential', 'independent'])

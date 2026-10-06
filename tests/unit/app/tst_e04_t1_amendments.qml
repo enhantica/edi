@@ -217,6 +217,17 @@ TestCase {
         verify(visibleControl("scatteringSource.neutron_scattering_length") === null,
                "owner X-ray record: a neutron-only option is not shown for X-rays");
         click("sideBar.tab.basic");
+        reveal("experiments", "experimentType.radiationProbe");
+        const explorer = visibleControl("group.experiments");
+        verify(!e.calculationOnly, "The independent X-ray fixture contains measured columns");
+        ["sampleForm", "beamMode", "radiationProbe", "scatteringType"].forEach(axis => {
+            const selector = Ui.find(explorer, "experimentType." + axis);
+            verify(selector !== null && !selector.enabled,
+                   "Type selectors belong to the explorer and remain fixed for measured data");
+        });
+        const dimensionality = Ui.find(explorer, "experimentType.dimensionality");
+        verify(dimensionality !== null && !dimensionality.enabled,
+               "The explorer retains the disabled dimensionality placeholder");
         reveal("background", "background.type");
         const background = visibleControl("background.type");
         verify(background !== null, "owner background record: a visible selector leads the Background group");
@@ -224,8 +235,8 @@ TestCase {
         same(tokens(background.model), ["line-segment", "chebyshev", "polynomial"],
              ": exactly the computable background families are offered; reserved families stay hidden");
         same(Probe.rows(e.categories).map(r => r.categoryId),
-             ["experiment_type", "data", "background", "instrument", "peak", "excluded_region", "linked_structure", "absorption", "preferred_orientation", "scattering_source"],
-             "owner category record: experiment groups are exactly the admitted edi categories");
+             ["data", "background", "instrument", "peak", "excluded_region", "linked_structure", "absorption", "preferred_orientation", "scattering_source"],
+             "Experiment categories retain the admitted scientific groups after type selectors move to the explorer");
         e.peakType = "cwl-tch-pseudo-voigt-fcj";
         reveal("peak", "peak.asym_fcj_1");
         const peak = visibleControl("group.peak");
@@ -244,7 +255,7 @@ TestCase {
         //  D11 adds the view-only Appearance group to Structure Extras.
         renderedCategories(["space_group", "cell", "atom_site"], ["scattering_length", "appearance"]);
         click("appBar.tab.experiment");
-        renderedCategories(["experiment_type", "background", "instrument", "peak", "excluded_region", "linked_structure"],
+        renderedCategories(["background", "instrument", "peak", "excluded_region", "linked_structure"],
                            ["data", "absorption", "preferred_orientation", "scattering_source", "peak"]);
     }
 }

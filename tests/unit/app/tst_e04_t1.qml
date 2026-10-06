@@ -36,7 +36,11 @@ TestCase {
         verify(appWindow !== null, "gate 2: production Main loads under the actual registered module");
     }
     function init() {
-        failOnWarning(/.*/);
+        // The first measured-profile actor encounters Qt Graphs' one-time GLES2
+        // context probe on the software host, as the other page actors do.
+        failOnWarning(qtest_results.functionName === "test_all_committed_profiles_and_current_experiment"
+            ? /\A(?!QRhiGles2: Failed to create (?:temporary context|context)\z)[\s\S]*\z/
+            : /.*/);
         Probe.clearWatches();
         unrelatedParameter = null;
         Session.closeProject();
@@ -48,7 +52,10 @@ TestCase {
         appWindow.destroy();
     }
     function open(path) {
-        Session.openProject(Probe.repoUrl(path));
+        const url = path.startsWith("tests/fixtures/")
+            ? Qt.resolvedUrl("../../fixtures/" + path.slice("tests/fixtures/".length))
+            : Probe.repoUrl(path);
+        Session.openProject(url);
         verify(Session.hasProject, "gate 3: committed project loads: " + path + " " + Session.lastError);
         return Session.project;
     }
@@ -186,8 +193,11 @@ TestCase {
             const wanted = expected.peakFields.concat(expected.unusedFreeFields);
             ordered(peakRows.map(r => r.parameter.name).sort(), wanted.slice().sort(), "I15: no inert storage fields, no hidden free parameters");
             peakRows.forEach(row => {
-                const frozen = expected.scalars["_peak." + row.parameter.name];
-                verify(frozen !== undefined, "I7: displayed peak field has an independent fixture value");
+                const frozen = expected.scalars["_peak." + row.parameter.name]
+                    || expected.peakDefaults[row.parameter.name];
+                verify(frozen !== undefined,
+                       "Every displayed peak field has a saved input or declared neutral default: "
+                       + expected.project + " " + expected.experiment + " " + row.parameter.name);
                 compare(row.parameter.value, frozen.value, "I7: displayed value equals project text");
                 compare(row.parameter.free, frozen.free, "I7: displayed free flag equals bracket rule");
                 compare(row.usedByProfile, !expected.unusedFreeFields.includes(row.parameter.name), "I15: unused free storage is explicitly marked");
@@ -208,9 +218,15 @@ TestCase {
             }
             const prefix = expected.mode === "cwl" ? "cwl-" : "tof-";
             ordered(tokens(experiment.peakTypeOptions).sort(), Object.keys(Oracle.frozen.profiles).filter(p => p.startsWith(prefix)).sort(), "I17: exactly independently declared profiles for this loaded experiment type");
-            ordered(tokens(experiment.backgroundTypeOptions), ["line-segment"], "I17: background selector offers exactly the sole supported family");
+            ordered(tokens(experiment.backgroundTypeOptions), ["line-segment", "chebyshev", "polynomial"], "The background selector offers exactly the independently declared computable families");
             ordered(tokens(project.analysis.minimizerTypeOptions), ["crysta"], "I17: minimizer selector offers exactly the supported engine");
-            ordered(tokens(project.analysis.fittingModeOptions).sort(), ["independent", "joint", "sequential", "single"], "I17: fitting mode selector offers exactly the declared vocabulary");
+            const declaration = Oracle.frozen.projects.find(p => p.path === expected.project);
+            const scanDeclared = declaration !== undefined
+                && declaration.analysis["_sequential_fit.data_dir"] !== undefined;
+            const modes = scanDeclared ? ["independent", "sequential", "single"]
+                                       : ["independent", "joint", "sequential", "single"];
+            ordered(tokens(project.analysis.fittingModeOptions).sort(), modes,
+                    "The app offers joint only for inputs without a declared scan");
             ordered(tokens(experiment.absorptionTypeOptions).sort(), (expected.mode === "cwl" ? ["none", "cylinder-hewat", "cylinder-lobanov"] : ["none", "cylinder"]).sort(), "I17: exactly the beam-scoped absorption families");
             compare(experiment.beamModeToken, expected.mode === "cwl" ? "constant wavelength" : "time-of-flight", "seam 7: spaced token and effective undeclared beam mode");
         });
