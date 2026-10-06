@@ -2,6 +2,8 @@
 #include "edi/fit_job.hpp"
 
 #include <atomic>
+#include <filesystem>
+#include <fstream>
 #include <exception>
 #include <map>
 #include <stdexcept>
@@ -119,26 +121,43 @@ FitFrame frame_of(Project& preview, const std::map<std::string, double>& values)
     return frame;
 }
 // Worker thread: the scan's file just fitted, drawn on the preview copy: its measured data from the file, every
-// parameter at its results row, the pattern calculated. Empty when the row is not that file's or anything refuses.
-FitFrame scan_frame_of(Project& preview, const std::string& directory, const std::string& file) {
+// parameter at the values of the row the driver appended for it (the event's own cells, never the file's moving
+// tail), the pattern calculated. `header` is read from results.csv once. Empty when anything refuses.
+FitFrame scan_frame_of(Project& preview, const std::string& directory, const ScanFileRecord& record,
+                       std::vector<std::string>& header) {
     FitFrame frame;
     try {
-        const ScanResults last = read_last_scan_result(preview);
-        const auto row = last.rows.find(file);
-        if (row == last.rows.end()) {
+        if (header.empty()) {
+            std::ifstream input(std::filesystem::path(preview.path) / "analysis" / "results.csv");
+            std::string line;
+            if (!std::getline(input, line)) {
+                return {};
+            }
+            std::stringstream cells(line);
+            for (std::string cell; std::getline(cells, cell, ',');) {
+                header.push_back(cell);
+            }
+        }
+        if (record.cells.size() != header.size()) {
             return {};
         }
         std::map<std::string, std::size_t> column;
-        for (std::size_t i = 0; i < last.header.size(); ++i) {
-            column.emplace(last.header[i], i);
+        for (std::size_t i = 0; i < header.size(); ++i) {
+            column.emplace(header[i], i);
         }
         for (const NamedSlot& slot : named_slots(preview)) {
             const auto found = column.find(scan_results_column(slot.unique_name));
+            double value = 0.0;
             if (found != column.end()) {
-                slot.parameter->value = std::stod(row->second[found->second]);
+                if (!parse_scan_number(record.cells[found->second], value)) {
+                    return {};
+                }
+                slot.parameter->value = value;
             }
         }
-        preview.experiment().data = read_scan_dataset(directory, file, preview.experiment().effective_beam_mode());
+        preview.experiment().data =
+            read_scan_dataset(directory, record.file_name, preview.experiment().effective_beam_mode());
+        preview.experiment().calculation_only = false;
         apply_relations(preview);
         preview.calculate();
         frame.push_back(capture_pattern(preview, 0));
@@ -276,8 +295,9 @@ bool FitJob::start(const Project* scan_template) {
                     }
                 });
             };
-            const FileCompleteCallback on_file_complete = [&self, &emit, &preview,
-                                                           &directory](const ScanFileRecord& record) {
+            std::vector<std::string> header;
+            const FileCompleteCallback on_file_complete = [&self, &emit, &preview, &directory,
+                                                           &header](const ScanFileRecord& record) {
                 emit([self, record] {
                     if (self->open && self->hooks.file_completed) {
                         self->hooks.file_completed(record);
@@ -285,7 +305,7 @@ bool FitJob::start(const Project* scan_template) {
                 });
                 if (preview && self->following.load(std::memory_order_acquire) &&
                     self->frame_wanted.load(std::memory_order_acquire)) {
-                    FitFrame frame = scan_frame_of(*preview, directory, record.file_name);
+                    FitFrame frame = scan_frame_of(*preview, directory, record, header);
                     if (!frame.empty()) {
                         self->frame_wanted.store(false, std::memory_order_release);
                         emit([self, file = record.file_name, frame = std::move(frame)] {

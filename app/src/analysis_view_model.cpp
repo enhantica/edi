@@ -284,7 +284,7 @@ void AnalysisViewModel::setFittingMode(const QString& mode) {
         return;
     }
     edi::Project& project = project_;
-    setLastError(editor_.apply(edi::Edit::fitting_mode(project, mode.toStdString()), false));
+    setLastError(editor_.apply_setting(edi::Edit::fitting_mode(project, mode.toStdString())));
 }
 
 void AnalysisViewModel::setDescent(const QString& id) {
@@ -292,17 +292,17 @@ void AnalysisViewModel::setDescent(const QString& id) {
         return;
     }
     edi::Project& project = project_;
-    setLastError(editor_.apply(edi::Edit::descent(project, id.toStdString()), false));
+    setLastError(editor_.apply_setting(edi::Edit::descent(project, id.toStdString())));
 }
 
 void AnalysisViewModel::setMaxIterations(int bound) {
     edi::Project& project = project_;
-    setLastError(editor_.apply(edi::Edit::max_iterations(project, bound), false));
+    setLastError(editor_.apply_setting(edi::Edit::max_iterations(project, bound)));
 }
 
 void AnalysisViewModel::setChiSquareTolerance(double tolerance) {
     edi::Project& project = project_;
-    setLastError(editor_.apply(edi::Edit::chi_square_tolerance(project, tolerance), false));
+    setLastError(editor_.apply_setting(edi::Edit::chi_square_tolerance(project, tolerance)));
 }
 
 void AnalysisViewModel::setLastError(const QString& error) {

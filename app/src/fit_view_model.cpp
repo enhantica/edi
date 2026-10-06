@@ -113,44 +113,6 @@ void FitResultListModel::setRecord(const edi::Project& project) {
     setTableRows(rows);
 }
 
-ScanSummary ScanSummary::of(const edi::ScanDatasets& datasets, const edi::ScanResults& results) {
-    ScanSummary summary;
-    summary.files = static_cast<int>(datasets.files.size());
-    std::size_t chi_column = 1, success_column = 2;
-    for (std::size_t i = 0; i < results.header.size(); ++i) {
-        if (results.header[i] == "fit_result.reduced_chi_square") chi_column = i;
-        if (results.header[i] == "fit_result.success") success_column = i;
-    }
-    bool first = true;
-    for (const std::string& file : datasets.files) {
-        const auto row = results.rows.find(file);
-        if (row == results.rows.end()) {
-            continue;
-        }
-        ++summary.fitted;
-        const std::vector<std::string>& cells = row->second;
-        if (success_column < cells.size() && cells[success_column] == "True") {
-            ++summary.ok;
-        } else {
-            ++summary.failed;
-        }
-        bool number = false;
-        const double chi2 =
-            chi_column < cells.size() ? QString::fromStdString(cells[chi_column]).toDouble(&number) : 0.0;
-        if (number && std::isfinite(chi2)) {
-            summary.chi_min = first ? chi2 : std::min(summary.chi_min, chi2);
-            summary.chi_max = first ? chi2 : std::max(summary.chi_max, chi2);
-            first = false;
-        }
-    }
-    if (summary.fitted > 0) {
-        summary.outcome = summary.failed > 0               ? QStringLiteral("failed")
-                          : summary.fitted < summary.files ? QStringLiteral("stopped")
-                                                           : QStringLiteral("success");
-    }
-    return summary;
-}
-
 namespace {
 
 QString chi_range(const ScanSummary& summary) {
@@ -160,6 +122,8 @@ QString chi_range(const ScanSummary& summary) {
 
 QString outcome_word(const QString& key) {
     if (key == QLatin1String("success")) return FitViewModel::tr("Success");
+    if (key == QLatin1String("maxIterations")) return FitViewModel::tr("Max iterations");
+    if (key == QLatin1String("noStep")) return FitViewModel::tr("No step");
     if (key == QLatin1String("stopped")) return FitViewModel::tr("Stopped");
     return FitViewModel::tr("Failed");
 }
@@ -180,6 +144,10 @@ void FitResultListModel::setScan(const ScanSummary& summary) {
     };
     row(QStringLiteral("flask"), tr("Minimizer"), QStringLiteral("crysta"));
     row(QString(), tr("Overall status"), outcome_word(summary.outcome), summary.outcome);
+    // The run's time when this app ran it; the driver's results record none.
+    if (summary.seconds >= 0.0) {
+        row(QStringLiteral("stopwatch"), tr("Fitting time (seconds)"), QString::number(summary.seconds, 'f', 2));
+    }
     row(QStringLiteral("copy"), tr("Files fitted"), QStringLiteral("%1/%2").arg(summary.fitted).arg(summary.files));
     row(QStringLiteral("check-circle"), tr("Converged"), QString::number(summary.ok));
     row(QStringLiteral("times-circle"), tr("Failed"), QString::number(summary.failed));
@@ -233,10 +201,9 @@ void FitViewModel::showRecord() {
     results_->setRecord(project_);
 }
 
-void FitViewModel::showScan(const edi::ScanDatasets& datasets, const edi::ScanResults& results) {
-    scan_ = ScanSummary::of(datasets, results);
-    // Results read from disk are the template's until it is edited (noteTemplateEdit).
-    setOutOfDate(false);
+void FitViewModel::showScan(const ScanSummary& summary, bool scan_last) {
+    scan_ = summary;
+    scan_last_ = scan_last;
     emit scanSummaryChanged();
     emit scanFilesChanged();
     emit scanOkChanged();
@@ -249,14 +216,15 @@ void FitViewModel::showScan(const edi::ScanDatasets& datasets, const edi::ScanRe
         return;
     }
     if (scan_.fitted == 0) {
-        setProgress(QString(), QString(), QString());
-        setElapsed(QString());
+        // A run that failed before its first file still says so.
+        setProgress(QString(), QString(), scan_.outcome.isEmpty() ? QString() : outcome_word(scan_.outcome),
+                    scan_.outcome);
+        setElapsed(scan_.seconds >= 0.0 ? duration(scan_.seconds) : QString());
         results_->clear();
         return;
     }
-    // The driver's results record no time.
     setProgress(QString(), chi_range(scan_), outcome_word(scan_.outcome), scan_.outcome);
-    setElapsed(QString());
+    setElapsed(scan_.seconds >= 0.0 ? duration(scan_.seconds) : QString());
     results_->setScan(scan_);
 }
 
@@ -328,17 +296,23 @@ bool FitViewModel::undo() {
 }
 
 void FitViewModel::sync() {
-    // A scan mode runs only in a project whose scan resolves to datasets (the template's data files).
+    // A scan mode runs only in a project whose scan resolves to datasets of one template experiment; a declared
+    // scan is never fitted jointly, whatever mode the project was saved with.
     const QString mode = QString::fromStdString(edi::effective_fitting_mode(project_));
     const bool scan = edi::is_scan_fitting_mode(mode.toStdString());
-    const bool available = mode == QLatin1String("single") || mode == QLatin1String("joint") ||
-                           (scan && owner_.scan());
-    const QString reason =
-        available ? QString()
-        : scan    ? tr("This project's %1 mode needs a scan: a data directory with matching files").arg(mode)
-                  : tr("Start fitting runs the single, joint, sequential and independent fitting modes; this "
-                       "project's is %1")
-                        .arg(mode);
+    const bool declared = project_.sequential_fit.declared();
+    QString reason;
+    if (scan) {
+        reason = owner_.scanRefusal();
+    } else if (mode == QLatin1String("joint") && declared) {
+        reason = tr("This project declares a scan (_sequential_fit): its datasets are fitted in the sequential or "
+                    "independent mode, not jointly");
+    } else if (mode != QLatin1String("single") && mode != QLatin1String("joint")) {
+        reason = tr("Start fitting runs the single, joint, sequential and independent fitting modes; this project's "
+                    "is %1")
+                     .arg(mode);
+    }
+    const bool available = reason.isEmpty();
     if (available != available_) {
         available_ = available;
         emit availableChanged();
@@ -405,7 +379,7 @@ void FitViewModel::fileCompleted(const edi::ScanFileRecord& record) {
     ++(record.converged ? counts.ok : counts.failed);
     setScanCounts(counts, QString::fromStdString(record.file_name));
     setProgress(QString(), chi(record.reduced_chi_square), tr("Running"));
-    owner_.scanFileFitted();
+    owner_.scanFileFitted(record);
     if (following()) {
         owner_.followScanFile(record.file_name);
     }
@@ -461,10 +435,7 @@ void FitViewModel::setContinuable(bool continuable) {
     }
 }
 
-void FitViewModel::noteTemplateEdit() {
-    setContinuable(false);
-    setOutOfDate(scan_.fitted > 0);
-}
+void FitViewModel::noteTemplateEdit() { setContinuable(false); }
 
 void FitViewModel::setOutOfDate(bool out_of_date) {
     if (out_of_date != out_of_date_) {
@@ -475,12 +446,11 @@ void FitViewModel::setOutOfDate(bool out_of_date) {
 
 void FitViewModel::scanEnded(const edi::FitReport& report) {
     setScanning(false);
-    owner_.scanEnded();
+    const double seconds = static_cast<double>(clock_.elapsed()) / 1000.0;
+    // The owner reads the rows on disk again and shows the run's summary, its own end and time included.
+    owner_.scanEnded(report.status, seconds);
     // Stopped part way: Continue fitting fits the files left.
     setContinuable(report.status == edi::FitStatus::CANCELLED && scan_.fitted > 0 && scan_.fitted < scan_.files);
-    if (scan_.fitted > 0) {
-        setElapsed(duration(static_cast<double>(clock_.elapsed()) / 1000.0));
-    }
     if (report.status == edi::FitStatus::ERROR) {
         emit refused(QString::fromStdString(report.refusal));
         return;

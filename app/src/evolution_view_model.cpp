@@ -22,26 +22,63 @@ void EvolutionParameterListModel::setNames(const QStringList& names) {
 EvolutionViewModel::EvolutionViewModel(QObject* parent)
     : QObject(parent), parameters_(new EvolutionParameterListModel(this)) {}
 
-void EvolutionViewModel::setScan(const edi::ScanDatasets& datasets, const edi::ScanResults& results,
-                                 std::size_t extract_rules, const QString& extracted_title) {
-    files_ = datasets.files;
-    results_ = results;
-    extract_rules_ = extract_rules;
+void EvolutionViewModel::setScan(const ScanSession* session, const edi::Project* project,
+                                 const QString& extracted_title) {
+    session_ = session;
+    project_ = project;
     extracted_title_ = extracted_title;
-    // A results row: file_path, reduced χ², success, iterations, the extract rules' values, then each fitted
-    // parameter's value and uncertainty.
     QStringList names;
-    for (std::size_t i = 4 + extract_rules; i < results.header.size(); ++i) {
-        const QString column = QString::fromStdString(results.header[i]);
-        if (!column.endsWith(QLatin1String(".uncertainty"))) {
-            names.append(column);
+    if (session_ != nullptr) {
+        for (const edi::ScanParameterColumns& parameter : session_->index().parameters) {
+            names.append(QString::fromStdString(parameter.name));
         }
     }
     const QString shown = current_ >= 0 && current_ < names_.size() ? names_[current_] : QString();
-    names_ = names;
-    parameters_->setNames(names_);
+    if (names != names_) {
+        names_ = names;
+        parameters_->setNames(names_);
+    }
     current_ = names_.isEmpty() ? -1 : std::max(0, static_cast<int>(names_.indexOf(shown)));
     rebuild();
+}
+
+std::optional<double> EvolutionViewModel::xOf(int dataset, const std::vector<std::string>* extracted) const {
+    if (x_mode_ == 0 && !extracted_title_.isEmpty()) {
+        double x = 0.0;
+        if (extracted == nullptr || extracted->empty() || !edi::parse_scan_number(extracted->front(), x) ||
+            !std::isfinite(x)) {
+            return std::nullopt;
+        }
+        return x;
+    }
+    return static_cast<double>(dataset + 1);
+}
+
+void EvolutionViewModel::addRow(int dataset, const std::vector<std::string>& cells) {
+    if (session_ == nullptr || current_ < 0) {
+        return;
+    }
+    const std::string name = names_[current_].toStdString();
+    for (const edi::ScanParameterColumns& parameter : session_->index().parameters) {
+        if (parameter.name != name || parameter.uncertainty >= cells.size()) {
+            continue;
+        }
+        const std::vector<std::string> extracted(cells.begin() + 4,
+                                                 cells.begin() + 4 + static_cast<std::ptrdiff_t>(
+                                                                         project_->sequential_fit.extract.size()));
+        Point point;
+        point.dataset = dataset;
+        const std::optional<double> x = xOf(dataset, &extracted);
+        if (!x || !edi::parse_scan_number(cells[parameter.value], point.y) ||
+            !edi::parse_scan_number(cells[parameter.uncertainty], point.error) || !std::isfinite(point.y) ||
+            !std::isfinite(point.error) || point.error < 0.0) {
+            return;
+        }
+        point.x = *x;
+        points_.push_back(point);
+        finish();
+        return;
+    }
 }
 
 void EvolutionViewModel::setOutOfDate(bool out_of_date) {
@@ -83,42 +120,20 @@ void EvolutionViewModel::setLayer(MeasuredLayer* layer) {
 
 void EvolutionViewModel::rebuild() {
     points_.clear();
-    if (current_ >= 0) {
-        std::map<std::string, std::size_t> column;
-        for (std::size_t i = 0; i < results_.header.size(); ++i) {
-            column.emplace(results_.header[i], i);
-        }
-        const std::string name = names_[current_].toStdString();
-        const auto value_column = column.find(name);
-        const auto error_column = column.find(name + ".uncertainty");
-        for (std::size_t index = 0; index < files_.size(); ++index) {
-            const auto row = results_.rows.find(files_[index]);
-            if (row == results_.rows.end() || value_column == column.end()) {
-                continue;
+    if (session_ != nullptr && project_ != nullptr && current_ >= 0) {
+        // The column read from the file once; a value, an uncertainty or an x that is not a finite number (or an
+        // uncertainty below zero) leaves its point out.
+        session_->column(*project_, names_[current_].toStdString(), [this](int dataset, double value, double error) {
+            const std::optional<double> x = xOf(dataset, session_->extracted(dataset));
+            if (x && std::isfinite(value) && std::isfinite(error) && error >= 0.0) {
+                points_.push_back({*x, value, error, dataset});
             }
-            const std::vector<std::string>& cells = row->second;
-            Point point;
-            bool ok = false;
-            point.y = QString::fromStdString(cells[value_column->second]).toDouble(&ok);
-            if (!ok) {
-                continue;
-            }
-            if (error_column != column.end()) {
-                point.error = QString::fromStdString(cells[error_column->second]).toDouble(&ok);
-                point.error = ok && std::isfinite(point.error) ? point.error : 0.0;
-            }
-            if (x_mode_ == 0 && extract_rules_ > 0) {
-                point.x = QString::fromStdString(cells[4]).toDouble(&ok);
-                if (!ok) {
-                    continue;
-                }
-            } else {
-                point.x = static_cast<double>(index + 1);
-            }
-            point.dataset = static_cast<int>(index);
-            points_.push_back(point);
-        }
+        });
     }
+    finish();
+}
+
+void EvolutionViewModel::finish() {
     // Above the limit: per x bucket only the lowest and the highest point, so every excursion stays visible.
     if (points_.size() > static_cast<std::size_t>(kThinningLimit)) {
         const auto [low, high] = std::minmax_element(points_.begin(), points_.end(),
@@ -127,7 +142,8 @@ void EvolutionViewModel::rebuild() {
         const int buckets = kThinningLimit / 2;
         std::vector<int> lowest(buckets, -1), highest(buckets, -1);
         for (std::size_t i = 0; i < points_.size(); ++i) {
-            const int bucket = std::min(buckets - 1, static_cast<int>((points_[i].x - x0) / span * buckets));
+            const double share = std::clamp((points_[i].x - x0) / span, 0.0, 1.0);
+            const int bucket = std::min(buckets - 1, static_cast<int>(share * buckets));
             if (lowest[bucket] < 0 || points_[i].y < points_[static_cast<std::size_t>(lowest[bucket])].y) {
                 lowest[bucket] = static_cast<int>(i);
             }

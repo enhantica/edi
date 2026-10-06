@@ -46,6 +46,8 @@ class RowTableModel : public QAbstractListModel {
     // Write one role of one row; false when the role is not writable or the core refused.
     virtual bool setRole(int row, const QString& role, const QVariant& value);
     void setTableRows(const QList<Row>& rows);
+    // One row's values, the row staying where it is: only the roles that differ are announced.
+    void setTableRow(int row, const QList<QVariant>& values);
     const void* keyAt(int row) const { return row >= 0 && row < rows_.size() ? rows_.at(row).key : nullptr; }
     int roleIndex(int role) const { return role - Qt::UserRole - 1; }
 

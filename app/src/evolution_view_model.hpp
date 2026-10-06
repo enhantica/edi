@@ -7,10 +7,12 @@
 #include <QString>
 #include <QStringList>
 #include <QtQml/qqmlregistration.h>
+#include <optional>
 #include <string>
 #include <vector>
 
 #include "edi/scan.hpp"
+#include "scan_session.hpp"
 #include "measured_layer.hpp"
 #include "row_table_model.hpp"
 
@@ -58,9 +60,11 @@ class EvolutionViewModel : public QObject {
 
     explicit EvolutionViewModel(QObject* parent);
 
-    // The scan's datasets, results and extract rule (its id and unit), after a load or a refresh.
-    void setScan(const edi::ScanDatasets& datasets, const edi::ScanResults& results, std::size_t extract_rules,
-                 const QString& extracted_title);
+    // The scan's results (the session's index and the project they belong to) and its first extract rule's title,
+    // after a load or a refresh: the chart reads the selected parameter's column from the file. Neither is copied.
+    void setScan(const ScanSession* session, const edi::Project* project, const QString& extracted_title);
+    // A row a run just appended: its point joins the chart without reading the file again.
+    void addRow(int dataset, const std::vector<std::string>& cells);
 
     EvolutionParameterListModel* parameters() const { return parameters_; }
     int currentParameter() const { return current_; }
@@ -111,10 +115,12 @@ class EvolutionViewModel : public QObject {
     QPointer<MeasuredLayer> layer_;
     QStringList names_;
     QString extracted_title_;
-    std::vector<std::string> files_;
-    edi::ScanResults results_;
-    std::size_t extract_rules_ = 0;
+    const ScanSession* session_ = nullptr;
+    const edi::Project* project_ = nullptr;
     std::vector<Point> points_;
+    // The x of a dataset: its first extracted value, or its place in the scan from 1; nullopt when not finite.
+    std::optional<double> xOf(int dataset, const std::vector<std::string>* extracted) const;
+    void finish();
     int current_ = -1;
     int x_mode_ = 0;
     bool out_of_date_ = false;

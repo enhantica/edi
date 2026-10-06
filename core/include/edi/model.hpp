@@ -3483,6 +3483,8 @@ struct ScanFileRecord {
     bool converged = false;
     double reduced_chi_square = 0.0;
     int iterations = 0;
+    // The row's cells as crysta appended them (the live event; empty for a resumed row read back).
+    std::vector<std::string> cells;
 };
 
 // Optional per-file completion subscriber. Passing none costs nothing: with no

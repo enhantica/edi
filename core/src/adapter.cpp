@@ -3,6 +3,7 @@
 #include <array>
 #include <cctype>
 #include <chrono>
+#include <charconv>
 #include <filesystem>
 #include <fstream>
 #include <locale>
@@ -894,7 +895,7 @@ std::vector<std::string> scan_extract_values(const Project& project, const std::
 namespace {
 
 // crysta writes plain comma-joined cells, with no quoting (its results.csv contract).
-std::vector<std::string> split_scan_row(const std::string& line) {
+std::vector<std::string> split_scan_row(std::string_view line) {
     std::vector<std::string> cells(1);
     for (const char character : line) {
         if (character == ',') {
@@ -906,84 +907,174 @@ std::vector<std::string> split_scan_row(const std::string& line) {
     return cells;
 }
 
-}  // namespace
-
-ScanResults read_last_scan_result(const Project& project) {
-    ScanResults results;
-    std::ifstream input(std::filesystem::path(project.path) / "analysis" / "results.csv", std::ios::binary);
-    std::string header;
-    if (!input || !std::getline(input, header)) {
-        return results;
-    }
-    const std::streamoff body = input.tellg();
-    input.seekg(0, std::ios::end);
-    std::streamoff end = input.tellg();
-    // Back over the final line break, then to the line break before the last row.
-    std::string line;
-    char character = 0;
-    while (end > body) {
-        input.seekg(end - 1);
-        input.get(character);
-        if (character != '\n' && character != '\r') {
-            break;
-        }
-        --end;
-    }
-    std::streamoff start = end;
-    while (start > body) {
-        input.seekg(start - 1);
-        input.get(character);
-        if (character == '\n') {
-            break;
-        }
-        --start;
-    }
-    if (start >= end) {
-        return results;
-    }
-    line.resize(static_cast<std::size_t>(end - start));
-    input.seekg(start);
-    input.read(line.data(), end - start);
-    results.header = split_scan_row(header);
-    std::vector<std::string> cells = split_scan_row(line);
-    if (cells.size() != results.header.size()) {
-        results.header.clear();
-        return results;
-    }
-    const std::string prefix = project.sequential_fit.data_dir + "/";
-    const std::string file = cells[0].starts_with(prefix) ? cells[0].substr(prefix.size()) : cells[0];
-    results.rows.emplace(file, std::move(cells));
-    return results;
+std::filesystem::path scan_results_path(const Project& project) {
+    return std::filesystem::path(project.path) / "analysis" / "results.csv";
 }
 
-ScanResults read_scan_results(const Project& project) {
-    ScanResults results;
-    std::ifstream input(std::filesystem::path(project.path) / "analysis" / "results.csv");
-    if (!input) {
-        return results;
+// The header crysta writes for this project's scan, checked; the parameters' column pairs.
+std::vector<ScanParameterColumns> check_scan_header(const Project& project, const std::vector<std::string>& header) {
+    const auto refuse = [](const std::string& why) {
+        throw std::invalid_argument("analysis/results.csv: " + why);
+    };
+    static const char* const kLeading[] = {"file_path", "fit_result.reduced_chi_square", "fit_result.success",
+                                           "fit_result.iterations"};
+    const std::size_t rules = project.sequential_fit.extract.size();
+    if (header.size() < 4 + rules) {
+        refuse("the header has " + std::to_string(header.size()) + " columns, fewer than the scan's results need");
     }
-    const auto split = split_scan_row;
-    std::string line;
-    if (!std::getline(input, line)) {
-        return results;
-    }
-    results.header = split(line);
-    const std::string prefix = project.sequential_fit.data_dir + "/";
-    while (std::getline(input, line)) {
-        std::vector<std::string> cells = split(line);
-        if (cells.size() != results.header.size()) {
-            continue;
+    for (std::size_t i = 0; i < 4; ++i) {
+        if (header[i] != kLeading[i]) {
+            refuse("column " + std::to_string(i + 1) + " is '" + header[i] + "', where crysta writes '" + kLeading[i] +
+                   "'");
         }
-        const std::string file = cells[0].starts_with(prefix) ? cells[0].substr(prefix.size()) : cells[0];
-        results.rows.emplace(file, std::move(cells));
     }
-    return results;
+    std::size_t rule = 0;
+    for (const auto& extract : project.sequential_fit.extract) {
+        if (header[4 + rule] != extract->target) {
+            refuse("column " + std::to_string(5 + rule) + " is '" + header[4 + rule] + "', where the extract rule '" +
+                   extract->id.value() + "' writes '" + extract->target + "'");
+        }
+        ++rule;
+    }
+    std::vector<ScanParameterColumns> parameters;
+    std::map<std::string, int> seen;
+    for (const std::string& name : header) {
+        if (++seen[name] > 1) {
+            refuse("the column '" + name + "' appears twice");
+        }
+    }
+    for (std::size_t i = 4 + rules; i < header.size(); i += 2) {
+        if (i + 1 >= header.size() || header[i + 1] != header[i] + ".uncertainty") {
+            refuse("the parameter column '" + header[i] + "' is not followed by its '.uncertainty' column");
+        }
+        parameters.push_back({header[i], i, i + 1});
+    }
+    return parameters;
+}
+
+}  // namespace
+
+bool parse_scan_number(std::string_view token, double& value) {
+    if (token.empty()) {
+        return false;
+    }
+    const char* end = token.data() + token.size();
+    const auto [stop, error] = std::from_chars(token.data(), end, value);
+    return error == std::errc() && stop == end;
+}
+
+ScanPlaces scan_places(const ScanDatasets& datasets) {
+    ScanPlaces places;
+    places.reserve(datasets.files.size());
+    for (std::size_t i = 0; i < datasets.files.size(); ++i) {
+        places.emplace(datasets.files[i], i);
+    }
+    return places;
+}
+
+std::pair<std::size_t, ScanResultIndex::Row> scan_row_facts(const Project& project, const ScanPlaces& places,
+                                                           const ScanResultIndex& index,
+                                                           const std::vector<std::string>& cells) {
+    const auto refuse = [&cells](const std::string& why) {
+        throw std::invalid_argument("analysis/results.csv: the row for '" + (cells.empty() ? std::string() : cells[0]) +
+                                    "' " + why);
+    };
+    if (cells.size() != index.header.size()) {
+        refuse("has " + std::to_string(cells.size()) + " cells, where the header has " +
+               std::to_string(index.header.size()));
+    }
+    const std::string prefix = project.sequential_fit.data_dir + "/";
+    if (!cells[0].starts_with(prefix)) {
+        refuse("names no file of the scan directory '" + project.sequential_fit.data_dir + "'");
+    }
+    const auto found = places.find(cells[0].substr(prefix.size()));
+    if (found == places.end()) {
+        refuse("names a file that is not one of the scan's");
+    }
+    ScanResultIndex::Row row;
+    if (!parse_scan_number(cells[1], row.reduced_chi_square) || !std::isfinite(row.reduced_chi_square)) {
+        refuse("has no finite reduced chi-square");
+    }
+    if (cells[2] != "True" && cells[2] != "False") {
+        refuse("has '" + cells[2] + "' for its success, where crysta writes True or False");
+    }
+    row.converged = cells[2] == "True";
+    double iterations = 0.0;
+    if (!parse_scan_number(cells[3], iterations) || iterations < 0 || iterations != std::floor(iterations)) {
+        refuse("has no whole iteration count");
+    }
+    row.iterations = static_cast<int>(iterations);
+    const std::size_t rules = project.sequential_fit.extract.size();
+    row.extracted.assign(cells.begin() + 4, cells.begin() + 4 + static_cast<std::ptrdiff_t>(rules));
+    for (const ScanParameterColumns& parameter : index.parameters) {
+        double value = 0.0, uncertainty = 0.0;
+        if (!parse_scan_number(cells[parameter.value], value) || !std::isfinite(value)) {
+            refuse("has no finite value for '" + parameter.name + "'");
+        }
+        if (!parse_scan_number(cells[parameter.uncertainty], uncertainty) || !std::isfinite(uncertainty) ||
+            uncertainty < 0.0) {
+            refuse("has no finite, non-negative uncertainty for '" + parameter.name + "'");
+        }
+    }
+    return {found->second, std::move(row)};
+}
+
+ScanResultIndex index_scan_results(const Project& project, const ScanDatasets& datasets) {
+    ScanResultIndex index;
+    index.rows.resize(datasets.files.size());
+    std::ifstream input(scan_results_path(project), std::ios::binary);
+    if (!input) {
+        return index;
+    }
+    std::string line;
+    if (!std::getline(input, line) || input.eof()) {
+        return index;  // nothing, or a header still being written
+    }
+    try {
+        index.header = split_scan_row(line);
+        index.parameters = check_scan_header(project, index.header);
+        std::int64_t offset = input.tellg();
+        index.end = offset;
+        const ScanPlaces places = scan_places(datasets);
+        while (std::getline(input, line)) {
+            if (input.eof()) {
+                break;  // no line break: a row still being written
+            }
+            const std::int64_t next = input.tellg();
+            auto [dataset, row] = scan_row_facts(project, places, index, split_scan_row(line));
+            if (index.rows[dataset].offset >= 0) {
+                throw std::invalid_argument("analysis/results.csv: '" + datasets.files[dataset] +
+                                            "' has two rows");
+            }
+            row.offset = offset;
+            index.rows[dataset] = std::move(row);
+            ++index.fitted;
+            offset = next;
+            index.end = next;
+        }
+    } catch (const std::exception& refusal) {
+        ScanResultIndex refused;
+        refused.error = refusal.what();
+        refused.rows.resize(datasets.files.size());
+        return refused;
+    }
+    return index;
+}
+
+std::vector<std::string> read_scan_row(const Project& project, std::int64_t offset) {
+    std::ifstream input(scan_results_path(project), std::ios::binary);
+    std::string line;
+    if (!input || offset < 0 || !input.seekg(offset) || !std::getline(input, line) || input.eof()) {
+        throw std::invalid_argument("analysis/results.csv has no complete row at byte " + std::to_string(offset));
+    }
+    return split_scan_row(line);
 }
 
 void check_scan_template_file(const Project& project, const std::string& file) {
     crysta::SequentialFitConfig config;
     fill_crysta_sequential(project.sequential_fit, config);
-    crysta::check_sequential_template_file(config, project.path, file);
+    crysta::check_sequential_template_file(config, project.scan_data_root.empty() ? project.path : project.scan_data_root,
+                                           file);
 }
 
 void set_scan_template_file(Project& project, const std::string& file) {
@@ -3114,6 +3205,7 @@ std::optional<ScanFileRecord> scan_record_from_cells(const std::vector<std::stri
         return std::nullopt;
     }
     ScanFileRecord record;
+    record.cells = cells;
     const std::size_t slash = cells[0].rfind('/');
     record.file_name = slash == std::string::npos ? cells[0] : cells[0].substr(slash + 1);
     record.converged = cells[2] == "True";

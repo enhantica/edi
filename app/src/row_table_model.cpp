@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "row_table_model.hpp"
 
+#include <QSet>
+
 namespace edi_app {
 
 RowTableModel::RowTableModel(const QStringList& roles, QObject* parent) : QAbstractListModel(parent), roles_(roles) {}
@@ -52,8 +54,14 @@ void RowTableModel::setTableRows(const QList<Row>& target) {
         }
         return qsizetype(-1);
     };
+    // The rows no longer wanted, found through a set of the wanted keys: one pass, whatever the length.
+    QSet<const void*> wanted;
+    wanted.reserve(target.size());
+    for (const Row& row : target) {
+        wanted.insert(row.key);
+    }
     for (qsizetype i = rows_.size() - 1; i >= 0; --i) {
-        if (find(target, rows_.at(i).key, 0) < 0) {
+        if (!wanted.contains(rows_.at(i).key)) {
             beginRemoveRows(QModelIndex(), static_cast<int>(i), static_cast<int>(i));
             rows_.removeAt(i);
             endRemoveRows();
@@ -86,6 +94,22 @@ void RowTableModel::setTableRows(const QList<Row>& target) {
     }
     if (rows_.size() != before) {
         emit countChanged();
+    }
+}
+
+void RowTableModel::setTableRow(int row, const QList<QVariant>& values) {
+    if (row < 0 || row >= rows_.size()) {
+        return;
+    }
+    QList<int> changed;
+    for (int column = 0; column < roles_.size(); ++column) {
+        if (rows_.at(row).values.value(column) != values.value(column)) {
+            changed.append(Qt::UserRole + 1 + column);
+        }
+    }
+    if (!changed.isEmpty()) {
+        rows_[row].values = values;
+        emit dataChanged(index(row), index(row), changed);
     }
 }
 

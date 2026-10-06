@@ -2,8 +2,12 @@
 #ifndef EDI_SCAN_HPP
 #define EDI_SCAN_HPP
 
+#include <cstdint>
 #include <map>
 #include <string>
+#include <string_view>
+#include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "edi/model.hpp"
@@ -29,17 +33,52 @@ PdDataBase read_scan_dataset(const std::string& directory, const std::string& fi
 std::vector<std::string> scan_extract_values(const Project& project, const std::string& directory,
                                              const std::string& file);
 
-/// The rows of `analysis/results.csv`: its header, and each row's cells by the file name it records. Empty when
-/// the file does not exist yet; a row whose cell count differs from the header's is left out.
-struct ScanResults {
-    std::vector<std::string> header;
-    std::map<std::string, std::vector<std::string>> rows;
-};
-ScanResults read_scan_results(const Project& project);
+/// A number as `analysis/results.csv` spells it: the whole token, in the C locale whatever the process locale is.
+/// False for anything else (an empty or partial token, a decimal comma).
+bool parse_scan_number(std::string_view token, double& value);
 
-/// The header and the last row of `analysis/results.csv`, read from the file's two ends, so a scan in progress
-/// takes each new row without reading the rows before it. Empty when there is no complete row.
-ScanResults read_last_scan_result(const Project& project);
+/// One fitted parameter's two columns in `analysis/results.csv`.
+struct ScanParameterColumns {
+    std::string name;
+    std::size_t value = 0;
+    std::size_t uncertainty = 0;
+};
+
+/// What `analysis/results.csv` records, checked, with one small entry per dataset: no row's parameter cells are kept
+/// (`read_scan_row` reads one row at its offset). The header must be crysta's: `file_path`,
+/// `fit_result.reduced_chi_square`, `fit_result.success`, `fit_result.iterations`, one column per extract rule's
+/// target in rule order, then each parameter's value and `.uncertainty`, every name once. Every complete row must
+/// have the header's width, name a file of the scan once, and carry finite numbers (uncertainties not negative). A
+/// last line without its line break is a row still being written and is left out. Anything else refuses the whole
+/// file: `error` says why and no row is kept.
+struct ScanResultIndex {
+    struct Row {
+        std::int64_t offset = -1;  ///< where the row starts in the file; -1: the dataset has no row
+        double reduced_chi_square = 0.0;
+        bool converged = false;
+        int iterations = 0;
+        std::vector<std::string> extracted;  ///< the extract rules' cells, in rule order
+    };
+    std::string error;
+    std::vector<std::string> header;
+    std::vector<ScanParameterColumns> parameters;
+    std::vector<Row> rows;      ///< by dataset place
+    std::int64_t end = 0;       ///< the offset after the last complete row (0: no file)
+    std::size_t fitted = 0;     ///< datasets with a row
+};
+ScanResultIndex index_scan_results(const Project& project, const ScanDatasets& datasets);
+
+/// Checks one row's cells against an accepted index's header (as `index_scan_results` checks a row) and returns its
+/// facts with the place of the dataset it names; throws, saying why, for a row that does not belong.
+using ScanPlaces = std::unordered_map<std::string, std::size_t>;
+/// Each dataset's place by its file name.
+ScanPlaces scan_places(const ScanDatasets& datasets);
+std::pair<std::size_t, ScanResultIndex::Row> scan_row_facts(const Project& project, const ScanPlaces& places,
+                                                           const ScanResultIndex& index,
+                                                           const std::vector<std::string>& cells);
+
+/// The cells of the row that starts at `offset`; throws when the file has no complete row there.
+std::vector<std::string> read_scan_row(const Project& project, std::int64_t offset);
 
 /// The template dataset (`_sequential_fit.template_file`): `file` must be one of the scan's files as its listing
 /// names them. Throws, naming the file, for anything else (crysta::check_sequential_template_file); reads no file.

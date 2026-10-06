@@ -27,8 +27,8 @@ QString recorded_outcome(const edi::FitResultRecord& result);
 // The last fit's results, as diffraction-lib's "Least-squares fit results" table: roles
 // `icon` (a font icon), `metric`, `value` and `outcome` (the outcome key on the Overall status row, else
 // empty), from the fit's final result.
-// What a scan's results say about the run as a whole: the outcome is the worst file's (Failed when any failed,
-// Stopped when files are left, else Success; none without a fitted file).
+// What a scan's results say about the run as a whole: the files, those fitted, converged and not, the χ² range,
+// the run's outcome (its own Failed or Stopped, else the worst file's) and its time (negative: not known).
 struct ScanSummary {
     int files = 0;
     int fitted = 0;
@@ -36,9 +36,8 @@ struct ScanSummary {
     int failed = 0;
     double chi_min = 0.0;
     double chi_max = 0.0;
+    double seconds = -1.0;
     QString outcome;
-
-    static ScanSummary of(const edi::ScanDatasets& datasets, const edi::ScanResults& results);
 };
 
 class FitResultListModel : public RowTableModel {
@@ -131,10 +130,13 @@ class FitViewModel : public QObject {
     QString scanFiles() const { return QStringLiteral("%1/%2").arg(scan_.fitted).arg(scan_.files); }
     int scanOk() const { return scan_.ok; }
     int scanFailed() const { return scan_.failed; }
-    // A scan project's results: the status bar's summary and the results window show the run as a whole.
-    void showScan(const edi::ScanDatasets& datasets, const edi::ScanResults& results);
+    // A scan project's results: the status bar's summary and the results window show the run as a whole, unless
+    // `scan_last` is false (a single fit on a dataset came after the run, and its own record is shown).
+    void showScan(const ScanSummary& summary, bool scan_last);
     // The template was edited: a stopped scan is started afresh, not continued.
     void noteTemplateEdit();
+    // The scan results came from another template than the one held now (the owner compares their provenance).
+    void setOutOfDate(bool out_of_date);
 
     Q_INVOKABLE void start();
     Q_INVOKABLE void cancel();
@@ -186,7 +188,6 @@ class FitViewModel : public QObject {
     void scanEnded(const edi::FitReport& report);
     void setScanning(bool scanning);
     void setContinuable(bool continuable);
-    void setOutOfDate(bool out_of_date);
     void setScanCounts(const ScanSummary& counts, const QString& file);
     void setRunning(bool running);
     void setProgress(const QString& iterations, const QString& goodness, const QString& status,

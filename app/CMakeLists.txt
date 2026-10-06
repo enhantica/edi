@@ -53,6 +53,7 @@ qt_add_qml_module(edi_app_module
         src/chart_models.hpp src/chart_models.cpp
         src/measured_layer.hpp src/measured_layer.cpp
         src/evolution_view_model.hpp src/evolution_view_model.cpp
+        src/scan_session.hpp src/scan_session.cpp
         src/experiment_view_model.hpp src/experiment_view_model.cpp
         src/analysis_view_model.hpp src/analysis_view_model.cpp
         src/fit_view_model.hpp src/fit_view_model.cpp
@@ -156,7 +157,7 @@ qt_add_qml_module(edi_app_module
 )
 target_include_directories(edi_app_module PUBLIC src ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(edi_app_module
-    PUBLIC Qt6::Quick Qt6::QuickControls2 Qt6::Graphs Qt6::Quick3D edi::core
+    PUBLIC Qt6::Quick Qt6::QuickControls2 Qt6::Graphs Qt6::Quick3D Qt6::Concurrent edi::core
     PRIVATE ${EDI_GUI_BASE_TARGETS} Qt6::CorePrivate)
 if(EMSCRIPTEN)
     target_link_libraries(edi_app_module PRIVATE Qt6::GuiPrivate)
