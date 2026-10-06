@@ -3,7 +3,6 @@
 #include <array>
 #include <cctype>
 #include <chrono>
-#include <charconv>
 #include <filesystem>
 #include <fstream>
 #include <locale>
@@ -970,12 +969,20 @@ void check_scan_header(const Project& project, ScanResultIndex& index) {
 }  // namespace
 
 bool parse_scan_number(std::string_view token, double& value) {
-    if (token.empty()) {
+    // io.cpp's to_double device: a classic-locale stream that must consume the whole token. Not
+    // std::from_chars, whose floating-point overload libc++ does not provide (macOS builds).
+    if (token.empty() || std::isspace(static_cast<unsigned char>(token.front())) != 0) {
         return false;
     }
-    const char* end = token.data() + token.size();
-    const auto [stop, error] = std::from_chars(token.data(), end, value);
-    return error == std::errc() && stop == end;
+    std::istringstream stream{std::string(token)};
+    stream.imbue(std::locale::classic());
+    double parsed = 0.0;
+    stream >> parsed;
+    if (stream.fail() || !stream.eof()) {
+        return false;
+    }
+    value = parsed;
+    return true;
 }
 
 ScanPlaces scan_places(const ScanDatasets& datasets) {
