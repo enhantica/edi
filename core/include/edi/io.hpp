@@ -222,9 +222,10 @@ BraggPdExperiment simulation_experiment(const std::string& name, const Experimen
 BraggPdExperiment simulation_experiment(const std::string& name, const ExperimentTypeTokens& type,
                                         const std::vector<std::string>& structure_ids);
 
-/// The rows of a plain two- or three-column data file `x y [σ]`, read by crysta's plain-data reader, and what it
-/// dropped or changed: lines that are not two or three numbers, rows with y <= 0, repeated x, rows moved by the
-/// sort, and rows whose σ was derived from y. Throws IoError when the file cannot be read or keeps no row.
+/// The rows of a plain two- or three-column data file `x y [σ]`, read by crysta's plain-data reader, and what
+/// it dropped or changed: lines that are not two or three numbers, rows with y <= 0, repeated
+/// x, rows moved by the sort, and rows whose σ was derived from y. Throws IoError when the file cannot be read or
+/// keeps no row.
 struct PlainDataRows {
     std::vector<double> x;
     std::vector<double> y;

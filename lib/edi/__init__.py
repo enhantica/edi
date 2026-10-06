@@ -966,10 +966,10 @@ class ExperimentFactory:
     ) -> 'BraggPdExperiment':
         """A from_scratch experiment with measured data read from a plain 2-3 column file.
 
-        ``x y [sy]``, separated by whitespace or commas, read by crysta's plain-data reader
-        : a line that is not two or three numbers is skipped, a missing ``sy`` is
-        ``sqrt(max(y, 1))``, any ``sy < 1e-4`` becomes ``1.0``, rows with ``y <= 0`` are dropped,
-        and the rows are sorted by ``x`` keeping the first of a repeated ``x``.
+        ``x y [sy]``, separated by whitespace or commas, read by crysta's plain-data reader: a
+        line that is not two or three numbers is skipped, a missing ``sy`` is ``sqrt(max(y, 1))``,
+        any ``sy < 1e-4`` becomes ``1.0``, rows with ``y <= 0`` are dropped, and the rows are
+        sorted by ``x`` keeping the first of a repeated ``x``.
         """
         experiment = cls.from_scratch(
             beam_mode=beam_mode,
