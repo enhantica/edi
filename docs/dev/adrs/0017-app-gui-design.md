@@ -214,7 +214,8 @@ and `stepMaximum`.
   sidebar's tab bar before, and the main view's tab bar for one build): on the Structure, Experiment and Analysis
   pages, under the main view's tab bar and above the chart toolbar, a row (`Components/MainAreaBlockSelector.qml`,
   `objectName` `mainArea.blocks`) on the chart background: a compact combo box (`Components/BlockSelector.qml`),
-  then the previous and next buttons, the last one's right edge on the right edge of the chart toolbar below
+  then the previous and next buttons (held, they repeat at about the keyboard's rate, as the arrow keys do; owner,
+  2026-10-06), the last one's right edge on the right edge of the chart toolbar below
   (which differs by page: each chart states it as `toolbarRightInset`). The chart toolbar's margin is above the
   row, and one margin, the chart's own above its toolbar, separates it from the chart, with no line (the owner
   compared the two, 2026-10-05); the row and the chart toolbar below it start at the main area's margin
@@ -323,7 +324,8 @@ The Project page's main area (`Pages/Project/DescriptionTab.qml`) lists, under t
 - **Structures (N)** and **Experiments (N)** — the count in brackets after the label, and as the value the
   datablock **names** (never file names: a block's file follows from its name, `structures/<name>.edi`),
   comma-separated, each after its block icon in its colour (§8), wrapping when they do not fit a line — as
-  easydiffractionbeta's *Model file: lbco.cif, coo.cif* (idea 22; `Pages/Project/BlockNames.qml`).
+  easydiffractionbeta's *Model file: lbco.cif, coo.cif* (idea 22; `Pages/Project/BlockNames.qml`). A list longer than
+  15 shows its first and last seven names with *…* between (a scan's datasets; owner, 2026-10-06).
 - No *Warnings* row: the loader's warnings are the status bar's messages (§14).
 
 ### 10. An icon before a name sits on the name's centre line
@@ -793,18 +795,19 @@ refuses to write its bank rows into it.
 
 - **Start fitting** (Analysis, Fitting group) runs the project's fit on the worker (ADR-0020 §9) and reads **Stop
   fitting**, with a stop icon, while it runs (owner, 2026-10-05; *Cancel fitting* before): a stop keeps the partial
-  result. After a scan stopped part way it reads **Continue fitting**. For a scan mode (sequential, independent) it is
-  disabled until scans run in the app, and its tooltip names the mode. While a fit runs the parameter table is
-  disabled and every edit is refused.
+  result. In a scan project it follows the datasets' fits (owner, 2026-10-06; §19). While a fit runs the parameter
+  table is disabled and every edit is refused.
 - **Follow** sits to the right of Start fitting at the same width. It is enabled only while a scan runs and starts
-  on; while on, the pattern tab shows the file being fitted.
+  on; while on, the pattern tab shows the file being fitted. In a scan project **Reset fits** sits between them, and
+  the three share the row in thirds.
 - **The chart follows the fit**: a frame of the current iteration's pattern at most once per display frame, then the
   fitted pattern when the fit ends. A fit that writes nothing puts back the pattern the project holds.
 - **The status bar's keys** (the owner, 2026-10-03): every item shows its key only while all the shown items fit the
   bar's width with their keys, measured from the items themselves; otherwise each shows its icon and value. (It
   replaced a fixed window-width threshold.)
-- **The status bar's fit area** (owner, 2026-10-05) is right-aligned after the items. While a fit runs it shows a
-  progress bar (`Components/FitProgressBar.qml`) with its text inside, then the live values beside it: a single fit
+- **The status bar's fit area** (owner, 2026-10-05) is right-aligned after the items. While a fit runs it shows the
+  live values, then a progress bar (`Components/FitProgressBar.qml`) with its text inside at the far right, where the
+  values' changing width does not move it (owner, 2026-10-06): a single fit
   fills the bar with moving stripes and reads `fitting · it 12`, then `4s · χ² 12.40 → 7.50`; a scan will fill it by
   file count. After the run the bar and the live values go, and a summary stays: the outcome, then `it 23 · 7s · χ²
   12.40 → 7.01`. One order everywhere: progress, then the counts, then time, then χ², every separator the same
@@ -859,24 +862,32 @@ refuses to write its bank rows into it.
   model with the template's parameters, and, for a dataset the scan has fitted, its fitted values and
   uncertainties from `analysis/results.csv` (`Edit::scan_view`); the pages then show that dataset and the pattern
   calculated from it. A project opens on the first dataset. Showing a dataset is not an edit of the project.
-- **An edit while a dataset is shown goes to the template**, seeded from that dataset (the packet's Scope 2): the
-  shown state becomes the template the next dataset views start from.
-- **A dataset's Fit outcome** is its results row's: *Success* when the driver's `fit_result.success` is true, *Failed*
-  otherwise; *Not fitted* without a row. Its extracted values come from its row, or from its file once shown.
+- **The template is held apart from the shown dataset.** An admitted edit of the experiment or the structures while a
+  dataset is shown makes the shown values the template's, over the template's own data file (the packet's Scope 2); a
+  project-wide setting (name, title, description, fitting mode, minimizer) goes to the template unchanged otherwise. A
+  save writes the template, never a dataset's data; a refused edit changes nothing.
+- **A dataset's Fit outcome** comes from its results row: *Success* when it converged; otherwise *Max iterations* when
+  its iteration count reached the bound, else *No step*; *Not fitted* without a row. Its extracted values come from
+  its row, or from its file when a view shows its entry.
 - **The Evolution tab** (Analysis, after Pattern; text only like every tab, §2) draws one fitted parameter across
   the datasets (`Components/EvolutionChart.qml`, `EvolutionViewModel`): a point per fitted dataset with its
   uncertainty as an error bar, drawn as the pattern chart draws measured points. The page's selector row keeps listing the
   datasets, as on the Pattern tab; a selector in the chart's own toolbar, beside the x box, chooses among the
   parameters `analysis/results.csv` records. x is the first extract rule's
   value with its unit, or the file's place in the scan (the box at the chart's top left, *x: …* closed as the
-  pattern chart's). A click on a point shows that dataset, on every page; a line marks the shown one. Above 5000
+  pattern chart's). A click on a point shows that dataset, on every page; a line marks the shown one, placed from the
+  dataset's own x so it moves only when the shown dataset does (owner, 2026-10-06). The pointer zooms as on the
+  pattern chart, without its toolbar: a drag zooms to the box, the wheel or touchpad about the pointer, a right click
+  resets. Above 5000
   points the chart draws, per x bucket, only the lowest and the highest, so every excursion stays visible. The tab
   is disabled in a project that is not a scan.
 - **Running a scan.** In the sequential or independent mode Start fitting runs crysta's driver from the template on the
   worker (`edi::FitJob`, the scan entry points of the core), which writes `analysis/results.csv` as it fits each file;
-  the template itself is left as it was. A fresh run first sets the previous results aside, and Undo writes them
-  back. Stop fitting keeps the rows written so far, and the button then reads Continue fitting, which fits only the
-  files without a row (the driver resumes from the file); an edit of the template turns it back into Start fitting.
+  the template itself is left as it was. The button follows the datasets' fits (owner, 2026-10-06): **Start fitting**
+  while none is fitted, **Continue fitting** while some are not (after a Stop too), which fits from the first dataset
+  without a row (the driver resumes from the file), and **disabled** once every dataset is fitted, its tooltip saying
+  so. **Reset fits** clears every dataset's fit result, one Undo step that writes them back, and so enables Start
+  fitting again. Stop fitting keeps the rows written so far.
   While a scan runs the status bar's bar fills by files, with *count · percent · file* inside, and the ok and fail
   counts, the time, the time left and the last χ² beside it. Joint is not offered in a project that declares a scan.
 - **Follow** is on when a scan starts and enabled only while one runs: the pattern tab then shows each file as it is
@@ -885,13 +896,14 @@ refuses to write its bank rows into it.
 - **The template dataset** (`_sequential_fit.template_file`): a single fit on a shown dataset makes its result the
   template and that dataset the template dataset. Its entry in the selector and its row in the Experiments table
   carry the word *template* in the accent blue. A scan project opens on it, else on the first dataset.
-- **Out of date.** An edit of the template after a scan leaves the results shown and marks them *out of date* in
-  the status bar's summary and on the Evolution tab until the next run replaces them.
+- **Out of date.** A run records which template it fitted from (`analysis/scan-run.json`); results from another
+  template than the one held now stay shown, marked *out of date* in the status bar's summary and on the Evolution
+  tab. The mark survives saving and reopening, and goes when a run of the current template replaces them.
 - **After a scan** the status bar's summary reads *outcome · fitted/files · N ok · N fail · χ² min–max*, a fail count
   above zero in red, and the results window shows the run as a whole: Overall status, files fitted, converged,
-  failed and the χ² range, with *Show evolution*, which opens the Evolution tab. The outcome is the worst file's:
-  Failed if any failed, Stopped while files are left, else Success. The driver's `results.csv` records no time, so a
-  scan read from it shows none.
+  failed, the fitting time and the χ² range, with *Show evolution*, which opens the Evolution tab. The outcome is the
+  run's own when it failed or was stopped, else Stopped while files are left, else the worst file's (Max iterations,
+  No step, Success). The time is recorded in `analysis/scan-run.json`; results no run of the app wrote show none.
 
 ## Consequences
 
