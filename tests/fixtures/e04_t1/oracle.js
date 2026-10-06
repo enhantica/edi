@@ -12752,6 +12752,87 @@ var frozen = {
         "_background.type": "line-segment"
       },
       "loops": {}
+    },
+    {
+      "project": "tests/fixtures/e04_t1/eta-project",
+      "experiment": "experiment",
+      "sha256": "fcc55f9df37c8467321af009b90c0670f7523d3d3d0e30e5bc1be0d519d361c6",
+      "peakType": "cwl-pseudo-voigt",
+      "mode": "cwl",
+      "peakFields": [
+        "broad_gauss_u",
+        "broad_gauss_v",
+        "broad_gauss_w",
+        "mixing_eta_0",
+        "mixing_eta_1"
+      ],
+      "unusedFreeFields": [],
+      "instrumentFields": [
+        "setup_wavelength",
+        "calib_twotheta_offset"
+      ],
+      "range": [
+        20.25,
+        80.25,
+        30.0,
+        3
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.radiation_probe": "xray",
+        "_experiment_type.scattering_type": "bragg",
+        "_experiment_type.beam_mode": "constant wavelength",
+        "_peak.type": "cwl-pseudo-voigt",
+        "_peak.broad_gauss_u": {
+          "value": 0.048457,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_v": {
+          "value": -0.083053,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_w": {
+          "value": 0.04,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.cutoff_fwhm": {
+          "value": 48.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_twotheta_offset": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_wavelength": {
+          "value": 1.54056,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_scattering_source.xray_form_factor": "it1992",
+        "_scattering_source.xray_dispersion": "sasaki1989",
+        "_background.type": "line-segment",
+        "_peak.mixing_eta_0": {
+          "value": 0.37,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.mixing_eta_1": {
+          "value": 0.0023,
+          "free": false,
+          "uncertainty": 0.0
+        }
+      },
+      "loops": {}
     }
   ]
 };

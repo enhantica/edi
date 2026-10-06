@@ -13,6 +13,7 @@ import hashlib
 import json
 import re
 import shlex
+import shutil
 from pathlib import Path
 
 import yaml
@@ -186,6 +187,27 @@ def scan_inputs(project, analysis):
     return datasets
 
 
+def eta_profile_fixture():
+    # The registry's scans declare TCH. Keep eta-profile category coverage with
+    # a separate measured fixture and nontrivial independently declared mixing.
+    eta_project = ROOT / 'tests/fixtures/e04_t1/eta-project'
+    shutil.copytree(eta_project.with_name('xray-project'), eta_project, dirs_exist_ok=True)
+    metadata = eta_project / 'project.edi'
+    metadata.write_text('_edi.schema_version 3\n_metadata.name "Eta profile category witness"\n')
+    experiment = eta_project / 'experiments/experiment.edi'
+    text = experiment.read_text().replace('cwl-tch-pseudo-voigt', 'cwl-pseudo-voigt')
+    text = (
+        '\n'.join(
+            line
+            for line in text.splitlines()
+            if not line.startswith(('_peak.broad_lorentz_x ', '_peak.broad_lorentz_y '))
+        )
+        + '\n_peak.mixing_eta_0 0.37\n_peak.mixing_eta_1 0.0023\n'
+    )
+    experiment.write_text(text)
+    return eta_project
+
+
 def generate(warning_project=None):
     projects = []
     for entry in yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text())['projects']:
@@ -235,7 +257,7 @@ def generate(warning_project=None):
             },
         })
     corpus = []
-    for project in sorted((ROOT / 'docs/user/cli').glob('*/project')):
+    for project in [*sorted((ROOT / 'docs/user/cli').glob('*/project')), eta_profile_fixture()]:
         for file in sorted((project / 'experiments').glob('*.edi')):
             fields = scalars(file)
             profile = fields['_peak.type']

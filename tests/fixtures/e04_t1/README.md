@@ -176,3 +176,10 @@ against edi `e6579e64` and pinned crysta SDK `build-417ffe01`. The generated
 axes and calculated arrays are unchanged; exactly the three experiment texts
 gain `_calculator.type crysta` and its block separator. All other saved-text
 bytes stay exact. Provenance: `<author-runs>/-seq8-generator.log`.
+
+Before: the scan declaration supplied the eta-profile category case despite
+storing TCH coefficients. After: scans declare TCH, while `generate.py` creates
+`eta-project` from the independently saved measured X-ray input, replacing only
+the profile's X/Y coefficients with eta0 = 0.37 and eta1 = 0.0023. Its frozen
+category values and hashes retain coverage of every public profile, independently
+of the example registry. No fitted output supplies an expectation.
