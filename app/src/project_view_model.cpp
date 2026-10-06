@@ -1074,18 +1074,21 @@ QString ProjectViewModel::saveTo(const QString& directory) {
     }
     // While a scan dataset is shown, the template is what a save writes; the shown model follows it to the new
     // directory, so a scan started next reads and writes there.
-    edi::Project& saved = scan_template_ ? *scan_template_ : *project_;
     try {
-        edi::save_project_as(saved, directory.toStdString());
+        if (scan_template_) {
+            edi::save_project_as(*scan_template_, directory.toStdString());
+        } else {
+            edi::save_project_as(*project_, directory.toStdString());
+        }
     } catch (const std::exception& refusal) {
         const QString message = QString::fromUtf8(refusal.what());
         setLastError(message);
         return message;
     }
     if (scan_template_) {
-        project_->path = saved.path;
-        project_->metadata = saved.metadata;
-        project_->scan_data_root = saved.scan_data_root;
+        project_->path = scan_template_->path;
+        project_->metadata = scan_template_->metadata;
+        project_->scan_data_root = scan_template_->scan_data_root;
     }
     setLastError({});
     emit pathChanged();

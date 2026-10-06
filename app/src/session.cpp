@@ -262,9 +262,16 @@ bool Session::openExample(const QString& exampleId) {
     // lives in the application's resources, which crysta cannot read: its scan data are copied with it.
     const QString target = extracted_->filePath(exampleId + QStringLiteral("/project"));
     QDir(target).removeRecursively();
-    if (!copyTree(source, target, {})) {
-        setLastError(QStringLiteral("cannot extract the example '%1'").arg(exampleId));
-        return false;
+    QDirIterator files(source, QDir::Files, QDirIterator::Subdirectories);
+    while (files.hasNext()) {
+        const QString file = files.next();
+        const QString destination = target + file.mid(source.size());
+        QDir().mkpath(QFileInfo(destination).absolutePath());
+        if (!QFile::copy(file, destination)) {
+            setLastError(QStringLiteral("cannot extract the example '%1'").arg(exampleId));
+            return false;
+        }
+        QFile::setPermissions(destination, QFile::ReadOwner | QFile::WriteOwner);
     }
     return open(target, exampleId);
 }
