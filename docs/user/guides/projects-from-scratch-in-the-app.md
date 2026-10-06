@@ -40,7 +40,8 @@ a name you gave it stays.
 
 The File cell then shows the file's name; clicking it loads another file in place of the data.
 **Undo** takes a load back, to the simulation or to the data before. Saving stores the data in the
-experiment's `.edi` file, so the project no longer needs the file you loaded.
+experiment's `.edi` file, so the project no longer needs the file you loaded; the File column still
+shows that file's name.
 
 ## Experiments with and without data
 

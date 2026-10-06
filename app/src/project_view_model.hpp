@@ -327,24 +327,21 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         int shown_dataset = -1;                 // Reset fits only: the dataset the model showed, and its values
         std::vector<edi::Edit::ScanValue> shown_values;
     };
-    // Load data: the experiment as it was before (a simulation, or its earlier data) and its data file then.
+    // Load data: the experiment as it was before (a simulation, or its earlier data, with its file name).
     struct LoadedData {
         const edi::ExperimentBase* experiment = nullptr;
         std::shared_ptr<const edi::BraggPdExperiment> before;
-        QString before_file;
     };
     using UndoRecord =
         std::variant<std::monostate, edi::RelationsUndo, AddedExperiments, ScanRun, LoadedData, edi::StructuresUndo>;
-    // The experiments made with Create experiment (they take Load data…) and the file each one's data came from.
-    // Kept by identity: a replaced experiment (Load data, a type change, their undo) passes its entries on.
+    // The experiments made with Create experiment (they take Load data…), kept by identity: a replaced experiment
+    // (Load data, a type change, their undo) passes its entry on.
     std::set<const edi::ExperimentBase*> created_;
-    std::map<const edi::ExperimentBase*, QString> data_files_;
-    void experimentReplaced(const edi::ExperimentBase* before, const edi::ExperimentBase* after, bool created,
-                            const QString& data_file);
-    // Each experiment view's Load data… state and data file, and the list's File column, from the two above.
+    void experimentReplaced(const edi::ExperimentBase* before, const edi::ExperimentBase* after, bool created);
+    // Each experiment view's Load data… state, from the set above.
     void syncLoadState();
     // Applies an experiment's replacement by Load data or its undo; the refusal, if any.
-    QString replaceData(int index, edi::BraggPdExperiment replacement, const QString& data_file);
+    QString replaceData(int index, edi::BraggPdExperiment replacement);
     bool restoreScanRun(const ScanRun& run);
     // The results read again from disk (after a run, an undo or a load), with every view of them.
     void reloadScanResults();
