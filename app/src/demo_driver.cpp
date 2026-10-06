@@ -241,6 +241,15 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                    "drag:evolution.pointer:0.2,0.1,0.6,0.9"}});
     steps_.push_back({"t16-74-evolution-reset", {"right-click:evolution.pointer"}});
     steps_.push_back({"t16-75-project-names", {"appBar.tab.project"}});
+    // The Evolution tab while a fresh scan of the 324-file example runs: a point per fitted dataset as it completes,
+    // the first parameter chosen, the marker on the dataset being fitted.
+    steps_.push_back({"t16-76-home", {QStringLiteral("appBar.tab.home")}});
+    steps_.push_back({"t16-77-evolution-mid-scan", start
+                                                       + open_example("pd-neut-cwl_cosio-d20_scan-324f")
+                                                       + QStringList{analysis, basic, "reveal:fitting.start",
+                                                                     "mainArea.analysis.tab.evolution", "fitting.start",
+                                                                     "wait-files:200", "capture-now"}});
+    steps_.push_back({"t16-78-evolution-stopped", {"fitting.start", "wait-fit", "choose:OK"}});
     steps_.push_back({"t16-40-created-saved-reopened",
                       QStringList{"resize:1280x768"} + start + open_example("pd-xray-cwl_lif") + QStringList{experiment, basic, "expand:group.experiments",
                       "experiments.create", "save-as:created", "open-project:created", experiment, "mainArea.blocks.box",
