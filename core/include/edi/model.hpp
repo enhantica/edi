@@ -4822,7 +4822,7 @@ inline const LinkedStructure& ExperimentBase::linked_structure() const {
     }
     return *linked_structures.front();
 }
-// The constant-wavelength token/slot rule (crysta ADR-0080): an experiment holds exactly the peak slots
+// The constant-wavelength token/slot rule: an experiment holds exactly the peak slots
 // its declared profile carries. Empty when it does, else what is wrong. The conversion for
 // calculation, fitting and saving and the free walks refuse a block that does not, so no slot is
 // dropped or read as another profile's.
