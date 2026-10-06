@@ -298,8 +298,11 @@ def assert_image_families(names, example_names, captures, final_captures=()):
     assert all(re.fullmatch(r't4-\d{2}-.+\.png', name) for name in final_names), (
         'gate 7/: final captures use the explicitly declared t4 numbered filename family'
     )
-    assert set(names) - set(numbered) == example_names | task_names | final_names, (
-        'gate 7/8/: exact inventory retains every Example and mapped t2/t4 capture, with no extras'
+    expected = example_names | task_names | final_names
+    actual = set(names) - set(numbered)
+    assert actual == expected, (
+        'Example image inventory includes every registered example and every mapped capture; '
+        f'missing={sorted(expected - actual)}, unexpected={sorted(actual - expected)}'
     )
 
 
