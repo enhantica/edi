@@ -165,12 +165,9 @@ def observed_object(sdk, build, fixture):
     if len(optimizer) != 1 or len(driver) != 1:
         raise RuntimeError('Scan execution: compiled native boundaries must resolve uniquely')
     real = next(name for name in wrapper_names if 'scan_contract_real_sequential' in name)
-    reader = [
-        name for name in wrapper_names if 'read_sequential_scan_data' in name
-    ]
+    reader = [name for name in wrapper_names if 'read_sequential_scan_data' in name]
     if len(reader) != 1:
         raise RuntimeError('Pending-selection actor must reach the compiled public dataset reader')
-    real_reader = next(name for name in wrapper_names if 'scan_contract_real_dataset_read' in name)
     entry = next(name for name in wrapper_names if 'scan_contract_optimizer' in name)
     objcopy = shutil.which('llvm-objcopy')
     if not objcopy:
@@ -181,14 +178,25 @@ def observed_object(sdk, build, fixture):
         '--redefine-sym=' + optimizer[0] + '=' + entry,
         str(native_object),
     ])
-    real_fit = next(name for name in wrapper_names if 'scan_contract_real_fit' in name)
-    fit_object = observe_entry(
-        library, build, optimizer[0], real_fit, 'observed_fit.o', objcopy
+    return (
+        native_object,
+        observe_entry(
+            library,
+            build,
+            optimizer[0],
+            next(name for name in wrapper_names if 'scan_contract_real_fit' in name),
+            'observed_fit.o',
+            objcopy,
+        ),
+        observe_entry(
+            library,
+            build,
+            reader[0],
+            next(name for name in wrapper_names if 'scan_contract_real_dataset_read' in name),
+            'observed_reader.o',
+            objcopy,
+        ),
     )
-    reader_object = observe_entry(
-        library, build, reader[0], real_reader, 'observed_reader.o', objcopy
-    )
-    return native_object, fit_object, reader_object
 
 
 def main():
@@ -204,7 +212,7 @@ def main():
     build = args.build.resolve()
     fixture = Path(__file__).resolve().parent
     source, hashes = snapshot(root, build, fixture)
-    native_object, fit_object, reader_object = observed_object(args.sdk, build, fixture)
+    objects = observed_object(args.sdk, build, fixture)
     command = [
         'cmake',
         '-S',
@@ -215,9 +223,10 @@ def main():
         'Ninja',
         '-DEDI_BUILD_APP=ON',
         '-DEDI_BUILD_BINDINGS=OFF',
-        '-DSCAN_CONTRACT_NATIVE_OBJECT=' + str(native_object),
-        '-DSCAN_CONTRACT_NATIVE_FIT_OBJECT=' + str(fit_object),
-        '-DSCAN_CONTRACT_NATIVE_READ_OBJECT=' + str(reader_object),
+        *[
+            '-DSCAN_CONTRACT_NATIVE_' + name + '=' + str(path)
+            for name, path in zip(('OBJECT', 'FIT_OBJECT', 'READ_OBJECT'), objects, strict=True)
+        ],
         '-DCMAKE_BUILD_TYPE=Release',
         '-DCMAKE_CXX_COMPILER_LAUNCHER=ccache',
         '-DCMAKE_PREFIX_PATH=' + str(args.sdk) + ';' + os.environ['CONDA_PREFIX'],

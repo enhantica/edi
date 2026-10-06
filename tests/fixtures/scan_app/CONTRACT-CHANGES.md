@@ -25,6 +25,16 @@ restart of completed fits.
 
 | Compiled dataset reader | Assumed the public reader was defined in the scan driver archive member. | Resolve the public reader's unique definition to its actual installed archive member, preserving its compiled instructions and the delayed-read and payload identity witnesses. |
 
+| Pending dataset edits and single fits | Allowed either a visible refusal or an admitted edit that survived late delivery; actual Fit had to identify the selected bytes. | Require visible refusal of values, free flags, settings and single Fit until the selected read settles; the later admitted Fit must still identify those same bytes. |
+| Pending Reset, scan Undo, Save As and scan Start | Allowed visible save refusal; Reset and Undo checked the eventual result state; scan Start had no pending-read scenario. | Require admission while the selected read is blocked, complete cleared/restored result state, a saved destination, and every fitted file's own identity after the scan. |
+| Retained result identity | Value, free-flag and settings changes all had to mark continued older rows stale. | Keep all three identity and Save/reopen/Reset/Undo checks; settings are part of the producing identity, so no gate relaxation is needed. |
+| Evolution live updates and gestures | Pointer clicks and drags used the actual chart; live rows retained zoom; thinning pinned a uniform whole-range partition. | Keep the same visible selection, zoom, extrema, uncertainty and partition requirements across the new handlers and two-pass rebuild. No gate relaxation is needed. |
+| Reset and output recovery | One Undo restored every scientific field and output byte; refused writes kept every previous output durably recoverable. | Keep the complete state and durable byte checks when taken files remain on disk until Undo. No gate relaxation is needed. |
+
+| Reordered retained rows | A row outside the initial scan prefix had to refuse before fitting. | Both a fully retained reordered scan and a reordered gap fill preserve every retained byte, original file identity and outcome; only missing files append once. |
+| Completed resume cause | All unsuccessful retained rows reported an unavailable cause. | A recorded terminal cause is recovered by that file's provenance identity even with reordered ledger rows and a changed iteration bound; absent legacy provenance still reports unknown. |
+| Locale-free scan classification | The bounded decision walker read the classifier from the driver translation unit. | Read its actual shared scan-file header, retaining every reachable-callee, unresolved-edge and locale-query negative control through the accepted-number conversion seam. |
+
 New observers have live disconnected, constant or wrong-state controls. Reset and Continue still
 use the actual app/core/worker; optimizer entries bind the fitted file and measured payload.
 The scale actor remains unthrottled and its bounds remain unchanged.

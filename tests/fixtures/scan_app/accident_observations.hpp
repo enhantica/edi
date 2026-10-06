@@ -69,6 +69,10 @@ QJsonObject pending_action(const std::string& path, const std::string& action) {
         stage = "pending-fit";
         view->fit()->start();
         admitted = view->fit()->running();
+    } else if (action == "start-scan") {
+        stage = "pending-scan";
+        view->fit()->start();
+        admitted = view->fit()->running();
     } else if (action == "value") {
         cell_item(*view)->setValue(initial + 0.003125);
         refusal = cell_item(*view)->lastError();
