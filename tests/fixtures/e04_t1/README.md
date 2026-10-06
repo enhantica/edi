@@ -171,3 +171,7 @@ Setting fields omitted from an input now display the resolved reference default.
 Explicit file codes retain priority. The CW instrument inventory also retains
 the FullProf La11B6 corpus's displacement and transparency fields, mapped from
 `SyCos` and `SySin` in that case's `PROVENANCE.md`. Neither generator imports edi.
+The optional TOF Gaussian/Lorentz size and strain terms use the zero defaults
+in CrySPY's `powder_diffraction_tof.py` (`calc_sigma`, `calc_sigma_gamma`).
+Only absent optional terms receive these defaults; all declared values and
+free flags remain the committed input values.
