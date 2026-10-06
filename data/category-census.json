@@ -810,6 +810,20 @@
           ]
         },
         {
+          "member": "PeakBase::mixing_eta_0",
+          "type": "std::optional<Parameter>",
+          "items": [
+            "mixing_eta_0"
+          ]
+        },
+        {
+          "member": "PeakBase::mixing_eta_1",
+          "type": "std::optional<Parameter>",
+          "items": [
+            "mixing_eta_1"
+          ]
+        },
+        {
           "member": "PeakBase::asym_fcj_1",
           "type": "std::optional<Parameter>",
           "items": [
@@ -2480,6 +2494,26 @@
       "part": "the row's identity as a calculation input"
     },
     {
+      "member": "CwlProfileSlots::lorentz_xy",
+      "type": "bool",
+      "not_storage": "the peak slots a CW profile token carries, read from the token"
+    },
+    {
+      "member": "CwlProfileSlots::mixing_eta",
+      "type": "bool",
+      "not_storage": "the peak slots a CW profile token carries, read from the token"
+    },
+    {
+      "member": "CwlProfileSlots::fcj",
+      "type": "bool",
+      "not_storage": "the peak slots a CW profile token carries, read from the token"
+    },
+    {
+      "member": "CwlProfileSlots::beba",
+      "type": "bool",
+      "not_storage": "the peak slots a CW profile token carries, read from the token"
+    },
+    {
       "member": "ExperimentType::sample_form",
       "type": "std::optional<SampleFormEnum>",
       "category": "_experiment_type"
@@ -2671,6 +2705,16 @@
     },
     {
       "member": "PeakBase::broad_lorentz_y",
+      "type": "std::optional<Parameter>",
+      "category": "_peak"
+    },
+    {
+      "member": "PeakBase::mixing_eta_0",
+      "type": "std::optional<Parameter>",
+      "category": "_peak"
+    },
+    {
+      "member": "PeakBase::mixing_eta_1",
       "type": "std::optional<Parameter>",
       "category": "_peak"
     },

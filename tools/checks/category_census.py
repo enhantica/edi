@@ -96,6 +96,7 @@ NOT_MODEL = {
     'ProjectTail': "a project's last member, linking its collections after a build or assignment",
     'ComputedSource': "what an experiment's computed categories were computed from",
     'ViewWindow': 'view state passed to a geometry read, never stored in the model',
+    'CwlProfileSlots': 'the peak slots a CW profile token carries, read from the token',
     'StructureGeometry': 'the computed structure categories, published whole',
     'WindowGeometry': 'a geometry computed for a view window',
     'IterationRecord': 'a fit report',
