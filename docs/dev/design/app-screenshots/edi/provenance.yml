@@ -215,3 +215,10 @@ reblessed:
       - 18-experiment-tch.png
       - ex-pd-neut-cwl_pbso4_beba-asymmetry.png
       - ex-pd-neut-cwl_yap-spodi_3k.png
+  - produced_at: c3aa7efc9ca126a4e73dbbcac62f701671aaf04d
+    reason: >-
+      TCH's X and Y share the U V W row and the FCJ asymmetry fields read S/L and D/L, so the TCH + FCJ switch is
+      captured again. The other TCH examples are left with the SSIM failures edi main already carries.
+    platform: Linux x86_64, QT_QPA_PLATFORM=xcb (Xwayland on headless Weston, Mesa llvmpipe OpenGL)
+    images:
+      - 18-experiment-tch.png

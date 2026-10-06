@@ -150,9 +150,9 @@
   },
   {
     "image": "18-experiment-tch.png",
-    "sha256": "3edd85e5d252546f02d16d7d5c274a6a245e951b74b6315b9ef2e90879fc80a1",
+    "sha256": "b2fffb665f81b7a6b94049e42a326ec4e166cdb02cf06fd238f5417b8ab458b5",
     "checks": {
-      "18": "withdrawn; final feedback: Thompson-Cox-Hastings shows U V W, then X Y, then asym fcj1 fcj2, a row per family, with no \"Broadening\" or \"Asymmetry\" subheading"
+      "18": "withdrawn; final feedback: Thompson-Cox-Hastings shows U V W X Y on one row, then S/L D/L, with no \"Broadening\" or \"Asymmetry\" subheading"
     }
   },
   {
