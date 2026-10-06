@@ -460,11 +460,13 @@ bool ProjectViewModel::setExperimentType(int index, const QString& axis, const Q
             replacement.data = experiment.data;
         }
         const edi::ExperimentBase* before = &experiment;
+        const bool created = created_.contains(before);
+        const QString data_file = data_files_.contains(before) ? data_files_.at(before) : QString();
         error = apply(edi::Edit::replace_experiment(project, experiment, std::move(replacement)), true);
         if (error.isEmpty()) {
             // Undo of the experiment's creation removes it in its new type.
-            experimentReplaced(before, project.experiments[static_cast<std::size_t>(index)].get());
-            syncLoadState();
+            experimentReplaced(before, project.experiments[static_cast<std::size_t>(index)].get(), created, data_file);
+            syncDatasets();
         }
     } catch (const std::exception& refusal) {
         error = QString::fromUtf8(refusal.what());
@@ -477,7 +479,8 @@ bool ProjectViewModel::setExperimentType(int index, const QString& axis, const Q
     return true;
 }
 
-void ProjectViewModel::experimentReplaced(const edi::ExperimentBase* before, const edi::ExperimentBase* after) {
+void ProjectViewModel::experimentReplaced(const edi::ExperimentBase* before, const edi::ExperimentBase* after,
+                                          bool created, const QString& data_file) {
     for (UndoRecord& record : undo_history_) {
         if (auto* added = std::get_if<AddedExperiments>(&record)) {
             std::replace(added->experiments.begin(), added->experiments.end(), before, after);
@@ -489,14 +492,16 @@ void ProjectViewModel::experimentReplaced(const edi::ExperimentBase* before, con
             }
         }
     }
-    if (created_.erase(before) != 0) {
+    // The edit's own publication has already dropped `before`'s entries (syncLoadState): they come from the caller.
+    created_.erase(before);
+    data_files_.erase(before);
+    if (created) {
         created_.insert(after);
     }
-    if (const auto found = data_files_.find(before); found != data_files_.end()) {
-        const QString file = found->second;
-        data_files_.erase(found);
-        data_files_[after] = file;
+    if (!data_file.isEmpty()) {
+        data_files_[after] = data_file;
     }
+    syncLoadState();
 }
 
 void ProjectViewModel::syncLoadState() {
@@ -517,6 +522,7 @@ void ProjectViewModel::syncLoadState() {
 QString ProjectViewModel::replaceData(int index, edi::BraggPdExperiment replacement, const QString& data_file) {
     edi::Project& project = *project_;
     const edi::ExperimentBase* before = project.experiments[static_cast<std::size_t>(index)].get();
+    const bool created = created_.contains(before);
     QString error;
     try {
         error = apply(edi::Edit::load_data(project, *before, std::move(replacement)), true);
@@ -527,14 +533,7 @@ QString ProjectViewModel::replaceData(int index, edi::BraggPdExperiment replacem
     if (!error.isEmpty()) {
         return error;
     }
-    const edi::ExperimentBase* after = project.experiments[static_cast<std::size_t>(index)].get();
-    experimentReplaced(before, after);
-    if (data_file.isEmpty()) {
-        data_files_.erase(after);
-    } else {
-        data_files_[after] = data_file;
-    }
-    syncLoadState();
+    experimentReplaced(before, project.experiments[static_cast<std::size_t>(index)].get(), created, data_file);
     syncDatasets();
     return {};
 }
@@ -601,7 +600,7 @@ bool ProjectViewModel::loadData(int index, const QUrl& file) {
         notes.append(tr("%n row(s) reordered by x", nullptr, static_cast<int>(load.reordered)));
     }
     if (load.derived != 0) {
-        notes.append(tr("σ = √y used for %n row(s) without a σ column", nullptr, static_cast<int>(load.derived)));
+        notes.append(tr("σ = √max(y, 1) used for %n row(s) without a σ column", nullptr, static_cast<int>(load.derived)));
     }
     QString text = tr("%1 loaded into '%2': %n point(s)", nullptr, static_cast<int>(load.points)).arg(file_name, loaded_name);
     if (!notes.isEmpty()) {

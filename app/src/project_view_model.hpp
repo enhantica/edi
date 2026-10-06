@@ -339,7 +339,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Kept by identity: a replaced experiment (Load data, a type change, their undo) passes its entries on.
     std::set<const edi::ExperimentBase*> created_;
     std::map<const edi::ExperimentBase*, QString> data_files_;
-    void experimentReplaced(const edi::ExperimentBase* before, const edi::ExperimentBase* after);
+    void experimentReplaced(const edi::ExperimentBase* before, const edi::ExperimentBase* after, bool created,
+                            const QString& data_file);
     // Each experiment view's Load data… state and data file, and the list's File column, from the two above.
     void syncLoadState();
     // Applies an experiment's replacement by Load data or its undo; the refusal, if any.
