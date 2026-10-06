@@ -18,6 +18,21 @@ edi_app::ParameterItem* cell_item(edi_app::ProjectViewModel& view) {
 QJsonObject scientific_state(edi_app::ProjectViewModel& view) {
     QJsonObject result = state(view);
     result["parameters"] = parameters(view);
+    QJsonObject parameter_facts;
+    for (const edi::NamedParameter& entry : edi::named_parameters(view.project())) {
+        const auto& value = *entry.parameter;
+        parameter_facts[QString::fromStdString(entry.unique_name)] = QJsonObject{
+            {"value", static_cast<double>(value.value)},
+            {"free", static_cast<bool>(value.free)},
+            {"uncertainty",
+             value.uncertainty.has_value() ? QJsonValue(*value.uncertainty) : QJsonValue()},
+            {"start",
+             value.start_value.has_value() ? QJsonValue(*value.start_value) : QJsonValue()},
+            {"startUncertainty", value.start_uncertainty.has_value()
+                                     ? QJsonValue(*value.start_uncertainty)
+                                     : QJsonValue()}};
+    }
+    result["parameterFacts"] = parameter_facts;
     result["rows"] = table(view.experiments());
     result["summary"] = table(view.fit()->results());
     result["held"] = view.project().fit_result.held();

@@ -57,6 +57,7 @@ def snapshot(root, build, fixture):
     source = build / 'source'
     source.mkdir(parents=True, exist_ok=True)
     (source / 'app/src/scan_contract_sink.hpp').unlink(missing_ok=True)
+    (source / 'core/src/scan_contract_fit_sink.hpp').unlink(missing_ok=True)
     archive = build / 'source.tar'
     with archive.open('wb') as stream:
         run(['git', '-C', str(root), 'archive', 'HEAD'], stdout=stream)
@@ -64,6 +65,18 @@ def snapshot(root, build, fixture):
         stream.extractall(source, filter='data')
     shutil.copytree(fixture, source / 'tests/fixtures/scan_app', dirs_exist_ok=True)
     hashes = fingerprint(source)
+    adapter = source / 'core/src/adapter.cpp'
+    text = adapter.read_text()
+    marker = 'const PreambleCallback& on_start, const CancelCallback& should_cancel) {'
+    if text.count(marker) != 1:
+        raise RuntimeError(
+            'Single fit identity actor must reach the effective measured-data entry'
+        )
+    text = text.replace(marker, marker + '\n    scan_contract_fit_data(grid, observed, sigma);', 1)
+    adapter.write_text('#include "scan_contract_fit_sink.hpp"\n' + text)
+    shutil.copyfile(
+        fixture / 'scan_contract_fit_sink.hpp', source / 'core/src/scan_contract_fit_sink.hpp'
+    )
     cmake = source / 'CMakeLists.txt'
     cmake.write_text(cmake.read_text() + '\nadd_subdirectory(tests/fixtures/scan_app)\n')
     core_cmake = source / 'core/CMakeLists.txt'

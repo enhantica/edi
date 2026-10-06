@@ -685,6 +685,16 @@ void scan_contract_work(const std::string& file, const crysta::Project& project)
                 << hash.result().toHex().constData() << std::endl;
 }
 
+void scan_contract_fit_data(const std::vector<double>& grid, const std::vector<double>& observed,
+                            const std::vector<double>& sigma) {
+    if (stage != "pending-fit" && stage != "settled-fit") return;
+    QCryptographicHash hash(QCryptographicHash::Sha256);
+    for (const auto* values : {&grid, &observed, &sigma})
+        hash.addData(QByteArray(reinterpret_cast<const char*>(values->data()),
+                                static_cast<qsizetype>(values->size() * sizeof(double))));
+    native_fit_inputs.append(QString::fromLatin1(hash.result().toHex()));
+}
+
 void scan_contract_work_receipt(const std::string& file) {
     if (trace_stream.is_open()) trace_stream << "work\t" << stage << "\t" << file << std::endl;
     if (work_stream.is_open())
