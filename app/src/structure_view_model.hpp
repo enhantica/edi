@@ -48,7 +48,7 @@ class SpaceGroupViewModel : public QObject {
     int itNumber() const { return it_number_; }
     // A new name or number chooses that space group's default setting, and a new code that setting's name, so
     // name, code and number always agree; a name or code crysta's table does not have is stored as typed, for the
-    // calculation to say why it refuses it. A number of 0 or less clears the stored number.
+    // calculation to say why it refuses it. A number of 0 or less clears the stored number; one above 230 is ignored.
     void setItNumber(int number);
     bool hasItNumber() const { return it_number_ > 0; }
     QString crystalSystem() const { return crystal_system_; }

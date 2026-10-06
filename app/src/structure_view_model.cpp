@@ -59,6 +59,9 @@ void SpaceGroupViewModel::setCoordSystemCode(const QString& code) {
 }
 
 void SpaceGroupViewModel::setItNumber(int number) {
+    if (number > 230) {
+        return;  // no such space-group type: never stored
+    }
     edi::SpaceGroup& group = structure_.space_group;
     const std::optional<edi::SpaceGroupSettingName> setting =
         number > 0 ? edi::space_group_setting_for_number(number) : std::nullopt;

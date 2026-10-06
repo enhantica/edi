@@ -28,6 +28,9 @@ EaElements.GroupRow {
         label: qsTr("number")
         fieldValue: row.spaceGroup && row.spaceGroup.hasItNumber ? row.spaceGroup.itNumber : ""
         accepts: "integer"
+        // The 230 space-group types (the owner, 2026-10-06).
+        admits: text => /^\s*\d+\s*$/.test(text) && Number(text) >= 1 && Number(text) <= 230
+        admitsRule: qsTr("A space-group number is a whole number from 1 to 230")
         clearable: true
         onCommitted: text => row.spaceGroup.itNumber = text === "" ? 0 : Number(text)
     }
