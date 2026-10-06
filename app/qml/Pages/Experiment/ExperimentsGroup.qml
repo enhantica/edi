@@ -164,13 +164,16 @@ EaElements.GroupBox {
                     EaElements.Button {
                         id: loadData
                         objectName: `experiments.loadData.${row.index}`
-                        // A simulation's only: a scan's datasets and loaded experiments have their data. Only one made
-                        // with Create experiment takes data; one loaded from `.edi` keeps it disabled.
-                        visible: !group.scan && row.experiment !== null && row.experiment.calculationOnly
+                        // An experiment made with Create experiment: Load data…, then the loaded file's name, which
+                        // loads another file in its place. A simulation loaded from `.edi` shows it disabled; a scan's
+                        // datasets and experiments loaded with their data show their file.
+                        visible: !group.scan && row.experiment !== null && (row.experiment.canLoadData || row.experiment.calculationOnly)
                         anchors.verticalCenter: parent.verticalCenter
                         width: parent.width
                         enabled: row.experiment !== null && row.experiment.canLoadData
-                        text: qsTr("Load data…")
+                        text: row.experiment !== null && !row.experiment.calculationOnly ? row.file : qsTr("Load data…")
+                        ToolTip.visible: hovered && row.experiment !== null && !row.experiment.calculationOnly
+                        ToolTip.text: qsTr("Load another data file in place of this one")
                         onClicked: group.chooseData(row.index)
                     }
                 }
