@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-06T21:58:31Z
+# measured_utc = 2026-10-06T22:00:44Z
 #
-# Recorded from: e04-t18-tests-seq6-child-pytest-2.log (3 node(s) measured once, 8315 banked, 0 stale row(s) dropped)
-# Collected tests: 9516; with a reported duration: 4619
+# Recorded from: e04-t18-tests-seq6-child-pytest-final.log (3 node(s) measured once, 8315 banked, 0 stale row(s) dropped)
+# Collected tests: 9516; with a reported duration: 4618
 # Module-scoped fixture costs recorded: 26
 #
 # Breaches are decided PER TIER against the table
@@ -7566,7 +7566,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_one_l
 UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_packet_escapes_reach_the_native_actions[load-source-reopen]
 UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_saved_data_is_self_contained_and_edi_load_cannot_replace_it[cwl]
 UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_saved_data_is_self_contained_and_edi_load_cannot_replace_it[tof]
-0.003	tests/system/py/test_pytest_child_environment.py::test_parent_options_do_not_reach_nested_pytest[basetemp]
+0.000	tests/system/py/test_pytest_child_environment.py::test_parent_options_do_not_reach_nested_pytest[basetemp]
 0.000	tests/system/py/test_pytest_child_environment.py::test_parent_options_do_not_reach_nested_pytest[keyword]
 0.000	tests/system/py/test_pytest_child_environment.py::test_parent_options_do_not_reach_nested_pytest[marker]
 0.140	tests/system/py/test_scan_accident_paths.py::test_an_externally_changed_indexed_row_never_becomes_a_template_value
@@ -9875,7 +9875,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 0.180	tests/system/py/test_e09_t75_native_execution.py
 # module-cost: 3.929	tests/system/py/test_fit_participants_native.py
 # module-cost: 138.021	tests/system/py/test_plain_data_app.py
-# module-cost: 25.957	tests/system/py/test_pytest_child_environment.py
+# module-cost: 21.241	tests/system/py/test_pytest_child_environment.py
 # module-cost: 0.543	tests/system/py/test_scan_accident_paths.py
 # module-cost: 112.644	tests/system/py/test_scan_app_execution.py
 # module-cost: 17.002	tests/system/py/test_scan_driver_resume.py
