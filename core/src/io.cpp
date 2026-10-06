@@ -2618,6 +2618,12 @@ BraggPdExperiment experiment_from_edi_text(const std::string& text) {
 
 BraggPdExperiment simulation_experiment(const std::string& name, const ExperimentTypeTokens& type,
                                         const std::string& structure_id) {
+    return simulation_experiment(name, type,
+                                 structure_id.empty() ? std::vector<std::string>{} : std::vector<std::string>{structure_id});
+}
+
+BraggPdExperiment simulation_experiment(const std::string& name, const ExperimentTypeTokens& type,
+                                        const std::vector<std::string>& structure_ids) {
     const bool constant_wavelength = type.beam_mode == "constant wavelength";
     std::string text = "data_" + name + "\n\n_edi.schema_version 3\n\n";
     text += "_experiment_type.sample_form \"" + type.sample_form + "\"\n";
@@ -2648,8 +2654,11 @@ BraggPdExperiment simulation_experiment(const std::string& name, const Experimen
                 "_data_range.time_of_flight_min 2000.\n_data_range.time_of_flight_max 20000.\n"
                 "_data_range.time_of_flight_step 10.\n";
     }
-    if (!structure_id.empty()) {
-        text += "\nloop_\n_linked_structure.structure_id\n_linked_structure.scale\n" + structure_id + " 1.\n";
+    if (!structure_ids.empty()) {
+        text += "\nloop_\n_linked_structure.structure_id\n_linked_structure.scale\n";
+        for (const std::string& structure_id : structure_ids) {
+            text += structure_id + " 1.\n";
+        }
     }
     return experiment_from_edi_text(text);
 }
@@ -2725,12 +2734,6 @@ BraggPdExperiment load_experiment_edi_file(const std::string& path) {
 
 std::vector<BraggPdExperiment> load_experiment_edi_files(const Project& project,
                                                          const std::vector<std::string>& paths) {
-    // load_project's project-level rule: every experiment carries measured data, or every one a
-    // calculation grid, so an addition never makes a project the loader would refuse.
-    std::optional<bool> calculation;
-    for (const auto& item : project.experiments) {
-        calculation = item->calculation_only;
-    }
     std::vector<BraggPdExperiment> loaded;
     std::set<std::string> names;
     for (const auto& item : project.experiments) {
@@ -2743,14 +2746,6 @@ std::vector<BraggPdExperiment> load_experiment_edi_files(const Project& project,
                           detail::printable_id(experiment.name) + "' is already " +
                           (holds_experiment(project, experiment.name) ? "in the project" : "in this load"));
         }
-        if (calculation.has_value() && *calculation != experiment.calculation_only) {
-            throw IoError(path + ": experiment '" + experiment.name + "' declares " +
-                          (experiment.calculation_only ? "a _data_range grid" : "measured data") +
-                          " where the project's experiments declare " +
-                          (*calculation ? "a _data_range grid" : "measured data") +
-                          " - a project calculates or fits as a whole");
-        }
-        calculation = experiment.calculation_only;
         loaded.push_back(std::move(experiment));
     }
     return loaded;
@@ -2874,16 +2869,8 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
         project.structures.push_back(std::move(structure));
     }
 
-    // One-loader ruling, PROJECT-level: the project's contents select ONE mode — every
-    // experiment declares measured data (a fit-ready project) or every experiment declares a
-    // calculation grid (a calculation project). A mixed project would be neither: joint
-    // refinement refuses at its calculation bank while the range bank rides beside observations.
-    std::optional<bool> project_is_calculation;
-    std::string mode_setting_file;
-    const auto mode_name = [](bool is_calculation) {
-        return is_calculation ? "a _data_range grid (calculation)"
-                              : "an embedded _data loop (fit-ready)";
-    };
+    // A project may hold experiments with measured data and experiments with a calculation grid side by
+    // side: a calculation covers every experiment, a fit only those with data.
     // `crysta` is the one calculator. Any other `_calculator.type` warns naming it, once per distinct
     // value, exactly as the minimizer below does, and the calculation runs with crysta. The category is
     // not modelled, so the value is not kept.
@@ -2905,17 +2892,6 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
                           "' (" + file.string() +
                           ") declares neither an embedded _data loop nor a _data_range grid - a "
                           "project must say what it computes over");
-        }
-        if (!project_is_calculation.has_value()) {
-            project_is_calculation = experiment.calculation_only;
-            mode_setting_file = file.string();
-        } else if (*project_is_calculation != experiment.calculation_only) {
-            throw IoError("project " + directory + ": experiment '" + experiment.name + "' (" +
-                          file.string() + ") declares " + mode_name(experiment.calculation_only) +
-                          " where '" + mode_setting_file + "' declared " +
-                          mode_name(*project_is_calculation) +
-                          " - the project's contents select calculate or fit as a whole, and a "
-                          "mixed data/range project is refused");
         }
         // Every linked structure names a structure of the project, as crysta's loader requires (an empty
         // id spells `structure`).

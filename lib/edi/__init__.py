@@ -63,8 +63,6 @@ if not (
     # results are untouched, and a caller-set value — or any wait knob above — wins.
     _os.environ.setdefault('OPENBLAS_THREAD_TIMEOUT', '4')
 
-# Imported after the preamble so the OpenBLAS timeout default is in place before its pool spins.
-import numpy as _np  # noqa: E402, ICN001 - see the preamble above; a bare `np` would be public (I1)
 
 # The compiled extension is emitted PER BUILD CONFIGURATION into <build-dir>/python/edi, never
 # into this source package — six build configurations sharing one source-tree artifact silently
@@ -263,6 +261,9 @@ from edi._edi import (  # noqa: E402 -: the crysta-vs-edi parity hooks
 )
 from edi._edi import (  # noqa: E402 -
     _model_dump as _model_dump,
+)
+from edi._edi import (  # noqa: E402 - after the __path__ resolution
+    _read_plain_data as _edi_read_plain_data,  # Crysta's plain-data reader
 )
 from edi._edi import (  # noqa: E402 -
     _structure_factor_evaluations as _structure_factor_evaluations,
@@ -963,10 +964,12 @@ class ExperimentFactory:
         radiation_probe='',
         scattering_type='',
     ) -> 'BraggPdExperiment':
-        """A from_scratch experiment with measured data read from a 2-3 column ASCII file.
+        """A from_scratch experiment with measured data read from a plain 2-3 column file.
 
-        ``x y [sy]``: a missing ``sy`` is approximated as ``sqrt(y)`` and any ``sy < 1e-4``
-        is replaced with ``1.0``.
+        ``x y [sy]``, separated by whitespace or commas, read by crysta's plain-data reader
+        (crysta ADR-0081): a line that is not two or three numbers is skipped, a missing ``sy`` is
+        ``sqrt(max(y, 1))``, any ``sy < 1e-4`` becomes ``1.0``, rows with ``y <= 0`` are dropped,
+        and the rows are sorted by ``x`` keeping the first of a repeated ``x``.
         """
         experiment = cls.from_scratch(
             beam_mode=beam_mode,
@@ -975,34 +978,19 @@ class ExperimentFactory:
             radiation_probe=radiation_probe,
             scattering_type=scattering_type,
         )
-        rows = _np.loadtxt(data_path, ndmin=2)
-        if rows.size == 0 or rows.shape[1] not in {2, 3}:
-            raise ValueError(f"data file '{data_path}': expected 2 or 3 columns `x y [sy]`")
-        x = rows[:, 0]
-        y = rows[:, 1]
-        if rows.shape[1] == 3:
-            sy = rows[:, 2]
-        else:
-            if (y < 0.0).any():
-                raise ValueError(
-                    f"data file '{data_path}': cannot derive sqrt(y) sigma for a negative "
-                    'intensity'
-                )
-            sy = _np.sqrt(y)
-        if not (_np.isfinite(x).all() and _np.isfinite(y).all() and _np.isfinite(sy).all()):
-            raise ValueError(f"data file '{data_path}': non-finite value")
-        sy = _np.where(sy < 1e-4, 1.0, sy)
+        rows = _edi_read_plain_data(str(data_path))
+        x, y, sy = rows['x'], rows['y'], rows['sigma']
         if beam_mode == _BEAM_MODE_CW:
             experiment.data = PdCwlData(
-                two_theta=x.tolist(),
-                intensity_meas=y.tolist(),
-                intensity_meas_su=sy.tolist(),
+                two_theta=x,
+                intensity_meas=y,
+                intensity_meas_su=sy,
             )
         else:
             experiment.data = PdTofData(
-                time_of_flight=x.tolist(),
-                intensity_meas=y.tolist(),
-                intensity_meas_su=sy.tolist(),
+                time_of_flight=x,
+                intensity_meas=y,
+                intensity_meas_su=sy,
             )
         return experiment
 
