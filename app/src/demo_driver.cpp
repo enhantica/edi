@@ -219,10 +219,10 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"t16-64-scan-done", {"fitting.start", "wait-fit"}});
     steps_.push_back({"t16-65-scan-evolution", {"choose:OK", "mainArea.analysis.tab.evolution"}});
     steps_.push_back({"t16-66-scan-experiment", {experiment, basic, "expand:group.experiments"}});
-    // After the scan: the single mode (a template edit) marks the results out of date on the status bar and the
-    // Evolution tab; a single fit on the shown dataset makes it the template dataset, tagged in the lists.
-    steps_.push_back({"t16-67-scan-out-of-date", {analysis, extras, "expand:group.fitting_mode", "fittingMode.type",
-                                                   "choose:single", basic, "mainArea.analysis.tab.evolution"}});
+    // After the scan: the single mode (a setting: the results stay current); a single fit on the shown dataset makes
+    // it the template dataset, tagged in the lists, and marks the results out of date on the status bar.
+    steps_.push_back({"t16-67-single-mode", {analysis, extras, "expand:group.fitting_mode", "fittingMode.type",
+                                              "choose:single", basic, "mainArea.analysis.tab.evolution"}});
     steps_.push_back({"t16-68-single-fit-on-dataset",
                       {"mainArea.analysis.tab.fitting", "reveal:fitting.start", "fitting.start", "wait-fit"}});
     steps_.push_back({"t16-69-template-dataset", {"choose:OK", experiment, basic, "show:experiments.list:161"}});
