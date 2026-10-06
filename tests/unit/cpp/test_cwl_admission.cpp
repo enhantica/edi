@@ -42,8 +42,8 @@ static edi::Project admission_model(int damage) {
 
 TEST_CASE("CW native calculate admits only a matching token and slot block") {
     auto control = edi::load_project((admission_root() / "tch").string());
-    CHECK_MESSAGE(!admission_refuses([&] { control.calculate(); }),
-                  "A native admission witness must first accept its valid TCH control");
+    CHECK_NOTHROW_MESSAGE(control.calculate(),
+                          "A native admission witness must first accept its valid TCH control");
     const auto destination = std::filesystem::temp_directory_path() /
                              ("cwl-admission-edi-calculate-" +
                               std::to_string(reinterpret_cast<std::uintptr_t>(&control)));
@@ -59,8 +59,8 @@ TEST_CASE("CW native calculate admits only a matching token and slot block") {
 
 TEST_CASE("CW native fit admits only a matching token and slot block") {
     auto control = edi::load_project((admission_root() / "tch").string());
-    CHECK_MESSAGE(!admission_refuses([&] { control.calculate(); }),
-                  "A native admission witness must first accept its valid TCH control");
+    CHECK_NOTHROW_MESSAGE(control.calculate(),
+                          "A native admission witness must first accept its valid TCH control");
     const auto destination =
         std::filesystem::temp_directory_path() /
         ("cwl-admission-edi-fit-" + std::to_string(reinterpret_cast<std::uintptr_t>(&control)));
@@ -76,8 +76,8 @@ TEST_CASE("CW native fit admits only a matching token and slot block") {
 
 TEST_CASE("CW native save admits only a matching token and slot block") {
     auto control = edi::load_project((admission_root() / "tch").string());
-    CHECK_MESSAGE(!admission_refuses([&] { control.calculate(); }),
-                  "A native admission witness must first accept its valid TCH control");
+    CHECK_NOTHROW_MESSAGE(control.calculate(),
+                          "A native admission witness must first accept its valid TCH control");
     const auto destination =
         std::filesystem::temp_directory_path() /
         ("cwl-admission-edi-save-" + std::to_string(reinterpret_cast<std::uintptr_t>(&control)));
@@ -93,8 +93,8 @@ TEST_CASE("CW native save admits only a matching token and slot block") {
 
 TEST_CASE("CW native free admits only a matching token and slot block") {
     auto control = edi::load_project((admission_root() / "tch").string());
-    CHECK_MESSAGE(!admission_refuses([&] { (void)control.free_parameters(); }),
-                  "A native free-set witness must first accept its valid TCH control");
+    CHECK_NOTHROW_MESSAGE((void)control.free_parameters(),
+                          "A native free-set witness must first accept its valid TCH control");
     for (int damage = 0; damage < 6; ++damage) {
         CAPTURE(damage);
         auto project = admission_model(damage);
