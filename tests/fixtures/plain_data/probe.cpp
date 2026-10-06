@@ -28,6 +28,12 @@ QJsonArray links(const edi::ExperimentBase& experiment) {
         result.append(QString::fromStdString(link->structure_id.value()));
     return result;
 }
+QJsonArray parameter_state(const std::vector<edi::Parameter*>& values) {
+    QJsonArray result;
+    for (const auto* parameter : values)
+        result.append(QJsonArray{parameter->value.get(), parameter->free.get()});
+    return result;
+}
 QJsonObject state(edi_app::ProjectViewModel& view) {
     const auto& p = view.project();
     QJsonArray experiments, structures, parameters;
@@ -45,10 +51,19 @@ QJsonObject state(edi_app::ProjectViewModel& view) {
             {"simulation", e.calculation_only},
             {"links", links(e)},
             {"weight", vm->datasetWeight()},
+            {"canLoadData", vm->canLoadData()},
             {"beam", vm->beamModeToken()},
             {"file", view.experiments()->get(i, "file").toString()},
             {"range", QJsonArray{vm->measuredRange()->minimum(), vm->measuredRange()->maximum(),
                                  vm->measuredRange()->step()}}};
+        auto& mutable_e = *const_cast<edi::BraggPdExperiment*>(&e);
+        row["instrument"] = parameter_state(mutable_e.instrument.parameters());
+        row["peak"] = parameter_state(mutable_e.peak.parameters());
+        QJsonArray background;
+        for (const auto& point : e.background)
+            background.append(QJsonArray{point->position.get(), point->intensity.value.get(),
+                                         point->intensity.free.get()});
+        row["background"] = background;
         if (e.data.has_value()) {
             const auto& d = *e.data;
             const auto axis = e.effective_beam_mode() == edi::BeamModeEnum::CONSTANT_WAVELENGTH
@@ -102,6 +117,36 @@ QJsonArray messages(edi_app::Session& session) {
     for (int i = 0; i < model->count(); ++i) result.append(model->get(i, "message").toString());
     return result;
 }
+void configure(edi_app::ProjectViewModel& view, const QString& beam, bool renamed) {
+    if (!create(view) || !view.createExperiment())
+        throw std::runtime_error("lifecycle setup refused");
+    if (beam == "tof" && !view.setExperimentType(0, "beamMode", "time-of-flight"))
+        throw std::runtime_error("TOF lifecycle setup refused");
+    auto* vm = view.currentExperiment();
+    vm->setRange(beam == "tof" ? 2400 : 14, beam == "tof" ? 2412 : 16, beam == "tof" ? 3 : 0.5);
+    if (renamed) vm->setName("User name");
+    vm->setDatasetWeight(2.5);
+    auto& experiment = *const_cast<edi::Project&>(view.project()).experiments[0];
+    if (beam == "tof") {
+        experiment.instrument.calib_d_to_tof_offset.value = 7.0;
+        experiment.peak.broad_gauss_sigma_0.value = 0.0625;
+    } else {
+        if (!experiment.instrument.calib_twotheta_offset || !experiment.peak.broad_gauss_w)
+            throw std::runtime_error("CWL lifecycle settings unavailable");
+        experiment.instrument.calib_twotheta_offset->value = 0.125;
+        experiment.peak.broad_gauss_w->value = 0.0625;
+    }
+    if (experiment.background.empty()) {
+        edi::LineSegment point;
+        point.position = beam == "tof" ? 2400 : 14;
+        point.intensity.value = 4.25;
+        experiment.background.push_back(point);
+    } else {
+        experiment.background[0]->intensity.value = 4.25;
+    }
+    experiment.excluded_regions = std::vector<std::pair<double, double>>{
+        {beam == "tof" ? 9000 : 60, beam == "tof" ? 9100 : 61}};
+}
 }  // namespace
 int main(int argc, char** argv) {
     QGuiApplication app(argc, argv);
@@ -142,22 +187,13 @@ int main(int argc, char** argv) {
             view.undo();
             result["undo"] = state(view);
         } else {
-            view.loadStructure(QUrl::fromLocalFile(fixture + "/default.cif"));
-            view.createExperiment();
-            if (beam == "tof") view.setExperimentType(0, "beamMode", "time-of-flight");
-            view.currentExperiment()->setRange(beam == "tof" ? 2400 : 14,
-                                               beam == "tof" ? 2412 : 16, beam == "tof" ? 3 : 0.5);
-            if (mode == "renamed") view.currentExperiment()->setName("User name");
-            view.currentExperiment()->setDatasetWeight(2.5);
-            view.apply(edi::Edit::append_excluded_region(
-                           *const_cast<edi::Project&>(view.project()).experiments[0],
-                           beam == "tof" ? 9000 : 60, beam == "tof" ? 9100 : 61),
-                       false);
+            configure(view, beam, mode == "renamed");
             result["before"] = state(view);
             const QString input = fixture + "/" + QString::fromLocal8Bit(argv[6]);
             const QString source = work + "/" + QFileInfo(input).fileName();
             std::filesystem::copy_file(input.toStdString(), source.toStdString(),
                                        std::filesystem::copy_options::overwrite_existing);
+            const int previous_messages = session.loadWarnings()->count();
             result["loaded"] = load(view, 0, source);
             if (escape == "retain-nonpositive" && result["loaded"].toBool()) {
                 auto& p = const_cast<edi::Project&>(view.project());
@@ -173,10 +209,17 @@ int main(int argc, char** argv) {
                 d.intensity_meas_su = sigma;
             }
             result["after"] = state(view);
-            result["messages"] = messages(session);
+            QJsonArray import_messages;
+            const auto all_messages = messages(session);
+            for (int i = previous_messages; i < all_messages.size(); ++i)
+                import_messages.append(all_messages[i]);
+            result["messages"] = import_messages;
             result["typeRefused"] = !view.setExperimentType(
-                0, "beamMode", beam == "tof" ? "constant-wavelength" : "time-of-flight");
+                0, "beamMode", beam == "tof" ? "constant wavelength" : "time-of-flight");
             result["afterTypeAttempt"] = state(view);
+            view.currentExperiment()->setRange(25, 28, 0.75);
+            result["rangeRefused"] = !view.currentExperiment()->lastError().isEmpty();
+            result["afterRangeAttempt"] = state(view);
             if (mode == "mixed") {
                 result["createdExtra"] = view.createExperiment();
                 result["mixed"] = state(view);
@@ -190,9 +233,12 @@ int main(int argc, char** argv) {
                 const auto fit = p.fit();
                 result["fitPoints"] = static_cast<int>(fit.n_points_loaded);
                 result["afterFit"] = state(view);
-            } else {
+            } else if (mode != "counts") {
                 const QString saved = work + "/saved";
                 result["saved"] = session.saveAs(QUrl::fromLocalFile(saved));
+                if (!result["saved"].toBool())
+                    throw std::runtime_error("saved project write refused: " +
+                                             session.lastError().toStdString());
                 session.closeProject();
                 std::filesystem::remove(source.toStdString());
                 if (escape == "source-reopen") {
@@ -201,22 +247,30 @@ int main(int argc, char** argv) {
                 }
                 result["opened"] = session.openProject(QUrl::fromLocalFile(saved));
                 if (!result["opened"].toBool())
-                    throw std::runtime_error("saved project did not reopen");
+                    throw std::runtime_error("saved project did not reopen: " +
+                                             session.lastError().toStdString());
                 result["reopened"] = state(*session.project());
+                result["reopenedTypeRefused"] = !session.project()->setExperimentType(
+                    0, "beamMode", beam == "tof" ? "constant wavelength" : "time-of-flight");
+                result["afterReopenedTypeAttempt"] = state(*session.project());
+                session.project()->currentExperiment()->setRange(25, 28, 0.75);
+                result["reopenedRangeRefused"] =
+                    !session.project()->currentExperiment()->lastError().isEmpty();
+                result["afterReopenedRangeAttempt"] = state(*session.project());
                 edi_app::Session imported;
                 imported.createProject("Imported", "");
                 auto& opened = *imported.project();
-                for (const auto& entry : std::filesystem::directory_iterator(
-                         saved.toStdString() + "/structures")) {
-                    if (!opened.loadStructure(QUrl::fromLocalFile(
-                            QString::fromStdString(entry.path().string()))))
+                for (const auto& entry :
+                     std::filesystem::directory_iterator(saved.toStdString() + "/structures")) {
+                    if (!opened.loadStructure(
+                            QUrl::fromLocalFile(QString::fromStdString(entry.path().string()))))
                         throw std::runtime_error("saved structure import refused");
                 }
                 QList<QUrl> experimentFiles;
-                for (const auto& entry : std::filesystem::directory_iterator(
-                         saved.toStdString() + "/experiments")) {
-                    experimentFiles.append(QUrl::fromLocalFile(
-                        QString::fromStdString(entry.path().string())));
+                for (const auto& entry :
+                     std::filesystem::directory_iterator(saved.toStdString() + "/experiments")) {
+                    experimentFiles.append(
+                        QUrl::fromLocalFile(QString::fromStdString(entry.path().string())));
                 }
                 if (!opened.loadExperiments(experimentFiles))
                     throw std::runtime_error("saved experiment import refused");
@@ -227,21 +281,26 @@ int main(int argc, char** argv) {
                 edi_app::Session live;
                 live.createProject("Live", "");
                 auto& v = *live.project();
-                v.createExperiment();
-                if (beam == "tof") v.setExperimentType(0, "beamMode", "time-of-flight");
-                v.currentExperiment()->setRange(beam == "tof" ? 2400 : 14,
-                                                beam == "tof" ? 2412 : 16, beam == "tof" ? 3 : .5);
+                configure(v, beam, mode == "renamed");
+                result["beforeLive"] = state(v);
                 result["firstLoad"] = load(v, 0, input);
                 result["firstData"] = state(v);
-                result["secondLoad"] =
-                    load(v, 0, fixture + "/" + beam + "/three_columns/pattern.xye");
+                const QString replacement = work + "/replacement.xye";
+                std::filesystem::copy_file(
+                    (fixture + "/" + beam + "/three_columns/pattern.xye").toStdString(),
+                    replacement.toStdString());
+                result["secondLoad"] = load(v, 0, replacement);
                 result["secondData"] = state(v);
                 v.undo();
                 result["undoSecond"] = state(v);
                 v.undo();
                 result["undoFirst"] = state(v);
                 result["undoTypeEditable"] = v.setExperimentType(
-                    0, "beamMode", beam == "tof" ? "constant-wavelength" : "time-of-flight");
+                    0, "beamMode", beam == "tof" ? "constant wavelength" : "time-of-flight");
+                result["afterUndoTypeEdit"] = state(v);
+                v.currentExperiment()->setRange(31, 34, 0.75);
+                result["undoRangeEditable"] = v.currentExperiment()->lastError().isEmpty();
+                result["afterUndoRangeEdit"] = state(v);
             }
         }
     } catch (const std::exception& error) {

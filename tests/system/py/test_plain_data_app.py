@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import json
 import os
 import re
@@ -12,7 +13,8 @@ from pathlib import Path
 import pytest
 
 from tests.conftest import crysta_reference_prefix
-from tests.integration.py.test_scan_app_contract import block, item, source
+from tests.integration.py.test_plain_data_picker import require_picker
+from tests.integration.py.test_scan_app_contract import require_availability, source
 
 ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / 'tests/fixtures/plain_data'
@@ -102,40 +104,147 @@ def require_unlinked(state):
     )
 
 
-@pytest.mark.parametrize('beam', ['cwl', 'tof'])
-def test_load_lock_replace_and_single_step_undo(native_probe, tmp_path, beam):
-    record = run(native_probe, tmp_path, beam=beam)
+def configuration(state):
+    experiment = state['experiments'][0]
+    return {
+        'parameters': state['parameters'],
+        **{
+            key: experiment[key]
+            for key in ['instrument', 'peak', 'background', 'excluded', 'weight', 'links']
+        },
+    }
+
+
+def content(state):
+    return {key: state[key] for key in ['experiments', 'structures', 'parameters']}
+
+
+def require_lifecycle(record, beam):
     require_success(record)
+    original = record['before']
     expected = CASES[beam + '/two_columns']['rows']
-    e = record['after']['experiments'][0]
+    for step in [
+        'after',
+        'afterTypeAttempt',
+        'afterRangeAttempt',
+        'reopened',
+        'afterReopenedTypeAttempt',
+        'afterReopenedRangeAttempt',
+        'beforeLive',
+        'firstData',
+        'secondData',
+        'undoSecond',
+        'undoFirst',
+    ]:
+        assert configuration(record[step]) == configuration(original), (
+            'Load data lifecycle: non-default instrument, peak, background, exclusions, '
+            'weight, links and parameter state survive every load, Undo and reopen: ' + step
+        )
+    assert (
+        original['experiments'][0]['excluded'] == ([[9000, 9100]] if beam == 'tof' else [[60, 61]])
+        and original['experiments'][0]['weight'] == 2.5
+    ), 'Load data lifecycle control: exclusions and dataset weight begin non-default'
+    assert any(value[0] == 0.0625 for value in original['experiments'][0]['peak']) and (
+        original['experiments'][0]['background'][0][1] == 4.25
+    ), 'Load data lifecycle control: peak and background begin with seeded non-default values'
+    assert any(
+        value[0] == (7 if beam == 'tof' else 0.125)
+        for value in original['experiments'][0]['instrument']
+    ), 'Load data lifecycle control: the active instrument offset begins non-default'
+    for step, case in [
+        ('after', 'two_columns'),
+        ('firstData', 'two_columns'),
+        ('secondData', 'three_columns'),
+        ('undoSecond', 'two_columns'),
+        ('reopened', 'two_columns'),
+    ]:
+        expected_rows = CASES[beam + '/' + case]['rows']
+        measured = record[step]['experiments'][0]
+        assert rows(record[step]) == expected_rows and measured['range'] == [
+            expected_rows[0][0],
+            expected_rows[-1][0],
+            expected_rows[1][0] - expected_rows[0][0],
+        ], (
+            'Load data lifecycle: every measured state exposes the independent rows and range: '
+            + step
+        )
+        assert not measured['simulation'] and measured['beam'] == (
+            'time-of-flight' if beam == 'tof' else 'constant wavelength'
+        ), (
+            'Load data lifecycle: each measured state retains its beam mode and measured lock: '
+            + step
+        )
+        if step != 'reopened':
+            assert measured['canLoadData'], (
+                'Load data lifecycle: every created measured state admits another load: ' + step
+            )
+    after = record['after']['experiments'][0]
     assert record['loaded'] and rows(record['after']) == expected, (
         'Load data: the created experiment receives the hand-constructed measured triples'
     )
-    assert not e['simulation'] and record['typeRefused'], (
-        'Load data: measured data locks the type and disables simulation-range editing'
+    assert (
+        not after['simulation']
+        and after['canLoadData']
+        and record['typeRefused']
+        and (record['rangeRefused'])
+    ), 'Load data: the measured object refuses type/range writes and still admits replacement'
+    assert content(record['afterTypeAttempt']) == content(record['after']) and (
+        content(record['afterRangeAttempt']) == content(record['after'])
+    ), (
+        'Load data write boundary: refused type and range actions '
+        'preserve the complete measured state'
     )
-    assert e['range'] == [expected[0][0], expected[-1][0], expected[1][0] - expected[0][0]], (
+    assert after['range'] == [expected[0][0], expected[-1][0], expected[1][0] - expected[0][0]], (
         'Load data: visible range reports measured start, end and nontrivial step'
     )
-    assert rows(record['afterTypeAttempt']) == expected, (
-        'Load data: attempting a type change preserves all measured columns'
+    assert content(record['reopened']) == content(record['after']) | {
+        'experiments': [
+            dict(after, canLoadData=record['reopened']['experiments'][0]['canLoadData'])
+        ]
+    }, 'Save plain data: reopen preserves all measured state and original file/name metadata'
+    assert (
+        record['reopenedTypeRefused']
+        and record['reopenedRangeRefused']
+        and (
+            content(record['afterReopenedTypeAttempt']) == content(record['reopened'])
+            and content(record['afterReopenedRangeAttempt']) == content(record['reopened'])
+        )
+    ), (
+        'Save plain data write boundary: reopened measured objects '
+        'refuse actual type and range edits'
     )
     assert (
-        record['before']['parameters'] == record['after']['parameters'] and e['weight'] == 2.5
-    ), 'Load data: instrument, peak, background and parameter state survive import'
-    assert record['firstLoad'] and record['secondLoad'], (
-        'Load data: a created experiment permits repeated replacement after its first import'
+        record['firstLoad']
+        and record['secondLoad']
+        and (rows(record['secondData']) == CASES[beam + '/three_columns']['rows'])
+    ), 'Load data: each replacement receives its complete independently constructed data'
+    first = record['firstData']['experiments'][0]
+    second = record['secondData']['experiments'][0]
+    assert (
+        first['file'] == after['file']
+        and first['name'] == after['name']
+        and (second['file'] == 'replacement.xye' and second['name'] == first['name'])
+    ), 'Load data naming: replacement changes the File column while preserving a non-default name'
+    assert content(record['undoSecond']) == content(record['firstData']), (
+        'Undo replacement: one Undo restores complete rows, file/name and preserved configuration'
     )
-    assert rows(record['secondData']) == CASES[beam + '/three_columns']['rows'], (
-        'Load data: the second import replaces rather than appends data'
+    assert content(record['undoFirst']) == content(record['beforeLive']), (
+        'Undo first load: one Undo restores the complete simulation and its previous metadata'
     )
-    assert rows(record['undoSecond']) == expected, (
-        'Undo load: one undo restores the entire preceding measured dataset'
+    assert record['undoTypeEditable'] and record['afterUndoTypeEdit']['experiments'][0][
+        'beam'
+    ] == ('constant wavelength' if beam == 'tof' else 'time-of-flight'), (
+        'Undo load editability: the restored simulation accepts an actual nonidentity type edit'
     )
-    undone = record['undoFirst']['experiments'][0]
-    assert undone['simulation'] and undone['range'] == (
-        [2400, 2412, 3] if beam == 'tof' else [14, 16, 0.5]
-    ), 'Undo load: the next undo restores the prior simulation range and editable type'
+    assert record['undoRangeEditable'] and (
+        record['afterUndoRangeEdit']['experiments'][0]['range'] == [31, 34, 0.75]
+    ), 'Undo load editability: the restored simulation accepts an actual non-default range edit'
+
+
+@pytest.mark.parametrize('beam', ['cwl', 'tof'])
+def test_load_lock_replace_and_single_step_undo(native_probe, tmp_path, beam):
+    record = run(native_probe, tmp_path, beam=beam)
+    require_lifecycle(record, beam)
 
 
 @pytest.mark.parametrize('beam', ['cwl', 'tof'])
@@ -170,44 +279,258 @@ def test_filename_and_user_name(native_probe, tmp_path, mode, expected_name):
     )
 
 
-@pytest.mark.parametrize(
-    'case', ['two_columns', 'headers_malformed', 'nonpositive', 'unsorted_duplicates', 'comma']
-)
-def test_one_load_message_reports_constructed_counts(native_probe, tmp_path, case):
-    record = run(native_probe, tmp_path, mode='counts', case=case)
+def require_message(message, counts):
+    text = message.lower()
+    row = r'row(?:\(s\)|s)?'
+    line = r'line(?:\(s\)|s)?'
+    patterns = {
+        'skipped': [
+            rf'\b(\d+)\s+{line}\s+(?:skipped|unparsable|malformed)',
+            rf'\b(\d+)\s+(?:skipped|unparsable|malformed)\s+{line}',
+            rf'(?:skipped|unparsable|malformed)\s+{line}\s*[:=]\s*(\d+)\b',
+        ],
+        'nonpositive': [
+            (
+                rf'\b(\d+)\s+(?:{row}\s+(?:with\s+)?)?'
+                r'(?:non[- ]?positive|(?:intensity|y)\s*(?:≤|<=)\s*0)'
+            ),
+            rf'non[- ]?positive(?:\s+{row})?\s*[:=]\s*(\d+)\b',
+        ],
+        'duplicates': [
+            (
+                rf'\b(\d+)\s+(?:{row}\s+(?:with\s+(?:a\s+)?)?)?'
+                r'(?:duplicates?|duplicated|repeated\s+x)'
+            ),
+            r'duplicates?(?:\s+rows?)?\s*[:=]\s*(\d+)\b',
+        ],
+        'reordered': [
+            rf'\b(\d+)\s+(?:{row}\s+)?(?:reordered|sorted)',
+            r'(?:reordered|sorted)(?:\s+rows?)?\s*[:=]\s*(\d+)\b',
+        ],
+    }
+    for category, alternatives in patterns.items():
+        observed = [
+            int(match.group(1)) for pattern in alternatives for match in re.finditer(pattern, text)
+        ]
+        assert len(observed) <= 1 and (observed[0] if observed else 0) == counts[category], (
+            'Load data message count: each category owns its number, including zero: ' + category
+        )
+    derived = bool(re.search(r'(?:sigma|\u03c3).*?(?:sqrt\s*\(|√)', text))
+    assert derived == bool(counts['derived']), (
+        'Load data message uncertainty: the derived-sigma note occurs exactly when used'
+    )
+    if derived:
+        reported = re.findall(r'used\s+for\s+(\d+)\s+' + row, text)
+        assert not reported or (len(reported) == 1 and int(reported[0]) == counts['derived']), (
+            'Load data message uncertainty: a reported derived-row count is bound to its own note'
+        )
+
+
+@pytest.mark.parametrize(('beam', 'case'), [tuple(key.split('/')) for key in CASES])
+def test_one_load_message_reports_constructed_counts(native_probe, tmp_path, beam, case):
+    record = run(native_probe, tmp_path, mode='counts', beam=beam, case=case)
     require_success(record)
+    assert record['loaded'] and rows(record['after']) == CASES[beam + '/' + case]['rows'], (
+        'Load data message control: its actual import succeeds with the constructed rows'
+    )
     messages = record['messages']
     assert len(messages) == 1, (
         'Load data messages: one import appends exactly one status-bar entry'
     )
-    message = messages[0].lower()
-    counts = CASES['cwl/' + case]['counts']
-    for label, count in [
-        ('skip', counts['skipped']),
-        ('non-positive', counts['nonpositive']),
-        ('duplicate', counts['duplicates']),
-        ('reorder', counts['reordered']),
-    ]:
-        if count:
-            assert re.search(
-                r'(?:\b'
-                + str(count)
-                + r'\b.{0,25}'
-                + re.escape(label)
-                + '|'
-                + re.escape(label)
-                + r'.{0,25}\b'
-                + str(count)
-                + r'\b)',
-                message,
-            ), (
-                'Load data messages: skipped, nonpositive, duplicate and reordered counts '
-                'match the fixture'
-            )
-    if counts['derived']:
-        assert ('sqrt' in message or '√' in message) and (
-            'sigma' in message or '\u03c3' in message
-        ), 'Load data messages: two-column import names the derived uncertainty convention'
+    require_message(messages[0], CASES[beam + '/' + case]['counts'])
+
+
+@pytest.mark.parametrize('beam', ['cwl', 'tof'])
+@pytest.mark.parametrize('wording', ['inequality', 'category-first'])
+def test_message_observer_accepts_equivalent_category_wording(beam, wording):
+    counts = CASES[beam + '/nonpositive']['counts']
+    message = (
+        '2 row(s) with intensity ≤ 0 skipped'
+        if wording == 'inequality'
+        else 'non-positive rows: 2'
+    )
+    require_message(message, counts)
+
+
+@pytest.mark.parametrize('beam', ['cwl', 'tof'])
+@pytest.mark.parametrize(
+    'damage',
+    [
+        'swapped',
+        'invented-skipped',
+        'invented-nonpositive',
+        'invented-duplicates',
+        'invented-reordered',
+        'missing-skipped',
+        'missing-nonpositive',
+        'missing-duplicates',
+        'missing-reordered',
+    ],
+)
+def test_message_observer_rejects_cross_category_and_false_counts(beam, damage):
+    if damage == 'swapped':
+        counts = CASES[beam + '/unsorted_duplicates']['counts']
+        require_message('1 duplicate; 3 reordered', counts)
+        message = '3 duplicates, 1 reordered'
+    elif damage.startswith('invented-'):
+        counts = CASES[beam + '/three_columns']['counts']
+        require_message('3 measured points loaded', counts)
+        message = {
+            'invented-skipped': '2 skipped lines',
+            'invented-nonpositive': '2 non-positive rows',
+            'invented-duplicates': '2 duplicates',
+            'invented-reordered': '2 reordered',
+        }[damage]
+    else:
+        category = damage.removeprefix('missing-')
+        counts = dict(CASES[beam + '/three_columns']['counts'], **{category: 2})
+        good = {
+            'skipped': '2 skipped lines',
+            'nonpositive': '2 non-positive rows',
+            'duplicates': '2 duplicates',
+            'reordered': '2 reordered',
+        }[category]
+        require_message(good, counts)
+        message = '3 measured points loaded'
+    with pytest.raises(AssertionError, match='Load data message count'):
+        require_message(message, counts)
+
+
+@pytest.fixture(scope='module')
+def lifecycle_control():
+    """Hand-constructed observation control; never a production-output reference."""
+    experiment = {
+        'instrument': [[0.125, False]],
+        'peak': [[0.0625, False]],
+        'background': [[14, 4.25, False]],
+        'excluded': [[60, 61]],
+        'weight': 2.5,
+        'links': ['structure1'],
+        'name': 'experiment1',
+        'file': '',
+        'beam': 'constant wavelength',
+        'simulation': True,
+        'canLoadData': True,
+        'range': [14, 16, 0.5],
+        'x': [],
+        'y': [],
+        'sigma': [],
+    }
+    before = {
+        'experiments': [experiment],
+        'structures': ['unchanged structure'],
+        'parameters': [[0.125, False], [0.0625, False], [4.25, False]],
+    }
+    first = copy.deepcopy(before)
+    e = first['experiments'][0]
+    expected = CASES['cwl/two_columns']['rows']
+    e.update(
+        simulation=False,
+        name='pattern',
+        file='pattern.xy',
+        range=[expected[0][0], expected[-1][0], expected[1][0] - expected[0][0]],
+    )
+    e.update(
+        zip(
+            ['x', 'y', 'sigma'],
+            [list(column) for column in zip(*expected, strict=True)],
+            strict=True,
+        )
+    )
+    second = copy.deepcopy(first)
+    expected_second = CASES['cwl/three_columns']['rows']
+    second['experiments'][0].update(file='replacement.xye')
+    second['experiments'][0].update(
+        zip(
+            ['x', 'y', 'sigma'],
+            [list(column) for column in zip(*expected_second, strict=True)],
+            strict=True,
+        )
+    )
+    type_edited = copy.deepcopy(before)
+    type_edited['experiments'][0]['beam'] = 'time-of-flight'
+    range_edited = copy.deepcopy(type_edited)
+    range_edited['experiments'][0]['range'] = [31, 34, 0.75]
+    record = {
+        'before': before,
+        'beforeLive': copy.deepcopy(before),
+        'after': first,
+        'afterTypeAttempt': copy.deepcopy(first),
+        'afterRangeAttempt': copy.deepcopy(first),
+        'reopened': copy.deepcopy(first),
+        'afterReopenedTypeAttempt': copy.deepcopy(first),
+        'afterReopenedRangeAttempt': copy.deepcopy(first),
+        'firstData': copy.deepcopy(first),
+        'secondData': second,
+        'undoSecond': copy.deepcopy(first),
+        'undoFirst': copy.deepcopy(before),
+        'loaded': True,
+        'typeRefused': True,
+        'rangeRefused': True,
+        'reopenedTypeRefused': True,
+        'reopenedRangeRefused': True,
+        'firstLoad': True,
+        'secondLoad': True,
+        'undoTypeEditable': True,
+        'undoRangeEditable': True,
+        'afterUndoTypeEdit': type_edited,
+        'afterUndoRangeEdit': range_edited,
+    }
+    require_lifecycle(record, 'cwl')
+    return record
+
+
+@pytest.mark.parametrize(
+    ('step', 'field'),
+    [
+        ('after', 'excluded'),
+        ('secondData', 'instrument'),
+        ('undoSecond', 'peak'),
+        ('undoFirst', 'background'),
+        ('reopened', 'weight'),
+        ('undoSecond', 'file'),
+        ('undoSecond', 'name'),
+        ('undoFirst', 'file'),
+        ('undoTypeEditable', 'action'),
+        ('undoRangeEditable', 'action'),
+        ('reopenedTypeRefused', 'action'),
+        ('reopenedRangeRefused', 'action'),
+        ('firstData', 'x'),
+        ('secondData', 'range'),
+        ('undoSecond', 'simulation'),
+        ('reopened', 'beam'),
+        ('secondData', 'canLoadData'),
+    ],
+)
+def test_lifecycle_observer_consumes_configuration_metadata_and_actual_edits(
+    lifecycle_control, step, field
+):
+    changed = copy.deepcopy(lifecycle_control)
+    if field == 'action':
+        changed[step] = False
+    else:
+        experiment = changed[step]['experiments'][0]
+        if field in {'x', 'range'}:
+            experiment[field][0] += 0.125
+        elif field == 'simulation':
+            experiment[field] = True
+        elif field == 'canLoadData':
+            experiment[field] = False
+        elif field == 'beam':
+            experiment[field] = 'time-of-flight'
+        elif field in {'excluded', 'background'}:
+            experiment[field] = []
+        elif field in {'instrument', 'peak'}:
+            experiment[field][0][0] += 1
+        elif field == 'weight':
+            experiment[field] = 1
+        else:
+            experiment[field] = 'wrong-restored-metadata'
+    assert changed != lifecycle_control, (
+        'Lifecycle observer escape: alter its consumed state or actual edit-action observation'
+    )
+    with pytest.raises(AssertionError, match=r'Load data|Undo|Save plain data'):
+        require_lifecycle(changed, 'cwl')
 
 
 def test_default_structure_matches_frozen_beta_cif(native_probe, tmp_path):
@@ -334,21 +657,9 @@ def test_nonpositive_retention_escape_reaches_the_loaded_model(native_probe, tmp
 
 def test_desktop_browser_picker_and_editability_bindings_share_load_path():
     qml = source('qml/Pages/Experiment/ExperimentsGroup.qml')
-    control = item(qml, 'experiments.loadData.${row.index}')
-    assert 'enabled: false' not in control and 'loadData' in control, (
-        'Load data picker: the per-experiment action must open its working data chooser'
-    )
-    assert 'WebFiles.openFiles' in qml and all(
-        ext in qml for ext in ['.xye', '.xy', '.dat', '.txt', '.csv']
-    ), 'Load data browser: offer every declared data extension through the shipped WebFiles picker'
-    callback = block(qml, 'function onFilesOpened')
-    assert 'loadData' in callback and 'request' in callback and 'webRequestProject' in callback, (
-        'Load data browser: deliver its own picker result to the same admitted load action'
-    )
-    assert 'calculationOnly' not in control, (
-        'Load data availability: retain the action after a created experiment receives data'
-    )
-    assert 'All files' in qml, 'Load data desktop: include the unrestricted All files filter'
+    require_availability(qml)
+    require_picker(qml, False)
+    require_picker(qml, True)
     range_qml = source('qml/Pages/Experiment/MeasuredRangeGroup.qml')
     type_qml = source('qml/Pages/Experiment/ExperimentTypeGroup.qml')
     assert (

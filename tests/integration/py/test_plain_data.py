@@ -35,7 +35,7 @@ def test_plain_data_rows_and_named_upstream_differences(case):
     experiment = library.ExperimentFactory.from_data_path(
         name='pattern',
         data_path=str(FIXTURE / case / specification['file']),
-        beam_mode='time-of-flight' if specification['beam'] == 'tof' else 'constant-wavelength',
+        beam_mode='time-of-flight' if specification['beam'] == 'tof' else 'constant wavelength',
     )
     expected_mode = 'TIME_OF_FLIGHT' if specification['beam'] == 'tof' else 'CONSTANT_WAVELENGTH'
     assert expected_mode in str(experiment.experiment_type.beam_mode), (

@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-06T18:52:44Z
+# measured_utc = 2026-10-06T21:02:45Z
 #
-# Recorded from: e04-t18-tests-edi-red-banked-final.log (3 node(s) measured once, 8231 banked, 0 stale row(s) dropped)
-# Collected tests: 9440; with a reported duration: 4580
-# Module-scoped fixture costs recorded: 24
+# Recorded from: e04-t18-tests-seq6-banked.log (109 node(s) measured once, 8224 banked, 0 stale row(s) dropped)
+# Collected tests: 9513; with a reported duration: 4616
+# Module-scoped fixture costs recorded: 25
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 9440
+# inventory_python = 9513
 # inventory_cpp = 298
-# inventory_measured = 8231
-# inventory_unmeasured = 1507
+# inventory_measured = 8316
+# inventory_unmeasured = 1495
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
 0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_cosio-d20_scan-162f]
@@ -4553,28 +4553,53 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e05_t1_physical_domain.p
 0.080	tests/integration/py/test_multiphase_constraints.py::test_same_site_id_in_two_structures_resolves_to_distinct_parameters[datablock]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_multiphase_constraints.py::test_same_site_id_in_two_structures_resolves_to_distinct_parameters[structure]
 0.010	tests/integration/py/test_multiphase_constraints.py::test_structure_added_after_project_creation_participates_in_constraints
-0.000	tests/integration/py/test_plain_data.py::test_nonpositive_retention_escape_is_rejected
-UNMEASURED:failed-in-this-run	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[cwl/comma]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[cwl/headers_malformed]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[cwl/nonpositive]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[cwl/three_columns]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[cwl/tiny_sigma]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[cwl/two_columns]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[cwl/unsorted_duplicates]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[tof/comma]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[tof/headers_malformed]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[tof/nonpositive]
+0.010	tests/integration/py/test_plain_data.py::test_nonpositive_retention_escape_is_rejected
+0.090	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[cwl/comma]
+0.000	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[cwl/headers_malformed]
+0.000	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[cwl/nonpositive]
+0.000	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[cwl/three_columns]
+0.000	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[cwl/tiny_sigma]
+0.000	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[cwl/two_columns]
+0.000	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[cwl/unsorted_duplicates]
+0.000	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[tof/comma]
+0.000	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[tof/headers_malformed]
+0.000	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[tof/nonpositive]
 0.000	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[tof/three_columns]
 0.000	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[tof/tiny_sigma]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[tof/two_columns]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[tof/unsorted_duplicates]
+0.000	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[tof/two_columns]
+0.000	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[tof/unsorted_duplicates]
+0.340	tests/integration/py/test_plain_data_picker.py::test_availability_observer_rejects_retired_or_overbroad_rules[always-disabled]
+0.320	tests/integration/py/test_plain_data_picker.py::test_availability_observer_rejects_retired_or_overbroad_rules[always-enabled]
+0.320	tests/integration/py/test_plain_data_picker.py::test_availability_observer_rejects_retired_or_overbroad_rules[simulation-only]
+0.160	tests/integration/py/test_plain_data_picker.py::test_load_data_availability_uses_ownership_after_first_load
+0.150	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[False-accepted]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[False-closed-project]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[False-foreign-project]
+0.180	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-accepted]
+0.180	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-cancelled]
+0.170	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-closed-project]
+0.170	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-failed]
+0.170	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-foreign-cancel]
+0.160	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-foreign-failure]
+0.140	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-foreign-project]
+0.140	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-foreign-request]
+0.310	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[disconnected-click]
+0.360	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[disconnected-desktop-accept]
+0.330	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[disconnected-desktop-open]
+0.370	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[early-browser-return]
+0.360	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[foreign-project]
+0.330	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[foreign-request]
+0.350	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[wrong-browser-row]
+0.310	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[wrong-chosen-row]
+0.370	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[wrong-desktop-row]
+0.330	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[wrong-multiplicity]
 0.000	tests/integration/py/test_scan_app_contract.py::test_button_names_and_follow_have_live_model_bindings
 0.290	tests/integration/py/test_scan_app_contract.py::test_create_experiment_is_enabled_and_routes_to_view_model
 0.140	tests/integration/py/test_scan_app_contract.py::test_data_free_experiment_type_has_a_write_boundary[beamMode]
 0.130	tests/integration/py/test_scan_app_contract.py::test_data_free_experiment_type_has_a_write_boundary[radiationProbe]
 0.130	tests/integration/py/test_scan_app_contract.py::test_data_free_experiment_type_has_a_write_boundary[sampleForm]
 0.130	tests/integration/py/test_scan_app_contract.py::test_data_free_experiment_type_has_a_write_boundary[scatteringType]
-0.010	tests/integration/py/test_scan_app_contract.py::test_disabled_placeholders_and_load_data_are_present
+0.150	tests/integration/py/test_scan_app_contract.py::test_disabled_placeholders_and_load_data_are_present
 0.140	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[block-delegate]
 0.260	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[outcome-color]
 0.290	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[outcome-icon]
@@ -4589,7 +4614,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_plain_data.py::test_plai
 0.260	tests/integration/py/test_scan_app_contract.py::test_explorer_observer_rejects_untaken_mapping_branches[iconColor-"red"]
 0.260	tests/integration/py/test_scan_app_contract.py::test_explorer_observer_rejects_untaken_mapping_branches[toolTip-"Failed"]
 0.000	tests/integration/py/test_scan_app_contract.py::test_follow_observer_rejects_disconnected_controls_and_unrelated_handlers
-0.680	tests/integration/py/test_scan_app_contract.py::test_forwarding_controls_reject_wrong_selected_index_token_range_and_visibility
+0.800	tests/integration/py/test_scan_app_contract.py::test_forwarding_controls_reject_wrong_selected_index_token_range_and_visibility
 0.130	tests/integration/py/test_scan_app_contract.py::test_javascript_uses_declared_runtime_with_empty_path
 0.530	tests/integration/py/test_scan_app_contract.py::test_long_parameter_pickers_use_shared_search_component[AliasesGroup]
 0.560	tests/integration/py/test_scan_app_contract.py::test_long_parameter_pickers_use_shared_search_component[ConstraintsGroup]
@@ -7474,22 +7499,70 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_phase_sum
 UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_texture_is_local_to_phase_and_invariant_under_axis_sign
 UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_two_free_scales_recover_unequal_independent_contributions
 UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_two_named_phases_load_and_roundtrip
-UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_default_structure_matches_frozen_beta_cif
-UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_desktop_browser_picker_and_editability_bindings_share_load_path
+0.100	tests/system/py/test_plain_data_app.py::test_default_structure_matches_frozen_beta_cif
+1.630	tests/system/py/test_plain_data_app.py::test_desktop_browser_picker_and_editability_bindings_share_load_path
 UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_filename_and_user_name[load-pattern]
 0.000	tests/system/py/test_plain_data_app.py::test_filename_and_user_name[renamed-User name]
-UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_link_all_unlinked_new_structure_and_atomic_remove_undo
+0.000	tests/system/py/test_plain_data_app.py::test_lifecycle_observer_consumes_configuration_metadata_and_actual_edits[after-excluded]
+0.000	tests/system/py/test_plain_data_app.py::test_lifecycle_observer_consumes_configuration_metadata_and_actual_edits[firstData-x]
+0.000	tests/system/py/test_plain_data_app.py::test_lifecycle_observer_consumes_configuration_metadata_and_actual_edits[reopened-beam]
+0.000	tests/system/py/test_plain_data_app.py::test_lifecycle_observer_consumes_configuration_metadata_and_actual_edits[reopened-weight]
+0.000	tests/system/py/test_plain_data_app.py::test_lifecycle_observer_consumes_configuration_metadata_and_actual_edits[reopenedRangeRefused-action]
+0.000	tests/system/py/test_plain_data_app.py::test_lifecycle_observer_consumes_configuration_metadata_and_actual_edits[reopenedTypeRefused-action]
+0.000	tests/system/py/test_plain_data_app.py::test_lifecycle_observer_consumes_configuration_metadata_and_actual_edits[secondData-canLoadData]
+0.000	tests/system/py/test_plain_data_app.py::test_lifecycle_observer_consumes_configuration_metadata_and_actual_edits[secondData-instrument]
+0.000	tests/system/py/test_plain_data_app.py::test_lifecycle_observer_consumes_configuration_metadata_and_actual_edits[secondData-range]
+0.000	tests/system/py/test_plain_data_app.py::test_lifecycle_observer_consumes_configuration_metadata_and_actual_edits[undoFirst-background]
+0.000	tests/system/py/test_plain_data_app.py::test_lifecycle_observer_consumes_configuration_metadata_and_actual_edits[undoFirst-file]
+0.000	tests/system/py/test_plain_data_app.py::test_lifecycle_observer_consumes_configuration_metadata_and_actual_edits[undoRangeEditable-action]
+0.000	tests/system/py/test_plain_data_app.py::test_lifecycle_observer_consumes_configuration_metadata_and_actual_edits[undoSecond-file]
+0.000	tests/system/py/test_plain_data_app.py::test_lifecycle_observer_consumes_configuration_metadata_and_actual_edits[undoSecond-name]
+0.000	tests/system/py/test_plain_data_app.py::test_lifecycle_observer_consumes_configuration_metadata_and_actual_edits[undoSecond-peak]
+0.000	tests/system/py/test_plain_data_app.py::test_lifecycle_observer_consumes_configuration_metadata_and_actual_edits[undoSecond-simulation]
+0.000	tests/system/py/test_plain_data_app.py::test_lifecycle_observer_consumes_configuration_metadata_and_actual_edits[undoTypeEditable-action]
+0.100	tests/system/py/test_plain_data_app.py::test_link_all_unlinked_new_structure_and_atomic_remove_undo
 UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_load_lock_replace_and_single_step_undo[cwl]
 UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_load_lock_replace_and_single_step_undo[tof]
+0.000	tests/system/py/test_plain_data_app.py::test_message_observer_accepts_equivalent_category_wording[category-first-cwl]
+0.000	tests/system/py/test_plain_data_app.py::test_message_observer_accepts_equivalent_category_wording[category-first-tof]
+0.000	tests/system/py/test_plain_data_app.py::test_message_observer_accepts_equivalent_category_wording[inequality-cwl]
+0.000	tests/system/py/test_plain_data_app.py::test_message_observer_accepts_equivalent_category_wording[inequality-tof]
+0.000	tests/system/py/test_plain_data_app.py::test_message_observer_rejects_cross_category_and_false_counts[invented-duplicates-cwl]
+0.000	tests/system/py/test_plain_data_app.py::test_message_observer_rejects_cross_category_and_false_counts[invented-duplicates-tof]
+0.000	tests/system/py/test_plain_data_app.py::test_message_observer_rejects_cross_category_and_false_counts[invented-nonpositive-cwl]
+0.000	tests/system/py/test_plain_data_app.py::test_message_observer_rejects_cross_category_and_false_counts[invented-nonpositive-tof]
+0.000	tests/system/py/test_plain_data_app.py::test_message_observer_rejects_cross_category_and_false_counts[invented-reordered-cwl]
+0.000	tests/system/py/test_plain_data_app.py::test_message_observer_rejects_cross_category_and_false_counts[invented-reordered-tof]
+0.000	tests/system/py/test_plain_data_app.py::test_message_observer_rejects_cross_category_and_false_counts[invented-skipped-cwl]
+0.000	tests/system/py/test_plain_data_app.py::test_message_observer_rejects_cross_category_and_false_counts[invented-skipped-tof]
+0.000	tests/system/py/test_plain_data_app.py::test_message_observer_rejects_cross_category_and_false_counts[missing-duplicates-cwl]
+0.000	tests/system/py/test_plain_data_app.py::test_message_observer_rejects_cross_category_and_false_counts[missing-duplicates-tof]
+0.000	tests/system/py/test_plain_data_app.py::test_message_observer_rejects_cross_category_and_false_counts[missing-nonpositive-cwl]
+0.000	tests/system/py/test_plain_data_app.py::test_message_observer_rejects_cross_category_and_false_counts[missing-nonpositive-tof]
+0.000	tests/system/py/test_plain_data_app.py::test_message_observer_rejects_cross_category_and_false_counts[missing-reordered-cwl]
+0.000	tests/system/py/test_plain_data_app.py::test_message_observer_rejects_cross_category_and_false_counts[missing-reordered-tof]
+0.000	tests/system/py/test_plain_data_app.py::test_message_observer_rejects_cross_category_and_false_counts[missing-skipped-cwl]
+0.000	tests/system/py/test_plain_data_app.py::test_message_observer_rejects_cross_category_and_false_counts[missing-skipped-tof]
+0.000	tests/system/py/test_plain_data_app.py::test_message_observer_rejects_cross_category_and_false_counts[swapped-cwl]
+0.000	tests/system/py/test_plain_data_app.py::test_message_observer_rejects_cross_category_and_false_counts[swapped-tof]
 UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_mixed_project_create_fit_measured_only_calculate_all
 UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_nonpositive_retention_escape_reaches_the_loaded_model
-UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_one_load_message_reports_constructed_counts[comma]
-UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_one_load_message_reports_constructed_counts[headers_malformed]
-UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_one_load_message_reports_constructed_counts[nonpositive]
-UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_one_load_message_reports_constructed_counts[two_columns]
-UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_one_load_message_reports_constructed_counts[unsorted_duplicates]
+0.090	tests/system/py/test_plain_data_app.py::test_one_load_message_reports_constructed_counts[cwl-comma]
+0.140	tests/system/py/test_plain_data_app.py::test_one_load_message_reports_constructed_counts[cwl-headers_malformed]
+0.090	tests/system/py/test_plain_data_app.py::test_one_load_message_reports_constructed_counts[cwl-nonpositive]
+0.080	tests/system/py/test_plain_data_app.py::test_one_load_message_reports_constructed_counts[cwl-three_columns]
+0.110	tests/system/py/test_plain_data_app.py::test_one_load_message_reports_constructed_counts[cwl-tiny_sigma]
+0.370	tests/system/py/test_plain_data_app.py::test_one_load_message_reports_constructed_counts[cwl-two_columns]
+0.080	tests/system/py/test_plain_data_app.py::test_one_load_message_reports_constructed_counts[cwl-unsorted_duplicates]
+UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_one_load_message_reports_constructed_counts[tof-comma]
+UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_one_load_message_reports_constructed_counts[tof-headers_malformed]
+UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_one_load_message_reports_constructed_counts[tof-nonpositive]
+UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_one_load_message_reports_constructed_counts[tof-three_columns]
+UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_one_load_message_reports_constructed_counts[tof-tiny_sigma]
+UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_one_load_message_reports_constructed_counts[tof-two_columns]
+UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_one_load_message_reports_constructed_counts[tof-unsorted_duplicates]
 0.000	tests/system/py/test_plain_data_app.py::test_packet_escape_controls_reject_bad_observations
-UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_packet_escapes_reach_the_native_actions[links-link-new]
+0.180	tests/system/py/test_plain_data_app.py::test_packet_escapes_reach_the_native_actions[links-link-new]
 UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_packet_escapes_reach_the_native_actions[load-source-reopen]
 UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_saved_data_is_self_contained_and_edi_load_cannot_replace_it[cwl]
 UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_saved_data_is_self_contained_and_edi_load_cannot_replace_it[tof]
@@ -9782,7 +9855,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 211.397	tests/integration/app/test_e04_t1_runtime_escapes.py
 # module-cost: 1.914	tests/integration/py/test_e04_t12_name_allowance.py
 # module-cost: 0.192	tests/integration/py/test_e09_t75_sdk_consumer.py
-# module-cost: 0.256	tests/integration/py/test_scan_app_contract.py
+# module-cost: 1.323	tests/integration/py/test_scan_app_contract.py
 # module-cost: 0.344	tests/integration/py/test_scan_extended_contract.py
 # module-cost: 2.511	tests/system/py/test_c09_t9_output_contract_and_cli.py
 # module-cost: 0.228	tests/system/py/test_c11_t62_native_scan_io.py
@@ -9798,6 +9871,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 1.762	tests/system/py/test_e09_t58_start_tied_numeric.py
 # module-cost: 0.180	tests/system/py/test_e09_t75_native_execution.py
 # module-cost: 3.929	tests/system/py/test_fit_participants_native.py
+# module-cost: 348.133	tests/system/py/test_plain_data_app.py
 # module-cost: 0.543	tests/system/py/test_scan_accident_paths.py
 # module-cost: 112.644	tests/system/py/test_scan_app_execution.py
 # module-cost: 17.002	tests/system/py/test_scan_driver_resume.py
