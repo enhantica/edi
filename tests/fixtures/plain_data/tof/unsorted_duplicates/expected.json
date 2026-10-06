@@ -1,0 +1,28 @@
+{
+  "file": "pattern.xye",
+  "rows": [
+    [
+      3500.0,
+      4,
+      2
+    ],
+    [
+      3600,
+      9,
+      3
+    ],
+    [
+      3700.0,
+      16,
+      4
+    ]
+  ],
+  "counts": {
+    "skipped": 0,
+    "nonpositive": 0,
+    "duplicates": 1,
+    "reordered": 3,
+    "derived": 0
+  },
+  "beam": "tof"
+}

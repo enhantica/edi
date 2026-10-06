@@ -1,0 +1,384 @@
+{
+  "cwl/two_columns": {
+    "file": "pattern.xy",
+    "rows": [
+      [
+        17.5,
+        0.25,
+        1
+      ],
+      [
+        18,
+        4,
+        2
+      ],
+      [
+        18.5,
+        9,
+        3
+      ]
+    ],
+    "counts": {
+      "skipped": 0,
+      "nonpositive": 0,
+      "duplicates": 0,
+      "reordered": 0,
+      "derived": 3
+    },
+    "beam": "cwl"
+  },
+  "tof/two_columns": {
+    "file": "pattern.xy",
+    "rows": [
+      [
+        3500.0,
+        0.25,
+        1
+      ],
+      [
+        3600,
+        4,
+        2
+      ],
+      [
+        3700.0,
+        9,
+        3
+      ]
+    ],
+    "counts": {
+      "skipped": 0,
+      "nonpositive": 0,
+      "duplicates": 0,
+      "reordered": 0,
+      "derived": 3
+    },
+    "beam": "tof"
+  },
+  "cwl/three_columns": {
+    "file": "pattern.xye",
+    "rows": [
+      [
+        17.5,
+        4,
+        0.5
+      ],
+      [
+        18,
+        9,
+        1.25
+      ],
+      [
+        18.5,
+        16,
+        2.5
+      ]
+    ],
+    "counts": {
+      "skipped": 0,
+      "nonpositive": 0,
+      "duplicates": 0,
+      "reordered": 0,
+      "derived": 0
+    },
+    "beam": "cwl"
+  },
+  "tof/three_columns": {
+    "file": "pattern.xye",
+    "rows": [
+      [
+        3500.0,
+        4,
+        0.5
+      ],
+      [
+        3600,
+        9,
+        1.25
+      ],
+      [
+        3700.0,
+        16,
+        2.5
+      ]
+    ],
+    "counts": {
+      "skipped": 0,
+      "nonpositive": 0,
+      "duplicates": 0,
+      "reordered": 0,
+      "derived": 0
+    },
+    "beam": "tof"
+  },
+  "cwl/headers_malformed": {
+    "file": "pattern.txt",
+    "rows": [
+      [
+        17.5,
+        4,
+        2
+      ],
+      [
+        18,
+        9,
+        3
+      ],
+      [
+        18.5,
+        16,
+        4
+      ]
+    ],
+    "counts": {
+      "skipped": 4,
+      "nonpositive": 0,
+      "duplicates": 0,
+      "reordered": 0,
+      "derived": 0
+    },
+    "beam": "cwl"
+  },
+  "tof/headers_malformed": {
+    "file": "pattern.txt",
+    "rows": [
+      [
+        3500.0,
+        4,
+        2
+      ],
+      [
+        3600,
+        9,
+        3
+      ],
+      [
+        3700.0,
+        16,
+        4
+      ]
+    ],
+    "counts": {
+      "skipped": 4,
+      "nonpositive": 0,
+      "duplicates": 0,
+      "reordered": 0,
+      "derived": 0
+    },
+    "beam": "tof"
+  },
+  "cwl/nonpositive": {
+    "file": "pattern.dat",
+    "rows": [
+      [
+        17.5,
+        4,
+        2
+      ],
+      [
+        19,
+        16,
+        4
+      ]
+    ],
+    "counts": {
+      "skipped": 0,
+      "nonpositive": 2,
+      "duplicates": 0,
+      "reordered": 0,
+      "derived": 0
+    },
+    "beam": "cwl"
+  },
+  "tof/nonpositive": {
+    "file": "pattern.dat",
+    "rows": [
+      [
+        3500.0,
+        4,
+        2
+      ],
+      [
+        3800,
+        16,
+        4
+      ]
+    ],
+    "counts": {
+      "skipped": 0,
+      "nonpositive": 2,
+      "duplicates": 0,
+      "reordered": 0,
+      "derived": 0
+    },
+    "beam": "tof"
+  },
+  "cwl/unsorted_duplicates": {
+    "file": "pattern.xye",
+    "rows": [
+      [
+        17.5,
+        4,
+        2
+      ],
+      [
+        18,
+        9,
+        3
+      ],
+      [
+        18.5,
+        16,
+        4
+      ]
+    ],
+    "counts": {
+      "skipped": 0,
+      "nonpositive": 0,
+      "duplicates": 1,
+      "reordered": 3,
+      "derived": 0
+    },
+    "beam": "cwl"
+  },
+  "tof/unsorted_duplicates": {
+    "file": "pattern.xye",
+    "rows": [
+      [
+        3500.0,
+        4,
+        2
+      ],
+      [
+        3600,
+        9,
+        3
+      ],
+      [
+        3700.0,
+        16,
+        4
+      ]
+    ],
+    "counts": {
+      "skipped": 0,
+      "nonpositive": 0,
+      "duplicates": 1,
+      "reordered": 3,
+      "derived": 0
+    },
+    "beam": "tof"
+  },
+  "cwl/comma": {
+    "file": "pattern.csv",
+    "rows": [
+      [
+        17.5,
+        4,
+        0.5
+      ],
+      [
+        18,
+        9,
+        1.25
+      ],
+      [
+        18.5,
+        16,
+        2.5
+      ]
+    ],
+    "counts": {
+      "skipped": 0,
+      "nonpositive": 0,
+      "duplicates": 0,
+      "reordered": 0,
+      "derived": 0
+    },
+    "beam": "cwl"
+  },
+  "tof/comma": {
+    "file": "pattern.csv",
+    "rows": [
+      [
+        3500.0,
+        4,
+        0.5
+      ],
+      [
+        3600,
+        9,
+        1.25
+      ],
+      [
+        3700.0,
+        16,
+        2.5
+      ]
+    ],
+    "counts": {
+      "skipped": 0,
+      "nonpositive": 0,
+      "duplicates": 0,
+      "reordered": 0,
+      "derived": 0
+    },
+    "beam": "tof"
+  },
+  "cwl/tiny_sigma": {
+    "file": "pattern.xye",
+    "rows": [
+      [
+        17.5,
+        4,
+        1
+      ],
+      [
+        18,
+        9,
+        0.0001
+      ],
+      [
+        18.5,
+        16,
+        2.5
+      ]
+    ],
+    "counts": {
+      "skipped": 0,
+      "nonpositive": 0,
+      "duplicates": 0,
+      "reordered": 0,
+      "derived": 0
+    },
+    "beam": "cwl"
+  },
+  "tof/tiny_sigma": {
+    "file": "pattern.xye",
+    "rows": [
+      [
+        3500.0,
+        4,
+        1
+      ],
+      [
+        3600,
+        9,
+        0.0001
+      ],
+      [
+        3700.0,
+        16,
+        2.5
+      ]
+    ],
+    "counts": {
+      "skipped": 0,
+      "nonpositive": 0,
+      "duplicates": 0,
+      "reordered": 0,
+      "derived": 0
+    },
+    "beam": "tof"
+  }
+}

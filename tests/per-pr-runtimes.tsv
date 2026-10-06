@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-06T16:00:39Z
+# measured_utc = 2026-10-06T18:19:55Z
 #
-# Recorded from: e04-t16-tests-seq14-edi-banked.log (29 node(s) measured once, 8197 banked, 3 stale row(s) dropped)
-# Collected tests: 9406; with a reported duration: 4580
+# Recorded from: e04-t18-tests-edi-red.log (33 node(s) measured once, 8226 banked, 0 stale row(s) dropped)
+# Collected tests: 9439; with a reported duration: 4580
 # Module-scoped fixture costs recorded: 24
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 9406
+# inventory_python = 9439
 # inventory_cpp = 298
-# inventory_measured = 8226
-# inventory_unmeasured = 1478
+# inventory_measured = 8231
+# inventory_unmeasured = 1506
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
 0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_cosio-d20_scan-162f]
@@ -4553,6 +4553,21 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e05_t1_physical_domain.p
 0.080	tests/integration/py/test_multiphase_constraints.py::test_same_site_id_in_two_structures_resolves_to_distinct_parameters[datablock]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_multiphase_constraints.py::test_same_site_id_in_two_structures_resolves_to_distinct_parameters[structure]
 0.010	tests/integration/py/test_multiphase_constraints.py::test_structure_added_after_project_creation_participates_in_constraints
+0.000	tests/integration/py/test_plain_data.py::test_nonpositive_retention_escape_is_rejected
+UNMEASURED:failed-in-this-run	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[cwl/comma]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[cwl/headers_malformed]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[cwl/nonpositive]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[cwl/three_columns]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[cwl/tiny_sigma]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[cwl/two_columns]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[cwl/unsorted_duplicates]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[tof/comma]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[tof/headers_malformed]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[tof/nonpositive]
+0.000	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[tof/three_columns]
+0.000	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[tof/tiny_sigma]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[tof/two_columns]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[tof/unsorted_duplicates]
 0.000	tests/integration/py/test_scan_app_contract.py::test_button_names_and_follow_have_live_model_bindings
 0.290	tests/integration/py/test_scan_app_contract.py::test_create_experiment_is_enabled_and_routes_to_view_model
 0.140	tests/integration/py/test_scan_app_contract.py::test_data_free_experiment_type_has_a_write_boundary[beamMode]
@@ -7459,6 +7474,24 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_phase_sum
 UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_texture_is_local_to_phase_and_invariant_under_axis_sign
 UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_two_free_scales_recover_unequal_independent_contributions
 UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_two_named_phases_load_and_roundtrip
+UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_default_structure_matches_frozen_beta_cif
+UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_desktop_browser_picker_and_editability_bindings_share_load_path
+UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_filename_and_user_name[load-pattern]
+0.000	tests/system/py/test_plain_data_app.py::test_filename_and_user_name[renamed-User name]
+UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_link_all_unlinked_new_structure_and_atomic_remove_undo
+UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_load_lock_replace_and_single_step_undo[cwl]
+UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_load_lock_replace_and_single_step_undo[tof]
+UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_mixed_project_create_fit_measured_only_calculate_all
+UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_one_load_message_reports_constructed_counts[comma]
+UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_one_load_message_reports_constructed_counts[headers_malformed]
+UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_one_load_message_reports_constructed_counts[nonpositive]
+UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_one_load_message_reports_constructed_counts[two_columns]
+UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_one_load_message_reports_constructed_counts[unsorted_duplicates]
+0.000	tests/system/py/test_plain_data_app.py::test_packet_escape_controls_reject_bad_observations
+UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_packet_escapes_reach_the_native_actions[links-link-new]
+UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_packet_escapes_reach_the_native_actions[load-source-reopen]
+UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_saved_data_is_self_contained_and_edi_load_cannot_replace_it[cwl]
+UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_saved_data_is_self_contained_and_edi_load_cannot_replace_it[tof]
 0.140	tests/system/py/test_scan_accident_paths.py::test_an_externally_changed_indexed_row_never_becomes_a_template_value
 0.250	tests/system/py/test_scan_accident_paths.py::test_changing_the_iteration_limit_cannot_reclassify_a_retained_result
 0.620	tests/system/py/test_scan_accident_paths.py::test_continue_keeps_old_generation_marks_through_save_reopen_and_reset_undo[free]
