@@ -10,8 +10,9 @@ the 324-file scan.
 
 `expected.json` pins the number of free parameters, 39, counted from the model (an independent reference; the model files
 are byte-identical to the 324-file project's, whose `expected.json` records the same count). The terminal record of this
-project's own fit is not pinned yet: crysta's main at the time of filing (`f4221bc9`) could not be built into a qualified
-SDK, so the fit has not been run here; its regression pins join `expected.json` once it has. Correctness of the scan
+project's own fit joins it as **regression pins**, which gate drift, not correctness: the last file, `01_162`
+(50.414 K), reduced χ² 14.65981576 after 4 iterations, measured by `python -m edi fit --report machine` on edi `a5950d9`
+linked against crysta `fc3d3061`, `OMP_NUM_THREADS=1`. Correctness of the scan
 driver stays with its own references (the 3-file and 324-file projects' provenance).
 
 | file | SHA-256 |
