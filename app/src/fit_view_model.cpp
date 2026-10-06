@@ -9,6 +9,7 @@
 #include "edi/edit.hpp"
 #include "edi/selectors.hpp"
 #include "project_view_model.hpp"
+#include "scan_session.hpp"
 
 namespace edi_app {
 namespace {
@@ -124,6 +125,7 @@ QString outcome_word(const QString& key) {
     if (key == QLatin1String("success")) return FitViewModel::tr("Success");
     if (key == QLatin1String("maxIterations")) return FitViewModel::tr("Max iterations");
     if (key == QLatin1String("noStep")) return FitViewModel::tr("No step");
+    if (key == QLatin1String("notConverged")) return FitViewModel::tr("Not converged");
     if (key == QLatin1String("stopped")) return FitViewModel::tr("Stopped");
     return FitViewModel::tr("Failed");
 }
@@ -131,7 +133,7 @@ QString outcome_word(const QString& key) {
 }  // namespace
 
 void FitResultListModel::setScan(const ScanSummary& summary) {
-    if (summary.fitted == 0) {
+    if (summary.fitted == 0 && summary.outcome.isEmpty()) {
         clear();
         return;
     }
@@ -151,7 +153,9 @@ void FitResultListModel::setScan(const ScanSummary& summary) {
     row(QStringLiteral("copy"), tr("Files fitted"), QStringLiteral("%1/%2").arg(summary.fitted).arg(summary.files));
     row(QStringLiteral("check-circle"), tr("Converged"), QString::number(summary.ok));
     row(QStringLiteral("times-circle"), tr("Failed"), QString::number(summary.failed));
-    row(QStringLiteral("ruler"), tr("Goodness-of-fit range (reduced χ²)"), chi_range(summary));
+    if (summary.fitted > 0) {
+        row(QStringLiteral("ruler"), tr("Goodness-of-fit range (reduced χ²)"), chi_range(summary));
+    }
     setTableRows(rows);
 }
 
@@ -217,11 +221,11 @@ void FitViewModel::showScan(const ScanSummary& summary, bool scan_last) {
         return;
     }
     if (scan_.fitted == 0) {
-        // A run that failed before its first file still says so.
+        // A run that failed or was stopped before its first file still says so, here and in the results window.
         setProgress(QString(), QString(), scan_.outcome.isEmpty() ? QString() : outcome_word(scan_.outcome),
                     scan_.outcome);
         setElapsed(scan_.seconds >= 0.0 ? duration(scan_.seconds) : QString());
-        results_->clear();
+        results_->setScan(scan_);
         return;
     }
     setProgress(QString(), chi_range(scan_), outcome_word(scan_.outcome), scan_.outcome);
@@ -240,6 +244,11 @@ void FitViewModel::close() {
 
 void FitViewModel::start() {
     if (!job_ || running_ || !available_) {
+        return;
+    }
+    // A chosen dataset still being read: the model still shows the one before, which is not the one to fit.
+    if (const QString pending = owner_.pendingRefusal(); !pending.isEmpty()) {
+        emit refused(pending);
         return;
     }
     // A scan runs from the template. With no dataset fitted it starts afresh (the previous result files, if any, go
@@ -454,7 +463,9 @@ void FitViewModel::syncScanState() {
     // fitted, Continue fitting while some are not, unavailable once all are; Reset fits clears them.
     const bool scan = edi::is_scan_fitting_mode(edi::effective_fitting_mode(project_)) && owner_.scan();
     setContinuable(scan && scan_.fitted > 0 && scan_.fitted < scan_.files);
-    const bool can_reset = scan && !running_ && scan_.fitted > 0;
+    const ScanSession* session = owner_.scanSession();
+    const bool unreadable = session != nullptr && !session->index().error.empty();
+    const bool can_reset = scan && !running_ && (scan_.fitted > 0 || unreadable);
     if (can_reset != can_reset_) {
         can_reset_ = can_reset;
         emit canResetChanged();

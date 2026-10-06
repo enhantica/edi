@@ -5,10 +5,12 @@
 #include <QObject>
 #include <QString>
 #include <atomic>
+#include <deque>
 #include <functional>
 #include <memory>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "edi/model.hpp"
@@ -26,10 +28,13 @@ class ScanSession : public QObject {
    public:
     // The last run's provenance, as the app wrote it at the run's end; empty when no run of the app wrote one.
     struct Run {
-        std::string identity;  // the template the results came from (templateIdentity)
-        double seconds = -1.0;
-        QString outcome;      // the run's outcome key (FitOutcomes)
+        std::string identity;  // the template the latest rows came from (templateIdentity)
+        double seconds = -1.0;     // the scan's total fitting time over its runs; negative: not known
+        QString outcome;           // the run's outcome key (FitOutcomes)
         bool last_single = false;  // a single fit on a dataset came after the run
+        bool mixed = false;        // the rows came from more than one template (a Continue after an edit)
+        bool invalid = false;      // a provenance file was there but did not read as one (`error` says why)
+        QString error;
     };
     // The three result files a fresh run replaces, as they were (absent: none).
     struct Files {
@@ -48,12 +53,13 @@ class ScanSession : public QObject {
     int place(const std::string& file) const;
     // A row a run just appended (the event's own cells): checked against the header, indexed at the file's end.
     // The dataset's place, or -1 with the refusal in `error`.
-    int addRow(const edi::Project& project, const std::vector<std::string>& cells, QString& error);
+    int addRow(const edi::Project& project, const std::vector<std::string>& cells, const std::string& termination,
+               QString& error);
     // The cells of a dataset's row, read at its offset and checked to name that dataset; empty without a row.
     std::vector<std::string> row(const edi::Project& project, int dataset) const;
-    // How the run ended on a dataset: success, maxIterations, noStep, or "" without a row. A row records only
-    // whether the fit converged; a fit that did not stopped at the iteration bound or without an improving step.
-    QString outcome(int dataset, int max_iterations) const;
+    // How the run ended on a dataset: success, maxIterations, noStep, notConverged (no reason recorded), or ""
+    // without a row.
+    QString outcome(int dataset) const;
     // Calls `visit(dataset, value, uncertainty)` for every row's cells of one parameter column, reading the file once.
     void column(const edi::Project& project, const std::string& name,
                 const std::function<void(int, double, double)>& visit) const;
@@ -68,13 +74,20 @@ class ScanSession : public QObject {
     // templates.
     static std::string templateIdentity(const edi::Project& project);
 
-    // A fresh run's start: reads and removes the three result files, all or none; the refusal, if any.
+    // A fresh run's start or Reset fits: reads the three result files and sets them aside, all or none; the
+    // in-memory provenance goes with them. The refusal, if any; a refusal that could not put everything back says
+    // where the files were kept.
     QString takeFiles(const edi::Project& project, Files& taken);
-    // Puts the three files back as they were, all or none; the refusal, if any.
+    // Puts the three files back as they were, all or none, with the same refusal; the provenance is read again.
     QString putFiles(const edi::Project& project, const Files& files);
+    // The provenance file alone, as it is now (a single fit's Undo restores it), and put back.
+    std::optional<std::string> runFile(const edi::Project& project) const;
+    QString putRunFile(const edi::Project& project, const std::optional<std::string>& bytes);
 
-    // The extracted values of a dataset: its row's, or those read in the background; nullptr while unknown.
+    // The extracted values of a dataset: its row's, or those read in the background; nullptr while unknown or
+    // when the read failed (`metadataError` says why).
     const std::vector<std::string>* extracted(int dataset) const;
+    QString metadataError(int dataset) const;
     // A dataset a view shows: its extracted values are read in the background if it has none yet, with the others
     // asked for in the same turn, one read per file; `metadataLoaded` reports them. Only what is shown is read.
     void want(int dataset);
@@ -89,11 +102,15 @@ class ScanSession : public QObject {
     edi::ScanResultIndex index_;
     Run run_;
     std::vector<std::optional<std::vector<std::string>>> metadata_;
+    std::unordered_map<int, QString> metadata_errors_;
     std::vector<bool> asked_;
     std::vector<int> wanted_;
+    std::deque<int> loaded_;  // the datasets holding read values, oldest first (the cache is bounded)
+    bool reading_ = false;    // one background read at a time
     std::shared_ptr<const edi::Project> source_;  // what the files' extract rules are read with
     std::shared_ptr<std::atomic<bool>> metadata_stop_;
     void readWanted();
+    QString readRun(const edi::Project& project);
 };
 
 }  // namespace edi_app

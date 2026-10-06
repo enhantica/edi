@@ -227,6 +227,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     QString prepareScan(bool fresh);
     // Reset fits (FitViewModel::reset): every dataset's fit result cleared, one Undo step; the refusal, if any.
     QString resetScan();
+    // Why a scientific action (a fit, an edit, Undo, Reset fits, a save) waits: a chosen dataset is still being
+    // read, so the model still shows the one before; empty otherwise.
+    QString pendingRefusal() const;
     // The template a scan runs from: the stored one while a dataset is shown, else none (the model is the template).
     const edi::Project* scanTemplate() const { return scan_template_ ? &*scan_template_ : nullptr; }
     void scanFileFitted(const edi::ScanFileRecord& record);
@@ -298,8 +301,14 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         std::vector<const edi::ExperimentBase*> experiments;
     };
     // A fresh scan run: the result files it replaced, as they were (absent: there was none, also recorded).
+    // The fit records Reset fits clears: the model's and, while a dataset is shown, the template's.
+    struct FitRecords {
+        edi::FitResultRecord model;
+        std::optional<edi::FitResultRecord> stash;
+    };
     struct ScanRun {
         ScanSession::Files files;
+        std::optional<FitRecords> fit_records;  // Reset fits only
     };
     using UndoRecord = std::variant<std::monostate, edi::RelationsUndo, AddedExperiments, ScanRun>;
     bool restoreScanRun(const ScanRun& run);
@@ -315,6 +324,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     struct TemplateState {
         std::string template_file;
         std::optional<edi::Project> stash;
+        std::optional<std::string> run_file;  // the scan's provenance file as it was (which fit came last)
     };
     std::optional<TemplateState> fit_template_before_, fit_template_undo_;
     std::vector<UndoRecord> undo_history_;
@@ -343,8 +353,14 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool applying_setting_ = false;
     // The newest dataset view asked for: a projection read off the GUI thread applies only while it is the newest.
     std::uint64_t view_request_ = 0, view_applied_ = 0;
+    int view_wanted_ = -1;       // the dataset of the newest request
+    bool view_reading_ = false;  // a read is in flight
+    // Reads the newest requested dataset off the GUI thread; its delivery applies it, or reads a newer one.
+    void startViewRead();
     // The identity of the template a run is fitting from (ScanSession::templateIdentity), for its provenance.
     std::string run_identity_;
+    // A Continue's earlier provenance (its rows stay), for the run's own at its end.
+    std::optional<ScanSession::Run> previous_run_;
     void loadScan();
     // Re-derives whether the scan modes can run (a single template experiment and a listed scan).
     void syncScanAdmission();

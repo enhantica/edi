@@ -6,15 +6,18 @@
 #include <QFuture>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QJsonParseError>
 #include <QMetaObject>
 #include <QPointer>
-#include <QtConcurrent/QtConcurrentRun>
 #include <algorithm>
+#include <cmath>
+#include <limits>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
 #include <string_view>
 
+#include "background.hpp"
 #include "edi/io.hpp"
 
 namespace edi_app {
@@ -27,6 +30,10 @@ fs::path analysis_dir(const edi::Project& project) { return fs::path(project.pat
 const char* const kResultFiles[] = {"results.csv", "results-provenance.csv", "scan-run.json"};
 
 std::optional<std::string>* slot(ScanSession::Files& files, int which) {
+    return which == 0 ? &files.results : which == 1 ? &files.provenance : &files.run;
+}
+
+const std::optional<std::string>* slot(const ScanSession::Files& files, int which) {
     return which == 0 ? &files.results : which == 1 ? &files.provenance : &files.run;
 }
 
@@ -107,19 +114,66 @@ QString ScanSession::load(const edi::Project& project) {
     asked_.assign(datasets_.files.size(), false);
     wanted_.clear();
     source_ = std::make_shared<const edi::Project>(project);
-    run_ = {};
-    try {
-        if (const std::optional<std::string> bytes = read_file(analysis_dir(project) / "scan-run.json")) {
-            const QJsonObject object = QJsonDocument::fromJson(QByteArray::fromStdString(*bytes)).object();
-            run_.identity = object.value(QStringLiteral("template")).toString().toStdString();
-            run_.seconds = object.value(QStringLiteral("seconds")).toDouble(-1.0);
-            run_.outcome = object.value(QStringLiteral("outcome")).toString();
-            run_.last_single = object.value(QStringLiteral("last")).toString() == QLatin1String("single");
-        }
-    } catch (const std::exception&) {
-        run_ = {};  // no readable provenance: the results are taken as the template's
-    }
+    metadata_errors_.clear();
+    loaded_.clear();
+    readRun(project);
     return reindex(project);
+}
+
+QString ScanSession::readRun(const edi::Project& project) {
+    // Only a provenance file that is not there is a legacy run; one that is there must read whole: the template it
+    // names, the last kind, a known outcome, a finite non-negative time or none.
+    run_ = {};
+    const auto invalid = [this](const QString& why) {
+        run_ = {};
+        run_.invalid = true;
+        run_.error = QStringLiteral("analysis/scan-run.json: %1").arg(why);
+        return run_.error;
+    };
+    std::optional<std::string> bytes;
+    try {
+        bytes = read_file(analysis_dir(project) / "scan-run.json");
+    } catch (const std::exception& refusal) {
+        return invalid(QString::fromUtf8(refusal.what()));
+    }
+    if (!bytes) {
+        return {};
+    }
+    QJsonParseError parse;
+    const QJsonDocument document = QJsonDocument::fromJson(QByteArray::fromStdString(*bytes), &parse);
+    if (parse.error != QJsonParseError::NoError || !document.isObject()) {
+        return invalid(QStringLiteral("not a JSON object"));
+    }
+    const QJsonObject object = document.object();
+    const QJsonValue identity = object.value(QStringLiteral("template"));
+    const QJsonValue last = object.value(QStringLiteral("last"));
+    const QJsonValue outcome = object.value(QStringLiteral("outcome"));
+    const QJsonValue seconds = object.value(QStringLiteral("seconds"));
+    const QJsonValue mixed = object.value(QStringLiteral("mixed"));
+    static const QStringList outcomes{QString(), QStringLiteral("success"), QStringLiteral("maxIterations"),
+                                      QStringLiteral("noStep"), QStringLiteral("notConverged"),
+                                      QStringLiteral("stopped"), QStringLiteral("failed")};
+    if (!identity.isString() || identity.toString().isEmpty()) {
+        return invalid(QStringLiteral("no template identity"));
+    }
+    if (!last.isString() || (last.toString() != QLatin1String("scan") && last.toString() != QLatin1String("single"))) {
+        return invalid(QStringLiteral("no last fit kind"));
+    }
+    if (!outcome.isString() || !outcomes.contains(outcome.toString())) {
+        return invalid(QStringLiteral("an unknown outcome"));
+    }
+    if (!seconds.isUndefined() && (!seconds.isDouble() || !std::isfinite(seconds.toDouble()) || seconds.toDouble() < 0.0)) {
+        return invalid(QStringLiteral("a time that is not a finite non-negative number"));
+    }
+    if (!mixed.isUndefined() && !mixed.isBool()) {
+        return invalid(QStringLiteral("a mixed flag that is not true or false"));
+    }
+    run_.identity = identity.toString().toStdString();
+    run_.last_single = last.toString() == QLatin1String("single");
+    run_.outcome = outcome.toString();
+    run_.seconds = seconds.isUndefined() ? -1.0 : seconds.toDouble();
+    run_.mixed = mixed.toBool(false);
+    return {};
 }
 
 QString ScanSession::reindex(const edi::Project& project) {
@@ -132,7 +186,8 @@ int ScanSession::place(const std::string& file) const {
     return found == places_.end() ? -1 : static_cast<int>(found->second);
 }
 
-int ScanSession::addRow(const edi::Project& project, const std::vector<std::string>& cells, QString& error) {
+int ScanSession::addRow(const edi::Project& project, const std::vector<std::string>& cells,
+                        const std::string& termination, QString& error) {
     if (!index_.error.empty()) {
         error = QString::fromStdString(index_.error);
         return -1;
@@ -159,6 +214,7 @@ int ScanSession::addRow(const edi::Project& project, const std::vector<std::stri
             length += static_cast<std::int64_t>(cell.size()) + 1;
         }
         row.offset = index_.end;
+        row.termination = termination;
         index_.end += length - 1;
         index_.rows[dataset] = std::move(row);
         ++index_.fitted;
@@ -179,18 +235,31 @@ std::vector<std::string> ScanSession::row(const edi::Project& project, int datas
         throw std::invalid_argument("analysis/results.csv changed under the app: the row for '" + expected +
                                     "' is no longer where it was");
     }
+    // Checked again as it was when indexed: a row edited since is refused, never shown in part.
+    if (edi::scan_row_facts(project, places_, index_, cells).first != static_cast<std::size_t>(dataset)) {
+        throw std::invalid_argument("analysis/results.csv changed under the app: the row for '" + expected +
+                                    "' names another file");
+    }
     return cells;
 }
 
-QString ScanSession::outcome(int dataset, int max_iterations) const {
+QString ScanSession::outcome(int dataset) const {
     if (dataset < 0 || dataset >= static_cast<int>(index_.rows.size()) || index_.rows[dataset].offset < 0) {
         return {};
     }
+    // From the row's own facts: converged, else the reason crysta's ledger recorded when the file was fitted; a row
+    // fitted before the ledger recorded reasons did not converge for a reason no one knows now.
     const edi::ScanResultIndex::Row& row = index_.rows[dataset];
     if (row.converged) {
         return QStringLiteral("success");
     }
-    return row.iterations >= max_iterations ? QStringLiteral("maxIterations") : QStringLiteral("noStep");
+    if (row.termination == "max_iter_exhausted") {
+        return QStringLiteral("maxIterations");
+    }
+    if (row.termination == "no_accepted_step") {
+        return QStringLiteral("noStep");
+    }
+    return QStringLiteral("notConverged");
 }
 
 void ScanSession::column(const edi::Project& project, const std::string& name,
@@ -232,7 +301,8 @@ QString ScanSession::writeRun(const edi::Project& project, const Run& run) {
     run_ = run;
     QJsonObject object{{QStringLiteral("template"), QString::fromStdString(run.identity)},
                        {QStringLiteral("outcome"), run.outcome},
-                       {QStringLiteral("last"), run.last_single ? QStringLiteral("single") : QStringLiteral("scan")}};
+                       {QStringLiteral("last"), run.last_single ? QStringLiteral("single") : QStringLiteral("scan")},
+                       {QStringLiteral("mixed"), run.mixed}};
     if (run.seconds >= 0.0) {
         object.insert(QStringLiteral("seconds"), run.seconds);
     }
@@ -269,6 +339,55 @@ std::string ScanSession::templateIdentity(const edi::Project& project) {
     return hash.result().toHex().toStdString();
 }
 
+namespace {
+
+// The earlier result files wait here while they are replaced, so a failure can always put them back; a failure that
+// cannot leaves them here, and the refusal says so.
+fs::path set_aside_dir(const edi::Project& project) { return analysis_dir(project) / ".edi-set-aside"; }
+
+void move_file(const fs::path& from, const fs::path& to) {
+    std::error_code error;
+    fs::remove(to, error);
+    error.clear();
+    fs::rename(from, to, error);
+    if (error) {
+        throw std::runtime_error("cannot move " + from.string() + " to " + to.string() + ": " + error.message());
+    }
+}
+
+// Moves the present result files aside; on a failure moves back what moved. Returns which moved.
+std::vector<int> set_aside(const edi::Project& project, const ScanSession::Files& present) {
+    const fs::path directory = analysis_dir(project), aside = set_aside_dir(project);
+    fs::create_directories(aside);
+    std::vector<int> moved;
+    try {
+        for (int which = 0; which < 3; ++which) {
+            if (*slot(present, which)) {
+                move_file(directory / kResultFiles[which], aside / kResultFiles[which]);
+                moved.push_back(which);
+            }
+        }
+    } catch (const std::exception&) {
+        for (const int which : moved) {
+            move_file(aside / kResultFiles[which], directory / kResultFiles[which]);  // throws: they stay aside
+        }
+        throw;
+    }
+    return moved;
+}
+
+void drop_set_aside(const edi::Project& project) {
+    std::error_code ignored;
+    fs::remove_all(set_aside_dir(project), ignored);
+}
+
+QString kept_aside(const edi::Project& project, const std::exception& refusal) {
+    return QStringLiteral("%1; the earlier result files are kept in %2")
+        .arg(QString::fromUtf8(refusal.what()), QString::fromStdString(set_aside_dir(project).string()));
+}
+
+}  // namespace
+
 QString ScanSession::takeFiles(const edi::Project& project, Files& taken) {
     const fs::path directory = analysis_dir(project);
     taken = {};
@@ -279,21 +398,16 @@ QString ScanSession::takeFiles(const edi::Project& project, Files& taken) {
     } catch (const std::exception& refusal) {
         return QString::fromUtf8(refusal.what());
     }
-    int removed = 0;
+    // Set aside, all or none; then dropped, the bytes being held by the caller (its Undo).
     try {
-        for (; removed < 3; ++removed) {
-            put_file(directory / kResultFiles[removed], std::nullopt);
-        }
+        set_aside(project, taken);
     } catch (const std::exception& refusal) {
-        // What was removed goes back, so a refused start leaves the results as they were.
-        for (int which = 0; which < removed; ++which) {
-            try {
-                put_file(directory / kResultFiles[which], *slot(taken, which));
-            } catch (const std::exception&) {
-            }
-        }
-        return QString::fromUtf8(refusal.what());
+        return std::filesystem::exists(set_aside_dir(project)) && !fs::is_empty(set_aside_dir(project))
+                   ? kept_aside(project, refusal)
+                   : QString::fromUtf8(refusal.what());
     }
+    drop_set_aside(project);
+    run_ = {};
     return {};
 }
 
@@ -308,21 +422,74 @@ QString ScanSession::putFiles(const edi::Project& project, const Files& files) {
     } catch (const std::exception& refusal) {
         return QString::fromUtf8(refusal.what());
     }
+    // 1. The wanted files written beside their places; a failure here changes nothing.
     Files wanted = files;
-    int done = 0;
+    std::vector<int> staged;
     try {
-        for (; done < 3; ++done) {
-            put_file(directory / kResultFiles[done], *slot(wanted, done));
+        for (int which = 0; which < 3; ++which) {
+            if (const std::optional<std::string>& text = *slot(wanted, which)) {
+                const fs::path path = directory / (std::string(kResultFiles[which]) + ".edi-staged");
+                std::ofstream output(path, std::ios::binary | std::ios::trunc);
+                output << *text;
+                output.close();
+                if (!output) {
+                    throw std::runtime_error("cannot write " + path.string());
+                }
+                staged.push_back(which);
+            }
         }
     } catch (const std::exception& refusal) {
-        for (int which = 0; which < done; ++which) {
-            try {
-                put_file(directory / kResultFiles[which], *slot(current, which));
-            } catch (const std::exception&) {
-            }
+        for (const int which : staged) {
+            std::error_code ignored;
+            fs::remove(directory / (std::string(kResultFiles[which]) + ".edi-staged"), ignored);
         }
         return QString::fromUtf8(refusal.what());
     }
+    // 2. The present files set aside; 3. the staged ones moved in. A failure puts the earlier ones back.
+    std::vector<int> moved_in;
+    try {
+        set_aside(project, current);
+        for (const int which : staged) {
+            move_file(directory / (std::string(kResultFiles[which]) + ".edi-staged"), directory / kResultFiles[which]);
+            moved_in.push_back(which);
+        }
+    } catch (const std::exception& refusal) {
+        try {
+            for (const int which : moved_in) {
+                std::error_code ignored;
+                fs::remove(directory / kResultFiles[which], ignored);
+            }
+            for (int which = 0; which < 3; ++which) {
+                if (*slot(current, which)) {
+                    move_file(set_aside_dir(project) / kResultFiles[which], directory / kResultFiles[which]);
+                }
+            }
+        } catch (const std::exception&) {
+            return kept_aside(project, refusal);
+        }
+        drop_set_aside(project);
+        return QString::fromUtf8(refusal.what());
+    }
+    drop_set_aside(project);
+    readRun(project);
+    return {};
+}
+
+std::optional<std::string> ScanSession::runFile(const edi::Project& project) const {
+    try {
+        return read_file(analysis_dir(project) / kResultFiles[2]);
+    } catch (const std::exception&) {
+        return std::nullopt;
+    }
+}
+
+QString ScanSession::putRunFile(const edi::Project& project, const std::optional<std::string>& bytes) {
+    try {
+        put_file(analysis_dir(project) / kResultFiles[2], bytes);
+    } catch (const std::exception& refusal) {
+        return QString::fromUtf8(refusal.what());
+    }
+    readRun(project);
     return {};
 }
 
@@ -336,6 +503,17 @@ const std::vector<std::string>* ScanSession::extracted(int dataset) const {
     return metadata_[dataset] ? &*metadata_[dataset] : nullptr;
 }
 
+QString ScanSession::metadataError(int dataset) const {
+    const auto found = metadata_errors_.find(dataset);
+    return found == metadata_errors_.end() ? QString() : found->second;
+}
+
+namespace {
+constexpr std::size_t kMetadataBatch = 64;     // files read per background task
+constexpr std::size_t kMetadataQueue = 256;    // requests waiting; older ones are dropped and asked again when shown
+constexpr std::size_t kMetadataCache = 4096;   // datasets holding read values; the oldest are dropped first
+}  // namespace
+
 void ScanSession::want(int dataset) {
     if (dataset < 0 || dataset >= static_cast<int>(asked_.size()) || asked_[static_cast<std::size_t>(dataset)] ||
         index_.rows[static_cast<std::size_t>(dataset)].offset >= 0 || source_ == nullptr ||
@@ -343,14 +521,22 @@ void ScanSession::want(int dataset) {
         return;
     }
     asked_[static_cast<std::size_t>(dataset)] = true;
-    if (wanted_.empty()) {
+    if (wanted_.empty() && !reading_) {
         QMetaObject::invokeMethod(this, &ScanSession::readWanted, Qt::QueuedConnection);
     }
     wanted_.push_back(dataset);
+    // The newest requests are the rows on screen now; the oldest past the bound are forgotten until shown again.
+    if (wanted_.size() > kMetadataQueue) {
+        const std::size_t drop = wanted_.size() - kMetadataQueue;
+        for (std::size_t i = 0; i < drop; ++i) {
+            asked_[static_cast<std::size_t>(wanted_[i])] = false;
+        }
+        wanted_.erase(wanted_.begin(), wanted_.begin() + static_cast<std::ptrdiff_t>(drop));
+    }
 }
 
 void ScanSession::readWanted() {
-    if (wanted_.empty()) {
+    if (wanted_.empty() || reading_) {
         return;
     }
     if (!metadata_stop_) {
@@ -359,38 +545,66 @@ void ScanSession::readWanted() {
     const std::shared_ptr<std::atomic<bool>> stop = metadata_stop_;
     const std::shared_ptr<const edi::Project> source = source_;
     const std::string directory = datasets_.directory;
-    std::vector<std::pair<int, std::string>> wanted;
-    for (const int dataset : wanted_) {
-        wanted.emplace_back(dataset, datasets_.files[static_cast<std::size_t>(dataset)]);
+    // The newest batch first: the rows on screen now.
+    const std::size_t take = std::min(kMetadataBatch, wanted_.size());
+    std::vector<std::pair<int, std::string>> batch;
+    for (std::size_t i = wanted_.size() - take; i < wanted_.size(); ++i) {
+        batch.emplace_back(wanted_[i], datasets_.files[static_cast<std::size_t>(wanted_[i])]);
     }
-    wanted_.clear();
-    // Each shown file is read once, for its extract rules only; the values reach this session only while it exists.
+    wanted_.resize(wanted_.size() - take);
+    reading_ = true;
+    // Each file is read once, for its extract rules only; the values reach this session only while it exists.
     const QPointer<ScanSession> self(this);
-    (void)QtConcurrent::run([self, stop, source, directory, wanted = std::move(wanted)] {
-        std::vector<std::pair<int, std::vector<std::string>>> done;
-        for (const auto& [dataset, file] : wanted) {
+    run_in_background([self, stop, source, directory, batch = std::move(batch)] {
+        struct Read {
+            int dataset;
+            std::vector<std::string> values;
+            QString error;
+        };
+        std::vector<Read> done;
+        for (const auto& [dataset, file] : batch) {
             if (stop->load()) {
-                return;
+                break;
             }
             try {
-                done.emplace_back(dataset, edi::scan_extract_values(*source, directory, file));
-            } catch (const std::exception&) {
-                done.emplace_back(dataset, std::vector<std::string>());
+                done.push_back({dataset, edi::scan_extract_values(*source, directory, file), {}});
+            } catch (const std::exception& refusal) {
+                done.push_back({dataset, {}, QString::fromUtf8(refusal.what())});
             }
         }
         QMetaObject::invokeMethod(
             QCoreApplication::instance(),
             [self, stop, done = std::move(done)]() mutable {
-                if (self.isNull() || stop->load() || done.empty()) {
+                if (self.isNull()) {
                     return;
                 }
-                int first = done.front().first, last = first;
-                for (auto& [dataset, values] : done) {
-                    self->metadata_[static_cast<std::size_t>(dataset)] = std::move(values);
-                    first = std::min(first, dataset);
-                    last = std::max(last, dataset);
+                self->reading_ = false;
+                if (stop->load()) {
+                    return;
                 }
-                emit self->metadataLoaded(first, last);
+                int first = std::numeric_limits<int>::max(), last = -1;
+                for (Read& read : done) {
+                    const auto index = static_cast<std::size_t>(read.dataset);
+                    if (read.error.isEmpty()) {
+                        self->metadata_[index] = std::move(read.values);
+                        self->loaded_.push_back(read.dataset);
+                    } else {
+                        // A failed read is named, and not tried again until the scan is listed again.
+                        self->metadata_errors_[read.dataset] = read.error;
+                    }
+                    first = std::min(first, read.dataset);
+                    last = std::max(last, read.dataset);
+                }
+                while (self->loaded_.size() > kMetadataCache) {
+                    const auto oldest = static_cast<std::size_t>(self->loaded_.front());
+                    self->loaded_.pop_front();
+                    self->metadata_[oldest].reset();
+                    self->asked_[oldest] = false;
+                }
+                if (last >= 0) {
+                    emit self->metadataLoaded(first, last);
+                }
+                self->readWanted();
             },
             Qt::QueuedConnection);
     });

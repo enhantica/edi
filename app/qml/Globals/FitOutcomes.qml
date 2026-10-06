@@ -20,6 +20,7 @@ QtObject {
             return "check-circle";
         case "maxIterations":
         case "noStep":
+        case "notConverged":
             return "exclamation-circle";
         case "stopped":
             return "stop-circle";
@@ -46,6 +47,8 @@ QtObject {
             return qsTr("Max iterations");
         case "noStep":
             return qsTr("No step");
+        case "notConverged":
+            return qsTr("Not converged");
         case "stopped":
             return qsTr("Stopped");
         case "superseded":
@@ -67,6 +70,8 @@ QtObject {
             return qsTr("The iteration limit was reached; the result is kept");
         case "noStep":
             return qsTr("No further improving step was found; the result is kept");
+        case "notConverged":
+            return qsTr("The fit did not converge; why was not recorded with the result, which is kept");
         case "stopped":
             return qsTr("Stop fitting was pressed; the result is kept");
         case "superseded":
@@ -83,6 +88,7 @@ QtObject {
             return EaStyle.Colors.green;
         case "maxIterations":
         case "noStep":
+        case "notConverged":
             return EaStyle.Colors.orange;
         case "failed":
             return EaStyle.Colors.red;
