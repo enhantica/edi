@@ -8,6 +8,7 @@ import os
 import re
 import shlex
 import subprocess
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 import pytest
@@ -281,38 +282,55 @@ def test_filename_and_user_name(native_probe, tmp_path, mode, expected_name):
     )
 
 
+def message_count(token):
+    try:
+        value = Decimal(token.replace('\u2212', '-'))
+    except InvalidOperation:
+        pytest.fail('Load data message count: a numeric claim must be a valid number: ' + token)
+    assert value.is_finite() and value >= 0 and value == value.to_integral_value(), (
+        'Load data message count: every numeric claim must be a finite nonnegative integer: '
+        + token
+    )
+    return value
+
+
 def require_message(message, counts):
     text = message.lower()
     row = r'row(?:\(s\)|s)?'
     line = r'line(?:\(s\)|s)?'
+    number = (
+        r'(?<![\w.+\u2212-])([+\u2212-]?(?:\d[\d.e+-]*|\.\d[\d.e+-]*|inf(?:inity)?|nan))(?![\w.])'
+    )
     patterns = {
         'skipped': [
-            rf'\b(\d+)\s+{line}\s+(?:skipped|unparsable|malformed)',
-            rf'\b(\d+)\s+(?:skipped|unparsable|malformed)\s+{line}',
-            rf'(?:skipped|unparsable|malformed)\s+{line}\s*[:=]\s*(\d+)\b',
+            rf'{number}\s+{line}\s+(?:skipped|unparsable|malformed)',
+            rf'{number}\s+(?:skipped|unparsable|malformed)\s+{line}',
+            rf'(?:skipped|unparsable|malformed)\s+{line}\s*[:=]\s*{number}',
         ],
         'nonpositive': [
             (
-                rf'\b(\d+)\s+(?:{row}\s+(?:with\s+)?)?'
+                rf'{number}\s+(?:{row}\s+(?:with\s+)?)?'
                 r'(?:non[- ]?positive|(?:intensity|y)\s*(?:≤|<=)\s*0)'
             ),
-            rf'non[- ]?positive(?:\s+{row})?\s*[:=]\s*(\d+)\b',
+            rf'non[- ]?positive(?:\s+{row})?\s*[:=]\s*{number}',
         ],
         'duplicates': [
             (
-                rf'\b(\d+)\s+(?:{row}\s+(?:with\s+(?:a\s+)?)?)?'
+                rf'{number}\s+(?:{row}\s+(?:with\s+(?:a\s+)?)?)?'
                 r'(?:duplicates?|duplicated|repeated\s+x)'
             ),
-            r'duplicates?(?:\s+rows?)?\s*[:=]\s*(\d+)\b',
+            rf'duplicates?(?:\s+rows?)?\s*[:=]\s*{number}',
         ],
         'reordered': [
-            rf'\b(\d+)\s+(?:{row}\s+)?(?:reordered|sorted)',
-            r'(?:reordered|sorted)(?:\s+rows?)?\s*[:=]\s*(\d+)\b',
+            rf'{number}\s+(?:{row}\s+)?(?:reordered|sorted)',
+            rf'(?:reordered|sorted)(?:\s+rows?)?\s*[:=]\s*{number}',
         ],
     }
     for category, alternatives in patterns.items():
         observed = [
-            int(match.group(1)) for pattern in alternatives for match in re.finditer(pattern, text)
+            message_count(match.group(1))
+            for pattern in alternatives
+            for match in re.finditer(pattern, text)
         ]
         assert len(observed) <= 1 and (observed[0] if observed else 0) == counts[category], (
             'Load data message count: each category owns its number, including zero: ' + category
@@ -322,10 +340,51 @@ def require_message(message, counts):
         'Load data message uncertainty: the derived-sigma note occurs exactly when used'
     )
     if derived:
-        reported = re.findall(r'used\s+for\s+(\d+)\s+' + row, text)
-        assert not reported or (len(reported) == 1 and int(reported[0]) == counts['derived']), (
-            'Load data message uncertainty: a reported derived-row count is bound to its own note'
-        )
+        reported = re.findall(r'used\s+for\s+' + number + r'\s+' + row, text)
+        assert not reported or (
+            len(reported) == 1 and message_count(reported[0]) == counts['derived']
+        ), 'Load data message uncertainty: a reported derived-row count is bound to its own note'
+
+
+@pytest.mark.parametrize(
+    ('category', 'style'),
+    [
+        (category, style)
+        for category in ['skipped', 'nonpositive', 'duplicates', 'reordered']
+        for style in ['number-first', 'category-first']
+    ]
+    + [('derived', 'number-first')],
+)
+@pytest.mark.parametrize('damage', ['negative', 'fractional', 'nonfinite'])
+def test_message_counts_reject_invalid_numbers_in_every_field(category, style, damage):
+    counts = dict(CASES['cwl/three_columns']['counts'], **{category: 2})
+
+    def message(token):
+        labels = {
+            'skipped': ('skipped lines', 'skipped lines'),
+            'nonpositive': ('non-positive rows', 'non-positive rows'),
+            'duplicates': ('duplicates', 'duplicates'),
+            'reordered': ('reordered', 'reordered rows'),
+        }
+        if category == 'derived':
+            return 'sigma=sqrt(y) used for ' + token + ' rows'
+        before, after = labels[category]
+        return token + ' ' + before if style == 'number-first' else after + ': ' + token
+
+    # Equivalent numeric spellings still denote the independently constructed integer two.
+    for token in ['2', '+2', '2.0', '2e0']:
+        require_message(message(token), counts)
+    damaged = {'negative': ['-2', '\u22122'], 'fractional': ['0.2'], 'nonfinite': ['nan', 'inf']}[
+        damage
+    ]
+    for token in damaged:
+        with pytest.raises(AssertionError, match='Load data message count'):
+            require_message(message(token), counts)
+        if category != 'derived':
+            # An unrecognized claim must not become an omitted zero-category count.
+            zero = dict(counts, **{category: 0})
+            with pytest.raises(AssertionError, match='Load data message count'):
+                require_message(message(token), zero)
 
 
 @pytest.mark.parametrize(('beam', 'case'), [tuple(key.split('/')) for key in CASES])

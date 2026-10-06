@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-06T22:00:44Z
+# measured_utc = 2026-10-06T22:35:01Z
 #
-# Recorded from: e04-t18-tests-seq6-child-pytest-final.log (3 node(s) measured once, 8315 banked, 0 stale row(s) dropped)
-# Collected tests: 9516; with a reported duration: 4618
+# Recorded from: e04-t18-tests-seq7-message-observers.log (49 node(s) measured once, 8296 banked, 0 stale row(s) dropped)
+# Collected tests: 9543; with a reported duration: 4618
 # Module-scoped fixture costs recorded: 26
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 9516
+# inventory_python = 9543
 # inventory_cpp = 298
-# inventory_measured = 8318
+# inventory_measured = 8345
 # inventory_unmeasured = 1496
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
@@ -7523,6 +7523,33 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_filen
 0.100	tests/system/py/test_plain_data_app.py::test_link_all_unlinked_new_structure_and_atomic_remove_undo
 UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_load_lock_replace_and_single_step_undo[cwl]
 UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_load_lock_replace_and_single_step_undo[tof]
+0.000	tests/system/py/test_plain_data_app.py::test_message_counts_reject_invalid_numbers_in_every_field[fractional-derived-number-first]
+0.000	tests/system/py/test_plain_data_app.py::test_message_counts_reject_invalid_numbers_in_every_field[fractional-duplicates-category-first]
+0.000	tests/system/py/test_plain_data_app.py::test_message_counts_reject_invalid_numbers_in_every_field[fractional-duplicates-number-first]
+0.000	tests/system/py/test_plain_data_app.py::test_message_counts_reject_invalid_numbers_in_every_field[fractional-nonpositive-category-first]
+0.000	tests/system/py/test_plain_data_app.py::test_message_counts_reject_invalid_numbers_in_every_field[fractional-nonpositive-number-first]
+0.000	tests/system/py/test_plain_data_app.py::test_message_counts_reject_invalid_numbers_in_every_field[fractional-reordered-category-first]
+0.000	tests/system/py/test_plain_data_app.py::test_message_counts_reject_invalid_numbers_in_every_field[fractional-reordered-number-first]
+0.000	tests/system/py/test_plain_data_app.py::test_message_counts_reject_invalid_numbers_in_every_field[fractional-skipped-category-first]
+0.000	tests/system/py/test_plain_data_app.py::test_message_counts_reject_invalid_numbers_in_every_field[fractional-skipped-number-first]
+0.000	tests/system/py/test_plain_data_app.py::test_message_counts_reject_invalid_numbers_in_every_field[negative-derived-number-first]
+0.000	tests/system/py/test_plain_data_app.py::test_message_counts_reject_invalid_numbers_in_every_field[negative-duplicates-category-first]
+0.000	tests/system/py/test_plain_data_app.py::test_message_counts_reject_invalid_numbers_in_every_field[negative-duplicates-number-first]
+0.000	tests/system/py/test_plain_data_app.py::test_message_counts_reject_invalid_numbers_in_every_field[negative-nonpositive-category-first]
+0.000	tests/system/py/test_plain_data_app.py::test_message_counts_reject_invalid_numbers_in_every_field[negative-nonpositive-number-first]
+0.000	tests/system/py/test_plain_data_app.py::test_message_counts_reject_invalid_numbers_in_every_field[negative-reordered-category-first]
+0.000	tests/system/py/test_plain_data_app.py::test_message_counts_reject_invalid_numbers_in_every_field[negative-reordered-number-first]
+0.000	tests/system/py/test_plain_data_app.py::test_message_counts_reject_invalid_numbers_in_every_field[negative-skipped-category-first]
+0.000	tests/system/py/test_plain_data_app.py::test_message_counts_reject_invalid_numbers_in_every_field[negative-skipped-number-first]
+0.000	tests/system/py/test_plain_data_app.py::test_message_counts_reject_invalid_numbers_in_every_field[nonfinite-derived-number-first]
+0.000	tests/system/py/test_plain_data_app.py::test_message_counts_reject_invalid_numbers_in_every_field[nonfinite-duplicates-category-first]
+0.000	tests/system/py/test_plain_data_app.py::test_message_counts_reject_invalid_numbers_in_every_field[nonfinite-duplicates-number-first]
+0.000	tests/system/py/test_plain_data_app.py::test_message_counts_reject_invalid_numbers_in_every_field[nonfinite-nonpositive-category-first]
+0.000	tests/system/py/test_plain_data_app.py::test_message_counts_reject_invalid_numbers_in_every_field[nonfinite-nonpositive-number-first]
+0.000	tests/system/py/test_plain_data_app.py::test_message_counts_reject_invalid_numbers_in_every_field[nonfinite-reordered-category-first]
+0.000	tests/system/py/test_plain_data_app.py::test_message_counts_reject_invalid_numbers_in_every_field[nonfinite-reordered-number-first]
+0.000	tests/system/py/test_plain_data_app.py::test_message_counts_reject_invalid_numbers_in_every_field[nonfinite-skipped-category-first]
+0.000	tests/system/py/test_plain_data_app.py::test_message_counts_reject_invalid_numbers_in_every_field[nonfinite-skipped-number-first]
 0.000	tests/system/py/test_plain_data_app.py::test_message_observer_accepts_equivalent_category_wording[category-first-cwl]
 0.000	tests/system/py/test_plain_data_app.py::test_message_observer_accepts_equivalent_category_wording[category-first-tof]
 0.000	tests/system/py/test_plain_data_app.py::test_message_observer_accepts_equivalent_category_wording[inequality-cwl]
