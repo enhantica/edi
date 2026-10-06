@@ -23,6 +23,11 @@ EaElements.ComboBox {
     // A field's title above the box, drawn as the base's ParamComboBox draws its own and aligned as every
     // field's title (FieldTitles, edi ADR-0017 §5); none when empty.
     property string title: ""
+    // In a table row: no border and no background, as the base's TableViewComboBox, which every other table
+    // cell picker is (the owner, 2026-10-06).
+    property bool inTable: false
+    // The base table's column sync sets each cell's alignment from its header label's.
+    property int horizontalAlignment: Text.AlignHCenter
     property int searchThreshold: 10
     readonly property bool searchable: count > searchThreshold
     property string searchText: ""
@@ -42,6 +47,26 @@ EaElements.ComboBox {
     function folded(text) {
         return String(text).toLowerCase().replace(/\s+/g, "");
     }
+    // The list opens below the box, or above it where there is more room, never over it, so the box keeps
+    // showing its value while one searches; it is as tall as its entries or the room allows, and keeps that
+    // height while a search shortens it.
+    function placePopup() {
+        const popup = control.popup;
+        const window = control.Window.window;
+        if (!window)
+            return;
+        const top = control.mapToItem(null, 0, 0).y;
+        const below = window.height - top - control.height - popup.bottomMargin;
+        const above = top - popup.topMargin;
+        const wanted = popup.contentItem.implicitHeight + popup.topPadding + popup.bottomPadding;
+        if (below >= wanted || below >= above) {
+            popup.height = Math.min(wanted, below);
+            popup.y = control.height;
+        } else {
+            popup.height = Math.min(wanted, above);
+            popup.y = -popup.height;
+        }
+    }
     // Whether an entry's text matches the search.
     function matches(text) {
         return filter === "" || control.folded(text).includes(filter);
@@ -59,6 +84,8 @@ EaElements.ComboBox {
         return first;
     }
 
+    borderColor: inTable ? "transparent" : _borderColor()
+    backgroundColor: inTable ? "transparent" : _backgroundColor()
     topInset: title === "" ? 0 : EaStyle.Sizes.fontPixelSize * 1.5
     topPadding: topInset + padding
 
@@ -92,28 +119,43 @@ EaElements.ComboBox {
         hoverEnabled: control.hoverEnabled
     }
 
-    // The search field, the header of the base popup's list.
+    // The search field, the header of the base popup's list: on the popup's own colour, so the entries the list
+    // scrolls under it never show through, and above them.
     Component {
         id: searchHeader
 
-        EaElements.TextField {
-            objectName: "comboBox.search"
+        Rectangle {
             z: 2
             width: ListView.view ? ListView.view.width : 0
-            height: control.searchable ? implicitHeight : 0
+            height: control.searchable ? field.implicitHeight : 0
             visible: control.searchable
-            horizontalAlignment: TextInput.AlignLeft
-            placeholderText: qsTr("Search")
-            // Red while the text matches no entry, until it does.
-            warned: !control.anyMatch
-            onTextChanged: control.searchText = text
-            onAccepted: {
-                const index = control.pickedIndex();
-                if (index < 0)
-                    return;
-                control.currentIndex = index;
-                control.activated(index);
-                control.popup.close();
+            color: control.popupBackgroundColor
+
+            function clear() {
+                field.clear();
+            }
+            function focusField() {
+                field.forceActiveFocus();
+            }
+
+            EaElements.TextField {
+                id: field
+
+                objectName: "comboBox.search"
+                anchors.fill: parent
+                horizontalAlignment: TextInput.AlignLeft
+                placeholderText: qsTr("Search")
+                // Red while the text matches no entry, until it does.
+                warned: !control.anyMatch
+                onTextChanged: control.searchText = text
+                onAccepted: {
+                    const index = control.pickedIndex();
+                    if (index < 0)
+                        return;
+                    control.currentIndex = index;
+                    control.activated(index);
+                    control.popup.close();
+                }
             }
         }
     }
@@ -133,11 +175,12 @@ EaElements.ComboBox {
             if (field)
                 field.clear();
             control.searchText = "";
+            control.placePopup();
         }
         function onOpened() {
             const field = (control.popup.contentItem as ListView)?.headerItem;
             if (field && control.searchable)
-                field.forceActiveFocus();
+                field.focusField();
         }
     }
 }
