@@ -7,6 +7,9 @@
 #include "edi/structure_scene.hpp"
 
 #include "edi/io.hpp"
+#include "crysta/adp.hpp"
+#include "edi/symmetry.hpp"
+#include "crysta/tokens.hpp"
 
 #include <algorithm>
 #include <charconv>
@@ -484,11 +487,24 @@ ElementRadius element_radius(std::string_view element, AtomView view) {
 SceneSource capture_scene(const Structure& structure) {
     SceneSource source;
     source.structure_id = structure.name.value();
+    // An anisotropic site's U*, through crysta's conversion (crysta ADR-0080), to turn Cartesian below.
+    std::unordered_map<std::string, std::array<double, 6>> u_star;
     for (const auto& site : structure.atom_sites) {
         source.site_types.emplace_back(site->id.value(), site->type_symbol.value());
-        // The stored ADP is Biso: U = B / (8 pi^2).
-        source.site_adps.push_back({site->id.value(), site->adp_iso.value / (8.0 * std::numbers::pi * std::numbers::pi),
-                                    std::nullopt});
+        // adp_iso holds the value in the site's type, or an anisotropic site's equivalent value.
+        double u_iso = site->adp_iso.value;
+        try {
+            if (crysta::equivalent_iso_form(crysta::adp_form_of(site->adp_type.value())) ==
+                crysta::AdpForm::Biso) {
+                u_iso /= 8.0 * std::numbers::pi * std::numbers::pi;
+            }
+        } catch (const std::exception&) {
+            u_iso /= 8.0 * std::numbers::pi * std::numbers::pi;  // an unknown type: read as B
+        }
+        if (const auto tensor = site_u_star(structure, *site)) {
+            u_star.emplace(site->id.value(), *tensor);
+        }
+        source.site_adps.push_back({site->id.value(), u_iso, std::nullopt});
     }
     if (!structure.geometry_current()) {
         return source;  // I11: no column of a geometry that no longer describes the structure
@@ -510,6 +526,29 @@ SceneSource capture_scene(const Structure& structure) {
     source.bond_site_2 = geometry.geom_bond.expanded_atom_site_id_2.buffer();
     source.bond_distance = geometry.geom_bond.distance.buffer();
     source.cartn_matrix = geometry.atom_sites_cartn_transform.matrix;
+    // The Cartesian U = M U* M^T, M taking fractional coordinates to Cartesian ones.
+    for (SceneSource::SiteAdp& adp : source.site_adps) {
+        const auto found = u_star.find(adp.site_id);
+        if (found == u_star.end()) {
+            continue;
+        }
+        const std::array<double, 6>& s = found->second;
+        const double star[3][3] = {{s[0], s[3], s[4]}, {s[3], s[1], s[5]}, {s[4], s[5], s[2]}};
+        const auto& m = source.cartn_matrix;
+        std::array<double, 9> u{};
+        for (int i = 0; i < 3; ++i) {
+            for (int j = 0; j < 3; ++j) {
+                double value = 0.0;
+                for (int a = 0; a < 3; ++a) {
+                    for (int b = 0; b < 3; ++b) {
+                        value += m[3 * i + a] * star[a][b] * m[3 * j + b];
+                    }
+                }
+                u[3 * i + j] = value;
+            }
+        }
+        adp.u_cartn = u;
+    }
     try {
         source.operation_rotations = space_group_rotations(structure.space_group);
     } catch (const std::exception&) {

@@ -70,7 +70,17 @@ inline void rename_atom_site(Structure& structure, AtomSite& site, const std::st
                                         "' is already in the structure");
         }
     }
+    // An anisotropic site's tensor row is keyed by the site id, so it follows the rename.
+    AtomSiteAniso* tensor = nullptr;
+    for (const auto& row : structure.atom_site_aniso) {
+        if (row->id == site.id) {
+            tensor = row.get();
+        }
+    }
     site.id = id;
+    if (tensor != nullptr) {
+        tensor->id = id;
+    }
 }
 
 // One component of a texture axis (the Python `PrefOrient.index_h/k/l` setters): an integer within

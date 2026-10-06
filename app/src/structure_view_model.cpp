@@ -205,8 +205,9 @@ bool AtomSiteListModel::setText(int row, const QString& role, const QString& val
     const edi::Edit edit = label                                      ? edi::Edit::rename_atom_site(structure, *site, text)
                            : role == QLatin1String("typeSymbol")      ? edi::Edit::assign(site->type_symbol, text)
                            : role == QLatin1String("wyckoffLetter")   ? edi::Edit::assign(site->wyckoff_letter, text)
-                                                                      : edi::Edit::assign(site->adp_type, text);
-    return editor_.apply(edit, label).isEmpty();
+                                                                      : edi::Edit::adp_type(structure, *site, text);
+    // A type change can add or remove a tensor row, which changes the parameter set.
+    return editor_.apply(edit, label || role == QLatin1String("adpType")).isEmpty();
 }
 
 void AtomSiteListModel::append() {
@@ -230,8 +231,7 @@ void AtomSiteListModel::duplicate(int row) {
         return;
     }
     edi::Structure& structure = structure_;
-    edi::AtomSite copy = *source;
-    copy.id = unused_name(source->id + "_", [&structure](const std::string& name) {
+    const std::string id = unused_name(source->id + "_", [&structure](const std::string& name) {
         for (const auto& existing : structure.atom_sites) {
             if (existing->id == name) {
                 return true;
@@ -239,7 +239,7 @@ void AtomSiteListModel::duplicate(int row) {
         }
         return false;
     });
-    editor_.apply(edi::Edit::append(structure.atom_sites, std::move(copy)), true);
+    editor_.apply(edi::Edit::duplicate_atom_site(structure, *source, id), true);
 }
 
 void AtomSiteListModel::remove(int row) {
@@ -247,25 +247,17 @@ void AtomSiteListModel::remove(int row) {
         return;
     }
     edi::Structure& structure = structure_;
-    editor_.apply(edi::Edit::erase(structure.atom_sites, static_cast<std::size_t>(row)), true);
+    editor_.apply(edi::Edit::erase_atom_site(structure, static_cast<std::size_t>(row)), true);
 }
 
 // ---- AtomSiteAdpListModel -----------------------------------------------------------------------
 
-namespace {
-constexpr double kEightPiSq = 8.0 * 3.141592653589793238 * 3.141592653589793238;
-}  // namespace
-
 AtomSiteAdpListModel::AtomSiteAdpListModel(edi::Structure& structure, ProjectEditor& editor,
-                                           ParameterRegistry& registry,
-                                           std::map<const edi::AtomSite*, AdpPreview>& previews, QObject* parent)
-    : RowTableModel({"label", "adpType", "active", "adpIso", "iso", "ani11", "ani22", "ani33", "ani12", "ani13",
-                     "ani23"},
-                    parent),
+                                           ParameterRegistry& registry, QObject* parent)
+    : RowTableModel({"label", "adpType", "adpIso", "ani11", "ani22", "ani33", "ani12", "ani13", "ani23"}, parent),
       structure_(structure),
       editor_(editor),
-      registry_(registry),
-      previews_(previews) {
+      registry_(registry) {
     sync();
 }
 
@@ -274,100 +266,36 @@ QStringList AtomSiteAdpListModel::types() const {
             QStringLiteral("beta")};
 }
 
-AdpCell AtomSiteAdpListModel::cell() const {
-    const edi::Cell& c = structure_.cell;
-    return {c.length_a.value, c.length_b.value, c.length_c.value,
-            c.angle_alpha.value, c.angle_beta.value, c.angle_gamma.value};
-}
-
 void AtomSiteAdpListModel::sync() {
-    // A removed site's preview goes with it.
-    std::erase_if(previews_, [this](const auto& entry) {
-        for (const auto& site : structure_.atom_sites) {
-            if (site.get() == entry.first) {
-                return false;
-            }
-        }
-        return true;
-    });
-    const AdpCell metric = cell();
     QList<Row> rows;
     for (const auto& site : structure_.atom_sites) {
-        const auto found = previews_.find(site.get());
-        const bool previewed = found != previews_.end();
-        const std::string type = previewed ? found->second.type : std::string("Biso");
-        const double b_iso = site->adp_iso.value;
-        QList<QVariant> values{QString::fromStdString(site->id), QString::fromStdString(type), !previewed,
+        QList<QVariant> values{QString::fromStdString(site->id), QString::fromStdString(site->adp_type),
                                parameter_role(registry_, &site->adp_iso)};
-        if (is_anisotropic(type)) {
-            const double b_eq = b_equivalent(found->second.ani, type, metric);
-            values.append(type == "Uani" ? b_eq / kEightPiSq : b_eq);
-            for (const double component : found->second.ani) {
-                values.append(component);
+        const edi::AtomSiteAniso* tensor = nullptr;
+        for (const auto& row : structure_.atom_site_aniso) {
+            if (row->id.value() == site->id.value()) {
+                tensor = row.get();
             }
-        } else {
-            values.append(type == "Uiso" ? b_iso / kEightPiSq : b_iso);
-            for (int k = 0; k < 6; ++k) {
-                values.append(QVariant());
-            }
+        }
+        for (const edi::Parameter* component :
+             tensor != nullptr ? const_cast<edi::AtomSiteAniso*>(tensor)->parameters() : std::vector<edi::Parameter*>{}) {
+            values.append(parameter_role(registry_, component));
+        }
+        while (values.size() < 9) {
+            values.append(QVariant());
         }
         rows.append({site.get(), values});
     }
     setTableRows(rows);
-    if (has_preview_ != !previews_.empty()) {
-        has_preview_ = !previews_.empty();
-        emit hasPreviewChanged();
-    }
 }
 
 void AtomSiteAdpListModel::setType(int row, const QString& type) {
-    const auto* site = static_cast<const edi::AtomSite*>(keyAt(row));
-    if (site == nullptr || !types().contains(type)) {
-        return;
-    }
-    const std::string to = type.toStdString();
-    const auto found = previews_.find(site);
-    const std::string from = found != previews_.end() ? found->second.type : std::string("Biso");
-    if (to == from) {
-        return;
-    }
-    if (to == "Biso") {
-        previews_.erase(site);  // the stored Biso was never changed by a preview
-    } else if (!is_anisotropic(to)) {
-        previews_[site] = {to, {}};
-    } else if (is_anisotropic(from)) {
-        previews_[site] = {to, convert_tensor(found->second.ani, from, to, cell())};
-    } else {
-        previews_[site] = {to, tensor_from_b_iso(to, site->adp_iso.value, cell())};
-    }
-    sync();
-    emit previewsChanged();
-}
-
-void AtomSiteAdpListModel::setIso(int row, double value) {
     auto* site = const_cast<edi::AtomSite*>(static_cast<const edi::AtomSite*>(keyAt(row)));
-    if (site == nullptr) {
+    if (site == nullptr || !types().contains(type) || site->adp_type.value() == type.toStdString()) {
         return;
     }
-    const auto found = previews_.find(site);
-    const std::string type = found != previews_.end() ? found->second.type : std::string("Biso");
-    if (is_anisotropic(type)) {
-        return;  // the equivalent value follows the six components
-    }
-    // A Uiso is the same displacement as the stored B = 8 pi^2 U, which the calculation uses.
-    editor_.apply(edi::Edit::value(site->adp_iso, type == "Uiso" ? value * kEightPiSq : value), false);
-}
-
-void AtomSiteAdpListModel::setComponent(int row, int component, double value) {
-    const auto* site = static_cast<const edi::AtomSite*>(keyAt(row));
-    const auto found = previews_.find(site);
-    if (site == nullptr || component < 0 || component > 5 || found == previews_.end() ||
-        !is_anisotropic(found->second.type)) {
-        return;
-    }
-    found->second.ani[static_cast<std::size_t>(component)] = value;
-    sync();
-    emit previewsChanged();
+    // A tensor row comes or goes: the parameter set changes.
+    editor_.apply(edi::Edit::adp_type(structure_, *site, type.toStdString()), true);
 }
 
 // ---- ScatteringLengthListModel ------------------------------------------------------------------
@@ -431,32 +359,16 @@ StructureViewModel::StructureViewModel(SavedFile saved, edi::Structure& structur
       space_group_(new SpaceGroupViewModel(structure, editor, this)),
       cell_(new CellViewModel(structure, registry, this)),
       atom_sites_(new AtomSiteListModel(structure, editor, registry, this)),
-      atom_site_adps_(new AtomSiteAdpListModel(structure, editor, registry, adp_previews_, this)),
+      atom_site_adps_(new AtomSiteAdpListModel(structure, editor, registry, this)),
       scattering_lengths_(new ScatteringLengthListModel(structure, editor, this)),
       categories_(new CategoryListModel(this)),
       text_(new BlockText([saved, &structure] { return saved(std::filesystem::path(edi::entity_path("", "structure", structure.name)).generic_string()); }, this)) {
     categories_->setCategories(edi::structure_categories(structure_));
-    connect(atom_site_adps_, &AtomSiteAdpListModel::previewsChanged, this, &StructureViewModel::applyAdpPreviews);
     captureScene();
 }
 
 void StructureViewModel::captureScene() {
     scene_source_ = edi::capture_scene(structure_);
-    applyAdpPreviews();
-}
-
-void StructureViewModel::applyAdpPreviews() {
-    const edi::Cell& c = structure_.cell;
-    const AdpCell cell{c.length_a.value, c.length_b.value, c.length_c.value,
-                       c.angle_alpha.value, c.angle_beta.value, c.angle_gamma.value};
-    for (edi::SceneSource::SiteAdp& adp : scene_source_.site_adps) {
-        adp.u_cartn.reset();
-        for (const auto& [site, preview] : adp_previews_) {
-            if (site->id.value() == adp.site_id && is_anisotropic(preview.type)) {
-                adp.u_cartn = cartesian_u(preview.ani, preview.type, cell, scene_source_.cartn_matrix);
-            }
-        }
-    }
     emit sceneSourceChanged();
 }
 

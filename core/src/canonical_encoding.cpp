@@ -229,6 +229,15 @@ void put_structure(std::string& out, const Structure& structure, Scope scope) {
         put_parameter(out, site.occupancy, scope);
         put_parameter(out, site.adp_iso, scope);
     }
+    // The anisotropic sites' tensors: an input of F and the pattern.
+    put_u64(out, structure.atom_site_aniso.size());
+    for (const auto& tensor_item : structure.atom_site_aniso) {
+        AtomSiteAniso& tensor = *tensor_item;
+        put_text(out, tensor.id);
+        for (const Parameter* component : tensor.parameters()) {
+            put_parameter(out, *component, scope);
+        }
+    }
     put_u64(out, structure.scattering_lengths_fm.size());
     for (const auto& entry : structure.scattering_lengths_fm) {  // std::map: key-ordered
         put_text(out, entry.first);
@@ -312,6 +321,17 @@ std::string geometry_inputs(const Structure& structure) {
             put_written(out, value->value);
         }
     }
+    // The tensors are geometry inputs too: the app's ellipsoids are drawn from them.
+    put_u64(out, structure.atom_site_aniso.size());
+    put_u64(out, structure.atom_site_aniso.generation());
+    for (const auto& tensor_item : structure.atom_site_aniso) {
+        AtomSiteAniso& tensor = *tensor_item;
+        put_text(out, tensor.id);
+        put_u64(out, tensor.id.written());
+        for (const Parameter* component : tensor.parameters()) {
+            put_written(out, component->value);
+        }
+    }
     put_geom(out, structure.geom);
     put_u64(out, structure.geom.min_bond_distance_cutoff.written());
     put_u64(out, structure.geom.bond_distance_inc.written());
@@ -360,6 +380,9 @@ std::string calculation_inputs(const ItemVec<Structure>& structures,
         put_u64(out, structure.space_group.epoch.value());
         for (const auto& site : structure.atom_sites) {
             put_u64(out, site->epoch.value());
+        }
+        for (const auto& tensor : structure.atom_site_aniso) {
+            put_u64(out, tensor->epoch.value());
         }
     }
     for (const std::uint64_t epoch :

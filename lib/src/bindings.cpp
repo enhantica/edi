@@ -27,11 +27,13 @@
 #include <vector>
 
 #include "edi/categories.hpp"
+#include "edi/edits.hpp"
 #include "edi/io.hpp"
 #include "edi/model.hpp"
 #include "edi/parameter_spec.hpp"
 #include "edi/report.hpp"
 #include "edi/selectors.hpp"
+#include "edi/symmetry.hpp"
 #include "edi/threading.hpp"
 #include "edi/validation.hpp"
 #include "edi/version.hpp"
@@ -827,6 +829,24 @@ static edi::Dependence dependence_now(edi::Parameter& parameter) {
 
 // The Python object that owns a parameter's storage: its keyed row (a site, a background point or term,
 // a texture row, a linked structure) or, for a block field, its structure or experiment. None when the project holds none.
+// The structure of a project that holds `site`, or null.
+static edi::Structure* holding_structure(edi::AtomSite& site) {
+    const edi::detail::Membership* record = site.row.record();
+    if (record == nullptr || record->owner == nullptr) {
+        return nullptr;
+    }
+    edi::Project* project = record->owner->host();
+    if (project == nullptr) {
+        return nullptr;
+    }
+    for (const std::shared_ptr<edi::Structure>& structure : project->structures) {
+        if (static_cast<const edi::detail::KeyedBase*>(&structure->atom_sites) == record->owner) {
+            return structure.get();
+        }
+    }
+    return nullptr;
+}
+
 static nb::object owner_of(edi::Project& project, const edi::Parameter* parameter) {
     const auto holds = [parameter](auto& node) {
         for (const edi::Parameter* held : node.parameters()) {
@@ -840,6 +860,11 @@ static nb::object owner_of(edi::Project& project, const edi::Parameter* paramete
         for (const std::shared_ptr<edi::AtomSite>& site : structure->atom_sites) {
             if (holds(*site)) {
                 return nb::cast(site);
+            }
+        }
+        for (const std::shared_ptr<edi::AtomSiteAniso>& tensor : structure->atom_site_aniso) {
+            if (holds(*tensor)) {
+                return nb::cast(tensor);
             }
         }
         if (holds(structure->cell)) {
@@ -883,6 +908,9 @@ static void relations_changed(const edi::ItemKey& key) {
 namespace edi::views {
 void after_change(const AliasesView& view) { relations_changed(*view.owner); }
 void after_change(const ConstraintsView& view) { relations_changed(*view.owner); }
+// A site added, removed or replaced: the tensor rows follow the sites' types.
+void after_change(const AtomSitesView& view) { sync_atom_site_aniso(*view.owner); }
+void after_change(const AtomSiteAnisoView& view) { sync_atom_site_aniso(*view.owner); }
 }  // namespace edi::views
 
 // The text either side of a constraint's first '=' (diffraction-lib Constraint._split_expression).
@@ -1262,6 +1290,15 @@ static void def_collection_views(nb::module_& m) {
     // Upstream's PrefOrients — the experiment's preferred-orientation rows keyed by structure_id
     // (R15). The engine links one structure, so the adapter refuses a second row at calculation;
     // the collection itself follows the shared protocol.
+    // The anisotropic sites' tensors (diffraction-lib's AtomSiteAnisoCollection). Rows follow the
+    // sites' types: a site gets one when its type becomes anisotropic.
+    nb::class_<AtomSiteAnisoView> atom_site_aniso_view(
+        m, "AtomSiteAnisoCollection",
+        "Live keyed collection of a structure's anisotropic displacement tensors (key: the site id).");
+    nb::class_<AtomSiteAnisoIter> atom_site_aniso_iter(m, "_AtomSiteAnisoIterator");
+    def_keyed_collection<AtomSiteAnisoView, AtomSiteAnisoIter, edi::AtomSiteAniso>(
+        atom_site_aniso_view, atom_site_aniso_iter);
+
     nb::class_<PrefOrientsView> pref_orients_view(
         m, "PrefOrients",
         "Live keyed collection of an experiment's preferred-orientation rows (key: structure_id).");
@@ -1690,10 +1727,18 @@ NB_MODULE(_edi, m) {
     // Shared-owned from birth (nb::new_), so a stored item releases its wrapper without
     // losing storage while add() still shares the caller's object.
     atom_site.def(nb::new_([]() { return std::make_shared<edi::AtomSite>(); }))
-        // ADR-0016: assigning is a rename the owning structure admits.
+        // ADR-0016: assigning is a rename the owning structure admits; an anisotropic site's
+        // tensor row, keyed by the site id, follows it.
         .def_prop_rw(
             "id", [](const edi::AtomSite& self) { return self.id.value(); },
-            [](edi::AtomSite& self, std::string value) { self.id = std::move(value); })
+            [](edi::AtomSite& self, std::string value) {
+                edi::Structure* structure = holding_structure(self);
+                if (structure != nullptr) {
+                    edi::rename_atom_site(*structure, self, value);
+                    return;
+                }
+                self.id = std::move(value);
+            })
         // A geometry input records its own writes, so it binds as a property.
         .def_prop_rw(
             "type_symbol", [](const edi::AtomSite& self) { return self.type_symbol.value(); },
@@ -1701,15 +1746,64 @@ NB_MODULE(_edi, m) {
         .def_prop_rw(
             "wyckoff_letter", [](const edi::AtomSite& self) { return self.wyckoff_letter.value(); },
             [](edi::AtomSite& self, std::string value) { self.wyckoff_letter = std::move(value); })
+        // A new type converts the site's values (crysta ADR-0080). The tensor and the cell are
+        // the structure's, so a site no structure of a project holds changes only between the
+        // two isotropic types.
         .def_prop_rw(
             "adp_type", [](const edi::AtomSite& self) { return self.adp_type.value(); },
-            [](edi::AtomSite& self, std::string value) { self.adp_type = std::move(value); });
+            [](edi::AtomSite& self, const std::string& value) {
+                if (!edi::is_adp_type(value)) {
+                    throw nb::value_error(("adp_type '" + value +
+                                           "' is not one of Biso, Uiso, Bani, Uani, beta")
+                                              .c_str());
+                }
+                // A site no structure holds yet is being declared: its values are taken as
+                // given in the new type.
+                if (!self.row.attached()) {
+                    self.adp_type = value;
+                    return;
+                }
+                if (edi::Structure* structure = holding_structure(self)) {
+                    edi::change_adp_type(*structure, self, value);
+                    return;
+                }
+                const std::string& current = self.adp_type.value();
+                if (edi::is_anisotropic_adp_type(value) || edi::is_anisotropic_adp_type(current)) {
+                    throw nb::value_error(
+                        "changing between isotropic and anisotropic ADP types needs the site's "
+                        "structure; add the site to a structure first");
+                }
+                if (current != value) {
+                    constexpr double eight_pi_sq = 8.0 * 3.141592653589793238 * 3.141592653589793238;
+                    self.adp_iso.value = value == "Uiso" ? self.adp_iso.value / eight_pi_sq
+                                                         : self.adp_iso.value * eight_pi_sq;
+                }
+                self.adp_type = value;
+            });
     def_parameter_walks(atom_site);
     def_parameter_field(atom_site, "fract_x", &edi::AtomSite::fract_x);
     def_parameter_field(atom_site, "fract_y", &edi::AtomSite::fract_y);
     def_parameter_field(atom_site, "fract_z", &edi::AtomSite::fract_z);
     def_parameter_field(atom_site, "occupancy", &edi::AtomSite::occupancy);
     def_parameter_field(atom_site, "adp_iso", &edi::AtomSite::adp_iso);
+
+    // An anisotropic site's tensor (diffraction-lib's AtomSiteAniso), keyed by the site id; its
+    // components are in the site's declared type.
+    nb::class_<edi::AtomSiteAniso> atom_site_aniso(m, "AtomSiteAniso");
+    atom_site_aniso.def("__setattr__", renewing_setattr<edi::AtomSiteAniso>({}, renew_epoch),
+                        nb::arg("name"), nb::arg("value").none());
+    atom_site_aniso.def(nb::new_([]() { return std::make_shared<edi::AtomSiteAniso>(); }))
+        // The key is the site's id: set while the row is being declared, renamed with its site.
+        .def_prop_rw(
+            "id", [](const edi::AtomSiteAniso& self) { return self.id.value(); },
+            [](edi::AtomSiteAniso& self, std::string value) { self.id = std::move(value); });
+    def_parameter_walks(atom_site_aniso);
+    def_parameter_field(atom_site_aniso, "adp_11", &edi::AtomSiteAniso::adp_11);
+    def_parameter_field(atom_site_aniso, "adp_22", &edi::AtomSiteAniso::adp_22);
+    def_parameter_field(atom_site_aniso, "adp_33", &edi::AtomSiteAniso::adp_33);
+    def_parameter_field(atom_site_aniso, "adp_12", &edi::AtomSiteAniso::adp_12);
+    def_parameter_field(atom_site_aniso, "adp_13", &edi::AtomSiteAniso::adp_13);
+    def_parameter_field(atom_site_aniso, "adp_23", &edi::AtomSiteAniso::adp_23);
 
     // One upstream PrefOrient row — the March-Dollase coefficient and random fraction (fit
     // parameters), the fixed integer texture axis, the structure it corrects.
@@ -1811,6 +1905,13 @@ NB_MODULE(_edi, m) {
             [](edi::Structure& self) {
                 return edi::views::AtomSitesView{&self, &edi::Structure::atom_sites,
                                                  &edi::AtomSite::id};
+            },
+            nb::keep_alive<0, 1>())
+        .def_prop_ro(
+            "atom_site_aniso",
+            [](edi::Structure& self) {
+                return edi::views::AtomSiteAnisoView{&self, &edi::Structure::atom_site_aniso,
+                                                     &edi::AtomSiteAniso::id};
             },
             nb::keep_alive<0, 1>())
         .def_prop_rw(
