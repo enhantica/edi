@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-06T18:47:44Z
+# measured_utc = 2026-10-06T20:44:49Z
 #
-# Recorded from: variants-measure.log (2 node(s) measured once, 6252 banked, 0 stale row(s) dropped)
-# Collected tests: 6906; with a reported duration: 4125
+# Recorded from: measure-retry.log (9 node(s) measured once, 6245 banked, 0 stale row(s) dropped)
+# Collected tests: 6906; with a reported duration: 4126
 # Module-scoped fixture costs recorded: 18
 #
 # Breaches are decided PER TIER against the table
@@ -42,7 +42,7 @@
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_minimizer_is_two_rows_of_two]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_separate_adp_table_and_isotropic_controls]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_space_group_name_and_number_choose_new_default]
-0.000	tests/integration/app/test_c13_t2_gui.py::test_gui_owner_decisions_pass_in_the_production_host
+0.004	tests/integration/app/test_c13_t2_gui.py::test_gui_owner_decisions_pass_in_the_production_host
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
 0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_cosio-d20_scan-324f]
 0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_cosio-d20_scan-3f]
@@ -7238,7 +7238,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # unaffected; excluding one test only moves the cost to the next sibling).
 # These rows mark and deselect NOTHING - kept for visibility
 # and the stale-module integrity refusal.
-# module-cost: 35.842	tests/integration/app/test_c13_t2_gui.py
+# module-cost: 41.066	tests/integration/app/test_c13_t2_gui.py
 # module-cost: 228.346	tests/integration/app/test_e04_t1_projects.py
 # module-cost: 20.089	tests/integration/app/test_e04_t1_runtime_escapes.py
 # module-cost: 1.914	tests/integration/py/test_e04_t12_name_allowance.py
