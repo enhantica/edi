@@ -266,12 +266,19 @@ def test_saved_data_is_self_contained_and_edi_load_cannot_replace_it(native_prob
 
 @pytest.mark.parametrize(
     ('mode', 'expected_name'),
-    [('load', 'pattern'), ('renamed', 'User name')],
+    [('load', 'pattern'), ('renamed', 'User_name')],
     ids=['default-name', 'user-name'],
 )
 def test_filename_and_user_name(native_probe, tmp_path, mode, expected_name):
     record = run(native_probe, tmp_path, mode=mode)
     require_success(record)
+    if mode == 'renamed':
+        assert record['before']['experiments'][0]['name'] == expected_name, (
+            'Load data naming: the valid non-default user name must be retained before import'
+        )
+        assert record['beforeLive']['experiments'][0]['name'] == expected_name, (
+            'Load data naming: replacement and Undo start with the same valid user name'
+        )
     e = record['after']['experiments'][0]
     assert e['name'] == expected_name and e['file'] == 'pattern.xy', (
         'Load data naming: default names take the stem, user names survive, '
