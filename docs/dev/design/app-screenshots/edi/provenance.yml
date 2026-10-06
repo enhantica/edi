@@ -192,3 +192,14 @@ reblessed:
     platform: Linux x86_64, QT_QPA_PLATFORM=xcb (Xwayland on headless Weston, Mesa llvmpipe OpenGL)
     images:
       - ex-pd-neut-tof_ferrite-austenite-beer_joint.png
+  - produced_at: 8668386ad4ad26fbb1fc4f83a313ad8470f6e2e6
+    reason: >-
+      The PbSO4 Bérar-Baldinozzi example now uses the pseudo-Voigt with Bérar-Baldinozzi asymmetry, so its
+      Peak profile shows U V W, Eta0 Eta1 and the asymmetry row instead of the TCH X and Y. The YAP
+      two-phase project joins the examples, so its page is captured (new, the set's 74th image). Captured
+      with edi built against crysta af99549e. Only these two images are replaced; the run's other SSIM
+      failures are the ones edi main already carries.
+    platform: Linux x86_64, QT_QPA_PLATFORM=xcb (Xwayland on headless Weston, Mesa llvmpipe OpenGL)
+    images:
+      - ex-pd-neut-cwl_pbso4_beba-asymmetry.png
+      - ex-pd-neut-cwl_yap-spodi_3k.png
