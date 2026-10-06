@@ -138,6 +138,9 @@ class Session : public QObject {
 
    private:
     bool open(const QString& directory, const QString& example);
+    // Opens `source` from a writable copy at `target` (an example, a read-only folder): the project and its results
+    // are copied, a scan's data directory is not (the copy reads it in place, Project::scan_data_root).
+    bool openCopy(const QString& source, const QString& target, const QString& example);
     void replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example);
     void setLastError(const QString& error);
 
@@ -149,7 +152,8 @@ class Session : public QObject {
     QString opened_example_;
     // The open project is a temporary copy of a folder this user may not write: Save As is its way out.
     bool read_only_copy_ = false;
-    bool copyTree(const QString& source, const QString& target);
+    // Copies every file under `source` to `target` but those under `skip` (none when empty), writable by the owner.
+    bool copyTree(const QString& source, const QString& target, const QString& skip);
 };
 
 }  // namespace edi_app

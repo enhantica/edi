@@ -10,6 +10,7 @@
 
 #include "app_info.hpp"
 #include "edi/io.hpp"
+#include "edi/scan.hpp"
 
 namespace edi_app {
 namespace {
@@ -163,12 +164,7 @@ bool Session::openProject(const QUrl& directory) {
             return false;
         }
         const QString target = extracted_->filePath(QStringLiteral("read-only/") + folder.fileName());
-        QDir(target).removeRecursively();
-        if (!copyTree(source, target)) {
-            setLastError(QStringLiteral("cannot make a temporary copy of %1").arg(source));
-            return false;
-        }
-        if (!open(target, {})) {
+        if (!openCopy(source, target, {})) {
             return false;
         }
         read_only_copy_ = true;
@@ -178,10 +174,14 @@ bool Session::openProject(const QUrl& directory) {
     return open(source, {});
 }
 
-bool Session::copyTree(const QString& source, const QString& target) {
+bool Session::copyTree(const QString& source, const QString& target, const QString& skip) {
+    const QString skipped = skip.isEmpty() ? QString() : QDir::cleanPath(QFileInfo(skip).absoluteFilePath()) + u'/';
     QDirIterator files(source, QDir::Files, QDirIterator::Subdirectories);
     while (files.hasNext()) {
         const QString file = files.next();
+        if (!skipped.isEmpty() && QDir::cleanPath(QFileInfo(file).absoluteFilePath()).startsWith(skipped)) {
+            continue;
+        }
         const QString destination = target + file.mid(source.size());
         QDir().mkpath(QFileInfo(destination).absolutePath());
         if (!QFile::copy(file, destination)) {
@@ -258,19 +258,13 @@ bool Session::openExample(const QString& exampleId) {
                          .arg(exampleId, extracted_->errorString()));
         return false;
     }
-    // A fresh copy per open, so edits to an opened example never leak into the next open of it.
+    // A fresh copy per open, so edits to an opened example never leak into the next open of it. A bundled example
+    // lives in the application's resources, which crysta cannot read: its scan data are copied with it.
     const QString target = extracted_->filePath(exampleId + QStringLiteral("/project"));
     QDir(target).removeRecursively();
-    QDirIterator files(source, QDir::Files, QDirIterator::Subdirectories);
-    while (files.hasNext()) {
-        const QString file = files.next();
-        const QString destination = target + file.mid(source.size());
-        QDir().mkpath(QFileInfo(destination).absolutePath());
-        if (!QFile::copy(file, destination)) {
-            setLastError(QStringLiteral("cannot extract the example '%1'").arg(exampleId));
-            return false;
-        }
-        QFile::setPermissions(destination, QFile::ReadOwner | QFile::WriteOwner);
+    if (!copyTree(source, target, {})) {
+        setLastError(QStringLiteral("cannot extract the example '%1'").arg(exampleId));
+        return false;
     }
     return open(target, exampleId);
 }
@@ -320,6 +314,39 @@ bool Session::open(const QString& directory, const QString& example) {
         edi::Project project = edi::load_project(directory.toStdString(), [&warnings](const std::string& message) {
             warnings.append(QString::fromStdString(message));
         });
+        opened = new ProjectViewModel(std::move(project), this);
+    } catch (const std::exception& refusal) {
+        setLastError(QString::fromUtf8(refusal.what()));  // the open project stays as it was
+        return false;
+    }
+    replaceProject(opened, warnings, example);
+    return true;
+}
+
+bool Session::openCopy(const QString& source, const QString& target, const QString& example) {
+    QStringList warnings;
+    ProjectViewModel* opened = nullptr;
+    try {
+        edi::Project project = edi::load_project(source.toStdString(), [&warnings](const std::string& message) {
+            warnings.append(QString::fromStdString(message));
+        });
+        QString data;
+        if (project.sequential_fit.declared()) {
+            try {
+                data = QString::fromStdString(edi::scan_datasets(project).directory);
+            } catch (const std::exception&) {
+                data.clear();  // no scan directory to read in place: the copy holds what there is
+            }
+        }
+        QDir(target).removeRecursively();
+        if (!copyTree(source, target, data)) {
+            throw std::runtime_error("cannot make a temporary copy of " + source.toStdString());
+        }
+        project.path = target.toStdString();
+        project.metadata.path = project.path;
+        if (!data.isEmpty()) {
+            project.scan_data_root = source.toStdString();
+        }
         opened = new ProjectViewModel(std::move(project), this);
     } catch (const std::exception& refusal) {
         setLastError(QString::fromUtf8(refusal.what()));  // the open project stays as it was
