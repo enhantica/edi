@@ -40,9 +40,6 @@ Column {
                 text: qsTr("label")
             }
             EaComponents.TableViewLabel {
-                width: AppSizes.atomIconColumnWidth
-            }
-            EaComponents.TableViewLabel {
                 width: group.typeWidth
                 text: qsTr("type")
             }
@@ -94,15 +91,6 @@ Column {
                 value: row.label
                 onCommitted: text => group.sites.setText(row.index, "label", text)
             }
-            // The site's atom icon in its element's colour, next to its type, as the Analysis page's parameter
-            // names carry it (the owner, 2026-10-03 and 2026-10-06).
-            IconCell {
-                objectName: `atomSite.icon.${row.index}`
-                width: AppSizes.atomIconColumnWidth
-                icon: row.fractX ? row.fractX.categoryIcon : ""
-                iconColor: AppColors.element(row.typeSymbol)
-                toolTip: row.typeSymbol
-            }
             // The type picked from the element table or typed into the list's search field (the owner,
             // 2026-10-06); a type outside the table, as a file may declare it ("Co2+", "157Gd"), is shown as it is.
             SearchableComboBox {
@@ -115,6 +103,26 @@ Column {
                 currentIndex: ApplicationInfo.elementSymbols.indexOf(row.typeSymbol)
                 displayText: row.typeSymbol
                 popup.width: Math.max(width, EaStyle.Sizes.fontPixelSize * 8)
+                // The site's atom icon in its element's colour just before the type, as the Analysis page's parameter
+                // names carry it (the owner, 2026-10-03 and 2026-10-06).
+                contentItem: Item {
+                    clip: true
+
+                    IconLine {
+                        objectName: `atomSite.icon.${row.index}`
+                        x: EaStyle.Sizes.fontPixelSize * 0.5
+                        anchors.verticalCenter: parent.verticalCenter
+                        segments: [
+                            {
+                                "icon": row.fractX ? row.fractX.categoryIcon : "",
+                                "color": AppColors.element(row.typeSymbol)
+                            },
+                            {
+                                "text": row.typeSymbol
+                            }
+                        ]
+                    }
+                }
                 onActivated: index => {
                     group.sites.setText(row.index, "typeSymbol", textAt(index));
                     currentIndex = Qt.binding(() => ApplicationInfo.elementSymbols.indexOf(row.typeSymbol));
