@@ -226,6 +226,21 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"t16-68-single-fit-on-dataset",
                       {"mainArea.analysis.tab.fitting", "reveal:fitting.start", "fitting.start", "wait-fit"}});
     steps_.push_back({"t16-69-template-dataset", {"choose:OK", experiment, basic, "show:experiments.list:161"}});
+    // The scan's buttons follow its fits (owner, 2026-10-06): all fitted, Start fitting is disabled and Reset fits
+    // enabled; Reset clears them (Start again); a stop leaves Continue. The Evolution chart zooms to a dragged box
+    // and resets with a right click; the Project page shortens a long dataset list.
+    steps_.push_back({"t16-70-scan-all-fitted", QStringList{"resize:1280x960"} + start
+                                                    + open_example("pd-neut-cwl_cosio-d20_scan-162f")
+                                                    + QStringList{analysis, basic, "reveal:fitting.start", "fitting.start",
+                                                                  "wait-fit", "choose:OK"}});
+    steps_.push_back({"t16-71-scan-reset", {"fitting.reset"}});
+    steps_.push_back({"t16-72-scan-stopped-continue", {"fitting.start", "wait-files:40", "fitting.start", "wait-fit",
+                                                        "choose:OK"}});
+    steps_.push_back({"t16-73-evolution-zoomed", {"fitting.start", "wait-fit", "choose:OK",
+                                                   "mainArea.analysis.tab.evolution",
+                                                   "drag:evolution.pointer:0.2,0.1,0.6,0.9"}});
+    steps_.push_back({"t16-74-evolution-reset", {"right-click:evolution.pointer"}});
+    steps_.push_back({"t16-75-project-names", {"appBar.tab.project"}});
     steps_.push_back({"t16-40-created-saved-reopened",
                       QStringList{"resize:1280x768"} + start + open_example("pd-xray-cwl_lif") + QStringList{experiment, basic, "expand:group.experiments",
                       "experiments.create", "save-as:created", "open-project:created", experiment, "mainArea.blocks.box",
@@ -434,6 +449,31 @@ bool DemoDriver::perform(const QString& action) {
                      .arg(steps_[current_].image, action, session ? session->lastError() : QStringLiteral("no session")));
             return false;
         }
+        return true;
+    }
+    if (action.startsWith(QLatin1String("drag:")) || action.startsWith(QLatin1String("right-click:"))) {
+        // drag:<name>:<x0>,<y0>,<x1>,<y1> drags the left button across the item, at fractions of its size;
+        // right-click:<name> clicks its centre with the right button.
+        const bool drag = action.startsWith(QLatin1String("drag:"));
+        const QStringList parts = action.mid(drag ? 5 : 12).split(QLatin1Char(':'));
+        QQuickItem* item = find(parts.value(0), true);
+        const QStringList at = parts.value(1, QStringLiteral("0.5,0.5,0.5,0.5")).split(QLatin1Char(','));
+        if (item == nullptr || at.size() != 4) {
+            fail(QStringLiteral("step %1: cannot %2").arg(steps_[current_].image, action));
+            return false;
+        }
+        const auto point = [item, &at](int i) {
+            return item->mapToScene(QPointF(at[i].toDouble() * item->width(), at[i + 1].toDouble() * item->height()));
+        };
+        const Qt::MouseButton button = drag ? Qt::LeftButton : Qt::RightButton;
+        const QPointF from = point(0), to = drag ? point(2) : point(0);
+        QMouseEvent press(QEvent::MouseButtonPress, from, window_.mapToGlobal(from), button, button, Qt::NoModifier);
+        QCoreApplication::sendEvent(&window_, &press);
+        QMouseEvent move(QEvent::MouseMove, to, window_.mapToGlobal(to), Qt::NoButton, button, Qt::NoModifier);
+        QCoreApplication::sendEvent(&window_, &move);
+        QMouseEvent release(QEvent::MouseButtonRelease, to, window_.mapToGlobal(to), button, Qt::NoButton,
+                            Qt::NoModifier);
+        QCoreApplication::sendEvent(&window_, &release);
         return true;
     }
     if (action.startsWith(QLatin1String("expand:"))) {
