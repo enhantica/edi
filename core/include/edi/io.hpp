@@ -2,6 +2,7 @@
 #ifndef EDI_IO_HPP
 #define EDI_IO_HPP
 
+#include <array>
 #include <cstdint>
 #include <functional>
 #include <optional>
@@ -106,6 +107,9 @@ struct SpaceGroupSettingName {
 };
 // Every setting crysta resolves, by IT number and then in its table's order.
 std::vector<SpaceGroupSettingName> space_group_settings();
+// The rotations of a space-group setting's operations in fractional coordinates (row-major), by operation id
+// - 1, as crysta numbers them; throws what crysta's resolver throws for an unknown setting.
+std::vector<std::array<int, 9>> space_group_rotations(const SpaceGroup& space_group);
 
 // Write a Project back out as a `.edi` project directory (inverse of load_project: structures,
 // experiments, analysis). Each bank's embedded `_data` loop is written back IFF present, so

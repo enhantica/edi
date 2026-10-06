@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // ADR-0022: the structure scene. See edi/structure_scene.hpp for the contract. Every position, bond end and
 // bond distance is crysta's value, carried bit for bit; the only arithmetic on crysta's numbers is the
-// cell's corners, the drawn radius, the shares of a shared site and the home frame.
+// cell's corners, the drawn radius, the shares of a shared site, the home frame and, in the ADP view, each
+// site's displacement turned onto its copies (a draft; crysta is to carry it per row).
 
 #include "edi/structure_scene.hpp"
+
+#include "edi/io.hpp"
 
 #include <algorithm>
 #include <charconv>
@@ -285,6 +288,113 @@ std::array<double, 4> rotation_from_y(const Vec3& v) {
     return {w, axis.x * s, axis.y * s, axis.z * s};
 }
 
+// ---- displacement ellipsoids --------------------------------------------------------------------------
+
+using Matrix3 = std::array<double, 9>;  // row-major
+
+Matrix3 product(const Matrix3& a, const Matrix3& b) {
+    Matrix3 out{};
+    for (int i = 0; i != 3; ++i) {
+        for (int j = 0; j != 3; ++j) {
+            for (int k = 0; k != 3; ++k) {
+                out[3 * i + j] += a[3 * i + k] * b[3 * k + j];
+            }
+        }
+    }
+    return out;
+}
+
+Matrix3 transposed(const Matrix3& a) {
+    return {a[0], a[3], a[6], a[1], a[4], a[7], a[2], a[5], a[8]};
+}
+
+Matrix3 inverted(const Matrix3& m) {
+    const double det = m[0] * (m[4] * m[8] - m[5] * m[7]) - m[1] * (m[3] * m[8] - m[5] * m[6]) +
+                       m[2] * (m[3] * m[7] - m[4] * m[6]);
+    Matrix3 out{};
+    for (int i = 0; i != 3; ++i) {
+        for (int j = 0; j != 3; ++j) {
+            const int r1 = (j + 1) % 3, r2 = (j + 2) % 3, c1 = (i + 1) % 3, c2 = (i + 2) % 3;
+            out[3 * i + j] = (m[3 * r1 + c1] * m[3 * r2 + c2] - m[3 * r1 + c2] * m[3 * r2 + c1]) / det;
+        }
+    }
+    return out;
+}
+
+// The radius, in units of the RMS displacement, that holds `probability` of a three-dimensional Gaussian: the
+// chi distribution's quantile for three degrees of freedom (ORTEP's scale; 1.5382 at 0.5, 3.3682 at 0.99).
+double probability_scale(double probability) {
+    const auto cdf = [](double r) {
+        return std::erf(r / std::numbers::sqrt2) - std::sqrt(2.0 / std::numbers::pi) * r * std::exp(-r * r / 2.0);
+    };
+    double low = 0.0, high = 10.0;
+    for (int i = 0; i != 100; ++i) {
+        const double middle = (low + high) / 2.0;
+        (cdf(middle) < probability ? low : high) = middle;
+    }
+    return (low + high) / 2.0;
+}
+
+// A symmetric matrix's eigenvalues and eigenvectors (the columns of `vectors`), by Jacobi rotations.
+void eigen_symmetric(Matrix3 a, std::array<double, 3>& values, Matrix3& vectors) {
+    vectors = {1, 0, 0, 0, 1, 0, 0, 0, 1};
+    for (int sweep = 0; sweep != 50; ++sweep) {
+        const double off = a[1] * a[1] + a[2] * a[2] + a[5] * a[5];
+        if (off < 1e-30) {
+            break;
+        }
+        for (const auto& [p, q] : {std::pair{0, 1}, std::pair{0, 2}, std::pair{1, 2}}) {
+            const double apq = a[3 * p + q];
+            if (std::abs(apq) < 1e-300) {
+                continue;
+            }
+            const double theta = (a[3 * q + q] - a[3 * p + p]) / (2.0 * apq);
+            const double t = (theta >= 0.0 ? 1.0 : -1.0) / (std::abs(theta) + std::sqrt(theta * theta + 1.0));
+            const double c = 1.0 / std::sqrt(t * t + 1.0), sn = t * c;
+            Matrix3 rotation{1, 0, 0, 0, 1, 0, 0, 0, 1};
+            rotation[3 * p + p] = c;
+            rotation[3 * q + q] = c;
+            rotation[3 * p + q] = sn;
+            rotation[3 * q + p] = -sn;
+            a = product(transposed(rotation), product(a, rotation));
+            vectors = product(vectors, rotation);
+        }
+    }
+    values = {a[0], a[4], a[8]};
+}
+
+// The unit quaternion (w, x, y, z) of a proper rotation matrix.
+std::array<double, 4> quaternion_of(const Matrix3& m) {
+    const double trace = m[0] + m[4] + m[8];
+    std::array<double, 4> q{};
+    if (trace > 0.0) {
+        const double s = 2.0 * std::sqrt(trace + 1.0);
+        q = {s / 4.0, (m[7] - m[5]) / s, (m[2] - m[6]) / s, (m[3] - m[1]) / s};
+    } else if (m[0] > m[4] && m[0] > m[8]) {
+        const double s = 2.0 * std::sqrt(1.0 + m[0] - m[4] - m[8]);
+        q = {(m[7] - m[5]) / s, s / 4.0, (m[1] + m[3]) / s, (m[2] + m[6]) / s};
+    } else if (m[4] > m[8]) {
+        const double s = 2.0 * std::sqrt(1.0 + m[4] - m[0] - m[8]);
+        q = {(m[2] - m[6]) / s, (m[1] + m[3]) / s, s / 4.0, (m[5] + m[7]) / s};
+    } else {
+        const double s = 2.0 * std::sqrt(1.0 + m[8] - m[0] - m[4]);
+        q = {(m[3] - m[1]) / s, (m[2] + m[6]) / s, (m[5] + m[7]) / s, s / 4.0};
+    }
+    const double length = std::sqrt(q[0] * q[0] + q[1] * q[1] + q[2] * q[2] + q[3] * q[3]);
+    for (double& component : q) {
+        component /= length;
+    }
+    return q;
+}
+
+// The symmetry operation id an expanded row's `site_symmetry` code `n_klm` names; 0 when it names none.
+std::size_t operation_id(const std::string& code) {
+    std::size_t id = 0;
+    const char* end = code.data() + code.size();
+    const auto [stop, error] = std::from_chars(code.data(), end, id);
+    return error == std::errc() && stop != code.data() ? id : 0;
+}
+
 SceneInstance segment_instance(const Vec3& start, const Vec3& end, double radius, const Rgb& color) {
     SceneInstance instance;
     const Vec3 along = sub(end, start);
@@ -365,6 +475,8 @@ ElementRadius element_radius(std::string_view element, AtomView view) {
             return {style->van_der_waals, false};
         case AtomView::Ionic:
             return style->ionic ? ElementRadius{*style->ionic, false} : ElementRadius{style->covalent, true};
+        case AtomView::Adp:
+            return {style->covalent, false};  // a site with no displacement, and a shared site's slices
     }
     return {style->covalent, false};
 }
@@ -374,6 +486,9 @@ SceneSource capture_scene(const Structure& structure) {
     source.structure_id = structure.name.value();
     for (const auto& site : structure.atom_sites) {
         source.site_types.emplace_back(site->id.value(), site->type_symbol.value());
+        // The stored ADP is Biso: U = B / (8 pi^2).
+        source.site_adps.push_back({site->id.value(), site->adp_iso.value / (8.0 * std::numbers::pi * std::numbers::pi),
+                                    std::nullopt});
     }
     if (!structure.geometry_current()) {
         return source;  // I11: no column of a geometry that no longer describes the structure
@@ -395,6 +510,11 @@ SceneSource capture_scene(const Structure& structure) {
     source.bond_site_2 = geometry.geom_bond.expanded_atom_site_id_2.buffer();
     source.bond_distance = geometry.geom_bond.distance.buffer();
     source.cartn_matrix = geometry.atom_sites_cartn_transform.matrix;
+    try {
+        source.operation_rotations = space_group_rotations(structure.space_group);
+    } catch (const std::exception&) {
+        source.operation_rotations.clear();  // no operation: an anisotropic site is drawn at its own orientation
+    }
     return source;
 }
 
@@ -441,6 +561,11 @@ StructureScene present_structure(const SceneSource& source, const SceneOptions& 
         scene.atoms[found->second].parts.push_back(std::move(part));
     }
 
+    std::unordered_map<std::string, const SceneSource::SiteAdp*> adp_of_site;
+    for (const SceneSource::SiteAdp& adp : source.site_adps) {
+        adp_of_site.emplace(adp.site_id, &adp);
+    }
+    const double probability = options.atom_view == AtomView::Adp ? probability_scale(options.adp_probability) : 0.0;
     std::vector<std::string> substituted;
     for (SceneAtom& atom : scene.atoms) {
         // I5: relative shares; a zero sum gives equal shares; one part is whole.
@@ -469,6 +594,41 @@ StructureScene present_structure(const SceneSource& source, const SceneOptions& 
         atom.table_radius = radius.radius;
         atom.radius_substituted = radius.substituted;
         atom.radius = options.atom_scale * std::sqrt(radius.radius);
+        if (options.atom_view == AtomView::Adp && parts == 1) {
+            const ScenePart& part = atom.parts[atom.major];
+            const auto adp = adp_of_site.find(part.site_id);
+            if (adp != adp_of_site.end() && adp->second->u_cartn.has_value()) {
+                // The site's tensor turned onto this copy by its operation's Cartesian rotation A R A^-1.
+                Matrix3 u = *adp->second->u_cartn;
+                const std::size_t id = operation_id(column_value(source.site_symmetry, part.row, std::string()));
+                if (id >= 1 && id <= source.operation_rotations.size()) {
+                    const std::array<int, 9>& r = source.operation_rotations[id - 1];
+                    const Matrix3 fractional{double(r[0]), double(r[1]), double(r[2]), double(r[3]), double(r[4]),
+                                             double(r[5]), double(r[6]), double(r[7]), double(r[8])};
+                    const Matrix3 turn = product(source.cartn_matrix, product(fractional, inverted(source.cartn_matrix)));
+                    u = product(turn, product(u, transposed(turn)));
+                }
+                std::array<double, 3> values{};
+                Matrix3 vectors{};
+                eigen_symmetric(u, values, vectors);
+                const double det = vectors[0] * (vectors[4] * vectors[8] - vectors[5] * vectors[7]) -
+                                   vectors[1] * (vectors[3] * vectors[8] - vectors[5] * vectors[6]) +
+                                   vectors[2] * (vectors[3] * vectors[7] - vectors[4] * vectors[6]);
+                if (det < 0.0) {  // a proper rotation: flip the third axis
+                    vectors[2] = -vectors[2];
+                    vectors[5] = -vectors[5];
+                    vectors[8] = -vectors[8];
+                }
+                atom.ellipsoid = true;
+                atom.semi_axes = {probability * std::sqrt(std::max(values[0], 0.0)),
+                                  probability * std::sqrt(std::max(values[1], 0.0)),
+                                  probability * std::sqrt(std::max(values[2], 0.0))};
+                atom.orientation = quaternion_of(vectors);
+                atom.radius = std::max({atom.semi_axes.x, atom.semi_axes.y, atom.semi_axes.z});
+            } else if (adp != adp_of_site.end() && adp->second->u_iso > 0.0) {
+                atom.radius = probability * std::sqrt(adp->second->u_iso);
+            }
+        }
         if (radius.substituted) {
             substituted.push_back(atom.parts[atom.major].element);  // the empty element (no symbol) too, once
         }
@@ -678,7 +838,8 @@ SceneDrawing scene_drawing(const StructureScene& scene, const Viewport& viewport
         }
         SceneInstance sphere;
         sphere.position = atom.centre;
-        sphere.scale = {atom.radius, atom.radius, atom.radius};
+        sphere.scale = atom.ellipsoid ? atom.semi_axes : Vec3{atom.radius, atom.radius, atom.radius};
+        sphere.rotation = atom.orientation;
         sphere.color = atom.parts[atom.major].color;
         sphere.atom = i;
         drawing.spheres.push_back(sphere);

@@ -226,7 +226,7 @@ inline std::vector<Category> experiment_categories(ExperimentBase& experiment) {
     return categories;
 }
 
-// A structure's categories in page order (§2b (ii)); ADP columns belong to atom_site (§15.6).
+// A structure's categories in page order (§2b (ii)).
 inline std::vector<Category> structure_categories(Structure& structure) {
     std::vector<Category> categories;
     categories.push_back({"space_group"});
@@ -255,6 +255,9 @@ inline std::vector<Category> structure_categories(Structure& structure) {
         }
     }
     categories.push_back(sites);
+    // The sites' displacement, a loop of its own (diffraction-lib's atom_site_aniso): its isotropic value is
+    // atom_site's adp_iso, listed there.
+    categories.push_back({"atom_site_aniso", true, structure.atom_sites.size()});
     categories.push_back({"scattering_length", true, structure.scattering_lengths_fm.size()});
     detail::mark_dependents(categories);
     return categories;

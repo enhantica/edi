@@ -3490,6 +3490,16 @@ std::vector<SpaceGroupSettingName> space_group_settings() {
     return settings;
 }
 
+std::vector<std::array<int, 9>> space_group_rotations(const SpaceGroup& space_group) {
+    Structure structure;
+    structure.space_group = space_group;
+    std::vector<std::array<int, 9>> rotations;
+    for (const crysta::SymmetryOperation& operation : crysta::symmetry_operations(resolve_group(structure))) {
+        rotations.push_back(operation.rotation);
+    }
+    return rotations;
+}
+
 // The engine owns the policy; edi forwards through the one TU allowed to hold a crysta
 // call (ADR-0003). See edi/threading.hpp for the contract.
 void apply_engine_thread_defaults() noexcept { crysta::threading::apply_process_thread_defaults(); }

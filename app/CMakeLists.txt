@@ -41,6 +41,7 @@ qt_add_qml_module(edi_app_module
         src/option_list_model.hpp src/option_list_model.cpp
         src/block_text.hpp src/block_text.cpp
         src/category_list_model.hpp src/category_list_model.cpp
+        src/adp_preview.hpp src/adp_preview.cpp
         src/structure_view_model.hpp src/structure_view_model.cpp
         src/structure_view_options.hpp src/structure_view_options.cpp
         src/structure_instances.hpp src/structure_instances.cpp
@@ -137,6 +138,7 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Report/ExportSummaryGroup.qml
         qml/Pages/Report/ReportPage.qml
         qml/Pages/Structure/AppearanceGroup.qml
+        qml/Pages/Structure/AtomSiteAdpGroup.qml
         qml/Pages/Structure/AtomSitesGroup.qml
         qml/Pages/Structure/CellGroup.qml
         qml/Pages/Structure/ScatteringLengthsGroup.qml

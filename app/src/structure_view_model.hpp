@@ -7,6 +7,9 @@
 #include <QStringList>
 #include <QtQml/qqmlregistration.h>
 
+#include <map>
+
+#include "adp_preview.hpp"
 #include "block_text.hpp"
 #include "category_list_model.hpp"
 #include "edi/model.hpp"
@@ -130,6 +133,45 @@ class AtomSiteListModel : public RowTableModel {
     ParameterRegistry& registry_;
 };
 
+// The Atomic displacement group (the owner, 2026-10-06): one row per atom site, in the sites' order — its label,
+// ADP type, isotropic value and the six anisotropic components. Biso is the stored, calculated type; the others are
+// the draft's previews (adp_preview.hpp), shown with `active` false. For an isotropic type `iso` is editable and the
+// six are empty; for an anisotropic type the six are editable and `iso` is the equivalent value, read only.
+class AtomSiteAdpListModel : public RowTableModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to a structure")
+    // The types the group offers, in diffraction-lib's AdpTypeEnum order as the owner listed them.
+    Q_PROPERTY(QStringList types READ types CONSTANT)
+    // Some site has a type the calculation does not use yet.
+    Q_PROPERTY(bool hasPreview READ hasPreview NOTIFY hasPreviewChanged)
+
+   public:
+    AtomSiteAdpListModel(edi::Structure& structure, ProjectEditor& editor, ParameterRegistry& registry,
+                         std::map<const edi::AtomSite*, AdpPreview>& previews, QObject* parent);
+    QStringList types() const;
+    bool hasPreview() const { return has_preview_; }
+    void sync();
+    Q_INVOKABLE void setType(int row, const QString& type);
+    // The isotropic value in the row's type (B for Biso, U for Uiso).
+    Q_INVOKABLE void setIso(int row, double value);
+    // One anisotropic component, 0 to 5 in the order 11, 22, 33, 12, 13, 23.
+    Q_INVOKABLE void setComponent(int row, int component, double value);
+
+   signals:
+    void hasPreviewChanged();
+    // A preview changed: the structure view redraws its ellipsoids.
+    void previewsChanged();
+
+   private:
+    AdpCell cell() const;
+    edi::Structure& structure_;
+    ProjectEditor& editor_;
+    ParameterRegistry& registry_;
+    std::map<const edi::AtomSite*, AdpPreview>& previews_;
+    bool has_preview_ = false;
+};
+
 // The structure's custom neutron scattering lengths.
 class ScatteringLengthListModel : public RowTableModel {
     Q_OBJECT
@@ -166,6 +208,7 @@ class StructureViewModel : public QObject {
     Q_PROPERTY(edi_app::SpaceGroupViewModel* spaceGroup READ spaceGroup CONSTANT)
     Q_PROPERTY(edi_app::CellViewModel* cell READ cell CONSTANT)
     Q_PROPERTY(edi_app::AtomSiteListModel* atomSites READ atomSites CONSTANT)
+    Q_PROPERTY(edi_app::AtomSiteAdpListModel* atomSiteAdps READ atomSiteAdps CONSTANT)
     Q_PROPERTY(edi_app::ScatteringLengthListModel* scatteringLengths READ scatteringLengths CONSTANT)
     Q_PROPERTY(edi_app::CategoryListModel* categories READ categories CONSTANT)
     Q_PROPERTY(edi_app::BlockText* text READ text CONSTANT)
@@ -178,6 +221,9 @@ class StructureViewModel : public QObject {
     SpaceGroupViewModel* spaceGroup() const { return space_group_; }
     CellViewModel* cell() const { return cell_; }
     AtomSiteListModel* atomSites() const { return atom_sites_; }
+    AtomSiteAdpListModel* atomSiteAdps() const { return atom_site_adps_; }
+    // The draft's ADP previews by site (adp_preview.hpp); the structure view draws ellipsoids from them.
+    const std::map<const edi::AtomSite*, AdpPreview>& adpPreviews() const { return adp_previews_; }
     ScatteringLengthListModel* scatteringLengths() const { return scattering_lengths_; }
     CategoryListModel* categories() const { return categories_; }
     BlockText* text() const { return text_; }
@@ -188,6 +234,8 @@ class StructureViewModel : public QObject {
     // stales the geometry and its publication, the source is marked not current.
     const edi::SceneSource& sceneSource() const { return scene_source_; }
     void captureScene();
+    // The draft's anisotropic previews into the captured source, for the ADP view's ellipsoids.
+    void applyAdpPreviews();
     void markSceneStale();
 
    signals:
@@ -200,9 +248,11 @@ class StructureViewModel : public QObject {
     edi::SceneSource scene_source_;
     ProjectEditor& editor_;
     QString name_;
+    std::map<const edi::AtomSite*, AdpPreview> adp_previews_;
     SpaceGroupViewModel* space_group_;
     CellViewModel* cell_;
     AtomSiteListModel* atom_sites_;
+    AtomSiteAdpListModel* atom_site_adps_;
     ScatteringLengthListModel* scattering_lengths_;
     CategoryListModel* categories_;
     BlockText* text_;
