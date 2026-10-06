@@ -218,12 +218,12 @@ TEST_CASE("E04-T10 gate 1 every CLI scene equals independently loaded crysta geo
         INFO(path);
         auto reference = crysta::load_project(path);
         auto live = edi::load_project(path);
-        REQUIRE_MESSAGE(live.structures.size() == 1,
+        REQUIRE_MESSAGE(live.structures.size() == reference.structures.size(),
                         " gate 1 every loaded structure has a reference");
         for (std::size_t si = 0; si < live.structures.size(); ++si) {
             auto& s = *live.structures[si];
             s.current_geometry();
-            const auto& g = crysta::current(reference.structure());
+            const auto& g = crysta::current(reference.structures.at(si));
             const auto& rows = g.expanded_atom_sites;
             const auto capture = edi::capture_scene(s);
             const auto scene = edi::present_structure(capture, {});
@@ -293,7 +293,7 @@ TEST_CASE("E04-T10 gate 1 every CLI scene equals independently loaded crysta geo
                                                                     : rows.occupancy[rr] / total),
                         " I5 independent relative occupancy or equal zero-total share reaches "
                         "every part");
-                    const auto& refsites = reference.structure().atom_sites;
+                    const auto& refsites = reference.structures.at(si).atom_sites;
                     auto site = std::find_if(refsites.begin(), refsites.end(), [&](const auto& q) {
                         return q.site_id == rows.atom_site_id[rr];
                     });

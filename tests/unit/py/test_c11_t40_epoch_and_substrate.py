@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import math
 from pathlib import Path
 from typing import Any
 
@@ -247,7 +246,7 @@ def test_c11_t40_validator_fires_at_python_factory_and_file_boundaries(
         pytest.param(
             'u',
             [('_atom_site_U_iso_or_equiv', '0.005')],
-            8.0 * math.pi**2 * 0.005,
+            0.005,
             0.0,
             id='u',
         ),
@@ -263,7 +262,7 @@ def test_c11_t40_validator_fires_at_python_factory_and_file_boundaries(
         ),
     ],
 )
-def test_c11_t40_cif_adp_spellings_convert_and_prefer_b(
+def test_c11_t40_cif_adp_spellings_preserve_type_and_prefer_b(
     tmp_path: Path,
     method_name: str,
     name: str,
@@ -275,12 +274,16 @@ def test_c11_t40_cif_adp_spellings_convert_and_prefer_b(
     path = tmp_path / f'{name}.cif'
     path.write_text(text, encoding='utf-8')
     source = text if method_name == 'from_cif_str' else path
-    parameter = getattr(edi.StructureFactory, method_name)(source).atom_sites[0].adp_iso
+    site = getattr(edi.StructureFactory, method_name)(source).atom_sites[0]
+    assert site.adp_type == ('Uiso' if name == 'u' else 'Biso'), (
+        'ADR-0080 each imported CIF convention must retain its declared ADP type'
+    )
+    parameter = site.adp_iso
     assert parameter.value == pytest.approx(expected_value, abs=1.0e-12), (
-        'CIF B/U spelling must follow diffraction-lib conversion semantics',
+        'ADR-0080 CIF B/U spelling must preserve its input convention',
         name,
     )
     assert parameter.uncertainty == pytest.approx(expected_uncertainty, abs=1.0e-12), (
-        'CIF standard uncertainty must survive the B/U conversion',
+        'CIF standard uncertainty must survive its preserved convention',
         name,
     )
