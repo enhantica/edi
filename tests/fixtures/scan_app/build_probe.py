@@ -99,14 +99,14 @@ def snapshot(root, build, fixture):
     return source, hashes
 
 
-def observe_fit(library, build, wrapper_names, optimizer, objcopy):
+def observe_entry(library, build, symbol, replacement, destination, objcopy):
     members = subprocess.check_output(['llvm-ar', 't', str(library)], text=True).splitlines()
     definitions = subprocess.check_output(
         ['llvm-nm', '-A', '--defined-only', str(library)], text=True
     ).splitlines()
-    found = [line for line in definitions if line.split()[-1:] == [optimizer]]
+    found = [line for line in definitions if line.split()[-1:] == [symbol]]
     if len(found) != 1:
-        raise RuntimeError('Fit identity actor must reach one compiled native entry definition')
+        raise RuntimeError('Native actor must reach one compiled public entry definition')
     member = [
         name
         for name in members
@@ -115,12 +115,11 @@ def observe_fit(library, build, wrapper_names, optimizer, objcopy):
         )
     ]
     if len(member) != 1:
-        raise RuntimeError('Fit identity actor must bind its actual archive member')
-    fit_object = build / 'observed_fit.o'
+        raise RuntimeError('Native actor must bind its actual archive member')
+    fit_object = build / destination
     with fit_object.open('wb') as output:
         run(['llvm-ar', 'p', str(library), member[0]], stdout=output)
-    real_fit = next(name for name in wrapper_names if 'scan_contract_real_fit' in name)
-    run([objcopy, '--redefine-sym=' + optimizer + '=' + real_fit, str(fit_object)])
+    run([objcopy, '--redefine-sym=' + symbol + '=' + replacement, str(fit_object)])
     return fit_object
 
 
@@ -167,7 +166,7 @@ def observed_object(sdk, build, fixture):
         raise RuntimeError('Scan execution: compiled native boundaries must resolve uniquely')
     real = next(name for name in wrapper_names if 'scan_contract_real_sequential' in name)
     reader = [
-        name for name in names if 'read_sequential_scan_data' in name and name in wrapper_names
+        name for name in wrapper_names if 'read_sequential_scan_data' in name
     ]
     if len(reader) != 1:
         raise RuntimeError('Pending-selection actor must reach the compiled public dataset reader')
@@ -180,10 +179,16 @@ def observed_object(sdk, build, fixture):
         objcopy,
         '--redefine-sym=' + driver[0] + '=' + real,
         '--redefine-sym=' + optimizer[0] + '=' + entry,
-        '--redefine-sym=' + reader[0] + '=' + real_reader,
         str(native_object),
     ])
-    return native_object, observe_fit(library, build, wrapper_names, optimizer[0], objcopy)
+    real_fit = next(name for name in wrapper_names if 'scan_contract_real_fit' in name)
+    fit_object = observe_entry(
+        library, build, optimizer[0], real_fit, 'observed_fit.o', objcopy
+    )
+    reader_object = observe_entry(
+        library, build, reader[0], real_reader, 'observed_reader.o', objcopy
+    )
+    return native_object, fit_object, reader_object
 
 
 def main():
@@ -199,7 +204,7 @@ def main():
     build = args.build.resolve()
     fixture = Path(__file__).resolve().parent
     source, hashes = snapshot(root, build, fixture)
-    native_object, fit_object = observed_object(args.sdk, build, fixture)
+    native_object, fit_object, reader_object = observed_object(args.sdk, build, fixture)
     command = [
         'cmake',
         '-S',
@@ -212,6 +217,7 @@ def main():
         '-DEDI_BUILD_BINDINGS=OFF',
         '-DSCAN_CONTRACT_NATIVE_OBJECT=' + str(native_object),
         '-DSCAN_CONTRACT_NATIVE_FIT_OBJECT=' + str(fit_object),
+        '-DSCAN_CONTRACT_NATIVE_READ_OBJECT=' + str(reader_object),
         '-DCMAKE_BUILD_TYPE=Release',
         '-DCMAKE_CXX_COMPILER_LAUNCHER=ccache',
         '-DCMAKE_PREFIX_PATH=' + str(args.sdk) + ';' + os.environ['CONDA_PREFIX'],

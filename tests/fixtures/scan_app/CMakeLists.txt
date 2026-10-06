@@ -5,7 +5,7 @@ target_link_libraries(scan_app_probe PRIVATE edi_app_module edi_app_moduleplugin
 target_compile_features(scan_app_probe PRIVATE cxx_std_20)
 # Only the observer: SDK and production targets retain their declared release optimization.
 target_compile_options(scan_app_probe PRIVATE -O0)
-target_sources(scan_app_probe PRIVATE native_boundary.cpp io_faults.cpp ${SCAN_CONTRACT_NATIVE_OBJECT} ${SCAN_CONTRACT_NATIVE_FIT_OBJECT})
+target_sources(scan_app_probe PRIVATE native_boundary.cpp io_faults.cpp ${SCAN_CONTRACT_NATIVE_OBJECT} ${SCAN_CONTRACT_NATIVE_FIT_OBJECT} ${SCAN_CONTRACT_NATIVE_READ_OBJECT})
 
 add_subdirectory(reference)
 

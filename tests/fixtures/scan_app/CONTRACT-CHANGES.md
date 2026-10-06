@@ -23,6 +23,8 @@ restart of completed fits.
 | Worker completion / template-edit observation | Treated `running == false` and a synchronous parameter setter as a fully projected view. | Wait for `calculating == false` and the displayed pattern to settle after the worker has ended and after edits; capture the worker refusal so a refused Continue cannot masquerade as a completed run. The fitted dataset and optimizer work requirements remain unchanged. |
 | Scoped producer dependencies | Every execution node constructed parity, transitions and the 100000-file benchmark. | Explicit module fixtures separate projection, transitions and scale. A scale node still invokes the complete benchmark; a projection/transition replay no longer starts unrelated scale work. |
 
+| Compiled dataset reader | Assumed the public reader was defined in the scan driver archive member. | Resolve the public reader's unique definition to its actual installed archive member, preserving its compiled instructions and the delayed-read and payload identity witnesses. |
+
 New observers have live disconnected, constant or wrong-state controls. Reset and Continue still
 use the actual app/core/worker; optimizer entries bind the fitted file and measured payload.
 The scale actor remains unthrottled and its bounds remain unchanged.
