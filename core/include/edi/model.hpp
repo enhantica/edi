@@ -53,6 +53,9 @@ enum class PublishOutcome : std::uint8_t;
 namespace detail {
 
 class KeyedBase;
+// Renames every link and texture row of `project` that names the structure `from` to `to`, all or
+// none (defined after Project).
+inline void rename_structure_links(Project& project, const std::string& from, const std::string& to);
 
 // The membership record an ItemVec owns and its attached items share. Items hold it STRONGLY —
 // ADR-0013 prohibits production weak references — and the collection revokes it (owner =
@@ -1301,6 +1304,9 @@ class KeyedBase {
     // Admit renaming `key` — the id of one of this collection's items — to `next`, or throw. Returns
     // false when `key` is not stored here (a stale record): the caller renames as detached.
     virtual bool admit_rename(const ItemKey& key, const std::string& next) const = 0;
+    // Called once a rename of `key` to `next` is admitted, before it is written: renames what names
+    // the item elsewhere in its project, or throws having written nothing.
+    virtual void rename_references(const ItemKey& /*key*/, const std::string& /*next*/) const {}
     // The live project this collection belongs to, as a member or inside one of its structures or
     // experiments; null otherwise (edi ADR-0024).
     Project* host() const noexcept { return host_link_ ? host_link_->project : nullptr; }
@@ -1366,6 +1372,7 @@ class ItemKey {
 
     void rename(std::string next) {
         if (attached() && membership_->owner->admit_rename(*this, next)) {
+            membership_->owner->rename_references(*this, next);
             v() = std::move(next);
             renew();
             return;
@@ -2002,6 +2009,17 @@ class ItemVec final : public detail::KeyedBase {
             (void)key;
             (void)next;
             return false;
+        }
+    }
+    // A structure's links and texture rows name it by id, so they follow its rename.
+    void rename_references(const ItemKey& key, const std::string& next) const override {
+        if constexpr (std::is_same_v<T, Structure>) {
+            if (Project* project = host()) {
+                detail::rename_structure_links(*project, key.value(), next);
+            }
+        } else {
+            (void)key;
+            (void)next;
         }
     }
 
@@ -4200,6 +4218,34 @@ inline void link_nested(ExperimentBase& experiment, const std::shared_ptr<const 
              &experiment.background, &experiment.background_terms, &experiment.preferred_orientation,
              &experiment.linked_structures}) {
         collection->host_link_ = link;
+    }
+}
+
+inline void rename_structure_links(Project& project, const std::string& from, const std::string& to) {
+    const std::string named = KeyTraits<Structure>::canonical(from);
+    if (named == KeyTraits<Structure>::canonical(to)) {
+        return;
+    }
+    std::vector<ItemKey*> keys;
+    for (const auto& experiment : project.experiments) {
+        for (const auto& link : experiment->linked_structures) {
+            if (KeyTraits<Structure>::canonical(link->structure_id.value()) == named) {
+                keys.push_back(&link->structure_id);
+            }
+        }
+        for (const auto& row : experiment->preferred_orientation) {
+            if (KeyTraits<Structure>::canonical(row->structure_id.value()) == named) {
+                keys.push_back(&row->structure_id);
+            }
+        }
+    }
+    for (ItemKey* key : keys) {  // every one is admitted before any is written
+        if (key->owner() != nullptr) {
+            key->owner()->admit_rename(*key, to);
+        }
+    }
+    for (ItemKey* key : keys) {
+        *key = to;
     }
 }
 
