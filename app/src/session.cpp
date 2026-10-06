@@ -7,6 +7,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <algorithm>
+#include <filesystem>
 
 #include "app_info.hpp"
 #include "edi/io.hpp"
@@ -174,16 +175,23 @@ bool Session::openProject(const QUrl& directory) {
     return open(source, {});
 }
 
-bool Session::copyTree(const QString& source, const QString& target, const QString& skip) {
-    const QString skipped = skip.isEmpty() ? QString() : QDir::cleanPath(QFileInfo(skip).absoluteFilePath()) + u'/';
+bool Session::copyTree(const QString& source, const QString& target, const QString& linked) {
+    const QString shared =
+        linked.isEmpty() ? QString() : QDir::cleanPath(QFileInfo(linked).absoluteFilePath()) + u'/';
     QDirIterator files(source, QDir::Files, QDirIterator::Subdirectories);
     while (files.hasNext()) {
         const QString file = files.next();
-        if (!skipped.isEmpty() && QDir::cleanPath(QFileInfo(file).absoluteFilePath()).startsWith(skipped)) {
-            continue;
-        }
         const QString destination = target + file.mid(source.size());
         QDir().mkpath(QFileInfo(destination).absolutePath());
+        // A scan data file is only read: the copy links to it, and copies it only where linking is refused (another
+        // file system). Its permissions are the original's, so they are left alone.
+        if (!shared.isEmpty() && QDir::cleanPath(QFileInfo(file).absoluteFilePath()).startsWith(shared)) {
+            std::error_code error;
+            std::filesystem::create_hard_link(file.toStdString(), destination.toStdString(), error);
+            if (!error) {
+                continue;
+            }
+        }
         if (!QFile::copy(file, destination)) {
             return false;
         }
@@ -337,12 +345,12 @@ bool Session::openCopy(const QString& source, const QString& target, const QStri
         edi::Project project = edi::load_project(source.toStdString(), [&warnings](const std::string& message) {
             warnings.append(QString::fromStdString(message));
         });
-        QString data;
+        QString data;  // the scan data directory, linked rather than copied
         if (project.sequential_fit.declared()) {
             try {
                 data = QString::fromStdString(edi::scan_datasets(project).directory);
             } catch (const std::exception&) {
-                data.clear();  // no scan directory to read in place: the copy holds what there is
+                data.clear();  // no scan directory resolves: everything is copied
             }
         }
         QDir(target).removeRecursively();
@@ -351,9 +359,6 @@ bool Session::openCopy(const QString& source, const QString& target, const QStri
         }
         project.path = target.toStdString();
         project.metadata.path = project.path;
-        if (!data.isEmpty()) {
-            project.scan_data_root = source.toStdString();
-        }
         opened = new ProjectViewModel(std::move(project), this);
     } catch (const std::exception& refusal) {
         setLastError(QString::fromUtf8(refusal.what()));  // the open project stays as it was
