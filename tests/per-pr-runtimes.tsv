@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-06T09:49:16Z
+# measured_utc = 2026-10-06T11:29:42Z
 #
-# Recorded from: e04-t16-tests-seq9-edi4.log (46 node(s) measured once, 6522 banked, 0 stale row(s) dropped)
-# Collected tests: 7691; with a reported duration: 4427
+# Recorded from: e04-t16-tests-seq11-edi4.log (50 node(s) measured once, 6522 banked, 0 stale row(s) dropped)
+# Collected tests: 7695; with a reported duration: 4452
 # Module-scoped fixture costs recorded: 7
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 7691
+# inventory_python = 7695
 # inventory_cpp = 290
-# inventory_measured = 6544
-# inventory_unmeasured = 1437
+# inventory_measured = 6571
+# inventory_unmeasured = 1414
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_projects_open_and_populate_pages
@@ -5756,52 +5756,56 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_phase_sum
 UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_texture_is_local_to_phase_and_invariant_under_axis_sign
 UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_two_free_scales_recover_unequal_independent_contributions
 UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_two_named_phases_load_and_roundtrip
-UNMEASURED:failed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_an_externally_changed_indexed_row_never_becomes_a_template_value
-0.130	tests/system/py/test_scan_accident_paths.py::test_changing_the_iteration_limit_cannot_reclassify_a_retained_result
-UNMEASURED:failed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_continue_keeps_old_generation_marks_through_save_reopen_and_reset_undo[free]
-UNMEASURED:failed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_continue_keeps_old_generation_marks_through_save_reopen_and_reset_undo[setting]
-UNMEASURED:failed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_continue_keeps_old_generation_marks_through_save_reopen_and_reset_undo[value]
-UNMEASURED:failed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_damaged_retained_results_are_visible_and_cannot_be_replaced_by_start[csv]
-0.120	tests/system/py/test_scan_accident_paths.py::test_damaged_retained_results_are_visible_and_cannot_be_replaced_by_start[foreign-path]
-0.120	tests/system/py/test_scan_accident_paths.py::test_damaged_retained_results_are_visible_and_cannot_be_replaced_by_start[sidecar-json]
-0.130	tests/system/py/test_scan_accident_paths.py::test_damaged_retained_results_are_visible_and_cannot_be_replaced_by_start[sidecar-types]
-UNMEASURED:failed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_new_worker_rows_preserve_the_users_effective_evolution_zoom
+0.140	tests/system/py/test_scan_accident_paths.py::test_an_externally_changed_indexed_row_never_becomes_a_template_value
+0.250	tests/system/py/test_scan_accident_paths.py::test_changing_the_iteration_limit_cannot_reclassify_a_retained_result
+0.620	tests/system/py/test_scan_accident_paths.py::test_continue_keeps_old_generation_marks_through_save_reopen_and_reset_undo[free]
+0.740	tests/system/py/test_scan_accident_paths.py::test_continue_keeps_old_generation_marks_through_save_reopen_and_reset_undo[setting]
+0.650	tests/system/py/test_scan_accident_paths.py::test_continue_keeps_old_generation_marks_through_save_reopen_and_reset_undo[value]
+0.180	tests/system/py/test_scan_accident_paths.py::test_damaged_retained_results_are_visible_and_cannot_be_replaced_by_start[csv]
+0.140	tests/system/py/test_scan_accident_paths.py::test_damaged_retained_results_are_visible_and_cannot_be_replaced_by_start[foreign-path]
+0.160	tests/system/py/test_scan_accident_paths.py::test_damaged_retained_results_are_visible_and_cannot_be_replaced_by_start[sidecar-json]
+0.140	tests/system/py/test_scan_accident_paths.py::test_damaged_retained_results_are_visible_and_cannot_be_replaced_by_start[sidecar-types]
+2.540	tests/system/py/test_scan_accident_paths.py::test_evolution_rebuild_keeps_whole_range_extrema_and_original_dataset_values[20001]
+0.810	tests/system/py/test_scan_accident_paths.py::test_evolution_rebuild_keeps_whole_range_extrema_and_original_dataset_values[5000]
+1.250	tests/system/py/test_scan_accident_paths.py::test_evolution_rebuild_keeps_whole_range_extrema_and_original_dataset_values[5001]
+0.480	tests/system/py/test_scan_accident_paths.py::test_new_worker_rows_preserve_the_users_effective_evolution_zoom
 UNMEASURED:failed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_one_reset_undo_restores_the_whole_prior_fit_state
-UNMEASURED:failed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_opening_a_fitted_scan_keeps_unselected_payload_reads_lazy
-UNMEASURED:failed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_pending_dataset_actions_keep_the_fitted_file_and_newer_scientific_state[fit]
+0.210	tests/system/py/test_scan_accident_paths.py::test_opening_a_fitted_scan_keeps_unselected_payload_reads_lazy
+0.247	tests/system/py/test_scan_accident_paths.py::test_pending_dataset_actions_keep_the_fitted_file_and_newer_scientific_state[fit]
 0.160	tests/system/py/test_scan_accident_paths.py::test_pending_dataset_actions_keep_the_fitted_file_and_newer_scientific_state[free]
-0.140	tests/system/py/test_scan_accident_paths.py::test_pending_dataset_actions_keep_the_fitted_file_and_newer_scientific_state[reset]
-0.190	tests/system/py/test_scan_accident_paths.py::test_pending_dataset_actions_keep_the_fitted_file_and_newer_scientific_state[saveas]
-0.150	tests/system/py/test_scan_accident_paths.py::test_pending_dataset_actions_keep_the_fitted_file_and_newer_scientific_state[setting]
-0.150	tests/system/py/test_scan_accident_paths.py::test_pending_dataset_actions_keep_the_fitted_file_and_newer_scientific_state[undo]
-UNMEASURED:failed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_pending_dataset_actions_keep_the_fitted_file_and_newer_scientific_state[value]
-UNMEASURED:failed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_range_edit_and_save_refuse_collapsed_steps_or_preserve_every_point[collapsed-cw-core]
-UNMEASURED:failed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_range_edit_and_save_refuse_collapsed_steps_or_preserve_every_point[collapsed-cw-gui]
-UNMEASURED:failed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_range_edit_and_save_refuse_collapsed_steps_or_preserve_every_point[collapsed-tof-core]
-UNMEASURED:failed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_range_edit_and_save_refuse_collapsed_steps_or_preserve_every_point[collapsed-tof-gui]
-0.070	tests/system/py/test_scan_accident_paths.py::test_range_edit_and_save_refuse_collapsed_steps_or_preserve_every_point[ordinary-cw-core]
-0.090	tests/system/py/test_scan_accident_paths.py::test_range_edit_and_save_refuse_collapsed_steps_or_preserve_every_point[ordinary-cw-gui]
+0.160	tests/system/py/test_scan_accident_paths.py::test_pending_dataset_actions_keep_the_fitted_file_and_newer_scientific_state[reset]
+0.200	tests/system/py/test_scan_accident_paths.py::test_pending_dataset_actions_keep_the_fitted_file_and_newer_scientific_state[saveas]
+0.160	tests/system/py/test_scan_accident_paths.py::test_pending_dataset_actions_keep_the_fitted_file_and_newer_scientific_state[setting]
+0.310	tests/system/py/test_scan_accident_paths.py::test_pending_dataset_actions_keep_the_fitted_file_and_newer_scientific_state[start-scan]
+0.160	tests/system/py/test_scan_accident_paths.py::test_pending_dataset_actions_keep_the_fitted_file_and_newer_scientific_state[undo]
+0.150	tests/system/py/test_scan_accident_paths.py::test_pending_dataset_actions_keep_the_fitted_file_and_newer_scientific_state[value]
+0.080	tests/system/py/test_scan_accident_paths.py::test_range_edit_and_save_refuse_collapsed_steps_or_preserve_every_point[collapsed-cw-core]
+0.090	tests/system/py/test_scan_accident_paths.py::test_range_edit_and_save_refuse_collapsed_steps_or_preserve_every_point[collapsed-cw-gui]
+0.090	tests/system/py/test_scan_accident_paths.py::test_range_edit_and_save_refuse_collapsed_steps_or_preserve_every_point[collapsed-tof-core]
+0.110	tests/system/py/test_scan_accident_paths.py::test_range_edit_and_save_refuse_collapsed_steps_or_preserve_every_point[collapsed-tof-gui]
+0.090	tests/system/py/test_scan_accident_paths.py::test_range_edit_and_save_refuse_collapsed_steps_or_preserve_every_point[ordinary-cw-core]
+0.110	tests/system/py/test_scan_accident_paths.py::test_range_edit_and_save_refuse_collapsed_steps_or_preserve_every_point[ordinary-cw-gui]
 0.080	tests/system/py/test_scan_accident_paths.py::test_range_edit_and_save_refuse_collapsed_steps_or_preserve_every_point[ordinary-tof-core]
-0.080	tests/system/py/test_scan_accident_paths.py::test_range_edit_and_save_refuse_collapsed_steps_or_preserve_every_point[ordinary-tof-gui]
-0.400	tests/system/py/test_scan_accident_paths.py::test_real_evolution_pointer_gestures_keep_selection_and_valid_viewports[axis]
-0.410	tests/system/py/test_scan_accident_paths.py::test_real_evolution_pointer_gestures_keep_selection_and_valid_viewports[diagonal]
-UNMEASURED:failed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_real_evolution_pointer_gestures_keep_selection_and_valid_viewports[horizontal]
-1.160	tests/system/py/test_scan_accident_paths.py::test_real_evolution_pointer_gestures_keep_selection_and_valid_viewports[left]
-0.430	tests/system/py/test_scan_accident_paths.py::test_real_evolution_pointer_gestures_keep_selection_and_valid_viewports[parameter]
-UNMEASURED:failed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_real_evolution_pointer_gestures_keep_selection_and_valid_viewports[right]
-UNMEASURED:failed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_real_evolution_pointer_gestures_keep_selection_and_valid_viewports[vertical]
-0.310	tests/system/py/test_scan_accident_paths.py::test_real_evolution_pointer_gestures_keep_selection_and_valid_viewports[wheel-out]
-0.430	tests/system/py/test_scan_accident_paths.py::test_real_evolution_pointer_gestures_keep_selection_and_valid_viewports[wheel-zero]
-0.350	tests/system/py/test_scan_accident_paths.py::test_real_evolution_pointer_gestures_keep_selection_and_valid_viewports[wheel]
-UNMEASURED:failed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_reset_after_a_single_fit_clears_every_visible_and_held_result
-UNMEASURED:failed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_single_fit_undo_restores_the_scan_summary_live_and_after_reopening[reopenedUndoSingle]
-UNMEASURED:failed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_single_fit_undo_restores_the_scan_summary_live_and_after_reopening[undoSingle]
-0.290	tests/system/py/test_scan_accident_paths.py::test_storage_failure_and_failed_rollback_cannot_lose_a_prior_output[csv-reset]
-0.280	tests/system/py/test_scan_accident_paths.py::test_storage_failure_and_failed_rollback_cannot_lose_a_prior_output[csv-undo]
-UNMEASURED:failed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_storage_failure_and_failed_rollback_cannot_lose_a_prior_output[provenance-reset]
-UNMEASURED:failed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_storage_failure_and_failed_rollback_cannot_lose_a_prior_output[provenance-undo]
-UNMEASURED:failed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_storage_failure_and_failed_rollback_cannot_lose_a_prior_output[run-summary-reset]
-UNMEASURED:failed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_storage_failure_and_failed_rollback_cannot_lose_a_prior_output[run-summary-undo]
+0.100	tests/system/py/test_scan_accident_paths.py::test_range_edit_and_save_refuse_collapsed_steps_or_preserve_every_point[ordinary-tof-gui]
+0.470	tests/system/py/test_scan_accident_paths.py::test_real_evolution_pointer_gestures_keep_selection_and_valid_viewports[axis]
+0.340	tests/system/py/test_scan_accident_paths.py::test_real_evolution_pointer_gestures_keep_selection_and_valid_viewports[diagonal]
+0.310	tests/system/py/test_scan_accident_paths.py::test_real_evolution_pointer_gestures_keep_selection_and_valid_viewports[horizontal]
+0.400	tests/system/py/test_scan_accident_paths.py::test_real_evolution_pointer_gestures_keep_selection_and_valid_viewports[left]
+0.360	tests/system/py/test_scan_accident_paths.py::test_real_evolution_pointer_gestures_keep_selection_and_valid_viewports[parameter]
+0.320	tests/system/py/test_scan_accident_paths.py::test_real_evolution_pointer_gestures_keep_selection_and_valid_viewports[right]
+0.310	tests/system/py/test_scan_accident_paths.py::test_real_evolution_pointer_gestures_keep_selection_and_valid_viewports[vertical]
+0.320	tests/system/py/test_scan_accident_paths.py::test_real_evolution_pointer_gestures_keep_selection_and_valid_viewports[wheel-out]
+0.310	tests/system/py/test_scan_accident_paths.py::test_real_evolution_pointer_gestures_keep_selection_and_valid_viewports[wheel-zero]
+0.360	tests/system/py/test_scan_accident_paths.py::test_real_evolution_pointer_gestures_keep_selection_and_valid_viewports[wheel]
+0.750	tests/system/py/test_scan_accident_paths.py::test_reset_after_a_single_fit_clears_every_visible_and_held_result
+0.000	tests/system/py/test_scan_accident_paths.py::test_single_fit_undo_restores_the_scan_summary_live_and_after_reopening[reopenedUndoSingle]
+0.000	tests/system/py/test_scan_accident_paths.py::test_single_fit_undo_restores_the_scan_summary_live_and_after_reopening[undoSingle]
+0.340	tests/system/py/test_scan_accident_paths.py::test_storage_failure_and_failed_rollback_cannot_lose_a_prior_output[csv-reset]
+0.320	tests/system/py/test_scan_accident_paths.py::test_storage_failure_and_failed_rollback_cannot_lose_a_prior_output[csv-undo]
+0.320	tests/system/py/test_scan_accident_paths.py::test_storage_failure_and_failed_rollback_cannot_lose_a_prior_output[provenance-reset]
+0.300	tests/system/py/test_scan_accident_paths.py::test_storage_failure_and_failed_rollback_cannot_lose_a_prior_output[provenance-undo]
+0.300	tests/system/py/test_scan_accident_paths.py::test_storage_failure_and_failed_rollback_cannot_lose_a_prior_output[run-summary-reset]
+0.330	tests/system/py/test_scan_accident_paths.py::test_storage_failure_and_failed_rollback_cannot_lose_a_prior_output[run-summary-undo]
 UNMEASURED:failed-in-this-run	tests/system/py/test_scan_app_execution.py::test_100000_file_median_time_has_no_scan_length_factor
 0.000	tests/system/py/test_scan_app_execution.py::test_100000_file_models_lists_and_selector_popup_are_virtualized
 UNMEASURED:failed-in-this-run	tests/system/py/test_scan_app_execution.py::test_100000_file_reads_have_at_most_four_files_of_read_ahead
@@ -8025,7 +8029,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 0.256	tests/integration/py/test_scan_app_contract.py
 # module-cost: 0.344	tests/integration/py/test_scan_extended_contract.py
 # module-cost: 0.228	tests/system/py/test_c11_t62_native_scan_io.py
-# module-cost: 0.587	tests/system/py/test_scan_accident_paths.py
+# module-cost: 0.543	tests/system/py/test_scan_accident_paths.py
 # module-cost: 112.644	tests/system/py/test_scan_app_execution.py
 # module-cost: 17.002	tests/system/py/test_scan_driver_resume.py
 # module-cost: 1.014	tests/system/py/test_scan_lazy_input.py

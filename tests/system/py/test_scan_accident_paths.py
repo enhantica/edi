@@ -13,7 +13,15 @@ import pytest
 
 from tests.conftest import _build_native_observer, crysta_reference_source  # noqa: PLC2701
 from tests.fixtures.scan_app.accident_inputs import project
-from tests.fixtures.scan_app.harness import Harness, csv_text, files, measured_hash, read_csv
+from tests.fixtures.scan_app.harness import (
+    Harness,
+    csv_text,
+    files,
+    measured_hash,
+    projection_csv,
+    read_csv,
+    scale_project,
+)
 
 
 @pytest.fixture(scope='module')
@@ -23,12 +31,14 @@ def accidents(tmp_path_factory):
     return root, Harness(root, library, preload)
 
 
-@pytest.mark.parametrize('action', ['fit', 'value', 'free', 'setting', 'reset', 'undo', 'saveas'])
+@pytest.mark.parametrize(
+    'action', ['fit', 'value', 'free', 'setting', 'reset', 'undo', 'saveas', 'start-scan']
+)
 def test_pending_dataset_actions_keep_the_fitted_file_and_newer_scientific_state(
     accidents, action
 ):
     root, harness = accidents
-    target = project(root / ('pending-' + action), fitted=True)
+    target = project(root / ('pending-' + action), fitted=action != 'start-scan')
     observed = harness.invoke(
         'pending', target, 'start-fitting' if action == 'fit' else action, observe=True
     )
@@ -37,6 +47,9 @@ def test_pending_dataset_actions_keep_the_fitted_file_and_newer_scientific_state
     )
     assert observed['projected'], 'Pending selection: the newest scientific state must settle'
     if action == 'fit':
+        assert not observed['admitted'] and observed['refusal'], (
+            'Pending single Fit: refuse visibly until the chosen measured dataset is applied'
+        )
         assert observed['nativeInputs'] and all(
             value == measured_hash(files(target)[1]) for value in observed['nativeInputs']
         ), 'Pending Fit: every actual optimizer snapshot must contain the selected dataset bytes'
@@ -45,34 +58,45 @@ def test_pending_dataset_actions_keep_the_fitted_file_and_newer_scientific_state
                 'Pending Fit: a retained result designates the dataset that was actually fitted'
             )
     elif action in {'value', 'free', 'setting'}:
-        if not observed['admitted']:
-            assert observed['refusal'], (
-                'Pending edit: a deferred edit names its refusal while selection settles'
-            )
-            return
-        field = {'value': 'value', 'free': 'free', 'setting': 'bound'}[action]
-        accepted = {'value': 'acceptedValue', 'free': 'acceptedFree', 'setting': 'acceptedBound'}[
-            action
-        ]
-        assert observed[field] == observed[accepted], (
-            'Pending edit: a late dataset delivery cannot overwrite the newest admitted '
-            'parameter value, free flag or fit setting'
+        assert not observed['admitted'] and observed['refusal'], (
+            'Pending edit: value, free flag and minimizer settings refuse visibly until '
+            'the chosen measured dataset is applied'
         )
-        if action == 'value' and observed['admitted']:
-            assert observed['value'] == observed['beforeValue'] + 0.003125, (
-                'Pending edit: the nontrivial admitted value remains visible after delivery'
-            )
+    elif action == 'start-scan':
+        assert observed['admitted'], (
+            'Pending scan: Start remains admitted while a view read is pending'
+        )
+        rows = read_csv(observed['files']['results.csv'])
+        assert {Path(row['file_path']).name for row in rows} == {
+            path.name for path in files(target)
+        }, 'Pending scan: fit each actual scan file and retain its own dataset identity'
+        assert observed['work'] == [
+            ['pending-scan', path.name, measured_hash(path)] for path in files(target)
+        ], 'Pending scan: each actual optimizer receives its own independently hashed payload'
+        assert not observed['after']['following'], (
+            'Pending scan: Follow ends with the worker; its last dataset remains shown'
+        )
+        assert observed['after']['selected'] == len(files(target)) - 1, (
+            'Pending scan: an older chosen read cannot overwrite the newest followed dataset'
+        )
+        assert observed['measuredHash'] == measured_hash(files(target)[-1]), (
+            'Pending scan: the shown measurement matches the newest followed dataset bytes'
+        )
     elif action == 'reset':
+        assert observed['admitted'], 'Pending Reset: clears results while a view read is pending'
         assert all(value is None for value in observed['files'].values()) and all(
             not row['fitOutcome'] for row in observed['after']['rows']
         ), 'Pending Reset: older captured rows cannot reinstate cleared dataset fit facts'
     elif action == 'undo':
+        assert observed['admitted'], (
+            'Pending Undo: restores scan results while a view read is pending'
+        )
         assert all(row['fitOutcome'] for row in observed['after']['rows']), (
             'Pending Undo: older unfitted projections cannot erase the restored fitted rows'
         )
     else:
-        assert observed['refusal'] or (target.parent / (target.name + '-saved')).is_dir(), (
-            'Pending Save As: refusal is visible or the admitted destination receives the project'
+        assert observed['admitted'] and (target.parent / (target.name + '-saved')).is_dir(), (
+            'Pending Save As: admitted destination receives the project during a view read'
         )
 
 
@@ -119,7 +143,8 @@ def test_one_reset_undo_restores_the_whole_prior_fit_state(accidents):
     ):
         assert after[field] == before[field], (
             'Reset Undo: parameter state, dataset outcomes, summary kind/time, template and stale '
-            'markers return together to their complete prior state'
+            'markers return together to their complete prior state; '
+            f'changed observable: {field}'
         )
 
 
@@ -386,14 +411,56 @@ def test_opening_a_fitted_scan_keeps_unselected_payload_reads_lazy(accidents):
     reads = []
     for record in observed['trace']:
         columns = record.split('\t')
-        if columns[0].startswith('open') and len(columns) > 1:
+        if columns[0].startswith(('open', 'fopen', 'freopen')) and len(columns) > 1:
             path = Path(columns[1])
             if path.suffix == '.dat' and path.parent == target / 'experiments/d20_scan':
                 reads.append(str(path.resolve()))
     assert reads, (
         'Lazy open witness: the observer reaches an actual selected measured payload read'
     )
+    assert str(files(target)[0].resolve()) in reads, (
+        'Lazy open witness: the observer reaches the actual initially shown dataset address'
+    )
     assert set(reads) <= allowed, (
         'Lazy scan opening: digesting/reopening retained results cannot read unselected dataset '
         'payloads beyond the shown dataset and four upcoming resource addresses'
     )
+
+
+@pytest.mark.parametrize('count', [5000, 5001, 20001])
+def test_evolution_rebuild_keeps_whole_range_extrema_and_original_dataset_values(accidents, count):
+    root, harness = accidents
+    target = scale_project(harness, root / f'column-{count}', count)
+    projection_csv(target, count)
+    observed = harness.invoke('evolution', target)
+    assert len(observed['columns']) == 1, 'Evolution rebuild: expose the synthetic fitted column'
+    points = next(axis['points'] for axis in observed['columns'][0]['axes'] if axis['mode'] == 1)
+    indexed = {round(point[0]) - 1: point for point in points}
+    assert 0 < len(points) <= 5000, 'Evolution rebuild: retain a bounded nonempty drawn column'
+    assert len(indexed) == len(points), 'Evolution rebuild: each drawn dataset occurs once'
+    for index, point in indexed.items():
+        value = 10.125 + ((index * 37) % 1001) / 100000
+        error = 0.000125 + (index % 7) / 1000000
+        assert point == pytest.approx([index + 1, value, value - error, value + error]), (
+            'Evolution rebuild: dataset identity, value and error endpoints equal the '
+            'independent closed-form CSV cells'
+        )
+    if count <= 5000:
+        assert set(indexed) == set(range(count)), (
+            'Evolution rebuild: retain every small-column point'
+        )
+    else:
+        # Labelled regression pin: IEEE double uniform buckets over the WHOLE x range.
+        # Scientific values remain independent closed forms; an incremental local-range
+        # partition fails this witness.
+        buckets = {}
+        for index in range(count):
+            bucket = min(2499, int(index / (count - 1) * 2500))
+            buckets.setdefault(bucket, []).append(index)
+        for candidates in buckets.values():
+            minimum = min(candidates, key=lambda index: (index * 37) % 1001)
+            maximum = max(candidates, key=lambda index: (index * 37) % 1001)
+            assert {minimum, maximum} <= set(indexed), (
+                'Evolution rebuild: preserve the independent minimum and maximum of every '
+                'whole-range regression bucket even across the streaming threshold'
+            )
