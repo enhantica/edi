@@ -1139,7 +1139,11 @@ void ProjectViewModel::publish(bool structural) {
         experiment->sync();
     }
     structure_list_->setStructures(structure_models_);
-    syncDatasets();
+    // A scan's rows change with its results and its template, not with an edit or a dataset shown: those are
+    // updated one row at a time (syncDataset). A structural change listed them already (syncBlocks).
+    if (!structural && !scan_) {
+        syncDatasets();
+    }
     analysis_->sync();
     syncParameterTable(false);  // the report is refreshed below, once everything it reads is published
     publishMetadata();
