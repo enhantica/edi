@@ -156,7 +156,7 @@ Row {
     }
 
     // The previous and next buttons, on the right: the base's sidebar button, square, with the arrow icons Continue
-    // uses.
+    // uses. Held, they repeat at about the keyboard's rate, as the arrow keys do (Qt's button auto-repeat).
     EaElements.SideBarButton {
         id: up
 
@@ -167,6 +167,9 @@ Row {
         enabled: row.blockIndex > 0
         fontIcon: "arrow-circle-up"
         ToolTip.text: row.blockKind === "experiment" ? qsTr("Previous experiment") : row.blockKind === "parameter" ? qsTr("Previous parameter") : qsTr("Previous structure")
+        autoRepeat: true
+        autoRepeatDelay: 300
+        autoRepeatInterval: 50
         onClicked: row.step(-1)
     }
 
@@ -180,6 +183,9 @@ Row {
         enabled: row.blockIndex >= 0 && row.blockIndex < selector.count - 1
         fontIcon: "arrow-circle-down"
         ToolTip.text: row.blockKind === "experiment" ? qsTr("Next experiment") : row.blockKind === "parameter" ? qsTr("Next parameter") : qsTr("Next structure")
+        autoRepeat: true
+        autoRepeatDelay: 300
+        autoRepeatInterval: 50
         onClicked: row.step(1)
     }
 }
