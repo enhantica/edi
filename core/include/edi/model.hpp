@@ -2759,12 +2759,12 @@ struct CwlProfileSlots {
     bool beba = false;        // asym_beba_a0/b0/a1/b1 and asym_beba_limit
 };
 inline CwlProfileSlots cwl_profile_slots(const std::string& token) {
-    CwlProfileSlots slots;
-    slots.beba = token == "cwl-pseudo-voigt-berar-baldinozzi";
-    slots.mixing_eta = slots.beba || token == "cwl-pseudo-voigt";
-    slots.fcj = token == "cwl-tch-pseudo-voigt-fcj";
-    slots.lorentz_xy = !slots.mixing_eta && token != "cwl-gaussian" && token != "cwl-lorentzian";
-    return slots;
+    CwlProfileSlots result;
+    result.beba = token == "cwl-pseudo-voigt-berar-baldinozzi";
+    result.mixing_eta = result.beba || token == "cwl-pseudo-voigt";
+    result.fcj = token == "cwl-tch-pseudo-voigt-fcj";
+    result.lorentz_xy = !result.mixing_eta && token != "cwl-gaussian" && token != "cwl-lorentzian";
+    return result;
 }
 
 // The experiment-type category: four presence-tracked axes (std::optional — absent means the
