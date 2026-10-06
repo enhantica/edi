@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-06T07:33:56Z
+# measured_utc = 2026-10-06T10:48:55Z
 #
-# Recorded from: tests-seq17-measured.log (3 node(s) measured once, 7829 banked, 0 stale row(s) dropped)
+# Recorded from: tests-seq24-focused.log (2 node(s) measured once, 7830 banked, 1 stale row(s) dropped)
 # Collected tests: 8507; with a reported duration: 4235
 # Module-scoped fixture costs recorded: 18
 #
@@ -3841,7 +3841,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_supp
 0.000	tests/integration/py/test_e04_t2_gate_escapes.py::test_wrong_runner_row_is_rejected[runner2]
 0.000	tests/integration/py/test_e04_t2_gate_escapes.py::test_wrong_runner_row_is_rejected[runner3]
 0.000	tests/integration/py/test_e04_t2_gate_escapes.py::test_wrong_runner_row_is_rejected[ubuntu-latest]
-0.020	tests/integration/py/test_e04_t4_capture_contract.py::test_every_final_visible_idea_has_checked_capture_evidence
+0.480	tests/integration/py/test_e04_t4_capture_contract.py::test_every_final_visible_idea_has_checked_capture_evidence
 0.000	tests/integration/py/test_e04_t4_capture_contract.py::test_message_demo_example_retains_independent_unsupported_inputs
 0.000	tests/integration/py/test_e04_t4_capture_contract.py::test_producer_cannot_self_certify_or_replace_checked_image_pins
 UNMEASURED:failed-in-this-run	tests/integration/py/test_e04_t5_calculator_save.py::test_e04_t5_unsupported_calculator_warns_and_saves_crysta[None]
@@ -7915,7 +7915,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_constraint_app_structure.py::te
 UNMEASURED:failed-in-this-run	tests/unit/py/test_constraint_app_structure.py::test_analysis_groups_read_core_rows_without_preview_data[alias-AliasesGroup-aliases]
 UNMEASURED:failed-in-this-run	tests/unit/py/test_constraint_app_structure.py::test_analysis_groups_read_core_rows_without_preview_data[constraint-ConstraintsGroup-constraints]
 0.000	tests/unit/py/test_constraint_app_structure.py::test_analysis_text_uses_the_saved_core_block_and_invalidates_after_edits
-0.000	tests/unit/py/test_constraint_app_structure.py::test_cwl_gaussian_and_lorentzian_coefficients_have_distinct_rows
+0.000	tests/unit/py/test_constraint_app_structure.py::test_cwl_width_row_combines_uvw_xy_and_keeps_tof_lorentzian_separate
 UNMEASURED:failed-in-this-run	tests/unit/py/test_constraint_app_structure.py::test_excluded_regions_are_in_the_basic_category_tier
 UNMEASURED:failed-in-this-run	tests/unit/py/test_constraint_app_structure.py::test_linked_structures_are_explicitly_moved_to_the_end_of_presentation_order
 0.000	tests/unit/py/test_constraint_app_structure.py::test_load_warnings_reach_the_app_message_model
