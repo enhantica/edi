@@ -848,7 +848,7 @@ refuses to write its bank rows into it.
 - **Load data…** (the owner, 2026-10-06) is in the File cell of an experiment made with Create
   experiment, until data is loaded into it; an experiment loaded from `.edi` has its data and no such button. It
   opens a file dialog for *Data files (\*.xye \*.xy \*.dat \*.txt \*.csv)* or *All files*, or the browser's file
-  chooser in the web app, and reads the file with crysta's plain-data reader (crysta ADR-0081): two or three
+  chooser in the web app, and reads the file with crysta's plain-data reader: two or three
   columns `x y [σ]`, x in the experiment's unit (2θ in degrees, TOF in µs). The rows replace the simulation's
   grid; the range fields stay, disabled, showing the data's start, end and step, and the type selectors lock.
   Instrument, peak, background and excluded regions stay as they were. An experiment still named `experimentN`
