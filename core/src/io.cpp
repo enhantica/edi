@@ -3665,6 +3665,8 @@ void save_project_as(Project& project, const std::string& directory) {
     }
     project.path = directory;
     project.metadata.path = directory;
+    // The saved project holds its scan data: it reads them from its own directory from now on.
+    project.scan_data_root.clear();
 }
 
 

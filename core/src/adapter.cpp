@@ -992,11 +992,14 @@ void set_scan_template_file(Project& project, const std::string& file) {
         throw std::invalid_argument("_sequential_fit.template_file: a scan has one template experiment; this project "
                                     "has " + std::to_string(project.experiments.size()));
     }
-    crysta::SequentialFitConfig config;
-    fill_crysta_sequential(project.sequential_fit, config);
-    const std::string directory = crysta::resolve_sequential_scan_dir(project.path, config.data_dir);
+    // The data are read where the driver reads them (the scan data root of a project whose outputs go
+    // elsewhere), and the template then holds measured data: no longer a range or a grid.
+    const std::string directory =
+        crysta::resolve_sequential_scan_dir(project.scan_data_root.empty() ? project.path : project.scan_data_root,
+                                            project.sequential_fit.data_dir);
     PdDataBase data = read_scan_dataset(directory, file, project.experiment().effective_beam_mode());
     project.experiment().data = std::move(data);
+    project.experiment().calculation_only = false;
     project.sequential_fit.template_file = file;
 }
 
@@ -1136,6 +1139,8 @@ void save_project_via_crysta(const Project& model, const std::string& directory)
     // silently dropped the scan inputs and the results, and the containment rule never ran on the
     // edi save path at all.
     cproject.path = model.path;
+    // Scan data read in place (a temporary copy of a read-only project) are carried into the saved one.
+    cproject.scan_data_root = model.scan_data_root;
     // The project identity rides the delegated save. Copy the six persisted metadata fields
     // across (the two ProjectMetadata mirrors are distinct C++ types; `path` is engine
     // bookkeeping the record never carries) and ENGAGE persistence — crysta's writer then merges
