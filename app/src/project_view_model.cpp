@@ -255,6 +255,17 @@ void ProjectViewModel::setCurrentExperimentIndex(int index) {
         if (fit_ != nullptr && fit_->scanning()) {
             fit_->setFollowing(false);
             if (index >= 0 && index < static_cast<int>(scan_datasets_.files.size()) && index != current_dataset_) {
+                // The model is the scan's while it runs: the chart shows the chosen file's measured points on a copy
+                // of the template, and the dataset is viewed in full when the run ends.
+                try {
+                    edi::Project shown = scan_template_ ? *scan_template_ : *project_;
+                    shown.experiment().data = edi::read_scan_dataset(
+                        scan_datasets_.directory, scan_datasets_.files[static_cast<std::size_t>(index)],
+                        shown.experiment().effective_beam_mode());
+                    showFitFrame(edi::FitFrame{edi::capture_pattern(shown, 0)});
+                } catch (const std::exception& refusal) {
+                    setLastError(QString::fromUtf8(refusal.what()));
+                }
                 current_dataset_ = index;
                 syncDatasets();
                 emit currentExperimentIndexChanged();
@@ -446,8 +457,8 @@ bool ProjectViewModel::setExperimentType(int index, const QString& axis, const Q
 
 void ProjectViewModel::loadScan() {
     const edi::Project& project = *project_;
-    scan_ = project.sequential_fit.declared() && project.experiments.size() == 1 &&
-            edi::is_scan_fitting_mode(edi::effective_fitting_mode(project));
+    // A project that declares a scan lists its datasets in every fitting mode: a single fit works on the shown one.
+    scan_ = project.sequential_fit.declared() && project.experiments.size() == 1;
     evolution_ = new EvolutionViewModel(this);
     if (!scan_) {
         return;
