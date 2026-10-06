@@ -20,3 +20,7 @@ Synthetic fitted CSV values, uncertainties, temperatures and file identities are
 input producer. Scientific correctness is not claimed from the fitted app output. Transaction and provenance
 checks use round-trip and generation invariants. Native object symbol wrappers call the installed original
 reader/optimizer bodies; they delay or observe entries without replacing numeric work or the driver loop.
+
+A free-flag edit can change the CSV's declared fitted columns. Continue may visibly refuse that
+incompatible schema; the attempt must preserve the old prefix and its old-generation warning in this
+case too. Value and iteration-setting edits keep their columns and must finish the missing datasets.
