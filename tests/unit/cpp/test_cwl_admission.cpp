@@ -73,6 +73,7 @@ TEST_CASE("CW native fit admits only a matching token and slot block") {
                           "A native admission witness must first accept its valid TCH control");
     control.experiment().data->intensity_meas =
         std::vector<double>(control.experiment().data->axis().size(), 1.0);
+    control.experiment().peak.broad_lorentz_x->value = 0.023;
     control.experiment().peak.broad_lorentz_x->free = true;
     control.minimizer_max_iterations = 1;
     CHECK_NOTHROW_MESSAGE(
