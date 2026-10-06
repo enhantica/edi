@@ -3284,6 +3284,16 @@
       "not_storage": "a fit report"
     },
     {
+      "member": "ScanFileRecord::cells",
+      "type": "std::vector<std::string>",
+      "not_storage": "a fit report"
+    },
+    {
+      "member": "ScanFileRecord::termination",
+      "type": "std::string",
+      "not_storage": "a fit report"
+    },
+    {
       "member": "ScanPreamble::total_files",
       "type": "int",
       "not_storage": "a fit report"
