@@ -264,7 +264,9 @@ def test_saved_data_is_self_contained_and_edi_load_cannot_replace_it(native_prob
 
 
 @pytest.mark.parametrize(
-    ('mode', 'expected_name'), [('load', 'pattern'), ('renamed', 'User name')]
+    ('mode', 'expected_name'),
+    [('load', 'pattern'), ('renamed', 'User name')],
+    ids=['default-name', 'user-name'],
 )
 def test_filename_and_user_name(native_probe, tmp_path, mode, expected_name):
     record = run(native_probe, tmp_path, mode=mode)

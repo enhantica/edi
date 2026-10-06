@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-06T21:02:45Z
+# measured_utc = 2026-10-06T21:12:06Z
 #
-# Recorded from: e04-t18-tests-seq6-banked.log (109 node(s) measured once, 8224 banked, 0 stale row(s) dropped)
-# Collected tests: 9513; with a reported duration: 4616
+# Recorded from: e04-t18-tests-seq6-stable-ids.log (8 node(s) measured once, 8309 banked, 8 stale row(s) dropped)
+# Collected tests: 9513; with a reported duration: 4618
 # Module-scoped fixture costs recorded: 25
 #
 # Breaches are decided PER TIER against the table
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 9513
 # inventory_cpp = 298
-# inventory_measured = 8316
-# inventory_unmeasured = 1495
+# inventory_measured = 8315
+# inventory_unmeasured = 1496
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
 0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_cosio-d20_scan-162f]
@@ -4634,12 +4634,12 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_plain_data_picker.py::te
 0.000	tests/integration/py/test_scan_app_contract.py::test_type_selectors_live_in_explorer_and_follow_selected_row
 0.000	tests/integration/py/test_scan_app_contract.py::test_typed_status_producer_matches_the_shared_outcome_keys[actual]
 0.000	tests/integration/py/test_scan_app_contract.py::test_typed_status_producer_matches_the_shared_outcome_keys[wrongMAX]
-0.180	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[failed-Failed-times-circle-red]
-0.000	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[maxIterations-Max iterations-exclamation-circle-orange]
-0.000	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[noStep-No step-exclamation-circle-orange]
-0.130	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[stopped-Stopped-stop-circle-themeForegroundMinor]
-0.130	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[success-Success-check-circle-green]
-0.130	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[superseded-Superseded-minus-circle-themeForegroundMinor]
+0.170	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[failed]
+0.190	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[maxIterations]
+0.160	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[noStep]
+0.140	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[stopped]
+0.150	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[success]
+0.150	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[superseded]
 0.000	tests/integration/py/test_scan_extended_contract.py::test_bundled_project_load_and_save_as_use_the_writable_copy_routes
 0.420	tests/integration/py/test_scan_extended_contract.py::test_effective_bundle_contains_selected_scan_payloads[desktop]
 0.260	tests/integration/py/test_scan_extended_contract.py::test_effective_bundle_contains_selected_scan_payloads[web]
@@ -7501,8 +7501,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_two_free_
 UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_two_named_phases_load_and_roundtrip
 0.100	tests/system/py/test_plain_data_app.py::test_default_structure_matches_frozen_beta_cif
 1.630	tests/system/py/test_plain_data_app.py::test_desktop_browser_picker_and_editability_bindings_share_load_path
-UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_filename_and_user_name[load-pattern]
-0.000	tests/system/py/test_plain_data_app.py::test_filename_and_user_name[renamed-User name]
+UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_filename_and_user_name[default-name]
+UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_filename_and_user_name[user-name]
 0.000	tests/system/py/test_plain_data_app.py::test_lifecycle_observer_consumes_configuration_metadata_and_actual_edits[after-excluded]
 0.000	tests/system/py/test_plain_data_app.py::test_lifecycle_observer_consumes_configuration_metadata_and_actual_edits[firstData-x]
 0.000	tests/system/py/test_plain_data_app.py::test_lifecycle_observer_consumes_configuration_metadata_and_actual_edits[reopened-beam]
@@ -9871,7 +9871,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 1.762	tests/system/py/test_e09_t58_start_tied_numeric.py
 # module-cost: 0.180	tests/system/py/test_e09_t75_native_execution.py
 # module-cost: 3.929	tests/system/py/test_fit_participants_native.py
-# module-cost: 348.133	tests/system/py/test_plain_data_app.py
+# module-cost: 138.021	tests/system/py/test_plain_data_app.py
 # module-cost: 0.543	tests/system/py/test_scan_accident_paths.py
 # module-cost: 112.644	tests/system/py/test_scan_app_execution.py
 # module-cost: 17.002	tests/system/py/test_scan_driver_resume.py
