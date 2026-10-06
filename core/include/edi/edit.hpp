@@ -248,7 +248,6 @@ class Edit {
     static Edit erase(ItemVec<ParameterAlias>& rows, std::size_t index) { return erasing(rows, index); }
     static Edit erase(ItemVec<ParameterConstraint>& rows, std::size_t index) { return erasing(rows, index); }
     static Edit erase(ItemVec<Structure>& rows, std::size_t index) { return erasing(rows, index); }
-    static Edit erase(ItemVec<BraggPdExperiment>& rows, std::size_t index) { return erasing(rows, index); }
     // An excluded region: its row added at the end, removed, or one of its two bounds assigned. The
     // regions are one recorded field (ADR-0018), written through its `modify`, which records a write
     // even when its callback throws: a missing row is therefore refused before it.
@@ -399,6 +398,9 @@ class Edit {
     // One experiment removed; a scan project keeps its template experiment.
     static Edit erase_experiment(Project& project, std::size_t index) {
         return Edit([&project, index] {
+            if (index >= project.experiments.size()) {
+                throw std::out_of_range("the project has no experiment " + std::to_string(index));
+            }
             require_scan_template(project, project.experiments.size() - 1);
             project.experiments.erase_at(index);
         });
@@ -416,6 +418,7 @@ class Edit {
                 }
                 kept.erase(found);
             }
+            require_scan_template(project, kept.size());
             project.experiments.assign(std::move(kept));
         });
     }
