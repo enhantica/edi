@@ -147,12 +147,13 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // before they are viewed, listed in the dialog, and counted again after it closes; then a refused
     // calculation's error in the list, below a loader warning and over its neutral chart placeholder. No
     // bundled project is refused, so another project's experiment is loaded: its preferred orientation
-    // names a structure this project does not have.
+    // names a structure this project does not have. The project is not a scan, which keeps its one
+    // template experiment and refuses a second.
     steps_.push_back({"t4-03-messages-not-viewed", open_example("pd-neut-tof_fe_pseudo-voigt")});
     steps_.push_back({"t4-04-messages-list", {"statusBar.warnings"}});
     steps_.push_back({"t4-05-messages-viewed", {"choose:OK"}});
     steps_.push_back({"t4-06-messages-error",
-                      open_example("pd-neut-cwl_cosio-d20_scan-3f")
+                      open_example("pd-neut-cwl_cosio-d20_start-1")
                           + QStringList{experiment, basic,
                                         "load-experiments:pd-neut-cwl_lbco-hrpt_start-2/project/experiments/hrpt.edi",
                                         "statusBar.warnings"}});
