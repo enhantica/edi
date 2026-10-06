@@ -9,3 +9,10 @@ https://github.com/easyscience/diffraction-lib. Shared loader rules come from
 Named differences: clamped two-column sigma, Bragg nonpositive filtering,
 comma separators, sorted first-duplicate selection. Header/malformed skipping
 and tiny supplied sigma replacement follow upstream.
+
+The lifecycle host seeds an instrument offset (CWL 0.125, TOF 7), peak width
+0.0625, background intensity 4.25, dataset weight 2.5 and exclusions
+[CWL 60, 61] / [TOF 9000, 9100]. Loads, Undo and reopen must retain them.
+The lifecycle observer's positive control is hand-constructed from these
+settings and the documented numeric rows. It tests the observer itself;
+the separate native workflow gates exercise actual product actions.
