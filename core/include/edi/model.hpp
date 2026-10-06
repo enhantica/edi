@@ -4029,6 +4029,9 @@ class Project : public detail::ProjectAnchor {
     // so scan data are read in place and never copied. Forwarded to crysta's
     // Project::scan_data_root; never persisted.
     std::string scan_data_root;
+    // An earlier run's results.csv that a scan run starts each file from (crysta's Project::scan_seed_results);
+    // empty = none. Set for one run; never persisted.
+    std::string scan_seed_results;
     // diffraction-lib `Project.metadata` / `Project.name`: plain data, mirrored on crysta.
     // `load_project` and the binding's `save_as` keep metadata.path in step.
     ProjectMetadata metadata;
@@ -4357,8 +4360,8 @@ static_assert(detail::one_entry_per_column(MetadataCategory::columns, MetadataCa
 struct ProjectStateCategory {
     using Owner = Project;
     static constexpr const char* name = "project";
-    static constexpr auto columns = std::tuple{&Project::path, &Project::scan_data_root};
-    static constexpr std::array items{"", ""};
+    static constexpr auto columns = std::tuple{&Project::path, &Project::scan_data_root, &Project::scan_seed_results};
+    static constexpr std::array items{"", "", ""};
 };
 static_assert(detail::one_entry_per_column(ProjectStateCategory::columns, ProjectStateCategory::items));
 

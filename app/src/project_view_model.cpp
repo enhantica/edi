@@ -766,11 +766,30 @@ QString ProjectViewModel::prepareScan(bool fresh) {
     if (!fresh) {
         return {};
     }
+    // A completed scan whose results are the current template's is fitted again from them: each file starts from
+    // its own earlier result (crysta's scan_seed_results), as Start does again in the single mode. Any other fresh
+    // run starts from the template.
+    clearScanSeed();
+    const bool refine = scan_session_->index().fitted == scan_session_->datasets().files.size() &&
+                        scan_session_->index().fitted > 0 && !fit_->outOfDate();
     // The previous results, kept for Undo (their absence included), then removed, all or none: crysta's driver
     // starts a scan without them.
     ScanRun run;
     if (const QString refusal = scan_session_->takeFiles(*project_, run.files); !refusal.isEmpty()) {
         return refusal;
+    }
+    if (refine && run.files.results) {
+        scan_seed_ = std::make_unique<QTemporaryDir>();
+        const QString seed = scan_seed_->filePath(QStringLiteral("results.csv"));
+        QFile file(seed);
+        if (!scan_seed_->isValid() || !file.open(QIODevice::WriteOnly) ||
+            file.write(QByteArray::fromStdString(*run.files.results)) !=
+                static_cast<qint64>(run.files.results->size())) {
+            scan_seed_.reset();
+            scan_session_->putFiles(*project_, run.files);
+            return tr("The earlier results could not be set aside to fit the scan again from them");
+        }
+        mutableScanTemplate().scan_seed_results = seed.toStdString();
     }
     undo_history_.emplace_back(std::move(run));
     syncUndo();
@@ -779,10 +798,17 @@ QString ProjectViewModel::prepareScan(bool fresh) {
     return {};
 }
 
+void ProjectViewModel::clearScanSeed() {
+    mutableScanTemplate().scan_seed_results.clear();
+    project_->scan_seed_results.clear();
+    scan_seed_.reset();
+}
+
 bool ProjectViewModel::restoreScanRun(const ScanRun& run) {
     if (fit_ != nullptr && fit_->running()) {
         return false;
     }
+    clearScanSeed();
     if (const QString refusal = scan_session_->putFiles(*project_, run.files); !refusal.isEmpty()) {
         const QString message = tr("The previous scan results could not be put back: %1").arg(refusal);
         setLastError(message);
@@ -890,6 +916,10 @@ void ProjectViewModel::showScanFrame(const std::string& file, const edi::FitFram
 void ProjectViewModel::scanEnded(edi::FitStatus status, double seconds) {
     if (scan_session_ == nullptr) {
         return;
+    }
+    // The earlier results a refit started from serve its Continue, if it was stopped, and nothing after.
+    if (status != edi::FitStatus::CANCELLED) {
+        clearScanSeed();
     }
     scan_session_->reindex(*project_);
     // The run's provenance: the template it fitted from, its time and outcome, kept beside the results.
