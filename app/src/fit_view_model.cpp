@@ -246,9 +246,9 @@ void FitViewModel::start() {
     if (!job_ || running_ || !available_) {
         return;
     }
-    // A chosen dataset still being read is read now: the fit is of the dataset shown, never the one before.
-    if (const QString refusal = owner_.settleView(); !refusal.isEmpty()) {
-        emit refused(refusal);
+    // A chosen dataset still being read: the model still shows the one before, which is not the one to fit.
+    if (const QString pending = owner_.pendingRefusal(); !pending.isEmpty()) {
+        emit refused(pending);
         return;
     }
     // A scan runs from the template. With no dataset fitted it starts afresh (the previous result files, if any, go
@@ -464,7 +464,7 @@ void FitViewModel::syncScanState() {
     const bool scan = edi::is_scan_fitting_mode(edi::effective_fitting_mode(project_)) && owner_.scan();
     setContinuable(scan && scan_.fitted > 0 && scan_.fitted < scan_.files);
     const ScanSession* session = owner_.scanSession();
-    const bool unreadable = session != nullptr && !session->index().error.empty();
+    const bool unreadable = session != nullptr && (!session->index().error.empty() || session->run().invalid);
     const bool can_reset = scan && !running_ && (scan_.fitted > 0 || unreadable);
     if (can_reset != can_reset_) {
         can_reset_ = can_reset;

@@ -227,9 +227,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     QString prepareScan(bool fresh);
     // Reset fits (FitViewModel::reset): every dataset's fit result cleared, one Undo step; the refusal, if any.
     QString resetScan();
-    // Before a scientific action (a fit, an edit, Undo, Reset fits, a save): a chosen dataset still being read is
-    // read and applied now, so the action never runs on the dataset shown before. The refusal if that read fails.
-    QString settleView();
+    // Why a scientific action (a fit, an edit, Undo, Reset fits, a save) waits: a chosen dataset is still being
+    // read, so the model still shows the one before; empty otherwise.
+    QString pendingRefusal() const;
     // The template a scan runs from: the stored one while a dataset is shown, else none (the model is the template).
     const edi::Project* scanTemplate() const { return scan_template_ ? &*scan_template_ : nullptr; }
     void scanFileFitted(const edi::ScanFileRecord& record);
@@ -357,6 +357,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool view_reading_ = false;  // a read is in flight
     // Reads the newest requested dataset off the GUI thread; its delivery applies it, or reads a newer one.
     void startViewRead();
+    // Shows a dataset at once: the one a project opens on (`reread`: its file is read), or the shown one again from
+    // its changed row.
+    void viewDatasetNow(int index, bool reread);
     // The identity of the template a run is fitting from (ScanSession::templateIdentity), for its provenance.
     std::string run_identity_;
     // A Continue's earlier provenance (its rows stay), for the run's own at its end.

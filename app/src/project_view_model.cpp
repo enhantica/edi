@@ -230,9 +230,10 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     if (scan_session_ != nullptr) {
         showScanResults();
     }
-    // A scan project opens on its template dataset, else on its first.
+    // A scan project opens on its template dataset, else on its first, read before the project is shown.
     if (scan_) {
-        viewDataset(std::max(0, templateIndex()));
+        scan_template_ = *project_;
+        viewDatasetNow(std::max(0, templateIndex()), true);
     }
     preview_->recalculate();
     publishCalculating();
@@ -543,6 +544,9 @@ QString ProjectViewModel::scanRefusal() const {
         return tr("The scan's results cannot be read (%1): Reset fits clears them")
             .arg(QString::fromStdString(scan_session_->index().error));
     }
+    if (scan_session_->run().invalid) {
+        return tr("The scan's run record cannot be read (%1): Reset fits clears it").arg(scan_session_->run().error);
+    }
     return {};
 }
 
@@ -655,13 +659,19 @@ void ProjectViewModel::viewDataset(int index, bool refresh) {
     if (!scan_template_) {
         scan_template_ = *project_;
     }
+    // The dataset already shown, with nothing pending: only its results row changed (a new row, Reset, Undo, a
+    // run's end), so it is shown again at once from its row, with no file to read.
+    if (index == current_dataset_ && view_applied_ == view_request_) {
+        viewDatasetNow(index, false);
+        return;
+    }
     // One read at a time, and only the newest selection waits behind it: holding the selector or a fast Follow
     // leaves no queue of reads nobody will see.
     ++view_request_;
     view_wanted_ = index;
     publishCalculating();
-    // The selection moves at once; the model follows when the read arrives. A fit, an edit, an Undo, Reset fits or
-    // a save asked for before then first completes it (settleView), so none acts on the dataset shown before.
+    // The selection moves at once; the model follows when the read arrives. Until then a fit, an edit, an Undo,
+    // Reset fits and a save are refused (pendingRefusal), so none acts on the dataset shown before.
     if (index != current_dataset_) {
         current_dataset_ = index;
         syncDataset(index);
@@ -672,29 +682,38 @@ void ProjectViewModel::viewDataset(int index, bool refresh) {
     }
 }
 
-QString ProjectViewModel::settleView() {
-    if (view_applied_ == view_request_ || !scan_) {
-        return {};
-    }
-    // The chosen dataset's projection, read here and now; the background read of the same request, when it
-    // arrives, finds it applied and is dropped.
-    const std::uint64_t request = view_request_;
-    const int index = view_wanted_;
+QString ProjectViewModel::pendingRefusal() const {
+    return view_applied_ != view_request_ ? tr("The chosen dataset is still being read") : QString();
+}
+
+void ProjectViewModel::viewDatasetNow(int index, bool reread) {
+    // Read here, on the GUI thread, one dataset: the one a project opens on (`reread`), or the one already shown
+    // when only its results row changed (its data are in the model, so no file is read). Nothing is left pending.
+    const std::uint64_t request = ++view_request_;
+    view_wanted_ = index;
     DatasetView view;
     try {
         view.values = datasetValues(scan_session_->row(*project_, index));
-        view.data = edi::read_scan_dataset(scan_session_->datasets().directory,
-                                           scan_session_->datasets().files[static_cast<std::size_t>(index)],
-                                           project_->experiment().effective_beam_mode());
+        if (reread || !project_->experiment().data) {
+            view.data = edi::read_scan_dataset(scan_session_->datasets().directory,
+                                               scan_session_->datasets().files[static_cast<std::size_t>(index)],
+                                               project_->experiment().effective_beam_mode());
+        } else {
+            view.data = *project_->experiment().data;
+        }
     } catch (const std::exception& refusal) {
         view_applied_ = request;
         const QString error = QString::fromUtf8(refusal.what());
         setLastError(error);
+        emit refused(error);
         publishCalculating();
-        return error;
+        return;
+    }
+    if (index != current_dataset_) {
+        current_dataset_ = index;
+        emit currentExperimentIndexChanged();
     }
     applyDatasetView(request, index, std::move(view));
-    return {};
 }
 
 void ProjectViewModel::startViewRead() {
@@ -747,7 +766,7 @@ void ProjectViewModel::startViewRead() {
                 }
                 self->view_reading_ = false;
                 if (self->view_applied_ == request) {
-                    return;  // applied already, when an action needed it (settleView)
+                    return;  // applied already
                 }
                 if (request != self->view_request_) {
                     // A newer selection came while this one was read: it is read now, this one dropped.
@@ -831,8 +850,9 @@ QString ProjectViewModel::prepareScan(bool fresh) {
     if (project_->path.empty()) {
         return tr("The project has no directory yet: save it first");
     }
-    if (const QString refusal = settleView(); !refusal.isEmpty()) {
-        return refusal;
+    if (const QString pending = pendingRefusal(); !pending.isEmpty()) {
+        setLastError(pending);
+        return pending;
     }
     run_identity_ = ScanSession::templateIdentity(scanTemplateOrModel());
     // A Continue keeps the rows already there, which came from the run (or runs) before: their provenance stays
@@ -862,8 +882,9 @@ QString ProjectViewModel::resetScan() {
     if (scan_session_ == nullptr) {
         return scanRefusal();
     }
-    if (const QString refusal = settleView(); !refusal.isEmpty()) {
-        return refusal;
+    if (const QString pending = pendingRefusal(); !pending.isEmpty()) {
+        setLastError(pending);
+        return pending;
     }
     // Every dataset's fit result goes, as one Undo step: the result files are set aside, absent ones included, the
     // run's provenance with them, and the record a single fit left on the template (its values stay: they are the
@@ -1109,10 +1130,9 @@ QString ProjectViewModel::apply(const edi::Edit& change, bool structural) {
         setLastError(message);
         return message;
     }
-    if (!applying_view_) {
-        if (const QString refusal = settleView(); !refusal.isEmpty()) {
-            return refusal;
-        }
+    if (const QString pending = pendingRefusal(); !applying_view_ && !pending.isEmpty()) {
+        setLastError(pending);
+        return pending;
     }
     pending_structural_ = structural;
     try {
@@ -1172,8 +1192,9 @@ void ProjectViewModel::undo() {
     if (!can_undo_) {
         return;
     }
-    if (const QString refusal = settleView(); !refusal.isEmpty()) {
-        emit refused(refusal);
+    if (const QString pending = pendingRefusal(); !pending.isEmpty()) {
+        setLastError(pending);
+        emit refused(pending);
         return;
     }
     // The newest record is kept until its reversal succeeds: a refused restore (a parameter it names was
@@ -1239,8 +1260,9 @@ QString ProjectViewModel::saveTo(const QString& directory) {
         setLastError(message);
         return message;
     }
-    if (const QString refusal = settleView(); !refusal.isEmpty()) {
-        return refusal;
+    if (const QString pending = pendingRefusal(); !pending.isEmpty()) {
+        setLastError(pending);
+        return pending;
     }
     // While a scan dataset is shown, the template is what a save writes; the shown model follows it to the new
     // directory, so a scan started next reads and writes there.
