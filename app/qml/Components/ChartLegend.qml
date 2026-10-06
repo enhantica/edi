@@ -15,6 +15,9 @@ Rectangle {
 
     // The rows: the chart controller's legend model, with the roles `label`, `color`, `mark` and `bragg`.
     property ChartLegendModel entries: null
+    // The name in the series' colour too, as a chart's legend shows it; the structure view's legend colours only
+    // the mark, as a pale element colour (Ce, S) cannot be read on the view's background.
+    property bool labelInColor: true
 
     width: column.width
     height: column.height
@@ -53,9 +56,18 @@ Rectangle {
                     {
                         "text": label
                     }
-                ] : [
+                ] : legend.labelInColor ? [
                     {
                         "text": mark + "  " + label
+                    }
+                ] : [
+                    {
+                        "text": mark,
+                        "color": color
+                    },
+                    {
+                        "text": label,
+                        "color": EaStyle.Colors.themeForeground
                     }
                 ]
             }

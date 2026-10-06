@@ -136,6 +136,7 @@ Rectangle {
             anchors.top: parent.top
             anchors.margins: view.margin
             entries: controller.legend
+            labelInColor: false
             visible: controller.legend.count > 0
         }
         EaElements.Label {
