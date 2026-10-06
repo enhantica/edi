@@ -25,7 +25,9 @@ class DemoDriver : public QObject {
     Q_OBJECT
 
    public:
-    DemoDriver(QQuickWindow& window, const QString& output_dir, QObject* parent = nullptr);
+    // `only`: run just the steps whose image name starts with it (each opens what it needs), else all.
+    DemoDriver(QQuickWindow& window, const QString& output_dir, const QString& only = QString(),
+               QObject* parent = nullptr);
     void start();
 
    private:
@@ -42,6 +44,14 @@ class DemoDriver : public QObject {
     //                               reproducible
     //   scroll-to:<view>:<text>     scroll the text view's Flickable so the first line holding <text> is
     //                               its top line, as a user scrolls to it
+    //   wait-fit                    wait until the open project's fit has ended (at most kFitWaitMs)
+    //   capture-now                 capture this step's image a fixed time after its actions, unsettled: a
+    //                               running fit's moving bar never settles
+    //   resize:<width>x<height>     the window's logical size
+    //   type:<text>                 type the text into the focused field
+    //   expand:<group>              unfold a group, whether or not it is folded
+    //   save-as:<name>              save the open project into a directory of that name in the run's
+    //                               scratch directory (or at an absolute path); open-project:<name> opens one
     struct Step {
         QString image;
         QStringList actions;
@@ -56,6 +66,8 @@ class DemoDriver : public QObject {
     void park_pointer();
     bool click(const QString& object_name);
     void settle_then(std::function<void()> next);
+    // Waits until the fit has ended or, with `files`, until a running scan has fitted that many files.
+    void wait_fit_then(std::function<void()> next, int waited_ms = 0, int files = -1);
     void fail(const QString& message);
 
     QQuickWindow& window_;

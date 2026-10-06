@@ -31,6 +31,7 @@
 #include "edi/model.hpp"
 #include "edi/parameter_spec.hpp"
 #include "edi/report.hpp"
+#include "edi/scan.hpp"
 #include "edi/selectors.hpp"
 #include "edi/threading.hpp"
 #include "edi/validation.hpp"
@@ -3230,6 +3231,9 @@ NB_MODULE(_edi, m) {
         // Assignment is the second way a mode reaches the model (the loader is the first), and
         // an open setter meant a lookalike or an unimplemented value was only discovered a whole
         // fit later — or, on the single-bank path, never.
+        .def_prop_rw(
+            "_template_file", [](const edi::Project& self) { return self.sequential_fit.template_file; },
+            [](edi::Project& self, const std::string& file) { edi::set_scan_template_file(self, file); })
         .def_prop_rw(
             "fitting_mode", [](const edi::Project& self) { return self.fitting_mode; },
             [](edi::Project& self, const std::string& value) {

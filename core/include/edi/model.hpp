@@ -3647,6 +3647,11 @@ struct ScanFileRecord {
     bool converged = false;
     double reduced_chi_square = 0.0;
     int iterations = 0;
+    // The row's cells as crysta appended them (the live event; empty for a resumed row read back).
+    std::vector<std::string> cells;
+    // Why the file's fit stopped, as crysta's ledger (results-provenance.csv) records it beside the row; empty when
+    // it was not recorded.
+    std::string termination;
 };
 
 // Optional per-file completion subscriber. Passing none costs nothing: with no
@@ -3926,6 +3931,8 @@ struct SequentialFitConfig {
     std::string data_dir;
     std::string file_pattern = "*";
     bool reverse = false;
+    // The template dataset: the scan file whose data the template experiment holds (set_scan_template_file).
+    std::string template_file;
     ItemVec<SequentialExtractRule> extract;  // Ids unique by construction
     bool declared() const { return !data_dir.empty(); }
     // ADR-0018: the row of this object's non-loop categories.
@@ -4528,8 +4535,9 @@ static_assert(detail::one_entry_per_column(FitResultBankCategory::columns, FitRe
 struct SequentialFitCategory {
     using Owner = SequentialFitConfig;
     static constexpr const char* name = "_sequential_fit";
-    static constexpr auto columns = std::tuple{&SequentialFitConfig::data_dir, &SequentialFitConfig::file_pattern, &SequentialFitConfig::reverse};
-    static constexpr std::array items{"data_dir", "file_pattern", "reverse"};
+    static constexpr auto columns = std::tuple{&SequentialFitConfig::data_dir, &SequentialFitConfig::file_pattern,
+                                               &SequentialFitConfig::reverse, &SequentialFitConfig::template_file};
+    static constexpr std::array items{"data_dir", "file_pattern", "reverse", "template_file"};
 };
 static_assert(detail::one_entry_per_column(SequentialFitCategory::columns, SequentialFitCategory::items));
 

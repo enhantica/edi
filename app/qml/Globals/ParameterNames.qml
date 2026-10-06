@@ -11,13 +11,13 @@ import edi.app
 // pretty labels (Globals/Proxies.qml paramName; ADR-0017 §8), as the pieces of one
 // IconLine (§10): the block's icon in the block's colour; the category's icon, for an atom site in its element's
 // colour; the row (an atom's label, a loop row's number) in the category icon's colour; the parameter's icon;
-// then its short name in bold.
+// then its short name, never bold.
 QtObject {
     id: names
 
     // A block kind's icon, as the block tables show it.
     function blockIcon(kind) {
-        return kind === "structure" ? "layer-group" : kind === "experiment" ? "microscope" : "";
+        return kind === "structure" ? "layer-group" : kind === "experiment" ? "microscope" : kind === "parameter" ? "chart-line" : "";
     }
 
     // easydiffractionbeta's parameter icons (Logic/Calculators.py), by `.edi` item name or its prefix; none
@@ -59,9 +59,9 @@ QtObject {
                 "icon": parameterIcon,
                 "color": minor
             });
+        // Never bold: in the parameter table only a free parameter's value is (owner, 2026-10-05).
         pieces.push({
-            "text": item.shortName,
-            "bold": true
+            "text": item.shortName
         });
         return pieces;
     }

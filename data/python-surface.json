@@ -243,6 +243,15 @@
      },
      "reason": "C",
      "verdict": "public"
+    },
+    "template_file": {
+     "need": {
+      "by": "deviation",
+      "ref": "D79",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
     }
    },
    "AtomSite": {
@@ -6134,7 +6143,8 @@
     "constraints",
     "descent",
     "fit",
-    "fitting_mode"
+    "fitting_mode",
+    "template_file"
    ]
   },
   "AtomSite": {

@@ -400,6 +400,19 @@ class Analysis:
         self._project.fitting_mode = value
 
     @property
+    def template_file(self) -> str:
+        """The scan's template dataset: one of its files, whose data the template experiment holds.
+
+        Setting it replaces that data with the file's and changes no parameter; a file outside the
+        scan is refused with a ValueError naming it.
+        """
+        return self._project._template_file
+
+    @template_file.setter
+    def template_file(self, file: str) -> None:
+        self._project._template_file = file
+
+    @property
     def descent(self) -> str:
         # The descent-strategy selection is MODEL STATE on this facade (like fitting_mode),
         # never a fit-call argument. The id set is crysta's own registry, resolved from the

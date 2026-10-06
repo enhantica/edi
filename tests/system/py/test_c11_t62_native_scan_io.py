@@ -62,9 +62,16 @@ pathlib.Path(result).write_text(json.dumps({'observed': payload, 'native': nativ
 """
 
 
-def _run(tmp_path, native_observer, mode):
+def _run(tmp_path, native_observer, mode, count=3):
     target = tmp_path / mode
     shutil.copytree(CASE, target)
+    if count != 3:
+        scan = target / 'experiments/d20_scan'
+        payload = next(scan.glob('*.dat')).read_bytes()
+        for path in scan.glob('*.dat'):
+            path.unlink()
+        for index in range(count):
+            (scan / f'{index:04d}.dat').write_bytes(payload)
     analysis = target / 'analysis/analysis.edi'
     analysis.write_text(
         analysis.read_text().replace(
@@ -103,14 +110,40 @@ def test_native_observer_reaches_the_real_data_reads(tmp_path, native_observer):
     )
 
 
-def test_completion_precedes_opening_the_next_data_file(tmp_path, native_observer):
-    snapshots = _run(tmp_path, native_observer, 'events')['observed']
-    assert len(snapshots) == 3, ' gate 5: real native scan must emit all file-completion events'
-    counts = [len({Path(path).name for path in rows}) for rows in snapshots]
-    assert counts == [1, 2, 3], (
-        ' gate 5: completion must fire before opening the NEXT data file; '
-        f'native data-open counts at events={counts}, polling delivers late'
+def assert_bounded_prefetch(snapshots, paths):
+    count = len(paths)
+    assert len(snapshots) == count, 'Native I/O: real scan emits every committed completion event'
+    expected = [path.resolve() for path in paths]
+    for completed, rows in enumerate(snapshots, 1):
+        opened = {Path(path).resolve() for path in rows}
+        assert set(expected[:completed]) <= opened, (
+            'Native I/O: each committed dataset has actually been read before its completion'
+        )
+        assert opened <= set(expected[: min(count, completed + 4)]), (
+            'Native I/O: only the next four unfinished dataset addresses may be read ahead'
+        )
+
+
+def test_completion_allows_only_four_upcoming_dataset_reads(tmp_path, native_observer):
+    # Before: zero prefetch. After: packet allows four upcoming files, with
+    # each committed dataset still observed and no unrelated read admitted.
+    snapshots = _run(tmp_path, native_observer, 'events', count=9)['observed']
+    paths = sorted((tmp_path / 'events/experiments/d20_scan').glob('*.dat'))
+    assert_bounded_prefetch(snapshots, paths)
+    changed = [list(rows) for rows in snapshots]
+    changed[0].append(str(tmp_path / 'events/experiments/d20_scan/0005.dat'))
+    assert changed != snapshots, (
+        'Native I/O: the escape adds a live fifth upcoming dataset address'
     )
+    with pytest.raises(AssertionError, match='four unfinished'):
+        assert_bounded_prefetch(changed, paths)
+    foreign = [list(rows) for rows in snapshots]
+    foreign[0].append(str(tmp_path / 'outside' / paths[0].name))
+    assert foreign != snapshots, (
+        'Native I/O: the escape retains a matching basename at a different resource address'
+    )
+    with pytest.raises(AssertionError, match='four unfinished'):
+        assert_bounded_prefetch(foreign, paths)
 
 
 def test_dry_scan_has_no_extra_native_data_opens(tmp_path, native_observer):

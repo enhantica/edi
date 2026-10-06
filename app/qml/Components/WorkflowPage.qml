@@ -3,17 +3,15 @@ import QtQuick
 import QtQuick.Controls
 
 import EasyApplication.Gui.Style as EaStyle
-import EasyApplication.Gui.Animations as EaAnimations
 import EasyApplication.Gui.Elements as EaElements
 import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
 
 // A workflow page's frame (easydiffractionbeta Pages/*/PageStructure.qml): the main view with its tabs
-// on the left, the Basic / Extras / Text sidebar on the right, and Continue at the bottom. A page with a
-// block list (Structure, Experiment) shows one compact block selector under the sidebar's tabs, above every
-// tab's content, never folded (edi ADR-0017 §7): the base's SideBar has no place for it, so it is a child of
-// the SideBar placed under the tab bar, and the tabs' view starts below it.
+// on the left, the Main / Extra / Text sidebar on the right, and Continue at the bottom. A page with a
+// block list (Structure, Experiment, Analysis) shows one compact block selector as a row at the top of the main
+// area, under its tab bar (MainAreaBlockSelector; edi ADR-0017 §7), while the project holds a block of its kind.
 EaComponents.ContentPage {
     id: page
 
@@ -38,7 +36,22 @@ EaComponents.ContentPage {
     property string blocksTextRole: ""
     property string blockKind: ""
     property int blockIndex: 0
+    // Where the selector row ends, from the main area's right edge: the right edge of the chart toolbar below.
+    property real blockSelectorRightInset: EaStyle.Sizes.fontPixelSize
+    // The blocks' fit-outcome role and the shown block's outcome (experiments; BlockSelector).
+    property string blockOutcomeRole: ""
+    property string blockCurrentOutcome: ""
+    // Every entry in the first block's colour (a scan's datasets).
+    property bool blockOneColour: false
+    // The role marking the template dataset, and whether the shown block is it (BlockSelector).
+    property string blockTemplateRole: ""
+    property bool blockCurrentTemplate: false
     signal blockActivated(int index)
+
+    // Shows one of the main area's tabs (the base's tab bar is the main content's first child).
+    function showMainTab(index) {
+        mainContent.children[0].currentIndex = index;
+    }
 
     // The base's fade above Continue, in the sidebar's colour, reads as a shadow over the Text tab's text view,
     // which runs under the Continue pill (edi ADR-0017 §7): hidden on that tab. The base
@@ -99,6 +112,31 @@ EaComponents.ContentPage {
 
     mainView: EaComponents.MainContent {
         id: mainContent
+
+        MainAreaBlockSelector {
+            id: blockSelector
+            visible: page.blockSelectorShown && page.blocks !== null && page.blocks.count > 0
+            areaWidth: mainContent.width
+            rightInset: page.blockSelectorRightInset
+            blocks: page.blocks
+            blocksTextRole: page.blocksTextRole
+            blockKind: page.blockKind
+            blockIndex: page.blockIndex
+            outcomeRole: page.blockOutcomeRole
+            currentOutcome: page.blockCurrentOutcome
+            oneColour: page.blockOneColour
+            templateRole: page.blockTemplateRole
+            currentTemplate: page.blockCurrentTemplate
+            onBlockActivated: index => page.blockActivated(index)
+        }
+
+        // The tabs' view (the base's SwipeView, the main area's second child, anchored under the tab bar)
+        // starts below the selector.
+        Binding {
+            target: mainContent.children.length > 1 ? mainContent.children[1].anchors : null
+            property: "topMargin"
+            value: blockSelector.reservedHeight
+        }
     }
 
     sideBar: EaComponents.SideBar {
@@ -106,13 +144,12 @@ EaComponents.ContentPage {
 
         tabs: [
             EaElements.TabButton {
-                id: basicTab
                 objectName: "sideBar.tab.basic"
-                text: qsTr("Basic")
+                text: qsTr("Main")
             },
             EaElements.TabButton {
                 objectName: "sideBar.tab.extras"
-                text: qsTr("Extras")
+                text: qsTr("Extra")
                 enabled: page.extrasEnabled
             },
             EaElements.TabButton {
@@ -146,43 +183,6 @@ EaComponents.ContentPage {
         continueButton.showBackground: true
         continueButton.radius: sideBar.continueButton.height / 2
         continueButton.width: (sideBar.continueButton.contentItem && sideBar.continueButton.contentItem.children.length > 0 ? sideBar.continueButton.contentItem.children[0].width : 0) + 2 * EaStyle.Sizes.fontPixelSize
-
-        BlockSelector {
-            id: blockSelector
-            objectName: "sideBar.blocks"
-            visible: page.blockSelectorShown
-            x: EaStyle.Sizes.sideBarPadding
-            // As the Text tab's selector sat: one font unit under the tab bar.
-            y: (basicTab.TabBar.tabBar ? basicTab.TabBar.tabBar.height : 0) + EaStyle.Sizes.fontPixelSize
-            blocks: page.blocks
-            blocksTextRole: page.blocksTextRole
-            blockKind: page.blockKind
-            blockIndex: page.blockIndex
-            onBlockActivated: index => page.blockActivated(index)
-        }
-
-        // On every tab the selector closes with the bottom border a group draws (the base GroupBox's: a line of
-        // the border colour, a font unit under its content, across the sidebar); the tabs' view starts right
-        // under it (edi ADR-0017 §7).
-        Rectangle {
-            objectName: "sideBar.blocks.border"
-            visible: page.blockSelectorShown
-            y: blockSelector.y + blockSelector.height + EaStyle.Sizes.fontPixelSize - height
-            width: parent.width
-            height: EaStyle.Sizes.borderThickness
-            color: EaStyle.Colors.appBorder
-            Behavior on color {
-                EaAnimations.ThemeChange {}
-            }
-        }
-
-        // The tabs' view (the base's SwipeView, anchored under the tab bar) starts a font unit under the
-        // selector on every tab, right under its border.
-        Binding {
-            target: basicLoader.SwipeView.view ? basicLoader.SwipeView.view.anchors : null
-            property: "topMargin"
-            value: !page.blockSelectorShown ? 0 : 2 * EaStyle.Sizes.fontPixelSize + blockSelector.height
-        }
 
         // On the Text tab the tabs' view reaches the bottom of the sidebar, so the text view can run down to it
         // with Continue kept in its place, drawn over the text with the base's fade (edi ADR-0017 §7). The base

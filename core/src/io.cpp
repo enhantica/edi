@@ -14,6 +14,7 @@
 
 #include "edi/parameter_spec.hpp"
 #include "edi/edits.hpp"
+#include "edi/scan.hpp"
 #include "edi/selectors.hpp"
 #include "edi/worker.hpp"
 #include "identity_bridge.hpp"  // Crysta's identity rules, via the adapter
@@ -2615,6 +2616,44 @@ BraggPdExperiment experiment_from_edi_text(const std::string& text) {
     return experiment_from_block(block, where);
 }
 
+BraggPdExperiment simulation_experiment(const std::string& name, const ExperimentTypeTokens& type,
+                                        const std::string& structure_id) {
+    const bool constant_wavelength = type.beam_mode == "constant wavelength";
+    std::string text = "data_" + name + "\n\n_edi.schema_version 3\n\n";
+    text += "_experiment_type.sample_form \"" + type.sample_form + "\"\n";
+    text += "_experiment_type.beam_mode \"" + type.beam_mode + "\"\n";
+    text += "_experiment_type.radiation_probe \"" + type.radiation_probe + "\"\n";
+    text += "_experiment_type.scattering_type \"" + type.scattering_type + "\"\n\n";
+    // Starting values that give a readable pattern: a Thompson-Cox-Hastings pseudo-Voigt at about a
+    // diffractometer's resolution for constant wavelength (HRPT's neutron wavelength, Cu Kα for X-rays),
+    // Jorgensen's profile on a 90° bank for time-of-flight.
+    if (constant_wavelength) {
+        text += type.radiation_probe == "xray" ? "_instrument.setup_wavelength 1.54056\n"
+                                               : "_instrument.setup_wavelength 1.494\n";
+        text += "_instrument.calib_twotheta_offset 0.\n\n"
+                "_peak.type cwl-tch-pseudo-voigt\n"
+                "_peak.broad_gauss_u 0.1\n_peak.broad_gauss_v -0.1\n_peak.broad_gauss_w 0.1\n"
+                "_peak.broad_lorentz_x 0.\n_peak.broad_lorentz_y 0.1\n_peak.cutoff_fwhm 8.\n\n"
+                "_data_range.two_theta_min 10.\n_data_range.two_theta_max 150.\n"
+                "_data_range.two_theta_step 0.05\n";
+    } else {
+        text += "_instrument.setup_twotheta_bank 90.\n"
+                "_instrument.calib_d_to_tof_offset 0.\n_instrument.calib_d_to_tof_linear 7000.\n"
+                "_instrument.calib_d_to_tof_quadratic 0.\n\n"
+                "_peak.type tof-jorgensen\n"
+                "_peak.rise_alpha_0 0.\n_peak.rise_alpha_1 0.25\n"
+                "_peak.decay_beta_0 0.025\n_peak.decay_beta_1 0.03\n"
+                "_peak.broad_gauss_sigma_0 0.\n_peak.broad_gauss_sigma_1 80.\n_peak.broad_gauss_sigma_2 3.\n"
+                "_peak.broad_gauss_size 0.\n_peak.broad_gauss_strain 0.\n_peak.cutoff_fwhm 8.\n\n"
+                "_data_range.time_of_flight_min 2000.\n_data_range.time_of_flight_max 20000.\n"
+                "_data_range.time_of_flight_step 10.\n";
+    }
+    if (!structure_id.empty()) {
+        text += "\nloop_\n_linked_structure.structure_id\n_linked_structure.scale\n" + structure_id + " 1.\n";
+    }
+    return experiment_from_edi_text(text);
+}
+
 // ----: structures and experiments from `.edi` block files ------------
 
 namespace {
@@ -2992,6 +3031,9 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
         }
         if (const std::string* reverse = block.find("_sequential_fit.reverse")) {
             project.sequential_fit.reverse = strict_bool(*reverse, "_sequential_fit.reverse");
+        }
+        if (const std::string* file = block.find("_sequential_fit.template_file")) {
+            project.sequential_fit.template_file = *file;
         }
         if (const Loop* extract = block.loop_with("_sequential_fit_extract.id")) {
             for (const auto& row : extract->rows) {
@@ -3474,6 +3516,10 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
 
     project.path = directory;
     project.metadata.path = directory;
+    // A declared template dataset must be one of the scan's files.
+    if (!project.sequential_fit.template_file.empty()) {
+        check_scan_template_file(project, project.sequential_fit.template_file);
+    }
     // Each value outside its admissible range — a fit may leave one there — is loaded and named in one
     // warning; the app marks it red.
     for (const ParameterEntry& entry : parameter_entries(project)) {
@@ -3695,6 +3741,8 @@ void save_project_as(Project& project, const std::string& directory) {
     }
     project.path = directory;
     project.metadata.path = directory;
+    // The saved project holds its scan data: it reads them from its own directory from now on.
+    project.scan_data_root.clear();
 }
 
 
@@ -3717,7 +3765,18 @@ class ScratchSave {
                               fs::temp_directory_path().string());
             }
         }
-        save_project(project, (root_ / "project").string());
+        // The save starts from a source holding only the project record. Seeded from the project's own
+        // directory it would copy every file there, a scan's data included, to write a few small texts.
+        const fs::path source = root_ / "source";
+        fs::create_directories(source);
+        if (!project.path.empty()) {
+            std::error_code absent;
+            fs::copy_file(fs::path(project.path) / "project.edi", source / "project.edi", absent);
+        }
+        Project unseeded = project;
+        unseeded.path = source.string();
+        unseeded.scan_data_root.clear();
+        save_project(unseeded, (root_ / "project").string());
     }
     ~ScratchSave() {
         std::error_code ignored;

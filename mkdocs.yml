@@ -55,6 +55,7 @@ nav:
           - dev/adrs/0023-web-build.md
           - dev/adrs/0024-parameter-aliases-and-constraints.md
           - dev/adrs/0025-several-structures-and-linked-structures.md
+          - dev/adrs/0026-scan-datasets-and-scale.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md
@@ -62,6 +63,7 @@ nav:
           - dev/design/architecture-and-upstreams.md
           - dev/design/diffraction-lib-parity.md
           - dev/design/modern-qt-guidelines.md
+          - dev/design/scan-folder-loading.md
           - dev/public-release-checklist.md
           - dev/design/where-tests-live.md
       - Requirements:
@@ -96,6 +98,7 @@ nav:
           - user/cli/pd-neut-cwl_cosio-d20_start-1/index.md
           - user/cli/pd-neut-cwl_cosio-d20_start-4/index.md
           - user/cli/pd-neut-cwl_cosio-d20_scan-3f/index.md
+          - user/cli/pd-neut-cwl_cosio-d20_scan-162f/index.md
           - user/cli/pd-neut-cwl_cosio-d20_scan-324f/index.md
           - user/cli/pd-neut-cwl_lbco-hrpt_start-2/index.md
           - user/cli/pd-neut-cwl_lbco-hrpt_start-4/index.md
@@ -117,6 +120,7 @@ nav:
           - user/cli/pd-xray-cwl_lif_single/index.md
       - Guides:
           - user/guides/complete-project-loading.md
+          - user/guides/sequential-fitting-in-the-app.md
       - Tutorials:
           - user/tutorials/index.md
           - user/tutorials/refine-cosio-d20-tscan.ipynb

@@ -1,0 +1,28 @@
+_edi.schema_version 2
+
+_fitting_mode.type sequential
+
+_minimizer.type "crysta (lm)"
+_minimizer.max_iterations 1000
+
+loop_
+_alias.id
+_alias.parameter_unique_name
+biso_Co1 cosio.atom_site.Co1.adp_iso
+biso_Co2 cosio.atom_site.Co2.adp_iso
+
+loop_
+_constraint.id
+_constraint.expression
+biso_Co2 "biso_Co2 = biso_Co1"
+
+_sequential_fit.data_dir experiments/d20_scan
+_sequential_fit.file_pattern *.dat
+_sequential_fit.reverse false
+
+loop_
+_sequential_fit_extract.id
+_sequential_fit_extract.target
+_sequential_fit_extract.pattern
+_sequential_fit_extract.required
+temperature diffrn.ambient_temperature ^TEMP\s+([0-9.]+) true

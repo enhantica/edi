@@ -30,11 +30,8 @@ WorkflowPage {
     mainTabs: [
         IconTabButton {
             objectName: "mainArea.structure.tab.view"
-            // The structure's icon in its colour, and its name; the word alone with no structure (edi ADR-0017
-            // §2).
-            fontIcon: page.structure ? "layer-group" : ""
-            iconColor: AppColors.structure(page.project ? page.project.currentStructureIndex : -1)
-            text: page.structure ? page.structure.name : qsTr("Structure")
+            // The view's name, text only (edi ADR-0017 §2).
+            text: qsTr("Structure")
         }
     ]
     mainItems: [
@@ -84,6 +81,7 @@ WorkflowPage {
     }
     // One block selector for Basic, Extras and Text (edi ADR-0017 §7).
     blockSelectorShown: true
+    blockSelectorRightInset: structureView.toolbarRightInset
     blocks: project ? project.structures : null
     blocksTextRole: "label"
     blockKind: "structure"

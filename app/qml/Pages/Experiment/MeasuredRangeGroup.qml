@@ -11,7 +11,8 @@ import EasyApplication.Gui.Components as EaComponents
 import edi.app
 
 // `data` / `data_range` (easydiffractionbeta's Measured range): the
-// axis summary, read-only — minimum, maximum, the increment and the number of points. The increment is one
+// axis summary — minimum, maximum, the increment and the number of points — read-only for measured data and
+// editable for an experiment without it (a simulation), whose grid it sets. The increment is one
 // value when every step between neighbouring points reads the same at the field's display precision, and
 // otherwise the smallest and largest step, "min–max" (TOF data, merged scans; ADR-0017 §6). `data` is a loop
 // in `.edi`, so its points follow as a table ("loop in .edi — table in gui"): the axis, the measured intensity
@@ -24,6 +25,7 @@ Column {
     readonly property RangeViewModel range: experiment ? experiment.measuredRange : null
     readonly property bool timeOfFlight: experiment !== null && experiment.beamMode === ExperimentViewModel.TimeOfFlight
     readonly property string units: timeOfFlight ? "µs" : "°"
+    readonly property bool editable: experiment !== null && experiment.calculationOnly
 
     // The axis at six significant digits; an intensity at three decimals, so a calculated value that is
     // effectively zero (1e-46 at a pattern's tail, its digits floating-point noise that differs by platform)
@@ -48,7 +50,8 @@ Column {
     EaElements.GroupRow {
         ValueField {
             objectName: "range.minimum"
-            editable: false
+            editable: group.editable
+            onCommitted: text => group.experiment.setRange(Number(text), group.range.maximum, group.range.step)
             accepts: "number"
             label: qsTr("min")
             unit: group.units
@@ -56,7 +59,8 @@ Column {
         }
         ValueField {
             objectName: "range.maximum"
-            editable: false
+            editable: group.editable
+            onCommitted: text => group.experiment.setRange(group.range.minimum, Number(text), group.range.step)
             accepts: "number"
             label: qsTr("max")
             unit: group.units
@@ -64,7 +68,8 @@ Column {
         }
         ValueField {
             objectName: "range.step"
-            editable: false
+            editable: group.editable
+            onCommitted: text => group.experiment.setRange(group.range.minimum, group.range.maximum, Number(text))
             accepts: "number"
             label: qsTr("inc")
             unit: group.units

@@ -222,3 +222,11 @@ reblessed:
     platform: Linux x86_64, QT_QPA_PLATFORM=xcb (Xwayland on headless Weston, Mesa llvmpipe OpenGL)
     images:
       - 18-experiment-tch.png
+  - produced_at: c69af6f2a50452b2b94c46c4b87c62deb5ac4f2d
+    reason: >-
+      The 162-file CoSiO scan joins the examples, so its page is captured (new). Captured with edi built against
+      crysta 072d833a. Only this image is added; the run's other SSIM failures are pages this branch's GUI work
+      changed, left to the app UI test's return.
+    platform: Linux x86_64, QT_QPA_PLATFORM=xcb (Xwayland on headless Weston, Mesa llvmpipe OpenGL)
+    images:
+      - ex-pd-neut-cwl_cosio-d20_scan-162f.png

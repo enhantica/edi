@@ -12,17 +12,28 @@ import EasyApplication.Gui.Components as EaComponents
 import edi.app
 
 // Experiments (N) (easydiffractionbeta Pages/Experiment/SideBarBasic/Experiments.qml): the project's
-// experiments, one current; experiments enter only from `.edi` block files declaring their
-// type, whenever a project is open — an edi project holds several.
+// experiments, one current, each with how the last fit ended on it (Fit) and the file its data is in; under
+// the table the selected experiment's type (ExperimentTypeGroup), then Load experiment (`.edi` block files,
+// several at once, each with its type, data and parameters) and Create experiment (a new experiment without
+// data, a simulation). A row without data has a Load data… button in its File cell, disabled until plain data
+// files load. Create and Load are each one undoable step.
 EaElements.GroupBox {
     id: group
 
     property ProjectViewModel project: null
+    // A scan project lists its datasets: No. · Fit · Datablock · File · one column per extract rule, with no
+    // colour column and no remove button (one template experiment shows them all).
+    readonly property bool scan: project !== null && project.scan
+    // One column per extract rule, with its unit, from the table's own model. The table lays a row's cells out
+    // by their place among the header's, so the header and each row repeat over the same list.
+    readonly property var scanColumns: project ? project.experiments.columns : []
 
     objectName: "group.experiments"
     title: qsTr("Experiments (%1)").arg(project ? project.experiments.count : 0)
     icon: "microscope"
     last: SideBarGroups.isLast(group)
+    // Open at the start, unlike the category groups (owner, 2026-10-05; edi ADR-0017 §3).
+    collapsed: false
 
     Column {
         spacing: AppSizes.groupContentSpacing
@@ -39,15 +50,43 @@ EaElements.GroupBox {
                     text: qsTr("No.")
                 }
                 EaComponents.TableViewLabel {
+                    width: group.scan ? 0 : EaStyle.Sizes.tableRowHeight
+                }
+                EaComponents.TableViewLabel {
                     width: EaStyle.Sizes.tableRowHeight
+                    text: qsTr("Fit")
                 }
                 EaComponents.TableViewLabel {
                     flexibleWidth: true
                     horizontalAlignment: Text.AlignLeft
-                    text: qsTr("Name")
+                    text: qsTr("Datablock")
                 }
                 EaComponents.TableViewLabel {
-                    width: AppSizes.iconColumnWidth
+                    width: group.scan ? AppSizes.datasetFileColumnWidth : AppSizes.fileColumnWidth
+                    horizontalAlignment: Text.AlignLeft
+                    text: qsTr("File")
+                }
+                // Each in a plain item: a repeated label has no parent while it is made, and the table copies a
+                // header cell's alignment onto the row cell at its place, the repeater's own included while a row
+                // has not made its cells yet.
+                Repeater {
+                    property int horizontalAlignment: Text.AlignHCenter
+                    model: group.scanColumns
+                    delegate: Item {
+                        id: column
+                        required property string modelData
+                        property int horizontalAlignment: Text.AlignHCenter
+                        width: AppSizes.dataColumnWidth * 1.4
+                        height: EaStyle.Sizes.tableRowHeight
+                        EaComponents.TableViewLabel {
+                            anchors.fill: parent
+                            horizontalAlignment: column.horizontalAlignment
+                            text: column.modelData
+                        }
+                    }
+                }
+                EaComponents.TableViewLabel {
+                    width: group.scan ? 0 : AppSizes.iconColumnWidth
                 }
             }
 
@@ -57,6 +96,10 @@ EaElements.GroupBox {
                 required property int index
                 required property string name
                 required property ExperimentViewModel experiment
+                required property string fitOutcome
+                required property string file
+                required property var extracted
+                required property bool isTemplate
 
                 objectName: `experiments.row.${index}`
                 color: group.project && group.project.currentExperimentIndex === index ? EaStyle.Colors.tableHighlight : (index % 2 ? EaStyle.Colors.themeBackgroundHovered2 : EaStyle.Colors.themeBackgroundHovered1)
@@ -70,22 +113,83 @@ EaElements.GroupBox {
                 // The block's icon in its colour (easydiffractionbeta's colour column; ADR-0017 §8).
                 IconCell {
                     objectName: `experiments.color.${row.index}`
+                    visible: !group.scan
+                    width: group.scan ? 0 : EaStyle.Sizes.tableRowHeight
                     icon: "microscope"
                     iconColor: AppColors.experiment(row.index)
                     toolTip: qsTr("Measured pattern color")
+                }
+                // How the project's last fit ended on this experiment; "Not fitted" when it took no part.
+                IconCell {
+                    objectName: `experiments.fit.${row.index}`
+                    icon: FitOutcomes.icon(row.fitOutcome)
+                    iconColor: String(FitOutcomes.color(row.fitOutcome))
+                    ring: FitOutcomes.ring(row.fitOutcome)
+                    toolTip: FitOutcomes.word(row.fitOutcome)
                 }
                 // The datablock name, editable: a refused rename returns the cell to the stored name and shows why.
                 // Editing a name also makes its row current, as a click on the row does.
                 TextCell {
                     objectName: `experiments.name.${row.index}`
-                    width: table.headerLabelItems.length > 2 ? table.headerLabelItems[2].width : 0
+                    width: table.headerLabelItems.length > 3 ? table.headerLabelItems[3].width : 0
                     value: row.name
                     onActiveFocusChanged: if (activeFocus)
                         group.project.currentExperimentIndex = row.index
                     onCommitted: text => row.experiment.name = text
                 }
+                // The data's file: the experiment's own `.edi`, which holds its data, or a scan dataset's data file,
+                // the template dataset's with the word "template" in the accent blue; Load data… without data.
+                Item {
+                    width: group.scan ? AppSizes.datasetFileColumnWidth : AppSizes.fileColumnWidth
+                    height: parent ? parent.height : 0
+
+                    EaComponents.TableViewLabel {
+                        visible: group.scan || (row.experiment !== null && !row.experiment.calculationOnly)
+                        width: parent.width - (templateTag.visible ? templateTag.width : 0)
+                        horizontalAlignment: Text.AlignLeft
+                        elide: Text.ElideMiddle
+                        text: row.file
+                    }
+                    EaComponents.TableViewLabel {
+                        id: templateTag
+                        objectName: `experiments.template.${row.index}`
+                        visible: group.scan && row.isTemplate
+                        anchors.right: parent.right
+                        width: implicitWidth
+                        elide: Text.ElideNone
+                        color: EaStyle.Colors.themeAccent
+                        text: qsTr("template")
+                    }
+                    EaElements.Button {
+                        objectName: `experiments.loadData.${row.index}`
+                        // A simulation's only: a scan's datasets and loaded experiments have their data.
+                        visible: row.experiment !== null && row.experiment.calculationOnly
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: parent.width
+                        enabled: false
+                        text: qsTr("Load data…")
+                    }
+                }
+                // What the scan's extract rules take from the dataset, with their units.
+                Repeater {
+                    property int horizontalAlignment: Text.AlignHCenter
+                    model: group.scanColumns.length
+                    delegate: Item {
+                        id: value
+                        required property int index
+                        property int horizontalAlignment: Text.AlignHCenter
+                        height: EaStyle.Sizes.tableRowHeight
+                        EaComponents.TableViewLabel {
+                            anchors.fill: parent
+                            horizontalAlignment: value.horizontalAlignment
+                            text: row.extracted && row.extracted.length > value.index ? row.extracted[value.index] : ""
+                        }
+                    }
+                }
                 EaComponents.TableViewButton {
                     objectName: `experiments.remove.${row.index}`
+                    visible: !group.scan
+                    width: group.scan ? 0 : AppSizes.iconColumnWidth
                     fontIcon: "minus-circle"
                     ToolTip.text: qsTr("Remove this experiment")
                     onClicked: group.project.removeExperiment(row.index)
@@ -93,8 +197,13 @@ EaElements.GroupBox {
             }
         }
 
-        // Load and Define manually side by side, as easydiffractionbeta's; defining an experiment by hand is
-        // not implemented, so its button is disabled (edi ADR-0017 §4).
+        ExperimentTypeGroup {
+            visible: group.project !== null && group.project.currentExperiment !== null
+            project: group.project
+            experiment: group.project ? group.project.currentExperiment : null
+            experimentIndex: group.project ? group.project.currentExperimentIndex : -1
+        }
+
         Row {
             spacing: EaStyle.Sizes.fontPixelSize
 
@@ -102,7 +211,8 @@ EaElements.GroupBox {
                 objectName: "experiments.load"
                 enabled: group.project !== null
                 fontIcon: "upload"
-                text: qsTr("Load experiment(s) from file(s)")
+                text: qsTr("Load experiment")
+                ToolTip.text: qsTr("Load experiments from .edi files, each with its type, data and parameters")
                 // In the browser the files come through the page (edi ADR-0023).
                 onClicked: {
                     if (WebFiles.available) {
@@ -114,10 +224,12 @@ EaElements.GroupBox {
                 }
             }
             EaElements.SideBarButton {
-                objectName: "experiments.define"
-                enabled: false
+                objectName: "experiments.create"
+                enabled: group.project !== null && group.project.canCreateExperiment
                 fontIcon: "plus-circle"
-                text: qsTr("Define experiment manually")
+                text: qsTr("Create experiment")
+                ToolTip.text: enabled ? qsTr("Add an experiment without data, to calculate its pattern") : qsTr("The project's experiments carry measured data; an experiment without data cannot join them")
+                onClicked: group.project.createExperiment()
             }
         }
     }

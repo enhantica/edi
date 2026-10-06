@@ -66,8 +66,12 @@ Column {
                 value: row.model.id
                 onCommitted: text => group.aliases.setText(row.index, "id", text)
             }
-            EaComponents.TableViewComboBox {
+            // The base's table combo box (TableViewComboBox), searchable: a project has many parameters.
+            SearchableComboBox {
                 objectName: `alias.parameter.${row.index}`
+                anchors.verticalCenter: parent.verticalCenter
+                borderColor: "transparent"
+                backgroundColor: "transparent"
                 width: table.headerLabelItems.length > 2 ? table.headerLabelItems[2].width : 0
                 model: group.aliases ? group.aliases.parameterNames : []
                 currentIndex: group.aliases ? group.aliases.parameterNames.indexOf(row.model.parameter) : -1

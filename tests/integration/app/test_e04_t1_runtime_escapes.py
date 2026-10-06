@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
@@ -76,8 +77,14 @@ def test_owner_amendment_receipts_cover_every_original_gui_boundary(owner_amendm
     )
 
 
-def test_existing_projects_open_and_populate_pages(acceptance_reference):
-    run = subprocess.run(
+@pytest.fixture(scope='module')
+def existing_projects_run(acceptance_reference, owner_amendment_run):
+    # Prime both shared page actors in the same setup phase. The module-cost
+    # instrument then retains their complete cost at one honest setup trigger.
+    assert 'E04T1OwnerAmendments' in owner_amendment_run.stdout, (
+        'The shared page setup first executes its actual owner-amendment actor'
+    )
+    return subprocess.run(
         [str(runner()), '-input', str(APP_TESTS / 'tst_e04_t1_projects.qml'), '-o', '-,txt'],
         env={
             **os.environ,
@@ -87,9 +94,16 @@ def test_existing_projects_open_and_populate_pages(acceptance_reference):
         },
         capture_output=True,
         text=True,
-        timeout=180,
+        # Whole-registry correctness actor now also projects first/middle/last
+        # datasets for every scan. Per-selection settlement stays bounded in QML;
+        # the independent scale/time gate keeps its existing limits.
+        timeout=300,
         check=False,
     )
+
+
+def test_existing_projects_open_and_populate_pages(existing_projects_run):
+    run = existing_projects_run
     output = run.stdout + run.stderr
     assert run.returncode == 0, (
         f'I19: all registered examples and legacy directories open: {output}'
@@ -101,6 +115,26 @@ def test_existing_projects_open_and_populate_pages(acceptance_reference):
         'E04T1ExistingProjects' in output
         and 'test_every_example_opens_through_its_page_row' in output
     ), 'I19: the production runner must actually execute the existing-project cases'
+
+
+@pytest.mark.parametrize(
+    'example',
+    [
+        project['id']
+        for project in json.loads(
+            (ROOT / 'tests/fixtures/e04_t1/oracle.js')
+            .read_text()
+            .split('var frozen = ', 1)[1]
+            .removesuffix(';\n')
+        )['projects']
+    ],
+)
+def test_existing_project_receipts_cover_every_registered_example(existing_projects_run, example):
+    output = existing_projects_run.stdout + existing_projects_run.stderr
+    assert (
+        'PASS   : edi_app::E04T1ExistingProjects::'
+        f'test_every_example_opens_through_its_page_row({example})' in output
+    ), 'Every registered example reaches and passes its real page-population assertions'
 
 
 @pytest.mark.parametrize('escape', ['missing_property', 'broad_notifications'])

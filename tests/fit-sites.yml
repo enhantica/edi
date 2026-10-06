@@ -83,9 +83,7 @@ sites:
 
   - file: tests/integration/py/test_constraint_fit.py
     case: constraint-covariance
-
-  - file: tests/system/py/test_beer_fullprof_agreement.py
-    case: beer-ferrite-austenite
-
-  - file: tests/system/py/test_yap_agreement.py
-    case: yap-spodi-3k
+  - file: tests/system/py/test_scan_driver_resume.py
+    case: cosio-d20-scan-3f
+  - file: tests/system/py/test_scan_lazy_input.py
+    case: cosio-d20-scan-3f

@@ -203,6 +203,22 @@ void clear_fit_result(Project& project);
 Structure structure_from_edi_text(const std::string& text);
 BraggPdExperiment experiment_from_edi_text(const std::string& text);
 
+/// The type of a new experiment, by its `.edi` tokens (`_experiment_type.*`).
+struct ExperimentTypeTokens {
+    std::string sample_form = "powder";
+    std::string beam_mode = "constant wavelength";
+    std::string radiation_probe = "neutron";
+    std::string scattering_type = "bragg";
+};
+
+/// A new experiment without measured data: a simulation over its beam mode's default calculation grid
+/// (`_data_range`, so calculation_only), linked to `structure_id` at scale 1 when that is not empty, with
+/// default instrument and peak values and every parameter fixed. Built from `.edi` text by the one
+/// experiment builder, so a type token or a name the loader refuses is refused here with its message
+/// (IoError).
+BraggPdExperiment simulation_experiment(const std::string& name, const ExperimentTypeTokens& type,
+                                        const std::string& structure_id);
+
 // Registration-live loader vocabulary (seam 20 / I15): the Python registration seam adds a new
 // `_peak.type` token here so the loader and selector accept it without a rebuild — crysta's
 // registry-built known_peak_types() pattern, mirrored. Idempotent; a shipped row is never

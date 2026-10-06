@@ -13,6 +13,7 @@ import hashlib
 import json
 import re
 import shlex
+import shutil
 from pathlib import Path
 
 import yaml
@@ -37,6 +38,11 @@ B2B = ['rise_alpha_0', 'rise_alpha_1', 'decay_beta_0', 'decay_beta_1']
 FCJ = ['asym_fcj_1', 'asym_fcj_2']
 BEBA = ['asym_beba_a0', 'asym_beba_b0', 'asym_beba_a1', 'asym_beba_b1', 'asym_beba_limit']
 PROFILES = {
+    # FullProf Npr 0 and 1 share the Caglioti width, with eta fixed to 0 and 1.
+    'cwl-gaussian': CW[:3],
+    'cwl-lorentzian': CW[:3],
+    # FullProf Npr 5: Caglioti U/V/W and eta0 + eta1 * two-theta.
+    'cwl-pseudo-voigt': CW[:3] + ['mixing_eta_0', 'mixing_eta_1'],
     'cwl-tch-pseudo-voigt': CW,
     'cwl-tch-pseudo-voigt-fcj': CW + FCJ,
     'cwl-pseudo-voigt-berar-baldinozzi': CW[:3] + ['mixing_eta_0', 'mixing_eta_1'] + BEBA,
@@ -138,6 +144,87 @@ def measured_range(path):
     return [values[0], values[-1], (values[-1] - values[0]) / (len(values) - 1), len(values)]
 
 
+def scan_inputs(project, analysis):
+    """Independent file catalogue and measured-range witnesses; never import the app."""
+    if analysis.get('_fitting_mode.type') not in {'sequential', 'independent'}:
+        return []
+    directory = project / analysis['_sequential_fit.data_dir']
+    files = sorted(directory.glob(analysis['_sequential_fit.file_pattern']))
+    if analysis.get('_sequential_fit.reverse') == 'true':
+        files.reverse()
+    datasets = []
+    selected = {0, len(files) // 2, len(files) - 1}
+    for file_index, file in enumerate(files):
+        rows = []
+        for line in file.read_text().splitlines():
+            fields = line.split()
+            if len(fields) != 3:
+                continue
+            try:
+                rows.append([float(field) for field in fields])
+            except ValueError:
+                continue
+        if len(rows) < 2:
+            raise ValueError('Scan range witness requires independent measured ASCII rows')
+        axis = [row[0] for row in rows]
+        dataset = {
+            'file': file.name,
+            'sha256': hashlib.sha256(file.read_bytes()).hexdigest(),
+            'range': [axis[0], axis[-1], (axis[-1] - axis[0]) / (len(axis) - 1), len(axis)],
+        }
+        if file_index in selected:
+            # Independent ASCII convention: diffraction-lib bragg_pd.py,
+            # as cited in scan_template/REFERENCE.md; never an app-generated value.
+            dataset['samples'] = [
+                {
+                    'index': index,
+                    'values': [
+                        round(rows[index][0], 4),
+                        rows[index][1],
+                        1.0 if rows[index][2] < 0.0001 else rows[index][2],
+                    ],
+                }
+                for index in sorted({0, len(rows) // 2, len(rows) - 1})
+            ]
+        datasets.append(dataset)
+    return datasets
+
+
+def profile_fixtures():
+    # Keep every FullProf profile category covered without mislabeling a scan.
+    projects = []
+    for kind, profile in (
+        ('eta', 'cwl-pseudo-voigt'),
+        ('gaussian', 'cwl-gaussian'),
+        ('lorentzian', 'cwl-lorentzian'),
+    ):
+        project = ROOT / 'tests/fixtures/e04_t1' / (kind + '-project')
+        shutil.copytree(project.with_name('xray-project'), project, dirs_exist_ok=True)
+        (project / 'project.edi').write_text(
+            f'_edi.schema_version 3\n_metadata.name "{kind.title()} profile category witness"\n'
+        )
+        experiment = project / 'experiments/experiment.edi'
+        text = experiment.read_text().replace('cwl-tch-pseudo-voigt', profile)
+        text = (
+            '\n'.join(
+                line
+                for line in text.splitlines()
+                if not line.startswith(('_peak.broad_lorentz_x ', '_peak.broad_lorentz_y '))
+            )
+            + '\n'
+        )
+        # Nontrivial X-ray polarization input is transcribed from the saved LiF example.
+        text += (
+            '_instrument.setup_polarization_coefficient 0.4\n'
+            '_instrument.setup_monochromator_twotheta 20\n'
+        )
+        if kind == 'eta':
+            text += '_peak.mixing_eta_0 0.37\n_peak.mixing_eta_1 0.0023\n'
+        experiment.write_text(text)
+        projects.append(project)
+    return projects
+
+
 def generate(warning_project=None):
     projects = []
     for entry in yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text())['projects']:
@@ -174,6 +261,7 @@ def generate(warning_project=None):
             'analysis': scalars(analysis) if analysis.exists() else {},
             'structures': structures,
             'experiments': [p.stem for p in sorted((project / 'experiments').glob('*.edi'))],
+            'datasets': scan_inputs(project, scalars(analysis) if analysis.exists() else {}),
             'loaderWarning': loader_warning(
                 scalars(analysis) if analysis.exists() else {},
                 [scalars(file) for file in sorted((project / 'experiments').glob('*.edi'))],
@@ -186,7 +274,7 @@ def generate(warning_project=None):
             },
         })
     corpus = []
-    for project in sorted((ROOT / 'docs/user/cli').glob('*/project')):
+    for project in [*sorted((ROOT / 'docs/user/cli').glob('*/project')), *profile_fixtures()]:
         for file in sorted((project / 'experiments').glob('*.edi')):
             fields = scalars(file)
             profile = fields['_peak.type']
@@ -207,12 +295,31 @@ def generate(warning_project=None):
                 'mode': mode,
                 'peakFields': expected,
                 'unusedFreeFields': unused,
-                #  extends the prior input oracle: keep the two CW
-                # fields, then the independently declared polarization pair.
+                # Absent optional mixing / extra broadening is fixed neutral zero;
+                # this is a declared input rule, not a calculated engine value.
+                'peakDefaults': {
+                    name: {'value': 0.0, 'free': False}
+                    for name in (
+                        'mixing_eta_0',
+                        'mixing_eta_1',
+                        'broad_gauss_size',
+                        'broad_gauss_strain',
+                        'broad_lorentz_size',
+                        'broad_lorentz_strain',
+                    )
+                    if name in expected and '_peak.' + name not in fields
+                },
+                # Keep the base fields and every independently declared optional
+                # FullProf sample-shift and polarization calibration input.
                 'instrumentFields': INSTRUMENT[mode]
                 + [
                     name
-                    for name in ('setup_polarization_coefficient', 'setup_monochromator_twotheta')
+                    for name in (
+                        'calib_sample_displacement',
+                        'calib_sample_transparency',
+                        'setup_polarization_coefficient',
+                        'setup_monochromator_twotheta',
+                    )
                     if '_instrument.' + name in fields
                 ],
                 'range': measured_range(file),

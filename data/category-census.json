@@ -1303,6 +1303,13 @@
           "items": [
             "reverse"
           ]
+        },
+        {
+          "member": "SequentialFitConfig::template_file",
+          "type": "std::string",
+          "items": [
+            "template_file"
+          ]
         }
       ],
       "owner": "SequentialFitConfig"
@@ -3341,6 +3348,16 @@
       "not_storage": "a fit report"
     },
     {
+      "member": "ScanFileRecord::cells",
+      "type": "std::vector<std::string>",
+      "not_storage": "a fit report"
+    },
+    {
+      "member": "ScanFileRecord::termination",
+      "type": "std::string",
+      "not_storage": "a fit report"
+    },
+    {
       "member": "ScanPreamble::total_files",
       "type": "int",
       "not_storage": "a fit report"
@@ -3573,6 +3590,11 @@
     {
       "member": "SequentialFitConfig::reverse",
       "type": "bool",
+      "category": "_sequential_fit"
+    },
+    {
+      "member": "SequentialFitConfig::template_file",
+      "type": "std::string",
       "category": "_sequential_fit"
     },
     {

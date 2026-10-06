@@ -268,7 +268,6 @@ AnalysisViewModel::AnalysisViewModel(edi::Project& project, ProjectEditor& edito
       constraints_(new ConstraintListModel(project, editor, this)),
       categories_(new CategoryListModel(this)),
       text_(new BlockText([saved] { return saved("analysis/analysis.edi"); }, this)) {
-    fitting_mode_options_->setOptions(edi::supported_fitting_modes(), "single");
     descent_options_->setOptions(edi::supported_descents(), edi::default_descent());
     minimizer_type_options_->setOptions(edi::supported_minimizer_types());
     sync();
@@ -285,7 +284,7 @@ void AnalysisViewModel::setFittingMode(const QString& mode) {
         return;
     }
     edi::Project& project = project_;
-    setLastError(editor_.apply(edi::Edit::fitting_mode(project, mode.toStdString()), false));
+    setLastError(editor_.apply_setting(edi::Edit::fitting_mode(project, mode.toStdString())));
 }
 
 void AnalysisViewModel::setDescent(const QString& id) {
@@ -293,17 +292,17 @@ void AnalysisViewModel::setDescent(const QString& id) {
         return;
     }
     edi::Project& project = project_;
-    setLastError(editor_.apply(edi::Edit::descent(project, id.toStdString()), false));
+    setLastError(editor_.apply_setting(edi::Edit::descent(project, id.toStdString())));
 }
 
 void AnalysisViewModel::setMaxIterations(int bound) {
     edi::Project& project = project_;
-    setLastError(editor_.apply(edi::Edit::max_iterations(project, bound), false));
+    setLastError(editor_.apply_setting(edi::Edit::max_iterations(project, bound)));
 }
 
 void AnalysisViewModel::setChiSquareTolerance(double tolerance) {
     edi::Project& project = project_;
-    setLastError(editor_.apply(edi::Edit::chi_square_tolerance(project, tolerance), false));
+    setLastError(editor_.apply_setting(edi::Edit::chi_square_tolerance(project, tolerance)));
 }
 
 void AnalysisViewModel::setLastError(const QString& error) {
@@ -314,6 +313,16 @@ void AnalysisViewModel::setLastError(const QString& error) {
 }
 
 void AnalysisViewModel::sync() {
+    // A project that declares a scan fits one template experiment at a time: joint is offered only without one.
+    const bool scan = project_.sequential_fit.declared();
+    if (fitting_mode_options_->count() == 0 || scan != scan_declared_) {
+        scan_declared_ = scan;
+        std::vector<std::string> modes = edi::supported_fitting_modes();
+        if (scan) {
+            std::erase(modes, std::string("joint"));
+        }
+        fitting_mode_options_->setOptions(modes, "single");
+    }
     const QString mode = QString::fromStdString(edi::effective_fitting_mode(project_));
     if (mode != fitting_mode_) {
         fitting_mode_ = mode;

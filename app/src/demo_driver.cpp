@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "demo_driver.hpp"
 
+#include <algorithm>
+
 #include <QCoreApplication>
 #include <QFile>
 #include <QGuiApplication>
@@ -22,6 +24,9 @@ namespace {
 // up to 1 s); a state that never settles within the bound fails the run.
 constexpr int kSettleIntervalMs = 100;
 constexpr int kSettleMaxAttempts = 30;
+// A fit the demo starts ends within this, or the run fails; `capture-now` captures this long after its actions.
+constexpr int kFitWaitMs = 300000;
+constexpr int kUnsettledCaptureMs = 150;
 
 // Open a bundled example from the Project page: scroll its row into view, click it.
 QStringList open_example(const QString& id) {
@@ -33,7 +38,7 @@ QStringList open_example(const QString& id) {
 
 }  // namespace
 
-DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, QObject* parent)
+DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QString& only, QObject* parent)
     : QObject(parent), window_(window), output_dir_(output_dir) {
     const QString experiment = QStringLiteral("appBar.tab.experiment");
     const QString basic = QStringLiteral("sideBar.tab.basic");
@@ -51,12 +56,12 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, QObject*
         {"02-project-no-project", {"home.start"}},
         {"03-project-examples", {"group.examples"}},
         {"04-project-loaded", {"examples.open.pd-neut-cwl_cosio-d20_start-1"}},
-        {"05-model-models", {"appBar.tab.structure", "group.structures"}},
+        {"05-model-models", {"appBar.tab.structure", "expand:group.structures"}},
         {"06-model-space-group", {"group.space_group"}},
         {"07-model-cell", {"group.cell"}},
         {"08-model-atom-site", {"group.atom_site"}},
         {"09-model-text-mode", {text}},
-        {"10-experiment-experiments", {experiment, "group.experiments"}},
+        {"10-experiment-experiments", {experiment, "expand:group.experiments"}},
         {"11-experiment-profile-shape", {"group.peak"}},
         {"12-experiment-background", {"group.background"}},
         {"13-analysis-basic", {"appBar.tab.analysis"}},
@@ -136,24 +141,123 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, QObject*
     // ... then ideas no capture above shows (edi ADR-0017): the Experiment type grid three
     // wide (§2), and Measured data's one increment where the steps are equal (§6; t2-12 shows the range) ...
     steps_.push_back({"t4-01-experiment-type", open_example("pd-neut-cwl_lbco-hrpt_start-2")
-                                                   + QStringList{experiment, basic, "group.experiment_type"}});
+                                                   + QStringList{experiment, basic, "expand:group.experiments"}});
     steps_.push_back({"t4-02-measured-data-uniform", {extras, "group.data"}});
     // ... and the messages (ideas 24-26; §14): the example that always has three, counted in the status bar
     // before they are viewed, listed in the dialog, and counted again after it closes; then a refused
     // calculation's error in the list, below a loader warning and over its neutral chart placeholder. No
     // bundled project is refused, so another project's experiment is loaded: its preferred orientation
-    // names a structure this project does not have.
+    // names a structure this project does not have. The project is not a scan, which keeps its one
+    // template experiment and refuses a second.
     steps_.push_back({"t4-03-messages-not-viewed", open_example("pd-neut-tof_fe_pseudo-voigt")});
     steps_.push_back({"t4-04-messages-list", {"statusBar.warnings"}});
     steps_.push_back({"t4-05-messages-viewed", {"choose:OK"}});
     steps_.push_back({"t4-06-messages-error",
-                      open_example("pd-neut-cwl_cosio-d20_scan-3f")
+                      open_example("pd-neut-cwl_cosio-d20_start-1")
                           + QStringList{experiment, basic,
                                         "load-experiments:pd-neut-cwl_lbco-hrpt_start-2/project/experiments/hrpt.edi",
                                         "statusBar.warnings"}});
     // ... and the About dialog, last: it stays open.
     steps_.push_back({"28-home-about", {"choose:OK",  // close the Messages dialog
                                         "appBar.tab.home", "home.about"}});
+    // ... and the fit area, the fitting buttons, the block selector in the main view's tab bar, the Experiments
+    // explorer with its Fit column, type selectors and Create experiment, and a searchable combo box. Each
+    // opens its example from Home, so `--demo-only t16-` runs them alone.
+    const QStringList start = {QStringLiteral("appBar.tab.home"), QStringLiteral("home.start"),
+                               QStringLiteral("expand:group.examples")};
+    steps_.push_back({"t16-01-analysis", start + open_example("pd-neut-cwl_cosio-d20_start-1") + QStringList{analysis, basic}});
+    steps_.push_back({"t16-02-fit-running", {"fitting.start", "capture-now"}});
+    steps_.push_back({"t16-03-fit-done", {"wait-fit"}});
+    steps_.push_back({"t16-04-fit-results", {"statusBar.fit.outcome"}});
+    steps_.push_back({"t16-05-experiments", {"choose:OK", experiment, basic, "expand:group.experiments"}});
+    steps_.push_back({"t16-06-structure", {"appBar.tab.structure", basic}});
+    steps_.push_back({"t16-07-narrow", {"resize:900x768", experiment}});
+    steps_.push_back({"t16-08-lif", QStringList{"resize:1280x768"} + start + open_example("pd-xray-cwl_lif")
+                                         + QStringList{experiment, basic, "expand:group.experiments"}});
+    steps_.push_back({"t16-08-create-experiment", {"experiments.create"}});
+    steps_.push_back({"t16-09-create-tof", {"experimentType.beamMode", "choose:time-of-flight"}});
+    steps_.push_back({"t16-09-create-text", {text}});
+    steps_.push_back({"t16-10-create-undone", {basic, "appBar.button.undo"}});
+    steps_.push_back({"t16-11-alias-search", start + open_example("pd-neut-cwl_cosio-d20_scan-3f")
+                                                 + QStringList{analysis, extras, "expand:group.alias", "aliases.append",
+                                                               "alias.parameter.0"}});
+    steps_.push_back({"t16-12-alias-search-filtered", {"type:scale"}});
+    // The owner's review of the first look (2026-10-05): the selector row at the top of the main area, its
+    // list and the outcome icons, on a project with two structures and two experiments and on one with one each.
+    const QString structure = QStringLiteral("appBar.tab.structure");
+    const QString blocks = QStringLiteral("mainArea.blocks.box");
+    const QString close = QStringLiteral("key:Escape");
+    steps_.push_back({"t16-20-beer-structure", start + open_example("pd-neut-tof_ferrite-austenite-beer_joint")
+                                                   + QStringList{structure, basic}});
+    steps_.push_back({"t16-21-beer-structure-list", {blocks}});
+    steps_.push_back({"t16-22-beer-experiment", {close, experiment, basic}});
+    steps_.push_back({"t16-23-beer-experiment-list", {blocks}});
+    steps_.push_back({"t16-24-beer-analysis-fitted", {close, analysis, basic, "fitting.start", "wait-fit", "choose:OK"}});
+    steps_.push_back({"t16-25-beer-analysis-list", {blocks}});
+    steps_.push_back({"t16-26-beer-experiment-fitted", {close, experiment, basic}});
+    steps_.push_back({"t16-27-cosio-structure", start + open_example("pd-neut-cwl_cosio-d20_start-1")
+                                                    + QStringList{structure, basic}});
+    steps_.push_back({"t16-28-cosio-experiment", {experiment, basic}});
+    steps_.push_back({"t16-29-cosio-experiment-list", {blocks}});
+    steps_.push_back({"t16-30-cosio-analysis", {close, analysis, basic}});
+    steps_.push_back({"t16-31-lbco-structure", start + open_example("pd-neut-cwl_lbco-hrpt_start-2")
+                                                   + QStringList{structure, basic}});
+    steps_.push_back({"t16-32-lbco-experiment", {experiment, basic}});
+    steps_.push_back({"t16-33-lbco-analysis", {analysis, basic}});
+    // A scan's datasets as experiments: the bundled 162-file example, before any scan has been fitted.
+    steps_.push_back({"t16-50-scan-experiment", start + open_example("pd-neut-cwl_cosio-d20_scan-162f")
+                                                    + QStringList{experiment, basic, "expand:group.experiments"}});
+    steps_.push_back({"t16-51-scan-list", {blocks}});
+    steps_.push_back({"t16-52-scan-dataset-5", {"key:Escape", "show:experiments.list:4", "experiments.row.4"}});
+    // A scan run from the app on the 162-file example: running (the S3 bar, Follow on), stopped part way,
+    // continued to the end, and the Evolution tab after it.
+    steps_.push_back({"t16-60-scan-ready", QStringList{"resize:1280x960"} + start
+                                               + open_example("pd-neut-cwl_cosio-d20_scan-162f")
+                                               + QStringList{analysis, basic, "reveal:fitting.start"}});
+    steps_.push_back({"t16-61-scan-running", {"fitting.start", "wait-files:40", "capture-now"}});
+    steps_.push_back({"t16-62-scan-stopped", {"fitting.start", "wait-fit"}});
+    steps_.push_back({"t16-63-scan-continue", {"choose:OK"}});
+    steps_.push_back({"t16-64-scan-done", {"fitting.start", "wait-fit"}});
+    steps_.push_back({"t16-65-scan-evolution", {"choose:OK", "mainArea.analysis.tab.evolution"}});
+    steps_.push_back({"t16-66-scan-experiment", {experiment, basic, "expand:group.experiments"}});
+    // After the scan: the single mode (a setting: the results stay current); a single fit on the shown dataset makes
+    // it the template dataset, tagged in the lists, and marks the results out of date on the status bar.
+    steps_.push_back({"t16-67-single-mode", {analysis, extras, "expand:group.fitting_mode", "fittingMode.type",
+                                              "choose:single", basic, "mainArea.analysis.tab.evolution"}});
+    steps_.push_back({"t16-68-single-fit-on-dataset",
+                      {"mainArea.analysis.tab.fitting", "reveal:fitting.start", "fitting.start", "wait-fit"}});
+    steps_.push_back({"t16-69-template-dataset", {"choose:OK", experiment, basic, "show:experiments.list:161"}});
+    // The scan's buttons follow its fits (owner, 2026-10-06): all fitted, Start fitting is disabled and Reset fits
+    // enabled; Reset clears them (Start again); a stop leaves Continue. The Evolution chart zooms to a dragged box
+    // and resets with a right click; the Project page shortens a long dataset list.
+    steps_.push_back({"t16-70-scan-all-fitted", QStringList{"resize:1280x960"} + start
+                                                    + open_example("pd-neut-cwl_cosio-d20_scan-162f")
+                                                    + QStringList{analysis, basic, "reveal:fitting.start", "fitting.start",
+                                                                  "wait-fit", "choose:OK"}});
+    steps_.push_back({"t16-71-scan-reset", {"fitting.reset"}});
+    steps_.push_back({"t16-72-scan-stopped-continue", {"fitting.start", "wait-files:40", "fitting.start", "wait-fit",
+                                                        "choose:OK"}});
+    steps_.push_back({"t16-73-evolution-zoomed", {"fitting.start", "wait-fit", "choose:OK",
+                                                   "mainArea.analysis.tab.evolution",
+                                                   "drag:evolution.pointer:0.2,0.1,0.6,0.9"}});
+    steps_.push_back({"t16-74-evolution-reset", {"right-click:evolution.pointer"}});
+    steps_.push_back({"t16-75-project-names", {"appBar.tab.project"}});
+    // The Evolution tab while a fresh scan of the 324-file example runs: a point per fitted dataset as it completes,
+    // the first parameter chosen, the marker on the dataset being fitted.
+    steps_.push_back({"t16-76-home", {QStringLiteral("appBar.tab.home")}});
+    steps_.push_back({"t16-77-evolution-mid-scan", start
+                                                       + open_example("pd-neut-cwl_cosio-d20_scan-324f")
+                                                       + QStringList{analysis, basic, "reveal:fitting.start",
+                                                                     "mainArea.analysis.tab.evolution", "fitting.start",
+                                                                     "wait-files:200", "capture-now"}});
+    steps_.push_back({"t16-78-evolution-stopped", {"fitting.start", "wait-fit", "choose:OK"}});
+    steps_.push_back({"t16-40-created-saved-reopened",
+                      QStringList{"resize:1280x768"} + start + open_example("pd-xray-cwl_lif") + QStringList{experiment, basic, "expand:group.experiments",
+                      "experiments.create", "save-as:created", "open-project:created", experiment, "mainArea.blocks.box",
+                       "choose:experiment1 · experiment1.edi", text, "scroll-to:text.view:_data_range"}});
+    if (!only.isEmpty()) {
+        std::erase_if(steps_, [&only](const Step& step) { return !step.image.startsWith(only); });
+    }
 }
 
 void DemoDriver::start() {
@@ -176,16 +280,38 @@ void DemoDriver::run_step() {
 
 void DemoDriver::next_action() {
     const Step& step = steps_[current_];
+    const bool unsettled = step.actions.contains(QStringLiteral("capture-now"));
     if (action_ < step.actions.size()) {
-        if (!perform(step.actions.at(action_))) {
+        const QString& action = step.actions.at(action_);
+        ++action_;
+        if (action == QLatin1String("capture-now")) {
+            next_action();
+            return;
+        }
+        if (action == QLatin1String("wait-fit")) {
+            wait_fit_then([this] { settle_then([this] { next_action(); }); });
+            return;
+        }
+        // A running scan keeps the worker busy, so its step is captured unsettled (capture-now).
+        if (action.startsWith(QLatin1String("wait-files:"))) {
+            wait_fit_then([this] { next_action(); }, 0, action.mid(11).toInt());
+            return;
+        }
+        if (!perform(action)) {
             return;  // fail() has ended the run
         }
-        ++action_;
         park_pointer();
-        settle_then([this] { next_action(); });  // what the action opened is drawn before the next
+        // What the action opened is drawn before the next; a step captured unsettled does not wait for it, nor
+        // does an action a wait follows (a fit keeps the window changing until it ends).
+        const bool waits = action_ < step.actions.size() && step.actions.at(action_).startsWith(QLatin1String("wait-"));
+        if (unsettled || waits) {
+            QTimer::singleShot(kSettleIntervalMs, this, [this] { next_action(); });
+        } else {
+            settle_then([this] { next_action(); });
+        }
         return;
     }
-    settle_then([this] {
+    const auto save = [this] {
         const QString path = output_dir_.filePath(steps_[current_].image + QStringLiteral(".png"));
         if (!previous_frame_.save(path)) {
             fail(QStringLiteral("cannot write %1").arg(path));
@@ -193,10 +319,55 @@ void DemoDriver::next_action() {
         }
         ++current_;
         run_step();
+    };
+    if (unsettled) {
+        QTimer::singleShot(kUnsettledCaptureMs, this, [this, save] {
+            previous_frame_ = window_.grabWindow();
+            save();
+        });
+        return;
+    }
+    settle_then(save);
+}
+
+void DemoDriver::wait_fit_then(std::function<void()> next, int waited_ms, int files) {
+    QQmlEngine* engine = qmlEngine(window_.contentItem());
+    auto* session = engine ? engine->singletonInstance<Session*>("edi.app", "Session") : nullptr;
+    const FitViewModel* fit = session != nullptr && session->project() != nullptr ? session->project()->fit() : nullptr;
+    const bool running = fit != nullptr && fit->running();
+    if (!running || (files >= 0 && fit->scanFitted() >= files)) {
+        next();
+        return;
+    }
+    if (waited_ms > kFitWaitMs) {
+        fail(QStringLiteral("step %1: the fit did not end within %2 ms").arg(steps_[current_].image).arg(kFitWaitMs));
+        return;
+    }
+    QTimer::singleShot(kSettleIntervalMs * 5, this, [this, next, waited_ms, files] {
+        wait_fit_then(next, waited_ms + kSettleIntervalMs * 5, files);
     });
 }
 
 bool DemoDriver::perform(const QString& action) {
+    // Scrolls the view a control is in until the control shows (a sidebar column longer than the window).
+    if (action.startsWith(QLatin1String("reveal:"))) {
+        QQuickItem* item = find(action.mid(7), false);
+        for (QQuickItem* view = item != nullptr ? item->parentItem() : nullptr; view != nullptr; view = view->parentItem()) {
+            // The first view that scrolls vertically (a swipe view's list scrolls sideways).
+            auto* content = view->inherits("QQuickFlickable") ? view->property("contentItem").value<QQuickItem*>() : nullptr;
+            if (content != nullptr && view->property("contentHeight").toDouble() > view->height()) {
+                const double top = item->mapToItem(content, QPointF(0, 0)).y();
+                const double most = std::max(0.0, view->property("contentHeight").toDouble() - view->height());
+                view->setProperty("contentY", std::clamp(top - view->height() / 2, 0.0, most));
+                return true;
+            }
+        }
+        if (item == nullptr) {
+            fail(QStringLiteral("step %1: cannot reveal '%2'").arg(steps_[current_].image, action.mid(7)));
+            return false;
+        }
+        return true;  // nothing around it scrolls: it shows as it is
+    }
     if (action.startsWith(QLatin1String("key:"))) {
         const QKeyCombination key = QKeySequence::fromString(action.mid(4))[0];
         QKeyEvent press(QEvent::KeyPress, key.key(), key.keyboardModifiers());
@@ -275,6 +446,66 @@ bool DemoDriver::perform(const QString& action) {
         }
         auto* content = qvariant_cast<QQuickItem*>(flickable->property("contentItem"));
         flickable->setProperty("contentY", content != nullptr ? view->mapToItem(content, line.topLeft()).y() : line.y());
+        return true;
+    }
+    if (action.startsWith(QLatin1String("save-as:")) || action.startsWith(QLatin1String("open-project:"))) {
+        QQmlEngine* engine = qmlEngine(window_.contentItem());
+        auto* session = engine ? engine->singletonInstance<Session*>("edi.app", "Session") : nullptr;
+        const bool save = action.startsWith(QLatin1String("save-as:"));
+        const QString name = action.section(QLatin1Char(':'), 1);
+        const QUrl directory = QUrl::fromLocalFile(QDir::isAbsolutePath(name) ? name : loaded_files_.filePath(name));
+        if (session == nullptr || !(save ? session->saveAs(directory) : session->openProject(directory))) {
+            fail(QStringLiteral("step %1: %2 refused: %3")
+                     .arg(steps_[current_].image, action, session ? session->lastError() : QStringLiteral("no session")));
+            return false;
+        }
+        return true;
+    }
+    if (action.startsWith(QLatin1String("drag:")) || action.startsWith(QLatin1String("right-click:"))) {
+        // drag:<name>:<x0>,<y0>,<x1>,<y1> drags the left button across the item, at fractions of its size;
+        // right-click:<name> clicks its centre with the right button.
+        const bool drag = action.startsWith(QLatin1String("drag:"));
+        const QStringList parts = action.mid(drag ? 5 : 12).split(QLatin1Char(':'));
+        QQuickItem* item = find(parts.value(0), true);
+        const QStringList at = parts.value(1, QStringLiteral("0.5,0.5,0.5,0.5")).split(QLatin1Char(','));
+        if (item == nullptr || at.size() != 4) {
+            fail(QStringLiteral("step %1: cannot %2").arg(steps_[current_].image, action));
+            return false;
+        }
+        const auto point = [item, &at](int i) {
+            return item->mapToScene(QPointF(at[i].toDouble() * item->width(), at[i + 1].toDouble() * item->height()));
+        };
+        const Qt::MouseButton button = drag ? Qt::LeftButton : Qt::RightButton;
+        const QPointF from = point(0), to = drag ? point(2) : point(0);
+        QMouseEvent press(QEvent::MouseButtonPress, from, window_.mapToGlobal(from), button, button, Qt::NoModifier);
+        QCoreApplication::sendEvent(&window_, &press);
+        QMouseEvent move(QEvent::MouseMove, to, window_.mapToGlobal(to), Qt::NoButton, button, Qt::NoModifier);
+        QCoreApplication::sendEvent(&window_, &move);
+        QMouseEvent release(QEvent::MouseButtonRelease, to, window_.mapToGlobal(to), button, Qt::NoButton,
+                            Qt::NoModifier);
+        QCoreApplication::sendEvent(&window_, &release);
+        return true;
+    }
+    if (action.startsWith(QLatin1String("expand:"))) {
+        QQuickItem* group = find(action.mid(7), false);
+        if (group == nullptr || !group->setProperty("collapsed", false)) {
+            fail(QStringLiteral("step %1: cannot expand '%2'").arg(steps_[current_].image, action.mid(7)));
+            return false;
+        }
+        return true;
+    }
+    if (action.startsWith(QLatin1String("type:"))) {
+        for (const QChar character : action.mid(5)) {
+            QKeyEvent press(QEvent::KeyPress, 0, Qt::NoModifier, QString(character));
+            QCoreApplication::sendEvent(&window_, &press);
+            QKeyEvent release(QEvent::KeyRelease, 0, Qt::NoModifier, QString(character));
+            QCoreApplication::sendEvent(&window_, &release);
+        }
+        return true;
+    }
+    if (action.startsWith(QLatin1String("resize:"))) {
+        const QStringList size = action.mid(7).split(QLatin1Char('x'));
+        window_.resize(size.value(0).toInt(), size.value(1).toInt());
         return true;
     }
     if (action.startsWith(QLatin1String("pin-time:"))) {
@@ -435,13 +666,18 @@ void DemoDriver::settle_then(std::function<void()> next) {
             next();
             return;
         }
-        previous_frame_ = frame;
         if (++settle_attempts_ > kSettleMaxAttempts) {
-            fail(QStringLiteral("step %1 did not settle within %2 ms")
+            // The last two frames, to see what kept changing.
+            previous_frame_.save(output_dir_.filePath(steps_[current_].image + QStringLiteral("-unsettled-a.png")));
+            frame.save(output_dir_.filePath(steps_[current_].image + QStringLiteral("-unsettled-b.png")));
+            fail(QStringLiteral("step %1 did not settle within %2 ms (%3)")
                      .arg(steps_[current_].image)
-                     .arg(kSettleIntervalMs * kSettleMaxAttempts));
+                     .arg(kSettleIntervalMs * kSettleMaxAttempts)
+                     .arg(calculating ? QStringLiteral("a calculation is in flight")
+                                      : QStringLiteral("the window kept changing")));
             return;
         }
+        previous_frame_ = frame;
         QTimer::singleShot(kSettleIntervalMs, this, *poll);
     };
     QTimer::singleShot(kSettleIntervalMs, this, *poll);
