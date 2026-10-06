@@ -5,5 +5,7 @@
 // Configured by app/CMakeLists.txt from git at configure time.
 #define EDI_APP_VERSION "@EDI_APP_VERSION@"
 #define EDI_APP_DATE "@EDI_APP_DATE@"
+#define EDI_APP_CRYSTA_VERSION "@EDI_APP_CRYSTA_VERSION@"
+#define EDI_APP_CRYSTA_COMMIT "@EDI_APP_CRYSTA_COMMIT@"
 
 #endif  // EDI_APP_BUILD_INFO_HPP

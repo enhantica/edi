@@ -71,6 +71,7 @@ AppDialog {
             text: qsTr("Experimental")
         }
         EaElements.AppBarTabButton {
+            objectName: "preferences.tab.develop"
             fontIcon: "laptop-code"
             text: qsTr("Develop")
         }
@@ -253,6 +254,21 @@ AppDialog {
                 currentIndex: model.indexOf(EaGlobals.Vars.loggingLevel)
                 onActivated: EaGlobals.Vars.loggingLevel = currentValue
             }
+
+            // What the app runs on and with, to read and to copy (the owner, 2026-10-06).
+            EaElements.Label {
+                text: qsTr("Diagnostics") + ":"
+            }
+            EaElements.Button {
+                objectName: "preferences.diagnostics"
+                text: qsTr("Show")
+                onClicked: diagnostics.open()
+            }
         }
+    }
+
+    DiagnosticsDialog {
+        id: diagnostics
+        parent: Overlay.overlay
     }
 }
