@@ -216,8 +216,10 @@ void FitViewModel::showScan(const ScanSummary& summary, bool scan_last) {
     emit scanProgressChanged();
     emit scanFittedChanged();
     emit scanTotalChanged();
-    // After a single fit on a dataset the status bar and the results window keep that fit's own.
+    // After a single fit on a dataset the status bar and the results window show that fit's own record (also when
+    // an Undo or a reopen brings it back).
     if (!scan_last_) {
+        showRecord();
         return;
     }
     if (scan_.fitted == 0) {
