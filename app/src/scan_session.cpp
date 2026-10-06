@@ -317,8 +317,9 @@ QString ScanSession::writeRun(const edi::Project& project, const Run& run) {
 }
 
 std::string ScanSession::templateIdentity(const edi::Project& project) {
-    // The name, title and description (project.edi) and the run settings (the fitting mode and the minimizer's
-    // bounds) are not the template: changing them leaves the results current.
+    // The name, title and description (project.edi) and the fitting mode are not the template: changing them leaves
+    // the results current. The minimizer's settings are part of it: rows fitted under another bound or descent are
+    // another generation.
     QCryptographicHash hash(QCryptographicHash::Sha256);
     for (const auto& [path, body] : edi::project_edi_files(project)) {
         if (path == "project.edi") {
@@ -330,7 +331,7 @@ std::string ScanSession::templateIdentity(const edi::Project& project) {
         while (start < body.size()) {
             const std::size_t end = std::min(body.find('\n', start), body.size());
             const std::string_view line(body.data() + start, end - start);
-            if (!line.starts_with("_fitting_mode.") && !line.starts_with("_minimizer.")) {
+            if (!line.starts_with("_fitting_mode.")) {
                 hash.addData(QByteArrayView(line.data(), static_cast<qsizetype>(line.size())));
                 hash.addData(QByteArrayView("\n", 1));
             }
