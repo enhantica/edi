@@ -221,12 +221,13 @@ int EvolutionViewModel::datasetAt(double x, double y, double x_tolerance, double
 }
 
 double EvolutionViewModel::datasetX(int dataset) const {
-    for (const Point& point : points_) {
-        if (point.dataset == dataset) {
-            return point.x;
-        }
+    // From the dataset itself, not from the drawn points: thinning may leave its point out, and the shown dataset's
+    // line must not come and go with it.
+    if (session_ == nullptr || dataset < 0 || dataset >= static_cast<int>(session_->datasets().files.size())) {
+        return std::numeric_limits<double>::quiet_NaN();
     }
-    return std::numeric_limits<double>::quiet_NaN();
+    const std::optional<double> x = xOf(dataset, session_->extracted(dataset));
+    return x ? *x : std::numeric_limits<double>::quiet_NaN();
 }
 
 }  // namespace edi_app

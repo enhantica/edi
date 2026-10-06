@@ -13,7 +13,9 @@ import edi.app
 // with its uncertainty as an error bar, drawn as the pattern chart draws measured points (MeasuredLayer). x is the
 // first extract rule's value or the file's place in the scan (the box at the top left); the parameter is chosen in
 // the selector beside that box; the page's selector row above lists the datasets, as on the Pattern tab. A click on
-// a point shows that dataset, here and on the Pattern tab; a line marks the shown one.
+// a point shows that dataset, here and on the Pattern tab; a line marks the shown one. The pointer zooms as on the
+// pattern chart, without its toolbar: a drag zooms to the box, the wheel or touchpad about the pointer, a right click
+// resets.
 Item {
     id: chart
 
@@ -30,6 +32,12 @@ Item {
     readonly property real toolbarRightInset: sideMargin
     readonly property real titleGutter: Math.round(em * 1.6)
     readonly property real xTitleHeight: Math.round(em * 1.7)
+    // The zoomed ranges, [xMin, xMax, yMin, yMax]; empty: the whole data.
+    property list<real> zoom: []
+    readonly property real xLow: zoom.length === 4 ? zoom[0] : (evolution ? evolution.xMin : 0)
+    readonly property real xHigh: zoom.length === 4 ? zoom[1] : (evolution ? evolution.xMax : 1)
+    readonly property real yLow: zoom.length === 4 ? zoom[2] : (evolution ? evolution.yMin : 0)
+    readonly property real yHigh: zoom.length === 4 ? zoom[3] : (evolution ? evolution.yMax : 1)
 
     // A round step giving about `count` ticks over a span: 1, 2 or 5 times a power of ten.
     function niceStep(span, count) {
@@ -102,8 +110,8 @@ Item {
         }
         axisX: ValueAxis {
             id: axisX
-            min: chart.evolution ? chart.evolution.xMin : 0
-            max: chart.evolution ? chart.evolution.xMax : 1
+            min: chart.xLow
+            max: chart.xHigh
             tickInterval: chart.niceStep(max - min, 8)
             tickAnchor: 0
             lineVisible: false
@@ -112,8 +120,8 @@ Item {
         }
         axisY: ValueAxis {
             id: axisY
-            min: chart.evolution ? chart.evolution.yMin : 0
-            max: chart.evolution ? chart.evolution.yMax : 1
+            min: chart.yLow
+            max: chart.yHigh
             tickInterval: chart.niceStep(max - min, 6)
             tickAnchor: 0
             lineVisible: false
@@ -170,10 +178,9 @@ Item {
                 color: EaStyle.Colors.chartGridLine
             }
         }
-        // The shown dataset.
+        // The shown dataset, from its own x: it moves only when the shown dataset, the x mode or the axis does.
         Rectangle {
-            // Read again when the points change (their count, the x mode).
-            readonly property real at: chart.evolution && chart.project && chart.evolution.count > 0 && chart.evolution.xMode >= 0 ? chart.evolution.datasetX(chart.project.currentExperimentIndex) : NaN
+            readonly property real at: chart.evolution && chart.project && chart.evolution.xMode >= 0 ? chart.evolution.datasetX(chart.project.currentExperimentIndex) : NaN
 
             objectName: "evolution.current"
             visible: !isNaN(at)
@@ -200,17 +207,80 @@ Item {
             border.color: EaStyle.Colors.chartAxis
             border.width: 1
         }
-        // A click shows the dataset of the nearest point within a few pixels.
+        // A click shows the dataset of the nearest point within a few pixels; a drag zooms to its box, the wheel about
+        // the pointer (one notch away multiplies the x span by 0.8, as on the pattern chart), a right click resets.
         MouseArea {
+            id: pointer
+
+            property real pressX: 0
+            property real pressY: 0
+            readonly property bool dragging: pressed && pressedButtons & Qt.LeftButton && (Math.abs(mouseX - pressX) > chart.em * 0.3 || Math.abs(mouseY - pressY) > chart.em * 0.3)
+
+            function xAt(px: real): real {
+                return axisX.min + px / width * (axisX.max - axisX.min);
+            }
+            function yAt(py: real): real {
+                return axisY.max - py / height * (axisY.max - axisY.min);
+            }
+
             objectName: "evolution.pointer"
             anchors.fill: parent
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
             cursorShape: Qt.PointingHandCursor
-            onClicked: mouse => {
-                const reach = chart.em * 0.6;
-                const dataset = chart.evolution.datasetAt(axisX.min + mouse.x / width * (axisX.max - axisX.min), axisY.max - mouse.y / height * (axisY.max - axisY.min), reach / width * (axisX.max - axisX.min), reach / height * (axisY.max - axisY.min));
-                if (dataset >= 0)
-                    chart.project.currentExperimentIndex = dataset;
+            onPressed: mouse => {
+                pressX = mouse.x;
+                pressY = mouse.y;
             }
+            onReleased: mouse => {
+                if (mouse.button === Qt.RightButton) {
+                    chart.zoom = [];
+                } else if (Math.abs(mouse.x - pressX) > chart.em * 0.3 || Math.abs(mouse.y - pressY) > chart.em * 0.3) {
+                    chart.zoom = [Math.min(xAt(pressX), xAt(mouse.x)), Math.max(xAt(pressX), xAt(mouse.x)), Math.min(yAt(pressY), yAt(mouse.y)), Math.max(yAt(pressY), yAt(mouse.y))];
+                } else {
+                    const reach = chart.em * 0.6;
+                    const dataset = chart.evolution.datasetAt(xAt(mouse.x), yAt(mouse.y), reach / width * (axisX.max - axisX.min), reach / height * (axisY.max - axisY.min));
+                    if (dataset >= 0)
+                        chart.project.currentExperimentIndex = dataset;
+                }
+            }
+            onWheel: wheel => {
+                if (wheel.angleDelta.y === 0)
+                    return;
+                const anchor = xAt(wheel.x);
+                const factor = Math.pow(0.8, wheel.angleDelta.y / 120);
+                chart.zoom = [anchor - (anchor - axisX.min) * factor, anchor + (axisX.max - anchor) * factor, axisY.min, axisY.max];
+            }
+
+            // The box being dragged, as the pattern chart draws it.
+            Rectangle {
+                objectName: "evolution.zoom.box"
+                visible: pointer.dragging
+                x: Math.min(pointer.pressX, pointer.mouseX)
+                y: Math.min(pointer.pressY, pointer.mouseY)
+                width: Math.abs(pointer.mouseX - pointer.pressX)
+                height: Math.abs(pointer.mouseY - pointer.pressY)
+                color: "transparent"
+                border.color: EaStyle.Colors.appBorder
+                border.width: EaStyle.Sizes.borderThickness
+                opacity: 0.9
+
+                Rectangle {
+                    anchors.fill: parent
+                    opacity: 0.5
+                    color: EaStyle.Colors.appBorder
+                }
+            }
+        }
+    }
+
+    // Another parameter or x axis is drawn at its whole range.
+    Connections {
+        target: chart.evolution
+        function onCurrentParameterChanged() {
+            chart.zoom = [];
+        }
+        function onXModeChanged() {
+            chart.zoom = [];
         }
     }
 
