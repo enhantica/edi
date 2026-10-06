@@ -269,12 +269,12 @@ EaElements.GroupBox {
             group.webRequest = 0;
             const index = group.webDataIndex;
             group.webDataIndex = -1;
-            if (group.project === null || group.project !== group.webRequestProject)
-                return;
-            if (index >= 0)
-                group.project.loadData(index, files[0]);
-            else
-                group.project.loadExperiments(files);
+            if (group.project !== null && group.project === group.webRequestProject) {
+                if (index >= 0)
+                    group.project.loadData(index, files[0]);
+                else
+                    group.project.loadExperiments(files);
+            }
         }
         function onFailed(request) {
             if (request === group.webRequest) {
