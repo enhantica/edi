@@ -362,7 +362,9 @@ def outcome_functions(text):
     )
 
 
-@pytest.mark.parametrize(('key', 'word', 'icon', 'color'), OUTCOMES)
+@pytest.mark.parametrize(
+    ('key', 'word', 'icon', 'color'), OUTCOMES, ids=[row[0] for row in OUTCOMES]
+)
 def test_view_model_names_each_outcome_from_owner_table(key, word, icon, color):
     result = evaluate(
         '[word(KEY),icon(KEY),color(KEY)]'.replace('KEY', json.dumps(key)),
