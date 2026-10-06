@@ -1410,6 +1410,7 @@ crysta::BraggPdExperiment to_crysta_cwl_experiment(const ExperimentBase& e, bool
         slot(e.peak.asym_beba_a1, "asym_beba_a1", 0.0);
         slot(e.peak.asym_beba_b1, "asym_beba_b1", 0.0);
         slot(e.peak.asym_beba_limit, "asym_beba_limit", 180.0);
+        peak.back().set_free(false);  // a fixed setting, whatever its flag (is_fixed_setting)
     }
     // Every other slot must be the declared profile's: one it does not carry would be dropped here,
     // from a calculation, a fit and a save alike, so it is refused instead.
