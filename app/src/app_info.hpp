@@ -64,6 +64,12 @@ class ApplicationInfo : public QObject {
     QStringList componentUses() const { return componentColumn(2); }
     // The text of a bundled licence resource (one of the URLs above); empty for any other URL.
     Q_INVOKABLE QString licenceText(const QString& url) const;
+    // The diagnostics view's text (the owner, 2026-10-06): the platform and browser, the build flavour and why it
+    // was chosen (web), threads, the Qt version and graphics backend, edi's and crysta's versions with the crysta
+    // SDK commit, and the feature switches; one "name: value" line each, to read and to copy.
+    Q_INVOKABLE QString diagnostics() const;
+    // Puts `text` on the clipboard (the web build's needs the click that asks for it).
+    Q_INVOKABLE void copyText(const QString& text) const;
     // Where a link inside the bundled licence text at `from` leads, resolved against that text's own location
     // (the app notice's "../COPYING" is qrc:/COPYING): the URL when it is one of the bundled licence texts above,
     // empty for anything else, so a link opens only what licenceText reads.
