@@ -246,8 +246,10 @@ void FitViewModel::start() {
     if (!job_ || running_ || !available_) {
         return;
     }
-    // A chosen dataset still being read: the model still shows the one before, which is not the one to fit.
-    if (const QString pending = owner_.pendingRefusal(); !pending.isEmpty()) {
+    // A chosen dataset still being read: the model still shows the one before, which is not the one to fit. A scan
+    // runs from the template, whatever is shown.
+    if (const QString pending = owner_.pendingRefusal();
+        !pending.isEmpty() && !edi::is_scan_fitting_mode(edi::effective_fitting_mode(project_))) {
         emit refused(pending);
         return;
     }

@@ -227,8 +227,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     QString prepareScan(bool fresh);
     // Reset fits (FitViewModel::reset): every dataset's fit result cleared, one Undo step; the refusal, if any.
     QString resetScan();
-    // Why a scientific action (a fit, an edit, Undo, Reset fits, a save) waits: a chosen dataset is still being
-    // read, so the model still shows the one before; empty otherwise.
+    // Why an edit or a single or joint fit waits: a chosen dataset is still being read, so the model still shows the
+    // one before; empty otherwise.
     QString pendingRefusal() const;
     // The template a scan runs from: the stored one while a dataset is shown, else none (the model is the template).
     const edi::Project* scanTemplate() const { return scan_template_ ? &*scan_template_ : nullptr; }

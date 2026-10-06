@@ -670,8 +670,11 @@ void ProjectViewModel::viewDataset(int index, bool refresh) {
     ++view_request_;
     view_wanted_ = index;
     publishCalculating();
-    // The selection moves at once; the model follows when the read arrives. Until then a fit, an edit, an Undo,
-    // Reset fits and a save are refused (pendingRefusal), so none acts on the dataset shown before.
+    // The selection moves at once; the model follows when the read arrives. Until then an edit and a single or joint
+    // fit are refused (pendingRefusal), so none acts on the dataset shown before. Reset fits, Undo of a scan's
+    // results, a scan's start and a save act on the results and the template, not on the shown model: they go
+    // ahead, and the dataset is read again after them (an older read in flight is dropped), so no projection
+    // captured before them is applied over what they changed.
     if (index != current_dataset_) {
         current_dataset_ = index;
         syncDataset(index);
@@ -850,10 +853,6 @@ QString ProjectViewModel::prepareScan(bool fresh) {
     if (project_->path.empty()) {
         return tr("The project has no directory yet: save it first");
     }
-    if (const QString pending = pendingRefusal(); !pending.isEmpty()) {
-        setLastError(pending);
-        return pending;
-    }
     run_identity_ = ScanSession::templateIdentity(scanTemplateOrModel());
     // A Continue keeps the rows already there, which came from the run (or runs) before: their provenance stays
     // with the scan's (scanEnded).
@@ -881,10 +880,6 @@ QString ProjectViewModel::resetScan() {
     }
     if (scan_session_ == nullptr) {
         return scanRefusal();
-    }
-    if (const QString pending = pendingRefusal(); !pending.isEmpty()) {
-        setLastError(pending);
-        return pending;
     }
     // Every dataset's fit result goes, as one Undo step: the result files are set aside, absent ones included, the
     // run's provenance with them, and the record a single fit left on the template (its values stay: they are the
@@ -1192,11 +1187,6 @@ void ProjectViewModel::undo() {
     if (!can_undo_) {
         return;
     }
-    if (const QString pending = pendingRefusal(); !pending.isEmpty()) {
-        setLastError(pending);
-        emit refused(pending);
-        return;
-    }
     // The newest record is kept until its reversal succeeds: a refused restore (a parameter it names was
     // removed or renamed since) leaves it in place, with the refusal as the message. A fit's undo can drop
     // its own entry on the way (its start state is gone once restored), so only a record still there goes.
@@ -1259,10 +1249,6 @@ QString ProjectViewModel::saveTo(const QString& directory) {
         const QString message = tr("The project cannot be saved while a fit is running");
         setLastError(message);
         return message;
-    }
-    if (const QString pending = pendingRefusal(); !pending.isEmpty()) {
-        setLastError(pending);
-        return pending;
     }
     // While a scan dataset is shown, the template is what a save writes; the shown model follows it to the new
     // directory, so a scan started next reads and writes there.
