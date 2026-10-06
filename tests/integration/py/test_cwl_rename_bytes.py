@@ -1,7 +1,10 @@
 """Renaming TCH profiles must retain their pre-change calculation bytes."""
 
+import base64
+import hashlib
 import json
 import platform
+import shutil
 from pathlib import Path
 
 import edi as crysta
@@ -9,7 +12,12 @@ import numpy as np
 import pytest
 
 from tests.fixtures.cwl_family import profiles
-from tests.fixtures.cwl_family.regression_comparison import compare, compare_pin, require_reference
+from tests.fixtures.cwl_family.regression_comparison import (
+    compare,
+    compare_pin,
+    read_reference,
+    rename_project,
+)
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -18,16 +26,8 @@ ROOT = Path(__file__).resolve().parents[3]
     ('name', 'token'), [('tch', profiles.TOKENS[4]), ('fcj', profiles.TOKENS[5])]
 )
 def test_tch_rename_preserves_pre_change_regression_bytes(tmp_path, name, token):
-    baseline = ROOT / 'tests/fixtures/cwl_family/tch-regression-Linux.json'
-    assert baseline.is_file(), (
-        'Every CI platform must have the retained pre-change reference input'
-    )
-    record = json.loads(baseline.read_text())
-    require_reference(record)
-    directory = profiles.write_project(tmp_path, token)
-    path = directory / 'experiments/bank.edi'
-    text = path.read_text().replace('_peak.broad_lorentz_x 0\n', '_peak.broad_lorentz_x .023\n')
-    path.write_text(text.replace('_peak.broad_lorentz_y 0\n', '_peak.broad_lorentz_y .047\n'))
+    record = read_reference(ROOT / 'tests/fixtures/cwl_family', platform.system())
+    directory = rename_project(ROOT / 'tests/fixtures/cwl_family', tmp_path, name, token, record)
     project = crysta.Project.load(directory)
     project.analysis.calculate()
     actual = np.asarray(project.experiments[0].data.intensity_calc, dtype='<f8').tobytes()
@@ -63,7 +63,49 @@ def test_native_reference_and_sample_population_cannot_be_weakened(damage):
 
 
 @pytest.mark.parametrize('name', ['tch', 'fcj'])
-def test_darwin_branch_uses_the_retained_pre_change_capture(tmp_path, monkeypatch, name):
-    monkeypatch.setattr(platform, 'system', lambda: 'Darwin')
-    token = profiles.TOKENS[4 if name == 'tch' else 5]
-    test_tch_rename_preserves_pre_change_regression_bytes(tmp_path, name, token)
+def test_darwin_branch_uses_the_retained_pre_change_capture(tmp_path, name):
+    # A synthetic selector control, never a numerical expectation for the engine.
+    linux = json.loads((ROOT / 'tests/fixtures/cwl_family/tch-regression-Linux.json').read_text())
+    (tmp_path / 'tch-regression-Linux.json').write_text(json.dumps(linux))
+    with pytest.raises(AssertionError, match='own pre-change platform reference'):
+        read_reference(tmp_path, 'Darwin')
+    darwin = dict(linux, platform='Darwin', pins=dict(linux['pins']))
+    native = np.frombuffer(base64.b64decode(linux['pins'][name]), dtype='<f8').copy()
+    native[0] = np.nextafter(native[0], np.inf)
+    darwin['pins'][name] = base64.b64encode(native.tobytes()).decode()
+    (tmp_path / 'tch-regression-Darwin.json').write_text(json.dumps(darwin))
+    selected = read_reference(tmp_path, 'Darwin')
+    assert selected['pins'][name] == darwin['pins'][name], (
+        'Darwin selects its native byte reference instead of substituting Linux samples'
+    )
+    compare_pin(native.tobytes(), selected, name, 'Darwin')
+    with pytest.raises(AssertionError, match='bytes exactly'):
+        compare_pin(base64.b64decode(linux['pins'][name]), selected, name, 'Darwin')
+
+
+@pytest.mark.parametrize('damage', ['sample', 'width'])
+def test_native_capture_inputs_cannot_change_under_the_same_reference(tmp_path, damage):
+    # Independently sealed input bytes, a selector control rather than an engine output oracle.
+    inputs = tmp_path / 'references'
+    shutil.copytree(ROOT / 'tests/fixtures/cwl_family/rename_inputs', inputs / 'rename_inputs')
+    hashes = {
+        p.relative_to(inputs / 'rename_inputs').as_posix(): hashlib.sha256(
+            p.read_bytes()
+        ).hexdigest()
+        for p in sorted((inputs / 'rename_inputs').rglob('*.edi'))
+    }
+    record = {'platform': 'Darwin', 'input_sha256': hashes}
+    rename_project(inputs, tmp_path / 'valid', 'tch', profiles.TOKENS[4], record)
+    path = inputs / 'rename_inputs/tch/experiments/bank.edi'
+    text = path.read_text()
+    text = (
+        text.replace('_peak.broad_gauss_w 0.085', '_peak.broad_gauss_w 0.086')
+        if damage == 'width'
+        else text.replace(' 0 1\n', ' 0 2\n', 1)
+    )
+    assert text != path.read_text(), (
+        'Every input-seal escape must actually change its independent vehicle'
+    )
+    path.write_text(text)
+    with pytest.raises(AssertionError, match='identical serialized'):
+        rename_project(inputs, tmp_path / 'damaged', 'tch', profiles.TOKENS[4], record)

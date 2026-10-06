@@ -36,7 +36,9 @@ def declarations(text):
             continue
         name = token['namespace'] or token['record'] or ''
         scopes.append(name)
-        if token['record']:
+        # A function or ordinary block has an unnamed scope. Its local types
+        # are not namespace/record model declarations, even when they shadow one.
+        if token['record'] and all(scopes):
             owners.add('::'.join(part for part in scopes if part))
     return owners
 
@@ -55,11 +57,20 @@ def members(dump, repo, owners):
         record = re.match(r'CXXRecordDecl .+\b(?:class|struct) (\w+) definition$', entry)
         if namespace:
             scopes.append((depth, namespace[1], False))
+        elif entry.startswith((
+            'FunctionDecl ',
+            'CXXMethodDecl ',
+            'CXXConstructorDecl ',
+            'CXXDestructorDecl ',
+            'CXXConversionDecl ',
+            'CompoundStmt ',
+        )):
+            scopes.append((depth, '', False))
         elif record:
             scopes.append((depth, record[1], True))
         elif entry.startswith('FieldDecl ') and scopes:
             owner = scopes[-1]
-            if not owner[2] or owner[0] != depth - 1:
+            if not owner[2] or owner[0] != depth - 1 or any(not scope[1] for scope in scopes):
                 continue
             field = compiler_field(entry, scopes, repo)
             if field and field[0] in owners:

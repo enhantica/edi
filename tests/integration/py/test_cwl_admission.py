@@ -231,3 +231,124 @@ def test_wrong_concrete_peak_view_cannot_add_foreign_slots(tmp_path):
     assert '_peak.broad_lorentz_x' not in (tmp_path / 'saved/experiments/bank.edi').read_text(), (
         'A wrong concrete view must not create state the adapter silently discards'
     )
+
+
+@pytest.mark.parametrize(
+    ('token', 'field', 'fallback'),
+    [
+        (token, field, 0.0)
+        for token in profiles.TOKENS[2:4]
+        for field in ('mixing_eta_0', 'mixing_eta_1')
+    ]
+    + [
+        (profiles.TOKENS[3], field, 0.0)
+        for field in ('asym_beba_a0', 'asym_beba_b0', 'asym_beba_a1', 'asym_beba_b1')
+    ]
+    + [(profiles.TOKENS[3], 'asym_beba_limit', 180.0)]
+    + [(profiles.TOKENS[5], field, 0.0) for field in ('asym_fcj_1', 'asym_fcj_2')],
+)
+def test_optional_profile_cell_clear_uses_declared_default(tmp_path, token, field, fallback):
+    project = engine.Project.load(profiles.write_project(tmp_path / 'input', token))
+    peak = project.experiments[0].peak
+    held = getattr(peak, field)
+    held.value = 160 if field == 'asym_beba_limit' else 0.031
+    previous = held.value
+    setattr(peak, field, None)
+    assert not held.is_attached(), 'Clearing an optional profile cell detaches its old handle'
+    assert held.value == previous, (
+        'A cleared optional profile handle retains its last readable value'
+    )
+    with pytest.raises((ValueError, RuntimeError)):
+        held.value = previous + 0.001
+    assert getattr(peak, field) is None, 'An absent optional profile cell remains visibly absent'
+    width = peak.broad_gauss_w
+    width.free = True
+    assert any(item.value == width.value for item in project.free_parameters), (
+        'Free selection admits optional absence and retains an actual free width coefficient'
+    )
+    project.analysis.calculate()
+    actual = np.asarray(project.experiments[0].data.intensity_calc).copy()
+    project.save_as(tmp_path / 'saved')
+    restored = engine.Project.load(tmp_path / 'saved')
+    restored.analysis.calculate()
+    np.testing.assert_array_equal(
+        actual,
+        restored.experiments[0].data.intensity_calc,
+        err_msg='Optional defaults retain calculation bytes across save and reload',
+    )
+    assert getattr(restored.experiments[0].peak, field).value == fallback, (
+        'Save and reload realize the independently declared default for the absent optional slot'
+    )
+
+
+@pytest.mark.parametrize('source', profiles.TOKENS)
+def test_cleared_cw_selector_conforms_to_the_default_tch_family(tmp_path, source):
+    project = engine.Project.load(profiles.write_project(tmp_path / 'input', source))
+    old = project.experiments[0].peak
+    old.type = None
+    peak = project.experiments[0].peak
+    assert isinstance(peak, engine.CwlTchPseudoVoigt), (
+        'A cleared CW selector resolves to the concrete CW TCH default view'
+    )
+    assert peak.broad_lorentz_x is not None and peak.broad_lorentz_y is not None, (
+        'Clearing any CW selector conforms the required default TCH width block'
+    )
+    for field in set(admission.FIELDS) - set(admission.owned_fields(profiles.TOKENS[4])):
+        assert not hasattr(peak, field), (
+            'Clearing a selector removes every foreign optional profile slot'
+        )
+    peak.broad_lorentz_x.value = 0.023
+    peak.broad_lorentz_y.value = 0.047
+    peak.broad_lorentz_x.free = True
+    assert project.free_parameters, 'The default family keeps its actual free TCH coefficient'
+    project.analysis.calculate()
+    before = np.asarray(project.experiments[0].data.intensity_calc).copy()
+    project.save_as(tmp_path / 'saved')
+    restored = engine.Project.load(tmp_path / 'saved')
+    assert isinstance(restored.experiments[0].peak, engine.CwlTchPseudoVoigt), (
+        'A cleared CW selector saves and reloads as the same effective default family'
+    )
+    restored.analysis.calculate()
+    np.testing.assert_array_equal(
+        before,
+        restored.experiments[0].data.intensity_calc,
+        err_msg='Selector clearing retains default-family samples across save and reload',
+    )
+
+
+def test_fixed_beba_limit_flag_cannot_create_a_binding_fit_parameter(tmp_path):
+    project = engine.Project.load(
+        profiles.write_project(
+            tmp_path / 'input',
+            profiles.TOKENS[3],
+            extra='_peak.asym_beba_limit 160\n_peak.asym_beba_a0 .031\n',
+        )
+    )
+    peak = project.experiments[0].peak
+    limit = peak.asym_beba_limit
+    refusal = None
+    try:
+        limit.free = True
+    except (ValueError, RuntimeError) as error:
+        refusal = str(error).lower()
+    if refusal is not None:
+        assert 'fixed' in refusal or 'limit' in refusal, (
+            'A fixed-setting mutation refusal must identify the rejected contract'
+        )
+    peak.asym_beba_a0.free = True
+    free = list(project.free_parameters)
+    assert all(item.value != 160 for item in free), (
+        'Bindings never advertise the fixed nondefault BeBa limit as a fitted coefficient'
+    )
+    assert any(item.value == 0.031 for item in free), (
+        'Fixed-limit admission preserves the actual supplied free asymmetry coefficient'
+    )
+    project.analysis.calculate()
+    project.save_as(tmp_path / 'saved')
+    restored = engine.Project.load(tmp_path / 'saved')
+    assert restored.experiments[0].peak.asym_beba_limit.value == 160, (
+        'A fixed setting keeps its supplied nondefault value across persistence'
+    )
+    assert not restored.experiments[0].peak.asym_beba_limit.free, (
+        'A setting never changes from fitted at admission to silently fixed only after save'
+    )

@@ -1,5 +1,6 @@
 #include <doctest/doctest.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <filesystem>
 #include <functional>
@@ -16,12 +17,17 @@ static std::filesystem::path admission_root() {
            "tests/fixtures/cwl_family/native";
 }
 static bool admission_refuses(const std::function<void()>& call) {
+    const auto peak_admission = [](const std::string& message) {
+        return message.find("peak") != std::string::npos &&
+               message.find("unsupported") == std::string::npos &&
+               message.find("not a CW profile coefficient") == std::string::npos;
+    };
     try {
         call();
     } catch (const std::invalid_argument& error) {
-        return std::string(error.what()).find("peak") != std::string::npos;
+        return peak_admission(error.what());
     } catch (const std::runtime_error& error) {
-        return std::string(error.what()).find("peak") != std::string::npos;
+        return peak_admission(error.what());
     }
     return false;
 }
@@ -126,4 +132,64 @@ TEST_CASE("CW native free admits only a matching token and slot block") {
         CHECK_MESSAGE(admission_refuses([&] { (void)project.free_parameters(); }),
                       "Native free enumeration must refuse stale absent or foreign profile slots");
     }
+}
+
+TEST_CASE("CW native optional profile slots use declared defaults") {
+    for (const std::string type : {"cwl-pseudo-voigt", "cwl-pseudo-voigt-berar-baldinozzi"}) {
+        auto project = edi::load_project((admission_root() / "gaussian").string());
+        auto& peak = project.experiment().peak;
+        peak.type = type;
+        peak.broad_gauss_u->free = true;
+        CHECK_NOTHROW_MESSAGE(
+            project.calculate(),
+            "A native profile admits absent optional mixing and asymmetry defaults");
+        CHECK_NOTHROW_MESSAGE((void)project.experiment().free_parameters(),
+                              "Experiment free selection admits absent optional profile defaults");
+        CHECK_NOTHROW_MESSAGE(
+            (void)project.free_parameters(),
+            "Project free selection admits absent optional mixing and asymmetry defaults");
+        project.experiment().data->intensity_meas =
+            std::vector<double>(project.experiment().data->axis().size(), 1.0);
+        project.minimizer_max_iterations = 1;
+        CHECK_NOTHROW_MESSAGE(
+            project.fit(),
+            "Native fitting accepts the profile's declared absent optional defaults");
+        const auto destination =
+            std::filesystem::temp_directory_path() / "cwl-edi-optional-defaults";
+        std::filesystem::remove_all(destination);
+        CHECK_NOTHROW_MESSAGE(
+            edi::save_project(project, destination.string()),
+            "Saving admits a native profile whose optional coefficients take defaults");
+        if (std::filesystem::exists(destination)) {
+            auto reloaded = edi::load_project(destination.string());
+            CHECK_NOTHROW_MESSAGE(reloaded.calculate(),
+                                  "Saved native optional defaults remain consumable after reload");
+        }
+        std::filesystem::remove_all(destination);
+    }
+}
+
+TEST_CASE("CW native fixed BeBa setting stays outside Edi free walks") {
+    auto project = edi::load_project((admission_root() / "beba").string());
+    auto& peak = project.experiment().peak;
+    peak.asym_beba_limit->value = 160;
+    peak.asym_beba_limit->free = true;
+    peak.asym_beba_a0->free = true;
+    const auto check = [&](const std::vector<edi::Parameter*>& free) {
+        CHECK_MESSAGE(std::find(free.begin(), free.end(), &*peak.asym_beba_limit) == free.end(),
+                      "The fixed BeBa limit cannot be advertised by a native Edi free walk");
+        CHECK_MESSAGE(
+            std::find(free.begin(), free.end(), &*peak.asym_beba_a0) != free.end(),
+            "A supplied free BeBa coefficient remains selectable beside its fixed setting");
+    };
+    check(project.experiment().free_parameters());
+    check(project.free_parameters());
+    CHECK_NOTHROW_MESSAGE(project.calculate(),
+                          "A nondefault fixed limit remains valid calculation input");
+    project.experiment().data->intensity_meas =
+        std::vector<double>(project.experiment().data->axis().size(), 1.0);
+    project.minimizer_max_iterations = 1;
+    CHECK_NOTHROW_MESSAGE(
+        project.fit(),
+        "Edi fitting excludes the fixed limit before constructing a derivative chain");
 }

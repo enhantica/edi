@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-06T03:33:53Z
+# measured_utc = 2026-10-06T05:25:09Z
 #
-# Recorded from: official Python writer plus focused native failure receipts tests-seq8-edi-native.log
-# Collected tests: 8477; with a reported duration: 4189
-# Module-scoped fixture costs recorded: 16
+# Recorded from: tests-seq11-edi-scoped.log (116 node(s) measured once, 7706 banked, 0 stale row(s) dropped)
+# Collected tests: 8501; with a reported duration: 4230
+# Module-scoped fixture costs recorded: 17
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 8477
-# inventory_cpp = 291
-# inventory_measured = 7779
-# inventory_unmeasured = 989
+# inventory_python = 8501
+# inventory_cpp = 293
+# inventory_measured = 7822
+# inventory_unmeasured = 972
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_projects_open_and_populate_pages
@@ -1831,7 +1831,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.
 0.000	tests/integration/py/test_cwl_admission.py::test_cif_nonzero_mixing_survives_import_without_default_substitution[collection-classic-cwl-pseudo-voigt]
 0.000	tests/integration/py/test_cwl_admission.py::test_cif_nonzero_mixing_survives_import_without_default_substitution[collection-dot-cwl-pseudo-voigt-berar-baldinozzi]
 0.000	tests/integration/py/test_cwl_admission.py::test_cif_nonzero_mixing_survives_import_without_default_substitution[collection-dot-cwl-pseudo-voigt]
-0.000	tests/integration/py/test_cwl_admission.py::test_cif_nonzero_mixing_survives_import_without_default_substitution[file-classic-cwl-pseudo-voigt-berar-baldinozzi]
+0.240	tests/integration/py/test_cwl_admission.py::test_cif_nonzero_mixing_survives_import_without_default_substitution[file-classic-cwl-pseudo-voigt-berar-baldinozzi]
 0.000	tests/integration/py/test_cwl_admission.py::test_cif_nonzero_mixing_survives_import_without_default_substitution[file-classic-cwl-pseudo-voigt]
 0.000	tests/integration/py/test_cwl_admission.py::test_cif_nonzero_mixing_survives_import_without_default_substitution[file-dot-cwl-pseudo-voigt-berar-baldinozzi]
 0.000	tests/integration/py/test_cwl_admission.py::test_cif_nonzero_mixing_survives_import_without_default_substitution[file-dot-cwl-pseudo-voigt]
@@ -1839,6 +1839,12 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.
 0.000	tests/integration/py/test_cwl_admission.py::test_cif_nonzero_mixing_survives_import_without_default_substitution[text-classic-cwl-pseudo-voigt]
 0.000	tests/integration/py/test_cwl_admission.py::test_cif_nonzero_mixing_survives_import_without_default_substitution[text-dot-cwl-pseudo-voigt-berar-baldinozzi]
 0.000	tests/integration/py/test_cwl_admission.py::test_cif_nonzero_mixing_survives_import_without_default_substitution[text-dot-cwl-pseudo-voigt]
+0.020	tests/integration/py/test_cwl_admission.py::test_cleared_cw_selector_conforms_to_the_default_tch_family[cwl-gaussian]
+0.020	tests/integration/py/test_cwl_admission.py::test_cleared_cw_selector_conforms_to_the_default_tch_family[cwl-lorentzian]
+0.020	tests/integration/py/test_cwl_admission.py::test_cleared_cw_selector_conforms_to_the_default_tch_family[cwl-pseudo-voigt-berar-baldinozzi]
+0.020	tests/integration/py/test_cwl_admission.py::test_cleared_cw_selector_conforms_to_the_default_tch_family[cwl-pseudo-voigt]
+0.020	tests/integration/py/test_cwl_admission.py::test_cleared_cw_selector_conforms_to_the_default_tch_family[cwl-tch-pseudo-voigt-fcj]
+0.020	tests/integration/py/test_cwl_admission.py::test_cleared_cw_selector_conforms_to_the_default_tch_family[cwl-tch-pseudo-voigt]
 0.020	tests/integration/py/test_cwl_admission.py::test_every_directed_cw_switch_reshapes_slots_and_roundtrips[cwl-gaussian-cwl-lorentzian]
 0.020	tests/integration/py/test_cwl_admission.py::test_every_directed_cw_switch_reshapes_slots_and_roundtrips[cwl-gaussian-cwl-pseudo-voigt-berar-baldinozzi]
 0.020	tests/integration/py/test_cwl_admission.py::test_every_directed_cw_switch_reshapes_slots_and_roundtrips[cwl-gaussian-cwl-pseudo-voigt]
@@ -1856,7 +1862,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.
 0.020	tests/integration/py/test_cwl_admission.py::test_every_directed_cw_switch_reshapes_slots_and_roundtrips[cwl-pseudo-voigt-berar-baldinozzi-cwl-tch-pseudo-voigt]
 0.020	tests/integration/py/test_cwl_admission.py::test_every_directed_cw_switch_reshapes_slots_and_roundtrips[cwl-pseudo-voigt-cwl-gaussian]
 0.020	tests/integration/py/test_cwl_admission.py::test_every_directed_cw_switch_reshapes_slots_and_roundtrips[cwl-pseudo-voigt-cwl-lorentzian]
-0.020	tests/integration/py/test_cwl_admission.py::test_every_directed_cw_switch_reshapes_slots_and_roundtrips[cwl-pseudo-voigt-cwl-pseudo-voigt-berar-baldinozzi]
+0.030	tests/integration/py/test_cwl_admission.py::test_every_directed_cw_switch_reshapes_slots_and_roundtrips[cwl-pseudo-voigt-cwl-pseudo-voigt-berar-baldinozzi]
 0.020	tests/integration/py/test_cwl_admission.py::test_every_directed_cw_switch_reshapes_slots_and_roundtrips[cwl-pseudo-voigt-cwl-tch-pseudo-voigt-fcj]
 0.020	tests/integration/py/test_cwl_admission.py::test_every_directed_cw_switch_reshapes_slots_and_roundtrips[cwl-pseudo-voigt-cwl-tch-pseudo-voigt]
 0.020	tests/integration/py/test_cwl_admission.py::test_every_directed_cw_switch_reshapes_slots_and_roundtrips[cwl-tch-pseudo-voigt-cwl-gaussian]
@@ -1866,8 +1872,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.
 0.020	tests/integration/py/test_cwl_admission.py::test_every_directed_cw_switch_reshapes_slots_and_roundtrips[cwl-tch-pseudo-voigt-cwl-tch-pseudo-voigt-fcj]
 0.020	tests/integration/py/test_cwl_admission.py::test_every_directed_cw_switch_reshapes_slots_and_roundtrips[cwl-tch-pseudo-voigt-fcj-cwl-gaussian]
 0.020	tests/integration/py/test_cwl_admission.py::test_every_directed_cw_switch_reshapes_slots_and_roundtrips[cwl-tch-pseudo-voigt-fcj-cwl-lorentzian]
-0.030	tests/integration/py/test_cwl_admission.py::test_every_directed_cw_switch_reshapes_slots_and_roundtrips[cwl-tch-pseudo-voigt-fcj-cwl-pseudo-voigt-berar-baldinozzi]
-0.240	tests/integration/py/test_cwl_admission.py::test_every_directed_cw_switch_reshapes_slots_and_roundtrips[cwl-tch-pseudo-voigt-fcj-cwl-pseudo-voigt]
+0.020	tests/integration/py/test_cwl_admission.py::test_every_directed_cw_switch_reshapes_slots_and_roundtrips[cwl-tch-pseudo-voigt-fcj-cwl-pseudo-voigt-berar-baldinozzi]
+0.020	tests/integration/py/test_cwl_admission.py::test_every_directed_cw_switch_reshapes_slots_and_roundtrips[cwl-tch-pseudo-voigt-fcj-cwl-pseudo-voigt]
 0.020	tests/integration/py/test_cwl_admission.py::test_every_directed_cw_switch_reshapes_slots_and_roundtrips[cwl-tch-pseudo-voigt-fcj-cwl-tch-pseudo-voigt]
 0.000	tests/integration/py/test_cwl_admission.py::test_every_foreign_slot_declaration_shape_is_refused[cif-dot-loop-collection-cwl-gaussian-beba-asym_beba_a0]
 0.000	tests/integration/py/test_cwl_admission.py::test_every_foreign_slot_declaration_shape_is_refused[cif-dot-loop-collection-cwl-gaussian-beba-asym_beba_a1]
@@ -3399,22 +3405,34 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_admission.py::test_e
 0.000	tests/integration/py/test_cwl_admission.py::test_every_foreign_slot_declaration_shape_is_refused[edi-scalar-text-cwl-tch-pseudo-voigt-fcj-mixing-mixing_eta_1]
 0.000	tests/integration/py/test_cwl_admission.py::test_every_foreign_slot_declaration_shape_is_refused[edi-scalar-text-cwl-tch-pseudo-voigt-mixing-mixing_eta_0]
 0.000	tests/integration/py/test_cwl_admission.py::test_every_foreign_slot_declaration_shape_is_refused[edi-scalar-text-cwl-tch-pseudo-voigt-mixing-mixing_eta_1]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_admission.py::test_held_old_view_cannot_reengage_a_removed_slot[cached-free-cwl-pseudo-voigt-berar-baldinozzi]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_admission.py::test_held_old_view_cannot_reengage_a_removed_slot[cached-free-cwl-pseudo-voigt]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_admission.py::test_held_old_view_cannot_reengage_a_removed_slot[cached-free-cwl-tch-pseudo-voigt-fcj]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_admission.py::test_held_old_view_cannot_reengage_a_removed_slot[cached-free-cwl-tch-pseudo-voigt]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_admission.py::test_held_old_view_cannot_reengage_a_removed_slot[cached-uncertainty-cwl-pseudo-voigt-berar-baldinozzi]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_admission.py::test_held_old_view_cannot_reengage_a_removed_slot[cached-uncertainty-cwl-pseudo-voigt]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_admission.py::test_held_old_view_cannot_reengage_a_removed_slot[cached-uncertainty-cwl-tch-pseudo-voigt-fcj]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_admission.py::test_held_old_view_cannot_reengage_a_removed_slot[cached-uncertainty-cwl-tch-pseudo-voigt]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_admission.py::test_held_old_view_cannot_reengage_a_removed_slot[cached-value-cwl-pseudo-voigt-berar-baldinozzi]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_admission.py::test_held_old_view_cannot_reengage_a_removed_slot[cached-value-cwl-pseudo-voigt]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_admission.py::test_held_old_view_cannot_reengage_a_removed_slot[cached-value-cwl-tch-pseudo-voigt-fcj]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_admission.py::test_held_old_view_cannot_reengage_a_removed_slot[cached-value-cwl-tch-pseudo-voigt]
+0.010	tests/integration/py/test_cwl_admission.py::test_fixed_beba_limit_flag_cannot_create_a_binding_fit_parameter
+0.020	tests/integration/py/test_cwl_admission.py::test_held_old_view_cannot_reengage_a_removed_slot[cached-free-cwl-pseudo-voigt-berar-baldinozzi]
+0.010	tests/integration/py/test_cwl_admission.py::test_held_old_view_cannot_reengage_a_removed_slot[cached-free-cwl-pseudo-voigt]
+0.010	tests/integration/py/test_cwl_admission.py::test_held_old_view_cannot_reengage_a_removed_slot[cached-free-cwl-tch-pseudo-voigt-fcj]
+0.010	tests/integration/py/test_cwl_admission.py::test_held_old_view_cannot_reengage_a_removed_slot[cached-free-cwl-tch-pseudo-voigt]
+0.010	tests/integration/py/test_cwl_admission.py::test_held_old_view_cannot_reengage_a_removed_slot[cached-uncertainty-cwl-pseudo-voigt-berar-baldinozzi]
+0.010	tests/integration/py/test_cwl_admission.py::test_held_old_view_cannot_reengage_a_removed_slot[cached-uncertainty-cwl-pseudo-voigt]
+0.010	tests/integration/py/test_cwl_admission.py::test_held_old_view_cannot_reengage_a_removed_slot[cached-uncertainty-cwl-tch-pseudo-voigt-fcj]
+0.010	tests/integration/py/test_cwl_admission.py::test_held_old_view_cannot_reengage_a_removed_slot[cached-uncertainty-cwl-tch-pseudo-voigt]
+0.010	tests/integration/py/test_cwl_admission.py::test_held_old_view_cannot_reengage_a_removed_slot[cached-value-cwl-pseudo-voigt-berar-baldinozzi]
+0.010	tests/integration/py/test_cwl_admission.py::test_held_old_view_cannot_reengage_a_removed_slot[cached-value-cwl-pseudo-voigt]
+0.010	tests/integration/py/test_cwl_admission.py::test_held_old_view_cannot_reengage_a_removed_slot[cached-value-cwl-tch-pseudo-voigt-fcj]
+0.010	tests/integration/py/test_cwl_admission.py::test_held_old_view_cannot_reengage_a_removed_slot[cached-value-cwl-tch-pseudo-voigt]
 0.010	tests/integration/py/test_cwl_admission.py::test_held_old_view_cannot_reengage_a_removed_slot[old-view-cwl-pseudo-voigt-berar-baldinozzi]
 0.010	tests/integration/py/test_cwl_admission.py::test_held_old_view_cannot_reengage_a_removed_slot[old-view-cwl-pseudo-voigt]
 0.010	tests/integration/py/test_cwl_admission.py::test_held_old_view_cannot_reengage_a_removed_slot[old-view-cwl-tch-pseudo-voigt-fcj]
 0.010	tests/integration/py/test_cwl_admission.py::test_held_old_view_cannot_reengage_a_removed_slot[old-view-cwl-tch-pseudo-voigt]
+0.020	tests/integration/py/test_cwl_admission.py::test_optional_profile_cell_clear_uses_declared_default[cwl-pseudo-voigt-berar-baldinozzi-asym_beba_a0-0.0]
+0.020	tests/integration/py/test_cwl_admission.py::test_optional_profile_cell_clear_uses_declared_default[cwl-pseudo-voigt-berar-baldinozzi-asym_beba_a1-0.0]
+0.020	tests/integration/py/test_cwl_admission.py::test_optional_profile_cell_clear_uses_declared_default[cwl-pseudo-voigt-berar-baldinozzi-asym_beba_b0-0.0]
+0.020	tests/integration/py/test_cwl_admission.py::test_optional_profile_cell_clear_uses_declared_default[cwl-pseudo-voigt-berar-baldinozzi-asym_beba_b1-0.0]
+0.020	tests/integration/py/test_cwl_admission.py::test_optional_profile_cell_clear_uses_declared_default[cwl-pseudo-voigt-berar-baldinozzi-asym_beba_limit-180.0]
+0.020	tests/integration/py/test_cwl_admission.py::test_optional_profile_cell_clear_uses_declared_default[cwl-pseudo-voigt-berar-baldinozzi-mixing_eta_0-0.0]
+0.020	tests/integration/py/test_cwl_admission.py::test_optional_profile_cell_clear_uses_declared_default[cwl-pseudo-voigt-berar-baldinozzi-mixing_eta_1-0.0]
+0.020	tests/integration/py/test_cwl_admission.py::test_optional_profile_cell_clear_uses_declared_default[cwl-pseudo-voigt-mixing_eta_0-0.0]
+0.020	tests/integration/py/test_cwl_admission.py::test_optional_profile_cell_clear_uses_declared_default[cwl-pseudo-voigt-mixing_eta_1-0.0]
+0.020	tests/integration/py/test_cwl_admission.py::test_optional_profile_cell_clear_uses_declared_default[cwl-tch-pseudo-voigt-fcj-asym_fcj_1-0.0]
+0.020	tests/integration/py/test_cwl_admission.py::test_optional_profile_cell_clear_uses_declared_default[cwl-tch-pseudo-voigt-fcj-asym_fcj_2-0.0]
 0.010	tests/integration/py/test_cwl_admission.py::test_wrong_concrete_peak_view_cannot_add_foreign_slots
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_each_declared_profile_calculates_and_roundtrips[cwl-gaussian]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_each_declared_profile_calculates_and_roundtrips[cwl-lorentzian]
@@ -3438,13 +3456,15 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_reti
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_supported_cw_inventory_contains_exactly_the_six_profiles
 0.000	tests/integration/py/test_cwl_rename_bytes.py::test_cross_platform_comparison_admits_only_the_declared_rounding_bound[Darwin]
 0.000	tests/integration/py/test_cwl_rename_bytes.py::test_cross_platform_comparison_admits_only_the_declared_rounding_bound[Windows]
-0.010	tests/integration/py/test_cwl_rename_bytes.py::test_darwin_branch_uses_the_retained_pre_change_capture[fcj]
-0.010	tests/integration/py/test_cwl_rename_bytes.py::test_darwin_branch_uses_the_retained_pre_change_capture[tch]
+0.000	tests/integration/py/test_cwl_rename_bytes.py::test_darwin_branch_uses_the_retained_pre_change_capture[fcj]
+0.000	tests/integration/py/test_cwl_rename_bytes.py::test_darwin_branch_uses_the_retained_pre_change_capture[tch]
+0.000	tests/integration/py/test_cwl_rename_bytes.py::test_native_capture_inputs_cannot_change_under_the_same_reference[sample]
+0.000	tests/integration/py/test_cwl_rename_bytes.py::test_native_capture_inputs_cannot_change_under_the_same_reference[width]
 0.000	tests/integration/py/test_cwl_rename_bytes.py::test_native_reference_and_sample_population_cannot_be_weakened[low-bit]
 0.000	tests/integration/py/test_cwl_rename_bytes.py::test_native_reference_and_sample_population_cannot_be_weakened[missing-sample]
 0.000	tests/integration/py/test_cwl_rename_bytes.py::test_native_reference_and_sample_population_cannot_be_weakened[nonfinite]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_rename_bytes.py::test_tch_rename_preserves_pre_change_regression_bytes[fcj-cwl-tch-pseudo-voigt-fcj]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_rename_bytes.py::test_tch_rename_preserves_pre_change_regression_bytes[tch-cwl-tch-pseudo-voigt]
+0.010	tests/integration/py/test_cwl_rename_bytes.py::test_tch_rename_preserves_pre_change_regression_bytes[fcj-cwl-tch-pseudo-voigt-fcj]
+0.010	tests/integration/py/test_cwl_rename_bytes.py::test_tch_rename_preserves_pre_change_regression_bytes[tch-cwl-tch-pseudo-voigt]
 0.090	tests/integration/py/test_e01_scaffold.py::test_app_is_one_option_gated_cpp_qml_host
 0.140	tests/integration/py/test_e01_scaffold.py::test_checkout_imports_edi_without_path_injection
 0.030	tests/integration/py/test_e01_scaffold.py::test_ci_routes_surfaces_and_uses_strict_self_hosted_jobs
@@ -6030,14 +6050,14 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.p
 0.030	tests/system/py/test_c34_t26_moved_from_project_reuse.py::test_c34_t26_moved_from_project_reuse_calculates_in_public_cpp_api[assign-copy]
 0.030	tests/system/py/test_c34_t26_moved_from_project_reuse.py::test_c34_t26_moved_from_project_reuse_calculates_in_public_cpp_api[construct-collections]
 0.040	tests/system/py/test_c34_t26_moved_from_project_reuse.py::test_c34_t26_moved_from_project_reuse_calculates_in_public_cpp_api[construct-copy]
-0.004	tests/system/py/test_c34_t28_census_binding.py::test_committed_census_matches_independent_compiler_and_io_references
+0.000	tests/system/py/test_c34_t28_census_binding.py::test_committed_census_matches_independent_compiler_and_io_references
 0.010	tests/system/py/test_c34_t28_census_binding.py::test_declared_variant_binding_refuses_each_schema_escape[duplicate-column]
 0.000	tests/system/py/test_c34_t28_census_binding.py::test_declared_variant_binding_refuses_each_schema_escape[duplicate-selector]
 0.000	tests/system/py/test_c34_t28_census_binding.py::test_declared_variant_binding_refuses_each_schema_escape[duplicate-variant]
 0.000	tests/system/py/test_c34_t28_census_binding.py::test_declared_variant_binding_refuses_each_schema_escape[empty-variants]
 0.000	tests/system/py/test_c34_t28_census_binding.py::test_declared_variant_binding_refuses_each_schema_escape[extra-model]
 0.000	tests/system/py/test_c34_t28_census_binding.py::test_declared_variant_binding_refuses_each_schema_escape[missing-loop]
-0.000	tests/system/py/test_c34_t28_census_binding.py::test_declared_variant_binding_refuses_each_schema_escape[missing-model]
+0.010	tests/system/py/test_c34_t28_census_binding.py::test_declared_variant_binding_refuses_each_schema_escape[missing-model]
 0.000	tests/system/py/test_c34_t28_census_binding.py::test_declared_variant_binding_refuses_each_schema_escape[missing-selector]
 0.000	tests/system/py/test_c34_t28_census_binding.py::test_declared_variant_binding_refuses_each_schema_escape[missing-storage]
 0.000	tests/system/py/test_c34_t28_census_binding.py::test_declared_variant_binding_refuses_each_schema_escape[non-loop-alternative]
@@ -6056,7 +6076,7 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.p
 0.000	tests/system/py/test_c34_t28_census_binding.py::test_independent_binding_refuses_each_omission_or_storage_escape[outside-schema]
 0.000	tests/system/py/test_c34_t28_census_binding.py::test_independent_binding_refuses_each_omission_or_storage_escape[wrong-category]
 0.010	tests/system/py/test_c34_t28_census_binding.py::test_variant_admission_retains_point_columns_and_ordinary_uniqueness[missing-point-column]
-0.000	tests/system/py/test_c34_t28_census_binding.py::test_variant_admission_retains_point_columns_and_ordinary_uniqueness[ordinary-duplicate]
+0.010	tests/system/py/test_c34_t28_census_binding.py::test_variant_admission_retains_point_columns_and_ordinary_uniqueness[ordinary-duplicate]
 0.370	tests/system/py/test_c34_t28_census_escapes.py::test_census_names_each_new_defect_even_while_unrelated_tables_are_pending[cif-category]
 0.320	tests/system/py/test_c34_t28_census_escapes.py::test_census_names_each_new_defect_even_while_unrelated_tables_are_pending[container]
 0.340	tests/system/py/test_c34_t28_census_escapes.py::test_census_names_each_new_defect_even_while_unrelated_tables_are_pending[dotted-category]
@@ -6243,14 +6263,14 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::te
 2.190	tests/system/py/test_c34_t28_native_retyping.py::test_retyped_member_keeps_declared_reads_and_writes[SequentialExtractRule-required]
 1.860	tests/system/py/test_c34_t28_native_retyping.py::test_retyped_member_keeps_declared_reads_and_writes[SequentialExtractRule-target]
 1.590	tests/system/py/test_c34_t28_native_retyping.py::test_retyped_member_keeps_declared_reads_and_writes[Structure-scattering_lengths_fm]
-4.880	tests/system/py/test_c34_t28_native_surface.py::test_every_preserved_public_declaration_keeps_its_compiler_type
+3.881	tests/system/py/test_c34_t28_native_surface.py::test_every_preserved_public_declaration_keeps_its_compiler_type
 0.000	tests/system/py/test_c34_t28_native_surface.py::test_multiphase_transition_never_exempts_its_replacement_contract[const-value]
 0.000	tests/system/py/test_c34_t28_native_surface.py::test_multiphase_transition_never_exempts_its_replacement_contract[key-type]
 0.000	tests/system/py/test_c34_t28_native_surface.py::test_multiphase_transition_never_exempts_its_replacement_contract[missing-row]
 0.000	tests/system/py/test_c34_t28_native_surface.py::test_multiphase_transition_never_exempts_its_replacement_contract[mutable-value]
 0.000	tests/system/py/test_c34_t28_native_surface.py::test_multiphase_transition_never_exempts_its_replacement_contract[traits]
-2.070	tests/system/py/test_c34_t28_native_surface.py::test_native_contract_detects_reference_and_exception_drift[attachment-may-throw]
-2.190	tests/system/py/test_c34_t28_native_surface.py::test_native_contract_detects_reference_and_exception_drift[axis-by-value]
+1.150	tests/system/py/test_c34_t28_native_surface.py::test_native_contract_detects_reference_and_exception_drift[attachment-may-throw]
+0.950	tests/system/py/test_c34_t28_native_surface.py::test_native_contract_detects_reference_and_exception_drift[axis-by-value]
 0.420	tests/system/py/test_c34_t28_pairing.py::test_pairing_reports_unlanded_work_and_a_stale_pin_on_intermediate_rows[ahead-current]
 0.350	tests/system/py/test_c34_t28_pairing.py::test_pairing_reports_unlanded_work_and_a_stale_pin_on_intermediate_rows[ahead-stale]
 0.400	tests/system/py/test_c34_t28_pairing.py::test_pairing_reports_unlanded_work_and_a_stale_pin_on_intermediate_rows[behind]
@@ -7467,10 +7487,12 @@ UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_transitions.cpp::Na
 0.040	tests/unit/cpp/test_constraint_transitions.cpp::Relation declaration writes revoke computed currentness without parameter writes
 0.072	tests/unit/cpp/test_constraint_transitions.cpp::Relation declaration writes supersede calculated publications atomically
 0.004	tests/unit/cpp/test_constraint_transitions.cpp::Unchanged relation declarations admit calculated publication
-UNMEASURED:failed-in-focused-native-run: tests-seq8-edi-native.log	tests/unit/cpp/test_cwl_admission.cpp::CW native calculate admits only a matching token and slot block
-UNMEASURED:failed-in-focused-native-run: tests-seq8-edi-native.log	tests/unit/cpp/test_cwl_admission.cpp::CW native fit admits only a matching token and slot block
-UNMEASURED:failed-in-focused-native-run: tests-seq8-edi-native.log	tests/unit/cpp/test_cwl_admission.cpp::CW native free admits only a matching token and slot block
-UNMEASURED:failed-in-focused-native-run: tests-seq8-edi-native.log	tests/unit/cpp/test_cwl_admission.cpp::CW native save admits only a matching token and slot block
+0.038	tests/unit/cpp/test_cwl_admission.cpp::CW native calculate admits only a matching token and slot block
+0.030	tests/unit/cpp/test_cwl_admission.cpp::CW native fit admits only a matching token and slot block
+UNMEASURED:failed-in-focused-native-run: tests-seq8-edi-native.log	tests/unit/cpp/test_cwl_admission.cpp::CW native fixed BeBa setting stays outside Edi free walks
+0.012	tests/unit/cpp/test_cwl_admission.cpp::CW native free admits only a matching token and slot block
+0.067	tests/unit/cpp/test_cwl_admission.cpp::CW native optional profile slots use declared defaults
+0.024	tests/unit/cpp/test_cwl_admission.cpp::CW native save admits only a matching token and slot block
 0.030	tests/unit/cpp/test_e05_t1_fit_job.cpp::E05-T1 gate 3 engine checkpoint cancel retains partial values and undo
 0.036	tests/unit/cpp/test_e05_t1_fit_job.cpp::E05-T1 gate 3 joint engine checkpoint cancel retains partial values and undo
 0.011	tests/unit/cpp/test_e05_t1_fit_job.cpp::E05-T1 gate 3 joint worker token cancellation reaches a running fit
@@ -7877,6 +7899,10 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_c34_t1c_construction_population
 0.000	tests/unit/py/test_c34_t1c_construction_population.py::test_c34_t1c_structure_factories_build_live_objects[from_cif_str]
 UNMEASURED:failed-in-this-run	tests/unit/py/test_c34_t1c_construction_population.py::test_c34_t1c_structure_factories_build_live_objects[from_scratch]
 UNMEASURED:failed-in-this-run	tests/unit/py/test_c34_t1c_construction_population.py::test_c34_t1c_tutorial_graph_constructs_and_populates_end_to_end
+0.050	tests/unit/py/test_c34_t28_census_scope.py::test_independent_census_distinguishes_local_and_model_scopes[function]
+0.030	tests/unit/py/test_c34_t28_census_scope.py::test_independent_census_distinguishes_local_and_model_scopes[lambda]
+0.030	tests/unit/py/test_c34_t28_census_scope.py::test_independent_census_distinguishes_local_and_model_scopes[method]
+0.040	tests/unit/py/test_c34_t28_census_scope.py::test_independent_census_distinguishes_local_and_model_scopes[nested-block]
 UNMEASURED:failed-in-this-run	tests/unit/py/test_constraint_app_structure.py::test_alias_picker_uses_core_candidates_and_the_closed_edit_door
 UNMEASURED:failed-in-this-run	tests/unit/py/test_constraint_app_structure.py::test_analysis_groups_read_core_rows_without_preview_data[alias-AliasesGroup-aliases]
 UNMEASURED:failed-in-this-run	tests/unit/py/test_constraint_app_structure.py::test_analysis_groups_read_core_rows_without_preview_data[constraint-ConstraintsGroup-constraints]
@@ -8815,8 +8841,9 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 2.511	tests/system/py/test_c09_t9_output_contract_and_cli.py
 # module-cost: 0.146	tests/system/py/test_c11_t62_native_scan_io.py
 # module-cost: 4.399	tests/system/py/test_c15_t2_native_family.py
-# module-cost: 3.106	tests/system/py/test_c34_t28_census_binding.py
+# module-cost: 3.252	tests/system/py/test_c34_t28_census_binding.py
 # module-cost: 0.011	tests/system/py/test_c34_t28_census_escapes.py
+# module-cost: 1.059	tests/system/py/test_c34_t28_native_surface.py
 # module-cost: 22.953	tests/system/py/test_e04_t10_latency.py
 # module-cost: 0.663	tests/system/py/test_e04_t12_public_release.py
 # module-cost: 110.331	tests/system/py/test_e04_t9_latency.py
