@@ -10,6 +10,7 @@
 #include <QMetaObject>
 #include <QPointer>
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <limits>
 #include <filesystem>
@@ -343,7 +344,18 @@ namespace {
 
 // The earlier result files wait here while they are replaced, so a failure can always put them back; a failure that
 // cannot leaves them here, and the refusal says so.
-fs::path set_aside_dir(const edi::Project& project) { return analysis_dir(project) / ".edi-set-aside"; }
+// One directory per replacement, never reused: the files a fresh run or Reset fits took stay there until an Undo puts
+// them back, so they are on disk whatever fails later.
+fs::path set_aside_dir(const edi::Project& project, const std::string& name) {
+    return analysis_dir(project) / ".edi-set-aside" / name;
+}
+
+std::string fresh_name(const char* kind) {
+    static int serial = 0;
+    const auto now = std::chrono::system_clock::now().time_since_epoch();
+    return std::string(kind) + "-" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(now).count()) +
+           "-" + std::to_string(++serial);
+}
 
 void move_file(const fs::path& from, const fs::path& to) {
     std::error_code error;
@@ -356,8 +368,8 @@ void move_file(const fs::path& from, const fs::path& to) {
 }
 
 // Moves the present result files aside; on a failure moves back what moved. Returns which moved.
-std::vector<int> set_aside(const edi::Project& project, const ScanSession::Files& present) {
-    const fs::path directory = analysis_dir(project), aside = set_aside_dir(project);
+std::vector<int> set_aside(const edi::Project& project, const ScanSession::Files& present, const fs::path& aside) {
+    const fs::path directory = analysis_dir(project);
     fs::create_directories(aside);
     std::vector<int> moved;
     try {
@@ -376,14 +388,14 @@ std::vector<int> set_aside(const edi::Project& project, const ScanSession::Files
     return moved;
 }
 
-void drop_set_aside(const edi::Project& project) {
+void drop_set_aside(const fs::path& aside) {
     std::error_code ignored;
-    fs::remove_all(set_aside_dir(project), ignored);
+    fs::remove_all(aside, ignored);
 }
 
-QString kept_aside(const edi::Project& project, const std::exception& refusal) {
+QString kept_aside(const fs::path& aside, const std::exception& refusal) {
     return QStringLiteral("%1; the earlier result files are kept in %2")
-        .arg(QString::fromUtf8(refusal.what()), QString::fromStdString(set_aside_dir(project).string()));
+        .arg(QString::fromUtf8(refusal.what()), QString::fromStdString(aside.string()));
 }
 
 }  // namespace
@@ -398,15 +410,16 @@ QString ScanSession::takeFiles(const edi::Project& project, Files& taken) {
     } catch (const std::exception& refusal) {
         return QString::fromUtf8(refusal.what());
     }
-    // Set aside, all or none; then dropped, the bytes being held by the caller (its Undo).
+    // Set aside, all or none, and kept there until an Undo puts them back (the caller holds the bytes too).
+    const fs::path aside = set_aside_dir(project, fresh_name("taken"));
     try {
-        set_aside(project, taken);
+        set_aside(project, taken, aside);
     } catch (const std::exception& refusal) {
-        return std::filesystem::exists(set_aside_dir(project)) && !fs::is_empty(set_aside_dir(project))
-                   ? kept_aside(project, refusal)
-                   : QString::fromUtf8(refusal.what());
+        std::error_code ignored;
+        return fs::exists(aside, ignored) && !fs::is_empty(aside, ignored) ? kept_aside(aside, refusal)
+                                                                          : QString::fromUtf8(refusal.what());
     }
-    drop_set_aside(project);
+    taken.kept = aside.string();
     run_ = {};
     return {};
 }
@@ -447,8 +460,9 @@ QString ScanSession::putFiles(const edi::Project& project, const Files& files) {
     }
     // 2. The present files set aside; 3. the staged ones moved in. A failure puts the earlier ones back.
     std::vector<int> moved_in;
+    const fs::path aside = set_aside_dir(project, fresh_name("replaced"));
     try {
-        set_aside(project, current);
+        set_aside(project, current, aside);
         for (const int which : staged) {
             move_file(directory / (std::string(kResultFiles[which]) + ".edi-staged"), directory / kResultFiles[which]);
             moved_in.push_back(which);
@@ -461,16 +475,20 @@ QString ScanSession::putFiles(const edi::Project& project, const Files& files) {
             }
             for (int which = 0; which < 3; ++which) {
                 if (*slot(current, which)) {
-                    move_file(set_aside_dir(project) / kResultFiles[which], directory / kResultFiles[which]);
+                    move_file(aside / kResultFiles[which], directory / kResultFiles[which]);
                 }
             }
         } catch (const std::exception&) {
-            return kept_aside(project, refusal);
+            return kept_aside(aside, refusal);
         }
-        drop_set_aside(project);
+        drop_set_aside(aside);
         return QString::fromUtf8(refusal.what());
     }
-    drop_set_aside(project);
+    // Put back: the replaced files and the copies kept when these were taken go.
+    drop_set_aside(aside);
+    if (!files.kept.empty()) {
+        drop_set_aside(fs::path(files.kept));
+    }
     readRun(project);
     return {};
 }
