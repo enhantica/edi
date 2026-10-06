@@ -25,7 +25,9 @@ def test_header_observer_rejects_disconnected_model_and_displayed_labels(monkeyp
         contract.test_scan_explorer_header_has_declared_columns_in_order()
 
 
-@pytest.mark.parametrize('channel', ['target', 'layer', 'coordinates', 'selection', 'low', 'high'])
+@pytest.mark.parametrize(
+    'channel', ['target', 'layer', 'coordinates', 'selection', 'low', 'high', 'axis-bounds']
+)
 def test_scene_graph_observer_rejects_disconnected_layer_hit_and_uncertainty(monkeypatch, channel):
     good = contract.evolution_component()
     contract.assert_evolution_bindings(good)
@@ -48,6 +50,7 @@ def test_scene_graph_observer_rejects_disconnected_layer_hit_and_uncertainty(mon
         'layer': ('value: chart.shown ? layer : null', 'value: null'),
         'coordinates': ('axisY.max - mouse.y / height', 'axisY.min + mouse.y / height'),
         'selection': ('currentExperimentIndex = dataset', 'currentExperimentIndex = 0'),
+        'axis-bounds': ('min: chart.evolution ? chart.evolution.xMin : 0', 'min: 2'),
     }[channel]
     changed = good.replace(old, new)
     assert changed != good, (
@@ -80,3 +83,23 @@ def test_actual_stale_markers_reject_constant_or_other_result_state(consumer):
         )
         with pytest.raises(AssertionError):
             contract.assert_stale_marker(changed)
+
+
+@pytest.mark.parametrize('composition', ['direct-model', 'project-alias'])
+def test_scene_graph_observer_accepts_equivalent_model_and_axis_bindings(composition):
+    good = contract.evolution_component()
+    if composition == 'direct-model':
+        changed = good
+        for prop, axis in [
+            ('xMin', 'axisX.min'),
+            ('xMax', 'axisX.max'),
+            ('yMin', 'axisY.min'),
+            ('yMax', 'axisY.max'),
+        ]:
+            changed = changed.replace(prop + ': ' + axis, prop + ': chart.evolution.' + prop)
+    else:
+        changed = good.replace('target: chart.evolution', 'target: chart.project.evolution')
+    assert changed != good, (
+        'Evolution wiring: the supported composition changes its actual consumer binding'
+    )
+    contract.assert_evolution_bindings(changed)

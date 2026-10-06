@@ -245,44 +245,66 @@ def assert_scene_evolution(qml):
         for a, b in spans(qml)
         if qml[a:b].startswith('{') and re.search(r'property:\s*"layer"', qml[a:b])
     )
-    assert property_value(binding, 'target') == 'chart.evolution', (
-        'Evolution wiring: the results model fills the visible chart layer'
+    model_context = (
+        'const evolution={xMin:2,xMax:12,yMin:10,yMax:30};'
+        'const project={evolution};const chart={project,evolution,shown:true};'
+        'const other={evolution:{xMin:6,xMax:9,yMin:11,yMax:13}};'
     )
-    assert evaluate(
-        property_value(binding, 'value'), 'const layer={tag:17};const chart={shown:true};'
-    ) == {'tag': 17}, (
+    handler = property_value(item(qml, 'evolution.pointer'), 'onClicked')
+    click_context = (
+        'let picked=[],hit=17;const width=200,height=100;'
+        'const axisX={min:2,max:12},axisY={min:10,max:30};'
+        'const chart={em:10,evolution:{datasetAt:(...args)=>{picked.push(args);return hit;}},'
+        'project:{currentExperimentIndex:3}};'
+    )
+    axis_context = model_context
+    for name in ('axisX', 'axisY'):
+        axis = block(qml, name + ': ValueAxis {')
+        axis_context += (
+            'const ' + name + '={get min(){return (' + property_value(axis, 'min') + ');},'
+            'get max(){return (' + property_value(axis, 'max') + ');}};'
+        )
+    expressions = ['axisX.min', 'axisX.max', 'axisY.min', 'axisY.max'] + [
+        property_value(layer, prop) for prop in ('xMin', 'xMax', 'yMin', 'yMax')
+    ]
+    # One runtime invocation observes all effective consumers; each scope retains
+    # its distinct state so a correct but unused binding cannot satisfy another.
+    bindings, values, axes = evaluate(
+        '[(()=>{'
+        + model_context
+        + 'const layer={tag:17};return [('
+        + property_value(binding, 'target')
+        + ') === evolution,('
+        + property_value(binding, 'value')
+        + ')];})(),(()=>{'
+        + click_context
+        + 'return [17,-1].map(dataset=>{picked=[];hit=dataset;'
+        'chart.project.currentExperimentIndex=3;('
+        + handler
+        + ')({x:40,y:25});return [picked,chart.project.currentExperimentIndex];});'
+        '})(),(()=>{'
+        + axis_context
+        + 'return [[2,12,10,30],[-3,17,-0.5,93]].map(([xMin,xMax,yMin,yMax])=>{'
+        'Object.assign(evolution,{xMin,xMax,yMin,yMax});return ['
+        + ','.join(expressions)
+        + '];});})()]'
+    )
+    assert bindings[0], 'Evolution wiring: the results model fills the visible chart layer'
+    assert bindings[1] == {'tag': 17}, (
         'Evolution wiring: the active tab supplies its actual visible point '
         'layer to the results model'
     )
     assert layer_id == 'layer', (
         'Evolution wiring: the bound target resolves to the actual plotted point item'
     )
-    handler = property_value(item(qml, 'evolution.pointer'), 'onClicked')
-    context = (
-        'let picked=[],hit=17;const width=200,height=100;'
-        'const axisX={min:2,max:12},axisY={min:10,max:30};'
-        'const chart={em:10,evolution:{datasetAt:(...args)=>{picked.push(args);return hit;}},'
-        'project:{currentExperimentIndex:3}};'
-    )
-    values = javascript(
-        context + 'console.log(JSON.stringify([17,-1].map(dataset=>{'
-        'picked=[];hit=dataset;chart.project.currentExperimentIndex=3;('
-        + handler
-        + ')({x:40,y:25});return [picked,chart.project.currentExperimentIndex];})));'
-    )
     assert values == [[[[4, 25, 0.3, 1.2]], 17], [[[4, 25, 0.3, 1.2]], 3]], (
         'Evolution wiring: a plotted point click passes data coordinates and pixel tolerance '
         'to hit testing, then selects that dataset; empty space keeps the selection'
     )
-    for prop, axis in [
-        ('xMin', 'axisX.min'),
-        ('xMax', 'axisX.max'),
-        ('yMin', 'axisY.min'),
-        ('yMax', 'axisY.max'),
-    ]:
-        assert property_value(layer, prop) == axis, (
-            'Evolution wiring: rendered points use the displayed data axes'
-        )
+    assert axes == [[2, 12, 10, 30] * 2, [-3, 17, -0.5, 93] * 2], (
+        'Evolution wiring: the displayed axes and rendered points '
+        'follow changing result-model bounds'
+    )
     draw = block(source('src/evolution_view_model.cpp'), 'void EvolutionViewModel::draw(')
     with tempfile.TemporaryDirectory() as scratch:
         actual = cpp_probe(

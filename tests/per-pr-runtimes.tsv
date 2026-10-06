@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-06T00:38:27Z
+# measured_utc = 2026-10-06T00:51:19Z
 #
-# Recorded from: seq6-last-small.log (6 node(s) measured once, 6492 banked, 0 stale row(s) dropped)
-# Collected tests: 7622; with a reported duration: 4382
+# Recorded from: seq6-effective-final.log (15 node(s) measured once, 6486 banked, 0 stale row(s) dropped)
+# Collected tests: 7625; with a reported duration: 4385
 # Module-scoped fixture costs recorded: 5
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 7622
+# inventory_python = 7625
 # inventory_cpp = 290
-# inventory_measured = 6498
+# inventory_measured = 6501
 # inventory_unmeasured = 1414
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
@@ -2936,7 +2936,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e05_t1_physical_domain.p
 0.010	tests/integration/py/test_scan_extended_contract.py::test_example_gate_rejects_swapped_names_with_matching_local_provenance[162]
 0.010	tests/integration/py/test_scan_extended_contract.py::test_example_gate_rejects_swapped_names_with_matching_local_provenance[324]
 0.270	tests/integration/py/test_scan_extended_contract.py::test_old_scan_results_are_retained_with_out_of_date_state
-0.830	tests/integration/py/test_scan_extended_contract.py::test_parameter_evolution_connects_rendered_errors_axis_and_point_selection
+0.630	tests/integration/py/test_scan_extended_contract.py::test_parameter_evolution_connects_rendered_errors_axis_and_point_selection
 0.890	tests/integration/py/test_scan_extended_contract.py::test_rendered_evolution_and_stale_observers_reject_unrelated_models_handlers_and_flags
 0.410	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_accepts_a_separately_linked_example_library
 0.330	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_distinguishes_executable_and_library_interfaces[INTERFACE]
@@ -6437,17 +6437,20 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_scan_app_execution.py::test_t
 0.000	tests/system/py/test_scan_lazy_input.py::test_gate_rejects_an_exercised_read_all_files_before_fitting_escape[eager-load-openat]
 0.000	tests/system/py/test_scan_lazy_input.py::test_gate_rejects_an_exercised_read_all_files_before_fitting_escape[eager-load-relative]
 0.000	tests/system/py/test_scan_lazy_input.py::test_gate_rejects_an_exercised_read_all_files_before_fitting_escape[eager-load]
-0.560	tests/system/py/test_scan_projection_wiring_escapes.py::test_actual_stale_markers_reject_constant_or_other_result_state[chart]
-0.570	tests/system/py/test_scan_projection_wiring_escapes.py::test_actual_stale_markers_reject_constant_or_other_result_state[status]
-0.960	tests/system/py/test_scan_projection_wiring_escapes.py::test_header_observer_rejects_disconnected_model_and_displayed_labels[labels]
-0.850	tests/system/py/test_scan_projection_wiring_escapes.py::test_header_observer_rejects_disconnected_model_and_displayed_labels[model]
-0.700	tests/system/py/test_scan_projection_wiring_escapes.py::test_header_observer_rejects_disconnected_model_and_displayed_labels[table]
-1.050	tests/system/py/test_scan_projection_wiring_escapes.py::test_scene_graph_observer_rejects_disconnected_layer_hit_and_uncertainty[coordinates]
-1.480	tests/system/py/test_scan_projection_wiring_escapes.py::test_scene_graph_observer_rejects_disconnected_layer_hit_and_uncertainty[high]
-0.900	tests/system/py/test_scan_projection_wiring_escapes.py::test_scene_graph_observer_rejects_disconnected_layer_hit_and_uncertainty[layer]
-1.510	tests/system/py/test_scan_projection_wiring_escapes.py::test_scene_graph_observer_rejects_disconnected_layer_hit_and_uncertainty[low]
-1.040	tests/system/py/test_scan_projection_wiring_escapes.py::test_scene_graph_observer_rejects_disconnected_layer_hit_and_uncertainty[selection]
-0.810	tests/system/py/test_scan_projection_wiring_escapes.py::test_scene_graph_observer_rejects_disconnected_layer_hit_and_uncertainty[target]
+0.630	tests/system/py/test_scan_projection_wiring_escapes.py::test_actual_stale_markers_reject_constant_or_other_result_state[chart]
+0.610	tests/system/py/test_scan_projection_wiring_escapes.py::test_actual_stale_markers_reject_constant_or_other_result_state[status]
+1.000	tests/system/py/test_scan_projection_wiring_escapes.py::test_header_observer_rejects_disconnected_model_and_displayed_labels[labels]
+0.860	tests/system/py/test_scan_projection_wiring_escapes.py::test_header_observer_rejects_disconnected_model_and_displayed_labels[model]
+0.690	tests/system/py/test_scan_projection_wiring_escapes.py::test_header_observer_rejects_disconnected_model_and_displayed_labels[table]
+0.620	tests/system/py/test_scan_projection_wiring_escapes.py::test_scene_graph_observer_accepts_equivalent_model_and_axis_bindings[direct-model]
+0.630	tests/system/py/test_scan_projection_wiring_escapes.py::test_scene_graph_observer_accepts_equivalent_model_and_axis_bindings[project-alias]
+0.770	tests/system/py/test_scan_projection_wiring_escapes.py::test_scene_graph_observer_rejects_disconnected_layer_hit_and_uncertainty[axis-bounds]
+0.820	tests/system/py/test_scan_projection_wiring_escapes.py::test_scene_graph_observer_rejects_disconnected_layer_hit_and_uncertainty[coordinates]
+1.260	tests/system/py/test_scan_projection_wiring_escapes.py::test_scene_graph_observer_rejects_disconnected_layer_hit_and_uncertainty[high]
+0.770	tests/system/py/test_scan_projection_wiring_escapes.py::test_scene_graph_observer_rejects_disconnected_layer_hit_and_uncertainty[layer]
+1.450	tests/system/py/test_scan_projection_wiring_escapes.py::test_scene_graph_observer_rejects_disconnected_layer_hit_and_uncertainty[low]
+0.790	tests/system/py/test_scan_projection_wiring_escapes.py::test_scene_graph_observer_rejects_disconnected_layer_hit_and_uncertainty[selection]
+0.830	tests/system/py/test_scan_projection_wiring_escapes.py::test_scene_graph_observer_rejects_disconnected_layer_hit_and_uncertainty[target]
 1.830	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[dispatch]
 1.190	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[follow]
 1.400	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[joint]
