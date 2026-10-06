@@ -63,9 +63,10 @@ void EvolutionViewModel::addRow(int dataset, const std::vector<std::string>& cel
         if (parameter.name != name || parameter.uncertainty >= cells.size()) {
             continue;
         }
-        const std::vector<std::string> extracted(cells.begin() + 4,
-                                                 cells.begin() + 4 + static_cast<std::ptrdiff_t>(
-                                                                         project_->sequential_fit.extract.size()));
+        std::vector<std::string> extracted;
+        for (const std::ptrdiff_t column : session_->index().extract) {
+            extracted.push_back(column < 0 ? std::string() : cells[static_cast<std::size_t>(column)]);
+        }
         Point point;
         point.dataset = dataset;
         const std::optional<double> x = xOf(dataset, &extracted);

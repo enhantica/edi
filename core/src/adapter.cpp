@@ -911,45 +911,60 @@ std::filesystem::path scan_results_path(const Project& project) {
     return std::filesystem::path(project.path) / "analysis" / "results.csv";
 }
 
-// The header crysta writes for this project's scan, checked; the parameters' column pairs.
-std::vector<ScanParameterColumns> check_scan_header(const Project& project, const std::vector<std::string>& header) {
+// The results header, its columns resolved by name (crysta's order and any other alike): the file, χ², success and
+// iteration columns are required, each extract rule's column is its target's (crysta's name) or its id's, and every
+// other column is a parameter value with its `.uncertainty` beside it somewhere. A name twice is refused.
+void check_scan_header(const Project& project, ScanResultIndex& index) {
     const auto refuse = [](const std::string& why) {
         throw std::invalid_argument("analysis/results.csv: " + why);
     };
-    static const char* const kLeading[] = {"file_path", "fit_result.reduced_chi_square", "fit_result.success",
-                                           "fit_result.iterations"};
-    const std::size_t rules = project.sequential_fit.extract.size();
-    if (header.size() < 4 + rules) {
-        refuse("the header has " + std::to_string(header.size()) + " columns, fewer than the scan's results need");
-    }
-    for (std::size_t i = 0; i < 4; ++i) {
-        if (header[i] != kLeading[i]) {
-            refuse("column " + std::to_string(i + 1) + " is '" + header[i] + "', where crysta writes '" + kLeading[i] +
-                   "'");
+    const std::vector<std::string>& header = index.header;
+    std::map<std::string, std::size_t> column;
+    for (std::size_t i = 0; i < header.size(); ++i) {
+        if (!column.emplace(header[i], i).second) {
+            refuse("the column '" + header[i] + "' appears twice");
         }
     }
-    std::size_t rule = 0;
-    for (const auto& extract : project.sequential_fit.extract) {
-        if (header[4 + rule] != extract->target) {
-            refuse("column " + std::to_string(5 + rule) + " is '" + header[4 + rule] + "', where the extract rule '" +
-                   extract->id.value() + "' writes '" + extract->target + "'");
+    const auto required = [&](const char* name) {
+        const auto found = column.find(name);
+        if (found == column.end()) {
+            refuse(std::string("the header has no '") + name + "' column");
         }
-        ++rule;
-    }
-    std::vector<ScanParameterColumns> parameters;
-    std::map<std::string, int> seen;
-    for (const std::string& name : header) {
-        if (++seen[name] > 1) {
-            refuse("the column '" + name + "' appears twice");
+        return found->second;
+    };
+    index.file = required("file_path");
+    index.chi = required("fit_result.reduced_chi_square");
+    index.success = required("fit_result.success");
+    index.iterations = required("fit_result.iterations");
+    std::set<std::size_t> taken{index.file, index.chi, index.success, index.iterations};
+    index.extract.clear();
+    for (const auto& rule : project.sequential_fit.extract) {
+        auto found = column.find(rule->target);
+        if (found == column.end()) {
+            found = column.find(rule->id.value());
+        }
+        index.extract.push_back(found == column.end() ? -1 : static_cast<std::ptrdiff_t>(found->second));
+        if (found != column.end()) {
+            taken.insert(found->second);
         }
     }
-    for (std::size_t i = 4 + rules; i < header.size(); i += 2) {
-        if (i + 1 >= header.size() || header[i + 1] != header[i] + ".uncertainty") {
-            refuse("the parameter column '" + header[i] + "' is not followed by its '.uncertainty' column");
+    index.parameters.clear();
+    for (std::size_t i = 0; i < header.size(); ++i) {
+        if (taken.contains(i) || header[i].ends_with(".uncertainty")) {
+            continue;
         }
-        parameters.push_back({header[i], i, i + 1});
+        const auto uncertainty = column.find(header[i] + ".uncertainty");
+        if (uncertainty == column.end()) {
+            refuse("the parameter column '" + header[i] + "' has no '.uncertainty' column");
+        }
+        index.parameters.push_back({header[i], i, uncertainty->second});
     }
-    return parameters;
+    for (std::size_t i = 0; i < header.size(); ++i) {
+        if (header[i].ends_with(".uncertainty") && !taken.contains(i) &&
+            !column.contains(header[i].substr(0, header[i].size() - 12))) {
+            refuse("the column '" + header[i] + "' has no value column");
+        }
+    }
 }
 
 }  // namespace
@@ -972,40 +987,46 @@ ScanPlaces scan_places(const ScanDatasets& datasets) {
     return places;
 }
 
-std::pair<std::size_t, ScanResultIndex::Row> scan_row_facts(const Project& project, const ScanPlaces& places,
+std::string scan_row_file(const ScanResultIndex& index, const std::vector<std::string>& cells) {
+    const std::string& path = cells.at(index.file);
+    const std::size_t slash = path.rfind('/');
+    return slash == std::string::npos ? path : path.substr(slash + 1);
+}
+
+std::pair<std::size_t, ScanResultIndex::Row> scan_row_facts(const Project& /*project*/, const ScanPlaces& places,
                                                            const ScanResultIndex& index,
                                                            const std::vector<std::string>& cells) {
-    const auto refuse = [&cells](const std::string& why) {
-        throw std::invalid_argument("analysis/results.csv: the row for '" + (cells.empty() ? std::string() : cells[0]) +
+    const auto refuse = [&cells, &index](const std::string& why) {
+        throw std::invalid_argument("analysis/results.csv: the row for '" +
+                                    (index.file < cells.size() ? cells[index.file] : std::string()) +
                                     "' " + why);
     };
     if (cells.size() != index.header.size()) {
         refuse("has " + std::to_string(cells.size()) + " cells, where the header has " +
                std::to_string(index.header.size()));
     }
-    const std::string prefix = project.sequential_fit.data_dir + "/";
-    if (!cells[0].starts_with(prefix)) {
-        refuse("names no file of the scan directory '" + project.sequential_fit.data_dir + "'");
-    }
-    const auto found = places.find(cells[0].substr(prefix.size()));
+    const auto found = places.find(scan_row_file(index, cells));
     if (found == places.end()) {
         refuse("names a file that is not one of the scan's");
     }
     ScanResultIndex::Row row;
-    if (!parse_scan_number(cells[1], row.reduced_chi_square) || !std::isfinite(row.reduced_chi_square)) {
+    if (!parse_scan_number(cells[index.chi], row.reduced_chi_square) || !std::isfinite(row.reduced_chi_square)) {
         refuse("has no finite reduced chi-square");
     }
-    if (cells[2] != "True" && cells[2] != "False") {
-        refuse("has '" + cells[2] + "' for its success, where crysta writes True or False");
+    const std::string& success = cells[index.success];
+    if (success != "True" && success != "False") {
+        refuse("has '" + success + "' for its success, where crysta writes True or False");
     }
-    row.converged = cells[2] == "True";
+    row.converged = success == "True";
     double iterations = 0.0;
-    if (!parse_scan_number(cells[3], iterations) || iterations < 0 || iterations != std::floor(iterations)) {
+    if (!parse_scan_number(cells[index.iterations], iterations) || iterations < 0 ||
+        iterations != std::floor(iterations)) {
         refuse("has no whole iteration count");
     }
     row.iterations = static_cast<int>(iterations);
-    const std::size_t rules = project.sequential_fit.extract.size();
-    row.extracted.assign(cells.begin() + 4, cells.begin() + 4 + static_cast<std::ptrdiff_t>(rules));
+    for (const std::ptrdiff_t column : index.extract) {
+        row.extracted.push_back(column < 0 ? std::string() : cells[static_cast<std::size_t>(column)]);
+    }
     for (const ScanParameterColumns& parameter : index.parameters) {
         double value = 0.0, uncertainty = 0.0;
         if (!parse_scan_number(cells[parameter.value], value) || !std::isfinite(value)) {
@@ -1032,7 +1053,7 @@ ScanResultIndex index_scan_results(const Project& project, const ScanDatasets& d
     }
     try {
         index.header = split_scan_row(line);
-        index.parameters = check_scan_header(project, index.header);
+        check_scan_header(project, index);
         std::int64_t offset = input.tellg();
         index.end = offset;
         const ScanPlaces places = scan_places(datasets);

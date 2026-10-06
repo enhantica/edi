@@ -61,6 +61,10 @@ struct ScanResultIndex {
     };
     std::string error;
     std::vector<std::string> header;
+    /// The columns, resolved by name: the file, χ², success and iteration count; each extract rule's (its target's
+    /// column, else its id's; -1 when the file has none); the parameters' value/uncertainty pairs.
+    std::size_t file = 0, chi = 0, success = 0, iterations = 0;
+    std::vector<std::ptrdiff_t> extract;
     std::vector<ScanParameterColumns> parameters;
     std::vector<Row> rows;      ///< by dataset place
     std::int64_t end = 0;       ///< the offset after the last complete row (0: no file)
@@ -73,6 +77,8 @@ ScanResultIndex index_scan_results(const Project& project, const ScanDatasets& d
 using ScanPlaces = std::unordered_map<std::string, std::size_t>;
 /// Each dataset's place by its file name.
 ScanPlaces scan_places(const ScanDatasets& datasets);
+/// The file a row names: its `file_path` cell's last component (crysta writes it under the scan directory).
+std::string scan_row_file(const ScanResultIndex& index, const std::vector<std::string>& cells);
 std::pair<std::size_t, ScanResultIndex::Row> scan_row_facts(const Project& project, const ScanPlaces& places,
                                                            const ScanResultIndex& index,
                                                            const std::vector<std::string>& cells);

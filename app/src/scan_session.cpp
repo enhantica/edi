@@ -137,7 +137,7 @@ int ScanSession::addRow(const edi::Project& project, const std::vector<std::stri
     if (index_.header.empty()) {
         // The run's first row: the header is on disk now, before it.
         reindex(project);
-        const int dataset = cells.empty() ? -1 : place(cells[0].substr(project.sequential_fit.data_dir.size() + 1));
+        const int dataset = cells.size() == index_.header.size() ? place(edi::scan_row_file(index_, cells)) : -1;
         if (!index_.error.empty() || dataset < 0 || index_.rows[static_cast<std::size_t>(dataset)].offset < 0) {
             error = index_.error.empty() ? QStringLiteral("analysis/results.csv does not hold the row just written")
                                          : QString::fromStdString(index_.error);
@@ -171,8 +171,8 @@ std::vector<std::string> ScanSession::row(const edi::Project& project, int datas
         return {};
     }
     std::vector<std::string> cells = edi::read_scan_row(project, index_.rows[dataset].offset);
-    const std::string expected = project.sequential_fit.data_dir + "/" + datasets_.files[dataset];
-    if (cells.empty() || cells[0] != expected) {
+    const std::string& expected = datasets_.files[static_cast<std::size_t>(dataset)];
+    if (cells.size() != index_.header.size() || edi::scan_row_file(index_, cells) != expected) {
         throw std::invalid_argument("analysis/results.csv changed under the app: the row for '" + expected +
                                     "' is no longer where it was");
     }
@@ -209,15 +209,14 @@ void ScanSession::column(const edi::Project& project, const std::string& name,
     if (!std::getline(input, line)) {
         return;
     }
-    const std::string prefix = project.sequential_fit.data_dir + "/";
     std::int64_t offset = input.tellg();
     while (offset < index_.end && std::getline(input, line) && !input.eof()) {
         offset = input.tellg();
         const std::vector<std::string> cells = split(line);
-        if (cells.size() != index_.header.size() || !cells[0].starts_with(prefix)) {
+        if (cells.size() != index_.header.size()) {
             continue;
         }
-        const int dataset = place(cells[0].substr(prefix.size()));
+        const int dataset = place(edi::scan_row_file(index_, cells));
         double value = 0.0, uncertainty = 0.0;
         if (dataset >= 0 && edi::parse_scan_number(cells[value_column], value) &&
             edi::parse_scan_number(cells[uncertainty_column], uncertainty)) {
