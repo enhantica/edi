@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-05T15:43:27Z
+# measured_utc = 2026-10-06T10:57:49Z
 #
-# Recorded from: tests-seq32-edi-after.log (127 node(s) measured once, 5871 banked, 0 stale row(s) dropped)
-# Collected tests: 6334; with a reported duration: 3971
-# Module-scoped fixture costs recorded: 15
+# Recorded from: edi-measure.log + edi-fixture-costs.json; native expected-red edi-replay.log
+# Collected tests: 6871; with a reported duration: 4110
+# Module-scoped fixture costs recorded: 16
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 6334
-# inventory_cpp = 232
-# inventory_measured = 5998
-# inventory_unmeasured = 568
+# inventory_python = 6871
+# inventory_cpp = 288
+# inventory_measured = 6208
+# inventory_unmeasured = 951
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_projects_open_and_populate_pages
@@ -51,6 +51,51 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_ui_compare.py::t
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_ui_compare.py::test_production_comparator_similarity_and_missing_escape[tile-threshold-False]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_ui_compare.py::test_production_comparator_similarity_and_missing_escape[whole-image-threshold-False]
 0.590	tests/integration/app/test_e04_t1_ui_compare.py::test_retired_calculation_identity_rows_and_adjacent_text_are_compared
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_an_absent_type_gets_the_biso_default
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_anisotropic_site_exposes_the_computed_isotropic_value[Bani]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_anisotropic_site_exposes_the_computed_isotropic_value[Uani]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_anisotropic_site_exposes_the_computed_isotropic_value[beta]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[Bani-hexagonal]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[Bani-monoclinic]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[Biso-hexagonal]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[Biso-monoclinic]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[Uani-hexagonal]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[Uani-monoclinic]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[Uiso-hexagonal]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[Uiso-monoclinic]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[beta-hexagonal]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[beta-monoclinic]
+0.000	tests/integration/py/test_anisotropic_adps.py::test_fullprof_reference_retains_the_upstream_bytes
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Bani-Bani]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Bani-Biso]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Bani-Uani]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Bani-Uiso]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Bani-beta]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Biso-Bani]
+0.000	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Biso-Biso]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Biso-Uani]
+0.000	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Biso-Uiso]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Biso-beta]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Uani-Bani]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Uani-Biso]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Uani-Uani]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Uani-Uiso]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Uani-beta]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Uiso-Bani]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Uiso-Biso]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Uiso-Uani]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Uiso-Uiso]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Uiso-beta]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[beta-Bani]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[beta-Biso]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[beta-Uani]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[beta-Uiso]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[beta-beta]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_y2o3_all_three_types_match_the_same_fullprof_profile[Bani]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_y2o3_all_three_types_match_the_same_fullprof_profile[Uani]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_y2o3_all_three_types_match_the_same_fullprof_profile[beta]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_shipment.py::test_y2o3_page_and_cli_project_are_registered
+UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_shipment.py::test_y2o3_reference_is_vendored_byte_identically_and_named
 0.000	tests/integration/py/test_c09_t12_general_jacobian_pin.py::test_c09_t12_round_trip_fixture_is_locked_to_independent_biso_reference
 0.100	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_decimal_brackets_are_absolute_on_edi
 0.030	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_decimal_su_save_load_preserves_reference_value_exactly[.5(1.5)]
@@ -2882,6 +2927,9 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e05_t1_physical_domain.p
 0.000	tests/integration/py/test_multiphase_app_contract.py::test_linked_structure_rows_use_available_names_and_add_remove_disable_actions
 0.000	tests/integration/py/test_multiphase_app_contract.py::test_shared_block_selector_has_bounded_square_icon_steps_and_file_labels
 0.000	tests/integration/py/test_multiphase_app_contract.py::test_structure_loading_is_not_capped_at_one_and_chart_retains_phase_identity
+0.000	tests/integration/py/test_space_group_edits.py::test_changing_only_the_setting_keeps_the_space_group_identity
+UNMEASURED:failed-in-this-run	tests/integration/py/test_space_group_edits.py::test_changing_space_group_replaces_old_setting_and_resolves_identity[name]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_space_group_edits.py::test_changing_space_group_replaces_old_setting_and_resolves_identity[number]
 1.360	tests/system/py/test_beer_multiphase.py::test_beer_joint_fit_preserves_both_phases_and_independent_bank_scales
 0.930	tests/system/py/test_beer_multiphase.py::test_beer_two_phases_and_independent_bank_scales_survive_two_save_cycles
 0.000	tests/system/py/test_c06_t6_fitting_corpus.py::test_corpus_absent_at_pin_is_a_named_transition_state[corpus-present]
@@ -4669,6 +4717,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::te
 0.090	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[corpus:background-lab6/project]
 0.110	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[corpus:background-pearl/project]
 0.590	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[corpus:beer-ferrite-austenite/project]
+0.080	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[corpus:constraint-covariance/project]
 0.210	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project]
 0.190	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project]
 0.200	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project]
@@ -4701,7 +4750,6 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::te
 0.200	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-tof_si-sepd_start-2/project]
 0.190	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-tof_si-sepd_start-5/project]
 0.100	tests/system/py/test_c34_t28_saved_bytes.py::test_saved_byte_inventory_covers_every_current_cli_and_corpus_project
-0.080	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[corpus:constraint-covariance/project]
 0.000	tests/system/py/test_c34_t28_storage_decisions.py::test_each_prior_decision_links_its_storage_amendment[0012]
 0.000	tests/system/py/test_c34_t28_storage_decisions.py::test_each_prior_decision_links_its_storage_amendment[0016]
 0.000	tests/system/py/test_c34_t28_storage_decisions.py::test_implemented_decisions_have_no_stale_status[0016]
@@ -5661,6 +5709,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_two_named
 0.000	tests/test_c34_t1a_selector_arity.py::test_separated_ignore_value_excludes_the_notebook_and_keeps_the_real_target
 0.000	tests/test_c34_t1a_selector_arity.py::test_separated_rootdir_value_is_consumed_and_target_kept
 0.000	tests/test_c34_t1a_selector_arity.py::test_unknown_bare_option_refuses_fail_closed
+UNMEASURED:expected-red in edi-replay.log on d068dde; no green runtime measured	tests/unit/cpp/test_adp_scene.cpp::Anisotropic scene axes and orientation preserve cctbx tensor shape
 0.000	tests/unit/cpp/test_c13_t12_ownership.cpp::C13-T12 actual model members use the checked keyed storage
 0.034	tests/unit/cpp/test_c13_t12_ownership.cpp::C13-T12 allocation failure is atomic for native experiments copy and insertion
 0.007	tests/unit/cpp/test_c13_t12_ownership.cpp::C13-T12 allocation failure is atomic for native experiments initial admissions
