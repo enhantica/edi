@@ -45,7 +45,7 @@
       "7": "the main tab reads the orange layer-group icon and the structure name cosio, not \"Structure view\"",
       "9": "the block selector (number, coloured icon, name) sits above the groups, under the tab bar, on Basic",
       "12": "the Structures table has a colour column with the orange layer-group icon before the name",
-      "13": "\"Create structure\" is shown beside \"Load structure from file\"",
+      "13": "\"Define structure manually\" is shown, disabled, beside \"Load structure from file\"",
       "19": "loop titles are plural with their count: \"Structures (1)\", \"Atom sites (6)\""
     }
   },
