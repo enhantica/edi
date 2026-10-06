@@ -3482,6 +3482,14 @@ int space_group_it_number(const SpaceGroup& space_group) {
     return resolve_group(structure).it_number;
 }
 
+std::vector<SpaceGroupSettingName> space_group_settings() {
+    std::vector<SpaceGroupSettingName> settings;
+    for (const crysta::SpaceGroupSettingName& entry : crysta::space_group_settings()) {
+        settings.push_back({entry.it_number, entry.name_h_m, entry.coord_system_code, entry.setting});
+    }
+    return settings;
+}
+
 // The engine owns the policy; edi forwards through the one TU allowed to hold a crysta
 // call (ADR-0003). See edi/threading.hpp for the contract.
 void apply_engine_thread_defaults() noexcept { crysta::threading::apply_process_thread_defaults(); }

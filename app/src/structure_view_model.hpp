@@ -4,6 +4,7 @@
 
 #include <QObject>
 #include <QString>
+#include <QStringList>
 #include <QtQml/qqmlregistration.h>
 
 #include "block_text.hpp"
@@ -30,6 +31,10 @@ class SpaceGroupViewModel : public QObject {
     Q_PROPERTY(int itNumber READ itNumber WRITE setItNumber NOTIFY itNumberChanged)
     Q_PROPERTY(bool hasItNumber READ hasItNumber NOTIFY hasItNumberChanged)
     Q_PROPERTY(QString crystalSystem READ crystalSystem NOTIFY crystalSystemChanged)
+    // What the name and code pickers list (the owner, 2026-10-06): every name crysta's table resolves, by IT
+    // number, and the codes of the shown space group's settings.
+    Q_PROPERTY(QStringList names READ names CONSTANT)
+    Q_PROPERTY(QStringList codes READ codes NOTIFY codesChanged)
 
    public:
     SpaceGroupViewModel(edi::Structure& structure, ProjectEditor& editor, QObject* parent);
@@ -38,12 +43,18 @@ class SpaceGroupViewModel : public QObject {
     QString coordSystemCode() const { return code_; }
     void setCoordSystemCode(const QString& code);
     int itNumber() const { return it_number_; }
-    void setItNumber(int number);  // 0 or less clears it
+    // A new name or number chooses that space group's default setting, and a new code that setting's name, so
+    // name, code and number always agree; a name or code crysta's table does not have is stored as typed, for the
+    // calculation to say why it refuses it. A number of 0 or less clears the stored number.
+    void setItNumber(int number);
     bool hasItNumber() const { return it_number_ > 0; }
     QString crystalSystem() const { return crystal_system_; }
+    QStringList names() const;
+    QStringList codes() const { return codes_; }
     void sync();
 
    signals:
+    void codesChanged();
     void nameHMChanged();
     void coordSystemCodeChanged();
     void itNumberChanged();
@@ -54,6 +65,7 @@ class SpaceGroupViewModel : public QObject {
     edi::Structure& structure_;
     ProjectEditor& editor_;
     QString name_hm_, code_, crystal_system_;
+    QStringList codes_;
     int it_number_ = 0;
 };
 

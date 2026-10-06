@@ -97,6 +97,15 @@ std::string crystal_system_name(const SpaceGroup& space_group);
 // The IT number of a space-group setting as crysta resolves it — the number crysta's writer writes
 // when `_space_group.it_number` is absent; throws what crysta's resolver throws.
 int space_group_it_number(const SpaceGroup& space_group);
+// One setting of crysta's space-group table, as the app's space-group pickers list it.
+struct SpaceGroupSettingName {
+    int it_number = 0;
+    std::string name_h_m;
+    std::string coord_system_code;  // "" for IT 1 and IT 2
+    int setting = 0;                // ordinal within its space group; 0 is the ITA default setting
+};
+// Every setting crysta resolves, by IT number and then in its table's order.
+std::vector<SpaceGroupSettingName> space_group_settings();
 
 // Write a Project back out as a `.edi` project directory (inverse of load_project: structures,
 // experiments, analysis). Each bank's embedded `_data` loop is written back IFF present, so
