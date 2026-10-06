@@ -309,6 +309,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     struct ScanRun {
         ScanSession::Files files;
         std::optional<FitRecords> fit_records;  // Reset fits only
+        int shown_dataset = -1;                 // Reset fits only: the dataset the model showed, and its values
+        std::vector<edi::Edit::ScanValue> shown_values;
     };
     using UndoRecord = std::variant<std::monostate, edi::RelationsUndo, AddedExperiments, ScanRun>;
     bool restoreScanRun(const ScanRun& run);
@@ -325,6 +327,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         std::string template_file;
         std::optional<edi::Project> stash;
         std::optional<std::string> run_file;  // the scan's provenance file as it was (which fit came last)
+        bool run_file_known = false;          // false: it could not be read, so its Undo leaves it alone
     };
     std::optional<TemplateState> fit_template_before_, fit_template_undo_;
     std::vector<UndoRecord> undo_history_;
@@ -354,6 +357,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // The newest dataset view asked for: a projection read off the GUI thread applies only while it is the newest.
     std::uint64_t view_request_ = 0, view_applied_ = 0;
     int view_wanted_ = -1;       // the dataset of the newest request
+    int projected_dataset_ = -1;  // the dataset the model holds now (a failed read leaves the one before)
     bool view_reading_ = false;  // a read is in flight
     // Reads the newest requested dataset off the GUI thread; its delivery applies it, or reads a newer one.
     void startViewRead();

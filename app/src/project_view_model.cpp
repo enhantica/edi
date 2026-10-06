@@ -201,19 +201,19 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     // designation before it is kept for the fit's Undo.
     connect(fit_, &FitViewModel::runningChanged, this, [this] {
         if (scan_ && fit_->running() && !fit_->scanning()) {
-            fit_template_before_ = TemplateState{scanTemplateOrModel().sequential_fit.template_file, scan_template_,
-                                                 scan_session_->runFile(*project_)};
+            fit_template_before_ = TemplateState{scanTemplateOrModel().sequential_fit.template_file, scan_template_};
+            fit_template_before_->run_file_known = scan_session_->runFile(*project_, fit_template_before_->run_file);
         }
     });
     connect(fit_, &FitViewModel::finished, this, [this] {
-        if (!scan_ || !fit_template_before_ || current_dataset_ < 0) {
+        if (!scan_ || !fit_template_before_ || projected_dataset_ < 0) {
             return;
         }
         fit_template_undo_ = std::move(fit_template_before_);
         fit_template_before_.reset();
         scan_template_.reset();
         project_->sequential_fit.template_file =
-            scan_session_->datasets().files[static_cast<std::size_t>(current_dataset_)];
+            scan_session_->datasets().files[static_cast<std::size_t>(projected_dataset_)];
         // The last run is this fit now: a reopened project shows its record, not the scan's summary.
         if (scan_session_->index().fitted > 0) {
             ScanSession::Run run = scan_session_->run();
@@ -521,6 +521,7 @@ void ProjectViewModel::syncScanAdmission() {
         scan_ = scan;
         if (!scan_) {
             current_dataset_ = -1;
+            projected_dataset_ = -1;
             scan_template_.reset();
         }
         emit scanChanged();
@@ -652,7 +653,7 @@ void ProjectViewModel::viewDataset(int index, bool refresh) {
     // A scan writes nothing to the model, so its datasets can be shown while it runs; a single or joint fit's
     // model is not touched.
     if (!scan_ || index < 0 || index >= static_cast<int>(scan_session_->datasets().files.size()) ||
-        (index == current_dataset_ && !refresh) || experiment_models_.isEmpty() ||
+        (index == current_dataset_ && !refresh && projected_dataset_ == index) || experiment_models_.isEmpty() ||
         (fit_ != nullptr && fit_->running() && !fit_->scanning())) {
         return;
     }
@@ -661,7 +662,7 @@ void ProjectViewModel::viewDataset(int index, bool refresh) {
     }
     // The dataset already shown, with nothing pending: only its results row changed (a new row, Reset, Undo, a
     // run's end), so it is shown again at once from its row, with no file to read.
-    if (index == current_dataset_ && view_applied_ == view_request_) {
+    if (index == current_dataset_ && view_applied_ == view_request_ && projected_dataset_ == index) {
         viewDatasetNow(index, false);
         return;
     }
@@ -686,7 +687,15 @@ void ProjectViewModel::viewDataset(int index, bool refresh) {
 }
 
 QString ProjectViewModel::pendingRefusal() const {
-    return view_applied_ != view_request_ ? tr("The chosen dataset is still being read") : QString();
+    // The model must hold the chosen dataset: not while its read is in flight, nor after a read that failed (the
+    // model still holds the one before, whatever the selection says).
+    if (view_applied_ != view_request_) {
+        return tr("The chosen dataset is still being read");
+    }
+    if (scan_ && current_dataset_ >= 0 && projected_dataset_ != current_dataset_) {
+        return tr("The chosen dataset could not be shown: choose it again, or another");
+    }
+    return {};
 }
 
 void ProjectViewModel::viewDatasetNow(int index, bool reread) {
@@ -813,6 +822,7 @@ void ProjectViewModel::applyDatasetView(std::uint64_t request, int index, Datase
         return;
     }
     current_dataset_ = index;
+    projected_dataset_ = index;
     syncDataset(index);
     publishCurrent();
     if (view.frame) {
@@ -890,6 +900,12 @@ QString ProjectViewModel::resetScan() {
         return refusal;
     }
     run.fit_records = FitRecords{project_->fit_result, scan_template_ ? std::optional(scan_template_->fit_result) : std::nullopt};
+    // The values the model shows now (a dataset's projection, or a single fit's result on it), which its Undo
+    // restores as they are rather than as the older results would project them.
+    run.shown_dataset = projected_dataset_;
+    for (const edi::NamedSlot& slot : edi::named_slots(*project_)) {
+        run.shown_values.push_back({slot.unique_name, slot.parameter->value.get(), slot.parameter->uncertainty.get()});
+    }
     project_->fit_result = {};
     if (scan_template_) {
         scan_template_->fit_result = {};
@@ -923,8 +939,19 @@ bool ProjectViewModel::restoreScanRun(const ScanRun& run) {
     setModified(true);
     scan_refusal_ = scan_session_->load(*project_);
     reloadScanResults();
-    // The shown dataset as its row on disk now gives it.
-    if (current_dataset_ >= 0) {
+    // Reset fits' Undo: the values shown before it, on the same dataset, as they were. Otherwise the shown dataset as
+    // its row on disk now gives it.
+    if (run.shown_dataset >= 0 && run.shown_dataset == projected_dataset_ && view_applied_ == view_request_ &&
+        project_->experiment().data) {
+        const bool modified = modified_;
+        applying_view_ = true;
+        const QString error = apply(edi::Edit::scan_view(*project_, project_->experiment(), run.shown_values,
+                                                         *project_->experiment().data),
+                                    false);
+        applying_view_ = false;
+        setModified(modified || error.isEmpty());
+        publishCurrent();
+    } else if (current_dataset_ >= 0) {
         viewDataset(current_dataset_, true);
     }
     return true;
@@ -1198,16 +1225,28 @@ void ProjectViewModel::undo() {
     } else if (const auto* run = std::get_if<ScanRun>(&undo_history_.back())) {
         undone = restoreScanRun(*run);
     } else {
-        undone = fit_->undo();
-        // A single fit on a scan dataset made it the template: its Undo restores the designation before it.
-        if (undone && fit_template_undo_) {
-            project_->sequential_fit.template_file = fit_template_undo_->template_file;
-            scan_template_ = std::move(fit_template_undo_->stash);
-            // Which fit came last goes back too: the scan's summary is shown again if it was.
+        // A single fit on a scan dataset made it the template and the last fit. Its Undo writes the run record as it
+        // was first: if that fails nothing is undone and the step stays, to be tried again. A record that could not
+        // be read when the fit started is left as it is.
+        std::optional<std::string> now;
+        bool restored_run = false;
+        if (fit_template_undo_ && fit_template_undo_->run_file_known && scan_session_->runFile(*project_, now)) {
             if (const QString refusal = scan_session_->putRunFile(*project_, fit_template_undo_->run_file);
                 !refusal.isEmpty()) {
                 setLastError(refusal);
+                emit refused(refusal);
+                syncUndo();
+                return;
             }
+            restored_run = true;
+        }
+        undone = fit_->undo();
+        if (!undone && restored_run) {
+            scan_session_->putRunFile(*project_, now);  // the fit stays: so does the record saying it came last
+        }
+        if (undone && fit_template_undo_) {
+            project_->sequential_fit.template_file = fit_template_undo_->template_file;
+            scan_template_ = std::move(fit_template_undo_->stash);
             fit_template_undo_.reset();
             publishTemplate();
             showScanResults();
