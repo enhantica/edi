@@ -140,6 +140,52 @@ def measured_range(path):
     return [values[0], values[-1], (values[-1] - values[0]) / (len(values) - 1), len(values)]
 
 
+def scan_inputs(project, analysis):
+    """Independent file catalogue and measured-range witnesses; never import the app."""
+    if analysis.get('_fitting_mode.type') not in {'sequential', 'independent'}:
+        return []
+    directory = project / analysis['_sequential_fit.data_dir']
+    files = sorted(directory.glob(analysis['_sequential_fit.file_pattern']))
+    if analysis.get('_sequential_fit.reverse') == 'true':
+        files.reverse()
+    datasets = []
+    selected = {0, len(files) // 2, len(files) - 1}
+    for file_index, file in enumerate(files):
+        rows = []
+        for line in file.read_text().splitlines():
+            fields = line.split()
+            if len(fields) != 3:
+                continue
+            try:
+                rows.append([float(field) for field in fields])
+            except ValueError:
+                continue
+        if len(rows) < 2:
+            raise ValueError('Scan range witness requires independent measured ASCII rows')
+        axis = [row[0] for row in rows]
+        dataset = {
+            'file': file.name,
+            'sha256': hashlib.sha256(file.read_bytes()).hexdigest(),
+            'range': [axis[0], axis[-1], (axis[-1] - axis[0]) / (len(axis) - 1), len(axis)],
+        }
+        if file_index in selected:
+            # Independent ASCII convention: diffraction-lib bragg_pd.py,
+            # as cited in scan_template/REFERENCE.md; never an app-generated value.
+            dataset['samples'] = [
+                {
+                    'index': index,
+                    'values': [
+                        round(rows[index][0], 4),
+                        rows[index][1],
+                        1.0 if rows[index][2] < 0.0001 else rows[index][2],
+                    ],
+                }
+                for index in sorted({0, len(rows) // 2, len(rows) - 1})
+            ]
+        datasets.append(dataset)
+    return datasets
+
+
 def generate(warning_project=None):
     projects = []
     for entry in yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text())['projects']:
@@ -176,6 +222,7 @@ def generate(warning_project=None):
             'analysis': scalars(analysis) if analysis.exists() else {},
             'structures': structures,
             'experiments': [p.stem for p in sorted((project / 'experiments').glob('*.edi'))],
+            'datasets': scan_inputs(project, scalars(analysis) if analysis.exists() else {}),
             'loaderWarning': loader_warning(
                 scalars(analysis) if analysis.exists() else {},
                 [scalars(file) for file in sorted((project / 'experiments').glob('*.edi'))],

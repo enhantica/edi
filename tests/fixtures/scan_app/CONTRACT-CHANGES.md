@@ -52,6 +52,14 @@ restart of completed fits.
 | App scientific observers | Direct access to the project structure field failed against the current SDK. | The main integration supplies the public structure accessor and walks the declared structure collection; compile all three affected observer translation units against the merged SDK. |
 | Example profile generator | The text-only generator recognized the previous constant-wavelength profile family. | Include the new pseudo-Voigt examples with the independent Caglioti and mixing declarations, so regenerating the complete registry also works after the profile-family integration. |
 
+
+| Frozen scan profile | The portable template declared the eta-mixing profile while retaining U/V/W/X/Y coefficients. | Declare the Thompson-Cox-Hastings profile that owns those same five frozen coefficients; preserve every measured byte and scalar through the visible migration generator in both repositories. |
+| SDK build command fixture | Only the bare parallel switch was admitted. | Admit the production command's explicit positive integer count; refuse missing, zero, negative and malformed counts. The isolated shard runner also receives the production build-jobs helper. |
+| Native joint scan cancellation | A scan declared with joint mode had to refuse before any callback. | Follow the established native entry matrix: native joint Fit admits the scan and translates predicate/start/iteration interruption into cancellation without writing files. The app's separate joint-scan refusal remains covered. |
+| Example-page scan loading | Every experiment row had to name a separately loaded experiment. | Inventory every scan filename in declared order, retain template identity, and select first/middle/last datasets lazily; compare their independent ASCII ranges, measured values and uncertainties while keeping every existing page-population and report assertion. |
+| Experiment type selectors | Type appeared in the Main settings category list. | Require the same editable type selectors in the Experiments explorer and the disabled dimensionality placeholder; retain the visible X-ray popup, background options and exact remaining Main/Extra categories. |
+| Frozen example profile inputs | The full scan oracle hashed the previous profile declaration. | Regenerate both text-only oracles from the current complete registry and Thompson-Cox-Hastings input; preserve independent field declarations and file hashes, adding measured dataset provenance rather than engine-produced expectations. |
+
 New observers have live disconnected, constant or wrong-state controls. Reset and Continue still
 use the actual app/core/worker; optimizer entries bind the fitted file and measured payload.
 The scale actor remains unthrottled and its bounds remain unchanged.
