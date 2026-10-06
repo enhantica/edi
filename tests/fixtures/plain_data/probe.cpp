@@ -124,7 +124,11 @@ void configure(edi_app::ProjectViewModel& view, const QString& beam, bool rename
         throw std::runtime_error("TOF lifecycle setup refused");
     auto* vm = view.currentExperiment();
     vm->setRange(beam == "tof" ? 2400 : 14, beam == "tof" ? 2412 : 16, beam == "tof" ? 3 : 0.5);
-    if (renamed) vm->setName("User name");
+    if (renamed) {
+        vm->setName("User_name");
+        if (vm->name() != "User_name")
+            throw std::runtime_error("renamed lifecycle setup did not retain its valid user name");
+    }
     vm->setDatasetWeight(2.5);
     auto& experiment = *const_cast<edi::Project&>(view.project()).experiments[0];
     if (beam == "tof") {
