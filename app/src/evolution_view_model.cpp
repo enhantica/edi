@@ -307,6 +307,9 @@ void EvolutionViewModel::draw() {
 }
 
 int EvolutionViewModel::datasetAt(double x, double y, double x_tolerance, double y_tolerance) const {
+    if (!picking_) {
+        return -1;
+    }
     int best = -1;
     double best_distance = std::numeric_limits<double>::infinity();
     for (const Point& point : points_) {

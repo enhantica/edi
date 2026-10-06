@@ -89,6 +89,9 @@ class EvolutionViewModel : public QObject {
     Q_INVOKABLE int datasetAt(double x, double y, double x_tolerance, double y_tolerance) const;
     // The x of a dataset's drawn point, or NaN when it has none.
     Q_INVOKABLE double datasetX(int dataset) const;
+    // Whether the next datasetAt picks: a pointer gesture that is not a plain left click (a drag, a right click) turns
+    // it off, so it selects nothing.
+    Q_INVOKABLE void setPicking(bool picking) { picking_ = picking; }
 
    signals:
     void currentParameterChanged();
@@ -109,6 +112,7 @@ class EvolutionViewModel : public QObject {
     // Thins the points above the drawing limit (per x bucket the lowest and the highest).
     void thin();
     int published_count_ = 0;
+    bool picking_ = true;
     struct Point {
         double x = 0.0, y = 0.0, error = 0.0;
         int dataset = -1;
