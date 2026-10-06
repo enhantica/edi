@@ -25,28 +25,35 @@ def test_excluded_regions_are_in_the_basic_category_tier():
     )
 
 
-def test_cwl_gaussian_and_lorentzian_coefficients_have_distinct_rows():
+def test_cwl_width_row_combines_uvw_xy_and_keeps_tof_lorentzian_separate():
+    # Previously U V W and X Y occupied separate rows; TCH now shares one width row.
+    # TOF Lorentzian gamma, size and strain still use their separate family row.
     text = source('src/experiment_view_model.cpp')
     match = re.search(r'int peak_family\([^)]*\)\s*\{(.*?)\n\}', text, re.DOTALL)
     assert match, 'the profile row classifier must remain inspectable by the static layout gate'
     body = match.group(1)
-    gaussian = re.search(r'if\s*\((.*?)\)\s*\{\s*return\s+1\s*;', body, re.DOTALL)
-    assert gaussian and 'broad_gauss_' in gaussian.group(1), (
-        'U, V and W must share their Gaussian row'
+    width = re.search(r'if\s*\(([^\n{};]+)\)\s*\{\s*return\s+1\s*;', body)
+    assert width and 'starts("broad_gauss_")' in width.group(1), (
+        'U, V and W must share the profile width row'
     )
-    assert 'broad_lorentz_' not in gaussian.group(1), (
-        'X and Y must not be folded into the U V W row'
+    for name in ('broad_lorentz_x', 'broad_lorentz_y'):
+        assert re.search(r'name\s*==\s*"' + name + '"', width.group(1)), (
+            'both TCH X and Y must join U V W in the profile width row'
+        )
+    assert 'starts("broad_lorentz_")' not in width.group(1), (
+        'the shared CWL width row must not absorb all TOF Lorentzian fields'
     )
-    assert re.search(r'if\s*\([^)]*"broad_lorentz_"[^;]*return\s+2\s*;', body, re.DOTALL), (
-        'X and Y must share their separate Lorentzian row'
+    assert re.search(r'if\s*\([^{};]*"broad_lorentz_"[^{};]*\)\s*\{\s*return\s+2\s*;', body), (
+        'TOF Lorentzian gamma, size and strain must retain their separate row'
     )
     grid = source('qml/Components/ParameterGrid.qml')
-    assert re.search(r'property int maxColumns:\s*[3-9]', grid), (
-        'one row must have room for all three U V W fields'
+    columns = re.search(r'property int maxColumns:\s*(\d+)', grid)
+    assert columns and int(columns.group(1)) >= 5, (
+        'one profile width row must have room for all five U V W X Y fields'
     )
     peak = source('qml/Pages/Experiment/PeakGroup.qml')
     assert 'peakGaussian' in peak and 'peakLorentzian' in peak, (
-        'the peak group must consume both live family rows'
+        'the peak group must consume the shared width row and the TOF Lorentzian row'
     )
 
 

@@ -1,0 +1,18 @@
+{
+  "source": "7a8eabf53084332a10b90991907d2040e5365b6a",
+  "kind": "regression-pin",
+  "platform": "Darwin",
+  "pins": {
+    "tch": "Y9EUYCg27T+DIg3yMX4dQPLOHEb/AzhA6Lt6oa8zPkBpQqRdBls5QNovN/oFTSFAT4cn/svb8z8=",
+    "fcj": "wrHOUHqBHkAOxAm8QYgpQI1DFy6qbDBA3g0yWQGTLECJDFPMRlgjQJoiTM0ynwVALlvPRMg83z8="
+  },
+  "architecture": "arm64",
+  "input_sha256": {
+    "fcj/experiments/bank.edi": "279184aaf4c6d81e5d32eee50cf63b1e973c59503be7e1cf2288d8857ab33571",
+    "fcj/structures/phase.edi": "be439161f0bd6b5b6109d820c41e4bbe2630bfb1e3111dd2b1da69b1d633a76c",
+    "tch/experiments/bank.edi": "bc45af518136558f0dc853cdb89b5a84dc1ae0821c21513ced4ca9cc8533b29d",
+    "tch/structures/phase.edi": "be439161f0bd6b5b6109d820c41e4bbe2630bfb1e3111dd2b1da69b1d633a76c"
+  },
+  "linux_capture_sha256": "f938410b6bd08f2740a02bdf9f7d9d780c08e6e412e70c82210778c160ecc87e",
+  "engine_source": "b9f2267451adf1896463c706a87fea20790d28ac"
+}

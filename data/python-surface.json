@@ -243,6 +243,15 @@
      },
      "reason": "C",
      "verdict": "public"
+    },
+    "template_file": {
+     "need": {
+      "by": "deviation",
+      "ref": "D79",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
     }
    },
    "AtomSite": {
@@ -1093,11 +1102,141 @@
      "verdict": "public"
     }
    },
+   "CwlGaussian": {
+    "broad_gauss_u": {
+     "need": {
+      "by": "deviation",
+      "ref": "D78",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_gauss_v": {
+     "need": {
+      "by": "deviation",
+      "ref": "D78",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_gauss_w": {
+     "need": {
+      "by": "deviation",
+      "ref": "D78",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "cutoff_fwhm": {
+     "need": {
+      "by": "deviation",
+      "ref": "D78",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "parameters": {
+     "need": {
+      "by": "deviation",
+      "ref": "D78",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "show_supported": {
+     "need": {
+      "by": "deviation",
+      "ref": "D78",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "type": {
+     "need": {
+      "by": "deviation",
+      "ref": "D78",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
    "CwlInstrumentBase": {
     "parameters": {
      "need": {
       "by": "counterpart",
       "ref": "CategoryItem.parameters",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "CwlLorentzian": {
+    "broad_gauss_u": {
+     "need": {
+      "by": "deviation",
+      "ref": "D78",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_gauss_v": {
+     "need": {
+      "by": "deviation",
+      "ref": "D78",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_gauss_w": {
+     "need": {
+      "by": "deviation",
+      "ref": "D78",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "cutoff_fwhm": {
+     "need": {
+      "by": "deviation",
+      "ref": "D78",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "parameters": {
+     "need": {
+      "by": "deviation",
+      "ref": "D78",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "show_supported": {
+     "need": {
+      "by": "deviation",
+      "ref": "D78",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "type": {
+     "need": {
+      "by": "deviation",
+      "ref": "D78",
       "verdict": "keep"
      },
      "reason": "C",
@@ -1255,28 +1394,28 @@
      "reason": "C",
      "verdict": "public"
     },
-    "broad_lorentz_x": {
-     "need": {
-      "by": "counterpart",
-      "ref": "CwlBroadeningMixin.broad_lorentz_x",
-      "verdict": "keep"
-     },
-     "reason": "C",
-     "verdict": "public"
-    },
-    "broad_lorentz_y": {
-     "need": {
-      "by": "counterpart",
-      "ref": "CwlBroadeningMixin.broad_lorentz_y",
-      "verdict": "keep"
-     },
-     "reason": "C",
-     "verdict": "public"
-    },
     "cutoff_fwhm": {
      "need": {
       "by": "counterpart",
       "ref": "CwlBroadeningMixin.cutoff_fwhm",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "mixing_eta_0": {
+     "need": {
+      "by": "deviation",
+      "ref": "D78",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "mixing_eta_1": {
+     "need": {
+      "by": "deviation",
+      "ref": "D78",
       "verdict": "keep"
      },
      "reason": "C",
@@ -1310,7 +1449,7 @@
      "verdict": "public"
     }
    },
-   "CwlPseudoVoigtBerarBaldinozziAsymmetry": {
+   "CwlPseudoVoigtBerarBaldinozzi": {
     "asym_beba_a0": {
      "need": {
       "by": "counterpart",
@@ -1358,8 +1497,8 @@
     },
     "broad_gauss_u": {
      "need": {
-      "by": "counterpart",
-      "ref": "CwlBroadeningMixin.broad_gauss_u",
+      "by": "deviation",
+      "ref": "D78",
       "verdict": "keep"
      },
      "reason": "C",
@@ -1367,8 +1506,8 @@
     },
     "broad_gauss_v": {
      "need": {
-      "by": "counterpart",
-      "ref": "CwlBroadeningMixin.broad_gauss_v",
+      "by": "deviation",
+      "ref": "D78",
       "verdict": "keep"
      },
      "reason": "C",
@@ -1376,26 +1515,8 @@
     },
     "broad_gauss_w": {
      "need": {
-      "by": "counterpart",
-      "ref": "CwlBroadeningMixin.broad_gauss_w",
-      "verdict": "keep"
-     },
-     "reason": "C",
-     "verdict": "public"
-    },
-    "broad_lorentz_x": {
-     "need": {
-      "by": "counterpart",
-      "ref": "CwlBroadeningMixin.broad_lorentz_x",
-      "verdict": "keep"
-     },
-     "reason": "C",
-     "verdict": "public"
-    },
-    "broad_lorentz_y": {
-     "need": {
-      "by": "counterpart",
-      "ref": "CwlBroadeningMixin.broad_lorentz_y",
+      "by": "deviation",
+      "ref": "D78",
       "verdict": "keep"
      },
      "reason": "C",
@@ -1403,8 +1524,26 @@
     },
     "cutoff_fwhm": {
      "need": {
-      "by": "counterpart",
-      "ref": "CwlBroadeningMixin.cutoff_fwhm",
+      "by": "deviation",
+      "ref": "D78",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "mixing_eta_0": {
+     "need": {
+      "by": "deviation",
+      "ref": "D78",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "mixing_eta_1": {
+     "need": {
+      "by": "deviation",
+      "ref": "D78",
       "verdict": "keep"
      },
      "reason": "C",
@@ -1412,8 +1551,8 @@
     },
     "parameters": {
      "need": {
-      "by": "counterpart",
-      "ref": "CategoryItem.parameters",
+      "by": "deviation",
+      "ref": "D78",
       "verdict": "keep"
      },
      "reason": "C",
@@ -1421,8 +1560,8 @@
     },
     "show_supported": {
      "need": {
-      "by": "counterpart",
-      "ref": "PeakBase.show_supported",
+      "by": "deviation",
+      "ref": "D78",
       "verdict": "keep"
      },
      "reason": "C",
@@ -1430,33 +1569,15 @@
     },
     "type": {
      "need": {
-      "by": "counterpart",
-      "ref": "SwitchableCategoryBase.type",
+      "by": "deviation",
+      "ref": "D78",
       "verdict": "keep"
      },
      "reason": "C",
      "verdict": "public"
     }
    },
-   "CwlThompsonCoxHastings": {
-    "asym_fcj_1": {
-     "need": {
-      "by": "counterpart",
-      "ref": "FcjAsymmetryMixin.asym_fcj_1",
-      "verdict": "keep"
-     },
-     "reason": "C",
-     "verdict": "public"
-    },
-    "asym_fcj_2": {
-     "need": {
-      "by": "counterpart",
-      "ref": "FcjAsymmetryMixin.asym_fcj_2",
-      "verdict": "keep"
-     },
-     "reason": "C",
-     "verdict": "public"
-    },
+   "CwlTchPseudoVoigt": {
     "broad_gauss_u": {
      "need": {
       "by": "counterpart",
@@ -1513,8 +1634,8 @@
     },
     "parameters": {
      "need": {
-      "by": "counterpart",
-      "ref": "CategoryItem.parameters",
+      "by": "deviation",
+      "ref": "D78",
       "verdict": "keep"
      },
      "reason": "C",
@@ -1522,8 +1643,8 @@
     },
     "show_supported": {
      "need": {
-      "by": "counterpart",
-      "ref": "PeakBase.show_supported",
+      "by": "deviation",
+      "ref": "D78",
       "verdict": "keep"
      },
      "reason": "C",
@@ -1531,8 +1652,109 @@
     },
     "type": {
      "need": {
-      "by": "counterpart",
-      "ref": "SwitchableCategoryBase.type",
+      "by": "deviation",
+      "ref": "D78",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "CwlTchPseudoVoigtFcj": {
+    "asym_fcj_1": {
+     "need": {
+      "by": "deviation",
+      "ref": "D78",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "asym_fcj_2": {
+     "need": {
+      "by": "deviation",
+      "ref": "D78",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_gauss_u": {
+     "need": {
+      "by": "deviation",
+      "ref": "D78",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_gauss_v": {
+     "need": {
+      "by": "deviation",
+      "ref": "D78",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_gauss_w": {
+     "need": {
+      "by": "deviation",
+      "ref": "D78",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_lorentz_x": {
+     "need": {
+      "by": "deviation",
+      "ref": "D78",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "broad_lorentz_y": {
+     "need": {
+      "by": "deviation",
+      "ref": "D78",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "cutoff_fwhm": {
+     "need": {
+      "by": "deviation",
+      "ref": "D78",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "parameters": {
+     "need": {
+      "by": "deviation",
+      "ref": "D78",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "show_supported": {
+     "need": {
+      "by": "deviation",
+      "ref": "D78",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "type": {
+     "need": {
+      "by": "deviation",
+      "ref": "D78",
       "verdict": "keep"
      },
      "reason": "C",
@@ -3268,6 +3490,22 @@
     }
    },
    "PeakProfileTypeEnum": {
+    "CWL_GAUSSIAN": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "CWL_LORENTZIAN": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "CWL_PSEUDO_VOIGT": {
      "need": {
       "by": "owner",
@@ -3276,7 +3514,7 @@
      "reason": "C",
      "verdict": "public"
     },
-    "CWL_PSEUDO_VOIGT_BERAR_BALDINOZZI_ASYMMETRY": {
+    "CWL_PSEUDO_VOIGT_BERAR_BALDINOZZI": {
      "need": {
       "by": "owner",
       "verdict": "keep"
@@ -3284,7 +3522,15 @@
      "reason": "C",
      "verdict": "public"
     },
-    "CWL_THOMPSON_COX_HASTINGS": {
+    "CWL_TCH_PSEUDO_VOIGT": {
+     "need": {
+      "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "CWL_TCH_PSEUDO_VOIGT_FCJ": {
      "need": {
       "by": "owner",
       "verdict": "keep"
@@ -5300,10 +5546,28 @@
     "reason": "C",
     "verdict": "public"
    },
+   "CwlGaussian": {
+    "need": {
+     "by": "deviation",
+     "ref": "D78",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
    "CwlInstrumentBase": {
     "need": {
      "by": "counterpart",
      "ref": "CwlInstrumentBase",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "CwlLorentzian": {
+    "need": {
+     "by": "deviation",
+     "ref": "D78",
      "verdict": "keep"
     },
     "reason": "C",
@@ -5338,26 +5602,35 @@
    },
    "CwlPseudoVoigt": {
     "need": {
-     "by": "counterpart",
-     "ref": "CwlPseudoVoigt",
+     "by": "deviation",
+     "ref": "D78",
      "verdict": "keep"
     },
     "reason": "C",
     "verdict": "public"
    },
-   "CwlPseudoVoigtBerarBaldinozziAsymmetry": {
+   "CwlPseudoVoigtBerarBaldinozzi": {
     "need": {
-     "by": "counterpart",
-     "ref": "CwlPseudoVoigtBerarBaldinozziAsymmetry",
+     "by": "deviation",
+     "ref": "D78",
      "verdict": "keep"
     },
     "reason": "C",
     "verdict": "public"
    },
-   "CwlThompsonCoxHastings": {
+   "CwlTchPseudoVoigt": {
     "need": {
-     "by": "counterpart",
-     "ref": "CwlThompsonCoxHastings",
+     "by": "deviation",
+     "ref": "D78",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "CwlTchPseudoVoigtFcj": {
+    "need": {
+     "by": "deviation",
+     "ref": "D78",
      "verdict": "keep"
     },
     "reason": "C",
@@ -6036,7 +6309,8 @@
     "constraints",
     "descent",
     "fit",
-    "fitting_mode"
+    "fitting_mode",
+    "template_file"
    ]
   },
   "AtomSite": {
@@ -6186,10 +6460,34 @@
     "values"
    ]
   },
+  "CwlGaussian": {
+   "kind": "class",
+   "members": [
+    "broad_gauss_u",
+    "broad_gauss_v",
+    "broad_gauss_w",
+    "cutoff_fwhm",
+    "parameters",
+    "show_supported",
+    "type"
+   ]
+  },
   "CwlInstrumentBase": {
    "kind": "class",
    "members": [
     "parameters"
+   ]
+  },
+  "CwlLorentzian": {
+   "kind": "class",
+   "members": [
+    "broad_gauss_u",
+    "broad_gauss_v",
+    "broad_gauss_w",
+    "cutoff_fwhm",
+    "parameters",
+    "show_supported",
+    "type"
    ]
   },
   "CwlPdInstrumentBase": {
@@ -6226,15 +6524,15 @@
     "broad_gauss_u",
     "broad_gauss_v",
     "broad_gauss_w",
-    "broad_lorentz_x",
-    "broad_lorentz_y",
     "cutoff_fwhm",
+    "mixing_eta_0",
+    "mixing_eta_1",
     "parameters",
     "show_supported",
     "type"
    ]
   },
-  "CwlPseudoVoigtBerarBaldinozziAsymmetry": {
+  "CwlPseudoVoigtBerarBaldinozzi": {
    "kind": "class",
    "members": [
     "asym_beba_a0",
@@ -6242,6 +6540,20 @@
     "asym_beba_b0",
     "asym_beba_b1",
     "asym_beba_limit",
+    "broad_gauss_u",
+    "broad_gauss_v",
+    "broad_gauss_w",
+    "cutoff_fwhm",
+    "mixing_eta_0",
+    "mixing_eta_1",
+    "parameters",
+    "show_supported",
+    "type"
+   ]
+  },
+  "CwlTchPseudoVoigt": {
+   "kind": "class",
+   "members": [
     "broad_gauss_u",
     "broad_gauss_v",
     "broad_gauss_w",
@@ -6253,7 +6565,7 @@
     "type"
    ]
   },
-  "CwlThompsonCoxHastings": {
+  "CwlTchPseudoVoigtFcj": {
    "kind": "class",
    "members": [
     "asym_fcj_1",
@@ -6604,9 +6916,12 @@
   "PeakProfileTypeEnum": {
    "kind": "enum",
    "members": [
+    "CWL_GAUSSIAN",
+    "CWL_LORENTZIAN",
     "CWL_PSEUDO_VOIGT",
-    "CWL_PSEUDO_VOIGT_BERAR_BALDINOZZI_ASYMMETRY",
-    "CWL_THOMPSON_COX_HASTINGS",
+    "CWL_PSEUDO_VOIGT_BERAR_BALDINOZZI",
+    "CWL_TCH_PSEUDO_VOIGT",
+    "CWL_TCH_PSEUDO_VOIGT_FCJ",
     "TOF_JORGENSEN",
     "TOF_JORGENSEN_VON_DREELE",
     "TOF_PSEUDO_VOIGT"

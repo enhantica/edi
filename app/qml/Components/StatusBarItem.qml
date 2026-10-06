@@ -7,6 +7,8 @@ import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Animations as EaAnimations
 import EasyApplication.Gui.Elements as EaElements
 
+import edi.app
+
 // One status bar entry, as the base's StatusBarItem draws it (icon, key, value), with its value colour
 // kept BOUND to the theme. The base's item assigns the value's colour on every text change, which breaks
 // its binding, so after the first change the value kept the colour of the theme it was set under. Here a
@@ -25,11 +27,16 @@ Control {
     property bool clickable: false
     // The key is shown only while every item of the bar fits with its key (StatusBar.keysFit).
     property bool showKey: true
-    // The item's width with its key shown, whether or not it is: what the bar measures.
+    // The item's width with its key shown, whether or not it is, and with its icon and value only: what the
+    // bar measures.
     readonly property real labelledWidth: iconLabel.implicitWidth + keyLabel.implicitWidth + valueLabel.implicitWidth + 2 * contentRow.spacing
+    readonly property real compactWidth: iconLabel.implicitWidth + valueLabel.implicitWidth + contentRow.spacing
+    // Whether the item has something to show, and whether the bar has room for it (StatusBar.roomFor).
+    property bool shown: valueText !== ""
+    property bool room: true
     signal clicked
 
-    visible: valueText !== ""
+    visible: shown && room
     anchors.verticalCenter: parent ? parent.verticalCenter : undefined
     padding: 0
     font.family: EaStyle.Fonts.fontFamily
@@ -90,7 +97,16 @@ Control {
         }
     }
 
-    background: Item {}
+    // A clickable item highlights on hover, as the fit area's outcome does (FitOutcomeLabel).
+    background: Item {
+        Rectangle {
+            anchors.fill: parent
+            anchors.margins: -control.font.pixelSize * 0.25
+            radius: 2
+            visible: control.clickable && hover.hovered
+            color: AppColors.hoverHighlight
+        }
+    }
 
     HoverHandler {
         id: hover

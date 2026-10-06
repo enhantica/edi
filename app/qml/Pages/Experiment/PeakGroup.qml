@@ -29,8 +29,9 @@ Column {
     }
 
     // One row per family, each five fields wide so the columns line up and a shorter row leaves its last
-    // cells empty (edi ADR-0017 §5): the back-to-back exponentials (α, β), the Gaussian broadening (σ, U V W,
-    // size, strain), the Lorentzian (γ, X Y, size, strain), then any other field.
+    // cells empty (edi ADR-0017 §5): the back-to-back exponentials (α, β), the width (σ, size, strain, or the
+    // CW U V W with TCH's X Y or the pseudo-Voigt's η₀ η₁), the TOF Lorentzian (γ, size, strain), then any
+    // other field.
     Repeater {
         model: group.experiment ? [group.experiment.peakBackToBack, group.experiment.peakGaussian, group.experiment.peakLorentzian, group.experiment.peakOther] : []
         delegate: ParameterGrid {

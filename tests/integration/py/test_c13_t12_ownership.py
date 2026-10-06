@@ -6,6 +6,8 @@ import gc
 import pytest
 from c13_t12_support import engine, loops, project
 
+from tests.fixtures.constraint_expressions.project import unlink_structure
+
 
 def test_singular_experiment_assignment_cannot_copy_sibling_id(tmp_path):
     model = project(tmp_path / 'input')
@@ -114,6 +116,9 @@ def _views(left, right, kind):
 def test_edi_held_item_detaches_at_each_lifecycle_exit(tmp_path, kind, removal):
     model, other = project(tmp_path / 'left'), project(tmp_path / 'right')
     view, other_view, key = _views(model, other, kind)
+    if kind == 'structure':
+        for structure in list(model.structures):
+            unlink_structure(model, structure.name)
     member, sibling = view[0], view[1]
     identity = getattr(member, key)
     sibling_key = getattr(sibling, key)
@@ -125,6 +130,8 @@ def test_edi_held_item_detaches_at_each_lifecycle_exit(tmp_path, kind, removal):
         view.clear()
     elif removal == 'upsert':
         replacement = other_view[0]
+        if kind == 'structure':
+            unlink_structure(other, getattr(replacement, key))
         other_view.remove(getattr(replacement, key))
         setattr(replacement, key, identity)
         view.add(replacement)
@@ -203,6 +210,8 @@ def test_arbitrary_identity_refusals_survive_python_translation(tmp_path, kind, 
     held, sibling = items
     setattr(held, key, identity)
     donor = other[0]
+    if kind == 'structure':
+        unlink_structure(right, getattr(donor, key))
     other.remove(getattr(donor, key))
     setattr(donor, key, identity)
     before = [getattr(item, key) for item in items]

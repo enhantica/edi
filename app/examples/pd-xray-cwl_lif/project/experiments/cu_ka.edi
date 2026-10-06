@@ -13,7 +13,7 @@ _scattering_source.xray_dispersion sasaki1989
 _instrument.setup_wavelength 1.54056
 _instrument.calib_twotheta_offset 0.
 
-_peak.type cwl-pseudo-voigt
+_peak.type cwl-tch-pseudo-voigt
 _peak.broad_gauss_u 0.048457
 _peak.broad_gauss_v -0.083053
 _peak.broad_gauss_w 0.04

@@ -5,6 +5,8 @@ import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Elements as EaElements
 
+import edi.app
+
 // A drop-down in a view's toolbar (edi ADR-0017 §15, §16; the owner, 2026-10-02), one style for the structure
 // view's colour scheme and the pattern chart's y scale: the base's combo box at the toolbar buttons' height, as
 // narrow as its widest entry with the arrow and the padding, and with the sidebar drop-downs' background — the
@@ -14,17 +16,22 @@ EaElements.ComboBox {
     id: box
 
     property string toolTip: ""
-    // The base's rich-text label leaves Qt's widest-text policy nothing to measure, so the entries are measured here.
+    // What the closed box shows for each entry (an axis box's "y: linear"), when it differs from the list's entry.
+    property var closedTexts: []
+    // The base's rich-text label leaves Qt's widest-text policy nothing to measure, so the entries, and the closed
+    // texts, are measured here.
     readonly property real widestEntry: {
         let widest = 0;
-        const entries = box.model || [];
+        const entries = (box.model || []).concat(box.closedTexts);
         for (let i = 0; i < entries.length; ++i)
             widest = Math.max(widest, metrics.advanceWidth(String(entries[i])));
         return Math.ceil(widest);
     }
 
+    displayText: box.closedTexts.length > box.currentIndex && box.currentIndex >= 0 ? box.closedTexts[box.currentIndex] : box.currentText
+
     width: widestEntry + contentItemLabel.leftPadding + contentItemLabel.rightPadding + leftPadding + rightPadding
-    height: Math.round(EaStyle.Sizes.fontPixelSize * 2.5)
+    height: AppSizes.toolbarControlSize
     backgroundColor: Qt.tint(EaStyle.Colors.contentBackground, !box.hovered ? EaStyle.Colors.appBarComboBoxBackground : box.pressed ? EaStyle.Colors.appBarComboBoxBackgroundPressed : EaStyle.Colors.appBarComboBoxBackgroundHovered)
 
     FontMetrics {

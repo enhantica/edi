@@ -27,7 +27,14 @@ def test_page_migration_executes_unchanged_reference_pins(page):
         + result.stdout[-1000:]
         + result.stderr[-2000:]
     )
-    assert 'migration and unchanged agreement pins verified' in result.stdout, (
+    # The removed TCH + BeBa subject's historical bounds stay archived; every
+    # retained model still executes its original unchanged bounds.
+    evidence = (
+        'replacement-model checks'
+        if page == 'pd-neut-cwl_PbSO4_beba-asymmetry'
+        else 'unchanged agreement pins'
+    )
+    assert 'migration and ' + evidence + ' verified' in result.stdout, (
         ' page execution must reach the post-calculation migration assertions'
     )
 

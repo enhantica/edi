@@ -192,3 +192,41 @@ reblessed:
     platform: Linux x86_64, QT_QPA_PLATFORM=xcb (Xwayland on headless Weston, Mesa llvmpipe OpenGL)
     images:
       - ex-pd-neut-tof_ferrite-austenite-beer_joint.png
+  - produced_at: 8668386ad4ad26fbb1fc4f83a313ad8470f6e2e6
+    reason: >-
+      The PbSO4 Bérar-Baldinozzi example now uses the pseudo-Voigt with Bérar-Baldinozzi asymmetry, so its
+      Peak profile shows U V W, Eta0 Eta1 and the asymmetry row instead of the TCH X and Y. The YAP
+      two-phase project joins the examples, so its page is captured (new, the set's 74th image). Captured
+      with edi built against crysta af99549e. Only these two images are replaced; the run's other SSIM
+      failures are the ones edi main already carries.
+    platform: Linux x86_64, QT_QPA_PLATFORM=xcb (Xwayland on headless Weston, Mesa llvmpipe OpenGL)
+    images:
+      - ex-pd-neut-cwl_pbso4_beba-asymmetry.png
+      - ex-pd-neut-cwl_yap-spodi_3k.png
+  - produced_at: fc81a04edadc86635fc9175162513bde2d07b7ae
+    reason: >-
+      The profile selector names each profile in full, and the pseudo-Voigt's Eta0 and Eta1 sit on the U V W row
+      with AsyLim an editable value without a fit toggle. The selector list, the TCH + FCJ switch and the two
+      Bérar-Baldinozzi examples are captured again; the other examples, whose selector shows the longer TCH name,
+      are left with the SSIM failures edi main already carries.
+    platform: Linux x86_64, QT_QPA_PLATFORM=xcb (Xwayland on headless Weston, Mesa llvmpipe OpenGL)
+    images:
+      - 17-experiment-profile-selector.png
+      - 18-experiment-tch.png
+      - ex-pd-neut-cwl_pbso4_beba-asymmetry.png
+      - ex-pd-neut-cwl_yap-spodi_3k.png
+  - produced_at: c3aa7efc9ca126a4e73dbbcac62f701671aaf04d
+    reason: >-
+      TCH's X and Y share the U V W row and the FCJ asymmetry fields read S/L and D/L, so the TCH + FCJ switch is
+      captured again. The other TCH examples are left with the SSIM failures edi main already carries.
+    platform: Linux x86_64, QT_QPA_PLATFORM=xcb (Xwayland on headless Weston, Mesa llvmpipe OpenGL)
+    images:
+      - 18-experiment-tch.png
+  - produced_at: c69af6f2a50452b2b94c46c4b87c62deb5ac4f2d
+    reason: >-
+      The 162-file CoSiO scan joins the examples, so its page is captured (new). Captured with edi built against
+      crysta 072d833a. Only this image is added; the run's other SSIM failures are pages this branch's GUI work
+      changed, left to the app UI test's return.
+    platform: Linux x86_64, QT_QPA_PLATFORM=xcb (Xwayland on headless Weston, Mesa llvmpipe OpenGL)
+    images:
+      - ex-pd-neut-cwl_cosio-d20_scan-162f.png

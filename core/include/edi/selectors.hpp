@@ -91,6 +91,11 @@ std::string scattering_source_value(const ExperimentBase& experiment, Scattering
 // The peak profiles an experiment of this beam mode can use: the shipped ones in their `.edi` order,
 // then any registered extension for the mode.
 std::vector<std::string> supported_peak_profiles(BeamModeEnum mode);
+// The profile a new experiment of this beam mode gets: the TCH pseudo-Voigt for constant wavelength.
+std::string default_peak_profile(BeamModeEnum mode);
+// What a profile selector shows for a token: the constant-wavelength profiles' short names
+//, the token itself for any other.
+std::string peak_profile_label(const std::string& token);
 // The absorption families of a beam mode, as a file spells them: CW none / cylinder-hewat /
 // cylinder-lobanov (the mu_r body), TOF none / cylinder (the ABSCOR pair). Read from crysta's
 // vocabulary table (ADR-0017).
@@ -109,6 +114,10 @@ std::vector<std::string> supported_descents();
 // limit 180) and drops the ones it does not; fields both profiles share keep their values and free
 // flags.
 void select_peak_profile(ExperimentBase& experiment, const std::string& token);
+// The peak block reshaped to what a constant-wavelength token carries: the slots it keeps stay as
+// they are, the ones it adds start at their defaults, the rest are cleared. Nothing for a TOF token,
+// whose block is the whole family. select_peak_profile and the Python `peak.type` setter call it.
+void conform_peak_slots(PeakBase& peak, const std::string& token);
 // Switch the absorption family within the experiment's beam mode, with the Python
 // AbsorptionBase.type setter's vocabulary and messages (a TOF "cylinder-hewat" is its "cylinder"),
 // then apply the family contract (apply_absorption_family).

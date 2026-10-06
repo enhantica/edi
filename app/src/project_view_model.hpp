@@ -2,22 +2,32 @@
 #ifndef EDI_APP_PROJECT_VIEW_MODEL_HPP
 #define EDI_APP_PROJECT_VIEW_MODEL_HPP
 
+#include <QHash>
 #include <QList>
+#include <QStringList>
 #include <QObject>
+#include <QTemporaryDir>
+#include <QTimer>
 #include <QString>
 #include <QUrl>
 #include <QtQml/qqmlregistration.h>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "analysis_view_model.hpp"
 #include "block_text.hpp"
+#include "edi/edit.hpp"
 #include "edi/live_preview.hpp"
 #include "edi/model.hpp"
+#include "edi/scan.hpp"
 #include "edi/worker.hpp"
+#include "evolution_view_model.hpp"
+#include "scan_session.hpp"
 #include "experiment_view_model.hpp"
 #include "fit_view_model.hpp"
 #include "parameter_table_model.hpp"
@@ -43,15 +53,43 @@ class StructureListModel : public RowTableModel {
     void setStructures(const QList<StructureViewModel*>& structures);
 };
 
-// The project's experiments: roles `name`, `label` (`name · file`), `experiment` (ExperimentViewModel).
+// The project's experiments: roles `name`, `label` (`name · file`), `experiment` (ExperimentViewModel),
+// `fitOutcome`, the outcome key of the project's last fit (recorded_outcome) on each experiment it fitted, else
+// empty: the first experiment after a single fit, every bank of a joint fit; `file`, the file its data is in; and
+// `extracted`, its scan values with their units. In a scan project the rows are the scan's datasets instead
+// (setDatasets): each the template experiment over one data file, with that file's results.csv outcome.
 class ExperimentListModel : public RowTableModel {
     Q_OBJECT
     QML_ELEMENT
     QML_UNCREATABLE("Belongs to a project")
+    // A scan's extract columns, one per rule with its unit, in the order of each row's `extracted` values.
+    Q_PROPERTY(QStringList columns READ columns NOTIFY columnsChanged)
 
    public:
     explicit ExperimentListModel(QObject* parent);
-    void setExperiments(const QList<ExperimentViewModel*>& experiments);
+    void setExperiments(const QList<ExperimentViewModel*>& experiments, const edi::Project& project);
+    struct Dataset {
+        QString file;
+        QString outcome;
+        QStringList extracted;
+        bool is_template = false;
+    };
+    void setDatasets(ExperimentViewModel* experiment, const QList<Dataset>& datasets);
+    // One dataset's row again, in place.
+    void setDataset(int index, ExperimentViewModel* experiment, const Dataset& dataset);
+    QStringList columns() const { return columns_; }
+    void setColumns(const QStringList& columns);
+    // Called with each row a view reads (a scan's datasets): the owner loads what the row still lacks, so only shown
+    // rows are read.
+    void setShownHook(std::function<void(int)> shown) { shown_ = std::move(shown); }
+    QVariant data(const QModelIndex& index, int role) const override;
+
+   signals:
+    void columnsChanged();
+
+   private:
+    QStringList columns_;
+    std::function<void(int)> shown_;
 };
 
 // The open project. It owns the core Project and is the editor every write goes through: the core
@@ -82,6 +120,18 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_PROPERTY(edi_app::StructureViewModel* currentStructure READ currentStructure NOTIFY currentStructureChanged)
     Q_PROPERTY(edi_app::ExperimentViewModel* currentExperiment READ currentExperiment NOTIFY currentExperimentChanged)
     Q_PROPERTY(bool canLoadStructure READ canLoadStructure NOTIFY canLoadStructureChanged)
+    // Create experiment adds an experiment without data: refused while the project's experiments carry
+    // measured data (a project calculates or fits as a whole).
+    Q_PROPERTY(bool canCreateExperiment READ canCreateExperiment NOTIFY canCreateExperimentChanged)
+    // A scan project (sequential or independent mode over a declared scan): its experiment list is the scan's
+    // datasets, and the current experiment index the shown dataset. `scanColumns`: one heading per extract
+    // rule, with its unit ("temperature (K)").
+    Q_PROPERTY(bool scan READ scan NOTIFY scanChanged)
+    Q_PROPERTY(QStringList scanColumns READ scanColumns CONSTANT)
+    // The template dataset's place among the datasets (`_sequential_fit.template_file`), or -1.
+    Q_PROPERTY(int templateIndex READ templateIndex NOTIFY templateIndexChanged)
+    // The Evolution tab: a fitted parameter across the scan's datasets (scan projects).
+    Q_PROPERTY(edi_app::EvolutionViewModel* evolution READ evolution CONSTANT)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
     // The app bar's Undo (edi ADR-0024): the newest recorded change — an edit of the aliases or
     // constraints, or a fit — is undone, so they undo in the order they were made.
@@ -119,12 +169,17 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     ReportViewModel* report() const { return report_; }
     int currentStructureIndex() const { return current_structure_; }
     void setCurrentStructureIndex(int index);
-    int currentExperimentIndex() const { return current_experiment_; }
+    int currentExperimentIndex() const { return scan_ ? current_dataset_ : current_experiment_; }
     void setCurrentExperimentIndex(int index);
     StructureViewModel* currentStructure() const { return structure_models_.value(current_structure_); }
     ExperimentViewModel* currentExperiment() const { return experiment_models_.value(current_experiment_); }
     // A project holds any number of structures (phases); loading one is always possible.
     bool canLoadStructure() const { return true; }
+    bool canCreateExperiment() const;
+    bool scan() const { return scan_; }
+    QStringList scanColumns() const { return scan_columns_; }
+    EvolutionViewModel* evolution() const { return evolution_; }
+    int templateIndex() const;
     QString lastError() const { return last_error_; }
     bool calculating() const { return calculating_; }
     StructureViewOptions* structureViewOptions() const { return structure_view_options_; }
@@ -145,6 +200,13 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_INVOKABLE bool loadExperiments(const QList<QUrl>& files);
     Q_INVOKABLE void removeStructure(int index);
     Q_INVOKABLE void removeExperiment(int index);
+    // A new experiment without data (edi::simulation_experiment), selected: powder, constant wavelength,
+    // neutron, Bragg, linked to the first structure. One undoable step, as a load of experiments is.
+    Q_INVOKABLE bool createExperiment();
+    // One type axis ("sampleForm", "beamMode", "radiationProbe", "scatteringType") of an experiment without
+    // data set to `token`: the experiment is made anew with that type, keeping its name, its link and,
+    // within one beam mode, its range.
+    Q_INVOKABLE bool setExperimentType(int index, const QString& axis, const QString& token);
     // The place of the structure of this name in the project, or -1: its colour (edi ADR-0017 §8).
     Q_INVOKABLE int structureIndex(const QString& name) const;
 
@@ -159,6 +221,27 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void publishFit();
     void showFitFrame(const edi::FitFrame& frame);
     void restorePatterns();
+    // A scan run's owner-thread steps (FitViewModel): before a fresh run, the previous results set aside, which
+    // Undo restores; each file it fits; the file it shows while followed; its end, after which the shown dataset is
+    // viewed again from the rows on disk. The shown dataset stays in the model while the scan runs from the template.
+    QString prepareScan(bool fresh);
+    // Reset fits (FitViewModel::reset): every dataset's fit result cleared, one Undo step; the refusal, if any.
+    QString resetScan();
+    // Why an edit or a single or joint fit waits: a chosen dataset is still being read, so the model still shows the
+    // one before; empty otherwise.
+    QString pendingRefusal() const;
+    // The template a scan runs from: the stored one while a dataset is shown, else none (the model is the template).
+    const edi::Project* scanTemplate() const { return scan_template_ ? &*scan_template_ : nullptr; }
+    void scanFileFitted(const edi::ScanFileRecord& record);
+    void showScanFrame(const std::string& file, const edi::FitFrame& frame);
+    void followScanFile(const std::string& file);
+    // The run ended: its status, seconds and outcome key (the worst file's, Stopped or Failed).
+    void scanEnded(edi::FitStatus status, double seconds);
+    // Why the scan modes cannot run here (no single template experiment, no datasets), or empty.
+    QString scanRefusal() const;
+    QString apply_setting(const edi::Edit& change) override;
+    // The scan's results (null outside a scan project).
+    const ScanSession* scanSession() const { return scan_session_; }
 
    signals:
     void nameChanged();
@@ -170,6 +253,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void currentExperimentIndexChanged();
     void currentExperimentChanged();
     void canLoadStructureChanged();
+    void canCreateExperimentChanged();
     void lastErrorChanged();
     void canUndoChanged();
     void refused(const QString& message);
@@ -182,6 +266,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // every one it runs, a superseded one included, in order, each before its publication or rejection. What
     // counts the calculations an input costs (the owner's one-calculation rule).
     void calculationStarted();
+    void templateIndexChanged();
+    void scanChanged();
     void calculationFinished();
 
    private:
@@ -209,9 +295,43 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     ParameterTableModel* parameters_;
     AnalysisViewModel* analysis_;
     FitViewModel* fit_ = nullptr;
-    // The undo history, oldest first: an edit of the relations (its RelationsUndo), or a fit (none: the
-    // fit's own start state is what undo_fit restores).
-    std::vector<std::optional<edi::RelationsUndo>> undo_history_;
+    // The undo history, oldest first: a fit (none: the fit's own start state is what undo_fit restores), an
+    // edit of the relations (its RelationsUndo), or experiments added by Create or Load experiment.
+    struct AddedExperiments {
+        std::vector<const edi::ExperimentBase*> experiments;
+    };
+    // A fresh scan run: the result files it replaced, as they were (absent: there was none, also recorded).
+    // The fit records Reset fits clears: the model's and, while a dataset is shown, the template's.
+    struct FitRecords {
+        edi::FitResultRecord model;
+        std::optional<edi::FitResultRecord> stash;
+    };
+    struct ScanRun {
+        ScanSession::Files files;
+        std::optional<FitRecords> fit_records;  // Reset fits only
+        int shown_dataset = -1;                 // Reset fits only: the dataset the model showed, and its values
+        std::vector<edi::Edit::ScanValue> shown_values;
+    };
+    using UndoRecord = std::variant<std::monostate, edi::RelationsUndo, AddedExperiments, ScanRun>;
+    bool restoreScanRun(const ScanRun& run);
+    // The results read again from disk (after a run, an undo or a load), with every view of them.
+    void reloadScanResults();
+    // The indexed results in the lists, Evolution, the fit summary and the outdated state.
+    void showScanResults();
+    // After the template changed (a single fit's designation, its Undo): texts, tags and outdated state.
+    void publishTemplate();
+    // The run as a whole, from the indexed rows: `run_outcome` is the run's own end when it failed or was stopped.
+    ScanSummary scanSummary(const QString& run_outcome, double seconds) const;
+    // The template designation a single fit on a dataset changes, as it was before the fit, for its Undo.
+    struct TemplateState {
+        std::string template_file;
+        std::optional<edi::Project> stash;
+        std::optional<std::string> run_file;  // the scan's provenance file as it was (which fit came last)
+        bool run_file_known = false;          // false: it could not be read, so its Undo leaves it alone
+    };
+    std::optional<TemplateState> fit_template_before_, fit_template_undo_;
+    std::vector<UndoRecord> undo_history_;
+    void noteAddedExperiments(std::size_t before);
     bool can_undo_ = false;
     void syncUndo();
     BlockText* metadata_text_;
@@ -220,6 +340,61 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     StructureViewOptions* structure_view_options_;
     int current_structure_ = -1;
     int current_experiment_ = -1;
+    // A scan project (edi ADR-0017 §19, ADR-0026): its results (the session), the dataset shown, and the template.
+    // While a dataset is shown the model holds that dataset's projection (its data, the template's parameters with
+    // its results row over them) and `scan_template_` holds the template, which is what a save writes and what a
+    // scan runs from. An admitted edit of the experiment or the structures goes to the template, seeded from the
+    // shown values; an edit of a project-wide setting goes to both; a refused edit to neither.
+    bool scan_ = false;
+    QString scan_refusal_;
+    EvolutionViewModel* evolution_ = nullptr;
+    QStringList scan_columns_;
+    ScanSession* scan_session_ = nullptr;
+    int current_dataset_ = -1;
+    std::optional<edi::Project> scan_template_;
+    bool applying_view_ = false;
+    bool applying_setting_ = false;
+    // The newest dataset view asked for: a projection read off the GUI thread applies only while it is the newest.
+    std::uint64_t view_request_ = 0, view_applied_ = 0;
+    int view_wanted_ = -1;       // the dataset of the newest request
+    int projected_dataset_ = -1;  // the dataset the model holds now (a failed read leaves the one before)
+    bool view_reading_ = false;  // a read is in flight
+    // Reads the newest requested dataset off the GUI thread; its delivery applies it, or reads a newer one.
+    void startViewRead();
+    // Shows a dataset at once: the one a project opens on (`reread`: its file is read), or the shown one again from
+    // its changed row.
+    void viewDatasetNow(int index, bool reread);
+    // The identity of the template a run is fitting from (ScanSession::templateIdentity), for its provenance.
+    std::string run_identity_;
+    // A Continue's earlier provenance (its rows stay), for the run's own at its end.
+    std::optional<ScanSession::Run> previous_run_;
+    void loadScan();
+    // Re-derives whether the scan modes can run (a single template experiment and a listed scan).
+    void syncScanAdmission();
+    // Shows a dataset: its projection is read off the GUI thread and applied when ready. `refresh`: again, even
+    // when it is the shown one (its results row changed).
+    void viewDataset(int index, bool refresh = false);
+    // A dataset's projection, read off the GUI thread: its data, the values it is shown with and, while a scan
+    // runs, its calculated pattern; or the refusal.
+    struct DatasetView {
+        std::optional<edi::PdDataBase> data;
+        std::vector<edi::Edit::ScanValue> values;
+        std::optional<edi::FitFrame> frame;
+        QString error;
+    };
+    // Applies a projection read for request `request`, unless a newer one was asked for since.
+    void applyDatasetView(std::uint64_t request, int index, DatasetView view);
+    // The values a dataset is shown with: the template's, with its results row's over them.
+    std::vector<edi::Edit::ScanValue> datasetValues(const std::vector<std::string>& row) const;
+    void syncDatasets();
+    // One dataset's row in the lists (its outcome, extracted values, template tag).
+    void syncDataset(int index);
+    ExperimentListModel::Dataset datasetRow(int index) const;
+    // The template, or the model when no dataset view holds one apart.
+    const edi::Project& scanTemplateOrModel() const { return scan_template_ ? *scan_template_ : *project_; }
+    // The results' outdated state, from their provenance against the template.
+    void syncOutOfDate();
+    void markTemplateChanged();
     struct SavedFiles {
         std::vector<std::pair<std::string, std::string>> files;
         std::string refusal;
@@ -241,6 +416,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     int published_structure_index_ = -1;
     int published_experiment_index_ = -1;
     bool published_can_load_structure_ = false;
+    bool published_can_create_experiment_ = false;
 };
 
 }  // namespace edi_app

@@ -15,9 +15,15 @@ SITES = {
 }
 
 
-def reference():
-    text = (HOME / 'yap_3k.sum').read_text()
-    result = {'parameters': {}, 'phases': {}, 'rwp': 0.0408, 'n_free': 56}
+def reference(*, asymmetry_off=False):
+    summary = 'asymmetry-off.sum' if asymmetry_off else 'yap_3k.sum'
+    text = (HOME / summary).read_text()
+    result = {
+        'parameters': {},
+        'phases': {},
+        'rwp': 0.0467 if asymmetry_off else 0.0408,
+        'n_free': 52 if asymmetry_off else 56,
+    }
     parts = re.split(r'=> Phase No\.\s+\d+', text)[1:]
     for name, part in zip(SITES, parts, strict=True):
         values = re.findall(r'(' + NUMBER + r')\(\s*(\d+)\)', part)
@@ -71,7 +77,11 @@ def reference():
         result['parameters'][f'background.{i + 1}'] = list(map(float, row))
     result['digests'] = {
         name: hashlib.sha256((HOME / name).read_bytes()).hexdigest()
-        for name in ('yap_3k.pcr', 'yap_3k.sum', 'yap_3k.prf', 'yap_3k.dat')
+        for name in (
+            ('asymmetry-off.inp', 'asymmetry-off.out', 'asymmetry-off.sum', 'yap_3k.dat')
+            if asymmetry_off
+            else ('yap_3k.pcr', 'yap_3k.sum', 'yap_3k.prf', 'yap_3k.dat')
+        )
     }
     return result
 
@@ -118,12 +128,12 @@ _experiment_type.beam_mode "constant wavelength"
 _scattering_source.neutron_scattering_length sears1992
 _instrument.setup_wavelength 1.54816
 _instrument.calib_twotheta_offset 0.0015
-_peak.type cwl-pseudo-voigt-berar-baldinozzi-asymmetry
+_peak.type cwl-pseudo-voigt-berar-baldinozzi
 _peak.broad_gauss_u 0.03889
 _peak.broad_gauss_v -0.04620
 _peak.broad_gauss_w 0.10586
-_peak.broad_lorentz_x 0
-_peak.broad_lorentz_y 0
+_peak.mixing_eta_0 0.13947
+_peak.mixing_eta_1 0
 _peak.asym_beba_a0 0
 _peak.asym_beba_b0 0
 _peak.asym_beba_a1 0
@@ -145,9 +155,9 @@ _linked_structure.scale
     return root
 
 
-def actual_values(project):
+def actual_values(project, *, asymmetry_off=False):
     values = {}
-    ref = reference()
+    ref = reference(asymmetry_off=asymmetry_off)
     e = project.experiments[0]
     links = getattr(e, 'linked_structures', None)
     if links is None:
@@ -166,11 +176,7 @@ def actual_values(project):
         elif bits[0] == 'profile':
             field = bits[1]
             if field == 'eta':
-                candidates = [name for name in ('eta', 'mixing_eta') if hasattr(e.peak, name)]
-                assert candidates, (
-                    "FullProf's fitted constant eta needs a stated physical model mapping"
-                )
-                field = candidates[0]
+                field = 'mixing_eta_0'
             value = getattr(e.peak, field).value
         elif bits[0] == 'instrument':
             value = getattr(e.instrument, bits[1]).value

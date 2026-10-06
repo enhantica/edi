@@ -7,9 +7,11 @@
 #include <QFile>
 #include <QFileInfo>
 #include <algorithm>
+#include <filesystem>
 
 #include "app_info.hpp"
 #include "edi/io.hpp"
+#include "edi/scan.hpp"
 
 namespace edi_app {
 namespace {
@@ -150,7 +152,52 @@ bool Session::openProject(const QUrl& directory) {
                          .arg(directory.toString()));
         return false;
     }
-    return open(directory.toLocalFile(), {});
+    // A project in a folder this user may not write (a read-only tree) runs in a temporary copy, as an example does,
+    // so a fit never writes into it; Save As writes the project where the user chooses.
+    const QString source = directory.toLocalFile();
+    const QFileInfo folder(source), analysis(source + QStringLiteral("/analysis"));
+    if (folder.isDir() && (!folder.isWritable() || (analysis.exists() && !analysis.isWritable()))) {
+        if (extracted_ == nullptr || !extracted_->isValid()) {
+            extracted_ = std::make_unique<QTemporaryDir>();
+        }
+        if (!extracted_->isValid()) {
+            setLastError(QStringLiteral("cannot create a temporary copy of %1: %2").arg(source, extracted_->errorString()));
+            return false;
+        }
+        const QString target = extracted_->filePath(QStringLiteral("read-only/") + folder.fileName());
+        if (!openCopy(source, target, {})) {
+            return false;
+        }
+        read_only_copy_ = true;
+        emit needsSaveAsChanged();
+        return true;
+    }
+    return open(source, {});
+}
+
+bool Session::copyTree(const QString& source, const QString& target, const QString& linked) {
+    const QString shared =
+        linked.isEmpty() ? QString() : QDir::cleanPath(QFileInfo(linked).absoluteFilePath()) + u'/';
+    QDirIterator files(source, QDir::Files, QDirIterator::Subdirectories);
+    while (files.hasNext()) {
+        const QString file = files.next();
+        const QString destination = target + file.mid(source.size());
+        QDir().mkpath(QFileInfo(destination).absolutePath());
+        // A scan data file is only read: the copy links to it, and copies it only where linking is refused (another
+        // file system). Its permissions are the original's, so they are left alone.
+        if (!shared.isEmpty() && QDir::cleanPath(QFileInfo(file).absoluteFilePath()).startsWith(shared)) {
+            std::error_code error;
+            std::filesystem::create_hard_link(file.toStdString(), destination.toStdString(), error);
+            if (!error) {
+                continue;
+            }
+        }
+        if (!QFile::copy(file, destination)) {
+            return false;
+        }
+        QFile::setPermissions(destination, QFile::ReadOwner | QFile::WriteOwner);
+    }
+    return true;
 }
 
 QString Session::projectLocation() const {
@@ -166,7 +213,7 @@ QString Session::projectLocation() const {
 }
 
 bool Session::needsSaveAs() const {
-    return project_ != nullptr && (project_->path().isEmpty() || !opened_example_.isEmpty());
+    return project_ != nullptr && (project_->path().isEmpty() || !opened_example_.isEmpty() || read_only_copy_);
 }
 
 bool Session::save() {
@@ -192,7 +239,8 @@ bool Session::saveAs(const QUrl& directory) {
     if (!error.isEmpty()) {
         return false;
     }
-    // Saved where the user chose, the project is no longer the example's temporary copy.
+    // Saved where the user chose, the project is no longer the example's or the read-only tree's temporary copy.
+    read_only_copy_ = false;
     if (!opened_example_.isEmpty()) {
         opened_example_.clear();
         emit openedExampleChanged();
@@ -218,7 +266,8 @@ bool Session::openExample(const QString& exampleId) {
                          .arg(exampleId, extracted_->errorString()));
         return false;
     }
-    // A fresh copy per open, so edits to an opened example never leak into the next open of it.
+    // A fresh copy per open, so edits to an opened example never leak into the next open of it. A bundled example
+    // lives in the application's resources, which crysta cannot read: its scan data are copied with it.
     const QString target = extracted_->filePath(exampleId + QStringLiteral("/project"));
     QDir(target).removeRecursively();
     QDirIterator files(source, QDir::Files, QDirIterator::Subdirectories);
@@ -289,7 +338,38 @@ bool Session::open(const QString& directory, const QString& example) {
     return true;
 }
 
+bool Session::openCopy(const QString& source, const QString& target, const QString& example) {
+    QStringList warnings;
+    ProjectViewModel* opened = nullptr;
+    try {
+        edi::Project project = edi::load_project(source.toStdString(), [&warnings](const std::string& message) {
+            warnings.append(QString::fromStdString(message));
+        });
+        QString data;  // the scan data directory, linked rather than copied
+        if (project.sequential_fit.declared()) {
+            try {
+                data = QString::fromStdString(edi::scan_datasets(project).directory);
+            } catch (const std::exception&) {
+                data.clear();  // no scan directory resolves: everything is copied
+            }
+        }
+        QDir(target).removeRecursively();
+        if (!copyTree(source, target, data)) {
+            throw std::runtime_error("cannot make a temporary copy of " + source.toStdString());
+        }
+        project.path = target.toStdString();
+        project.metadata.path = project.path;
+        opened = new ProjectViewModel(std::move(project), this);
+    } catch (const std::exception& refusal) {
+        setLastError(QString::fromUtf8(refusal.what()));  // the open project stays as it was
+        return false;
+    }
+    replaceProject(opened, warnings, example);
+    return true;
+}
+
 void Session::replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example) {
+    read_only_copy_ = false;
     // Every piece of the session's state — the project, its load warnings, the example it came from,
     // the cleared error — is in place before any consumer is told, so a handler of one signal reads
     // the new state of the others; then each property signals only if it changed.

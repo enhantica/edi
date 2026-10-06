@@ -99,7 +99,7 @@ _experiment_type.scattering_type bragg
 _experiment_type.beam_mode "constant wavelength"
 _scattering_source.xray_form_factor it1992
 _scattering_source.xray_dispersion sasaki1989
-_peak.type cwl-pseudo-voigt
+_peak.type cwl-tch-pseudo-voigt
 _peak.broad_gauss_u {FULLPROF_U}
 _peak.broad_gauss_v {FULLPROF_V}
 _peak.broad_gauss_w {FULLPROF_W}

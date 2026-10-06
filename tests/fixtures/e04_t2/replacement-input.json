@@ -1,0 +1,8 @@
+{
+  "classification": "Replacement-model input identity: regression pin, not numerical oracle",
+  "authority": "ADR-0080 retires the TCH + BeBa model",
+  "file": "docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project/experiments/d1a.edi",
+  "before_sha256": "1397212f018457de21bd98ccc52918112db1eb46163c18860250735769522496",
+  "after_sha256": "f02575053ccb68d9047209eada95ef0042fc632ffdef67024c5bd1198d5a8ddb",
+  "after_selector": "cwl-pseudo-voigt-berar-baldinozzi"
+}

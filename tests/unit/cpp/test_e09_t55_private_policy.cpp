@@ -28,7 +28,7 @@ crysta::Project empty_phase_project() {
     const auto bank = crysta::experiment_from_edi_text(
         "data_bank\n_experiment_type.sample_form powder\n"
         "_experiment_type.radiation_probe neutron\n_experiment_type.scattering_type bragg\n"
-        "_experiment_type.beam_mode \"constant wavelength\"\n_peak.type cwl-pseudo-voigt\n"
+        "_experiment_type.beam_mode \"constant wavelength\"\n_peak.type cwl-tch-pseudo-voigt\n"
         "_peak.broad_gauss_u 0\n_peak.broad_gauss_v 0\n_peak.broad_gauss_w 0.01\n"
         "_peak.broad_lorentz_x 0\n_peak.broad_lorentz_y 0\n_peak.cutoff_fwhm 5\n"
         "_instrument.calib_twotheta_offset 0\n_instrument.setup_wavelength 1.54\n"

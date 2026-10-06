@@ -25,6 +25,7 @@ from mkdocs.config import load_config
 
 from tests.fixtures.constraint_expressions.cosio_seed_bytes import legacy_seed
 from tests.fixtures.constraint_expressions.ncaf_follower_bytes import historical_followers
+from tests.fixtures.cwl_family.historical import original_tokens
 from tests.integration.py.ci_runner_contract import self_hosted_runners
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -36,7 +37,7 @@ PROJECT_IDS = IDS['source_to_project']
 
 
 def blob_id(path):
-    raw = path.read_bytes()
+    raw = original_tokens(path.read_bytes())
     return hashlib.sha1(
         b'blob ' + str(len(raw)).encode() + b'\0' + raw, usedforsecurity=False
     ).hexdigest()
@@ -145,7 +146,7 @@ def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id):
                 (ROOT / 'tests/fixtures/c13_t4_march/regression-pins.json').read_text()
             )['sha256']
             assert (
-                hashlib.sha256(path.read_bytes()).hexdigest()
+                hashlib.sha256(original_tokens(path.read_bytes())).hexdigest()
                 == extension[path.relative_to(ROOT).as_posix()]
             ), ' only the reviewed March extension bytes replace the original LBCO seed'
             continue
@@ -158,7 +159,9 @@ def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id):
         } and name.startswith('project/experiments/'):
             #  changes ONLY the calculator declaration. Reversing that exact
             # declaration restores the original independently inventoried blob identity.
-            raw = path.read_bytes().replace(b'_calculator.type crysta', b'_calculator.type cryspy')
+            raw = original_tokens(path.read_bytes()).replace(
+                b'_calculator.type crysta', b'_calculator.type cryspy'
+            )
             restored = hashlib.sha1(
                 b'blob ' + str(len(raw)).encode() + b'\0' + raw, usedforsecurity=False
             ).hexdigest()

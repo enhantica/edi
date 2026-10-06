@@ -85,7 +85,7 @@ def _peak_type_token(value: object) -> str:
     return {
         'PeakProfileTypeEnum.TOF_JORGENSEN': 'tof-jorgensen',
         'PeakProfileTypeEnum.TOF_JORGENSEN_VON_DREELE': 'tof-jorgensen-von-dreele',
-        'PeakProfileTypeEnum.CWL_PSEUDO_VOIGT': 'cwl-pseudo-voigt',
+        'PeakProfileTypeEnum.CWL_TCH_PSEUDO_VOIGT': 'cwl-tch-pseudo-voigt',
     }[str(value)]
 
 

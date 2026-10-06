@@ -9,13 +9,15 @@ import sys
 import tempfile
 from pathlib import Path
 
+from tests.fixtures.cwl_family.historical import original_tokens
+
 
 def snapshot(root):
     result = {}
     for path in sorted(Path(root).rglob('*')):
         if not path.is_file():
             continue
-        content = path.read_bytes()
+        content = original_tokens(path.read_bytes())
         if path.name == 'project.edi':
             content = re.sub(
                 rb'(?m)^(_metadata\.(?:created|last_modified)\s+).+$', rb'\1<CLOCK>', content

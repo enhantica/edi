@@ -23,6 +23,8 @@ EaElements.GroupBox {
     title: qsTr("Structures (%1)").arg(project ? project.structures.count : 0)
     icon: "layer-group"
     last: SideBarGroups.isLast(group)
+    // Open at the start, unlike the category groups (owner, 2026-10-05; edi ADR-0017 §3).
+    collapsed: false
 
     Column {
         spacing: AppSizes.groupContentSpacing

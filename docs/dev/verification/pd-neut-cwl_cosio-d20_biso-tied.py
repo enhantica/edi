@@ -132,7 +132,7 @@ def build_experiment(
     text = f"""data_d20
 _edi.schema_version 3
 _experiment_type.beam_mode "constant wavelength"
-_peak.type cwl-pseudo-voigt
+_peak.type cwl-tch-pseudo-voigt
 _peak.cutoff_fwhm {FULLPROF_WDT}
 _peak.broad_gauss_u {u}
 _peak.broad_gauss_v {v}

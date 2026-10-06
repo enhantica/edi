@@ -53,6 +53,9 @@ enum class PublishOutcome : std::uint8_t;
 namespace detail {
 
 class KeyedBase;
+// Renames every link and texture row of `project` that names the structure `from` to `to`, all or
+// none (defined after Project).
+inline void rename_structure_links(Project& project, const std::string& from, const std::string& to);
 
 // The membership record an ItemVec owns and its attached items share. Items hold it STRONGLY —
 // ADR-0013 prohibits production weak references — and the collection revokes it (owner =
@@ -1171,6 +1174,120 @@ struct Parameter {
     bool bound() const noexcept { return value.bound(); }
 };
 
+// An optional parameter of a one-row category (a peak profile slot, an instrument shift, an absorption
+// coefficient) with edi ADR-0012's detached-item lifetime. The parameter lives in its own cell, and
+// clearing or replacing the field keeps the old cell, detached, for as long as the field lives: a handle
+// to a removed slot keeps its last values and refuses writes, as a removed row's does, and never points
+// at storage a later value reuses. It reads like std::optional<Parameter>.
+class OptionalParameter {
+   public:
+    using value_type = Parameter;
+    OptionalParameter() = default;
+    OptionalParameter(std::nullopt_t /*none*/) noexcept {}  // NOLINT(google-explicit-constructor)
+    OptionalParameter(Parameter value) { engage(std::move(value)); }  // NOLINT(google-explicit-constructor)
+    OptionalParameter(const std::optional<Parameter>& value) {  // NOLINT(google-explicit-constructor)
+        if (value) {
+            engage(*value);
+        }
+    }
+    // A copy is a new cell with the source's values; nothing detached is copied.
+    OptionalParameter(const OptionalParameter& other) {
+        if (other.live_) {
+            engage(other.live_->parameter);
+        }
+    }
+    // A move takes the cells whole, so every handle stays where it was.
+    OptionalParameter(OptionalParameter&& other) noexcept = default;
+    ~OptionalParameter() = default;
+
+    // Assignments follow std::optional: an engaged field takes the value in place, so its handles stay
+    // attached; clearing it detaches them.
+    OptionalParameter& operator=(const OptionalParameter& other) {
+        if (this != &other) {
+            other.live_ ? assign(other.live_->parameter) : reset();
+        }
+        return *this;
+    }
+    OptionalParameter& operator=(OptionalParameter&& other) noexcept {
+        if (this != &other) {
+            reset();
+            live_ = std::move(other.live_);
+            for (std::shared_ptr<ParameterCell>& cell : other.retired_) {
+                retired_.push_back(std::move(cell));
+            }
+            other.retired_.clear();
+        }
+        return *this;
+    }
+    OptionalParameter& operator=(std::nullopt_t /*none*/) {
+        reset();
+        return *this;
+    }
+    OptionalParameter& operator=(Parameter value) {
+        assign(std::move(value));
+        return *this;
+    }
+    OptionalParameter& operator=(const std::optional<Parameter>& value) {
+        value ? assign(*value) : reset();
+        return *this;
+    }
+
+    bool has_value() const noexcept { return live_ != nullptr; }
+    explicit operator bool() const noexcept { return has_value(); }
+    Parameter& operator*() { return live_->parameter; }
+    const Parameter& operator*() const { return live_->parameter; }
+    Parameter* operator->() { return &live_->parameter; }
+    const Parameter* operator->() const { return &live_->parameter; }
+    Parameter& value() {
+        if (!live_) {
+            throw std::bad_optional_access();
+        }
+        return live_->parameter;
+    }
+    const Parameter& value() const {
+        if (!live_) {
+            throw std::bad_optional_access();
+        }
+        return live_->parameter;
+    }
+    Parameter value_or(const Parameter& fallback) const { return live_ ? live_->parameter : fallback; }
+
+    // Detaches the current parameter: its handles keep their last values and refuse writes.
+    void reset() {
+        if (!live_) {
+            return;
+        }
+        detail::RowLink& link = live_->removed;
+        link.link(std::make_shared<detail::Membership>());  // once held ...
+        link.unlink();                                       // ... and no longer: detached
+        live_->parameter.category.point_at(link);
+        retired_.push_back(std::move(live_));
+    }
+    template <typename... Args>
+    Parameter& emplace(Args&&... args) {
+        reset();
+        engage(Parameter(std::forward<Args>(args)...));
+        return live_->parameter;
+    }
+
+   private:
+    struct ParameterCell {
+        explicit ParameterCell(Parameter value) : parameter(std::move(value)) {}
+        Parameter parameter;
+        detail::RowLink removed;  // what a removed parameter's category points at
+    };
+    void engage(Parameter value) { live_ = std::make_shared<ParameterCell>(std::move(value)); }
+    void assign(Parameter value) {
+        if (live_) {
+            live_->parameter = std::move(value);
+        } else {
+            engage(std::move(value));
+        }
+    }
+    std::shared_ptr<ParameterCell> live_;
+    std::vector<std::shared_ptr<ParameterCell>> retired_;
+};
+
 // The free flag's rule (edi ADR-0024): a dependent stays dependent, so freeing one changes nothing and
 // answers false; the caller says so with crysta's `crysta.domain.dependent_free_ignored`.
 inline bool set_free(Parameter& parameter, bool free) {
@@ -1301,6 +1418,9 @@ class KeyedBase {
     // Admit renaming `key` — the id of one of this collection's items — to `next`, or throw. Returns
     // false when `key` is not stored here (a stale record): the caller renames as detached.
     virtual bool admit_rename(const ItemKey& key, const std::string& next) const = 0;
+    // Called once a rename of `key` to `next` is admitted, before it is written: renames what names
+    // the item elsewhere in its project, or throws having written nothing.
+    virtual void rename_references(const ItemKey& /*key*/, const std::string& /*next*/) const {}
     // The live project this collection belongs to, as a member or inside one of its structures or
     // experiments; null otherwise (edi ADR-0024).
     Project* host() const noexcept { return host_link_ ? host_link_->project : nullptr; }
@@ -1366,6 +1486,7 @@ class ItemKey {
 
     void rename(std::string next) {
         if (attached() && membership_->owner->admit_rename(*this, next)) {
+            membership_->owner->rename_references(*this, next);
             v() = std::move(next);
             renew();
             return;
@@ -1700,6 +1821,12 @@ void encode_cell(std::string& out, const std::optional<T>& cell) {
         encode_cell(out, *cell);
     }
 }
+inline void encode_cell(std::string& out, const OptionalParameter& cell) {
+    out += cell.has_value() ? 'S' : '-';
+    if (cell.has_value()) {
+        encode_cell(out, *cell);
+    }
+}
 }  // namespace detail
 
 // ADR-0018: the table view of one non-loop category of `owner`. A non-loop category is a table
@@ -2002,6 +2129,17 @@ class ItemVec final : public detail::KeyedBase {
             (void)key;
             (void)next;
             return false;
+        }
+    }
+    // A structure's links and texture rows name it by id, so they follow its rename.
+    void rename_references(const ItemKey& key, const std::string& next) const override {
+        if constexpr (std::is_same_v<T, Structure>) {
+            if (Project* project = host()) {
+                detail::rename_structure_links(*project, key.value(), next);
+            }
+        } else {
+            (void)key;
+            (void)next;
         }
     }
 
@@ -2772,11 +2910,14 @@ enum class ScatteringTypeEnum : std::uint8_t { BRAGG, TOTAL };
 enum class PeakProfileTypeEnum : std::uint8_t {
     TOF_JORGENSEN,
     TOF_JORGENSEN_VON_DREELE,
-    CWL_PSEUDO_VOIGT,
-    // Diffraction-lib's members, verbatim.
-    CWL_THOMPSON_COX_HASTINGS,
-    CWL_PSEUDO_VOIGT_BERAR_BALDINOZZI_ASYMMETRY,
+    // The constant-wavelength family, named for what each profile is.
+    CWL_TCH_PSEUDO_VOIGT,
+    CWL_TCH_PSEUDO_VOIGT_FCJ,
+    CWL_PSEUDO_VOIGT_BERAR_BALDINOZZI,
     TOF_PSEUDO_VOIGT,
+    CWL_GAUSSIAN,
+    CWL_LORENTZIAN,
+    CWL_PSEUDO_VOIGT,
 };
 
 // Verbatim tokens (the `.edi` spellings; the CW beam mode has a SPACE and is quoted on write).
@@ -2796,13 +2937,34 @@ inline const char* token(PeakProfileTypeEnum value) {
     switch (value) {
         case PeakProfileTypeEnum::TOF_JORGENSEN: return "tof-jorgensen";
         case PeakProfileTypeEnum::TOF_JORGENSEN_VON_DREELE: return "tof-jorgensen-von-dreele";
+        case PeakProfileTypeEnum::CWL_GAUSSIAN: return "cwl-gaussian";
+        case PeakProfileTypeEnum::CWL_LORENTZIAN: return "cwl-lorentzian";
         case PeakProfileTypeEnum::CWL_PSEUDO_VOIGT: return "cwl-pseudo-voigt";
-        case PeakProfileTypeEnum::CWL_THOMPSON_COX_HASTINGS: return "cwl-thompson-cox-hastings";
-        case PeakProfileTypeEnum::CWL_PSEUDO_VOIGT_BERAR_BALDINOZZI_ASYMMETRY:
-            return "cwl-pseudo-voigt-berar-baldinozzi-asymmetry";
+        case PeakProfileTypeEnum::CWL_PSEUDO_VOIGT_BERAR_BALDINOZZI:
+            return "cwl-pseudo-voigt-berar-baldinozzi";
+        case PeakProfileTypeEnum::CWL_TCH_PSEUDO_VOIGT: return "cwl-tch-pseudo-voigt";
+        case PeakProfileTypeEnum::CWL_TCH_PSEUDO_VOIGT_FCJ: return "cwl-tch-pseudo-voigt-fcj";
         case PeakProfileTypeEnum::TOF_PSEUDO_VOIGT: return "tof-pseudo-voigt";
     }
     return "tof-jorgensen";
+}
+
+// The constant-wavelength profile family: which optional `_peak` slots a CW
+// profile token carries. U, V, W belong to every one. A registered extension token keeps the
+// family default, the TCH pseudo-Voigt.
+struct CwlProfileSlots {
+    bool lorentz_xy = false;  // broad_lorentz_x/y: the TCH pair
+    bool mixing_eta = false;  // mixing_eta_0/1: the two pseudo-Voigts
+    bool fcj = false;         // asym_fcj_1/2
+    bool beba = false;        // asym_beba_a0/b0/a1/b1 and asym_beba_limit
+};
+inline CwlProfileSlots cwl_profile_slots(const std::string& token) {
+    CwlProfileSlots result;
+    result.beba = token == "cwl-pseudo-voigt-berar-baldinozzi";
+    result.mixing_eta = result.beba || token == "cwl-pseudo-voigt";
+    result.fcj = token == "cwl-tch-pseudo-voigt-fcj";
+    result.lorentz_xy = !result.mixing_eta && token != "cwl-gaussian" && token != "cwl-lorentzian";
+    return result;
 }
 
 // The experiment-type category: four presence-tracked axes (std::optional — absent means the
@@ -2934,15 +3096,17 @@ struct PeakBase {
     // TOF Lorentzian (JvD) block; all zero for a pure Jorgensen experiment.
     Parameter broad_lorentz_gamma_0, broad_lorentz_gamma_1, broad_lorentz_gamma_2;
     Parameter broad_lorentz_size, broad_lorentz_strain;
-    // CW rung-0 block (Caglioti U/V/W + Lorentz X/Y), presence-tracked.
-    std::optional<Parameter> broad_gauss_u, broad_gauss_v, broad_gauss_w;
-    std::optional<Parameter> broad_lorentz_x, broad_lorentz_y;
-    // The CW asymmetry coefficients, presence-tracked like the block above and engaged only on
-    // the `_peak.type` that carries them — Finger-Cox-Jephcoat (S/L, D/L) on
-    // `cwl-thompson-cox-hastings`, Berar-Baldinozzi on `cwl-pseudo-voigt-berar-baldinozzi-asymmetry`.
-    std::optional<Parameter> asym_fcj_1, asym_fcj_2;
-    std::optional<Parameter> asym_beba_a0, asym_beba_b0, asym_beba_a1, asym_beba_b1;
-    std::optional<Parameter> asym_beba_limit;  // FullProf AsyLim, deg; default 180
+    // CW block, presence-tracked and engaged only on the `_peak.type` that carries each slot
+    // (cwl_profile_slots): Caglioti U/V/W on every CW profile, the TCH Lorentz X/Y, and the
+    // pseudo-Voigt mixing eta = eta_0 + eta_1 2theta.
+    OptionalParameter broad_gauss_u, broad_gauss_v, broad_gauss_w;
+    OptionalParameter broad_lorentz_x, broad_lorentz_y;
+    OptionalParameter mixing_eta_0, mixing_eta_1;
+    // The CW asymmetry coefficients, likewise — Finger-Cox-Jephcoat (S/L, D/L) on
+    // `cwl-tch-pseudo-voigt-fcj`, Berar-Baldinozzi on `cwl-pseudo-voigt-berar-baldinozzi`.
+    OptionalParameter asym_fcj_1, asym_fcj_2;
+    OptionalParameter asym_beba_a0, asym_beba_b0, asym_beba_a1, asym_beba_b1;
+    OptionalParameter asym_beba_limit;  // FullProf AsyLim, deg; default 180
 
     PeakBase();  // attaches the parameter specs (inline below)
 
@@ -2964,14 +3128,14 @@ struct InstrumentBase {
     Parameter calib_d_to_tof_offset, calib_d_to_tof_linear, calib_d_to_tof_quadratic,
         calib_d_to_tof_reciprocal;
     Parameter setup_twotheta_bank{152.827};
-    std::optional<Parameter> setup_wavelength, calib_twotheta_offset;
+    OptionalParameter setup_wavelength, calib_twotheta_offset;
     // The CW line shifts (SyCos, SySin), presence-tracked — absent is the loader's default 0 on
     // both sides, so a model that never declared them crosses exactly as before.
-    std::optional<Parameter> calib_sample_displacement, calib_sample_transparency;
+    OptionalParameter calib_sample_displacement, calib_sample_transparency;
     // The X-ray CW monochromator polarization (K, 2theta_m in degrees), presence-tracked. An X-ray CW
     // load engages both at upstream's default 0 (K = 0 is no correction); a neutron or TOF experiment
     // never carries them.
-    std::optional<Parameter> setup_polarization_coefficient, setup_monochromator_twotheta;
+    OptionalParameter setup_polarization_coefficient, setup_monochromator_twotheta;
 
     InstrumentBase();  // attaches the parameter specs (inline below)
 
@@ -3008,13 +3172,13 @@ struct LinkedStructure : std::enable_shared_from_this<LinkedStructure> {
 // (muR = ABSCOR1 * lambda, kernel-proven); ABSCOR2's lambda-power is unpinned in the engine, so
 // freeing it is a hard error there and its spelling deliberately stays FullProf's (parity doc).
 struct AbsorptionBase {
-    std::optional<Parameter> abscor1;
-    std::optional<Parameter> abscor2;
+    OptionalParameter abscor1;
+    OptionalParameter abscor2;
     // The CW cylinder body — muR = mu * R (R the cylinder RADIUS), evaluated by the engine at
     // each reflection's Bragg theta. A typed family's parameters exist iff the type says so:
     // TOF "cylinder" carries the ABSCOR pair, CW "cylinder-hewat"/"cylinder-lobanov" carry
     // mu_r, "none" carries nothing.
-    std::optional<Parameter> mu_r;
+    OptionalParameter mu_r;
     std::optional<std::string> type;  // `_absorption.type`, e.g. "cylinder" / "none"
 
     std::vector<Parameter*> parameters();  // the present family body, in order (R18)
@@ -3545,6 +3709,11 @@ struct ScanFileRecord {
     bool converged = false;
     double reduced_chi_square = 0.0;
     int iterations = 0;
+    // The row's cells as crysta appended them (the live event; empty for a resumed row read back).
+    std::vector<std::string> cells;
+    // Why the file's fit stopped, as crysta's ledger (results-provenance.csv) records it beside the row; empty when
+    // it was not recorded.
+    std::string termination;
 };
 
 // Optional per-file completion subscriber. Passing none costs nothing: with no
@@ -3824,6 +3993,8 @@ struct SequentialFitConfig {
     std::string data_dir;
     std::string file_pattern = "*";
     bool reverse = false;
+    // The template dataset: the scan file whose data the template experiment holds (set_scan_template_file).
+    std::string template_file;
     ItemVec<SequentialExtractRule> extract;  // Ids unique by construction
     bool declared() const { return !data_dir.empty(); }
     // ADR-0018: the row of this object's non-loop categories.
@@ -4234,8 +4405,37 @@ inline void link_nested(Structure& structure, const std::shared_ptr<const Projec
 
 inline void link_nested(ExperimentBase& experiment, const std::shared_ptr<const ProjectLink>& link) noexcept {
     for (KeyedBase* collection : std::initializer_list<KeyedBase*>{
-             &experiment.background, &experiment.background_terms, &experiment.preferred_orientation}) {
+             &experiment.background, &experiment.background_terms, &experiment.preferred_orientation,
+             &experiment.linked_structures}) {
         collection->host_link_ = link;
+    }
+}
+
+inline void rename_structure_links(Project& project, const std::string& from, const std::string& to) {
+    const std::string named = KeyTraits<Structure>::canonical(from);
+    if (named == KeyTraits<Structure>::canonical(to)) {
+        return;
+    }
+    std::vector<ItemKey*> keys;
+    for (const auto& experiment : project.experiments) {
+        for (const auto& link : experiment->linked_structures) {
+            if (KeyTraits<Structure>::canonical(link->structure_id.value()) == named) {
+                keys.push_back(&link->structure_id);
+            }
+        }
+        for (const auto& row : experiment->preferred_orientation) {
+            if (KeyTraits<Structure>::canonical(row->structure_id.value()) == named) {
+                keys.push_back(&row->structure_id);
+            }
+        }
+    }
+    for (ItemKey* key : keys) {  // every one is admitted before any is written
+        if (key->owner() != nullptr) {
+            key->owner()->admit_rename(*key, to);
+        }
+    }
+    for (ItemKey* key : keys) {
+        *key = to;
     }
 }
 
@@ -4296,8 +4496,8 @@ static_assert(detail::one_entry_per_column(ScatteringSourceCategory::columns, Sc
 struct PeakCategory {
     using Owner = PeakBase;
     static constexpr const char* name = "_peak";
-    static constexpr auto columns = std::tuple{&PeakBase::type, &PeakBase::cutoff_fwhm, &PeakBase::rise_alpha_0, &PeakBase::rise_alpha_1, &PeakBase::decay_beta_0, &PeakBase::decay_beta_1, &PeakBase::broad_gauss_sigma_0, &PeakBase::broad_gauss_sigma_1, &PeakBase::broad_gauss_sigma_2, &PeakBase::broad_gauss_size, &PeakBase::broad_gauss_strain, &PeakBase::broad_lorentz_gamma_0, &PeakBase::broad_lorentz_gamma_1, &PeakBase::broad_lorentz_gamma_2, &PeakBase::broad_lorentz_size, &PeakBase::broad_lorentz_strain, &PeakBase::broad_gauss_u, &PeakBase::broad_gauss_v, &PeakBase::broad_gauss_w, &PeakBase::broad_lorentz_x, &PeakBase::broad_lorentz_y, &PeakBase::asym_fcj_1, &PeakBase::asym_fcj_2, &PeakBase::asym_beba_a0, &PeakBase::asym_beba_b0, &PeakBase::asym_beba_a1, &PeakBase::asym_beba_b1, &PeakBase::asym_beba_limit};
-    static constexpr std::array items{"type", "cutoff_fwhm", "rise_alpha_0", "rise_alpha_1", "decay_beta_0", "decay_beta_1", "broad_gauss_sigma_0", "broad_gauss_sigma_1", "broad_gauss_sigma_2", "broad_gauss_size", "broad_gauss_strain", "broad_lorentz_gamma_0", "broad_lorentz_gamma_1", "broad_lorentz_gamma_2", "broad_lorentz_size", "broad_lorentz_strain", "broad_gauss_u", "broad_gauss_v", "broad_gauss_w", "broad_lorentz_x", "broad_lorentz_y", "asym_fcj_1", "asym_fcj_2", "asym_beba_a0", "asym_beba_b0", "asym_beba_a1", "asym_beba_b1", "asym_beba_limit"};
+    static constexpr auto columns = std::tuple{&PeakBase::type, &PeakBase::cutoff_fwhm, &PeakBase::rise_alpha_0, &PeakBase::rise_alpha_1, &PeakBase::decay_beta_0, &PeakBase::decay_beta_1, &PeakBase::broad_gauss_sigma_0, &PeakBase::broad_gauss_sigma_1, &PeakBase::broad_gauss_sigma_2, &PeakBase::broad_gauss_size, &PeakBase::broad_gauss_strain, &PeakBase::broad_lorentz_gamma_0, &PeakBase::broad_lorentz_gamma_1, &PeakBase::broad_lorentz_gamma_2, &PeakBase::broad_lorentz_size, &PeakBase::broad_lorentz_strain, &PeakBase::broad_gauss_u, &PeakBase::broad_gauss_v, &PeakBase::broad_gauss_w, &PeakBase::broad_lorentz_x, &PeakBase::broad_lorentz_y, &PeakBase::mixing_eta_0, &PeakBase::mixing_eta_1, &PeakBase::asym_fcj_1, &PeakBase::asym_fcj_2, &PeakBase::asym_beba_a0, &PeakBase::asym_beba_b0, &PeakBase::asym_beba_a1, &PeakBase::asym_beba_b1, &PeakBase::asym_beba_limit};
+    static constexpr std::array items{"type", "cutoff_fwhm", "rise_alpha_0", "rise_alpha_1", "decay_beta_0", "decay_beta_1", "broad_gauss_sigma_0", "broad_gauss_sigma_1", "broad_gauss_sigma_2", "broad_gauss_size", "broad_gauss_strain", "broad_lorentz_gamma_0", "broad_lorentz_gamma_1", "broad_lorentz_gamma_2", "broad_lorentz_size", "broad_lorentz_strain", "broad_gauss_u", "broad_gauss_v", "broad_gauss_w", "broad_lorentz_x", "broad_lorentz_y", "mixing_eta_0", "mixing_eta_1", "asym_fcj_1", "asym_fcj_2", "asym_beba_a0", "asym_beba_b0", "asym_beba_a1", "asym_beba_b1", "asym_beba_limit"};
     static constexpr std::array legacy{"_easydiffraction_peak"};
 };
 static_assert(detail::one_entry_per_column(PeakCategory::columns, PeakCategory::items));
@@ -4398,8 +4598,9 @@ static_assert(detail::one_entry_per_column(FitResultBankCategory::columns, FitRe
 struct SequentialFitCategory {
     using Owner = SequentialFitConfig;
     static constexpr const char* name = "_sequential_fit";
-    static constexpr auto columns = std::tuple{&SequentialFitConfig::data_dir, &SequentialFitConfig::file_pattern, &SequentialFitConfig::reverse};
-    static constexpr std::array items{"data_dir", "file_pattern", "reverse"};
+    static constexpr auto columns = std::tuple{&SequentialFitConfig::data_dir, &SequentialFitConfig::file_pattern,
+                                               &SequentialFitConfig::reverse, &SequentialFitConfig::template_file};
+    static constexpr std::array items{"data_dir", "file_pattern", "reverse", "template_file"};
 };
 static_assert(detail::one_entry_per_column(SequentialFitCategory::columns, SequentialFitCategory::items));
 
@@ -4581,7 +4782,7 @@ inline std::vector<Parameter*> free_of(std::vector<Parameter*> all) {
     }
     return free;
 }
-inline void push_optional(std::vector<Parameter*>& out, std::optional<Parameter>& field) {
+inline void push_optional(std::vector<Parameter*>& out, OptionalParameter& field) {
     if (field) {
         out.push_back(&*field);
     }
@@ -4625,6 +4826,8 @@ inline std::vector<Parameter*> PeakBase::parameters() {
     detail::push_optional(out, broad_gauss_w);
     detail::push_optional(out, broad_lorentz_x);
     detail::push_optional(out, broad_lorentz_y);
+    detail::push_optional(out, mixing_eta_0);
+    detail::push_optional(out, mixing_eta_1);
     detail::push_optional(out, asym_fcj_1);
     detail::push_optional(out, asym_fcj_2);
     detail::push_optional(out, asym_beba_a0);
@@ -4701,8 +4904,109 @@ inline const LinkedStructure& ExperimentBase::linked_structure() const {
     }
     return *linked_structures.front();
 }
+// The constant-wavelength token/slot rule: an experiment holds exactly the peak slots
+// its declared profile carries. Empty when it does, else what is wrong. The conversion for
+// calculation, fitting and saving and the free walks refuse a block that does not, so no slot is
+// dropped or read as another profile's.
+// The profile an experiment's peak declares: its type, or the beam mode's default when it names none
+// (the TCH pseudo-Voigt for constant wavelength, Jorgensen for time of flight).
+inline std::string effective_peak_type(const ExperimentBase& experiment) {
+    return experiment.peak.type.value_or(
+        experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH ? "cwl-tch-pseudo-voigt"
+                                                                              : "tof-jorgensen");
+}
+
+namespace detail {
+// The constant-wavelength peak slots: each field, the metadata its parameter carries, and its tag.
+struct CwlPeakSlot {
+    OptionalParameter PeakBase::* field;
+    const ParameterSpec* spec;
+    const char* tag;
+};
+inline const std::array<CwlPeakSlot, 14>& cwl_peak_slots() {
+    static const std::array<CwlPeakSlot, 14> slots_table{{
+        {&PeakBase::broad_gauss_u, &spec::peak_broad_gauss_u, "_peak.broad_gauss_u"},
+        {&PeakBase::broad_gauss_v, &spec::peak_broad_gauss_v, "_peak.broad_gauss_v"},
+        {&PeakBase::broad_gauss_w, &spec::peak_broad_gauss_w, "_peak.broad_gauss_w"},
+        {&PeakBase::broad_lorentz_x, &spec::peak_broad_lorentz_x, "_peak.broad_lorentz_x"},
+        {&PeakBase::broad_lorentz_y, &spec::peak_broad_lorentz_y, "_peak.broad_lorentz_y"},
+        {&PeakBase::mixing_eta_0, &spec::peak_mixing_eta_0, "_peak.mixing_eta_0"},
+        {&PeakBase::mixing_eta_1, &spec::peak_mixing_eta_1, "_peak.mixing_eta_1"},
+        {&PeakBase::asym_fcj_1, &spec::peak_asym_fcj_1, "_peak.asym_fcj_1"},
+        {&PeakBase::asym_fcj_2, &spec::peak_asym_fcj_2, "_peak.asym_fcj_2"},
+        {&PeakBase::asym_beba_a0, &spec::peak_asym_beba_a0, "_peak.asym_beba_a0"},
+        {&PeakBase::asym_beba_b0, &spec::peak_asym_beba_b0, "_peak.asym_beba_b0"},
+        {&PeakBase::asym_beba_a1, &spec::peak_asym_beba_a1, "_peak.asym_beba_a1"},
+        {&PeakBase::asym_beba_b1, &spec::peak_asym_beba_b1, "_peak.asym_beba_b1"},
+        {&PeakBase::asym_beba_limit, &spec::peak_asym_beba_limit, "_peak.asym_beba_limit"},
+    }};
+    return slots_table;
+}
+}  // namespace detail
+
+// A peak slot's metadata is the slot's own: a parameter without any takes it, so every handle to the
+// slot classes it as the slot is (the limit angle fixed, a coefficient refinable). One carrying
+// another slot's metadata is refused by peak_slots_mismatch.
+inline void canonicalize_peak_specs(PeakBase& peak) {
+    for (const detail::CwlPeakSlot& slot : detail::cwl_peak_slots()) {
+        OptionalParameter& field = peak.*slot.field;
+        if (field.has_value() && field->spec == nullptr) {
+            field->spec = slot.spec;
+        }
+    }
+}
+
+// The constant-wavelength token/slot rule: an experiment holds no peak slot its declared profile
+// does not carry, and every one the profile requires (U, V, W, and X, Y on the TCH pair). A carried
+// optional slot (the mixing and the asymmetry) may be absent and reads as its default. A slot's
+// parameter carries no other slot's metadata. Empty when the block fits, else what is wrong. The
+// conversion for calculation, fitting and saving and the free walks refuse a block that does not, so
+// no slot is dropped, read as another profile's, or classed by another slot's metadata.
+inline std::string peak_slots_mismatch(const ExperimentBase& experiment) {
+    if (experiment.effective_beam_mode() != BeamModeEnum::CONSTANT_WAVELENGTH) {
+        return {};
+    }
+    const std::string declared = effective_peak_type(experiment);
+    const CwlProfileSlots profile = cwl_profile_slots(declared);
+    const std::string where = "experiment '" + experiment.name.value() + "': ";
+    for (const detail::CwlPeakSlot& slot : detail::cwl_peak_slots()) {
+        const OptionalParameter& field = experiment.peak.*slot.field;
+        const std::string tag = slot.tag;
+        const bool lorentz = tag == "_peak.broad_lorentz_x" || tag == "_peak.broad_lorentz_y";
+        const bool carried = tag.rfind("_peak.broad_gauss_", 0) == 0 ? true
+                             : lorentz                                  ? profile.lorentz_xy
+                             : tag.rfind("_peak.mixing_eta_", 0) == 0   ? profile.mixing_eta
+                             : tag.rfind("_peak.asym_fcj_", 0) == 0     ? profile.fcj
+                                                                        : profile.beba;
+        const bool required = tag.rfind("_peak.broad_gauss_", 0) == 0 || (lorentz && profile.lorentz_xy);
+        if (field.has_value() && !carried) {
+            return where + tag + " is not a parameter of _peak.type '" + declared +
+                   "': each profile carries only its own parameters";
+        }
+        if (!field.has_value() && required) {
+            return where + "_peak.type '" + declared + "' requires " + tag;
+        }
+        if (field.has_value() && field->spec != nullptr && field->spec != slot.spec) {
+            return where + "the parameter in " + tag + " carries the metadata of '" + field->spec->name +
+                   "', another parameter";
+        }
+    }
+    return {};
+}
+inline void require_peak_slots_fit_type(const ExperimentBase& experiment) {
+    if (const std::string mismatch = peak_slots_mismatch(experiment); !mismatch.empty()) {
+        throw std::invalid_argument(mismatch);
+    }
+}
 inline std::vector<Parameter*> ExperimentBase::free_parameters() {
-    return detail::free_of(parameters());
+    canonicalize_peak_specs(peak);
+    require_peak_slots_fit_type(*this);
+    std::vector<Parameter*> out = detail::free_of(parameters());
+    // The limit angle is a fixed setting (is_fixed_setting), known by its slot whatever it carries.
+    if (peak.asym_beba_limit) {
+        std::erase(out, &*peak.asym_beba_limit);
+    }
+    return out;
 }
 inline std::vector<Parameter*> Project::parameters() {
     std::vector<Parameter*> out;
@@ -4721,6 +5025,10 @@ inline std::vector<Parameter*> Project::parameters() {
 // The free parameters a fit refines: what no enabled phase reads is left out — a disabled link's
 // scale and texture, and every parameter of a structure no enabled link names (crysta's rule).
 inline std::vector<Parameter*> Project::free_parameters() {
+    for (const std::shared_ptr<BraggPdExperiment>& experiment : experiments) {
+        canonicalize_peak_specs(experiment->peak);
+        require_peak_slots_fit_type(*experiment);
+    }
     std::vector<const Parameter*> idle;
     std::vector<std::string> used;
     for (const std::shared_ptr<BraggPdExperiment>& experiment : experiments) {
@@ -4739,6 +5047,11 @@ inline std::vector<Parameter*> Project::free_parameters() {
                     idle.push_back(&row->march_random_fract);
                 }
             }
+        }
+    }
+    for (const std::shared_ptr<BraggPdExperiment>& experiment : experiments) {
+        if (experiment->peak.asym_beba_limit) {  // a fixed setting, known by its slot
+            idle.push_back(&*experiment->peak.asym_beba_limit);
         }
     }
     if (!experiments.empty()) {

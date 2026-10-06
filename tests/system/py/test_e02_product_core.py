@@ -3,6 +3,7 @@
 # ruff: noqa: PLC0415
 from __future__ import annotations
 
+import os
 import subprocess
 from pathlib import Path
 
@@ -107,11 +108,16 @@ def test_e02_parameter_state_and_nontrivial_model_round_trip() -> None:
 def test_e02_cpp_adapter_conversion_probe() -> None:
     from conftest import corpus_case_dir
 
+    build = (
+        ROOT
+        / 'build'
+        / ('ci-consumer' if os.environ.get('EDI_USE_CONSUMER_BUILD') == '1' else 'ci')
+    )
     candidates = [
-        ROOT / 'build/ci/core/e02_adapter_probe',
-        ROOT / 'build/ci/core/e02_adapter_probe.exe',
-        ROOT / 'build/ci/e02_adapter_probe',
-        ROOT / 'build/ci/e02_adapter_probe.exe',
+        build / 'core/e02_adapter_probe',
+        build / 'core/e02_adapter_probe.exe',
+        build / 'e02_adapter_probe',
+        build / 'e02_adapter_probe.exe',
     ]
     probe = next((path for path in candidates if path.is_file()), None)
     assert probe is not None, (

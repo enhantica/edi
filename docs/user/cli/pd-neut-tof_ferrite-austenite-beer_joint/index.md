@@ -24,5 +24,5 @@ from its Examples list.
 The starting values are those of the owner's FullProf project for these data ([PROVENANCE.md](PROVENANCE.md)).
 CI and `pixi run verify` run this project through `python -m edi` (`tools/checks/cli_projects.py`) and check its
 number of free parameters against FullProf's, and its Rwp, reduced chi-square and iteration count against
-regression pins. The fitted values are not compared with FullProf's yet: FullProf shares one B iso between the two
-Fe sites, and edi cannot express that constraint yet.
+regression pins. FullProf shares one B iso between the two Fe sites; the project declares the same tie as a
+constraint, and every fitted value is within FullProf's standard uncertainty of FullProf's own.

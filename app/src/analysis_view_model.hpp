@@ -222,6 +222,7 @@ class AnalysisViewModel : public QObject {
     void lastErrorChanged();
 
    private:
+    bool scan_declared_ = false;
     void setLastError(const QString& error);
 
     edi::Project& project_;

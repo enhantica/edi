@@ -29,6 +29,8 @@ RELATIONS = json.loads((ROOT / 'tests/fixtures/constraint_expressions/byte-pins.
 POLYNOMIAL_CASES = [
     'repo:docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project',
     'corpus:beer-ferrite-austenite/project',
+    'corpus:yap-spodi-3k/project',
+    'repo:docs/user/cli/pd-neut-cwl_yap-spodi_3k/project',
     'corpus:background-cecoal/project',
     'corpus:background-lab6/project',
     'corpus:background-pearl/project',
@@ -177,6 +179,16 @@ def test_save_matches_the_labelled_pre_move_regression_pin(tmp_path, case):
             REFERENCE.observe(source, tmp_path / 'saved', calculator=True)
             == expected['saved_sha256']
         ), 'the complete saved project must match the labelled model-change regression pin'
+        return
+    if case == 'repo:docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project':
+        first, second = tmp_path / 'first', tmp_path / 'second'
+        once = REFERENCE.observe(source, first)
+        assert REFERENCE.observe(first, second) == once, (
+            'The replacement Npr5 PbSO4 model must reach a byte-exact save fixed point'
+        )
+        assert hasattr(
+            __import__('edi').Project.load(first).experiments[0].peak, 'mixing_eta_0'
+        ), 'The retired TCH plus asymmetry byte subject is replaced by the declared Npr5 model'
         return
     if case.startswith('repo:') and REFERENCE.hashes(source) != expected['input_sha256']:
         # Main's independently merged example edits cannot rewrite a storage

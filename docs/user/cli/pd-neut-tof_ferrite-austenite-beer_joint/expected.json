@@ -1,13 +1,13 @@
 {
   "schema": 1,
   "source": {
-    "engine": "FullProf 8.40 (n_free); edi (regression pins)",
+    "engine": "FullProf 8.40 (n_free and the fitted values); edi (regression pins)",
     "artifact": "../../../../knowledge/fitting/fullprof/pd-neut-tof_duplex-beer_pseudo-voigt/owner-input.inp",
     "provenance": "PROVENANCE.md"
   },
   "quantities": {
     "n_free": {
-      "value": 76.0,
+      "value": 75.0,
       "kind": "reference",
       "tol_abs": 0.0,
       "tol_rel": null
@@ -19,13 +19,13 @@
       "tol_rel": null
     },
     "reduced_chi_square": {
-      "value": 6.926083272,
+      "value": 6.925059031,
       "kind": "regression-pin",
       "tol_abs": 1e-06,
       "tol_rel": null
     },
     "rwp": {
-      "value": 0.07147118444,
+      "value": 0.07147231917,
       "kind": "regression-pin",
       "tol_abs": 1e-09,
       "tol_rel": null

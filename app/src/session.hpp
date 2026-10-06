@@ -138,6 +138,9 @@ class Session : public QObject {
 
    private:
     bool open(const QString& directory, const QString& example);
+    // Opens `source` (a read-only folder) from a writable copy at `target`: the project and its results are copied, and
+    // a scan's data files linked, not duplicated.
+    bool openCopy(const QString& source, const QString& target, const QString& example);
     void replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example);
     void setLastError(const QString& error);
 
@@ -147,6 +150,10 @@ class Session : public QObject {
     WarningListModel* warnings_;
     std::unique_ptr<QTemporaryDir> extracted_;
     QString opened_example_;
+    // The open project is a temporary copy of a folder this user may not write: Save As is its way out.
+    bool read_only_copy_ = false;
+    // Copies every file under `source` to `target`, writable by the owner; those under `linked` are hard links.
+    bool copyTree(const QString& source, const QString& target, const QString& linked);
 };
 
 }  // namespace edi_app

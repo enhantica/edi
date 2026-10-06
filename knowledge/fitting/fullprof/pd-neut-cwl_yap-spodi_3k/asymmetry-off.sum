@@ -1,0 +1,319 @@
+
+
+        **********************************************************
+        ** PROGRAM FullProf.2k (Version 8.40 - Feb2026-ILL JRC) **
+        **********************************************************
+                       M U L T I -- P A T T E R N                 
+            Rietveld, Profile Matching & Integrated Intensity     
+                 Refinement of X-ray and/or Neutron Data
+
+
+    Date: 05/10/2026  Time: 23:09:08.586                              
+
+ => PCR file code: yap_3k
+ => DAT file code: yap_3k               -> Relative contribution: 1.0000                                                            
+ => Title: YAlO3
+
+ ==> CONDITIONS OF THIS RUN FOR PATTERN No.:  1
+
+ => Global Refinement of neutron powder data                                                                                        
+ => The    5th default profile function was selected
+
+ => X-Y type of data: 2theta/TOF/E(Kev) Intens sigma for pattern:  1
+ => Analysis of refinement at the end
+ => Wavelengths:  1.54816 1.54816
+ => Cos(Monochromator angle)=   0.0000
+ => Absorption correction (AC), muR-eff =   0.0221  0.0000
+ => AC : Cylinder Debye-Scherrer (Hewat formula)
+ => Base of peaks: 2.0*HW*   20.00
+ ==> Angular range, step and number of points:
+     2Thmin:       2.300000  2Thmax:     151.949997  Step:       0.050019  No. of points:   2994
+ =>-------> Pattern#  1
+ => Crystal Structure Refinement for phase: 1
+ => The density (volumic mass) of phase 1 is:    5.368 g/cm3
+ =>-------> Pattern#  1
+ => Crystal Structure Refinement for phase: 2
+ => The density (volumic mass) of phase 2 is:    3.997 g/cm3
+ => Scor: 2.7531
+
+ ==> RESULTS OF REFINEMENT:
+
+
+ => No. of fitted parameters:   52
+
+
+------------------------------------------------------------------------------
+ => Phase No.  1 YAlO3                                   P b n m             
+------------------------------------------------------------------------------
+
+ =>  No. of reflections for pattern#:   1:   245  
+
+
+ ==> ATOM PARAMETERS:
+
+  Name      x     sx       y     sy       z      sz      B   sB   occ. socc.  Mult
+ Y       0.01228(  13)  0.55407(   9)  0.25000(   0)  0.127( 10)  0.500(  0)    4
+ Al      0.00000(   0)  0.00000(   0)  0.00000(   0)  0.182( 18)  0.500(  0)    4
+ O1     -0.08375(  17) -0.02193(  14)  0.25000(   0)  0.080( 11)  0.500(  0)    4
+ O2      0.20462(  11)  0.29492(  10)  0.04431(   7)  0.175(  9)  1.000(  0)    8
+
+ ==> PROFILE PARAMETERS FOR PATTERN#  1
+
+ => Cell parameters      :
+                              5.17349   0.00003
+                              5.32778   0.00003
+                              7.36249   0.00004
+                             90.00000   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+ 
+ => overall scale factor :   28.13916     0.9122253E-01
+ => Eta(p-v) or m(p-vii) :    0.13919   0.00585
+ => Overall tem. factor  :    0.00000   0.00000
+ => Halfwidth parameters :    0.02735   0.00079
+                             -0.03128   0.00211
+                              0.10047   0.00109
+ => Preferred orientation:    0.00000   0.00000
+                              0.00000   0.00000
+ => Asymmetry parameters :    0.00000   0.00000
+                              0.00000   0.00000
+                              0.00000   0.00000
+                              0.00000   0.00000
+ => X and y parameters   :    0.00000   0.00000
+                              0.00000   0.00000
+ => Strain parameters    :    0.00000   0.00000
+                              0.00000   0.00000
+                              0.00000   0.00000
+ => Size parameters (G,L):    0.00000   0.00000
+                              0.00000   0.00000
+
+------------------------------------------------------------------------------
+ => Phase No.  2 Al2O3                                   R -3 c              
+------------------------------------------------------------------------------
+
+ =>  No. of reflections for pattern#:   1:    67  
+
+
+ ==> ATOM PARAMETERS:
+
+  Name      x     sx       y     sy       z      sz      B   sB   occ. socc.  Mult
+ Al1     0.00000(   0)  0.00000(   0)  0.33471( 339) -0.727(279)  0.333(  0)   12
+ O1      0.36099( 358)  0.00000(   0)  0.25000(   0)  0.143(256)  0.500(  0)   18
+
+ ==> PROFILE PARAMETERS FOR PATTERN#  1
+
+ => Cell parameters      :
+                              4.75611   0.00042
+                              4.75611   0.00042
+                             12.98211   0.00186
+                             90.00000   0.00000
+                             90.00000   0.00000
+                            120.00000   0.00000
+ 
+ => overall scale factor :  0.1635094     0.1160825E-01
+ => Eta(p-v) or m(p-vii) :    0.13919   0.00585
+ => Overall tem. factor  :    0.00000   0.00000
+ => Halfwidth parameters :    0.02735   0.00079
+                             -0.03128   0.00211
+                              0.10047   0.00109
+ => Preferred orientation:    0.00000   0.00000
+                              0.00000   0.00000
+ => Asymmetry parameters :    0.00000   0.00000
+                              0.00000   0.00000
+                              0.00000   0.00000
+                              0.00000   0.00000
+ => X and y parameters   :    0.00000   0.00000
+                              0.00000   0.00000
+ => Strain parameters    :    0.00000   0.00000
+                              0.00000   0.00000
+                              0.00000   0.00000
+ => Size parameters (G,L):    0.00000   0.00000
+                              0.00000   0.00000
+
+ ==> GLOBAL PARAMETERS FOR PATTERN#  1
+
+
+ => Zero-point:     0.0040    0.0004
+ => Background Parameters (linear interpolation)  ==>
+                                 1320.72        55.3051    
+                                 1824.88        39.1469    
+                                 2430.72        25.7694    
+                                 2109.63        21.4032    
+                                 2026.74        21.1568    
+                                 2074.87        19.3224    
+                                 2104.67        20.3101    
+                                 2140.32        22.9182    
+                                 1957.15        26.6469    
+                                 2000.55        24.5380    
+                                 2039.95        20.1684    
+                                 1970.87        20.4311    
+                                 2138.69        21.1790    
+                                 2138.18        23.6637    
+                                 2159.70        26.5478    
+                                 2068.28        32.4626    
+                                 1963.56        29.9399    
+                                 1974.85        26.7709    
+                                 2006.01        25.4699    
+                                 2520.23        32.9155    
+                                 2353.28        26.9807    
+                                 2697.44        30.8550    
+                                 2598.57        35.9395    
+                                 2840.20        44.5357    
+                                 2789.23        56.2873    
+ => Cos(2theta)-shift parameter :   0.0000  0.0000
+ => Sin(2theta)-shift parameter :   0.0000  0.0000
+
+ ==> RELIABILITY FACTORS WITH ALL NON-EXCLUDED POINTS FOR PATTERN:  1
+
+  => Cycle: 10 => MaxCycle:150
+ => N-P+C:  2907
+ =>  R-factors (not corrected for background) for Pattern:  1
+ => Rp:  3.62     Rwp:  4.67     Rexp:    1.30 Chi2:  12.9      L.S. refinement
+ => Conventional Rietveld R-factors for Pattern:  1
+ => Rp:  5.81     Rwp:  6.66     Rexp:    1.85 Chi2:  12.9    
+ => Deviance:  0.375E+05     Dev*  :   12.89    
+ => DW-Stat.:    0.2778     DW-exp:     1.9215
+ => N-sigma of the GoF:      453.564
+
+ ==> RELIABILITY FACTORS FOR POINTS WITH BRAGG CONTRIBUTIONS FOR PATTERN:  1
+
+ => N-P+C:  2692
+ =>  R-factors (not corrected for background) for Pattern:  1
+ => Rp:  3.67     Rwp:  4.72     Rexp:    1.27 Chi2:  13.8      L.S. refinement
+ => Conventional Rietveld R-factors for Pattern:  1
+ => Rp:  5.73     Rwp:  6.64     Rexp:    1.78 Chi2:  13.8    
+ => Deviance:  0.372E+05     Dev*  :   13.81    
+ => DW-Stat.:    0.2799     DW-exp:     1.9199
+ => N-sigma of the GoF:      470.403
+
+ => Global user-weigthed Chi2 (Bragg contrib.):   13.9    
+
+     -----------------------------------------------------
+     BRAGG R-Factors and weight fractions for Pattern #  1
+     -----------------------------------------------------
+
+ => Phase:  1     YAlO3
+ => Bragg R-factor:   3.10       Vol:  202.934( 0.002)  Fract(%):   99.33( 0.46)
+ => Rf-factor=  1.96             ATZ:         655.543   Brindley:  1.0000
+
+ => Phase:  2     Al2O3
+ => Bragg R-factor:   7.71       Vol:  254.320( 0.049)  Fract(%):    0.67( 0.05)
+ => Rf-factor=  5.38             ATZ:         611.758   Brindley:  1.0000
+
+
+       ----------------------------------------------------
+       -    ANALYSIS OF THE REFINEMENT FOR PATTERN #  1   -
+       ----------------------------------------------------
+
+
+ => GLOBAL INDICATORS:
+
+    The first and last reflections appears at:
+    2theta(degrees)/T.O.F(microsecs)/Energy(KeV) =>         21.074       153.892
+    s (angstroms-1) =>     0.2362    1.2585
+    D (angstroms  ) =>     4.2329    0.7946
+    sin(theta/lamb) =>     0.1181    0.6292
+    Q (angstroms-1) =>     2.9687   15.8144
+
+    The average FWHM is:   0.3627  Fwhm(av)/step =   7.2540
+
+ => Sum(Yiobs-Yical):     9779.78   -3292.10   30523.35     412.50 <- Four regions
+            Total ->     37423.52
+
+  Expected Rp (background uncorrected):     0.94 Observed->     3.62
+  Expected cRp(background   corrected):     1.52 Observed->     5.81
+  -> Ratio Rp/Exp=cRp/cExp:     3.83
+  Weighted Average Bragg R-factor:     3.14
+  Weighted Average      RF-factor:     1.99
+  Reduced Chi-square :    13.82
+
+ => Total number of "independent" reflections:    297
+    Effective number (account for resolution) of reflections: 
+                      at level p=1.00  : 133.7
+                      at level p=0.50  : 178.8
+                      at level p=0.25  : 201.4
+
+    A reflection contributes as x/(x+nearest), where "x"  
+    is the fraction of the total area of the current phase and 
+   "nearest" is the number of adjacent reflections verifying the formula:
+
+    Postn-p*FWHM <= Postn(adjacent) <= Postn+p*FWHM 
+
+   "nearest" is weighted by the corresponding "x(s)" 
+
+ =>             Number of global  refined parameters:     26
+                Number of profile refined parameters:     11
+    Number of intensity-affecting refined parameters:     15
+      (Preferred orientation belongs to this class)   
+
+ => (Effective Number of reflections)/(Number of intensity parameters)= refni
+      Ratio ( Optimistic view,p=0.25):   13.4
+      Ratio (Pessimistic view,p=1.00):    8.9
+      Ratio (   Eclectic view,p=0.50):   11.9
+
+ => PHASE DEPENDENT INDICATORS:
+
+ => Positions and FWHM of the sharpest reflection
+
+     Phase  2Theta/TOF  FWHM     Q       DQ      Delta   Dd/d(%)
+
+       1      60.87   0.3025   4.1116  0.01848  0.02301  0.449
+       2      60.10   0.3025   4.0649  0.01855  0.02818  0.456
+
+   Q ,DQ(FWHM in Q-space) and Delta are given in 1/angstroms
+ Delta is the expected step between consecutive reflections at Q
+
+ Phase    %Cont  Nintdp  Nprofp   Nref      Enref(Effective)
+                                         R:p=1  R:p=1/2  R:p=1/4
+     1   99.09      11       8     233  133.36  178.30  200.83
+                                         12.12   16.21   18.26
+     2    0.91       4       3      64    0.58    0.58    0.58
+                                          0.15    0.15    0.15
+  Where:
+  %Cont: percentage of the total integrated intensity (100x)
+ Nintdp: Number of intensity-affecting refined parameters
+ Nprofp: Number of profile refined parameters
+   Nref: Number "independent" contributing reflections
+  Enref: Effective Number of reflections for each p-value
+R:p=1/n: Ratio Enref(Effective)/Nintdp <- "Solvability Index" 
+
+
+ => ANALYSIS OF STANDARD DEVIATIONS
+
+    Phase:  1 Degrees of freedom for p=1, 1/2, 1/4:           122.36          167.30          189.83
+              Chi2 based on integrated intensities:           159.29          116.51          102.67
+    Phase:  2 Degrees of freedom for p=1, 1/2, 1/4:             1.00            1.00            1.00
+              Chi2 based on integrated intensities:          4979.16         4979.16         4979.16
+              Calculated with Scott'S FORMULA     :   291.62  211.63  186.11
+
+ => Standard deviations concern the PRECISION of parameters and
+    represent ACCURACY only if there is no systematic errors
+    A better estimate of the accuracy of structural parameters
+    is obtained multiplying sigmas by the parameter SCOR
+ -> SCOR =   2.7531 { Berar'S FORMULA}
+ -> SCOR =   2.6933 {Pawley'S FORMULA}
+ -> Application of modified Scott'S FORMULA
+    SCOR(p=1,1/2,1/4) =             3.39            2.90            2.73
+    SCOR(p=1,1/2,1/4) =            18.98           18.98           18.98
+    SCOR(expected Si) =       4.5933      3.9130      3.6694
+   Warning! Do not take into account Scott'S SCOR
+            These indicators are under test....
+
+ => ANALYSIS OF CORRELATED PARAMETERS 
+
+  -> The parameter:   13 appears   2 times
+  -> The parameter:   14 appears   2 times
+  -> The parameter:   15 appears   2 times
+  -> The parameter:   38 appears   2 times
+  -> The parameter:   42 appears   3 times
+  -> The number of correlated parameters is :   5
+
+ => WARNING!:
+  Reduced Chi-square  TOO HIGH, the model is probably good but
+  the residuals are dominated by systematic errors in profile.
+
+ 
+              CPU Time:     2.217 seconds
+                            0.037 minutes
+
+ => Run finished at:     Date: 05/10/2026  Time: 23:09:10.802                              

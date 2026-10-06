@@ -6,12 +6,11 @@
 # pseudo-Voigt profile. Each bank is the sum of both phases' patterns, each with its own scale,
 # over one shared background.
 #
-# **No reference comparison yet.** This page calculates and fits the delivered project
-# `pd-neut-tof_ferrite-austenite-beer_joint` and shows the result; it checks only that both
-# phases contribute to both banks and that the fit improves the agreement. The owner's FullProf
-# project for these data is kept beside the other FullProf references; the comparison against it
-# needs a constraint the fit does not support yet (one B iso shared by both Fe sites) and comes
-# with that.
+# This page calculates and fits the delivered project `pd-neut-tof_ferrite-austenite-beer_joint`
+# and shows the result; it checks that both phases contribute to both banks and that the fit
+# improves the agreement. The project is the owner's FullProf model for these data, one B iso
+# shared by both Fe sites as a constraint, and its fitted values are compared with FullProf's,
+# within FullProf's own uncertainties, by edi's FullProf agreement test.
 
 # %%
 import shutil

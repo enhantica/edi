@@ -35,7 +35,7 @@ _experiment_type.sample_form powder
 _experiment_type.radiation_probe xray
 _experiment_type.scattering_type bragg
 _experiment_type.beam_mode "constant wavelength"
-_peak.type cwl-pseudo-voigt
+_peak.type cwl-tch-pseudo-voigt
 _peak.broad_gauss_u 0
 _peak.broad_gauss_v 0
 _peak.broad_gauss_w 0.01

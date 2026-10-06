@@ -166,7 +166,7 @@ def test_c11_t4_forbidden_family_tags_name_selector_and_crossing_tag(
     """A family crossing is diagnostic at edi's boundary, not deferred to crysta."""
     crossings = {
         'cwl_with_tof_tag': (
-            'cwl-pseudo-voigt',
+            'cwl-tch-pseudo-voigt',
             '_instrument.calib_d_to_tof_linear',
         ),
         'tof_with_cw_tag': (

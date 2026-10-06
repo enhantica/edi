@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "kind": "syntactic-fixture-adaptation",
+  "witness": "tests/unit/cpp/test_c34_t27_geometry_edit_freshness.cpp",
+  "original_sha256": "b14653a26909cff7c05f8856182c78771183f9c0cc6f6c24bccb0114b7a11dda",
+  "adapted_sha256": "cee92610888ae05957dd27d9af87c0d895b2cac869fee09e1a20b7101afa7347",
+  "replacements": [
+    {
+      "before": "        REQUIRE_MESSAGE(\n            structure.geometry_current(),\n            \" fixture stored geometry starts current before a collection write\");\n        REQUIRE_MESSAGE(\n            edi::window_geometry_current(structure, window),\n            \" fixture window geometry starts current before a collection write\");\n",
+      "after": "        REQUIRE_MESSAGE(structure.geometry_current(),\n                        \" fixture stored geometry starts current before a collection write\");\n        REQUIRE_MESSAGE(edi::window_geometry_current(structure, window),\n                        \" fixture window geometry starts current before a collection write\");\n"
+    },
+    {
+      "before": "    project.experiments.push_back(edi::experiment_from_edi_text(fixture_text(\n        \"tests/fixtures/c11_t4_cw_selection/cases/cwl_valid.edi\")));\n",
+      "after": "    project.experiments.push_back(edi::experiment_from_edi_text(\n        fixture_text(\"tests/fixtures/c11_t4_cw_selection/cases/cwl_valid.edi\")));\n    project.experiment().linked_structure().structure_id = project.structure().name;\n"
+    },
+    {
+      "before": "        // An editor's pending collection can alias the live one when an unchanged edit is committed.\n",
+      "after": "        // An editor's pending collection can alias the live one when an unchanged edit is\n        // committed.\n"
+    }
+  ]
+}

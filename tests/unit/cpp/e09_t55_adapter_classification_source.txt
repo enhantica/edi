@@ -60,8 +60,8 @@ crysta::SpaceGroup resolve_group(const Structure& s) {
 // crysta's own per-setting freedom map (crysta::cell_freedom, ) is the single source of the
 // tie: a dependent parameter takes its independent leader's value and a symmetry-fixed angle takes
 // its constant, so a cubic cell written as `a` alone computes with b = c = a rather than with the
-// default 1.0 Å — the silent-wrong-answer path the crysta 501d49ea bump would otherwise open (the
-// engine stopped ignoring b/c at ). This is exactly the tie crysta itself applies on its
+// default 1.0 Å — the silent-wrong-answer path an engine change would otherwise open (the
+// engine uses every cell length). This is exactly the tie crysta itself applies on its
 // refinement path, sourced from the same map, so the forward and refinement cells cannot disagree
 // and edi acquires no crystallographic knowledge of its own (ADR-0009).
 std::array<double, 6> completed_cell_values(const Cell& cell, const crysta::CellFreedom& freedom) {
@@ -126,7 +126,7 @@ crysta::NeutronScattering select_scattering(const Structure& structure) {
 // Make a converted experiment FIT-ready (, generalised to N banks by ). Historically
 // the forward builder emitted the 3-term calibration and crysta's fit path read instrument[3] —
 // the reciprocal term — so this padded a fixed 0.0 there. Since  crysta's builder stamps
-// the 4-wide instrument itself, and since  seq-104 edi's model CARRIES the reciprocal and
+// the 4-wide instrument itself; edi's model also CARRIES the reciprocal and
 // the conversion passes it through (`d_to_tof_reciprocal` below), so the guard here can no longer
 // fire; it stays as a fail-safe for a caller that hands in a hand-built 3-term experiment.
 void make_fit_ready(crysta::ExperimentBase& built) {
@@ -175,9 +175,9 @@ std::optional<ResolvedParameter> resolve_instrument_label(ExperimentBase& experi
     // ONE flat label table (): the seam rename made the TOF and CW label sets disjoint
     // (crysta's CW 2θ zero-shift is now "calib_twotheta_offset", its TOF calibration zero
     // "calib_d_to_tof_offset"), so the  kind dispatch died with the collision that forced it.
-    // Every label leaf equals the edi field leaf (plan I2/S5). Presence-tracked CW fields keep
+    // Every label leaf equals the edi field leaf. Presence-tracked CW fields keep
     // the fail-closed rule: a label whose field the model never carried stays unresolvable — the
-    // abscor1 precedent — never a write to a value the model never had (plan I8).
+    // abscor1 precedent — never a write to a value the model never had.
     using RequiredField = Parameter& (*)(ExperimentBase&);
     static const std::map<std::string, std::pair<RequiredField, const char*>> kRequired{
         {"calib_d_to_tof_offset",
@@ -496,7 +496,7 @@ void put_experiment(std::string& out, const ExperimentBase& experiment) {
     put_text(out, experiment.name);
     out += experiment.peak.type ? 'P' : '-';
     if (experiment.peak.type) put_text(out, *experiment.peak.type);
-    //  (review-1 B1) / : the four typed axes and all seven CW fields are part of the
+    // The four typed axes and all seven CW fields are part of the
     // calculation-affecting source state, so they are fingerprinted — a TOF handle whose source is
     // mutated CW-ward (a beam-mode flip or any CW field write) is DETECTED as a stale source
     // rather than continuing on stale TOF engine state. Presence is encoded distinctly from every
@@ -911,7 +911,7 @@ void apply_post_build_fields(const ExperimentBase& e, crysta::ExperimentBase& bu
         param(e.absorption.abscor2.value_or(Parameter{}), crysta::CORRECTION, "abscor2"));
 }
 
-// The CW conversion (): crysta has no named CW builder at b9aee906, so the adapter uses the
+// The CW conversion: the captured engine has no named CW builder, so the adapter uses the
 // public ExperimentBase constructor with the documented CW vector layout — peak = [U, V, W, X, Y] and
 // instrument = (calib_twotheta_offset, setup_wavelength) — then sets the kind/beam-mode fields the
 // constructor does not take. No value transformation happens here beyond marshalling (Fork 2's

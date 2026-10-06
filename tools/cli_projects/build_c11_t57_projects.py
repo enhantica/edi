@@ -2,19 +2,21 @@
 """Build the three CLI projects from their vendored FullProf references.
 
 - ``pd-neut-cwl_lab6-echidna_fcj-asymmetry`` — TCH pseudo-Voigt with Finger-Cox-Jephcoat asymmetry;
-- ``pd-neut-cwl_pbso4_beba-asymmetry`` — pseudo-Voigt with Bérar-Baldinozzi asymmetry;
+- ``pd-neut-cwl_pbso4_beba-asymmetry`` — pseudo-Voigt with Bérar-Baldinozzi asymmetry, re-fitted;
 - ``pd-neut-tof_fe_pseudo-voigt`` — the non-convoluted TOF pseudo-Voigt.
 
-Each project carries the model FullProf computes in
-``knowledge/verification/fullprof/<id>/``: the values its verification page seeds, FullProf's
-background, and its data, fitted points and excluded regions. The overall scale is the ONE free
-parameter, as in FullProf's authoring-time ``scale-fit`` run, so FullProf's scale and point
-count are independent references for ``python -m edi fit`` (each project's
-``expected.json``). Every experiment declares Sears (1992) as its neutron scattering-length source
-: its real parts are FullProf's own values for these elements. The source selector is project-file
-text (edi ADR-0014 §5), so each experiment's scalars are written as ``.edi`` text and its
-background and data are set on the built object. Two translations are forced, and each project's
-``PROVENANCE.md`` states them:
+Each project carries the model FullProf computes in ``knowledge/verification/fullprof/<id>/``: the
+values its verification page seeds, FullProf's background, and its data, fitted points and excluded
+regions. For LaB6 and Fe the overall scale is the ONE free parameter, as in FullProf's
+authoring-time ``scale-fit`` run, so FullProf's scale and point count are independent references
+for ``python -m edi fit`` (each project's ``expected.json``). PbSO4 no longer has FullProf's model:
+FullProf's reference is a TCH pseudo-Voigt with Bérar-Baldinozzi asymmetry, a pair edi does not
+carry, so its project is the pseudo-Voigt with Bérar-Baldinozzi (FullProf's Npr 5) with its widths,
+mixing, asymmetry and scale free, re-fitted against the data. Every experiment declares Sears
+(1992) as its neutron scattering-length source: its real parts are FullProf's own values for these
+elements. The source selector is project-file text (edi ADR-0014 §5), so each experiment's scalars
+are written as ``.edi`` text and its background and data are set on the built object. Two
+translations are forced, and each project's ``PROVENANCE.md`` states them:
 
 - LaB6's 6th-degree polynomial background, which edi cannot express, becomes a line-segment
   background with one anchor per FullProf ``.bac`` point;
@@ -177,7 +179,7 @@ def lab6() -> edi.Project:
         'echidna',
         [
             '_experiment_type.beam_mode "constant wavelength"',
-            '_peak.type cwl-thompson-cox-hastings',
+            '_peak.type cwl-tch-pseudo-voigt-fcj',
             '_peak.cutoff_fwhm 12.0',
             '_peak.broad_gauss_u 0.143431',
             '_peak.broad_gauss_v -0.523140',
@@ -218,18 +220,19 @@ def pbso4() -> edi.Project:
         'd1a',
         [
             '_experiment_type.beam_mode "constant wavelength"',
-            '_peak.type cwl-pseudo-voigt-berar-baldinozzi-asymmetry',
+            '_peak.type cwl-pseudo-voigt-berar-baldinozzi',
             '_peak.cutoff_fwhm 30.0',
-            '_peak.broad_gauss_u 0.153402',
-            '_peak.broad_gauss_v -0.453103',
-            '_peak.broad_gauss_w 0.419409',
-            '_peak.broad_lorentz_x 0.0',
-            '_peak.broad_lorentz_y 0.086818',
-            # diffraction-lib issue 166's inferred map from FullProf's P1..P4.
-            f'_peak.asym_beba_a0 {round(-p1 - 3.0 * p2, 6)}',
-            f'_peak.asym_beba_b0 {-p2}',
-            f'_peak.asym_beba_a1 {round(-p3 - 3.0 * p4, 6)}',
-            f'_peak.asym_beba_b1 {-p4}',
+            # Starts: FullProf's Gaussian widths, and the TCH mixing near mid-angle for eta.
+            '_peak.broad_gauss_u 0.153402()',
+            '_peak.broad_gauss_v -0.453103()',
+            '_peak.broad_gauss_w 0.419409()',
+            '_peak.mixing_eta_0 0.25()',
+            '_peak.mixing_eta_1 0.0()',
+            # diffraction-lib issue 166's inferred map from FullProf's P1..P4, as starts.
+            f'_peak.asym_beba_a0 {round(-p1 - 3.0 * p2, 6)}()',
+            f'_peak.asym_beba_b0 {-p2}()',
+            f'_peak.asym_beba_a1 {round(-p3 - 3.0 * p4, 6)}()',
+            f'_peak.asym_beba_b1 {-p4}()',
             '_peak.asym_beba_limit 180.0',
             '_instrument.setup_wavelength 1.912',
             '_instrument.calib_twotheta_offset -0.08424',

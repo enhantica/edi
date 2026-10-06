@@ -28,7 +28,8 @@ int main(int argc, char* argv[]) {
     QGuiApplication::setApplicationName(QStringLiteral("EasyDiffraction"));
     edi_app::use_design_font();
     edi_app::require_freetype_engine();
-    // `--demo <dir>`: the scripted click-through that saves one image per page state.
+    // `--demo <dir>`: the scripted click-through that saves one image per page state; `--demo-only <prefix>`
+    // runs just the steps whose image name starts with the prefix.
     const QStringList arguments = QGuiApplication::arguments();
     const qsizetype demo_flag = arguments.indexOf(QStringLiteral("--demo"));
     const bool demo = demo_flag >= 0;
@@ -74,7 +75,9 @@ int main(int argc, char* argv[]) {
             return -1;
         }
         window->resize(1280, 768);  // the originals' logical window size
-        driver = std::make_unique<edi_app::DemoDriver>(*window, arguments.at(demo_flag + 1));
+        const qsizetype only_flag = arguments.indexOf(QStringLiteral("--demo-only"));
+        driver = std::make_unique<edi_app::DemoDriver>(*window, arguments.at(demo_flag + 1),
+                                                       only_flag >= 0 ? arguments.value(only_flag + 1) : QString());
         driver->start();
     }
     return QGuiApplication::exec();

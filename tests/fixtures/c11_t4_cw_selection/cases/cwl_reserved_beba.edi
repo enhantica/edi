@@ -9,12 +9,12 @@ _experiment_type.scattering_type bragg
 
 _calculator.type cryspy
 
-_peak.type cwl-pseudo-voigt-berar-baldinozzi-asymmetry
+_peak.type cwl-pseudo-voigt-berar-baldinozzi
+_peak.mixing_eta_0 0.37
+_peak.mixing_eta_1 0
 _peak.broad_gauss_u 0.143431
 _peak.broad_gauss_v -0.52314
 _peak.broad_gauss_w 0.590412
-_peak.broad_lorentz_x 0
-_peak.broad_lorentz_y 0.054515
 _peak.cutoff_fwhm 12
 
 _instrument.setup_wavelength 1.623899

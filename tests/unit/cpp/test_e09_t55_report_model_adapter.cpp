@@ -309,7 +309,7 @@ TEST_CASE("E09-T55 adapter conversion preserves CW layout and refuses incomplete
     const crysta::BraggPdExperiment converted = edi::detail::to_crysta_experiment(source);
     CHECK_MESSAGE(converted.kind.get() == crysta::BeamModeEnum::ConstantWavelength,
                   "the adapter must retain the declared CW beam family");
-    CHECK_MESSAGE(converted.peak_type.get() == "cwl-pseudo-voigt",
+    CHECK_MESSAGE(converted.peak_type.get() == "cwl-tch-pseudo-voigt",
                   "an omitted CW selector must acquire the one implemented CW profile");
     REQUIRE_MESSAGE(converted.peak.size() == 5,
                     "the CW adapter must preserve exactly the U/V/W/X/Y profile layout");

@@ -7,6 +7,8 @@ from pathlib import Path
 import edi
 import pytest
 
+from tests.fixtures.constraint_expressions.project import unlink_structure
+
 ROOT = Path(__file__).resolve().parents[3]
 MATERIALIZE = runpy.run_path(str(ROOT / 'tests/fixtures/constraint_expressions/project.py'))[
     'materialize'
@@ -89,6 +91,7 @@ def test_warmed_geometry_follows_current_relation_owner(
     if source_kind == 'constrained':
         attach(donor, family, 'v = 4.3' if family == 'cell' else 'v = .23')
     if source_kind == 'standalone':
+        unlink_structure(donor, child.name)
         donor.structures.remove(child.name)
     target = target_of(child, family)
     _ = child.expanded_atom_sites
@@ -100,8 +103,10 @@ def test_warmed_geometry_follows_current_relation_owner(
         attach(destination, family, 'v = 4.7' if family == 'cell' else 'v = .37')
         sink = destination.structures
         if source_kind != 'standalone':
+            unlink_structure(donor, child.name)
             donor.structures.remove(child.name)
         if route == 'insert':
+            unlink_structure(destination, child.name)
             sink.remove(child.name)
         if route == 'assign':
             sink._assign([child])
@@ -111,6 +116,7 @@ def test_warmed_geometry_follows_current_relation_owner(
         changed_owner = True
     else:
         if route == 'remove' and source_kind != 'standalone':
+            unlink_structure(donor, child.name)
             donor.structures.remove(child.name)
         if route == 'destroy':
             del donor

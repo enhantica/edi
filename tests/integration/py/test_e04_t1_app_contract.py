@@ -298,8 +298,11 @@ def assert_image_families(names, example_names, captures, final_captures=()):
     assert all(re.fullmatch(r't4-\d{2}-.+\.png', name) for name in final_names), (
         'gate 7/: final captures use the explicitly declared t4 numbered filename family'
     )
-    assert set(names) - set(numbered) == example_names | task_names | final_names, (
-        'gate 7/8/: exact inventory retains every Example and mapped t2/t4 capture, with no extras'
+    expected = example_names | task_names | final_names
+    actual = set(names) - set(numbered)
+    assert actual == expected, (
+        'Example image inventory includes every registered example and every mapped capture; '
+        f'missing={sorted(expected - actual)}, unexpected={sorted(actual - expected)}'
     )
 
 
@@ -460,6 +463,12 @@ def test_existing_projects_oracle_covers_the_registry_without_filters():
                 'gate 3: scan projects exercise every read-only scan field'
             )
     for project in oracle['projects']:
+        for dataset in project.get('datasets', []):
+            directory = project['analysis']['_sequential_fit.data_dir']
+            source = ROOT / project['path'] / directory / dataset['file']
+            assert hashlib.sha256(source.read_bytes()).hexdigest() == dataset['sha256'], (
+                'Dataset catalogue and ranges retain independent measured ASCII provenance'
+            )
         assert project['structures'] and project['experiments'], (
             'I19: each page-population witness contains real structures and experiments'
         )

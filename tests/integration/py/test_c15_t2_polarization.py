@@ -224,6 +224,8 @@ def test_c33_owned_page_is_the_measured_filename_difference():
     after.discard('pd-neut-cwl_Y2O3_beta-adp')
     # ADR-0078 adds its separately gated tied-Biso page; keep this task's delta exact.
     after.discard('pd-neut-cwl_cosio-d20_biso-tied')
+    # profile contract's separately gated two-phase page is retained prior art.
+    after.discard('pd-neut-cwl_YAP_multiphase')
     assert before <= after and after - before == {'pd-xray-cwl_LiF_single_polarization'}, (
         ' C33 filename difference must contain exactly its owned polarization page'
     )

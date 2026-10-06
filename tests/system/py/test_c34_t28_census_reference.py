@@ -13,7 +13,7 @@ REPO = 'edi'
 
 @pytest.mark.parametrize('visibility', ['public', 'private'])
 def test_compiler_reference_observes_each_member_without_included_type_aliases(
-    tmp_path, visibility
+    tmp_path, visibility, monkeypatch
 ):
     compiler = shutil.which('clang++')
     assert compiler, ' I21 the independent census reference requires Clang'
@@ -48,6 +48,11 @@ def test_compiler_reference_observes_each_member_without_included_type_aliases(
         'auto identity_columns() { auto columns = {{"_atom_site.id", "atom site"}};'
         ' return columns; }'
     )
+    sdk = tmp_path / 'shadow-sdk'
+    shadow = sdk / 'include' / REPO / 'model.hpp'
+    shadow.parent.mkdir(parents=True)
+    shadow.write_text('namespace ' + REPO + ' { struct Cell { int diverted; }; }')
+    monkeypatch.setenv('CRYSTA_SDK_DIR', str(sdk))
     result = reference.inventory(root, REPO, compiler)
     assert [(row['owner'], row['member']) for row in result['members']] == [
         (REPO + '::Cell', 'represented')

@@ -26,6 +26,9 @@ class ParameterItem : public QObject {
     // False while the space group fixes the parameter or ties it to another (edi ADR-0019): a page shows
     // it disabled, with the value symmetry implies, and the Analysis table does not list it.
     Q_PROPERTY(bool refinable READ isRefinable NOTIFY refinableChanged)
+    // False for a fixed setting (the Berar-Baldinozzi limit angle): its value is edited, it is never fitted,
+    // so a page shows no fit toggle and the Analysis table does not list it.
+    Q_PROPERTY(bool fittable READ isFittable CONSTANT)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
     Q_PROPERTY(QString path READ path CONSTANT)
     Q_PROPERTY(QString uid READ uid CONSTANT)
@@ -64,6 +67,7 @@ class ParameterItem : public QObject {
     bool isFree() const { return free_; }
     void setFree(bool free);
     bool isRefinable() const { return refinable_; }
+    bool isFittable() const { return fittable_; }
     // Set by the registry at each rebuild and publish: a space-group edit changes it while the parameter
     // stays shown.
     void setRefinable(bool refinable);
@@ -123,6 +127,7 @@ class ParameterItem : public QObject {
     std::optional<double> uncertainty_;
     bool free_;
     bool refinable_;
+    bool fittable_;
     QString last_error_;
     QString path_, uid_, block_kind_, block_name_, category_, row_label_, name_, display_name_, display_units_,
         short_name_, category_icon_, element_symbol_;

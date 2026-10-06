@@ -38,6 +38,8 @@ class RowTableModel : public QAbstractListModel {
     Qt::ItemFlags flags(const QModelIndex& index) const override;
     // The value of a role by name (C++ only: the QML contract carries no QVariant, I2).
     QVariant get(int row, const QString& role) const;
+    // A role's value as text, for QML that shows a few rows without a view over all of them.
+    Q_INVOKABLE QString text(int row, const QString& role) const { return get(row, role).toString(); }
 
    signals:
     void countChanged();
@@ -46,6 +48,8 @@ class RowTableModel : public QAbstractListModel {
     // Write one role of one row; false when the role is not writable or the core refused.
     virtual bool setRole(int row, const QString& role, const QVariant& value);
     void setTableRows(const QList<Row>& rows);
+    // One row's values, the row staying where it is: only the roles that differ are announced.
+    void setTableRow(int row, const QList<QVariant>& values);
     const void* keyAt(int row) const { return row >= 0 && row < rows_.size() ? rows_.at(row).key : nullptr; }
     int roleIndex(int role) const { return role - Qt::UserRole - 1; }
 

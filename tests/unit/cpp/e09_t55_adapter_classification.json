@@ -6,7 +6,7 @@
     "anchor": "content-sha256-v1",
     "path": "tests/unit/cpp/e09_t55_adapter_classification_source.txt",
     "reason": "The classification predates P0d, so its exact measured bytes are retained in-tree; content identity proves what was measured without requiring commit history.",
-    "sha256": "3bbd306d42fc286647076478b98fadce37724386ed06916ffe62e3d5b1fe5b33",
+    "sha256": "16f07eeaf9007ce60dc4b0597a13aa5ac492b1b01db10604797f8ec7f2416dbc",
     "lines": 1504
   },
   "post_move_source": {

@@ -25,8 +25,8 @@ void ParameterTableModel::sync() {
     QList<Row> rows;
     int free_count = 0;
     for (ParameterItem* item : registry_.items()) {
-        if (!item->isRefinable()) {
-            continue;  // symmetry fixes or ties it: shown on its page, never fitted
+        if (!item->isRefinable() || !item->isFittable()) {
+            continue;  // symmetry fixes or ties it, or a fixed setting: shown on its page, never fitted
         }
         if (!experiment_scope_.isEmpty() && item->blockKind() == QLatin1String("experiment") &&
             item->blockName() != experiment_scope_) {

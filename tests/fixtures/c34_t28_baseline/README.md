@@ -1,4 +1,4 @@
-#  pre-move serialization
+# pre-move serialization
 
 `generate_bytes.py --record` captures the save output of the pre-move edi build at
 `f3ea7afea400639f2a66d6acb8d922163f1ef128`, and refuses a different model/binding source closure.
@@ -20,7 +20,7 @@ the explicitly returned `Ticks` tuple for that family; `copy-differs` and
 `move-differs` compare the new holder with the source before construction, while
 `copy-source` and `move-source` compare the source itself. A zero tuple slot is
 unused. These are observations, including unchanged stamps, not stronger promises.
-The frozen  witnesses retain the Python, cache, undo and scan contracts.
+The frozen witnesses retain the Python, cache, undo and scan contracts.
 
 For the byte replay the generator copies the input project and prescribes
 `created = 01 Jan 2099 00:00:00` and `last_modified = 01 Jan 2099 00:00:01`
@@ -30,13 +30,12 @@ Original input hashes are still checked before this clock-controlled replay.
 
 Python observations in `freshness.json` use `generate_freshness.py` with the same
 pre-move source closure and imported package check. The small input comes from
-`generate_input.py` (committed  input, explicit schema-3/background/cutoff
+`generate_input.py` (committed input, explicit schema-3/background/cutoff
 inputs); the scan uses the committed three-frame corpus including all data-file
 hashes. These are freshness regression pins, not calculated-value oracles. The
 vehicle observes a held geometry window and saved calculated-category presence
 before any post-write lazy read. It records crysta's existing read-only measured
 setters as refusals; undo is an edi route because crysta exposes no Python undo.
-
 
 `census_reference.py --source-root <checkout> --repo edi --output <file>`
 prepares an independent inventory from Clang's field declarations in `model.hpp`,
@@ -72,3 +71,21 @@ in experiment computed-currentness, structure geometry-currentness and the
 experiment epoch. The baseline includes unchanged dependants, including a
 changed optional value whose canonical calculation input stays equal; it never
 assumes that every native assignment renews an epoch.
+
+## Retained API witness adaptation
+
+The original public-release archive and its manifest remain unchanged. The receipt
+records exact replacements in the geometry freshness vehicle: formatting, a wrapped
+comment, and the link from its loaded experiment to the structure it actually creates.
+The latter replaces the imported experiment's unrelated structure identity. All
+original code tokens, assertion predicates and messages survive, apart from that
+single added fixture assignment. Every other archived witness stays byte-identical.
+
+Run `python tests/fixtures/c34_t28_baseline/api_witness_adaptation.py` to verify the
+fixed receipt against the archived original and the live source. The verifier never
+generates a pin from current source. The adapted digest is a syntactic regression
+receipt, not a scientific correctness reference. The gate additionally exercises
+changed predicates/messages, missing or wrong links, and receipt re-pinning attempts.
+
+The public-release fresh-history fixture includes this visible verifier and receipt,
+so its independent one-commit replay has the complete declared inputs.

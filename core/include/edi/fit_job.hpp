@@ -14,11 +14,14 @@
 #include "edi/worker.hpp"
 
 // ADR-0020 §9: a fit on the worker. The fit runs on a snapshot of the project by its fitting mode —
-// Project::fit for `single`, Project::fit_joint for `joint`, the entries the CLI's fit takes — and its
+// Project::fit for `single`, Project::fit_joint for `joint`, Project::fit_sequential and fit_independent for the
+// scan modes, the entries the CLI's fit takes — and its
 // preamble, every accepted iteration and its end arrive on the owner thread as the worker's ordered,
 // never-dropped deliveries (work::Emit), the end last. The live project is written once, on the owner
 // thread, when the fit ends: the fitted values, uncertainties and fit start, with the pattern the fit's
-// own last calculation left, all or nothing. Qt-free; every member runs on the owner thread.
+// own last calculation left, all or nothing. A scan writes its results to `analysis/results.csv` as crysta's
+// driver fits each file, and nothing to the live project: the template stays as it was (edi ADR-0017 §19).
+// Qt-free; every member runs on the owner thread.
 
 namespace edi {
 
@@ -54,6 +57,14 @@ class FitJob {
         std::function<void(const FitFrame&)> frame;
         // Once, last: nothing of this fit is delivered afterwards.
         std::function<void(const FitReport&)> finished;
+        // The scan hooks follow `finished` so callers that list the first four in order keep their meaning.
+        // A scan: once, before its first file, the number of files and the rows results.csv already holds.
+        std::function<void(const ScanPreamble&)> scan_started;
+        // A scan: once per file it fitted, after the file's results.csv row is on disk, in order.
+        std::function<void(const ScanFileRecord&)> file_completed;
+        // A scan while it is followed (`follow`): the file just fitted and its pattern at the fitted values, in place
+        // of the frames a single fit draws. The job draws the next only after `frame_shown`.
+        std::function<void(const std::string& file, const FitFrame&)> file_frame;
     };
     // Test instrumentation: production constructs a FitJob without it.
     struct Seams {
@@ -68,12 +79,16 @@ class FitJob {
     FitJob(const FitJob&) = delete;
     FitJob& operator=(const FitJob&) = delete;
 
-    // Fits the live project as it is now. False, and nothing starts, while a fit is running.
-    bool start();
+    // Fits the live project as it is now. False, and nothing starts, while a fit is running. A scan resumes
+    // from the rows results.csv holds (crysta's driver); the caller clears them for a fresh run.
+    // `scan_template`, for a scan: the template to fit from when the live project shows one of its datasets.
+    bool start(const Project* scan_template = nullptr);
     // Asks a running fit to stop at crysta's next check; it still ends with `finished`.
     void cancel();
     // The owner has shown the last frame: the job may calculate the next.
     void frame_shown();
+    // Whether a running scan draws each file it fits (Follow).
+    void follow(bool on);
     // From `start` until `finished` has run.
     bool running() const noexcept;
     // The running fit's job on the worker, or 0.

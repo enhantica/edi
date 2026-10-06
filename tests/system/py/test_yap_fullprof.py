@@ -29,6 +29,14 @@ def test_fullprof_reference_retains_every_non_asymmetry_parameter_and_occupancy(
         assert digest in provenance, (
             'Each external FullProf artifact must retain its recorded digest'
         )
+    asymmetry_off = fullprof.reference(asymmetry_off=True)
+    assert len(asymmetry_off['parameters']) == asymmetry_off['n_free'] == 52, (
+        'The authoring-time asymmetry-off FullProf fit must retain every free-value expectation'
+    )
+    for digest in asymmetry_off['digests'].values():
+        assert digest in provenance, (
+            'The independent asymmetry-off outputs must match their receipts'
+        )
     wyckoff = json.loads((ROOT / 'tests/fixtures/c34_t25_fullprof/wyckoff.json').read_text())[
         'groups'
     ]

@@ -7,6 +7,8 @@ from pathlib import Path
 import edi
 import pytest
 
+from tests.fixtures.constraint_expressions.project import unlink_structure
+
 ROOT = Path(__file__).resolve().parents[3]
 MATERIALIZE = runpy.run_path(str(ROOT / 'tests/fixtures/constraint_expressions/project.py'))[
     'materialize'
@@ -56,6 +58,8 @@ def test_retained_child_free_setter_agrees_with_dependence_after_owner_exit(
     )
     if route == 'remove':
         collection = project.structures if kind in {'site', 'cell'} else project.experiments
+        if kind in {'site', 'cell'}:
+            unlink_structure(project, child.name)
         collection.remove(child.name)
     else:
         del project
@@ -94,7 +98,11 @@ def test_saved_collection_rebinds_retained_parameters_without_accessor(
     parameter = donor.analysis.aliases['held'].param
     parameter.free = False
     if route in {'insert', 'transfer'}:
+        if structural:
+            unlink_structure(destination, child.name)
         sink.remove(child.name)
+    if structural:
+        unlink_structure(donor, child.name)
     source.remove(child.name)
     if route == 'assign':
         sink._assign([child])
@@ -132,7 +140,9 @@ def test_saved_collection_rebinds_retained_geometry_without_accessor(
     child = source[0]
     parameter = donor.analysis.aliases['held'].param
     if route in {'insert', 'transfer'}:
+        unlink_structure(destination, child.name)
         sink.remove(child.name)
+    unlink_structure(donor, child.name)
     source.remove(child.name)
     if route == 'assign':
         sink._assign([child])

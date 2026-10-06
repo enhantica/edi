@@ -32,7 +32,7 @@ endif()
 configure_file(src/app_build_info.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/app_build_info.hpp @ONLY)
 
 # Singletons are marked before the module is declared: qt_add_qml_module reads the property then.
-set_source_files_properties(qml/Globals/AppState.qml qml/Globals/FieldTitles.qml qml/Globals/ParameterNames.qml
+set_source_files_properties(qml/Globals/AppState.qml qml/Globals/FieldTitles.qml qml/Globals/FitOutcomes.qml qml/Globals/ParameterNames.qml
                             qml/Globals/Preferences.qml qml/Globals/SideBarGroups.qml qml/Globals/TypedInput.qml
                             qml/Style/AppColors.qml qml/Style/AppSizes.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 qt_add_library(edi_app_module STATIC)
@@ -65,6 +65,8 @@ qt_add_qml_module(edi_app_module
         src/pattern_chart_controller.hpp src/pattern_chart_controller.cpp
         src/chart_models.hpp src/chart_models.cpp
         src/measured_layer.hpp src/measured_layer.cpp
+        src/evolution_view_model.hpp src/evolution_view_model.cpp
+        src/scan_session.hpp src/scan_session.cpp
         src/experiment_view_model.hpp src/experiment_view_model.cpp
         src/analysis_view_model.hpp src/analysis_view_model.cpp
         src/fit_view_model.hpp src/fit_view_model.cpp
@@ -80,6 +82,8 @@ qt_add_qml_module(edi_app_module
         qml/Components/BlockSelector.qml
         qml/Components/CategoryGroup.qml
         qml/Components/DiagnosticsDialog.qml
+        qml/Components/FitOutcomeLabel.qml
+        qml/Components/FitProgressBar.qml
         qml/Components/FitResultsDialog.qml
         qml/Components/ChartLegend.qml
         qml/Components/ChartToolButton.qml
@@ -87,10 +91,13 @@ qt_add_qml_module(edi_app_module
         qml/Components/IconCell.qml
         qml/Components/IconLine.qml
         qml/Components/IconTabButton.qml
+        qml/Components/MainAreaBlockSelector.qml
         qml/Components/ParameterCell.qml
         qml/Components/ParameterField.qml
         qml/Components/ParameterGrid.qml
         qml/Components/PatternChart.qml
+        qml/Components/ProjectPatternChart.qml
+        qml/Components/EvolutionChart.qml
         qml/Components/SearchableComboBox.qml
         qml/Components/SelectorField.qml
         qml/Components/StatusBar.qml
@@ -108,6 +115,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/WorkflowPage.qml
         qml/Globals/AppState.qml
         qml/Globals/FieldTitles.qml
+        qml/Globals/FitOutcomes.qml
         qml/Globals/ParameterNames.qml
         qml/Globals/Preferences.qml
         qml/Globals/SideBarGroups.qml
@@ -115,7 +123,6 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Analysis/AliasesGroup.qml
         qml/Pages/Analysis/AnalysisPage.qml
         qml/Pages/Analysis/ConstraintsGroup.qml
-        qml/Pages/Analysis/ExperimentSelectorGroup.qml
         qml/Pages/Analysis/FitStartGroup.qml
         qml/Pages/Analysis/FittingGroup.qml
         qml/Pages/Analysis/FittingModeGroup.qml
@@ -165,16 +172,16 @@ qt_add_qml_module(edi_app_module
 )
 target_include_directories(edi_app_module PUBLIC src ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(edi_app_module
-    PUBLIC Qt6::Quick Qt6::QuickControls2 Qt6::Graphs Qt6::Quick3D edi::core
+    PUBLIC Qt6::Quick Qt6::QuickControls2 Qt6::Graphs Qt6::Quick3D Qt6::Concurrent edi::core
     PRIVATE ${EDI_GUI_BASE_TARGETS} Qt6::CorePrivate)
 if(EMSCRIPTEN)
     target_link_libraries(edi_app_module PRIVATE Qt6::GuiPrivate)
 endif()
 
 # The Examples: every project edi's CLI registry lists, in registry order, then the app's own X-ray
-# example — bundled without the scan data a project's
-# `_sequential_fit.data_dir` names (opening and calculating never read it). Configuration fails when
-# the registry and the project directories disagree.
+# example, each with its scan data (a scan's datasets are browsed in the app). The web app leaves out the
+# 324-file scan (19 MB); the 162-file cooling run is its scan example. Configuration fails when the registry
+# and the project directories disagree.
 set(_cli ${PROJECT_SOURCE_DIR}/docs/user/cli)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${_cli}/projects.yml)
 file(STRINGS ${_cli}/projects.yml _id_lines REGEX "^  - id: ")
@@ -192,25 +199,13 @@ foreach(entry IN LISTS _cli_entries)
         message(FATAL_ERROR "docs/user/cli/${entry}/ is not listed in docs/user/cli/projects.yml")
     endif()
 endforeach()
+if(EMSCRIPTEN)
+    list(REMOVE_ITEM EDI_APP_EXAMPLE_IDS pd-neut-cwl_cosio-d20_scan-324f)
+endif()
 function(edi_app_bundle_examples root)
     foreach(id IN LISTS ARGN)
-        set(project ${root}/${id}/project)
-        set(skip "")
-        if(EXISTS ${project}/analysis/analysis.edi)
-            file(STRINGS ${project}/analysis/analysis.edi _data_dir REGEX "^_sequential_fit.data_dir ")
-            if(_data_dir)
-                string(REGEX REPLACE "^_sequential_fit.data_dir +" "" skip "${_data_dir}")
-            endif()
-        endif()
-        file(GLOB_RECURSE files CONFIGURE_DEPENDS ${project}/*)
-        set(bundled)
-        foreach(file IN LISTS files)
-            if(NOT skip STREQUAL "" AND file MATCHES "^${project}/${skip}/")
-                continue()
-            endif()
-            list(APPEND bundled ${file})
-        endforeach()
-        qt_add_resources(edi_app_module "edi_example_${id}" PREFIX "/edi/examples" BASE ${root} FILES ${bundled})
+        file(GLOB_RECURSE files CONFIGURE_DEPENDS ${root}/${id}/project/*)
+        qt_add_resources(edi_app_module "edi_example_${id}" PREFIX "/edi/examples" BASE ${root} FILES ${files})
     endforeach()
 endfunction()
 edi_app_bundle_examples(${_cli} ${EDI_APP_EXAMPLE_IDS})

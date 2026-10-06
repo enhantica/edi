@@ -33,7 +33,7 @@ if(EDI_BUILD_APP)
     # through GuiPrivate's header. Qt warns that a private module ties the build to its Qt version: edi pins that
     # version exactly (ADR-0023 §5), so the warning is off.
     set(QT_NO_PRIVATE_MODULE_WARNING ON)
-    find_package(Qt6 REQUIRED COMPONENTS Gui Qml Quick QuickControls2 QuickTest Graphs Quick3D CorePrivate)
+    find_package(Qt6 REQUIRED COMPONENTS Gui Qml Quick QuickControls2 QuickTest Graphs Quick3D CorePrivate Concurrent)
     if(EMSCRIPTEN)
         find_package(Qt6 REQUIRED COMPONENTS GuiPrivate)
     endif()

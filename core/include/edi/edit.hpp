@@ -16,7 +16,8 @@
 //     rule and message;
 //   - one collection mutator (`append`, `erase`): a mutator that throws leaves the collection as it
 //     was (ADR-0016 §2);
-//   - several objects at once (`add_experiments`): everything is checked, then one mutation.
+//   - several objects at once (`add_experiments`, `erase_experiments`): everything is checked, then one
+//     mutation.
 // No operation is a template: each names the model's own field, row and value types, so the only
 // code an Edit runs is edi's and the standard library's. A value a caller converts is converted at
 // the call, before the Edit exists, and a row is copied by its model type's own copy. An id is
@@ -24,6 +25,8 @@
 // rule is edi's (KeyTraits), never one a caller's keyed type would supply.
 // Outside the claim: an allocation failing inside an operation's write.
 
+#include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <functional>
 #include <map>
@@ -138,8 +141,16 @@ class Edit {
             project.metadata.last_modified = time;
         });
     }
+    // A project that declares a scan fits its one template experiment against each file: joint is refused there.
     static Edit fitting_mode(Project& project, std::string mode) {
-        return Edit([&project, mode = std::move(mode)] { set_fitting_mode(project, mode); });
+        return Edit([&project, mode = std::move(mode)] {
+            if (mode == "joint" && project.sequential_fit.declared()) {
+                throw std::invalid_argument(
+                    "joint fitting is not available in a project that declares a scan (_sequential_fit): its datasets "
+                    "are fitted one at a time against the template experiment");
+            }
+            set_fitting_mode(project, mode);
+        });
     }
     static Edit descent(Project& project, std::string id) {
         return Edit([&project, id = std::move(id)] { set_descent(project, id); });
@@ -286,6 +297,8 @@ class Edit {
     static Edit erase(ItemVec<ParameterAlias>& rows, std::size_t index) { return erasing(rows, index); }
     static Edit erase(ItemVec<ParameterConstraint>& rows, std::size_t index) { return erasing(rows, index); }
     static Edit erase(ItemVec<Structure>& rows, std::size_t index) { return erasing(rows, index); }
+    // A row-level removal cannot see the project's scan declaration: the app removes experiments through
+    // erase_experiment, which keeps a scan's one template experiment.
     static Edit erase(ItemVec<BraggPdExperiment>& rows, std::size_t index) { return erasing(rows, index); }
     // An excluded region: its row added at the end, removed, or one of its two bounds assigned. The
     // regions are one recorded field (ADR-0018), written through its `modify`, which records a write
@@ -346,6 +359,7 @@ class Edit {
     static Edit add_experiments(Project& project, std::vector<BraggPdExperiment> experiments) {
         auto batch = std::make_shared<std::vector<BraggPdExperiment>>(std::move(experiments));
         return Edit([&project, batch] {
+            require_scan_template(project, project.experiments.size() + batch->size());
             std::vector<ItemVec<BraggPdExperiment>::Ptr> all(project.experiments.begin(), project.experiments.end());
             for (const BraggPdExperiment& experiment : *batch) {
                 const std::string key = KeyTraits<BraggPdExperiment>::canonical(experiment.name);
@@ -358,6 +372,144 @@ class Edit {
                 all.push_back(std::make_shared<BraggPdExperiment>(experiment));
             }
             project.experiments.assign(std::move(all));
+        });
+    }
+
+    // A new experiment without measured data (simulation_experiment) added at the end: its name is checked
+    // against the project's, and a project whose experiments carry measured data refuses it (load_project's
+    // rule: a project calculates or fits as a whole).
+    static Edit create_experiment(Project& project, BraggPdExperiment experiment) {
+        auto created = std::make_shared<BraggPdExperiment>(std::move(experiment));
+        return Edit([&project, created] {
+            require_calculation_project(project);
+            require_scan_template(project, project.experiments.size() + 1);
+            const std::string key = KeyTraits<BraggPdExperiment>::canonical(created->name);
+            for (const auto& held : project.experiments) {
+                if (KeyTraits<BraggPdExperiment>::canonical(held->name) == key) {
+                    throw IoError("an experiment named '" + detail::printable_id(created->name) +
+                                  "' is already in the project");
+                }
+            }
+            project.experiments.push_back(std::make_shared<BraggPdExperiment>(*created));
+        });
+    }
+    // An experiment without measured data replaced in its place by `replacement` (a new type of it, from
+    // simulation_experiment): refused once the experiment holds measured data, whose type the data fixes.
+    static Edit replace_experiment(Project& project, const ExperimentBase& experiment, BraggPdExperiment replacement) {
+        auto next = std::make_shared<BraggPdExperiment>(std::move(replacement));
+        return Edit([&project, &experiment, next] {
+            if (!experiment.calculation_only) {
+                throw std::invalid_argument("the experiment '" + experiment.name +
+                                            "' holds measured data, which fixes its type");
+            }
+            std::vector<ItemVec<BraggPdExperiment>::Ptr> all(project.experiments.begin(), project.experiments.end());
+            const auto found = std::find_if(all.begin(), all.end(), [&experiment](const auto& held) {
+                return held.get() == &experiment;
+            });
+            if (found == all.end()) {
+                throw std::invalid_argument("the experiment is not in the project");
+            }
+            *found = std::make_shared<BraggPdExperiment>(*next);
+            project.experiments.assign(std::move(all));
+        });
+    }
+    // The calculation grid of an experiment without measured data: `start` to `end` by `step`, as the
+    // loader generates a `_data_range` grid, and under the same rule (step > 0, end > start). Refused for an
+    // experiment with measured data, whose points are its data's, and above `kMaximumGridPoints`.
+    static constexpr std::size_t kMaximumGridPoints = 1000000;
+    static Edit data_range(ExperimentBase& experiment, double start, double end, double step) {
+        return Edit([&experiment, start, end, step] {
+            if (!experiment.calculation_only) {
+                throw std::invalid_argument("the experiment '" + experiment.name +
+                                            "' holds measured data, whose points set its range");
+            }
+            // A range a save can declare again: finite, at least two points.
+            if (!std::isfinite(start) || !std::isfinite(end) || !std::isfinite(step) || !(step > 0.0) ||
+                !(end > start)) {
+                throw std::invalid_argument("a calculation range needs finite values, step > 0 and end > start");
+            }
+            if (step > end - start) {
+                throw std::invalid_argument("a calculation range needs a step no larger than its span, so it holds "
+                                            "at least two points");
+            }
+            const double intervals = std::floor((end - start) / step);
+            if (!(intervals < static_cast<double>(kMaximumGridPoints))) {
+                throw std::invalid_argument("a calculation range holds at most " +
+                                            std::to_string(kMaximumGridPoints) + " points");
+            }
+            std::vector<double> axis(static_cast<std::size_t>(intervals) + 1);
+            for (std::size_t index = 0; index < axis.size(); ++index) {
+                axis[index] = start + static_cast<double>(index) * step;
+                // Every point distinct, as the saved declaration regenerates them: a step too small for
+                // the range's values leaves two points equal.
+                if (index > 0 && !(axis[index] > axis[index - 1])) {
+                    throw std::invalid_argument("a calculation range needs a step large enough for its values: "
+                                                "two of its points would coincide");
+                }
+            }
+            PdDataBase generated;
+            (experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH ? generated.two_theta
+                                                                                  : generated.time_of_flight) =
+                std::move(axis);
+            experiment.data = std::move(generated);
+        });
+    }
+    // One experiment removed; a scan project keeps its template experiment.
+    static Edit erase_experiment(Project& project, std::size_t index) {
+        return Edit([&project, index] {
+            if (index >= project.experiments.size()) {
+                throw std::out_of_range("the project has no experiment " + std::to_string(index));
+            }
+            require_scan_template(project, project.experiments.size() - 1);
+            project.experiments.erase_at(index);
+        });
+    }
+    // Experiments removed, all or none (an undo of their addition): each is found by identity first, so one
+    // removed since refuses with nothing written.
+    static Edit erase_experiments(Project& project, std::vector<const ExperimentBase*> experiments) {
+        return Edit([&project, experiments = std::move(experiments)] {
+            std::vector<ItemVec<BraggPdExperiment>::Ptr> kept(project.experiments.begin(), project.experiments.end());
+            for (const ExperimentBase* gone : experiments) {
+                const auto found = std::find_if(kept.begin(), kept.end(),
+                                                [gone](const auto& held) { return held.get() == gone; });
+                if (found == kept.end()) {
+                    throw std::invalid_argument("undo: an added experiment is no longer in the project");
+                }
+                kept.erase(found);
+            }
+            require_scan_template(project, kept.size());
+            project.experiments.assign(std::move(kept));
+        });
+    }
+
+    // A scan dataset shown in the model (the app's dataset view): the experiment's measured data replaced by the
+    // dataset's, and each named parameter given its value and uncertainty (a fitted dataset's results row, or the
+    // template's). Every name is resolved first; one the model does not have is left out, as a results column of
+    // a parameter the template no longer has. The writes are assignments, which cannot fail.
+    struct ScanValue {
+        std::string unique_name;
+        double value = 0.0;
+        std::optional<double> uncertainty;
+    };
+    static Edit scan_view(Project& project, ExperimentBase& experiment, std::vector<ScanValue> values, PdDataBase data) {
+        auto shown = std::make_shared<PdDataBase>(std::move(data));
+        return Edit([&project, &experiment, values = std::move(values), shown] {
+            std::map<std::string, Parameter*> by_name;
+            for (const NamedSlot& slot : named_slots(project)) {
+                by_name.emplace(slot.unique_name, slot.parameter);
+            }
+            std::vector<std::pair<Parameter*, const ScanValue*>> targets;
+            for (const ScanValue& value : values) {
+                if (const auto found = by_name.find(value.unique_name); found != by_name.end()) {
+                    targets.emplace_back(found->second, &value);
+                }
+            }
+            experiment.data = *shown;
+            experiment.calculation_only = false;
+            for (const auto& [parameter, value] : targets) {
+                parameter->value = value->value;
+                parameter->uncertainty = value->uncertainty;
+            }
         });
     }
 
@@ -425,9 +577,26 @@ class Edit {
     static Edit erasing(ItemVec<Row>& rows, std::size_t index) {
         return Edit([&rows, index] { rows.erase_at(index); });
     }
+    // A project that declares a scan fits its one template experiment against each file (edi ADR-0017 §19): an
+    // edit that would leave it another number of experiments is refused.
+    static void require_scan_template(const Project& project, std::size_t experiments) {
+        if (project.sequential_fit.declared() && experiments != 1) {
+            throw std::invalid_argument(
+                "this project declares a scan (_sequential_fit), which fits one template experiment against each "
+                "file: an edit leaving it " + std::to_string(experiments) + " experiments is refused");
+        }
+    }
     // Refuses an id whose item a collection other than the model's own ItemVec<Item> holds: a
     // caller's keyed type derived from a model type would bring its own rename rule (KeyTraits),
     // which could write and then throw. A detached id has no rule to run.
+    static void require_calculation_project(const Project& project) {
+        for (const auto& held : project.experiments) {
+            if (!held->calculation_only) {
+                throw IoError("the project's experiments carry measured data - a project calculates or fits "
+                              "as a whole, so an experiment without data cannot join it");
+            }
+        }
+    }
     static void require_region(const ExperimentBase& experiment, std::size_t row) {
         if (row >= experiment.excluded_regions.size()) {
             throw std::out_of_range("the experiment has no excluded region " + std::to_string(row));

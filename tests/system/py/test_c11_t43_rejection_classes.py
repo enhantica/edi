@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 import csv
+import io
 import math
 import os
 import re
@@ -198,7 +199,7 @@ _RESULT_SOURCE_BY_FIELD = {
     'reduced_chi_square': 'fit_result.reduced_chi_square',
     'result_kind': 'sequential operation invariant',
     'rwp': 'unavailable: no results.csv column',
-    'status': 'unavailable: terminal cause has no results.csv column',
+    'status': 'per-file provenance termination; unavailable only for legacy rows',
     'success': 'fit_result.success',
     'uncertainty': '<parameter>.uncertainty columns',
     'values': '<parameter> value columns',
@@ -329,9 +330,46 @@ def test_completed_resume_partitions_terminal_outcome_on_cli(
         )
 
 
+def _prepare_cause_ledger(project_dir, terminal, live_cause, ledger, max_iterations):
+    provenance = project_dir / 'analysis/results-provenance.csv'
+    recorded = list(csv.DictReader(io.StringIO(provenance.read_text())))
+    expected_reason = 'max_iter_exhausted' if live_cause == 'max-iter' else 'no_accepted_step'
+    terminal_name = Path(terminal['file_path']).name
+    terminal_ledger = next(row for row in recorded if Path(row['file_path']).name == terminal_name)
+    assert terminal_ledger['termination'] == expected_reason, (
+        'Resume witness: the producing ledger records the independently admitted terminal cause'
+    )
+    if ledger == 'legacy':
+        provenance.unlink()
+    else:
+        # Put the terminal entry first and poison the other entries: selecting the last ledger
+        # row, or re-inferring from the current bound, must fail this identity-based witness.
+        others = [dict(row) for row in recorded if row is not terminal_ledger]
+        for row in others:
+            row['termination'] = 'converged'
+        _write_cause_rows(provenance, [terminal_ledger, *others])
+        csv_path = project_dir / 'analysis/results.csv'
+        csv_rows = list(csv.DictReader(io.StringIO(csv_path.read_text())))
+        _write_cause_rows(csv_path, [csv_rows[-1], *csv_rows[:-1]])
+    analysis = project_dir / 'analysis/analysis.edi'
+    analysis.write_text(
+        analysis.read_text().replace(
+            f'_minimizer.max_iterations {max_iterations}', '_minimizer.max_iterations 17'
+        )
+    )
+
+
+def _write_cause_rows(path, rows):
+    with path.open('w', newline='', encoding='utf-8') as stream:
+        writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+@pytest.mark.parametrize('ledger', ['recorded', 'legacy'])
 @pytest.mark.parametrize('live_cause', ['max-iter', 'no-step'])
-def test_completed_resume_marks_the_live_terminal_cause_unavailable_on_python(
-    tmp_path: Path, live_cause: str
+def test_completed_resume_recovers_recorded_cause_or_legacy_unknown_on_python(
+    tmp_path: Path, live_cause: str, ledger: str
 ) -> None:
     project_dir, project = _live_cause_project(tmp_path, f'python-{live_cause}', live_cause)
     live = project.analysis.fit()
@@ -357,6 +395,9 @@ def test_completed_resume_marks_the_live_terminal_cause_unavailable_on_python(
         'inventory; a new field cannot silently inherit a default'
     )
 
+    _prepare_cause_ledger(
+        project_dir, terminal, live_cause, ledger, 1 if live_cause == 'max-iter' else 3
+    )
     completed_project = edi.Project.load(project_dir)
     outcome = completed_project.analysis.fit()
     assert outcome.converged is False, (
@@ -369,9 +410,9 @@ def test_completed_resume_marks_the_live_terminal_cause_unavailable_on_python(
     assert unavailable is not None, (
         ' edi needs an explicit public status for an unavailable resumed terminal cause'
     )
-    assert outcome.status == unavailable, (
-        ' edi Python completed resume must expose terminal cause as UNAVAILABLE because '
-        f'the frozen CSV cannot distinguish NO_STEP from MAX_ITER; live={live_cause}'
+    assert outcome.status == (expected_live if ledger == 'recorded' else unavailable), (
+        'Completed resume recovers the terminal file cause from provenance despite row '
+        'reordering and a changed bound; absent legacy provenance stays unknown'
     )
     assert outcome.iterations == int(terminal['fit_result.iterations']), (
         ' edi Python resume must recover iterations instead of publishing zero'
@@ -403,9 +444,10 @@ def test_completed_resume_marks_the_live_terminal_cause_unavailable_on_python(
     )
 
 
+@pytest.mark.parametrize('ledger', ['recorded', 'legacy'])
 @pytest.mark.parametrize('live_cause', ['max-iter', 'no-step'])
-def test_completed_resume_cli_record_marks_the_terminal_cause_unavailable(
-    tmp_path: Path, live_cause: str
+def test_completed_resume_cli_recovers_recorded_cause_or_legacy_unknown(
+    tmp_path: Path, live_cause: str, ledger: str
 ) -> None:
     _source_dir, project = _live_cause_project(tmp_path, f'cli-source-{live_cause}', live_cause)
     project_dir = tmp_path / f'cli-{live_cause}'
@@ -430,6 +472,9 @@ def test_completed_resume_cli_record_marks_the_terminal_cause_unavailable(
         )
         terminal = list(reader)[-1]
 
+    _prepare_cause_ledger(
+        project_dir, terminal, live_cause, ledger, 1 if live_cause == 'max-iter' else 3
+    )
     completed = _run_cli(project_dir, '--report', 'machine', '--verbosity', 'compact')
     assert completed.returncode == 0, (
         f' completed CLI resume must succeed: {completed.stderr[-500:]!r}'
@@ -438,9 +483,9 @@ def test_completed_resume_cli_record_marks_the_terminal_cause_unavailable(
     assert record['converged'] == 'false', (
         f' CLI completed {live_cause} resume must retain terminal non-convergence'
     )
-    assert record['status'] == 'unavailable', (
-        ' machine record must publish status=unavailable because results.csv has no '
-        f'terminal-cause column; live={live_cause}'
+    assert record['status'] == (expected_live if ledger == 'recorded' else 'unavailable'), (
+        'Completed CLI resume recovers the terminal file cause from provenance despite row '
+        'reordering and a changed bound; absent legacy provenance stays unknown'
     )
     assert int(record['iterations']) == int(terminal['fit_result.iterations']), (
         ' CLI resume must report recovered terminal iterations, never synthetic zero'

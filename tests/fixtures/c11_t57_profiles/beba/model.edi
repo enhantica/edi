@@ -27,12 +27,12 @@ _experiment_type.sample_form powder
 _experiment_type.radiation_probe neutron
 _experiment_type.scattering_type bragg
 _experiment_type.beam_mode "constant wavelength"
-_peak.type cwl-pseudo-voigt-berar-baldinozzi-asymmetry
+_peak.type cwl-pseudo-voigt-berar-baldinozzi
+_peak.mixing_eta_0 0.37
+_peak.mixing_eta_1 0
 _peak.broad_gauss_u 0.153402
 _peak.broad_gauss_v -0.453103
 _peak.broad_gauss_w 0.419409
-_peak.broad_lorentz_x 0.0
-_peak.broad_lorentz_y 0.086818
 _peak.asym_beba_a0 0.29465
 _peak.asym_beba_b0 0.02261
 _peak.asym_beba_a1 -0.10961

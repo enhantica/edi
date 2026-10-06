@@ -1,0 +1,36 @@
+_edi.schema_version 3
+
+_metadata.name             cosio_d20_scan_162f
+_metadata.title            "Co2SiO4 D20 cooling scan, 162 files"
+_metadata.description      "The cooling run of the D20 scan, 497.4 K down to 50.4 K"
+_metadata.created          "09 Sep 2026 07:33:40"
+_metadata.last_modified    "23 Sep 2026 14:06:27"
+_metadata.timestamp        2026-09-09T07:34:35+00:00
+
+_rendering_plot.type auto
+
+_report.cif false
+_report.html true
+_report.tex false
+_report.pdf false
+_report.html_offline false
+
+_rendering_table.type auto
+
+_rendering_structure.type auto
+
+_structure_view.show_labels false
+_structure_view.show_moments true
+_structure_view.range_a_min 0.
+_structure_view.range_a_max 1.
+_structure_view.range_b_min 0.
+_structure_view.range_b_max 1.
+_structure_view.range_c_min 0.
+_structure_view.range_c_max 1.
+
+_structure_style.atom_view adp
+_structure_style.color_scheme jmol
+_structure_style.adp_probability 0.99
+_structure_style.atom_scale 0.3
+
+_verbosity.fit short

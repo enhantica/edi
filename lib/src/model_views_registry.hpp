@@ -13,27 +13,48 @@ namespace edi::views {
 
 struct TofJorgensen : PeakNode {
     using PeakNode::PeakNode;
+    const char* profile() const override { return "tof-jorgensen"; }
 };
 
 struct TofJorgensenVonDreele final : TofJorgensen {
     using TofJorgensen::TofJorgensen;
+    const char* profile() const override { return "tof-jorgensen-von-dreele"; }
+};
+
+// The constant-wavelength profiles and the TOF pseudo-Voigt.
+struct CwlGaussian final : PeakNode {
+    using PeakNode::PeakNode;
+    const char* profile() const override { return "cwl-gaussian"; }
+};
+
+struct CwlLorentzian final : PeakNode {
+    using PeakNode::PeakNode;
+    const char* profile() const override { return "cwl-lorentzian"; }
 };
 
 struct CwlPseudoVoigt final : PeakNode {
     using PeakNode::PeakNode;
+    const char* profile() const override { return "cwl-pseudo-voigt"; }
 };
 
-// The two CW asymmetry rungs and the TOF pseudo-Voigt (diffraction-lib's classes).
-struct CwlThompsonCoxHastings final : PeakNode {
+struct CwlPseudoVoigtBerarBaldinozzi final : PeakNode {
     using PeakNode::PeakNode;
+    const char* profile() const override { return "cwl-pseudo-voigt-berar-baldinozzi"; }
 };
 
-struct CwlPseudoVoigtBerarBaldinozziAsymmetry final : PeakNode {
+struct CwlTchPseudoVoigt final : PeakNode {
     using PeakNode::PeakNode;
+    const char* profile() const override { return "cwl-tch-pseudo-voigt"; }
+};
+
+struct CwlTchPseudoVoigtFcj final : PeakNode {
+    using PeakNode::PeakNode;
+    const char* profile() const override { return "cwl-tch-pseudo-voigt-fcj"; }
 };
 
 struct TofPseudoVoigt final : PeakNode {
     using PeakNode::PeakNode;
+    const char* profile() const override { return "tof-pseudo-voigt"; }
 };
 
 inline const bool tof_jorgensen_registered = PeakFactory::register_type(
@@ -48,24 +69,41 @@ inline const bool tof_jorgensen_von_dreele_registered = PeakFactory::register_ty
         return std::make_unique<TofJorgensenVonDreele>(experiment);
     }});
 
+inline const bool cwl_gaussian_registered = PeakFactory::register_type(
+    "cwl-gaussian",
+    {[](edi::ExperimentBase* experiment) -> std::unique_ptr<PeakNode> {
+        return std::make_unique<CwlGaussian>(experiment);
+    }});
+
+inline const bool cwl_lorentzian_registered = PeakFactory::register_type(
+    "cwl-lorentzian",
+    {[](edi::ExperimentBase* experiment) -> std::unique_ptr<PeakNode> {
+        return std::make_unique<CwlLorentzian>(experiment);
+    }});
+
 inline const bool cwl_pseudo_voigt_registered = PeakFactory::register_type(
     "cwl-pseudo-voigt",
     {[](edi::ExperimentBase* experiment) -> std::unique_ptr<PeakNode> {
         return std::make_unique<CwlPseudoVoigt>(experiment);
     }});
 
-inline const bool cwl_thompson_cox_hastings_registered = PeakFactory::register_type(
-    "cwl-thompson-cox-hastings",
+inline const bool cwl_pseudo_voigt_berar_baldinozzi_registered = PeakFactory::register_type(
+    "cwl-pseudo-voigt-berar-baldinozzi",
     {[](edi::ExperimentBase* experiment) -> std::unique_ptr<PeakNode> {
-        return std::make_unique<CwlThompsonCoxHastings>(experiment);
+        return std::make_unique<CwlPseudoVoigtBerarBaldinozzi>(experiment);
     }});
 
-inline const bool cwl_pseudo_voigt_berar_baldinozzi_asymmetry_registered =
-    PeakFactory::register_type(
-        "cwl-pseudo-voigt-berar-baldinozzi-asymmetry",
-        {[](edi::ExperimentBase* experiment) -> std::unique_ptr<PeakNode> {
-            return std::make_unique<CwlPseudoVoigtBerarBaldinozziAsymmetry>(experiment);
-        }});
+inline const bool cwl_tch_pseudo_voigt_registered = PeakFactory::register_type(
+    "cwl-tch-pseudo-voigt",
+    {[](edi::ExperimentBase* experiment) -> std::unique_ptr<PeakNode> {
+        return std::make_unique<CwlTchPseudoVoigt>(experiment);
+    }});
+
+inline const bool cwl_tch_pseudo_voigt_fcj_registered = PeakFactory::register_type(
+    "cwl-tch-pseudo-voigt-fcj",
+    {[](edi::ExperimentBase* experiment) -> std::unique_ptr<PeakNode> {
+        return std::make_unique<CwlTchPseudoVoigtFcj>(experiment);
+    }});
 
 inline const bool tof_pseudo_voigt_registered = PeakFactory::register_type(
     "tof-pseudo-voigt",

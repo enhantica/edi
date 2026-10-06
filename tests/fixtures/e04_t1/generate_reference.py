@@ -27,8 +27,8 @@ def generate(destination):
     references = []
     for name in PROJECTS:
         project = edi.Project.load(ROOT / 'docs/user/cli' / name / 'project')
-        project.calculate()
-        exp = project.experiment
+        project.analysis.calculate()
+        exp = project.experiments[0]
         data = exp.data
         axis = data.two_theta if name.startswith('pd-neut-cwl') else data.time_of_flight
         saved = destination / name

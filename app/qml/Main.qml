@@ -304,6 +304,9 @@ EaComponents.ApplicationWindow {
         function onFinished() {
             fitResults.open();
         }
+        function onScanFinished() {
+            fitResults.open();
+        }
         function onRefused(message) {
             fitError.message = message;
             fitError.open();

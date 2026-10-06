@@ -13,7 +13,10 @@ from functools import cache
 from pathlib import Path
 from typing import Any
 
+from tests.fixtures.cwl_family.historical import current_surface_path
+
 PRODUCTS = ('crysta', 'edi')
+
 ROOT = Path(__file__).resolve().parents[3]
 PRODUCT = 'edi'
 MANIFEST = 'data/python-surface.json'
@@ -147,7 +150,7 @@ def _baseline_paths(repo: str) -> set[str]:
         if isinstance(owner_members, list)
         for member in owner_members
     )
-    return paths
+    return {current_surface_path(path) for path in paths}
 
 
 def _classification_paths(manifest: dict[str, Any]) -> set[str]:
@@ -165,7 +168,7 @@ def _classification_paths(manifest: dict[str, Any]) -> set[str]:
         if isinstance(owner_members, dict)
         for member in owner_members
     )
-    return paths
+    return {current_surface_path(path) for path in paths}
 
 
 def _removed_inventory_findings(repo: str, manifest: dict[str, Any]) -> list[str]:
@@ -219,7 +222,7 @@ def _binding_source_paths(repo: str) -> tuple[str, ...]:
         path for path in completed.stdout.splitlines() if Path(path).suffix in CPP_SUFFIXES
     )
     assert paths, f' I6: {repo} binding source inventory is empty'
-    return paths
+    return {current_surface_path(path) for path in paths}
 
 
 def _binding_source_snapshot(repo: str) -> dict[str, str]:

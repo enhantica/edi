@@ -53,9 +53,41 @@ static void record_event(const char *operation, const char *path) {
     char line[4096];
     int length = snprintf(line, sizeof(line), "%s\t%s\n", operation, path != NULL ? path : "");
     if (length > 0) {
-        size_t count = (size_t)length < sizeof(line) ? (size_t)length : sizeof(line) - 1;
-        (void)write(observer_fd, line, count);
+        if ((size_t)length >= sizeof(line)) {
+            const char *failure = "unresolved\tpath exceeds observer record capacity\n";
+            (void)write(observer_fd, failure, strlen(failure));
+            return;
+        }
+        (void)write(observer_fd, line, (size_t)length);
     }
+}
+
+static void record_file(const char *operation, int directory_fd, const char *path) {
+    if (!observer_active() || observer_fd < 0 || path == NULL) return;
+    char base[4096], joined[8192], resolved[8192];
+    if (path[0] == '/') {
+        snprintf(joined, sizeof(joined), "%s", path);
+    } else {
+        if (directory_fd == AT_FDCWD) {
+            if (getcwd(base, sizeof(base)) == NULL) {
+                record_event("unresolved", path); return;
+            }
+        } else {
+#if defined(__APPLE__)
+            if (fcntl(directory_fd, F_GETPATH, base) < 0) {
+                record_event("unresolved", path); return;
+            }
+#else
+            char descriptor[64];
+            snprintf(descriptor, sizeof(descriptor), "/proc/self/fd/%d", directory_fd);
+            ssize_t size = readlink(descriptor, base, sizeof(base) - 1);
+            if (size < 0) { record_event("unresolved", path); return; }
+            base[size] = '\0';
+#endif
+        }
+        snprintf(joined, sizeof(joined), "%s/%s", base, path);
+    }
+    record_event(operation, realpath(joined, resolved) != NULL ? resolved : joined);
 }
 
 __attribute__((constructor)) static void initialise_observer(void) {
@@ -81,7 +113,7 @@ int OBSERVER_NAME(open)(const char *path, int flags, ...) {
         mode = OBSERVER_MODE(arguments);
         va_end(arguments);
     }
-    record_event("open", path);
+    record_file("open", AT_FDCWD, path);
     return (flags & O_CREAT) != 0 ? real_open(path, flags, mode) : real_open(path, flags);
 }
 
@@ -97,7 +129,7 @@ int OBSERVER_NAME(openat)(int directory_fd, const char *path, int flags, ...) {
         mode = OBSERVER_MODE(arguments);
         va_end(arguments);
     }
-    record_event("openat", path);
+    record_file("openat", directory_fd, path);
     return (flags & O_CREAT) != 0 ? real_openat(directory_fd, path, flags, mode)
                                   : real_openat(directory_fd, path, flags);
 }
@@ -115,7 +147,7 @@ int open64(const char *path, int flags, ...) {
         mode = va_arg(arguments, mode_t);
         va_end(arguments);
     }
-    record_event("open64", path);
+    record_file("open64", AT_FDCWD, path);
     return (flags & O_CREAT) != 0 ? real_open64(path, flags, mode) : real_open64(path, flags);
 }
 
@@ -131,7 +163,7 @@ int openat64(int directory_fd, const char *path, int flags, ...) {
         mode = va_arg(arguments, mode_t);
         va_end(arguments);
     }
-    record_event("openat64", path);
+    record_file("openat64", directory_fd, path);
     return (flags & O_CREAT) != 0 ? real_openat64(directory_fd, path, flags, mode)
                                   : real_openat64(directory_fd, path, flags);
 }
@@ -146,13 +178,13 @@ FILE *OBSERVER_NAME(fopen)(const char *path, const char *mode) {
         real_fopen = ORIGINAL(fopen);
 #endif
     }
-    record_event("fopen", path);
+    record_file("fopen", AT_FDCWD, path);
     return real_fopen(path, mode);
 }
 
 #if defined(__APPLE__)
 static FILE *observer_fopen_extsn(const char *path, const char *mode) {
-    record_event("fopen", path);
+    record_file("fopen", AT_FDCWD, path);
     return observer_libc_fopen_extsn(path, mode);
 }
 #endif
@@ -162,7 +194,7 @@ FILE *OBSERVER_NAME(freopen)(const char *path, const char *mode, FILE *stream) {
     if (real_freopen == NULL) {
         real_freopen = ORIGINAL(freopen);
     }
-    record_event("freopen", path);
+    record_file("freopen", AT_FDCWD, path);
     return real_freopen(path, mode, stream);
 }
 

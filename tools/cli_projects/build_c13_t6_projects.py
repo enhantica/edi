@@ -318,7 +318,7 @@ def experiment_text(case: str, pcr: Pcr, name: str, structure: str, data) -> str
             f'_peak.asym_fcj_1 {param(*asymmetry[6])}',
             f'_peak.asym_fcj_2 {param(*asymmetry[7])}',
             f'_peak.cutoff_fwhm {fmt(wave[4])}',
-            '_peak.type cwl-thompson-cox-hastings',
+            '_peak.type cwl-tch-pseudo-voigt-fcj',
             '',
             f'_instrument.setup_wavelength {param(zero[6], zero[7])}',
             f'_instrument.calib_twotheta_offset {param(zero[0], zero[1])}',

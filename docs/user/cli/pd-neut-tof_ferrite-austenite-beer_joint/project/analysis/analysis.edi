@@ -11,3 +11,13 @@ _joint_fit.experiment_id
 _joint_fit.weight
 expt_s2 0.5
 expt_n2 0.5
+
+loop_
+_alias.id
+_alias.parameter_unique_name
+biso_ferrite ferrite.atom_site.Fe.adp_iso
+biso_austenite austenite.atom_site.Fe.adp_iso
+
+loop_
+_constraint.expression
+"biso_austenite = biso_ferrite"

@@ -30,8 +30,21 @@ Phase 1 (YAlO3, P b n m, general multiplicity 8) already followed the convention
 
 FullProf.2k 8.40 (Feb2026-ILL): `printf 'yap_3k\n\n' | fp2k` in a copy of this folder (the hub skill `fullprof-fp2k`). Result line: `=> Rp: 3.21 Rwp: 4.08 Rexp: 1.30 Chi2: 9.88`.
 
+## The asymmetry-off fit
+
+The same fit with the Bérar-Baldinozzi asymmetry switched off, the reference for comparing every other refined value
+with an engine whose asymmetry form differs from FullProf's (diffraction-lib issue 166). `asymmetry-off.inp` is the
+committed `.pcr` with Asy1..Asy4 set to 0 and fixed in both phases and the refined-parameter count 56 -> 52, nothing
+else changed. Run once at authoring time (FullProf.2k 8.40, `fp2k` sha256
+`b8cb5cdb00ef55f2fef9004ef070324a459f2fcc92ad5c4613f2ea06118c9f1f`) as `printf 'yap_3k\n\n' | fp2k` in a copy of this
+folder with that input as `yap_3k.pcr`; `asymmetry-off.out` and `asymmetry-off.sum` are its `.out` and `.sum`.
+Convergence at cycle 10: `=> Rp: 3.62 Rwp: 4.67 Rexp: 1.30 Chi2: 12.9`, N-P+C 2907.
+
 ## Files (sha256)
 
+- `asymmetry-off.inp` `fb30545a11cf4b1d898f667358c550013d6552bf6c255d5353f83c1821c19cf6`
+- `asymmetry-off.out` `b3c01835b5ea9c74791c0c3e0f162b05ba72801f7ced869710e55c3e3dcdc5cd`
+- `asymmetry-off.sum` `26008b2e5c90b125a3051871aacfe9f42f32c6b986e1042a51a43c94b7926a09`
 - `full-fit.inp` `a797d0ce9db456d0a6e7560ae4f045501a391d156f14a72def0ab8544c562b14`
 - `full-fit.out` `3c5220fe7607cebaa23c76139adf4b9465df7f0adf6a1927dc04a4ce2c279d42`
 - `yap_3k.dat` `ece2a18bf5b4bfcce3b215d5093199da3a63b7a6f963fb4789419b66d70b62e3`

@@ -28,6 +28,6 @@ runs:
           echo "CMAKE_C_COMPILER_LAUNCHER=ccache"
           echo "CMAKE_CXX_COMPILER_LAUNCHER=ccache"
         } >> "$GITHUB_ENV"
-        pin="$(sed -n 's/^CRYSTA_SDK_TAG = "build-\([0-9a-f]\{12\}\).*/\1/p' pixi.toml | head -n 1)"
+        pin="$(python3 tools/ci/crysta_sdk.py pins pixi.toml | grep . | sort -u | head -n 1 | cut -c1-12)"
         lock="$(shasum -a 256 pixi.lock | cut -c1-12)"
         echo "prefix=${RUNNER_OS}-${RUNNER_ARCH}-crysta-${pin}-lock-${lock}-" >> "$GITHUB_OUTPUT"
