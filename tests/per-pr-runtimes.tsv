@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-07T12:03:30Z
+# measured_utc = 2026-10-07T14:34:04Z
 #
-# Recorded from: public-file.log (1 node(s) measured once, 8339 banked, 0 stale row(s) dropped)
-# Collected tests: 9505; with a reported duration: 4638
+# Recorded from: per-pr-durations.txt (34 node(s) measured once, 8340 banked, 0 stale row(s) dropped)
+# Collected tests: 9539; with a reported duration: 4665
 # Module-scoped fixture costs recorded: 27
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 9505
+# inventory_python = 9539
 # inventory_cpp = 302
-# inventory_measured = 8340
+# inventory_measured = 8374
 # inventory_unmeasured = 1467
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
@@ -3583,9 +3583,39 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_supp
 0.000	tests/integration/py/test_e01_scaffold.py::test_verify_requires_core_build
 0.080	tests/integration/py/test_e02_t2_io_parity_integration.py::test_e02_t2_edi_save_reload_preserves_semantics
 0.080	tests/integration/py/test_e02_t2_io_parity_integration.py::test_e02_t2_save_as_replaces_the_complete_destination_without_stale_files
+0.000	tests/integration/py/test_e04_t11_ci_order.py::test_condition_observer_distinguishes_implicit_success_and_reporting[failure]
+0.000	tests/integration/py/test_e04_t11_ci_order.py::test_condition_observer_distinguishes_implicit_success_and_reporting[skipped]
+0.000	tests/integration/py/test_e04_t11_ci_order.py::test_condition_observer_distinguishes_implicit_success_and_reporting[success]
 0.030	tests/integration/py/test_e04_t11_ci_order.py::test_full_ci_consumers_run_on_every_event_and_only_skip_core_only_repairs
+0.040	tests/integration/py/test_e04_t11_ci_order.py::test_later_jobs_report_after_core_and_native_results[failure-pull_request]
+0.030	tests/integration/py/test_e04_t11_ci_order.py::test_later_jobs_report_after_core_and_native_results[failure-push]
+0.040	tests/integration/py/test_e04_t11_ci_order.py::test_later_jobs_report_after_core_and_native_results[failure-workflow_dispatch]
+0.030	tests/integration/py/test_e04_t11_ci_order.py::test_later_jobs_report_after_core_and_native_results[skipped-pull_request]
+0.030	tests/integration/py/test_e04_t11_ci_order.py::test_later_jobs_report_after_core_and_native_results[skipped-push]
+0.030	tests/integration/py/test_e04_t11_ci_order.py::test_later_jobs_report_after_core_and_native_results[skipped-workflow_dispatch]
+0.030	tests/integration/py/test_e04_t11_ci_order.py::test_later_jobs_report_after_core_and_native_results[success-pull_request]
+0.030	tests/integration/py/test_e04_t11_ci_order.py::test_later_jobs_report_after_core_and_native_results[success-push]
+0.040	tests/integration/py/test_e04_t11_ci_order.py::test_later_jobs_report_after_core_and_native_results[success-workflow_dispatch]
+0.030	tests/integration/py/test_e04_t11_ci_order.py::test_newer_heads_still_cancel_superseded_runs
 0.030	tests/integration/py/test_e04_t11_ci_order.py::test_pages_visibility_and_webapp_default_retention_follow_the_public_profile
 0.030	tests/integration/py/test_e04_t11_ci_order.py::test_platform_cores_wait_only_for_their_own_native_build
+0.030	tests/integration/py/test_e04_t11_ci_order.py::test_red_core_reporting_refuses_success_conversion_and_run_cancel_escapes[cancel]
+0.030	tests/integration/py/test_e04_t11_ci_order.py::test_red_core_reporting_refuses_success_conversion_and_run_cancel_escapes[fail-fast]
+0.030	tests/integration/py/test_e04_t11_ci_order.py::test_red_core_reporting_refuses_success_conversion_and_run_cancel_escapes[optional-job]
+0.030	tests/integration/py/test_e04_t11_ci_order.py::test_red_core_reporting_refuses_success_conversion_and_run_cancel_escapes[optional-step]
+0.030	tests/integration/py/test_e04_t11_ci_order.py::test_red_core_reporting_refuses_success_conversion_and_run_cancel_escapes[permission]
+0.030	tests/integration/py/test_e04_t11_ci_order.py::test_reporting_keeps_source_cancellation_and_repair_boundaries[cancelled-pull_request]
+0.040	tests/integration/py/test_e04_t11_ci_order.py::test_reporting_keeps_source_cancellation_and_repair_boundaries[cancelled-push]
+0.030	tests/integration/py/test_e04_t11_ci_order.py::test_reporting_keeps_source_cancellation_and_repair_boundaries[cancelled-workflow_dispatch]
+0.030	tests/integration/py/test_e04_t11_ci_order.py::test_reporting_keeps_source_cancellation_and_repair_boundaries[changes-failed-pull_request]
+0.030	tests/integration/py/test_e04_t11_ci_order.py::test_reporting_keeps_source_cancellation_and_repair_boundaries[changes-failed-push]
+0.030	tests/integration/py/test_e04_t11_ci_order.py::test_reporting_keeps_source_cancellation_and_repair_boundaries[changes-failed-workflow_dispatch]
+0.030	tests/integration/py/test_e04_t11_ci_order.py::test_reporting_keeps_source_cancellation_and_repair_boundaries[changes-skipped-pull_request]
+0.030	tests/integration/py/test_e04_t11_ci_order.py::test_reporting_keeps_source_cancellation_and_repair_boundaries[changes-skipped-push]
+0.040	tests/integration/py/test_e04_t11_ci_order.py::test_reporting_keeps_source_cancellation_and_repair_boundaries[changes-skipped-workflow_dispatch]
+0.030	tests/integration/py/test_e04_t11_ci_order.py::test_reporting_keeps_source_cancellation_and_repair_boundaries[core-only-pull_request]
+0.030	tests/integration/py/test_e04_t11_ci_order.py::test_reporting_keeps_source_cancellation_and_repair_boundaries[core-only-push]
+0.030	tests/integration/py/test_e04_t11_ci_order.py::test_reporting_keeps_source_cancellation_and_repair_boundaries[core-only-workflow_dispatch]
 0.000	tests/integration/py/test_e04_t11_file_requests.py::test_every_browser_file_receiver_preserves_request_ownership[cancel-then-other-page]
 0.000	tests/integration/py/test_e04_t11_file_requests.py::test_every_browser_file_receiver_preserves_request_ownership[overlapping-folder-uploads]
 0.000	tests/integration/py/test_e04_t11_file_requests.py::test_every_browser_file_receiver_preserves_request_ownership[replacement-during-upload]
@@ -6743,6 +6773,10 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_cwl_cli.py::test_each_cw_prof
 0.000	tests/system/py/test_e04_t12_public_release.py::test_dependency_notice_covers_review_component[robin-map]
 0.000	tests/system/py/test_e04_t12_public_release.py::test_dependency_notice_covers_review_component[zlib]
 0.000	tests/system/py/test_e04_t12_public_release.py::test_fork_guard_cannot_admit_or_negate_the_attacker[!(github.event.pull_request.head.repo.fork == false)-False]
+0.000	tests/system/py/test_e04_t12_public_release.py::test_fork_guard_cannot_admit_or_negate_the_attacker[!cancelled() && !(github.event.pull_request.head.repo.fork == false)-False]
+0.000	tests/system/py/test_e04_t12_public_release.py::test_fork_guard_cannot_admit_or_negate_the_attacker[!cancelled() && github.event.pull_request.head.repo.fork != false-False]
+0.000	tests/system/py/test_e04_t12_public_release.py::test_fork_guard_cannot_admit_or_negate_the_attacker[!cancelled() && github.event.pull_request.head.repo.fork == false-True]
+0.000	tests/system/py/test_e04_t12_public_release.py::test_fork_guard_cannot_admit_or_negate_the_attacker[!cancelled() || github.event.pull_request.head.repo.fork == false-False]
 0.000	tests/system/py/test_e04_t12_public_release.py::test_fork_guard_cannot_admit_or_negate_the_attacker[contains('github.event_name == "push"', 'push')-False]
 0.000	tests/system/py/test_e04_t12_public_release.py::test_fork_guard_cannot_admit_or_negate_the_attacker[github.event.pull_request.head.repo.fork != false-False]
 0.000	tests/system/py/test_e04_t12_public_release.py::test_fork_guard_cannot_admit_or_negate_the_attacker[github.event.pull_request.head.repo.fork == false || always()-False]
