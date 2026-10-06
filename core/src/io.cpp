@@ -960,6 +960,15 @@ ResolvedExperimentKind resolve_experiment_kind(const Block& block, const std::st
 // restricted to the implementations edi-core reads.
 void validate_experiment_selectors(const Block& block, const std::string& peak_type,
                                    BeamModeEnum mode, const std::string& where) {
+    // A `_peak` item is one value. Written as a loop column it would be dropped on read, and a
+    // profile's declaration would vanish before the rules below see it.
+    for (const Loop& loop : block.loops) {
+        for (const std::string& tag : loop.tags) {
+            if (tag.rfind("_peak.", 0) == 0) {
+                fail_schema(where, "peak-item-in-loop", tag + " is a scalar item, not a loop column");
+            }
+        }
+    }
     // Family crossings, both directions: a tag of the OTHER family on this block is a hard error
     // naming both the tag and the selector it contradicts (verified to mirror crysta's b9aee906
     // loader, whose forbidden set is the full other family — size_g/strain_g included).
@@ -2333,6 +2342,9 @@ const std::vector<CifExperimentItemRule>& experiment_cif_item_rules() {
         {"_peak.broad_lorentz_x", {"_easydiffraction_peak.broad_lorentz_x"}, "cwl-tch", "0.0"},
         {"_peak.broad_lorentz_y", {"_easydiffraction_peak.broad_lorentz_y"}, "cwl-tch", "0.0"},
         // The CW asymmetry mixins, filled only on the rung that carries them.
+        // The pseudo-Voigt mixing: the loader reads an absent one as 0, so no fallback is filled.
+        {"_peak.mixing_eta_0", {"_easydiffraction_peak.mixing_eta_0"}},
+        {"_peak.mixing_eta_1", {"_easydiffraction_peak.mixing_eta_1"}},
         {"_peak.asym_fcj_1", {"_easydiffraction_peak.asym_fcj_1"}, "cwl-fcj", "0.0"},
         {"_peak.asym_fcj_2", {"_easydiffraction_peak.asym_fcj_2"}, "cwl-fcj", "0.0"},
         {"_peak.asym_beba_a0", {"_easydiffraction_peak.asym_beba_a0"}, "cwl-beba", "0.0"},
@@ -2456,16 +2468,36 @@ bool experiment_block_is_classic_cif(const Block& block) {
 }
 
 Block translate_experiment_cif(const Block& in) {
+    // The peak category is one row in either vocabulary. A peak item written as a loop column has
+    // no translation, and dropping it would let a profile's foreign or supplied coefficients vanish
+    // before the profile rules see them, so it is refused.
+    for (const Loop& loop : in.loops) {
+        for (const std::string& tag : loop.tags) {
+            if (starts_with(tag, "_peak.") || starts_with(tag, "_easydiffraction_peak.")) {
+                fail_schema("classic CIF experiment block '" + in.name + "'", "peak-item-in-loop",
+                            tag + " is a scalar item, not a loop column");
+            }
+        }
+    }
     Block out;
     out.name = in.name;
     out.items.emplace_back("_edi.schema_version", "3");
     const auto translate_items = [&in, &out](const std::vector<CifExperimentItemRule>& rules) {
         for (const CifExperimentItemRule& rule : rules) {
+            const std::string* value = nullptr;
             for (const char* classic : rule.classic) {
-                if (const std::string* value = in.find(classic)) {
-                    out.items.emplace_back(rule.edi, *value);
+                value = in.find(classic);
+                if (value != nullptr) {
                     break;  // upstream priority order: the first declared spelling wins
                 }
+            }
+            // A peak item in the dot-form spelling is the same declaration, so it is carried
+            // rather than dropped (a profile's coefficients never fall back to defaults).
+            if (value == nullptr && starts_with(rule.edi, "_peak.")) {
+                value = in.find(rule.edi);
+            }
+            if (value != nullptr) {
+                out.items.emplace_back(rule.edi, *value);
             }
         }
     };
