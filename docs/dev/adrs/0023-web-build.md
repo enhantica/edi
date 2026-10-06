@@ -77,8 +77,9 @@ hash of their contents (`multithread-<hash>/`), `build.json` names the two folde
 module imports. The page also downloads and compiles the module itself, once (streamed when the host labels it
 `application/wasm`, else from its bytes; Emscripten's own path downloads it a second time after a refused
 streaming compile), and a multithreaded build that fails before it starts gives way to the single-thread build. A host without COOP/COEP headers (GitHub Pages) gets them from `coi-serviceworker.js`
-(v0.1.7, MIT, vendored unchanged): the page registers it and reloads once per session; where a service worker cannot
-run, the single-thread build loads. The site is one folder: the page, both builds, the shim, a README naming the
+(v0.1.7, MIT, vendored unchanged): the page registers it and reloads once per deploy, so a redeploy opened before
+its worker is active tries again; where a service worker cannot run, the single-thread build loads. The page keeps why
+it chose a build in `window.ediBuildInfo`, which the app's diagnostics view (Preferences, Develop) shows. The site is one folder: the page, both builds, the shim, a README naming the
 hosting requirement, `BUILD-INFO.txt` and the licence texts (`tools/ci/wasm-pack.sh`, `build/wasm/edi-webapp.zip`).
 
 ### 5. The browser's files and settings
