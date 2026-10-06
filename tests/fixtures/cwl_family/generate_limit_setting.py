@@ -7,6 +7,7 @@ Neither product engine is imported; no expected scientific output is generated.
 import ast
 import hashlib
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -15,7 +16,11 @@ if __name__ == '__main__':
     upstream = Path(sys.argv[1])
     sha = '0d9f10e412a0cd08d4dd0af95845dd9bb597dcdf'
     path = 'src/easydiffraction/datablocks/experiment/categories/peak/cwl_mixins.py'
-    source = subprocess.check_output(['git', 'show', sha + ':' + path], cwd=upstream)
+    git_executable = shutil.which('git')
+    assert git_executable is not None, (
+        'Independent provenance generation requires an installed Git'
+    )
+    source = subprocess.check_output([git_executable, 'show', sha + ':' + path], cwd=upstream)
     cls = next(
         node
         for node in ast.parse(source).body
@@ -29,12 +34,14 @@ if __name__ == '__main__':
         and isinstance(node.annotation, ast.Name)
         and node.annotation.id == 'Parameter'
     ]
-    assert fields == ['asym_beba_a0', 'asym_beba_b0', 'asym_beba_a1', 'asym_beba_b1']
+    assert fields == ['asym_beba_a0', 'asym_beba_b0', 'asym_beba_a1', 'asym_beba_b1'], (
+        'The retained upstream peak metadata declares exactly the four asymmetry coefficients'
+    )
     pcr = Path(sys.argv[2])
-    lines = pcr.read_text().splitlines()
+    lines = pcr.read_text(encoding='utf-8').splitlines()
     setting_line = next(i for i, line in enumerate(lines) if 'AsyLim' in line)
     limit = float(lines[setting_line + 1].split()[7])
-    assert limit == 160
+    assert limit == 160, 'The original owner PCR supplies the non-default fixed limit'
     asy_line = next(i for i, line in enumerate(lines) if 'Pref1' in line and 'Asy4' in line)
     header = lines[asy_line].removeprefix('!').split()
     codes = lines[asy_line + 2].split()
@@ -48,7 +55,9 @@ if __name__ == '__main__':
             'url': 'https://www.psi.ch/sites/default/files/import/lns-diffraction/LinuxEN/fullprof-manual.pdf',
             'pdf_pages': [75, 76],
             'line': 8,
-            'classification': 'fixed powder-data setup; separate from the four asymmetry fit coefficients',
+            'classification': (
+                'fixed powder-data setup; separate from the four asymmetry fit coefficients'
+            ),
         },
         'owner_pcr': {
             'path': 'edi/knowledge/fitting/fullprof/pd-neut-cwl_yap-spodi_3k/yap_3k.pcr',
@@ -64,7 +73,12 @@ if __name__ == '__main__':
             'sha256': hashlib.sha256(source).hexdigest(),
             'tagged_parameter_fields': fields,
             'limit_entry_present': False,
-            'scope': 'Pinned per-category metadata defines four coefficients; it does not expose a limit entry or an explicit false flag for the limit',
+            'scope': (
+                'Pinned per-category metadata defines four coefficients; '
+                'it does not expose a limit entry or an explicit false flag for the limit'
+            ),
         },
     }
-    Path(__file__).with_name('limit_setting.json').write_text(json.dumps(record, indent=2) + '\n')
+    Path(__file__).with_name('limit_setting.json').write_text(
+        json.dumps(record, indent=2) + '\n', encoding='utf-8'
+    )
