@@ -117,6 +117,9 @@ QString ScanSession::load(const edi::Project& project) {
     source_ = std::make_shared<const edi::Project>(project);
     metadata_errors_.clear();
     loaded_.clear();
+    // A new generation: a read still in flight from before delivers nothing, and does not hold up this one's queue.
+    ++metadata_generation_;
+    reading_ = false;
     readRun(project);
     return reindex(project);
 }
@@ -177,8 +180,8 @@ QString ScanSession::readRun(const edi::Project& project) {
     return {};
 }
 
-QString ScanSession::reindex(const edi::Project& project) {
-    index_ = edi::index_scan_results(project, datasets_);
+QString ScanSession::reindex(const edi::Project& project, bool writing) {
+    index_ = edi::index_scan_results(project, datasets_, writing);
     return QString::fromStdString(index_.error);
 }
 
@@ -194,8 +197,8 @@ int ScanSession::addRow(const edi::Project& project, const std::vector<std::stri
         return -1;
     }
     if (index_.header.empty()) {
-        // The run's first row: the header is on disk now, before it.
-        reindex(project);
+        // The run's first row: the header is on disk now, before it (the run is still writing).
+        reindex(project, true);
         const int dataset = cells.size() == index_.header.size() ? place(edi::scan_row_file(index_, cells)) : -1;
         if (!index_.error.empty() || dataset < 0 || index_.rows[static_cast<std::size_t>(dataset)].offset < 0) {
             error = index_.error.empty() ? QStringLiteral("analysis/results.csv does not hold the row just written")
@@ -229,6 +232,14 @@ int ScanSession::addRow(const edi::Project& project, const std::vector<std::stri
 std::vector<std::string> ScanSession::row(const edi::Project& project, int dataset) const {
     if (dataset < 0 || dataset >= static_cast<int>(index_.rows.size()) || index_.rows[dataset].offset < 0) {
         return {};
+    }
+    {
+        std::ifstream input(analysis_dir(project) / "results.csv", std::ios::binary);
+        std::string header;
+        if (!std::getline(input, header) || split(header) != index_.header) {
+            throw std::invalid_argument("analysis/results.csv changed under the app: its header is not the one read "
+                                        "before");
+        }
     }
     std::vector<std::string> cells = edi::read_scan_row(project, index_.rows[dataset].offset);
     const std::string& expected = datasets_.files[static_cast<std::size_t>(dataset)];
@@ -279,7 +290,8 @@ void ScanSession::column(const edi::Project& project, const std::string& name,
     }
     std::ifstream input(analysis_dir(project) / "results.csv", std::ios::binary);
     std::string line;
-    if (!std::getline(input, line)) {
+    // The columns mean what the indexed header says only while the file still has that header.
+    if (!std::getline(input, line) || split(line) != index_.header) {
         return;
     }
     std::int64_t offset = input.tellg();
@@ -358,35 +370,44 @@ std::string fresh_name(const char* kind) {
            "-" + std::to_string(++serial);
 }
 
+// Renames `from` over `to`. The source is proven first, and nothing is removed before the rename, which replaces
+// `to` in one step: a failure leaves both as they were.
 void move_file(const fs::path& from, const fs::path& to) {
     std::error_code error;
-    fs::remove(to, error);
-    error.clear();
+    if (!fs::exists(from, error)) {
+        throw std::runtime_error("cannot move " + from.string() + ": it is not there");
+    }
     fs::rename(from, to, error);
     if (error) {
         throw std::runtime_error("cannot move " + from.string() + " to " + to.string() + ": " + error.message());
     }
 }
 
-// Moves the present result files aside; on a failure moves back what moved. Returns which moved.
-std::vector<int> set_aside(const edi::Project& project, const ScanSession::Files& present, const fs::path& aside) {
+// Moves the present result files aside, recording in `moved` each one that moved; a failure throws with `moved`
+// telling the caller, which alone undoes them, what to move back.
+void set_aside(const edi::Project& project, const ScanSession::Files& present, const fs::path& aside,
+               std::vector<int>& moved) {
     const fs::path directory = analysis_dir(project);
     fs::create_directories(aside);
-    std::vector<int> moved;
-    try {
-        for (int which = 0; which < 3; ++which) {
-            if (*slot(present, which)) {
-                move_file(directory / kResultFiles[which], aside / kResultFiles[which]);
-                moved.push_back(which);
-            }
+    for (int which = 0; which < 3; ++which) {
+        if (*slot(present, which)) {
+            move_file(directory / kResultFiles[which], aside / kResultFiles[which]);
+            moved.push_back(which);
         }
-    } catch (const std::exception&) {
-        for (const int which : moved) {
-            move_file(aside / kResultFiles[which], directory / kResultFiles[which]);  // throws: they stay aside
-        }
-        throw;
     }
-    return moved;
+}
+
+// Moves back what `moved` says went aside; false when one could not (it stays aside).
+bool move_back(const edi::Project& project, const fs::path& aside, const std::vector<int>& moved) {
+    bool all = true;
+    for (const int which : moved) {
+        try {
+            move_file(aside / kResultFiles[which], analysis_dir(project) / kResultFiles[which]);
+        } catch (const std::exception&) {
+            all = false;
+        }
+    }
+    return all;
 }
 
 void drop_set_aside(const fs::path& aside) {
@@ -413,12 +434,15 @@ QString ScanSession::takeFiles(const edi::Project& project, Files& taken) {
     }
     // Set aside, all or none, and kept there until an Undo puts them back (the caller holds the bytes too).
     const fs::path aside = set_aside_dir(project, fresh_name("taken"));
+    std::vector<int> moved;
     try {
-        set_aside(project, taken, aside);
+        set_aside(project, taken, aside, moved);
     } catch (const std::exception& refusal) {
-        std::error_code ignored;
-        return fs::exists(aside, ignored) && !fs::is_empty(aside, ignored) ? kept_aside(aside, refusal)
-                                                                          : QString::fromUtf8(refusal.what());
+        if (!move_back(project, aside, moved)) {
+            return kept_aside(aside, refusal);
+        }
+        drop_set_aside(aside);
+        return QString::fromUtf8(refusal.what());
     }
     taken.kept = aside.string();
     run_ = {};
@@ -460,27 +484,32 @@ QString ScanSession::putFiles(const edi::Project& project, const Files& files) {
         return QString::fromUtf8(refusal.what());
     }
     // 2. The present files set aside; 3. the staged ones moved in. A failure puts the earlier ones back.
-    std::vector<int> moved_in;
+    std::vector<int> moved_aside, moved_in;
     const fs::path aside = set_aside_dir(project, fresh_name("replaced"));
     try {
-        set_aside(project, current, aside);
+        set_aside(project, current, aside, moved_aside);
         for (const int which : staged) {
             move_file(directory / (std::string(kResultFiles[which]) + ".edi-staged"), directory / kResultFiles[which]);
             moved_in.push_back(which);
         }
     } catch (const std::exception& refusal) {
-        try {
-            for (const int which : moved_in) {
-                std::error_code ignored;
-                fs::remove(directory / kResultFiles[which], ignored);
+        // Undone here alone, exactly as far as it went: the files moved in go back to their staged names (the bytes
+        // to put back stay on disk), then the files set aside return.
+        bool whole = true;
+        for (const int which : moved_in) {
+            try {
+                move_file(directory / kResultFiles[which], directory / (std::string(kResultFiles[which]) + ".edi-staged"));
+            } catch (const std::exception&) {
+                whole = false;
             }
-            for (int which = 0; which < 3; ++which) {
-                if (*slot(current, which)) {
-                    move_file(aside / kResultFiles[which], directory / kResultFiles[which]);
-                }
-            }
-        } catch (const std::exception&) {
+        }
+        whole = move_back(project, aside, moved_aside) && whole;
+        if (!whole) {
             return kept_aside(aside, refusal);
+        }
+        for (const int which : staged) {
+            std::error_code ignored;
+            fs::remove(directory / (std::string(kResultFiles[which]) + ".edi-staged"), ignored);
         }
         drop_set_aside(aside);
         return QString::fromUtf8(refusal.what());
@@ -494,11 +523,13 @@ QString ScanSession::putFiles(const edi::Project& project, const Files& files) {
     return {};
 }
 
-std::optional<std::string> ScanSession::runFile(const edi::Project& project) const {
+bool ScanSession::runFile(const edi::Project& project, std::optional<std::string>& bytes) const {
     try {
-        return read_file(analysis_dir(project) / kResultFiles[2]);
+        bytes = read_file(analysis_dir(project) / kResultFiles[2]);
+        return true;
     } catch (const std::exception&) {
-        return std::nullopt;
+        bytes.reset();
+        return false;  // there, but unreadable: not the same as absent
     }
 }
 
@@ -564,6 +595,7 @@ void ScanSession::readWanted() {
     const std::shared_ptr<std::atomic<bool>> stop = metadata_stop_;
     const std::shared_ptr<const edi::Project> source = source_;
     const std::string directory = datasets_.directory;
+    const std::uint64_t generation = metadata_generation_;
     // The newest batch first: the rows on screen now.
     const std::size_t take = std::min(kMetadataBatch, wanted_.size());
     std::vector<std::pair<int, std::string>> batch;
@@ -574,7 +606,7 @@ void ScanSession::readWanted() {
     reading_ = true;
     // Each file is read once, for its extract rules only; the values reach this session only while it exists.
     const QPointer<ScanSession> self(this);
-    run_in_background([self, stop, source, directory, batch = std::move(batch)] {
+    run_in_background([self, stop, source, directory, generation, batch = std::move(batch)] {
         struct Read {
             int dataset;
             std::vector<std::string> values;
@@ -593,12 +625,13 @@ void ScanSession::readWanted() {
         }
         QMetaObject::invokeMethod(
             QCoreApplication::instance(),
-            [self, stop, done = std::move(done)]() mutable {
-                if (self.isNull()) {
-                    return;
+            [self, stop, generation, done = std::move(done)]() mutable {
+                if (self.isNull() || generation != self->metadata_generation_) {
+                    return;  // a read of an earlier listing: its results and its running state are not this one's
                 }
                 self->reading_ = false;
                 if (stop->load()) {
+                    self->readWanted();
                     return;
                 }
                 int first = std::numeric_limits<int>::max(), last = -1;

@@ -5,6 +5,7 @@
 #include <QObject>
 #include <QString>
 #include <atomic>
+#include <cstdint>
 #include <deque>
 #include <functional>
 #include <memory>
@@ -48,7 +49,7 @@ class ScanSession : public QObject {
     // Lists the datasets and indexes the results; the refusal, if any (the index then holds no row).
     QString load(const edi::Project& project);
     // Indexes the results again (after a run or an undo); the refusal, if any.
-    QString reindex(const edi::Project& project);
+    QString reindex(const edi::Project& project, bool writing = false);
     const edi::ScanDatasets& datasets() const { return datasets_; }
     const edi::ScanResultIndex& index() const { return index_; }
     int place(const std::string& file) const;
@@ -82,7 +83,8 @@ class ScanSession : public QObject {
     // Puts the three files back as they were, all or none, with the same refusal; the provenance is read again.
     QString putFiles(const edi::Project& project, const Files& files);
     // The provenance file alone, as it is now (a single fit's Undo restores it), and put back.
-    std::optional<std::string> runFile(const edi::Project& project) const;
+    // The provenance file's bytes (absent: none) in `bytes`; false when it is there but cannot be read.
+    bool runFile(const edi::Project& project, std::optional<std::string>& bytes) const;
     QString putRunFile(const edi::Project& project, const std::optional<std::string>& bytes);
 
     // The extracted values of a dataset: its row's, or those read in the background; nullptr while unknown or
@@ -108,6 +110,7 @@ class ScanSession : public QObject {
     std::vector<int> wanted_;
     std::deque<int> loaded_;  // the datasets holding read values, oldest first (the cache is bounded)
     bool reading_ = false;    // one background read at a time
+    std::uint64_t metadata_generation_ = 0;  // bumped by every listing; a read delivers only to its own
     std::shared_ptr<const edi::Project> source_;  // what the files' extract rules are read with
     std::shared_ptr<std::atomic<bool>> metadata_stop_;
     void readWanted();
