@@ -363,8 +363,14 @@ class Edit {
                 throw std::invalid_argument("the experiment '" + experiment.name +
                                             "' holds measured data, whose points set its range");
             }
-            if (!(step > 0.0) || !(end > start)) {
-                throw std::invalid_argument("a calculation range needs step > 0 and end > start");
+            // A range a save can declare again: finite, at least two points.
+            if (!std::isfinite(start) || !std::isfinite(end) || !std::isfinite(step) || !(step > 0.0) ||
+                !(end > start)) {
+                throw std::invalid_argument("a calculation range needs finite values, step > 0 and end > start");
+            }
+            if (step > end - start) {
+                throw std::invalid_argument("a calculation range needs a step no larger than its span, so it holds "
+                                            "at least two points");
             }
             const double intervals = std::floor((end - start) / step);
             if (!(intervals < static_cast<double>(kMaximumGridPoints))) {
