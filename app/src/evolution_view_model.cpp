@@ -17,6 +17,13 @@ bool drawable(double x, double y, double error) {
            std::isfinite(y + error);
 }
 
+// The bucket of `x` among `buckets` over a range starting at `half_low` (halved values, so the widest finite range
+// does not overflow) with halved width `half_span`; the first bucket for a share that is not a finite number.
+int bucket_of(double x, double half_low, double half_span, int buckets) {
+    const double share = half_span > 0.0 ? (x / 2.0 - half_low) / half_span : 0.0;
+    return std::isfinite(share) ? std::min(buckets - 1, static_cast<int>(std::clamp(share, 0.0, 1.0) * buckets)) : 0;
+}
+
 // `value` moved by `pad`, or left where it is when that would leave the finite numbers.
 double padded(double value, double pad) {
     const double moved = value + pad;
@@ -164,18 +171,54 @@ void EvolutionViewModel::setLayer(MeasuredLayer* layer) {
 void EvolutionViewModel::rebuild() {
     points_.clear();
     if (session_ != nullptr && project_ != nullptr && current_ >= 0) {
-        // The column read from the file once; a value, an uncertainty or an x that is not a finite number (or an
-        // uncertainty below zero) leaves its point out.
-        session_->column(*project_, names_[current_].toStdString(), [this](int dataset, double value, double error) {
+        // Two reads of the column. The first finds the drawable points' x range and count; above the drawing limit
+        // the second keeps per bucket of that range only the lowest and the highest point: the points thinning the
+        // whole column keeps, without ever holding it. A value, an uncertainty or an x that is not a finite
+        // number, or an error bar that leaves the finite numbers, leaves its point out.
+        const std::string name = names_[current_].toStdString();
+        double low = std::numeric_limits<double>::infinity(), high = -low;
+        std::size_t count = 0;
+        session_->column(*project_, name, [&](int dataset, double value, double error) {
             const std::optional<double> x = xOf(dataset, session_->extracted(dataset));
             if (x && drawable(*x, value, error)) {
-                points_.push_back({*x, value, error, dataset});
-                // Thinned as it grows: a long scan never holds all its points at once.
-                if (points_.size() > 4 * static_cast<std::size_t>(kThinningLimit)) {
-                    thin();
-                }
+                low = std::min(low, *x);
+                high = std::max(high, *x);
+                ++count;
             }
         });
+        if (count <= static_cast<std::size_t>(kThinningLimit)) {
+            session_->column(*project_, name, [this](int dataset, double value, double error) {
+                const std::optional<double> x = xOf(dataset, session_->extracted(dataset));
+                if (x && drawable(*x, value, error)) {
+                    points_.push_back({*x, value, error, dataset});
+                }
+            });
+        } else {
+            const int buckets = kThinningLimit / 2;
+            const double x0 = low / 2.0, span = high / 2.0 - low / 2.0;
+            std::vector<std::optional<Point>> lowest(buckets), highest(buckets);
+            session_->column(*project_, name, [&](int dataset, double value, double error) {
+                const std::optional<double> x = xOf(dataset, session_->extracted(dataset));
+                if (!x || !drawable(*x, value, error)) {
+                    return;
+                }
+                const Point point{*x, value, error, dataset};
+                const int bucket = bucket_of(point.x, x0, span, buckets);
+                if (!lowest[bucket] || point.y < lowest[bucket]->y) {
+                    lowest[bucket] = point;
+                }
+                if (!highest[bucket] || point.y > highest[bucket]->y) {
+                    highest[bucket] = point;
+                }
+            });
+            for (int bucket = 0; bucket < buckets; ++bucket) {
+                for (const std::optional<Point>& point : {lowest[bucket], highest[bucket]}) {
+                    if (point && (points_.empty() || points_.back().dataset != point->dataset)) {
+                        points_.push_back(*point);
+                    }
+                }
+            }
+        }
     }
     finish();
 }
@@ -192,8 +235,7 @@ void EvolutionViewModel::thin() {
     const int buckets = kThinningLimit / 2;
     std::vector<int> lowest(buckets, -1), highest(buckets, -1);
     for (std::size_t i = 0; i < points_.size(); ++i) {
-        const double share = span > 0.0 ? (points_[i].x / 2.0 - x0) / span : 0.0;
-        const int bucket = std::isfinite(share) ? std::min(buckets - 1, static_cast<int>(std::clamp(share, 0.0, 1.0) * buckets)) : 0;
+        const int bucket = bucket_of(points_[i].x, x0, span, buckets);
         if (lowest[bucket] < 0 || points_[i].y < points_[static_cast<std::size_t>(lowest[bucket])].y) {
             lowest[bucket] = static_cast<int>(i);
         }
