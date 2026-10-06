@@ -624,13 +624,14 @@ bool ProjectViewModel::createStructure() {
         name = held ? std::string() : candidate;
     }
     // easydiffractionbeta's default phase (easyDiffractionApp/Logic/Model.py, _DEFAULT_CIF_BLOCK), under the new name.
+    // The block names no Wyckoff letter; the site at the origin is P b n m's position a.
     const std::string text = "data_" + name +
                              "\n\n_edi.schema_version 3\n\n_space_group.name_h_m \"P b n m\"\n\n"
                              "_cell.length_a 10.\n_cell.length_b 6.\n_cell.length_c 5.\n"
                              "_cell.angle_alpha 90.\n_cell.angle_beta 90.\n_cell.angle_gamma 90.\n\n"
                              "loop_\n_atom_site.id\n_atom_site.type_symbol\n_atom_site.fract_x\n_atom_site.fract_y\n"
-                             "_atom_site.fract_z\n_atom_site.occupancy\n_atom_site.adp_type\n_atom_site.adp_iso\n"
-                             "O O 0. 0. 0. 1. Biso 0.\n";
+                             "_atom_site.fract_z\n_atom_site.wyckoff_letter\n_atom_site.occupancy\n_atom_site.adp_type\n"
+                             "_atom_site.adp_iso\nO O 0. 0. 0. a 1. Biso 0.\n";
     edi::StructuresUndo before = edi::capture_structures(project);
     QString error;
     try {
