@@ -1764,15 +1764,35 @@ NB_MODULE(_edi, m) {
         .def(nb::init<>())
         .def_prop_rw(
             "name_h_m", [](const edi::SpaceGroup& self) { return self.name_h_m.value(); },
-            [](edi::SpaceGroup& self, std::string value) { self.name_h_m = std::move(value); })
+            // A new name takes that group's default setting, so the code and a stored IT number follow it (as
+            // diffraction-lib's name_h_m setter resets the code); a name crysta's table lacks is kept as given.
+            [](edi::SpaceGroup& self, std::string value) {
+                if (edi::same_space_group_name(value, self.name_h_m.value())) {
+                    self.name_h_m = std::move(value);
+                } else if (const auto setting = edi::space_group_setting_for_name(value)) {
+                    edi::assign_space_group_setting(self, *setting, false);
+                } else {
+                    self.name_h_m = std::move(value);
+                }
+            })
         .def_prop_rw(
             "coord_system_code",
             [](const edi::SpaceGroup& self) { return self.coord_system_code.value(); },
             [](edi::SpaceGroup& self, std::string value) {
                 self.coord_system_code = std::move(value);
             })
-        // The IUCr IT number, presence-tracked (`int | None`).
-        .def_rw("it_number", &edi::SpaceGroup::it_number);
+        // The IUCr IT number, presence-tracked (`int | None`). A number takes that group's default setting: its
+        // name and code follow.
+        .def_prop_rw(
+            "it_number", [](const edi::SpaceGroup& self) { return self.it_number; },
+            [](edi::SpaceGroup& self, std::optional<int> value) {
+                const auto setting = value ? edi::space_group_setting_for_number(*value) : std::nullopt;
+                if (setting) {
+                    edi::assign_space_group_setting(self, *setting, true);
+                } else {
+                    self.it_number = value;
+                }
+            });
 
     nb::class_<edi::Structure> structure(m, "Structure", nb::is_weak_referenceable());
     structure.def("__setattr__", renewing_setattr<edi::Structure>({}, renew_epoch), nb::arg("name"), nb::arg("value").none());

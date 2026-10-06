@@ -263,17 +263,11 @@ class Edit {
             });
         });
     }
-    // A space-group setting chosen whole: the name, its coordinate-system code and the IT number, which is
-    // stored when `declare_number` or when the structure already stores one, so the three never contradict one
-    // another (the owner, 2026-10-06). Assignments, which cannot fail.
-    static Edit space_group_setting(SpaceGroup& group, std::string name, std::string code, int it_number,
-                                    bool declare_number) {
-        return Edit([&group, name = std::move(name), code = std::move(code), it_number, declare_number] {
-            group.name_h_m = name;
-            group.coord_system_code = code;
-            if (declare_number || group.it_number.has_value()) {
-                group.it_number = it_number;
-            }
+    // A space-group setting chosen whole (assign_space_group_setting): name, code and IT number never contradict
+    // one another (the owner, 2026-10-06). Assignments, which cannot fail.
+    static Edit space_group_setting(SpaceGroup& group, SpaceGroupSettingName setting, bool declare_number) {
+        return Edit([&group, setting = std::move(setting), declare_number] {
+            assign_space_group_setting(group, setting, declare_number);
         });
     }
     // A structure's declared scattering length: set (declaring it when it is new) or removed. The map is

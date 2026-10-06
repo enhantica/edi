@@ -107,6 +107,17 @@ struct SpaceGroupSettingName {
 };
 // Every setting crysta resolves, by IT number and then in its table's order.
 std::vector<SpaceGroupSettingName> space_group_settings();
+// The setting a space-group edit chooses (the owner, 2026-10-06), so name, code and IT number never contradict
+// one another: a name or an IT number takes that group's default setting (its lowest ordinal, the ITA one), a
+// code the setting of `it_number` carrying it. Names compare without spaces. Empty when crysta's table has none.
+std::optional<SpaceGroupSettingName> space_group_setting_for_name(const std::string& name);
+std::optional<SpaceGroupSettingName> space_group_setting_for_number(int it_number);
+std::optional<SpaceGroupSettingName> space_group_setting_for_code(int it_number, const std::string& code);
+// Whether two Hermann-Mauguin names are one name, spaces aside.
+bool same_space_group_name(const std::string& a, const std::string& b);
+// A chosen setting written whole: the name, the code and the IT number, which is stored when `declare_number`
+// or when the group already stores one. Assignments only.
+void assign_space_group_setting(SpaceGroup& group, const SpaceGroupSettingName& setting, bool declare_number);
 // The rotations of a space-group setting's operations in fractional coordinates (row-major), by operation id
 // - 1, as crysta numbers them; throws what crysta's resolver throws for an unknown setting.
 std::vector<std::array<int, 9>> space_group_rotations(const SpaceGroup& space_group);

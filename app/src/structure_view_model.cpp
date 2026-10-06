@@ -25,27 +25,6 @@ const std::vector<edi::SpaceGroupSettingName>& space_group_settings() {
     static const std::vector<edi::SpaceGroupSettingName> settings = edi::space_group_settings();
     return settings;
 }
-// A name as the pickers compare it: without spaces ("P 1 21/c 1" and "P121/c1" are one name).
-std::string unspaced(const std::string& name) {
-    std::string out;
-    for (const char c : name) {
-        if (c != ' ' && c != '\t') {
-            out += c;
-        }
-    }
-    return out;
-}
-// The setting of the lowest ordinal that `pick` accepts: a space group's default setting; null when none.
-template <class Pick>
-const edi::SpaceGroupSettingName* default_setting(Pick pick) {
-    const edi::SpaceGroupSettingName* found = nullptr;
-    for (const edi::SpaceGroupSettingName& setting : space_group_settings()) {
-        if (pick(setting) && (found == nullptr || setting.setting < found->setting)) {
-            found = &setting;
-        }
-    }
-    return found;
-}
 }  // namespace
 
 QStringList SpaceGroupViewModel::names() const {
@@ -61,49 +40,51 @@ QStringList SpaceGroupViewModel::names() const {
 
 void SpaceGroupViewModel::setNameHM(const QString& name) {
     edi::SpaceGroup& group = structure_.space_group;
-    const std::string typed = unspaced(name.toStdString());
-    if (typed == unspaced(group.name_h_m)) {
+    const std::string typed = name.toStdString();
+    if (edi::same_space_group_name(typed, group.name_h_m)) {
         return;  // the same group: its code stays as chosen
     }
-    const edi::SpaceGroupSettingName* setting =
-        default_setting([&typed](const edi::SpaceGroupSettingName& s) { return unspaced(s.name_h_m) == typed; });
-    editor_.apply(setting != nullptr ? edi::Edit::space_group_setting(group, setting->name_h_m,
-                                                                      setting->coord_system_code, setting->it_number,
-                                                                      false)
-                                     : edi::Edit::assign(group.name_h_m, name.toStdString()),
+    const std::optional<edi::SpaceGroupSettingName> setting = edi::space_group_setting_for_name(typed);
+    editor_.apply(setting ? edi::Edit::space_group_setting(group, *setting, false) : edi::Edit::assign(group.name_h_m, typed),
                   false);
 }
 
 void SpaceGroupViewModel::setCoordSystemCode(const QString& code) {
     edi::SpaceGroup& group = structure_.space_group;
     const std::string chosen = code.toStdString();
-    const int number = it_number_;
-    const edi::SpaceGroupSettingName* setting =
-        default_setting([&chosen, number](const edi::SpaceGroupSettingName& s) {
-            return s.it_number == number && s.coord_system_code == chosen;
-        });
-    editor_.apply(setting != nullptr ? edi::Edit::space_group_setting(group, setting->name_h_m,
-                                                                      setting->coord_system_code, setting->it_number,
-                                                                      false)
-                                     : edi::Edit::assign(group.coord_system_code, chosen),
+    const std::optional<edi::SpaceGroupSettingName> setting = edi::space_group_setting_for_code(it_number_, chosen);
+    editor_.apply(setting ? edi::Edit::space_group_setting(group, *setting, false)
+                          : edi::Edit::assign(group.coord_system_code, chosen),
                   false);
 }
 
 void SpaceGroupViewModel::setItNumber(int number) {
     edi::SpaceGroup& group = structure_.space_group;
-    const edi::SpaceGroupSettingName* setting =
-        number > 0 ? default_setting([number](const edi::SpaceGroupSettingName& s) { return s.it_number == number; })
-                   : nullptr;
-    editor_.apply(setting != nullptr
-                      ? edi::Edit::space_group_setting(group, setting->name_h_m, setting->coord_system_code, number,
-                                                       true)
-                      : edi::Edit::assign(group.it_number, number > 0 ? std::optional<int>(number) : std::nullopt),
+    const std::optional<edi::SpaceGroupSettingName> setting =
+        number > 0 ? edi::space_group_setting_for_number(number) : std::nullopt;
+    editor_.apply(setting ? edi::Edit::space_group_setting(group, *setting, true)
+                          : edi::Edit::assign(group.it_number, number > 0 ? std::optional<int>(number) : std::nullopt),
                   false);
 }
 
 void SpaceGroupViewModel::sync() {
     const QString name = QString::fromStdString(structure_.space_group.name_h_m);
-    const QString code = QString::fromStdString(structure_.space_group.coord_system_code);
+    // A file declaring the name alone stores no code: the code shown is then the one the name resolves to, the
+    // name's only setting; a name with several settings has none until one is chosen. The stored code is unchanged.
+    std::string shown_code = structure_.space_group.coord_system_code;
+    if (shown_code.empty()) {
+        int candidates = 0;
+        for (const edi::SpaceGroupSettingName& setting : space_group_settings()) {
+            if (edi::same_space_group_name(setting.name_h_m, structure_.space_group.name_h_m)) {
+                shown_code = setting.coord_system_code;
+                ++candidates;
+            }
+        }
+        if (candidates != 1) {
+            shown_code.clear();
+        }
+    }
+    const QString code = QString::fromStdString(shown_code);
     // The stored IT number, else the one crysta derives from the setting — the number the Text tab's
     // writer shows (a file declaring the name alone showed an empty number).
     int number = structure_.space_group.it_number.value_or(0);

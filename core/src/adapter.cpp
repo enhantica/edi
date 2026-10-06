@@ -3490,6 +3490,56 @@ std::vector<SpaceGroupSettingName> space_group_settings() {
     return settings;
 }
 
+namespace {
+const std::vector<SpaceGroupSettingName>& cached_settings() {
+    static const std::vector<SpaceGroupSettingName> settings = space_group_settings();
+    return settings;
+}
+std::string unspaced(const std::string& name) {
+    std::string out;
+    for (const char c : name) {
+        if (c != ' ' && c != '\t') {
+            out += c;
+        }
+    }
+    return out;
+}
+template <class Pick>
+std::optional<SpaceGroupSettingName> lowest_setting(Pick pick) {
+    const SpaceGroupSettingName* found = nullptr;
+    for (const SpaceGroupSettingName& setting : cached_settings()) {
+        if (pick(setting) && (found == nullptr || setting.setting < found->setting)) {
+            found = &setting;
+        }
+    }
+    return found != nullptr ? std::optional<SpaceGroupSettingName>(*found) : std::nullopt;
+}
+}  // namespace
+
+bool same_space_group_name(const std::string& a, const std::string& b) { return unspaced(a) == unspaced(b); }
+
+std::optional<SpaceGroupSettingName> space_group_setting_for_name(const std::string& name) {
+    const std::string wanted = unspaced(name);
+    return lowest_setting([&wanted](const SpaceGroupSettingName& s) { return unspaced(s.name_h_m) == wanted; });
+}
+
+std::optional<SpaceGroupSettingName> space_group_setting_for_number(int it_number) {
+    return lowest_setting([it_number](const SpaceGroupSettingName& s) { return s.it_number == it_number; });
+}
+
+std::optional<SpaceGroupSettingName> space_group_setting_for_code(int it_number, const std::string& code) {
+    return lowest_setting(
+        [it_number, &code](const SpaceGroupSettingName& s) { return s.it_number == it_number && s.coord_system_code == code; });
+}
+
+void assign_space_group_setting(SpaceGroup& group, const SpaceGroupSettingName& setting, bool declare_number) {
+    group.name_h_m = setting.name_h_m;
+    group.coord_system_code = setting.coord_system_code;
+    if (declare_number || group.it_number.has_value()) {
+        group.it_number = setting.it_number;
+    }
+}
+
 std::vector<std::array<int, 9>> space_group_rotations(const SpaceGroup& space_group) {
     Structure structure;
     structure.space_group = space_group;
