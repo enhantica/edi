@@ -90,6 +90,8 @@ def test_cif_nonzero_mixing_survives_import_without_default_substitution(
     text = admission.classic(path.read_text()).replace('data_bank\n', 'data_probe\n', 1)
     prefix = '_easydiffraction_peak.' if spelling == 'classic' else '_peak.'
     text += f'\n{prefix}mixing_eta_0 .23\n{prefix}mixing_eta_1 .0031\n'
+    if token == profiles.TOKENS[3]:
+        text += f'{prefix}asym_beba_limit 160\n'
     project = engine.Project.load(directory)
     experiment = load_route(route, text, path, project)
     if experiment is None:
@@ -100,6 +102,13 @@ def test_cif_nonzero_mixing_survives_import_without_default_substitution(
         [0.23, 0.0031],
         err_msg='CIF import retains both supplied nonzero mixing coefficients exactly',
     )
+    if token == profiles.TOKENS[3]:
+        assert experiment.peak.asym_beba_limit.value == 160, (
+            'CIF import retains the owner PCR limit value instead of substituting its default'
+        )
+        assert not experiment.peak.asym_beba_limit.free, (
+            'CIF import keeps the independently classified limit setting fixed'
+        )
 
 
 @pytest.mark.parametrize(('source', 'target'), list(itertools.permutations(profiles.TOKENS, 2)))
