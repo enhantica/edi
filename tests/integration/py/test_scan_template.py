@@ -123,8 +123,16 @@ def serialized_data(project, destination):
     text = (destination / 'experiments/d20.edi').read_text()
     lines = text.splitlines()
     first = next(i for i, line in enumerate(lines) if line.startswith('_data.'))
+    columns = []
     while first < len(lines) and (lines[first].startswith('_data.') or not lines[first].strip()):
+        if lines[first].startswith('_data.'):
+            columns.append(lines[first].strip())
         first += 1
+    fields = ['_data.two_theta', '_data.intensity_meas', '_data.intensity_meas_su']
+    assert all(columns.count(field) == 1 for field in fields), (
+        'Template dataset: saved measured columns are identified by their unique declared tags'
+    )
+    indices = [columns.index(field) for field in fields]
     rows = []
     for line in lines[first:]:
         if not line.strip():
@@ -132,7 +140,7 @@ def serialized_data(project, destination):
         if line.startswith(('_', 'loop_', 'data_')):
             break
         tokens = shlex.split(line)
-        rows.append(tuple(map(float, tokens[:3])))
+        rows.append(tuple(float(tokens[index]) for index in indices))
     return rows
 
 

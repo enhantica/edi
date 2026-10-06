@@ -4,7 +4,8 @@ The producer builds a private source snapshot and links the actual app module, c
 installed crysta SDK. It does not run or enable the app test tasks. Qt is the declared `app`
 environment. The headless host observes model state and actual QML consumers; no look is asserted.
 
-The full 162-file CSV reference is produced by crysta's public `fit_project` on the identical
+The full 162-file CSV reference is produced by crysta's actual public Python `Project.fit` binding, rebuilt from its committed sources and
+linked to the same installed SDK as the app on the identical
 project bytes and mode. App/driver equality is a consistency invariant, not independent numerical
 correctness. C11-T43 remains the scientific reference. Measured columns come from independent
 ASCII parsing (scan_template/REFERENCE.md); CSV values, uncertainties, extracted values and order
@@ -21,3 +22,24 @@ rows and open the real selector popup before its item count is judged.
 The production snapshot, SDK/header digest and reference source identity travel in the build
 receipt. Reuse of a binary with different production bytes refuses. Instrumentation only observes
 MeasuredLayer.setData and the native optimizer/read boundaries; no model transition is mocked.
+
+The uniform x-bucket partition of the existing Evolution implementation is an explicitly named
+regression pin. Its numeric extrema, dataset identities and uncertainties still come from the
+closed-form synthetic CSV. Full scan fits keep the example's complete iteration configuration;
+Stop/Continue and single-fit transition fixtures declare one iteration to isolate those behaviors.
+
+The independent CSV grammar is the frozen diffraction-lib scan reference: instrument columns
+use `twotheta_offset` and `wavelength`, while model identities retain `calib_` and `setup_`. The
+reference resolves that convention before calculating; the app projection is checked at its
+actual parameter items. Both effective CMake SDK targets must name the declared installed
+library and header path, including when a prior build cache points somewhere else.
+
+QML witnesses traverse both QObject ownership and the actual visual item tree, force the list's
+public layout operation, and invoke its enum-valued positioning method through Qt's JavaScript
+bridge. The host selects Qt's Null rendering backend; no graphics driver or display is required.
+The peak at file 1000 includes its GUI delivery; the final peak includes completed-run result
+handling. Native read receipts also reject jumps beyond the four upcoming unselected files.
+
+Archive and symbol observation uses the declared llvm-tools executables exclusively; ambient
+ar, nm and objcopy cannot become undeclared runtime dependencies. Synthetic payload links are
+partitioned among seed files to remain below filesystem link-count limits.
