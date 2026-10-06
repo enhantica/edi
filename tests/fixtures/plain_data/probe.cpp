@@ -159,6 +159,19 @@ int main(int argc, char** argv) {
             std::filesystem::copy_file(input.toStdString(), source.toStdString(),
                                        std::filesystem::copy_options::overwrite_existing);
             result["loaded"] = load(view, 0, source);
+            if (escape == "retain-nonpositive" && result["loaded"].toBool()) {
+                auto& p = const_cast<edi::Project&>(view.project());
+                auto& d = *p.experiments[0]->data;
+                auto axis = d.two_theta.get();
+                axis->push_back(18.0);
+                d.two_theta = axis;
+                auto intensity = d.intensity_meas.get();
+                intensity.push_back(0.0);
+                d.intensity_meas = intensity;
+                auto sigma = d.intensity_meas_su.get();
+                sigma.push_back(1.0);
+                d.intensity_meas_su = sigma;
+            }
             result["after"] = state(view);
             result["messages"] = messages(session);
             result["typeRefused"] = !view.setExperimentType(
@@ -168,6 +181,7 @@ int main(int argc, char** argv) {
                 result["createdExtra"] = view.createExperiment();
                 result["mixed"] = state(view);
                 auto& p = const_cast<edi::Project&>(view.project());
+                p.experiments[0]->linked_structures[0]->scale.free = true;
                 p.calculate();
                 QJsonArray counts;
                 for (const auto& e : p.experiments)
@@ -189,7 +203,24 @@ int main(int argc, char** argv) {
                 if (!result["opened"].toBool())
                     throw std::runtime_error("saved project did not reopen");
                 result["reopened"] = state(*session.project());
-                auto& opened = *session.project();
+                edi_app::Session imported;
+                imported.createProject("Imported", "");
+                auto& opened = *imported.project();
+                for (const auto& entry : std::filesystem::directory_iterator(
+                         saved.toStdString() + "/structures")) {
+                    if (!opened.loadStructure(QUrl::fromLocalFile(
+                            QString::fromStdString(entry.path().string()))))
+                        throw std::runtime_error("saved structure import refused");
+                }
+                QList<QUrl> experimentFiles;
+                for (const auto& entry : std::filesystem::directory_iterator(
+                         saved.toStdString() + "/experiments")) {
+                    experimentFiles.append(QUrl::fromLocalFile(
+                        QString::fromStdString(entry.path().string())));
+                }
+                if (!opened.loadExperiments(experimentFiles))
+                    throw std::runtime_error("saved experiment import refused");
+                result["ediImported"] = state(opened);
                 result["ediLoadRefused"] =
                     !load(opened, 0, fixture + "/" + beam + "/three_columns/pattern.xye");
                 result["afterEdiLoadAttempt"] = state(opened);

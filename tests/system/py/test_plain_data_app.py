@@ -143,8 +143,11 @@ def test_saved_data_is_self_contained_and_edi_load_cannot_replace_it(native_prob
     record = run(native_probe, tmp_path, beam=beam)
     expected = CASES[beam + '/two_columns']['rows']
     require_reopened(record, expected)
+    assert rows(record['ediImported']) == expected, (
+        'Load experiment: the explicitly imported .edi supplies the saved measured rows'
+    )
     assert record['ediLoadRefused'] and rows(record['afterEdiLoadAttempt']) == expected, (
-        'Load data admission: an experiment reopened from .edi cannot use the creation-only action'
+        'Load data admission: an experiment imported through Load experiment cannot use the action'
     )
     assert not record['reopened']['experiments'][0]['simulation'], (
         'Save plain data: the reopened experiment retains its measured-data type lock'
@@ -311,6 +314,22 @@ def test_packet_escapes_reach_the_native_actions(native_probe, tmp_path, mode, e
         require_success(mutated)
         with pytest.raises(AssertionError, match='Create structure'):
             require_unlinked(mutated['newStructure'])
+
+
+def test_nonpositive_retention_escape_reaches_the_loaded_model(native_probe, tmp_path):
+    control = run(native_probe, tmp_path, case='nonpositive')
+    require_success(control)
+    expected = CASES['cwl/nonpositive']['rows']
+    assert rows(control['after']) == expected, (
+        'Bragg import control: the actual admitted dataset excludes both nonpositive rows'
+    )
+    mutated = run(native_probe, tmp_path, case='nonpositive', escape='retain-nonpositive')
+    assert rows(mutated['after'])[-1] == [18.0, 0.0, 1.0], (
+        'Nonpositive escape: the actor reaches the native measured model and retains a zero row'
+    )
+    assert rows(mutated['after']) != expected, (
+        'Bragg import observer: a zero row retained in the actual model defeats exact row equality'
+    )
 
 
 def test_desktop_browser_picker_and_editability_bindings_share_load_path():
