@@ -248,6 +248,9 @@ class Edit {
     static Edit erase(ItemVec<ParameterAlias>& rows, std::size_t index) { return erasing(rows, index); }
     static Edit erase(ItemVec<ParameterConstraint>& rows, std::size_t index) { return erasing(rows, index); }
     static Edit erase(ItemVec<Structure>& rows, std::size_t index) { return erasing(rows, index); }
+    // A row-level removal cannot see the project's scan declaration: the app removes experiments through
+    // erase_experiment, which keeps a scan's one template experiment.
+    static Edit erase(ItemVec<BraggPdExperiment>& rows, std::size_t index) { return erasing(rows, index); }
     // An excluded region: its row added at the end, removed, or one of its two bounds assigned. The
     // regions are one recorded field (ADR-0018), written through its `modify`, which records a write
     // even when its callback throws: a missing row is therefore refused before it.

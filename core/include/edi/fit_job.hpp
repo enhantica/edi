@@ -55,6 +55,9 @@ class FitJob {
         // A frame, between iterations. The job calculates the next one only after `frame_shown`, so a slow
         // owner sees fewer frames and the fit is never queued behind them. Empty: no frames are calculated.
         std::function<void(const FitFrame&)> frame;
+        // Once, last: nothing of this fit is delivered afterwards.
+        std::function<void(const FitReport&)> finished;
+        // The scan hooks follow `finished` so callers that list the first four in order keep their meaning.
         // A scan: once, before its first file, the number of files and the rows results.csv already holds.
         std::function<void(const ScanPreamble&)> scan_started;
         // A scan: once per file it fitted, after the file's results.csv row is on disk, in order.
@@ -62,8 +65,6 @@ class FitJob {
         // A scan while it is followed (`follow`): the file just fitted and its pattern at the fitted values, in place
         // of the frames a single fit draws. The job draws the next only after `frame_shown`.
         std::function<void(const std::string& file, const FitFrame&)> file_frame;
-        // Once, last: nothing of this fit is delivered afterwards.
-        std::function<void(const FitReport&)> finished;
     };
     // Test instrumentation: production constructs a FitJob without it.
     struct Seams {
