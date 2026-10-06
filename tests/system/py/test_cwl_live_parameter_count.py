@@ -50,6 +50,7 @@ def count_probe(tmp_path_factory):
         capture_output=True,
         text=True,
         timeout=30,
+        check=False,
     )
     assert result.returncode == 0, (
         'The unchanged production metadata publication bodies must compile in the '
@@ -63,7 +64,9 @@ def count_probe(tmp_path_factory):
     'vehicle', ['second-structure', 'experiment-fields', 'experiment-asymmetry']
 )
 def test_live_value_publication_preserves_parameter_population(count_probe, vehicle):
-    result = subprocess.run([str(count_probe), vehicle], capture_output=True, text=True, timeout=5)
+    result = subprocess.run(
+        [str(count_probe), vehicle], capture_output=True, text=True, timeout=5, check=False
+    )
     assert result.returncode == 0, (
         'A second-structure value edit must preserve parameter membership and '
         'free/fixed counts through production publication for every category field: '
