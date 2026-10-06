@@ -27,6 +27,12 @@ void EvolutionViewModel::setScan(const ScanSession* session, const edi::Project*
     session_ = session;
     project_ = project;
     extracted_title_ = extracted_title;
+    syncNames();
+    rebuild();
+}
+
+bool EvolutionViewModel::syncNames() {
+    // The parameters results.csv records, the shown one kept, else the first (every recorded parameter is free).
     QStringList names;
     if (session_ != nullptr) {
         for (const edi::ScanParameterColumns& parameter : session_->index().parameters) {
@@ -34,12 +40,18 @@ void EvolutionViewModel::setScan(const ScanSession* session, const edi::Project*
         }
     }
     const QString shown = current_ >= 0 && current_ < names_.size() ? names_[current_] : QString();
-    if (names != names_) {
+    const bool changed = names != names_;
+    if (changed) {
         names_ = names;
         parameters_->setNames(names_);
     }
-    current_ = names_.isEmpty() ? -1 : std::max(0, static_cast<int>(names_.indexOf(shown)));
-    rebuild();
+    const int current = names_.isEmpty() ? -1 : std::max(0, static_cast<int>(names_.indexOf(shown)));
+    if (current != current_ || changed) {
+        current_ = current;
+        emit currentParameterChanged();
+        emit yTitleChanged();
+    }
+    return changed;
 }
 
 std::optional<double> EvolutionViewModel::xOf(int dataset, const std::vector<std::string>* extracted) const {
@@ -55,7 +67,14 @@ std::optional<double> EvolutionViewModel::xOf(int dataset, const std::vector<std
 }
 
 void EvolutionViewModel::addRow(int dataset, const std::vector<std::string>& cells) {
-    if (session_ == nullptr || current_ < 0) {
+    if (session_ == nullptr) {
+        return;
+    }
+    // A fresh run's first row brings the header, and with it the parameters: they are listed then, and the points
+    // read once; every later row adds its own point.
+    if (current_ < 0 || names_.size() != static_cast<qsizetype>(session_->index().parameters.size())) {
+        syncNames();
+        rebuild();
         return;
     }
     const std::string name = names_[current_].toStdString();
@@ -92,6 +111,8 @@ void EvolutionViewModel::setOutOfDate(bool out_of_date) {
 void EvolutionViewModel::setCurrentParameter(int index) {
     if (index != current_ && index >= 0 && index < names_.size()) {
         current_ = index;
+        emit currentParameterChanged();
+        emit yTitleChanged();
         rebuild();
     }
 }
