@@ -890,6 +890,50 @@ PdDataBase read_scan_dataset(const std::string& directory, const std::string& fi
     return data;
 }
 
+PlainDataRows read_plain_data(const std::string& path) {
+    crysta::PlainData read;
+    try {
+        read = crysta::read_plain_data(path, true);
+    } catch (const std::exception& refusal) {
+        throw IoError(refusal.what());
+    }
+    return PlainDataRows{std::move(read.x),          std::move(read.y),         std::move(read.sigma),
+                         read.counts.skipped,       read.counts.nonpositive, read.counts.duplicates,
+                         read.counts.reordered,     read.counts.derived};
+}
+
+PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, const std::string& path,
+                                         bool take_file_name) {
+    PlainDataRows read = read_plain_data(path);
+    PlainDataLoad load{BraggPdExperiment(experiment), std::filesystem::path(path).filename().string()};
+    load.points = read.x.size();
+    load.skipped = read.skipped;
+    load.nonpositive = read.nonpositive;
+    load.duplicates = read.duplicates;
+    load.reordered = read.reordered;
+    load.derived = read.derived;
+    PdDataBase data;
+    (experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH ? data.two_theta : data.time_of_flight) =
+        std::move(read.x);
+    data.intensity_meas = std::move(read.y);
+    data.intensity_meas_su = std::move(read.sigma);
+    load.experiment.data = std::move(data);
+    load.experiment.calculation_only = false;
+    if (take_file_name) {
+        // The file's stem, with anything a datablock name cannot hold made an underscore.
+        std::string stem = std::filesystem::path(path).stem().string();
+        for (char& character : stem) {
+            const bool keep = (character >= 'a' && character <= 'z') || (character >= 'A' && character <= 'Z') ||
+                              (character >= '0' && character <= '9') || character == '_' || character == '-';
+            character = keep ? character : '_';
+        }
+        if (!stem.empty()) {
+            load.experiment.name = stem;
+        }
+    }
+    return load;
+}
+
 std::vector<std::string> scan_extract_values(const Project& project, const std::string& directory,
                                              const std::string& file) {
     crysta::SequentialFitConfig config;
