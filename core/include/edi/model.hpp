@@ -3485,6 +3485,9 @@ struct ScanFileRecord {
     int iterations = 0;
     // The row's cells as crysta appended them (the live event; empty for a resumed row read back).
     std::vector<std::string> cells;
+    // Why the file's fit stopped, as crysta's ledger (results-provenance.csv) records it beside the row; empty when
+    // it was not recorded.
+    std::string termination;
 };
 
 // Optional per-file completion subscriber. Passing none costs nothing: with no

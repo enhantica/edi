@@ -910,6 +910,48 @@ std::filesystem::path scan_results_path(const Project& project) {
     return std::filesystem::path(project.path) / "analysis" / "results.csv";
 }
 
+// Why each file's fit stopped, from crysta's ledger (`termination`, its fifth column), by file_path cell; a ledger
+// written before it recorded the reason, or none, gives nothing.
+std::unordered_map<std::string, std::string> ledger_terminations(const std::filesystem::path& path) {
+    std::unordered_map<std::string, std::string> reasons;
+    std::ifstream input(path, std::ios::binary);
+    std::string line;
+    if (!std::getline(input, line)) {
+        return reasons;
+    }
+    const std::vector<std::string> header = split_scan_row(line);
+    if (header.size() != 5 || header[0] != "file_path" || header[4] != "termination") {
+        return reasons;
+    }
+    while (std::getline(input, line) && !input.eof()) {
+        const std::vector<std::string> cells = split_scan_row(line);
+        if (cells.size() == 5) {
+            reasons[cells[0]] = cells[4];
+        }
+    }
+    return reasons;
+}
+
+// The termination the ledger's last line records for `file_cell`; empty when that line is another file's, the
+// ledger does not record reasons, or there is none. Reads only the file's end.
+std::string ledger_termination(const std::filesystem::path& path, const std::string& file_cell) {
+    std::ifstream input(path, std::ios::binary | std::ios::ate);
+    if (!input) {
+        return {};
+    }
+    const std::streamoff size = input.tellg();
+    const std::streamoff tail = std::min<std::streamoff>(size, 64 * 1024);
+    std::string text(static_cast<std::size_t>(tail), '\0');
+    input.seekg(size - tail);
+    input.read(text.data(), tail);
+    if (!text.empty() && text.back() == '\n') {
+        text.pop_back();
+    }
+    const std::size_t start = text.rfind('\n');
+    const std::vector<std::string> cells = split_scan_row(start == std::string::npos ? text : text.substr(start + 1));
+    return cells.size() == 5 && cells[0] == file_cell ? cells[4] : std::string();
+}
+
 // The results header, its columns resolved by name (crysta's order and any other alike): the file, χ², success and
 // iteration columns are required, each extract rule's column is its target's (crysta's name) or its id's, and every
 // other column is a parameter value with its `.uncertainty` beside it somewhere. A name twice is refused.
@@ -932,6 +974,7 @@ void check_scan_header(const Project& project, ScanResultIndex& index) {
         return found->second;
     };
     index.file = required("file_path");
+    index.directory = project.sequential_fit.data_dir + "/";
     index.chi = required("fit_result.reduced_chi_square");
     index.success = required("fit_result.success");
     index.iterations = required("fit_result.iterations");
@@ -996,8 +1039,11 @@ ScanPlaces scan_places(const ScanDatasets& datasets) {
 
 std::string scan_row_file(const ScanResultIndex& index, const std::vector<std::string>& cells) {
     const std::string& path = cells.at(index.file);
-    const std::size_t slash = path.rfind('/');
-    return slash == std::string::npos ? path : path.substr(slash + 1);
+    std::string_view name(path);
+    if (!index.directory.empty() && name.starts_with(index.directory)) {
+        name.remove_prefix(index.directory.size());
+    }
+    return name.find('/') == std::string_view::npos ? std::string(name) : std::string();
 }
 
 std::pair<std::size_t, ScanResultIndex::Row> scan_row_facts(const Project& /*project*/, const ScanPlaces& places,
@@ -1027,8 +1073,8 @@ std::pair<std::size_t, ScanResultIndex::Row> scan_row_facts(const Project& /*pro
     row.converged = success == "True";
     double iterations = 0.0;
     if (!parse_scan_number(cells[index.iterations], iterations) || iterations < 0 ||
-        iterations != std::floor(iterations)) {
-        refuse("has no whole iteration count");
+        iterations != std::floor(iterations) || iterations > std::numeric_limits<int>::max()) {
+        refuse("has no whole iteration count an int holds");
     }
     row.iterations = static_cast<int>(iterations);
     for (const std::ptrdiff_t column : index.extract) {
@@ -1064,15 +1110,20 @@ ScanResultIndex index_scan_results(const Project& project, const ScanDatasets& d
         std::int64_t offset = input.tellg();
         index.end = offset;
         const ScanPlaces places = scan_places(datasets);
+        const auto reasons = ledger_terminations(scan_results_path(project).parent_path() / "results-provenance.csv");
         while (std::getline(input, line)) {
             if (input.eof()) {
                 break;  // no line break: a row still being written
             }
             const std::int64_t next = input.tellg();
-            auto [dataset, row] = scan_row_facts(project, places, index, split_scan_row(line));
+            const std::vector<std::string> cells = split_scan_row(line);
+            auto [dataset, row] = scan_row_facts(project, places, index, cells);
             if (index.rows[dataset].offset >= 0) {
                 throw std::invalid_argument("analysis/results.csv: '" + datasets.files[dataset] +
                                             "' has two rows");
+            }
+            if (const auto reason = reasons.find(cells[index.file]); reason != reasons.end()) {
+                row.termination = reason->second;
             }
             row.offset = offset;
             index.rows[dataset] = std::move(row);
@@ -3434,14 +3485,18 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
                 record.iteration = static_cast<int>(file_history->size()) + 1;
                 file_history->push_back(record);
             };
+        const std::filesystem::path ledger_path = project_root / "analysis" / "results-provenance.csv";
         const crysta::FileCompleteCallback engine_file_complete =
-            [file_history, last_file_history,
+            [file_history, last_file_history, ledger_path,
              &on_file_complete](const std::vector<std::string>& row) {
                 std::swap(*last_file_history, *file_history);
                 file_history->clear();
                 if (on_file_complete) {
-                    const std::optional<ScanFileRecord> record = scan_record_from_cells(row);
+                    std::optional<ScanFileRecord> record = scan_record_from_cells(row);
                     if (record.has_value()) {
+                        // The driver wrote this file's ledger row just before its results row and waits
+                        // here, so the ledger's last line is this file's.
+                        record->termination = ledger_termination(ledger_path, row.empty() ? std::string() : row[0]);
                         on_file_complete(*record);
                     }
                 }
