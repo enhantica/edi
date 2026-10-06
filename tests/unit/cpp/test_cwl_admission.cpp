@@ -193,3 +193,105 @@ TEST_CASE("CW native fixed BeBa setting stays outside Edi free walks") {
         project.fit(),
         "Edi fitting excludes the fixed limit before constructing a derivative chain");
 }
+
+static void metadata_free_walk(edi::Project& project, bool experiment_walk,
+                               bool allow_refusal = false) {
+    auto& peak = project.experiment().peak;
+    std::vector<edi::Parameter*> free;
+    try {
+        free =
+            experiment_walk ? project.experiment().free_parameters() : project.free_parameters();
+    } catch (const std::invalid_argument& error) {
+        const std::string message = error.what();
+        CHECK_MESSAGE((allow_refusal &&
+                       (message.find("peak") != std::string::npos ||
+                        message.find("asym_beba") != std::string::npos) &&
+                       (message.find("descriptor") != std::string::npos ||
+                        message.find("metadata") != std::string::npos ||
+                        message.find("spec") != std::string::npos)),
+                      "A metadata refusal must identify the canonical peak descriptor mismatch");
+        return;
+    }
+    CHECK_MESSAGE(
+        std::find(free.begin(), free.end(), &*peak.asym_beba_limit) == free.end(),
+        "The owning limit slot remains fixed after any descriptor or parameter replacement");
+    CHECK_MESSAGE(std::find(free.begin(), free.end(), &*peak.asym_beba_a0) != free.end(),
+                  "The actual free coefficient cannot be suppressed by the limit descriptor");
+    CHECK_MESSAGE(std::find(free.begin(), free.end(), &*peak.broad_gauss_w) != free.end(),
+                  "Metadata admission must retain an independently free width coefficient");
+}
+
+static edi::Project metadata_control() {
+    auto project = edi::load_project((admission_root() / "beba").string());
+    auto& peak = project.experiment().peak;
+    peak.asym_beba_limit->value = 160;
+    peak.asym_beba_limit->free = true;
+    peak.asym_beba_a0->value = .031;
+    peak.asym_beba_a0->free = true;
+    peak.broad_gauss_w->value = .047;
+    peak.broad_gauss_w->free = true;
+    return project;
+}
+
+TEST_CASE("CW fixed limit metadata cannot change its owning slot selection") {
+    auto control = metadata_control();
+    CHECK_NOTHROW_MESSAGE(metadata_free_walk(control, true),
+                          "Canonical metadata admits the experiment's real free coefficients");
+    CHECK_NOTHROW_MESSAGE(metadata_free_walk(control, false),
+                          "Canonical metadata admits the project's real free coefficients");
+    for (int mutation = 0; mutation < 4; ++mutation) {
+        CAPTURE(mutation);
+        for (const bool experiment_walk : {true, false}) {
+            CAPTURE(experiment_walk);
+            auto project = metadata_control();
+            auto& peak = project.experiment().peak;
+            const auto* coefficient_spec = peak.asym_beba_a0->spec;
+            REQUIRE_MESSAGE(
+                coefficient_spec != nullptr,
+                "The different non-null descriptor comes from a real loaded coefficient");
+            REQUIRE_MESSAGE(
+                coefficient_spec != peak.asym_beba_limit->spec,
+                "The metadata substitution must differ from the fixed limit descriptor");
+            if (mutation == 0) peak.asym_beba_limit->spec = nullptr;
+            if (mutation == 1) peak.asym_beba_limit->spec = coefficient_spec;
+            if (mutation == 2) peak.asym_beba_limit = edi::Parameter(160, 0.0, true);
+            if (mutation == 3) peak.asym_beba_limit = *peak.asym_beba_a0;
+            peak.asym_beba_limit->value = 160;
+            peak.asym_beba_limit->free = true;
+            CHECK_NOTHROW_MESSAGE(
+                metadata_free_walk(project, experiment_walk, true),
+                "Free enumeration classifies the slot or refuses only its descriptor mismatch");
+            CHECK_MESSAGE(peak.asym_beba_limit->value == 160,
+                          "Descriptor admission retains the supplied nondefault limit angle");
+        }
+    }
+}
+
+TEST_CASE("CW real coefficient remains selectable with the fixed limit descriptor") {
+    auto control = metadata_control();
+    metadata_free_walk(control, true);
+    metadata_free_walk(control, false);
+    for (const bool replacement : {false, true}) {
+        CAPTURE(replacement);
+        for (const bool experiment_walk : {true, false}) {
+            CAPTURE(experiment_walk);
+            auto project = metadata_control();
+            auto& peak = project.experiment().peak;
+            const auto* limit_spec = peak.asym_beba_limit->spec;
+            REQUIRE_MESSAGE(limit_spec != nullptr,
+                            "The mirror escape copies the actual loaded fixed limit descriptor");
+            if (replacement) {
+                peak.asym_beba_a0 = *peak.asym_beba_limit;
+            } else {
+                peak.asym_beba_a0->spec = limit_spec;
+            }
+            peak.asym_beba_a0->value = .031;
+            peak.asym_beba_a0->free = true;
+            CHECK_NOTHROW_MESSAGE(
+                metadata_free_walk(project, experiment_walk, true),
+                "The mirrored descriptor cannot silently remove a real free coefficient");
+            CHECK_MESSAGE(peak.asym_beba_a0->value == .031,
+                          "Mirror admission retains the real coefficient's supplied value");
+        }
+    }
+}

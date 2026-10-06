@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-06T05:25:09Z
+# measured_utc = 2026-10-06T05:51:25Z
 #
-# Recorded from: tests-seq11-edi-scoped.log (116 node(s) measured once, 7706 banked, 0 stale row(s) dropped)
-# Collected tests: 8501; with a reported duration: 4230
+# Recorded from: focused native admission controls and actual durations tests-seq14-current-native.log
+# Collected tests: 8501; with a reported duration: 4233
 # Module-scoped fixture costs recorded: 17
 #
 # Breaches are decided PER TIER against the table
@@ -30,9 +30,9 @@
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 8501
-# inventory_cpp = 293
-# inventory_measured = 7822
-# inventory_unmeasured = 972
+# inventory_cpp = 295
+# inventory_measured = 7825
+# inventory_unmeasured = 971
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_projects_open_and_populate_pages
@@ -7487,12 +7487,14 @@ UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_transitions.cpp::Na
 0.040	tests/unit/cpp/test_constraint_transitions.cpp::Relation declaration writes revoke computed currentness without parameter writes
 0.072	tests/unit/cpp/test_constraint_transitions.cpp::Relation declaration writes supersede calculated publications atomically
 0.004	tests/unit/cpp/test_constraint_transitions.cpp::Unchanged relation declarations admit calculated publication
-0.038	tests/unit/cpp/test_cwl_admission.cpp::CW native calculate admits only a matching token and slot block
-0.030	tests/unit/cpp/test_cwl_admission.cpp::CW native fit admits only a matching token and slot block
-UNMEASURED:failed-in-focused-native-run: tests-seq8-edi-native.log	tests/unit/cpp/test_cwl_admission.cpp::CW native fixed BeBa setting stays outside Edi free walks
+0.008	tests/unit/cpp/test_cwl_admission.cpp::CW fixed limit metadata cannot change its owning slot selection
+0.045	tests/unit/cpp/test_cwl_admission.cpp::CW native calculate admits only a matching token and slot block
+0.034	tests/unit/cpp/test_cwl_admission.cpp::CW native fit admits only a matching token and slot block
+0.020	tests/unit/cpp/test_cwl_admission.cpp::CW native fixed BeBa setting stays outside Edi free walks
 0.012	tests/unit/cpp/test_cwl_admission.cpp::CW native free admits only a matching token and slot block
 0.067	tests/unit/cpp/test_cwl_admission.cpp::CW native optional profile slots use declared defaults
-0.024	tests/unit/cpp/test_cwl_admission.cpp::CW native save admits only a matching token and slot block
+0.026	tests/unit/cpp/test_cwl_admission.cpp::CW native save admits only a matching token and slot block
+0.005	tests/unit/cpp/test_cwl_admission.cpp::CW real coefficient remains selectable with the fixed limit descriptor
 0.030	tests/unit/cpp/test_e05_t1_fit_job.cpp::E05-T1 gate 3 engine checkpoint cancel retains partial values and undo
 0.036	tests/unit/cpp/test_e05_t1_fit_job.cpp::E05-T1 gate 3 joint engine checkpoint cancel retains partial values and undo
 0.011	tests/unit/cpp/test_e05_t1_fit_job.cpp::E05-T1 gate 3 joint worker token cancellation reaches a running fit
