@@ -5,15 +5,15 @@ import QtQuick
 import QtQuick.Controls
 
 import EasyApplication.Gui.Style as EaStyle
-import EasyApplication.Gui.Elements as EaElements
 import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
 
 // `atom_site_aniso` (easydiffractionbeta Pages/Model/SideBarBasic/AtomSiteAdp.qml; the owner, 2026-10-06): one row
 // per atom site, its label as in Atom sites, read only; its ADP type; the isotropic value; the six anisotropic
-// components. An isotropic type edits `iso` and leaves the six empty; an anisotropic type edits the six and shows
-// the equivalent isotropic value. Only Biso is calculated yet: the other types are a draft, kept in the app.
+// components. An isotropic type edits its value and leaves the six empty; an anisotropic type edits the six, those
+// its site symmetry leaves free, and shows the equivalent isotropic value read only. Changing the type converts the
+// site's values.
 Column {
     id: group
 
@@ -78,9 +78,7 @@ Column {
             required property int index
             required property string label
             required property string adpType
-            required property bool active
             required property ParameterItem adpIso
-            required property var iso
             required property var ani11
             required property var ani22
             required property var ani33
@@ -112,85 +110,80 @@ Column {
                     currentIndex = Qt.binding(() => group.adps ? group.adps.types.indexOf(row.adpType) : -1);
                 }
             }
-            // Biso is the stored parameter itself, with its vary toggle; any other type's value is the draft's. One
-            // column, so the table's columns stay one per header label.
+            // The isotropic value in the site's type; an anisotropic site's equivalent value, which follows its
+            // tensor, is shown disabled.
+            ParameterCell {
+                objectName: `atomSiteAdp.iso.${row.index}`
+                width: group.valueWidth
+                item: row.adpIso
+                enabled: !row.anisotropic && refinable
+            }
             Item {
                 width: group.valueWidth
                 height: EaStyle.Sizes.tableRowHeight
 
                 ParameterCell {
-                    objectName: `atomSiteAdp.iso.${row.index}`
+                    objectName: `atomSiteAdp.ani11.${row.index}`
                     anchors.fill: parent
-                    visible: row.adpType === "Biso"
-                    item: row.adpIso
-                }
-                TextCell {
-                    objectName: `atomSiteAdp.isoPreview.${row.index}`
-                    anchors.fill: parent
-                    visible: row.adpType !== "Biso"
-                    enabled: !row.anisotropic
-                    accepts: "number"
-                    value: row.iso
-                    onCommitted: text => group.adps.setIso(row.index, Number(text))
+                    visible: row.anisotropic && !!row.ani11
+                    item: row.ani11 ? row.ani11 : null
                 }
             }
-            TextCell {
-                objectName: `atomSiteAdp.ani11.${row.index}`
+            Item {
                 width: group.valueWidth
-                enabled: row.anisotropic
-                accepts: "number"
-                value: row.anisotropic ? row.ani11 : ""
-                onCommitted: text => group.adps.setComponent(row.index, 0, Number(text))
+                height: EaStyle.Sizes.tableRowHeight
+
+                ParameterCell {
+                    objectName: `atomSiteAdp.ani22.${row.index}`
+                    anchors.fill: parent
+                    visible: row.anisotropic && !!row.ani22
+                    item: row.ani22 ? row.ani22 : null
+                }
             }
-            TextCell {
-                objectName: `atomSiteAdp.ani22.${row.index}`
+            Item {
                 width: group.valueWidth
-                enabled: row.anisotropic
-                accepts: "number"
-                value: row.anisotropic ? row.ani22 : ""
-                onCommitted: text => group.adps.setComponent(row.index, 1, Number(text))
+                height: EaStyle.Sizes.tableRowHeight
+
+                ParameterCell {
+                    objectName: `atomSiteAdp.ani33.${row.index}`
+                    anchors.fill: parent
+                    visible: row.anisotropic && !!row.ani33
+                    item: row.ani33 ? row.ani33 : null
+                }
             }
-            TextCell {
-                objectName: `atomSiteAdp.ani33.${row.index}`
+            Item {
                 width: group.valueWidth
-                enabled: row.anisotropic
-                accepts: "number"
-                value: row.anisotropic ? row.ani33 : ""
-                onCommitted: text => group.adps.setComponent(row.index, 2, Number(text))
+                height: EaStyle.Sizes.tableRowHeight
+
+                ParameterCell {
+                    objectName: `atomSiteAdp.ani12.${row.index}`
+                    anchors.fill: parent
+                    visible: row.anisotropic && !!row.ani12
+                    item: row.ani12 ? row.ani12 : null
+                }
             }
-            TextCell {
-                objectName: `atomSiteAdp.ani12.${row.index}`
+            Item {
                 width: group.valueWidth
-                enabled: row.anisotropic
-                accepts: "number"
-                value: row.anisotropic ? row.ani12 : ""
-                onCommitted: text => group.adps.setComponent(row.index, 3, Number(text))
+                height: EaStyle.Sizes.tableRowHeight
+
+                ParameterCell {
+                    objectName: `atomSiteAdp.ani13.${row.index}`
+                    anchors.fill: parent
+                    visible: row.anisotropic && !!row.ani13
+                    item: row.ani13 ? row.ani13 : null
+                }
             }
-            TextCell {
-                objectName: `atomSiteAdp.ani13.${row.index}`
+            Item {
                 width: group.valueWidth
-                enabled: row.anisotropic
-                accepts: "number"
-                value: row.anisotropic ? row.ani13 : ""
-                onCommitted: text => group.adps.setComponent(row.index, 4, Number(text))
-            }
-            TextCell {
-                objectName: `atomSiteAdp.ani23.${row.index}`
-                width: group.valueWidth
-                enabled: row.anisotropic
-                accepts: "number"
-                value: row.anisotropic ? row.ani23 : ""
-                onCommitted: text => group.adps.setComponent(row.index, 5, Number(text))
+                height: EaStyle.Sizes.tableRowHeight
+
+                ParameterCell {
+                    objectName: `atomSiteAdp.ani23.${row.index}`
+                    anchors.fill: parent
+                    visible: row.anisotropic && !!row.ani23
+                    item: row.ani23 ? row.ani23 : null
+                }
             }
         }
-    }
-
-    EaElements.Label {
-        objectName: "atomSiteAdps.draft"
-        visible: group.adps !== null && group.adps.hasPreview
-        width: EaStyle.Sizes.sideBarContentWidth
-        wrapMode: Text.WordWrap
-        color: EaStyle.Colors.themeForegroundMinor
-        text: qsTr("Draft: only Biso is calculated and saved. Uiso, Bani, Uani and beta are shown here to try the table: the calculation still uses each site's Biso, and these types are not saved or written to the Text tab. They come with the anisotropic ADP support.")
     }
 }

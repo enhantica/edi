@@ -155,6 +155,8 @@ from edi._edi import (  # noqa: E402 - the __path__ resolution above must run fi
     Alias,
     Aliases,
     AtomSite,
+    AtomSiteAniso,
+    AtomSiteAnisoCollection,
     AtomSites,
     AtomSitesCartnTransform,
     BankMetric,
@@ -275,6 +277,8 @@ __all__ = [
     'Aliases',
     'Analysis',
     'AtomSite',
+    'AtomSiteAniso',
+    'AtomSiteAnisoCollection',
     'AtomSites',
     'AtomSitesCartnTransform',
     'BankMetric',
@@ -549,12 +553,22 @@ _ATOM_SITE_KEYS = frozenset({
     'occupancy',
     'adp_iso',
 })
+_ATOM_SITE_ANISO_KEYS = frozenset({
+    'id',
+    'adp_11',
+    'adp_22',
+    'adp_33',
+    'adp_12',
+    'adp_13',
+    'adp_23',
+})
 _SPACE_GROUP_KEYS = frozenset({'name_h_m', 'coord_system_code', 'it_number'})
 _STRUCTURE_KEYS = frozenset({
     'name',
     'space_group',
     'cell',
     'atom_sites',
+    'atom_site_aniso',
     'scattering_lengths_fm',
 })
 # The categorised experiment dict grammar: the dict mirrors the object tree exactly.
@@ -741,7 +755,7 @@ class StructureFactory:
             site.id = site_spec.get('id', '')
             site.type_symbol = site_spec.get('type_symbol', '')
             site.wyckoff_letter = site_spec.get('wyckoff_letter', '')
-            site.adp_type = site_spec.get('adp_type', '')
+            site.adp_type = site_spec.get('adp_type', 'Biso')
             fract_x, fract_y, fract_z = site_spec.get('fract', (0.0, 0.0, 0.0))
             site.fract_x = _parameter(site_spec.get('fract_x', fract_x))
             site.fract_y = _parameter(site_spec.get('fract_y', fract_y))
@@ -753,6 +767,21 @@ class StructureFactory:
         # list, so a duplicate id is refused by name instead of being collapsed by add()'s
         # upsert.
         structure.atom_sites._assign(sites)
+
+        # The anisotropic sites' tensors, in each site's declared type. Without them, each
+        # anisotropic site holds the tensor of its isotropic value.
+        tensors = []
+        for tensor_spec in spec.get('atom_site_aniso', ()):
+            _reject_unknown(
+                tensor_spec, _ATOM_SITE_ANISO_KEYS, 'StructureFactory.from_dict atom_site_aniso'
+            )
+            tensor = AtomSiteAniso()
+            tensor.id = tensor_spec.get('id', '')
+            for component in ('adp_11', 'adp_22', 'adp_33', 'adp_12', 'adp_13', 'adp_23'):
+                setattr(tensor, component, _parameter(tensor_spec.get(component, 0.0)))
+            tensors.append(tensor)
+        if 'atom_site_aniso' in spec:
+            structure.atom_site_aniso._assign(tensors)
 
         # Element -> b_c (fm) for crysta::NeutronScattering (empty => the engine's default table).
         structure.scattering_lengths_fm = {

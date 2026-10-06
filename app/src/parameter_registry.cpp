@@ -70,6 +70,13 @@ void ParameterRegistry::refreshElements(const edi::Project& project) {
                  {&site->fract_x, &site->fract_y, &site->fract_z, &site->occupancy, &site->adp_iso}) {
                 element.emplace(parameter, site->type_symbol);
             }
+            for (const auto& tensor : structure->atom_site_aniso) {
+                if (tensor->id.value() == site->id.value()) {
+                    for (const edi::Parameter* parameter : tensor->parameters()) {
+                        element.emplace(parameter, site->type_symbol);
+                    }
+                }
+            }
         }
     }
     // A phase's scale and texture take the colour of the structure they belong to, when there are several.

@@ -337,6 +337,145 @@
      "verdict": "public"
     }
    },
+   "AtomSiteAniso": {
+    "adp_11": {
+     "need": {
+      "by": "counterpart",
+      "ref": "AtomSiteAniso.adp_11",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "adp_12": {
+     "need": {
+      "by": "counterpart",
+      "ref": "AtomSiteAniso.adp_12",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "adp_13": {
+     "need": {
+      "by": "counterpart",
+      "ref": "AtomSiteAniso.adp_13",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "adp_22": {
+     "need": {
+      "by": "counterpart",
+      "ref": "AtomSiteAniso.adp_22",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "adp_23": {
+     "need": {
+      "by": "counterpart",
+      "ref": "AtomSiteAniso.adp_23",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "adp_33": {
+     "need": {
+      "by": "counterpart",
+      "ref": "AtomSiteAniso.adp_33",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "id": {
+     "need": {
+      "by": "counterpart",
+      "ref": "AtomSiteAniso.id",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "parameters": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CategoryItem.parameters",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "AtomSiteAnisoCollection": {
+    "add": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CategoryCollection.add",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "clear": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CategoryCollection.clear",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "items": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.items",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "keys": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.keys",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "names": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.names",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "remove": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.remove",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "values": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CollectionBase.values",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
    "AtomSites": {
     "add": {
      "need": {
@@ -2509,76 +2648,76 @@
    },
    "LinkedStructures": {
     "add": {
-     "reason": "C",
-     "verdict": "public",
      "need": {
       "by": "counterpart",
       "ref": "CategoryCollection.add",
       "verdict": "keep"
-     }
+     },
+     "reason": "C",
+     "verdict": "public"
     },
     "clear": {
-     "reason": "C",
-     "verdict": "public",
      "need": {
       "by": "counterpart",
       "ref": "CategoryCollection.clear",
       "verdict": "keep"
-     }
+     },
+     "reason": "C",
+     "verdict": "public"
     },
     "create": {
-     "reason": "C",
-     "verdict": "public",
      "need": {
       "by": "counterpart",
       "ref": "CategoryCollection.create",
       "verdict": "keep"
-     }
+     },
+     "reason": "C",
+     "verdict": "public"
     },
     "items": {
-     "reason": "C",
-     "verdict": "public",
      "need": {
       "by": "counterpart",
       "ref": "CollectionBase.items",
       "verdict": "keep"
-     }
+     },
+     "reason": "C",
+     "verdict": "public"
     },
     "keys": {
-     "reason": "C",
-     "verdict": "public",
      "need": {
       "by": "counterpart",
       "ref": "CollectionBase.keys",
       "verdict": "keep"
-     }
+     },
+     "reason": "C",
+     "verdict": "public"
     },
     "names": {
-     "reason": "C",
-     "verdict": "public",
      "need": {
       "by": "counterpart",
       "ref": "CollectionBase.names",
       "verdict": "keep"
-     }
+     },
+     "reason": "C",
+     "verdict": "public"
     },
     "remove": {
-     "reason": "C",
-     "verdict": "public",
      "need": {
       "by": "counterpart",
       "ref": "CollectionBase.remove",
       "verdict": "keep"
-     }
+     },
+     "reason": "C",
+     "verdict": "public"
     },
     "values": {
-     "reason": "C",
-     "verdict": "public",
      "need": {
       "by": "counterpart",
       "ref": "CollectionBase.values",
       "verdict": "keep"
-     }
+     },
+     "reason": "C",
+     "verdict": "public"
     }
    },
    "NoAbsorption": {
@@ -4148,6 +4287,15 @@
     }
    },
    "Structure": {
+    "atom_site_aniso": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Structure.atom_site_aniso",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "atom_sites": {
      "need": {
       "by": "counterpart",
@@ -5062,6 +5210,24 @@
     "reason": "C",
     "verdict": "public"
    },
+   "AtomSiteAniso": {
+    "need": {
+     "by": "counterpart",
+     "ref": "AtomSiteAniso",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "AtomSiteAnisoCollection": {
+    "need": {
+     "by": "counterpart",
+     "ref": "AtomSiteAnisoCollection",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
    "AtomSites": {
     "need": {
      "by": "counterpart",
@@ -5378,13 +5544,13 @@
     "verdict": "public"
    },
    "LinkedStructures": {
-    "reason": "C",
-    "verdict": "public",
     "need": {
      "by": "counterpart",
      "ref": "LinkedStructures",
      "verdict": "keep"
-    }
+    },
+    "reason": "C",
+    "verdict": "public"
    },
    "NoAbsorption": {
     "need": {
@@ -5886,6 +6052,31 @@
     "parameters",
     "type_symbol",
     "wyckoff_letter"
+   ]
+  },
+  "AtomSiteAniso": {
+   "kind": "class",
+   "members": [
+    "adp_11",
+    "adp_12",
+    "adp_13",
+    "adp_22",
+    "adp_23",
+    "adp_33",
+    "id",
+    "parameters"
+   ]
+  },
+  "AtomSiteAnisoCollection": {
+   "kind": "class",
+   "members": [
+    "add",
+    "clear",
+    "items",
+    "keys",
+    "names",
+    "remove",
+    "values"
    ]
   },
   "AtomSites": {
@@ -6619,6 +6810,7 @@
   "Structure": {
    "kind": "class",
    "members": [
+    "atom_site_aniso",
     "atom_sites",
     "atom_sites_cartn_transform",
     "cell",

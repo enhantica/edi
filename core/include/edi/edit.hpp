@@ -39,6 +39,7 @@
 #include "edi/model.hpp"
 #include "edi/parameter_walk.hpp"
 #include "edi/selectors.hpp"
+#include "edi/symmetry.hpp"
 #include "edi/categories.hpp"
 
 namespace edi {
@@ -159,6 +160,11 @@ class Edit {
         return Edit(
             [&experiment, item, token = std::move(token)] { select_scattering_source(experiment, item, token); });
     }
+    // A site's ADP type, its values converted (change_adp_type): crysta computes the new values on a
+    // copy, so a refusal writes nothing.
+    static Edit adp_type(Structure& structure, AtomSite& site, std::string type) {
+        return Edit([&structure, &site, type = std::move(type)] { change_adp_type(structure, site, type); });
+    }
     static Edit texture_axis_component(PrefOrient& row, detail::Written<int> PrefOrient::*component, int value) {
         return Edit([&row, component, value] { set_texture_axis_component(row, component, value); });
     }
@@ -231,6 +237,49 @@ class Edit {
         return appending(rows, std::move(row));
     }
     static Edit erase(ItemVec<AtomSite>& rows, std::size_t index) { return erasing(rows, index); }
+    // A copy of a site under a new id, with a copy of its tensor row when it has one.
+    static Edit duplicate_atom_site(Structure& structure, const AtomSite& source, std::string id) {
+        return Edit([&structure, &source, id = std::move(id)] {
+            for (const auto& existing : structure.atom_sites) {
+                if (existing->id.value() == id) {
+                    throw std::invalid_argument("an atom site labelled '" + detail::printable_id(id) +
+                                                "' is already in the structure");
+                }
+            }
+            AtomSite site = source;
+            site.id = id;
+            std::optional<AtomSiteAniso> tensor;
+            for (const auto& row : structure.atom_site_aniso) {
+                if (row->id.value() == source.id.value()) {
+                    tensor = *row;
+                    tensor->id = id;
+                }
+            }
+            structure.atom_sites.push_back(std::move(site));
+            if (tensor) {
+                structure.atom_site_aniso.push_back(std::move(*tensor));
+            }
+        });
+    }
+    // An atom site and, when it is anisotropic, its tensor row: the row would otherwise name no site.
+    static Edit erase_atom_site(Structure& structure, std::size_t index) {
+        return Edit([&structure, index] {
+            if (index >= structure.atom_sites.size()) {
+                throw std::out_of_range("no atom site at row " + std::to_string(index));
+            }
+            const std::string id = structure.atom_sites[index]->id.value();
+            std::optional<std::size_t> tensor;
+            for (std::size_t row = 0; row < structure.atom_site_aniso.size(); ++row) {
+                if (structure.atom_site_aniso[row]->id.value() == id) {
+                    tensor = row;
+                }
+            }
+            structure.atom_sites.erase_at(index);
+            if (tensor) {
+                structure.atom_site_aniso.erase_at(*tensor);
+            }
+        });
+    }
     static Edit erase(ItemVec<LineSegment>& rows, std::size_t index) { return erasing(rows, index); }
     static Edit erase(ItemVec<PrefOrient>& rows, std::size_t index) { return erasing(rows, index); }
     static Edit erase(ItemVec<LinkedStructure>& rows, std::size_t index) { return erasing(rows, index); }
