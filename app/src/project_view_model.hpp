@@ -12,8 +12,10 @@
 #include <QUrl>
 #include <QtQml/qqmlregistration.h>
 #include <functional>
+#include <map>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <utility>
 #include <variant>
@@ -120,8 +122,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_PROPERTY(edi_app::StructureViewModel* currentStructure READ currentStructure NOTIFY currentStructureChanged)
     Q_PROPERTY(edi_app::ExperimentViewModel* currentExperiment READ currentExperiment NOTIFY currentExperimentChanged)
     Q_PROPERTY(bool canLoadStructure READ canLoadStructure NOTIFY canLoadStructureChanged)
-    // Create experiment adds an experiment without data: refused while the project's experiments carry
-    // measured data (a project calculates or fits as a whole).
+    // Create experiment adds an experiment without data, beside experiments with data too: a fit skips it, a
+    // calculation covers it. A scan project keeps its one template experiment.
     Q_PROPERTY(bool canCreateExperiment READ canCreateExperiment NOTIFY canCreateExperimentChanged)
     // A scan project (sequential or independent mode over a declared scan): its experiment list is the scan's
     // datasets, and the current experiment index the shown dataset. `scanColumns`: one heading per extract
@@ -198,11 +200,22 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // D12: add blocks from `.edi` files; on a refusal nothing changes and `refused` names the reason.
     Q_INVOKABLE bool loadStructure(const QUrl& file);
     Q_INVOKABLE bool loadExperiments(const QList<QUrl>& files);
+    // A structure's removal takes every experiment's link to it (and texture row for it) with it, in one undoable
+    // step, with a message naming the experiments.
     Q_INVOKABLE void removeStructure(int index);
+    // Create structure: a new structure named structure1, structure2, … holding easydiffractionbeta's default phase
+    // (P b n m, a = 10, b = 6, c = 5 Å, one O site at the origin), selected and linked to no experiment. One
+    // undoable step.
+    Q_INVOKABLE bool createStructure();
     Q_INVOKABLE void removeExperiment(int index);
     // A new experiment without data (edi::simulation_experiment), selected: powder, constant wavelength,
-    // neutron, Bragg, linked to the first structure. One undoable step, as a load of experiments is.
+    // neutron, Bragg, linked to every structure. One undoable step, as a load of experiments is.
     Q_INVOKABLE bool createExperiment();
+    // Load data…: the plain-data file's rows (crysta's reader) become the measured data of experiment `index`, one
+    // made with Create experiment; its type then locks and its range shows the data's. An experiment still named
+    // experiment1, experiment2, … takes the file's name. A second load replaces the data. One undoable step, and
+    // one message saying what the reader skipped or changed.
+    Q_INVOKABLE bool loadData(int index, const QUrl& file);
     // One type axis ("sampleForm", "beamMode", "radiationProbe", "scatteringType") of an experiment without
     // data set to `token`: the experiment is made anew with that type, keeping its name, its link and,
     // within one beam mode, its range.
@@ -257,6 +270,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void lastErrorChanged();
     void canUndoChanged();
     void refused(const QString& message);
+    // A message for the status bar's Messages (Session lists it): a load's account, a removal's links.
+    void message(const QString& text);
     void pathChanged();
     void modifiedChanged();
     // A calculation was published; each experiment's pattern holds its outcome (Session's message list).
@@ -312,7 +327,21 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         int shown_dataset = -1;                 // Reset fits only: the dataset the model showed, and its values
         std::vector<edi::Edit::ScanValue> shown_values;
     };
-    using UndoRecord = std::variant<std::monostate, edi::RelationsUndo, AddedExperiments, ScanRun>;
+    // Load data: the experiment as it was before (a simulation, or its earlier data, with its file name).
+    struct LoadedData {
+        const edi::ExperimentBase* experiment = nullptr;
+        std::shared_ptr<const edi::BraggPdExperiment> before;
+    };
+    using UndoRecord =
+        std::variant<std::monostate, edi::RelationsUndo, AddedExperiments, ScanRun, LoadedData, edi::StructuresUndo>;
+    // The experiments made with Create experiment (they take Load data…), kept by identity: a replaced experiment
+    // (Load data, a type change, their undo) passes its entry on.
+    std::set<const edi::ExperimentBase*> created_;
+    void experimentReplaced(const edi::ExperimentBase* before, const edi::ExperimentBase* after, bool created);
+    // Each experiment view's Load data… state, from the set above.
+    void syncLoadState();
+    // Applies an experiment's replacement by Load data or its undo; the refusal, if any.
+    QString replaceData(int index, edi::BraggPdExperiment replacement);
     bool restoreScanRun(const ScanRun& run);
     // The results read again from disk (after a run, an undo or a load), with every view of them.
     void reloadScanResults();

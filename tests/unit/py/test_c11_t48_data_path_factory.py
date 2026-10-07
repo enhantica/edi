@@ -66,12 +66,50 @@ def test_c11_t48_data_path_factory_preserves_columns_and_sigma_rules(
         'the two-column contract derives sigma as the closed-form square root of intensity'
     )
 
-    invalid_inputs = (
-        ('one-column.dat', '1.0\n2.0\n', r'expected 2 or 3 columns'),
-        ('negative.dat', '1.0 -4.0\n', r'cannot derive sqrt\(y\)'),
-        ('non-finite.dat', '1.0 4.0 nan\n', r'non-finite value'),
+
+@pytest.mark.parametrize(
+    'beam_mode', ['constant wavelength', 'time-of-flight'], ids=['cwl', 'tof']
+)
+@pytest.mark.parametrize(
+    ('filename', 'rows'),
+    [
+        ('one-column.dat', '1.0\n2.0\n'),
+        ('negative.dat', '1.0 -4.0\n'),
+        ('non-finite.dat', '1.0 4.0 nan\n'),
+    ],
+    ids=['malformed-columns', 'nonpositive-bragg', 'nonfinite-sigma'],
+)
+def test_data_path_factory_refuses_empty_result_after_filtering(
+    tmp_path, beam_mode, filename, rows
+):
+    # E04-T18 replaces immediate per-row errors with filtering, then one empty-result refusal.
+    path = _write_rows(tmp_path, filename, rows)
+    with pytest.raises(ValueError, match='holds no data rows'):
+        edi.ExperimentFactory.from_data_path(name='invalid', data_path=path, beam_mode=beam_mode)
+
+
+@pytest.mark.parametrize(
+    'beam_mode', ['constant wavelength', 'time-of-flight'], ids=['cwl', 'tof']
+)
+def test_data_path_factory_keeps_good_rows_among_all_filtered_classes(tmp_path, beam_mode):
+    path = _write_rows(
+        tmp_path,
+        'filtered.dat',
+        '11 9 3\nheader\n2\n7 -4 2\n8 0 2\n10 4 nan\n9 16 4\n11 25 5\n',
     )
-    for name, rows, message in invalid_inputs:
-        path = _write_rows(tmp_path, name, rows)
-        with pytest.raises(ValueError, match=message):
-            edi.ExperimentFactory.from_data_path(name='invalid', data_path=path)
+    experiment = edi.ExperimentFactory.from_data_path(
+        name='filtered-bank', data_path=path, beam_mode=beam_mode
+    )
+    assert experiment.name == 'filtered-bank', (
+        'E04-T18 factory: a mixed usable/unusable file preserves its independently chosen name'
+    )
+    assert list(experiment.data.axis()) == [9.0, 11.0], (
+        'E04-T18 factory: filter malformed, nonpositive and nonfinite rows; '
+        'sort x and keep the first duplicate'
+    )
+    assert experiment.data.intensity_meas == [16.0, 9.0], (
+        'E04-T18 factory: retained intensities belong to the first surviving rows at each x'
+    )
+    assert experiment.data.intensity_meas_su == [4.0, 3.0], (
+        'E04-T18 factory: sorting and filtering preserve the supplied nontrivial uncertainties'
+    )

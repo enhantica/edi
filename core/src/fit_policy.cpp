@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "fit_policy.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <map>
 #include <stdexcept>
@@ -9,6 +10,7 @@
 
 #include "crysta/model.hpp"
 #include "edi/model.hpp"
+#include "edi/parameter_walk.hpp"
 
 // Lifted verbatim out of adapter.cpp; see the header for what this file is.
 
@@ -139,6 +141,67 @@ int default_max_iterations() { return detail::bounded_max_iterations(0); }
 // project cannot reach it, because the one loader already proved every bank carries measured data.
 // A calculation-only bank (a `_data_range`-generated grid) refuses here too: the project's own
 // contents selected calculate, so a fit on it is a caller error, never a data accident.
+namespace {
+
+bool has_measured_data(const ExperimentBase& experiment) {
+    return experiment.data.has_value() && !experiment.calculation_only;
+}
+
+// Experiments with measured data beside experiments without (a simulation made with Create experiment).
+bool mixed_experiments(const Project& project) {
+    return std::any_of(project.experiments.begin(), project.experiments.end(),
+                       [](const auto& e) { return has_measured_data(*e); }) &&
+           std::any_of(project.experiments.begin(), project.experiments.end(),
+                       [](const auto& e) { return !has_measured_data(*e); });
+}
+
+// A fit of a mixed project leaves the simulations out. It runs on a copy holding only the measured
+// experiments, and what it wrote, the parameters and the fit records, is copied back by parameter path and
+// experiment name. Any other project fits itself, so its fit is unchanged.
+template <typename Fit>
+FitResultBase fit_measured_experiments(Project& project, Fit fit) {
+    Project measured = project;
+    std::vector<ItemVec<BraggPdExperiment>::Ptr> kept;
+    for (const auto& experiment : measured.experiments) {
+        if (has_measured_data(*experiment)) {
+            kept.push_back(experiment);
+        }
+    }
+    measured.experiments.assign(std::move(kept));
+    FitResultBase result = fit(measured);
+    std::map<std::string, Parameter*> targets;
+    for (const ParameterEntry& entry : parameter_entries(project)) {
+        targets.emplace(entry.path, entry.parameter);
+    }
+    for (const ParameterEntry& entry : parameter_entries(measured)) {
+        const auto found = targets.find(entry.path);
+        if (found == targets.end() || found->second == nullptr || entry.parameter == nullptr) {
+            continue;
+        }
+        Parameter& target = *found->second;
+        const Parameter& source = *entry.parameter;
+        if (target.value.get() != source.value.get()) {
+            target.value = source.value.get();
+        }
+        target.uncertainty = source.uncertainty.get();
+        target.start_value = source.start_value.get();
+        target.start_uncertainty = source.start_uncertainty.get();
+    }
+    project.fit_result = measured.fit_result;
+    for (const auto& target : project.experiments) {
+        for (const auto& source : measured.experiments) {
+            if (source->name.value() == target->name.value()) {
+                target->fit_n_data_points = source->fit_n_data_points;
+                target->fit_prof_wr_factor = source->fit_prof_wr_factor;
+                target->fit_chi_square = source->fit_chi_square;
+            }
+        }
+    }
+    return result;
+}
+
+}  // namespace
+
 FitResultBase Project::fit(const IterationCallback& on_iteration,
                            const PreambleCallback& on_start, const CancelCallback& should_cancel) {
     // A sequential project reaching the single-bank one-call form would silently fit the
@@ -154,6 +217,11 @@ FitResultBase Project::fit(const IterationCallback& on_iteration,
             "edi fit: _fitting_mode.type is '" + fitting_mode +
             "' - this entry point serves exactly the 'single' mode; use analysis.fit(), which "
             "routes each declared mode to its own entry");
+    }
+    if (mixed_experiments(*this)) {
+        return fit_measured_experiments(*this, [&](Project& measured) {
+            return measured.fit(on_iteration, on_start, should_cancel);
+        });
     }
     if (!experiment().data.has_value() || experiment().calculation_only) {
         throw std::invalid_argument("edi fit: experiment() '" + experiment().name +
@@ -182,6 +250,11 @@ FitResultBase Project::fit_joint(const IterationCallback& on_iteration,
     }
     if (experiments.empty()) {
         throw std::invalid_argument("edi fit_joint: project has no experiments");
+    }
+    if (mixed_experiments(*this)) {
+        return fit_measured_experiments(*this, [&](Project& measured) {
+            return measured.fit_joint(on_iteration, on_start, should_cancel);
+        });
     }
     std::vector<PdDataBase> patterns;
     patterns.reserve(experiments.size());

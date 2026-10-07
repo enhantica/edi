@@ -1,0 +1,28 @@
+{
+  "file": "pattern.txt",
+  "rows": [
+    [
+      3500.0,
+      4,
+      2
+    ],
+    [
+      3600,
+      9,
+      3
+    ],
+    [
+      3700.0,
+      16,
+      4
+    ]
+  ],
+  "counts": {
+    "skipped": 4,
+    "nonpositive": 0,
+    "duplicates": 0,
+    "reordered": 0,
+    "derived": 0
+  },
+  "beam": "tof"
+}

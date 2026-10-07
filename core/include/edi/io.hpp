@@ -218,6 +218,43 @@ struct ExperimentTypeTokens {
 /// (IoError).
 BraggPdExperiment simulation_experiment(const std::string& name, const ExperimentTypeTokens& type,
                                         const std::string& structure_id);
+/// The same, linked to each of `structure_ids` at scale 1 (Create experiment links every structure).
+BraggPdExperiment simulation_experiment(const std::string& name, const ExperimentTypeTokens& type,
+                                        const std::vector<std::string>& structure_ids);
+
+/// The rows of a plain two- or three-column data file `x y [σ]`, read by crysta's plain-data reader, and what
+/// it dropped or changed: lines that are not two or three numbers, rows with y <= 0, repeated
+/// x, rows moved by the sort, and rows whose σ was derived from y. Throws IoError when the file cannot be read or
+/// keeps no row.
+struct PlainDataRows {
+    std::vector<double> x;
+    std::vector<double> y;
+    std::vector<double> sigma;
+    std::size_t skipped = 0;
+    std::size_t nonpositive = 0;
+    std::size_t duplicates = 0;
+    std::size_t reordered = 0;
+    std::size_t derived = 0;
+};
+PlainDataRows read_plain_data(const std::string& path);
+
+/// A plain-data file read into an experiment (Load data): the experiment as it was, with the file's rows as
+/// its measured data, so its type, instrument, peak, background and excluded regions stay.
+struct PlainDataLoad {
+    BraggPdExperiment experiment;
+    std::string file_name;  // the file's own name, without its directory
+    std::size_t points = 0;
+    std::size_t skipped = 0;
+    std::size_t nonpositive = 0;
+    std::size_t duplicates = 0;
+    std::size_t reordered = 0;
+    std::size_t derived = 0;
+};
+/// `experiment` with the rows of the plain-data file at `path` as its measured data. With `take_file_name`,
+/// the experiment is renamed to the file's name without its extension, when that is a name the project can
+/// use. Throws IoError when the file cannot be read or keeps no row.
+PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, const std::string& path,
+                                         bool take_file_name);
 
 // Registration-live loader vocabulary (seam 20 / I15): the Python registration seam adds a new
 // `_peak.type` token here so the loader and selector accept it without a rebuild — crysta's
