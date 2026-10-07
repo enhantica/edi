@@ -39,5 +39,9 @@ The separate executed-body witness lives in crysta's visible
 `tests/fixtures/web_parallel` builders and hidden browser driver. Build it from
 the same core source as the app, with the same Emscripten thread and SIMD options,
 and run that browser driver as well. Configuration counts cannot replace this
-execution witness. The native performance gate remains the existing crysta A/B
+execution witness. The witness driver accepts the optional last argument
+`serial-dispatch` or `backend-off` for the corresponding observer build. These
+control runs must complete and record executed serial bodies with the failed
+rendezvous; a startup failure does not count as refusal. The serial-dispatch
+control also retains configured capacity four and advertised chunks sixteen. The native performance gate remains the existing crysta A/B
 harness (`tools/bench/ab_perf.py`); no new pinned duration is introduced.
