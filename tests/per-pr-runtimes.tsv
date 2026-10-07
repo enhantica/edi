@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-07T01:03:18Z
+# measured_utc = 2026-10-07T07:34:14Z
 #
-# Recorded from: scoped.log (20 node(s) measured once, 8305 banked, 0 stale row(s) dropped)
+# Recorded from: measure-durations.log (4 node(s) measured once, 8321 banked, 0 stale row(s) dropped)
 # Collected tests: 9497; with a reported duration: 4631
 # Module-scoped fixture costs recorded: 27
 #
@@ -299,7 +299,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_shipment.py:
 0.000	tests/integration/py/test_c13_t12_loop_identity.py::test_cif_aniso_identity_table[duplicate-path]
 0.000	tests/integration/py/test_c13_t12_loop_identity.py::test_cif_aniso_identity_table[duplicate-text]
 0.000	tests/integration/py/test_c13_t12_loop_identity.py::test_cif_aniso_identity_table[unique-path]
-0.000	tests/integration/py/test_c13_t12_loop_identity.py::test_cif_aniso_identity_table[unique-text]
+0.010	tests/integration/py/test_c13_t12_loop_identity.py::test_cif_aniso_identity_table[unique-text]
 0.000	tests/integration/py/test_c13_t12_loop_identity.py::test_duplicate_loop_ids_refuse_at_load[bare-atom_site-cif-path]
 0.000	tests/integration/py/test_c13_t12_loop_identity.py::test_duplicate_loop_ids_refuse_at_load[bare-atom_site-cif-text]
 0.000	tests/integration/py/test_c13_t12_loop_identity.py::test_duplicate_loop_ids_refuse_at_load[bare-atom_site-edi-path]
