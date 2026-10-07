@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-07T12:33:55Z
+# measured_utc = 2026-10-07T12:37:14Z
 #
-# Recorded from: edi-identity.log (12 node(s) measured once, 8374 banked, 0 stale row(s) dropped)
-# Collected tests: 9568; with a reported duration: 4635
+# Recorded from: edi-current.log (12 node(s) measured once, 8374 banked, 0 stale row(s) dropped)
+# Collected tests: 9568; with a reported duration: 4647
 # Module-scoped fixture costs recorded: 26
 #
 # Breaches are decided PER TIER against the table
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 9568
 # inventory_cpp = 298
-# inventory_measured = 8374
-# inventory_unmeasured = 1492
+# inventory_measured = 8386
+# inventory_unmeasured = 1480
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
 0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_cosio-d20_scan-162f]
@@ -7504,18 +7504,18 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_phase_sum
 UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_texture_is_local_to_phase_and_invariant_under_axis_sign
 UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_two_free_scales_recover_unequal_independent_contributions
 UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_two_named_phases_load_and_roundtrip
-UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[one-held-name-mixed-experiment]
-UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[one-held-name-mixed-structure]
-UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[one-held-name-title-experiment]
-UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[one-held-name-title-structure]
-UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[one-held-name-upper-experiment]
-UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[one-held-name-upper-structure]
-UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[two-held-names-mixed-experiment]
-UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[two-held-names-mixed-structure]
-UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[two-held-names-title-experiment]
-UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[two-held-names-title-structure]
-UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[two-held-names-upper-experiment]
-UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[two-held-names-upper-structure]
+0.130	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[one-held-name-mixed-experiment]
+0.070	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[one-held-name-mixed-structure]
+0.141	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[one-held-name-title-experiment]
+0.090	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[one-held-name-title-structure]
+0.140	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[one-held-name-upper-experiment]
+0.110	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[one-held-name-upper-structure]
+0.130	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[two-held-names-mixed-experiment]
+0.090	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[two-held-names-mixed-structure]
+0.130	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[two-held-names-title-experiment]
+0.080	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[two-held-names-title-structure]
+0.150	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[two-held-names-upper-experiment]
+0.090	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[two-held-names-upper-structure]
 0.060	tests/system/py/test_plain_data_app.py::test_default_structure_matches_frozen_beta_cif
 0.470	tests/system/py/test_plain_data_app.py::test_desktop_browser_picker_and_editability_bindings_share_load_path
 UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_filename_and_user_name[default-name]
@@ -9926,7 +9926,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 1.762	tests/system/py/test_e09_t58_start_tied_numeric.py
 # module-cost: 0.180	tests/system/py/test_e09_t75_native_execution.py
 # module-cost: 3.929	tests/system/py/test_fit_participants_native.py
-# module-cost: 48.634	tests/system/py/test_plain_data_app.py
+# module-cost: 129.839	tests/system/py/test_plain_data_app.py
 # module-cost: 21.241	tests/system/py/test_pytest_child_environment.py
 # module-cost: 0.543	tests/system/py/test_scan_accident_paths.py
 # module-cost: 112.644	tests/system/py/test_scan_app_execution.py
