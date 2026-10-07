@@ -129,14 +129,13 @@ struct Block {
         }
         return nullptr;
     }
-    // The tensor loop, found by any column whose tag starts with `prefix`, or nullptr. A loop
-    // without its id column, or a second tensor loop, refuses rather than being left unread.
-    const Loop* tensor_loop(const std::string& prefix, const std::string& id_tag,
-                            const std::string& where) const {
+    // The tensor loop, found by any of its columns (`is_tensor`), or nullptr. A loop without its id
+    // column, or a second tensor loop, refuses rather than being left unread.
+    template <typename IsTensor>
+    const Loop* tensor_loop(const IsTensor& is_tensor, const std::string& id_tag, const std::string& where) const {
         const Loop* found = nullptr;
         for (const auto& loop : loops) {
-            const bool tensor = std::any_of(loop.tags.begin(), loop.tags.end(),
-                                            [&prefix](const std::string& tag) { return tag.starts_with(prefix); });
+            const bool tensor = std::any_of(loop.tags.begin(), loop.tags.end(), is_tensor);
             if (!tensor) {
                 continue;
             }
@@ -807,7 +806,12 @@ Structure structure_from_block(const Block& block, const std::string& where) {
     }
 
     // The anisotropic sites' tensors, one row per anisotropic site.
-    if (const Loop* aniso = block.tensor_loop("_atom_site_aniso.", "_atom_site_aniso.id", where)) {
+    // The category's columns share the id tag's category prefix.
+    const std::string aniso_id = "_atom_site_aniso.id";
+    const std::string aniso_category = aniso_id.substr(0, aniso_id.rfind('.') + 1);
+    if (const Loop* aniso = block.tensor_loop(
+            [&aniso_category](const std::string& tag) { return tag.starts_with(aniso_category); }, aniso_id,
+            where)) {
         const ParameterSpec* const specs[6] = {
             &spec::atom_site_aniso_adp_11, &spec::atom_site_aniso_adp_22,
             &spec::atom_site_aniso_adp_33, &spec::atom_site_aniso_adp_12,
@@ -2302,18 +2306,27 @@ Structure structure_from_cif_block(const Block& block, const std::string& where)
         AtomSiteAniso tensor;
     };
     std::map<std::string, CifTensor> tensors;
-    if (const Loop* aniso = block.tensor_loop("_atom_site_aniso_", "_atom_site_aniso_label", where)) {
-        static const std::array<std::pair<const char*, std::array<const char*, 6>>, 3> kForms{{
-            {"Uani",
-             {"_atom_site_aniso_U_11", "_atom_site_aniso_U_22", "_atom_site_aniso_U_33",
-              "_atom_site_aniso_U_12", "_atom_site_aniso_U_13", "_atom_site_aniso_U_23"}},
-            {"Bani",
-             {"_atom_site_aniso_B_11", "_atom_site_aniso_B_22", "_atom_site_aniso_B_33",
-              "_atom_site_aniso_B_12", "_atom_site_aniso_B_13", "_atom_site_aniso_B_23"}},
-            {"beta",
-             {"_atom_site_aniso_beta_11", "_atom_site_aniso_beta_22", "_atom_site_aniso_beta_33",
-              "_atom_site_aniso_beta_12", "_atom_site_aniso_beta_13", "_atom_site_aniso_beta_23"}},
-        }};
+    static const std::array<std::pair<const char*, std::array<const char*, 6>>, 3> kForms{{
+        {"Uani",
+         {"_atom_site_aniso_U_11", "_atom_site_aniso_U_22", "_atom_site_aniso_U_33",
+          "_atom_site_aniso_U_12", "_atom_site_aniso_U_13", "_atom_site_aniso_U_23"}},
+        {"Bani",
+         {"_atom_site_aniso_B_11", "_atom_site_aniso_B_22", "_atom_site_aniso_B_33",
+          "_atom_site_aniso_B_12", "_atom_site_aniso_B_13", "_atom_site_aniso_B_23"}},
+        {"beta",
+         {"_atom_site_aniso_beta_11", "_atom_site_aniso_beta_22", "_atom_site_aniso_beta_33",
+          "_atom_site_aniso_beta_12", "_atom_site_aniso_beta_13", "_atom_site_aniso_beta_23"}},
+    }};
+    // A tensor column is the label or any component the three forms spell.
+    const auto is_tensor = [](const std::string& tag) {
+        if (tag == "_atom_site_aniso_label") {
+            return true;
+        }
+        return std::any_of(kForms.begin(), kForms.end(), [&tag](const auto& form) {
+            return std::find(form.second.begin(), form.second.end(), tag) != form.second.end();
+        });
+    };
+    if (const Loop* aniso = block.tensor_loop(is_tensor, "_atom_site_aniso_label", where)) {
         bool found_form = false;
         for (const auto& [type, tags] : kForms) {
             if (aniso->column(tags[0]) < 0) {
