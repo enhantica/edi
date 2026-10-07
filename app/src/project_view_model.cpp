@@ -123,6 +123,18 @@ void ExperimentListModel::setDataset(int index, ExperimentViewModel* experiment,
     setTableRow(index, dataset_values(experiment, dataset));
 }
 
+bool ExperimentListModel::holdsDatasets(int count) const {
+    if (this->count() != count) {
+        return false;
+    }
+    for (int i = 0; i < count; ++i) {
+        if (keyAt(i) != reinterpret_cast<const void*>(static_cast<std::uintptr_t>(i + 1))) {
+            return false;
+        }
+    }
+    return true;
+}
+
 // ---- ProjectViewModel ---------------------------------------------------------------------------
 
 ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
@@ -774,6 +786,23 @@ void ProjectViewModel::syncDatasets() {
         return;
     }
     const std::size_t count = scan_session_->datasets().files.size();
+    experiment_list_->setColumns(scan_columns_);
+    // A list already holding the scan's datasets is brought up to date row by row: a scan of many files would
+    // otherwise hold its rows two and three times at once (the end of a run is where this is called).
+    if (experiment_list_->holdsDatasets(static_cast<int>(count))) {
+        ExperimentViewModel* experiment = experiment_models_.value(0);
+        for (std::size_t index = 0; index < count; ++index) {
+            const ExperimentListModel::Dataset row = datasetRow(static_cast<int>(index));
+            experiment_list_->setDataset(static_cast<int>(index), experiment, row);
+            if (experiment != nullptr && static_cast<int>(index) == current_dataset_) {
+                experiment->setFitOutcome(row.outcome);
+            }
+        }
+        if (experiment != nullptr && (current_dataset_ < 0 || current_dataset_ >= static_cast<int>(count))) {
+            experiment->setFitOutcome(QString());
+        }
+        return;
+    }
     QList<ExperimentListModel::Dataset> rows;
     rows.reserve(static_cast<qsizetype>(count));
     for (std::size_t index = 0; index < count; ++index) {
@@ -783,7 +812,6 @@ void ProjectViewModel::syncDatasets() {
         experiment->setFitOutcome(current_dataset_ >= 0 && current_dataset_ < rows.size() ? rows[current_dataset_].outcome
                                                                                           : QString());
     }
-    experiment_list_->setColumns(scan_columns_);
     experiment_list_->setDatasets(experiment_models_.value(0), rows);
 }
 
