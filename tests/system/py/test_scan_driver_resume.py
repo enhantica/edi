@@ -116,7 +116,9 @@ def native_resume(tmp_path_factory):
         '-o',
         str(executable),
     ]
-    if sys.platform != 'darwin':
+    if sys.platform == 'darwin':
+        command.insert(-2, '-lomp')
+    else:
         command.insert(-2, '-fopenmp')
     result = subprocess.run(command, capture_output=True, text=True, check=False, timeout=60)
     assert result.returncode == 0, (
