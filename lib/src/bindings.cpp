@@ -1729,14 +1729,9 @@ NB_MODULE(_edi, m) {
         // tensor row, keyed by the site id, follows it.
         .def_prop_rw(
             "id", [](const edi::AtomSite& self) { return self.id.value(); },
-            [](edi::AtomSite& self, std::string value) {
-                edi::Structure* structure = holding_structure(self);
-                if (structure != nullptr) {
-                    edi::rename_atom_site(*structure, self, value);
-                    return;
-                }
-                self.id = std::move(value);
-            })
+            // Every assignment is a write, an equal one included; the collection carries a tensor row
+            // along (detail::follow_site_rename).
+            [](edi::AtomSite& self, std::string value) { self.id = std::move(value); })
         // A geometry input records its own writes, so it binds as a property.
         .def_prop_rw(
             "type_symbol", [](const edi::AtomSite& self) { return self.type_symbol.value(); },
