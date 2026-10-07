@@ -964,27 +964,37 @@ std::filesystem::path scan_results_path(const Project& project) {
     return std::filesystem::path(project.path) / "analysis" / "results.csv";
 }
 
-// Why each file's fit stopped, from crysta's ledger (`termination`, its fifth column), by file_path cell; a ledger
-// written before it recorded the reason, or none, gives nothing.
-std::unordered_map<std::string, std::string> ledger_terminations(const std::filesystem::path& path) {
-    std::unordered_map<std::string, std::string> reasons;
-    std::ifstream input(path, std::ios::binary);
-    std::string line;
-    if (!std::getline(input, line)) {
-        return reasons;
-    }
-    const std::vector<std::string> header = split_scan_row(line);
-    if (header.size() != 5 || header[0] != "file_path" || header[4] != "termination") {
-        return reasons;
-    }
-    while (std::getline(input, line) && !input.eof()) {
-        const std::vector<std::string> cells = split_scan_row(line);
-        if (cells.size() == 5) {
-            reasons[cells[0]] = cells[4];
+// Why each file's fit stopped, from crysta's ledger (`termination`, its fifth column), read in step with
+// results.csv: crysta writes a file's ledger row just before its results row, so the k-th of each name the same
+// file. Reading both together keeps one row in memory, not the whole scan's. A ledger written before it recorded
+// the reason, none, or one whose row names another file gives nothing from there on.
+class LedgerReader {
+   public:
+    explicit LedgerReader(const std::filesystem::path& path) : input_(path, std::ios::binary) {
+        std::string line;
+        if (std::getline(input_, line)) {
+            const std::vector<std::string> header = split_scan_row(line);
+            usable_ = header.size() == 5 && header[0] == "file_path" && header[4] == "termination";
         }
     }
-    return reasons;
-}
+    std::string next(const std::string& file_cell) {
+        std::string line;
+        if (!usable_ || !std::getline(input_, line) || input_.eof()) {
+            usable_ = false;
+            return {};
+        }
+        std::vector<std::string> cells = split_scan_row(line);
+        if (cells.size() != 5 || cells[0] != file_cell) {
+            usable_ = false;
+            return {};
+        }
+        return std::move(cells[4]);
+    }
+
+   private:
+    std::ifstream input_;
+    bool usable_ = false;
+};
 
 // The termination the ledger's last line records for `file_cell`; empty when that line is another file's, the
 // ledger does not record reasons, or there is none. Reads only the file's end.
@@ -1149,6 +1159,11 @@ std::pair<std::size_t, ScanResultIndex::Row> scan_row_facts(const Project& /*pro
 }
 
 ScanResultIndex index_scan_results(const Project& project, const ScanDatasets& datasets, bool writing) {
+    return index_scan_results(project, datasets, scan_places(datasets), writing);
+}
+
+ScanResultIndex index_scan_results(const Project& project, const ScanDatasets& datasets, const ScanPlaces& places,
+                                   bool writing) {
     ScanResultIndex index;
     index.rows.resize(datasets.files.size());
     const auto refused = [&datasets](const std::string& why) {
@@ -1180,8 +1195,7 @@ ScanResultIndex index_scan_results(const Project& project, const ScanDatasets& d
         check_scan_header(project, index);
         std::int64_t offset = input.tellg();
         index.end = offset;
-        const ScanPlaces places = scan_places(datasets);
-        const auto reasons = ledger_terminations(scan_results_path(project).parent_path() / "results-provenance.csv");
+        LedgerReader reasons(scan_results_path(project).parent_path() / "results-provenance.csv");
         while (std::getline(input, line)) {
             if (input.eof()) {
                 if (writing) {
@@ -1196,9 +1210,7 @@ ScanResultIndex index_scan_results(const Project& project, const ScanDatasets& d
                 throw std::invalid_argument("analysis/results.csv: '" + datasets.files[dataset] +
                                             "' has two rows");
             }
-            if (const auto reason = reasons.find(cells[index.file]); reason != reasons.end()) {
-                row.termination = reason->second;
-            }
+            row.termination = reasons.next(cells[index.file]);
             row.offset = offset;
             index.rows[dataset] = std::move(row);
             ++index.fitted;
