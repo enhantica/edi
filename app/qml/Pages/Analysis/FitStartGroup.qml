@@ -5,7 +5,6 @@ import QtQuick
 import QtQuick.Controls
 
 import EasyApplication.Gui.Style as EaStyle
-import EasyApplication.Gui.Logic as EaLogic
 import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
@@ -18,9 +17,9 @@ EaComponents.TableView {
 
     property AnalysisViewModel analysis: null
 
-    // A start value at the base's default precision; the model keeps it whole.
+    // A start value by the app's one rule for numbers in cells (NumberText); the model keeps it whole.
     function shown(value) {
-        return value === undefined ? "" : EaLogic.Utils.toDefaultPrecision(value);
+        return value === undefined ? "" : NumberText.plain(value, 8);
     }
 
     objectName: "fitStart.list"
