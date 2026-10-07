@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-07T11:57:51Z
+# measured_utc = 2026-10-07T12:03:30Z
 #
-# Recorded from: measure-final.log (98 node(s) measured once, 8242 banked, 0 stale row(s) dropped)
+# Recorded from: public-file.log (1 node(s) measured once, 8339 banked, 0 stale row(s) dropped)
 # Collected tests: 9505; with a reported duration: 4638
 # Module-scoped fixture costs recorded: 27
 #
@@ -6748,7 +6748,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_cwl_cli.py::test_each_cw_prof
 0.000	tests/system/py/test_e04_t12_public_release.py::test_fork_guard_cannot_admit_or_negate_the_attacker[github.event.pull_request.head.repo.fork == false || always()-False]
 0.000	tests/system/py/test_e04_t12_public_release.py::test_fork_guard_cannot_admit_or_negate_the_attacker[github.event.pull_request.head.repo.fork == false-True]
 0.000	tests/system/py/test_e04_t12_public_release.py::test_fork_guard_cannot_admit_or_negate_the_attacker[github.event_name == 'workflow_dispatch'-True]
-0.007	tests/system/py/test_e04_t12_public_release.py::test_frozen_api_gate_survives_one_commit_history
+0.010	tests/system/py/test_e04_t12_public_release.py::test_frozen_api_gate_survives_one_commit_history
 0.000	tests/system/py/test_e04_t12_public_release.py::test_independent_private_pattern_controls
 1.710	tests/system/py/test_e04_t12_public_release.py::test_independent_secret_predicate_checks_every_decoded_member
 0.010	tests/system/py/test_e04_t12_public_release.py::test_live_edi_history_anchors_resolve_in_one_commit_tree
@@ -9863,7 +9863,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 1.059	tests/system/py/test_c34_t28_native_surface.py
 # module-cost: 1.269	tests/system/py/test_cwl_live_parameter_count.py
 # module-cost: 22.953	tests/system/py/test_e04_t10_latency.py
-# module-cost: 0.663	tests/system/py/test_e04_t12_public_release.py
+# module-cost: 0.680	tests/system/py/test_e04_t12_public_release.py
 # module-cost: 110.331	tests/system/py/test_e04_t9_latency.py
 # module-cost: 4.456	tests/system/py/test_e05_t1_background_provenance.py
 # module-cost: 1.762	tests/system/py/test_e09_t58_start_tied_numeric.py
