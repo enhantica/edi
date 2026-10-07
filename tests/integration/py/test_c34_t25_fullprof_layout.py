@@ -450,6 +450,7 @@ def test_no_unaccounted_project_homes_or_invented_instruments():
         'pd-xray-cwl_lif_single-polarization',
         'pd-neut-cwl_lbco-hrpt_preferred-orientation',
         'pd-neut-cwl_cosio-d20_biso-tied',
+        'pd-neut-cwl_y2o3_beta-adp',
     }
     for home, names in [
         (

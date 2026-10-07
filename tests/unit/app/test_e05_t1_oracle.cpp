@@ -203,7 +203,7 @@ class FitOracle final : public QObject {
         // comes directly from crysta's public maps, outside edi's marks/table model.
         const auto external=crysta::load_project(QDir(root()).filePath(path).toStdString());
         std::map<std::pair<std::string,std::string>,bool> independent;
-        for(const auto& structure:external.structures) {
+        for (const auto& structure : external.structures) {
             const auto freedom=crysta::cell_freedom(structure.space_group);
             const char* cell_names[]={"length_a","length_b","length_c","angle_alpha","angle_beta","angle_gamma"};
             for(std::size_t axis=0;axis<6;++axis)

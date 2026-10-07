@@ -116,9 +116,11 @@ def test_image_family_inventory_rejects_damage(damage):
                 'duplicate-state': '01-other.png',
             }[damage]
         )
-    with pytest.raises(
-        AssertionError, match=r'Example image inventory|exactly one expected image'
-    ):
+    # Inventory damage names missing/extra files; numbered damage names the state family.
+    reason = (
+        'exactly one expected image' if damage == 'duplicate-state' else 'Example image inventory'
+    )
+    with pytest.raises(AssertionError, match=reason):
         assert_image_families(names, examples, captures)
 
 

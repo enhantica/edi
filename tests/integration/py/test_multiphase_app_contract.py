@@ -25,7 +25,7 @@ def test_shared_block_selector_has_bounded_square_icon_steps_and_file_labels():
         for button in buttons
     ), 'Both selector buttons must be square at the regular combobox height'
     assert 'spacing: AppSizes.toolbarSpacing' in selector, (
-        'The compact main-area selector must use the shared toolbar-group spacing'
+        'The selector must use the shared spacing within a toolbar group'
     )
     assert all(
         label in selector
@@ -53,14 +53,13 @@ def test_shared_block_selector_has_bounded_square_icon_steps_and_file_labels():
         or 'filename' in selector + model
         or 'key + QStringLiteral(".edi")' in model
     ), 'Selector labels must combine datablock and file names'
-    placement = code('app/qml/Components/MainAreaBlockSelector.qml')
-    assert 'BlockSelector {' in placement and (
-        'onBlockActivated: index => placement.blockActivated(index)' in placement
-    ), 'The main-area selector must forward choices from the shared block control'
+    # Before the owner's GUI round, Analysis had a sidebar selector; all pages now share
+    # the single main-area placement while preserving the complete collection and activation.
     workflow = code('app/qml/Components/WorkflowPage.qml')
-    assert (
-        'MainAreaBlockSelector {' in workflow and 'visible: page.blockSelectorShown' in workflow
-    ), 'The shared workflow main area must host the enabled block selector'
+    assert 'MainAreaBlockSelector {' in workflow and (
+        'visible: page.blockSelectorShown && page.blocks !== null && page.blocks.count > 0'
+        in workflow
+    ), 'The shared workflow must host the selector only while its page has blocks'
     assert all(
         binding in workflow
         for binding in (
@@ -70,14 +69,24 @@ def test_shared_block_selector_has_bounded_square_icon_steps_and_file_labels():
             'onBlockActivated: index => page.blockActivated(index)',
         )
     ), 'The shared selector must forward the page collection, selection and activation'
-    for name, kind, collection in (
+    placement = code('app/qml/Components/MainAreaBlockSelector.qml')
+    assert placement.count('BlockSelector {') == 1 and (
+        'onBlockActivated: index => placement.blockActivated(index)' in placement
+    ), 'The main-area placement must compose one selector and forward its original index'
+    assert 'BlockSelector {' in placement and (
+        'onBlockActivated: index => placement.blockActivated(index)' in placement
+    ), 'The main-area selector must forward choices from the shared block control'
+    assert (
+        'MainAreaBlockSelector {' in workflow and 'visible: page.blockSelectorShown' in workflow
+    ), 'The shared workflow main area must host the enabled block selector'
+    for page_name, kind, collection in (
         ('Experiment', 'Experiment', 'experiments'),
         ('Structure', 'Structure', 'structures'),
         ('Analysis', 'Experiment', 'experiments'),
     ):
-        page = code(f'app/qml/Pages/{name}/{name}Page.qml')
+        page = code(f'app/qml/Pages/{page_name}/{page_name}Page.qml')
         assert 'WorkflowPage {' in page and 'blockSelectorShown: true' in page, (
-            'All three browsing pages must enable the shared workflow selector'
+            'Every browsing page must enable the shared workflow selector'
         )
         assert f'blocks: project ? project.{collection} : null' in page, (
             'Each browsing page must supply its own complete block collection'

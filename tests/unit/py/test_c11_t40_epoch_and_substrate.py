@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import math
 from pathlib import Path
 from typing import Any
 
@@ -246,10 +245,19 @@ def test_c11_t40_validator_fires_at_python_factory_and_file_boundaries(
         ),
         pytest.param(
             'u',
-            [('_atom_site_U_iso_or_equiv', '0.005')],
-            8.0 * math.pi**2 * 0.005,
-            0.0,
+            [('_atom_site_U_iso_or_equiv', '0.0050(2)')],
+            # Independent cctbx-base 2025.11 adptbx.u_as_b(0.005),
+            # adptbx.u_as_b(0.0002); frozen for offline testing.
+            0.39478417604357435,
+            0.015791367041742974,
             id='u',
+        ),
+        pytest.param(
+            'u-without-uncertainty',
+            [('_atom_site_U_iso_or_equiv', '0.005')],
+            0.39478417604357435,
+            0.0,
+            id='u-without-uncertainty',
         ),
         pytest.param(
             'both',
@@ -263,7 +271,7 @@ def test_c11_t40_validator_fires_at_python_factory_and_file_boundaries(
         ),
     ],
 )
-def test_c11_t40_cif_adp_spellings_convert_and_prefer_b(
+def test_c11_t40_cif_adp_spellings_preserve_type_and_prefer_b(
     tmp_path: Path,
     method_name: str,
     name: str,
@@ -275,12 +283,18 @@ def test_c11_t40_cif_adp_spellings_convert_and_prefer_b(
     path = tmp_path / f'{name}.cif'
     path.write_text(text, encoding='utf-8')
     source = text if method_name == 'from_cif_str' else path
-    parameter = getattr(edi.StructureFactory, method_name)(source).atom_sites[0].adp_iso
+    site = getattr(edi.StructureFactory, method_name)(source).atom_sites[0]
+    # Before: U-only columns implied Uiso. After: without a declared type,
+    # Biso is the default and both U value and standard uncertainty convert.
+    assert site.adp_type == 'Biso', (
+        'an undeclared CIF site must default to Biso regardless of the B/U input spelling'
+    )
+    parameter = site.adp_iso
     assert parameter.value == pytest.approx(expected_value, abs=1.0e-12), (
-        'CIF B/U spelling must follow diffraction-lib conversion semantics',
+        'undeclared U-only CIF values convert to Biso against cctbx; an explicit B column wins',
         name,
     )
     assert parameter.uncertainty == pytest.approx(expected_uncertainty, abs=1.0e-12), (
-        'CIF standard uncertainty must survive the B/U conversion',
+        'CIF standard uncertainty must follow the same independent U-to-B conversion as its value',
         name,
     )

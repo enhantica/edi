@@ -19,11 +19,28 @@ IDENTITIES = {
     'F d -3 m': (227, 'cubic'),
     'I m -3 m': (229, 'cubic'),
     'I 21 3': (199, 'cubic'),
+    'I a -3': (206, 'cubic'),
     'P n m a': (62, 'orthorhombic'),
     # Independent owner FullProf output gives the number and crystal system.
     'P b n m': (62, 'orthorhombic'),
     'R -3 c': (167, 'trigonal'),
     'P m m a': (51, 'orthorhombic'),
+}
+
+
+# CrySPY b37f9f3148d2771c6d84ee91f57331676d93746f,
+# function_2_space_group.get_default_it_coordinate_system_code_by_it_number:
+# ordinary orthorhombic settings use abc; these ordinary cubic settings use 1;
+# the double-origin Fd-3m reference uses 2. Explicit file codes still win.
+DEFAULT_COORDINATE_CODES = {
+    51: 'abc',
+    62: 'abc',
+    199: '1',
+    206: '1',
+    221: '1',
+    225: '1',
+    227: '2',
+    229: '1',
 }
 
 
@@ -87,7 +104,11 @@ def generate():
                     ['spaceGroup.nameHM', name, 'text'],
                     [
                         'spaceGroup.coordSystemCode',
-                        scalar_text(values.get('_space_group.coord_system_code', '')),
+                        scalar_text(
+                            values['_space_group.coord_system_code']
+                            if '_space_group.coord_system_code' in values
+                            else DEFAULT_COORDINATE_CODES[number]
+                        ),
                         'text',
                     ],
                 ],

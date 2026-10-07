@@ -167,6 +167,13 @@ def test_frozen_project_bytes_or_named_identity_only_difference(tmp_path, row, r
         require_frozen_simulation_roundtrip(model, tmp_path)
         return
     if 'save_error' in row:
+        if row['path'] == 'app/examples/pd-xray-cwl_lif/project':
+            # Before: a generated range refused save. After: save retains the
+            # declared range and never turns a calculation grid into observations.
+            require_calculation_range_save(
+                model, tmp_path / 'input', tmp_path / 'saved', tmp_path, record_property
+            )
+            return
         with pytest.raises((RuntimeError, ValueError)) as caught:
             model.save_as(tmp_path / 'saved')
         assert str(caught.value) == row['save_error'], (
@@ -207,6 +214,48 @@ def test_frozen_project_bytes_or_named_identity_only_difference(tmp_path, row, r
                 pytest.fail(' group (e): non-identity change in ' + row['path'] + '/' + name)
     record_property('group', 'b-identity-delimiters' if changed else 'a-identical')
     record_property('differing_files', ','.join(changed))
+
+
+def require_calculation_range_save(model, source, saved, tmp_path, record_property):
+    record_property('group', 'calculation-range-save-adaptation')
+    experiment_files = sorted((source / 'experiments').glob('*.edi'))
+    declared = {
+        path.name: {
+            fields[0]: float(fields[1])
+            for line in path.read_text().splitlines()
+            if (fields := line.split()) and fields[0].startswith('_data_range.')
+        }
+        for path in experiment_files
+    }
+    assert declared and all(len(values) == 3 for values in declared.values()), (
+        'the retained calculation-only input declares its complete min/max/step range'
+    )
+    before_axes = [list(experiment.data.axis()) for experiment in model.experiments]
+    model.save_as(saved)
+    files = sorted((saved / 'experiments').glob('*.edi'))
+    assert [path.name for path in files] == list(declared), (
+        'saving a calculation-only project retains every declared experiment file'
+    )
+    for path in files:
+        text = path.read_text()
+        actual = {
+            fields[0]: float(fields[1])
+            for line in text.splitlines()
+            if (fields := line.split()) and fields[0].startswith('_data_range.')
+        }
+        assert actual == declared[path.name], (
+            'the saved calculation-only range keeps every independently declared value'
+        )
+        assert not re.search(r'(?m)^_data\.(?:id|intensity_meas|intensity_meas_su)\b', text), (
+            'a saved calculation-only range must never fabricate measured observations'
+        )
+    reopened = engine.Project.load(saved)
+    assert [list(experiment.data.axis()) for experiment in reopened.experiments] == before_axes, (
+        'the saved calculation-only range must reopen with the complete original grid'
+    )
+    assert observe(saved, tmp_path / 'second') == observe(
+        tmp_path / 'second', tmp_path / 'third'
+    ), 'calculation-only saving reaches a complete byte-exact serialization fixed point'
 
 
 @pytest.mark.parametrize(

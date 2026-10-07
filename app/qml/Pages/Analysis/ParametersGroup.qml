@@ -102,7 +102,6 @@ EaElements.GroupBox {
             header: EaComponents.TableViewHeader {
                 EaComponents.TableViewLabel {
                     width: AppSizes.indexColumnWidth
-                    text: qsTr("No.")
                 }
                 EaComponents.TableViewLabel {
                     flexibleWidth: true

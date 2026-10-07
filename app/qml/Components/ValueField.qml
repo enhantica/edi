@@ -22,6 +22,11 @@ EaElements.ParamTextField {
     property string accepts: "text"
     // An empty text is committed as it is (the owner reads it as "no value") rather than refused.
     property bool clearable: false
+    // A narrower rule than `accepts`, as a function of the text (true when admitted), and why it refuses: the
+    // text is red while typed against it, as a filterable combo box's is, and a commit of it is refused.
+    property var admits: null
+    property string admitsRule: ""
+    readonly property bool typedAdmitted: admits === null || text === "" || admits(text)
     // Why the last commit was refused; empty once a commit takes or the value changes.
     property string refusal: ""
     signal committed(string text)
@@ -38,7 +43,7 @@ EaElements.ParamTextField {
             "units": field.unit
         })
     readOnly: !editable
-    warned: refusal !== ""
+    warned: refusal !== "" || !typedAdmitted
     ToolTip.text: refusal
     ToolTip.visible: refusal !== "" && (hovered || activeFocus)
 
@@ -53,6 +58,8 @@ EaElements.ParamTextField {
         if (!editable || text === field.value)
             return;
         refusal = clearable && text === "" ? "" : TypedInput.refusal(text, accepts);
+        if (refusal === "" && !typedAdmitted)
+            refusal = admitsRule;
         if (refusal === "") {
             committed(text);
             refusal = Session.project ? Session.project.lastError : "";

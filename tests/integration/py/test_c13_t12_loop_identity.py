@@ -237,8 +237,36 @@ def _named(action, identity):
     message = str(caught.value)
     assert identity in message, ' duplicate refusal must name the colliding identity'
     assert any(
-        word in message.lower() for word in ('duplicat', 'unique', 'collision', 'more than once')
+        word in message.lower()
+        for word in (
+            'duplicat',
+            'unique',
+            'collision',
+            'more than once',
+            'already in the structure',
+        )
     ), ' duplicate identities must refuse as an identity violation'
+
+
+@pytest.mark.parametrize(
+    ('message', 'accepted'),
+    [
+        ("duplicate atom site identity 'X'", True),
+        ("an atom site labelled 'X' is already in the structure", True),
+        ("an atom site labelled 'Y' is already in the structure", False),
+        ("site 'X' cannot be edited during a fit", False),
+    ],
+    ids=['duplicate-word', 'existing-site', 'wrong-identity', 'unrelated-refusal'],
+)
+def test_duplicate_refusal_observer_requires_collision_reason_and_identity(message, accepted):
+    def refusal():
+        raise ValueError(message)
+
+    if accepted:
+        _named(refusal, 'X')
+    else:
+        with pytest.raises(AssertionError):
+            _named(refusal, 'X')
 
 
 @pytest.mark.parametrize(('category', 'route'), CASES)
@@ -288,6 +316,7 @@ def test_attached_experiment_name_mutation_refuses_atomically(tmp_path):
 @pytest.mark.parametrize('duplicate', [False, True], ids=['unique', 'duplicate'])
 def test_cif_aniso_identity_table(tmp_path, route, duplicate):
     structure, _, _, _ = _texts('atom_site')
+    structure = structure.replace(' Biso ', ' Uani ')
     text = _cif(structure, 'structure')
     text += (
         'loop_\n_atom_site_aniso_label\n_atom_site_aniso_U_11\n'

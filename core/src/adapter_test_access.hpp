@@ -20,6 +20,7 @@ namespace edi::detail {
 // non-cubic conversion model (non-90° angle, a≠b≠c) that crysta MVP1 cannot resolve a space group for.
 crysta::Cell to_crysta_cell(const Cell& cell);
 std::vector<crysta::AtomSite> to_crysta_atom_sites(const ItemVec<AtomSite>& atoms);
+std::vector<crysta::AtomSiteAniso> to_crysta_atom_site_aniso(const Structure& s);
 crysta::BraggPdExperiment to_crysta_experiment(const ExperimentBase& experiment);
 
 }  // namespace edi::detail

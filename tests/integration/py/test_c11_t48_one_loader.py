@@ -132,6 +132,26 @@ def _require_saved_profiles(project, source: Path, destination: Path) -> None:
 
     before = profiles(project)
     project.save_as(destination)
+    # A mixed project retains its measured banks and the range representation of its
+    # calculation-only banks; the range-only assertion also applies to the mixed case.
+    files = tuple(sorted((destination / 'experiments').glob('*.edi')))
+    assert len(files) == len(before), 'Saving range grids must retain every experiment block'
+    range_files = [
+        path
+        for path in files
+        if '_data_range.time_of_flight_min' in path.read_text(encoding='utf-8')
+    ]
+    assert len(range_files) == sum(not profile[2] for profile in before), (
+        'Saving mixed projects must retain a declared range for every unmeasured bank'
+    )
+    for path in range_files:
+        text = path.read_text(encoding='utf-8')
+        assert (
+            '_data_range.time_of_flight_min' in text and '_data_range.time_of_flight_step' in text
+        ), 'Saved calculation grids must retain their declared range representation'
+        assert not re.search(r'(?m)^_data\.(?:id|intensity_meas|intensity_meas_su)\b', text), (
+            'Saved calculation grids must never invent measured-data rows'
+        )
     shutil.rmtree(source)
     reopened = edi.Project.load(destination)
     assert profiles(reopened) == before, (

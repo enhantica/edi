@@ -70,6 +70,8 @@ inline void rename_atom_site(Structure& structure, AtomSite& site, const std::st
                                         "' is already in the structure");
         }
     }
+    // An anisotropic site's tensor row is keyed by the site id; the site's collection renames it
+    // along (KeyedBase::holder).
     site.id = id;
 }
 

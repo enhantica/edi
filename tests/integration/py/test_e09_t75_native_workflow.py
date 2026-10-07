@@ -51,12 +51,23 @@ def public_build_boundary(data, name, platform=None):
             'public SDK native jobs must retain the positive trusted-pull-request fork boundary'
         )
         for core_only in (False, True):
-            assert not active(job, 'pull_request', fork=True, core_only=core_only), (
-                'every public SDK job must refuse forks with either core-only input'
-            )
+            assert not active(
+                job,
+                'pull_request',
+                fork=True,
+                core_only=core_only,
+                states={'changes': 'success', 'native': 'success', 'core': 'success'},
+            ), 'every public SDK job must refuse forks with either core-only input'
     for event in ('pull_request', 'push', 'workflow_dispatch'):
-        assert active(job, event), 'every full trusted event must reach its public SDK job'
-        assert active(job, event, core_only=True) == (name in {'native', 'core'}), (
+        assert active(
+            job, event, states={'changes': 'success', 'native': 'success', 'core': 'success'}
+        ), 'every full trusted event must reach its public SDK job'
+        assert active(
+            job,
+            event,
+            core_only=True,
+            states={'changes': 'success', 'native': 'success', 'core': 'success'},
+        ) == (name in {'native', 'core'}), (
             'core-only repairs retain native/core and skip every downstream public SDK job'
         )
     assert job.get('environment') == 'crysta-sdk', (

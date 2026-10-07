@@ -151,10 +151,23 @@ def test_alias_picker_uses_core_candidates_and_the_closed_edit_door():
     assert re.search(r'editor_\.apply_relation_edit\(edi::Edit::', text), (
         'relation edits must enter the shared relation door for publication and undo'
     )
+    # Relation models now delegate through the undo-aware relation entry, which uses the same door.
+    relations = text.split('AnalysisViewModel::AnalysisViewModel', 1)[0]
+    edits = re.findall(r'edi::Edit::\w+\(', relations)
+    routed = re.findall(r'editor_\.apply_relation_edit\(edi::Edit::\w+\(', relations)
+    assert edits and len(routed) == len(edits), (
+        'every relation edit must enter the typed relation route without a direct-write escape'
+    )
     project = source('src/project_view_model.cpp')
-    door = project.split('QString ProjectViewModel::apply_relation_edit(', 1)[1].split('\n}', 1)[0]
-    assert 'apply(change, true)' in door, (
-        'the shared relation door must publish through the closed core edit door'
+    route = re.search(
+        r'QString ProjectViewModel::apply_relation_edit\([^)]*\)\s*{(.*?)\n}', project, re.DOTALL
+    )
+    assert route and 'apply(change, true)' in route.group(1), (
+        'the relation route must delegate to the common structural edit door'
+    )
+    door = re.search(r'QString ProjectViewModel::apply\([^)]*\)\s*{(.*?)\n}', project, re.DOTALL)
+    assert door and 'preview_->apply(change)' in door.group(1), (
+        'the common edit door must submit the typed change through the preview publisher'
     )
 
 
@@ -164,8 +177,16 @@ def test_analysis_text_uses_the_saved_core_block_and_invalidates_after_edits():
         'the Analysis Text tab must read the canonical saved analysis block'
     )
     project = source('src/project_view_model.cpp')
+    # Saving uses the template when a dataset is shown; ordinary projects save themselves.
     assert 'edi::project_edi_files(scanTemplateOrModel())' in project, (
-        'the text provider must use the same core writer as a project save'
+        'the text provider must use the canonical writer on the same template or model as saving'
+    )
+    assert (
+        'edi::save_project_as(*scan_template_' in project
+        and 'edi::save_project_as(*project_' in project
+    ), 'project saving must retain both the scan-template and ordinary-model canonical routes'
+    assert re.search(r'for \(const auto& \[path, body\] : savedFiles\(\)\)', project), (
+        'each text block must come from the shared saved-file snapshot'
     )
     assert 'analysis_->text()->invalidate()' in project, (
         'editing a relation must invalidate shown analysis text instead of displaying stale loops'
