@@ -123,10 +123,23 @@ def pin(platform: str) -> tuple[str, str]:
 
 
 def token() -> str:
-    """Return the token that reads crysta's releases: CI's App token, or one a desk run exports."""
+    """Return the token that reads crysta's releases.
+
+    CI's App token, or one a desk run exports; on a desk with neither, the GitHub CLI's own
+    login (`gh auth token`). CI has no `gh`, so it reads only its environment.
+    """
     found = os.environ.get('GITHUB_TOKEN') or os.environ.get('GH_TOKEN')
+    if not found and shutil.which('gh'):
+        try:
+            r = subprocess.run(
+                ['gh', 'auth', 'token'], capture_output=True, text=True, timeout=30, check=False
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            r = None
+        found = r.stdout.strip() if r is not None and r.returncode == 0 else ''
     return found or refuse(
-        'no GITHUB_TOKEN or GH_TOKEN reads crysta releases (a desk run exports its own token)'
+        'no GITHUB_TOKEN or GH_TOKEN reads crysta releases, and `gh auth token` gave none '
+        '(a desk run logs in with `gh auth login` or exports its own token)'
     )
 
 
