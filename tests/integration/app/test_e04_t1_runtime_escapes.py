@@ -14,12 +14,6 @@ ROOT = Path(__file__).resolve().parents[3]
 APP_TESTS = ROOT / 'tests/unit/app'
 
 
-@pytest.fixture(scope='module')
-def acceptance_reference():
-    # Frozen separate-surface wiring regression pins; never generated at GUI runtime.
-    return str(ROOT / 'tests/fixtures/e04_t1/reference')
-
-
 def runner():
     override = os.environ.get('EDI_APP_TEST_RUNNER')
     candidates = (
@@ -49,6 +43,7 @@ def owner_amendment_run():
     )
 
 
+@pytest.mark.usefixtures('existing_projects_run')
 def test_owner_amendments_execute_in_the_production_qml_host(owner_amendment_run):
     run = owner_amendment_run
     output = run.stdout + run.stderr
@@ -75,6 +70,12 @@ def test_owner_amendment_receipts_cover_every_original_gui_boundary(owner_amendm
         'each original GUI boundary must actually execute and pass in the production host: '
         + boundary
     )
+
+
+@pytest.fixture(scope='module')
+def acceptance_reference():
+    # Pytest fixtures in the sibling projects module are not visible here.
+    return str(ROOT / 'tests/fixtures/e04_t1/reference')
 
 
 @pytest.fixture(scope='module')

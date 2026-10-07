@@ -29,6 +29,8 @@ EaComponents.ContentPage {
     property bool textEnabled: false
     property alias continueText: sideBar.continueButton.text
     property bool continueVisible: true
+    // Continue and its fade, while AppState shows the Continue area at all.
+    readonly property bool continueShown: continueVisible && AppState.continueAreaShown
     signal continueClicked
     // The block selector: shown when set; the page's blocks, the shown one, and the user's choice.
     property bool blockSelectorShown: false
@@ -60,7 +62,7 @@ EaComponents.ContentPage {
         for (let i = 0; i < sideBar.children.length; ++i) {
             const child = sideBar.children[i];
             if (child.gradient)
-                child.visible = Qt.binding(() => !textLoader.SwipeView.isCurrentItem);
+                child.visible = Qt.binding(() => page.continueShown && !textLoader.SwipeView.isCurrentItem);
         }
         page.placeSideBar();
         sideBar.continueButton.anchors.bottomMargin = Qt.binding(() => EaStyle.Sizes.fontPixelSize);
@@ -174,7 +176,7 @@ EaComponents.ContentPage {
         ]
 
         continueButton.objectName: "sideBar.continue"
-        continueButton.visible: page.continueVisible
+        continueButton.visible: page.continueShown
         continueButton.onClicked: page.continueClicked()
         // Continue as a pill (the owner, 2026-09-29; edi ADR-0017 §7): the base button's own background and
         // border shown, fully rounded ends, as wide as its icon and text plus a font unit each side (the base
@@ -192,7 +194,7 @@ EaComponents.ContentPage {
             target: basicLoader.SwipeView.view ? basicLoader.SwipeView.view.anchors : null
             property: "bottomMargin"
             when: textLoader.SwipeView.isCurrentItem
-            value: page.continueVisible ? -(sideBar.continueButton.height + sideBar.continueButton.anchors.bottomMargin) : 0
+            value: page.continueShown ? -(sideBar.continueButton.height + sideBar.continueButton.anchors.bottomMargin) : 0
         }
     }
 }

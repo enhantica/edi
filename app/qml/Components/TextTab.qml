@@ -18,8 +18,9 @@ EaComponents.SideBarColumn {
     id: tab
 
     required property BlockText source
-    // False on a page without Continue (Report): nothing is drawn over the text view's bottom.
-    property bool underContinue: true
+    // False on a page without Continue (Report), or while the Continue area is hidden: nothing is drawn over the
+    // text view's bottom.
+    property bool underContinue: AppState.continueAreaShown
 
     // The text view fills the tab edge to edge (the owner, 2026-09-29; edi ADR-0017 §7): the sidebar's full
     // width, from the top of the tab's view — under the tab bar, or under the shared block selector — down to

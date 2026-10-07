@@ -90,7 +90,9 @@ var frozen = {
   "instrument": {
     "cwl": [
       "setup_wavelength",
-      "calib_twotheta_offset"
+      "calib_twotheta_offset",
+      "calib_sample_displacement",
+      "calib_sample_transparency"
     ],
     "tof": [
       "setup_twotheta_bank",
@@ -7396,6 +7398,58 @@ var frozen = {
         "experiments/expt_s2.edi": "948b6f720ed6d72a5d5f0c5b8b06cae3dca6159f4f9e6edd56739110a2f2290a",
         "analysis/analysis.edi": "e228e179bbb95062d1646300ac68b92cbc0692d9b34a436ed944ef97cdd3df07"
       }
+    },
+    {
+      "id": "pd-neut-cwl_y2o3_beta-adp",
+      "path": "docs/user/cli/pd-neut-cwl_y2o3_beta-adp/project",
+      "metadata": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_metadata.name": "pd_neut_cwl_y2o3_beta_adp",
+        "_metadata.title": "Y2O3, beta ADPs, scale against FullProf",
+        "_metadata.description": "?",
+        "_metadata.created": "06 Oct 2026 16:43:16",
+        "_metadata.last_modified": "06 Oct 2026 16:43:17",
+        "_metadata.timestamp": "?"
+      },
+      "analysis": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_fitting_mode.type": "single"
+      },
+      "structures": [
+        {
+          "name": "y2o3",
+          "atoms": 3,
+          "cellA": 10.605744,
+          "spaceGroup": "I a -3",
+          "cell": [
+            10.605744,
+            10.605744,
+            10.605744,
+            90.0,
+            90.0,
+            90.0
+          ]
+        }
+      ],
+      "experiments": [
+        "y2o3"
+      ],
+      "datasets": [],
+      "loaderWarning": "",
+      "files": {
+        "project.edi": "539e990301b80e0b83d75d930100d367c10d60aa79458fbe0dd678753e5aa95c",
+        "structures/y2o3.edi": "dcacdbe2ddd6490b390aa7b4b36eeaf7e09d43b62f6b31b25a52121ffa295382",
+        "experiments/y2o3.edi": "403bcc7ce6bcc112b9dc5d4c612b61389667c0b80c7163e00c790a19645b533a",
+        "analysis/analysis.edi": "64a5254af5f390f3c3a49e84affc9bd4a6a074d2fe50ea5f97e5864c444c7f71"
+      }
     }
   ],
   "corpus": [
@@ -8718,6 +8772,86 @@ var frozen = {
       "loops": {}
     },
     {
+      "project": "docs/user/cli/pd-neut-cwl_y2o3_beta-adp/project",
+      "experiment": "y2o3",
+      "sha256": "403bcc7ce6bcc112b9dc5d4c612b61389667c0b80c7163e00c790a19645b533a",
+      "peakType": "cwl-tch-pseudo-voigt",
+      "mode": "cwl",
+      "peakFields": [
+        "broad_gauss_u",
+        "broad_gauss_v",
+        "broad_gauss_w",
+        "broad_lorentz_x",
+        "broad_lorentz_y"
+      ],
+      "unusedFreeFields": [],
+      "peakDefaults": {},
+      "instrumentFields": [
+        "setup_wavelength",
+        "calib_twotheta_offset"
+      ],
+      "range": [
+        0.95,
+        153.9,
+        0.05,
+        3060
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.beam_mode": "constant wavelength",
+        "_scattering_source.neutron_scattering_length": "sears1992",
+        "_calculator.type": "crysta",
+        "_peak.broad_gauss_u": {
+          "value": 0.036631,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_v": {
+          "value": -0.068345,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_w": {
+          "value": 0.131426,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_x": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_y": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.cutoff_fwhm": {
+          "value": 20.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.type": "cwl-tch-pseudo-voigt",
+        "_instrument.setup_wavelength": {
+          "value": 1.54822,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_twotheta_offset": {
+          "value": -0.01625,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_absorption.type": "none",
+        "_background.type": "line-segment"
+      },
+      "loops": {}
+    },
+    {
       "project": "docs/user/cli/pd-neut-cwl_yap-spodi_3k/project",
       "experiment": "spodi",
       "sha256": "f89b143912601bef9a62b3f61c6ff25c6988759785333e7186244c130b3d5e62",
@@ -9486,24 +9620,7 @@ var frozen = {
         "broad_lorentz_strain"
       ],
       "unusedFreeFields": [],
-      "peakDefaults": {
-        "broad_gauss_size": {
-          "value": 0.0,
-          "free": false
-        },
-        "broad_gauss_strain": {
-          "value": 0.0,
-          "free": false
-        },
-        "broad_lorentz_size": {
-          "value": 0.0,
-          "free": false
-        },
-        "broad_lorentz_strain": {
-          "value": 0.0,
-          "free": false
-        }
-      },
+      "peakDefaults": {},
       "instrumentFields": [
         "setup_twotheta_bank",
         "calib_d_to_tof_offset",
@@ -9595,7 +9712,27 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_absorption.type": "none",
-        "_background.type": "line-segment"
+        "_background.type": "line-segment",
+        "_peak.broad_gauss_size": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_strain": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        },
+        "_peak.broad_lorentz_size": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        },
+        "_peak.broad_lorentz_strain": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        }
       },
       "loops": {}
     },
@@ -9618,24 +9755,7 @@ var frozen = {
         "broad_lorentz_strain"
       ],
       "unusedFreeFields": [],
-      "peakDefaults": {
-        "broad_gauss_size": {
-          "value": 0.0,
-          "free": false
-        },
-        "broad_gauss_strain": {
-          "value": 0.0,
-          "free": false
-        },
-        "broad_lorentz_size": {
-          "value": 0.0,
-          "free": false
-        },
-        "broad_lorentz_strain": {
-          "value": 0.0,
-          "free": false
-        }
-      },
+      "peakDefaults": {},
       "instrumentFields": [
         "setup_twotheta_bank",
         "calib_d_to_tof_offset",
@@ -9727,7 +9847,27 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_absorption.type": "none",
-        "_background.type": "line-segment"
+        "_background.type": "line-segment",
+        "_peak.broad_gauss_size": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_strain": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        },
+        "_peak.broad_lorentz_size": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        },
+        "_peak.broad_lorentz_strain": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        }
       },
       "loops": {}
     },

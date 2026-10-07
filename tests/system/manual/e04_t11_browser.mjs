@@ -357,11 +357,11 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   })()`);
   await click(/^Start fitting$/);
 
-  await waitAX(/^Done$/); await waitModal(true); await shot('fit-results');
+  await waitAX(/^Success$/); await waitModal(true); await shot('fit-results');
   const progress = await evaluate('window.__e04Progress');
   const runningProgress = values => values.some(value => /^(?:stop|cancel) fitting$/i.test(value)) &&
     values.some(value => /^(?:spinner)?Fit iterations\d+$/i.test(value));
-  assert(!runningProgress(['Maximum iterations 400','Done','Iterations']),
+  assert(!runningProgress(['Maximum iterations 400','Success','Iterations']),
     'completed report text and minimizer settings cannot impersonate live fitting progress');
   if (mode !== 'singlethread') assert(runningProgress(progress),
     'multithread fitting must publish both a running control and a live iteration indicator');

@@ -8,7 +8,8 @@ import EasyApplication.Gui.Style as EaStyle
 import edi.app
 
 // The colours edi gives datablocks and elements (edi ADR-0017 §8), all from the base's EaStyle tokens except
-// the element colours, which are the core's element table (data/elements, the Jmol colours; edi ADR-0022 §4).
+// the element colours, which are the core's element table (data/elements, Jmol or VESTA as the structure view
+// shows them; edi ADR-0022 §4).
 QtObject {
     id: colors
 
@@ -35,10 +36,13 @@ QtObject {
         return kind === "structure" ? colors.structure(index) : kind === "experiment" ? colors.experiment(index) : EaStyle.Colors.themeForegroundMinor;
     }
 
-    // An element's colour from a type symbol: the core's element table (edi ADR-0022 §4), its Jmol colour of
-    // the symbol's element ("162Dy" is Dy, "Co2+" is Co, "2H" is H); the minor foreground colour for an element
-    // the table does not have.
+    // The structure view's colour scheme ("jmol" or "vesta"), which every table's atom icons follow too.
+    readonly property string elementScheme: Session.project && Session.project.structureViewOptions ? Session.project.structureViewOptions.colorScheme : "jmol"
+
+    // An element's colour from a type symbol: the core's element table (edi ADR-0022 §4), the colour of the
+    // symbol's element ("162Dy" is Dy, "Co2+" is Co, "2H" is H) in the structure view's scheme; the minor
+    // foreground colour for an element the table does not have.
     function element(typeSymbol) {
-        return ApplicationInfo.elementColor(String(typeSymbol), EaStyle.Colors.themeForegroundMinor);
+        return ApplicationInfo.elementColor(String(typeSymbol), EaStyle.Colors.themeForegroundMinor, colors.elementScheme);
     }
 }

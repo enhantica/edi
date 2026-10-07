@@ -14,6 +14,7 @@ Analysis.calculate	model-operation
 Analysis.descent	other-public
 Analysis.fit	model-operation
 Analysis.fitting_mode	other-public
+Analysis.template_file	other-public
 AtomSite	other-public
 AtomSite.adp_iso	other-public
 AtomSite.adp_type	other-public
@@ -625,6 +626,23 @@ Constraints.show	other-public
 Constraints.values	other-public
 Parameter.symmetry_constrained	other-public
 Parameter.user_constrained	other-public
+AtomSiteAniso	other-public
+AtomSiteAniso.adp_11	other-public
+AtomSiteAniso.adp_22	other-public
+AtomSiteAniso.adp_33	other-public
+AtomSiteAniso.adp_12	other-public
+AtomSiteAniso.adp_13	other-public
+AtomSiteAniso.adp_23	other-public
+AtomSiteAniso.id	other-public
+AtomSiteAniso.parameters	other-public
+AtomSiteAnisoCollection	other-public
+AtomSiteAnisoCollection.add	other-public
+AtomSiteAnisoCollection.clear	other-public
+AtomSiteAnisoCollection.items	other-public
+AtomSiteAnisoCollection.keys	other-public
+AtomSiteAnisoCollection.names	other-public
+AtomSiteAnisoCollection.remove	other-public
+AtomSiteAnisoCollection.values	other-public
 CwlGaussian	other-public
 CwlGaussian.broad_gauss_u	other-public
 CwlGaussian.broad_gauss_v	other-public
@@ -663,3 +681,4 @@ LinkedStructures.keys	other-public
 LinkedStructures.names	other-public
 LinkedStructures.remove	other-public
 LinkedStructures.values	other-public
+Structure.atom_site_aniso	other-public

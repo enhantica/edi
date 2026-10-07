@@ -26,7 +26,9 @@
 #include "adapter_test_access.hpp"  // edi::detail conversion seam (core/src only; test-only, not installed)
 #include "canonical_encoding.hpp"  // edi-only logic: core/src-private, never installed
 #include "identity_bridge.hpp"  // The loader's reach into crysta's identity rules
+#include "crysta/adp.hpp"
 #include "crysta/analysis.hpp"
+#include "crysta/constraints.hpp"
 #include "crysta/cell_metric.hpp"
 #include "crysta/cell_symmetry.hpp"
 #include "crysta/descent.hpp"
@@ -171,6 +173,7 @@ crysta::Structure to_crysta_structure(const Structure& s) {
                                  built.geom.min_bond_distance_cutoff =
                                      s.geom.min_bond_distance_cutoff.get();
                                  built.geom.bond_distance_inc = s.geom.bond_distance_inc.get();
+                                 built.atom_site_aniso = detail::to_crysta_atom_site_aniso(s);
                              });
 }
 
@@ -238,7 +241,259 @@ std::vector<ParameterTie> structure_ties(const Structure& s) {
             }
         }
     }
+    // The anisotropic tensors: crysta's site-symmetry ties (ADR-0027).
+    for (const auto& tensor : s.atom_site_aniso) {
+        const AtomSite* site = nullptr;
+        for (const auto& candidate : s.atom_sites) {
+            if (candidate->id.value() == tensor->id.value()) {
+                site = candidate.get();
+            }
+        }
+        if (site == nullptr) {
+            continue;
+        }
+        const std::vector<Parameter*> components = const_cast<AtomSiteAniso&>(*tensor).parameters();
+        ties.push_back({&site->adp_iso, TieKind::Follows, components[0], std::nullopt});
+        std::vector<ParameterTie> rows;
+        for (const Parameter* component : components) {
+            rows.push_back({component});
+        }
+        try {
+            const crysta::Structure engine = to_crysta_structure(s);
+            for (const crysta::AtomSite& candidate : engine.atom_sites) {
+                if (candidate.site_id.value() != site->id.value()) {
+                    continue;
+                }
+                for (const crysta::AdpTie& tie : crysta::adp_ties(engine, candidate)) {
+                    ParameterTie& row = rows[tie.component];
+                    if (tie.fixed) {
+                        row.kind = TieKind::Fixed;
+                        row.fixed_value = 0.0;
+                    } else {
+                        row.kind = TieKind::Follows;
+                        row.leader = components[tie.terms.front().first];
+                    }
+                }
+            }
+        } catch (const std::exception&) {
+            // An unresolvable setting or site: the components are reported independent.
+        }
+        ties.insert(ties.end(), rows.begin(), rows.end());
+    }
     return ties;
+}
+
+namespace {
+// The cell the calculation uses: the model's cell completed by its space group's ties (a cubic
+// structure declares only a), or the cell as written when the group does not resolve.
+crysta::Cell completed_cell(const Structure& s) {
+    try {
+        return to_completed_crysta_cell(s.cell, crysta::cell_freedom(resolve_group(s)));
+    } catch (const std::exception&) {
+        return detail::to_crysta_cell(s.cell);
+    }
+}
+}  // namespace
+
+std::optional<std::array<double, 6>> site_u_star(const Structure& s, const AtomSite& site) {
+    try {
+        const crysta::AdpForm form = crysta::adp_form_of(site.adp_type.value());
+        if (!crysta::is_anisotropic(form)) {
+            return std::nullopt;
+        }
+        for (const auto& tensor : s.atom_site_aniso) {
+            if (tensor->id.value() != site.id.value()) {
+                continue;
+            }
+            crysta::AdpTensor components{};
+            const std::vector<Parameter*> parameters = tensor->parameters();
+            for (std::size_t k = 0; k < 6; ++k) {
+                components[k] = parameters[k]->value;
+            }
+            return crysta::u_star_of(form, components, crysta::CellMetric::from_cell(completed_cell(s)));
+        }
+    } catch (const std::exception&) {
+        // an unknown type or an unrealizable cell
+    }
+    return std::nullopt;
+}
+
+namespace {
+
+// The space group crysta resolves for `s`, or crysta's default for a setting it cannot resolve
+// (whose sites then carry no stabilizer ties).
+crysta::SpaceGroup group_or_default(const Structure& s) {
+    try {
+        return resolve_group(s);
+    } catch (const std::exception&) {
+        return crysta::SpaceGroup{};
+    }
+}
+
+// A one-site crysta structure for `site` at the structure's completed cell and space group, the
+// site of type `adp_type`: crysta converts and ties its values (ADR-0027).
+crysta::Structure one_site_engine(const Structure& s, const AtomSite& site, const std::string& adp_type,
+                                  const crysta::Structure::Finish& finish = {}) {
+    std::vector<crysta::AtomSite> sites{crysta::AtomSite(
+        site.id.value(), site.type_symbol.value(), site.wyckoff_letter.value(), adp_type,
+        param(site.fract_x, crysta::ATOM_POS, "fract_x"), param(site.fract_y, crysta::ATOM_POS, "fract_y"),
+        param(site.fract_z, crysta::ATOM_POS, "fract_z"), param(site.occupancy, crysta::OCC, "occupancy"),
+        param(site.adp_iso, crysta::ADP, "adp_iso"))};
+    return crysta::Structure(completed_cell(s), group_or_default(s), sites, finish);
+}
+
+// The tensor rows in the order of their sites, as a loaded file holds them, so a row a type change
+// adds sits with its site (the parameter walk lists the rows in this order).
+void order_tensor_rows(Structure& s) {
+    std::vector<std::shared_ptr<AtomSiteAniso>> ordered;
+    for (const auto& site : s.atom_sites) {
+        for (const auto& row : s.atom_site_aniso) {
+            if (row->id.value() == site->id.value()) {
+                ordered.push_back(row);
+            }
+        }
+    }
+    bool same = ordered.size() == s.atom_site_aniso.size();
+    for (std::size_t i = 0; same && i < ordered.size(); ++i) {
+        same = ordered[i] == s.atom_site_aniso[i];
+    }
+    if (!same && ordered.size() == s.atom_site_aniso.size()) {
+        s.atom_site_aniso.assign(std::move(ordered));
+    }
+}
+
+}  // namespace
+
+void sync_atom_site_aniso(Structure& s) {
+    for (std::size_t row = s.atom_site_aniso.size(); row-- > 0;) {
+        const std::string& id = s.atom_site_aniso[row]->id.value();
+        bool kept = false;
+        for (const auto& site : s.atom_sites) {
+            kept = kept || (site->id.value() == id && is_anisotropic_adp_type(site->adp_type.value()));
+        }
+        if (!kept) {
+            s.atom_site_aniso.erase_at(row);
+        }
+    }
+    for (const auto& site : s.atom_sites) {
+        if (!is_anisotropic_adp_type(site->adp_type.value())) {
+            continue;
+        }
+        bool held = false;
+        for (const auto& tensor : s.atom_site_aniso) {
+            held = held || tensor->id.value() == site->id.value();
+        }
+        if (held) {
+            continue;
+        }
+        const crysta::AdpForm form = crysta::adp_form_of(site->adp_type.value());
+        const crysta::CellMetric metric = crysta::CellMetric::from_cell(completed_cell(s));
+        crysta::AdpTensor components = crysta::components_of(
+            form, crysta::u_star_of_iso(crysta::equivalent_iso_form(form), site->adp_iso.value, metric), metric);
+        // The site's symmetry exactly: a fixed component is 0, tied ones the same number.
+        try {
+            const crysta::Structure engine = one_site_engine(s, *site, site->adp_type.value());
+            components = crysta::tied_components(engine, engine.atom_sites[0], components);
+        } catch (const std::exception&) {
+            // a position that names no stabilizer keeps the converted values
+        }
+        AtomSiteAniso tensor;
+        tensor.id = site->id.value();
+        const std::vector<Parameter*> parameters = tensor.parameters();
+        for (std::size_t k = 0; k < 6; ++k) {
+            parameters[k]->value = components[k];
+        }
+        s.atom_site_aniso.push_back(std::move(tensor));
+    }
+    order_tensor_rows(s);
+    // An anisotropic site's adp_iso is its tensor's equivalent value, in the form its type shows it.
+    const crysta::CellMetric metric = crysta::CellMetric::from_cell(completed_cell(s));
+    for (const auto& tensor : s.atom_site_aniso) {
+        for (const auto& site : s.atom_sites) {
+            if (site->id.value() != tensor->id.value()) {
+                continue;
+            }
+            const crysta::AdpForm form = crysta::adp_form_of(site->adp_type.value());
+            crysta::AdpTensor components{};
+            const std::vector<Parameter*> parameters = tensor->parameters();
+            for (std::size_t k = 0; k < 6; ++k) {
+                components[k] = parameters[k]->value;
+            }
+            const double equivalent = crysta::iso_of(crysta::equivalent_iso_form(form),
+                                                     crysta::u_star_of(form, components, metric), metric);
+            // A different equivalent replaces the scalar; the scalar's uncertainty and fit start
+            // belonged to that other value (ADR-0027), so they go (absent stays absent, any other
+            // uncertainty the present zero of a value with none).
+            if (site->adp_iso.value != equivalent) {
+                const std::optional<double> before = site->adp_iso.uncertainty;
+                site->adp_iso.value = equivalent;
+                site->adp_iso.uncertainty = before.has_value() ? std::optional<double>(0.0) : std::nullopt;
+                site->adp_iso.start_value = std::nullopt;
+                site->adp_iso.start_uncertainty = std::nullopt;
+            }
+        }
+    }
+}
+
+void change_adp_type(Structure& s, AtomSite& site, const std::string& adp_type) {
+    if (!is_adp_type(adp_type)) {
+        throw std::invalid_argument("adp_type '" + adp_type +
+                                    "' is not one of Biso, Uiso, Bani, Uani, beta");
+    }
+    if (site.adp_type.value() == adp_type) {
+        return;
+    }
+    // A one-site crysta structure at this cell and space group: crysta converts the values and
+    // applies the site's symmetry ties.
+    std::shared_ptr<AtomSiteAniso> held;
+    for (const auto& tensor : s.atom_site_aniso) {
+        if (tensor->id.value() == site.id.value()) {
+            held = tensor;
+        }
+    }
+    crysta::Structure engine = one_site_engine(s, site, site.adp_type.value(), [&held](crysta::Structure& built) {
+        if (held) {
+            Structure one;
+            one.atom_site_aniso.push_back(*held);
+            built.atom_site_aniso = detail::to_crysta_atom_site_aniso(one);
+        }
+    });
+    crysta::change_adp_type(engine, engine.atom_sites[0], adp_type);
+    // The converted state, value, uncertainty and fit start alike (ADR-0027): crysta
+    // rescales what the change only rescales and drops what it cannot carry.
+    // An uncertainty the change drops keeps edi's spelling of none: absent stays absent, any
+    // other becomes the present zero a fixed value carries.
+    const auto take = [](Parameter& to, const crysta::Parameter& from) {
+        const std::optional<double> before = to.uncertainty;
+        to.value = from.value();
+        to.uncertainty = from.uncertainty().has_value() || !before.has_value()
+                             ? from.uncertainty()
+                             : std::optional<double>(0.0);
+        to.start_value = from.start_value();
+        to.start_uncertainty = from.start_uncertainty();
+    };
+    take(site.adp_iso, engine.atom_sites[0].adp_iso);
+    site.adp_type = adp_type;
+    if (engine.atom_site_aniso.empty()) {
+        for (std::size_t i = 0; i < s.atom_site_aniso.size(); ++i) {
+            if (s.atom_site_aniso[i]->id.value() == site.id.value()) {
+                s.atom_site_aniso.erase_at(i);
+                break;
+            }
+        }
+        return;
+    }
+    if (!held) {
+        AtomSiteAniso tensor;
+        tensor.id = site.id.value();
+        s.atom_site_aniso.push_back(std::move(tensor));
+        held = s.atom_site_aniso[s.atom_site_aniso.size() - 1];
+    }
+    const std::vector<Parameter*> components = held->parameters();
+    for (std::size_t k = 0; k < 6; ++k) {
+        take(*components[k], engine.atom_site_aniso[0].adp[k]);
+    }
+    order_tensor_rows(s);
 }
 
 // Review-9 F1 (the lossless prior-state property, edi's landing half): write_back snapshots
@@ -606,6 +861,16 @@ Index build_index(Project& model, crysta::Project& cproject) {
         index.emplace(base + "fract_z", Slot{&catom.fract[2], &atom.fract_z});
         index.emplace(base + "occupancy", Slot{&catom.occupancy, &atom.occupancy});
         index.emplace(base + "adp_iso", Slot{&catom.adp_iso, &atom.adp_iso});
+    }
+    for (std::size_t row = 0; row < model.structure().atom_site_aniso.size(); ++row) {
+        AtomSiteAniso& tensor = *model.structure().atom_site_aniso[row];
+        crysta::AtomSiteAniso& ctensor = cstructure.atom_site_aniso[row];
+        const std::string base = "structure.atom_site_aniso[" + tensor.id + "].";
+        const char* const names[6] = {"adp_11", "adp_22", "adp_33", "adp_12", "adp_13", "adp_23"};
+        const std::vector<Parameter*> components = tensor.parameters();
+        for (std::size_t k = 0; k < 6; ++k) {
+            index.emplace(base + names[k], Slot{&ctensor.adp[k], components[k]});
+        }
     }
 
     ExperimentBase& experiment = model.experiment();
@@ -1499,6 +1764,21 @@ crysta::Cell to_crysta_cell(const Cell& c) {
     cell_params.push_back(param(c.angle_beta, crysta::CELL, "beta"));
     cell_params.push_back(param(c.angle_gamma, crysta::CELL, "gamma"));
     return crysta::Cell(std::move(cell_params));
+}
+
+// The anisotropic sites' tensors, in their declared types.
+std::vector<crysta::AtomSiteAniso> to_crysta_atom_site_aniso(const Structure& s) {
+    std::vector<crysta::AtomSiteAniso> rows;
+    rows.reserve(s.atom_site_aniso.size());
+    for (const auto& item : s.atom_site_aniso) {
+        const AtomSiteAniso& t = *item;
+        rows.emplace_back(t.id.value(),
+                          std::array<crysta::Parameter, 6>{
+                              param(t.adp_11, crysta::ADP, "adp_11"), param(t.adp_22, crysta::ADP, "adp_22"),
+                              param(t.adp_33, crysta::ADP, "adp_33"), param(t.adp_12, crysta::ADP, "adp_12"),
+                              param(t.adp_13, crysta::ADP, "adp_13"), param(t.adp_23, crysta::ADP, "adp_23")});
+    }
+    return rows;
 }
 
 std::vector<crysta::AtomSite> to_crysta_atom_sites(const ItemVec<AtomSite>& atoms) {
@@ -3870,6 +4150,74 @@ int space_group_it_number(const SpaceGroup& space_group) {
     Structure structure;
     structure.space_group = space_group;
     return resolve_group(structure).it_number;
+}
+
+std::vector<SpaceGroupSettingName> space_group_settings() {
+    std::vector<SpaceGroupSettingName> settings;
+    for (const crysta::SpaceGroupSettingName& entry : crysta::space_group_settings()) {
+        settings.push_back({entry.it_number, entry.name_h_m, entry.coord_system_code, entry.setting});
+    }
+    return settings;
+}
+
+namespace {
+const std::vector<SpaceGroupSettingName>& cached_settings() {
+    static const std::vector<SpaceGroupSettingName> settings = space_group_settings();
+    return settings;
+}
+std::string unspaced(const std::string& name) {
+    std::string out;
+    for (const char c : name) {
+        if (c != ' ' && c != '\t') {
+            out += c;
+        }
+    }
+    return out;
+}
+template <class Pick>
+std::optional<SpaceGroupSettingName> lowest_setting(Pick pick) {
+    const SpaceGroupSettingName* found = nullptr;
+    for (const SpaceGroupSettingName& setting : cached_settings()) {
+        if (pick(setting) && (found == nullptr || setting.setting < found->setting)) {
+            found = &setting;
+        }
+    }
+    return found != nullptr ? std::optional<SpaceGroupSettingName>(*found) : std::nullopt;
+}
+}  // namespace
+
+bool same_space_group_name(const std::string& a, const std::string& b) { return unspaced(a) == unspaced(b); }
+
+std::optional<SpaceGroupSettingName> space_group_setting_for_name(const std::string& name) {
+    const std::string wanted = unspaced(name);
+    return lowest_setting([&wanted](const SpaceGroupSettingName& s) { return unspaced(s.name_h_m) == wanted; });
+}
+
+std::optional<SpaceGroupSettingName> space_group_setting_for_number(int it_number) {
+    return lowest_setting([it_number](const SpaceGroupSettingName& s) { return s.it_number == it_number; });
+}
+
+std::optional<SpaceGroupSettingName> space_group_setting_for_code(int it_number, const std::string& code) {
+    return lowest_setting(
+        [it_number, &code](const SpaceGroupSettingName& s) { return s.it_number == it_number && s.coord_system_code == code; });
+}
+
+void assign_space_group_setting(SpaceGroup& group, const SpaceGroupSettingName& setting, bool declare_number) {
+    group.name_h_m = setting.name_h_m;
+    group.coord_system_code = setting.coord_system_code;
+    if (declare_number || group.it_number.has_value()) {
+        group.it_number = setting.it_number;
+    }
+}
+
+std::vector<std::array<int, 9>> space_group_rotations(const SpaceGroup& space_group) {
+    Structure structure;
+    structure.space_group = space_group;
+    std::vector<std::array<int, 9>> rotations;
+    for (const crysta::SymmetryOperation& operation : crysta::symmetry_operations(resolve_group(structure))) {
+        rotations.push_back(operation.rotation);
+    }
+    return rotations;
 }
 
 // The engine owns the policy; edi forwards through the one TU allowed to hold a crysta

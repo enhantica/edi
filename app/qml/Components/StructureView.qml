@@ -143,6 +143,7 @@ Rectangle {
             anchors.margins: view.margin
             anchors.leftMargin: view.sideMargin
             entries: controller.legend
+            labelInColor: false
             visible: controller.legend.count > 0
         }
         EaElements.Label {

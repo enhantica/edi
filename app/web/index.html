@@ -5,7 +5,8 @@
   fit runs. Each build's files sit in a folder named by their content (`multithread-<hash>/`, `singlethread-<hash>/`), which
   build.json names and the page reads past every cache: a redeploy cannot pair one build's cached script with another's module. On a
   host that sends no COOP/COEP headers (GitHub Pages), coi-serviceworker.js adds them once it controls the page: the page registers
-  it and reloads once. `?build=multithread` or `?build=singlethread` forces a build. While the build downloads, compiles and starts,
+  it and reloads once per deploy. `?build=multithread` or `?build=singlethread` forces a build. Why a build was chosen is kept in
+  window.ediBuildInfo for the app's diagnostics view (Preferences > Develop). While the build downloads, compiles and starts,
   the page shows the logo as a splash, its mark turning as in EasyDiffractionBeta's loading window (mark.svg over name.svg,
   splash.css: the mark turns as an element, which the compositor keeps drawing while the module's start blocks the main thread); when
   the page has a message instead of the app, the logo stands still (logo.svg). The page takes the colour scheme the app's settings
@@ -105,29 +106,44 @@
         }
       }
 
-      // The build this browser runs, or null while the page reloads under the service worker.
-      async function chooseBuild() {
+      // The build this browser runs and why ({build, reason}), or null while the page reloads under the service
+      // worker. The reload happens once per deploy (`deploy` names build.json's folders): a page still not isolated
+      // after it falls back, and a new deploy tries again, as a browser may open it before its worker is active.
+      async function chooseBuild(deploy) {
         const forced = new URLSearchParams(location.search).get("build");
+        const session = sessionStore();
         if (BUILDS.includes(forced)) {
-          return forced;
+          const fallback = session && session.getItem("edi.fallback-reason");
+          if (fallback) {
+            session.removeItem("edi.fallback-reason");
+          }
+          return { build: forced, reason: fallback ? `fell back: ${fallback}` : `forced by ?build=${forced}` };
         }
         if (self.crossOriginIsolated && typeof SharedArrayBuffer === "function") {
-          return "multithread";
+          return { build: "multithread", reason: "the page is cross-origin isolated and has SharedArrayBuffer" };
         }
-        // Once per session: a page still not isolated after the reload falls back instead of reloading again.
-        const session = sessionStore();
-        if (window.isSecureContext && navigator.serviceWorker && session && !session.getItem("edi.coi-reload")) {
-          try {
-            await navigator.serviceWorker.register("coi-serviceworker.js");
-            await navigator.serviceWorker.ready;
-            session.setItem("edi.coi-reload", "1");
-            location.reload();
-            return null;
-          } catch (e) {
-            console.warn("edi: the COOP/COEP service worker could not register:", e);
-          }
+        if (!window.isSecureContext) {
+          return { build: "singlethread", reason: "not a secure context, so no service worker can isolate the page" };
         }
-        return "singlethread";
+        if (!navigator.serviceWorker) {
+          return { build: "singlethread", reason: "this browser offers no service worker to isolate the page" };
+        }
+        if (!session) {
+          return { build: "singlethread", reason: "no session storage to remember a reload in" };
+        }
+        if (session.getItem("edi.coi-reload") === deploy) {
+          return { build: "singlethread", reason: "not cross-origin isolated after the service worker's reload for this deploy" };
+        }
+        try {
+          await navigator.serviceWorker.register("coi-serviceworker.js");
+          await navigator.serviceWorker.ready;
+          session.setItem("edi.coi-reload", deploy);
+          location.reload();
+          return null;
+        } catch (e) {
+          console.warn("edi: the COOP/COEP service worker could not register:", e);
+          return { build: "singlethread", reason: `the COOP/COEP service worker could not register: ${e}` };
+        }
       }
 
       // Each build's folder, from build.json, never from a cache: a redeploy names new folders.
@@ -159,6 +175,10 @@
           return false;
         }
         console.warn(`edi: the multithreaded build did not start (${reason}); loading the single-thread build`);
+        const session = sessionStore();
+        if (session) {
+          session.setItem("edi.fallback-reason", `the multithreaded build did not start (${reason})`);
+        }
         params.set("build", "singlethread");
         location.replace(`${location.pathname}?${params}`);
         return true;
@@ -168,18 +188,26 @@
       let started = "";
 
       async function start() {
-        const build = await chooseBuild();
-        started = build || "";
-        if (build === null) {
+        const folders = await buildFolders();
+        const chosen = await chooseBuild(`${folders.multithread} ${folders.singlethread}`);
+        if (chosen === null) {
           return;
         }
-        const folder = (await buildFolders())[build];
+        const build = chosen.build;
+        started = build;
+        // What the app's diagnostics view shows about this choice (Preferences > Develop).
+        window.ediBuildInfo = {
+          build,
+          reason: chosen.reason,
+          deploy: `${folders.multithread} ${folders.singlethread}`,
+        };
+        const folder = folders[build];
         if (typeof folder !== "string" || !/^[a-z]+-[0-9a-f]+$/.test(folder)) {
           throw new Error(`build.json names no ${build} build`);
         }
         window.ediBuild = build;
         document.documentElement.dataset.build = build;
-        console.log(`edi: the ${build} build (crossOriginIsolated: ${self.crossOriginIsolated})`);
+        console.log(`edi: the ${build} build: ${chosen.reason} (crossOriginIsolated: ${self.crossOriginIsolated})`);
         await loadScript(`${folder}/qtloader.js`);
         await loadScript(`${folder}/edi_app.js`);
         const screen = document.getElementById("screen");

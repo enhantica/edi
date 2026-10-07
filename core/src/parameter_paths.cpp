@@ -277,6 +277,17 @@ std::optional<ResolvedParameter> resolve_structural_label(Structure& structure,
                 return ResolvedParameter{&atom.occupancy, base + "occupancy"};
             }
         }
+        // An anisotropic site's tensor component, `<site>.adp_<ij>`.
+        for (auto& tensor_item : structure.atom_site_aniso) {
+            AtomSiteAniso& tensor = *tensor_item;
+            if (tensor.id != site) continue;
+            const std::string base = root + "atom_site_aniso[" + tensor.id + "].";
+            const char* const names[6] = {"adp_11", "adp_22", "adp_33", "adp_12", "adp_13", "adp_23"};
+            const std::vector<Parameter*> components = tensor.parameters();
+            for (std::size_t k = 0; k < 6; ++k) {
+                if (field == names[k]) return ResolvedParameter{components[k], base + names[k]};
+            }
+        }
     }
     return std::nullopt;
 }
@@ -489,6 +500,10 @@ std::vector<ParameterEntry> parameter_entries(Project& project) {
         return resolved.has_value() && resolved->target == field ? resolved->path : spelled;
     };
     for (const auto& structure : project.structures) {
+        // A site's tensor components are listed with the site, after its own fields, whatever order
+        // the two loops are in (the owner, 2026-10-07): they are collected here and placed below.
+        std::vector<ParameterEntry> tensor_entries;
+        std::vector<ParameterEntry> structure_entries;
         for (const Category& category : structure_categories(*structure)) {
             for (std::size_t i = 0; i < category.fields.size(); ++i) {
                 const CategoryField& field = category.fields[i];
@@ -500,12 +515,34 @@ std::vector<ParameterEntry> parameter_entries(Project& project) {
                     entry.path = path_of(
                         detail::resolve_structural_label(*structure, entry.row_label + "." + field.name, root),
                         field.parameter, root + "atom_sites[" + entry.row_label + "]." + field.name);
+                } else if (category.id == "atom_site_aniso") {
+                    entry.row_label = structure->atom_site_aniso[i / 6]->id;
+                    entry.path = path_of(
+                        detail::resolve_structural_label(*structure, entry.row_label + "." + field.name, root),
+                        field.parameter, root + "atom_site_aniso[" + entry.row_label + "]." + field.name);
+                    tensor_entries.push_back(entry);
+                    continue;
                 } else {
                     entry.path = path_of(
                         detail::resolve_structural_label(*structure, category.id + "_" + field.name, root),
                         field.parameter, root + category.id + "." + field.name);
                 }
-                entries.push_back(entry);
+                structure_entries.push_back(entry);
+            }
+        }
+        for (std::size_t i = 0; i < structure_entries.size(); ++i) {
+            entries.push_back(structure_entries[i]);
+            const bool site_ends = structure_entries[i].category == "atom_site" &&
+                                   (i + 1 == structure_entries.size() ||
+                                    structure_entries[i + 1].row_label != structure_entries[i].row_label ||
+                                    structure_entries[i + 1].category != "atom_site");
+            if (!site_ends) {
+                continue;
+            }
+            for (const ParameterEntry& tensor : tensor_entries) {
+                if (tensor.row_label == structure_entries[i].row_label) {
+                    entries.push_back(tensor);
+                }
             }
         }
     }

@@ -42,6 +42,8 @@ namespace edi {
 
 struct ExperimentBase;
 struct Structure;
+struct AtomSite;
+struct AtomSiteAniso;
 class Project;
 struct Parameter;
 // ADR-0020: the publication transaction, declared in edi/calculation.hpp.
@@ -1401,6 +1403,10 @@ class ProjectTail {
 // (null when it leaves), so a retained one follows its item from project to project.
 inline void link_nested(Structure& structure, const std::shared_ptr<const ProjectLink>& link) noexcept;
 inline void link_nested(ExperimentBase& experiment, const std::shared_ptr<const ProjectLink>& link) noexcept;
+// An anisotropic site's tensor row is keyed by the site's id: a site rename renames its row too,
+// and a row is never renamed on its own while its site holds it (defined after Structure).
+inline void follow_site_rename(Structure* structure, const std::string& from, const std::string& to);
+inline void follow_tensor_rename(Structure* structure, const std::string& from, const std::string& to);
 
 // A keyed collection, as its members' ids see it.
 class KeyedBase {
@@ -1424,6 +1430,9 @@ class KeyedBase {
     // The live project this collection belongs to, as a member or inside one of its structures or
     // experiments; null otherwise (edi ADR-0024).
     Project* host() const noexcept { return host_link_ ? host_link_->project : nullptr; }
+    // The structure this collection is a member of (its sites, its tensors), in a project or not;
+    // null for any other collection. Like the host it belongs to the collection object.
+    Structure* holder() const noexcept { return holder_; }
 
    protected:
     const std::shared_ptr<const ProjectLink>& host_link() const noexcept { return host_link_; }
@@ -1433,7 +1442,9 @@ class KeyedBase {
     friend void link_nested(Structure& structure, const std::shared_ptr<const ProjectLink>& link) noexcept;
     friend void link_nested(ExperimentBase& experiment,
                             const std::shared_ptr<const ProjectLink>& link) noexcept;
+    friend struct edi::Structure;
     std::shared_ptr<const ProjectLink> host_link_;
+    Structure* holder_ = nullptr;
 };
 
 
@@ -2131,12 +2142,17 @@ class ItemVec final : public detail::KeyedBase {
             return false;
         }
     }
-    // A structure's links and texture rows name it by id, so they follow its rename.
+    // A structure's links and texture rows name it by id, so they follow its rename; a site's
+    // tensor row follows the site's.
     void rename_references(const ItemKey& key, const std::string& next) const override {
         if constexpr (std::is_same_v<T, Structure>) {
             if (Project* project = host()) {
                 detail::rename_structure_links(*project, key.value(), next);
             }
+        } else if constexpr (std::is_same_v<T, AtomSite>) {
+            detail::follow_site_rename(holder(), key.value(), next);
+        } else if constexpr (std::is_same_v<T, AtomSiteAniso>) {
+            detail::follow_tensor_rename(holder(), key.value(), next);
         } else {
             (void)key;
             (void)next;
@@ -2483,16 +2499,17 @@ struct AtomSite : std::enable_shared_from_this<AtomSite> {
     // Scattering type symbol, e.g. "Ca". A geometry input: it records its own writes.
     detail::WrittenText type_symbol;
     detail::WrittenText wyckoff_letter = "";  // Wyckoff letter (optional; "" = general)
-    // `_atom_site.adp_type` as STORED: "" when the source carried
-    // no column; "Biso" when it carried Biso — or Uiso, whose value the loader converts to B at the
-    // boundary, so the stored token names the stored representation. Written back iff non-empty. A
-    // geometry input: it records its own writes.
-    detail::WrittenText adp_type;
+    // `_atom_site.adp_type`, the type the site's values are in: Biso, Uiso, Bani, Uani or beta
+    // (ADR-0027). A file that declares none reads as Biso; a save writes it. A geometry
+    // input: it records its own writes.
+    detail::WrittenText adp_type = "Biso";
     Parameter fract_x;
     Parameter fract_y;
     Parameter fract_z;
     Parameter occupancy{1.0};
-    Parameter adp_iso{0.0};  // isotropic ADP stored as Biso (Å²), crysta's convention
+    // The isotropic ADP in the declared type (B or U, Å²); for an anisotropic site, its tensor's
+    // equivalent value, which crysta derives.
+    Parameter adp_iso{0.0};
 
     // Attaches the parameter specs. Defined inline in this header so every consumer TU list
     // (the hidden C++ probes compile core sources directly) links unchanged.
@@ -2529,6 +2546,56 @@ struct RowTraits<AtomSite> {
     static const detail::RowLink* primary(const AtomSite& site) noexcept { return &site.row; }
 };
 
+// The ADP types a site can declare, and which of them hold a tensor (ADR-0027).
+inline bool is_adp_type(const std::string& type) {
+    return type == "Biso" || type == "Uiso" || type == "Bani" || type == "Uani" || type == "beta";
+}
+inline bool is_anisotropic_adp_type(const std::string& type) {
+    return type == "Bani" || type == "Uani" || type == "beta";
+}
+
+// An anisotropic site's displacement tensor (diffraction-lib's `atom_site_aniso`), keyed by the
+// site id. The six components are in the site's declared type: U_ij (Uani), B_ij (Bani) or the
+// dimensionless beta_ij (beta). Rows exist exactly for the anisotropic sites.
+struct AtomSiteAniso : std::enable_shared_from_this<AtomSiteAniso> {
+    ItemKey id;  // the site id;: owned by atom_site_aniso
+    Parameter adp_11;
+    Parameter adp_22;
+    Parameter adp_33;
+    Parameter adp_12;
+    Parameter adp_13;
+    Parameter adp_23;
+
+    AtomSiteAniso();
+
+    std::vector<Parameter*> parameters() {
+        return {&adp_11, &adp_22, &adp_33, &adp_12, &adp_13, &adp_23};
+    }
+    std::vector<Parameter*> free_parameters();
+    // Whether a collection holds the row this belongs to; that collection sets it.
+    detail::RowLink row;
+    // This row's identity as a calculation input.
+    detail::Epoch epoch;
+};
+
+template <>
+struct KeyTraits<AtomSiteAniso> {
+    static ItemKey& key(AtomSiteAniso& row) { return row.id; }
+    static const ItemKey& key(const AtomSiteAniso& row) { return row.id; }
+    static std::string canonical(const std::string& id) { return id; }
+    static const char* category() { return "anisotropic atom site"; }
+};
+
+// A tensor is a row of its structure's `atom_site_aniso`.
+template <>
+struct RowTraits<AtomSiteAniso> {
+    static void link(AtomSiteAniso& row, const std::shared_ptr<detail::Membership>& record) noexcept {
+        row.row.link(record);
+    }
+    static void unlink(AtomSiteAniso& row) noexcept { row.row.unlink(); }
+    static const detail::RowLink* primary(const AtomSiteAniso& row) noexcept { return &row.row; }
+};
+
 }  // namespace edi
 
 // ADR-0018: the columns of the `_atom_site` table.
@@ -2538,7 +2605,16 @@ struct RowSchema<edi::AtomSite> {
     static constexpr const char* name = "_atom_site";
     static constexpr auto fields = std::tuple{&edi::AtomSite::id, &edi::AtomSite::type_symbol, &edi::AtomSite::wyckoff_letter, &edi::AtomSite::adp_type, &edi::AtomSite::fract_x, &edi::AtomSite::fract_y, &edi::AtomSite::fract_z, &edi::AtomSite::occupancy, &edi::AtomSite::adp_iso};
     static constexpr std::array items{"id", "type_symbol", "wyckoff_letter", "adp_type", "fract_x", "fract_y", "fract_z", "occupancy", "adp_iso"};
-    static constexpr std::array cif{"_atom_site_label", "_atom_site_type_symbol", "_atom_site_Wyckoff_symbol", "_atom_site_fract_x", "_atom_site_fract_y", "_atom_site_fract_z", "_atom_site_occupancy", "_atom_site_B_iso_or_equiv", "_atom_site_U_iso_or_equiv"};
+    static constexpr std::array cif{"_atom_site_label", "_atom_site_type_symbol", "_atom_site_Wyckoff_symbol", "_atom_site_fract_x", "_atom_site_fract_y", "_atom_site_fract_z", "_atom_site_occupancy", "_atom_site_B_iso_or_equiv", "_atom_site_U_iso_or_equiv", "_atom_site_adp_type"};
+};
+
+// The columns of the `_atom_site_aniso` table.
+template <>
+struct RowSchema<edi::AtomSiteAniso> {
+    static constexpr const char* name = "_atom_site_aniso";
+    static constexpr auto fields = std::tuple{&edi::AtomSiteAniso::id, &edi::AtomSiteAniso::adp_11, &edi::AtomSiteAniso::adp_22, &edi::AtomSiteAniso::adp_33, &edi::AtomSiteAniso::adp_12, &edi::AtomSiteAniso::adp_13, &edi::AtomSiteAniso::adp_23};
+    static constexpr std::array items{"id", "adp_11", "adp_22", "adp_33", "adp_12", "adp_13", "adp_23"};
+    static constexpr std::array cif{"_atom_site_aniso_label", "_atom_site_aniso_U_11", "_atom_site_aniso_U_22", "_atom_site_aniso_U_33", "_atom_site_aniso_U_12", "_atom_site_aniso_U_13", "_atom_site_aniso_U_23", "_atom_site_aniso_B_11", "_atom_site_aniso_B_22", "_atom_site_aniso_B_33", "_atom_site_aniso_B_12", "_atom_site_aniso_B_13", "_atom_site_aniso_B_23", "_atom_site_aniso_beta_11", "_atom_site_aniso_beta_22", "_atom_site_aniso_beta_33", "_atom_site_aniso_beta_12", "_atom_site_aniso_beta_13", "_atom_site_aniso_beta_23"};
 };
 }  // namespace crysta
 
@@ -2652,12 +2728,21 @@ struct GeometrySource;  // what a structure's stored geometry was computed from 
 }  // namespace detail
 
 struct Structure : std::enable_shared_from_this<Structure> {
+    // The structure's own sites and tensors know it (KeyedBase::holder), so a copy marks them
+    // again. A structure is copied, never moved (its name's ItemKey cannot move).
+    Structure() noexcept { hold_rows(); }
+    Structure(const Structure& other);
+    Structure& operator=(const Structure&) = default;
+    ~Structure() = default;
+
     // Datablock id, e.g. "ncaf" ("" for programmatic models);: owned by Project::structures,
     // which compares its canonical key (an empty name is `structure`).
     ItemKey name;
     SpaceGroup space_group;
     Cell cell;
     ItemVec<AtomSite> atom_sites;  // Shared items, deep-copied with the structure
+    // The anisotropic sites' tensors, one row per such site (ADR-0027).
+    ItemVec<AtomSiteAniso> atom_site_aniso;
     // Element -> coherent bound neutron scattering length b_c (fm). Empty => the adapter uses crysta's
     // default table (load_neutron_scattering); a non-empty map overrides it (isotopes / custom lengths).
     // A loop category held in one cell; written whole or with `modify`.
@@ -2686,7 +2771,67 @@ struct Structure : std::enable_shared_from_this<Structure> {
     // The value read: computes `geometry` through crysta when it is not current, then returns it.
     // Throws what crysta throws; nothing earlier stays readable.
     const StructureGeometry& current_geometry();
+
+   private:
+    void hold_rows() noexcept {
+        atom_sites.holder_ = this;
+        atom_site_aniso.holder_ = this;
+    }
 };
+
+inline Structure::Structure(const Structure& other)
+    : std::enable_shared_from_this<Structure>(other),
+      name(other.name),
+      space_group(other.space_group),
+      cell(other.cell),
+      atom_sites(other.atom_sites),
+      atom_site_aniso(other.atom_site_aniso),
+      scattering_lengths_fm(other.scattering_lengths_fm),
+      epoch(other.epoch),
+      geom(other.geom),
+      geometry(other.geometry),
+      geometry_source(other.geometry_source) {
+    hold_rows();
+}
+
+namespace detail {
+
+// Set while a site rename carries its tensor row along, the one rename a held row admits.
+inline thread_local bool following_site = false;
+
+inline void follow_site_rename(Structure* structure, const std::string& from, const std::string& to) {
+    if (structure == nullptr || from == to) {
+        return;
+    }
+    for (const auto& row : structure->atom_site_aniso) {
+        if (row->id.value() == from) {
+            following_site = true;
+            try {
+                row->id = to;
+            } catch (...) {
+                following_site = false;
+                throw;
+            }
+            following_site = false;
+            return;
+        }
+    }
+}
+
+inline void follow_tensor_rename(Structure* structure, const std::string& from, const std::string& to) {
+    if (structure == nullptr || from == to || following_site) {
+        return;
+    }
+    for (const auto& site : structure->atom_sites) {
+        if (site->id.value() == from) {
+            throw std::invalid_argument("the anisotropic row of site '" + detail::printable_id(from) +
+                                        "' cannot be renamed to '" + detail::printable_id(to) +
+                                        "' on its own: it follows its site; rename the site");
+        }
+    }
+}
+
+}  // namespace detail
 
 // The ONE geometry read. crysta computes the four categories for `window` from the structure as
 // it is now; edi shares the buffers. Pure: it stores nothing. Throws crysta's
@@ -4338,6 +4483,7 @@ inline void ProjectTail::relink() const noexcept {
 
 inline void link_nested(Structure& structure, const std::shared_ptr<const ProjectLink>& link) noexcept {
     static_cast<KeyedBase&>(structure.atom_sites).host_link_ = link;
+    static_cast<KeyedBase&>(structure.atom_site_aniso).host_link_ = link;
 }
 
 inline void link_nested(ExperimentBase& experiment, const std::shared_ptr<const ProjectLink>& link) noexcept {
@@ -4600,12 +4746,6 @@ struct FitParameterCategory {
     static constexpr const char* derived =
         "composed at save from the parameters' fit-start cells; read back into them at load";
 };
-struct AtomSiteAnisoCategory {
-    static constexpr const char* name = "_atom_site_aniso";
-    static constexpr const char* derived =
-        "read by the CIF import, which reduces it to each site's isotropic ADP; never stored";
-    static constexpr std::array cif{"_atom_site_aniso_label", "_atom_site_aniso_U_11", "_atom_site_aniso_U_22", "_atom_site_aniso_U_33"};
-};
 struct EdiCategory {
     static constexpr const char* name = "_edi";
     static constexpr const char* derived =
@@ -4680,6 +4820,15 @@ inline AtomSite::AtomSite() {
     adp_iso.spec = &spec::atom_site_adp_iso;
 }
 
+inline AtomSiteAniso::AtomSiteAniso() {
+    adp_11.spec = &spec::atom_site_aniso_adp_11;
+    adp_22.spec = &spec::atom_site_aniso_adp_22;
+    adp_33.spec = &spec::atom_site_aniso_adp_33;
+    adp_12.spec = &spec::atom_site_aniso_adp_12;
+    adp_13.spec = &spec::atom_site_aniso_adp_13;
+    adp_23.spec = &spec::atom_site_aniso_adp_23;
+}
+
 inline PeakBase::PeakBase() {
     rise_alpha_0.spec = &spec::peak_rise_alpha_0;
     rise_alpha_1.spec = &spec::peak_rise_alpha_1;
@@ -4725,6 +4874,9 @@ inline void push_optional(std::vector<Parameter*>& out, OptionalParameter& field
 
 inline std::vector<Parameter*> Cell::free_parameters() { return detail::free_of(parameters()); }
 inline std::vector<Parameter*> AtomSite::free_parameters() { return detail::free_of(parameters()); }
+inline std::vector<Parameter*> AtomSiteAniso::free_parameters() {
+    return detail::free_of(parameters());
+}
 inline std::vector<Parameter*> LineSegment::free_parameters() {
     return detail::free_of(parameters());
 }
@@ -4735,6 +4887,11 @@ inline std::vector<Parameter*> Structure::parameters() {
     std::vector<Parameter*> out = cell.parameters();
     for (const std::shared_ptr<AtomSite>& site : atom_sites) {
         for (Parameter* parameter : site->parameters()) {
+            out.push_back(parameter);
+        }
+    }
+    for (const std::shared_ptr<AtomSiteAniso>& tensor : atom_site_aniso) {
+        for (Parameter* parameter : tensor->parameters()) {
             out.push_back(parameter);
         }
     }
@@ -5011,6 +5168,7 @@ inline void point_at_row(Category& category) {
 }
 inline void point_parameters(Cell& cell) { point_at_row(cell); }
 inline void point_parameters(AtomSite& site) { point_at_row(site); }
+inline void point_parameters(AtomSiteAniso& tensor) { point_at_row(tensor); }
 inline void point_parameters(LineSegment& point) { point_at_row(point); }
 inline void point_parameters(PolynomialTerm& term) { point_at_row(term); }
 inline void point_parameters(PrefOrient& row) { point_at_row(row); }
@@ -5022,6 +5180,9 @@ inline void point_parameters(Structure& structure) {
     point_parameters(structure.cell);
     for (const std::shared_ptr<AtomSite>& site : structure.atom_sites) {
         point_parameters(*site);
+    }
+    for (const std::shared_ptr<AtomSiteAniso>& tensor : structure.atom_site_aniso) {
+        point_parameters(*tensor);
     }
 }
 inline void point_parameters(ExperimentBase& experiment) {

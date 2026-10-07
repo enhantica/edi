@@ -33,6 +33,7 @@ PAGES = {
     'pd-neut-cwl_LBCO_basic': 'pd-neut-cwl_lbco-hrpt_basic',
     'pd-neut-cwl_PbSO4_basic': 'pd-neut-cwl_pbso4_basic',
     'pd-neut-cwl_Y2O3_isotropic-adp': 'pd-neut-cwl_y2o3_isotropic-adp',
+    'pd-neut-cwl_Y2O3_beta-adp': 'pd-neut-cwl_y2o3_beta-adp',
     'pd-neut-cwl_LaB6_11B': 'pd-neut-cwl_lab6-echidna_11b',
     'pd-neut-tof_Si_jorgensen': 'pd-neut-tof_si-sepd_jorgensen',
     'pd-neut-tof_Si_jorgensen-von-dreele': 'pd-neut-tof_si-sepd_jorgensen-von-dreele',
@@ -173,6 +174,15 @@ def _assert_calculated_candidate_flow(page: str, tree: ast.Module) -> None:
             for target in node.targets
         )
     ]
+    if not bindings:
+        bindings = [
+            keyword
+            for call in ast.walk(tree)
+            if isinstance(call, ast.Call)
+            and ast.unparse(call.func) == 'verify.plot_pattern_comparison'
+            for keyword in call.keywords
+            if keyword.arg == 'candidate'
+        ]
     assert len(bindings) == 1, f'{page}: calculated candidate must have one source binding'
     binding = bindings[0]
     expected = ast.parse(
@@ -183,7 +193,9 @@ def _assert_calculated_candidate_flow(page: str, tree: ast.Module) -> None:
         # Several-bank pages select the row once and use that same row for the
         # inclusion mask and calculated intensity; oracle/cross-bank swaps refuse.
         loops = [
-            loop for loop in ast.walk(tree) if isinstance(loop, ast.For) and binding in loop.body
+            loop
+            for loop in ast.walk(tree)
+            if isinstance(loop, ast.For) and any(node is binding for node in ast.walk(loop))
         ]
         if page == 'pd-neut-cwl_YAP_multiphase':
             assert not loops, f'{page}: calculated candidate selects one declared bank'
@@ -499,7 +511,8 @@ def test_ci_runs_notebooks_for_every_result_changing_surface() -> None:
     notebook_job = _job_body(
         workflow, 'notebooks' if '\n  notebooks:' in workflow else 'notebook-tests'
     )
-    # Before: per-surface filters. After  I1/I34: unconditional native reuse.
+    # Before: successful upstream jobs implied reachability. After: declared upstream
+    # results drive scheduling; a failed core/native no longer cancels later reporting.
     from tests.fixtures.e09_t75_workflow import (  # noqa: PLC0415 - avoid test-module import cycles
         active,
     )
@@ -511,14 +524,24 @@ def test_ci_runs_notebooks_for_every_result_changing_surface() -> None:
     data = jobs()
     public = public_profile(data)
     assert all(
-        active(data['notebooks'], event) for event in ('push', 'pull_request', 'workflow_dispatch')
+        active(
+            data['notebooks'],
+            event,
+            states={'changes': 'success', 'native': 'failure', 'core': 'failure'},
+        )
+        for event in ('push', 'pull_request', 'workflow_dispatch')
     ), '/ notebooks run for every result-changing surface'
     assert 'uses: ./.github/actions/setup-pixi' in notebook_job
     assert 'pixi run notebook-tests' in notebook_job
 
     docs_job = _job_body(workflow, 'docs')
     assert all(
-        active(data['docs'], event) for event in ('push', 'pull_request', 'workflow_dispatch')
+        active(
+            data['docs'],
+            event,
+            states={'changes': 'success', 'native': 'failure', 'core': 'failure'},
+        )
+        for event in ('push', 'pull_request', 'workflow_dispatch')
     ), '/ required docs execution cannot be path-filtered'
     if not public:
         for name in ('notebooks', 'docs'):

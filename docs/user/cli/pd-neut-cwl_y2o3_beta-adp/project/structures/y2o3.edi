@@ -1,0 +1,41 @@
+data_y2o3
+
+_edi.schema_version 3
+
+_cell.length_a 10.605744
+_cell.length_b 10.605744
+_cell.length_c 10.605744
+_cell.angle_alpha 90
+_cell.angle_beta 90
+_cell.angle_gamma 90
+
+_space_group.name_h_m "I a -3"
+_space_group.coord_system_code 1
+_space_group.it_number 206
+
+loop_
+_atom_site.id
+_atom_site.type_symbol
+_atom_site.fract_x
+_atom_site.fract_y
+_atom_site.fract_z
+_atom_site.wyckoff_letter
+_atom_site.multiplicity
+_atom_site.occupancy
+_atom_site.adp_iso
+_atom_site.adp_type
+Y1 Y -0.03236 0 0.25 d 24 1 1.3047889472050174 beta
+Y2 Y 0.25 0.25 0.25 b 8 1 1.3677787584493977 beta
+O1 O 0.39072 0.15204 0.3803 e 48 1 1.3227860361319832 beta
+
+loop_
+_atom_site_aniso.id
+_atom_site_aniso.adp_11
+_atom_site_aniso.adp_22
+_atom_site_aniso.adp_33
+_atom_site_aniso.adp_12
+_atom_site_aniso.adp_13
+_atom_site_aniso.adp_23
+Y1 0.00303 0.00272 0.00295 0 0 -0.00025
+Y2 0.00304 0.00304 0.00304 -0.00013 -0.00013 -0.00013
+O1 0.00299 0.0031 0.00273 -0.00007 -0.0002 -0.00001

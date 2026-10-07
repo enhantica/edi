@@ -22,6 +22,7 @@ WorkflowPage {
             "space_group": spaceGroupContent,
             "cell": cellContent,
             "atom_site": atomSitesContent,
+            "atom_site_aniso": atomSiteAdpContent,
             "scattering_length": scatteringLengthsContent
         })
 
@@ -105,6 +106,12 @@ WorkflowPage {
     Component {
         id: atomSitesContent
         AtomSitesGroup {
+            structure: page.structure
+        }
+    }
+    Component {
+        id: atomSiteAdpContent
+        AtomSiteAdpGroup {
             structure: page.structure
         }
     }
