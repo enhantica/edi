@@ -397,10 +397,39 @@ def _run_human(project: edi.Project, verbosity, project_name: str, *, clock=time
                 measured_completed=tally.completed - prior[0],
             )
         )
+        skipped = _skipped_line(project)
+        if skipped:
+            sys.stdout.write(skipped + '\n')
         sys.stdout.flush()
         return _exit_code(outcome)
 
     return _stream_single_fit(project, verbosity, project_name)
+
+
+def _skipped_line(project: edi.Project) -> str:
+    """What crysta skipped while reading the scan's files, from analysis/scan-skipped.csv."""
+    directory = project.metadata.path
+    if directory is None:
+        return ''
+    try:
+        lines = (Path(directory) / 'analysis' / 'scan-skipped.csv').read_text('utf-8').splitlines()
+    except OSError:
+        return ''
+    if not lines or lines[0] != 'file_path,negative_points,skipped_dataset':
+        return ''
+    files = points = 0
+    for line in lines[1:]:
+        cells = line.split(',')
+        if len(cells) != 3 or not cells[1].isdigit():
+            continue
+        points += int(cells[1])
+        files += cells[2] == 'True'
+    if not files and not points:
+        return ''
+    return (
+        f'Skipped: {files} file(s) with no intensity above zero, '
+        f'{points} point(s) with a negative intensity (analysis/scan-skipped.csv)'
+    )
 
 
 class _ScanTally:

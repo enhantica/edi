@@ -59,6 +59,10 @@ struct ScanResultIndex {
         int iterations = 0;
         std::vector<std::string> extracted;  ///< the extract rules' cells, in rule order
         std::string termination;  ///< why its fit stopped, from crysta's ledger; empty when not recorded
+        /// From crysta's `analysis/scan-skipped.csv`: the file's rows skipped for a negative intensity, and whether
+        /// the whole file was skipped for having no intensity above zero (it then has no row).
+        std::size_t negative_points = 0;
+        bool skipped = false;
     };
     std::string error;
     std::vector<std::string> header;
@@ -72,6 +76,7 @@ struct ScanResultIndex {
     std::vector<Row> rows;      ///< by dataset place
     std::int64_t end = 0;       ///< the offset after the last complete row (0: no file)
     std::size_t fitted = 0;     ///< datasets with a row
+    std::size_t skipped = 0;    ///< datasets skipped for having no intensity above zero
 };
 /// A results file that is there must read whole; `writing`: a run is appending to it, so a last line still being
 /// written is left out rather than refused.

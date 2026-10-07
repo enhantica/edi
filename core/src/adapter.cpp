@@ -1423,12 +1423,65 @@ std::pair<std::size_t, ScanResultIndex::Row> scan_row_facts(const Project& /*pro
     return {found->second, std::move(row)};
 }
 
+namespace {
+
+// What crysta skipped while reading the scan's files (`analysis/scan-skipped.csv`: file_path, negative_points,
+// skipped_dataset), onto the datasets it names. A report, not a result: a file that is not there or not in this
+// form adds nothing, and a line still being written is left out.
+void mark_skipped(const Project& project, const ScanDatasets& datasets, ScanResultIndex& index) {
+    std::ifstream input(scan_results_path(project).parent_path() / "scan-skipped.csv", std::ios::binary);
+    std::string line;
+    if (!std::getline(input, line) || input.eof() ||
+        split_scan_row(line) != std::vector<std::string>{"file_path", "negative_points", "skipped_dataset"}) {
+        return;
+    }
+    const ScanPlaces places = scan_places(datasets);
+    const std::string directory = project.sequential_fit.data_dir + "/";
+    while (std::getline(input, line) && !input.eof()) {
+        const std::vector<std::string> cells = split_scan_row(line);
+        if (cells.size() != 3) {
+            continue;
+        }
+        std::string_view name(cells[0]);
+        if (name.starts_with(directory)) {
+            name.remove_prefix(directory.size());
+        }
+        const auto found = places.find(std::string(name));
+        double negative = 0.0;
+        if (found == places.end() || !parse_scan_number(cells[1], negative) || negative < 0.0) {
+            continue;
+        }
+        ScanResultIndex::Row& row = index.rows[found->second];
+        row.negative_points = static_cast<std::size_t>(negative);
+        if (cells[2] == "True" && row.offset < 0 && !row.skipped) {
+            row.skipped = true;
+            ++index.skipped;
+        }
+    }
+}
+
+ScanResultIndex index_scan_rows(const Project& project, const ScanDatasets& datasets, const ScanPlaces& places,
+                                bool writing);
+
+}  // namespace
+
 ScanResultIndex index_scan_results(const Project& project, const ScanDatasets& datasets, bool writing) {
     return index_scan_results(project, datasets, scan_places(datasets), writing);
 }
 
 ScanResultIndex index_scan_results(const Project& project, const ScanDatasets& datasets, const ScanPlaces& places,
                                    bool writing) {
+    ScanResultIndex index = index_scan_rows(project, datasets, places, writing);
+    if (index.error.empty()) {
+        mark_skipped(project, datasets, index);
+    }
+    return index;
+}
+
+namespace {
+
+ScanResultIndex index_scan_rows(const Project& project, const ScanDatasets& datasets, const ScanPlaces& places,
+                                bool writing) {
     ScanResultIndex index;
     index.rows.resize(datasets.files.size());
     const auto refused = [&datasets](const std::string& why) {
@@ -1490,6 +1543,8 @@ ScanResultIndex index_scan_results(const Project& project, const ScanDatasets& d
     }
     return index;
 }
+
+}  // namespace
 
 std::vector<std::string> read_scan_row(const Project& project, std::int64_t offset) {
     std::ifstream input(scan_results_path(project), std::ios::binary);
