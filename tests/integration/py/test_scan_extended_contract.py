@@ -180,8 +180,12 @@ def test_scan_explorer_header_has_declared_columns_in_order():
     qml = source('qml/Pages/Experiment/ExperimentsGroup.qml')
     header = block(qml, 'header:')
     labels = re.findall(r'text:\s*qsTr\("([^\"]+)"\)', header)
-    assert labels[:4] == ['No.', 'Fit', 'Datablock', 'File'], (
-        'Dataset list labels: scan columns appear in number, fit, datablock, file order'
+    assert labels[:3] == ['Fit', 'Datablock', 'File'], (
+        'Dataset list labels: the unlabelled number column precedes fit, datablock and file'
+    )
+    number_column = block(header, 'EaComponents.TableViewLabel {')
+    assert 'width: AppSizes.indexColumnWidth' in number_column and 'text:' not in number_column, (
+        'Dataset list labels: the first number column stays present with an empty header'
     )
     repeater = block(header, 'Repeater {')
     table = block(qml, 'EaComponents.TableView {')

@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-06T21:49:49Z
+# measured_utc = 2026-10-07T00:33:26Z
 #
-# Recorded from: measure-corrected.log (25 node(s) measured once, 8255 banked, 0 stale row(s) dropped)
-# Collected tests: 9493; with a reported duration: 4603
-# Module-scoped fixture costs recorded: 26
+# Recorded from: seq19 completed focused Python run; serial priority loader; final entire app tier with common setup trigger; serial completed adp-scene.xml; all parent identities retained
+# Collected tests: 9497; with a reported duration: 4631
+# Module-scoped fixture costs recorded: 27
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 9493
+# inventory_python = 9497
 # inventory_cpp = 302
-# inventory_measured = 8278
-# inventory_unmeasured = 1517
+# inventory_measured = 8325
+# inventory_unmeasured = 1474
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_atom_filter_recovers_from_red_and_commits_element]
@@ -44,7 +44,7 @@
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_space_group_name_and_number_choose_new_default]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_gui_owner_decisions_pass_in_the_production_host
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
-0.003	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_cosio-d20_scan-162f]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_cosio-d20_scan-162f]
 0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_cosio-d20_scan-324f]
 0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_cosio-d20_scan-3f]
 0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_cosio-d20_start-1]
@@ -54,7 +54,7 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.p
 0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_lbco-hrpt_start-2]
 0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_lbco-hrpt_start-4]
 0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_pbso4_beba-asymmetry]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_y2o3_beta-adp]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_y2o3_beta-adp]
 0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_yap-spodi_3k]
 0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_cecoal-polaris_chebyshev]
 0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_ceo2-pearl_polynomial]
@@ -68,8 +68,8 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::tes
 0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_si-sepd_start-2]
 0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_si-sepd_start-5]
 0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-xray-cwl_lif_single]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_existing_projects_open_and_populate_pages
-0.009	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_cosio-d20_scan-162f]
+0.003	tests/integration/app/test_e04_t1_projects.py::test_existing_projects_open_and_populate_pages
+0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_cosio-d20_scan-162f]
 0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_cosio-d20_scan-324f]
 0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_cosio-d20_scan-3f]
 0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_cosio-d20_start-1]
@@ -79,7 +79,7 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::tes
 0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_lbco-hrpt_start-2]
 0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_lbco-hrpt_start-4]
 0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_pbso4_beba-asymmetry]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_y2o3_beta-adp]
+0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_y2o3_beta-adp]
 0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_yap-spodi_3k]
 0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_cecoal-polaris_chebyshev]
 0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_ceo2-pearl_polynomial]
@@ -90,18 +90,18 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.
 0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_ncaf-wish-3bank_start-5]
 0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_ncaf-wish-5bank_start-5]
 0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_ncaf-wish-5bank_start-fullprof]
-0.170	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_si-sepd_start-2]
+0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_si-sepd_start-2]
 0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_si-sepd_start-5]
 0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-xray-cwl_lif_single]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_projects_open_and_populate_pages
-0.280	tests/integration/app/test_e04_t1_runtime_escapes.py::test_missing_property_fails_the_production_qmllint_import_context
-0.001	tests/integration/app/test_e04_t1_runtime_escapes.py::test_owner_amendment_receipts_cover_every_original_gui_boundary[test_library_settable_scalars_and_derived_readonly]
+0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_projects_open_and_populate_pages
+0.430	tests/integration/app/test_e04_t1_runtime_escapes.py::test_missing_property_fails_the_production_qmllint_import_context
+0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_owner_amendment_receipts_cover_every_original_gui_boundary[test_library_settable_scalars_and_derived_readonly]
 0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_owner_amendment_receipts_cover_every_original_gui_boundary[test_library_settable_table_columns_reach_core]
 0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_owner_amendment_receipts_cover_every_original_gui_boundary[test_settable_fields_are_editable_in_the_page]
 0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_owner_amendment_receipts_cover_every_original_gui_boundary[test_visible_xray_and_background_selectors_and_no_split_groups]
-0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_owner_amendments_execute_in_the_production_qml_host
-0.110	tests/integration/app/test_e04_t1_runtime_escapes.py::test_runtime_escape_reaches_the_same_assertions[broad_notifications]
-0.130	tests/integration/app/test_e04_t1_runtime_escapes.py::test_runtime_escape_reaches_the_same_assertions[missing_property]
+0.006	tests/integration/app/test_e04_t1_runtime_escapes.py::test_owner_amendments_execute_in_the_production_qml_host
+0.230	tests/integration/app/test_e04_t1_runtime_escapes.py::test_runtime_escape_reaches_the_same_assertions[broad_notifications]
+0.230	tests/integration/app/test_e04_t1_runtime_escapes.py::test_runtime_escape_reaches_the_same_assertions[missing_property]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_ui_compare.py::test_production_comparator_similarity_and_missing_escape[different-size-False]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_ui_compare.py::test_production_comparator_similarity_and_missing_escape[identical-True]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_ui_compare.py::test_production_comparator_similarity_and_missing_escape[missing-expected-False]
@@ -109,49 +109,49 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_ui_compare.py::t
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_ui_compare.py::test_production_comparator_similarity_and_missing_escape[tile-threshold-False]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_ui_compare.py::test_production_comparator_similarity_and_missing_escape[whole-image-threshold-False]
 0.590	tests/integration/app/test_e04_t1_ui_compare.py::test_retired_calculation_identity_rows_and_adjacent_text_are_compared
-UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_an_absent_type_gets_the_biso_default
-UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_anisotropic_site_exposes_the_computed_isotropic_value[Bani]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_anisotropic_site_exposes_the_computed_isotropic_value[Uani]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_anisotropic_site_exposes_the_computed_isotropic_value[beta]
-0.080	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[Bani-hexagonal]
-0.110	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[Bani-monoclinic]
-0.080	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[Biso-hexagonal]
-0.100	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[Biso-monoclinic]
-0.090	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[Uani-hexagonal]
-0.110	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[Uani-monoclinic]
-0.080	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[Uiso-hexagonal]
-0.120	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[Uiso-monoclinic]
-0.080	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[beta-hexagonal]
-0.110	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[beta-monoclinic]
+0.000	tests/integration/py/test_anisotropic_adps.py::test_an_absent_type_gets_the_biso_default
+0.010	tests/integration/py/test_anisotropic_adps.py::test_anisotropic_site_exposes_the_computed_isotropic_value[Bani]
+0.010	tests/integration/py/test_anisotropic_adps.py::test_anisotropic_site_exposes_the_computed_isotropic_value[Uani]
+0.010	tests/integration/py/test_anisotropic_adps.py::test_anisotropic_site_exposes_the_computed_isotropic_value[beta]
+0.280	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[Bani-hexagonal]
+0.130	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[Bani-monoclinic]
+0.110	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[Biso-hexagonal]
+0.370	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[Biso-monoclinic]
+0.100	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[Uani-hexagonal]
+0.120	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[Uani-monoclinic]
+0.100	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[Uiso-hexagonal]
+0.140	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[Uiso-monoclinic]
+0.100	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[beta-hexagonal]
+0.120	tests/integration/py/test_anisotropic_adps.py::test_each_declared_type_survives_load_and_two_saves[beta-monoclinic]
 0.000	tests/integration/py/test_anisotropic_adps.py::test_fullprof_reference_retains_the_upstream_bytes
-UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Bani-Bani]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Bani-Biso]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Bani-Uani]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Bani-Uiso]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Bani-beta]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Biso-Bani]
+0.000	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Bani-Bani]
+0.000	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Bani-Biso]
+0.000	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Bani-Uani]
+0.000	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Bani-Uiso]
+0.010	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Bani-beta]
+0.000	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Biso-Bani]
 0.000	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Biso-Biso]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Biso-Uani]
+0.000	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Biso-Uani]
 0.000	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Biso-Uiso]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Biso-beta]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Uani-Bani]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Uani-Biso]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Uani-Uani]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Uani-Uiso]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Uani-beta]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Uiso-Bani]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Uiso-Biso]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Uiso-Uani]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Uiso-Uiso]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Uiso-beta]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[beta-Bani]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[beta-Biso]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[beta-Uani]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[beta-Uiso]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[beta-beta]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_y2o3_all_three_types_match_the_same_fullprof_profile[Bani]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_y2o3_all_three_types_match_the_same_fullprof_profile[Uani]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_adps.py::test_y2o3_all_three_types_match_the_same_fullprof_profile[beta]
+0.000	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Biso-beta]
+0.000	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Uani-Bani]
+0.010	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Uani-Biso]
+0.010	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Uani-Uani]
+0.010	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Uani-Uiso]
+0.000	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Uani-beta]
+0.000	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Uiso-Bani]
+0.000	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Uiso-Biso]
+0.000	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Uiso-Uani]
+0.000	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Uiso-Uiso]
+0.000	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[Uiso-beta]
+0.000	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[beta-Bani]
+0.000	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[beta-Biso]
+0.000	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[beta-Uani]
+0.000	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[beta-Uiso]
+0.010	tests/integration/py/test_anisotropic_adps.py::test_user_type_change_converts_with_cctbx_and_saves_current_type[beta-beta]
+0.030	tests/integration/py/test_anisotropic_adps.py::test_y2o3_all_three_types_match_the_same_fullprof_profile[Bani]
+0.040	tests/integration/py/test_anisotropic_adps.py::test_y2o3_all_three_types_match_the_same_fullprof_profile[Uani]
+0.030	tests/integration/py/test_anisotropic_adps.py::test_y2o3_all_three_types_match_the_same_fullprof_profile[beta]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_shipment.py::test_y2o3_page_and_cli_project_are_registered
 UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_shipment.py::test_y2o3_reference_is_vendored_byte_identically_and_named
 0.000	tests/integration/py/test_c09_t12_general_jacobian_pin.py::test_c09_t12_round_trip_fixture_is_locked_to_independent_biso_reference
@@ -246,8 +246,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_shipment.py:
 0.110	tests/integration/py/test_c11_t41_measurement_provenance.py::test_i5_stale_only_collection_reaches_banker_without_rerunning
 0.090	tests/integration/py/test_c11_t41_measurement_provenance.py::test_i5_the_cli_refuses_update_without_the_artifact
 0.000	tests/integration/py/test_c11_t41_measurement_provenance.py::test_i5_unreached_nodes_are_holed_not_zeroed
-0.040	tests/integration/py/test_c11_t48_one_loader.py::test_c11_t48_project_load_accepts_calculation_only_range_grid
-0.050	tests/integration/py/test_c11_t48_one_loader.py::test_c11_t48_project_load_is_the_only_loader_and_accepts_fit_ready_data
+0.020	tests/integration/py/test_c11_t48_one_loader.py::test_c11_t48_project_load_accepts_calculation_only_range_grid
+0.060	tests/integration/py/test_c11_t48_one_loader.py::test_c11_t48_project_load_is_the_only_loader_and_accepts_fit_ready_data
 0.010	tests/integration/py/test_c11_t48_one_loader.py::test_c11_t48_project_load_refuses_both_categories
 0.010	tests/integration/py/test_c11_t48_one_loader.py::test_c11_t48_project_load_refuses_mixed_data_and_range_project
 0.000	tests/integration/py/test_c11_t48_one_loader.py::test_c11_t48_project_load_refuses_neither_category_and_names_file
@@ -291,7 +291,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_shipment.py:
 0.030	tests/integration/py/test_c11_t57_profile_surfaces.py::test_selected_profile_loads_calculates_and_survives_save[tof]
 0.090	tests/integration/py/test_c11_t62_vendored_scan.py::test_cli_full_scan_has_every_reversed_temperature_pair
 0.120	tests/integration/py/test_c11_t62_vendored_scan.py::test_cli_scan_contains_the_original_inputs
-0.000	tests/integration/py/test_c13_t12_encoder_routing.py::test_writer_delegates_actual_project_to_shared_engine_encoder
+0.010	tests/integration/py/test_c13_t12_encoder_routing.py::test_writer_delegates_actual_project_to_shared_engine_encoder
 0.000	tests/integration/py/test_c13_t12_loop_identity.py::test_attached_experiment_name_mutation_refuses_atomically
 0.000	tests/integration/py/test_c13_t12_loop_identity.py::test_attached_site_id_mutation_refuses_atomically[cif]
 0.000	tests/integration/py/test_c13_t12_loop_identity.py::test_attached_site_id_mutation_refuses_atomically[edi]
@@ -368,6 +368,10 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_shipment.py:
 0.000	tests/integration/py/test_c13_t12_loop_identity.py::test_duplicate_loop_ids_refuse_at_load[quoted-scattering_length-edi-text]
 0.000	tests/integration/py/test_c13_t12_loop_identity.py::test_duplicate_loop_ids_refuse_at_load[quoted-scattering_length-project]
 0.000	tests/integration/py/test_c13_t12_loop_identity.py::test_duplicate_loop_ids_refuse_at_load[quoted-sequential_fit_extract-project]
+0.000	tests/integration/py/test_c13_t12_loop_identity.py::test_duplicate_refusal_observer_requires_collision_reason_and_identity[duplicate-word]
+0.000	tests/integration/py/test_c13_t12_loop_identity.py::test_duplicate_refusal_observer_requires_collision_reason_and_identity[existing-site]
+0.000	tests/integration/py/test_c13_t12_loop_identity.py::test_duplicate_refusal_observer_requires_collision_reason_and_identity[unrelated-refusal]
+0.000	tests/integration/py/test_c13_t12_loop_identity.py::test_duplicate_refusal_observer_requires_collision_reason_and_identity[wrong-identity]
 0.000	tests/integration/py/test_c13_t12_loop_identity.py::test_identity_names_are_local_to_their_loop_category
 0.000	tests/integration/py/test_c13_t12_loop_identity.py::test_structure_factory_rejects_duplicate_site_ids
 0.000	tests/integration/py/test_c13_t12_loop_identity.py::test_unique_loop_ids_are_admitted[atom_site-cif-path]
@@ -390,7 +394,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_shipment.py:
 0.000	tests/integration/py/test_c13_t12_loop_identity.py::test_unique_loop_ids_are_admitted[excluded_region-edi-path]
 0.000	tests/integration/py/test_c13_t12_loop_identity.py::test_unique_loop_ids_are_admitted[excluded_region-edi-text]
 0.000	tests/integration/py/test_c13_t12_loop_identity.py::test_unique_loop_ids_are_admitted[excluded_region-project]
-0.010	tests/integration/py/test_c13_t12_loop_identity.py::test_unique_loop_ids_are_admitted[fit_parameter-project]
+0.000	tests/integration/py/test_c13_t12_loop_identity.py::test_unique_loop_ids_are_admitted[fit_parameter-project]
 0.000	tests/integration/py/test_c13_t12_loop_identity.py::test_unique_loop_ids_are_admitted[joint_fit-project]
 0.000	tests/integration/py/test_c13_t12_loop_identity.py::test_unique_loop_ids_are_admitted[linked_structure-cif-path]
 0.000	tests/integration/py/test_c13_t12_loop_identity.py::test_unique_loop_ids_are_admitted[linked_structure-cif-text]
@@ -428,9 +432,9 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_shipment.py:
 0.000	tests/integration/py/test_c13_t12_ownership.py::test_edi_held_item_detaches_at_each_lifecycle_exit[delete-experiment]
 0.000	tests/integration/py/test_c13_t12_ownership.py::test_edi_held_item_detaches_at_each_lifecycle_exit[delete-site]
 0.000	tests/integration/py/test_c13_t12_ownership.py::test_edi_held_item_detaches_at_each_lifecycle_exit[delete-structure]
-0.120	tests/integration/py/test_c13_t12_ownership.py::test_edi_held_item_detaches_at_each_lifecycle_exit[owner-destruction-experiment]
-0.080	tests/integration/py/test_c13_t12_ownership.py::test_edi_held_item_detaches_at_each_lifecycle_exit[owner-destruction-site]
-0.080	tests/integration/py/test_c13_t12_ownership.py::test_edi_held_item_detaches_at_each_lifecycle_exit[owner-destruction-structure]
+0.150	tests/integration/py/test_c13_t12_ownership.py::test_edi_held_item_detaches_at_each_lifecycle_exit[owner-destruction-experiment]
+0.110	tests/integration/py/test_c13_t12_ownership.py::test_edi_held_item_detaches_at_each_lifecycle_exit[owner-destruction-site]
+0.140	tests/integration/py/test_c13_t12_ownership.py::test_edi_held_item_detaches_at_each_lifecycle_exit[owner-destruction-structure]
 0.000	tests/integration/py/test_c13_t12_ownership.py::test_edi_held_item_detaches_at_each_lifecycle_exit[remove-experiment]
 0.000	tests/integration/py/test_c13_t12_ownership.py::test_edi_held_item_detaches_at_each_lifecycle_exit[remove-site]
 0.000	tests/integration/py/test_c13_t12_ownership.py::test_edi_held_item_detaches_at_each_lifecycle_exit[remove-structure]
@@ -446,9 +450,9 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_shipment.py:
 0.000	tests/integration/py/test_c13_t12_ownership.py::test_python_reinitialization_cannot_detach_attached_item[structure]
 0.000	tests/integration/py/test_c13_t12_ownership.py::test_singular_experiment_assignment_cannot_copy_sibling_id
 0.000	tests/integration/py/test_c13_t12_persistence.py::test_case_fold_collision_is_atomic_at_save
-0.000	tests/integration/py/test_c13_t12_persistence.py::test_declared_extract_identity_decodes_once_and_saves_canonically["t17"]
-0.000	tests/integration/py/test_c13_t12_persistence.py::test_declared_extract_identity_decodes_once_and_saves_canonically['t17']
-0.000	tests/integration/py/test_c13_t12_persistence.py::test_declared_extract_identity_decodes_once_and_saves_canonically[t17]
+0.010	tests/integration/py/test_c13_t12_persistence.py::test_declared_extract_identity_decodes_once_and_saves_canonically["t17"]
+0.010	tests/integration/py/test_c13_t12_persistence.py::test_declared_extract_identity_decodes_once_and_saves_canonically['t17']
+0.010	tests/integration/py/test_c13_t12_persistence.py::test_declared_extract_identity_decodes_once_and_saves_canonically[t17]
 0.000	tests/integration/py/test_c13_t12_persistence.py::test_distinct_literal_quotes_and_control_like_ids_load[cif-text-"X"]
 0.000	tests/integration/py/test_c13_t12_persistence.py::test_distinct_literal_quotes_and_control_like_ids_load[cif-text-'X']
 0.000	tests/integration/py/test_c13_t12_persistence.py::test_distinct_literal_quotes_and_control_like_ids_load[cif-text-_x]
@@ -466,7 +470,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_shipment.py:
 0.000	tests/integration/py/test_c13_t12_persistence.py::test_identity_spelling_and_exact_roundtrip["X"-'"X"']
 0.000	tests/integration/py/test_c13_t12_persistence.py::test_identity_spelling_and_exact_roundtrip[#x-'#x']
 0.000	tests/integration/py/test_c13_t12_persistence.py::test_identity_spelling_and_exact_roundtrip[$x-'$x']
-0.000	tests/integration/py/test_c13_t12_persistence.py::test_identity_spelling_and_exact_roundtrip[''-'''']
+0.010	tests/integration/py/test_c13_t12_persistence.py::test_identity_spelling_and_exact_roundtrip[''-'''']
 0.000	tests/integration/py/test_c13_t12_persistence.py::test_identity_spelling_and_exact_roundtrip['X'-''X'']
 0.000	tests/integration/py/test_c13_t12_persistence.py::test_identity_spelling_and_exact_roundtrip[-'']
 0.000	tests/integration/py/test_c13_t12_persistence.py::test_identity_spelling_and_exact_roundtrip[.-'.']
@@ -474,19 +478,19 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_shipment.py:
 0.000	tests/integration/py/test_c13_t12_persistence.py::test_identity_spelling_and_exact_roundtrip[?-'?']
 0.000	tests/integration/py/test_c13_t12_persistence.py::test_identity_spelling_and_exact_roundtrip[DaTa_a-'DaTa_a']
 0.000	tests/integration/py/test_c13_t12_persistence.py::test_identity_spelling_and_exact_roundtrip[X"Y-X"Y]
-0.000	tests/integration/py/test_c13_t12_persistence.py::test_identity_spelling_and_exact_roundtrip[X%20Y-'X%20Y']
+0.010	tests/integration/py/test_c13_t12_persistence.py::test_identity_spelling_and_exact_roundtrip[X%20Y-'X%20Y']
 0.000	tests/integration/py/test_c13_t12_persistence.py::test_identity_spelling_and_exact_roundtrip[X'Y-X'Y]
-0.000	tests/integration/py/test_c13_t12_persistence.py::test_identity_spelling_and_exact_roundtrip[X-X]
-0.000	tests/integration/py/test_c13_t12_persistence.py::test_identity_spelling_and_exact_roundtrip[X\tY-'X\tY']
+0.010	tests/integration/py/test_c13_t12_persistence.py::test_identity_spelling_and_exact_roundtrip[X-X]
+0.010	tests/integration/py/test_c13_t12_persistence.py::test_identity_spelling_and_exact_roundtrip[X\tY-'X\tY']
 0.000	tests/integration/py/test_c13_t12_persistence.py::test_identity_spelling_and_exact_roundtrip[[x-'[x']
 0.000	tests/integration/py/test_c13_t12_persistence.py::test_identity_spelling_and_exact_roundtrip[]x-']x']
-0.000	tests/integration/py/test_c13_t12_persistence.py::test_identity_spelling_and_exact_roundtrip[_x-'_x']
+0.010	tests/integration/py/test_c13_t12_persistence.py::test_identity_spelling_and_exact_roundtrip[_x-'_x']
 0.000	tests/integration/py/test_c13_t12_persistence.py::test_identity_spelling_and_exact_roundtrip[a"%20b-'a"%20b']
-0.000	tests/integration/py/test_c13_t12_persistence.py::test_identity_spelling_and_exact_roundtrip[a'%20b-"a'%20b"]
-0.000	tests/integration/py/test_c13_t12_persistence.py::test_identity_spelling_and_exact_roundtrip[data_a-'data_a']
+0.010	tests/integration/py/test_c13_t12_persistence.py::test_identity_spelling_and_exact_roundtrip[a'%20b-"a'%20b"]
+0.010	tests/integration/py/test_c13_t12_persistence.py::test_identity_spelling_and_exact_roundtrip[data_a-'data_a']
 0.000	tests/integration/py/test_c13_t12_persistence.py::test_identity_spelling_and_exact_roundtrip[global_-'global_']
 0.000	tests/integration/py/test_c13_t12_persistence.py::test_identity_spelling_and_exact_roundtrip[loop_-'loop_']
-0.000	tests/integration/py/test_c13_t12_persistence.py::test_identity_spelling_and_exact_roundtrip[save_a-'save_a']
+0.010	tests/integration/py/test_c13_t12_persistence.py::test_identity_spelling_and_exact_roundtrip[save_a-'save_a']
 0.000	tests/integration/py/test_c13_t12_persistence.py::test_identity_spelling_and_exact_roundtrip[stop_-'stop_']
 0.000	tests/integration/py/test_c13_t12_persistence.py::test_malformed_multiline_identity_refuses_in_parser[CR-bad\rid-atom_site]
 0.000	tests/integration/py/test_c13_t12_persistence.py::test_malformed_multiline_identity_refuses_in_parser[CR-bad\rid-background]
@@ -509,11 +513,11 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_shipment.py:
 0.000	tests/integration/py/test_c13_t12_persistence.py::test_malformed_multiline_identity_refuses_in_parser[LF-bad\nid-scattering_length]
 0.000	tests/integration/py/test_c13_t12_persistence.py::test_malformed_multiline_identity_refuses_in_parser[LF-bad\nid-sequential_fit_extract]
 0.000	tests/integration/py/test_c13_t12_persistence.py::test_multiline_text_field_identity_refuses_at_load
-0.000	tests/integration/py/test_c13_t12_persistence.py::test_persisted_name_positive_controls[1000236]
-0.000	tests/integration/py/test_c13_t12_persistence.py::test_persisted_name_positive_controls[]
-0.000	tests/integration/py/test_c13_t12_persistence.py::test_persisted_name_positive_controls[_x]
-0.000	tests/integration/py/test_c13_t12_persistence.py::test_persisted_name_positive_controls[pd-neut]
-0.000	tests/integration/py/test_c13_t12_persistence.py::test_persisted_name_positive_controls[wish_1_10]
+0.010	tests/integration/py/test_c13_t12_persistence.py::test_persisted_name_positive_controls[1000236]
+0.010	tests/integration/py/test_c13_t12_persistence.py::test_persisted_name_positive_controls[]
+0.010	tests/integration/py/test_c13_t12_persistence.py::test_persisted_name_positive_controls[_x]
+0.010	tests/integration/py/test_c13_t12_persistence.py::test_persisted_name_positive_controls[pd-neut]
+0.010	tests/integration/py/test_c13_t12_persistence.py::test_persisted_name_positive_controls[wish_1_10]
 0.000	tests/integration/py/test_c13_t12_persistence.py::test_persisted_name_refuses_before_publication[experiment-..]
 0.000	tests/integration/py/test_c13_t12_persistence.py::test_persisted_name_refuses_before_publication[experiment-.]
 0.000	tests/integration/py/test_c13_t12_persistence.py::test_persisted_name_refuses_before_publication[experiment-/abs]
@@ -553,7 +557,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_shipment.py:
 0.000	tests/integration/py/test_c13_t12_persistence.py::test_positional_declared_ids_are_rewritten_as_ordinals[background]
 0.000	tests/integration/py/test_c13_t12_persistence.py::test_positional_declared_ids_are_rewritten_as_ordinals[data]
 0.000	tests/integration/py/test_c13_t12_persistence.py::test_positional_declared_ids_are_rewritten_as_ordinals[excluded_region]
-0.000	tests/integration/py/test_c13_t12_persistence.py::test_single_line_text_field_identity_roundtrips_and_multiline_refuses
+0.010	tests/integration/py/test_c13_t12_persistence.py::test_single_line_text_field_identity_roundtrips_and_multiline_refuses
 0.000	tests/integration/py/test_c13_t12_persistence.py::test_unrepresentable_identity_refuses_at_load[DEL-bad\x7fid-atom_site]
 0.000	tests/integration/py/test_c13_t12_persistence.py::test_unrepresentable_identity_refuses_at_load[DEL-bad\x7fid-background]
 0.000	tests/integration/py/test_c13_t12_persistence.py::test_unrepresentable_identity_refuses_at_load[DEL-bad\x7fid-data]
@@ -3797,11 +3801,11 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_supp
 0.000	tests/integration/py/test_e04_t1_app_contract.py::test_adr_records_the_decision_and_comparison_plan
 0.010	tests/integration/py/test_e04_t1_app_contract.py::test_app_reachability_observer_rejects_missing_group_or_checker[empty-checker]
 0.010	tests/integration/py/test_e04_t1_app_contract.py::test_app_reachability_observer_rejects_missing_group_or_checker[missing-edge]
-0.110	tests/integration/py/test_e04_t1_app_contract.py::test_existing_projects_oracle_covers_the_registry_without_filters
-0.030	tests/integration/py/test_e04_t1_app_contract.py::test_frozen_oracle_inputs_are_the_committed_fixture_bytes
+0.130	tests/integration/py/test_e04_t1_app_contract.py::test_existing_projects_oracle_covers_the_registry_without_filters
+0.040	tests/integration/py/test_e04_t1_app_contract.py::test_frozen_oracle_inputs_are_the_committed_fixture_bytes
 0.040	tests/integration/py/test_e04_t1_app_contract.py::test_local_and_ci_gates_reach_app_tests
-UNMEASURED:failed-in-this-run	tests/integration/py/test_e04_t1_app_contract.py::test_one_shared_labelled_regression_baseline_and_pairs
-0.060	tests/integration/py/test_e04_t1_app_contract.py::test_originals_remain_byte_identical
+0.020	tests/integration/py/test_e04_t1_app_contract.py::test_one_shared_labelled_regression_baseline_and_pairs
+0.030	tests/integration/py/test_e04_t1_app_contract.py::test_originals_remain_byte_identical
 0.010	tests/integration/py/test_e04_t1_app_contract.py::test_shipped_qml_imports_and_base_pin
 0.020	tests/integration/py/test_e04_t1_app_contract.py::test_shipped_view_model_api_is_typed
 0.000	tests/integration/py/test_e04_t1_app_contract.py::test_typed_api_allows_model_internal_variants
@@ -3925,10 +3929,10 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e04_t1_app_contract.py::
 0.000	tests/integration/py/test_e04_t2_gate_escapes.py::test_image_family_inventory_rejects_damage[example-extra]
 0.000	tests/integration/py/test_e04_t2_gate_escapes.py::test_image_family_inventory_rejects_damage[example-missing]
 0.000	tests/integration/py/test_e04_t2_gate_escapes.py::test_image_family_inventory_rejects_damage[unrelated]
-0.060	tests/integration/py/test_e04_t2_gate_escapes.py::test_live_app_gate_rejects_matrix_damage[duplicate-platform]
-0.050	tests/integration/py/test_e04_t2_gate_escapes.py::test_live_app_gate_rejects_matrix_damage[missing-platform]
-0.050	tests/integration/py/test_e04_t2_gate_escapes.py::test_live_app_gate_rejects_matrix_damage[wrong-binding]
-0.050	tests/integration/py/test_e04_t2_gate_escapes.py::test_live_app_gate_rejects_matrix_damage[wrong-row]
+0.110	tests/integration/py/test_e04_t2_gate_escapes.py::test_live_app_gate_rejects_matrix_damage[duplicate-platform]
+0.110	tests/integration/py/test_e04_t2_gate_escapes.py::test_live_app_gate_rejects_matrix_damage[missing-platform]
+0.120	tests/integration/py/test_e04_t2_gate_escapes.py::test_live_app_gate_rejects_matrix_damage[wrong-binding]
+0.100	tests/integration/py/test_e04_t2_gate_escapes.py::test_live_app_gate_rejects_matrix_damage[wrong-row]
 0.000	tests/integration/py/test_e04_t2_gate_escapes.py::test_numbered_state_inventory_rejects_damage[duplicate]
 0.000	tests/integration/py/test_e04_t2_gate_escapes.py::test_numbered_state_inventory_rejects_damage[extra]
 0.000	tests/integration/py/test_e04_t2_gate_escapes.py::test_numbered_state_inventory_rejects_damage[missing]
@@ -4636,84 +4640,84 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e05_t1_physical_domain.p
 UNMEASURED:failed-in-this-run	tests/integration/py/test_multiphase_constraints.py::test_same_site_id_in_two_structures_resolves_to_distinct_parameters[structure]
 0.010	tests/integration/py/test_multiphase_constraints.py::test_structure_added_after_project_creation_participates_in_constraints
 0.000	tests/integration/py/test_scan_app_contract.py::test_button_names_and_follow_have_live_model_bindings
-0.290	tests/integration/py/test_scan_app_contract.py::test_create_experiment_is_enabled_and_routes_to_view_model
-0.140	tests/integration/py/test_scan_app_contract.py::test_data_free_experiment_type_has_a_write_boundary[beamMode]
-0.130	tests/integration/py/test_scan_app_contract.py::test_data_free_experiment_type_has_a_write_boundary[radiationProbe]
-0.130	tests/integration/py/test_scan_app_contract.py::test_data_free_experiment_type_has_a_write_boundary[sampleForm]
-0.130	tests/integration/py/test_scan_app_contract.py::test_data_free_experiment_type_has_a_write_boundary[scatteringType]
+0.320	tests/integration/py/test_scan_app_contract.py::test_create_experiment_is_enabled_and_routes_to_view_model
+0.160	tests/integration/py/test_scan_app_contract.py::test_data_free_experiment_type_has_a_write_boundary[beamMode]
+0.150	tests/integration/py/test_scan_app_contract.py::test_data_free_experiment_type_has_a_write_boundary[radiationProbe]
+0.160	tests/integration/py/test_scan_app_contract.py::test_data_free_experiment_type_has_a_write_boundary[sampleForm]
+0.150	tests/integration/py/test_scan_app_contract.py::test_data_free_experiment_type_has_a_write_boundary[scatteringType]
 0.010	tests/integration/py/test_scan_app_contract.py::test_disabled_placeholders_and_load_data_are_present
-0.140	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[block-delegate]
-0.260	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[outcome-color]
-0.290	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[outcome-icon]
-0.280	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[outcome-word]
-0.130	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[search-header]
-0.140	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[search-height]
-0.270	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[search-index]
-0.140	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[search-input]
-0.160	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[search-opacity]
-0.120	tests/integration/py/test_scan_app_contract.py::test_explorer_fit_column_has_outcome_model_roles
+0.150	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[block-delegate]
+0.330	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[outcome-color]
+0.300	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[outcome-icon]
+0.330	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[outcome-word]
+0.160	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[search-header]
+0.200	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[search-height]
+0.300	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[search-index]
+0.210	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[search-input]
+0.150	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[search-opacity]
+0.140	tests/integration/py/test_scan_app_contract.py::test_explorer_fit_column_has_outcome_model_roles
 0.300	tests/integration/py/test_scan_app_contract.py::test_explorer_observer_rejects_untaken_mapping_branches[icon-"times-circle"]
-0.260	tests/integration/py/test_scan_app_contract.py::test_explorer_observer_rejects_untaken_mapping_branches[iconColor-"red"]
-0.260	tests/integration/py/test_scan_app_contract.py::test_explorer_observer_rejects_untaken_mapping_branches[toolTip-"Failed"]
+0.310	tests/integration/py/test_scan_app_contract.py::test_explorer_observer_rejects_untaken_mapping_branches[iconColor-"red"]
+0.290	tests/integration/py/test_scan_app_contract.py::test_explorer_observer_rejects_untaken_mapping_branches[toolTip-"Failed"]
 0.000	tests/integration/py/test_scan_app_contract.py::test_follow_observer_rejects_disconnected_controls_and_unrelated_handlers
-0.680	tests/integration/py/test_scan_app_contract.py::test_forwarding_controls_reject_wrong_selected_index_token_range_and_visibility
-0.130	tests/integration/py/test_scan_app_contract.py::test_javascript_uses_declared_runtime_with_empty_path
-0.530	tests/integration/py/test_scan_app_contract.py::test_long_parameter_pickers_use_shared_search_component[AliasesGroup]
-0.560	tests/integration/py/test_scan_app_contract.py::test_long_parameter_pickers_use_shared_search_component[ConstraintsGroup]
+0.770	tests/integration/py/test_scan_app_contract.py::test_forwarding_controls_reject_wrong_selected_index_token_range_and_visibility
+0.150	tests/integration/py/test_scan_app_contract.py::test_javascript_uses_declared_runtime_with_empty_path
+0.680	tests/integration/py/test_scan_app_contract.py::test_long_parameter_pickers_use_shared_search_component[AliasesGroup]
+0.590	tests/integration/py/test_scan_app_contract.py::test_long_parameter_pickers_use_shared_search_component[ConstraintsGroup]
 0.000	tests/integration/py/test_scan_app_contract.py::test_messages_is_first_in_both_layout_and_width_inventory
-0.120	tests/integration/py/test_scan_app_contract.py::test_outcome_gate_rejects_a_different_results_word
-0.150	tests/integration/py/test_scan_app_contract.py::test_result_row_and_status_summary_share_outcome_presentation
-0.590	tests/integration/py/test_scan_app_contract.py::test_search_accepts_direct_field_and_state_compositions
+0.160	tests/integration/py/test_scan_app_contract.py::test_outcome_gate_rejects_a_different_results_word
+0.180	tests/integration/py/test_scan_app_contract.py::test_result_row_and_status_summary_share_outcome_presentation
+0.620	tests/integration/py/test_scan_app_contract.py::test_search_accepts_direct_field_and_state_compositions
 0.010	tests/integration/py/test_scan_app_contract.py::test_sidebar_tabs_have_requested_names
-0.120	tests/integration/py/test_scan_app_contract.py::test_simulation_range_fields_have_live_write_bindings[maximum]
-0.140	tests/integration/py/test_scan_app_contract.py::test_simulation_range_fields_have_live_write_bindings[minimum]
-0.130	tests/integration/py/test_scan_app_contract.py::test_simulation_range_fields_have_live_write_bindings[step]
-0.310	tests/integration/py/test_scan_app_contract.py::test_status_fit_area_binds_live_progress_and_terminal_summary
+0.140	tests/integration/py/test_scan_app_contract.py::test_simulation_range_fields_have_live_write_bindings[maximum]
+0.150	tests/integration/py/test_scan_app_contract.py::test_simulation_range_fields_have_live_write_bindings[minimum]
+0.140	tests/integration/py/test_scan_app_contract.py::test_simulation_range_fields_have_live_write_bindings[step]
+0.350	tests/integration/py/test_scan_app_contract.py::test_status_fit_area_binds_live_progress_and_terminal_summary
 0.320	tests/integration/py/test_scan_app_contract.py::test_status_observer_rejects_wrong_progress_polarity_fill_producer_and_unused_facts[facts]
-0.180	tests/integration/py/test_scan_app_contract.py::test_status_observer_rejects_wrong_progress_polarity_fill_producer_and_unused_facts[fill]
-0.164	tests/integration/py/test_scan_app_contract.py::test_status_observer_rejects_wrong_progress_polarity_fill_producer_and_unused_facts[polarity]
-0.170	tests/integration/py/test_scan_app_contract.py::test_status_observer_rejects_wrong_progress_polarity_fill_producer_and_unused_facts[producer]
+0.150	tests/integration/py/test_scan_app_contract.py::test_status_observer_rejects_wrong_progress_polarity_fill_producer_and_unused_facts[fill]
+0.170	tests/integration/py/test_scan_app_contract.py::test_status_observer_rejects_wrong_progress_polarity_fill_producer_and_unused_facts[polarity]
+0.160	tests/integration/py/test_scan_app_contract.py::test_status_observer_rejects_wrong_progress_polarity_fill_producer_and_unused_facts[producer]
 0.000	tests/integration/py/test_scan_app_contract.py::test_type_selectors_live_in_explorer_and_follow_selected_row
-0.000	tests/integration/py/test_scan_app_contract.py::test_typed_status_producer_matches_the_shared_outcome_keys[actual]
+0.003	tests/integration/py/test_scan_app_contract.py::test_typed_status_producer_matches_the_shared_outcome_keys[actual]
 0.000	tests/integration/py/test_scan_app_contract.py::test_typed_status_producer_matches_the_shared_outcome_keys[wrongMAX]
-0.180	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[failed-Failed-times-circle-red]
+0.200	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[failed-Failed-times-circle-red]
 0.000	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[maxIterations-Max iterations-exclamation-circle-orange]
 0.000	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[noStep-No step-exclamation-circle-orange]
-0.130	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[stopped-Stopped-stop-circle-themeForegroundMinor]
-0.130	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[success-Success-check-circle-green]
-0.130	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[superseded-Superseded-minus-circle-themeForegroundMinor]
+0.200	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[stopped-Stopped-stop-circle-themeForegroundMinor]
+0.160	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[success-Success-check-circle-green]
+0.160	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[superseded-Superseded-minus-circle-themeForegroundMinor]
 0.000	tests/integration/py/test_scan_extended_contract.py::test_bundled_project_load_and_save_as_use_the_writable_copy_routes
-0.420	tests/integration/py/test_scan_extended_contract.py::test_effective_bundle_contains_selected_scan_payloads[desktop]
-0.260	tests/integration/py/test_scan_extended_contract.py::test_effective_bundle_contains_selected_scan_payloads[web]
+0.460	tests/integration/py/test_scan_extended_contract.py::test_effective_bundle_contains_selected_scan_payloads[desktop]
+0.280	tests/integration/py/test_scan_extended_contract.py::test_effective_bundle_contains_selected_scan_payloads[web]
 0.000	tests/integration/py/test_scan_extended_contract.py::test_empty_selectors_are_hidden_on_experiment_and_structure_pages
 0.010	tests/integration/py/test_scan_extended_contract.py::test_example_gate_rejects_swapped_names_with_matching_local_provenance[162]
 0.010	tests/integration/py/test_scan_extended_contract.py::test_example_gate_rejects_swapped_names_with_matching_local_provenance[324]
-0.270	tests/integration/py/test_scan_extended_contract.py::test_old_scan_results_are_retained_with_out_of_date_state
-0.630	tests/integration/py/test_scan_extended_contract.py::test_parameter_evolution_connects_rendered_errors_axis_and_point_selection
-0.890	tests/integration/py/test_scan_extended_contract.py::test_rendered_evolution_and_stale_observers_reject_unrelated_models_handlers_and_flags
-0.410	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_accepts_a_separately_linked_example_library
-0.330	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_distinguishes_executable_and_library_interfaces[INTERFACE]
-0.380	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_distinguishes_executable_and_library_interfaces[PRIVATE]
-0.380	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_distinguishes_executable_and_library_interfaces[PUBLIC]
-0.380	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_distinguishes_executable_and_library_interfaces[library-interface]
-0.760	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_a_second_payload_at_the_index_address
-0.740	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_comment_only_and_inactive_bundle_calls
-0.490	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_excluded_payload_in_the_live_qml_module[alias]
-0.520	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_excluded_payload_in_the_live_qml_module[default]
-0.500	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_excluded_payload_in_the_live_qml_module[prefix]
-0.430	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[alias]
-0.360	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[hidden]
-0.400	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[index]
-0.360	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[metadata]
-0.426	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[prefix]
-0.390	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[target]
-0.690	tests/integration/py/test_scan_extended_contract.py::test_scan_availability_and_joint_mode_follow_scan_declaration
+0.360	tests/integration/py/test_scan_extended_contract.py::test_old_scan_results_are_retained_with_out_of_date_state
+0.700	tests/integration/py/test_scan_extended_contract.py::test_parameter_evolution_connects_rendered_errors_axis_and_point_selection
+0.950	tests/integration/py/test_scan_extended_contract.py::test_rendered_evolution_and_stale_observers_reject_unrelated_models_handlers_and_flags
+0.460	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_accepts_a_separately_linked_example_library
+0.370	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_distinguishes_executable_and_library_interfaces[INTERFACE]
+0.440	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_distinguishes_executable_and_library_interfaces[PRIVATE]
+0.490	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_distinguishes_executable_and_library_interfaces[PUBLIC]
+0.450	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_distinguishes_executable_and_library_interfaces[library-interface]
+0.740	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_a_second_payload_at_the_index_address
+0.690	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_comment_only_and_inactive_bundle_calls
+0.550	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_excluded_payload_in_the_live_qml_module[alias]
+0.560	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_excluded_payload_in_the_live_qml_module[default]
+0.620	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_excluded_payload_in_the_live_qml_module[prefix]
+0.410	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[alias]
+0.410	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[hidden]
+0.460	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[index]
+0.390	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[metadata]
+0.436	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[prefix]
+0.450	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[target]
+0.830	tests/integration/py/test_scan_extended_contract.py::test_scan_availability_and_joint_mode_follow_scan_declaration
 0.040	tests/integration/py/test_scan_extended_contract.py::test_scan_examples_have_exact_source_file_inventory_and_checksums[162]
-0.060	tests/integration/py/test_scan_extended_contract.py::test_scan_examples_have_exact_source_file_inventory_and_checksums[324]
-0.510	tests/integration/py/test_scan_extended_contract.py::test_scan_explorer_header_has_declared_columns_in_order
-0.600	tests/integration/py/test_scan_extended_contract.py::test_scan_stop_continue_and_follow_have_model_state
-0.600	tests/integration/py/test_scan_extended_contract.py::test_scan_worker_routes_both_modes_to_existing_driver
-0.190	tests/integration/py/test_scan_extended_contract.py::test_selector_moves_to_main_tab_bar_once
+0.080	tests/integration/py/test_scan_extended_contract.py::test_scan_examples_have_exact_source_file_inventory_and_checksums[324]
+0.650	tests/integration/py/test_scan_extended_contract.py::test_scan_explorer_header_has_declared_columns_in_order
+0.710	tests/integration/py/test_scan_extended_contract.py::test_scan_stop_continue_and_follow_have_model_state
+0.660	tests/integration/py/test_scan_extended_contract.py::test_scan_worker_routes_both_modes_to_existing_driver
+0.170	tests/integration/py/test_scan_extended_contract.py::test_selector_moves_to_main_tab_bar_once
 0.010	tests/integration/py/test_scan_extended_contract.py::test_user_page_and_scale_adr_document_approved_limits
 0.000	tests/integration/py/test_scan_extended_contract.py::test_working_copy_observer_rejects_copy_to_an_unrelated_destination
 0.120	tests/integration/py/test_scan_template.py::test_legacy_scan_without_template_field_preserves_model
@@ -8327,7 +8331,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_yap_agreement.py::test_yap_pr
 0.000	tests/test_c34_t1a_selector_arity.py::test_separated_ignore_value_excludes_the_notebook_and_keeps_the_real_target
 0.000	tests/test_c34_t1a_selector_arity.py::test_separated_rootdir_value_is_consumed_and_target_kept
 0.000	tests/test_c34_t1a_selector_arity.py::test_unknown_bare_option_refuses_fail_closed
-UNMEASURED:expected-red in edi-replay.log on d068dde; no green runtime measured	tests/unit/cpp/test_adp_scene.cpp::Anisotropic scene axes and orientation preserve cctbx tensor shape
+0.001	tests/unit/cpp/test_adp_scene.cpp::Anisotropic scene axes and orientation preserve cctbx tensor shape
 0.000	tests/unit/cpp/test_c13_t12_ownership.cpp::C13-T12 actual model members use the checked keyed storage
 0.034	tests/unit/cpp/test_c13_t12_ownership.cpp::C13-T12 allocation failure is atomic for native experiments copy and insertion
 0.007	tests/unit/cpp/test_c13_t12_ownership.cpp::C13-T12 allocation failure is atomic for native experiments initial admissions
@@ -8904,17 +8908,17 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_c34_t1c_construction_population
 0.030	tests/unit/py/test_c34_t28_census_scope.py::test_independent_census_distinguishes_local_and_model_scopes[lambda]
 0.030	tests/unit/py/test_c34_t28_census_scope.py::test_independent_census_distinguishes_local_and_model_scopes[method]
 0.040	tests/unit/py/test_c34_t28_census_scope.py::test_independent_census_distinguishes_local_and_model_scopes[nested-block]
-UNMEASURED:failed-in-this-run	tests/unit/py/test_constraint_app_structure.py::test_alias_picker_uses_core_candidates_and_the_closed_edit_door
-UNMEASURED:failed-in-this-run	tests/unit/py/test_constraint_app_structure.py::test_analysis_groups_read_core_rows_without_preview_data[alias-AliasesGroup-aliases]
-UNMEASURED:failed-in-this-run	tests/unit/py/test_constraint_app_structure.py::test_analysis_groups_read_core_rows_without_preview_data[constraint-ConstraintsGroup-constraints]
+0.000	tests/unit/py/test_constraint_app_structure.py::test_alias_picker_uses_core_candidates_and_the_closed_edit_door
+0.000	tests/unit/py/test_constraint_app_structure.py::test_analysis_groups_read_core_rows_without_preview_data[alias-AliasesGroup-aliases]
+0.000	tests/unit/py/test_constraint_app_structure.py::test_analysis_groups_read_core_rows_without_preview_data[constraint-ConstraintsGroup-constraints]
 0.000	tests/unit/py/test_constraint_app_structure.py::test_analysis_text_uses_the_saved_core_block_and_invalidates_after_edits
 0.000	tests/unit/py/test_constraint_app_structure.py::test_cwl_width_row_combines_uvw_xy_and_keeps_tof_lorentzian_separate
-UNMEASURED:failed-in-this-run	tests/unit/py/test_constraint_app_structure.py::test_excluded_regions_are_in_the_basic_category_tier
-UNMEASURED:failed-in-this-run	tests/unit/py/test_constraint_app_structure.py::test_linked_structures_are_explicitly_moved_to_the_end_of_presentation_order
+0.000	tests/unit/py/test_constraint_app_structure.py::test_excluded_regions_are_in_the_basic_category_tier
+0.000	tests/unit/py/test_constraint_app_structure.py::test_linked_structures_are_explicitly_moved_to_the_end_of_presentation_order
 0.000	tests/unit/py/test_constraint_app_structure.py::test_load_warnings_reach_the_app_message_model
-0.000	tests/unit/py/test_constraint_app_structure.py::test_preview_projects_cannot_be_bundled_as_application_resources
-UNMEASURED:failed-in-this-run	tests/unit/py/test_constraint_app_structure.py::test_relation_tables_expose_live_append_duplicate_and_remove_actions[AliasesGroup]
-UNMEASURED:failed-in-this-run	tests/unit/py/test_constraint_app_structure.py::test_relation_tables_expose_live_append_duplicate_and_remove_actions[ConstraintsGroup]
+0.010	tests/unit/py/test_constraint_app_structure.py::test_preview_projects_cannot_be_bundled_as_application_resources
+0.000	tests/unit/py/test_constraint_app_structure.py::test_relation_tables_expose_live_append_duplicate_and_remove_actions[AliasesGroup]
+0.000	tests/unit/py/test_constraint_app_structure.py::test_relation_tables_expose_live_append_duplicate_and_remove_actions[ConstraintsGroup]
 0.050	tests/unit/py/test_e02_t2_io_parity.py::test_e02_t2_cif_and_edi_structures_are_model_equivalent[from_cif_path]
 0.040	tests/unit/py/test_e02_t2_io_parity.py::test_e02_t2_cif_and_edi_structures_are_model_equivalent[from_cif_str]
 0.000	tests/unit/py/test_e02_t2_io_parity.py::test_e02_t2_format_discriminator_rejects_unsupported_selector_bodies[background-body-without-selector]
@@ -9755,11 +9759,11 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e04_t9_sanitizer.py::test_sanit
 0.000	tests/unit/py/test_e09_t55_python_api_coverage.py::test_python_analysis_facade_round_trips_mode_and_calculation
 0.000	tests/unit/py/test_e09_t55_python_api_coverage.py::test_structure_factory_round_trips_full_public_dict_and_rejects_retired_shape
 0.000	tests/unit/py/test_e09_t55_unit_coverage_contract.py::test_e09_t55_declares_edi_denominators_and_thresholds
-0.020	tests/unit/py/test_e09_t55_unit_coverage_contract.py::test_e09_t55_edi_cpp_threshold_control[79.99-1]
-0.020	tests/unit/py/test_e09_t55_unit_coverage_contract.py::test_e09_t55_edi_cpp_threshold_control[80.00-0]
+0.030	tests/unit/py/test_e09_t55_unit_coverage_contract.py::test_e09_t55_edi_cpp_threshold_control[79.99-1]
+0.030	tests/unit/py/test_e09_t55_unit_coverage_contract.py::test_e09_t55_edi_cpp_threshold_control[80.00-0]
 0.000	tests/unit/py/test_e09_t55_unit_coverage_contract.py::test_e09_t55_edi_exclusions_are_exact_reasoned_live_lines
-0.090	tests/unit/py/test_e09_t55_unit_coverage_contract.py::test_e09_t55_every_counted_edi_unit_test_reaches_an_assertion
-0.010	tests/unit/py/test_e09_t55_unit_coverage_contract.py::test_e09_t55_only_unit_tiers_feed_edi_metrics
+0.000	tests/unit/py/test_e09_t55_unit_coverage_contract.py::test_e09_t55_every_counted_edi_unit_test_reaches_an_assertion
+0.000	tests/unit/py/test_e09_t55_unit_coverage_contract.py::test_e09_t55_only_unit_tiers_feed_edi_metrics
 0.000	tests/unit/py/test_e09_t58_float_identity_and_cli.py::test_cli_fit_reads_analysis_and_saves_only_when_requested[False-human]
 0.000	tests/unit/py/test_e09_t58_float_identity_and_cli.py::test_cli_fit_reads_analysis_and_saves_only_when_requested[False-machine]
 0.000	tests/unit/py/test_e09_t58_float_identity_and_cli.py::test_cli_fit_reads_analysis_and_saves_only_when_requested[True-human]
@@ -9781,8 +9785,8 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e04_t9_sanitizer.py::test_sanit
 0.000	tests/unit/py/test_e09_t58_float_identity_and_cli.py::test_float_label_rejects_malformed_source_identity
 0.020	tests/unit/py/test_e09_t58_project_only_inputs.py::test_declared_cutoff_changes_the_computed_result
 0.020	tests/unit/py/test_e09_t58_project_only_inputs.py::test_declared_grid_is_the_grid_that_is_calculated
-0.020	tests/unit/py/test_e09_t58_project_only_inputs.py::test_declared_scattering_map_and_default_lookup_both_reach_calculation
-0.010	tests/unit/py/test_e09_t58_project_only_inputs.py::test_project_calculation_accepts_no_second_source_of_truth
+0.030	tests/unit/py/test_e09_t58_project_only_inputs.py::test_declared_scattering_map_and_default_lookup_both_reach_calculation
+0.020	tests/unit/py/test_e09_t58_project_only_inputs.py::test_project_calculation_accepts_no_second_source_of_truth
 0.000	tests/unit/py/test_e09_t58_project_only_inputs.py::test_survey_is_complete_and_model_state_cannot_reenter_signatures
 0.020	tests/unit/py/test_e09_t58_start_state_roundtrip.py::test_start_value_and_uncertainty_round_trip_through_the_single_loader
 0.010	tests/unit/py/test_e09_t58_writer_delegation.py::test_e09_t58_edi_project_save_has_one_delegating_writer_and_no_local_serializer
@@ -9836,13 +9840,13 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # unaffected; excluding one test only moves the cost to the next sibling).
 # These rows mark and deselect NOTHING - kept for visibility
 # and the stale-module integrity refusal.
-# module-cost: 37.983	tests/integration/app/test_c13_t2_gui.py
-# module-cost: 240.437	tests/integration/app/test_e04_t1_projects.py
-# module-cost: 261.901	tests/integration/app/test_e04_t1_runtime_escapes.py
+# module-cost: 40.370	tests/integration/app/test_c13_t2_gui.py
+# module-cost: 259.157	tests/integration/app/test_e04_t1_projects.py
+# module-cost: 271.344	tests/integration/app/test_e04_t1_runtime_escapes.py
 # module-cost: 1.914	tests/integration/py/test_e04_t12_name_allowance.py
 # module-cost: 0.192	tests/integration/py/test_e09_t75_sdk_consumer.py
-# module-cost: 0.256	tests/integration/py/test_scan_app_contract.py
-# module-cost: 0.344	tests/integration/py/test_scan_extended_contract.py
+# module-cost: 1.587	tests/integration/py/test_scan_app_contract.py
+# module-cost: 0.384	tests/integration/py/test_scan_extended_contract.py
 # module-cost: 2.511	tests/system/py/test_c09_t9_output_contract_and_cli.py
 # module-cost: 0.228	tests/system/py/test_c11_t62_native_scan_io.py
 # module-cost: 4.399	tests/system/py/test_c15_t2_native_family.py
@@ -9862,3 +9866,4 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 17.002	tests/system/py/test_scan_driver_resume.py
 # module-cost: 1.014	tests/system/py/test_scan_lazy_input.py
 # module-cost: 2.483	tests/unit/py/test_e04_t9_latency_ratchet.py
+# module-cost: 0.250	tests/unit/py/test_e09_t55_unit_coverage_contract.py

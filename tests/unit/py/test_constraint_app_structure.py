@@ -1,9 +1,11 @@
 """Static app wiring checks retained while native app tests are disabled."""
 
+import json
 import re
 from pathlib import Path
 
 import pytest
+import yaml
 
 ROOT = Path(__file__).resolve().parents[3]
 APP = ROOT / 'app'
@@ -99,10 +101,22 @@ def test_preview_projects_cannot_be_bundled_as_application_resources():
                 'temporary look-check projects must not enter shipped application resources'
             )
     cmake = (ROOT / 'app/CMakeLists.txt').read_text()
-    examples = re.search(r'set\(EDI_APP_OWN_EXAMPLES\s+([^)]*)\)', cmake)
-    assert examples, 'the app example packaging list must be inspectable'
-    assert not re.search(r'(?i)(?:look|preview|sample|demo)', examples.group(1)), (
-        'look-check and preview projects must not enter the shipped example resource list'
+    registry = yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text())['projects']
+    bundled = [row['id'] for row in registry if row.get('user-facing') is True]
+    selected = json.loads(
+        (ROOT / 'tests/fixtures/example_catalogue/catalogue-selection.json').read_text()
+    )['cases']
+    assert bundled == [row['id'] for row in selected], (
+        'The app must bundle the complete independent owner selection in its declared order'
+    )
+    assert 'file(STRINGS ${_cli}/projects.yml' in cmake and 'user-facing:' in cmake, (
+        'the app example selection must read the registry user-facing declarations'
+    )
+    assert 'edi_app_bundle_examples(${_cli} ${EDI_APP_EXAMPLE_IDS})' in cmake, (
+        'the registry-selected catalogue must reach the production bundle call'
+    )
+    assert not any(re.search(r'(?i)(?:look|preview|demo)', case) for case in bundled), (
+        'look-check and preview projects must not enter the shipped example catalogue'
     )
     assert 'constraint_samples' not in cmake, (
         'the application packaging list must exclude the temporary relation samples'
@@ -131,15 +145,19 @@ def test_relation_tables_expose_live_append_duplicate_and_remove_actions(compone
 
 
 def test_linked_structures_are_explicitly_moved_to_the_end_of_presentation_order():
+    """The historical linked-group witness now follows dictionary order without an exception."""
     text = source('src/category_list_model.cpp')
     body = text.split('presentation_order(', 1)[1].split(
         'CategoryListModel::CategoryListModel', 1
     )[0]
-    assert '"linked_structure"' in body, (
-        'presentation ordering must explicitly handle Linked structures after all other groups'
+    assert 'std::stable_sort' in body, (
+        'Category presentation preserves declaration order when dictionary numbers tie'
     )
-    assert re.search(r'\{\s*"excluded_region"\s*,\s*"linked_structure"\s*}', body), (
-        'the final ordinary Basic group must precede Linked structures in presentation order'
+    assert re.search(
+        r'return\s+edi::category_order\(a->id\)\s*<\s*edi::category_order\(b->id\)', body
+    ), 'Every sidebar group follows its declared dictionary order number'
+    assert '"linked_structure"' not in body, (
+        'Linked structures have no separate ordering rule outside the dictionary'
     )
 
 
@@ -148,8 +166,57 @@ def test_alias_picker_uses_core_candidates_and_the_closed_edit_door():
     assert 'named_parameters(' in text, (
         'the alias picker must enumerate core-owned suitable parameter identities'
     )
-    assert 'edi::Edit::' in text and re.search(r'\.apply\(|->apply\(', text), (
-        'relation edits must enter the closed core edit door for publication'
+    assert re.search(r'editor_\.apply_relation_(?:edit|control)\(\s*edi::Edit::', text), (
+        'relation edits must enter the shared relation door for publication and undo'
+    )
+    # The widget-aware route adds input identity; both typed routes retain the
+    # same recorded-edit and preview publisher (the relation Undo contract).
+    relations = text.split('AnalysisViewModel::AnalysisViewModel', 1)[0]
+    edits = re.findall(r'edi::Edit::\w+\(', relations)
+    routed = re.findall(
+        r'editor_\.apply_relation_(?:edit|control)\(\s*edi::Edit::\w+\(', relations
+    )
+    assert edits and len(routed) == len(edits), (
+        'every relation edit must enter the typed relation route without a direct-write escape'
+    )
+    project = source('src/project_view_model.cpp')
+
+    def body(name):
+        matches = re.findall(
+            r'ProjectViewModel::' + name + r'\([^)]*\)\s*{(.*?)\n}', project, re.DOTALL
+        )
+        assert len(matches) == 1, (
+            f'The closed relation route requires one inspectable {name} implementation'
+        )
+        return matches[0]
+
+    for name in ('apply_relation_edit', 'apply_relation_control'):
+        assert 'applyRecordedEdit(change, true)' in body(name), (
+            'Each typed relation route must record Undo through the common structural edit door'
+        )
+    assert 'return apply_relation_edit(change)' in body('apply_relation_control'), (
+        'A relation control without native widget input retains the ordinary typed relation route'
+    )
+    assert 'editor_.append_constraint(project_, std::move(row), action)' in relations, (
+        'Complete constraint rows retain the typed editor entry '
+        'rather than direct collection writes'
+    )
+    append = body('append_constraint')
+    appends = re.findall(r'edi::Edit::constraint_append\(', append)
+    recorded_appends = re.findall(
+        r'applyRecordedEdit\(edi::Edit::constraint_append\([^;]*\),\s*true\)', append
+    )
+    assert appends and len(recorded_appends) == len(appends), (
+        'Both native-widget and manual complete-constraint commits record structural Undo'
+    )
+    assert 'applyEdit(change, structural)' in body('applyRecordedEdit'), (
+        'Recorded relation changes retain the same common edit execution path'
+    )
+    assert 'applyEdit(change, structural)' in body('apply'), (
+        'Ordinary edits and recorded relations converge on the same edit execution path'
+    )
+    assert 'preview_->apply(change, applied, applied_result)' in body('applyEdit'), (
+        'The common edit door submits the same typed change and application receipts to preview'
     )
 
 
@@ -159,8 +226,40 @@ def test_analysis_text_uses_the_saved_core_block_and_invalidates_after_edits():
         'the Analysis Text tab must read the canonical saved analysis block'
     )
     project = source('src/project_view_model.cpp')
-    assert 'edi::project_edi_files(*project_)' in project, (
-        'the text provider must use the same core writer as a project save'
+    saved = re.search(
+        r'ProjectViewModel::savedFiles\(\)\s+const\s*\{(.*?)\n\}', project, re.DOTALL
+    )
+    assert saved, 'the shared Text snapshot provider must remain inspectable'
+    assert re.search(r'edi::project_edi_files\(\s*\*project_\s*\)', saved.group(1)) and (
+        'scanTemplateOrModel' not in saved.group(1)
+    ), (
+        'ADR-0015 makes Text use the shown model, including selected scan values; '
+        'the save routes still write the scan template or ordinary project'
+    )
+    save = re.search(r'QString ProjectViewModel::saveTo\([^)]*\)\s*{(.*?)\n}', project, re.DOTALL)
+    assert save, 'The actual project Save boundary remains inspectable'
+    assert re.search(
+        r'edi::Project& saved = scan_template_ \? \*scan_template_ : \*project_;',
+        save.group(1),
+    ), 'Project saving selects the canonical scan template or ordinary project'
+    assert 'edi::save_project_as(saved, directory.toStdString())' in save.group(1), (
+        'The selected canonical model reaches the actual core writer'
+    )
+    session = source('src/session.cpp')
+    staged = re.search(r'bool Session::stageCopy\([^)]*\)\s*{(.*?)\n}', session, re.DOTALL)
+    assert staged, 'The staged project Save boundary remains inspectable'
+    assert 'std::make_shared<edi::Project>(project_->savedModel())' in staged.group(1), (
+        'A staged save copies the canonical saved model rather than a selected dataset view'
+    )
+    assert 'edi::save_project_as(*copy, staged.folder.toStdString())' in staged.group(1), (
+        'The canonical staged snapshot reaches the actual core writer'
+    )
+    assert re.search(
+        r'savedModel\(\) const { return scan_template_ \? \*scan_template_ : \*project_; }',
+        source('src/project_view_model.hpp'),
+    ), 'Both staged and direct writers select the scan template or ordinary model'
+    assert re.search(r'for \(const auto& \[path, body\] : savedFiles\(\)\)', project), (
+        'each text block must come from the shared saved-file snapshot'
     )
     assert 'analysis_->text()->invalidate()' in project, (
         'editing a relation must invalidate shown analysis text instead of displaying stale loops'
