@@ -318,6 +318,52 @@ std::optional<std::array<double, 6>> site_u_star(const Structure& s, const AtomS
     return std::nullopt;
 }
 
+namespace {
+
+// The space group crysta resolves for `s`, or crysta's default for a setting it cannot resolve
+// (whose sites then carry no stabilizer ties).
+crysta::SpaceGroup group_or_default(const Structure& s) {
+    try {
+        return resolve_group(s);
+    } catch (const std::exception&) {
+        return crysta::SpaceGroup{};
+    }
+}
+
+// A one-site crysta structure for `site` at the structure's completed cell and space group, the
+// site of type `adp_type`: crysta converts and ties its values (ADR-0027).
+crysta::Structure one_site_engine(const Structure& s, const AtomSite& site, const std::string& adp_type,
+                                  const crysta::Structure::Finish& finish = {}) {
+    std::vector<crysta::AtomSite> sites{crysta::AtomSite(
+        site.id.value(), site.type_symbol.value(), site.wyckoff_letter.value(), adp_type,
+        param(site.fract_x, crysta::ATOM_POS, "fract_x"), param(site.fract_y, crysta::ATOM_POS, "fract_y"),
+        param(site.fract_z, crysta::ATOM_POS, "fract_z"), param(site.occupancy, crysta::OCC, "occupancy"),
+        param(site.adp_iso, crysta::ADP, "adp_iso"))};
+    return crysta::Structure(completed_cell(s), group_or_default(s), sites, finish);
+}
+
+// The tensor rows in the order of their sites, as a loaded file holds them, so a row a type change
+// adds sits with its site (the parameter walk lists the rows in this order).
+void order_tensor_rows(Structure& s) {
+    std::vector<std::shared_ptr<AtomSiteAniso>> ordered;
+    for (const auto& site : s.atom_sites) {
+        for (const auto& row : s.atom_site_aniso) {
+            if (row->id.value() == site->id.value()) {
+                ordered.push_back(row);
+            }
+        }
+    }
+    bool same = ordered.size() == s.atom_site_aniso.size();
+    for (std::size_t i = 0; same && i < ordered.size(); ++i) {
+        same = ordered[i] == s.atom_site_aniso[i];
+    }
+    if (!same && ordered.size() == s.atom_site_aniso.size()) {
+        s.atom_site_aniso.assign(std::move(ordered));
+    }
+}
+
+}  // namespace
+
 void sync_atom_site_aniso(Structure& s) {
     for (std::size_t row = s.atom_site_aniso.size(); row-- > 0;) {
         const std::string& id = s.atom_site_aniso[row]->id.value();
@@ -342,8 +388,15 @@ void sync_atom_site_aniso(Structure& s) {
         }
         const crysta::AdpForm form = crysta::adp_form_of(site->adp_type.value());
         const crysta::CellMetric metric = crysta::CellMetric::from_cell(completed_cell(s));
-        const crysta::AdpTensor components = crysta::components_of(
+        crysta::AdpTensor components = crysta::components_of(
             form, crysta::u_star_of_iso(crysta::equivalent_iso_form(form), site->adp_iso.value, metric), metric);
+        // The site's symmetry exactly: a fixed component is 0, tied ones the same number.
+        try {
+            const crysta::Structure engine = one_site_engine(s, *site, site->adp_type.value());
+            components = crysta::tied_components(engine, engine.atom_sites[0], components);
+        } catch (const std::invalid_argument&) {
+            // a position that names no stabilizer keeps the converted values
+        }
         AtomSiteAniso tensor;
         tensor.id = site->id.value();
         const std::vector<Parameter*> parameters = tensor.parameters();
@@ -352,6 +405,7 @@ void sync_atom_site_aniso(Structure& s) {
         }
         s.atom_site_aniso.push_back(std::move(tensor));
     }
+    order_tensor_rows(s);
     // An anisotropic site's adp_iso is its tensor's equivalent value, in the form its type shows it.
     const crysta::CellMetric metric = crysta::CellMetric::from_cell(completed_cell(s));
     for (const auto& tensor : s.atom_site_aniso) {
@@ -382,28 +436,21 @@ void change_adp_type(Structure& s, AtomSite& site, const std::string& adp_type) 
     if (site.adp_type.value() == adp_type) {
         return;
     }
-    // A one-site crysta structure at this cell: crysta converts the values.
-    std::vector<crysta::AtomSite> sites{crysta::AtomSite(
-        site.id.value(), site.type_symbol.value(), site.wyckoff_letter.value(),
-        site.adp_type.value(), param(site.fract_x, crysta::ATOM_POS, "fract_x"),
-        param(site.fract_y, crysta::ATOM_POS, "fract_y"),
-        param(site.fract_z, crysta::ATOM_POS, "fract_z"),
-        param(site.occupancy, crysta::OCC, "occupancy"),
-        param(site.adp_iso, crysta::ADP, "adp_iso"))};
+    // A one-site crysta structure at this cell and space group: crysta converts the values and
+    // applies the site's symmetry ties.
     std::shared_ptr<AtomSiteAniso> held;
     for (const auto& tensor : s.atom_site_aniso) {
         if (tensor->id.value() == site.id.value()) {
             held = tensor;
         }
     }
-    crysta::Structure engine(completed_cell(s), crysta::SpaceGroup{}, sites,
-                             [&held](crysta::Structure& built) {
-                                 if (held) {
-                                     Structure one;
-                                     one.atom_site_aniso.push_back(*held);
-                                     built.atom_site_aniso = detail::to_crysta_atom_site_aniso(one);
-                                 }
-                             });
+    crysta::Structure engine = one_site_engine(s, site, site.adp_type.value(), [&held](crysta::Structure& built) {
+        if (held) {
+            Structure one;
+            one.atom_site_aniso.push_back(*held);
+            built.atom_site_aniso = detail::to_crysta_atom_site_aniso(one);
+        }
+    });
     crysta::change_adp_type(engine, engine.atom_sites[0], adp_type);
     // The converted state, value, uncertainty and fit start alike (ADR-0027): crysta
     // rescales what the change only rescales and drops what it cannot carry.
@@ -439,6 +486,7 @@ void change_adp_type(Structure& s, AtomSite& site, const std::string& adp_type) 
     for (std::size_t k = 0; k < 6; ++k) {
         take(*components[k], engine.atom_site_aniso[0].adp[k]);
     }
+    order_tensor_rows(s);
 }
 
 // Review-9 F1 (the lossless prior-state property, edi's landing half): write_back snapshots
