@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-07T07:34:14Z
+# measured_utc = 2026-10-07T09:47:52Z
 #
-# Recorded from: measure-durations.log (4 node(s) measured once, 8321 banked, 0 stale row(s) dropped)
-# Collected tests: 9497; with a reported duration: 4631
+# Recorded from: edi-measure-fixed.log (18 node(s) measured once, 8310 banked, 0 stale row(s) dropped)
+# Collected tests: 9500; with a reported duration: 4632
 # Module-scoped fixture costs recorded: 27
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,13 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 9497
+# inventory_python = 9500
 # inventory_cpp = 302
-# inventory_measured = 8325
+# inventory_measured = 8328
 # inventory_unmeasured = 1474
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
+0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_atom_filter_recovers_from_red_and_commits_element]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_atom_icon_colours_follow_structure_palette_in_both_tables]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_each_declared_adp_type_has_the_required_editor_state]
@@ -42,7 +43,7 @@
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_minimizer_is_two_rows_of_two]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_separate_adp_table_and_isotropic_controls]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_space_group_name_and_number_choose_new_default]
-0.000	tests/integration/app/test_c13_t2_gui.py::test_gui_owner_decisions_pass_in_the_production_host
+0.005	tests/integration/app/test_c13_t2_gui.py::test_gui_owner_decisions_pass_in_the_production_host
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
 0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_cosio-d20_scan-162f]
 0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_cosio-d20_scan-324f]
@@ -8675,6 +8676,8 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_c09_t17_seeded_scale_no_fit.py:
 0.000	tests/unit/py/test_c11_t40_epoch_and_substrate.py::test_c11_t40_cif_adp_spellings_preserve_type_and_prefer_b[b-preferred-over-u-from_cif_str]
 0.000	tests/unit/py/test_c11_t40_epoch_and_substrate.py::test_c11_t40_cif_adp_spellings_preserve_type_and_prefer_b[u-from_cif_path]
 0.000	tests/unit/py/test_c11_t40_epoch_and_substrate.py::test_c11_t40_cif_adp_spellings_preserve_type_and_prefer_b[u-from_cif_str]
+0.000	tests/unit/py/test_c11_t40_epoch_and_substrate.py::test_c11_t40_cif_adp_spellings_preserve_type_and_prefer_b[u-without-uncertainty-from_cif_path]
+0.000	tests/unit/py/test_c11_t40_epoch_and_substrate.py::test_c11_t40_cif_adp_spellings_preserve_type_and_prefer_b[u-without-uncertainty-from_cif_str]
 0.020	tests/unit/py/test_c11_t40_epoch_and_substrate.py::test_c11_t40_every_reachable_parameter_has_surviving_metadata
 0.020	tests/unit/py/test_c11_t40_epoch_and_substrate.py::test_c11_t40_validator_fires_at_python_factory_and_file_boundaries
 0.000	tests/unit/py/test_c11_t40_parameter_spec.py::test_c11_t40_bare_parameter_metadata_access_fails_closed
@@ -9840,7 +9843,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # unaffected; excluding one test only moves the cost to the next sibling).
 # These rows mark and deselect NOTHING - kept for visibility
 # and the stale-module integrity refusal.
-# module-cost: 36.370	tests/integration/app/test_c13_t2_gui.py
+# module-cost: 38.315	tests/integration/app/test_c13_t2_gui.py
 # module-cost: 259.157	tests/integration/app/test_e04_t1_projects.py
 # module-cost: 271.344	tests/integration/app/test_e04_t1_runtime_escapes.py
 # module-cost: 1.914	tests/integration/py/test_e04_t12_name_allowance.py
