@@ -43,6 +43,7 @@ def owner_amendment_run():
     )
 
 
+@pytest.mark.usefixtures('existing_projects_run')
 def test_owner_amendments_execute_in_the_production_qml_host(owner_amendment_run):
     run = owner_amendment_run
     output = run.stdout + run.stderr

@@ -220,7 +220,8 @@ def test_e09_t55_only_unit_tiers_feed_edi_metrics() -> None:
     ), 'the C++ denominator must contain every core translation unit, not only linked reach'
 
 
-def test_e09_t55_every_counted_edi_unit_test_reaches_an_assertion() -> None:
+@pytest.fixture(scope='module')
+def unit_assertion_census() -> list[str]:
     missing: list[str] = []
     for path in sorted(candidate for candidate in UNIT.rglob('*') if candidate.is_file()):
         if path.suffix == '.py':
@@ -237,8 +238,13 @@ def test_e09_t55_every_counted_edi_unit_test_reaches_an_assertion() -> None:
                     set(CPP_CALL.findall(body)) & asserting_helpers
                 ):
                     missing.append(f'{path.relative_to(ROOT)}::{title}')
-    assert missing == [], (
-        'counted unit tests with no direct or local-helper assertion:\n' + '\n'.join(missing)
+    return missing
+
+
+def test_e09_t55_every_counted_edi_unit_test_reaches_an_assertion(unit_assertion_census) -> None:
+    assert unit_assertion_census == [], (
+        'counted unit tests with no direct or local-helper assertion:\n'
+        + '\n'.join(unit_assertion_census)
     )
 
 

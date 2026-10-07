@@ -277,7 +277,13 @@ class Edit {
     static Edit append(ItemVec<ParameterConstraint>& rows, ParameterConstraint row) {
         return appending(rows, std::move(row));
     }
-    static Edit erase(ItemVec<AtomSite>& rows, std::size_t index) { return erasing(rows, index); }
+    // A site of a structure goes with its tensor row (erase_atom_site); any other row alone.
+    static Edit erase(ItemVec<AtomSite>& rows, std::size_t index) {
+        if (Structure* structure = rows.holder()) {
+            return erase_atom_site(*structure, index);
+        }
+        return erasing(rows, index);
+    }
     // A copy of a site under a new id, with a copy of its tensor row when it has one.
     static Edit duplicate_atom_site(Structure& structure, const AtomSite& source, std::string id) {
         return Edit([&structure, &source, id = std::move(id)] {

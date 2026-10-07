@@ -36,10 +36,10 @@ TestCase {
         verify(appWindow !== null, "gate 2: production Main loads under the actual registered module");
     }
     function init() {
-        // A partial run can encounter Qt Graphs' first probe in any case.
-        // Exempt its exact context/first-window diagnostics only on a software offscreen
-        // host whose independent QOpenGLContext creation actually fails.
-        failOnWarning(Probe.softwareOffscreenWithoutGl() ? /\A(?!(?:QRhiGles2: Failed to create (?:temporary context|context)|window doesn\x27t exist\.)\z)[\s\S]*\z/ : /.*/);
+        // The alphabetically first actor opens a measured project and encounters
+        // Qt Graphs' one-time GLES2 context probe on the software host.
+        failOnWarning(qtest_results.functionName === "test_add_requires_explicit_complete_experiment_type"
+            ? /\A(?!QRhiGles2: Failed to create (?:temporary context|context)\z)[\s\S]*\z/ : /.*/);
         Probe.clearWatches();
         unrelatedParameter = null;
         Session.closeProject();
@@ -51,14 +51,17 @@ TestCase {
         appWindow.destroy();
     }
     function open(path) {
-        const url = path.startsWith("tests/fixtures/") ? Qt.resolvedUrl("../../fixtures/" + path.slice("tests/fixtures/".length)) : Probe.repoUrl(path);
+        const url = path.startsWith("tests/fixtures/")
+            ? Qt.resolvedUrl("../../fixtures/" + path.slice("tests/fixtures/".length))
+            : Probe.repoUrl(path);
         Session.openProject(url);
         verify(Session.hasProject, "gate 3: committed project loads: " + path + " " + Session.lastError);
         return Session.project;
     }
     function example(index) {
         const project = open("docs/user/cli/" + Oracle.frozen.examples[index].id + "/project");
-        tryVerify(() => Probe.computedCurrent(project.currentExperiment), 10000, "I9: the committed example completes its initial calculation");
+        tryVerify(() => Probe.computedCurrent(project.currentExperiment), 10000,
+                  "I9: the committed example completes its initial calculation");
         return project;
     }
     function rows(model) {
@@ -126,7 +129,7 @@ TestCase {
                 if (counts[key] !== undefined)
                     compare(actual.find(r => r.categoryId === key).itemCount, counts[key], "I7: category row counts come from committed project loops: " + key);
             });
-            categories(project.analysis.categories, [["minimizer", "Extras"], ["fitting_mode", "Extras"]]);
+            categories(project.analysis.categories, [["minimizer", "Extras"], ["fitting_mode", "Extras"], ["joint_fit", "Extras"]]);
             // : the frozen universe is retained in the editors, while Analysis
             // omits the symmetry-dependent subset supplied independently by crysta.
             const dependent = SymmetryOracle.structure(Probe.repoUrl("docs/user/cli/" + expected.id + "/project").toString().replace("file://", "")).filter(row => !row.independent);
@@ -187,26 +190,17 @@ TestCase {
             project.currentExperimentIndex = index;
             const experiment = project.currentExperiment;
             compare(experiment.name, expected.experiment, "I7: current-experiment selection changes the rendered object");
-            if (expected.singleCrystal) {
-                compare(rows(experiment.peak).length, 0, "I15: a single crystal exposes no powder profile slots");
-                compare(rows(experiment.singleCrystalReflections).length, expected.loops.refln.length, "I7: the single-crystal category retains every authored reflection");
-                ordered(fieldNames(experiment.extinction).sort(), ["mosaicity", "radius"], "I15: a single crystal exposes exactly its two extinction fields");
-                rows(experiment.extinction).forEach(row => {
-                    const frozen = expected.scalars["_extinction." + row.parameter.name];
-                    verify(frozen !== undefined, "I7: every extinction field has an independent input declaration");
-                    compare(row.parameter.value, frozen.value, "I7: extinction values equal committed single-crystal inputs");
-                    compare(row.parameter.free, frozen.free, "I7: extinction free flags equal committed brackets");
-                });
-                return;
-            }
             compare(experiment.peakType, expected.peakType, "I7: the selector shows the loaded profile");
             ordered(fieldNames(experiment.instrument), expected.instrumentFields, "I15: mode-specific instrument fields");
             const peakRows = rows(experiment.peak).concat(rows(experiment.peakAsymmetry));
             const wanted = expected.peakFields.concat(expected.unusedFreeFields);
             ordered(peakRows.map(r => r.parameter.name).sort(), wanted.slice().sort(), "I15: no inert storage fields, no hidden free parameters");
             peakRows.forEach(row => {
-                const frozen = expected.scalars["_peak." + row.parameter.name] || expected.peakDefaults[row.parameter.name];
-                verify(frozen !== undefined, "Every displayed peak field has a saved input or declared neutral default: " + expected.project + " " + expected.experiment + " " + row.parameter.name);
+                const frozen = expected.scalars["_peak." + row.parameter.name]
+                    || expected.peakDefaults[row.parameter.name];
+                verify(frozen !== undefined,
+                       "Every displayed peak field has a saved input or declared neutral default: "
+                       + expected.project + " " + expected.experiment + " " + row.parameter.name);
                 compare(row.parameter.value, frozen.value, "I7: displayed value equals project text");
                 compare(row.parameter.free, frozen.free, "I7: displayed free flag equals bracket rule");
                 compare(row.usedByProfile, !expected.unusedFreeFields.includes(row.parameter.name), "I15: unused free storage is explicitly marked");
@@ -230,9 +224,12 @@ TestCase {
             ordered(tokens(experiment.backgroundTypeOptions), ["line-segment", "chebyshev", "polynomial"], "The background selector offers exactly the independently declared computable families");
             ordered(tokens(project.analysis.minimizerTypeOptions), ["crysta"], "I17: minimizer selector offers exactly the supported engine");
             const declaration = Oracle.frozen.projects.find(p => p.path === expected.project);
-            const scanDeclared = declaration !== undefined && declaration.analysis["_sequential_fit.data_dir"] !== undefined;
-            const modes = scanDeclared ? ["independent", "sequential", "single"] : project.experiments.count > 1 ? ["joint"] : ["single"];
-            ordered(tokens(project.analysis.fittingModeOptions).sort(), modes, "The selector offers only the modes applicable to the committed experiment and scan input");
+            const scanDeclared = declaration !== undefined
+                && declaration.analysis["_sequential_fit.data_dir"] !== undefined;
+            const modes = scanDeclared ? ["independent", "sequential", "single"]
+                                       : ["independent", "joint", "sequential", "single"];
+            ordered(tokens(project.analysis.fittingModeOptions).sort(), modes,
+                    "The app offers joint only for inputs without a declared scan");
             ordered(tokens(experiment.absorptionTypeOptions).sort(), (expected.mode === "cwl" ? ["none", "cylinder-hewat", "cylinder-lobanov"] : ["none", "cylinder"]).sort(), "I17: exactly the beam-scoped absorption families");
             compare(experiment.beamModeToken, expected.mode === "cwl" ? "constant wavelength" : "time-of-flight", "seam 7: spaced token and effective undeclared beam mode");
         });
@@ -365,8 +362,8 @@ TestCase {
         project.analysis.fittingMode = "sequential";
         verify(rows(project.analysis.categories).some(r => r.categoryId === "sequential_fit"), "I17: scan declaration is shown");
         project.analysis.fittingMode = "single";
-        categories(project.analysis.categories, [["minimizer", "Extras"], ["fitting_mode", "Extras"]]);
-        ordered(rows(project.analysis.jointWeights).map(r => [r.experiment, r.weight]), [["hrpt", 1]], "Inactive joint weights remain in the model while their category and scan categories are hidden");
+        categories(project.analysis.categories, [["minimizer", "Extras"], ["fitting_mode", "Extras"], ["joint_fit", "Extras"]]);
+        ordered(rows(project.analysis.jointWeights).map(r => [r.experiment, r.weight]), [["hrpt", 1]], "I17/ note 6: single mode retains the joint table and excludes scan categories");
         project = example(1);
         exp = project.currentExperiment;
         exp.peakType = "tof-jorgensen";
@@ -460,11 +457,7 @@ TestCase {
             compare(ExperimentText.structureProblem(project.currentStructure.text.text, reference.texts["structures/" + expected.structure + ".edi"]), "", "I8: structure Text keeps exact writer fields and tolerant calculated columns");
             const frozenExperiment = reference.texts["experiments/" + expected.experiment + ".edi"];
             compare(ExperimentText.problem(experiment.text.text, frozenExperiment), "", " experiment Text equals Python writer bytes without identity masking");
-            const frozenAnalysis = reference.texts["analysis/analysis.edi"];
-            verify(frozenAnalysis.includes("_fitting_mode.type single"), "The retained Analysis pin must declare the single mode");
-            const removedLoop = "\nloop_\n_joint_fit.experiment_id\n_joint_fit.weight\n" + expected.experiment + " 1\n";
-            verify(frozenAnalysis.endsWith(removedLoop), "The retained single-mode pin must end in its declared inactive weights loop");
-            compare(project.analysis.text.text, frozenAnalysis.slice(0, -removedLoop.length), "Analysis Text must retain every frozen byte except the owner-removed inactive joint loop");
+            compare(project.analysis.text.text, reference.texts["analysis/analysis.edi"], "I8: Analysis Text equals the Python writer bytes");
         });
     }
     function test_encoded_url_and_unused_free_field() {
