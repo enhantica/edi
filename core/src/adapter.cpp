@@ -4224,4 +4224,8 @@ std::vector<std::array<int, 9>> space_group_rotations(const SpaceGroup& space_gr
 // call (ADR-0003). See edi/threading.hpp for the contract.
 void apply_engine_thread_defaults() noexcept { crysta::threading::apply_process_thread_defaults(); }
 
+EngineThreading engine_threading() noexcept {
+    return {crysta::threading::parallel_backend(), crysta::threading::parallel_workers(), crysta::threading::wasm_simd()};
+}
+
 }  // namespace edi
