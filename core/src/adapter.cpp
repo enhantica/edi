@@ -241,7 +241,7 @@ std::vector<ParameterTie> structure_ties(const Structure& s) {
             }
         }
     }
-    // The anisotropic tensors: crysta's site-symmetry ties (crysta ADR-0081 §5).
+    // The anisotropic tensors: crysta's site-symmetry ties (ADR-0027).
     for (const auto& tensor : s.atom_site_aniso) {
         const AtomSite* site = nullptr;
         for (const auto& candidate : s.atom_sites) {
@@ -405,7 +405,20 @@ void change_adp_type(Structure& s, AtomSite& site, const std::string& adp_type) 
                                  }
                              });
     crysta::change_adp_type(engine, engine.atom_sites[0], adp_type);
-    site.adp_iso.value = engine.atom_sites[0].adp_iso.value();
+    // The converted state, value, uncertainty and fit start alike (ADR-0027): crysta
+    // rescales what the change only rescales and drops what it cannot carry.
+    // An uncertainty the change drops keeps edi's spelling of none: absent stays absent, any
+    // other becomes the present zero a fixed value carries.
+    const auto take = [](Parameter& to, const crysta::Parameter& from) {
+        const std::optional<double> before = to.uncertainty;
+        to.value = from.value();
+        to.uncertainty = from.uncertainty().has_value() || !before.has_value()
+                             ? from.uncertainty()
+                             : std::optional<double>(0.0);
+        to.start_value = from.start_value();
+        to.start_uncertainty = from.start_uncertainty();
+    };
+    take(site.adp_iso, engine.atom_sites[0].adp_iso);
     site.adp_type = adp_type;
     if (engine.atom_site_aniso.empty()) {
         for (std::size_t i = 0; i < s.atom_site_aniso.size(); ++i) {
@@ -424,7 +437,7 @@ void change_adp_type(Structure& s, AtomSite& site, const std::string& adp_type) 
     }
     const std::vector<Parameter*> components = held->parameters();
     for (std::size_t k = 0; k < 6; ++k) {
-        components[k]->value = engine.atom_site_aniso[0].adp[k].value();
+        take(*components[k], engine.atom_site_aniso[0].adp[k]);
     }
 }
 

@@ -480,7 +480,7 @@ TestCase {
         verify(project.canLoadStructure, "D12: an empty project permits its first structure");
         const base = "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project/";
         verify(project.loadStructure(Probe.repoUrl(base + "structures/lbco.edi")), "D12: a committed .edi structure block loads through the core");
-        verify(project.canLoadStructure, "C12-T4: a loaded project permits another distinct structure");
+        verify(project.canLoadStructure, "Structure loading: a loaded project permits another distinct structure");
         compare(project.currentStructure.spaceGroup.nameHM, "P m -3 m", "D12: loaded structure categories retain file values");
         verify(project.loadExperiments([Probe.repoUrl(base + "experiments/hrpt.edi")]), "D12: a complete .edi experiment loads with its declared type");
         compare(project.currentExperiment.beamModeToken, "constant wavelength", "D12: loaded CW type is preserved");
@@ -491,7 +491,7 @@ TestCase {
         compare(project.currentExperiment.beamModeToken, "time-of-flight", "D12: the newly loaded experiment becomes current");
         verify(!rows(project.currentExperiment.categories).some(r => r.categoryId === "preferred_orientation"), "I7: selecting the loaded TOF block removes the CW-only category");
         ordered(fieldNames(project.currentExperiment.instrument), Oracle.frozen.instrument.tof, "I7: block-file loading uses the same frozen TOF field expectation");
-        verify(!project.loadStructure(Probe.repoUrl(base + "structures/lbco.edi")), "C12-T4: a duplicate structure identity is refused without replacement");
+        verify(!project.loadStructure(Probe.repoUrl(base + "structures/lbco.edi")), "Structure loading: a duplicate structure identity is refused without replacement");
         compare(rows(project.structures).length, 1, "D12: refused second structure preserves the first");
     }
     function test_edi_batch_refusals_are_atomic() {

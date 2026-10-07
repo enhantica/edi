@@ -835,22 +835,10 @@ static edi::Dependence dependence_now(edi::Parameter& parameter) {
 
 // The Python object that owns a parameter's storage: its keyed row (a site, a background point or term,
 // a texture row, a linked structure) or, for a block field, its structure or experiment. None when the project holds none.
-// The structure of a project that holds `site`, or null.
+// The structure whose sites hold `site`, in a project or not; null for a site no structure holds.
 static edi::Structure* holding_structure(edi::AtomSite& site) {
     const edi::detail::Membership* record = site.row.record();
-    if (record == nullptr || record->owner == nullptr) {
-        return nullptr;
-    }
-    edi::Project* project = record->owner->host();
-    if (project == nullptr) {
-        return nullptr;
-    }
-    for (const std::shared_ptr<edi::Structure>& structure : project->structures) {
-        if (static_cast<const edi::detail::KeyedBase*>(&structure->atom_sites) == record->owner) {
-            return structure.get();
-        }
-    }
-    return nullptr;
+    return record != nullptr && record->owner != nullptr ? record->owner->holder() : nullptr;
 }
 
 static nb::object owner_of(edi::Project& project, const edi::Parameter* parameter) {
@@ -1773,9 +1761,8 @@ NB_MODULE(_edi, m) {
         .def_prop_rw(
             "wyckoff_letter", [](const edi::AtomSite& self) { return self.wyckoff_letter.value(); },
             [](edi::AtomSite& self, std::string value) { self.wyckoff_letter = std::move(value); })
-        // A new type converts the site's values (crysta ADR-0081). The tensor and the cell are
-        // the structure's, so a site no structure of a project holds changes only between the
-        // two isotropic types.
+        // A new type converts the site's values (ADR-0027) at its structure's cell, its
+        // uncertainty and fit start with them.
         .def_prop_rw(
             "adp_type", [](const edi::AtomSite& self) { return self.adp_type.value(); },
             [](edi::AtomSite& self, const std::string& value) {
@@ -1790,22 +1777,11 @@ NB_MODULE(_edi, m) {
                     self.adp_type = value;
                     return;
                 }
-                if (edi::Structure* structure = holding_structure(self)) {
-                    edi::change_adp_type(*structure, self, value);
-                    return;
+                edi::Structure* structure = holding_structure(self);
+                if (structure == nullptr) {
+                    throw nb::value_error("the site's collection names no structure");
                 }
-                const std::string& current = self.adp_type.value();
-                if (edi::is_anisotropic_adp_type(value) || edi::is_anisotropic_adp_type(current)) {
-                    throw nb::value_error(
-                        "changing between isotropic and anisotropic ADP types needs the site's "
-                        "structure; add the site to a structure first");
-                }
-                if (current != value) {
-                    constexpr double eight_pi_sq = 8.0 * 3.141592653589793238 * 3.141592653589793238;
-                    self.adp_iso.value = value == "Uiso" ? self.adp_iso.value / eight_pi_sq
-                                                         : self.adp_iso.value * eight_pi_sq;
-                }
-                self.adp_type = value;
+                edi::change_adp_type(*structure, self, value);
             });
     def_parameter_walks(atom_site);
     def_parameter_field(atom_site, "fract_x", &edi::AtomSite::fract_x);
@@ -1820,7 +1796,8 @@ NB_MODULE(_edi, m) {
     atom_site_aniso.def("__setattr__", renewing_setattr<edi::AtomSiteAniso>({}, renew_epoch),
                         nb::arg("name"), nb::arg("value").none());
     atom_site_aniso.def(nb::new_([]() { return std::make_shared<edi::AtomSiteAniso>(); }))
-        // The key is the site's id: set while the row is being declared, renamed with its site.
+        // The key is the site's id: set while the row is being declared, renamed with its site;
+        // a held row refuses a rename of its own (detail::follow_tensor_rename).
         .def_prop_rw(
             "id", [](const edi::AtomSiteAniso& self) { return self.id.value(); },
             [](edi::AtomSiteAniso& self, std::string value) { self.id = std::move(value); });

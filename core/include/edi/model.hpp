@@ -42,6 +42,8 @@ namespace edi {
 
 struct ExperimentBase;
 struct Structure;
+struct AtomSite;
+struct AtomSiteAniso;
 class Project;
 struct Parameter;
 // ADR-0020: the publication transaction, declared in edi/calculation.hpp.
@@ -1401,6 +1403,10 @@ class ProjectTail {
 // (null when it leaves), so a retained one follows its item from project to project.
 inline void link_nested(Structure& structure, const std::shared_ptr<const ProjectLink>& link) noexcept;
 inline void link_nested(ExperimentBase& experiment, const std::shared_ptr<const ProjectLink>& link) noexcept;
+// An anisotropic site's tensor row is keyed by the site's id: a site rename renames its row too,
+// and a row is never renamed on its own while its site holds it (defined after Structure).
+inline void follow_site_rename(Structure* structure, const std::string& from, const std::string& to);
+inline void follow_tensor_rename(Structure* structure, const std::string& from, const std::string& to);
 
 // A keyed collection, as its members' ids see it.
 class KeyedBase {
@@ -1424,6 +1430,9 @@ class KeyedBase {
     // The live project this collection belongs to, as a member or inside one of its structures or
     // experiments; null otherwise (edi ADR-0024).
     Project* host() const noexcept { return host_link_ ? host_link_->project : nullptr; }
+    // The structure this collection is a member of (its sites, its tensors), in a project or not;
+    // null for any other collection. Like the host it belongs to the collection object.
+    Structure* holder() const noexcept { return holder_; }
 
    protected:
     const std::shared_ptr<const ProjectLink>& host_link() const noexcept { return host_link_; }
@@ -1433,7 +1442,9 @@ class KeyedBase {
     friend void link_nested(Structure& structure, const std::shared_ptr<const ProjectLink>& link) noexcept;
     friend void link_nested(ExperimentBase& experiment,
                             const std::shared_ptr<const ProjectLink>& link) noexcept;
+    friend struct edi::Structure;
     std::shared_ptr<const ProjectLink> host_link_;
+    Structure* holder_ = nullptr;
 };
 
 
@@ -2131,12 +2142,17 @@ class ItemVec final : public detail::KeyedBase {
             return false;
         }
     }
-    // A structure's links and texture rows name it by id, so they follow its rename.
+    // A structure's links and texture rows name it by id, so they follow its rename; a site's
+    // tensor row follows the site's.
     void rename_references(const ItemKey& key, const std::string& next) const override {
         if constexpr (std::is_same_v<T, Structure>) {
             if (Project* project = host()) {
                 detail::rename_structure_links(*project, key.value(), next);
             }
+        } else if constexpr (std::is_same_v<T, AtomSite>) {
+            detail::follow_site_rename(holder(), key.value(), next);
+        } else if constexpr (std::is_same_v<T, AtomSiteAniso>) {
+            detail::follow_tensor_rename(holder(), key.value(), next);
         } else {
             (void)key;
             (void)next;
@@ -2484,7 +2500,7 @@ struct AtomSite : std::enable_shared_from_this<AtomSite> {
     detail::WrittenText type_symbol;
     detail::WrittenText wyckoff_letter = "";  // Wyckoff letter (optional; "" = general)
     // `_atom_site.adp_type`, the type the site's values are in: Biso, Uiso, Bani, Uani or beta
-    // (crysta ADR-0081). A file that declares none reads as Biso; a save writes it. A geometry
+    // (ADR-0027). A file that declares none reads as Biso; a save writes it. A geometry
     // input: it records its own writes.
     detail::WrittenText adp_type = "Biso";
     Parameter fract_x;
@@ -2530,7 +2546,7 @@ struct RowTraits<AtomSite> {
     static const detail::RowLink* primary(const AtomSite& site) noexcept { return &site.row; }
 };
 
-// The ADP types a site can declare, and which of them hold a tensor (crysta ADR-0081).
+// The ADP types a site can declare, and which of them hold a tensor (ADR-0027).
 inline bool is_adp_type(const std::string& type) {
     return type == "Biso" || type == "Uiso" || type == "Bani" || type == "Uani" || type == "beta";
 }
@@ -2712,13 +2728,20 @@ struct GeometrySource;  // what a structure's stored geometry was computed from 
 }  // namespace detail
 
 struct Structure : std::enable_shared_from_this<Structure> {
+    // The structure's own sites and tensors know it (KeyedBase::holder), so a copy marks them
+    // again. A structure is copied, never moved (its name's ItemKey cannot move).
+    Structure() noexcept { hold_rows(); }
+    Structure(const Structure& other);
+    Structure& operator=(const Structure&) = default;
+    ~Structure() = default;
+
     // Datablock id, e.g. "ncaf" ("" for programmatic models);: owned by Project::structures,
     // which compares its canonical key (an empty name is `structure`).
     ItemKey name;
     SpaceGroup space_group;
     Cell cell;
     ItemVec<AtomSite> atom_sites;  // Shared items, deep-copied with the structure
-    // The anisotropic sites' tensors, one row per such site (crysta ADR-0081).
+    // The anisotropic sites' tensors, one row per such site (ADR-0027).
     ItemVec<AtomSiteAniso> atom_site_aniso;
     // Element -> coherent bound neutron scattering length b_c (fm). Empty => the adapter uses crysta's
     // default table (load_neutron_scattering); a non-empty map overrides it (isotopes / custom lengths).
@@ -2748,7 +2771,67 @@ struct Structure : std::enable_shared_from_this<Structure> {
     // The value read: computes `geometry` through crysta when it is not current, then returns it.
     // Throws what crysta throws; nothing earlier stays readable.
     const StructureGeometry& current_geometry();
+
+   private:
+    void hold_rows() noexcept {
+        atom_sites.holder_ = this;
+        atom_site_aniso.holder_ = this;
+    }
 };
+
+inline Structure::Structure(const Structure& other)
+    : std::enable_shared_from_this<Structure>(other),
+      name(other.name),
+      space_group(other.space_group),
+      cell(other.cell),
+      atom_sites(other.atom_sites),
+      atom_site_aniso(other.atom_site_aniso),
+      scattering_lengths_fm(other.scattering_lengths_fm),
+      epoch(other.epoch),
+      geom(other.geom),
+      geometry(other.geometry),
+      geometry_source(other.geometry_source) {
+    hold_rows();
+}
+
+namespace detail {
+
+// Set while a site rename carries its tensor row along, the one rename a held row admits.
+inline thread_local bool following_site = false;
+
+inline void follow_site_rename(Structure* structure, const std::string& from, const std::string& to) {
+    if (structure == nullptr || from == to) {
+        return;
+    }
+    for (const auto& row : structure->atom_site_aniso) {
+        if (row->id.value() == from) {
+            following_site = true;
+            try {
+                row->id = to;
+            } catch (...) {
+                following_site = false;
+                throw;
+            }
+            following_site = false;
+            return;
+        }
+    }
+}
+
+inline void follow_tensor_rename(Structure* structure, const std::string& from, const std::string& to) {
+    if (structure == nullptr || from == to || following_site) {
+        return;
+    }
+    for (const auto& site : structure->atom_sites) {
+        if (site->id.value() == from) {
+            throw std::invalid_argument("the anisotropic row of site '" + detail::printable_id(from) +
+                                        "' cannot be renamed to '" + detail::printable_id(to) +
+                                        "' on its own: it follows its site; rename the site");
+        }
+    }
+}
+
+}  // namespace detail
 
 // The ONE geometry read. crysta computes the four categories for `window` from the structure as
 // it is now; edi shares the buffers. Pure: it stores nothing. Throws crysta's

@@ -7447,7 +7447,7 @@ var frozen = {
       "files": {
         "project.edi": "539e990301b80e0b83d75d930100d367c10d60aa79458fbe0dd678753e5aa95c",
         "structures/y2o3.edi": "dcacdbe2ddd6490b390aa7b4b36eeaf7e09d43b62f6b31b25a52121ffa295382",
-        "experiments/y2o3.edi": "f848804c0238d76eb03f43f2a06688f52cf87d1caa8f38dbcf29e0402e755e1d",
+        "experiments/y2o3.edi": "403bcc7ce6bcc112b9dc5d4c612b61389667c0b80c7163e00c790a19645b533a",
         "analysis/analysis.edi": "64a5254af5f390f3c3a49e84affc9bd4a6a074d2fe50ea5f97e5864c444c7f71"
       }
     }
@@ -8774,27 +8774,18 @@ var frozen = {
     {
       "project": "docs/user/cli/pd-neut-cwl_y2o3_beta-adp/project",
       "experiment": "y2o3",
-      "sha256": "f848804c0238d76eb03f43f2a06688f52cf87d1caa8f38dbcf29e0402e755e1d",
-      "peakType": "cwl-pseudo-voigt",
+      "sha256": "403bcc7ce6bcc112b9dc5d4c612b61389667c0b80c7163e00c790a19645b533a",
+      "peakType": "cwl-tch-pseudo-voigt",
       "mode": "cwl",
       "peakFields": [
         "broad_gauss_u",
         "broad_gauss_v",
         "broad_gauss_w",
-        "mixing_eta_0",
-        "mixing_eta_1"
+        "broad_lorentz_x",
+        "broad_lorentz_y"
       ],
       "unusedFreeFields": [],
-      "peakDefaults": {
-        "mixing_eta_0": {
-          "value": 0.0,
-          "free": false
-        },
-        "mixing_eta_1": {
-          "value": 0.0,
-          "free": false
-        }
-      },
+      "peakDefaults": {},
       "instrumentFields": [
         "setup_wavelength",
         "calib_twotheta_offset"
@@ -8844,7 +8835,7 @@ var frozen = {
           "free": false,
           "uncertainty": 0.0
         },
-        "_peak.type": "cwl-pseudo-voigt",
+        "_peak.type": "cwl-tch-pseudo-voigt",
         "_instrument.setup_wavelength": {
           "value": 1.54822,
           "free": false,

@@ -13,19 +13,23 @@ TestCase {
     function initTestCase() {
         failOnWarning(/.*/);
         appWindow = application.createObject(null);
-        verify(appWindow !== null, "C13-T2 GUI: production Main loads");
-        verify(waitForRendering(appWindow.contentItem), "C13-T2 GUI: production window renders");
+        verify(appWindow !== null, "GUI: production Main loads");
+        verify(waitForRendering(appWindow.contentItem), "GUI: production window renders");
     }
     function init() {
-        failOnWarning(qtest_results.functionName === "test_adp_view_uses_probability_in_atom_scale_position"
+        // Offscreen software has no GL context; changing a tensor also refreshes the 3D scene.
+        // Keep all other warnings fatal, including every warning in cases without a scene refresh.
+        const refreshesScene = ["test_adp_view_uses_probability_in_atom_scale_position",
+            "test_each_declared_adp_type_has_the_required_editor_state"].includes(qtest_results.functionName);
+        failOnWarning(refreshesScene
             ? /\A(?!QRhiGles2: Failed to create (?:temporary context|context)\z)[\s\S]*\z/ : /.*/);
         Session.closeProject();
         Session.openProject(Probe.repoUrl("tests/fixtures/e04_t1/editable-project"));
-        verify(Session.hasProject, "C13-T2 GUI: committed editable project opens");
+        verify(Session.hasProject, "GUI: committed editable project opens");
     }
     function cleanupTestCase() {
         Session.closeProject();
-        verify(waitForRendering(appWindow.contentItem), "C13-T2 GUI: page teardown settles");
+        verify(waitForRendering(appWindow.contentItem), "GUI: page teardown settles");
         appWindow.destroy();
     }
     function click(name) { Ui.click(test, Probe, appWindow, name); }
@@ -44,20 +48,20 @@ TestCase {
         click("sideBar.tab." + tier);
         let header = null;
         tryVerify(() => { header = discover(Ui.page(appWindow), "group." + group); return header !== null; },
-                  2000, "C13-T2 GUI: declared category belongs to the selected pane: " + group);
+                  2000, "GUI: declared category belongs to the selected pane: " + group);
         Ui.scrollIntoView(Ui.target(header));
         Ui.expandGroup(test, Probe, appWindow, "group." + group);
-        tryVerify(() => control(name) !== null, 2000, "C13-T2 GUI: category exposes its control: " + name);
+        tryVerify(() => control(name) !== null, 2000, "GUI: category exposes its control: " + name);
         return control(name);
     }
     function search(combo, text) {
         Ui.scrollIntoView(combo);
         const point = Ui.clickPoint(combo);
-        verify(point !== null, "C13-T2 GUI: combo is exposed for real input");
+        verify(point !== null, "GUI: combo is exposed for real input");
         mouseClick(combo, point.x, point.y);
-        tryCompare(combo.popup, "opened", true, 2000, "C13-T2 GUI: real click opens the popup");
+        tryCompare(combo.popup, "opened", true, 2000, "GUI: real click opens the popup");
         const field = Ui.find(combo.popup.contentItem.headerItem, "comboBox.search");
-        verify(field !== null, "C13-T2 GUI: filter field is visible at the top of the popup");
+        verify(field !== null, "GUI: filter field is visible at the top of the popup");
         filterText(field, text);
         return field;
     }
@@ -107,18 +111,18 @@ TestCase {
     function test_each_declared_adp_type_has_the_required_editor_state() {
         const picker = reveal("structure", "basic", "atom_site_aniso", "atomSiteAdp.type.0");
         compare(JSON.stringify(Array.from(picker.model)), JSON.stringify(["Biso", "Uiso", "Bani", "Uani", "beta"]),
-                "C13-T2: all five declared ADP types are selectable");
+                "ADP: all five declared ADP types are selectable");
         for (const type of ["Uiso", "Bani", "Uani", "beta", "Biso"]) {
             Ui.scrollIntoView(picker);
             click("atomSiteAdp.type.0");
-            tryCompare(picker.popup, "opened", true, 2000, "C13-T2: ADP list opens through input");
+            tryCompare(picker.popup, "opened", true, 2000, "ADP: ADP list opens through input");
             const index = Array.from(picker.model).indexOf(type);
             keyClick(Qt.Key_Home);
             for (let i = 0; i < index; ++i) keyClick(Qt.Key_Down);
             keyClick(Qt.Key_Return);
-            tryCompare(picker.popup, "visible", false, 2000, "C13-T2: selection finishes closing the ADP popup");
+            tryCompare(picker.popup, "visible", false, 2000, "ADP: selection finishes closing the ADP popup");
             tryVerify(() => Probe.rows(Session.project.currentStructure.atomSiteAdps)[0].adpType === type,
-                      2000, "C13-T2: real ADP selection reaches the row model: " + type);
+                      2000, "ADP: real ADP selection reaches the row model: " + type);
             const anisotropic = ["Bani", "Uani", "beta"].includes(type);
             // Before: non-Biso selected a retired preview object. After: the same
             // iso cell edits both scalar types and displays the tensor equivalent.
