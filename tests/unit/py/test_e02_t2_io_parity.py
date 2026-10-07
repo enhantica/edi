@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import math
 import shutil
 from collections.abc import Callable
 from pathlib import Path
@@ -403,9 +402,12 @@ def test_e02_t2_published_cod_structure_matches_hand_pinned_values(
             'published site occupancy mismatch',
             label,
         )
-        expected_b_eq = 8.0 * math.pi**2 * sum(u_diagonal) / 3.0
-        assert float(site.adp_iso.value) == pytest.approx(expected_b_eq, abs=1e-12), (
-            'published anisotropic U diagonal must convert to B-equivalent',
+        expected_u_eq = sum(u_diagonal) / 3.0
+        assert site.adp_type == 'Uani', (
+            'ADR-0080 the COD anisotropic U convention must survive import'
+        )
+        assert float(site.adp_iso.value) == pytest.approx(expected_u_eq, abs=1e-12), (
+            'ADR-0080 published anisotropic U diagonals must produce the U-equivalent value',
             label,
         )
 

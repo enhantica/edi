@@ -143,8 +143,8 @@ void check_alias_assignment(const std::string& route,
     project.experiments.clear();
     project.experiments.push_back(edi::experiment_from_edi_text(
         fixture_text("tests/fixtures/c11_t4_cw_selection/cases/cwl_valid.edi")));
-    project.experiment().linked_structure().structure_id = project.structure().name;
     auto& structure = project.structure();
+    project.experiment().linked_structure().structure_id = structure.name;
     auto neighbour = std::make_shared<edi::AtomSite>(*structure.atom_sites[0]);
     neighbour->id = "Si2";
     neighbour->fract_x.value = 0.6;

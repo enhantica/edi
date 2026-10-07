@@ -126,7 +126,130 @@
         "_atom_site_fract_z",
         "_atom_site_occupancy",
         "_atom_site_B_iso_or_equiv",
-        "_atom_site_U_iso_or_equiv"
+        "_atom_site_U_iso_or_equiv",
+        "_atom_site_adp_type"
+      ]
+    },
+    {
+      "name": "_atom_site_aniso",
+      "form": "loop",
+      "columns": [
+        {
+          "member": "AtomSiteAniso::id",
+          "type": "ItemKey",
+          "items": [
+            "id"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
+        },
+        {
+          "member": "AtomSiteAniso::adp_11",
+          "type": "Parameter",
+          "items": [
+            "adp_11"
+          ],
+          "storage": [
+            "value: crysta::Column<double>",
+            "uncertainty: crysta::Column<std::optional<double>>",
+            "free: crysta::Column<std::uint8_t>",
+            "start_value: crysta::Column<std::optional<double>>",
+            "start_uncertainty: crysta::Column<std::optional<double>>"
+          ]
+        },
+        {
+          "member": "AtomSiteAniso::adp_22",
+          "type": "Parameter",
+          "items": [
+            "adp_22"
+          ],
+          "storage": [
+            "value: crysta::Column<double>",
+            "uncertainty: crysta::Column<std::optional<double>>",
+            "free: crysta::Column<std::uint8_t>",
+            "start_value: crysta::Column<std::optional<double>>",
+            "start_uncertainty: crysta::Column<std::optional<double>>"
+          ]
+        },
+        {
+          "member": "AtomSiteAniso::adp_33",
+          "type": "Parameter",
+          "items": [
+            "adp_33"
+          ],
+          "storage": [
+            "value: crysta::Column<double>",
+            "uncertainty: crysta::Column<std::optional<double>>",
+            "free: crysta::Column<std::uint8_t>",
+            "start_value: crysta::Column<std::optional<double>>",
+            "start_uncertainty: crysta::Column<std::optional<double>>"
+          ]
+        },
+        {
+          "member": "AtomSiteAniso::adp_12",
+          "type": "Parameter",
+          "items": [
+            "adp_12"
+          ],
+          "storage": [
+            "value: crysta::Column<double>",
+            "uncertainty: crysta::Column<std::optional<double>>",
+            "free: crysta::Column<std::uint8_t>",
+            "start_value: crysta::Column<std::optional<double>>",
+            "start_uncertainty: crysta::Column<std::optional<double>>"
+          ]
+        },
+        {
+          "member": "AtomSiteAniso::adp_13",
+          "type": "Parameter",
+          "items": [
+            "adp_13"
+          ],
+          "storage": [
+            "value: crysta::Column<double>",
+            "uncertainty: crysta::Column<std::optional<double>>",
+            "free: crysta::Column<std::uint8_t>",
+            "start_value: crysta::Column<std::optional<double>>",
+            "start_uncertainty: crysta::Column<std::optional<double>>"
+          ]
+        },
+        {
+          "member": "AtomSiteAniso::adp_23",
+          "type": "Parameter",
+          "items": [
+            "adp_23"
+          ],
+          "storage": [
+            "value: crysta::Column<double>",
+            "uncertainty: crysta::Column<std::optional<double>>",
+            "free: crysta::Column<std::uint8_t>",
+            "start_value: crysta::Column<std::optional<double>>",
+            "start_uncertainty: crysta::Column<std::optional<double>>"
+          ]
+        }
+      ],
+      "row": "AtomSiteAniso",
+      "cif": [
+        "_atom_site_aniso_label",
+        "_atom_site_aniso_U_11",
+        "_atom_site_aniso_U_22",
+        "_atom_site_aniso_U_33",
+        "_atom_site_aniso_U_12",
+        "_atom_site_aniso_U_13",
+        "_atom_site_aniso_U_23",
+        "_atom_site_aniso_B_11",
+        "_atom_site_aniso_B_22",
+        "_atom_site_aniso_B_33",
+        "_atom_site_aniso_B_12",
+        "_atom_site_aniso_B_13",
+        "_atom_site_aniso_B_23",
+        "_atom_site_aniso_beta_11",
+        "_atom_site_aniso_beta_22",
+        "_atom_site_aniso_beta_33",
+        "_atom_site_aniso_beta_12",
+        "_atom_site_aniso_beta_13",
+        "_atom_site_aniso_beta_23"
       ]
     },
     {
@@ -1530,17 +1653,6 @@
       "why": "composed at save from the parameters' fit-start cells; read back into them at load"
     },
     {
-      "name": "_atom_site_aniso",
-      "form": "derived",
-      "why": "read by the CIF import, which reduces it to each site's isotropic ADP; never stored",
-      "cif": [
-        "_atom_site_aniso_label",
-        "_atom_site_aniso_U_11",
-        "_atom_site_aniso_U_22",
-        "_atom_site_aniso_U_33"
-      ]
-    },
-    {
       "name": "_edi",
       "form": "derived",
       "why": "the file's schema version: the writer's constant, checked by the loader"
@@ -2202,6 +2314,51 @@
       "part": "the row's identity as a calculation input"
     },
     {
+      "member": "AtomSiteAniso::id",
+      "type": "ItemKey",
+      "category": "_atom_site_aniso"
+    },
+    {
+      "member": "AtomSiteAniso::adp_11",
+      "type": "Parameter",
+      "category": "_atom_site_aniso"
+    },
+    {
+      "member": "AtomSiteAniso::adp_22",
+      "type": "Parameter",
+      "category": "_atom_site_aniso"
+    },
+    {
+      "member": "AtomSiteAniso::adp_33",
+      "type": "Parameter",
+      "category": "_atom_site_aniso"
+    },
+    {
+      "member": "AtomSiteAniso::adp_12",
+      "type": "Parameter",
+      "category": "_atom_site_aniso"
+    },
+    {
+      "member": "AtomSiteAniso::adp_13",
+      "type": "Parameter",
+      "category": "_atom_site_aniso"
+    },
+    {
+      "member": "AtomSiteAniso::adp_23",
+      "type": "Parameter",
+      "category": "_atom_site_aniso"
+    },
+    {
+      "member": "AtomSiteAniso::row",
+      "type": "detail::RowLink",
+      "part": "the row's link to its collection"
+    },
+    {
+      "member": "AtomSiteAniso::epoch",
+      "type": "detail::Epoch",
+      "part": "the row's identity as a calculation input"
+    },
+    {
       "member": "SpaceGroup::name_h_m",
       "type": "detail::WrittenText",
       "category": "_space_group"
@@ -2450,6 +2607,13 @@
       "type": "ItemVec<AtomSite>",
       "holds": [
         "_atom_site"
+      ]
+    },
+    {
+      "member": "Structure::atom_site_aniso",
+      "type": "ItemVec<AtomSiteAniso>",
+      "holds": [
+        "_atom_site_aniso"
       ]
     },
     {

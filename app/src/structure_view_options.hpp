@@ -12,8 +12,8 @@
 namespace edi_app {
 
 // The structure view's options (edi ADR-0022 §5, ADR-0017 §16): diffraction-lib's, with its names, values
-// and defaults — `atom_view` (covalent, vdw, ionic), `color_scheme` (jmol, vesta) and
-// `atom_scale` of its `structure_style`, `show_labels` of its `structure_view`, and the feature set (atoms all,
+// and defaults — `atom_view` (covalent, vdw, ionic, adp), `color_scheme` (jmol, vesta), `atom_scale` and
+// `adp_probability` of its `structure_style`, `show_labels` of its `structure_view`, and the feature set (atoms all,
 // asymmetric or none; bonds, cell and axes). View state of the open project: one object, owned by the
 // project view-model and shared by the toolbar, the Appearance group and every structure's view. They are not
 // read from or written to the project file. A value outside its set is refused and the option stays as it was.
@@ -24,12 +24,13 @@ class StructureViewOptions : public QObject {
     Q_PROPERTY(QString atomView READ atomView WRITE setAtomView NOTIFY atomViewChanged)
     Q_PROPERTY(QString colorScheme READ colorScheme WRITE setColorScheme NOTIFY colorSchemeChanged)
     Q_PROPERTY(double atomScale READ atomScale WRITE setAtomScale NOTIFY atomScaleChanged)
+    Q_PROPERTY(double adpProbability READ adpProbability WRITE setAdpProbability NOTIFY adpProbabilityChanged)
     Q_PROPERTY(bool showLabels READ showLabels WRITE setShowLabels NOTIFY showLabelsChanged)
     Q_PROPERTY(QString atoms READ atoms WRITE setAtoms NOTIFY atomsChanged)
     Q_PROPERTY(bool bonds READ bonds WRITE setBonds NOTIFY bondsChanged)
     Q_PROPERTY(bool cell READ cell WRITE setCell NOTIFY cellChanged)
     Q_PROPERTY(bool axes READ axes WRITE setAxes NOTIFY axesChanged)
-    // The atom views diffraction-lib offers, less `adp`, for the Appearance group's selector.
+    // The atom views diffraction-lib offers, for the Appearance group's selector.
     Q_PROPERTY(edi_app::OptionListModel* atomViewOptions READ atomViewOptions CONSTANT)
 
    public:
@@ -41,6 +42,8 @@ class StructureViewOptions : public QObject {
     void setColorScheme(const QString& scheme);
     double atomScale() const { return options_.atom_scale; }
     void setAtomScale(double scale);  // above 0 and at most 1
+    double adpProbability() const { return options_.adp_probability; }
+    void setAdpProbability(double probability);  // above 0 and below 1
     bool showLabels() const { return options_.labels; }
     void setShowLabels(bool shown);
     QString atoms() const;  // "all", "asymmetric" or "none"
@@ -63,6 +66,7 @@ class StructureViewOptions : public QObject {
     void atomViewChanged();
     void colorSchemeChanged();
     void atomScaleChanged();
+    void adpProbabilityChanged();
     void showLabelsChanged();
     void atomsChanged();
     void bondsChanged();

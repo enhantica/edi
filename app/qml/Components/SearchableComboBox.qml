@@ -7,23 +7,96 @@ import QtQuick.Controls
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
 
+import edi.app
+
 // The base's combo box with a search field at the top of its list when it holds more than `searchThreshold`
-// entries (edi ADR-0017 §7): every combo box that lists project items (blocks, parameters) is one of these. The
-// field filters the list by any part of an entry's text, ignoring case; Enter picks the first entry left. The
-// list is the base's own popup, with the field as its list's header. A delegate folds itself away while it does
-// not match, through `matches`: the base's own delegate does so here, and a combo box that brings its own
-// delegate binds its height and opacity the same way.
+// entries (edi ADR-0017 §7): every combo box that lists project items (blocks, parameters) or a long vocabulary
+// (atom types, space groups) is one of these. The field filters the list by any part of an entry's text, ignoring
+// case and spaces; Enter picks the entry spelled as typed, else the first entry left. The typed text is red while
+// it matches no entry, in every such combo box (the owner, 2026-10-06). The list is the base's own popup, with the
+// field as its list's header. A delegate folds itself away while it does not match, through `matches`: the base's
+// own delegate does so here, and a combo box that brings its own delegate binds its height and opacity the same
+// way.
 EaElements.ComboBox {
     id: control
 
+    // A field's title above the box, drawn as the base's ParamComboBox draws its own and aligned as every
+    // field's title (FieldTitles, edi ADR-0017 §5); none when empty.
+    property string title: ""
+    // In a table row: no border and no background, as the base's TableViewComboBox, which every other table
+    // cell picker is (the owner, 2026-10-06).
+    property bool inTable: false
+    // The base table's column sync sets each cell's alignment from its header label's.
+    property int horizontalAlignment: Text.AlignHCenter
     property int searchThreshold: 10
     readonly property bool searchable: count > searchThreshold
     property string searchText: ""
-    readonly property string filter: searchable ? searchText.trim().toLowerCase() : ""
+    readonly property string filter: searchable ? control.folded(searchText) : ""
+    // Some entry matches the search (true while there is none).
+    readonly property bool anyMatch: {
+        if (filter === "")
+            return true;
+        for (let i = 0; i < count; ++i) {
+            if (matches(textAt(i)))
+                return true;
+        }
+        return false;
+    }
 
+    // The form a search compares: lower case, without spaces ("P 1 21/c 1" and "p121/c1" are one).
+    function folded(text) {
+        return String(text).toLowerCase().replace(/\s+/g, "");
+    }
+    // The list opens below the box, or above it where there is more room, never over it, so the box keeps
+    // showing its value while one searches; it is as tall as its entries or the room allows, and keeps that
+    // height while a search shortens it.
+    function placePopup() {
+        const popup = control.popup;
+        const window = control.Window.window;
+        if (!window)
+            return;
+        const top = control.mapToItem(null, 0, 0).y;
+        const below = window.height - top - control.height - popup.bottomMargin;
+        const above = top - popup.topMargin;
+        const wanted = popup.contentItem.implicitHeight + popup.topPadding + popup.bottomPadding;
+        if (below >= wanted || below >= above) {
+            popup.height = Math.min(wanted, below);
+            popup.y = control.height;
+        } else {
+            popup.height = Math.min(wanted, above);
+            popup.y = -popup.height;
+        }
+    }
     // Whether an entry's text matches the search.
     function matches(text) {
-        return filter === "" || String(text).toLowerCase().includes(filter);
+        return filter === "" || control.folded(text).includes(filter);
+    }
+    // The entry Enter picks: the one spelled as typed, else the first that matches; -1 when none does.
+    function pickedIndex() {
+        let first = -1;
+        for (let i = 0; i < count; ++i) {
+            const text = textAt(i);
+            if (control.folded(text) === filter)
+                return i;
+            if (first < 0 && matches(text))
+                first = i;
+        }
+        return first;
+    }
+
+    borderColor: inTable ? "transparent" : _borderColor()
+    backgroundColor: inTable ? "transparent" : _backgroundColor()
+    topInset: title === "" ? 0 : EaStyle.Sizes.fontPixelSize * 1.5
+    topPadding: topInset + padding
+
+    EaElements.Label {
+        visible: control.title !== ""
+        anchors.left: control.left
+        anchors.leftMargin: FieldTitles.inset
+        width: control.width - FieldTitles.inset
+        elide: Text.ElideRight
+        color: EaStyle.Colors.themeForegroundMinor
+        text: control.title
     }
 
     delegate: EaElements.MenuItem {
@@ -46,27 +119,42 @@ EaElements.ComboBox {
         hoverEnabled: control.hoverEnabled
     }
 
-    // The search field, the header of the base popup's list.
+    // The search field, the header of the base popup's list: on the popup's own colour, so the entries the list
+    // scrolls under it never show through, and above them.
     Component {
         id: searchHeader
 
-        EaElements.TextField {
-            objectName: "comboBox.search"
+        Rectangle {
+            z: 2
             width: ListView.view ? ListView.view.width : 0
-            height: control.searchable ? implicitHeight : 0
+            height: control.searchable ? field.implicitHeight : 0
             visible: control.searchable
-            horizontalAlignment: TextInput.AlignLeft
-            placeholderText: qsTr("Search")
-            onTextChanged: control.searchText = text
-            // Enter picks the first entry the search leaves.
-            onAccepted: {
-                for (let i = 0; i < control.count; ++i) {
-                    if (control.matches(control.textAt(i))) {
-                        control.currentIndex = i;
-                        control.activated(i);
-                        control.popup.close();
+            color: control.popupBackgroundColor
+
+            function clear() {
+                field.clear();
+            }
+            function focusField() {
+                field.forceActiveFocus();
+            }
+
+            EaElements.TextField {
+                id: field
+
+                objectName: "comboBox.search"
+                anchors.fill: parent
+                horizontalAlignment: TextInput.AlignLeft
+                placeholderText: qsTr("Search")
+                // Red while the text matches no entry, until it does.
+                warned: !control.anyMatch
+                onTextChanged: control.searchText = text
+                onAccepted: {
+                    const index = control.pickedIndex();
+                    if (index < 0)
                         return;
-                    }
+                    control.currentIndex = index;
+                    control.activated(index);
+                    control.popup.close();
                 }
             }
         }
@@ -74,6 +162,8 @@ EaElements.ComboBox {
 
     Component.onCompleted: {
         control.popup.contentItem.header = searchHeader;
+        // The field stays at the top while the list scrolls: a long list opens at its current entry.
+        control.popup.contentItem.headerPositioning = ListView.OverlayHeader;
         // The field takes the keyboard while the list is open.
         control.popup.focus = Qt.binding(() => control.searchable);
     }
@@ -85,11 +175,12 @@ EaElements.ComboBox {
             if (field)
                 field.clear();
             control.searchText = "";
+            control.placePopup();
         }
         function onOpened() {
             const field = (control.popup.contentItem as ListView)?.headerItem;
             if (field && control.searchable)
-                field.forceActiveFocus();
+                field.focusField();
         }
     }
 }

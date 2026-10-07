@@ -232,7 +232,7 @@ inline std::vector<Category> experiment_categories(ExperimentBase& experiment) {
     return categories;
 }
 
-// A structure's categories in page order (§2b (ii)); ADP columns belong to atom_site (§15.6).
+// A structure's categories in page order (§2b (ii)).
 inline std::vector<Category> structure_categories(Structure& structure) {
     std::vector<Category> categories;
     categories.push_back({"space_group"});
@@ -261,6 +261,17 @@ inline std::vector<Category> structure_categories(Structure& structure) {
         }
     }
     categories.push_back(sites);
+    // The anisotropic sites' tensors, a loop of its own (diffraction-lib's atom_site_aniso): a
+    // component symmetry ties to the others is not refinable.
+    Category aniso{"atom_site_aniso", true, structure.atom_site_aniso.size()};
+    for (const auto& tensor : structure.atom_site_aniso) {
+        const char* names[] = {"adp_11", "adp_22", "adp_33", "adp_12", "adp_13", "adp_23"};
+        const std::vector<Parameter*> parameters = tensor->parameters();
+        for (std::size_t i = 0; i < parameters.size(); ++i) {
+            aniso.fields.push_back({names[i], parameters[i], true, refinable(parameters[i])});
+        }
+    }
+    categories.push_back(aniso);
     categories.push_back({"scattering_length", true, structure.scattering_lengths_fm.size()});
     detail::mark_dependents(categories);
     return categories;

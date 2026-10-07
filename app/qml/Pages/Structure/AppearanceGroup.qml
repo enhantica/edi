@@ -6,9 +6,9 @@ import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
 
-// Appearance (edi ADR-0017 §16; easydiffractionbeta's group of that name and place): the two
+// Appearance (edi ADR-0017 §16; easydiffractionbeta's group of that name and place): the
 // `structure_style` options of diffraction-lib that its modebar does not carry — the atom view (the radius
-// model) and the atom scale — laid out and styled as the Instrument group (the owner, 2026-10-02): a muted
+// model, or the ADP surfaces) and the atom scale, or the ADP probability in the ADP view — laid out and styled as the Instrument group (the owner, 2026-10-02): a muted
 // caption above each field and the fields side by side in equal columns over the group's width, with the
 // components that group and the selectors use. The elements whose radius was substituted are listed under them.
 // View state of the open project, shared by every structure's view; not saved.
@@ -47,6 +47,7 @@ EaElements.GroupBox {
                 id: scale
 
                 objectName: "structure.appearance.atomScale"
+                visible: group.options === null || group.options.atomView !== "adp"
                 width: grid.fieldWidth
                 parameter: group.options ? {
                     "value": group.options.atomScale,
@@ -69,6 +70,37 @@ EaElements.GroupBox {
 
                 // Its title as every field's (edi ADR-0017 §5).
                 Component.onCompleted: FieldTitles.align(scale)
+                onAccepted: commit()
+                onEditingFinished: commit()
+            }
+            // The ADP view sizes its ellipsoids by a probability, not a scale: its field takes the scale's place
+            // (the owner, 2026-10-06; diffraction-lib's `adp_probability`, 0.99 by default).
+            EaElements.ParamTextField {
+                id: probability
+
+                objectName: "structure.appearance.adpProbability"
+                visible: group.options !== null && group.options.atomView === "adp"
+                width: grid.fieldWidth
+                parameter: group.options ? {
+                    "value": group.options.adpProbability,
+                    "error": 0,
+                    "enabled": true,
+                    "fittable": false,
+                    "fit": false,
+                    "name": "adp_probability",
+                    "shortPrettyName": qsTr("Probability"),
+                    "units": ""
+                } : ({})
+
+                // Above 0 and below 1 (diffraction-lib's range); anything else leaves the probability as it was.
+                function commit() {
+                    if (group.options !== null && text !== probability.value) {
+                        group.options.adpProbability = Number(text);
+                        text = Qt.binding(() => probability.value);
+                    }
+                }
+
+                Component.onCompleted: FieldTitles.align(probability)
                 onAccepted: commit()
                 onEditingFinished: commit()
             }

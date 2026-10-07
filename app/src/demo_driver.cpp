@@ -138,6 +138,30 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                                                         : QStringList{};
         steps_.push_back({QStringLiteral("ex-") + id, theme + open_example(id) + QStringList{experiment, basic, "group.peak"}});
     }
+    // ... and the anisotropic ADP draft on the Structure page: the Atomic displacement group, a site shown as Uani,
+    // the ADP atom view with its probability, and the space-group name picker with its search field.
+    steps_.push_back({"c13-01-atomic-displacement", open_example("pd-neut-cwl_cosio-d20_start-1")
+                                                        + QStringList{"appBar.tab.structure", basic,
+                                                                      "group.atom_site_aniso"}});
+    steps_.push_back({"c13-02-adp-uani", {"atomSiteAdp.type.1", "choose:Uani"}});
+    steps_.push_back({"c13-03-adp-view", {extras, "group.appearance", "structure.appearance.atomView", "choose:adp"}});
+    steps_.push_back({"c13-04-space-group-name", {basic, "group.space_group", "spaceGroup.nameHM"}});
+    // A name typed into the search field: red while it matches nothing, then a whole space group, whose
+    // structure the view redraws.
+    steps_.push_back({"c13-05-space-group-no-match", QStringList{"key:Escape"} + open_example("pd-neut-tof_ceo2-pearl_polynomial")
+                                                         + QStringList{"appBar.tab.structure", basic, "group.space_group",
+                                                                       "spaceGroup.nameHM", "type:Pnmc"}});
+    steps_.push_back({"c13-06-space-group-changed", {"key:Escape", "spaceGroup.nameHM", "type:Im-3m", "key:Return"}});
+    // The pattern of the new space group, then the IT number typed: back to F m -3 m, with its default code.
+    steps_.push_back({"c13-07-space-group-pattern", {"appBar.tab.experiment"}});
+    steps_.push_back({"c13-08-space-group-number", {"appBar.tab.structure", "spaceGroup.itNumber", "key:Ctrl+A",
+                                                    "type:225", "key:Return"}});
+    // A number outside 1-230, typed: red, and not applied.
+    steps_.push_back({"c13-09-space-group-number-invalid", {"spaceGroup.itNumber", "key:Ctrl+A", "type:999"}});
+    // The diagnostics view, from Preferences > Develop, then both dialogs closed.
+    steps_.push_back({"c13-10-diagnostics", {"key:Escape", "appBar.button.preferences", "preferences.tab.develop",
+                                             "preferences.diagnostics"}});
+    steps_.push_back({"c13-11-diagnostics-closed", {"choose:OK", "choose:OK"}});
     // ... then ideas no capture above shows (edi ADR-0017): the Experiment type grid three
     // wide (§2), and Measured data's one increment where the steps are equal (§6; t2-12 shows the range) ...
     steps_.push_back({"t4-01-experiment-type", open_example("pd-neut-cwl_lbco-hrpt_start-2")
@@ -374,6 +398,16 @@ bool DemoDriver::perform(const QString& action) {
         QCoreApplication::sendEvent(&window_, &press);
         QKeyEvent release(QEvent::KeyRelease, key.key(), key.keyboardModifiers());
         QCoreApplication::sendEvent(&window_, &release);
+        return true;
+    }
+    if (action.startsWith(QLatin1String("type:"))) {
+        // Each character as a key press with its text, into whatever has the keyboard (a search field).
+        for (const QChar character : action.mid(5)) {
+            QKeyEvent press(QEvent::KeyPress, 0, Qt::NoModifier, QString(character));
+            QCoreApplication::sendEvent(&window_, &press);
+            QKeyEvent release(QEvent::KeyRelease, 0, Qt::NoModifier, QString(character));
+            QCoreApplication::sendEvent(&window_, &release);
+        }
         return true;
     }
     if (action.startsWith(QLatin1String("show:"))) {

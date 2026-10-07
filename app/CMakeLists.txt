@@ -16,6 +16,19 @@ if(EDI_APP_VERSION STREQUAL "")
     set(EDI_APP_VERSION "0.0.0+unknown")
 endif()
 set(EDI_APP_DATE "${EDI_APP_GIT_DATE}")
+# The crysta the app links, for the diagnostics view: its package version, and the commit its SDK manifest
+# records (a local crysta build has no manifest).
+find_package(crysta CONFIG QUIET)
+set(EDI_APP_CRYSTA_VERSION "${crysta_VERSION}")
+set(EDI_APP_CRYSTA_COMMIT "a local build (no SDK manifest)")
+set(_edi_crysta_manifest "${crysta_DIR}/../../../share/crysta-sdk/manifest.json")
+if(EXISTS "${_edi_crysta_manifest}")
+    file(READ "${_edi_crysta_manifest}" _edi_crysta_manifest_text)
+    string(JSON EDI_APP_CRYSTA_COMMIT ERROR_VARIABLE _edi_crysta_manifest_error GET "${_edi_crysta_manifest_text}" source_sha)
+    if(_edi_crysta_manifest_error)
+        set(EDI_APP_CRYSTA_COMMIT "unreadable SDK manifest")
+    endif()
+endif()
 configure_file(src/app_build_info.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/app_build_info.hpp @ONLY)
 
 # Singletons are marked before the module is declared: qt_add_qml_module reads the property then.
@@ -68,6 +81,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/AppPreferencesDialog.qml
         qml/Components/BlockSelector.qml
         qml/Components/CategoryGroup.qml
+        qml/Components/DiagnosticsDialog.qml
         qml/Components/FitOutcomeLabel.qml
         qml/Components/FitProgressBar.qml
         qml/Components/FitResultsDialog.qml
@@ -144,6 +158,7 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Report/ExportSummaryGroup.qml
         qml/Pages/Report/ReportPage.qml
         qml/Pages/Structure/AppearanceGroup.qml
+        qml/Pages/Structure/AtomSiteAdpGroup.qml
         qml/Pages/Structure/AtomSitesGroup.qml
         qml/Pages/Structure/CellGroup.qml
         qml/Pages/Structure/ScatteringLengthsGroup.qml

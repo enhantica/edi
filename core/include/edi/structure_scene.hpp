@@ -29,7 +29,9 @@ struct Vec3 {
 };
 
 enum class ColorScheme : std::uint8_t { Jmol, Vesta };
-enum class AtomView : std::uint8_t { Covalent, VanDerWaals, Ionic };  // diffraction-lib's atom_view, less adp
+// diffraction-lib's atom_view. Adp draws each site's displacement at `adp_probability`: an ellipsoid for an
+// anisotropic site, a sphere for an isotropic one; a ball of the covalent radius where a site has neither.
+enum class AtomView : std::uint8_t { Covalent, VanDerWaals, Ionic, Adp };
 enum class Projection : std::uint8_t { Orthographic, Perspective };
 enum class AtomSubset : std::uint8_t { All, AsymmetricUnit, None };
 
@@ -73,6 +75,17 @@ struct SceneSource {
     Column<double> bond_distance;
     std::array<double, 9> cartn_matrix{};  // `_atom_sites_cartn_transform`, row-major
     std::vector<std::pair<std::string, std::string>> site_types;  // `_atom_site.id`, `.type_symbol`
+    // Each site's displacement, by `_atom_site.id`: the isotropic U (Angstrom squared) and, for an anisotropic
+    // site, its Cartesian U (row-major, the frame of `cartn_matrix`) at the site's own position.
+    struct SiteAdp {
+        std::string site_id;
+        double u_iso = 0.0;
+        std::optional<std::array<double, 9>> u_cartn;
+    };
+    std::vector<SiteAdp> site_adps;
+    // The space group's rotations in fractional coordinates (row-major), by symmetry operation id - 1: an
+    // expanded row's `site_symmetry` code `n_klm` names its operation n, which turns the site's tensor onto it.
+    std::vector<std::array<int, 9>> operation_rotations;
 };
 // Owner thread. Reads the stored geometry only while `structure.geometry_current()` is true, and never
 // computes it; otherwise the source has `current` false and no column.
@@ -82,6 +95,7 @@ struct SceneOptions {
     ColorScheme colors = ColorScheme::Jmol;
     AtomView atom_view = AtomView::Covalent;
     double atom_scale = 0.3;
+    double adp_probability = 0.99;  // diffraction-lib's `_structure_style.adp_probability`, in (0, 1)
     AtomSubset atoms = AtomSubset::All;
     bool bonds = true, cell = true, axes = true, labels = false;
 };
@@ -98,6 +112,11 @@ struct SceneAtom {  // one position
     std::int32_t cluster_id = 0;
     double table_radius = 0.0, radius = 0.0;
     bool radius_substituted = false;
+    // In the ADP view, an anisotropic atom's ellipsoid: its semi-axes (Angstrom) along the local x, y and z of
+    // `orientation`, a unit quaternion (w, x, y, z). `radius` is then its largest semi-axis.
+    bool ellipsoid = false;
+    Vec3 semi_axes;
+    std::array<double, 4> orientation{1.0, 0.0, 0.0, 0.0};
     std::string label;
     bool asymmetric = false;
     bool drawn = true;

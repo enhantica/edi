@@ -33,6 +33,8 @@ class ApplicationInfo : public QObject {
     Q_PROPERTY(QString copyrightHolder READ copyrightHolder CONSTANT)
     Q_PROPERTY(QString developerYearsFrom READ developerYearsFrom CONSTANT)
     Q_PROPERTY(QString developerYearsTo READ developerYearsTo CONSTANT)
+    // The element symbols of the core's element table, H to Og: what an atom-type picker lists.
+    Q_PROPERTY(QStringList elementSymbols READ elementSymbols CONSTANT)
 
    public:
     explicit ApplicationInfo(QObject* parent = nullptr) : QObject(parent) {}
@@ -62,6 +64,12 @@ class ApplicationInfo : public QObject {
     QStringList componentUses() const { return componentColumn(2); }
     // The text of a bundled licence resource (one of the URLs above); empty for any other URL.
     Q_INVOKABLE QString licenceText(const QString& url) const;
+    // The diagnostics view's text (the owner, 2026-10-06): the platform and browser, the build flavour and why it
+    // was chosen (web), threads, the Qt version and graphics backend, edi's and crysta's versions with the crysta
+    // SDK commit, and the feature switches; one "name: value" line each, to read and to copy.
+    Q_INVOKABLE QString diagnostics() const;
+    // Puts `text` on the clipboard (the web build's needs the click that asks for it).
+    Q_INVOKABLE void copyText(const QString& text) const;
     // Where a link inside the bundled licence text at `from` leads, resolved against that text's own location
     // (the app notice's "../COPYING" is qrc:/COPYING): the URL when it is one of the bundled licence texts above,
     // empty for anything else, so a link opens only what licenceText reads.
@@ -79,10 +87,12 @@ class ApplicationInfo : public QObject {
     // EasyDiffraction project's first year to the current release's.
     QString developerYearsFrom() const { return QStringLiteral("2019"); }
     QString developerYearsTo() const { return QStringLiteral("2026"); }
-    // ADR-0017 §8, ADR-0022 §4: an element's colour from a type symbol — the core table's Jmol colour of
-    // edi::element_of(typeSymbol) — or `fallback` for an element the table does not have. The app holds no
-    // element colour of its own.
-    Q_INVOKABLE QColor elementColor(const QString& typeSymbol, const QColor& fallback) const;
+    // ADR-0017 §8, ADR-0022 §4: an element's colour from a type symbol — the core table's colour of
+    // edi::element_of(typeSymbol) in `scheme` ("jmol" or "vesta", the structure view's) — or `fallback` for an
+    // element the table does not have. The app holds no element colour of its own.
+    QStringList elementSymbols() const;
+    Q_INVOKABLE QColor elementColor(const QString& typeSymbol, const QColor& fallback,
+                                    const QString& scheme = QStringLiteral("jmol")) const;
 };
 
 #endif  // EDI_APP_APP_INFO_HPP

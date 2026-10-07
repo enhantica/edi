@@ -68,3 +68,6 @@ projects:
   - id: pd-neut-tof_ferrite-austenite-beer_joint
     # Ferrite and austenite against two BEER banks, fitted jointly, each bank's phase scales free.
     executing: true
+  - id: pd-neut-cwl_y2o3_beta-adp
+    # Y2O3 with anisotropic beta ADPs tied by site symmetry; the scale alone against FullProf's fit.
+    executing: true

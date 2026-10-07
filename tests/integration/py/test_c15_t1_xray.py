@@ -135,6 +135,8 @@ def test_c33_lif_counter_is_derived_from_filename_difference():
     # The independently gated two-bank verification page is now retained prior art.
     before.add('pd-neut-tof_ferrite-austenite_beer_joint')
     after = {p.stem for p in (ROOT / 'docs/dev/verification').glob('*.py')}
+    # ADR-0026 independently gates its beta-tensor verification page.
+    after.discard('pd-neut-cwl_Y2O3_beta-adp')
     after.discard('pd-neut-cwl_LBCO_preferred-orientation')
     #  owns the additional polarized page;  still owns exactly its baseline page.
     after.discard('pd-xray-cwl_LiF_single_polarization')
@@ -165,6 +167,18 @@ def test_shared_candidate_flow_rejects_oracle_and_wrong_calculation(escape, vehi
         if isinstance(node, ast.Assign) and any(
             isinstance(target, ast.Name) and target.id == 'calc_ed_crysta'
             for target in node.targets
+        ):
+            if escape == 'oracle-assignment':
+                node.value.args[1] = ast.Name(id='calc_fullprof', ctx=ast.Load())
+            elif escape == 'other-experiment':
+                node.value.args[1] = ast.parse(
+                    'other.experiment.data.intensity_calc', mode='eval'
+                ).body
+        if (
+            isinstance(node, ast.keyword)
+            and node.arg == 'candidate'
+            and isinstance(node.value, ast.Call)
+            and ast.unparse(node.value.func) == 'verify.restrict_to_included'
         ):
             if escape == 'oracle-assignment':
                 node.value.args[1] = ast.Name(id='calc_fullprof', ctx=ast.Load())

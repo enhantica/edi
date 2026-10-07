@@ -176,6 +176,18 @@ axes and calculated arrays are unchanged; exactly the three experiment texts
 gain `_calculator.type crysta` and its block separator. All other saved-text
 bytes stay exact. Provenance: `<author-runs>/-seq8-generator.log`.
 
+Setting fields omitted from an input now display the resolved reference default.
+`generate_display.py` freezes the corpus defaults from unmodified CrySPY
+`b37f9f3148d2771c6d84ee91f57331676d93746f`,
+`function_2_space_group.get_default_it_coordinate_system_code_by_it_number`.
+Explicit file codes retain priority. The CW instrument inventory also retains
+the FullProf La11B6 corpus's displacement and transparency fields, mapped from
+`SyCos` and `SySin` in that case's `PROVENANCE.md`. Neither generator imports edi.
+The optional TOF Gaussian/Lorentz size and strain terms use the zero defaults
+in CrySPY's `powder_diffraction_tof.py` (`calc_sigma`, `calc_sigma_gamma`).
+Only absent optional terms receive these defaults; all declared values and
+free flags remain the committed input values.
+
 Before: the scan declaration supplied the eta-profile category case despite
 storing TCH coefficients. After: scans declare TCH, while `generate.py` creates
 `eta-project` from the independently saved measured X-ray input, replacing only
