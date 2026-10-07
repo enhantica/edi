@@ -741,7 +741,7 @@ Structure structure_from_block(const Block& block, const std::string& where) {
     if (loop == nullptr) {
         fail_schema(where, "missing-atom-site-loop", "missing _atom_site loop");
     }
-    // A site keeps the type its file declares (crysta ADR-0081): `adp_iso` is read in that type,
+    // A site keeps the type its file declares (ADR-0027): `adp_iso` is read in that type,
     // and a file that declares none is Biso. An unknown type refuses.
     const int adp_type_column = loop->column("_atom_site.adp_type");
     for (const auto& row : loop->rows) {
@@ -2275,7 +2275,7 @@ Structure structure_from_cif_block(const Block& block, const std::string& where)
     }
 
     // The tensors, in the form the loop spells (U_ij, B_ij or beta_ij), keyed by site label;
-    // a site with one keeps it in that type (crysta ADR-0081).
+    // a site with one keeps it in that type (ADR-0027).
     struct CifTensor {
         std::string type;
         AtomSiteAniso tensor;
@@ -2321,6 +2321,8 @@ Structure structure_from_cif_block(const Block& block, const std::string& where)
         }
     }
 
+    std::vector<std::pair<std::string, std::string>> declared_types;
+    std::set<std::string> consumed;
     for (const auto& row : loop->rows) {
         AtomSite site;
         site.id = loop_cell(*loop, row, "_atom_site_label", where);
@@ -2342,10 +2344,11 @@ Structure structure_from_cif_block(const Block& block, const std::string& where)
         read_into(site.occupancy,
                   parse_parameter(loop_cell(*loop, row, "_atom_site_occupancy", where), where),
                   where);
-        // The isotropic value in the type the file gives it: B_iso_or_equiv as Biso, else
-        // U_iso_or_equiv as Uiso. A site with a tensor row takes the row's type unless
-        // _atom_site_adp_type declares it isotropic; its adp_iso is then the tensor's equivalent
-        // value, set below once the structure is complete.
+        // The site takes the type _atom_site_adp_type declares, its numbers converted to it from the
+        // form the file spells them in (below, once the structure is complete). A site that declares
+        // none takes its tensor row's form, else Uiso when it gives only U_iso_or_equiv, else Biso.
+        // A declared type outside the five, an anisotropic type without a tensor row, an isotropic
+        // type with one, and a tensor row naming no site refuse (ADR-0027).
         const int b_iso_column = loop->column("_atom_site_B_iso_or_equiv");
         const int u_iso_column = loop->column("_atom_site_U_iso_or_equiv");
         const int type_column = loop->column("_atom_site_adp_type");
@@ -2362,25 +2365,50 @@ Structure structure_from_cif_block(const Block& block, const std::string& where)
                       parse_parameter(row[static_cast<std::size_t>(u_iso_column)], where), where);
             type = "Uiso";
         }
+        const std::string label = site.id.value();
         const std::string declared =
-            type_column >= 0 ? row[static_cast<std::size_t>(type_column)] : std::string();
-        const auto tensor = tensors.find(site.id.value());
-        if (tensor != tensors.end() && declared != "Uiso" && declared != "Biso") {
-            constexpr double eight_pi_sq = 8.0 * 3.141592653589793238 * 3.141592653589793238;
-            const std::string equivalent = tensor->second.type == "Uani" ? "Uiso" : "Biso";
-            if (equivalent != type) {
-                site.adp_iso.value = equivalent == "Uiso" ? site.adp_iso.value / eight_pi_sq
-                                                          : site.adp_iso.value * eight_pi_sq;
+            given(type_column) ? row[static_cast<std::size_t>(type_column)] : std::string();
+        const auto tensor = tensors.find(label);
+        if (!declared.empty()) {
+            const std::string at = where + ": site '" + label + "'";
+            if (!is_adp_type(declared)) {
+                throw IoError(at + " declares _atom_site_adp_type '" + declared +
+                              "', which is not one of Biso, Uiso, Bani, Uani or beta");
             }
+            if (is_anisotropic_adp_type(declared) && tensor == tensors.end()) {
+                throw IoError(at + " declares the anisotropic type '" + declared +
+                              "' but has no _atom_site_aniso row");
+            }
+            if (!is_anisotropic_adp_type(declared) && tensor != tensors.end()) {
+                throw IoError(at + " declares the isotropic type '" + declared +
+                              "' but has an _atom_site_aniso row");
+            }
+            declared_types.emplace_back(label, declared);
+        }
+        if (tensor != tensors.end()) {
             type = tensor->second.type;
             structure.atom_site_aniso.push_back(tensor->second.tensor);
+            consumed.insert(label);
         }
         site.adp_type = type;
         structure.atom_sites.push_back(std::move(site));
     }
-    // A file may give a tensor without U_iso_or_equiv: the equivalent value comes from it.
+    for (const auto& [label, tensor] : tensors) {
+        if (!consumed.contains(label)) {
+            throw IoError(where + ": the _atom_site_aniso row '" + label + "' names no _atom_site row");
+        }
+    }
+    // A file may give a tensor without U_iso_or_equiv: the equivalent value comes from it. Then
+    // each declared type, converted from the form the file spells it in, uncertainties with it.
     if (!structure.atom_site_aniso.empty()) {
         sync_atom_site_aniso(structure);
+    }
+    for (const auto& [label, declared] : declared_types) {
+        for (const auto& site : structure.atom_sites) {
+            if (site->id.value() == label) {
+                change_adp_type(structure, *site, declared);
+            }
+        }
     }
     return structure;
 }
