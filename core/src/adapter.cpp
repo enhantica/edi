@@ -890,6 +890,8 @@ PdDataBase read_scan_dataset(const std::string& directory, const std::string& fi
     return data;
 }
 
+bool persistable_name(const std::string& name) { return crysta::is_persistable_name(name); }
+
 PlainDataRows read_plain_data(const std::string& path) {
     crysta::PlainData read;
     try {
@@ -921,14 +923,15 @@ PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, co
     load.experiment.calculation_only = false;
     load.experiment.data_file = load.file_name;
     if (take_file_name) {
-        // The file's stem, with anything a datablock name cannot hold made an underscore.
+        // The file's stem, with anything a datablock name cannot hold made an underscore; a stem the save would
+        // still refuse (a reserved device name) leaves the name as it was.
         std::string stem = std::filesystem::path(path).stem().string();
         for (char& character : stem) {
             const bool keep = (character >= 'a' && character <= 'z') || (character >= 'A' && character <= 'Z') ||
                               (character >= '0' && character <= '9') || character == '_' || character == '-';
             character = keep ? character : '_';
         }
-        if (!stem.empty()) {
+        if (persistable_name(stem)) {
             load.experiment.name = stem;
         }
     }
@@ -1570,16 +1573,12 @@ std::vector<crysta::AtomSite> to_crysta_atom_sites(const ItemVec<AtomSite>& atom
 
 namespace {
 // The engine experiment is built around one scale. It is seeded from the first row, and
-// apply_post_build_fields then writes every link, so no phase is dropped. A bank with no link is
-// converted only for the project's relations, where it has no scale to name; any other conversion
-// refuses it.
-const Parameter& seed_scale(const ExperimentBase& e, bool for_relations) {
+// apply_post_build_fields then writes every link, so no phase is dropped. A bank with no link has no scale to
+// seed: it converts with none, and crysta decides what it admits (background alone, no fit).
+const Parameter& seed_scale(const ExperimentBase& e) {
     if (e.linked_structures.empty()) {
-        if (for_relations) {
-            static const Parameter no_scale{};
-            return no_scale;
-        }
-        throw std::out_of_range("experiment '" + e.name.value() + "' links no structure");
+        static const Parameter no_scale{};
+        return no_scale;
     }
     return e.linked_structures[0]->scale;
 }
@@ -1844,7 +1843,7 @@ crysta::BraggPdExperiment to_crysta_cwl_experiment(const ExperimentBase& e, bool
                                 param(point->intensity, crysta::BACKGROUND, "intensity"));
     }
     crysta::BraggPdExperiment built(std::move(peak), std::move(instrument),
-                             param(seed_scale(e, for_relations), crysta::SCALE, "scale"), std::move(background));
+                             param(seed_scale(e), crysta::SCALE, "scale"), std::move(background));
     built.cutoff_fwhm = e.peak.cutoff_fwhm;
     built.kind = crysta::BeamModeEnum::ConstantWavelength;  // before the post-build fill: the
     // TOF-only abscor guard reads it
@@ -1913,7 +1912,7 @@ crysta::BraggPdExperiment to_crysta_experiment(const ExperimentBase& e, bool for
         .dtt1(state(e.instrument.calib_d_to_tof_linear))
         .dtt2(state(e.instrument.calib_d_to_tof_quadratic))
         .d_to_tof_reciprocal(state(e.instrument.calib_d_to_tof_reciprocal))
-        .scale(state(seed_scale(e, for_relations)))
+        .scale(state(seed_scale(e)))
         .setup_twotheta_bank(e.instrument.setup_twotheta_bank.value)
         .cutoff_fwhm(e.peak.cutoff_fwhm);
 
