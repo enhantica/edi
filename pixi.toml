@@ -138,14 +138,13 @@ nodejs = "==22.23.2"
 # tools/ci/build-crysta.sh reads them from this file. Only an update PR or a paired PR moves them.
 [target.osx-arm64.activation.env]
 MACOSX_DEPLOYMENT_TARGET = '13.4'
-CRYSTA_SDK_TAG = "build-5a893f2e5858ba0c0d997bbd599c136e0c9e3aa7"
-CRYSTA_SDK_SHA256 = "02da3a42bebd29fb6742a6597eefd3b0e076464582b811f51b7218e945a185b1"
-# crysta pack from a failed job, its package steps passed; failed: Hidden numerical suite (cpp surface); cppcheck
+CRYSTA_SDK_TAG = "build-2b86a9a866638d1b36c1341956b9d51f5a145dc5"
+CRYSTA_SDK_SHA256 = "76c18fe387d92f00ec350e53837e1842e4c7029e2b7b80111334f5d0a961b1ce"
+# crysta pack from a failed job, its package steps passed; failed: Hidden numerical suite (cpp surface)
 
 [target.linux-64.activation.env]
-CRYSTA_SDK_TAG = "build-5a893f2e5858ba0c0d997bbd599c136e0c9e3aa7"
-CRYSTA_SDK_SHA256 = "343208fcd2b9aaf650dd9c0e2cf04102c6780d1300a812e19ecbc4e43f8d7186"
-# crysta pack from a failed job, its package steps passed; failed: One write boundary (ADR-0073 / relay C34-T26); Unit coverage, PR subset (clang -O0 + LLVM, C06-T6); cppcheck
+CRYSTA_SDK_TAG = "build-2b86a9a866638d1b36c1341956b9d51f5a145dc5"
+CRYSTA_SDK_SHA256 = "b16b3b35a8cf85b552e0ccac5862dfa25834a941d1993c7982be2ae2b801df52"
 
 [target.linux-64.dependencies]
 clangxx = "22.*"
