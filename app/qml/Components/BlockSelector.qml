@@ -98,6 +98,10 @@ Row {
         model: blocks
         textRole: blocksTextRole
         currentIndex: blockIndex
+        // The box follows the shared index again whenever its rows come and go: emptied for a moment (the one
+        // experiment replaced by Load data, every structure put back by an Undo) it drops to no entry, and the
+        // shared index, unchanged, would never set it back.
+        onCountChanged: selector.currentIndex = Qt.binding(() => selector.blockIndex)
         // The choice goes to the one shared current index; the box then follows that index again, so every
         // selector over the same blocks shows the same one (edi ADR-0017 §7).
         onActivated: index => {

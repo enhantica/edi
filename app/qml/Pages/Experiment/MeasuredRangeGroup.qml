@@ -27,14 +27,14 @@ Column {
     readonly property string units: timeOfFlight ? "µs" : "°"
     readonly property bool editable: experiment !== null && experiment.calculationOnly
 
-    // The axis at six significant digits; an intensity at three decimals, so a calculated value that is
-    // effectively zero (1e-46 at a pattern's tail, its digits floating-point noise that differs by platform)
-    // reads 0. The table shows the data, it does not edit it.
+    // The axis by the app's one rule for numbers (NumberText); an intensity first rounded to three decimals,
+    // so a calculated value that is effectively zero (1e-46 at a pattern's tail, its digits floating-point
+    // noise that differs by platform) reads 0. The table shows the data, it does not edit it.
     function shown(value) {
-        return value === undefined || isNaN(value) ? "" : String(Number(value.toPrecision(6)));
+        return value === undefined || isNaN(value) ? "" : NumberText.plain(value, 10);
     }
     function intensity(value) {
-        return value === undefined || isNaN(value) ? "" : String(Number(value.toFixed(3)));
+        return value === undefined || isNaN(value) ? "" : NumberText.plain(Number(value.toFixed(3)), 10);
     }
     // "inc": the steps at the base's default precision, as ValueField shows a number.
     function increment(summary) {
