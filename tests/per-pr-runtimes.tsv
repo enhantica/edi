@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-07T14:34:04Z
+# measured_utc = 2026-10-07T21:39:51Z
 #
-# Recorded from: per-pr-durations.txt (34 node(s) measured once, 8340 banked, 0 stale row(s) dropped)
-# Collected tests: 9539; with a reported duration: 4665
+# Recorded from: edi-measure-pytest.log (6 node(s) measured once, 8374 banked, 0 stale row(s) dropped)
+# Collected tests: 9545; with a reported duration: 4667
 # Module-scoped fixture costs recorded: 27
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 9539
+# inventory_python = 9545
 # inventory_cpp = 302
-# inventory_measured = 8374
-# inventory_unmeasured = 1467
+# inventory_measured = 8378
+# inventory_unmeasured = 1469
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -8359,6 +8359,12 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_scan_app_execution.py::test_t
 1.190	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[follow]
 1.400	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[joint]
 1.000	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[state]
+UNMEASURED:failed-in-this-run	tests/system/py/test_web_parallel_build.py::test_app_pthread_pool_is_preallocated_and_sized_for_the_engine
+UNMEASURED:failed-in-this-run	tests/system/py/test_web_parallel_build.py::test_each_kit_selects_its_own_engine_backend_and_simd
+0.000	tests/system/py/test_web_parallel_oracles.py::test_native_fit_retains_the_owner_five_iteration_final_values
+0.000	tests/system/py/test_web_parallel_oracles.py::test_owner_five_bank_reference_is_not_a_generated_web_pin
+0.220	tests/system/py/test_web_parallel_oracles.py::test_web_fit_native_reference_covers_parameters_and_calculated_pattern[lbco]
+1.250	tests/system/py/test_web_parallel_oracles.py::test_web_fit_native_reference_covers_parameters_and_calculated_pattern[ncaf]
 0.010	tests/system/py/test_yap_agreement.py::test_delivered_yap_project_has_both_phases_and_physical_occupancies
 0.000	tests/system/py/test_yap_agreement.py::test_verification_page_executes_the_owner_reference_comparison
 3.160	tests/system/py/test_yap_agreement.py::test_yap_fit_agrees_with_every_other_fullprof_parameter_and_rwp

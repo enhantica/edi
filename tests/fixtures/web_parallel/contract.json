@@ -1,0 +1,22 @@
+{
+  "source": "owner's unchanged native desktop build, measured 2026-10-04",
+  "baseline": {
+    "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project",
+    "iterations": 5,
+    "initial_reduced_chi_square": 649.33,
+    "final_reduced_chi_square": 9.50,
+    "rwp_percent": 7.69,
+    "rounding_half_unit": 0.005
+  },
+  "speed": {"minimum_core_count": 4, "minimum_ratio": 2.5},
+  "build": {
+    "native_thread_option": "CRYSTA_STD_THREADS",
+    "wasm_simd_option": "CRYSTA_WASM_SIMD"
+  },
+  "routes": {
+    "singlethread": {"kit": "singlethread", "isolated": false, "shared_array_buffer": false},
+    "multithread": {"kit": "multithread", "isolated": true, "shared_array_buffer": true},
+    "shim": {"kit": "multithread", "isolated": true, "shared_array_buffer": true}
+  },
+  "prior_diagnostics": ["Threads (ideal)", "Threads (OpenMP team)", "Browser cores (hardwareConcurrency)"]
+}
