@@ -295,17 +295,14 @@ std::vector<NamedSlot> named_slots(Project& project);
 
 // The analysis categories shown (D-i): the minimizer and the fitting mode always; the scan declaration
 // in a scan mode. Every loop the block writes is shown as its own category ("loop in .edi — table in
-// gui"): the joint weights always (the writer writes them in every mode; admitted in joint mode only),
-// the scan extraction rules and the fit start state when there are any.
+// gui"): the aliases, the constraints and the joint weights always (the first alias and constraint are
+// added from their tables; the weights are written in every mode, admitted in joint mode only), the scan
+// extraction rules and the fit start state when there are any.
 inline std::vector<Category> analysis_categories(const Project& project) {
     std::vector<Category> categories{{"minimizer"}, {"fitting_mode"}};
-    // The declared aliases and constraints, in diffraction-lib's analysis order.
-    if (!project.aliases.empty()) {
-        categories.push_back({"alias", true, project.aliases.size()});
-    }
-    if (!project.constraints.empty()) {
-        categories.push_back({"constraint", true, project.constraints.size()});
-    }
+    // The declared aliases and constraints, in diffraction-lib's analysis order, empty when there are none.
+    categories.push_back({"alias", true, project.aliases.size()});
+    categories.push_back({"constraint", true, project.constraints.size()});
     Category joint{"joint_fit", true, project.experiments.size()};
     joint.admitted = project.fitting_mode == "joint";
     categories.push_back(joint);
