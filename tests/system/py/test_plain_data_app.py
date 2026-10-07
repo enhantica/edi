@@ -746,3 +746,73 @@ def test_desktop_browser_picker_and_editability_bindings_share_load_path():
     assert 'EMSCRIPTEN' in browser and ('openFile' in browser or 'openFiles' in browser), (
         'Load data browser build: compile the picker implementation for the web platform'
     )
+
+
+@pytest.mark.parametrize('kind', ['experiment', 'structure'])
+@pytest.mark.parametrize('case', ['title', 'upper', 'mixed'])
+@pytest.mark.parametrize('occupied', [1, 2], ids=['one-held-name', 'two-held-names'])
+def test_automatic_creation_uses_the_persisted_casefold_identity_domain(
+    native_probe, tmp_path, kind, case, occupied
+):
+    # Independent reference: the smallest positive suffix whose ASCII case-folded name
+    # is absent. The writer owns this identity domain on every filesystem.
+    spelling = {
+        'title': kind.capitalize(),
+        'upper': kind.upper(),
+        'mixed': 'eXpErImEnT' if kind == 'experiment' else 'sTrUcTuRe',
+    }[case]
+    environment = dict(os.environ, QT_QPA_PLATFORM='offscreen', QSG_RHI_BACKEND='software')
+    completed = subprocess.run(
+        [
+            str(native_probe),
+            'identity',
+            str(FIXTURE),
+            str(tmp_path),
+            'cwl',
+            kind,
+            spelling,
+            str(occupied),
+        ],
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=30,
+    )
+    assert completed.returncode == 0, (
+        'Creation identity: the real app host must complete '
+        'the automatic action and save observation\n' + completed.stderr
+    )
+    record = json.loads(completed.stdout.splitlines()[-1])
+    require_success(record)
+    assert record['beforeSaved'], (
+        'Creation identity: the independently named input must save before automatic creation: '
+        + record['beforeSaveError']
+    )
+    category = kind + 's'
+    prior_names = [spelling + str(i + 1) for i in range(occupied)]
+    assert [row['name'] for row in record['before'][category]] == prior_names, (
+        'Creation identity: the app fixture must contain '
+        'independently specified case-variant names'
+    )
+    assert record['created'] and record['recreated'], (
+        'Creation identity: automatic experiment and structure creation '
+        'remain available beside user names'
+    )
+    expected = prior_names + [kind + str(occupied + 1)]
+    assert [row['name'] for row in record['after'][category]] == expected, (
+        'Creation identity: both automatic actions choose '
+        'the first unused persisted case-folded name'
+    )
+    assert [row['name'] for row in record['undone'][category]] == prior_names, (
+        'Creation identity: Undo removes only the newly created object '
+        'and retains every prior spelling'
+    )
+    assert record['saved'], (
+        'Creation identity: an admitted automatic creation must save '
+        'without a case-collision refusal: ' + record['saveError']
+    )
+    assert record['opened'], 'Creation identity: a successfully saved automatic object must reopen'
+    assert [row['name'] for row in record['reopened'][category]] == expected, (
+        'Creation identity: save and reopen retain the complete ordered identity set'
+    )
