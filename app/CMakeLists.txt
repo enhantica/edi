@@ -32,7 +32,7 @@ endif()
 configure_file(src/app_build_info.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/app_build_info.hpp @ONLY)
 
 # Singletons are marked before the module is declared: qt_add_qml_module reads the property then.
-set_source_files_properties(qml/Globals/AppState.qml qml/Globals/FieldTitles.qml qml/Globals/FitOutcomes.qml qml/Globals/ParameterNames.qml
+set_source_files_properties(qml/Globals/AppState.qml qml/Globals/FieldTitles.qml qml/Globals/FitOutcomes.qml qml/Globals/NumberText.qml qml/Globals/ParameterNames.qml
                             qml/Globals/Preferences.qml qml/Globals/SideBarGroups.qml qml/Globals/TypedInput.qml
                             qml/Style/AppColors.qml qml/Style/AppSizes.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 qt_add_library(edi_app_module STATIC)
@@ -116,6 +116,7 @@ qt_add_qml_module(edi_app_module
         qml/Globals/AppState.qml
         qml/Globals/FieldTitles.qml
         qml/Globals/FitOutcomes.qml
+        qml/Globals/NumberText.qml
         qml/Globals/ParameterNames.qml
         qml/Globals/Preferences.qml
         qml/Globals/SideBarGroups.qml
