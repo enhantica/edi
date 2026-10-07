@@ -67,6 +67,12 @@ inline constexpr const char* kFractZ[] = {"_atom_site.fract_z"};
 inline constexpr const char* kOccupancy[] = {"_atom_site.occupancy"};
 inline constexpr const char* kAdpIso[] = {"_atom_site.adp_iso"};
 inline constexpr const char* kAdpIsoCif[] = {"_atom_site.B_iso_or_equiv", "_atom_site.U_iso_or_equiv"};
+inline constexpr const char* kAdp11[] = {"_atom_site_aniso.adp_11"};
+inline constexpr const char* kAdp22[] = {"_atom_site_aniso.adp_22"};
+inline constexpr const char* kAdp33[] = {"_atom_site_aniso.adp_33"};
+inline constexpr const char* kAdp12[] = {"_atom_site_aniso.adp_12"};
+inline constexpr const char* kAdp13[] = {"_atom_site_aniso.adp_13"};
+inline constexpr const char* kAdp23[] = {"_atom_site_aniso.adp_23"};
 inline constexpr const char* kRiseAlpha0[] = {"_peak.rise_alpha_0"};
 inline constexpr const char* kRiseAlpha0Cif[] = {"_easydiffraction_peak.rise_alpha_0"};
 inline constexpr const char* kRiseAlpha1[] = {"_peak.rise_alpha_1"};
@@ -198,10 +204,37 @@ inline const ParameterSpec atom_site_occupancy{
     "atom_site", "occupancy", "dimensionless", "Occupancy of the atom site",
     {0.0, 1.0}, "occupancy", "", "Occ.", "", detail::kOccupancy, {}};
 inline const ParameterSpec atom_site_adp_iso{
-    // Display metadata says B_iso deliberately: edi stores the B convention (crysta seam).
+    // The value is in the site's declared type: B for Biso, U for Uiso, and an anisotropic site's
+    // equivalent isotropic value (U_eq for Uani, B_eq for Bani and beta).
     "atom_site", "adp_iso", "angstrom_squared",
-    "Isotropic atomic displacement parameter (ADP) for the atom site, stored as B_iso",
+    "Isotropic atomic displacement parameter (ADP) for the atom site, in its declared type",
     {0.0, 10.0}, "adp_iso", "Å²", "$B_{\\mathrm{iso}}$", "\\AA$^2$", detail::kAdpIso, detail::kAdpIsoCif};
+// An anisotropic site's tensor components, in its declared type: U (Uani) or B (Bani) in A^2, or
+// the dimensionless beta.
+inline const ParameterSpec atom_site_aniso_adp_11{
+    "atom_site_aniso", "adp_11", "angstrom_squared",
+    "Anisotropic displacement tensor component 11, in the site's declared type",
+    {0.0, detail::kInf}, "ani11", "Å²", "$U_{11}$", "\\AA$^2$", detail::kAdp11, {}};
+inline const ParameterSpec atom_site_aniso_adp_22{
+    "atom_site_aniso", "adp_22", "angstrom_squared",
+    "Anisotropic displacement tensor component 22, in the site's declared type",
+    {0.0, detail::kInf}, "ani22", "Å²", "$U_{22}$", "\\AA$^2$", detail::kAdp22, {}};
+inline const ParameterSpec atom_site_aniso_adp_33{
+    "atom_site_aniso", "adp_33", "angstrom_squared",
+    "Anisotropic displacement tensor component 33, in the site's declared type",
+    {0.0, detail::kInf}, "ani33", "Å²", "$U_{33}$", "\\AA$^2$", detail::kAdp33, {}};
+inline const ParameterSpec atom_site_aniso_adp_12{
+    "atom_site_aniso", "adp_12", "angstrom_squared",
+    "Anisotropic displacement tensor component 12, in the site's declared type",
+    detail::kUnbounded, "ani12", "Å²", "$U_{12}$", "\\AA$^2$", detail::kAdp12, {}};
+inline const ParameterSpec atom_site_aniso_adp_13{
+    "atom_site_aniso", "adp_13", "angstrom_squared",
+    "Anisotropic displacement tensor component 13, in the site's declared type",
+    detail::kUnbounded, "ani13", "Å²", "$U_{13}$", "\\AA$^2$", detail::kAdp13, {}};
+inline const ParameterSpec atom_site_aniso_adp_23{
+    "atom_site_aniso", "adp_23", "angstrom_squared",
+    "Anisotropic displacement tensor component 23, in the site's declared type",
+    detail::kUnbounded, "ani23", "Å²", "$U_{23}$", "\\AA$^2$", detail::kAdp23, {}};
 
 inline const ParameterSpec peak_rise_alpha_0{
     "peak", "rise_alpha_0", "microseconds", "Back-to-back exponential rise α₀",

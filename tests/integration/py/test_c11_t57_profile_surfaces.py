@@ -139,6 +139,8 @@ def test_c33_filename_difference_adds_exactly_the_owned_pages():
     before.add('pd-neut-tof_ferrite-austenite_beer_joint')
     expected.add('pd-neut-cwl_YAP_multiphase')
     after = {path.stem for path in (ROOT / 'docs/dev/verification').glob('*.py')}
+    # ADR-0027 independently gates its beta-tensor verification page.
+    after.discard('pd-neut-cwl_Y2O3_beta-adp')
     # The single-phase page has its own gates; preserve the asymmetry page delta.
     after.discard('pd-xray-cwl_LiF_single')
     # Additional polarization and orientation pages have their own gates.

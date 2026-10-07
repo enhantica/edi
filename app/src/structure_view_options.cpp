@@ -5,7 +5,7 @@ namespace edi_app {
 
 StructureViewOptions::StructureViewOptions(QObject* parent)
     : QObject(parent), atom_view_options_(new OptionListModel(this)) {
-    atom_view_options_->setOptions({"covalent", "vdw", "ionic"});
+    atom_view_options_->setOptions({"covalent", "vdw", "ionic", "adp"});
 }
 
 template <class T>
@@ -23,6 +23,8 @@ QString StructureViewOptions::atomView() const {
             return QStringLiteral("vdw");
         case edi::AtomView::Ionic:
             return QStringLiteral("ionic");
+        case edi::AtomView::Adp:
+            return QStringLiteral("adp");
         case edi::AtomView::Covalent:
             break;
     }
@@ -36,6 +38,8 @@ void StructureViewOptions::setAtomView(const QString& view) {
         assign(options_.atom_view, edi::AtomView::VanDerWaals, &StructureViewOptions::atomViewChanged);
     } else if (view == QLatin1String("ionic")) {
         assign(options_.atom_view, edi::AtomView::Ionic, &StructureViewOptions::atomViewChanged);
+    } else if (view == QLatin1String("adp")) {
+        assign(options_.atom_view, edi::AtomView::Adp, &StructureViewOptions::atomViewChanged);
     }
 }
 
@@ -54,6 +58,12 @@ void StructureViewOptions::setColorScheme(const QString& scheme) {
 void StructureViewOptions::setAtomScale(double scale) {
     if (scale > 0.0 && scale <= 1.0) {  // diffraction-lib's range; NaN fails both
         assign(options_.atom_scale, scale, &StructureViewOptions::atomScaleChanged);
+    }
+}
+
+void StructureViewOptions::setAdpProbability(double probability) {
+    if (probability > 0.0 && probability < 1.0) {  // diffraction-lib's range; NaN fails both
+        assign(options_.adp_probability, probability, &StructureViewOptions::adpProbabilityChanged);
     }
 }
 

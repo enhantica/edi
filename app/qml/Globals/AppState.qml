@@ -20,6 +20,10 @@ QtObject {
         Report
     }
 
+    // The Continue area at the bottom of every page's sidebar, hidden for now (the owner, 2026-10-06), so the
+    // sidebar's content runs down to its bottom. The one switch: true brings Continue back as it was.
+    readonly property bool continueAreaShown: false
+
     // The platform's appearance, which the base's "System" theme follows: Qt's own colour scheme, live
     // (macOS switches it with System Settings → Appearance). Writable, as the test and demo seam: a
     // headless Linux runner reports Unknown, so they set Light or Dark here instead.

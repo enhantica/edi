@@ -17,6 +17,7 @@ CategoryPresentation category_presentation(const QString& id) {
         {QStringLiteral("space_group"), {T::Basic, "Space group", "satellite"}},
         {QStringLiteral("cell"), {T::Basic, "Cell", "cube"}},
         {QStringLiteral("atom_site"), {T::Basic, "Atom sites", "atom"}},
+        {QStringLiteral("atom_site_aniso"), {T::Basic, "Atomic displacement", "arrows-alt"}},  // owner, 2026-10-06
         {QStringLiteral("scattering_length"), {T::Extras, "Scattering lengths", "ruler"}},
         {QStringLiteral("experiment_type"), {T::Basic, "Experiment type", "radiation"}},
         {QStringLiteral("data"), {T::Extras, "Measured data", "arrows-alt-h"}},  // owner, 2026-09-29

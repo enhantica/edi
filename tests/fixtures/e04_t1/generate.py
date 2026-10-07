@@ -51,7 +51,14 @@ PROFILES = {
     'tof-pseudo-voigt': GAUSS + LORENTZ,
 }
 INSTRUMENT = {
-    'cwl': ['setup_wavelength', 'calib_twotheta_offset'],
+    # FullProf La11B6 corpus: SyCos/SySin are the declared displacement/
+    # transparency fields (the case's PROVENANCE.md maps the original PCR).
+    'cwl': [
+        'setup_wavelength',
+        'calib_twotheta_offset',
+        'calib_sample_displacement',
+        'calib_sample_transparency',
+    ],
     'tof': [
         'setup_twotheta_bank',
         'calib_d_to_tof_offset',
@@ -280,6 +287,18 @@ def generate(warning_project=None):
             profile = fields['_peak.type']
             mode = 'cwl' if profile.startswith('cwl-') else 'tof'
             expected = list(PROFILES[profile])
+            # Unmodified CrySPY b37f9f3 powder_diffraction_tof.py calc_sigma/
+            # calc_sigma_gamma defaults the optional size and strain terms to zero.
+            for name in (
+                'broad_gauss_size',
+                'broad_gauss_strain',
+                'broad_lorentz_size',
+                'broad_lorentz_strain',
+            ):
+                if name in expected:
+                    fields.setdefault(
+                        '_peak.' + name, {'value': 0.0, 'free': False, 'uncertainty': None}
+                    )
             unused = [
                 name
                 for name in CW + B2B + GAUSS + LORENTZ + FCJ + BEBA
@@ -309,9 +328,13 @@ def generate(warning_project=None):
                     )
                     if name in expected and '_peak.' + name not in fields
                 },
-                # Keep the base fields and every independently declared optional
-                # FullProf sample-shift and polarization calibration input.
-                'instrumentFields': INSTRUMENT[mode]
+                # FullProf shift and polarization fields are optional; include each
+                # explicitly saved field once alongside the base instrument fields.
+                'instrumentFields': [
+                    name
+                    for name in INSTRUMENT[mode]
+                    if name not in {'calib_sample_displacement', 'calib_sample_transparency'}
+                ]
                 + [
                     name
                     for name in (

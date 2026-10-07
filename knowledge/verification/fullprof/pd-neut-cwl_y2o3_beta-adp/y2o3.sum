@@ -1,0 +1,248 @@
+
+
+        **********************************************************
+        ** PROGRAM FullProf.2k (Version 7.95 - Jan2023-ILL JRC) **
+        **********************************************************
+                       M U L T I -- P A T T E R N                 
+            Rietveld, Profile Matching & Integrated Intensity     
+                 Refinement of X-ray and/or Neutron Data
+
+
+    Date: 18/06/2026  Time: 14:38:33.051                              
+
+ => PCR file code: y2o3
+ => DAT file code: y2o3                 -> Relative contribution: 1.0000                                                            
+ => Title: Y2O3 Ge(551) 300mm_varH 15/10/13
+
+ ==> CONDITIONS OF THIS RUN FOR PATTERN No.:  1
+
+ => Global Refinement of neutron powder data                                                                                        
+ => The    7th default profile function was selected
+
+ => X-Y type of data: 2theta/TOF/E(Kev) Intens sigma for pattern:  1
+ => Analysis of refinement at the end
+ => Wavelengths:  1.54822 1.54822
+ => Cos(Monochromator angle)=   0.0000
+ => Absorption correction (AC), muR-eff =   0.0000  0.0000
+ => Base of peaks: 2.0*HW*   20.00
+ ==> Angular range, step and number of points:
+     2Thmin:       0.950000  2Thmax:     153.899994  Step:       0.050019  No. of points:   3060
+ =>-------> Pattern#  1
+ => Crystal Structure Refinement for phase: 1
+ => The density (volumic mass) of phase 1 is:    5.029 g/cm3
+ => Scor: 3.2517
+
+ ==> RESULTS OF REFINEMENT:
+
+
+ => No. of fitted parameters:    0
+
+
+------------------------------------------------------------------------------
+ => Phase No.  1 Y2O3                                    I a -3              
+------------------------------------------------------------------------------
+
+ =>  No. of reflections for pattern#:   1:   229  
+
+
+ ==> ATOM PARAMETERS:
+
+  Name      x     sx       y     sy       z      sz      B   sB   occ. socc.  Mult
+ Y1     -0.03236(   0)  0.00000(   0)  0.25000(   0)  0.000(  0)  0.500(  0)   24
+ Y2      0.25000(   0)  0.25000(   0)  0.25000(   0)  0.000(  0)  0.167(  0)    8
+ O1      0.39072(   0)  0.15204(   0)  0.38030(   0)  0.000(  0)  1.000(  0)   48
+
+ =>   Anisotropic Betas*1E04
+
+ Name        B11     B22     B33     B12     B13     B23  
+            sB11    sB22    sB33    sB12    sB13    sB23  
+
+ Y1         30.3    27.2    29.5     0.0     0.0    -2.5
+             0.0     0.0     0.0     0.0     0.0     0.0
+ Y2         30.4    30.4    30.4    -1.3    -1.3    -1.3
+             0.0     0.0     0.0     0.0     0.0     0.0
+ O1         29.9    31.0    27.3    -0.7    -2.0    -0.1
+             0.0     0.0     0.0     0.0     0.0     0.0
+
+ ==> PROFILE PARAMETERS FOR PATTERN#  1
+
+ => Cell parameters      :
+                             10.60575   0.00000
+                             10.60575   0.00000
+                             10.60575   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+ 
+ => overall scale factor :      1.060199976     0.000000000
+ => Eta(p-v) or m(p-vii) :    0.00000   0.00000
+ => Overall tem. factor  :    0.00000   0.00000
+ => Halfwidth parameters :    0.03663   0.00000
+                             -0.06835   0.00000
+                              0.13143   0.00000
+ => Preferred orientation:    0.00000   0.00000
+                              0.00000   0.00000
+ => Asymmetry parameters :    0.00000   0.00000
+                              0.00000   0.00000
+                              0.00000   0.00000
+                              0.00000   0.00000
+ => X and y parameters   :    0.00000   0.00000
+                              0.00000   0.00000
+ => Strain parameters    :    0.00000   0.00000
+                              0.00000   0.00000
+                              0.00000   0.00000
+ => Size parameters (G,L):    0.00000   0.00000
+                              0.00000   0.00000
+
+ => Add. shape parameters: 
+                              0.00000   0.00000
+                              0.00000   0.00000
+
+
+
+ ==> GLOBAL PARAMETERS FOR PATTERN#  1
+
+
+ => Zero-point:    -0.0162    0.0000
+ => Cos(2theta)-shift parameter :   0.0000  0.0000
+ => Sin(2theta)-shift parameter :   0.0000  0.0000
+
+ ==> RELIABILITY FACTORS WITH ALL NON-EXCLUDED POINTS FOR PATTERN:  1
+
+  => Cycle:  1 => MaxCycle:  1
+ => N-P+C:  2509
+ =>  R-factors (not corrected for background) for Pattern:  1
+ => Rp:  35.0     Rwp:  91.4     Rexp:    1.24 Chi2: 0.544E+04  L.S. refinement
+ => Conventional Rietveld R-factors for Pattern:  1
+ => Rp:  653.     Rwp:  708.     Rexp:    9.60 Chi2: 0.544E+04
+ => Deviance:  0.558E+07     Dev*  :   2223.    
+ => DW-Stat.:    0.0537     DW-exp:     1.8759
+ => N-sigma of the GoF:   192514.141
+
+ ==> RELIABILITY FACTORS FOR POINTS WITH BRAGG CONTRIBUTIONS FOR PATTERN:  1
+
+ => N-P+C:  2509
+ =>  R-factors (not corrected for background) for Pattern:  1
+ => Rp:  35.0     Rwp:  91.4     Rexp:    1.24 Chi2: 0.544E+04  L.S. refinement
+ => Conventional Rietveld R-factors for Pattern:  1
+ => Rp:  653.     Rwp:  708.     Rexp:    9.60 Chi2: 0.544E+04
+ => Deviance:  0.558E+07     Dev*  :   2223.    
+ => DW-Stat.:    0.0537     DW-exp:     1.8759
+ => N-sigma of the GoF:   192514.141
+
+ => Global user-weigthed Chi2 (Bragg contrib.):  0.544E+04
+ => Scor: 3.2517
+
+ ==> RESULTS OF REFINEMENT:
+
+
+ => No. of fitted parameters:    0
+
+
+------------------------------------------------------------------------------
+ => Phase No.  1 Y2O3                                    I a -3              
+------------------------------------------------------------------------------
+
+ =>  No. of reflections for pattern#:   1:   229  
+
+
+ ==> ATOM PARAMETERS:
+
+  Name      x     sx       y     sy       z      sz      B   sB   occ. socc.  Mult
+ Y1     -0.03236(   0)  0.00000(   0)  0.25000(   0)  0.000(  0)  0.500(  0)   24
+ Y2      0.25000(   0)  0.25000(   0)  0.25000(   0)  0.000(  0)  0.167(  0)    8
+ O1      0.39072(   0)  0.15204(   0)  0.38030(   0)  0.000(  0)  1.000(  0)   48
+
+ =>   Anisotropic Betas*1E04
+
+ Name        B11     B22     B33     B12     B13     B23  
+            sB11    sB22    sB33    sB12    sB13    sB23  
+
+ Y1         30.3    27.2    29.5     0.0     0.0    -2.5
+             0.0     0.0     0.0     0.0     0.0     0.0
+ Y2         30.4    30.4    30.4    -1.3    -1.3    -1.3
+             0.0     0.0     0.0     0.0     0.0     0.0
+ O1         29.9    31.0    27.3    -0.7    -2.0    -0.1
+             0.0     0.0     0.0     0.0     0.0     0.0
+
+ ==> PROFILE PARAMETERS FOR PATTERN#  1
+
+ => Cell parameters      :
+                             10.60575   0.00000
+                             10.60575   0.00000
+                             10.60575   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+ 
+ => overall scale factor :      1.060199976     0.000000000
+ => Eta(p-v) or m(p-vii) :    0.00000   0.00000
+ => Overall tem. factor  :    0.00000   0.00000
+ => Halfwidth parameters :    0.03663   0.00000
+                             -0.06835   0.00000
+                              0.13143   0.00000
+ => Preferred orientation:    0.00000   0.00000
+                              0.00000   0.00000
+ => Asymmetry parameters :    0.00000   0.00000
+                              0.00000   0.00000
+                              0.00000   0.00000
+                              0.00000   0.00000
+ => X and y parameters   :    0.00000   0.00000
+                              0.00000   0.00000
+ => Strain parameters    :    0.00000   0.00000
+                              0.00000   0.00000
+                              0.00000   0.00000
+ => Size parameters (G,L):    0.00000   0.00000
+                              0.00000   0.00000
+
+ => Add. shape parameters: 
+                              0.00000   0.00000
+                              0.00000   0.00000
+
+
+
+ ==> GLOBAL PARAMETERS FOR PATTERN#  1
+
+
+ => Zero-point:    -0.0162    0.0000
+ => Cos(2theta)-shift parameter :   0.0000  0.0000
+ => Sin(2theta)-shift parameter :   0.0000  0.0000
+
+ ==> RELIABILITY FACTORS WITH ALL NON-EXCLUDED POINTS FOR PATTERN:  1
+
+  => Cycle:  1 => MaxCycle:  1
+ => N-P+C:  2509
+ =>  R-factors (not corrected for background) for Pattern:  1
+ => Rp:  35.0     Rwp:  91.4     Rexp:    1.24 Chi2: 0.544E+04  L.S. refinement
+ => Conventional Rietveld R-factors for Pattern:  1
+ => Rp:  653.     Rwp:  708.     Rexp:    9.60 Chi2: 0.544E+04
+ => Deviance:  0.558E+07     Dev*  :   2223.    
+ => DW-Stat.:    0.0537     DW-exp:     1.8759
+ => N-sigma of the GoF:   192514.141
+
+ ==> RELIABILITY FACTORS FOR POINTS WITH BRAGG CONTRIBUTIONS FOR PATTERN:  1
+
+ => N-P+C:  2509
+ =>  R-factors (not corrected for background) for Pattern:  1
+ => Rp:  35.0     Rwp:  91.4     Rexp:    1.24 Chi2: 0.544E+04  L.S. refinement
+ => Conventional Rietveld R-factors for Pattern:  1
+ => Rp:  653.     Rwp:  708.     Rexp:    9.60 Chi2: 0.544E+04
+ => Deviance:  0.558E+07     Dev*  :   2223.    
+ => DW-Stat.:    0.0537     DW-exp:     1.8759
+ => N-sigma of the GoF:   192514.141
+
+ => Global user-weigthed Chi2 (Bragg contrib.):  0.544E+04
+
+     -----------------------------------------------------
+     BRAGG R-Factors and weight fractions for Pattern #  1
+     -----------------------------------------------------
+
+ => Phase:  1     Y2O3
+ => Bragg R-factor:   645.       Vol: 1192.954( 0.000)  Fract(%):  100.00( 0.00)
+ => Rf-factor=  161.             ATZ:        3612.974   Brindley:  1.0000
+
+ 
+              CPU Time:     0.160 seconds
+                            0.003 minutes
+
+ => Run finished at:     Date: 18/06/2026  Time: 14:38:33.209                              

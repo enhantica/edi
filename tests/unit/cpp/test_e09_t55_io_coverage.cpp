@@ -661,17 +661,16 @@ TEST_CASE("E09-T55 structure schema handles optional identity and ADP branches")
 
     const edi::Structure uiso = edi::structure_from_edi_text(
         replacing("Ca Ca 0.4661 0 0.25 b 1 0.90 Biso", "Ca Ca 0.4661 0 0.25 b 1 0.01 Uiso"));
-    CHECK_MESSAGE(uiso.atom_sites.front()->adp_type == "Biso",
-                  "a Uiso source must be stored in the model's Biso representation");
-    CHECK_MESSAGE(uiso.atom_sites.front()->adp_iso.value ==
-                      doctest::Approx(0.01 * 8.0 * 3.141592653589793238 * 3.141592653589793238),
-                  "Uiso must use the independently defined B=8*pi^2*U conversion");
+    CHECK_MESSAGE(uiso.atom_sites.front()->adp_type == "Uiso",
+                  "a Uiso source must retain its declared type");
+    CHECK_MESSAGE(uiso.atom_sites.front()->adp_iso.value == doctest::Approx(0.01),
+                  "Uiso must retain its independently declared square-Angstrom value");
     check_io_error(
         [&] {
             static_cast<void>(edi::structure_from_edi_text(replacing(
                 "Ca Ca 0.4661 0 0.25 b 1 0.90 Biso", "Ca Ca 0.4661 0 0.25 b 1 0.90 Uani")));
         },
-        "not readable", "an anisotropic ADP token must not be misread as isotropic B");
+        "has no _atom_site_aniso row", "an anisotropic type must require its tensor row");
 }
 
 TEST_CASE("E09-T55 background and measured loops reject partial plausible shapes") {

@@ -4,7 +4,10 @@
 
 #include <QObject>
 #include <QString>
+#include <QStringList>
 #include <QtQml/qqmlregistration.h>
+
+#include <map>
 
 #include "block_text.hpp"
 #include "category_list_model.hpp"
@@ -30,6 +33,10 @@ class SpaceGroupViewModel : public QObject {
     Q_PROPERTY(int itNumber READ itNumber WRITE setItNumber NOTIFY itNumberChanged)
     Q_PROPERTY(bool hasItNumber READ hasItNumber NOTIFY hasItNumberChanged)
     Q_PROPERTY(QString crystalSystem READ crystalSystem NOTIFY crystalSystemChanged)
+    // What the name and code pickers list (the owner, 2026-10-06): every name crysta's table resolves, by IT
+    // number, and the codes of the shown space group's settings.
+    Q_PROPERTY(QStringList names READ names CONSTANT)
+    Q_PROPERTY(QStringList codes READ codes NOTIFY codesChanged)
 
    public:
     SpaceGroupViewModel(edi::Structure& structure, ProjectEditor& editor, QObject* parent);
@@ -38,12 +45,18 @@ class SpaceGroupViewModel : public QObject {
     QString coordSystemCode() const { return code_; }
     void setCoordSystemCode(const QString& code);
     int itNumber() const { return it_number_; }
-    void setItNumber(int number);  // 0 or less clears it
+    // A new name or number chooses that space group's default setting, and a new code that setting's name, so
+    // name, code and number always agree; a name or code crysta's table does not have is stored as typed, for the
+    // calculation to say why it refuses it. A number of 0 or less clears the stored number; one above 230 is ignored.
+    void setItNumber(int number);
     bool hasItNumber() const { return it_number_ > 0; }
     QString crystalSystem() const { return crystal_system_; }
+    QStringList names() const;
+    QStringList codes() const { return codes_; }
     void sync();
 
    signals:
+    void codesChanged();
     void nameHMChanged();
     void coordSystemCodeChanged();
     void itNumberChanged();
@@ -54,6 +67,7 @@ class SpaceGroupViewModel : public QObject {
     edi::Structure& structure_;
     ProjectEditor& editor_;
     QString name_hm_, code_, crystal_system_;
+    QStringList codes_;
     int it_number_ = 0;
 };
 
@@ -118,6 +132,30 @@ class AtomSiteListModel : public RowTableModel {
     ParameterRegistry& registry_;
 };
 
+// The Atomic displacement group (the owner, 2026-10-06): one row per atom site, in the sites' order — its label,
+// ADP type, isotropic value and the six anisotropic components. For an isotropic type `adpIso` is the site's value
+// in that type and the six are empty; for an anisotropic type the six are the tensor's components (crysta ADR-0081)
+// and `adpIso` is the equivalent value crysta derives from them, read only.
+class AtomSiteAdpListModel : public RowTableModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to a structure")
+    // The types the group offers, in diffraction-lib's AdpTypeEnum order as the owner listed them.
+    Q_PROPERTY(QStringList types READ types CONSTANT)
+
+   public:
+    AtomSiteAdpListModel(edi::Structure& structure, ProjectEditor& editor, ParameterRegistry& registry, QObject* parent);
+    QStringList types() const;
+    void sync();
+    // A new type converts the site's values (edi::change_adp_type).
+    Q_INVOKABLE void setType(int row, const QString& type);
+
+   private:
+    edi::Structure& structure_;
+    ProjectEditor& editor_;
+    ParameterRegistry& registry_;
+};
+
 // The structure's custom neutron scattering lengths.
 class ScatteringLengthListModel : public RowTableModel {
     Q_OBJECT
@@ -154,6 +192,7 @@ class StructureViewModel : public QObject {
     Q_PROPERTY(edi_app::SpaceGroupViewModel* spaceGroup READ spaceGroup CONSTANT)
     Q_PROPERTY(edi_app::CellViewModel* cell READ cell CONSTANT)
     Q_PROPERTY(edi_app::AtomSiteListModel* atomSites READ atomSites CONSTANT)
+    Q_PROPERTY(edi_app::AtomSiteAdpListModel* atomSiteAdps READ atomSiteAdps CONSTANT)
     Q_PROPERTY(edi_app::ScatteringLengthListModel* scatteringLengths READ scatteringLengths CONSTANT)
     Q_PROPERTY(edi_app::CategoryListModel* categories READ categories CONSTANT)
     Q_PROPERTY(edi_app::BlockText* text READ text CONSTANT)
@@ -166,6 +205,7 @@ class StructureViewModel : public QObject {
     SpaceGroupViewModel* spaceGroup() const { return space_group_; }
     CellViewModel* cell() const { return cell_; }
     AtomSiteListModel* atomSites() const { return atom_sites_; }
+    AtomSiteAdpListModel* atomSiteAdps() const { return atom_site_adps_; }
     ScatteringLengthListModel* scatteringLengths() const { return scattering_lengths_; }
     CategoryListModel* categories() const { return categories_; }
     BlockText* text() const { return text_; }
@@ -191,6 +231,7 @@ class StructureViewModel : public QObject {
     SpaceGroupViewModel* space_group_;
     CellViewModel* cell_;
     AtomSiteListModel* atom_sites_;
+    AtomSiteAdpListModel* atom_site_adps_;
     ScatteringLengthListModel* scattering_lengths_;
     CategoryListModel* categories_;
     BlockText* text_;

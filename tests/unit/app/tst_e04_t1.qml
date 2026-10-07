@@ -36,11 +36,10 @@ TestCase {
         verify(appWindow !== null, "gate 2: production Main loads under the actual registered module");
     }
     function init() {
-        // The first measured-profile actor encounters Qt Graphs' one-time GLES2
-        // context probe on the software host, as the other page actors do.
-        failOnWarning(qtest_results.functionName === "test_all_committed_profiles_and_current_experiment"
-            ? /\A(?!QRhiGles2: Failed to create (?:temporary context|context)\z)[\s\S]*\z/
-            : /.*/);
+        // The alphabetically first actor opens a measured project and encounters
+        // Qt Graphs' one-time GLES2 context probe on the software host.
+        failOnWarning(qtest_results.functionName === "test_add_requires_explicit_complete_experiment_type"
+            ? /\A(?!QRhiGles2: Failed to create (?:temporary context|context)\z)[\s\S]*\z/ : /.*/);
         Probe.clearWatches();
         unrelatedParameter = null;
         Session.closeProject();
@@ -60,7 +59,10 @@ TestCase {
         return Session.project;
     }
     function example(index) {
-        return open("docs/user/cli/" + Oracle.frozen.examples[index].id + "/project");
+        const project = open("docs/user/cli/" + Oracle.frozen.examples[index].id + "/project");
+        tryVerify(() => Probe.computedCurrent(project.currentExperiment), 10000,
+                  "I9: the committed example completes its initial calculation");
+        return project;
     }
     function rows(model) {
         return Probe.rows(model);
@@ -104,10 +106,11 @@ TestCase {
             const project = example(i);
             const structure = project.currentStructure;
             const experiment = project.currentExperiment;
-            categories(structure.categories, [["space_group", "Basic"], ["cell", "Basic"], ["atom_site", "Basic"], ["scattering_length", "Extras"]]);
+            categories(structure.categories, [["space_group", "Basic"], ["cell", "Basic"], ["atom_site", "Basic"], ["atom_site_aniso", "Basic"], ["scattering_length", "Extras"]]);
             //  owner-confirmed ADR-0017 §3: Measured data is Extras;
             // Background precedes Instrument. All other membership/order stays exact.
-            const expCategories = [["experiment_type", "Basic"], ["data", "Extras"], ["background", "Basic"], ["instrument", "Basic"], ["peak", "Basic"], ["linked_structure", "Basic"], ["excluded_region", "Extras"], ["absorption", "Extras"]];
+            // ADR-0017 section 2 places type controls in the Experiments explorer.
+            const expCategories = [["data", "Extras"], ["background", "Basic"], ["instrument", "Basic"], ["peak", "Basic"], ["excluded_region", "Basic"], ["linked_structure", "Basic"], ["absorption", "Extras"]];
             if (i !== 1)
                 expCategories.push(["preferred_orientation", "Extras"]);
             expCategories.push(["scattering_source", "Extras"]);
@@ -288,24 +291,29 @@ TestCase {
         onlyEvents(projectWatch, [], "I5: a parameter write cannot replace Session.project");
         //  ADR-0017 §13: the first edit sets only the dependent dirty flag.
         compare(project.modified, true, " saving: a successful edit marks the project modified");
-        onlyEvents(objectWatch, ["modifiedChanged"], "I3/: first edit changes only the project modified flag");
-        onlyEvents(experimentWatch, [], "I3: a parameter write cannot refresh the whole experiment");
+        onlyEvents(objectWatch, ["modifiedChanged", "calculatingChanged"], "I3/I9: edit changes dirty state and queued calculation activity only");
+        compare((Probe.events(objectWatch).modifiedChanged || []).length, 1, "I3: first edit notifies the dirty flag exactly once");
+        onlyEvents(experimentWatch, ["patternWentStale"], "I3/I9: edit publishes only the dependent pattern staleness signal");
+        compare((Probe.events(experimentWatch).patternWentStale || []).length, 1, "I9: one edit stales the pattern exactly once");
         const events = onlyEvents(tableWatch, ["dataChanged"], "I3: one table update, no reset/layout change");
         compare(events.dataChanged[0].first, targetRow, "I3: changed row starts at edited parameter");
         compare(events.dataChanged[0].last, targetRow, "I3: no other row is invalidated");
         ordered(events.dataChanged[0].roles, [Probe.roleNumber(project.parameters, "value")], "I3: only the changed value role is invalidated");
         tryVerify(() => Probe.events(patternWatch).dataChanged !== undefined, 5000, "I3/I9: a coalesced edit publishes a recalculated pattern");
-        const patternEvents = onlyEvents(patternWatch, ["dataChanged"], "I3: recalculation updates pattern values exactly once without resetting axes");
+        const patternEvents = Probe.events(patternWatch);
+        ordered(Object.keys(patternEvents).sort(), ["dataChanged", "staleChanged"], "I3/I9: recalculation changes only pattern values and currentness");
+        compare(patternEvents.dataChanged.length, 1, "I3: one recalculation publishes values exactly once");
+        compare(patternEvents.staleChanged.length, 2, "I9: one edit transitions current to stale and back to current");
         ordered(patternEvents.dataChanged[0].roles, [Probe.roleNumber(project.currentExperiment.pattern, "intensityCalc")], "I3: recalculation only invalidates intensityCalc");
         Probe.clearWatches();
         const noOp = Probe.watch(target);
         const modifiedWatch = Probe.watch(project);
         target.value = 0.173;
         onlyEvents(noOp, [], "I3: assigning the same value emits nothing");
-        onlyEvents(modifiedWatch, [], "I3/: a no-op cannot re-notify the modified flag");
+        onlyEvents(modifiedWatch, ["calculatingChanged"], "I3/I9: an equal write may recalculate but cannot re-notify the dirty flag");
         target.value = 0.174;
         onlyEvents(noOp, ["valueChanged"], "I3: a later changed value still emits exactly once");
-        onlyEvents(modifiedWatch, [], "I3/: an already modified project cannot re-notify its dirty flag");
+        onlyEvents(modifiedWatch, ["calculatingChanged"], "I3/I9: a later edit may recalculate but cannot re-notify an already dirty flag");
     }
     function test_table_write_shares_parameter_identity() {
         const project = example(0);
@@ -321,6 +329,7 @@ TestCase {
         let project = example(0);
         let exp = project.currentExperiment;
         const originalText = exp.text.text;
+        const originalProfile = exp.peakType;
         const before = rows(exp.peak).map(r => [r.parameter.name, r.parameter.value, r.parameter.free]);
         exp.peakType = "cwl-tch-pseudo-voigt-fcj";
         ordered(fieldNames(exp.peakAsymmetry), ["asym_fcj_1", "asym_fcj_2"], "I17: FCJ fields engage");
@@ -328,15 +337,22 @@ TestCase {
             compare(r.parameter.value, 0, "I17: new FCJ field uses loader default");
             verify(!r.parameter.free, "I17: new FCJ field starts fixed");
         });
+        exp.peakType = originalProfile;
+        ordered(rows(exp.peak).map(r => [r.parameter.name, r.parameter.value, r.parameter.free]), before, "I17: the TCH and FCJ round trip retains every shared value and free flag");
+        tryVerify(() => exp.text.text.includes("_data.intensity_calc"), 5000, "I17: returning to TCH republishes its calculated writer text");
+        compare(exp.text.text, originalText, "I17: the TCH and FCJ round trip restores Experiment Text byte for byte");
         exp.peakType = "cwl-pseudo-voigt-berar-baldinozzi";
         ordered(fieldNames(exp.peakAsymmetry), Oracle.frozen.profiles[exp.peakType].slice(5), "I17: BeBa replaces FCJ");
         compare(rows(exp.peakAsymmetry)[4].parameter.value, 180, "I17: BeBa limit loader default");
         verify(!exp.text.text.includes("_peak.asym_fcj_"), "I17: disengaged fields disappear from persisted Text");
-        exp.peakType = "cwl-pseudo-voigt";
-        ordered(rows(exp.peak).map(r => [r.parameter.name, r.parameter.value, r.parameter.free]), before, "I17 D-j: profile switches retain shared values and free flags");
+        // Crysta ADR-0080 section 4 reshapes each family to its owned slots.
+        // BeBa shares Caglioti U/V/W; TCH X/Y are removed and newly defaulted.
+        exp.peakType = originalProfile;
+        ordered(rows(exp.peak).slice(0, 3).map(r => [r.parameter.name, r.parameter.value, r.parameter.free]), before.slice(0, 3), "I17 D-j: BeBa and TCH retain their shared Caglioti values and free flags");
+        ordered(fieldNames(exp.peak), Oracle.frozen.profiles[originalProfile], "I17: returning to TCH restores exactly its own parameter slots");
+        verify(!exp.text.text.includes("_peak.mixing_eta_"), "I17: returning to TCH removes the pseudo-Voigt-only mixing slots");
         verify(!exp.text.text.includes("_data.intensity_calc"), "I17: the returned profile is stale until its queued recalculation publishes");
         tryVerify(() => exp.text.text.includes("_data.intensity_calc"), 5000, "I17: the queued recalculation republishes the computed experiment text");
-        compare(exp.text.text, originalText, "I17: profile round trip restores Experiment Text byte for byte");
         ["none", "cylinder-lobanov", "cylinder-hewat"].forEach(token => {
             exp.absorptionType = token;
             ordered(fieldNames(exp.absorption), token === "none" ? [] : ["mu_r"], "I17: absorption switches shown fields");
@@ -464,7 +480,7 @@ TestCase {
         verify(project.canLoadStructure, "D12: an empty project permits its first structure");
         const base = "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project/";
         verify(project.loadStructure(Probe.repoUrl(base + "structures/lbco.edi")), "D12: a committed .edi structure block loads through the core");
-        verify(!project.canLoadStructure, "D12: the current core supports one structure");
+        verify(project.canLoadStructure, "C12-T4: a loaded project permits another distinct structure");
         compare(project.currentStructure.spaceGroup.nameHM, "P m -3 m", "D12: loaded structure categories retain file values");
         verify(project.loadExperiments([Probe.repoUrl(base + "experiments/hrpt.edi")]), "D12: a complete .edi experiment loads with its declared type");
         compare(project.currentExperiment.beamModeToken, "constant wavelength", "D12: loaded CW type is preserved");
@@ -475,7 +491,7 @@ TestCase {
         compare(project.currentExperiment.beamModeToken, "time-of-flight", "D12: the newly loaded experiment becomes current");
         verify(!rows(project.currentExperiment.categories).some(r => r.categoryId === "preferred_orientation"), "I7: selecting the loaded TOF block removes the CW-only category");
         ordered(fieldNames(project.currentExperiment.instrument), Oracle.frozen.instrument.tof, "I7: block-file loading uses the same frozen TOF field expectation");
-        verify(!project.loadStructure(Probe.repoUrl(base + "structures/lbco.edi")), "D12: a second structure is refused without replacement");
+        verify(!project.loadStructure(Probe.repoUrl(base + "structures/lbco.edi")), "C12-T4: a duplicate structure identity is refused without replacement");
         compare(rows(project.structures).length, 1, "D12: refused second structure preserves the first");
     }
     function test_edi_batch_refusals_are_atomic() {
@@ -548,9 +564,9 @@ TestCase {
             });
             click("appBar.tab.experiment");
             click("sideBar.tab.basic");
-            Ui.expandGroup(test, Probe, appWindow, "group.experiment_type");
+            Ui.expandGroup(test, Probe, appWindow, "group.experiments");
             ["sampleForm", "beamMode", "radiationProbe", "scatteringType"].forEach(axis => {
-                tryVerify(() => visibleControl("experimentType." + axis) !== null, 2000, "owner seq 2: each immutable axis is exposed after group expansion: " + axis);
+                tryVerify(() => visibleControl("experimentType." + axis) !== null, 2000, "owner seq 2: each immutable axis is exposed in the Experiments explorer: " + axis);
                 const control = visibleControl("experimentType." + axis);
                 verify(control !== null, "owner seq 2: experiment axis is a visible combo box: " + axis);
                 verify(!control.enabled, "owner seq 2: loaded experiment type cannot be edited: " + axis);
