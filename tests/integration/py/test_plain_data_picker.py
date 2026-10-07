@@ -42,20 +42,22 @@ def require_picker(text, browser, scenario='accepted'):
     data_filter = property_value(text, 'dataFilter')
     program = """
 let calls=[];
+const initiator={id:'initiator',canLoadData:true,calculationOnly:true};
+const other={id:'other',canLoadData:true,calculationOnly:true};
 const original={currentExperimentIndex:4,
-    loadData:(index,file)=>calls.push(['loaded','original',index,file]),
+    loadDataInto:(experiment,file)=>calls.push(['loaded','original',experiment.id,file]),
     loadExperiments:files=>calls.push(['wrong-action',files])};
 const foreign={currentExperimentIndex:7,
-    loadData:(index,file)=>calls.push(['loaded','foreign',index,file])};
-const group={project:original,webRequest:0,webRequestProject:null,webDataIndex:-1};
-const row={index:2,experiment:{canLoadData:true,calculationOnly:true}};
+    loadDataInto:(experiment,file)=>calls.push(['loaded','foreign',experiment.id,file])};
+const group={project:original,webRequest:0,webRequestProject:null,webDataExperiment:null};
+const row={index:2,experiment:initiator};
 const qsTr=text=>text;
 const WebFiles={available:BROWSER,
     openFiles:(filter,multiple)=>{calls.push(['web',filter,multiple]);return 41;}};
-const dataDialog={experimentIndex:-1,selectedFile:'chosen.dat',
-    open:()=>calls.push(['desktop',dataDialog.experimentIndex])};
+const dataDialog={experiment:null,project:null,selectedFile:'chosen.dat',
+    open:()=>calls.push(['desktop',dataDialog.experiment.id])};
 group.dataFilter=DATA_FILTER;
-group.chooseData=function(index) CHOOSE;
+group.chooseData=function(experiment) CHOOSE;
 function click() { ACTION }
 function accept() { ACCEPTED }
 RECEIVED
@@ -70,7 +72,7 @@ console.log(JSON.stringify({calls,desktopFilters}));
     route = (
         'onFilesOpened(41,["chosen.dat"]); onFilesOpened(41,["duplicate.dat"]);'
         if browser
-        else 'accept();'
+        else 'accept(); accept();'
     )
     prefix = {
         'accepted': '',
@@ -81,6 +83,8 @@ console.log(JSON.stringify({calls,desktopFilters}));
         'failed': 'onFailed(41);',
         'foreign-cancel': 'onCancelled(42);',
         'foreign-failure': 'onFailed(42);',
+        'reindexed': 'row.index=9;',
+        'retargeted-row': 'row.experiment=other;',
     }[scenario]
     substitutions = {
         'BROWSER': json.dumps(browser),
@@ -97,12 +101,15 @@ console.log(JSON.stringify({calls,desktopFilters}));
     for token, value in substitutions.items():
         program = program.replace(token, value)
     observed = javascript(program)
-    expected = [['web', '.xye,.xy,.dat,.txt,.csv', False]] if browser else [['desktop', 2]]
+    expected = (
+        [['web', '.xye,.xy,.dat,.txt,.csv', False]] if browser else [['desktop', 'initiator']]
+    )
     if scenario not in {'foreign-project', 'closed-project', 'cancelled', 'failed'}:
-        expected.append(['loaded', 'original', 2, 'chosen.dat'])
+        expected.append(['loaded', 'original', 'initiator', 'chosen.dat'])
     assert observed['calls'] == expected, (
         'Load data routing: the real click opens its chooser, targets its initiating row '
-        'and project, and rejects stale, foreign, failed, cancelled or duplicate results'
+        'and project through the retained experiment object after row changes; '
+        'foreign, failed, cancelled and duplicate results are refused'
     )
     assert (
         len(observed['desktopFilters']) == 2
@@ -120,7 +127,16 @@ def test_load_data_availability_uses_ownership_after_first_load():
 
 @pytest.mark.parametrize(
     ('browser', 'scenario'),
-    [(False, case) for case in ['accepted', 'foreign-project', 'closed-project']]
+    [
+        (False, case)
+        for case in [
+            'accepted',
+            'foreign-project',
+            'closed-project',
+            'reindexed',
+            'retargeted-row',
+        ]
+    ]
     + [
         (True, case)
         for case in [
@@ -132,6 +148,8 @@ def test_load_data_availability_uses_ownership_after_first_load():
             'failed',
             'foreign-cancel',
             'foreign-failure',
+            'reindexed',
+            'retargeted-row',
         ]
     ],
 )
@@ -162,30 +180,30 @@ def test_availability_observer_rejects_retired_or_overbroad_rules(damage):
 @pytest.mark.parametrize(
     ('old', 'new', 'browser', 'scenario'),
     [
-        ('onClicked: group.chooseData(row.index)', 'onClicked: {}', True, 'accepted'),
-        ('group.chooseData(row.index)', 'group.chooseData(0)', False, 'accepted'),
+        ('onClicked: group.chooseData(row.experiment)', 'onClicked: {}', True, 'accepted'),
+        ('group.chooseData(row.experiment)', 'group.chooseData(other)', False, 'accepted'),
         ('dataDialog.open();', 'return;', False, 'accepted'),
         (
-            'group.project.loadData(dataDialog.experimentIndex, dataDialog.selectedFile)',
+            'group.project.loadDataInto(dataDialog.experiment, dataDialog.selectedFile)',
             '{ return; }',
             False,
             'accepted',
         ),
         (
-            'group.project.loadData(dataDialog.experimentIndex, dataDialog.selectedFile)',
-            'group.project.loadData(0, dataDialog.selectedFile)',
+            'group.project.loadDataInto(dataDialog.experiment, dataDialog.selectedFile)',
+            'group.project.loadDataInto(other, dataDialog.selectedFile)',
             False,
             'accepted',
         ),
         (
-            'group.project.loadData(index, files[0]);',
-            'return; group.project.loadData(index, files[0]);',
+            'group.project.loadDataInto(experiment, files[0]);',
+            'return; group.project.loadDataInto(experiment, files[0]);',
             True,
             'accepted',
         ),
         (
-            'group.project.loadData(index, files[0]);',
-            'group.project.loadData(0, files[0]);',
+            'group.project.loadDataInto(experiment, files[0]);',
+            'group.project.loadDataInto(other, files[0]);',
             True,
             'accepted',
         ),

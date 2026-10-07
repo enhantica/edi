@@ -148,8 +148,13 @@ def test_alias_picker_uses_core_candidates_and_the_closed_edit_door():
     assert 'named_parameters(' in text, (
         'the alias picker must enumerate core-owned suitable parameter identities'
     )
-    assert 'edi::Edit::' in text and re.search(r'\.apply\(|->apply\(', text), (
-        'relation edits must enter the closed core edit door for publication'
+    assert re.search(r'editor_\.apply_relation_edit\(edi::Edit::', text), (
+        'relation edits must enter the shared relation door for publication and undo'
+    )
+    project = source('src/project_view_model.cpp')
+    door = project.split('QString ProjectViewModel::apply_relation_edit(', 1)[1].split('\n}', 1)[0]
+    assert 'apply(change, true)' in door, (
+        'the shared relation door must publish through the closed core edit door'
     )
 
 
@@ -159,7 +164,7 @@ def test_analysis_text_uses_the_saved_core_block_and_invalidates_after_edits():
         'the Analysis Text tab must read the canonical saved analysis block'
     )
     project = source('src/project_view_model.cpp')
-    assert 'edi::project_edi_files(*project_)' in project, (
+    assert 'edi::project_edi_files(scanTemplateOrModel())' in project, (
         'the text provider must use the same core writer as a project save'
     )
     assert 'analysis_->text()->invalidate()' in project, (

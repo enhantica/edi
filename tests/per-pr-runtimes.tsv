@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-06T23:11:21Z
+# measured_utc = 2026-10-07T07:25:41Z
 #
-# Recorded from: e04-t18-tests-seq8-native-tracked.log + native e04-t18-tests-seq8-mixed-identity.log
-# Collected tests: 9551; with a reported duration: 4630
+# Recorded from: measurements.log (49 node(s) measured once, 8326 banked, 0 stale row(s) dropped)
+# Collected tests: 9556; with a reported duration: 4635
 # Module-scoped fixture costs recorded: 26
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 9551
+# inventory_python = 9556
 # inventory_cpp = 298
-# inventory_measured = 8367
-# inventory_unmeasured = 1482
+# inventory_measured = 8374
+# inventory_unmeasured = 1480
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
 0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_cosio-d20_scan-162f]
@@ -4572,27 +4572,31 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_multiphase_constraints.p
 0.300	tests/integration/py/test_plain_data_picker.py::test_availability_observer_rejects_retired_or_overbroad_rules[always-enabled]
 0.300	tests/integration/py/test_plain_data_picker.py::test_availability_observer_rejects_retired_or_overbroad_rules[simulation-only]
 0.150	tests/integration/py/test_plain_data_picker.py::test_load_data_availability_uses_ownership_after_first_load
-0.150	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[False-accepted]
-0.210	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[False-closed-project]
+0.140	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[False-accepted]
+0.140	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[False-closed-project]
 0.140	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[False-foreign-project]
+0.150	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[False-reindexed]
+0.140	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[False-retargeted-row]
 0.150	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-accepted]
-0.130	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-cancelled]
-0.150	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-closed-project]
+0.150	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-cancelled]
+0.140	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-closed-project]
 0.130	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-failed]
 0.140	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-foreign-cancel]
-0.160	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-foreign-failure]
+0.140	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-foreign-failure]
 0.140	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-foreign-project]
 0.140	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-foreign-request]
-0.260	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[disconnected-click]
-0.260	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[disconnected-desktop-accept]
-0.320	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[disconnected-desktop-open]
-0.420	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[early-browser-return]
+0.170	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-reindexed]
+0.150	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-retargeted-row]
+0.300	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[disconnected-click]
+0.280	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[disconnected-desktop-accept]
+0.310	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[disconnected-desktop-open]
+0.390	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[early-browser-return]
 0.270	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[foreign-project]
-0.310	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[foreign-request]
-0.310	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[wrong-browser-row]
-0.270	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[wrong-chosen-row]
-0.300	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[wrong-desktop-row]
-0.270	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[wrong-multiplicity]
+0.300	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[foreign-request]
+0.280	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[wrong-browser-row]
+0.280	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[wrong-chosen-row]
+0.260	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[wrong-desktop-row]
+0.300	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[wrong-multiplicity]
 0.000	tests/integration/py/test_scan_app_contract.py::test_button_names_and_follow_have_live_model_bindings
 0.290	tests/integration/py/test_scan_app_contract.py::test_create_experiment_is_enabled_and_routes_to_view_model
 0.140	tests/integration/py/test_scan_app_contract.py::test_data_free_experiment_type_has_a_write_boundary[beamMode]
@@ -4691,7 +4695,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_multiphase_constraints.p
 0.250	tests/integration/py/test_scan_template.py::test_template_setter_selects_scan_data_without_changing_parameters[all594687.dat]
 0.240	tests/integration/py/test_scan_template.py::test_template_setter_selects_scan_data_without_changing_parameters[all594791.dat]
 0.250	tests/integration/py/test_scan_template.py::test_template_setter_selects_scan_data_without_changing_parameters[all594842.dat]
-UNMEASURED:failed-in-this-run	tests/system/py/test_beer_fullprof_agreement.py::test_beer_fit_agrees_with_every_fullprof_parameter
+1.090	tests/system/py/test_beer_fullprof_agreement.py::test_beer_fit_agrees_with_every_fullprof_parameter
 UNMEASURED:failed-in-this-run	tests/system/py/test_beer_fullprof_agreement.py::test_delivered_beer_project_preserves_shared_biso_and_free_set
 0.000	tests/system/py/test_beer_fullprof_agreement.py::test_fullprof_beer_reference_preserves_all_independent_variables
 1.360	tests/system/py/test_beer_multiphase.py::test_beer_joint_fit_preserves_both_phases_and_independent_bank_scales
@@ -6501,6 +6505,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::te
 0.590	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[corpus:beer-ferrite-austenite/project]
 0.080	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[corpus:constraint-covariance/project]
 UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[corpus:yap-spodi-3k/project]
+0.750	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project]
 0.210	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project]
 0.210	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-cwl_yap-spodi_3k/project]
 0.190	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project]
@@ -6533,7 +6538,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_saved_bytes.py::test_
 0.480	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project]
 0.200	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-tof_si-sepd_start-2/project]
 0.190	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-tof_si-sepd_start-5/project]
-0.100	tests/system/py/test_c34_t28_saved_bytes.py::test_saved_byte_inventory_covers_every_current_cli_and_corpus_project
+0.200	tests/system/py/test_c34_t28_saved_bytes.py::test_saved_byte_inventory_covers_every_current_cli_and_corpus_project
 0.000	tests/system/py/test_c34_t28_storage_decisions.py::test_each_prior_decision_links_its_storage_amendment[0012]
 0.000	tests/system/py/test_c34_t28_storage_decisions.py::test_each_prior_decision_links_its_storage_amendment[0016]
 0.000	tests/system/py/test_c34_t28_storage_decisions.py::test_implemented_decisions_have_no_stale_status[0016]
@@ -7500,7 +7505,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_texture_i
 UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_two_free_scales_recover_unequal_independent_contributions
 UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_two_named_phases_load_and_roundtrip
 0.060	tests/system/py/test_plain_data_app.py::test_default_structure_matches_frozen_beta_cif
-0.490	tests/system/py/test_plain_data_app.py::test_desktop_browser_picker_and_editability_bindings_share_load_path
+0.470	tests/system/py/test_plain_data_app.py::test_desktop_browser_picker_and_editability_bindings_share_load_path
 UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_filename_and_user_name[default-name]
 UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_filename_and_user_name[user-name]
 0.000	tests/system/py/test_plain_data_app.py::test_lifecycle_observer_consumes_configuration_metadata_and_actual_edits[after-excluded]
@@ -8958,7 +8963,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_c34_t1c_construction_population
 0.030	tests/unit/py/test_c34_t28_census_scope.py::test_independent_census_distinguishes_local_and_model_scopes[lambda]
 0.030	tests/unit/py/test_c34_t28_census_scope.py::test_independent_census_distinguishes_local_and_model_scopes[method]
 0.040	tests/unit/py/test_c34_t28_census_scope.py::test_independent_census_distinguishes_local_and_model_scopes[nested-block]
-UNMEASURED:failed-in-this-run	tests/unit/py/test_constraint_app_structure.py::test_alias_picker_uses_core_candidates_and_the_closed_edit_door
+0.000	tests/unit/py/test_constraint_app_structure.py::test_alias_picker_uses_core_candidates_and_the_closed_edit_door
 UNMEASURED:failed-in-this-run	tests/unit/py/test_constraint_app_structure.py::test_analysis_groups_read_core_rows_without_preview_data[alias-AliasesGroup-aliases]
 UNMEASURED:failed-in-this-run	tests/unit/py/test_constraint_app_structure.py::test_analysis_groups_read_core_rows_without_preview_data[constraint-ConstraintsGroup-constraints]
 0.000	tests/unit/py/test_constraint_app_structure.py::test_analysis_text_uses_the_saved_core_block_and_invalidates_after_edits
@@ -9837,7 +9842,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e04_t9_sanitizer.py::test_sanit
 0.020	tests/unit/py/test_e09_t58_project_only_inputs.py::test_declared_grid_is_the_grid_that_is_calculated
 0.020	tests/unit/py/test_e09_t58_project_only_inputs.py::test_declared_scattering_map_and_default_lookup_both_reach_calculation
 0.010	tests/unit/py/test_e09_t58_project_only_inputs.py::test_project_calculation_accepts_no_second_source_of_truth
-0.010	tests/unit/py/test_e09_t58_project_only_inputs.py::test_survey_is_complete_and_model_state_cannot_reenter_signatures
+0.000	tests/unit/py/test_e09_t58_project_only_inputs.py::test_survey_is_complete_and_model_state_cannot_reenter_signatures
 0.020	tests/unit/py/test_e09_t58_start_state_roundtrip.py::test_start_value_and_uncertainty_round_trip_through_the_single_loader
 0.010	tests/unit/py/test_e09_t58_writer_delegation.py::test_e09_t58_edi_project_save_has_one_delegating_writer_and_no_local_serializer
 0.030	tests/unit/py/test_e09_t74_ci_source_wiring.py::test_crysta_app_tokens_request_only_contents_read
@@ -9913,6 +9918,6 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 21.241	tests/system/py/test_pytest_child_environment.py
 # module-cost: 0.543	tests/system/py/test_scan_accident_paths.py
 # module-cost: 112.644	tests/system/py/test_scan_app_execution.py
-# module-cost: 17.002	tests/system/py/test_scan_driver_resume.py
-# module-cost: 1.014	tests/system/py/test_scan_lazy_input.py
+# module-cost: 17.635	tests/system/py/test_scan_driver_resume.py
+# module-cost: 1.016	tests/system/py/test_scan_lazy_input.py
 # module-cost: 2.483	tests/unit/py/test_e04_t9_latency_ratchet.py

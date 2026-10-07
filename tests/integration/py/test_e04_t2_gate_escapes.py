@@ -116,7 +116,9 @@ def test_image_family_inventory_rejects_damage(damage):
                 'duplicate-state': '01-other.png',
             }[damage]
         )
-    with pytest.raises(AssertionError, match='gate 7'):
+    with pytest.raises(
+        AssertionError, match=r'Example image inventory|exactly one expected image'
+    ):
         assert_image_families(names, examples, captures)
 
 
