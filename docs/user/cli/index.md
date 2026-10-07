@@ -47,6 +47,7 @@ are independent references.
 | [pd-neut-cwl_lab6-11b-echidna_tch-fcj](pd-neut-cwl_lab6-11b-echidna_tch-fcj/index.md) | 11B LaB6 on ECHIDNA (constant wavelength), TCH x FCJ, polynomial background, 17 parameters, against FullProf |
 | [pd-xray-cwl_lif_single](pd-xray-cwl_lif_single/index.md) | LiF with Cu Kα₁ X-rays (constant wavelength), the two polarization parameters, against FullProf |
 | [pd-neut-cwl_y2o3_beta-adp](pd-neut-cwl_y2o3_beta-adp/index.md) | Y2O3 (constant wavelength), anisotropic beta ADPs tied by site symmetry, scale only, against FullProf |
+| [pd-xray-cwl_latp_scan-4f](pd-xray-cwl_latp_scan-4f/index.md) | LATP with two AlPO4 phases, synchrotron X-ray sequential scan over four files, 54 parameters, against FullProf |
 
 The registry of projects and which of them execute is [`projects.yml`](projects.yml).
 
