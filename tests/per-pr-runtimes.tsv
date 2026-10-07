@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-07T00:33:26Z
+# measured_utc = 2026-10-07T01:03:18Z
 #
-# Recorded from: seq19 completed focused Python run; serial priority loader; final entire app tier with common setup trigger; serial completed adp-scene.xml; all parent identities retained
+# Recorded from: scoped.log (20 node(s) measured once, 8305 banked, 0 stale row(s) dropped)
 # Collected tests: 9497; with a reported duration: 4631
 # Module-scoped fixture costs recorded: 27
 #
@@ -8916,7 +8916,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_c34_t1c_construction_population
 0.000	tests/unit/py/test_constraint_app_structure.py::test_excluded_regions_are_in_the_basic_category_tier
 0.000	tests/unit/py/test_constraint_app_structure.py::test_linked_structures_are_explicitly_moved_to_the_end_of_presentation_order
 0.000	tests/unit/py/test_constraint_app_structure.py::test_load_warnings_reach_the_app_message_model
-0.010	tests/unit/py/test_constraint_app_structure.py::test_preview_projects_cannot_be_bundled_as_application_resources
+0.000	tests/unit/py/test_constraint_app_structure.py::test_preview_projects_cannot_be_bundled_as_application_resources
 0.000	tests/unit/py/test_constraint_app_structure.py::test_relation_tables_expose_live_append_duplicate_and_remove_actions[AliasesGroup]
 0.000	tests/unit/py/test_constraint_app_structure.py::test_relation_tables_expose_live_append_duplicate_and_remove_actions[ConstraintsGroup]
 0.050	tests/unit/py/test_e02_t2_io_parity.py::test_e02_t2_cif_and_edi_structures_are_model_equivalent[from_cif_path]
@@ -9840,7 +9840,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # unaffected; excluding one test only moves the cost to the next sibling).
 # These rows mark and deselect NOTHING - kept for visibility
 # and the stale-module integrity refusal.
-# module-cost: 40.370	tests/integration/app/test_c13_t2_gui.py
+# module-cost: 36.370	tests/integration/app/test_c13_t2_gui.py
 # module-cost: 259.157	tests/integration/app/test_e04_t1_projects.py
 # module-cost: 271.344	tests/integration/app/test_e04_t1_runtime_escapes.py
 # module-cost: 1.914	tests/integration/py/test_e04_t12_name_allowance.py

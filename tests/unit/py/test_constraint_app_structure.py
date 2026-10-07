@@ -174,7 +174,7 @@ def test_analysis_text_uses_the_saved_core_block_and_invalidates_after_edits():
         'the Analysis Text tab must read the canonical saved analysis block'
     )
     project = source('src/project_view_model.cpp')
-    # E04-T16 saves the template when a dataset is shown; ordinary projects save themselves.
+    # Saving uses the template when a dataset is shown; ordinary projects save themselves.
     assert 'edi::project_edi_files(scanTemplateOrModel())' in project, (
         'the text provider must use the canonical writer on the same template or model as saving'
     )

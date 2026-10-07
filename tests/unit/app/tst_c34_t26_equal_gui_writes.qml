@@ -54,7 +54,7 @@ TestCase {
                       ": the scattering-length setup must recalculate before the equal write");
         }
         tryVerify(() => Probe.computedCurrent(experiment), 10000,
-                  "C34-T26: an equal-write witness must await the initial calculation");
+                  "GUI edit: an equal-write witness must await the initial calculation");
 
         const background = experiment.background;
         const excluded = experiment.excludedRegions;

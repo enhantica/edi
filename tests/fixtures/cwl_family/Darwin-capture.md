@@ -1,7 +1,7 @@
 # Native Darwin regression pins
 
 Captured on Darwin arm64 in the retained cpp-ci toolchain by
-[run 37536237373](https://github.com/enhantica/crysta/actions/runs/37536237373),
+SDK producer run `37536237373`,
 using harness `9481a808c7a2f0116ab09ec529248a07a61c873f`.
 The native extensions were freshly built from each artifact's immutable source
 commit and imported by their explicit physical paths. These are regression pins.
