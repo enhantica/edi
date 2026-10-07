@@ -28,14 +28,15 @@ namespace fs = std::filesystem;
 
 fs::path analysis_dir(const edi::Project& project) { return fs::path(project.path) / "analysis"; }
 
-const char* const kResultFiles[] = {"results.csv", "results-provenance.csv", "scan-run.json"};
+const char* const kResultFiles[] = {"results.csv", "results-provenance.csv", "scan-run.json", "scan-skipped.csv"};
+constexpr int kResultFileCount = 4;
 
 std::optional<std::string>* slot(ScanSession::Files& files, int which) {
-    return which == 0 ? &files.results : which == 1 ? &files.provenance : &files.run;
+    return which == 0 ? &files.results : which == 1 ? &files.provenance : which == 2 ? &files.run : &files.skipped;
 }
 
 const std::optional<std::string>* slot(const ScanSession::Files& files, int which) {
-    return which == 0 ? &files.results : which == 1 ? &files.provenance : &files.run;
+    return which == 0 ? &files.results : which == 1 ? &files.provenance : which == 2 ? &files.run : &files.skipped;
 }
 
 // A file's bytes; nullopt when it does not exist; throws when it exists and cannot be read.
@@ -258,6 +259,9 @@ std::vector<std::string> ScanSession::row(const edi::Project& project, int datas
 }
 
 QString ScanSession::outcome(int dataset) const {
+    if (dataset >= 0 && dataset < static_cast<int>(index_.rows.size()) && index_.rows[dataset].skipped) {
+        return QStringLiteral("skipped");
+    }
     if (dataset < 0 || dataset >= static_cast<int>(index_.rows.size()) || index_.rows[dataset].offset < 0) {
         return {};
     }
@@ -391,7 +395,7 @@ void set_aside(const edi::Project& project, const ScanSession::Files& present, c
                std::vector<int>& moved) {
     const fs::path directory = analysis_dir(project);
     fs::create_directories(aside);
-    for (int which = 0; which < 3; ++which) {
+    for (int which = 0; which < kResultFileCount; ++which) {
         if (*slot(present, which)) {
             move_file(directory / kResultFiles[which], aside / kResultFiles[which]);
             moved.push_back(which);
@@ -428,7 +432,7 @@ QString ScanSession::takeFiles(const edi::Project& project, Files& taken) {
     const fs::path directory = analysis_dir(project);
     taken = {};
     try {
-        for (int which = 0; which < 3; ++which) {
+        for (int which = 0; which < kResultFileCount; ++which) {
             *slot(taken, which) = read_file(directory / kResultFiles[which]);
         }
     } catch (const std::exception& refusal) {
@@ -456,7 +460,7 @@ QString ScanSession::putFiles(const edi::Project& project, const Files& files) {
     Files current;
     try {
         fs::create_directories(directory);
-        for (int which = 0; which < 3; ++which) {
+        for (int which = 0; which < kResultFileCount; ++which) {
             *slot(current, which) = read_file(directory / kResultFiles[which]);
         }
     } catch (const std::exception& refusal) {
@@ -466,7 +470,7 @@ QString ScanSession::putFiles(const edi::Project& project, const Files& files) {
     Files wanted = files;
     std::vector<int> staged;
     try {
-        for (int which = 0; which < 3; ++which) {
+        for (int which = 0; which < kResultFileCount; ++which) {
             if (const std::optional<std::string>& text = *slot(wanted, which)) {
                 const fs::path path = directory / (std::string(kResultFiles[which]) + ".edi-staged");
                 std::ofstream output(path, std::ios::binary | std::ios::trunc);

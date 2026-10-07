@@ -34,6 +34,8 @@ struct ScanSummary {
     int fitted = 0;
     int ok = 0;
     int failed = 0;
+    int skipped = 0;             // files with no intensity above zero, not fitted
+    long long negative_points = 0;  // rows skipped for a negative intensity, over every file
     double chi_min = 0.0;
     double chi_max = 0.0;
     double seconds = -1.0;

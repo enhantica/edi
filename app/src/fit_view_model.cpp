@@ -153,6 +153,13 @@ void FitResultListModel::setScan(const ScanSummary& summary) {
     row(QStringLiteral("copy"), tr("Files fitted"), QStringLiteral("%1/%2").arg(summary.fitted).arg(summary.files));
     row(QStringLiteral("check-circle"), tr("Converged"), QString::number(summary.ok));
     row(QStringLiteral("times-circle"), tr("Failed"), QString::number(summary.failed));
+    if (summary.skipped > 0) {
+        row(QStringLiteral("minus-circle"), tr("Skipped (no intensity above zero)"), QString::number(summary.skipped));
+    }
+    if (summary.negative_points > 0) {
+        row(QStringLiteral("minus-circle"), tr("Points skipped (negative intensity)"),
+            QString::number(summary.negative_points));
+    }
     if (summary.fitted > 0) {
         row(QStringLiteral("ruler"), tr("Goodness-of-fit range (reduced χ²)"), chi_range(summary));
     }

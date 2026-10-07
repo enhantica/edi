@@ -1181,6 +1181,10 @@ ScanSummary ProjectViewModel::scanSummary(const QString& run_outcome, double sec
     const auto& rows = scan_session_->index().rows;
     bool first = true;
     for (std::size_t index = 0; index < rows.size(); ++index) {
+        summary.negative_points += static_cast<long long>(rows[index].negative_points);
+        if (rows[index].skipped) {
+            ++summary.skipped;
+        }
         if (rows[index].offset < 0) {
             continue;
         }
@@ -1207,7 +1211,7 @@ ScanSummary ProjectViewModel::scanSummary(const QString& run_outcome, double sec
     // files unfitted reading as stopped part way.
     if (run_outcome == QLatin1String("failed") || run_outcome == QLatin1String("stopped")) {
         summary.outcome = run_outcome;
-    } else if (summary.fitted < summary.files) {
+    } else if (summary.fitted + summary.skipped < summary.files) {
         summary.outcome = QStringLiteral("stopped");
     } else {
         summary.outcome = worst.isEmpty() ? QStringLiteral("success") : worst;

@@ -25,6 +25,7 @@ QtObject {
         case "stopped":
             return "stop-circle";
         case "superseded":
+        case "skipped":
             return "minus-circle";
         case "failed":
             return "times-circle";
@@ -53,6 +54,8 @@ QtObject {
             return qsTr("Stopped");
         case "superseded":
             return qsTr("Superseded");
+        case "skipped":
+            return qsTr("Skipped");
         case "failed":
             return qsTr("Failed");
         }
@@ -76,6 +79,8 @@ QtObject {
             return qsTr("Stop fitting was pressed; the result is kept");
         case "superseded":
             return qsTr("An input changed during the fit; nothing was written");
+        case "skipped":
+            return qsTr("The file has no intensity above zero, so it was not fitted");
         case "failed":
             return qsTr("The fit was refused or failed; nothing was written");
         }
