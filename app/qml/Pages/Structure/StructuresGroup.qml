@@ -95,8 +95,8 @@ EaElements.GroupBox {
             }
         }
 
-        // Load and Define manually side by side, as easydiffractionbeta's; defining a structure by hand is not
-        // implemented, so its button is disabled (edi ADR-0017 §4).
+        // Load and Create side by side, as easydiffractionbeta's Load and Define manually: Create adds
+        // easydiffractionbeta's default phase as structure1, structure2, … (edi ADR-0017 §4).
         Row {
             spacing: EaStyle.Sizes.fontPixelSize
 
@@ -116,10 +116,12 @@ EaElements.GroupBox {
                 }
             }
             EaElements.SideBarButton {
-                objectName: "structures.define"
-                enabled: false
+                objectName: "structures.create"
+                enabled: group.project !== null
                 fontIcon: "plus-circle"
-                text: qsTr("Define structure manually")
+                text: qsTr("Create structure")
+                ToolTip.text: qsTr("Add a structure with one atom site, to edit into the one you need")
+                onClicked: group.project.createStructure()
             }
         }
     }

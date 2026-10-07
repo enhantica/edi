@@ -1,0 +1,23 @@
+{
+  "file": "pattern.dat",
+  "rows": [
+    [
+      17.5,
+      4,
+      2
+    ],
+    [
+      19,
+      16,
+      4
+    ]
+  ],
+  "counts": {
+    "skipped": 0,
+    "nonpositive": 2,
+    "duplicates": 0,
+    "reordered": 0,
+    "derived": 0
+  },
+  "beam": "cwl"
+}

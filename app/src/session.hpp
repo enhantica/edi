@@ -148,6 +148,7 @@ class Session : public QObject {
     QString last_error_;
     ExampleListModel* examples_;
     WarningListModel* warnings_;
+    int project_messages_ = 0;  // the keys of the project's messages
     std::unique_ptr<QTemporaryDir> extracted_;
     QString opened_example_;
     // The open project is a temporary copy of a folder this user may not write: Save As is its way out.

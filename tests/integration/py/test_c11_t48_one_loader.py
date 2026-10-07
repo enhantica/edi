@@ -81,8 +81,7 @@ def test_c11_t48_project_load_accepts_calculation_only_range_grid(tmp_path: Path
         assert len(data.intensity_meas) == len(data.intensity_meas_su) == 0, (
             'every calculation-only grid must carry no measured intensities or uncertainties'
         )
-    with pytest.raises(ValueError, match='calculation-only'):
-        project.save_as(tmp_path / 'must-refuse')
+    _require_saved_profiles(project, source, tmp_path / 'saved-calculation-only')
 
 
 def test_c11_t48_project_load_refuses_neither_category_and_names_file(tmp_path: Path) -> None:
@@ -97,8 +96,45 @@ def test_c11_t48_project_load_refuses_both_categories(tmp_path: Path) -> None:
         edi.Project.load(source)
 
 
-def test_c11_t48_project_load_refuses_mixed_data_and_range_project(tmp_path: Path) -> None:
+def test_c11_t48_project_load_preserves_mixed_data_and_range_project(tmp_path: Path) -> None:
     source, experiment_files, _range_file = _project_variant(tmp_path, 'mixed')
-    offending_file_pattern = '|'.join(re.escape(str(path)) for path in experiment_files)
-    with pytest.raises(edi.IoError, match=offending_file_pattern):
-        edi.Project.load(source)
+    project = edi.Project.load(source)
+    assert len(project.experiments) == len(experiment_files), (
+        'Mixed projects: load every measured bank and the range-only bank from the fixture'
+    )
+    grid = project.experiments[0].data
+    assert list(grid.axis()) == pytest.approx([1000.5, 1001.25, 1002.0], abs=1.0e-12), (
+        'Mixed projects: the explicitly constructed range-only bank retains its declared grid'
+    )
+    assert len(grid.intensity_meas) == len(grid.intensity_meas_su) == 0, (
+        'Mixed projects: the range-only bank must not acquire invented measured observations'
+    )
+    for experiment in list(project.experiments)[1:]:
+        data = experiment.data
+        assert len(data.axis()) == len(data.intensity_meas) == len(data.intensity_meas_su) > 0, (
+            'Mixed projects: each saved measured bank retains one intensity and sigma per point'
+        )
+    _require_saved_profiles(project, source, tmp_path / 'saved-mixed')
+
+
+def _require_saved_profiles(project, source: Path, destination: Path) -> None:
+    # Round-trip invariant, not an independent numerical reference for measured profiles.
+    def profiles(value):
+        return [
+            (
+                experiment.name,
+                list(experiment.data.axis()),
+                list(experiment.data.intensity_meas),
+                list(experiment.data.intensity_meas_su),
+            )
+            for experiment in value.experiments
+        ]
+
+    before = profiles(project)
+    project.save_as(destination)
+    shutil.rmtree(source)
+    reopened = edi.Project.load(destination)
+    assert profiles(reopened) == before, (
+        'Saving mixed and range-only projects: reopen every name, axis, intensity and sigma '
+        'solely from the saved project after removing its original source'
+    )

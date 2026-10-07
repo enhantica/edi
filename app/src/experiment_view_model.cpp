@@ -258,4 +258,11 @@ void ExperimentViewModel::markPatternStale() {
     }
 }
 
+void ExperimentViewModel::setCanLoadData(bool can_load_data) {
+    if (can_load_data != can_load_data_) {
+        can_load_data_ = can_load_data;
+        emit canLoadDataChanged();
+    }
+}
+
 }  // namespace edi_app

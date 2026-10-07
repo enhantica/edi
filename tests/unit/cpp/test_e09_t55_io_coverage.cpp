@@ -12,6 +12,7 @@
 #include "edi/io.hpp"
 #include "edi/model.hpp"
 #include "edi/validation.hpp"
+#include "project_save/rounding.hpp"
 
 namespace {
 
@@ -289,7 +290,9 @@ TEST_CASE("E09-T55 constant-wavelength project writer preserves typed axes and o
     edi::Project project = populated_project(std::move(structure), std::move(experiment));
     project.fitting_mode = "single";
     project.experiment().peak.broad_gauss_u = edi::Parameter{0.125, 1.0e-40, true};
-    project.experiment().excluded_regions = {{25.0, 30.0}};
+    project.experiment().excluded_regions = edi::excluded_region_rows({{25.0, 30.0}});
+    project.experiment().excluded_regions[0]->id = "low angle";
+    project.experiment().background[0]->id = "anchor point";
     TempTree temporary = temp_tree("cwl-roundtrip");
     edi::save_project(project, temporary.path.string());
     edi::save_project(project, temporary.path.string());
@@ -303,8 +306,18 @@ TEST_CASE("E09-T55 constant-wavelength project writer preserves typed axes and o
                   "the CW writer must retain the two-theta axis name");
     CHECK_MESSAGE(restored.experiment().data->axis().size() == 6,
                   "the CW writer must retain all six independently recorded rows");
-    CHECK_MESSAGE(restored.experiment().excluded_regions == project.experiment().excluded_regions,
+    CHECK_MESSAGE((edi::excluded_region_ranges(restored.experiment().excluded_regions) ==
+                   edi::excluded_region_ranges(project.experiment().excluded_regions)),
                   "the CW writer must retain excluded-region pairs");
+    REQUIRE_MESSAGE((restored.experiment().excluded_regions.size() == 1),
+                    "constant-wavelength project writer preserves typed axes and observations");
+    CHECK_MESSAGE((restored.experiment().excluded_regions[0]->id == "low angle"),
+                  "constant-wavelength project writer preserves typed axes and observations");
+    REQUIRE_MESSAGE(
+        (restored.experiment().background.size() == project.experiment().background.size()),
+        "constant-wavelength project writer preserves typed axes and observations");
+    CHECK_MESSAGE((restored.experiment().background[0]->id == "anchor point"),
+                  "constant-wavelength project writer preserves typed axes and observations");
     REQUIRE_MESSAGE(restored.experiment().peak.broad_gauss_u.has_value(),
                     "the CW writer must retain Caglioti U");
     CHECK_MESSAGE(
@@ -409,15 +422,58 @@ TEST_CASE("E09-T55 declared data ranges select calculation mode and reject ambig
     std::filesystem::create_directories(all_range.path / "structures");
     std::filesystem::create_directories(all_range.path / "experiments");
     std::filesystem::copy_file(fixtures / "structure.edi", all_range.path / "structures/ncaf.edi");
-    write_text(all_range.path / "experiments/range.edi", ranged);
+    std::string distinct_range = ranged;
+    distinct_range.replace(0, std::string("data_wish_5_6").size(), "data_range_bank");
+    write_text(all_range.path / "experiments/range.edi", distinct_range);
     const edi::Project range_project = edi::load_project(all_range.path.string());
     CHECK_MESSAGE(range_project.experiment().calculation_only,
                   "a project whose banks all declare ranges must select calculation mode");
 
     write_text(all_range.path / "experiments/measured.edi", measured);
-    check_io_error([&] { static_cast<void>(edi::load_project(all_range.path.string())); },
-                   "project's contents select calculate or fit as a whole",
-                   "a mixed observation/range project must fail closed");
+    // Mixed projects are admitted; a block declaring both data and a range still refuses.
+    const auto require_mixed = [](const edi::Project& project) {
+        REQUIRE_MESSAGE(project.experiments.size() == 2,
+                        "Mixed projects: loading retains the measured bank and the range bank");
+        const edi::BraggPdExperiment* measured = nullptr;
+        const edi::BraggPdExperiment* ranged = nullptr;
+        for (const auto& experiment : project.experiments) {
+            if (experiment->name == "wish_5_6") measured = &*experiment;
+            if (experiment->name == "range_bank") ranged = &*experiment;
+        }
+        REQUIRE_MESSAGE((measured && ranged),
+                        "Mixed projects: source-file ordering must not replace bank identity");
+        const auto& measured_bank = *measured;
+        const auto& range_bank = *ranged;
+        CHECK_MESSAGE(
+            (measured_bank.name == "wish_5_6" && range_bank.name == "range_bank"),
+            "Mixed projects: the independently named banks must retain distinct identities");
+        CHECK_MESSAGE(
+            (!measured_bank.calculation_only && range_bank.calculation_only),
+            "Mixed projects: each bank preserves its own measured or simulation admission");
+        REQUIRE_MESSAGE((measured_bank.data && range_bank.data),
+                        "Mixed projects: both banks retain their declared data nodes");
+        CHECK_MESSAGE(
+            (measured_bank.data->axis() ==
+             std::vector<double>{18.25, 31.613267, 39.5, 72.125, 110.75, 150.5}),
+            "Mixed projects: the measured bank retains the six committed fixture coordinates");
+        CHECK_MESSAGE(
+            measured_bank.data->intensity_meas == std::vector<double>(6, 0.0),
+            "Mixed projects: measured zero intensities from an edi project are preserved");
+        CHECK_MESSAGE(
+            measured_bank.data->intensity_meas_su == std::vector<double>(6, 1.0),
+            "Mixed projects: the measured bank retains its six independently supplied sigmas");
+        CHECK_MESSAGE((range_bank.data->axis() == std::vector<double>{10.0, 15.0, 20.0}),
+                      "Mixed projects: the simulation retains the hand-constructed range grid");
+        CHECK_MESSAGE((range_bank.data->intensity_meas.empty() &&
+                       range_bank.data->intensity_meas_su.empty()),
+                      "Mixed projects: a simulation never fabricates measured data");
+    };
+    const edi::Project mixed = edi::load_project(all_range.path.string());
+    require_mixed(mixed);
+    TempTree saved_mixed = temp_tree("mixed-project-roundtrip");
+    edi::save_project(mixed, saved_mixed.path.string());
+    std::filesystem::remove_all(all_range.path);
+    require_mixed(edi::load_project(saved_mixed.path.string()));
 }
 
 TEST_CASE("E09-T55 project I/O fails closed before partial state escapes") {
@@ -443,8 +499,9 @@ TEST_CASE("E09-T55 project I/O fails closed before partial state escapes") {
             carried.structures[i]->atom_sites.size() == multi.structures[i]->atom_sites.size(),
             "A multi-structure save must preserve each structure's sites");
         CHECK_MESSAGE(
-            carried.structures[i]->cell.length_a.value == multi.structures[i]->cell.length_a.value,
-            "A multi-structure save must preserve each structure's cell");
+            carried.structures[i]->cell.length_a.value ==
+                saved_reference::six_digits(multi.structures[i]->cell.length_a.value.get()),
+            "A multi-structure save retains each cell under independent six-digit rounding");
     }
 }
 
@@ -571,6 +628,57 @@ TEST_CASE("E09-T55 experiment schema mutations fail at their declared boundary")
 
     std::string alternates = replace_one("_experiment_type.sample_form powder",
                                          "_experiment_type.sample_form \"single crystal\"");
+    // This composite mutation retains a powder profile, background and pattern. It is not
+    // a valid alternate single-crystal type: category admission must refuse before losing data.
+    check_io_error([&] { static_cast<void>(edi::experiment_from_edi_text(alternates)); },
+                   "_peak.type on a single crystal",
+                   "a single-crystal declaration must refuse the retained powder categories");
+
+    const std::vector<std::string> powder_tags{"_peak.type",
+                                               "_background.type",
+                                               "_background_estimate.method",
+                                               "_data.two_theta",
+                                               "_data_range.two_theta_min",
+                                               "_excluded_region.start",
+                                               "_absorption.type",
+                                               "_preferred_orientation.structure_id",
+                                               "_data_source.file_name"};
+    for (const bool tof : {false, true}) {
+        const std::string clean =
+            std::string("data_single\n_edi.schema_version 3\n") +
+            "_experiment_type.sample_form \"single crystal\"\n" +
+            "_experiment_type.radiation_probe neutron\n_experiment_type.scattering_type bragg\n" +
+            "_experiment_type.beam_mode \"" + (tof ? "time-of-flight" : "constant wavelength") +
+            "\"\n" + (tof ? "" : "_instrument.setup_wavelength 1.6\n");
+        const auto single = edi::experiment_from_edi_text(clean);
+        CHECK_MESSAGE(single.experiment_type.sample_form == edi::SampleFormEnum::SINGLE_CRYSTAL,
+                      "a clean single-crystal declaration must retain its typed sample form");
+        CHECK_MESSAGE(single.experiment_type.radiation_probe == edi::RadiationProbeEnum::NEUTRON,
+                      "a supported single crystal must retain its declared neutron probe");
+        CHECK_MESSAGE(single.experiment_type.scattering_type == edi::ScatteringTypeEnum::BRAGG,
+                      "a supported single crystal must retain its declared Bragg scattering");
+        CHECK_MESSAGE(
+            single.experiment_type.beam_mode ==
+                (tof ? edi::BeamModeEnum::TIME_OF_FLIGHT : edi::BeamModeEnum::CONSTANT_WAVELENGTH),
+            "a clean single crystal must retain its declared wavelength mode");
+        for (const auto& tag : powder_tags) {
+            for (const bool loop : {false, true}) {
+                CAPTURE(tag);
+                CAPTURE(tof);
+                CAPTURE(loop);
+                const std::string forbidden =
+                    clean + (loop ? "loop_\n" + tag + "\n1\n" : tag + " 1\n");
+                check_io_error(
+                    [&] { static_cast<void>(edi::experiment_from_edi_text(forbidden)); },
+                    tag + " on a single crystal",
+                    "each powder category must refuse by name in scalar and loop single-crystal "
+                    "input");
+            }
+        }
+    }
+
+    // Keep the independent x-ray/total token controls on their valid powder input.
+    alternates = valid;
     const std::size_t neutron = alternates.find("_experiment_type.radiation_probe neutron");
     REQUIRE_MESSAGE(neutron != std::string::npos,
                     "the committed CW fixture must carry the radiation mutation seam");
@@ -582,8 +690,8 @@ TEST_CASE("E09-T55 experiment schema mutations fail at their declared boundary")
     alternates.replace(bragg, std::string("_experiment_type.scattering_type bragg").size(),
                        "_experiment_type.scattering_type total");
     const edi::BraggPdExperiment typed = edi::experiment_from_edi_text(alternates);
-    CHECK_MESSAGE(typed.experiment_type.sample_form == edi::SampleFormEnum::SINGLE_CRYSTAL,
-                  "the alternate sample-form token must retain its typed value");
+    CHECK_MESSAGE(typed.experiment_type.sample_form == edi::SampleFormEnum::POWDER,
+                  "the alternate powder type control must retain its sample form");
     CHECK_MESSAGE(typed.experiment_type.radiation_probe == edi::RadiationProbeEnum::XRAY,
                   "the alternate radiation token must retain its typed value");
     CHECK_MESSAGE(typed.experiment_type.scattering_type == edi::ScatteringTypeEnum::TOTAL,
@@ -617,17 +725,33 @@ TEST_CASE("E09-T55 structure schema handles optional identity and ADP branches")
 
     const edi::Structure uiso = edi::structure_from_edi_text(
         replacing("Ca Ca 0.4661 0 0.25 b 1 0.90 Biso", "Ca Ca 0.4661 0 0.25 b 1 0.01 Uiso"));
-    CHECK_MESSAGE(uiso.atom_sites.front()->adp_type == "Biso",
-                  "a Uiso source must be stored in the model's Biso representation");
-    CHECK_MESSAGE(uiso.atom_sites.front()->adp_iso.value ==
-                      doctest::Approx(0.01 * 8.0 * 3.141592653589793238 * 3.141592653589793238),
-                  "Uiso must use the independently defined B=8*pi^2*U conversion");
-    check_io_error(
-        [&] {
-            static_cast<void>(edi::structure_from_edi_text(replacing(
-                "Ca Ca 0.4661 0 0.25 b 1 0.90 Biso", "Ca Ca 0.4661 0 0.25 b 1 0.90 Uani")));
-        },
-        "not readable", "an anisotropic ADP token must not be misread as isotropic B");
+    CHECK_MESSAGE(uiso.atom_sites.front()->adp_type == "Uiso",
+                  "a Uiso source must retain its declared type");
+    CHECK_MESSAGE(uiso.atom_sites.front()->adp_iso.value == doctest::Approx(0.01),
+                  "Uiso must retain its independently declared square-Angstrom value");
+    // Native missing rows initialize from the declared isotropic value (ADR-0027).
+    const edi::Structure uani = edi::structure_from_edi_text(
+        replacing("Ca Ca 0.4661 0 0.25 b 1 0.90 Biso", "Ca Ca 0.4661 0 0.25 b 1 0.90 Uani"));
+    REQUIRE_MESSAGE(uani.atom_site_aniso.size() == 1,
+                    "native ADP load must initialize exactly the missing tensor row");
+    const auto& tensor = uani.atom_site_aniso.front();
+    CHECK_MESSAGE(tensor->id == uani.atom_sites.front()->id,
+                  "the initialized tensor must belong to the declared anisotropic atom");
+    const std::vector<double> isotropic{0.90, 0.90, 0.90, 0.0, 0.0, 0.0};
+    const auto components = tensor->parameters();
+    for (std::size_t i = 0; i < components.size(); ++i) {
+        CHECK_MESSAGE(components[i]->value == doctest::Approx(isotropic[i]),
+                      "the native Uani fallback must preserve the full isotropic tensor");
+        if (i >= 3) {
+            CHECK_MESSAGE(!components[i]->uncertainty.has_value(),
+                          "exact zero tensor components must carry no standard uncertainty");
+        } else {
+            CHECK_MESSAGE(components[i]->uncertainty.value_or(0.0) == 0.0,
+                          "a bare isotropic input must not invent a nonzero tensor uncertainty");
+        }
+    }
+    CHECK_MESSAGE(uani.atom_sites.front()->adp_iso.value == doctest::Approx(0.90),
+                  "the native Uani fallback must preserve the declared isotropic equivalent");
 }
 
 TEST_CASE("E09-T55 background and measured loops reject partial plausible shapes") {
@@ -648,7 +772,7 @@ TEST_CASE("E09-T55 background and measured loops reject partial plausible shapes
          "requires a loop declaring both"},
         {with_background("loop_\n_background.id\n_background.position\n1 10\n"
                          "loop_\n_background.id\n_background.intensity\n1 169"),
-         "the background points are declared in more than one loop"},
+         "both _background.id and _background.id"},
     };
     for (const auto& [source, fragment] : background_refusals) {
         check_io_error([&] { static_cast<void>(edi::experiment_from_edi_text(source)); }, fragment,
@@ -766,7 +890,7 @@ TEST_CASE("E09-T55 live peak registration is idempotent and mode-specific") {
 TEST_CASE("E09-T55 refinement refuses a measured pattern wholly removed by exclusions") {
     edi::Project project =
         edi::load_project((repo_root() / "tests/fixtures/e02_t2_ncaf_5bank/project").string());
-    project.experiment().excluded_regions = {{-1.0e9, 1.0e9}};
+    project.experiment().excluded_regions = edi::excluded_region_rows({{-1.0e9, 1.0e9}});
 
     bool raised = false;
     try {
@@ -779,4 +903,69 @@ TEST_CASE("E09-T55 refinement refuses a measured pattern wholly removed by exclu
     }
     CHECK_MESSAGE(raised,
                   "a fully excluded measured pattern must fail before entering the minimizer");
+}
+
+TEST_CASE("GUI table readers generate legacy IDs and retain quoteable literal IDs") {
+    const auto fixture = repo_root() / "tests/fixtures/c11_t4_cw_selection/cases/cwl_valid.edi";
+    const auto reference = read_text(fixture);
+    auto legacy = reference;
+    const auto header = legacy.find("_background.id\n");
+    REQUIRE_MESSAGE((header != std::string::npos),
+                    "GUI table readers generate legacy IDs and retain quoteable literal IDs");
+    legacy.erase(header, std::string("_background.id\n").size());
+    const auto at = legacy.find("1 10 169\n2 90 171.25\n3 165 174.56");
+    REQUIRE_MESSAGE((at != std::string::npos),
+                    "GUI table readers generate legacy IDs and retain quoteable literal IDs");
+    legacy.replace(at, std::string("1 10 169\n2 90 171.25\n3 165 174.56").size(),
+                   "10 169\n90 171.25\n165 174.56");
+    legacy += "\nloop_\n_excluded_region.start\n_excluded_region.end\n25 30\n50 55\n";
+    const auto experiment = edi::experiment_from_edi_text(legacy);
+    REQUIRE_MESSAGE((experiment.background.size() == 3),
+                    "GUI table readers generate legacy IDs and retain quoteable literal IDs");
+    CHECK_MESSAGE((experiment.background[0]->id == "1"),
+                  "GUI table readers generate legacy IDs and retain quoteable literal IDs");
+    CHECK_MESSAGE((experiment.background[1]->id == "2"),
+                  "GUI table readers generate legacy IDs and retain quoteable literal IDs");
+    CHECK_MESSAGE((experiment.background[2]->id == "3"),
+                  "GUI table readers generate legacy IDs and retain quoteable literal IDs");
+    REQUIRE_MESSAGE((experiment.excluded_regions.size() == 2),
+                    "GUI table readers generate legacy IDs and retain quoteable literal IDs");
+    CHECK_MESSAGE((experiment.excluded_regions[0]->id == "1"),
+                  "GUI table readers generate legacy IDs and retain quoteable literal IDs");
+    CHECK_MESSAGE((experiment.excluded_regions[1]->id == "2"),
+                  "GUI table readers generate legacy IDs and retain quoteable literal IDs");
+    CHECK_MESSAGE((edi::excluded_region_ranges(experiment.excluded_regions) ==
+                   std::vector<std::pair<double, double>>{{25, 30}, {50, 55}}),
+                  "GUI table readers generate legacy IDs and retain quoteable literal IDs");
+    for (const auto& marker : {std::string{"."}, std::string{"?"}}) {
+        auto literal_background = reference;
+        const auto first = literal_background.find("1 10 169");
+        REQUIRE_MESSAGE((first != std::string::npos),
+                        "GUI table readers generate legacy IDs and retain quoteable literal IDs");
+        literal_background.replace(first, 1, marker);
+        const auto literal_exclusion =
+            literal_background +
+            "\nloop_\n_excluded_region.id\n_excluded_region.start\n_excluded_region.end\n" +
+            marker + " 25 30\n";
+        const auto literal = edi::experiment_from_edi_text(literal_exclusion);
+        REQUIRE_MESSAGE((literal.background.size() == 3),
+                        "GUI table readers generate legacy IDs and retain quoteable literal IDs");
+        CHECK_MESSAGE((literal.background[0]->id == marker),
+                      "GUI table readers generate legacy IDs and retain quoteable literal IDs");
+        CHECK_MESSAGE((literal.background[1]->id == "2"),
+                      "GUI table readers generate legacy IDs and retain quoteable literal IDs");
+        CHECK_MESSAGE((literal.background[2]->id == "3"),
+                      "GUI table readers generate legacy IDs and retain quoteable literal IDs");
+        CHECK_MESSAGE((literal.background[0]->position.get() == 10),
+                      "GUI table readers generate legacy IDs and retain quoteable literal IDs");
+        CHECK_MESSAGE((literal.background[0]->intensity.value.get() == 169),
+                      "GUI table readers generate legacy IDs and retain quoteable literal IDs");
+        REQUIRE_MESSAGE((literal.excluded_regions.size() == 1),
+                        "GUI table readers generate legacy IDs and retain quoteable literal IDs");
+        CHECK_MESSAGE((literal.excluded_regions[0]->id == marker),
+                      "GUI table readers generate legacy IDs and retain quoteable literal IDs");
+        CHECK_MESSAGE((edi::excluded_region_ranges(literal.excluded_regions) ==
+                       std::vector<std::pair<double, double>>{{25, 30}}),
+                      "GUI table readers generate legacy IDs and retain quoteable literal IDs");
+    }
 }

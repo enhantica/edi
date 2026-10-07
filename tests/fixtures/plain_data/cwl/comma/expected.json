@@ -1,0 +1,28 @@
+{
+  "file": "pattern.csv",
+  "rows": [
+    [
+      17.5,
+      4,
+      0.5
+    ],
+    [
+      18,
+      9,
+      1.25
+    ],
+    [
+      18.5,
+      16,
+      2.5
+    ]
+  ],
+  "counts": {
+    "skipped": 0,
+    "nonpositive": 0,
+    "duplicates": 0,
+    "reordered": 0,
+    "derived": 0
+  },
+  "beam": "cwl"
+}

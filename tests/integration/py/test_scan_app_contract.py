@@ -144,6 +144,33 @@ def evaluate(expression, context=''):
     return javascript(context + '\nconsole.log(JSON.stringify(' + value + '));')
 
 
+def require_availability(text):
+    control = item(text, 'experiments.loadData.${row.index}')
+    visible = property_value(control, 'visible')
+    enabled = property_value(control, 'enabled')
+    contexts = [
+        (False, {'canLoadData': True, 'calculationOnly': True}, True),
+        (False, {'canLoadData': True, 'calculationOnly': False}, True),
+        (False, {'canLoadData': False, 'calculationOnly': True}, False),
+        (False, {'canLoadData': False, 'calculationOnly': False}, False),
+        (False, None, False),
+        (True, {'canLoadData': True, 'calculationOnly': True}, False),
+        (True, {'canLoadData': True, 'calculationOnly': False}, False),
+    ]
+    program = 'let observed=[];'
+    for scan, experiment, _ in contexts:
+        program += (
+            '{const group={scan:' + json.dumps(scan) + '};'
+            'const row={experiment:' + json.dumps(experiment) + '};'
+            'observed.push(Boolean((' + visible + ') && (' + enabled + ')));}'
+        )
+    program += 'console.log(JSON.stringify(observed));'
+    assert javascript(program) == [expected for _, _, expected in contexts], (
+        'Load data availability: created unloaded and loaded rows admit the action; '
+        'imported, absent and scan rows cannot invoke it'
+    )
+
+
 def assert_search(shared, delegate=None):
     field = item(shared, 'comboBox.search')
     delegate = delegate or block(shared, 'delegate:')
@@ -335,7 +362,9 @@ def outcome_functions(text):
     )
 
 
-@pytest.mark.parametrize(('key', 'word', 'icon', 'color'), OUTCOMES)
+@pytest.mark.parametrize(
+    ('key', 'word', 'icon', 'color'), OUTCOMES, ids=[row[0] for row in OUTCOMES]
+)
 def test_view_model_names_each_outcome_from_owner_table(key, word, icon, color):
     result = evaluate(
         '[word(KEY),icon(KEY),color(KEY)]'.replace('KEY', json.dumps(key)),
@@ -646,16 +675,7 @@ def test_disabled_placeholders_and_load_data_are_present():
         == 'row.experiment !== null && row.experiment.radiationProbe ==='
         ' ExperimentViewModel.Neutron'
     ), 'Type wiring: polarization is restricted to neutron experiments'
-    control = item(
-        source('qml/Pages/Experiment/ExperimentsGroup.qml'), 'experiments.loadData.${row.index}'
-    )
-    assert property_value(control, 'enabled') == 'false', (
-        'Load data wiring: the actual row action remains disabled'
-    )
-    assert (
-        property_value(control, 'visible')
-        == 'row.experiment !== null && row.experiment.calculationOnly'
-    ), 'Load data wiring: the row action is restricted to simulations'
+    require_availability(source('qml/Pages/Experiment/ExperimentsGroup.qml'))
 
 
 @pytest.mark.parametrize('field', ['minimum', 'maximum', 'step'])
@@ -930,6 +950,8 @@ def test_search_accepts_direct_field_and_state_compositions():
 
 def test_forwarding_controls_reject_wrong_selected_index_token_range_and_visibility(monkeypatch):
     original = source
+    # Load-data availability escapes live in test_plain_data_picker, with their
+    # own valid controls for unloaded, loaded and imported rows.
     checks = [
         (
             'src/project_view_model.cpp',
@@ -956,13 +978,6 @@ def test_forwarding_controls_reject_wrong_selected_index_token_range_and_visibil
             'qml/Pages/Experiment/ExperimentTypeGroup.qml',
             'row.experiment.radiationProbe === ExperimentViewModel.Neutron',
             'row.experiment.radiationProbe === ExperimentViewModel.Neutron || true',
-            test_disabled_placeholders_and_load_data_are_present,
-            (),
-        ),
-        (
-            'qml/Pages/Experiment/ExperimentsGroup.qml',
-            'row.experiment !== null && row.experiment.calculationOnly',
-            'row.experiment !== null && row.experiment.calculationOnly || true',
             test_disabled_placeholders_and_load_data_are_present,
             (),
         ),

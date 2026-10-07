@@ -1,0 +1,28 @@
+{
+  "file": "pattern.xye",
+  "rows": [
+    [
+      17.5,
+      4,
+      2
+    ],
+    [
+      18,
+      9,
+      3
+    ],
+    [
+      18.5,
+      16,
+      4
+    ]
+  ],
+  "counts": {
+    "skipped": 0,
+    "nonpositive": 0,
+    "duplicates": 1,
+    "reordered": 3,
+    "derived": 0
+  },
+  "beam": "cwl"
+}
