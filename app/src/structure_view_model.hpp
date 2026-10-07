@@ -134,8 +134,8 @@ class AtomSiteListModel : public RowTableModel {
 
 // The Atomic displacement group (the owner, 2026-10-06): one row per atom site, in the sites' order — its label,
 // ADP type, isotropic value and the six anisotropic components. For an isotropic type `adpIso` is the site's value
-// in that type and the six are empty; for an anisotropic type the six are the tensor's components and `adpIso` is
-// the equivalent value crysta derives from them, read only.
+// in that type and the six are empty; for an anisotropic type the six are the tensor's components (ADR-0027)
+// and `adpIso` is the equivalent value crysta derives from them, read only.
 class AtomSiteAdpListModel : public RowTableModel {
     Q_OBJECT
     QML_ELEMENT
