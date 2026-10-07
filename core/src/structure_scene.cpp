@@ -487,7 +487,7 @@ ElementRadius element_radius(std::string_view element, AtomView view) {
 SceneSource capture_scene(const Structure& structure) {
     SceneSource source;
     source.structure_id = structure.name.value();
-    // An anisotropic site's U*, through crysta's conversion (crysta ADR-0081), to turn Cartesian below.
+    // An anisotropic site's U*, through crysta's conversion (ADR-0027), to turn Cartesian below.
     std::unordered_map<std::string, std::array<double, 6>> u_star;
     for (const auto& site : structure.atom_sites) {
         source.site_types.emplace_back(site->id.value(), site->type_symbol.value());
