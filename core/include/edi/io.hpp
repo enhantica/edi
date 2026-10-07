@@ -274,9 +274,13 @@ struct PlainDataLoad {
     std::size_t reordered = 0;
     std::size_t derived = 0;
 };
+/// Whether a datablock name can name its saved file (crysta's rule: ASCII letters, digits, `_` and `-`, and not
+/// a Windows reserved device name).
+bool persistable_name(const std::string& name);
 /// `experiment` with the rows of the plain-data file at `path` as its measured data. With `take_file_name`,
-/// the experiment is renamed to the file's name without its extension, when that is a name the project can
-/// use. Throws IoError when the file cannot be read or keeps no row.
+/// the experiment is renamed to the file's name without its extension, when that name can be saved (the caller
+/// still checks it against the project's other names). Throws IoError when the file cannot be read or keeps no
+/// row.
 PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, const std::string& path,
                                          bool take_file_name);
 

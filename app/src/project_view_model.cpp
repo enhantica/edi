@@ -8,6 +8,7 @@
 #include <QTemporaryDir>
 #include <QFile>
 #include <algorithm>
+#include <cctype>
 #include <map>
 #include <fstream>
 #include <filesystem>
@@ -560,10 +561,16 @@ bool ProjectViewModel::loadData(int index, const QUrl& file) {
         return refuse(QString::fromUtf8(refusal.what()));
     }
     edi::PlainDataLoad& load = *read;
-    // A file name another experiment already has keeps the experiment's own.
-    const std::string wanted = edi::KeyTraits<edi::BraggPdExperiment>::canonical(load.experiment.name);
+    // A file name another experiment already has, in any letter case (saved files are told apart without it),
+    // keeps the experiment's own.
+    const auto folded = [](std::string text) {
+        std::transform(text.begin(), text.end(), text.begin(),
+                       [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        return text;
+    };
+    const std::string wanted = folded(load.experiment.name);
     for (const auto& held : project.experiments) {
-        if (held.get() != &experiment && edi::KeyTraits<edi::BraggPdExperiment>::canonical(held->name) == wanted) {
+        if (held.get() != &experiment && folded(held->name) == wanted) {
             load.experiment.name = name;
         }
     }
@@ -600,6 +607,17 @@ bool ProjectViewModel::loadData(int index, const QUrl& file) {
     emit message(text);
     setCurrentExperimentIndex(index);
     return true;
+}
+
+bool ProjectViewModel::loadDataInto(ExperimentViewModel* experiment, const QUrl& file) {
+    const int index = experiment != nullptr ? static_cast<int>(experiment_models_.indexOf(experiment)) : -1;
+    if (index < 0) {
+        const QString refusal = tr("The experiment the file was chosen for is no longer in the project");
+        setLastError(refusal);
+        emit refused(refusal);
+        return false;
+    }
+    return loadData(index, file);
 }
 
 bool ProjectViewModel::createStructure() {

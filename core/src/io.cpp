@@ -1655,14 +1655,12 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
         }
     }
 
-    const Loop* linked = block.loop_with("_linked_structure.structure_id");
-    if (linked == nullptr || linked->rows.empty()) {
-        fail_schema(where, "missing-linked-structure-loop", "missing _linked_structure loop");
-    }
     // Every row is a linked structure (phase) with its scale and an optional enabled flag (absent
-    // = taking part).
+    // = taking part). No loop: the experiment links no structure (one made before any structure existed, or whose
+    // structures were removed); it calculates as background alone and cannot be fitted.
+    const Loop* linked = block.loop_with("_linked_structure.structure_id");
     std::vector<std::shared_ptr<LinkedStructure>> links;
-    for (const std::vector<std::string>& row : linked->rows) {
+    for (const std::vector<std::string>& row : linked != nullptr ? linked->rows : std::vector<std::vector<std::string>>{}) {
         auto link = std::make_shared<LinkedStructure>();
         link->structure_id = loop_cell(*linked, row, "_linked_structure.structure_id", where);
         read_into(link->scale,
