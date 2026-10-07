@@ -146,6 +146,9 @@ jobs:
           EDI_CORE_TARGETS: edi_tests
       - name: C++ unit tests
         run: pixi run --skip-deps cpp-test
+        env:
+          # A stale pin makes cpp-test resolve the paired crysta build again, which reads crysta's releases.
+          GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
 
   audit:
     name: audit
