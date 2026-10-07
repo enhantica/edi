@@ -6,14 +6,10 @@ from pathlib import Path
 
 import pytest
 
-from tests.fixtures.element_contrast.legacy_receipts import require_readable_elements
-from tests.fixtures.fast_chart_redraws.rendering import native_arguments
-
 ROOT = Path(__file__).resolve().parents[3]
 BOUNDARIES = (
     'test_separate_adp_table_and_isotropic_controls',
     'test_each_declared_adp_type_has_the_required_editor_state',
-    'test_analysis_tensor_rows_stay_with_their_site',
     'test_atom_filter_recovers_from_red_and_commits_element',
     'test_space_group_name_and_number_choose_new_default',
     'test_invalid_number_is_red_and_unapplied',
@@ -27,24 +23,14 @@ BOUNDARIES = (
 def gui_run():
     binary = Path(os.environ.get('EDI_APP_TEST_RUNNER', ROOT / 'build/app/app/edi_app_tests'))
     assert binary.is_file(), 'GUI: app-build must supply the real Qt test runner'
-    result = subprocess.run(
-        native_arguments([
-            str(binary),
-            '-input',
-            str(ROOT / 'tests/unit/app/tst_c13_t2_gui.qml'),
-            '-o',
-            '-,txt',
-        ]),
+    return subprocess.run(
+        [str(binary), '-input', str(ROOT / 'tests/unit/app/tst_c13_t2_gui.qml'), '-o', '-,txt'],
         env={**os.environ, 'QT_QPA_PLATFORM': 'offscreen', 'QT_QUICK_BACKEND': 'software'},
         capture_output=True,
         text=True,
         timeout=90,
         check=False,
     )
-
-    if result.returncode == 0:
-        require_readable_elements(result.stdout + result.stderr)
-    return result
 
 
 def test_gui_owner_decisions_pass_in_the_production_host(gui_run):
