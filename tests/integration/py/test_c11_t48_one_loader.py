@@ -81,8 +81,7 @@ def test_c11_t48_project_load_accepts_calculation_only_range_grid(tmp_path: Path
         assert len(data.intensity_meas) == len(data.intensity_meas_su) == 0, (
             'every calculation-only grid must carry no measured intensities or uncertainties'
         )
-    with pytest.raises(ValueError, match='calculation-only'):
-        project.save_as(tmp_path / 'must-refuse')
+    _require_saved_profiles(project, source, tmp_path / 'saved-calculation-only')
 
 
 def test_c11_t48_project_load_refuses_neither_category_and_names_file(tmp_path: Path) -> None:
@@ -102,3 +101,37 @@ def test_c11_t48_project_load_refuses_mixed_data_and_range_project(tmp_path: Pat
     offending_file_pattern = '|'.join(re.escape(str(path)) for path in experiment_files)
     with pytest.raises(edi.IoError, match=offending_file_pattern):
         edi.Project.load(source)
+
+
+def _require_saved_profiles(project, source: Path, destination: Path) -> None:
+    # Round-trip invariant, not an independent numerical reference for measured profiles.
+    def profiles(value):
+        return [
+            (
+                experiment.name,
+                list(experiment.data.axis()),
+                list(experiment.data.intensity_meas),
+                list(experiment.data.intensity_meas_su),
+            )
+            for experiment in value.experiments
+        ]
+
+    before = profiles(project)
+    project.save_as(destination)
+    # The saved calculation experiment keeps its declared range rather than fabricating data.
+    files = tuple(sorted((destination / 'experiments').glob('*.edi')))
+    assert len(files) == len(before), 'Saving range grids must retain every experiment block'
+    for path in files:
+        text = path.read_text(encoding='utf-8')
+        assert (
+            '_data_range.time_of_flight_min' in text and '_data_range.time_of_flight_step' in text
+        ), 'Saved calculation grids must retain their declared range representation'
+        assert not re.search(r'(?m)^_data\.(?:id|intensity_meas|intensity_meas_su)\b', text), (
+            'Saved calculation grids must never invent measured-data rows'
+        )
+    shutil.rmtree(source)
+    reopened = edi.Project.load(destination)
+    assert profiles(reopened) == before, (
+        'Saving range-only projects: reopen every name, axis, intensity and sigma '
+        'solely from the saved project after removing its original source'
+    )
