@@ -3778,24 +3778,28 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
     }
     validate_descent(descent, "edi fit_sequential");
     try {
-        // Stateless rebuild-per-fit, the single-bank shape: one crysta Project over the shared
-        // structure and the template experiment, with the identity and declarations the
-        // sequential driver reads (structure name and experiment name feed the results.csv
+        // Stateless rebuild-per-fit, the single-bank shape: one crysta Project over the
+        // structures and the template experiment, with the identity and declarations the
+        // sequential driver reads (structure names and experiment name feed the results.csv
         // column grammar; the scan block and iteration bound are the declared inputs).
-        // The engine refuses a sequential or independent fit of several linked structures; this
-        // single-structure build would otherwise fit the first structure alone and ignore the rest.
-        if (structures.size() > 1 || experiment().linked_structures.size() != 1 ||
-            !experiment().linked_structure().enabled.get()) {
-            throw std::invalid_argument(
-                "edi fit_sequential: a sequential or independent fit with several linked structures is not "
-                "supported yet");
-        }
-        crysta::Project cproject = build_crysta_project(structure(), experiment());
+        // Several structures (phases) are all handed over, as the single fit does, and crysta
+        // fits each scan file through its phase-sum residual.
+        const bool phases = structures.size() > 1 || experiment().linked_structures.size() != 1 ||
+                            !experiment().linked_structure().enabled.get();
+        crysta::Project cproject = [&]() -> crysta::Project {
+            if (phases) {
+                return crysta::Project(to_crysta_structures(*this),
+                                       std::vector<crysta::BraggPdExperiment>{detail::to_crysta_experiment(experiment())});
+            }
+            return build_crysta_project(structure(), experiment());
+        }();
         detail::require_populated_participants(cproject, "edi fit_sequential");
         fill_crysta_relations(*this, cproject);
         make_fit_ready(cproject.experiment());
-        cproject.structure().name = structure().name;
-        cproject.structure().scattering_lengths_fm = structure().scattering_lengths_fm;
+        if (!phases) {
+            cproject.structure().name = structure().name;
+            cproject.structure().scattering_lengths_fm = structure().scattering_lengths_fm;
+        }
         // Review-1 F4: forward the DECLARED mode, never a hard-coded one — pinning
         // "sequential" here would have run an `independent` project chained, silently answering
         // a different question than the project declares.
@@ -3907,7 +3911,7 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         refined.reserve(result.values.size());
         for (const auto& [label, value] : result.values) {
             std::optional<detail::ResolvedParameter> resolved =
-                detail::resolve_label(structure(), experiment(), label);
+                detail::resolve_project_label(*this, experiment(), label);
             if (!resolved) {
                 throw std::invalid_argument(
                     "edi fit_sequential: crysta result label '" + label +
