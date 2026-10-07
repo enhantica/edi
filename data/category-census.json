@@ -2135,6 +2135,11 @@
       "not_storage": "the base of the table class"
     },
     {
+      "member": "KeyedBase::holder_",
+      "type": "Structure*",
+      "not_storage": "the base of the table class"
+    },
+    {
       "member": "ItemKey::value_",
       "type": "std::string",
       "not_storage": "a cell view: the id of a keyed row"
