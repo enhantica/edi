@@ -6,33 +6,66 @@
 # the upstream URIs from an explicit file list. Upstream files are never edited or copied into edi; the
 # ones that need QtWebEngine, QtCharts, QtTest or QtMultimedia are left out (ADR-0006: WASM-clean).
 #
-# Offline builds point FETCHCONTENT_SOURCE_DIR_GUI_COMPONENTS at a local clone; that clone must be at the
-# pinned commit with an unmodified src/ tree, or configuration stops.
+# The pinned commit is fetched as GitHub's archive of it, checked against its SHA-256: a plain download
+# with a timeout, where a git clone inside CMake could hang without a word. Offline builds point
+# FETCHCONTENT_SOURCE_DIR_GUI_COMPONENTS (EDI_GUI_COMPONENTS_SRC in tools/ci/app-build.sh) at a local copy:
+# a git clone must be at the pinned commit with an unmodified src/ tree, and any other copy must hold
+# exactly the pinned src/ files, or configuration stops.
 
 include(FetchContent)
 
 set(EDI_GUI_COMPONENTS_SHA a573a9695e53a0807de197785e12f9facd06da05)  # tag v0.9.1
+set(EDI_GUI_COMPONENTS_ARCHIVE_SHA256 df502bdc41f2730531533c9ef81d371ec7db39b04666d54016e65e4a93bb1dba)
+# Every file under src/ at the pinned commit, as edi_gui_tree_sha256 below sums them.
+set(EDI_GUI_COMPONENTS_SRC_SHA256 0da3aa8344714c0199871a2df671840b467370918dc2232d8edf71bb811fe6be)
 
+if(NOT FETCHCONTENT_SOURCE_DIR_GUI_COMPONENTS)
+    message(STATUS "gui-components: fetching the pinned archive ${EDI_GUI_COMPONENTS_SHA} (8 MB, once per build tree)")
+endif()
 FetchContent_Declare(gui_components
-    GIT_REPOSITORY https://github.com/easyscience/gui-components.git
-    GIT_TAG ${EDI_GUI_COMPONENTS_SHA}
+    URL https://github.com/easyscience/gui-components/archive/${EDI_GUI_COMPONENTS_SHA}.tar.gz
+    URL_HASH SHA256=${EDI_GUI_COMPONENTS_ARCHIVE_SHA256}
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    INACTIVITY_TIMEOUT 60
+    TIMEOUT 600
     SOURCE_SUBDIR no-cmake-build  # upstream has no CMakeLists.txt; the modules are declared below
 )
 FetchContent_MakeAvailable(gui_components)
 
-execute_process(
-    COMMAND git -C ${gui_components_SOURCE_DIR} rev-parse HEAD
-    OUTPUT_VARIABLE _edi_gui_sha OUTPUT_STRIP_TRAILING_WHITESPACE RESULT_VARIABLE _edi_gui_sha_rc)
-execute_process(
-    COMMAND git -C ${gui_components_SOURCE_DIR} status --porcelain -- src
-    OUTPUT_VARIABLE _edi_gui_dirty OUTPUT_STRIP_TRAILING_WHITESPACE)
-if(NOT _edi_gui_sha_rc EQUAL 0 OR NOT _edi_gui_sha STREQUAL EDI_GUI_COMPONENTS_SHA)
-    message(FATAL_ERROR "gui-components at ${gui_components_SOURCE_DIR} is at '${_edi_gui_sha}', "
-                        "not the pinned ${EDI_GUI_COMPONENTS_SHA}")
-endif()
-if(NOT _edi_gui_dirty STREQUAL "")
-    message(FATAL_ERROR "gui-components at ${gui_components_SOURCE_DIR} has local changes under src/; "
-                        "edi builds the pinned files unmodified")
+# The files under `dir`, each named with its SHA-256, summed in name order.
+function(edi_gui_tree_sha256 dir out)
+    file(GLOB_RECURSE files LIST_DIRECTORIES false RELATIVE "${dir}" "${dir}/*")
+    list(SORT files)
+    set(text "")
+    foreach(file IN LISTS files)
+        file(SHA256 "${dir}/${file}" hash)
+        string(APPEND text "${file} ${hash}\n")
+    endforeach()
+    string(SHA256 sum "${text}")
+    set(${out} ${sum} PARENT_SCOPE)
+endfunction()
+
+if(EXISTS "${gui_components_SOURCE_DIR}/.git")
+    execute_process(
+        COMMAND git -C ${gui_components_SOURCE_DIR} rev-parse HEAD
+        OUTPUT_VARIABLE _edi_gui_sha OUTPUT_STRIP_TRAILING_WHITESPACE RESULT_VARIABLE _edi_gui_sha_rc)
+    execute_process(
+        COMMAND git -C ${gui_components_SOURCE_DIR} status --porcelain -- src
+        OUTPUT_VARIABLE _edi_gui_dirty OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if(NOT _edi_gui_sha_rc EQUAL 0 OR NOT _edi_gui_sha STREQUAL EDI_GUI_COMPONENTS_SHA)
+        message(FATAL_ERROR "gui-components at ${gui_components_SOURCE_DIR} is at '${_edi_gui_sha}', "
+                            "not the pinned ${EDI_GUI_COMPONENTS_SHA}")
+    endif()
+    if(NOT _edi_gui_dirty STREQUAL "")
+        message(FATAL_ERROR "gui-components at ${gui_components_SOURCE_DIR} has local changes under src/; "
+                            "edi builds the pinned files unmodified")
+    endif()
+else()
+    edi_gui_tree_sha256("${gui_components_SOURCE_DIR}/src" _edi_gui_tree)
+    if(NOT _edi_gui_tree STREQUAL EDI_GUI_COMPONENTS_SRC_SHA256)
+        message(FATAL_ERROR "gui-components at ${gui_components_SOURCE_DIR} does not hold the pinned "
+                            "${EDI_GUI_COMPONENTS_SHA} src/ files unmodified")
+    endif()
 endif()
 
 set(EDI_GUI_BASE_DIR ${gui_components_SOURCE_DIR}/src/EasyApplication)
