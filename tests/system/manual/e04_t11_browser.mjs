@@ -9,11 +9,12 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import { inflateSync } from 'node:zlib';
+import { fittingObservationKind, hasRunningProgress } from '../../fixtures/e04_t11_wasm/browser_observations.mjs';
 
 const [siteArg, mode, outputArg, chromeArg] = process.argv.slice(2);
 const fileRequestsOnly = process.argv.includes('--file-requests-only');
 const fileRequestCase = process.argv.find(arg => arg.startsWith('--file-request-case='))?.split('=')[1] || 'all';
-assert(['all','none','overlap','replacement','cancel-structure','cancel-experiment'].includes(fileRequestCase),
+assert(['all','none','overlap','replacement','cancel-structure','cancel-experiment','load-data'].includes(fileRequestCase),
   'each scoped request case must be declared explicitly');
 const reopenControl = process.argv.find(arg => arg.startsWith('--reopen-control='))?.split('=')[1];
 assert(!fileRequestsOnly || !reopenControl, 'request-only checks cannot impersonate a reopen control');
@@ -344,12 +345,17 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   await waitModal(false);
   await evaluate(`(() => {
     window.__e04Progress = [];
+    const progressKind = (${fittingObservationKind.toString()});
     const roots = [document];
     for (let i=0;i<roots.length;++i) for (const element of roots[i].querySelectorAll('*')) if (element.shadowRoot) roots.push(element.shadowRoot);
     const observer = new MutationObserver(records => {
       for (const record of records) {
         const values = [record.oldValue,record.target.getAttribute?.('aria-label'),record.target.textContent];
-        for (const value of values) if (value && /^(?:(?:stop|cancel) fitting|(?:spinner)?Fit iterations\\d+|\\d+\\s*%)$/i.test(value)) window.__e04Progress.push(value);
+        for (const node of record.addedNodes || []) {
+          values.push(node.getAttribute?.('aria-label'), node.textContent);
+          for (const child of node.querySelectorAll?.('[aria-label]') || []) values.push(child.getAttribute('aria-label'));
+        }
+        for (const value of values) if (progressKind(value)) window.__e04Progress.push(value);
       }
     });
     for (const root of roots) observer.observe(root,{subtree:true,attributes:true,attributeOldValue:true,characterData:true,characterDataOldValue:true,childList:true});
@@ -359,13 +365,19 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
 
   await waitAX(/^Success$/); await waitModal(true); await shot('fit-results');
   const progress = await evaluate('window.__e04Progress');
-  const runningProgress = values => values.some(value => /^(?:stop|cancel) fitting$/i.test(value)) &&
-    values.some(value => /^(?:spinner)?Fit iterations\d+$/i.test(value));
-  assert(!runningProgress(['Maximum iterations 400','Success','Iterations']),
-    'completed report text and minimizer settings cannot impersonate live fitting progress');
-  if (mode !== 'singlethread') assert(runningProgress(progress),
-    'multithread fitting must publish both a running control and a live iteration indicator');
+  // Before: "Fit iterationsN". Now: "fitting · it N", with an optional
+  // stop-circle prefix on the real Stop control's accessibility label.
   await writeFile(join(output, `${mode}-progress.json`), JSON.stringify(progress,null,2));
+  assert(hasRunningProgress(['stop-circle Stop fitting', 'fitting · it 2']),
+    'the current running control and live iteration label must satisfy the progress oracle');
+  assert(!hasRunningProgress(['Maximum iterations 400','Success','Iterations', 'it 20 · 2 s']),
+    'completed report text and minimizer settings cannot impersonate live fitting progress');
+  assert(!hasRunningProgress(['Stop fitting', 'Success', 'Iterations 20']),
+    'a running control alone cannot impersonate a live iteration indicator');
+  assert(!hasRunningProgress(['Start fitting', 'fitting · it 2']),
+    'an iteration label alone cannot impersonate a running control');
+  if (mode !== 'singlethread') assert(hasRunningProgress(progress),
+    'multithread fitting must publish both a running control and a live iteration indicator');
   await evaluate('window.__e04ProgressObserver.disconnect()');
   const fitAX = await send('Accessibility.getFullAXTree');
   await writeFile(join(output, `${mode}-fit-accessibility.json`), JSON.stringify(fitAX, null, 2));
@@ -470,10 +482,17 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
     const beginPicker = async regex => {
       lastEvents.delete('Page.fileChooserOpened');
       const opened=event('Page.fileChooserOpened');
-      await accessiblePress(regex); await opened;
-      const result=await send('Runtime.evaluate',{expression:'window.__e04FileInput'});
-      assert(result.result.objectId,'each request must cross the actual browser picker');
-      return {objectId:result.result.objectId};
+      // Before: synthetic click on Qt's accessibility element. Now: pointer
+      // input on the app control, including Qt's openFiles/Load data path.
+      await click(regex, 'button');
+      const chooser=await opened;
+      assert(chooser.backendDOMNodeId,'each request must expose its actual browser file input');
+      const result=await send('DOM.resolveNode',{backendNodeId:chooser.backendDOMNodeId});
+      const picker={objectId:result.object.objectId};
+      const actual=await send('Runtime.callFunctionOn',{...picker,returnByValue:true,
+        functionDeclaration:'function() { return this === window.__e04FileInput && this instanceof HTMLInputElement && this.type === "file"; }'});
+      assert(actual.result.value,'each request must cross the actual browser picker, not reuse an earlier input');
+      return picker;
     };
     let getStartedOpen = !fileRequestsOnly;
     const projectPage = async () => {
@@ -603,6 +622,18 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
     await send('DOM.setFileInputFiles',{...structure,files:[join(inputs,'blocks/structure.edi')]});
     await waitAX(/Structures \(1\)/);
     await click(/^Experiment$/); await waitAX(/Experiments \(0\)/);
+    }
+    if (['all','load-data'].includes(fileRequestCase)) {
+    await createEmpty('routing_empty_data');
+    await click(/^Experiment$/); await waitAX(/Experiments \(0\)/);
+    if (fileRequestCase !== 'all') await accessiblePress(/Experiments \(0\)/);
+    await click(/^Create experiment$/, 'button');
+    await waitAX(/Experiments \(1\)/);
+    await beginPicker(/^Load data(?:…|\.\.\.)$/);
+    assert.equal(await evaluate('window.__e04FileInput.multiple'),false,
+      'Load data must open a real single-file browser chooser through its experiment control');
+    await evaluate("window.__e04FileInput.dispatchEvent(new Event('cancel')); true"); await frame();
+    await waitAX(/Experiments \(1\)/);
     }
     await writeFile(join(output,`${mode}-file-requests.json`),JSON.stringify({case:fileRequestCase,completed:true},null,2));
   }
