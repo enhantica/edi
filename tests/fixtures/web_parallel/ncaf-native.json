@@ -1,7 +1,13 @@
 {
   "reference": "unchanged native serial/OpenMP core, independent of wasm",
+  "native_start_and_finish": {
+    "initial_reduced_chi_square": 649.3324230076997,
+    "final_reduced_chi_square": 9.497535493605657,
+    "iterations": 5,
+    "rwp": 0.07694458605579471
+  },
   "producer": "edi@981d27325f47bcfb75f67d17d920e9e342fbf72f; crysta SDK@c22d1ae31ef15919306ac96b6a9c971a86313040; unchanged native OpenMP",
-  "executable_sha256": "b9f34e7e91603f275a9f5f041b8826500daa7d329cb16fb008395f5b0468cc1a",
+  "executable_sha256": "d683c71423ef93d76c56e6e9b6c5e3fb659995365919bea3b7d8a18edeae2087",
   "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project",
   "command": [
     "python",

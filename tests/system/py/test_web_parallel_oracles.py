@@ -65,6 +65,10 @@ def test_owner_five_bank_reference_is_not_a_generated_web_pin():
 
 
 def test_native_fit_retains_the_owner_five_iteration_final_values():
+    native = json.loads((FIXTURE / 'ncaf-native.json').read_text())['native_start_and_finish']
+    assert abs(native['initial_reduced_chi_square'] - 649.33) <= 0.005, (
+        'Independent native pre-fit record must retain the owner rounded starting chi-square'
+    )
     fields = dict(
         line.split('=', 1)
         for line in (FIXTURE / 'ncaf-native-report.txt').read_text().splitlines()

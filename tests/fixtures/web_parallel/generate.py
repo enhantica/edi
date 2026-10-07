@@ -46,8 +46,32 @@ def generate(cli, producer, *, edi=False):
             native = cli
             if edi:
                 native = Path(importlib.import_module('edi')._edi.__file__)
+            pre_fit = None
+            if edi:
+                capture = subprocess.run(
+                    [
+                        str(cli.resolve()),
+                        '-c',
+                        """import edi, json, sys
+project = edi.Project.load(sys.argv[1])
+record = {}
+def start(preamble):
+    record['initial_reduced_chi_square'] = preamble.pre_fit.reduced_chi_square
+outcome = project.analysis.fit(on_start=start)
+record.update(final_reduced_chi_square=outcome.reduced_chi_square,
+              iterations=outcome.iterations, rwp=outcome.rwp)
+print(json.dumps(record))""",
+                        str(ROOT / relative),
+                    ],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                    timeout=30,
+                )
+                pre_fit = json.loads(capture.stdout)
             fixture = {
                 'reference': 'unchanged native serial/OpenMP core, independent of wasm',
+                'native_start_and_finish': pre_fit,
                 'producer': producer,
                 'executable_sha256': hashlib.sha256(native.read_bytes()).hexdigest(),
                 'project': relative,

@@ -418,7 +418,7 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
     'browser saved fit must agree with the independent committed native CLI chi square');
 
   const iterations = Number(before.analysis.match(/^_fit_result.iterations\s+(\S+)/m)?.[1]);
-  const rwp = Number(before.analysis.match(/^_fit_result.rwp\s+(\S+)/m)?.[1]);
+  const rwp = Number(before.analysis.match(/^_fit_result.prof_wr_factor\s+(\S+)/m)?.[1]);
   if (fitCase === 'ncaf') {
     assert(iterations === 5 && Number.isFinite(rwp) && Math.abs(100*rwp-7.69) <= 0.005,
       'the five-bank browser fit must retain the owner recorded five iterations and Rwp 7.69 percent');

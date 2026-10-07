@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-07T21:39:51Z
+# measured_utc = 2026-10-07T21:58:07Z
 #
-# Recorded from: edi-measure-pytest.log (6 node(s) measured once, 8374 banked, 0 stale row(s) dropped)
-# Collected tests: 9545; with a reported duration: 4667
+# Recorded from: edi-owner-pytest.log (1 node(s) measured once, 8377 banked, 0 stale row(s) dropped)
+# Collected tests: 9545; with a reported duration: 4668
 # Module-scoped fixture costs recorded: 27
 #
 # Breaches are decided PER TIER against the table
@@ -8361,7 +8361,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_scan_app_execution.py::test_t
 1.000	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[state]
 UNMEASURED:failed-in-this-run	tests/system/py/test_web_parallel_build.py::test_app_pthread_pool_is_preallocated_and_sized_for_the_engine
 UNMEASURED:failed-in-this-run	tests/system/py/test_web_parallel_build.py::test_each_kit_selects_its_own_engine_backend_and_simd
-0.000	tests/system/py/test_web_parallel_oracles.py::test_native_fit_retains_the_owner_five_iteration_final_values
+0.180	tests/system/py/test_web_parallel_oracles.py::test_native_fit_retains_the_owner_five_iteration_final_values
 0.000	tests/system/py/test_web_parallel_oracles.py::test_owner_five_bank_reference_is_not_a_generated_web_pin
 0.220	tests/system/py/test_web_parallel_oracles.py::test_web_fit_native_reference_covers_parameters_and_calculated_pattern[lbco]
 1.250	tests/system/py/test_web_parallel_oracles.py::test_web_fit_native_reference_covers_parameters_and_calculated_pattern[ncaf]
