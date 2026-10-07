@@ -216,6 +216,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // experiment1, experiment2, … takes the file's name. A second load replaces the data. One undoable step, and
     // one message saying what the reader skipped or changed.
     Q_INVOKABLE bool loadData(int index, const QUrl& file);
+    // Load data for the experiment a chooser was opened for, wherever its row is now: refused when that experiment
+    // is no longer in the project (removed, or replaced by an Undo or a type change since).
+    Q_INVOKABLE bool loadDataInto(edi_app::ExperimentViewModel* experiment, const QUrl& file);
     // One type axis ("sampleForm", "beamMode", "radiationProbe", "scatteringType") of an experiment without
     // data set to `token`: the experiment is made anew with that type, keeping its name, its link and,
     // within one beam mode, its range.
