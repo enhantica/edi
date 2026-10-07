@@ -249,10 +249,11 @@ def main():
     expected = (args.sdk / 'lib/libcrysta_core.a').resolve()
     for record in ('scan-core-sdk.txt', 'scan-reference-sdk.txt'):
         lines = (build / 'cmake' / record).read_text().splitlines()
-        includes = lines[1].split(';')
+        # Published SDK prefixes expose their headers through a symlink.
+        includes = [Path(path).resolve() for path in lines[1].split(';')]
         if (
             Path(lines[0]).resolve() != expected
-            or str((args.sdk / 'include').resolve()) not in includes
+            or (args.sdk / 'include').resolve() not in includes
         ):
             raise RuntimeError('Scan execution: effective CMake SDK library/header paths differ')
     jobs = (
