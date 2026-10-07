@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import math
 import signal
 import sys
 import tempfile
@@ -407,29 +408,40 @@ def _run_human(project: edi.Project, verbosity, project_name: str, *, clock=time
 
 
 def _skipped_line(project: edi.Project) -> str:
-    """What crysta skipped while reading the scan's files, from analysis/scan-skipped.csv."""
+    """What crysta noted about the scan's files, from analysis/scan-notes.csv."""
     directory = project.metadata.path
     if directory is None:
         return ''
     try:
-        lines = (Path(directory) / 'analysis' / 'scan-skipped.csv').read_text('utf-8').splitlines()
+        lines = (Path(directory) / 'analysis' / 'scan-notes.csv').read_text('utf-8').splitlines()
     except OSError:
         return ''
-    if not lines or lines[0] != 'file_path,negative_points,skipped_dataset':
+    if not lines or lines[0] != 'file_path,negative_points,skipped_dataset,refusal':
         return ''
     files = points = 0
+    refused = []
     for line in lines[1:]:
         cells = line.split(',')
-        if len(cells) != 3 or not cells[1].isdigit():
+        if len(cells) != 4 or not cells[1].isdigit():
             continue
         points += int(cells[1])
         files += cells[2] == 'True'
-    if not files and not points:
-        return ''
-    return (
-        f'Skipped: {files} file(s) with no intensity above zero, '
-        f'{points} point(s) with a negative intensity (analysis/scan-skipped.csv)'
-    )
+        if cells[3]:
+            refused.append(f'  {cells[0].rsplit("/", 1)[-1]}: {cells[3]}')
+    out = []
+    if files or points:
+        out.append(
+            f'Skipped: {files} file(s) with no intensity above zero, '
+            f'{points} point(s) with a negative intensity'
+        )
+    if refused:
+        out.append(f'Refused: {len(refused)} file(s), recorded as failed')
+        out.extend(refused[:10])
+        if len(refused) > 10:
+            out.append(f'  ... and {len(refused) - 10} more')
+    if out:
+        out.append('(analysis/scan-notes.csv)')
+    return '\n'.join(out)
 
 
 class _ScanTally:
@@ -450,8 +462,9 @@ class _ScanTally:
 
     def add(self, record: object) -> None:
         chi = record.reduced_chi_square
-        self.chi2_min = chi if self.completed == 0 else min(self.chi2_min, chi)
-        self.chi2_max = chi if self.completed == 0 else max(self.chi2_max, chi)
+        if not math.isnan(chi):  # a refused file has none
+            self.chi2_min = chi if math.isnan(self.chi2_min) else min(self.chi2_min, chi)
+            self.chi2_max = chi if math.isnan(self.chi2_max) else max(self.chi2_max, chi)
         self.completed += 1
         self.ok += 1 if record.converged else 0
 

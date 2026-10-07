@@ -1392,15 +1392,22 @@ std::pair<std::size_t, ScanResultIndex::Row> scan_row_facts(const Project& /*pro
         refuse("names a file that is not one of the scan's");
     }
     ScanResultIndex::Row row;
-    if (!parse_scan_number(cells[index.chi], row.reduced_chi_square) || !std::isfinite(row.reduced_chi_square) ||
-        row.reduced_chi_square < 0.0) {
-        refuse("has no finite, non-negative reduced chi-square");
-    }
     const std::string& success = cells[index.success];
     if (success != "True" && success != "False") {
         refuse("has '" + success + "' for its success, where crysta writes True or False");
     }
     row.converged = success == "True";
+    // A failed row (a refused fit) has `nan` for what its fit never produced.
+    const auto number = [&row](const std::string& cell, double& value) {
+        if (!row.converged && cell == "nan") {
+            value = std::numeric_limits<double>::quiet_NaN();
+            return true;
+        }
+        return parse_scan_number(cell, value) && std::isfinite(value);
+    };
+    if (!number(cells[index.chi], row.reduced_chi_square) || row.reduced_chi_square < 0.0) {
+        refuse("has no finite, non-negative reduced chi-square");
+    }
     double iterations = 0.0;
     if (!parse_scan_number(cells[index.iterations], iterations) || iterations < 0 ||
         iterations != std::floor(iterations) || iterations > std::numeric_limits<int>::max()) {
@@ -1415,8 +1422,7 @@ std::pair<std::size_t, ScanResultIndex::Row> scan_row_facts(const Project& /*pro
         if (!parse_scan_number(cells[parameter.value], value) || !std::isfinite(value)) {
             refuse("has no finite value for '" + parameter.name + "'");
         }
-        if (!parse_scan_number(cells[parameter.uncertainty], uncertainty) || !std::isfinite(uncertainty) ||
-            uncertainty < 0.0) {
+        if (!number(cells[parameter.uncertainty], uncertainty) || uncertainty < 0.0) {
             refuse("has no finite, non-negative uncertainty for '" + parameter.name + "'");
         }
     }
@@ -1425,21 +1431,22 @@ std::pair<std::size_t, ScanResultIndex::Row> scan_row_facts(const Project& /*pro
 
 namespace {
 
-// What crysta skipped while reading the scan's files (`analysis/scan-skipped.csv`: file_path, negative_points,
-// skipped_dataset), onto the datasets it names. A report, not a result: a file that is not there or not in this
-// form adds nothing, and a line still being written is left out.
+// What crysta noted about the scan's files (`analysis/scan-notes.csv`: file_path, negative_points, skipped_dataset,
+// refusal), onto the datasets it names. A report, not a result: a file that is not there or not in this form adds
+// nothing, and a line still being written is left out.
 void mark_skipped(const Project& project, const ScanDatasets& datasets, ScanResultIndex& index) {
-    std::ifstream input(scan_results_path(project).parent_path() / "scan-skipped.csv", std::ios::binary);
+    std::ifstream input(scan_results_path(project).parent_path() / "scan-notes.csv", std::ios::binary);
     std::string line;
     if (!std::getline(input, line) || input.eof() ||
-        split_scan_row(line) != std::vector<std::string>{"file_path", "negative_points", "skipped_dataset"}) {
+        split_scan_row(line) !=
+            std::vector<std::string>{"file_path", "negative_points", "skipped_dataset", "refusal"}) {
         return;
     }
     const ScanPlaces places = scan_places(datasets);
     const std::string directory = project.sequential_fit.data_dir + "/";
     while (std::getline(input, line) && !input.eof()) {
         const std::vector<std::string> cells = split_scan_row(line);
-        if (cells.size() != 3) {
+        if (cells.size() != 4) {
             continue;
         }
         std::string_view name(cells[0]);
@@ -1453,6 +1460,7 @@ void mark_skipped(const Project& project, const ScanDatasets& datasets, ScanResu
         }
         ScanResultIndex::Row& row = index.rows[found->second];
         row.negative_points = static_cast<std::size_t>(negative);
+        row.refusal = cells[3];
         if (cells[2] == "True" && row.offset < 0 && !row.skipped) {
             row.skipped = true;
             ++index.skipped;
@@ -3734,7 +3742,9 @@ std::optional<ScanFileRecord> scan_record_from_cells(const std::vector<std::stri
     const std::size_t slash = cells[0].rfind('/');
     record.file_name = slash == std::string::npos ? cells[0] : cells[0].substr(slash + 1);
     record.converged = cells[2] == "True";
-    if (!parse_csv_cell(cells[1], record.reduced_chi_square)) {
+    if (!record.converged && cells[1] == "nan") {
+        record.reduced_chi_square = std::numeric_limits<double>::quiet_NaN();  // a refused fit
+    } else if (!parse_csv_cell(cells[1], record.reduced_chi_square)) {
         return std::nullopt;
     }
     if (!parse_csv_cell(cells[3], record.iterations)) {
