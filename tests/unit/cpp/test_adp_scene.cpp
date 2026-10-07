@@ -16,7 +16,7 @@ auto column(std::vector<T> values) {
 }
 
 template <class Source, class Options>
-void check_ellipsoids() {
+bool check_ellipsoids() {
     using View = decltype(Options{}.atom_view);
     if constexpr (requires(Source s, Options o) {
                       s.site_adps;
@@ -77,15 +77,16 @@ void check_ellipsoids() {
                           "Lower probability must make the same displacement ellipsoid smaller");
             ++count;
         }
-        CHECK_MESSAGE(count == 2,
-                      "Both monoclinic and hexagonal Cartesian references must reach the scene");
+        return count == 2;
     } else {
         REQUIRE_MESSAGE(
             false, "The core scene must support anisotropic tensors and ellipsoid probability");
+        return false;
     }
 }
 }  // namespace
 
 TEST_CASE("Anisotropic scene axes and orientation preserve cctbx tensor shape") {
-    check_ellipsoids<edi::SceneSource, edi::SceneOptions>();
+    CHECK_MESSAGE((check_ellipsoids<edi::SceneSource, edi::SceneOptions>()),
+                  "Both monoclinic and hexagonal Cartesian references must reach the scene");
 }

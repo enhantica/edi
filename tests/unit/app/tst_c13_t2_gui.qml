@@ -17,7 +17,11 @@ TestCase {
         verify(waitForRendering(appWindow.contentItem), "C13-T2 GUI: production window renders");
     }
     function init() {
-        failOnWarning(qtest_results.functionName === "test_adp_view_uses_probability_in_atom_scale_position"
+        // Offscreen software has no GL context; changing a tensor also refreshes the 3D scene.
+        // Keep all other warnings fatal, including every warning in cases without a scene refresh.
+        const refreshesScene = ["test_adp_view_uses_probability_in_atom_scale_position",
+            "test_each_declared_adp_type_has_the_required_editor_state"].includes(qtest_results.functionName);
+        failOnWarning(refreshesScene
             ? /\A(?!QRhiGles2: Failed to create (?:temporary context|context)\z)[\s\S]*\z/ : /.*/);
         Session.closeProject();
         Session.openProject(Probe.repoUrl("tests/fixtures/e04_t1/editable-project"));

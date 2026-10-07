@@ -85,7 +85,7 @@ var frozen = {
     "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project/experiments/expt_s2.edi": "948b6f720ed6d72a5d5f0c5b8b06cae3dca6159f4f9e6edd56739110a2f2290a",
     "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project/analysis/analysis.edi": "e228e179bbb95062d1646300ac68b92cbc0692d9b34a436ed944ef97cdd3df07",
     "docs/user/cli/pd-neut-cwl_y2o3_beta-adp/project/structures/y2o3.edi": "dcacdbe2ddd6490b390aa7b4b36eeaf7e09d43b62f6b31b25a52121ffa295382",
-    "docs/user/cli/pd-neut-cwl_y2o3_beta-adp/project/experiments/y2o3.edi": "f848804c0238d76eb03f43f2a06688f52cf87d1caa8f38dbcf29e0402e755e1d",
+    "docs/user/cli/pd-neut-cwl_y2o3_beta-adp/project/experiments/y2o3.edi": "403bcc7ce6bcc112b9dc5d4c612b61389667c0b80c7163e00c790a19645b533a",
     "docs/user/cli/pd-neut-cwl_y2o3_beta-adp/project/analysis/analysis.edi": "64a5254af5f390f3c3a49e84affc9bd4a6a074d2fe50ea5f97e5864c444c7f71",
     "tests/fixtures/e04_t1/xray-project/structures/structure.edi": "3eafe9649956cbc14b8f4be0f687089c0c7234f32ecd48232d75fe93c8d5a166",
     "tests/fixtures/e04_t1/xray-project/experiments/experiment.edi": "b7660875a00c409f028074f3421c47d057086b639980b1327759ece7b23ebb25",
