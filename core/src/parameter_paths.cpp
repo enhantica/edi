@@ -500,6 +500,10 @@ std::vector<ParameterEntry> parameter_entries(Project& project) {
         return resolved.has_value() && resolved->target == field ? resolved->path : spelled;
     };
     for (const auto& structure : project.structures) {
+        // A site's tensor components are listed with the site, after its own fields, whatever order
+        // the two loops are in (the owner, 2026-10-07): they are collected here and placed below.
+        std::vector<ParameterEntry> tensor_entries;
+        std::vector<ParameterEntry> structure_entries;
         for (const Category& category : structure_categories(*structure)) {
             for (std::size_t i = 0; i < category.fields.size(); ++i) {
                 const CategoryField& field = category.fields[i];
@@ -516,12 +520,29 @@ std::vector<ParameterEntry> parameter_entries(Project& project) {
                     entry.path = path_of(
                         detail::resolve_structural_label(*structure, entry.row_label + "." + field.name, root),
                         field.parameter, root + "atom_site_aniso[" + entry.row_label + "]." + field.name);
+                    tensor_entries.push_back(entry);
+                    continue;
                 } else {
                     entry.path = path_of(
                         detail::resolve_structural_label(*structure, category.id + "_" + field.name, root),
                         field.parameter, root + category.id + "." + field.name);
                 }
-                entries.push_back(entry);
+                structure_entries.push_back(entry);
+            }
+        }
+        for (std::size_t i = 0; i < structure_entries.size(); ++i) {
+            entries.push_back(structure_entries[i]);
+            const bool site_ends = structure_entries[i].category == "atom_site" &&
+                                   (i + 1 == structure_entries.size() ||
+                                    structure_entries[i + 1].row_label != structure_entries[i].row_label ||
+                                    structure_entries[i + 1].category != "atom_site");
+            if (!site_ends) {
+                continue;
+            }
+            for (const ParameterEntry& tensor : tensor_entries) {
+                if (tensor.row_label == structure_entries[i].row_label) {
+                    entries.push_back(tensor);
+                }
             }
         }
     }

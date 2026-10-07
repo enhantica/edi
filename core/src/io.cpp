@@ -129,6 +129,27 @@ struct Block {
         }
         return nullptr;
     }
+    // The tensor loop, found by any column whose tag starts with `prefix`, or nullptr. A loop
+    // without its id column, or a second tensor loop, refuses rather than being left unread.
+    const Loop* tensor_loop(const std::string& prefix, const std::string& id_tag,
+                            const std::string& where) const {
+        const Loop* found = nullptr;
+        for (const auto& loop : loops) {
+            const bool tensor = std::any_of(loop.tags.begin(), loop.tags.end(),
+                                            [&prefix](const std::string& tag) { return tag.starts_with(prefix); });
+            if (!tensor) {
+                continue;
+            }
+            if (found != nullptr) {
+                fail_schema(where, "duplicate-loop", "a second _atom_site_aniso loop; the tensors are one loop");
+            }
+            if (loop.column(id_tag) < 0) {
+                fail_schema(where, "missing-required-tag", "the _atom_site_aniso loop has no " + id_tag + " column");
+            }
+            found = &loop;
+        }
+        return found;
+    }
 };
 
 // What a non-regular-file entry at the record's name IS, for the refusal message — a
@@ -786,7 +807,7 @@ Structure structure_from_block(const Block& block, const std::string& where) {
     }
 
     // The anisotropic sites' tensors, one row per anisotropic site.
-    if (const Loop* aniso = block.loop_with("_atom_site_aniso.id")) {
+    if (const Loop* aniso = block.tensor_loop("_atom_site_aniso.", "_atom_site_aniso.id", where)) {
         const ParameterSpec* const specs[6] = {
             &spec::atom_site_aniso_adp_11, &spec::atom_site_aniso_adp_22,
             &spec::atom_site_aniso_adp_33, &spec::atom_site_aniso_adp_12,
@@ -2281,7 +2302,7 @@ Structure structure_from_cif_block(const Block& block, const std::string& where)
         AtomSiteAniso tensor;
     };
     std::map<std::string, CifTensor> tensors;
-    if (const Loop* aniso = block.loop_with("_atom_site_aniso_label")) {
+    if (const Loop* aniso = block.tensor_loop("_atom_site_aniso_", "_atom_site_aniso_label", where)) {
         static const std::array<std::pair<const char*, std::array<const char*, 6>>, 3> kForms{{
             {"Uani",
              {"_atom_site_aniso_U_11", "_atom_site_aniso_U_22", "_atom_site_aniso_U_33",
@@ -2346,7 +2367,8 @@ Structure structure_from_cif_block(const Block& block, const std::string& where)
                   where);
         // The site takes the type _atom_site_adp_type declares, its numbers converted to it from the
         // form the file spells them in (below, once the structure is complete). A site that declares
-        // none takes its tensor row's form, else Uiso when it gives only U_iso_or_equiv, else Biso.
+        // none takes its tensor row's form (the row states the type), else the default, Biso, a
+        // U_iso_or_equiv value converted to B.
         // A declared type outside the five, an anisotropic type without a tensor row, an isotropic
         // type with one, and a tensor row naming no site refuse (ADR-0027).
         const int b_iso_column = loop->column("_atom_site_B_iso_or_equiv");
@@ -2384,6 +2406,8 @@ Structure structure_from_cif_block(const Block& block, const std::string& where)
                               "' but has an _atom_site_aniso row");
             }
             declared_types.emplace_back(label, declared);
+        } else if (tensor == tensors.end() && type != "Biso") {
+            declared_types.emplace_back(label, "Biso");  // the default; the column gave U
         }
         if (tensor != tensors.end()) {
             type = tensor->second.type;

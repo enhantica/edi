@@ -394,7 +394,7 @@ void sync_atom_site_aniso(Structure& s) {
         try {
             const crysta::Structure engine = one_site_engine(s, *site, site->adp_type.value());
             components = crysta::tied_components(engine, engine.atom_sites[0], components);
-        } catch (const std::invalid_argument&) {
+        } catch (const std::exception&) {
             // a position that names no stabilizer keeps the converted values
         }
         AtomSiteAniso tensor;
@@ -421,8 +421,15 @@ void sync_atom_site_aniso(Structure& s) {
             }
             const double equivalent = crysta::iso_of(crysta::equivalent_iso_form(form),
                                                      crysta::u_star_of(form, components, metric), metric);
+            // A different equivalent replaces the scalar; the scalar's uncertainty and fit start
+            // belonged to that other value (ADR-0027), so they go (absent stays absent, any other
+            // uncertainty the present zero of a value with none).
             if (site->adp_iso.value != equivalent) {
+                const std::optional<double> before = site->adp_iso.uncertainty;
                 site->adp_iso.value = equivalent;
+                site->adp_iso.uncertainty = before.has_value() ? std::optional<double>(0.0) : std::nullopt;
+                site->adp_iso.start_value = std::nullopt;
+                site->adp_iso.start_uncertainty = std::nullopt;
             }
         }
     }
