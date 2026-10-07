@@ -174,7 +174,7 @@ EaElements.GroupBox {
                         text: row.experiment !== null && !row.experiment.calculationOnly ? row.file : qsTr("Load data…")
                         ToolTip.visible: hovered && row.experiment !== null && !row.experiment.calculationOnly
                         ToolTip.text: qsTr("Load another data file in place of this one")
-                        onClicked: group.chooseData(row.index)
+                        onClicked: group.chooseData(row.experiment)
                     }
                 }
                 // What the scan's extract rules take from the dataset, with their units.
@@ -224,7 +224,7 @@ EaElements.GroupBox {
                 onClicked: {
                     if (WebFiles.available) {
                         group.webRequestProject = group.project;
-                        group.webDataIndex = -1;
+                        group.webDataExperiment = null;
                         group.webRequest = WebFiles.openFiles(".edi", true);
                     } else {
                         loadDialog.open();
@@ -242,37 +242,39 @@ EaElements.GroupBox {
         }
     }
 
-    // Load data… for experiment `index`: the file dialog, or in the browser the page's file chooser.
+    // Load data… for `experiment`: the file dialog, or in the browser the page's file chooser. The answer goes to
+    // that experiment wherever its row is by then, and is refused if it has gone.
     readonly property string dataFilter: ".xye,.xy,.dat,.txt,.csv"
-    function chooseData(index) {
+    function chooseData(experiment) {
         if (WebFiles.available) {
             group.webRequestProject = group.project;
-            group.webDataIndex = index;
+            group.webDataExperiment = experiment;
             group.webRequest = WebFiles.openFiles(group.dataFilter, false);
         } else {
-            dataDialog.experimentIndex = index;
+            dataDialog.experiment = experiment;
             dataDialog.project = group.project;
             dataDialog.open();
         }
     }
 
     // This page's browser file request and the project it was made for: only its own answer is used, and only
-    // while that project is still open. `webDataIndex`: the experiment a Load data… request is for, or -1 for
-    // Load experiment.
+    // while that project is still open. `webDataExperiment`: the experiment a Load data… request is for, or null
+    // for Load experiment.
     property int webRequest: 0
     property var webRequestProject: null
-    property int webDataIndex: -1
+    property var webDataExperiment: null
     Connections {
         target: WebFiles
         function onFilesOpened(request, files) {
             if (request !== group.webRequest)
                 return;
             group.webRequest = 0;
-            const index = group.webDataIndex;
-            group.webDataIndex = -1;
+            const experiment = group.webDataExperiment;
+            const forData = experiment !== null;
+            group.webDataExperiment = null;
             if (group.project !== null && group.project === group.webRequestProject) {
-                if (index >= 0)
-                    group.project.loadData(index, files[0]);
+                if (forData)
+                    group.project.loadDataInto(experiment, files[0]);
                 else
                     group.project.loadExperiments(files);
             }
@@ -280,13 +282,13 @@ EaElements.GroupBox {
         function onFailed(request) {
             if (request === group.webRequest) {
                 group.webRequest = 0;
-                group.webDataIndex = -1;
+                group.webDataExperiment = null;
             }
         }
         function onCancelled(request) {
             if (request === group.webRequest) {
                 group.webRequest = 0;
-                group.webDataIndex = -1;
+                group.webDataExperiment = null;
             }
         }
     }
@@ -303,15 +305,19 @@ EaElements.GroupBox {
     // is still the open one.
     FileDialog {
         id: dataDialog
-        property int experimentIndex: -1
+        property var experiment: null
         property var project: null
         title: qsTr("Load measured data from a plain two- or three-column file")
         nameFilters: [qsTr("Data files (*.xye *.xy *.dat *.txt *.csv)"), qsTr("All files (*)")]
         onAccepted: {
             if (dataDialog.project !== null && dataDialog.project === group.project)
-                group.project.loadData(dataDialog.experimentIndex, dataDialog.selectedFile);
+                group.project.loadDataInto(dataDialog.experiment, dataDialog.selectedFile);
             dataDialog.project = null;
+            dataDialog.experiment = null;
         }
-        onRejected: dataDialog.project = null
+        onRejected: {
+            dataDialog.project = null;
+            dataDialog.experiment = null;
+        }
     }
 }
