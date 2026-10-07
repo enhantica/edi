@@ -26,13 +26,11 @@ EaElements.ParamTextField {
     property string refusal: ""
     signal committed(string text)
 
-    // A number the field accepts as a number is passed as one, so the base shows it at its default three
-    // significant digits (gui-components Utils.toDefaultPrecision) as it shows a parameter without an
-    // uncertainty: a stopgap until the per-parameter display formats. Display only: the model keeps the
-    // full value, and an unedited field commits nothing. Anything else (a name, a token, a whole number)
-    // is passed as text and shown as it is.
+    // A number the field accepts as a number is shown by the app's one rule for numbers (NumberText).
+    // Display only: the model keeps the full value, and an unedited field commits nothing. Anything else (a
+    // name, a token, a whole number) is shown as it is.
     parameter: ({
-            "value": field.accepts === "number" && typeof field.fieldValue === "number" ? field.fieldValue : String(field.fieldValue),
+            "value": field.accepts === "number" && typeof field.fieldValue === "number" ? NumberText.plain(field.fieldValue, 10) : String(field.fieldValue),
             "error": 0,
             "enabled": field.editable,
             "fittable": false,

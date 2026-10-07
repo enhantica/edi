@@ -187,7 +187,7 @@ EaElements.GroupBox {
                 }
                 EaComponents.TableViewLabel {
                     width: EaStyle.Sizes.fontPixelSize * 3.5
-                    text: row.parameter && row.parameter.hasUncertainty ? row.parameter.uncertainty.toPrecision(1) : ""
+                    text: row.parameter && row.parameter.hasUncertainty ? NumberText.error(row.parameter.uncertainty) : ""
                 }
                 EaComponents.TableViewLabel {
                     width: EaStyle.Sizes.fontPixelSize * 3

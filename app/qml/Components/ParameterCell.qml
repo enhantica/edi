@@ -26,9 +26,10 @@ EaComponents.TableViewParameter {
     readonly property bool canFit: refinable && (item === null || item.fittable)
 
     enabled: refinable
+    // The value and its uncertainty as text, by the app's one rule for numbers in cells (NumberText).
     parameter: item ? {
-        "value": item.value,
-        "error": item.hasUncertainty ? item.uncertainty : 0,
+        "value": NumberText.parameter(item.value, item.hasUncertainty ? item.uncertainty : 0, 8),
+        "error": item.hasUncertainty ? NumberText.error(item.uncertainty) : "",
         "enabled": cell.refinable,
         "fittable": cell.canFit,
         "fit": item.free && cell.canFit,
