@@ -832,8 +832,9 @@ std::vector<edi::Edit::ScanValue> ProjectViewModel::datasetValues(const std::vec
             continue;  // a parameter the results do not record keeps the template's value
         }
         double number = 0.0, uncertainty = 0.0;
+        const std::string& uncertainty_cell = row[found->second->uncertainty];
         if (!edi::parse_scan_number(row[found->second->value], number) ||
-            !edi::parse_scan_number(row[found->second->uncertainty], uncertainty)) {
+            (uncertainty_cell != "nan" && !edi::parse_scan_number(uncertainty_cell, uncertainty))) {
             throw std::invalid_argument("analysis/results.csv: the row's '" + found->second->name +
                                         "' cells are not numbers");
         }
@@ -1175,8 +1176,8 @@ ScanSummary ProjectViewModel::scanSummary(const QString& run_outcome, double sec
     summary.files = static_cast<int>(scan_session_->datasets().files.size());
     summary.seconds = seconds;
     // The worst file's outcome: Max iterations, then No step, then Not converged (no reason recorded), else Success.
-    static const QStringList severity{QStringLiteral("maxIterations"), QStringLiteral("noStep"),
-                                      QStringLiteral("notConverged")};
+    static const QStringList severity{QStringLiteral("refused"), QStringLiteral("maxIterations"),
+                                      QStringLiteral("noStep"), QStringLiteral("notConverged")};
     QString worst;
     const auto& rows = scan_session_->index().rows;
     bool first = true;
@@ -1191,9 +1192,11 @@ ScanSummary ProjectViewModel::scanSummary(const QString& run_outcome, double sec
         ++summary.fitted;
         ++(rows[index].converged ? summary.ok : summary.failed);
         const double chi2 = rows[index].reduced_chi_square;
-        summary.chi_min = first ? chi2 : std::min(summary.chi_min, chi2);
-        summary.chi_max = first ? chi2 : std::max(summary.chi_max, chi2);
-        first = false;
+        if (!std::isnan(chi2)) {  // a refused file has none
+            summary.chi_min = first ? chi2 : std::min(summary.chi_min, chi2);
+            summary.chi_max = first ? chi2 : std::max(summary.chi_max, chi2);
+            first = false;
+        }
         const QString outcome = scan_session_->outcome(static_cast<int>(index));
         const qsizetype rank = severity.indexOf(outcome);
         if (rank >= 0 && (worst.isEmpty() || rank < severity.indexOf(worst))) {
@@ -1219,16 +1222,16 @@ ScanSummary ProjectViewModel::scanSummary(const QString& run_outcome, double sec
     return summary;
 }
 
-void ProjectViewModel::scanFileFitted(const edi::ScanFileRecord& record) {
+int ProjectViewModel::scanFileFitted(const edi::ScanFileRecord& record) {
     if (scan_session_ == nullptr) {
-        return;
+        return -1;
     }
     // The event's own row: checked and indexed where the driver appended it, never read from the moving tail.
     QString error;
     const int index = scan_session_->addRow(*project_, record.cells, record.termination, error);
     if (index < 0) {
         setLastError(error);
-        return;
+        return -1;
     }
     syncDataset(index);
     evolution_->addRow(index, record.cells);
@@ -1236,6 +1239,7 @@ void ProjectViewModel::scanFileFitted(const edi::ScanFileRecord& record) {
     if (index == current_dataset_ && !(fit_ != nullptr && fit_->following())) {
         viewDataset(index, true);
     }
+    return index;
 }
 
 void ProjectViewModel::followScanFile(const std::string& file) {

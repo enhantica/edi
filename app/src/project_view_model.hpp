@@ -262,7 +262,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     QString pendingRefusal() const;
     // The template a scan runs from: the stored one while a dataset is shown, else none (the model is the template).
     const edi::Project* scanTemplate() const { return scan_template_ ? &*scan_template_ : nullptr; }
-    void scanFileFitted(const edi::ScanFileRecord& record);
+    // The place of the file's dataset in the scan, or -1 when its row could not be indexed.
+    int scanFileFitted(const edi::ScanFileRecord& record);
     void showScanFrame(const std::string& file, const edi::FitFrame& frame);
     void followScanFile(const std::string& file);
     // The run ended: its status, seconds and outcome key (the worst file's, Stopped or Failed).

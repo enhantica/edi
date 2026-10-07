@@ -117,7 +117,7 @@ void EvolutionViewModel::addRow(int dataset, const std::vector<std::string>& cel
         Point point;
         point.dataset = dataset;
         const std::optional<double> x = xOf(dataset, &extracted);
-        if (!x || !edi::parse_scan_number(cells[parameter.value], point.y) ||
+        if (!x || cells[session_->index().chi] == "nan" || !edi::parse_scan_number(cells[parameter.value], point.y) ||
             !edi::parse_scan_number(cells[parameter.uncertainty], point.error) ||
             !drawable(*x, point.y, point.error)) {
             return;

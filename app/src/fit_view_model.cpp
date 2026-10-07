@@ -401,9 +401,12 @@ void FitViewModel::fileCompleted(const edi::ScanFileRecord& record) {
     ScanSummary counts = scan_;
     ++counts.fitted;
     ++(record.converged ? counts.ok : counts.failed);
+    // The files are taken in scan order, so every file before this one is done: fitted, or skipped for having
+    // nothing to fit, which sends no event of its own.
+    const int place = owner_.scanFileFitted(record);
+    counts.fitted = std::max(counts.fitted, place + 1);
     setScanCounts(counts, QString::fromStdString(record.file_name));
     setProgress(QString(), chi(record.reduced_chi_square), tr("Running"));
-    owner_.scanFileFitted(record);
     if (following()) {
         owner_.followScanFile(record.file_name);
     }

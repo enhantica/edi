@@ -28,7 +28,7 @@ namespace fs = std::filesystem;
 
 fs::path analysis_dir(const edi::Project& project) { return fs::path(project.path) / "analysis"; }
 
-const char* const kResultFiles[] = {"results.csv", "results-provenance.csv", "scan-run.json", "scan-skipped.csv"};
+const char* const kResultFiles[] = {"results.csv", "results-provenance.csv", "scan-run.json", "scan-notes.csv"};
 constexpr int kResultFileCount = 4;
 
 std::optional<std::string>* slot(ScanSession::Files& files, int which) {
@@ -271,6 +271,9 @@ QString ScanSession::outcome(int dataset) const {
     if (row.converged) {
         return QStringLiteral("success");
     }
+    if (row.termination == "refused" || !row.refusal.empty()) {
+        return QStringLiteral("refused");
+    }
     if (row.termination == "max_iter_exhausted") {
         return QStringLiteral("maxIterations");
     }
@@ -309,7 +312,8 @@ void ScanSession::column(const edi::Project& project, const std::string& name,
         }
         const int dataset = place(edi::scan_row_file(index_, cells));
         double value = 0.0, uncertainty = 0.0;
-        if (dataset >= 0 && edi::parse_scan_number(cells[value_column], value) &&
+        // A refused file's row holds the values its fit started from, not a result: it is not drawn.
+        if (dataset >= 0 && cells[index_.chi] != "nan" && edi::parse_scan_number(cells[value_column], value) &&
             edi::parse_scan_number(cells[uncertainty_column], uncertainty)) {
             visit(dataset, value, uncertainty);
         }
