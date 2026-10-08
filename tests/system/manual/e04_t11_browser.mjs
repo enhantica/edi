@@ -328,6 +328,7 @@ try {
       return {x:((rawX%1280)+1280)%1280,y:(q[1]+q[3]+q[5]+q[7])/4};
     };
     const last = await rowCenter(/lbco.*hrpt.*start[- ]?4/i);
+    const first = await rowCenter(/cosio.*d20.*start[- ]?1/i);
     const row=await rowCenter(exampleName);
     const tablePosition = async () => {
       const {nodes}=await send('Accessibility.getFullAXTree');
@@ -338,14 +339,16 @@ try {
     };
     if(row.y>last.y) {
       const before=await tablePosition(),deltaY=Math.ceil((row.y-last.y)/60)*60;
-      const pointer={x:last.x,y:last.y-deltaY};
+      const pointer={x:last.x,y:(first.y+last.y)/2};
       // Qt uses its tracked pointer for wheel delivery; update it before the wheel event.
       await send('Input.dispatchMouseEvent',{type:'mouseMoved',...pointer});
-      await send('Input.dispatchMouseEvent',{type:'mouseWheel',...pointer,deltaX:0,deltaY});
-      await settleRenderedPage();
-      const scrollDeadline=Date.now()+10000;
+      await frame();
       let position=await tablePosition();
-      while(position<=before && Date.now()<scrollDeadline) {await frame();position=await tablePosition();}
+      for(let attempt=0;attempt<3 && position<=before;attempt++) {
+        await send('Input.dispatchMouseEvent',{type:'mouseWheel',...pointer,deltaX:0,deltaY});
+        await settleRenderedPage();
+        position=await tablePosition();
+      }
       assert(position>before,'The actual table scrollbar must move before selecting the clipped five-bank row');
       // Qt's wasm AX rectangles stay at their pre-scroll positions. Apply the real pixel-wheel displacement.
       for(const type of ['mousePressed','mouseReleased'])await send('Input.dispatchMouseEvent',
