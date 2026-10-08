@@ -340,6 +340,7 @@ try {
     if(row.y>last.y) {
       const before=await tablePosition(),deltaY=Math.ceil((row.y-last.y)/60)*60;
       const pointer={x:last.x,y:(first.y+last.y)/2};
+      console.log('browser example scroll:',JSON.stringify({first,last,row,before,pointer,deltaY}));
       // Qt uses its tracked pointer for wheel delivery; update it before the wheel event.
       await send('Input.dispatchMouseEvent',{type:'mouseMoved',...pointer});
       await frame();
@@ -348,6 +349,7 @@ try {
         await send('Input.dispatchMouseEvent',{type:'mouseWheel',...pointer,deltaX:0,deltaY});
         await settleRenderedPage();
         position=await tablePosition();
+        console.log('browser example scroll position:',position);
       }
       assert(position>before,'The actual table scrollbar must move before selecting the clipped five-bank row');
       // Qt's wasm AX rectangles stay at their pre-scroll positions. Apply the real pixel-wheel displacement.
