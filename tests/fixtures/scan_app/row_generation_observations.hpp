@@ -67,14 +67,15 @@ QJsonObject row_generation(const std::string& path, const std::string& route,
 
     QString error;
     bool replaced = false;
+    QPointer<edi_app::ExperimentViewModel> prior_template;
     if (change == "template") {
         // The same structural replacement used by Load data/Undo reaches the
         // QObject lifetime boundary, keeping the file list and template values.
-        QPointer<edi_app::ExperimentViewModel> prior = view->currentExperiment();
-        edi::BraggPdExperiment replacement(view->project().experiment());
-        error = view->apply(edi::Edit::load_data(view->project(), view->project().experiment(),
+        prior_template = view->currentExperiment();
+        auto& project = const_cast<edi::Project&>(view->project());
+        edi::BraggPdExperiment replacement(project.experiment());
+        error = view->apply(edi::Edit::load_data(project, project.experiment(),
                                                std::move(replacement)), true);
-        replaced = prior.isNull() && view->currentExperiment() != nullptr;
     } else if (route == "reset-undo") {
         view->undo();
         error = view->lastError();
@@ -83,6 +84,10 @@ QJsonObject row_generation(const std::string& path, const std::string& route,
         error = view->saveTo(QString::fromStdString(destination));
     }
     const bool ready = settled(*view);
+    if (change == "template") {
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        replaced = prior_template.isNull() && view->currentExperiment() != nullptr;
+    }
     const QJsonArray after = snapshot();
     QJsonArray reopened;
     if (route == "reopen") {
