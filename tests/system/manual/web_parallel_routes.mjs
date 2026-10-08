@@ -39,18 +39,20 @@ for(const mode of ['singlethread','multithread','shim']) {
   const context=await browser.newContext({viewport:{width:1280,height:768}});
   const watched=new WeakMap();
   const observe=page=>{
-   const state={wasm:[],documents:[],errors:[]};watched.set(page,state);
+   const state={wasm:[],documents:[],errors:[],console:[]};watched.set(page,state);
    page.on('request',request=>{if(new URL(request.url()).pathname.endsWith('.wasm'))state.wasm.push(request.url());});
    page.on('response',async response=>{
     if(response.request().isNavigationRequest()&&response.request().frame()===page.mainFrame())
      state.documents.push({url:response.url(),headers:await response.allHeaders()});
    });
    page.on('pageerror',error=>state.errors.push(error.message));
+   page.on('console',message=>{state.console.push(message.text());if(state.console.length>20)state.console.shift();});
   };
   const navigate=async(page,label,reload=false)=>{
-   const state=watched.get(page);state.wasm=[];state.documents=[];state.errors=[];
+   const state=watched.get(page);state.wasm=[];state.documents=[];state.errors=[];state.console=[];
    console.log(`WebKit ${mode}: ${label} starts`);
    try {
+    await page.bringToFront();
     if(reload)await page.reload({waitUntil:'domcontentloaded'});
     else await page.goto(url,{waitUntil:'domcontentloaded'});
     await page.waitForFunction(()=>{
@@ -97,6 +99,7 @@ for(const mode of ['singlethread','multithread','shim']) {
   const first=await context.newPage();observe(first);
   await navigate(first,'initial');
   await navigate(first,'reload',true);
+  await first.close();
   const second=await context.newPage();observe(second);
   await navigate(second,'second-navigation');
   await navigate(second,'second-navigation-reload',true);
