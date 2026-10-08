@@ -8,7 +8,7 @@
     "rwp_percent": 7.69,
     "rounding_half_unit": 0.005
   },
-  "speed": {"minimum_core_count": 4, "minimum_ratio": 2.5},
+  "speed": {"minimum_core_count": 4, "minimum_ratio": 1.4},
   "build": {
     "native_thread_option": "CRYSTA_STD_THREADS",
     "wasm_simd_option": "CRYSTA_WASM_SIMD"

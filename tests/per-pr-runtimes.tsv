@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-07T21:58:07Z
+# measured_utc = 2026-10-08T01:04:53Z
 #
-# Recorded from: edi-owner-pytest.log (1 node(s) measured once, 8377 banked, 0 stale row(s) dropped)
+# Recorded from: threshold-after.log (1 node(s) measured once, 8377 banked, 0 stale row(s) dropped)
 # Collected tests: 9545; with a reported duration: 4668
 # Module-scoped fixture costs recorded: 27
 #
