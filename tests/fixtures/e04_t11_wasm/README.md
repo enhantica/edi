@@ -34,13 +34,18 @@ node --experimental-websocket tests/system/manual/e04_t11_browser.mjs <extracted
 
 The progress check follows the current status bar: the former `Fit iterationsN` label is now
 `fitting · it N`. A Stop/Cancel control (including the Stop icon prefix) and a live iteration
-label are both required in multithread and shim modes. Completed `it N` summaries, Success,
+label are both required in multithread and shim modes. The control is observed in AX;
+the live bar is read through `window.ediFitProgress()` with actual native running,
+effective visibility and positive iteration text, as specified in
+[the native progress bridge contract](../web_parallel/README.md). The bar keeps its ProgressBar role. Completed `it N` summaries, Success,
 maximum-iteration settings, a control alone and an iteration label alone remain negative controls.
 The observer records changed labels and newly inserted accessibility nodes before their first update.
 
 File requests use real pointer input on the app's button instead of a synthetic click on its
-accessibility element. The chooser event's backend node must be the file input captured from the
-app's own request. Structure remains single-file, Experiment remains batch, and Load data is
+accessibility element. `Page.fileChooserOpened.backendNodeId` identifies the real file input;
+the former `backendDOMNodeId` lookup confused this event with an AX node. The chooser event's
+backend node must still equal the file input captured from the app's own request. The pointer
+action and chooser event are awaited together so a refused request retains its failure evidence. Structure remains single-file, Experiment remains batch, and Load data is
 single-file. The `--file-request-case=load-data` case creates an experiment and opens its actual
 Load data control; the full `all` case includes it. The driver never opens the input directly.
 
