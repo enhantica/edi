@@ -148,6 +148,9 @@ def test_alias_picker_uses_core_candidates_and_the_closed_edit_door():
     assert 'named_parameters(' in text, (
         'the alias picker must enumerate core-owned suitable parameter identities'
     )
+    assert re.search(r'editor_\.apply_relation_edit\(edi::Edit::', text), (
+        'relation edits must enter the shared relation door for publication and undo'
+    )
     # Relation models now delegate through the undo-aware relation entry, which uses the same door.
     relations = text.split('AnalysisViewModel::AnalysisViewModel', 1)[0]
     edits = re.findall(r'edi::Edit::\w+\(', relations)

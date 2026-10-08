@@ -107,12 +107,18 @@ def native_resume(tmp_path_factory):
         str(ROOT / 'tests/fixtures/scan_template/work_probe.cpp'),
         str(artifact / 'core/libedi_core.a'),
         str(prefix / 'lib/libcrysta_core.a'),
+        '-L' + str(prefix / 'lib'),
+        '-L' + str(Path(sys.prefix) / 'lib'),
+        '-Wl,-rpath,' + str(prefix / 'lib'),
+        '-Wl,-rpath,' + str(Path(sys.prefix) / 'lib'),
         '-lsleef',
         '-lpthread',
         '-o',
         str(executable),
     ]
-    if sys.platform != 'darwin':
+    if sys.platform == 'darwin':
+        command.insert(-2, '-lomp')
+    else:
         command.insert(-2, '-fopenmp')
     result = subprocess.run(command, capture_output=True, text=True, check=False, timeout=60)
     assert result.returncode == 0, (

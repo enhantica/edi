@@ -8,6 +8,7 @@
 #include <QTemporaryDir>
 #include <QFile>
 #include <algorithm>
+#include <cctype>
 #include <map>
 #include <fstream>
 #include <filesystem>
@@ -26,6 +27,14 @@ namespace edi_app {
 // ---- StructureListModel / ExperimentListModel ---------------------------------------------------
 
 namespace {
+
+// A name as a save tells names apart: saved files are compared without letter case (crysta refuses
+// two datablock names that differ only by case, as one file on a case-insensitive filesystem).
+std::string folded_name(std::string name) {
+    std::transform(name.begin(), name.end(), name.begin(),
+                   [](unsigned char c) { return c >= 'A' && c <= 'Z' ? static_cast<char>(c - 'A' + 'a') : static_cast<char>(c); });
+    return name;
+}
 // A block's selector entry: its name, a dot, and the file it is saved as in the project.
 QString block_label(const QString& name, const QString& fallback) {
     const QString key = name.isEmpty() ? fallback : name;
@@ -54,6 +63,8 @@ void ExperimentListModel::setExperiments(const QList<ExperimentViewModel*>& expe
     const QString outcome = recorded_outcome(project.fit_result);
     const bool joint = std::any_of(project.experiments.begin(), project.experiments.end(),
                                    [](const auto& experiment) { return experiment->fit_prof_wr_factor.has_value(); });
+    dataset_row_ = nullptr;
+    dataset_experiment_ = nullptr;
     QList<Row> rows;
     for (int i = 0; i < experiments.size(); ++i) {
         ExperimentViewModel* experiment = experiments[i];
@@ -62,7 +73,9 @@ void ExperimentListModel::setExperiments(const QList<ExperimentViewModel*>& expe
         rows.append({experiment,
                      {experiment->name(), block_label(experiment->name(), QStringLiteral("experiment")),
                       QVariant::fromValue<QObject*>(experiment), experiment->fitOutcome(),
-                      experiment->name() + QStringLiteral(".edi"), QStringList(), false}});
+                      experiment->dataFile().isEmpty() ? experiment->name() + QStringLiteral(".edi")
+                                                       : experiment->dataFile(),
+                      QStringList(), false}});
     }
     setTableRows(rows);
 }
@@ -90,15 +103,24 @@ QList<QVariant> dataset_values(ExperimentViewModel* experiment, const Experiment
 
 }  // namespace
 
-void ExperimentListModel::setDatasets(ExperimentViewModel* experiment, const QList<Dataset>& datasets) {
+void ExperimentListModel::setDatasets(ExperimentViewModel* experiment, int count, std::function<Dataset(int)> row) {
+    // The rows are brought to the new count with no provider: a row read during a removal or insertion notification
+    // reads as empty, never through a file list that may already be the new one. The provider comes after.
+    dataset_row_ = nullptr;
+    dataset_experiment_ = experiment;
     QList<Row> rows;
-    rows.reserve(datasets.size());
-    for (int i = 0; i < datasets.size(); ++i) {
+    rows.reserve(count);
+    for (int i = 0; i < count; ++i) {
         // A dataset row is keyed by its place in the scan: one template experiment shows them all.
-        rows.append({reinterpret_cast<const void*>(static_cast<std::uintptr_t>(i + 1)),
-                     dataset_values(experiment, datasets[i])});
+        rows.append({reinterpret_cast<const void*>(static_cast<std::uintptr_t>(i + 1)), {}});
     }
     setTableRows(rows);
+    dataset_row_ = std::move(row);
+    datasetsChanged();
+}
+
+QList<QVariant> ExperimentListModel::rowValues(int row) const {
+    return dataset_row_ ? dataset_values(dataset_experiment_.data(), dataset_row_(row)) : RowTableModel::rowValues(row);
 }
 
 QVariant ExperimentListModel::data(const QModelIndex& index, int role) const {
@@ -106,10 +128,6 @@ QVariant ExperimentListModel::data(const QModelIndex& index, int role) const {
         shown_(index.row());
     }
     return RowTableModel::data(index, role);
-}
-
-void ExperimentListModel::setDataset(int index, ExperimentViewModel* experiment, const Dataset& dataset) {
-    setTableRow(index, dataset_values(experiment, dataset));
 }
 
 // ---- ProjectViewModel ---------------------------------------------------------------------------
@@ -387,11 +405,7 @@ bool ProjectViewModel::loadExperiments(const QList<QUrl>& files) {
 
 bool ProjectViewModel::canCreateExperiment() const {
     // A scan project holds its one template experiment (edi::Edit refuses another).
-    if (project_->sequential_fit.declared() && !project_->experiments.empty()) {
-        return false;
-    }
-    return std::all_of(project_->experiments.begin(), project_->experiments.end(),
-                       [](const auto& experiment) { return experiment->calculation_only; });
+    return !(project_->sequential_fit.declared() && !project_->experiments.empty());
 }
 
 bool ProjectViewModel::createExperiment() {
@@ -401,15 +415,17 @@ bool ProjectViewModel::createExperiment() {
     for (int n = 1; name.empty(); ++n) {
         const std::string candidate = "experiment" + std::to_string(n);
         const bool held = std::any_of(project.experiments.begin(), project.experiments.end(), [&candidate](const auto& item) {
-            return edi::KeyTraits<edi::BraggPdExperiment>::canonical(item->name) ==
-                   edi::KeyTraits<edi::BraggPdExperiment>::canonical(candidate);
+            return folded_name(edi::KeyTraits<edi::BraggPdExperiment>::canonical(item->name)) == candidate;
         });
         name = held ? std::string() : candidate;
     }
-    const std::string structure = project.structures.empty() ? std::string() : std::string(project.structures.front()->name);
+    std::vector<std::string> structures;
+    for (const auto& structure : project.structures) {
+        structures.emplace_back(structure->name.value());
+    }
     QString error;
     try {
-        error = apply(edi::Edit::create_experiment(project, edi::simulation_experiment(name, {}, structure)), true);
+        error = apply(edi::Edit::create_experiment(project, edi::simulation_experiment(name, {}, structures)), true);
     } catch (const std::exception& refusal) {
         error = QString::fromUtf8(refusal.what());
         setLastError(error);
@@ -418,6 +434,8 @@ bool ProjectViewModel::createExperiment() {
         emit refused(error);
         return false;
     }
+    created_.insert(project.experiments.back().get());
+    syncLoadState();
     noteAddedExperiments(project.experiments.size() - 1);
     setCurrentExperimentIndex(static_cast<int>(experiment_models_.size()) - 1);
     return true;
@@ -445,26 +463,24 @@ bool ProjectViewModel::setExperimentType(int index, const QString& axis, const Q
     } else {
         return false;
     }
-    const std::string structure = experiment.linked_structures.empty()
-                                      ? std::string()
-                                      : std::string((*experiment.linked_structures.begin())->structure_id);
+    std::vector<std::string> structures;
+    for (const auto& link : experiment.linked_structures) {
+        structures.emplace_back(link->structure_id.value());
+    }
     QString error;
     try {
-        edi::BraggPdExperiment replacement = edi::simulation_experiment(experiment.name, type, structure);
+        edi::BraggPdExperiment replacement = edi::simulation_experiment(experiment.name, type, structures);
         // Within one beam mode the grid stays as it was set.
         if (replacement.effective_beam_mode() == experiment.effective_beam_mode() && experiment.data.has_value()) {
             replacement.data = experiment.data;
         }
         const edi::ExperimentBase* before = &experiment;
+        const bool created = created_.contains(before);
         error = apply(edi::Edit::replace_experiment(project, experiment, std::move(replacement)), true);
         if (error.isEmpty()) {
             // Undo of the experiment's creation removes it in its new type.
-            const edi::ExperimentBase* after = project.experiments[static_cast<std::size_t>(index)].get();
-            for (UndoRecord& record : undo_history_) {
-                if (auto* added = std::get_if<AddedExperiments>(&record)) {
-                    std::replace(added->experiments.begin(), added->experiments.end(), before, after);
-                }
-            }
+            experimentReplaced(before, project.experiments[static_cast<std::size_t>(index)].get(), created);
+            syncDatasets();
         }
     } catch (const std::exception& refusal) {
         error = QString::fromUtf8(refusal.what());
@@ -474,6 +490,180 @@ bool ProjectViewModel::setExperimentType(int index, const QString& axis, const Q
         emit refused(error);
         return false;
     }
+    return true;
+}
+
+void ProjectViewModel::experimentReplaced(const edi::ExperimentBase* before, const edi::ExperimentBase* after,
+                                          bool created) {
+    for (UndoRecord& record : undo_history_) {
+        if (auto* added = std::get_if<AddedExperiments>(&record)) {
+            std::replace(added->experiments.begin(), added->experiments.end(), before, after);
+        } else if (auto* loaded = std::get_if<LoadedData>(&record)) {
+            loaded->experiment = loaded->experiment == before ? after : loaded->experiment;
+        } else if (auto* structures = std::get_if<edi::StructuresUndo>(&record)) {
+            for (auto& rows : structures->experiments) {
+                rows.experiment = rows.experiment == before ? after : rows.experiment;
+            }
+        }
+    }
+    // The edit's own publication has already dropped `before`'s entry (syncLoadState): it comes from the caller.
+    created_.erase(before);
+    if (created) {
+        created_.insert(after);
+    }
+    syncLoadState();
+}
+
+void ProjectViewModel::syncLoadState() {
+    // Entries of experiments no longer in the project go: a new experiment could take a gone one's address.
+    std::set<const edi::ExperimentBase*> held;
+    for (const auto& experiment : project_->experiments) {
+        held.insert(experiment.get());
+    }
+    std::erase_if(created_, [&held](const edi::ExperimentBase* experiment) { return !held.contains(experiment); });
+    for (ExperimentViewModel* model : experiment_models_) {
+        model->setCanLoadData(created_.contains(model->experiment()));
+    }
+}
+
+QString ProjectViewModel::replaceData(int index, edi::BraggPdExperiment replacement) {
+    edi::Project& project = *project_;
+    const edi::ExperimentBase* before = project.experiments[static_cast<std::size_t>(index)].get();
+    const bool created = created_.contains(before);
+    QString error;
+    try {
+        error = apply(edi::Edit::load_data(project, *before, std::move(replacement)), true);
+    } catch (const std::exception& refusal) {
+        error = QString::fromUtf8(refusal.what());
+        setLastError(error);
+    }
+    if (!error.isEmpty()) {
+        return error;
+    }
+    experimentReplaced(before, project.experiments[static_cast<std::size_t>(index)].get(), created);
+    syncDatasets();
+    return {};
+}
+
+bool ProjectViewModel::loadData(int index, const QUrl& file) {
+    const auto refuse = [this](const QString& refusal) {
+        setLastError(refusal);
+        emit refused(refusal);
+        return false;
+    };
+    if (index < 0 || index >= experiment_models_.size()) {
+        return false;
+    }
+    if (!file.isLocalFile()) {
+        return refuse(QStringLiteral("not a local file: %1").arg(file.toString()));
+    }
+    edi::Project& project = *project_;
+    const edi::BraggPdExperiment& experiment = *project.experiments[static_cast<std::size_t>(index)];
+    if (!created_.contains(&experiment)) {
+        return refuse(tr("Load data works on an experiment made with Create experiment; '%1' has its data from its "
+                         "file")
+                          .arg(QString::fromStdString(experiment.name)));
+    }
+    // A name the user has not changed (experiment1, experiment2, …) gives way to the file's.
+    const std::string& name = experiment.name.value();
+    const bool default_name = name.size() > 10 && name.starts_with("experiment") &&
+                              std::all_of(name.begin() + 10, name.end(), [](char c) { return c >= '0' && c <= '9'; });
+    std::optional<edi::PlainDataLoad> read;
+    try {
+        read.emplace(edi::experiment_with_plain_data(experiment, file.toLocalFile().toStdString(), default_name));
+    } catch (const std::exception& refusal) {
+        return refuse(QString::fromUtf8(refusal.what()));
+    }
+    edi::PlainDataLoad& load = *read;
+    // A file name another experiment already has, in any letter case (saved files are told apart without it),
+    // keeps the experiment's own.
+    const std::string wanted = folded_name(load.experiment.name);
+    for (const auto& held : project.experiments) {
+        if (held.get() != &experiment && folded_name(held->name) == wanted) {
+            load.experiment.name = name;
+        }
+    }
+    const QString file_name = QString::fromStdString(load.file_name);
+    LoadedData record{nullptr, std::make_shared<const edi::BraggPdExperiment>(experiment)};
+    const QString loaded_name = QString::fromStdString(load.experiment.name);
+    if (const QString error = replaceData(index, std::move(load.experiment)); !error.isEmpty()) {
+        return refuse(error);
+    }
+    record.experiment = project.experiments[static_cast<std::size_t>(index)].get();
+    undo_history_.emplace_back(std::move(record));
+    syncUndo();
+    // One message: the points, then what the reader skipped or changed.
+    QStringList notes;
+    if (load.skipped != 0) {
+        notes.append(tr("%n line(s) skipped that are not two or three numbers", nullptr, static_cast<int>(load.skipped)));
+    }
+    if (load.nonpositive != 0) {
+        notes.append(tr("%n row(s) with intensity ≤ 0 skipped", nullptr, static_cast<int>(load.nonpositive)));
+    }
+    if (load.duplicates != 0) {
+        notes.append(tr("%n row(s) with a repeated x skipped (the first kept)", nullptr, static_cast<int>(load.duplicates)));
+    }
+    if (load.reordered != 0) {
+        notes.append(tr("%n row(s) reordered by x", nullptr, static_cast<int>(load.reordered)));
+    }
+    if (load.derived != 0) {
+        notes.append(tr("σ = √max(y, 1) used for %n row(s) without a σ column", nullptr, static_cast<int>(load.derived)));
+    }
+    QString text = tr("%1 loaded into '%2': %n point(s)", nullptr, static_cast<int>(load.points)).arg(file_name, loaded_name);
+    if (!notes.isEmpty()) {
+        text += QStringLiteral("; ") + notes.join(QStringLiteral("; "));
+    }
+    emit message(text);
+    setCurrentExperimentIndex(index);
+    return true;
+}
+
+bool ProjectViewModel::loadDataInto(ExperimentViewModel* experiment, const QUrl& file) {
+    const int index = experiment != nullptr ? static_cast<int>(experiment_models_.indexOf(experiment)) : -1;
+    if (index < 0) {
+        const QString refusal = tr("The experiment the file was chosen for is no longer in the project");
+        setLastError(refusal);
+        emit refused(refusal);
+        return false;
+    }
+    return loadData(index, file);
+}
+
+bool ProjectViewModel::createStructure() {
+    edi::Project& project = *project_;
+    // The first free name of the form structure1, structure2, …
+    std::string name;
+    for (int n = 1; name.empty(); ++n) {
+        const std::string candidate = "structure" + std::to_string(n);
+        const bool held = std::any_of(project.structures.begin(), project.structures.end(), [&candidate](const auto& item) {
+            return folded_name(edi::KeyTraits<edi::Structure>::canonical(item->name)) == candidate;
+        });
+        name = held ? std::string() : candidate;
+    }
+    // easydiffractionbeta's default phase (easyDiffractionApp/Logic/Model.py, _DEFAULT_CIF_BLOCK), under the new name.
+    // The block names no Wyckoff letter; the site at the origin is P b n m's position a.
+    const std::string text = "data_" + name +
+                             "\n\n_edi.schema_version 3\n\n_space_group.name_h_m \"P b n m\"\n\n"
+                             "_cell.length_a 10.\n_cell.length_b 6.\n_cell.length_c 5.\n"
+                             "_cell.angle_alpha 90.\n_cell.angle_beta 90.\n_cell.angle_gamma 90.\n\n"
+                             "loop_\n_atom_site.id\n_atom_site.type_symbol\n_atom_site.fract_x\n_atom_site.fract_y\n"
+                             "_atom_site.fract_z\n_atom_site.wyckoff_letter\n_atom_site.occupancy\n_atom_site.adp_type\n"
+                             "_atom_site.adp_iso\nO O 0. 0. 0. a 1. Biso 0.\n";
+    edi::StructuresUndo before = edi::capture_structures(project);
+    QString error;
+    try {
+        error = apply(edi::Edit::add_structure(project, edi::structure_from_edi_text(text)), true);
+    } catch (const std::exception& refusal) {
+        error = QString::fromUtf8(refusal.what());
+        setLastError(error);
+    }
+    if (!error.isEmpty()) {
+        emit refused(error);
+        return false;
+    }
+    undo_history_.emplace_back(std::move(before));
+    syncUndo();
+    setCurrentStructureIndex(static_cast<int>(structure_models_.size()) - 1);
     return true;
 }
 
@@ -558,6 +748,11 @@ int ProjectViewModel::templateIndex() const {
 ExperimentListModel::Dataset ProjectViewModel::datasetRow(int index) const {
     ExperimentListModel::Dataset dataset;
     const auto& files = scan_session_->datasets().files;
+    // A row the list still holds while the session already lists fewer files (a re-list after save or Undo, before
+    // the list follows) reads as empty.
+    if (index < 0 || static_cast<std::size_t>(index) >= files.size()) {
+        return dataset;
+    }
     dataset.file = QString::fromStdString(files[static_cast<std::size_t>(index)]);
     dataset.is_template = files[static_cast<std::size_t>(index)] == scanTemplateOrModel().sequential_fit.template_file;
     dataset.outcome = scan_session_->outcome(index);
@@ -590,29 +785,28 @@ void ProjectViewModel::syncDatasets() {
         experiment_list_->setExperiments(experiment_models_, *project_);
         return;
     }
-    const std::size_t count = scan_session_->datasets().files.size();
-    QList<ExperimentListModel::Dataset> rows;
-    rows.reserve(static_cast<qsizetype>(count));
-    for (std::size_t index = 0; index < count; ++index) {
-        rows.append(datasetRow(static_cast<int>(index)));
-    }
-    if (ExperimentViewModel* experiment = experiment_models_.value(0)) {
-        experiment->setFitOutcome(current_dataset_ >= 0 && current_dataset_ < rows.size() ? rows[current_dataset_].outcome
-                                                                                          : QString());
-    }
+    const int count = static_cast<int>(scan_session_->datasets().files.size());
+    ExperimentViewModel* experiment = experiment_models_.value(0);
     experiment_list_->setColumns(scan_columns_);
-    experiment_list_->setDatasets(experiment_models_.value(0), rows);
+    if (experiment_list_->showsDatasets(experiment, count)) {
+        experiment_list_->datasetsChanged();
+    } else {
+        experiment_list_->setDatasets(experiment, count, [this](int index) { return datasetRow(index); });
+    }
+    if (experiment != nullptr) {
+        experiment->setFitOutcome(current_dataset_ >= 0 && current_dataset_ < count ? datasetRow(current_dataset_).outcome
+                                                                                    : QString());
+    }
 }
 
 void ProjectViewModel::syncDataset(int index) {
     if (!scan_ || index < 0 || index >= static_cast<int>(scan_session_->datasets().files.size())) {
         return;
     }
-    const ExperimentListModel::Dataset row = datasetRow(index);
-    experiment_list_->setDataset(index, experiment_models_.value(0), row);
+    experiment_list_->datasetChanged(index);
     if (index == current_dataset_) {
         if (ExperimentViewModel* experiment = experiment_models_.value(0)) {
-            experiment->setFitOutcome(row.outcome);
+            experiment->setFitOutcome(datasetRow(index).outcome);
         }
     }
 }
@@ -1096,21 +1290,31 @@ void ProjectViewModel::removeStructure(int index) {
         return;
     }
     edi::Project& project = *project_;
-    // A structure an experiment links stays: removing it would leave the link naming nothing. The
-    // link is removed first, on the Experiment page.
-    const std::string& name = project.structures[static_cast<std::size_t>(index)]->name.value();
+    // The experiments that link the structure lose the link (and any texture row for it) in the same step.
+    const std::string name = project.structures[static_cast<std::size_t>(index)]->name.value();
+    const std::string spelled = name.empty() ? std::string("structure") : name;
+    QStringList linking;
     for (const auto& experiment : project.experiments) {
         for (const auto& link : experiment->linked_structures) {
-            if (link->structure_id.value() == name) {
-                const QString error = tr("Structure '%1' is linked by experiment '%2'; remove that link first.")
-                                          .arg(QString::fromStdString(name), QString::fromStdString(experiment->name));
-                setLastError(error);
-                emit refused(error);
-                return;
+            const std::string id = link->structure_id.value();
+            if ((id.empty() ? std::string("structure") : id) == spelled) {
+                linking.append(QString::fromStdString(experiment->name));
             }
         }
     }
-    apply(edi::Edit::erase(project.structures, static_cast<std::size_t>(index)), true);
+    edi::StructuresUndo before = edi::capture_structures(project);
+    const QString error = apply(edi::Edit::remove_structure(project, static_cast<std::size_t>(index)), true);
+    if (!error.isEmpty()) {
+        emit refused(error);
+        return;
+    }
+    undo_history_.emplace_back(std::move(before));
+    syncUndo();
+    if (!linking.isEmpty()) {
+        emit message(tr("Structure '%1' removed, with its link from %n experiment(s): %2", nullptr,
+                        static_cast<int>(linking.size()))
+                         .arg(QString::fromStdString(name), linking.join(QStringLiteral(", "))));
+    }
 }
 
 int ProjectViewModel::structureIndex(const QString& name) const {
@@ -1224,6 +1428,20 @@ void ProjectViewModel::undo() {
         undone = apply(edi::Edit::erase_experiments(*project_, added->experiments), true).isEmpty();
     } else if (const auto* run = std::get_if<ScanRun>(&undo_history_.back())) {
         undone = restoreScanRun(*run);
+    } else if (const auto* loaded = std::get_if<LoadedData>(&undo_history_.back())) {
+        // The experiment as it was before the load: its simulation with its range and type, or the earlier data.
+        const auto found = std::find_if(project_->experiments.begin(), project_->experiments.end(),
+                                        [loaded](const auto& held) { return held.get() == loaded->experiment; });
+        if (found == project_->experiments.end()) {
+            setLastError(tr("undo: the loaded experiment is no longer in the project"));
+        } else {
+            const LoadedData record = *loaded;
+            const QString error = replaceData(static_cast<int>(found - project_->experiments.begin()),
+                                              edi::BraggPdExperiment(*record.before));
+            undone = error.isEmpty();
+        }
+    } else if (const auto* structures = std::get_if<edi::StructuresUndo>(&undo_history_.back())) {
+        undone = apply(edi::Edit::restore_structures(*project_, *structures), true).isEmpty();
     } else {
         // A single fit on a scan dataset made it the template and the last fit. Its Undo is refused, with nothing
         // changed, while the model's dataset is still being read, and when the run record is there but cannot be
@@ -1492,6 +1710,7 @@ void ProjectViewModel::syncBlocks() {
         }
         experiment_models_ = next;
     }
+    syncLoadState();
     structure_list_->setStructures(structure_models_);
     syncDatasets();
     const int structures = static_cast<int>(structure_models_.size());

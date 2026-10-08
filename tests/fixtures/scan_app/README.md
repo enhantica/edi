@@ -48,3 +48,11 @@ The scale observation never synchronizes native completion with GUI delivery: pe
 the actual 1000-file boundary and after the final GUI drain includes the production queue. Only
 the functional Stop/Follow actor uses a synchronous handoff to place a user action at its named
 file boundary.
+
+Storage faults live in a linked fixture library on both platforms. Linux resolves the
+replacement libc symbols by name; Darwin uses the SDK's `DYLD_INTERPOSE` declarations.
+The library must load at process launch because dyld reads interposition sections only
+from dylibs. Its digest is part of the build receipt, checked before running the actor.
+The selected-output mutation, visible refusal and durable recovery assertions are unchanged.
+References: Apple's [interposition header](https://github.com/apple-oss-distributions/dyld/blob/main/include/mach-o/dyld-interposing.h)
+and [loader implementation](https://github.com/apple-oss-distributions/dyld/blob/main/dyld/DyldRuntimeState.cpp).

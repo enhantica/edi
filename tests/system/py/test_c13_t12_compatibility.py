@@ -8,6 +8,7 @@ import sys
 import zipfile
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from tests.fixtures.c34_t28_baseline.generate_bytes import observe
@@ -94,6 +95,56 @@ def retain_follower_witness(project, after):
         )
 
 
+def require_frozen_simulation_roundtrip(model, tmp_path):
+    # Before: a declared simulation grid refused save. After: retain its
+    # frozen input range and its complete save/load fixed point, without
+    # inventing observations or replacing the immutable byte/refusal oracle.
+    original = snapshot(tmp_path / 'input')
+    model.analysis.calculate()
+    experiment = model.experiments[0]
+    expected_axis = [10 + index * 0.02 for index in range(7001)]
+    assert list(experiment.data.two_theta) == pytest.approx(expected_axis, rel=0, abs=1e-12), (
+        'The frozen LiF input declares the complete 10 to 150 degree grid at 0.02 degree steps'
+    )
+    calculated = np.asarray(experiment.data.intensity_calc).copy()
+    model.save_as(tmp_path / 'saved')
+    first = snapshot(tmp_path / 'saved')
+    saved_experiment = first['experiments/cu_ka.edi'].decode()
+    for tag, value in (('min', 10), ('max', 150), ('step', 0.02)):
+        values = re.findall(r'(?m)^_data_range.two_theta_' + tag + r'\s+(\S+)', saved_experiment)
+        assert len(values) == 1 and float(values[0]) == value, (
+            'Saving the simulation must retain each independently declared range value once'
+        )
+    assert '_data.intensity_meas' not in saved_experiment, (
+        'A generated simulation grid must never be saved as measured observations'
+    )
+    reopened = engine.Project.load(tmp_path / 'saved')
+    reopened.analysis.calculate()
+    assert list(reopened.experiments[0].data.two_theta) == pytest.approx(
+        expected_axis, rel=0, abs=1e-12
+    ), 'Reopening the saved simulation must restore its independently declared grid'
+    assert np.array_equal(calculated, reopened.experiments[0].data.intensity_calc), (
+        'The frozen simulation save/load roundtrip must preserve its entire calculated profile'
+    )
+    reopened.save_as(tmp_path / 'second')
+    assert {name: normalized_record(name, data) for name, data in first.items()} == {
+        name: normalized_record(name, data) for name, data in snapshot(tmp_path / 'second').items()
+    }, 'The newly saveable simulation must retain a complete second-save byte fixed point'
+    assert snapshot(tmp_path / 'input') == original, (
+        'Saving a simulation must preserve every frozen input byte'
+    )
+
+
+def require_profile_replacement_roundtrip(source, tmp_path):
+    model = engine.Project.load(source)
+    assert hasattr(model.experiments[0].peak, 'mixing_eta_0'), (
+        'The replacement for the retired combined profile must select Npr5 mixing'
+    )
+    first = observe(source, tmp_path / 'first')
+    second = observe(tmp_path / 'first', tmp_path / 'second')
+    assert first == second, 'The Npr5 replacement preserves the complete second-save fixed point'
+
+
 @pytest.mark.parametrize('row', BASELINE['accepted'], ids=operator.itemgetter('path'))
 def test_frozen_project_bytes_or_named_identity_only_difference(tmp_path, row, record_property):
     record_property('project', row['path'])
@@ -103,16 +154,7 @@ def test_frozen_project_bytes_or_named_identity_only_difference(tmp_path, row, r
             ' frozen baseline bytes must retain their authoring hash'
         )
     if row['path'] == 'docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project':
-        source = ROOT / row['path']
-        model = engine.Project.load(source)
-        assert hasattr(model.experiments[0].peak, 'mixing_eta_0'), (
-            'The replacement for the retired combined profile must select Npr5 mixing'
-        )
-        first = observe(source, tmp_path / 'first')
-        second = observe(tmp_path / 'first', tmp_path / 'second')
-        assert first == second, (
-            'The Npr5 replacement preserves the complete second-save fixed point'
-        )
+        require_profile_replacement_roundtrip(ROOT / row['path'], tmp_path)
         return
     try:
         model = engine.Project.load(tmp_path / 'input')
@@ -122,6 +164,9 @@ def test_frozen_project_bytes_or_named_identity_only_difference(tmp_path, row, r
         pytest.fail(
             ' accepted baseline project now refuses load: ' + row['path'] + '; ' + str(error)
         )
+    if row['path'] == 'app/examples/pd-xray-cwl_lif/project':
+        require_frozen_simulation_roundtrip(model, tmp_path)
+        return
     if 'save_error' in row:
         if row['path'] == 'app/examples/pd-xray-cwl_lif/project':
             # Before: a generated range refused save. After: save retains the

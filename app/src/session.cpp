@@ -381,6 +381,10 @@ void Session::replaceProject(ProjectViewModel* project, const QStringList& warni
     if (project_ != nullptr) {
         connect(project_, &ProjectViewModel::refused, this, &Session::setLastError);
         connect(project_, &ProjectViewModel::recalculated, this, &Session::syncCalculationMessages);
+        // A load's or a removal's account: each one listed as its own message.
+        connect(project_, &ProjectViewModel::message, this, [this](const QString& text) {
+            warnings_->post(QStringLiteral("project:%1").arg(++project_messages_), text, QStringLiteral("warning"));
+        });
     }
     syncCalculationMessages();  // the new project calculated before it was connected
     setLastError({});

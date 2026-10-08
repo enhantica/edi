@@ -3545,6 +3545,9 @@ struct ExperimentBase : std::enable_shared_from_this<ExperimentBase> {
     // The reflections crysta computed, beside the `data` node's computed columns.
     PowderReflnDataBase refln;
     double dataset_weight = 1.0;  // joint-fit weight from analysis.edi
+    // The plain-data file the measured data was read from (`_data_source.file_name`, Load data), its own
+    // name without a directory; the data itself is `data`. Empty: none.
+    std::string data_file;
     // This bank's share of the project's last joint fit (`_fit_result_bank`, beside the project's
     // `_fit_result`; crysta's ExperimentBase carries the same): the points it fitted, its weighted-profile
     // R factor and its raw chi-square. Absent when the project holds no joint fit result.
@@ -4612,6 +4615,14 @@ struct BackgroundCategory {
     static constexpr std::array items{"type", "origin", "x_min", "x_max"};
 };
 static_assert(detail::one_entry_per_column(BackgroundCategory::columns, BackgroundCategory::items));
+
+struct DataSourceCategory {
+    using Owner = ExperimentBase;
+    static constexpr const char* name = "_data_source";
+    static constexpr auto columns = std::tuple{&ExperimentBase::data_file};
+    static constexpr std::array items{"file_name"};
+};
+static_assert(detail::one_entry_per_column(DataSourceCategory::columns, DataSourceCategory::items));
 
 struct JointFitCategory {
     using Owner = ExperimentBase;

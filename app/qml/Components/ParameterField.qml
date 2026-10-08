@@ -25,9 +25,10 @@ EaElements.ParamTextField {
     readonly property bool canFit: refinable && (item === null || item.fittable)
 
     enabled: refinable
+    // The value and its uncertainty as text, by the app's one rule for numbers (NumberText).
     parameter: item ? {
-        "value": item.value,
-        "error": item.hasUncertainty ? item.uncertainty : 0,
+        "value": NumberText.parameter(item.value, item.hasUncertainty ? item.uncertainty : 0, 10),
+        "error": item.hasUncertainty ? NumberText.error(item.uncertainty) : "",
         "enabled": field.refinable,
         "fittable": field.canFit,
         "fit": item.free && field.canFit,

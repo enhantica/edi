@@ -34,11 +34,13 @@ set per bank, so the project takes phase 1's (ferrite) values, which differ from
 ## Check run
 
 `python -m edi fit <copy> --dry --report machine --verbosity full`: `status=done`, `n_free=75`,
-`n_points_fitted=5642`, `iterations=3`, `reduced_chi_square=6.925059031`, `rwp=0.07147231917`, under a second.
+`n_points_fitted=5642`, `iterations=3`, `reduced_chi_square=6.925333048`, `rwp=0.0714737332`, under a second.
 FullProf's fit of the same project prints Rwp 7.20 % (S2) and 7.06 % (N2) over all non-excluded points.
 
-Every fitted value is within FullProf's standard uncertainty of FullProf's own; the largest difference is ferrite's
-B iso, 1.7216 against 1.715(16), 0.41 of its uncertainty.
+Every fitted value is within FullProf's standard uncertainty of FullProf's own; the largest difference is bank N2's
+first background point, -0.0174 against 0.025(129), 0.33 of its uncertainty, and the shared B iso is 1.7153 against
+1.715(16). The tie holds in every step of the fit, as in FullProf; the earlier pins (`reduced_chi_square=6.925059031`,
+`rwp=0.07147231917`) came from fits that applied it only to the result.
 
 ## expected.json
 

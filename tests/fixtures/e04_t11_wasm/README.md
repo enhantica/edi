@@ -32,6 +32,18 @@ node --experimental-websocket tests/system/manual/e04_t11_browser.mjs <extracted
 node --experimental-websocket tests/system/manual/e04_t11_browser.mjs <extracted-webapp> shim <persistent-output> <chrome>
 ```
 
+The progress check follows the current status bar: the former `Fit iterationsN` label is now
+`fitting · it N`. A Stop/Cancel control (including the Stop icon prefix) and a live iteration
+label are both required in multithread and shim modes. Completed `it N` summaries, Success,
+maximum-iteration settings, a control alone and an iteration label alone remain negative controls.
+The observer records changed labels and newly inserted accessibility nodes before their first update.
+
+File requests use real pointer input on the app's button instead of a synthetic click on its
+accessibility element. The chooser event's backend node must be the file input captured from the
+app's own request. Structure remains single-file, Experiment remains batch, and Load data is
+single-file. The `--file-request-case=load-data` case creates an experiment and opens its actual
+Load data control; the full `all` case includes it. The driver never opens the input directly.
+
 Use Node with the WebSocket API (the shown flag enables it on Node 20) and pinned Chrome headless shell 146 with SwiftShader (the feasibility-check browser). The driver
 records screenshots, the browser's own isolation flag, requested wasm URLs, runtime exceptions and
 the fitting accessibility tree and progress-mutation history. It uses an isolated browser profile, serves under a subfolder,

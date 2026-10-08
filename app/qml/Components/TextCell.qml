@@ -2,7 +2,6 @@
 import QtQuick
 import QtQuick.Controls
 
-import EasyApplication.Gui.Logic as EaLogic
 import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
@@ -18,7 +17,8 @@ EaComponents.TableViewTextInput {
     id: cell
 
     property var value: ""
-    readonly property string shown: accepts === "number" && typeof value === "number" && isFinite(value) ? EaLogic.Utils.toDefaultPrecision(value) : String(value)
+    // A number by the app's one rule for numbers in cells (NumberText).
+    readonly property string shown: accepts === "number" && typeof value === "number" && isFinite(value) ? NumberText.plain(value, 8) : String(value)
     // "text", "number" or "integer": what the cell accepts before anything reaches the model.
     property string accepts: "text"
     // Why the last commit was refused; empty once a commit takes or the value changes.

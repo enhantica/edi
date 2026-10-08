@@ -27,6 +27,7 @@ RELATIONS = json.loads((ROOT / 'tests/fixtures/constraint_expressions/byte-pins.
 #  projects postdate the immutable  pre-move source closure.
 # Their serialization is checked by a second-save fixed point, never a rewritten old pin.
 POLYNOMIAL_CASES = [
+    'repo:docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project',
     'repo:docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project',
     'corpus:beer-ferrite-austenite/project',
     'corpus:yap-spodi-3k/project',

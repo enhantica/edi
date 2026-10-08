@@ -1,12 +1,12 @@
 """Agreement with the unchanged owner-supplied YAP FullProf model."""
 
-import shutil
 from pathlib import Path
 
 import edi
 import pytest
 
 from tests.fixtures.multiphase import fullprof
+from tests.fixtures.multiphase.support import stage_delivered_corpus_project
 
 ROOT = Path(__file__).resolve().parents[3]
 PROJECT = ROOT / 'docs/user/cli/pd-neut-cwl_yap-spodi_3k/project'
@@ -32,8 +32,7 @@ def test_delivered_yap_project_has_both_phases_and_physical_occupancies():
 
 def test_yap_fit_agrees_with_every_other_fullprof_parameter_and_rwp(tmp_path):
     assert PROJECT.is_dir(), 'The independent YAP agreement gate needs the delivered CLI project'
-    target = tmp_path / 'project'
-    shutil.copytree(PROJECT, target)
+    target = stage_delivered_corpus_project(PROJECT, 'yap-spodi-3k', tmp_path / 'project')
     p = edi.Project.load(target)
     assert len(p.free_parameters) == 56, 'The full YAP fit must retain 56 declared free parameters'
     result = p.fit()
