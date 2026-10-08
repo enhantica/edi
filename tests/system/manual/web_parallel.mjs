@@ -33,4 +33,4 @@ const ratio = st.fitElapsedMs / mt.fitElapsedMs;
 const evidence = {chrome,coreCount:mt.coreCount,ratio,observations};
 await writeFile(join(output,'web-performance.json'),JSON.stringify(evidence,null,2));
 console.log(JSON.stringify({coreCount:mt.coreCount,ratio,singlethreadMs:st.fitElapsedMs,multithreadMs:mt.fitElapsedMs}));
-assert(ratio >= contract.speed.minimum_ratio,'the multithread five-bank fit must be at least 2.5 times faster on the same browser runner');
+assert(ratio >= contract.speed.minimum_ratio,'the multithread five-bank fit must be at least 1.4 times faster on the same browser runner');

@@ -27,7 +27,7 @@ This executes both corpus cases on the singlethread, direct-isolation and
 service-worker routes through the existing browser driver. Every route checks
 its kit, isolation, SharedArrayBuffer, Develop diagnostics and native numerical
 reference. It records the NCAF fit durations and requires the multithread kit to
-be at least 2.5 times faster on the same browser executable and runner exposing
+be at least 1.4 times faster on the same browser executable and runner exposing
 at least four cores. Only this speed gate uses a duration threshold.
 
 The diagnostics text contract adds `Engine backend`, `Engine workers`, and

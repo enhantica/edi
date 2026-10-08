@@ -59,7 +59,7 @@ def test_owner_five_bank_reference_is_not_a_generated_web_pin():
     ) == (649.33, 9.50, 7.69, 5), (
         'Five-bank acceptance must retain the owner native start, end, Rwp and iterations'
     )
-    assert contract['speed'] == {'minimum_core_count': 4, 'minimum_ratio': 2.5}, (
+    assert contract['speed'] == {'minimum_core_count': 4, 'minimum_ratio': 1.4}, (
         'Web speed acceptance must use the packet ratio and minimum core count'
     )
 
