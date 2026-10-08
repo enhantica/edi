@@ -142,7 +142,9 @@ The five-bank case also needs `window.ediOpenExample(exampleId)` in both kits.
 It returns (or resolves to) the boolean returned by the existing native
 `Session::openExample(exampleId)`, invoked on Qt's main thread against its
 bundled resource registry; unknown ids must fail through Session's existing
-validation. The check requests `ncaf_wish_5bank_s5`. It must not make a new
+validation. The check requests the bundled resource id `pd-neut-tof_ncaf-wish-5bank_start-5`
+from `docs/user/cli/projects.yml`, replacing the mistaken use of its project
+metadata name `ncaf_wish_5bank_s5` as a resource id. It must not make a new
 project, substitute a test fixture, or report success without calling Session.
 Qt's six-row Examples table includes clipped/recycled delegates whose AX
 names and rectangles can identify a different actual row. This bridge replaces
@@ -151,3 +153,28 @@ project save, Reset and reopen still run. The saved archive must independently
 identify `ncaf_wish_5bank_s5` before the unchanged native/owner numbers can
 satisfy the check. The existing Develop bridge's main-thread installation is
 the prior implementation to extend with this separate Session action.
+
+The native file controls also need `window.ediControlGeometry(objectName)` in
+both kits, installed alongside the existing main-thread page bridges. Qt can
+retain an old AX rectangle after the empty-table layout changes: the observed
+Structure Load proxy still placed its center at y=187.5 while the actual drawn
+button was at y=280 in the fixed 1280x768 viewport. This reader replaces the
+stale proxy rectangle; the subsequent action remains trusted CDP pointer input
+on the actual button, followed by its real browser chooser and native results.
+
+Every call returns or resolves to a fresh object with `objectName`, `x`, `y`,
+`width`, `height`, `visible` and `enabled`. Find exactly one effectively visible
+`QQuickItem` with the requested actual `objectName` in the live QML engine roots;
+read its actual name, `mapRectToScene(boundingRect())`, effective
+`QQuickItem::isVisible()` and `isEnabled()` on Qt's main thread. Coordinates are
+in the real Qt scene displayed at the driver's fixed viewport. Unknown,
+duplicate, hidden or missing objects and read errors throw/reject. Do not
+hardcode positions, read AX rectangles, force visibility, expand groups or
+activate the control inside this hook.
+
+Required names from the shipped QML are `structures.load`, `experiments.load`,
+`experiments.create` and `experiments.loadData.0`. The driver refuses wrong
+names, hidden/disabled controls, nonfinite/nonpositive geometry and rectangles
+outside the viewport. It still proves that `Page.fileChooserOpened.backendNodeId`
+resolves to the actual `HTMLInputElement` captured from that request; single-file,
+batch, cancel, superseded-request and native project-result claims are retained.

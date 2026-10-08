@@ -11,6 +11,7 @@ import assert from 'node:assert/strict';
 import { inflateSync } from 'node:zlib';
 import { inspectDevelopDiagnostics } from './web_develop_diagnostics.mjs';
 import { beginFitProgress, endFitProgress, isLiveFitProgress } from './web_fit_progress.mjs';
+import { controlPointer } from './web_control_geometry.mjs';
 import { fittingObservationKind, hasRunningProgress } from '../../fixtures/e04_t11_wasm/browser_observations.mjs';
 
 const [siteArg, mode, outputArg, chromeArg] = process.argv.slice(2);
@@ -156,14 +157,18 @@ try {
     } while (Date.now() < deadline);
     throw Error('page navigation must finish rendering before the next pointer action');
   };
-  const click = async (regex, role) => {
+  const click = async (regex, role, nativeObjectName) => {
     const node = await waitAX(regex, true, role);
     console.log(`browser ${mode}: click ${node.name?.value}`);
     assert(node.backendDOMNodeId, 'UI actions require a real browser-backed accessible control');
-    const model = await send('DOM.getBoxModel', { backendNodeId: node.backendDOMNodeId });
-    const q = model.model.content;
-    const rawX = (q[0]+q[2]+q[4]+q[6])/4;
-    const x = ((rawX % 1280) + 1280) % 1280, y = (q[1]+q[3]+q[5]+q[7])/4;
+    let x, y;
+    if (nativeObjectName) ({x,y} = await controlPointer(evaluate,nativeObjectName));
+    else {
+      const model = await send('DOM.getBoxModel', { backendNodeId: node.backendDOMNodeId });
+      const q = model.model.content;
+      const rawX = (q[0]+q[2]+q[4]+q[6])/4;
+      x = ((rawX % 1280) + 1280) % 1280; y = (q[1]+q[3]+q[5]+q[7])/4;
+    }
     console.log(`browser ${mode}: pointer ${x},${y}`);
     for (const type of ['mousePressed', 'mouseReleased']) await send('Input.dispatchMouseEvent',
       {type,x,y,button:'left',clickCount:1});
@@ -324,7 +329,7 @@ try {
     // Use the existing native Session action; the saved archive below proves the actual project.
     assert(await evaluate('typeof window.ediOpenExample === "function"'),
       'The five-bank browser check requires the live native Session.openExample bridge');
-    assert.equal(await evaluate('window.ediOpenExample("ncaf_wish_5bank_s5")'),true,
+    assert.equal(await evaluate('window.ediOpenExample("pd-neut-tof_ncaf-wish-5bank_start-5")'),true,
       'The live Session must successfully open its bundled five-bank start-5 example');
   } else {
     await click(exampleName, 'button');
@@ -547,7 +552,10 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
       const opened=event('Page.fileChooserOpened');
       // Before: synthetic click on Qt's accessibility element. Now: pointer
       // input on the app control, including Qt's openFiles/Load data path.
-      const [chooser] = await Promise.all([opened, click(regex, 'button')]);
+      const nativeObjectName = /Load structure/.test(regex.source) ? 'structures.load' :
+        /Load experiment/.test(regex.source) ? 'experiments.load' :
+        /Load data/.test(regex.source) ? 'experiments.loadData.0' : undefined;
+      const [chooser] = await Promise.all([opened, click(regex, 'button', nativeObjectName)]);
       await writeFile(join(output, `${mode}-request-picker.json`), JSON.stringify(chooser,null,2));
       assert(chooser.backendNodeId,'each request must expose its actual browser file input');
       const result=await send('DOM.resolveNode',{backendNodeId:chooser.backendNodeId});
@@ -687,7 +695,7 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
     if (['all','load-data'].includes(fileRequestCase)) {
     await createEmpty('routing_empty_data');
     await click(/^Experiment$/); await waitAX(/Experiments \(0\)/);
-    await click(/^Create experiment$/, 'button');
+    await click(/^Create experiment$/, 'button', 'experiments.create');
     await waitAX(/Experiments \(1\)/);
     await beginPicker(/^Load data(?:…|\.\.\.)$/);
     assert.equal(await evaluate('window.__e04FileInput.multiple'),false,
