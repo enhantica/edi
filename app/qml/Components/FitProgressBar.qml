@@ -23,6 +23,10 @@ Item {
 
     implicitHeight: Math.round(EaStyle.Sizes.fontPixelSize * 1.3)
 
+    // What the bar shows, for screen readers and the browser checks.
+    Accessible.role: Accessible.ProgressBar
+    Accessible.name: bar.text
+
     // The track.
     Rectangle {
         anchors.fill: parent
