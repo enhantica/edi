@@ -47,7 +47,9 @@ the former `backendDOMNodeId` lookup confused this event with an AX node. The ch
 backend node must still equal the file input captured from the app's own request. The pointer
 action and chooser event are awaited together so a refused request retains its failure evidence. Structure remains single-file, Experiment remains batch, and Load data is
 single-file. The `--file-request-case=load-data` case creates an experiment and opens its actual
-Load data control; the full `all` case includes it. The driver never opens the input directly.
+Load data control; the full `all` case includes it. The driver never opens the input directly. Structure and Experiment groups start open
+(edi ADR-0017 section 3); the former unconditional header toggles closed them before Load.
+The driver preserves their open state and still requires the real chooser and native results.
 
 Use Node with the WebSocket API (the shown flag enables it on Node 20) and pinned Chrome headless shell 146 with SwiftShader (the feasibility-check browser). The driver
 records screenshots, the browser's own isolation flag, requested wasm URLs, runtime exceptions and
