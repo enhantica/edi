@@ -340,7 +340,21 @@ try {
       const before=await tablePosition(),deltaY=row.y-last.y;
       // Qt uses its tracked pointer for wheel delivery; update it before the wheel event.
       await send('Input.dispatchMouseEvent',{type:'mouseMoved',...last});
-      await send('Input.dispatchMouseEvent',{type:'mouseWheel',...last,deltaX:0,deltaY});
+      // Its accessibility HTML overlays can consume a wheel before Qt's canvas receives it.
+      await evaluate(`(() => {
+        const roots=[document],canvases=[];
+        for(let i=0;i<roots.length;i++) for(const element of roots[i].querySelectorAll('*')) {
+          if(element.shadowRoot)roots.push(element.shadowRoot);
+          if(element.tagName==='CANVAS') {
+            const box=element.getBoundingClientRect();
+            if(box.width>100 && box.height>100)canvases.push({element,area:box.width*box.height});
+          }
+        }
+        canvases.sort((a,b)=>b.area-a.area);
+        if(!canvases.length)throw Error('The example scroll requires the actual rendered Qt canvas');
+        canvases[0].element.dispatchEvent(new WheelEvent('wheel',{bubbles:true,cancelable:true,
+          clientX:${last.x},clientY:${last.y},deltaX:0,deltaY:${deltaY},deltaMode:0}));
+      })()`);
       await settleRenderedPage();
       const scrollDeadline=Date.now()+10000;
       let position=await tablePosition();
