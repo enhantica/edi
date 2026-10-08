@@ -33,8 +33,10 @@ at least four cores. Only this speed gate uses a duration threshold.
 The matrix also runs `tests/system/manual/web_parallel_routes.mjs` in WebKit
 against the shipped site: initial load, reload, a second page in the same browser
 context and its reload, for each of the three routes. Every load observes the
-actual wasm request, isolation and SharedArrayBuffer. Controlled shim documents
+completed wasm request, isolation and SharedArrayBuffer. Controlled shim documents
 must receive COEP `require-corp`; Chromium cannot stand in for this regression.
+Rendered UI and fitted-result checks remain in the existing full browser matrix;
+this WebKit addition checks routing across reloads and navigations.
 Install the locked driver and its WebKit engine before running the matrix:
 
 ```
