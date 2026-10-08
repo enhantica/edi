@@ -135,6 +135,16 @@ def require_frozen_simulation_roundtrip(model, tmp_path):
     )
 
 
+def require_profile_replacement_roundtrip(source, tmp_path):
+    model = engine.Project.load(source)
+    assert hasattr(model.experiments[0].peak, 'mixing_eta_0'), (
+        'The replacement for the retired combined profile must select Npr5 mixing'
+    )
+    first = observe(source, tmp_path / 'first')
+    second = observe(tmp_path / 'first', tmp_path / 'second')
+    assert first == second, 'The Npr5 replacement preserves the complete second-save fixed point'
+
+
 @pytest.mark.parametrize('row', BASELINE['accepted'], ids=operator.itemgetter('path'))
 def test_frozen_project_bytes_or_named_identity_only_difference(tmp_path, row, record_property):
     record_property('project', row['path'])
@@ -144,16 +154,7 @@ def test_frozen_project_bytes_or_named_identity_only_difference(tmp_path, row, r
             ' frozen baseline bytes must retain their authoring hash'
         )
     if row['path'] == 'docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project':
-        source = ROOT / row['path']
-        model = engine.Project.load(source)
-        assert hasattr(model.experiments[0].peak, 'mixing_eta_0'), (
-            'The replacement for the retired combined profile must select Npr5 mixing'
-        )
-        first = observe(source, tmp_path / 'first')
-        second = observe(tmp_path / 'first', tmp_path / 'second')
-        assert first == second, (
-            'The Npr5 replacement preserves the complete second-save fixed point'
-        )
+        require_profile_replacement_roundtrip(ROOT / row['path'], tmp_path)
         return
     try:
         model = engine.Project.load(tmp_path / 'input')
