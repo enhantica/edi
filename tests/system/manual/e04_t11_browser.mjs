@@ -213,7 +213,7 @@ try {
         row[x] = (raw[y*(stride+1)+x+1] + predictor) & 255;
       }
       if ([Math.round(height*.25),Math.round(height*.74)].includes(y)) {
-        for (const fraction of [.28,.5,.72]) {
+        for (const fraction of [.28,.72]) {
           const x = Math.round(width*fraction)*channels;
           samples.push([...row.subarray(x,x+3)]);
         }
@@ -221,8 +221,9 @@ try {
       previous = row;
     }
     // gui-components v0.9.1 Colors.qml: dialogBackground = contentBackground = #f4f4f4 in the light theme.
+    // Sample the two dialog margins: its central results table can have a selected row.
     // A broad opaque modal covers both the white plotting canvas and sidebar; the ordinary chart cannot satisfy this.
-    return samples.length === 6 && samples.every(rgb => rgb.every(value => Math.abs(value-244) <= 2));
+    return samples.length === 4 && samples.every(rgb => rgb.every(value => Math.abs(value-244) <= 2));
   };
   const waitModal = async shown => {
     const deadline = Date.now()+45000;
