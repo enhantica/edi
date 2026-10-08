@@ -409,7 +409,7 @@ def _run_human(project: edi.Project, verbosity, project_name: str, *, clock=time
 
 def _skipped_line(project: edi.Project) -> str:
     """What crysta noted about the scan's files, from analysis/scan-notes.csv."""
-    directory = project.metadata.path
+    directory = getattr(getattr(project, 'metadata', None), 'path', None)
     if directory is None:
         return ''
     try:
