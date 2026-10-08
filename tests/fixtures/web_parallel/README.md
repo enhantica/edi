@@ -11,8 +11,17 @@ OMP_NUM_THREADS=4 python -m tests.fixtures.web_parallel.generate \
 
 The browser corpus is LBCO HRPT start 4 and NCAF WISH five-bank start 5. Captures
 include fitted parameters, fit scalars and every measured/calculated pattern
-operand. The existing ADR-0057 cross-platform relative tolerance 1e-9 and
-absolute tolerance 1e-11 apply; the owner's rounded numbers use half a hundredth.
+operand. Parameter values and pattern operands retain the native captures'
+relative tolerance 1e-9 and absolute tolerance 1e-11. Fitted uncertainties use
+the native machine-report conformance bound
+`abs(actual - reference) <= max(5e-9 * abs(reference), 5e-10)`, including its
+absolute floor for uncertainty near zero. This bound predates the wasm build;
+it is not derived from an observed browser difference. Both components of a
+saved `value(uncertainty)` token are compared numerically: decimal uncertainty
+is absolute, while integer uncertainty uses the mantissa's last decimal units.
+An empty uncertainty, zero uncertainty and an unbracketed fixed operand remain
+distinct. Nonfinite or malformed operands refuse. The owner's rounded numbers
+use half a hundredth.
 The original input baseline is chi-square 649.33; the native capture converges
 in five iterations to chi-square 9.497535494 and Rwp 0.07694458606.
 
@@ -105,11 +114,29 @@ The live progress witness checks the status bar while fitting: it requires
 an actual `Stop fitting` control and an actual
 `fitting · it N` label while the fit runs. This replaces the former
 `Fit iterationsN` expectation; completed outcome text and minimizer settings
-cannot satisfy it. The drawn `FitProgressBar` currently has no accessible
-name. Its existing root Item needs `Accessible.role: Accessible.ProgressBar`
-and `Accessible.name: bar.text`, so the actual bar text reaches the browser's
-accessibility DOM for both single-fit and scan bars. No test-generated label
-or completed-results substitute is admitted.
+cannot satisfy it. The drawn `FitProgressBar` keeps its
+`Accessible.role: Accessible.ProgressBar` and `Accessible.name: bar.text`.
+The wasm accessibility layer need not mirror that role into the browser DOM;
+the check reads live native progress through `window.ediFitProgress()` instead.
+No test-generated label or completed-results substitute is admitted.
+
+Install `window.ediFitProgress()` in both kits alongside the existing page
+bridges. Every call returns (or resolves to) a fresh object with:
+
+- `text`: the actual QML `statusBar.fit.progress` item's current `text` property.
+- `visible`: that item's effective `QQuickItem::isVisible()` value, including its parents.
+- `running`: the actual native fit's `running` state, as exposed by the existing
+  `statusBar.fit` item's readonly `running` property; do not infer this from text.
+
+Read these properties on Qt's main thread. Missing native objects or read errors
+must throw/reject rather than return invented defaults. Do not synthesize the
+text from requested iterations, a timer, a kit name or completed fit results.
+The sampler begins before the real Start fitting action, polls the live hook on
+animation frames while the fit runs and stops at the successful results popup.
+At least one threaded-fit sample must have `running: true`, `visible: true` and
+`text` matching `fitting · it N` with a positive iteration, alongside the actual
+running control. Samples are retained with the before/after states; a completed
+or hidden bar, or stale text with `running: false`, cannot satisfy the witness.
 
 The five-bank case also needs `window.ediOpenExample(exampleId)` in both kits.
 It returns (or resolves to) the boolean returned by the existing native

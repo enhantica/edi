@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import { inflateSync } from 'node:zlib';
 import { inspectDevelopDiagnostics } from './web_develop_diagnostics.mjs';
+import { beginFitProgress, endFitProgress, isLiveFitProgress } from './web_fit_progress.mjs';
 
 const [siteArg, mode, outputArg, chromeArg] = process.argv.slice(2);
 const fitCase = process.argv.find(arg => arg.startsWith('--fit-case='))?.split('=')[1] || 'lbco';
@@ -377,6 +378,7 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
     for (const root of roots) observer.observe(root,{subtree:true,attributes:true,attributeOldValue:true,characterData:true,characterDataOldValue:true,childList:true});
     window.__e04ProgressObserver = observer;
   })()`);
+  const progressBefore = await beginFitProgress(evaluate);
   const fitStarted = await evaluate('performance.now()');
   await click(/^Start fitting$/);
 
@@ -384,16 +386,22 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   const fitElapsedMs = (await evaluate('performance.now()')) - fitStarted;
   assert(Number.isFinite(fitElapsedMs) && fitElapsedMs > 0, 'fit measurement must span the actual browser fitting action'); await waitModal(true); await shot('fit-results');
   const progress = await evaluate('window.__e04Progress');
-  await writeFile(join(output, `${mode}-progress.json`), JSON.stringify(progress,null,2));
+  const nativeProgress = await endFitProgress(evaluate);
+  const progressAfter = await evaluate('window.ediFitProgress()');
+  await writeFile(join(output, `${mode}-progress.json`), JSON.stringify({accessibility:progress,
+    native:nativeProgress,before:progressBefore,after:progressAfter},null,2));
   // The live status-bar stripe shows the running fit's current iteration: "fitting · it N".
-  const runningProgress = values => values.some(value => /^stop fitting$/i.test(value)) &&
-    values.some(value => /^fitting\s*·\s*it\s+\d+$/i.test(value));
-  assert(runningProgress(['Stop fitting','fitting · it 3']),
+  const runningProgress = (values,states) => values.some(value => /^stop fitting$/i.test(value)) &&
+    states.some(isLiveFitProgress);
+  assert(runningProgress(['Stop fitting'],[{running:true,visible:true,text:'fitting · it 3'}]),
     'The shipped running control and live status-bar iteration label must satisfy the progress witness');
-  assert(!runningProgress(['Maximum iterations 400','Success · it 3','Stopped · it 3','Iterations']),
+  assert(!runningProgress(['Stop fitting'],[{running:false,visible:true,text:'fitting · it 3'}]) &&
+    !runningProgress(['Stop fitting'],[{running:true,visible:true,text:'Success · it 3'}]),
     'completed report text and minimizer settings cannot impersonate live fitting progress');
-  if (mode !== 'singlethread') assert(runningProgress(progress),
+  if (mode !== 'singlethread') assert(runningProgress(progress,nativeProgress),
     'multithread fitting must publish both a running control and a live iteration indicator');
+  assert.equal(progressAfter.running,false,
+    'The native fit must stop running when the actual successful results popup is displayed');
   await evaluate('window.__e04ProgressObserver.disconnect()');
   const fitAX = await send('Accessibility.getFullAXTree');
   await writeFile(join(output, `${mode}-fit-accessibility.json`), JSON.stringify(fitAX, null, 2));
