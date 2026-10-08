@@ -374,13 +374,13 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   const fitElapsedMs = (await evaluate('performance.now()')) - fitStarted;
   assert(Number.isFinite(fitElapsedMs) && fitElapsedMs > 0, 'fit measurement must span the actual browser fitting action'); await waitModal(true); await shot('fit-results');
   const progress = await evaluate('window.__e04Progress');
+  await writeFile(join(output, `${mode}-progress.json`), JSON.stringify(progress,null,2));
   const runningProgress = values => values.some(value => /^(?:stop|cancel) fitting$/i.test(value)) &&
     values.some(value => /^(?:spinner)?Fit iterations\d+$/i.test(value));
   assert(!runningProgress(['Maximum iterations 400','Success','Iterations']),
     'completed report text and minimizer settings cannot impersonate live fitting progress');
   if (mode !== 'singlethread') assert(runningProgress(progress),
     'multithread fitting must publish both a running control and a live iteration indicator');
-  await writeFile(join(output, `${mode}-progress.json`), JSON.stringify(progress,null,2));
   await evaluate('window.__e04ProgressObserver.disconnect()');
   const fitAX = await send('Accessibility.getFullAXTree');
   await writeFile(join(output, `${mode}-fit-accessibility.json`), JSON.stringify(fitAX, null, 2));
