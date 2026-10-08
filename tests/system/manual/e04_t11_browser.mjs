@@ -575,7 +575,7 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
     const createEmpty = async name => {
       await projectPage(); await accessiblePress(/^Create a new project$/);
       // Qt omits popup editors from AX, as it omits the fit table. The real rendered name
-      // input at 1280x768 is recorded in seq4-f1-create's capture; type through native input.
+      // input at the fixed 1280x768 viewport is recorded in the screenshot; type through native input.
       for (const type of ['mousePressed','mouseReleased']) await send('Input.dispatchMouseEvent',
         {type,x:640,y:325,button:'left',clickCount:1});
       for (const type of ['keyDown','keyUp']) await send('Input.dispatchKeyEvent',
@@ -653,17 +653,17 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
 
     }
     if (['all','cancel-structure'].includes(fileRequestCase)) {
+    // The shipped groups start open (edi ADR-0017 section 3); preserve that state
+    // rather than toggling them closed before the real pointer action.
     // Real cancel events route through Qt. The source seam gate independently checks that no
     // stale receiver makes an unrelated refused call (a refusal can leave archive bytes unchanged).
     await createEmpty('routing_empty_c');
     await click(/^Structure$/); await waitAX(/Structures \(0\)/);
-    await accessiblePress(/Structures \(0\)/);
     await beginPicker(/^Load structure from file$/);
     assert.equal(await evaluate('window.__e04FileInput.multiple'),false,
       'Structure must preserve the standalone single-file chooser contract');
     await evaluate("window.__e04FileInput.dispatchEvent(new Event('cancel')); true"); await frame();
     await click(/^Experiment$/); await waitAX(/Experiments \(0\)/);
-    await accessiblePress(/Experiments \(0\)/);
     const experiment=await beginPicker(/^Load experiment\(s\) from file\(s\)$/);
     assert.equal(await evaluate('window.__e04FileInput.multiple'),true,
       'Experiment must retain its batch chooser contract');
@@ -674,11 +674,9 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
     if (['all','cancel-experiment'].includes(fileRequestCase)) {
     await createEmpty('routing_empty_d');
     await click(/^Experiment$/); await waitAX(/Experiments \(0\)/);
-    if (fileRequestCase !== 'all') await accessiblePress(/Experiments \(0\)/);
     await beginPicker(/^Load experiment\(s\) from file\(s\)$/);
     await evaluate("window.__e04FileInput.dispatchEvent(new Event('cancel')); true"); await frame();
     await click(/^Structure$/); await waitAX(/Structures \(0\)/);
-    if (fileRequestCase !== 'all') await accessiblePress(/Structures \(0\)/);
     const structure=await beginPicker(/^Load structure from file$/);
     assert.equal(await evaluate('window.__e04FileInput.multiple'),false,
       'Structure must keep a single-file chooser after Experiment cancellation');
@@ -689,7 +687,6 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
     if (['all','load-data'].includes(fileRequestCase)) {
     await createEmpty('routing_empty_data');
     await click(/^Experiment$/); await waitAX(/Experiments \(0\)/);
-    if (fileRequestCase !== 'all') await accessiblePress(/Experiments \(0\)/);
     await click(/^Create experiment$/, 'button');
     await waitAX(/Experiments \(1\)/);
     await beginPicker(/^Load data(?:…|\.\.\.)$/);
