@@ -651,6 +651,7 @@ QJsonObject prepare_scale(const std::string& path) {
     return {{"prepared", true}};
 }
 #include "accident_observations.hpp"
+#include "row_generation_observations.hpp"
 }  // namespace
 
 void scan_contract_before_dataset_read(const std::string& path) {
@@ -765,7 +766,9 @@ int main(int argc, char** argv) {
     stage = command;
     QJsonObject answer;
     try {
-        if (command == "pending")
+        if (command == "row-generation")
+            answer = row_generation(path, argv[3], argv[4], argv[5]);
+        else if (command == "pending")
             answer = pending_action(path, argv[3]);
         else if (command == "reset-state")
             answer = reset_state(path);

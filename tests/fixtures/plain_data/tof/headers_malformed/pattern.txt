@@ -1,0 +1,7 @@
+# instrument header
+x y sigma
+3500.0 4 2
+3600.0 nope 3
+3600.0 9 3
+3700.0 16 4
+3800.0 2 3 trailing

@@ -409,15 +409,58 @@ TEST_CASE("E09-T55 declared data ranges select calculation mode and reject ambig
     std::filesystem::create_directories(all_range.path / "structures");
     std::filesystem::create_directories(all_range.path / "experiments");
     std::filesystem::copy_file(fixtures / "structure.edi", all_range.path / "structures/ncaf.edi");
-    write_text(all_range.path / "experiments/range.edi", ranged);
+    std::string distinct_range = ranged;
+    distinct_range.replace(0, std::string("data_wish_5_6").size(), "data_range_bank");
+    write_text(all_range.path / "experiments/range.edi", distinct_range);
     const edi::Project range_project = edi::load_project(all_range.path.string());
     CHECK_MESSAGE(range_project.experiment().calculation_only,
                   "a project whose banks all declare ranges must select calculation mode");
 
     write_text(all_range.path / "experiments/measured.edi", measured);
-    check_io_error([&] { static_cast<void>(edi::load_project(all_range.path.string())); },
-                   "project's contents select calculate or fit as a whole",
-                   "a mixed observation/range project must fail closed");
+    // Mixed projects are admitted; a block declaring both data and a range still refuses.
+    const auto require_mixed = [](const edi::Project& project) {
+        REQUIRE_MESSAGE(project.experiments.size() == 2,
+                        "Mixed projects: loading retains the measured bank and the range bank");
+        const edi::BraggPdExperiment* measured = nullptr;
+        const edi::BraggPdExperiment* ranged = nullptr;
+        for (const auto& experiment : project.experiments) {
+            if (experiment->name == "wish_5_6") measured = &*experiment;
+            if (experiment->name == "range_bank") ranged = &*experiment;
+        }
+        REQUIRE_MESSAGE((measured && ranged),
+                        "Mixed projects: source-file ordering must not replace bank identity");
+        const auto& measured_bank = *measured;
+        const auto& range_bank = *ranged;
+        CHECK_MESSAGE(
+            (measured_bank.name == "wish_5_6" && range_bank.name == "range_bank"),
+            "Mixed projects: the independently named banks must retain distinct identities");
+        CHECK_MESSAGE(
+            (!measured_bank.calculation_only && range_bank.calculation_only),
+            "Mixed projects: each bank preserves its own measured or simulation admission");
+        REQUIRE_MESSAGE((measured_bank.data && range_bank.data),
+                        "Mixed projects: both banks retain their declared data nodes");
+        CHECK_MESSAGE(
+            (measured_bank.data->axis() ==
+             std::vector<double>{18.25, 31.613267, 39.5, 72.125, 110.75, 150.5}),
+            "Mixed projects: the measured bank retains the six committed fixture coordinates");
+        CHECK_MESSAGE(
+            measured_bank.data->intensity_meas == std::vector<double>(6, 0.0),
+            "Mixed projects: measured zero intensities from an edi project are preserved");
+        CHECK_MESSAGE(
+            measured_bank.data->intensity_meas_su == std::vector<double>(6, 1.0),
+            "Mixed projects: the measured bank retains its six independently supplied sigmas");
+        CHECK_MESSAGE((range_bank.data->axis() == std::vector<double>{10.0, 15.0, 20.0}),
+                      "Mixed projects: the simulation retains the hand-constructed range grid");
+        CHECK_MESSAGE((range_bank.data->intensity_meas.empty() &&
+                       range_bank.data->intensity_meas_su.empty()),
+                      "Mixed projects: a simulation never fabricates measured data");
+    };
+    const edi::Project mixed = edi::load_project(all_range.path.string());
+    require_mixed(mixed);
+    TempTree saved_mixed = temp_tree("mixed-project-roundtrip");
+    edi::save_project(mixed, saved_mixed.path.string());
+    std::filesystem::remove_all(all_range.path);
+    require_mixed(edi::load_project(saved_mixed.path.string()));
 }
 
 TEST_CASE("E09-T55 project I/O fails closed before partial state escapes") {

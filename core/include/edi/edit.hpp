@@ -93,6 +93,36 @@ inline void keep_changed(RelationsUndo& before, Project& project) {
     });
 }
 
+// The structures as they were before Create or Remove structure, with every experiment's links and texture rows,
+// which undo puts back (restore_structures). Taken with capture_structures.
+struct StructuresUndo {
+    struct ExperimentRows {
+        const ExperimentBase* experiment = nullptr;
+        std::vector<LinkedStructure> links;
+        std::vector<PrefOrient> texture;
+    };
+    std::vector<Structure> structures;
+    std::vector<ExperimentRows> experiments;
+};
+
+inline StructuresUndo capture_structures(const Project& project) {
+    StructuresUndo before;
+    for (const auto& structure : project.structures) {
+        before.structures.push_back(*structure);
+    }
+    for (const auto& experiment : project.experiments) {
+        StructuresUndo::ExperimentRows rows{experiment.get(), {}, {}};
+        for (const auto& link : experiment->linked_structures) {
+            rows.links.push_back(*link);
+        }
+        for (const auto& row : experiment->preferred_orientation) {
+            rows.texture.push_back(*row);
+        }
+        before.experiments.push_back(std::move(rows));
+    }
+    return before;
+}
+
 class Edit {
    public:
     // Runs the operation: its refusal, with nothing written, or the whole write.
@@ -359,6 +389,72 @@ class Edit {
             add_loaded_structure(project, *structure);
         });
     }
+    // A structure removed with every experiment's link to it and texture row for it, all or none.
+    static Edit remove_structure(Project& project, std::size_t index) {
+        return Edit([&project, index] {
+            if (index >= project.structures.size()) {
+                throw std::out_of_range("the project has no structure " + std::to_string(index));
+            }
+            const std::string name = spelled_structure(project.structures[index]->name.value());
+            std::vector<ItemVec<Structure>::Ptr> structures(project.structures.begin(), project.structures.end());
+            structures.erase(structures.begin() + static_cast<std::ptrdiff_t>(index));
+            std::vector<std::vector<ItemVec<LinkedStructure>::Ptr>> links;
+            std::vector<std::vector<ItemVec<PrefOrient>::Ptr>> texture;
+            for (const auto& experiment : project.experiments) {
+                auto& kept_links = links.emplace_back();
+                for (const auto& link : experiment->linked_structures) {
+                    if (spelled_structure(link->structure_id.value()) != name) {
+                        kept_links.push_back(link);
+                    }
+                }
+                auto& kept_texture = texture.emplace_back();
+                for (const auto& row : experiment->preferred_orientation) {
+                    if (spelled_structure(row->structure_id.value()) != name) {
+                        kept_texture.push_back(row);
+                    }
+                }
+            }
+            for (std::size_t i = 0; i < project.experiments.size(); ++i) {
+                project.experiments[i]->linked_structures.assign(std::move(links[i]));
+                project.experiments[i]->preferred_orientation.assign(std::move(texture[i]));
+            }
+            project.structures.assign(std::move(structures));
+        });
+    }
+    // The structures, links and texture rows put back as `before` holds them (an undo of Create or Remove
+    // structure): each experiment is found by identity first, so one removed since refuses with nothing written.
+    static Edit restore_structures(Project& project, StructuresUndo before) {
+        return Edit([&project, before = std::make_shared<StructuresUndo>(std::move(before))] {
+            std::vector<ExperimentBase*> experiments;
+            for (const StructuresUndo::ExperimentRows& rows : before->experiments) {
+                const auto found = std::find_if(project.experiments.begin(), project.experiments.end(),
+                                                [&rows](const auto& held) { return held.get() == rows.experiment; });
+                if (found == project.experiments.end()) {
+                    throw std::invalid_argument("undo: an experiment the structures were linked to is no longer in "
+                                                "the project");
+                }
+                experiments.push_back(found->get());
+            }
+            std::vector<ItemVec<Structure>::Ptr> structures;
+            for (const Structure& structure : before->structures) {
+                structures.push_back(std::make_shared<Structure>(structure));
+            }
+            project.structures.assign(std::move(structures));
+            for (std::size_t i = 0; i < experiments.size(); ++i) {
+                std::vector<ItemVec<LinkedStructure>::Ptr> links;
+                for (const LinkedStructure& link : before->experiments[i].links) {
+                    links.push_back(std::make_shared<LinkedStructure>(link));
+                }
+                std::vector<ItemVec<PrefOrient>::Ptr> texture;
+                for (const PrefOrient& row : before->experiments[i].texture) {
+                    texture.push_back(std::make_shared<PrefOrient>(row));
+                }
+                experiments[i]->linked_structures.assign(std::move(links));
+                experiments[i]->preferred_orientation.assign(std::move(texture));
+            }
+        });
+    }
+
     // Loaded experiments added, all or none: every name is checked against the project and against
     // the others (add_loaded_experiment's rule and message), then the collection takes them in one
     // mutation.
@@ -382,12 +478,10 @@ class Edit {
     }
 
     // A new experiment without measured data (simulation_experiment) added at the end: its name is checked
-    // against the project's, and a project whose experiments carry measured data refuses it (load_project's
-    // rule: a project calculates or fits as a whole).
+    // against the project's. It may join experiments with measured data: a fit skips it.
     static Edit create_experiment(Project& project, BraggPdExperiment experiment) {
         auto created = std::make_shared<BraggPdExperiment>(std::move(experiment));
         return Edit([&project, created] {
-            require_calculation_project(project);
             require_scan_template(project, project.experiments.size() + 1);
             const std::string key = KeyTraits<BraggPdExperiment>::canonical(created->name);
             for (const auto& held : project.experiments) {
@@ -414,6 +508,30 @@ class Edit {
             });
             if (found == all.end()) {
                 throw std::invalid_argument("the experiment is not in the project");
+            }
+            *found = std::make_shared<BraggPdExperiment>(*next);
+            project.experiments.assign(std::move(all));
+        });
+    }
+    // An experiment made with Create experiment replaced in its place by `replacement`: the same experiment with
+    // measured data read from a file (Load data), or as it was before (its undo). The new name is checked against
+    // the other experiments'.
+    static Edit load_data(Project& project, const ExperimentBase& experiment, BraggPdExperiment replacement) {
+        auto next = std::make_shared<BraggPdExperiment>(std::move(replacement));
+        return Edit([&project, &experiment, next] {
+            std::vector<ItemVec<BraggPdExperiment>::Ptr> all(project.experiments.begin(), project.experiments.end());
+            const auto found = std::find_if(all.begin(), all.end(), [&experiment](const auto& held) {
+                return held.get() == &experiment;
+            });
+            if (found == all.end()) {
+                throw std::invalid_argument("the experiment is not in the project");
+            }
+            const std::string key = KeyTraits<BraggPdExperiment>::canonical(next->name);
+            for (const auto& held : all) {
+                if (held.get() != &experiment && KeyTraits<BraggPdExperiment>::canonical(held->name) == key) {
+                    throw IoError("an experiment named '" + detail::printable_id(next->name) +
+                                  "' is already in the project");
+                }
             }
             *found = std::make_shared<BraggPdExperiment>(*next);
             project.experiments.assign(std::move(all));
@@ -592,22 +710,16 @@ class Edit {
                 "file: an edit leaving it " + std::to_string(experiments) + " experiments is refused");
         }
     }
-    // Refuses an id whose item a collection other than the model's own ItemVec<Item> holds: a
-    // caller's keyed type derived from a model type would bring its own rename rule (KeyTraits),
-    // which could write and then throw. A detached id has no rule to run.
-    static void require_calculation_project(const Project& project) {
-        for (const auto& held : project.experiments) {
-            if (!held->calculation_only) {
-                throw IoError("the project's experiments carry measured data - a project calculates or fits "
-                              "as a whole, so an experiment without data cannot join it");
-            }
-        }
-    }
+    // A structure's name as links spell it: an empty one is `structure` (the loader's rule).
+    static std::string spelled_structure(const std::string& id) { return id.empty() ? std::string("structure") : id; }
     static void require_region(const ExperimentBase& experiment, std::size_t row) {
         if (row >= experiment.excluded_regions.size()) {
             throw std::out_of_range("the experiment has no excluded region " + std::to_string(row));
         }
     }
+    // Refuses an id whose item a collection other than the model's own ItemVec<Item> holds: a
+    // caller's keyed type derived from a model type would bring its own rename rule (KeyTraits),
+    // which could write and then throw. A detached id has no rule to run.
     template <typename Item>
     static void require_model_owner(const ItemKey& id, const char* what) {
         if (id.owner() != nullptr && dynamic_cast<const ItemVec<Item>*>(id.owner()) == nullptr) {

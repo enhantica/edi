@@ -4,6 +4,12 @@
 #include <stdarg.h>
 #include <unistd.h>
 
+#ifdef __APPLE__
+#define SCAN_FAULT_NAME(name) scan_contract_fault_##name
+#else
+#define SCAN_FAULT_NAME(name) name
+#endif
+
 #include <atomic>
 #include <cstdio>
 #include <string>
@@ -40,7 +46,7 @@ int scan_contract_disarm_io() {
     armed = false;
     return failures;
 }
-extern "C" int open(const char* path, int flags, ...) {
+extern "C" int SCAN_FAULT_NAME(open)(const char* path, int flags, ...) {
     mode_t mode = 0;
     if (flags & O_CREAT) {
         va_list args;
@@ -49,7 +55,11 @@ extern "C" int open(const char* path, int flags, ...) {
         va_end(args);
     }
     if ((flags & (O_WRONLY | O_RDWR)) && refuse(path)) return -1;
+#ifdef __APPLE__
+    auto real = &::open;
+#else
     static auto real = reinterpret_cast<int (*)(const char*, int, ...)>(dlsym(RTLD_NEXT, "open"));
+#endif
     return real(path, flags, mode);
 }
 #ifdef __linux__
@@ -67,35 +77,55 @@ extern "C" int open64(const char* path, int flags, ...) {
     return real(path, flags, mode);
 }
 #endif
-extern "C" int unlink(const char* path) {
+extern "C" int SCAN_FAULT_NAME(unlink)(const char* path) {
     if (refuse(path)) return -1;
+#ifdef __APPLE__
+    auto real = &::unlink;
+#else
     static auto real = reinterpret_cast<int (*)(const char*)>(dlsym(RTLD_NEXT, "unlink"));
+#endif
     return real(path);
 }
-extern "C" int unlinkat(int fd, const char* path, int flags) {
+extern "C" int SCAN_FAULT_NAME(unlinkat)(int fd, const char* path, int flags) {
     if (refuse(path)) return -1;
+#ifdef __APPLE__
+    auto real = &::unlinkat;
+#else
     static auto real =
         reinterpret_cast<int (*)(int, const char*, int)>(dlsym(RTLD_NEXT, "unlinkat"));
+#endif
     return real(fd, path, flags);
 }
-extern "C" int rename(const char* from, const char* to) {
+extern "C" int SCAN_FAULT_NAME(rename)(const char* from, const char* to) {
     if (refuse(from) || refuse(to)) return -1;
+#ifdef __APPLE__
+    auto real = &::rename;
+#else
     static auto real =
         reinterpret_cast<int (*)(const char*, const char*)>(dlsym(RTLD_NEXT, "rename"));
+#endif
     return real(from, to);
 }
 
-extern "C" int remove(const char* path) {
+extern "C" int SCAN_FAULT_NAME(remove)(const char* path) {
     if (refuse(path)) return -1;
+#ifdef __APPLE__
+    auto real = &::remove;
+#else
     static auto real = reinterpret_cast<int (*)(const char*)>(dlsym(RTLD_NEXT, "remove"));
+#endif
     return real(path);
 }
-extern "C" FILE* fopen(const char* path, const char* mode) {
+extern "C" FILE* SCAN_FAULT_NAME(fopen)(const char* path, const char* mode) {
     if ((mode[0] == 'w' || mode[0] == 'a' || std::string(mode).find('+') != std::string::npos) &&
         refuse(path))
         return nullptr;
+#ifdef __APPLE__
+    auto real = &::fopen;
+#else
     static auto real =
         reinterpret_cast<FILE* (*)(const char*, const char*)>(dlsym(RTLD_NEXT, "fopen"));
+#endif
     return real(path, mode);
 }
 #ifdef __linux__
@@ -107,4 +137,23 @@ extern "C" FILE* fopen64(const char* path, const char* mode) {
         reinterpret_cast<FILE* (*)(const char*, const char*)>(dlsym(RTLD_NEXT, "fopen64"));
     return real(path, mode);
 }
+#endif
+
+#ifdef __APPLE__
+// Darwin's two-level bindings in libc++/libSystem do not resolve to executable
+// definitions by name. dyld reads these replacement/import pairs at launch.
+#define SCAN_INTERPOSE(replacement, replacee)                                           \
+    __attribute__((used, section("__DATA,__interpose"))) static const struct {           \
+        void (*replacement_function)();                                                \
+        void (*replacee_function)();                                                   \
+    } scan_interpose_##replacee = {reinterpret_cast<void (*)()>(&replacement),          \
+                                  reinterpret_cast<void (*)()>(&replacee)};
+
+SCAN_INTERPOSE(scan_contract_fault_open, open)
+SCAN_INTERPOSE(scan_contract_fault_unlink, unlink)
+SCAN_INTERPOSE(scan_contract_fault_unlinkat, unlinkat)
+SCAN_INTERPOSE(scan_contract_fault_rename, rename)
+SCAN_INTERPOSE(scan_contract_fault_remove, remove)
+SCAN_INTERPOSE(scan_contract_fault_fopen, fopen)
+#undef SCAN_INTERPOSE
 #endif

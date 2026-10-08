@@ -5,7 +5,23 @@ target_link_libraries(scan_app_probe PRIVATE edi_app_module edi_app_moduleplugin
 target_compile_features(scan_app_probe PRIVATE cxx_std_20)
 # Only the observer: SDK and production targets retain their declared release optimization.
 target_compile_options(scan_app_probe PRIVATE -O0)
-target_sources(scan_app_probe PRIVATE native_boundary.cpp io_faults.cpp ${SCAN_CONTRACT_NATIVE_OBJECT} ${SCAN_CONTRACT_NATIVE_FIT_OBJECT} ${SCAN_CONTRACT_NATIVE_READ_OBJECT})
+# The observation host checks logical container bounds too: an erased vector
+# element can retain allocated storage, so a memory sanitizer alone misses it.
+# These checks change neither container layout nor the installed SDK.
+foreach(target edi_app_module scan_app_probe)
+  target_compile_definitions(${target} PRIVATE _GLIBCXX_ASSERTIONS=1
+    _LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE)
+endforeach()
+target_sources(scan_app_probe PRIVATE native_boundary.cpp ${SCAN_CONTRACT_NATIVE_OBJECT} ${SCAN_CONTRACT_NATIVE_FIT_OBJECT} ${SCAN_CONTRACT_NATIVE_READ_OBJECT})
+
+# dyld reads interposition tuples from dylibs loaded at launch. Use the same
+# fixture-library boundary on Linux so its packaging is exercised locally too.
+add_library(scan_io_faults SHARED io_faults.cpp)
+target_compile_features(scan_io_faults PRIVATE cxx_std_20)
+target_link_libraries(scan_io_faults PRIVATE ${CMAKE_DL_LIBS})
+target_link_libraries(scan_app_probe PRIVATE scan_io_faults)
+file(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/scan-io-library.txt"
+     CONTENT "$<TARGET_FILE:scan_io_faults>")
 
 add_subdirectory(reference)
 

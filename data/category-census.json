@@ -1164,6 +1164,20 @@
       "owner": "ExperimentBase"
     },
     {
+      "name": "_data_source",
+      "form": "one row",
+      "columns": [
+        {
+          "member": "ExperimentBase::data_file",
+          "type": "std::string",
+          "items": [
+            "file_name"
+          ]
+        }
+      ],
+      "owner": "ExperimentBase"
+    },
+    {
       "name": "_joint_fit",
       "form": "one row",
       "columns": [
@@ -3395,6 +3409,11 @@
       "category": "_joint_fit"
     },
     {
+      "member": "ExperimentBase::data_file",
+      "type": "std::string",
+      "category": "_data_source"
+    },
+    {
       "member": "ExperimentBase::fit_n_data_points",
       "type": "std::optional<int>",
       "category": "_fit_result_bank"
@@ -4019,6 +4038,9 @@
     ],
     "_data_range": [
       "_data_range"
+    ],
+    "_data_source": [
+      "_data_source"
     ],
     "_diffrn_radiation_wavelength": [
       "_instrument"

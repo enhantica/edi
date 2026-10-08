@@ -144,6 +144,15 @@ class Harness:
             )
         if self.receipt['binary'] != hashlib.sha256(self.executable.read_bytes()).hexdigest():
             raise RuntimeError('Scan execution: observer binary digest differs from its receipt')
+        io_library = self.receipt.get('io_fault_library')
+        if (
+            not io_library
+            or io_library['sha256']
+            != hashlib.sha256(Path(io_library['path']).read_bytes()).hexdigest()
+        ):
+            raise RuntimeError(
+                'Output transaction: storage actor library differs from its receipt'
+            )
         sdk_override = os.environ.get('EDI_SCAN_APP_SDK')
         sdk = Path(sdk_override) if sdk_override else crysta_reference_prefix()
         if self.receipt['sdk_headers'] != fingerprint_headers(sdk / 'include'):

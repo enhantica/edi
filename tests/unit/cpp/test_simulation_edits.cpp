@@ -70,7 +70,7 @@ TEST_CASE("simulation type and range edits target only the selected experiment")
                   "Undo of a type edit preserves other rows");
 }
 
-TEST_CASE("measured experiments refuse type range and simulation creation atomically") {
+TEST_CASE("measured experiments lock type and range while allowing simulation creation") {
     auto project = simulation_project();
     edi::Edit::create_experiment(project, edi::simulation_experiment("measured", {}, "cosio"))();
     auto& selected = *project.experiments[0];
@@ -83,11 +83,11 @@ TEST_CASE("measured experiments refuse type range and simulation creation atomic
         edi::Edit::replace_experiment(project, selected,
                                       edi::simulation_experiment("measured", {}, "cosio"))(),
         std::invalid_argument, "Measured data fixes its type");
-    CHECK_THROWS_AS_MESSAGE(
+    CHECK_NOTHROW_MESSAGE(
         edi::Edit::create_experiment(project, edi::simulation_experiment("extra", {}, "cosio"))(),
-        edi::IoError, "Measured projects refuse adding a simulation");
-    CHECK_MESSAGE((project.experiments.size() == 1 && project.experiments[0].get() == identity),
-                  "Every refusal preserves selected and collection identity");
+        "Mixed projects allow adding a simulation alongside measured data");
+    CHECK_MESSAGE((project.experiments.size() == 2 && project.experiments[0].get() == identity),
+                  "Type and range refusals plus creation preserve the measured row identity");
     CHECK_MESSAGE(selected.data->two_theta.get() == data->two_theta.get(),
                   "Every refusal preserves the measured axis");
 }

@@ -9,6 +9,7 @@ import edi as engine
 import numpy as np
 
 from tests.fixtures.multiphase import beer
+from tests.fixtures.multiphase.support import stage_delivered_corpus_project
 
 ROOT = Path(__file__).resolve().parents[3]
 HOME = ROOT / 'tests/fixtures/cwl_family'
@@ -66,7 +67,10 @@ def test_delivered_beer_project_preserves_shared_biso_and_free_set(tmp_path):
 
 
 def test_beer_fit_agrees_with_every_fullprof_parameter(tmp_path, record_property):
-    project = loaded(tmp_path)
+    staged = stage_delivered_corpus_project(
+        PROJECT, 'beer-ferrite-austenite', tmp_path / 'project'
+    )
+    project = engine.Project.load(staged)
     assert len(project.analysis.constraints) == 1, (
         'BEER agreement requires the declared shared Biso before fitting'
     )

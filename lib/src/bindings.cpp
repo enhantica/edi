@@ -1549,6 +1549,23 @@ NB_MODULE(_edi, m) {
           [](const std::string& text) { return edi::structure_from_edi_text(text); });
     m.def("_experiment_from_edi_text",
           [](const std::string& text) { return edi::experiment_from_edi_text(text); });
+    // The one plain-data reader (crysta's), for ExperimentFactory.from_data_path: the rows and what it dropped.
+    m.def(
+        "_read_plain_data",
+        [](const std::string& path) {
+            edi::PlainDataRows read = edi::read_plain_data(path);
+            nb::dict rows;
+            rows["x"] = read.x;
+            rows["y"] = read.y;
+            rows["sigma"] = read.sigma;
+            rows["skipped"] = read.skipped;
+            rows["nonpositive"] = read.nonpositive;
+            rows["duplicates"] = read.duplicates;
+            rows["reordered"] = read.reordered;
+            rows["derived"] = read.derived;
+            return rows;
+        },
+        "path"_a);
     // The descent registry resolved from the LINKED crysta engine at call time, never a
     // transcribed copy.
     // `python -m edi` renders its `--descent` choices and help default from these, so every edi
