@@ -325,7 +325,8 @@ try {
       assert(row?.backendDOMNodeId,'The real example row must exist before scrolling its native table');
       const {model} = await send('DOM.getBoxModel',{backendNodeId:row.backendDOMNodeId});
       const q=model.content,rawX=(q[0]+q[2]+q[4]+q[6])/4;
-      return {x:((rawX%1280)+1280)%1280,y:(q[1]+q[3]+q[5]+q[7])/4};
+      return {x:((rawX%1280)+1280)%1280,y:(q[1]+q[3]+q[5]+q[7])/4,
+        left:((Math.min(q[0],q[2],q[4],q[6])%1280)+1280)%1280};
     };
     const last = await rowCenter(/lbco.*hrpt.*start[- ]?4/i);
     const first = await rowCenter(/cosio.*d20.*start[- ]?1/i);
@@ -339,7 +340,8 @@ try {
     };
     if(row.y>last.y) {
       const before=await tablePosition(),deltaY=Math.ceil((row.y-last.y)/60)*60;
-      const pointer={x:last.x,y:(first.y+last.y)/2};
+      // The label is a Qt button; deliver the wheel in the table's row-number gutter.
+      const pointer={x:last.left-12,y:(first.y+last.y)/2};
       console.log('browser example scroll:',JSON.stringify({first,last,row,before,pointer,deltaY}));
       // Qt uses its tracked pointer for wheel delivery; update it before the wheel event.
       await send('Input.dispatchMouseEvent',{type:'mouseMoved',...pointer});
