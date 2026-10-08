@@ -49,6 +49,9 @@ trap 'rm -rf "$SCRATCH"' EXIT
 SITE="$SCRATCH/site"
 python -c 'import sys, zipfile; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])' "$ZIP" "$SITE"
 export PATH="$NODE_BIN:$PATH"
+# The locked Playwright driver and its WebKit, for the matrix's route check (tools/ci/wasm-webkit.sh).
+PW="$(wasm_playwright_dir)"
+export PLAYWRIGHT_BROWSERS_PATH="$PW/browsers" WEB_PARALLEL_PLAYWRIGHT="$PW/node_modules/playwright-core/index.mjs"
 
 status=0
 echo "wasm-parallel-check: the browser matrix"

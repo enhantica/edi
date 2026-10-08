@@ -80,9 +80,12 @@ if [ "$(cat "$CHROME/.edi-installed" 2>/dev/null)" != "$EDI_WASM_CHROME" ]; then
   printf '%s\n' "$EDI_WASM_CHROME" >"$CHROME/.edi-installed"
 fi
 
+# --- WebKit for the route check (wasm-parallel-check.sh) ---------------------------------------------------
+bash "$ROOT/tools/ci/wasm-webkit.sh"
+
 # The pin is enforced where it bites: the kit's own recommended Emscripten must be the one installed.
 for kit in wasm_multithread wasm_singlethread; do
   wasm_check_emsdk_pin "$QT/$EDI_WASM_QT/$kit"
 done
 echo "wasm-toolchain: Emscripten $EDI_WASM_EMSDK and Qt $EDI_WASM_QT (multithread, singlethread) in $EDI_WASM_TOOLCHAIN"
-du -sh "$EMSDK" "$EIGEN" "$CHROME" "$QT/$EDI_WASM_QT/wasm_multithread" "$QT/$EDI_WASM_QT/wasm_singlethread"
+du -sh "$EMSDK" "$EIGEN" "$CHROME" "$(wasm_playwright_dir)" "$QT/$EDI_WASM_QT/wasm_multithread" "$QT/$EDI_WASM_QT/wasm_singlethread"
