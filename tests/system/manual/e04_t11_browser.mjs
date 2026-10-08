@@ -9,6 +9,7 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import { inflateSync } from 'node:zlib';
+import { inspectDevelopDiagnostics } from './web_develop_diagnostics.mjs';
 
 const [siteArg, mode, outputArg, chromeArg] = process.argv.slice(2);
 const fitCase = process.argv.find(arg => arg.startsWith('--fit-case='))?.split('=')[1] || 'lbco';
@@ -301,29 +302,12 @@ try {
   await send('Runtime.callFunctionOn', { objectId: node.object.objectId,
     functionDeclaration: 'function() { this.click(); }' });
   await waitAX(/Get started|Home/);
-  await click(/Application preferences|Preferences/i, 'button');
-  await click(/^Develop$/, 'tab');
-  await click(/^Show$/, 'button');
-  await waitAX(/^Diagnostics$/);
-  const diagnosticsTree = await send('Accessibility.getFullAXTree');
-  const diagnostics = diagnosticsTree.nodes.filter(node => !node.ignored)
-    .map(node => node.value?.value || node.name?.value || '').join('\n');
-  for (const prior of ['Threads (ideal)', 'Threads (OpenMP team)', 'Browser cores (hardwareConcurrency)'])
-    assert(diagnostics.includes(prior), 'Develop diagnostics must retain the existing thread and browser lines');
-  const backend = diagnostics.match(/(?:parallel|engine) backend:\s*([^\n]+)/i)?.[1];
-  const workerCount = Number(diagnostics.match(/(?:parallel|engine) workers:\s*(\d+)/i)?.[1]);
-  const simd = diagnostics.match(/(?:WebAssembly |wasm )?SIMD:\s*(yes|no|on|off|enabled|disabled)/i)?.[1];
-  assert(backend && Number.isInteger(workerCount) && simd, 'Develop must show engine backend, actual worker count and SIMD state');
-  if (mode === 'singlethread') {
-    assert(/serial/i.test(backend) && workerCount === 1 && /^(no|off|disabled)$/i.test(simd),
-      'the serial browser route must report its serial scalar engine');
+  await inspectDevelopDiagnostics(evaluate, frame, mode,
+    snapshot => writeFile(join(output, `${mode}-diagnostics.json`), JSON.stringify(snapshot, null, 2)),
+    () => shot('develop-diagnostics'));
+  if (process.argv.includes('--diagnostics-only')) {
+    console.log(`${mode}: actual Develop-view diagnostics passed`);
   } else {
-    assert(/std.?thread|thread.?pool/i.test(backend) && workerCount > 1 && /^(yes|on|enabled)$/i.test(simd),
-      'both isolated browser routes must report the active thread backend and SIMD');
-  }
-  await writeFile(join(output, `${mode}-diagnostics.json`), JSON.stringify({backend,workerCount,simd,diagnostics},null,2));
-  for (const type of ['keyDown','keyUp']) await send('Input.dispatchKeyEvent', {type,key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
-  for (const type of ['keyDown','keyUp']) await send('Input.dispatchKeyEvent', {type,key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
   await shot('home');
   await click(/^Start$/);
   await click(/^Project$/);
@@ -663,6 +647,7 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
   await writeFile(join(output, `${mode}-browser.json`), JSON.stringify({ isolated, wasm, errors, transcript, fileRequestsOnly, fileRequestCase }, null, 2));
   if (fileRequestsOnly) console.log(`${mode}: request-only ${fileRequestCase} passed; full browser checks not run`);
   else console.log(`${mode}: workflow and saved-fit roundtrip passed; file requests ${fileRequestCase}`);
+  }
   }
 } catch (error) {
   await writeFile(join(output, `${mode}-failure.json`), JSON.stringify({ message: error.message, network, errors, transcript }, null, 2));

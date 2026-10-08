@@ -71,3 +71,20 @@ control runs must complete and record executed serial bodies with the failed
 rendezvous; a startup failure does not count as refusal. The serial-dispatch
 control also retains configured capacity four and advertised chunks sixteen. The native performance gate remains the existing crysta A/B
 harness (`tools/bench/ab_perf.py`); no new pinned duration is introduced.
+
+The browser does not navigate Qt popup dialogs through Chrome's accessibility
+DOM: those popups have no usable AX subtree in the wasm app. The app must expose
+`window.ediDevelopDiagnostics(action)`, accepting `open`, `read`, and `close`
+(synchronous results or Promises). `open` opens the existing Preferences dialog,
+selects its existing Develop tab, then opens its existing Diagnostics dialog;
+`close` closes both dialogs. `read` returns a fresh object with actual QML state:
+`preferencesVisible`, `developSelected`, `diagnosticsVisible`, `textVisible`,
+`text` (the displayed `diagnostics.text` TextArea's text), and `providerText`
+(the current `ApplicationInfo.diagnostics()` result). Visibility includes the
+TextArea's effective visibility. It must operate the existing QML controls on
+Qt's main thread; it must not synthesize text or state from `ediBuildInfo`, a
+requested kit, or expected test values. The inspector compares displayed text
+to the provider and checks the actual dialog state before and after inspection.
+The regular browser run then continues its unchanged real project/fit/download
+checks and records the same-browser speed matrix. `--diagnostics-only` is a
+focused diagnostic, never a substitute for that full run.
