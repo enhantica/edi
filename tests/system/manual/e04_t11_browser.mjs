@@ -340,14 +340,10 @@ try {
     };
     if(row.y>last.y) {
       const before=await tablePosition(),deltaY=Math.ceil((row.y-last.y)/60)*60;
-      // The label is a Qt button; deliver the wheel in the table's row-number gutter.
-      const pointer={x:last.left-12,y:(first.y+last.y)/2};
+      const pointer={x:last.x,y:(first.y+last.y)/2};
       console.log('browser example scroll:',JSON.stringify({first,last,row,before,pointer,deltaY}));
-      // Qt uses its tracked pointer for wheel delivery; update it before the wheel event.
-      await send('Input.dispatchMouseEvent',{type:'mouseMoved',...pointer});
-      await frame();
       let position=await tablePosition();
-      for(let attempt=0;attempt<3 && position<=before;attempt++) {
+      for(let attempt=0;attempt<12 && position<=before;attempt++) {
         await send('Input.dispatchMouseEvent',{type:'mouseWheel',...pointer,deltaX:0,deltaY});
         await settleRenderedPage();
         position=await tablePosition();
