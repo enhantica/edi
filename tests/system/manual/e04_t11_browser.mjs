@@ -361,7 +361,7 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
     const observer = new MutationObserver(records => {
       for (const record of records) {
         const values = [record.oldValue,record.target.getAttribute?.('aria-label'),record.target.textContent];
-        for (const value of values) if (value && /^(?:(?:stop|cancel) fitting|(?:spinner)?Fit iterations\\d+|\\d+\\s*%)$/i.test(value)) window.__e04Progress.push(value);
+        for (const value of values) if (value && /^(?:stop fitting|fitting\\s*·\\s*it\\s+\\d+|\\d+\\s*%)$/i.test(value)) window.__e04Progress.push(value);
       }
     });
     for (const root of roots) observer.observe(root,{subtree:true,attributes:true,attributeOldValue:true,characterData:true,characterDataOldValue:true,childList:true});
@@ -375,9 +375,12 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   assert(Number.isFinite(fitElapsedMs) && fitElapsedMs > 0, 'fit measurement must span the actual browser fitting action'); await waitModal(true); await shot('fit-results');
   const progress = await evaluate('window.__e04Progress');
   await writeFile(join(output, `${mode}-progress.json`), JSON.stringify(progress,null,2));
-  const runningProgress = values => values.some(value => /^(?:stop|cancel) fitting$/i.test(value)) &&
-    values.some(value => /^(?:spinner)?Fit iterations\d+$/i.test(value));
-  assert(!runningProgress(['Maximum iterations 400','Success','Iterations']),
+  // Owner's E04-T16 F6 contract (2026-10-05): a live stripe says "fitting · it N".
+  const runningProgress = values => values.some(value => /^stop fitting$/i.test(value)) &&
+    values.some(value => /^fitting\s*·\s*it\s+\d+$/i.test(value));
+  assert(runningProgress(['Stop fitting','fitting · it 3']),
+    'The shipped running control and live status-bar iteration label must satisfy the progress witness');
+  assert(!runningProgress(['Maximum iterations 400','Success · it 3','Stopped · it 3','Iterations']),
     'completed report text and minimizer settings cannot impersonate live fitting progress');
   if (mode !== 'singlethread') assert(runningProgress(progress),
     'multithread fitting must publish both a running control and a live iteration indicator');
