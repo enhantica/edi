@@ -64,8 +64,8 @@ fi
 
 build_kit() {
   local flavour="$1" kit threads simd owner out key
-  # The multithread kit runs crysta's parallel fill on its std::thread pool and compiles it with WebAssembly SIMD;
-  # the singlethread kit stays serial and scalar, for browsers without either.
+  # The multithread kit runs crysta's parallel fill on its std::thread pool and compiles it with WebAssembly SIMD,
+  # its vectorised kernels included (SLEEF); the singlethread kit stays serial and scalar, for browsers without either.
   case "$flavour" in
     multithread) threads=ON simd=ON owner=OFF ;;
     singlethread) threads=OFF simd=OFF owner=ON ;;
@@ -75,7 +75,7 @@ build_kit() {
   wasm_check_emsdk_pin "$kit"
   out="$ROOT/build/wasm/$flavour"
 
-  key="crysta $SHA kit $EDI_WASM_QT/$flavour emsdk $EDI_WASM_EMSDK eigen $EDI_WASM_EIGEN_SHA256 fetched simd $simd"
+  key="crysta $SHA kit $EDI_WASM_QT/$flavour emsdk $EDI_WASM_EMSDK eigen $EDI_WASM_EIGEN_SHA256 fetched simd $simd sleef $simd"
   if [ "$(cat "$out/crysta-prefix/.edi-wasm-key" 2>/dev/null)" != "$key" ]; then
     echo "wasm-build: crysta for $flavour"
     rm -rf "$out/crysta" "$out/crysta-prefix"
@@ -83,7 +83,7 @@ build_kit() {
     # fetches its pinned release (the same version and sha256 as ours) for the wasm target.
     emcmake cmake -S "$SRC" -B "$out/crysta" -G Ninja --no-warn-unused-cli -DCMAKE_BUILD_TYPE=Release \
       -DCRYSTA_CXX_PACKAGE=ON -DCRYSTA_WASM_THREADS="$threads" -DCRYSTA_WASM_SIMD="$simd" -DCRYSTA_OPENMP=OFF \
-      -DCRYSTA_SLEEF=OFF \
+      -DCRYSTA_SLEEF="$simd" \
       -DCMAKE_DISABLE_FIND_PACKAGE_doctest=ON -DCRYSTA_EIGEN_FETCH=ON \
       -DCMAKE_INSTALL_PREFIX="$out/crysta-prefix"
     cmake --build "$out/crysta"
