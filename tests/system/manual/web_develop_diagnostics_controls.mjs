@@ -18,9 +18,15 @@ async function exercise(mode, change = value => value, missing = false, brokenCl
       diagnosticsVisible: visible, textVisible: visible, text: text(mode), providerText: text(mode)}, visible);
   }};
   const evidence = [];
-  await inspectDevelopDiagnostics(expression => runInNewContext(expression, {window}),
-    async () => { throw Error('control refused non-visible view'); }, mode,
-    async value => evidence.push(value), async () => calls.push('capture'));
+  const realClock = Date.now;
+  let clock = 0;
+  // Exhaust the readiness bound without wall-clock waiting, then exercise the view assertion.
+  Date.now = () => (clock += 10001);
+  try {
+    await inspectDevelopDiagnostics(expression => runInNewContext(expression, {window}),
+      async () => {}, mode,
+      async value => evidence.push(value), async () => calls.push('capture'));
+  } finally { Date.now = realClock; }
   assert(calls.includes('capture') && calls.includes('close') && !visible,
     'A valid dialog protocol must capture actual visibility and close before subsequent workflow');
   assert.equal(evidence.at(-1).diagnostics, text(mode),
@@ -30,8 +36,8 @@ let count = 0;
 for (const mode of ['singlethread', 'multithread', 'shim']) { await exercise(mode); count++; }
 const controls = [
   ['missing bridge', () => exercise('multithread', undefined, true), /must expose ediDevelopDiagnostics/],
-  ['unselected Develop', () => exercise('multithread', (v, shown) => ({...v, developSelected: shown ? false : v.developSelected})), /non-visible view/],
-  ['hidden TextArea', () => exercise('multithread', (v, shown) => ({...v, textVisible: shown ? false : v.textVisible})), /non-visible view/],
+  ['unselected Develop', () => exercise('multithread', (v, shown) => ({...v, developSelected: shown ? false : v.developSelected})), /must be visible/],
+  ['hidden TextArea', () => exercise('multithread', (v, shown) => ({...v, textVisible: shown ? false : v.textVisible})), /must be visible/],
   ['provider drift', () => exercise('multithread', v => ({...v, providerText: v.text + '\nstale'})), /must equal the actual/],
   ['missing old line', () => exercise('multithread', v => { const text = v.text.replace(fields[1], ''); return {...v, text, providerText: text}; }), /retain the existing/],
   ['missing backend', () => exercise('multithread', v => { const text = v.text.replace(/Engine backend:[^\n]+/, ''); return {...v, text, providerText: text}; }), /must show engine backend/],
