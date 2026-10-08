@@ -104,7 +104,9 @@ QList<QVariant> dataset_values(ExperimentViewModel* experiment, const Experiment
 }  // namespace
 
 void ExperimentListModel::setDatasets(ExperimentViewModel* experiment, int count, std::function<Dataset(int)> row) {
-    dataset_row_ = std::move(row);
+    // The rows are brought to the new count with no provider: a row read during a removal or insertion notification
+    // reads as empty, never through a file list that may already be the new one. The provider comes after.
+    dataset_row_ = nullptr;
     dataset_experiment_ = experiment;
     QList<Row> rows;
     rows.reserve(count);
@@ -113,6 +115,7 @@ void ExperimentListModel::setDatasets(ExperimentViewModel* experiment, int count
         rows.append({reinterpret_cast<const void*>(static_cast<std::uintptr_t>(i + 1)), {}});
     }
     setTableRows(rows);
+    dataset_row_ = std::move(row);
     datasetsChanged();
 }
 
@@ -745,6 +748,11 @@ int ProjectViewModel::templateIndex() const {
 ExperimentListModel::Dataset ProjectViewModel::datasetRow(int index) const {
     ExperimentListModel::Dataset dataset;
     const auto& files = scan_session_->datasets().files;
+    // A row the list still holds while the session already lists fewer files (a re-list after save or Undo, before
+    // the list follows) reads as empty.
+    if (index < 0 || static_cast<std::size_t>(index) >= files.size()) {
+        return dataset;
+    }
     dataset.file = QString::fromStdString(files[static_cast<std::size_t>(index)]);
     dataset.is_template = files[static_cast<std::size_t>(index)] == scanTemplateOrModel().sequential_fit.template_file;
     dataset.outcome = scan_session_->outcome(index);
