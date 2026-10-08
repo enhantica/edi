@@ -673,7 +673,7 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
       'Structure must preserve the standalone single-file chooser contract');
     await evaluate("window.__e04FileInput.dispatchEvent(new Event('cancel')); true"); await frame();
     await click(/^Experiment$/); await waitAX(/Experiments \(0\)/);
-    const experiment=await beginPicker(/^Load experiment\(s\) from file\(s\)$/);
+    const experiment=await beginPicker(/^Load experiment$/);
     assert.equal(await evaluate('window.__e04FileInput.multiple'),true,
       'Experiment must retain its batch chooser contract');
     await send('DOM.setFileInputFiles',{...experiment,files:[join(inputs,'blocks/experiment-1.edi'),join(inputs,'blocks/experiment-2.edi')]});
@@ -683,7 +683,7 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
     if (['all','cancel-experiment'].includes(fileRequestCase)) {
     await createEmpty('routing_empty_d');
     await click(/^Experiment$/); await waitAX(/Experiments \(0\)/);
-    await beginPicker(/^Load experiment\(s\) from file\(s\)$/);
+    await beginPicker(/^Load experiment$/);
     await evaluate("window.__e04FileInput.dispatchEvent(new Event('cancel')); true"); await frame();
     await click(/^Structure$/); await waitAX(/Structures \(0\)/);
     const structure=await beginPicker(/^Load structure from file$/);
