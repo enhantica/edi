@@ -593,6 +593,7 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
       for (const type of ['keyDown','keyUp']) await send('Input.dispatchKeyEvent',
         {type,key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
       await waitName(name);
+      await settleRenderedPage();
       const viewport = await evaluate(`(() => {
         const canvases=[];
         const walk=root=>{for(const item of root.querySelectorAll('*')) {
