@@ -592,7 +592,13 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
       await send('Input.insertText',{text:name});
       for (const type of ['keyDown','keyUp']) await send('Input.dispatchKeyEvent',
         {type,key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
-      await waitName(name); await settleRenderedPage();
+      await waitName(name);
+      const viewport = await evaluate('({x:scrollX,y:scrollY,screen:document.getElementById("screen").getBoundingClientRect().toJSON()})');
+      await writeFile(join(output, `${mode}-create-${name}-viewport.json`), JSON.stringify(viewport,null,2));
+      // Browser focus on Qt's shadow editor can scroll the fixed canvas document.
+      // Restore the browser viewport before the next real app pointer action.
+      await evaluate('window.scrollTo(0,0); true');
+      await settleRenderedPage();
     };
     // Capture the browser's actual reads, hold promises, and release on explicit observable states.
     await evaluate(`(() => {
