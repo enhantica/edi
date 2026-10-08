@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
-#include "develop_diagnostics.hpp"
+#include "web_page_hooks.hpp"
 
 #include <QQmlApplicationEngine>
 
@@ -14,6 +14,7 @@
 #include <string>
 
 #include "app_info.hpp"
+#include "session.hpp"
 
 namespace {
 
@@ -89,8 +90,17 @@ extern "C" EMSCRIPTEN_KEEPALIVE const char* edi_develop_diagnostics(const char* 
     return result.c_str();
 }
 
+// Session::openExample(id) on Qt's main thread: 1 opened, 0 refused (Session names why), -1 no Session.
+extern "C" EMSCRIPTEN_KEEPALIVE int edi_open_example(const char* example_id) {
+    auto* session = g_engine != nullptr ? g_engine->singletonInstance<Session*>("edi.app", "Session") : nullptr;
+    if (session == nullptr) {
+        return -1;
+    }
+    return session->openExample(QString::fromUtf8(example_id)) ? 1 : 0;
+}
+
 EM_JS_DEPS(edi_develop, "$UTF8ToString,$stringToUTF8OnStack,$withStackSave");
-EM_JS(void, edi_install_develop_diagnostics, (), {
+EM_JS(void, edi_install_web_page_hooks, (), {
     const call = (action) => {
         const state = JSON.parse(UTF8ToString(withStackSave(() => _edi_develop_diagnostics(stringToUTF8OnStack(action)))));
         if (state.error) {
@@ -119,15 +129,22 @@ EM_JS(void, edi_install_develop_diagnostics, (), {
             poll();
         });
     };
+    globalThis.ediOpenExample = (exampleId) => {
+        const opened = withStackSave(() => _edi_open_example(stringToUTF8OnStack(String(exampleId))));
+        if (opened < 0) {
+            throw new Error("ediOpenExample: the app's Session is not available");
+        }
+        return opened === 1;
+    };
 });
 
-void edi_app::install_develop_diagnostics(QQmlApplicationEngine& engine) {
+void edi_app::install_web_page_hooks(QQmlApplicationEngine& engine) {
     g_engine = &engine;
-    edi_install_develop_diagnostics();
+    edi_install_web_page_hooks();
 }
 
 #else
 
-void edi_app::install_develop_diagnostics(QQmlApplicationEngine& /*engine*/) {}
+void edi_app::install_web_page_hooks(QQmlApplicationEngine& /*engine*/) {}
 
 #endif
