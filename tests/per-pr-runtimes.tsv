@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-08T18:35:59Z
+# measured_utc = 2026-10-08T18:46:19Z
 #
-# Recorded from: checkpoint.log (34 node(s) measured once, 9035 banked, 34 stale row(s) dropped)
-# Collected tests: 9731; with a reported duration: 4901
+# Recorded from: green-shared.log (34 node(s) measured once, 9035 banked, 0 stale row(s) dropped)
+# Collected tests: 9731; with a reported duration: 4935
 # Module-scoped fixture costs recorded: 29
 #
 # Breaches are decided PER TIER against the table
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 9731
 # inventory_cpp = 302
-# inventory_measured = 9035
-# inventory_unmeasured = 998
+# inventory_measured = 9069
+# inventory_unmeasured = 964
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -7785,38 +7785,38 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_
 0.320	tests/system/py/test_scan_accident_paths.py::test_real_evolution_pointer_gestures_keep_selection_and_valid_viewports[wheel-out]
 0.310	tests/system/py/test_scan_accident_paths.py::test_real_evolution_pointer_gestures_keep_selection_and_valid_viewports[wheel-zero]
 0.360	tests/system/py/test_scan_accident_paths.py::test_real_evolution_pointer_gestures_keep_selection_and_valid_viewports[wheel]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[data-empty-reopen]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[data-empty-reset-undo]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[data-empty-save-as]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[data-empty-save]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[data-grow-reopen]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[data-grow-reset-undo]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[data-grow-save-as]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[data-grow-save]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[data-same-reopen]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[data-same-reset-undo]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[data-same-save-as]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[data-same-save]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[data-shrink-reopen]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[data-shrink-reset-undo]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[data-shrink-save-as]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[data-shrink-save]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[get-empty-reopen]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[get-empty-reset-undo]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[get-empty-save-as]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[get-empty-save]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[get-grow-reopen]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[get-grow-reset-undo]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[get-grow-save-as]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[get-grow-save]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[get-same-reopen]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[get-same-reset-undo]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[get-same-save-as]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[get-same-save]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[get-shrink-reopen]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[get-shrink-reset-undo]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[get-shrink-save-as]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[get-shrink-save]
+0.170	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[data-empty-reopen]
+0.140	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[data-empty-reset-undo]
+0.150	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[data-empty-save-as]
+0.150	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[data-empty-save]
+0.210	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[data-grow-reopen]
+0.140	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[data-grow-reset-undo]
+0.160	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[data-grow-save-as]
+0.170	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[data-grow-save]
+0.170	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[data-same-reopen]
+0.150	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[data-same-reset-undo]
+0.140	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[data-same-save-as]
+0.150	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[data-same-save]
+0.170	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[data-shrink-reopen]
+0.150	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[data-shrink-reset-undo]
+0.150	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[data-shrink-save-as]
+0.150	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[data-shrink-save]
+0.170	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[get-empty-reopen]
+0.160	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[get-empty-reset-undo]
+0.140	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[get-empty-save-as]
+0.150	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[get-empty-save]
+0.220	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[get-grow-reopen]
+0.150	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[get-grow-reset-undo]
+0.190	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[get-grow-save-as]
+0.160	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[get-grow-save]
+0.180	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[get-same-reopen]
+0.150	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[get-same-reset-undo]
+0.160	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[get-same-save-as]
+0.150	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[get-same-save]
+0.200	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[get-shrink-reopen]
+0.170	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[get-shrink-reset-undo]
+0.150	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[get-shrink-save-as]
+0.160	tests/system/py/test_scan_accident_paths.py::test_relisted_scan_rows_remain_readable_during_notifications[get-shrink-save]
 0.750	tests/system/py/test_scan_accident_paths.py::test_reset_after_a_single_fit_clears_every_visible_and_held_result
 0.000	tests/system/py/test_scan_accident_paths.py::test_single_fit_undo_restores_the_scan_summary_live_and_after_reopening[reopenedUndoSingle]
 0.000	tests/system/py/test_scan_accident_paths.py::test_single_fit_undo_restores_the_scan_summary_live_and_after_reopening[undoSingle]
@@ -7826,8 +7826,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_accident_paths.py
 0.300	tests/system/py/test_scan_accident_paths.py::test_storage_failure_and_failed_rollback_cannot_lose_a_prior_output[provenance-undo]
 0.300	tests/system/py/test_scan_accident_paths.py::test_storage_failure_and_failed_rollback_cannot_lose_a_prior_output[run-summary-reset]
 0.330	tests/system/py/test_scan_accident_paths.py::test_storage_failure_and_failed_rollback_cannot_lose_a_prior_output[run-summary-undo]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_template_replacement_keeps_notification_rows_and_qobjects_readable[data]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_template_replacement_keeps_notification_rows_and_qobjects_readable[get]
+0.160	tests/system/py/test_scan_accident_paths.py::test_template_replacement_keeps_notification_rows_and_qobjects_readable[data]
+0.160	tests/system/py/test_scan_accident_paths.py::test_template_replacement_keeps_notification_rows_and_qobjects_readable[get]
 0.000	tests/system/py/test_scan_app_execution.py::test_bundle_scan_uses_temporary_copy_and_save_as_retains_results
 0.010	tests/system/py/test_scan_app_execution.py::test_continue_starts_at_first_unfitted_and_skips_later_fitted_datasets[independent]
 0.010	tests/system/py/test_scan_app_execution.py::test_continue_starts_at_first_unfitted_and_skips_later_fitted_datasets[sequential]
@@ -10097,7 +10097,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 3.929	tests/system/py/test_fit_participants_native.py
 # module-cost: 129.839	tests/system/py/test_plain_data_app.py
 # module-cost: 21.241	tests/system/py/test_pytest_child_environment.py
-# module-cost: 0.543	tests/system/py/test_scan_accident_paths.py
+# module-cost: 349.085	tests/system/py/test_scan_accident_paths.py
 # module-cost: 557.564	tests/system/py/test_scan_app_execution.py
 # module-cost: 17.635	tests/system/py/test_scan_driver_resume.py
 # module-cost: 1.016	tests/system/py/test_scan_lazy_input.py
