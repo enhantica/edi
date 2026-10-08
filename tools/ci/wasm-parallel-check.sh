@@ -6,11 +6,11 @@
 #   pixi run wasm-parallel-check <out dir>
 #
 # The matrix (tests/system/manual/web_parallel.mjs) fits the corpus projects on all three routes of the packed site
-# and times the multithread kit against the singlethread one. The witness builds crysta's observer probe from the
+# and times the multithread kit against the singlethread one. The witnesses build crysta's observer probes from the
 # crysta source the app compiles (build/crysta-src, or EDI_WASM_CRYSTA_SRC as in wasm-build.sh), with the web
-# build's thread and SIMD options, and runs it in the browser: the threaded probe must show fill chunks running at
+# build's thread and SIMD options, and run them in the browser: the threaded probe must show fill chunks running at
 # the same time on different workers, and the two controls (serial dispatch, backend off) must be refused after
-# their chunks ran. Needs wasm-build's output and wasm-toolchain's Emscripten, Node and Chrome.
+# their chunks ran; the SIMD probe must consume the vectorised maths layer, and its two controls must be refused. Needs wasm-build's output and wasm-toolchain's Emscripten, Node and Chrome.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
@@ -38,8 +38,8 @@ if [ -n "${EDI_WASM_CRYSTA_SRC:-}" ]; then
 else
   SRC="$ROOT/build/crysta-src"
 fi
-if [ ! -f "$SRC/tests/fixtures/web_parallel/build.py" ]; then
-  echo "wasm-parallel-check: $SRC has no web_parallel observer — run pixi run crysta-sdk" >&2
+if [ ! -f "$SRC/tests/fixtures/web_parallel/build.py" ] || [ ! -f "$SRC/tests/fixtures/web_simd/build.py" ]; then
+  echo "wasm-parallel-check: $SRC has no web_parallel or web_simd observer — run pixi run crysta-sdk" >&2
   exit 1
 fi
 
@@ -75,5 +75,21 @@ for mode in threaded serial-dispatch serial; do
     status=1
   fi
   rm -rf "$OUT/observer-$mode/build"  # the witness's evidence is its output; the build tree is ~100 MB
+done
+
+# The SIMD layer's witness in the browser (crysta tests/fixtures/web_simd): the maths layer as the multithread kit
+# builds it must be consumed by every vectorised kernel, and the two controls (maths layer disabled, silent scalar
+# fallback) must agree numerically and be refused as consumption.
+for mode in enabled scalar fallback; do
+  echo "wasm-parallel-check: the SIMD witness, $mode"
+  rm -rf "$OUT/simd-$mode"
+  if (cd "$SRC" && unset CC CXX CFLAGS CXXFLAGS CPPFLAGS LDFLAGS CONDA_PREFIX CMAKE_CXX_COMPILER_LAUNCHER CMAKE_C_COMPILER_LAUNCHER &&
+    python -m tests.fixtures.web_simd.build "$mode" --emsdk "$EMSDK" --output "$OUT/simd-$mode"); then
+    (cd "$SRC" && node --experimental-websocket tests/system/manual/web_simd_witness.mjs wasm "$OUT/simd-$mode" "$mode" \
+      "$OUT/simd-witness-$mode" "$CHROME") || status=1
+  else
+    status=1
+  fi
+  rm -rf "$OUT/simd-$mode/build"
 done
 exit "$status"
