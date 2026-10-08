@@ -338,9 +338,14 @@ try {
     };
     if(row.y>last.y) {
       const before=await tablePosition(),deltaY=row.y-last.y;
+      // Qt uses its tracked pointer for wheel delivery; update it before the wheel event.
+      await send('Input.dispatchMouseEvent',{type:'mouseMoved',...last});
       await send('Input.dispatchMouseEvent',{type:'mouseWheel',...last,deltaX:0,deltaY});
       await settleRenderedPage();
-      assert(await tablePosition()>before,'The actual table scrollbar must move before selecting the clipped five-bank row');
+      const scrollDeadline=Date.now()+10000;
+      let position=await tablePosition();
+      while(position<=before && Date.now()<scrollDeadline) {await frame();position=await tablePosition();}
+      assert(position>before,'The actual table scrollbar must move before selecting the clipped five-bank row');
       // Qt's wasm AX rectangles stay at their pre-scroll positions. Apply the real pixel-wheel displacement.
       for(const type of ['mousePressed','mouseReleased'])await send('Input.dispatchMouseEvent',
         {type,x:row.x,y:row.y-deltaY,button:'left',clickCount:1});
@@ -702,7 +707,7 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
   throw error;
 } finally {
   ws?.close(); child.kill(); server.closeAllConnections(); server.close();
-  await new Promise(ok => { if (child.exitCode !== null || child.signalCode !== null) ok(); else child.once('exit', ok); });
+  await new Promise(ok => { if (child.pid === undefined || child.exitCode !== null || child.signalCode !== null) ok(); else child.once('exit', ok); });
   await rm(join(output, 'saved-project'), { recursive: true, force: true });
-  await rm(scratch, { recursive: true, force: true });
+  await rm(scratch, { recursive: true, force: true, maxRetries:5, retryDelay:100 });
 }
