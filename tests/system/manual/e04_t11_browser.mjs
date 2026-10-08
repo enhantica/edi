@@ -408,19 +408,22 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
       'the five-bank browser fit must retain the owner recorded five iterations and Rwp 7.69 percent');
   }
 
-  // The public reset toolbar action closes the model. Identify its actual browser rectangle,
-  // not a stale offscreen page control: the documented four left toolbar buttons end with Reset.
+  // The public reset action closes the model. Observe all four actual left toolbar buttons
+  // by their accessible names and rendered rectangles, including the disabled Redo button.
+  const toolbarNames = ['Save current state of the project', 'Undo the last change',
+    'Redo the last undone change', 'Reset to initial state without project, model and data'];
   const tree = await send('Accessibility.getFullAXTree');
   const toolbar = [];
-  for (const item of tree.nodes.filter(n => !n.ignored && n.role?.value === 'button' && !n.name?.value && n.backendDOMNodeId)) {
+  for (const item of tree.nodes.filter(n => !n.ignored && n.role?.value === 'button' && n.backendDOMNodeId)) {
     const {model} = await send('DOM.getBoxModel', {backendNodeId:item.backendDOMNodeId});
     const q = model.content, x=(q[0]+q[2]+q[4]+q[6])/4, y=(q[1]+q[3]+q[5]+q[7])/4;
-    if (x>0 && x<200 && y>0 && y<70) toolbar.push({x,y});
+    if (x>0 && x<200 && y>0 && y<70) toolbar.push({x,y,name:item.name?.value || ''});
   }
   toolbar.sort((a,b) => a.x-b.x);
   assert.equal(toolbar.length,4,'reset must address the real four-button left app toolbar');
-  for (const type of ['mousePressed','mouseReleased']) await send('Input.dispatchMouseEvent',
-    {type,...toolbar[3],button:'left',clickCount:1});
+  assert.deepEqual(toolbar.map(button=>button.name),toolbarNames,
+    'The actual left app toolbar must name Save, Undo, Redo and Reset in its displayed order');
+  await click(/^Reset to initial state without project, model and data$/);
   await settleRenderedPage();
   await click(/^Start$/); await click(/^Project$/);
   await waitAX(/^Save project as/, false, 'button');
