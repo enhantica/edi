@@ -5,7 +5,39 @@ import re
 import shlex
 from pathlib import Path
 
-_NUMBER = re.compile(r'^([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)(?:\((\d+)\))?$')
+_MANTISSA = r'[+-]?(?:\d+(?:\.\d*)?|\.\d+)'
+_NUMBER = re.compile(r'^' + _MANTISSA + r'(?:[eE][+-]?\d+)?$')
+_PARAMETER = re.compile(r'^(' + _MANTISSA + r')\((\d+|\d*\.\d+|\d+\.)?\)$')
+# The native machine-report contract places fitted uncertainties within these
+# conformance bounds, including a floor for uncertainty near zero. Values and
+# pattern operands keep the tighter bounds declared by their native captures.
+_UNCERTAINTY_RELATIVE = 5e-9
+_UNCERTAINTY_ABSOLUTE = 5e-10
+
+
+def _operand(token):
+    parameter = _PARAMETER.fullmatch(token)
+    if parameter:
+        mantissa, suffix = parameter.groups()
+        value = float(mantissa)
+        sigma = None
+        if suffix is not None:
+            # Decimal SU is absolute; integer SU is in the mantissa's last units.
+            digits = len(mantissa.partition('.')[2])
+            sigma = float(suffix) if '.' in suffix else float(suffix) / 10**digits
+        if not math.isfinite(value) or (sigma is not None and not math.isfinite(sigma)):
+            raise ValueError('web fit has a nonfinite parameter or uncertainty operand')
+        return value, sigma, True
+    if _NUMBER.fullmatch(token):
+        value = float(token)
+        if not math.isfinite(value):
+            raise ValueError('web fit has a nonfinite parameter or pattern operand')
+        return value, None, False
+    if token.lower().lstrip('+-') in {'nan', 'inf', 'infinity'}:
+        raise ValueError('web fit has a nonfinite parameter or pattern operand')
+    if re.match(r'^[+-]?(?:\d|\.\d)', token) and '(' in token:
+        raise ValueError('web fit has an invalid parameter or uncertainty operand')
+    return None
 
 
 def scientific(root):
@@ -65,13 +97,14 @@ def compare_scientific(actual, expected, relative=1e-9, absolute=1e-11):
             if len(observed) != len(reference):
                 raise ValueError('web fit changed a native scientific row shape: ' + name)
             for a, b in zip(observed, reference, strict=True):
-                aa, bb = _NUMBER.fullmatch(a), _NUMBER.fullmatch(b)
-                if aa or bb:
-                    if not aa or not bb:
+                aa, bb = _operand(a), _operand(b)
+                if aa is not None or bb is not None:
+                    if aa is None or bb is None:
                         raise ValueError(
                             'web fit invalidated a native parameter or pattern operand: ' + name
                         )
-                    av, bv = float(aa[1]), float(bb[1])
+                    av, au, bracketed = aa
+                    bv, bu, reference_bracketed = bb
                     if (
                         not math.isfinite(av)
                         or not math.isfinite(bv)
@@ -80,7 +113,11 @@ def compare_scientific(actual, expected, relative=1e-9, absolute=1e-11):
                         raise ValueError(
                             'web fit changed a native parameter or pattern operand: ' + name
                         )
-                    if aa[2] != bb[2]:
+                    if bracketed != reference_bracketed or (au is None) != (bu is None):
+                        raise ValueError('web fit changed a native parameter uncertainty: ' + name)
+                    if au is not None and abs(au - bu) > max(
+                        _UNCERTAINTY_RELATIVE * abs(bu), _UNCERTAINTY_ABSOLUTE
+                    ):
                         raise ValueError('web fit changed a native parameter uncertainty: ' + name)
                 elif a != b:
                     raise ValueError('web fit changed a native scientific token: ' + name)
