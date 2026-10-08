@@ -3,19 +3,29 @@
   "kind": "syntactic-fixture-adaptation",
   "witness": "tests/unit/cpp/test_c34_t27_geometry_edit_freshness.cpp",
   "original_sha256": "b14653a26909cff7c05f8856182c78771183f9c0cc6f6c24bccb0114b7a11dda",
-  "adapted_sha256": "cee92610888ae05957dd27d9af87c0d895b2cac869fee09e1a20b7101afa7347",
+  "adapted_sha256": "8dccae23f526abe6125679f9d8fa4ef93e5fe43da8809265a707d8d1bc168368",
   "replacements": [
     {
       "before": "        REQUIRE_MESSAGE(\n            structure.geometry_current(),\n            \" fixture stored geometry starts current before a collection write\");\n        REQUIRE_MESSAGE(\n            edi::window_geometry_current(structure, window),\n            \" fixture window geometry starts current before a collection write\");\n",
       "after": "        REQUIRE_MESSAGE(structure.geometry_current(),\n                        \" fixture stored geometry starts current before a collection write\");\n        REQUIRE_MESSAGE(edi::window_geometry_current(structure, window),\n                        \" fixture window geometry starts current before a collection write\");\n"
     },
     {
-      "before": "    project.experiments.push_back(edi::experiment_from_edi_text(fixture_text(\n        \"tests/fixtures/c11_t4_cw_selection/cases/cwl_valid.edi\")));\n",
-      "after": "    project.experiments.push_back(edi::experiment_from_edi_text(\n        fixture_text(\"tests/fixtures/c11_t4_cw_selection/cases/cwl_valid.edi\")));\n    project.experiment().linked_structure().structure_id = project.structure().name;\n"
+      "before": "    project.experiments.push_back(edi::experiment_from_edi_text(fixture_text(\n        \"tests/fixtures/c11_t4_cw_selection/cases/cwl_valid.edi\")));\n    auto& structure = project.structure();\n",
+      "after": "    project.experiments.push_back(edi::experiment_from_edi_text(\n        fixture_text(\"tests/fixtures/c11_t4_cw_selection/cases/cwl_valid.edi\")));\n    auto& structure = project.structure();\n    project.experiment().linked_structure().structure_id = structure.name;\n"
     },
     {
       "before": "        // An editor's pending collection can alias the live one when an unchanged edit is committed.\n",
       "after": "        // An editor's pending collection can alias the live one when an unchanged edit is\n        // committed.\n"
     }
-  ]
+  ],
+  "gui": {
+    "kind": "queued-initial-calculation-and-public-diagnostic-adaptation",
+    "witness": "tests/unit/app/tst_c34_t26_equal_gui_writes.qml",
+    "original_sha256": "878a9a67110ec793e53dbd64809cce9ea12cc3c9abac61b240e8d4d972e65011",
+    "adapted_sha256": "b198f7ff120fad474cb2ae737f2dcc2637a59918b24b35aab5305d63b83fda1a",
+    "replacement": {
+      "before": "        verify(Probe.computedCurrent(experiment),\n               \": an equal-write witness must start with current computed categories\");\n",
+      "after": "        tryVerify(() => Probe.computedCurrent(experiment), 10000,\n                  \"GUI edit: an equal-write witness must await the initial calculation\");\n"
+    }
+  }
 }

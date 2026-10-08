@@ -14,6 +14,17 @@ namespace edi {
 // crysta/threading.hpp for the matrix.
 void apply_engine_thread_defaults() noexcept;
 
+// The engine's parallel fill as built, for the Develop diagnostics view: its backend ("OpenMP",
+// "std::thread pool" or "serial"), the threads it runs on (the pool starts on the first call) and
+// whether the engine was compiled with WebAssembly SIMD. A configuration report, not proof that a
+// fill ran in parallel.
+struct EngineThreading {
+    const char* backend;
+    int workers;
+    bool wasm_simd;
+};
+EngineThreading engine_threading() noexcept;
+
 }  // namespace edi
 
 #endif  // EDI_THREADING_HPP

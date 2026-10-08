@@ -316,6 +316,7 @@ def test_attached_experiment_name_mutation_refuses_atomically(tmp_path):
 @pytest.mark.parametrize('duplicate', [False, True], ids=['unique', 'duplicate'])
 def test_cif_aniso_identity_table(tmp_path, route, duplicate):
     structure, _, _, _ = _texts('atom_site')
+    structure = structure.replace(' Biso ', ' Uani ')
     text = _cif(structure, 'structure')
     text += (
         'loop_\n_atom_site_aniso_label\n_atom_site_aniso_U_11\n'

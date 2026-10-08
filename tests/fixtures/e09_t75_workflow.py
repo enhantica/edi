@@ -22,12 +22,19 @@ def active(  # noqa: PLR0913 - each keyword is one workflow context input
     repository='enhantica/edi',
     fork=False,
     repository_private=False,
+    cancelled=False,
 ):
     ref = event_ref(event) if ref is None else ref
     value = node.get('if', 'success()')
     if isinstance(value, bool):
-        return value
+        value = 'true' if value else 'false'
     value = str(value).strip().removeprefix('${{').removesuffix('}}').strip()
+    # Before: every status function assumed a successful, uncancelled run. After:
+    # the caller supplies preceding job results and actual run cancellation. GitHub
+    # applies success() implicitly unless the condition includes a status function.
+    has_status = re.search(r'\b(?:success|failure|cancelled|always)\(\)', value)
+    if not has_status:
+        value = f'success() && ({value})'
     # Unknown atoms refuse instead of pretending the workflow executed them.
     values = {
         'github.event_name': event,
@@ -51,9 +58,9 @@ def active(  # noqa: PLR0913 - each keyword is one workflow context input
     for name, item in values.items():
         value = re.sub(r'\b' + re.escape(name) + r'\b', repr(item), value)
     for name, item in [
-        ('cancelled', False),
-        ('success', True),
-        ('failure', False),
+        ('cancelled', cancelled),
+        ('success', not cancelled and all(s == 'success' for s in (states or {}).values())),
+        ('failure', any(s == 'failure' for s in (states or {}).values())),
         ('always', True),
     ]:
         value = value.replace(name + '()', str(item))

@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[3]
 BOUNDARIES = (
     'test_separate_adp_table_and_isotropic_controls',
     'test_each_declared_adp_type_has_the_required_editor_state',
+    'test_analysis_tensor_rows_stay_with_their_site',
     'test_atom_filter_recovers_from_red_and_commits_element',
     'test_space_group_name_and_number_choose_new_default',
     'test_invalid_number_is_red_and_unapplied',

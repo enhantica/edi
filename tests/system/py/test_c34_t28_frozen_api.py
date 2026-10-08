@@ -1,7 +1,7 @@
 """gate 3: preserve the frozen inventory and all original assertion code.
 
-Only the exact structure-link fixture adaptation is permitted. The archive stays
-unchanged; every other witness remains byte-identical, including moved-from gates.
+Only the exact structure-link and queued initial-calculation adaptations are permitted.
+The archive stays unchanged; every other witness remains byte-identical.
 """
 
 import hashlib
@@ -22,6 +22,7 @@ def expected_blobs(blobs):
     spec.loader.exec_module(adaptation)
     result = dict(blobs)
     result[adaptation.WITNESS] = adaptation.adapted_blob(blobs[adaptation.WITNESS])
+    result[adaptation.GUI_WITNESS] = adaptation.adapted_gui_blob(blobs[adaptation.GUI_WITNESS])
     return result
 
 
@@ -89,13 +90,10 @@ def test_adapted_witness_preserves_assertions_and_its_own_structure_link(tmp_pat
         'predicate': ('structure.geometry_current()', 'true'),
         'message': (' fixture stored geometry starts current', ' altered geometry starts current'),
         'missing-link': (
-            (
-                '    project.experiment().linked_structure().structure_id = '
-                'project.structure().name;\n'
-            ),
+            ('    project.experiment().linked_structure().structure_id = structure.name;\n'),
             '',
         ),
-        'wrong-link': ('structure_id = project.structure().name', 'structure_id = "ncaf"'),
+        'wrong-link': ('structure_id = structure.name', 'structure_id = "ncaf"'),
     }
     before, after = changes[damage]
     assert before in text, 'the escape attempt must reach the retained witness code'
@@ -127,3 +125,27 @@ def test_adaptation_receipt_cannot_repin_changed_assertions(tmp_path, monkeypatc
     monkeypatch.setattr(adaptation, 'HERE', tmp_path)
     with pytest.raises(AssertionError, match='every original code token'):
         adaptation.adapted_blob(original)
+
+
+@pytest.mark.parametrize('damage', ['predicate', 'timeout', 'message'])
+def test_gui_adaptation_receipt_cannot_repin_a_changed_wait(tmp_path, monkeypatch, damage):
+    source = ROOT / 'tests/fixtures/c34_t28_baseline/api_witness_adaptation.py'
+    spec = importlib.util.spec_from_file_location('gui_witness_escape', source)
+    adaptation = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(adaptation)
+    receipt = json.loads((source.parent / 'api_witness_adaptation.json').read_text())
+    original = frozen_blobs()[adaptation.GUI_WITNESS]
+    before, after = {
+        'predicate': ('Probe.computedCurrent(experiment)', 'true'),
+        'timeout': ('10000', '999999'),
+        'message': ('must await the initial calculation', 'may ignore the initial calculation'),
+    }[damage]
+    replacement = receipt['gui']['replacement']
+    assert before in replacement['after'], 'the GUI receipt escape reaches its named wait property'
+    replacement['after'] = replacement['after'].replace(before, after, 1)
+    changed = original.decode().replace(replacement['before'], replacement['after'], 1)
+    receipt['gui']['adapted_sha256'] = hashlib.sha256(changed.encode()).hexdigest()
+    (tmp_path / 'api_witness_adaptation.json').write_text(json.dumps(receipt))
+    monkeypatch.setattr(adaptation, 'HERE', tmp_path)
+    with pytest.raises(AssertionError, match='only the setup wait'):
+        adaptation.adapted_gui_blob(original)

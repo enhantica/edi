@@ -416,7 +416,10 @@ def workflows():
 
 
 def nonfork(condition):
-    condition = str(condition)
+    # Before: every negation refused, including the owner's safe cancellation guard.
+    # After: permit only the exact !cancelled() status conjunct; positive fork
+    # admission is still mandatory, with every OR or other negation refused.
+    condition = str(condition).replace('!cancelled()', 'True')
     if '||' in condition or '!' in condition.replace('!=', ''):
         return False
     return any(
@@ -947,6 +950,10 @@ def test_secret_scanner_rejects_a_credential_control(tmp_path):
     ('condition', 'expected'),
     [
         ('github.event.pull_request.head.repo.fork == false', True),
+        ('!cancelled() && github.event.pull_request.head.repo.fork == false', True),
+        ('!cancelled() && github.event.pull_request.head.repo.fork != false', False),
+        ('!cancelled() || github.event.pull_request.head.repo.fork == false', False),
+        ('!cancelled() && !(github.event.pull_request.head.repo.fork == false)', False),
         ("github.event_name == 'workflow_dispatch'", True),
         ('github.event.pull_request.head.repo.fork == false || always()', False),
         ("contains('github.event_name == \"push\"', 'push')", False),

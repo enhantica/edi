@@ -20,7 +20,8 @@ TestCase {
         // Offscreen software has no GL context; changing a tensor also refreshes the 3D scene.
         // Keep all other warnings fatal, including every warning in cases without a scene refresh.
         const refreshesScene = ["test_adp_view_uses_probability_in_atom_scale_position",
-            "test_each_declared_adp_type_has_the_required_editor_state"].includes(qtest_results.functionName);
+            "test_each_declared_adp_type_has_the_required_editor_state",
+            "test_analysis_tensor_rows_stay_with_their_site"].includes(qtest_results.functionName);
         failOnWarning(refreshesScene
             ? /\A(?!QRhiGles2: Failed to create (?:temporary context|context)\z)[\s\S]*\z/ : /.*/);
         Session.closeProject();
@@ -137,6 +138,47 @@ TestCase {
                     const field = control("atomSiteAdp.ani" + component + ".0");
                     return field !== null && field.enabled === (anisotropic && component === "11");
                 }, 2000, "cubic site symmetry: only the independent tensor component is editable");
+        }
+    }
+    function test_analysis_tensor_rows_stay_with_their_site() {
+        const labels = Probe.rows(Session.project.currentStructure.atomSites).map(row => row.label);
+        // First and middle sites both have later neighbours; appending all tensors
+        // after the scalar rows must fail even when tensor storage itself is sorted.
+        for (const siteIndex of [0, 1]) {
+            const picker = reveal("structure", "basic", "atom_site_aniso", "atomSiteAdp.type." + siteIndex);
+            Ui.scrollIntoView(picker);
+            click("atomSiteAdp.type." + siteIndex);
+            tryCompare(picker.popup, "opened", true, 2000, "Analysis: the real ADP selector opens");
+            keyClick(Qt.Key_Home);
+            for (let i = 0; i < Array.from(picker.model).indexOf("Uani"); ++i) keyClick(Qt.Key_Down);
+            keyClick(Qt.Key_Return);
+            tryCompare(picker.popup, "visible", false, 2000, "Analysis: the ADP selection closes");
+            tryVerify(() => Probe.rows(Session.project.currentStructure.atomSiteAdps)[siteIndex].adpType === "Uani",
+                      2000, "Analysis: the selected site changes to Uani");
+            click("appBar.tab.analysis"); click("sideBar.tab.basic");
+            let table = null;
+            tryVerify(() => { table = discover(Ui.page(appWindow), "parameters.list"); return table !== null; },
+                      2000, "Analysis: inspect the parameter table displayed in the selected pane");
+            const rows = Probe.rows(table.model).filter(row =>
+                row.category === "atom_site" || row.category === "atom_site_aniso");
+            verify(rows.some(row => row.category === "atom_site_aniso" && row.rowLabel === labels[siteIndex]),
+                   "Analysis: the selected site's independent tensor parameters are actually listed");
+            const groups = rows.map(row => row.rowLabel).filter((label, index, values) => index === 0 || label !== values[index - 1]);
+            compare(JSON.stringify(groups), JSON.stringify(labels),
+                    "owner 2026-10-07: Analysis keeps tensor rows contiguous with their own site in atom order");
+            const ownRows = rows.filter(row => row.rowLabel === labels[siteIndex]);
+            verify(ownRows[ownRows.length - 1].category === "atom_site_aniso",
+                   "Analysis: a site's tensor components follow its visible scalar fields");
+            compare(new Set(rows.map(row => row.path)).size, rows.length,
+                    "Analysis: regrouping retains unique canonical parameter paths");
+            const field = control("parameters.nameFilter");
+            verify(field !== null, "Analysis: the displayed table exposes its real name filter");
+            filterText(field, labels[siteIndex]);
+            const filtered = Probe.rows(table.model).filter(row =>
+                row.category === "atom_site" || row.category === "atom_site_aniso");
+            compare(JSON.stringify(filtered.map(row => row.path)), JSON.stringify(ownRows.map(row => row.path)),
+                    "Analysis: filtering a site retains the same ordered scalar and tensor parameter identities");
+            field.forceActiveFocus(); keyClick(Qt.Key_A, Qt.ControlModifier); keyClick(Qt.Key_Backspace);
         }
     }
     function test_atom_filter_recovers_from_red_and_commits_element() {

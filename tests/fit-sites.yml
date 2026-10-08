@@ -76,6 +76,12 @@ sites:
   - file: tests/system/py/test_beer_multiphase.py
     case: beer-ferrite-austenite
 
+  # Independent FullProf comparisons use private copies of the same declared models.
+  - file: tests/system/py/test_beer_fullprof_agreement.py
+    case: beer-ferrite-austenite
+  - file: tests/system/py/test_yap_agreement.py
+    case: yap-spodi-3k
+
   # Active-participant variants of the two-phase scale vehicle; only admission is
   # asserted, using the independent Bragg dilation truth table, never fitted values.
   - file: tests/system/py/test_fit_participants.py

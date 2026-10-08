@@ -24,6 +24,7 @@ EaComponents.ApplicationWindow {
     appVersion: ApplicationInfo.version
     appDate: ApplicationInfo.releaseDate
 
+    // The icon-only buttons name themselves by their tool tip, for screen readers and the browser checks.
     appBarLeftButtons: [
         // Save (edi ADR-0017 §13): enabled while the project has unsaved changes; a project with no directory
         // of its own (a bundled example's working copy) is saved as. Save as has no app-bar button (the owner,
@@ -34,6 +35,7 @@ EaComponents.ApplicationWindow {
             highlighted: true
             fontIcon: "save"
             ToolTip.text: qsTr("Save current state of the project")
+            Accessible.name: ToolTip.text
             onClicked: window.saveProject()
         },
         // Undo: the newest recorded change, an edit of the aliases or constraints or a fit, in the order they
@@ -43,6 +45,7 @@ EaComponents.ApplicationWindow {
             enabled: Session.project !== null && Session.project.canUndo
             fontIcon: "undo"
             ToolTip.text: qsTr("Undo the last change")
+            Accessible.name: ToolTip.text
             onClicked: Session.project.undo()
         },
         EaElements.ToolButton {
@@ -54,6 +57,7 @@ EaComponents.ApplicationWindow {
             objectName: "appBar.button.reset"
             fontIcon: "backspace"
             ToolTip.text: qsTr("Reset to initial state without project, model and data")
+            Accessible.name: ToolTip.text
             onClicked: AppState.reset()
         }
     ]
@@ -63,6 +67,7 @@ EaComponents.ApplicationWindow {
             objectName: "appBar.button.preferences"
             fontIcon: "cog"
             ToolTip.text: qsTr("Application preferences")
+            Accessible.name: ToolTip.text
             // edi's own preferences dialog (AppPreferencesDialog; edi ADR-0017 §12), not the base's.
             onClicked: Preferences.dialogShown = true
         },
@@ -70,12 +75,14 @@ EaComponents.ApplicationWindow {
             objectName: "appBar.button.help"
             fontIcon: "question-circle"
             ToolTip.text: qsTr("Get online help")
+            Accessible.name: ToolTip.text
             onClicked: Qt.openUrlExternally(ApplicationInfo.docsUrl)
         },
         EaElements.ToolButton {
             objectName: "appBar.button.bug"
             fontIcon: "bug"
             ToolTip.text: qsTr("Report a bug or issue")
+            Accessible.name: ToolTip.text
             onClicked: Qt.openUrlExternally(ApplicationInfo.issuesUrl)
         }
     ]

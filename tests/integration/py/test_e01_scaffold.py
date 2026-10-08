@@ -202,7 +202,8 @@ def test_ci_routes_surfaces_and_uses_strict_self_hosted_jobs() -> None:
 
     app_wasm = job_body('app-wasm')
     assert all(
-        active(jobs['app-wasm'], event) for event in ('push', 'pull_request', 'workflow_dispatch')
+        active(jobs['app-wasm'], event, states={'changes': 'success', 'core': 'success'})
+        for event in ('push', 'pull_request', 'workflow_dispatch')
     ), 'the WebAssembly job runs on every full CI event'
     assert 'wasm-build' in app_wasm and 'wasm-check' in app_wasm, (
         'the WebAssembly job builds and checks the real site'

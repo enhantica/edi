@@ -9,11 +9,14 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import { inflateSync } from 'node:zlib';
+import { fittingObservationKind, hasRunningProgress } from '../../fixtures/e04_t11_wasm/browser_observations.mjs';
 
 const [siteArg, mode, outputArg, chromeArg] = process.argv.slice(2);
+const fitCase = process.argv.find(arg => arg.startsWith('--fit-case='))?.split('=')[1] || 'lbco';
+assert(['lbco', 'ncaf'].includes(fitCase), 'browser fit case must name a committed native reference');
 const fileRequestsOnly = process.argv.includes('--file-requests-only');
 const fileRequestCase = process.argv.find(arg => arg.startsWith('--file-request-case='))?.split('=')[1] || 'all';
-assert(['all','none','overlap','replacement','cancel-structure','cancel-experiment'].includes(fileRequestCase),
+assert(['all','none','overlap','replacement','cancel-structure','cancel-experiment','load-data'].includes(fileRequestCase),
   'each scoped request case must be declared explicitly');
 const reopenControl = process.argv.find(arg => arg.startsWith('--reopen-control='))?.split('=')[1];
 assert(!fileRequestsOnly || !reopenControl, 'request-only checks cannot impersonate a reopen control');
@@ -276,6 +279,9 @@ try {
   assert.equal(await evaluate('typeof self.showOpenFilePicker'), 'undefined',
     'this browser case exercises the real zip-download fallback without native filesystem pickers');
   const isolated = await evaluate('self.crossOriginIsolated');
+  const sharedArrayBuffer = await evaluate('typeof SharedArrayBuffer !== "undefined"');
+  const coreCount = await evaluate('navigator.hardwareConcurrency');
+  assert.equal(sharedArrayBuffer, mode !== 'singlethread', 'each shipped route must prove SharedArrayBuffer availability');
   assert.equal(isolated, mode !== 'singlethread', 'the browser itself must prove the selected isolation case');
   const wasm = network.filter(url => url.endsWith('.wasm'));
   const expected = mode === 'singlethread' ? 'singlethread' : 'multithread';
@@ -283,7 +289,7 @@ try {
     'automatic start-page selection must load the thread kit the browser can actually run');
   assert(!wasm.some(url => url.replace(/[-_]/g, '').includes(mode === 'singlethread' ? 'multithread' : 'singlethread')),
     'automatic selection must not launch an incompatible second kit');
-  await writeFile(join(output, `${mode}-startup.json`), JSON.stringify({ isolated, wasm, errors, transcript }, null, 2));
+  await writeFile(join(output, `${mode}-startup.json`), JSON.stringify({ isolated, sharedArrayBuffer, coreCount, wasm, errors, transcript }, null, 2));
   assert.equal(errors.length, 0, 'startup must have no uncaught browser exception');
   if (process.argv.includes('--startup-only')) {
     console.log(`${mode}: real canvas, browser isolation and automatic kit selection passed`);
@@ -296,6 +302,29 @@ try {
   await send('Runtime.callFunctionOn', { objectId: node.object.objectId,
     functionDeclaration: 'function() { this.click(); }' });
   await waitAX(/Get started|Home/);
+  await click(/Application preferences|Preferences/i, 'button');
+  await click(/^Develop$/, 'tab');
+  await click(/^Show$/, 'button');
+  await waitAX(/^Diagnostics$/);
+  const diagnosticsTree = await send('Accessibility.getFullAXTree');
+  const diagnostics = diagnosticsTree.nodes.filter(node => !node.ignored)
+    .map(node => node.value?.value || node.name?.value || '').join('\n');
+  for (const prior of ['Threads (ideal)', 'Threads (OpenMP team)', 'Browser cores (hardwareConcurrency)'])
+    assert(diagnostics.includes(prior), 'Develop diagnostics must retain the existing thread and browser lines');
+  const backend = diagnostics.match(/(?:parallel|engine) backend:\s*([^\n]+)/i)?.[1];
+  const workerCount = Number(diagnostics.match(/(?:parallel|engine) workers:\s*(\d+)/i)?.[1]);
+  const simd = diagnostics.match(/(?:WebAssembly |wasm )?SIMD:\s*(yes|no|on|off|enabled|disabled)/i)?.[1];
+  assert(backend && Number.isInteger(workerCount) && simd, 'Develop must show engine backend, actual worker count and SIMD state');
+  if (mode === 'singlethread') {
+    assert(/serial/i.test(backend) && workerCount === 1 && /^(no|off|disabled)$/i.test(simd),
+      'the serial browser route must report its serial scalar engine');
+  } else {
+    assert(/std.?thread|thread.?pool/i.test(backend) && workerCount > 1 && /^(yes|on|enabled)$/i.test(simd),
+      'both isolated browser routes must report the active thread backend and SIMD');
+  }
+  await writeFile(join(output, `${mode}-diagnostics.json`), JSON.stringify({backend,workerCount,simd,diagnostics},null,2));
+  for (const type of ['keyDown','keyUp']) await send('Input.dispatchKeyEvent', {type,key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
+  for (const type of ['keyDown','keyUp']) await send('Input.dispatchKeyEvent', {type,key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
   await shot('home');
   await click(/^Start$/);
   await click(/^Project$/);
@@ -304,7 +333,7 @@ try {
     (n.properties || []).some(p=>p.name==='disabled' && p.value.value)),
     'example opening must start without a live project or enabled Analysis tab');
   await click(/Examples$/, 'button');
-  await click(/lbco.*hrpt.*(?:start[- ]?)?4/i, 'button');
+  await click(fitCase === 'ncaf' ? /ncaf.*wish.*5bank.*(?:start[- ]?)?5/i : /lbco.*hrpt.*(?:start[- ]?)?4/i, 'button');
   await waitAX(/^Analysis$/,true,'tab');
   await waitAX(/^Save project as/, true, 'button');
   await click(/^Structure$/); await waitAX(/Cell|Space group/i); await shot('structure');
@@ -344,28 +373,42 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   await waitModal(false);
   await evaluate(`(() => {
     window.__e04Progress = [];
+    const progressKind = (${fittingObservationKind.toString()});
     const roots = [document];
     for (let i=0;i<roots.length;++i) for (const element of roots[i].querySelectorAll('*')) if (element.shadowRoot) roots.push(element.shadowRoot);
     const observer = new MutationObserver(records => {
       for (const record of records) {
         const values = [record.oldValue,record.target.getAttribute?.('aria-label'),record.target.textContent];
-        for (const value of values) if (value && /^(?:(?:stop|cancel) fitting|(?:spinner)?Fit iterations\\d+|\\d+\\s*%)$/i.test(value)) window.__e04Progress.push(value);
+        for (const node of record.addedNodes || []) {
+          values.push(node.getAttribute?.('aria-label'), node.textContent);
+          for (const child of node.querySelectorAll?.('[aria-label]') || []) values.push(child.getAttribute('aria-label'));
+        }
+        for (const value of values) if (progressKind(value)) window.__e04Progress.push(value);
       }
     });
     for (const root of roots) observer.observe(root,{subtree:true,attributes:true,attributeOldValue:true,characterData:true,characterDataOldValue:true,childList:true});
     window.__e04ProgressObserver = observer;
   })()`);
+  const fitStarted = await evaluate('performance.now()');
   await click(/^Start fitting$/);
 
-  await waitAX(/^Done$/); await waitModal(true); await shot('fit-results');
+  await waitAX(/^Success$/);
+  const fitElapsedMs = (await evaluate('performance.now()')) - fitStarted;
+  assert(Number.isFinite(fitElapsedMs) && fitElapsedMs > 0, 'fit measurement must span the actual browser fitting action'); await waitModal(true); await shot('fit-results');
   const progress = await evaluate('window.__e04Progress');
-  const runningProgress = values => values.some(value => /^(?:stop|cancel) fitting$/i.test(value)) &&
-    values.some(value => /^(?:spinner)?Fit iterations\d+$/i.test(value));
-  assert(!runningProgress(['Maximum iterations 400','Done','Iterations']),
-    'completed report text and minimizer settings cannot impersonate live fitting progress');
-  if (mode !== 'singlethread') assert(runningProgress(progress),
-    'multithread fitting must publish both a running control and a live iteration indicator');
+  // Before: "Fit iterationsN". Now: "fitting · it N", with an optional
+  // stop-circle prefix on the real Stop control's accessibility label.
   await writeFile(join(output, `${mode}-progress.json`), JSON.stringify(progress,null,2));
+  assert(hasRunningProgress(['stop-circle Stop fitting', 'fitting · it 2']),
+    'the current running control and live iteration label must satisfy the progress oracle');
+  assert(!hasRunningProgress(['Maximum iterations 400','Success','Iterations', 'it 20 · 2 s']),
+    'completed report text and minimizer settings cannot impersonate live fitting progress');
+  assert(!hasRunningProgress(['Stop fitting', 'Success', 'Iterations 20']),
+    'a running control alone cannot impersonate a live iteration indicator');
+  assert(!hasRunningProgress(['Start fitting', 'fitting · it 2']),
+    'an iteration label alone cannot impersonate a running control');
+  if (mode !== 'singlethread') assert(hasRunningProgress(progress),
+    'multithread fitting must publish both a running control and a live iteration indicator');
   await evaluate('window.__e04ProgressObserver.disconnect()');
   const fitAX = await send('Accessibility.getFullAXTree');
   await writeFile(join(output, `${mode}-fit-accessibility.json`), JSON.stringify(fitAX, null, 2));
@@ -381,9 +424,17 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
     /_fit_result.iterations\s+[1-9]\d*/.test(before.analysis),
     'the saved project must contain a successful performed fit, not only the unfitted example');
   const chi = Number(before.analysis.match(/^_fit_result.reduced_chi_square\s+(\S+)/m)?.[1]);
-  assert(Number.isFinite(chi) && Math.abs(chi-nativeOracle.reduced_chi_square) <=
-    nativeOracle.absolute_tolerance + nativeOracle.relative_tolerance*Math.abs(nativeOracle.reduced_chi_square),
+  const referenceChi = fitCase === 'ncaf' ? 9.50 : nativeOracle.reduced_chi_square;
+  const chiTolerance = fitCase === 'ncaf' ? 0.005 : nativeOracle.absolute_tolerance + nativeOracle.relative_tolerance*Math.abs(referenceChi);
+  assert(Number.isFinite(chi) && Math.abs(chi-referenceChi) <= chiTolerance,
     'browser saved fit must agree with the independent committed native CLI chi square');
+
+  const iterations = Number(before.analysis.match(/^_fit_result.iterations\s+(\S+)/m)?.[1]);
+  const rwp = Number(before.analysis.match(/^_fit_result.prof_wr_factor\s+(\S+)/m)?.[1]);
+  if (fitCase === 'ncaf') {
+    assert(iterations === 5 && Number.isFinite(rwp) && Math.abs(100*rwp-7.69) <= 0.005,
+      'the five-bank browser fit must retain the owner recorded five iterations and Rwp 7.69 percent');
+  }
 
   // The public reset toolbar action closes the model. Identify its actual browser rectangle,
   // not a stale offscreen page control: the documented four left toolbar buttons end with Reset.
@@ -426,6 +477,20 @@ if sys.argv[3] == 'refuse':
     markers[0].write_text('_edi.schema_version invalid\\n')
 print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encoding: 'utf8', timeout: 10000 });
   assert.equal(unpack.status, 0, 'browser save must produce a real reopenable project archive');
+  const numerical = spawnSync('python', ['-c', `import json, pathlib, sys
+from tests.fixtures.web_parallel.numeric import scientific, compare_scientific
+actual = scientific(pathlib.Path(sys.argv[1]))
+oracle = json.loads(pathlib.Path(sys.argv[2]).read_text())
+compare_scientific(actual, oracle['scientific'], oracle['relative_tolerance'], oracle['absolute_tolerance'])
+pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
+    fileURLToPath(new URL(`../../fixtures/web_parallel/${fitCase}-native.json`, import.meta.url)),
+    join(output, `${mode}-${fitCase}-scientific.json`)], {encoding:'utf8',timeout:10000});
+  assert.equal(numerical.status, 0, 'browser fitted parameters and pattern arrays must agree with the independent native capture: ' + numerical.stderr);
+  await writeFile(join(output, `${mode}-${fitCase}-measurement.json`), JSON.stringify({
+    mode, fitCase, coreCount, fitElapsedMs, isolated, sharedArrayBuffer, kit: expected,
+    chiSquare: chi, iterations, rwp, nativeNumerics: true
+  }, null, 2));
+
   if (reopenControl === 'noop') {
     await send('Runtime.callFunctionOn', {...picker,
       functionDeclaration: "function() { this.addEventListener('change', e => e.stopImmediatePropagation(), {capture:true,once:true}); }"});
@@ -470,10 +535,17 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
     const beginPicker = async regex => {
       lastEvents.delete('Page.fileChooserOpened');
       const opened=event('Page.fileChooserOpened');
-      await accessiblePress(regex); await opened;
-      const result=await send('Runtime.evaluate',{expression:'window.__e04FileInput'});
-      assert(result.result.objectId,'each request must cross the actual browser picker');
-      return {objectId:result.result.objectId};
+      // Before: synthetic click on Qt's accessibility element. Now: pointer
+      // input on the app control, including Qt's openFiles/Load data path.
+      await click(regex, 'button');
+      const chooser=await opened;
+      assert(chooser.backendDOMNodeId,'each request must expose its actual browser file input');
+      const result=await send('DOM.resolveNode',{backendNodeId:chooser.backendDOMNodeId});
+      const picker={objectId:result.object.objectId};
+      const actual=await send('Runtime.callFunctionOn',{...picker,returnByValue:true,
+        functionDeclaration:'function() { return this === window.__e04FileInput && this instanceof HTMLInputElement && this.type === "file"; }'});
+      assert(actual.result.value,'each request must cross the actual browser picker, not reuse an earlier input');
+      return picker;
     };
     let getStartedOpen = !fileRequestsOnly;
     const projectPage = async () => {
@@ -603,6 +675,18 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
     await send('DOM.setFileInputFiles',{...structure,files:[join(inputs,'blocks/structure.edi')]});
     await waitAX(/Structures \(1\)/);
     await click(/^Experiment$/); await waitAX(/Experiments \(0\)/);
+    }
+    if (['all','load-data'].includes(fileRequestCase)) {
+    await createEmpty('routing_empty_data');
+    await click(/^Experiment$/); await waitAX(/Experiments \(0\)/);
+    if (fileRequestCase !== 'all') await accessiblePress(/Experiments \(0\)/);
+    await click(/^Create experiment$/, 'button');
+    await waitAX(/Experiments \(1\)/);
+    await beginPicker(/^Load data(?:…|\.\.\.)$/);
+    assert.equal(await evaluate('window.__e04FileInput.multiple'),false,
+      'Load data must open a real single-file browser chooser through its experiment control');
+    await evaluate("window.__e04FileInput.dispatchEvent(new Event('cancel')); true"); await frame();
+    await waitAX(/Experiments \(1\)/);
     }
     await writeFile(join(output,`${mode}-file-requests.json`),JSON.stringify({case:fileRequestCase,completed:true},null,2));
   }

@@ -79,7 +79,15 @@ records exact replacements in the geometry freshness vehicle: formatting, a wrap
 comment, and the link from its loaded experiment to the structure it actually creates.
 The latter replaces the imported experiment's unrelated structure identity. All
 original code tokens, assertion predicates and messages survive, apart from that
-single added fixture assignment. Every other archived witness stays byte-identical.
+single added fixture assignment. The assignment now uses the same `structure` alias
+introduced immediately above it; the immutable original and all original code tokens stay bound.
+
+The same receipt names one GUI setup adaptation: before, an immediate check required the
+initial calculation to have completed; after, the same currentness predicate is awaited
+for at most ten seconds. Its diagnostic uses the public wording. Every subsequent equal-write
+assertion and every other GUI byte stays unchanged. The verifier permits exactly that replacement,
+and rejects re-pinned changes to its predicate, timeout or diagnostic.
+Every other archived witness stays byte-identical.
 
 Run `python tests/fixtures/c34_t28_baseline/api_witness_adaptation.py` to verify the
 fixed receipt against the archived original and the live source. The verifier never
