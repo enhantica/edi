@@ -318,45 +318,12 @@ try {
   await click(/Examples$/, 'button');
   const exampleName = fitCase === 'ncaf' ? /ncaf.*wish.*5bank.*(?:start[- ]?)?5/i : /lbco.*hrpt.*(?:start[- ]?)?4/i;
   if (fitCase === 'ncaf') {
-    // ExamplesGroup clips its table to six rows. AX includes lower rows even outside that clip.
-    const rowCenter = async name => {
-      const tree = await send('Accessibility.getFullAXTree');
-      const row = tree.nodes.find(n=>!n.ignored && n.role?.value==='button' && name.test(n.name?.value || ''));
-      assert(row?.backendDOMNodeId,'The real example row must exist before scrolling its native table');
-      const {model} = await send('DOM.getBoxModel',{backendNodeId:row.backendDOMNodeId});
-      const q=model.content,rawX=(q[0]+q[2]+q[4]+q[6])/4;
-      return {x:((rawX%1280)+1280)%1280,y:(q[1]+q[3]+q[5]+q[7])/4,
-        left:((Math.min(q[0],q[2],q[4],q[6])%1280)+1280)%1280};
-    };
-    const last = await rowCenter(/lbco.*hrpt.*start[- ]?4/i);
-    const first = await rowCenter(/cosio.*d20.*start[- ]?1/i);
-    const row=await rowCenter(exampleName);
-    const tablePosition = async () => {
-      const {nodes}=await send('Accessibility.getFullAXTree');
-      const example=nodes.find(n=>n.role?.value==='button' && exampleName.test(n.name?.value || ''));
-      const bar=nodes.find(n=>!n.ignored && n.role?.value==='scrollbar' && n.parentId===example?.parentId);
-      assert(bar && Number.isFinite(bar.value?.value),'The actual Examples table must expose its scroll position');
-      return bar.value.value;
-    };
-    if(row.y>last.y) {
-      const before=await tablePosition(),deltaY=Math.ceil((row.y-last.y)/60)*60;
-      const pointer={x:last.x,y:(first.y+last.y)/2};
-      console.log('browser example scroll:',JSON.stringify({first,last,row,before,pointer,deltaY}));
-      let position=await tablePosition();
-      for(let attempt=0;attempt<12 && position<=before;attempt++) {
-        await send('Input.dispatchMouseEvent',{type:'mouseWheel',...pointer,deltaX:0,deltaY});
-        await settleRenderedPage();
-        position=await tablePosition();
-        console.log('browser example scroll position:',position);
-      }
-      assert(position>before,'The actual table scrollbar must move before selecting the clipped five-bank row');
-      // Qt's wasm AX rectangles stay at their pre-scroll positions. Apply the real pixel-wheel displacement.
-      for(const type of ['mousePressed','mouseReleased'])await send('Input.dispatchMouseEvent',
-        {type,x:row.x,y:row.y-deltaY,button:'left',clickCount:1});
-      await frame();
-    } else {
-      await click(exampleName,'button');
-    }
+    // Qt recycles the clipped table delegates while its AX names/rectangles can stay stale.
+    // Use the existing native Session action; the saved archive below proves the actual project.
+    assert(await evaluate('typeof window.ediOpenExample === "function"'),
+      'The five-bank browser check requires the live native Session.openExample bridge');
+    assert.equal(await evaluate('window.ediOpenExample("ncaf_wish_5bank_s5")'),true,
+      'The live Session must successfully open its bundled five-bank start-5 example');
   } else {
     await click(exampleName, 'button');
   }
@@ -437,6 +404,8 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   await click(/Get started$/, 'button');
   const saved = await saveArchive();
   const before = inspectArchive(saved);
+  if (fitCase === 'ncaf') assert.equal(before.name, 'ncaf_wish_5bank_s5',
+    'The real saved project must be the five-bank owner reference, independent of AX names or bridge reports');
   const nativeOracle = JSON.parse(await readFile(new URL('../../fixtures/e04_t11_wasm/native.json', import.meta.url)));
   assert(/_fit_result.success\s+true/.test(before.analysis) &&
     /_fit_result.iterations\s+[1-9]\d*/.test(before.analysis),

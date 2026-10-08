@@ -110,3 +110,17 @@ name. Its existing root Item needs `Accessible.role: Accessible.ProgressBar`
 and `Accessible.name: bar.text`, so the actual bar text reaches the browser's
 accessibility DOM for both single-fit and scan bars. No test-generated label
 or completed-results substitute is admitted.
+
+The five-bank case also needs `window.ediOpenExample(exampleId)` in both kits.
+It returns (or resolves to) the boolean returned by the existing native
+`Session::openExample(exampleId)`, invoked on Qt's main thread against its
+bundled resource registry; unknown ids must fail through Session's existing
+validation. The check requests `ncaf_wish_5bank_s5`. It must not make a new
+project, substitute a test fixture, or report success without calling Session.
+Qt's six-row Examples table includes clipped/recycled delegates whose AX
+names and rectangles can identify a different actual row. This bridge replaces
+that unreliable pointer selection, while the real Analysis controls, fit,
+project save, Reset and reopen still run. The saved archive must independently
+identify `ncaf_wish_5bank_s5` before the unchanged native/owner numbers can
+satisfy the check. The existing Develop bridge's main-thread installation is
+the prior implementation to extend with this separate Session action.
