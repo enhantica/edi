@@ -34,3 +34,8 @@ const evidence = {chrome,coreCount:mt.coreCount,ratio,observations};
 await writeFile(join(output,'web-performance.json'),JSON.stringify(evidence,null,2));
 console.log(JSON.stringify({coreCount:mt.coreCount,ratio,singlethreadMs:st.fitElapsedMs,multithreadMs:mt.fitElapsedMs}));
 assert(ratio >= contract.speed.minimum_ratio,'the multithread five-bank fit must be at least 1.4 times faster on the same browser runner');
+const webkitDriver=fileURLToPath(new URL('./web_parallel_routes.mjs',import.meta.url));
+const webkitArgs=[webkitDriver,resolve(site),join(output,'webkit-routes')];
+if(process.env.WEB_PARALLEL_PLAYWRIGHT)webkitArgs.push(process.env.WEB_PARALLEL_PLAYWRIGHT);
+const webkitRun=spawnSync(process.execPath,webkitArgs,{stdio:'inherit',timeout:600000});
+assert.equal(webkitRun.status,0,'The shipped WebKit routes must pass reload and second navigation with COEP require-corp');

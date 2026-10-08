@@ -30,6 +30,30 @@ reference. It records the NCAF fit durations and requires the multithread kit to
 be at least 1.4 times faster on the same browser executable and runner exposing
 at least four cores. Only this speed gate uses a duration threshold.
 
+The matrix also runs `tests/system/manual/web_parallel_routes.mjs` in WebKit
+against the shipped site: initial load, reload, a second page in the same browser
+context and its reload, for each of the three routes. Every load observes the
+actual wasm request, isolation and SharedArrayBuffer. Controlled shim documents
+must receive COEP `require-corp`; Chromium cannot stand in for this regression.
+Install the locked driver and its WebKit engine before running the matrix:
+
+```
+npm ci --prefix tests/fixtures/web_parallel
+node tests/fixtures/web_parallel/node_modules/playwright-core/cli.js install webkit
+```
+
+`PLAYWRIGHT_BROWSERS_PATH` can place the pinned browser in the isolated toolchain
+cache. `WEB_PARALLEL_PLAYWRIGHT` can name that locked package's `index.mjs` when
+the toolchain installs it outside the fixture directory. A missing driver or
+browser refuses the check; it is never a skipped route. The standalone route
+check accepts the same module path as its third argument.
+
+Gate 9's before/after web-to-desktop ratio and the measured native exceptions,
+mimalloc, LTO and relaxed-SIMD trials belong in the packet's results with each
+run's provenance. The approximate 1.5x target is reported, not asserted here;
+gate 4 retains its authorized 1.4x multithread-to-singlethread floor. Native fit
+captures and cross-platform numeric tolerances remain unchanged.
+
 The diagnostics text contract adds `Engine backend`, `Engine workers`, and
 `WebAssembly SIMD`, retaining the existing ideal-thread, OpenMP-team and browser
 core labels. The isolated kits report a std::thread pool with multiple workers
