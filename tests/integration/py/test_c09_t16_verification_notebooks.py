@@ -511,7 +511,8 @@ def test_ci_runs_notebooks_for_every_result_changing_surface() -> None:
     notebook_job = _job_body(
         workflow, 'notebooks' if '\n  notebooks:' in workflow else 'notebook-tests'
     )
-    # Before: per-surface filters. After  I1/I34: unconditional native reuse.
+    # Before: successful upstream jobs implied reachability. After: declared upstream
+    # results drive scheduling; a failed core/native no longer cancels later reporting.
     from tests.fixtures.e09_t75_workflow import (  # noqa: PLC0415 - avoid test-module import cycles
         active,
     )
@@ -523,14 +524,24 @@ def test_ci_runs_notebooks_for_every_result_changing_surface() -> None:
     data = jobs()
     public = public_profile(data)
     assert all(
-        active(data['notebooks'], event) for event in ('push', 'pull_request', 'workflow_dispatch')
+        active(
+            data['notebooks'],
+            event,
+            states={'changes': 'success', 'native': 'failure', 'core': 'failure'},
+        )
+        for event in ('push', 'pull_request', 'workflow_dispatch')
     ), '/ notebooks run for every result-changing surface'
     assert 'uses: ./.github/actions/setup-pixi' in notebook_job
     assert 'pixi run notebook-tests' in notebook_job
 
     docs_job = _job_body(workflow, 'docs')
     assert all(
-        active(data['docs'], event) for event in ('push', 'pull_request', 'workflow_dispatch')
+        active(
+            data['docs'],
+            event,
+            states={'changes': 'success', 'native': 'failure', 'core': 'failure'},
+        )
+        for event in ('push', 'pull_request', 'workflow_dispatch')
     ), '/ required docs execution cannot be path-filtered'
     if not public:
         for name in ('notebooks', 'docs'):

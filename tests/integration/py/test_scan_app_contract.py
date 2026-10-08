@@ -171,10 +171,25 @@ def require_availability(text):
     )
 
 
+def search_functions(shared):
+    # Execute the actual shared functions; before the GUI round matches() was self-contained.
+    folded = block(shared, 'function folded(')
+    matcher = block(shared, 'function matches(')
+    picker = block(shared, 'function pickedIndex(')
+    return (
+        'control.folded = function(text) ' + folded[folded.index('{') :] + ';\n'
+        'control.matches = function(text) {let filter = control.filter; '
+        + matcher[matcher.index('{') + 1 : -1]
+        + '};\n'
+        'control.pickedIndex = function() {let {count,filter,textAt,matches} = control; '
+        + picker[picker.index('{') + 1 : -1]
+        + '};\n'
+    )
+
+
 def assert_search(shared, delegate=None):
     field = item(shared, 'comboBox.search')
     delegate = delegate or block(shared, 'delegate:')
-    matcher = block(shared, 'function matches(')
     # Both a direct input binding and state updated by the input are valid compositions.
     program = """const control = {count: 11, searchText: ""}; const searchField = {text:
 ""};
@@ -189,9 +204,7 @@ searchThreshold} = control; return SEARCHABLE}});
 Object.defineProperty(control, 'filter', {get: () => {let {searchable,
 
 searchText} = control; return FILTER}});
-control.matches = function(text) {let filter = control.filter; MATCH_BODY}
-
-;
+FUNCTIONS
 let output=[];
 for (const size of [10,11]) {
  control.count=size;
@@ -210,7 +223,7 @@ console.log(JSON.stringify(output));"""
         'THRESHOLD': property_value(shared, 'searchThreshold'),
         'SEARCHABLE': property_value(shared, 'searchable'),
         'FILTER': property_value(shared, 'filter'),
-        'MATCH_BODY': matcher[matcher.index('{') + 1 : -1],
+        'FUNCTIONS': search_functions(shared),
         'ASSIGN': property_value(field, 'onTextChanged'),
         'MATCHING': property_value(delegate, 'matching') if 'matching:' in delegate else 'true',
         'VISIBLE': property_value(delegate, 'visible')
@@ -229,8 +242,14 @@ console.log(JSON.stringify(output));"""
         'Search wiring: actual field, matcher and delegate implement '
         'case-insensitive substring filtering above ten'
     )
-    assert property_value(field, 'visible') == 'control.searchable', (
-        'Search wiring: threshold controls the attached field'
+    # The field may own visibility directly or sit in the popup's painted header.
+    holder = (
+        field
+        if re.search(r'(?m)^\s*visible:', field)
+        else block(block(shared, 'id: searchHeader'), 'Rectangle {')
+    )
+    assert property_value(holder, 'visible') == 'control.searchable', (
+        'Search wiring: threshold controls the attached field or its enclosing header'
     )
     completed = block(shared, 'Component.onCompleted:')
     require(
@@ -239,18 +258,23 @@ console.log(JSON.stringify(output));"""
         'Search wiring: input is the popup list header',
     )
     accepted = property_value(field, 'onAccepted')
-    result = javascript(
-        """let picked=[],closed=0; const control={count:3,currentIndex:2,
-textAt:i=>["other","CoSiO cooling.dat","last"][i],matches:t=>t.includes("SiO"),
-
-
-activated:i=>picked.push(i),popup:{close:()=>closed++}};
-(function()BODY)();console.log(JSON.stringify([control.currentIndex,
-
-picked,closed]));""".replace('BODY', accepted)
+    # Each interaction has fresh state; execute the complete matrix in one declared Node host.
+    context = (
+        'let results=[]; for (const term of ["SiO"," cosio cooling.DAT ","absent",""]) {'
+        'let picked=[],closed=0; const control={count:3,currentIndex:0,'
+        'textAt:i=>["other","CoSiO warming.dat","CoSiO cooling.dat"][i],'
+        'activated:i=>picked.push(i),popup:{close:()=>closed++}};'
+        + search_functions(shared)
+        + 'control.filter=control.folded(term);'
+        + '(function()'
+        + accepted
+        + ')();'
+        'results.push([control.currentIndex,picked,closed]);}'
+        'console.log(JSON.stringify(results));'
     )
-    assert result == [1, [1], 1], (
-        'Search wiring: Enter selects and activates the first matching original index'
+    assert javascript(context) == [[1, [1], 1], [2, [2], 1], [0, [], 0], [0, [0], 1]], (
+        'Search wiring: Enter prefers an exact folded match, otherwise the first original '
+        'index, and leaves a no-match search open'
     )
 
 
@@ -895,14 +919,14 @@ def test_effective_consumers_reject_wrong_branches_and_disconnected_search(chann
             'control.popup.contentItem.header = searchHeader',
             'control.popup.contentItem.header = null',
         ),
-        ('control.currentIndex = i', 'control.currentIndex = 0'),
+        ('control.currentIndex = index', 'control.currentIndex = 0'),
     ]:
         key = {
             'control.searchText = text': 'search-input',
             'matching ? EaStyle.Sizes.comboBoxHeight : 0': 'search-height',
             'matching ? 1 : 0': 'search-opacity',
             'control.popup.contentItem.header = searchHeader': 'search-header',
-            'control.currentIndex = i': 'search-index',
+            'control.currentIndex = index': 'search-index',
         }[old]
         if channel != key:
             continue
@@ -924,8 +948,8 @@ def test_effective_consumers_reject_wrong_branches_and_disconnected_search(chann
 def test_search_accepts_direct_field_and_state_compositions():
     shared = source('qml/Components/SearchableComboBox.qml')
     direct = shared.replace(
-        'searchable ? searchText.trim().toLowerCase()',
-        'searchable ? searchField.text.trim().toLowerCase()',
+        'searchable ? control.folded(searchText)',
+        'searchable ? control.folded(searchField.text)',
     )
     assert direct != shared, (
         'Search wiring: the control supplies the alternative field composition'

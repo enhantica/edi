@@ -79,6 +79,8 @@ class ExperimentListModel : public RowTableModel {
     void setDatasets(ExperimentViewModel* experiment, const QList<Dataset>& datasets);
     // One dataset's row again, in place.
     void setDataset(int index, ExperimentViewModel* experiment, const Dataset& dataset);
+    // Whether the rows are a scan's `count` datasets, in place order, so each can be set again in place.
+    bool holdsDatasets(int count) const;
     QStringList columns() const { return columns_; }
     void setColumns(const QStringList& columns);
     // Called with each row a view reads (a scan's datasets): the owner loads what the row still lacks, so only shown

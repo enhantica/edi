@@ -224,7 +224,12 @@ def evaluate(node, values):
 
 
 def condition(expression, *, fork, event):
-    return active({'if': expression} if expression is not None else {}, event, fork=fork)
+    return active(
+        {'if': expression} if expression is not None else {},
+        event,
+        fork=fork,
+        states={'changes': 'success', 'native': 'success', 'core': 'success'},
+    )
 
 
 def environment_name(value, *, fork, event):

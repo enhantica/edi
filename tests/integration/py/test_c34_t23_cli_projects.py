@@ -312,8 +312,16 @@ def assert_registry_wiring(manifest, workflow):
                 from tests.fixtures.e09_t75_workflow import active  # noqa: PLC0415
 
                 try:
-                    trusted_public = active(job, 'pull_request') and all(
-                        not active(job, 'pull_request', fork=True, core_only=repair)
+                    trusted_public = active(
+                        job, 'pull_request', states={'changes': 'success', 'core': 'success'}
+                    ) and all(
+                        not active(
+                            job,
+                            'pull_request',
+                            states={'changes': 'success', 'core': 'success'},
+                            fork=True,
+                            core_only=repair,
+                        )
                         for repair in (False, True)
                     )
                 except AssertionError:

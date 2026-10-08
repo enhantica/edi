@@ -73,6 +73,12 @@ def test_shared_block_selector_has_bounded_square_icon_steps_and_file_labels():
     assert placement.count('BlockSelector {') == 1 and (
         'onBlockActivated: index => placement.blockActivated(index)' in placement
     ), 'The main-area placement must compose one selector and forward its original index'
+    assert 'BlockSelector {' in placement and (
+        'onBlockActivated: index => placement.blockActivated(index)' in placement
+    ), 'The main-area selector must forward choices from the shared block control'
+    assert (
+        'MainAreaBlockSelector {' in workflow and 'visible: page.blockSelectorShown' in workflow
+    ), 'The shared workflow main area must host the enabled block selector'
     for page_name, kind, collection in (
         ('Experiment', 'Experiment', 'experiments'),
         ('Structure', 'Structure', 'structures'),

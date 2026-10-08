@@ -27,6 +27,14 @@ namespace edi_app {
 // ---- StructureListModel / ExperimentListModel ---------------------------------------------------
 
 namespace {
+
+// A name as a save tells names apart: saved files are compared without letter case (crysta refuses
+// two datablock names that differ only by case, as one file on a case-insensitive filesystem).
+std::string folded_name(std::string name) {
+    std::transform(name.begin(), name.end(), name.begin(),
+                   [](unsigned char c) { return c >= 'A' && c <= 'Z' ? static_cast<char>(c - 'A' + 'a') : static_cast<char>(c); });
+    return name;
+}
 // A block's selector entry: its name, a dot, and the file it is saved as in the project.
 QString block_label(const QString& name, const QString& fallback) {
     const QString key = name.isEmpty() ? fallback : name;
@@ -113,6 +121,18 @@ QVariant ExperimentListModel::data(const QModelIndex& index, int role) const {
 
 void ExperimentListModel::setDataset(int index, ExperimentViewModel* experiment, const Dataset& dataset) {
     setTableRow(index, dataset_values(experiment, dataset));
+}
+
+bool ExperimentListModel::holdsDatasets(int count) const {
+    if (this->count() != count) {
+        return false;
+    }
+    for (int i = 0; i < count; ++i) {
+        if (keyAt(i) != reinterpret_cast<const void*>(static_cast<std::uintptr_t>(i + 1))) {
+            return false;
+        }
+    }
+    return true;
 }
 
 // ---- ProjectViewModel ---------------------------------------------------------------------------
@@ -400,8 +420,7 @@ bool ProjectViewModel::createExperiment() {
     for (int n = 1; name.empty(); ++n) {
         const std::string candidate = "experiment" + std::to_string(n);
         const bool held = std::any_of(project.experiments.begin(), project.experiments.end(), [&candidate](const auto& item) {
-            return edi::KeyTraits<edi::BraggPdExperiment>::canonical(item->name) ==
-                   edi::KeyTraits<edi::BraggPdExperiment>::canonical(candidate);
+            return folded_name(edi::KeyTraits<edi::BraggPdExperiment>::canonical(item->name)) == candidate;
         });
         name = held ? std::string() : candidate;
     }
@@ -563,14 +582,9 @@ bool ProjectViewModel::loadData(int index, const QUrl& file) {
     edi::PlainDataLoad& load = *read;
     // A file name another experiment already has, in any letter case (saved files are told apart without it),
     // keeps the experiment's own.
-    const auto folded = [](std::string text) {
-        std::transform(text.begin(), text.end(), text.begin(),
-                       [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-        return text;
-    };
-    const std::string wanted = folded(load.experiment.name);
+    const std::string wanted = folded_name(load.experiment.name);
     for (const auto& held : project.experiments) {
-        if (held.get() != &experiment && folded(held->name) == wanted) {
+        if (held.get() != &experiment && folded_name(held->name) == wanted) {
             load.experiment.name = name;
         }
     }
@@ -627,7 +641,7 @@ bool ProjectViewModel::createStructure() {
     for (int n = 1; name.empty(); ++n) {
         const std::string candidate = "structure" + std::to_string(n);
         const bool held = std::any_of(project.structures.begin(), project.structures.end(), [&candidate](const auto& item) {
-            return edi::KeyTraits<edi::Structure>::canonical(item->name) == edi::KeyTraits<edi::Structure>::canonical(candidate);
+            return folded_name(edi::KeyTraits<edi::Structure>::canonical(item->name)) == candidate;
         });
         name = held ? std::string() : candidate;
     }
@@ -772,6 +786,23 @@ void ProjectViewModel::syncDatasets() {
         return;
     }
     const std::size_t count = scan_session_->datasets().files.size();
+    experiment_list_->setColumns(scan_columns_);
+    // A list already holding the scan's datasets is brought up to date row by row: a scan of many files would
+    // otherwise hold its rows two and three times at once (the end of a run is where this is called).
+    if (experiment_list_->holdsDatasets(static_cast<int>(count))) {
+        ExperimentViewModel* experiment = experiment_models_.value(0);
+        for (std::size_t index = 0; index < count; ++index) {
+            const ExperimentListModel::Dataset row = datasetRow(static_cast<int>(index));
+            experiment_list_->setDataset(static_cast<int>(index), experiment, row);
+            if (experiment != nullptr && static_cast<int>(index) == current_dataset_) {
+                experiment->setFitOutcome(row.outcome);
+            }
+        }
+        if (experiment != nullptr && (current_dataset_ < 0 || current_dataset_ >= static_cast<int>(count))) {
+            experiment->setFitOutcome(QString());
+        }
+        return;
+    }
     QList<ExperimentListModel::Dataset> rows;
     rows.reserve(static_cast<qsizetype>(count));
     for (std::size_t index = 0; index < count; ++index) {
@@ -781,7 +812,6 @@ void ProjectViewModel::syncDatasets() {
         experiment->setFitOutcome(current_dataset_ >= 0 && current_dataset_ < rows.size() ? rows[current_dataset_].outcome
                                                                                           : QString());
     }
-    experiment_list_->setColumns(scan_columns_);
     experiment_list_->setDatasets(experiment_models_.value(0), rows);
 }
 

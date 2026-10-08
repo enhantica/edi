@@ -14,6 +14,7 @@
 #include "experiment_view_model.hpp"
 #include "project_view_model.hpp"
 #include "session.hpp"
+#include "structure_view_model.hpp"
 Q_IMPORT_QML_PLUGIN(edi_appPlugin)
 
 namespace {
@@ -154,8 +155,10 @@ void configure(edi_app::ProjectViewModel& view, const QString& beam, bool rename
 }  // namespace
 int main(int argc, char** argv) {
     QGuiApplication app(argc, argv);
-    if (argc != 7) return 2;
-    const std::string mode = argv[1], escape = argv[5];
+    if (argc < 2) return 2;
+    const std::string mode = argv[1];
+    if (argc != (mode == "identity" ? 8 : 7)) return 2;
+    const std::string escape = argv[5];
     const QString fixture = QString::fromLocal8Bit(argv[2]);
     const QString work = QString::fromLocal8Bit(argv[3]);
     const QString beam = QString::fromLocal8Bit(argv[4]);
@@ -165,7 +168,47 @@ int main(int argc, char** argv) {
         if (!session.createProject("Scratch", ""))
             throw std::runtime_error("create project refused");
         auto& view = *session.project();
-        if (mode == "structure") {
+        if (mode == "identity") {
+            configure(view, beam, false);
+            const bool experiments = escape == "experiment";
+            const std::string spelling = argv[6];
+            const int occupied = argc > 7 ? std::stoi(argv[7]) : 1;
+            for (int i = 1; i < occupied; ++i) {
+                if (!(experiments ? view.createExperiment() : view.createStructure()))
+                    throw std::runtime_error("identity setup creation refused");
+            }
+            for (int i = 0; i < occupied; ++i) {
+                const auto name = spelling + std::to_string(i + 1);
+                if (experiments)
+                    view.experimentModels()[i]->setName(QString::fromStdString(name));
+                else {
+                    const auto old_name = view.project().structures[i]->name.value();
+                    view.structureModels()[i]->setName(QString::fromStdString(name));
+                    // Fixture setup: retain the loaded link identities when choosing user
+                    // spellings.
+                    auto& project = const_cast<edi::Project&>(view.project());
+                    for (auto& experiment : project.experiments)
+                        for (auto& link : experiment->linked_structures)
+                            if (link->structure_id.value() == old_name) link->structure_id = name;
+                }
+            }
+            result["before"] = state(view);
+            result["beforeSaved"] = session.saveAs(QUrl::fromLocalFile(work + "/before-saved"));
+            result["beforeSaveError"] = session.lastError();
+            result["created"] = experiments ? view.createExperiment() : view.createStructure();
+            result["after"] = state(view);
+            view.undo();
+            result["undone"] = state(view);
+            result["recreated"] = experiments ? view.createExperiment() : view.createStructure();
+            const auto saved = work + "/saved";
+            result["saved"] = session.saveAs(QUrl::fromLocalFile(saved));
+            result["saveError"] = session.lastError();
+            if (result["saved"].toBool()) {
+                session.closeProject();
+                result["opened"] = session.openProject(QUrl::fromLocalFile(saved));
+                if (result["opened"].toBool()) result["reopened"] = state(*session.project());
+            }
+        } else if (mode == "structure") {
             result["created"] = create(view);
             result["first"] = state(view);
             result["createdSecond"] = create(view);

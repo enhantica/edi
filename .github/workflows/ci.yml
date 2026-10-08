@@ -146,12 +146,16 @@ jobs:
           EDI_CORE_TARGETS: edi_tests
       - name: C++ unit tests
         run: pixi run --skip-deps cpp-test
+        env:
+          # A stale pin makes cpp-test resolve the paired crysta build again, which reads crysta's releases.
+          GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
 
   audit:
     name: audit
-    if: github.event.pull_request.head.repo.fork == false && inputs.core_only != true
+    if: ${{ !cancelled() && needs.changes.result == 'success' && github.event.pull_request.head.repo.fork == false && inputs.core_only != true }}
     environment: crysta-sdk
-    # After the core tests, which take the runners first; a core failure cancels the run before these start.
+    # After the core tests, which take the runners first. It runs even when core fails, so one round lists
+    # every failure.
     needs: [changes, core]
     runs-on: *linux
     env:
@@ -208,10 +212,6 @@ jobs:
             runner: *macos
             sdk: osx-arm64
     runs-on: ${{ matrix.runner }}
-    # `actions: write` for the cancel step at the end.
-    permissions:
-      contents: read
-      actions: write
     steps:
       - uses: actions/checkout@v5
         with:
@@ -266,25 +266,15 @@ jobs:
         run: pixi run --skip-deps tsan-worker
         env:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
-      # A core failure ends the run, so the red arrives in minutes and no runner spends time on a head
-      # that is already red. A cancelled run is never merge evidence.
-      - name: Cancel the run after a core failure
-        if: failure()
-        run: |
-          curl -fsS -X POST -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel"
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
 
   notebooks:
     name: notebooks
-    # Runs for every result-changing surface, so no job condition: the steps that use the crysta
-    # token, and the run that needs their build, carry the fork guard (a fork's pull request skips
-    # this job anyway, through the native job it needs).
-    if: inputs.core_only != true
+    # Runs for every result-changing surface. It runs even when native or core fails, so one round lists
+    # every failure; a fork's pull request skips it, as it skips the native job.
+    if: ${{ !cancelled() && needs.changes.result == 'success' && github.event.pull_request.head.repo.fork == false && inputs.core_only != true }}
     environment: crysta-sdk
-    # After the native build and the core tests of this run, which take the runners first; a core failure
-    # cancels the run before these start. Each job still builds its own tree (no artifact carries crysta).
+    # After the native build and the core tests of this run, which take the runners first. Each job still
+    # builds its own tree (no artifact carries crysta).
     needs: [changes, native, core]
     env:
       CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
@@ -328,9 +318,10 @@ jobs:
 
   cli-python:
     name: cli-python · ${{ matrix.platform }}
-    if: github.event.pull_request.head.repo.fork == false && inputs.core_only != true
+    if: ${{ !cancelled() && needs.changes.result == 'success' && github.event.pull_request.head.repo.fork == false && inputs.core_only != true }}
     environment: crysta-sdk
-    # After the core tests, which take the runners first; a core failure cancels the run before these start.
+    # After the core tests, which take the runners first. It runs even when core fails, so one round lists
+    # every failure.
     needs: [changes, core]
     env:
       CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
@@ -400,9 +391,10 @@ jobs:
 
   docs:
     name: docs
-    if: github.event.pull_request.head.repo.fork == false && inputs.core_only != true
+    if: ${{ !cancelled() && needs.changes.result == 'success' && github.event.pull_request.head.repo.fork == false && inputs.core_only != true }}
     environment: crysta-sdk
-    # After the core tests, which take the runners first; a core failure cancels the run before these start.
+    # After the core tests, which take the runners first. It runs even when core fails, so one round lists
+    # every failure.
     needs: [changes, core]
     env:
       CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
@@ -447,9 +439,10 @@ jobs:
 
   app:
     name: app · ${{ matrix.platform }}
-    if: github.event.pull_request.head.repo.fork == false && inputs.core_only != true
+    if: ${{ !cancelled() && needs.changes.result == 'success' && github.event.pull_request.head.repo.fork == false && inputs.core_only != true }}
     environment: crysta-sdk
-    # After the core tests, which take the runners first; a core failure cancels the run before these start.
+    # After the core tests, which take the runners first. It runs even when core fails, so one round lists
+    # every failure.
     needs: [changes, core]
     env:
       CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
@@ -536,9 +529,10 @@ jobs:
   # wasm from the pinned SDK's source, per kit.
   app-wasm:
     name: app · WebAssembly
-    if: github.event.pull_request.head.repo.fork == false && inputs.core_only != true
+    if: ${{ !cancelled() && needs.changes.result == 'success' && github.event.pull_request.head.repo.fork == false && inputs.core_only != true }}
     environment: crysta-sdk
-    # After the core tests, which take the runners first; a core failure cancels the run before these start.
+    # After the core tests, which take the runners first. It runs even when core fails, so one round lists
+    # every failure.
     needs: [changes, core]
     runs-on: *linux
     env:
@@ -600,6 +594,11 @@ jobs:
         run: >-
           pixi run --skip-deps wasm-check "$RUNNER_TEMP/edi-webapp-checks" tests/system/manual/e04_t11_browser.mjs
           tests/system/py/test_e04_t11_wasm_fit.py tests/system/py/test_e04_t11_wasm_delivery.py
+      # The multithread kit's parallel fit: all three routes timed against each other (the speed ratio is in the log)
+      # and crysta's executed-body witness built from the same crysta source with the same options.
+      - name: Check the parallel engine in the browser
+        if: ${{ !cancelled() }}
+        run: pixi run --skip-deps wasm-parallel-check "$RUNNER_TEMP/edi-webapp-checks/parallel"
       - name: Upload the browser checks' screenshots and logs
         if: always()
         uses: actions/upload-artifact@v4

@@ -417,8 +417,7 @@ TEST_CASE("E09-T55 declared data ranges select calculation mode and reject ambig
                   "a project whose banks all declare ranges must select calculation mode");
 
     write_text(all_range.path / "experiments/measured.edi", measured);
-    // E04-T18 Scope 11 lifts the project-wide mixed-mode refusal. Block ambiguity above stays
-    // invalid.
+    // Mixed projects are admitted; a block declaring both data and a range still refuses.
     const auto require_mixed = [](const edi::Project& project) {
         REQUIRE_MESSAGE(project.experiments.size() == 2,
                         "Mixed projects: loading retains the measured bank and the range bank");

@@ -245,10 +245,19 @@ def test_c11_t40_validator_fires_at_python_factory_and_file_boundaries(
         ),
         pytest.param(
             'u',
-            [('_atom_site_U_iso_or_equiv', '0.005')],
-            0.005,
-            0.0,
+            [('_atom_site_U_iso_or_equiv', '0.0050(2)')],
+            # Independent cctbx-base 2025.11 adptbx.u_as_b(0.005),
+            # adptbx.u_as_b(0.0002); frozen for offline testing.
+            0.39478417604357435,
+            0.015791367041742974,
             id='u',
+        ),
+        pytest.param(
+            'u-without-uncertainty',
+            [('_atom_site_U_iso_or_equiv', '0.005')],
+            0.39478417604357435,
+            0.0,
+            id='u-without-uncertainty',
         ),
         pytest.param(
             'both',
@@ -275,15 +284,17 @@ def test_c11_t40_cif_adp_spellings_preserve_type_and_prefer_b(
     path.write_text(text, encoding='utf-8')
     source = text if method_name == 'from_cif_str' else path
     site = getattr(edi.StructureFactory, method_name)(source).atom_sites[0]
-    assert site.adp_type == ('Uiso' if name == 'u' else 'Biso'), (
-        'ADR-0080 each imported CIF convention must retain its declared ADP type'
+    # Before: U-only columns implied Uiso. After: without a declared type,
+    # Biso is the default and both U value and standard uncertainty convert.
+    assert site.adp_type == 'Biso', (
+        'an undeclared CIF site must default to Biso regardless of the B/U input spelling'
     )
     parameter = site.adp_iso
     assert parameter.value == pytest.approx(expected_value, abs=1.0e-12), (
-        'ADR-0080 CIF B/U spelling must preserve its input convention',
+        'undeclared U-only CIF values convert to Biso against cctbx; an explicit B column wins',
         name,
     )
     assert parameter.uncertainty == pytest.approx(expected_uncertainty, abs=1.0e-12), (
-        'CIF standard uncertainty must survive its preserved convention',
+        'CIF standard uncertainty must follow the same independent U-to-B conversion as its value',
         name,
     )

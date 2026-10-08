@@ -27,6 +27,7 @@ RELATIONS = json.loads((ROOT / 'tests/fixtures/constraint_expressions/byte-pins.
 #  projects postdate the immutable  pre-move source closure.
 # Their serialization is checked by a second-save fixed point, never a rewritten old pin.
 POLYNOMIAL_CASES = [
+    'repo:docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project',
     'repo:docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project',
     'corpus:beer-ferrite-austenite/project',
     'corpus:yap-spodi-3k/project',
@@ -43,6 +44,13 @@ POLYNOMIAL_CASES = [
 # New relation data keeps its own fixed-point witness and never replaces an old pin.
 RELATION_CASES = ['corpus:constraint-covariance/project']
 
+# New CLI subjects retain all source bytes and the complete second-save fixed point;
+# they do not replace or regenerate any historical serialization pin.
+ADP_AND_SCAN_CASES = [
+    'repo:docs/user/cli/pd-neut-cwl_y2o3_beta-adp/project',
+    'repo:docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project',
+]
+
 
 def test_saved_byte_inventory_covers_every_current_cli_and_corpus_project(tmp_path):
     # Before: all inputs existed before the move. After : preserve
@@ -58,6 +66,7 @@ def test_saved_byte_inventory_covers_every_current_cli_and_corpus_project(tmp_pa
         set(BASELINE['cases'])
         | additions
         | set(POLYNOMIAL_CASES)
+        | set(ADP_AND_SCAN_CASES)
         | (set(RELATION_CASES) & set(REFERENCE.inputs()))
     ), (
         ' I22 every project must retain its pre-move byte witness, labelled '
@@ -260,7 +269,7 @@ def test_byte_witness_observes_value_order_inventory_and_measured_files(tmp_path
     )
 
 
-@pytest.mark.parametrize('case', POLYNOMIAL_CASES + RELATION_CASES)
+@pytest.mark.parametrize('case', POLYNOMIAL_CASES + RELATION_CASES + ADP_AND_SCAN_CASES)
 def test_c13_t6_new_projects_have_a_second_save_fixed_point(tmp_path, case):
     inputs = REFERENCE.inputs()
     assert case in inputs, ' every new declared project needs its serialization witness'

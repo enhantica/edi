@@ -24,8 +24,10 @@ app.
    `adp_iso` holds the value in that type. An anisotropic site has a row of the structure's `atom_site_aniso`
    collection, keyed by the site id, with `adp_11` … `adp_23` in its type. Rows exist exactly for the anisotropic
    sites: a load refuses a row for any other site and an anisotropic site without one. A CIF site takes the type
-   `_atom_site_adp_type` declares, its numbers converted to it; a declared type outside the five, an anisotropic
-   type without a tensor row, an isotropic one with a row, and a row naming no site refuse. A site's rename renames
+   `_atom_site_adp_type` declares, its numbers converted to it; a site that declares none is `Biso`, a U value
+   converted, unless a tensor row states its type. A declared type outside the five, an anisotropic type without a
+   tensor row, an isotropic one with a row, a row naming no site, a tensor loop without its id column and a second
+   tensor loop refuse. A site's rename renames
    its row, in a project or not, and a held row is never renamed on its own; removing a site removes it;
    duplicating one copies it.
 2. **One conversion, crysta's.** Changing a site's type (`AtomSite.adp_type` from Python, the app's type cell)
@@ -33,7 +35,9 @@ app.
    with them where the change only rescales them. A site not yet held by a structure is being declared, so it takes
    the type with its values as given. Whenever the sites change, the rows follow
    their types (`sync_atom_site_aniso`): a missing row is the tensor of the site's isotropic value, and an
-   anisotropic site's `adp_iso` is its tensor's equivalent value, both computed by crysta.
+   anisotropic site's `adp_iso` is its tensor's equivalent value, both computed by crysta; a different equivalent
+   replaces the scalar without the old value's uncertainty and fit start. The Analysis table lists a site's tensor
+   components with the site, after its own fields.
 3. **Ties.** Which tensor components a site's symmetry leaves free is crysta's `adp_ties`, reported through
    `structure_ties` like the cell and coordinate ties, so the app shows a tied component disabled and a fit refines
    only the free ones.

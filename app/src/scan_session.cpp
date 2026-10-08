@@ -181,7 +181,9 @@ QString ScanSession::readRun(const edi::Project& project) {
 }
 
 QString ScanSession::reindex(const edi::Project& project, bool writing) {
-    index_ = edi::index_scan_results(project, datasets_, writing);
+    // The old index goes first: a scan's two indexes at once would double what it holds at the end of a run.
+    index_ = {};
+    index_ = edi::index_scan_results(project, datasets_, places_, writing);
     return QString::fromStdString(index_.error);
 }
 
