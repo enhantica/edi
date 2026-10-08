@@ -100,3 +100,13 @@ before the downloaded project is reopened and compared with the native capture.
 The existing Save, Undo and Reset names stay. The app's currently unnamed Redo
 button needs `ToolTip.text: qsTr("Redo the last undone change")` and
 `Accessible.name: ToolTip.text`; its existing disabled behavior is sufficient.
+
+The live progress witness follows the owner's shipped E04-T16 F6 design
+(2026-10-05): it requires an actual `Stop fitting` control and an actual
+`fitting · it N` label while the fit runs. This replaces the former
+`Fit iterationsN` expectation; completed outcome text and minimizer settings
+cannot satisfy it. The drawn `FitProgressBar` currently has no accessible
+name. Its existing root Item needs `Accessible.role: Accessible.ProgressBar`
+and `Accessible.name: bar.text`, so the actual bar text reaches the browser's
+accessibility DOM for both single-fit and scan bars. No test-generated label
+or completed-results substitute is admitted.
