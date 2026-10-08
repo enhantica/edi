@@ -647,7 +647,7 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
     await click(/Get started$/, 'button'); getStartedOpen = false;
     await accessiblePress(/Examples$/);
     // The first delegate's Qt AX rectangle predates table layout. Input location is from
-    // the 1280x768 rendered table (seq4-f1-layout capture); identity below is the oracle.
+    // the rendered table at the fixed viewport; project identity below is the oracle.
     for (const type of ['mousePressed','mouseReleased']) await send('Input.dispatchMouseEvent',
       {type,x:992.5,y:239.5,button:'left',clickCount:1});
     await settleRenderedPage();
