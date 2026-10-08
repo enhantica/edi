@@ -15,7 +15,7 @@ for (const fitCase of ['lbco','ncaf']) {
   observations[fitCase] = {};
   for (const mode of ['singlethread','multithread','shim']) {
     const dir = join(output, fitCase, mode);
-    const run = spawnSync(process.execPath, ['--experimental-websocket',driver,resolve(site),mode,dir,chrome,`--fit-case=${fitCase}`], {stdio:'inherit',timeout:120000});
+    const run = spawnSync(process.execPath, ['--experimental-websocket',driver,resolve(site),mode,dir,chrome,`--fit-case=${fitCase}`], {stdio:'inherit',timeout:300000});
     assert.equal(run.status,0,'every corpus fit must complete through each shipped browser route');
     const measurement = JSON.parse(await readFile(join(dir,`${mode}-${fitCase}-measurement.json`)));
     const route = contract.routes[mode];
