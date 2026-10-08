@@ -77,7 +77,8 @@ DOM: those popups have no usable AX subtree in the wasm app. The app must expose
 `window.ediDevelopDiagnostics(action)`, accepting `open`, `read`, and `close`
 (synchronous results or Promises). `open` opens the existing Preferences dialog,
 selects its existing Develop tab, then opens its existing Diagnostics dialog;
-`close` closes both dialogs. `read` returns a fresh object with actual QML state:
+`close` completes only after both dialogs have closed (resolve its Promise
+after any close animation). `read` returns a fresh object with actual QML state:
 `preferencesVisible`, `developSelected`, `diagnosticsVisible`, `textVisible`,
 `text` (the displayed `diagnostics.text` TextArea's text), and `providerText`
 (the current `ApplicationInfo.diagnostics()` result). Visibility includes the
