@@ -316,7 +316,29 @@ try {
     (n.properties || []).some(p=>p.name==='disabled' && p.value.value)),
     'example opening must start without a live project or enabled Analysis tab');
   await click(/Examples$/, 'button');
-  await click(fitCase === 'ncaf' ? /ncaf.*wish.*5bank.*(?:start[- ]?)?5/i : /lbco.*hrpt.*(?:start[- ]?)?4/i, 'button');
+  const exampleName = fitCase === 'ncaf' ? /ncaf.*wish.*5bank.*(?:start[- ]?)?5/i : /lbco.*hrpt.*(?:start[- ]?)?4/i;
+  if (fitCase === 'ncaf') {
+    // ExamplesGroup clips its table to six rows. AX includes lower rows even outside that clip.
+    const rowCenter = async name => {
+      const tree = await send('Accessibility.getFullAXTree');
+      const row = tree.nodes.find(n=>!n.ignored && n.role?.value==='button' && name.test(n.name?.value || ''));
+      assert(row?.backendDOMNodeId,'The real example row must exist before scrolling its native table');
+      const {model} = await send('DOM.getBoxModel',{backendNodeId:row.backendDOMNodeId});
+      const q=model.content;return {x:(q[0]+q[2]+q[4]+q[6])/4,y:(q[1]+q[3]+q[5]+q[7])/4};
+    };
+    const first = await rowCenter(/cosio.*d20.*start[- ]?1/i);
+    const last = await rowCenter(/lbco.*hrpt.*start[- ]?4/i);
+    let visible=false;
+    for(let attempt=0;attempt<12;attempt++) {
+      const row=await rowCenter(exampleName);
+      if(row.y>=first.y && row.y<=last.y) {visible=true;break;}
+      await send('Input.dispatchMouseEvent',{type:'mouseWheel',x:last.x,y:(first.y+last.y)/2,
+        deltaX:0,deltaY:row.y>last.y?180:-180});
+      await settleRenderedPage();
+    }
+    assert(visible,'The five-bank example must enter the actual six-row table viewport before its real pointer click');
+  }
+  await click(exampleName, 'button');
   await waitAX(/^Analysis$/,true,'tab');
   await waitAX(/^Save project as/, true, 'button');
   await click(/^Structure$/); await waitAX(/Cell|Space group/i); await shot('structure');
