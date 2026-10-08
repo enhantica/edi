@@ -547,10 +547,10 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
       const opened=event('Page.fileChooserOpened');
       // Before: synthetic click on Qt's accessibility element. Now: pointer
       // input on the app control, including Qt's openFiles/Load data path.
-      await click(regex, 'button');
-      const chooser=await opened;
-      assert(chooser.backendDOMNodeId,'each request must expose its actual browser file input');
-      const result=await send('DOM.resolveNode',{backendNodeId:chooser.backendDOMNodeId});
+      const [chooser] = await Promise.all([opened, click(regex, 'button')]);
+      await writeFile(join(output, `${mode}-request-picker.json`), JSON.stringify(chooser,null,2));
+      assert(chooser.backendNodeId,'each request must expose its actual browser file input');
+      const result=await send('DOM.resolveNode',{backendNodeId:chooser.backendNodeId});
       const picker={objectId:result.object.objectId};
       const actual=await send('Runtime.callFunctionOn',{...picker,returnByValue:true,
         functionDeclaration:'function() { return this === window.__e04FileInput && this instanceof HTMLInputElement && this.type === "file"; }'});
