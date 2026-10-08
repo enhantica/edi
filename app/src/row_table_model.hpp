@@ -51,6 +51,14 @@ class RowTableModel : public QAbstractListModel {
     // One row's values, the row staying where it is: only the roles that differ are announced.
     void setTableRow(int row, const QList<QVariant>& values);
     const void* keyAt(int row) const { return row >= 0 && row < rows_.size() ? rows_.at(row).key : nullptr; }
+    // A row's values as data() and get() read them: those the row holds, unless a model builds them on demand.
+    virtual QList<QVariant> rowValues(int row) const { return rows_.at(row).values; }
+    // Every role of rows first..last changed (a model that builds its values on demand announces them so).
+    void announceRows(int first, int last) {
+        if (first <= last) {
+            emit dataChanged(index(first), index(last));
+        }
+    }
     int roleIndex(int role) const { return role - Qt::UserRole - 1; }
 
    private:

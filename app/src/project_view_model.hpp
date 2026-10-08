@@ -6,6 +6,7 @@
 #include <QList>
 #include <QStringList>
 #include <QObject>
+#include <QPointer>
 #include <QTemporaryDir>
 #include <QTimer>
 #include <QString>
@@ -76,11 +77,17 @@ class ExperimentListModel : public RowTableModel {
         QStringList extracted;
         bool is_template = false;
     };
-    void setDatasets(ExperimentViewModel* experiment, const QList<Dataset>& datasets);
-    // One dataset's row again, in place.
-    void setDataset(int index, ExperimentViewModel* experiment, const Dataset& dataset);
-    // Whether the rows are a scan's `count` datasets, in place order, so each can be set again in place.
-    bool holdsDatasets(int count) const;
+    // A scan's `count` datasets. The rows hold only their keys: a row's values are built from `row` when it is read,
+    // so a scan of many files keeps no text per file (the session holds its facts).
+    void setDatasets(ExperimentViewModel* experiment, int count, std::function<Dataset(int)> row);
+    // A dataset's facts changed; its row is read again.
+    void datasetChanged(int index) { announceRows(index, index); }
+    // Every dataset's facts may have changed.
+    void datasetsChanged() { announceRows(0, count() - 1); }
+    // Whether the rows are `count` datasets of `experiment` already, so a change needs only announcing.
+    bool showsDatasets(ExperimentViewModel* experiment, int count) const {
+        return dataset_row_ && dataset_experiment_ == experiment && this->count() == count;
+    }
     QStringList columns() const { return columns_; }
     void setColumns(const QStringList& columns);
     // Called with each row a view reads (a scan's datasets): the owner loads what the row still lacks, so only shown
@@ -91,9 +98,14 @@ class ExperimentListModel : public RowTableModel {
    signals:
     void columnsChanged();
 
+   protected:
+    QList<QVariant> rowValues(int row) const override;
+
    private:
     QStringList columns_;
     std::function<void(int)> shown_;
+    std::function<Dataset(int)> dataset_row_;  // set while the rows are a scan's datasets
+    QPointer<ExperimentViewModel> dataset_experiment_;
 };
 
 // The open project. It owns the core Project and is the editor every write goes through: the core

@@ -63,6 +63,8 @@ void ExperimentListModel::setExperiments(const QList<ExperimentViewModel*>& expe
     const QString outcome = recorded_outcome(project.fit_result);
     const bool joint = std::any_of(project.experiments.begin(), project.experiments.end(),
                                    [](const auto& experiment) { return experiment->fit_prof_wr_factor.has_value(); });
+    dataset_row_ = nullptr;
+    dataset_experiment_ = nullptr;
     QList<Row> rows;
     for (int i = 0; i < experiments.size(); ++i) {
         ExperimentViewModel* experiment = experiments[i];
@@ -101,15 +103,21 @@ QList<QVariant> dataset_values(ExperimentViewModel* experiment, const Experiment
 
 }  // namespace
 
-void ExperimentListModel::setDatasets(ExperimentViewModel* experiment, const QList<Dataset>& datasets) {
+void ExperimentListModel::setDatasets(ExperimentViewModel* experiment, int count, std::function<Dataset(int)> row) {
+    dataset_row_ = std::move(row);
+    dataset_experiment_ = experiment;
     QList<Row> rows;
-    rows.reserve(datasets.size());
-    for (int i = 0; i < datasets.size(); ++i) {
+    rows.reserve(count);
+    for (int i = 0; i < count; ++i) {
         // A dataset row is keyed by its place in the scan: one template experiment shows them all.
-        rows.append({reinterpret_cast<const void*>(static_cast<std::uintptr_t>(i + 1)),
-                     dataset_values(experiment, datasets[i])});
+        rows.append({reinterpret_cast<const void*>(static_cast<std::uintptr_t>(i + 1)), {}});
     }
     setTableRows(rows);
+    datasetsChanged();
+}
+
+QList<QVariant> ExperimentListModel::rowValues(int row) const {
+    return dataset_row_ ? dataset_values(dataset_experiment_.data(), dataset_row_(row)) : RowTableModel::rowValues(row);
 }
 
 QVariant ExperimentListModel::data(const QModelIndex& index, int role) const {
@@ -117,22 +125,6 @@ QVariant ExperimentListModel::data(const QModelIndex& index, int role) const {
         shown_(index.row());
     }
     return RowTableModel::data(index, role);
-}
-
-void ExperimentListModel::setDataset(int index, ExperimentViewModel* experiment, const Dataset& dataset) {
-    setTableRow(index, dataset_values(experiment, dataset));
-}
-
-bool ExperimentListModel::holdsDatasets(int count) const {
-    if (this->count() != count) {
-        return false;
-    }
-    for (int i = 0; i < count; ++i) {
-        if (keyAt(i) != reinterpret_cast<const void*>(static_cast<std::uintptr_t>(i + 1))) {
-            return false;
-        }
-    }
-    return true;
 }
 
 // ---- ProjectViewModel ---------------------------------------------------------------------------
@@ -785,45 +777,28 @@ void ProjectViewModel::syncDatasets() {
         experiment_list_->setExperiments(experiment_models_, *project_);
         return;
     }
-    const std::size_t count = scan_session_->datasets().files.size();
+    const int count = static_cast<int>(scan_session_->datasets().files.size());
+    ExperimentViewModel* experiment = experiment_models_.value(0);
     experiment_list_->setColumns(scan_columns_);
-    // A list already holding the scan's datasets is brought up to date row by row: a scan of many files would
-    // otherwise hold its rows two and three times at once (the end of a run is where this is called).
-    if (experiment_list_->holdsDatasets(static_cast<int>(count))) {
-        ExperimentViewModel* experiment = experiment_models_.value(0);
-        for (std::size_t index = 0; index < count; ++index) {
-            const ExperimentListModel::Dataset row = datasetRow(static_cast<int>(index));
-            experiment_list_->setDataset(static_cast<int>(index), experiment, row);
-            if (experiment != nullptr && static_cast<int>(index) == current_dataset_) {
-                experiment->setFitOutcome(row.outcome);
-            }
-        }
-        if (experiment != nullptr && (current_dataset_ < 0 || current_dataset_ >= static_cast<int>(count))) {
-            experiment->setFitOutcome(QString());
-        }
-        return;
+    if (experiment_list_->showsDatasets(experiment, count)) {
+        experiment_list_->datasetsChanged();
+    } else {
+        experiment_list_->setDatasets(experiment, count, [this](int index) { return datasetRow(index); });
     }
-    QList<ExperimentListModel::Dataset> rows;
-    rows.reserve(static_cast<qsizetype>(count));
-    for (std::size_t index = 0; index < count; ++index) {
-        rows.append(datasetRow(static_cast<int>(index)));
+    if (experiment != nullptr) {
+        experiment->setFitOutcome(current_dataset_ >= 0 && current_dataset_ < count ? datasetRow(current_dataset_).outcome
+                                                                                    : QString());
     }
-    if (ExperimentViewModel* experiment = experiment_models_.value(0)) {
-        experiment->setFitOutcome(current_dataset_ >= 0 && current_dataset_ < rows.size() ? rows[current_dataset_].outcome
-                                                                                          : QString());
-    }
-    experiment_list_->setDatasets(experiment_models_.value(0), rows);
 }
 
 void ProjectViewModel::syncDataset(int index) {
     if (!scan_ || index < 0 || index >= static_cast<int>(scan_session_->datasets().files.size())) {
         return;
     }
-    const ExperimentListModel::Dataset row = datasetRow(index);
-    experiment_list_->setDataset(index, experiment_models_.value(0), row);
+    experiment_list_->datasetChanged(index);
     if (index == current_dataset_) {
         if (ExperimentViewModel* experiment = experiment_models_.value(0)) {
-            experiment->setFitOutcome(row.outcome);
+            experiment->setFitOutcome(datasetRow(index).outcome);
         }
     }
 }

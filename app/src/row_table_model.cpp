@@ -14,7 +14,7 @@ QVariant RowTableModel::data(const QModelIndex& index, int role) const {
     if (!index.isValid() || index.row() >= rows_.size() || column < 0 || column >= roles_.size()) {
         return {};
     }
-    return rows_.at(index.row()).values.value(column);
+    return rowValues(index.row()).value(column);
 }
 
 QHash<int, QByteArray> RowTableModel::roleNames() const {
@@ -41,7 +41,7 @@ QVariant RowTableModel::get(int row, const QString& role) const {
     if (row < 0 || row >= rows_.size() || column < 0) {
         return {};
     }
-    return rows_.at(row).values.value(column);
+    return rowValues(row).value(column);
 }
 
 void RowTableModel::setTableRows(const QList<Row>& target) {
