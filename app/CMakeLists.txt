@@ -47,7 +47,7 @@ qt_add_qml_module(edi_app_module
         src/app_info.hpp src/app_info.cpp
         src/engine_setup.hpp src/engine_setup.cpp
         src/demo_driver.hpp src/demo_driver.cpp
-        src/develop_diagnostics.hpp src/develop_diagnostics.cpp
+        src/web_page_hooks.hpp src/web_page_hooks.cpp
         src/project_editor.hpp
         src/row_table_model.hpp src/row_table_model.cpp
         src/parameter_item.hpp src/parameter_item.cpp

@@ -14,7 +14,7 @@
 
 #include "app_info.hpp"
 #include "demo_driver.hpp"
-#include "develop_diagnostics.hpp"
+#include "web_page_hooks.hpp"
 #include "engine_setup.hpp"
 
 Q_IMPORT_QML_PLUGIN(edi_appPlugin)
@@ -69,7 +69,7 @@ int main(int argc, char* argv[]) {
     if (engine.rootObjects().isEmpty()) {
         return -1;
     }
-    edi_app::install_develop_diagnostics(engine);  // the web build's page hook for the browser checks
+    edi_app::install_web_page_hooks(engine);  // the web build's page hooks for the browser checks
     std::unique_ptr<edi_app::DemoDriver> driver;
     if (demo) {
         auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().constFirst());
