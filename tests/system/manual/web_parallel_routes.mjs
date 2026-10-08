@@ -39,8 +39,14 @@ for(const mode of ['singlethread','multithread','shim']) {
   const context=await browser.newContext({viewport:{width:1280,height:768}});
   const watched=new WeakMap();
   const observe=page=>{
-   const state={wasm:[],documents:[],errors:[],console:[]};watched.set(page,state);
+   const state={wasm:[],loadedWasm:[],documents:[],errors:[],console:[]};watched.set(page,state);
    page.on('request',request=>{if(new URL(request.url()).pathname.endsWith('.wasm'))state.wasm.push(request.url());});
+   page.on('requestfinished',async request=>{
+    if(new URL(request.url()).pathname.endsWith('.wasm')) {
+     const response=await request.response();
+     state.loadedWasm.push({url:request.url(),status:response?.status()});
+    }
+   });
    page.on('response',async response=>{
     if(response.request().isNavigationRequest()&&response.request().frame()===page.mainFrame())
      state.documents.push({url:response.url(),headers:await response.allHeaders()});
@@ -49,21 +55,18 @@ for(const mode of ['singlethread','multithread','shim']) {
    page.on('console',message=>{state.console.push(message.text());if(state.console.length>20)state.console.shift();});
   };
   const navigate=async(page,label,reload=false)=>{
-   const state=watched.get(page);state.wasm=[];state.documents=[];state.errors=[];state.console=[];
+   const state=watched.get(page);state.wasm=[];state.loadedWasm=[];state.documents=[];state.errors=[];state.console=[];
    console.log(`WebKit ${mode}: ${label} starts`);
    try {
     await page.bringToFront();
+    const kitLoaded=page.waitForEvent('requestfinished',{
+     predicate:request=>new URL(request.url()).pathname.endsWith('.wasm'),timeout:90000});
     if(reload)await page.reload({waitUntil:'domcontentloaded'});
     else await page.goto(url,{waitUntil:'domcontentloaded'});
-    await page.waitForFunction(()=>{
-     if(!document.documentElement.dataset.build||document.getElementById('screen')?.style.display!=='block')return false;
-     const roots=[document];
-     for(let i=0;i<roots.length;i++)for(const element of roots[i].querySelectorAll('*')) {
-      if(element.shadowRoot)roots.push(element.shadowRoot);
-      if(element.tagName==='CANVAS'&&element.width>100&&element.height>100&&element.getBoundingClientRect().width>100)return true;
-     }
-     return false;
-    },null,{timeout:180000,polling:250});
+    const wasmRequest=await kitLoaded;
+    const wasmResponse=await wasmRequest.response();
+    assert.equal(wasmResponse?.status(),200,'The WebKit route must finish downloading its actual shipped wasm module');
+    await page.waitForFunction(()=>!!document.documentElement.dataset.build,null,{timeout:10000,polling:250});
     const actual=await page.evaluate(()=>({kit:document.documentElement.dataset.build,
      isolated:crossOriginIsolated,sharedArrayBuffer:typeof SharedArrayBuffer==='function',
      controlled:!!navigator.serviceWorker?.controller,coreCount:navigator.hardwareConcurrency,
@@ -77,6 +80,8 @@ for(const mode of ['singlethread','multithread','shim']) {
     assert.equal(actual.sharedArrayBuffer,expected.shared_array_buffer,'WebKit must retain shared memory availability on every navigation');
     assert(state.wasm.length&&state.wasm.every(name=>name.replaceAll(/[-_]/g,'').includes(expected.kit)),
      'Every WebKit load must request the actual expected wasm kit, including cache-backed reloads');
+    assert(state.loadedWasm.length&&state.loadedWasm.every(item=>item.status===200),
+     'Each WebKit navigation must complete its actual wasm request successfully');
     if(mode==='shim') {
      assert(actual.controlled,'The WebKit shim must be controlled by its real service worker');
      assert(state.documents.some(item=>item.headers['cross-origin-embedder-policy']==='require-corp'),
