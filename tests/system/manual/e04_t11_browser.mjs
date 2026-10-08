@@ -324,13 +324,15 @@ try {
       const row = tree.nodes.find(n=>!n.ignored && n.role?.value==='button' && name.test(n.name?.value || ''));
       assert(row?.backendDOMNodeId,'The real example row must exist before scrolling its native table');
       const {model} = await send('DOM.getBoxModel',{backendNodeId:row.backendDOMNodeId});
-      const q=model.content;return {x:(q[0]+q[2]+q[4]+q[6])/4,y:(q[1]+q[3]+q[5]+q[7])/4};
+      const q=model.content,rawX=(q[0]+q[2]+q[4]+q[6])/4;
+      return {x:((rawX%1280)+1280)%1280,y:(q[1]+q[3]+q[5]+q[7])/4};
     };
     const first = await rowCenter(/cosio.*d20.*start[- ]?1/i);
     const last = await rowCenter(/lbco.*hrpt.*start[- ]?4/i);
     let visible=false;
     for(let attempt=0;attempt<12;attempt++) {
       const row=await rowCenter(exampleName);
+      console.log(`browser ${mode}: example row ${row.x},${row.y}, table ${first.y}..${last.y}`);
       if(row.y>=first.y && row.y<=last.y) {visible=true;break;}
       await send('Input.dispatchMouseEvent',{type:'mouseWheel',x:last.x,y:(first.y+last.y)/2,
         deltaX:0,deltaY:row.y>last.y?180:-180});
