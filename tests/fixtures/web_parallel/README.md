@@ -89,3 +89,14 @@ to the provider and checks the actual dialog state before and after inspection.
 The regular browser run then continues its unchanged real project/fit/download
 checks and records the same-browser speed matrix. `--diagnostics-only` is a
 focused diagnostic, never a substitute for that full run.
+
+The reset/reopen witness uses the app toolbar's accessible names, replacing
+the former assumption that all four buttons were unnamed. The four displayed
+buttons must be named `Save current state of the project`, `Undo the last change`,
+`Redo the last undone change`, and
+`Reset to initial state without project, model and data`, in that order. Reset
+is clicked by its exact accessible name and must still remove the real project
+before the downloaded project is reopened and compared with the native capture.
+The existing Save, Undo and Reset names stay. The app's currently unnamed Redo
+button needs `ToolTip.text: qsTr("Redo the last undone change")` and
+`Accessible.name: ToolTip.text`; its existing disabled behavior is sufficient.
