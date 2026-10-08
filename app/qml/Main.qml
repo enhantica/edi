@@ -52,6 +52,8 @@ EaComponents.ApplicationWindow {
             objectName: "appBar.button.redo"
             enabled: false
             fontIcon: "redo"
+            ToolTip.text: qsTr("Redo the last undone change")
+            Accessible.name: ToolTip.text
         },
         EaElements.ToolButton {
             objectName: "appBar.button.reset"
