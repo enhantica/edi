@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-08T15:57:42Z
+# measured_utc = 2026-10-08T18:10:38Z
 #
-# Recorded from: tests.log (672 node(s) measured once, 8363 banked, 4 stale row(s) dropped)
-# Collected tests: 9697; with a reported duration: 4901
+# Recorded from: checkpoint.log (34 node(s) measured once, 9035 banked, 0 stale row(s) dropped)
+# Collected tests: 9731; with a reported duration: 4901
 # Module-scoped fixture costs recorded: 29
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 9697
+# inventory_python = 9731
 # inventory_cpp = 302
 # inventory_measured = 9035
-# inventory_unmeasured = 964
+# inventory_unmeasured = 998
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -8505,6 +8505,40 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_
 1.450	tests/system/py/test_scan_projection_wiring_escapes.py::test_scene_graph_observer_rejects_disconnected_layer_hit_and_uncertainty[low]
 0.790	tests/system/py/test_scan_projection_wiring_escapes.py::test_scene_graph_observer_rejects_disconnected_layer_hit_and_uncertainty[selection]
 0.830	tests/system/py/test_scan_projection_wiring_escapes.py::test_scene_graph_observer_rejects_disconnected_layer_hit_and_uncertainty[target]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_row_generation.py::test_relisted_scan_rows_remain_readable_during_notifications[data-empty-reopen]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_row_generation.py::test_relisted_scan_rows_remain_readable_during_notifications[data-empty-reset-undo]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_row_generation.py::test_relisted_scan_rows_remain_readable_during_notifications[data-empty-save-as]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_row_generation.py::test_relisted_scan_rows_remain_readable_during_notifications[data-empty-save]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_row_generation.py::test_relisted_scan_rows_remain_readable_during_notifications[data-grow-reopen]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_row_generation.py::test_relisted_scan_rows_remain_readable_during_notifications[data-grow-reset-undo]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_row_generation.py::test_relisted_scan_rows_remain_readable_during_notifications[data-grow-save-as]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_row_generation.py::test_relisted_scan_rows_remain_readable_during_notifications[data-grow-save]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_row_generation.py::test_relisted_scan_rows_remain_readable_during_notifications[data-same-reopen]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_row_generation.py::test_relisted_scan_rows_remain_readable_during_notifications[data-same-reset-undo]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_row_generation.py::test_relisted_scan_rows_remain_readable_during_notifications[data-same-save-as]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_row_generation.py::test_relisted_scan_rows_remain_readable_during_notifications[data-same-save]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_row_generation.py::test_relisted_scan_rows_remain_readable_during_notifications[data-shrink-reopen]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_row_generation.py::test_relisted_scan_rows_remain_readable_during_notifications[data-shrink-reset-undo]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_row_generation.py::test_relisted_scan_rows_remain_readable_during_notifications[data-shrink-save-as]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_row_generation.py::test_relisted_scan_rows_remain_readable_during_notifications[data-shrink-save]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_row_generation.py::test_relisted_scan_rows_remain_readable_during_notifications[get-empty-reopen]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_row_generation.py::test_relisted_scan_rows_remain_readable_during_notifications[get-empty-reset-undo]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_row_generation.py::test_relisted_scan_rows_remain_readable_during_notifications[get-empty-save-as]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_row_generation.py::test_relisted_scan_rows_remain_readable_during_notifications[get-empty-save]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_row_generation.py::test_relisted_scan_rows_remain_readable_during_notifications[get-grow-reopen]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_row_generation.py::test_relisted_scan_rows_remain_readable_during_notifications[get-grow-reset-undo]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_row_generation.py::test_relisted_scan_rows_remain_readable_during_notifications[get-grow-save-as]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_row_generation.py::test_relisted_scan_rows_remain_readable_during_notifications[get-grow-save]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_row_generation.py::test_relisted_scan_rows_remain_readable_during_notifications[get-same-reopen]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_row_generation.py::test_relisted_scan_rows_remain_readable_during_notifications[get-same-reset-undo]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_row_generation.py::test_relisted_scan_rows_remain_readable_during_notifications[get-same-save-as]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_row_generation.py::test_relisted_scan_rows_remain_readable_during_notifications[get-same-save]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_row_generation.py::test_relisted_scan_rows_remain_readable_during_notifications[get-shrink-reopen]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_row_generation.py::test_relisted_scan_rows_remain_readable_during_notifications[get-shrink-reset-undo]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_row_generation.py::test_relisted_scan_rows_remain_readable_during_notifications[get-shrink-save-as]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_row_generation.py::test_relisted_scan_rows_remain_readable_during_notifications[get-shrink-save]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_row_generation.py::test_template_replacement_keeps_notification_rows_and_qobjects_readable[data]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_row_generation.py::test_template_replacement_keeps_notification_rows_and_qobjects_readable[get]
 1.830	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[dispatch]
 1.190	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[follow]
 1.400	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[joint]
