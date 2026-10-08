@@ -178,3 +178,11 @@ names, hidden/disabled controls, nonfinite/nonpositive geometry and rectangles
 outside the viewport. It still proves that `Page.fileChooserOpened.backendNodeId`
 resolves to the actual `HTMLInputElement` captured from that request; single-file,
 batch, cancel, superseded-request and native project-result claims are retained.
+
+The results-popup pixel witness checks the opaque dialog margins on both sides
+and at both vertical sample levels, over the otherwise white plot and sidebar.
+The former central sample entered a highlighted results-table row in the
+five-bank dialog and falsely rejected the actually drawn popup. The margin
+background retains gui-components' declared light-theme color and tolerance;
+actual Success, real popup drawing, completed fit and saved native parity are
+still required, and the same witness must observe closure after Escape.
