@@ -593,11 +593,28 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
       for (const type of ['keyDown','keyUp']) await send('Input.dispatchKeyEvent',
         {type,key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
       await waitName(name);
-      const viewport = await evaluate('({x:scrollX,y:scrollY,screen:document.getElementById("screen").getBoundingClientRect().toJSON()})');
+      const viewport = await evaluate(`(() => {
+        const canvases=[];
+        const walk=root=>{for(const item of root.querySelectorAll('*')) {
+          if(item.tagName==='CANVAS') canvases.push(item);
+          if(item.shadowRoot) walk(item.shadowRoot);
+        }};
+        walk(document.getElementById('screen'));
+        const visible=canvases.filter(item=>item.getBoundingClientRect().width>0);
+        if(visible.length!==1) throw Error('the published app must have one visible canvas');
+        const canvas=visible[0], before=canvas.getBoundingClientRect().toJSON(), scrolled=[];
+        for(let item=canvas.parentElement;item;item=item.parentElement||item.getRootNode().host) {
+          if(item.scrollTop||item.scrollLeft) {
+            scrolled.push({x:item.scrollLeft,y:item.scrollTop}); item.scrollTo(0,0);
+          }
+        }
+        return {before,after:canvas.getBoundingClientRect().toJSON(),scrolled};
+      })()`);
       await writeFile(join(output, `${mode}-create-${name}-viewport.json`), JSON.stringify(viewport,null,2));
-      // Browser focus on Qt's shadow editor can scroll the fixed canvas document.
-      // Restore the browser viewport before the next real app pointer action.
-      await evaluate('window.scrollTo(0,0); true');
+      assert.equal(viewport.after.x,0,'trusted app pointers require the actual fixed canvas origin');
+      assert.equal(viewport.after.y,0,'trusted app pointers require the actual fixed canvas origin');
+      assert.equal(viewport.after.width,1280,'trusted app pointers require the actual fixed canvas width');
+      assert.equal(viewport.after.height,768,'trusted app pointers require the actual fixed canvas height');
       await settleRenderedPage();
     };
     // Capture the browser's actual reads, hold promises, and release on explicit observable states.
