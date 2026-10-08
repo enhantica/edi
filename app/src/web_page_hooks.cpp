@@ -90,6 +90,21 @@ extern "C" EMSCRIPTEN_KEEPALIVE const char* edi_develop_diagnostics(const char* 
     return result.c_str();
 }
 
+// The status bar's live fit progress: its bar's text and effective visibility, and whether the fit is running.
+extern "C" EMSCRIPTEN_KEEPALIVE const char* edi_fit_progress() {
+    static std::string result;
+    auto* bar = qobject_cast<QQuickItem*>(named("statusBar.fit.progress"));
+    QObject* fit = named("statusBar.fit");
+    const QJsonObject state =
+        bar == nullptr || fit == nullptr
+            ? QJsonObject{{QStringLiteral("error"), QStringLiteral("the status bar's fit progress was not found")}}
+            : QJsonObject{{QStringLiteral("text"), bar->property("text").toString()},
+                          {QStringLiteral("visible"), bar->isVisible()},
+                          {QStringLiteral("running"), fit->property("running").toBool()}};
+    result = QJsonDocument(state).toJson(QJsonDocument::Compact).toStdString();
+    return result.c_str();
+}
+
 // Session::openExample(id) on Qt's main thread: 1 opened, 0 refused (Session names why), -1 no Session.
 extern "C" EMSCRIPTEN_KEEPALIVE int edi_open_example(const char* example_id) {
     auto* session = g_engine != nullptr ? g_engine->singletonInstance<edi_app::Session*>("edi.app", "Session") : nullptr;
@@ -128,6 +143,13 @@ EM_JS(void, edi_install_web_page_hooks, (), {
             };
             poll();
         });
+    };
+    globalThis.ediFitProgress = () => {
+        const state = JSON.parse(UTF8ToString(_edi_fit_progress()));
+        if (state.error) {
+            throw new Error(`ediFitProgress: ${state.error}`);
+        }
+        return state;
     };
     globalThis.ediOpenExample = (exampleId) => {
         const opened = withStackSave(() => _edi_open_example(stringToUTF8OnStack(String(exampleId))));
