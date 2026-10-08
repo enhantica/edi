@@ -385,7 +385,7 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   assert(Number.isFinite(fitElapsedMs) && fitElapsedMs > 0, 'fit measurement must span the actual browser fitting action'); await waitModal(true); await shot('fit-results');
   const progress = await evaluate('window.__e04Progress');
   await writeFile(join(output, `${mode}-progress.json`), JSON.stringify(progress,null,2));
-  // Owner's E04-T16 F6 contract (2026-10-05): a live stripe says "fitting · it N".
+  // The live status-bar stripe shows the running fit's current iteration: "fitting · it N".
   const runningProgress = values => values.some(value => /^stop fitting$/i.test(value)) &&
     values.some(value => /^fitting\s*·\s*it\s+\d+$/i.test(value));
   assert(runningProgress(['Stop fitting','fitting · it 3']),
