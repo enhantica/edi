@@ -18,8 +18,9 @@ EaComponents.TableView {
     property ExperimentViewModel experiment: null
     readonly property bool timeOfFlight: experiment !== null && experiment.beamMode === ExperimentViewModel.TimeOfFlight
 
+    // A reflection's values by the app's one rule for numbers (NumberText).
     function shown(value) {
-        return value === undefined || isNaN(value) ? "" : String(Number(value.toPrecision(6)));
+        return value === undefined || isNaN(value) ? "" : NumberText.plain(value, 10);
     }
 
     objectName: "reflections.list"

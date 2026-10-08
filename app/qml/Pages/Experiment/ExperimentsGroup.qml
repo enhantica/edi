@@ -15,8 +15,9 @@ import edi.app
 // experiments, one current, each with how the last fit ended on it (Fit) and the file its data is in; under
 // the table the selected experiment's type (ExperimentTypeGroup), then Load experiment (`.edi` block files,
 // several at once, each with its type, data and parameters) and Create experiment (a new experiment without
-// data, a simulation). A row without data has a Load data… button in its File cell, disabled until plain data
-// files load. Create and Load are each one undoable step.
+// data, a simulation). A row made with Create experiment has a Load data… button in its File cell until data is
+// loaded into it: a plain two- or three-column file whose rows become its measured data. Create, Load and Load
+// data are each one undoable step.
 EaElements.GroupBox {
     id: group
 
@@ -143,7 +144,7 @@ EaElements.GroupBox {
                     height: parent ? parent.height : 0
 
                     EaComponents.TableViewLabel {
-                        visible: group.scan || (row.experiment !== null && !row.experiment.calculationOnly)
+                        visible: !loadData.visible
                         width: parent.width - (templateTag.visible ? templateTag.width : 0)
                         horizontalAlignment: Text.AlignLeft
                         elide: Text.ElideMiddle
@@ -160,13 +161,19 @@ EaElements.GroupBox {
                         text: qsTr("template")
                     }
                     EaElements.Button {
+                        id: loadData
                         objectName: `experiments.loadData.${row.index}`
-                        // A simulation's only: a scan's datasets and loaded experiments have their data.
-                        visible: row.experiment !== null && row.experiment.calculationOnly
+                        // An experiment made with Create experiment: Load data…, then the loaded file's name, which
+                        // loads another file in its place. A simulation loaded from `.edi` shows it disabled; a scan's
+                        // datasets and experiments loaded with their data show their file.
+                        visible: !group.scan && row.experiment !== null && (row.experiment.canLoadData || row.experiment.calculationOnly)
                         anchors.verticalCenter: parent.verticalCenter
                         width: parent.width
-                        enabled: false
-                        text: qsTr("Load data…")
+                        enabled: row.experiment !== null && row.experiment.canLoadData
+                        text: row.experiment !== null && !row.experiment.calculationOnly ? row.file : qsTr("Load data…")
+                        ToolTip.visible: hovered && row.experiment !== null && !row.experiment.calculationOnly
+                        ToolTip.text: qsTr("Load another data file in place of this one")
+                        onClicked: group.chooseData(row.experiment)
                     }
                 }
                 // What the scan's extract rules take from the dataset, with their units.
@@ -216,6 +223,7 @@ EaElements.GroupBox {
                 onClicked: {
                     if (WebFiles.available) {
                         group.webRequestProject = group.project;
+                        group.webDataExperiment = null;
                         group.webRequest = WebFiles.openFiles(".edi", true);
                     } else {
                         loadDialog.open();
@@ -227,32 +235,60 @@ EaElements.GroupBox {
                 enabled: group.project !== null && group.project.canCreateExperiment
                 fontIcon: "plus-circle"
                 text: qsTr("Create experiment")
-                ToolTip.text: enabled ? qsTr("Add an experiment without data, to calculate its pattern") : qsTr("The project's experiments carry measured data; an experiment without data cannot join them")
+                ToolTip.text: enabled ? qsTr("Add an experiment without data, to calculate its pattern or load data into") : qsTr("A scan project fits its one template experiment")
                 onClicked: group.project.createExperiment()
             }
         }
     }
 
+    // Load data… for `experiment`: the file dialog, or in the browser the page's file chooser. The answer goes to
+    // that experiment wherever its row is by then, and is refused if it has gone.
+    readonly property string dataFilter: ".xye,.xy,.dat,.txt,.csv"
+    function chooseData(experiment) {
+        if (WebFiles.available) {
+            group.webRequestProject = group.project;
+            group.webDataExperiment = experiment;
+            group.webRequest = WebFiles.openFiles(group.dataFilter, false);
+        } else {
+            dataDialog.experiment = experiment;
+            dataDialog.project = group.project;
+            dataDialog.open();
+        }
+    }
+
     // This page's browser file request and the project it was made for: only its own answer is used, and only
-    // while that project is still open.
+    // while that project is still open. `webDataExperiment`: the experiment a Load data… request is for, or null
+    // for Load experiment.
     property int webRequest: 0
     property var webRequestProject: null
+    property var webDataExperiment: null
     Connections {
         target: WebFiles
         function onFilesOpened(request, files) {
             if (request !== group.webRequest)
                 return;
             group.webRequest = 0;
-            if (group.project !== null && group.project === group.webRequestProject)
-                group.project.loadExperiments(files);
+            const experiment = group.webDataExperiment;
+            const forData = experiment !== null;
+            group.webDataExperiment = null;
+            if (group.project !== null && group.project === group.webRequestProject) {
+                if (forData)
+                    group.project.loadDataInto(experiment, files[0]);
+                else
+                    group.project.loadExperiments(files);
+            }
         }
         function onFailed(request) {
-            if (request === group.webRequest)
+            if (request === group.webRequest) {
                 group.webRequest = 0;
+                group.webDataExperiment = null;
+            }
         }
         function onCancelled(request) {
-            if (request === group.webRequest)
+            if (request === group.webRequest) {
                 group.webRequest = 0;
+                group.webDataExperiment = null;
+            }
         }
     }
 
@@ -262,5 +298,25 @@ EaElements.GroupBox {
         fileMode: FileDialog.OpenFiles
         nameFilters: [qsTr("edi block files (*.edi)")]
         onAccepted: group.project.loadExperiments(selectedFiles)
+    }
+
+    // The dialog's answer goes to the experiment and the project it was opened for, and only while that project
+    // is still the open one.
+    FileDialog {
+        id: dataDialog
+        property var experiment: null
+        property var project: null
+        title: qsTr("Load measured data from a plain two- or three-column file")
+        nameFilters: [qsTr("Data files (*.xye *.xy *.dat *.txt *.csv)"), qsTr("All files (*)")]
+        onAccepted: {
+            if (dataDialog.project !== null && dataDialog.project === group.project)
+                group.project.loadDataInto(dataDialog.experiment, dataDialog.selectedFile);
+            dataDialog.project = null;
+            dataDialog.experiment = null;
+        }
+        onRejected: {
+            dataDialog.project = null;
+            dataDialog.experiment = null;
+        }
     }
 }

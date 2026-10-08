@@ -96,11 +96,25 @@ def test_c11_t48_project_load_refuses_both_categories(tmp_path: Path) -> None:
         edi.Project.load(source)
 
 
-def test_c11_t48_project_load_refuses_mixed_data_and_range_project(tmp_path: Path) -> None:
+def test_c11_t48_project_load_preserves_mixed_data_and_range_project(tmp_path: Path) -> None:
     source, experiment_files, _range_file = _project_variant(tmp_path, 'mixed')
-    offending_file_pattern = '|'.join(re.escape(str(path)) for path in experiment_files)
-    with pytest.raises(edi.IoError, match=offending_file_pattern):
-        edi.Project.load(source)
+    project = edi.Project.load(source)
+    assert len(project.experiments) == len(experiment_files), (
+        'Mixed projects: load every measured bank and the range-only bank from the fixture'
+    )
+    grid = project.experiments[0].data
+    assert list(grid.axis()) == pytest.approx([1000.5, 1001.25, 1002.0], abs=1.0e-12), (
+        'Mixed projects: the explicitly constructed range-only bank retains its declared grid'
+    )
+    assert len(grid.intensity_meas) == len(grid.intensity_meas_su) == 0, (
+        'Mixed projects: the range-only bank must not acquire invented measured observations'
+    )
+    for experiment in list(project.experiments)[1:]:
+        data = experiment.data
+        assert len(data.axis()) == len(data.intensity_meas) == len(data.intensity_meas_su) > 0, (
+            'Mixed projects: each saved measured bank retains one intensity and sigma per point'
+        )
+    _require_saved_profiles(project, source, tmp_path / 'saved-mixed')
 
 
 def _require_saved_profiles(project, source: Path, destination: Path) -> None:
@@ -118,10 +132,19 @@ def _require_saved_profiles(project, source: Path, destination: Path) -> None:
 
     before = profiles(project)
     project.save_as(destination)
-    # The saved calculation experiment keeps its declared range rather than fabricating data.
+    # A mixed project retains its measured banks and the range representation of its
+    # calculation-only banks; the range-only assertion also applies to the mixed case.
     files = tuple(sorted((destination / 'experiments').glob('*.edi')))
     assert len(files) == len(before), 'Saving range grids must retain every experiment block'
-    for path in files:
+    range_files = [
+        path
+        for path in files
+        if '_data_range.time_of_flight_min' in path.read_text(encoding='utf-8')
+    ]
+    assert len(range_files) == sum(not profile[2] for profile in before), (
+        'Saving mixed projects must retain a declared range for every unmeasured bank'
+    )
+    for path in range_files:
         text = path.read_text(encoding='utf-8')
         assert (
             '_data_range.time_of_flight_min' in text and '_data_range.time_of_flight_step' in text
@@ -132,6 +155,6 @@ def _require_saved_profiles(project, source: Path, destination: Path) -> None:
     shutil.rmtree(source)
     reopened = edi.Project.load(destination)
     assert profiles(reopened) == before, (
-        'Saving range-only projects: reopen every name, axis, intensity and sigma '
+        'Saving mixed and range-only projects: reopen every name, axis, intensity and sigma '
         'solely from the saved project after removing its original source'
     )

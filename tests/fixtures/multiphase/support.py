@@ -1,9 +1,12 @@
 """Authored phases and independent linearity/Bragg-law controls."""
 
 import math
+import shutil
 from pathlib import Path
 
 import numpy as np
+
+from tests.conftest import corpus_case_dir
 
 LENGTHS = {'alpha': (2.2, 3.1, 4.3), 'beta': (3.3, 4.6, 5.7)}
 SCALES = {'alpha': 2.75, 'beta': 0.375}
@@ -120,3 +123,25 @@ def enable(row, *, value):
             return
     message = 'A linked phase needs a persistent enable/disable flag'
     raise AssertionError(message)
+
+
+def stage_delivered_corpus_project(delivered, case_id, destination):
+    """Prove the delivered fit inputs equal one pinned case, then stage that case privately."""
+    corpus = corpus_case_dir(case_id) / 'project'
+    for child in ('experiments', 'structures', 'analysis'):
+
+        def contents(root):
+            return {
+                file.relative_to(root).as_posix(): file.read_bytes()
+                for file in root.rglob('*')
+                if file.is_file()
+            }
+
+        assert contents(delivered / child) == contents(corpus / child), (
+            'FullProf agreement must keep the delivered data and recipe equal to its pinned case'
+        )
+    shutil.copytree(delivered, destination)
+    for child in ('experiments', 'structures'):
+        shutil.rmtree(destination / child)
+        (destination / child).symlink_to(corpus / child, target_is_directory=True)
+    return destination

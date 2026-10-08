@@ -1155,6 +1155,54 @@ PdDataBase read_scan_dataset(const std::string& directory, const std::string& fi
     return data;
 }
 
+bool persistable_name(const std::string& name) { return crysta::is_persistable_name(name); }
+
+PlainDataRows read_plain_data(const std::string& path) {
+    crysta::PlainData read;
+    try {
+        read = crysta::read_plain_data(path, true);
+    } catch (const std::exception& refusal) {
+        throw IoError(refusal.what());
+    }
+    return PlainDataRows{std::move(read.x),          std::move(read.y),         std::move(read.sigma),
+                         read.counts.skipped,       read.counts.nonpositive, read.counts.duplicates,
+                         read.counts.reordered,     read.counts.derived};
+}
+
+PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, const std::string& path,
+                                         bool take_file_name) {
+    PlainDataRows read = read_plain_data(path);
+    PlainDataLoad load{BraggPdExperiment(experiment), std::filesystem::path(path).filename().string()};
+    load.points = read.x.size();
+    load.skipped = read.skipped;
+    load.nonpositive = read.nonpositive;
+    load.duplicates = read.duplicates;
+    load.reordered = read.reordered;
+    load.derived = read.derived;
+    PdDataBase data;
+    (experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH ? data.two_theta : data.time_of_flight) =
+        std::move(read.x);
+    data.intensity_meas = std::move(read.y);
+    data.intensity_meas_su = std::move(read.sigma);
+    load.experiment.data = std::move(data);
+    load.experiment.calculation_only = false;
+    load.experiment.data_file = load.file_name;
+    if (take_file_name) {
+        // The file's stem, with anything a datablock name cannot hold made an underscore; a stem the save would
+        // still refuse (a reserved device name) leaves the name as it was.
+        std::string stem = std::filesystem::path(path).stem().string();
+        for (char& character : stem) {
+            const bool keep = (character >= 'a' && character <= 'z') || (character >= 'A' && character <= 'Z') ||
+                              (character >= '0' && character <= '9') || character == '_' || character == '-';
+            character = keep ? character : '_';
+        }
+        if (persistable_name(stem)) {
+            load.experiment.name = stem;
+        }
+    }
+    return load;
+}
+
 std::vector<std::string> scan_extract_values(const Project& project, const std::string& directory,
                                              const std::string& file) {
     crysta::SequentialFitConfig config;
@@ -1181,27 +1229,37 @@ std::filesystem::path scan_results_path(const Project& project) {
     return std::filesystem::path(project.path) / "analysis" / "results.csv";
 }
 
-// Why each file's fit stopped, from crysta's ledger (`termination`, its fifth column), by file_path cell; a ledger
-// written before it recorded the reason, or none, gives nothing.
-std::unordered_map<std::string, std::string> ledger_terminations(const std::filesystem::path& path) {
-    std::unordered_map<std::string, std::string> reasons;
-    std::ifstream input(path, std::ios::binary);
-    std::string line;
-    if (!std::getline(input, line)) {
-        return reasons;
-    }
-    const std::vector<std::string> header = split_scan_row(line);
-    if (header.size() != 5 || header[0] != "file_path" || header[4] != "termination") {
-        return reasons;
-    }
-    while (std::getline(input, line) && !input.eof()) {
-        const std::vector<std::string> cells = split_scan_row(line);
-        if (cells.size() == 5) {
-            reasons[cells[0]] = cells[4];
+// Why each file's fit stopped, from crysta's ledger (`termination`, its fifth column), read in step with
+// results.csv: crysta writes a file's ledger row just before its results row, so the k-th of each name the same
+// file. Reading both together keeps one row in memory, not the whole scan's. A ledger written before it recorded
+// the reason, none, or one whose row names another file gives nothing from there on.
+class LedgerReader {
+   public:
+    explicit LedgerReader(const std::filesystem::path& path) : input_(path, std::ios::binary) {
+        std::string line;
+        if (std::getline(input_, line)) {
+            const std::vector<std::string> header = split_scan_row(line);
+            usable_ = header.size() == 5 && header[0] == "file_path" && header[4] == "termination";
         }
     }
-    return reasons;
-}
+    std::string next(const std::string& file_cell) {
+        std::string line;
+        if (!usable_ || !std::getline(input_, line) || input_.eof()) {
+            usable_ = false;
+            return {};
+        }
+        std::vector<std::string> cells = split_scan_row(line);
+        if (cells.size() != 5 || cells[0] != file_cell) {
+            usable_ = false;
+            return {};
+        }
+        return std::move(cells[4]);
+    }
+
+   private:
+    std::ifstream input_;
+    bool usable_ = false;
+};
 
 // The termination the ledger's last line records for `file_cell`; empty when that line is another file's, the
 // ledger does not record reasons, or there is none. Reads only the file's end.
@@ -1366,6 +1424,11 @@ std::pair<std::size_t, ScanResultIndex::Row> scan_row_facts(const Project& /*pro
 }
 
 ScanResultIndex index_scan_results(const Project& project, const ScanDatasets& datasets, bool writing) {
+    return index_scan_results(project, datasets, scan_places(datasets), writing);
+}
+
+ScanResultIndex index_scan_results(const Project& project, const ScanDatasets& datasets, const ScanPlaces& places,
+                                   bool writing) {
     ScanResultIndex index;
     index.rows.resize(datasets.files.size());
     const auto refused = [&datasets](const std::string& why) {
@@ -1397,8 +1460,7 @@ ScanResultIndex index_scan_results(const Project& project, const ScanDatasets& d
         check_scan_header(project, index);
         std::int64_t offset = input.tellg();
         index.end = offset;
-        const ScanPlaces places = scan_places(datasets);
-        const auto reasons = ledger_terminations(scan_results_path(project).parent_path() / "results-provenance.csv");
+        LedgerReader reasons(scan_results_path(project).parent_path() / "results-provenance.csv");
         while (std::getline(input, line)) {
             if (input.eof()) {
                 if (writing) {
@@ -1413,9 +1475,7 @@ ScanResultIndex index_scan_results(const Project& project, const ScanDatasets& d
                 throw std::invalid_argument("analysis/results.csv: '" + datasets.files[dataset] +
                                             "' has two rows");
             }
-            if (const auto reason = reasons.find(cells[index.file]); reason != reasons.end()) {
-                row.termination = reason->second;
-            }
+            row.termination = reasons.next(cells[index.file]);
             row.offset = offset;
             index.rows[dataset] = std::move(row);
             ++index.fitted;
@@ -1805,16 +1865,12 @@ std::vector<crysta::AtomSite> to_crysta_atom_sites(const ItemVec<AtomSite>& atom
 
 namespace {
 // The engine experiment is built around one scale. It is seeded from the first row, and
-// apply_post_build_fields then writes every link, so no phase is dropped. A bank with no link is
-// converted only for the project's relations, where it has no scale to name; any other conversion
-// refuses it.
-const Parameter& seed_scale(const ExperimentBase& e, bool for_relations) {
+// apply_post_build_fields then writes every link, so no phase is dropped. A bank with no link has no scale to
+// seed: it converts with none, and crysta decides what it admits (background alone, no fit).
+const Parameter& seed_scale(const ExperimentBase& e) {
     if (e.linked_structures.empty()) {
-        if (for_relations) {
-            static const Parameter no_scale{};
-            return no_scale;
-        }
-        throw std::out_of_range("experiment '" + e.name.value() + "' links no structure");
+        static const Parameter no_scale{};
+        return no_scale;
     }
     return e.linked_structures[0]->scale;
 }
@@ -1832,7 +1888,8 @@ const Parameter& seed_scale(const ExperimentBase& e, bool for_relations) {
 //                 `tof-jorgensen`, under which a bracketed Lorentzian coefficient is REJECTED, so
 //                 omitting this silently changes the free set (or hard-errors);
 //   absorption    the per-bank ABSCOR1/ABSCOR2 pair; absent/0 means mu*R = 0, i.e. A == 1;
-//   dataset_weight, excluded_regions  the per-bank joint weight and mask.
+//   dataset_weight, excluded_regions  the per-bank joint weight and mask;
+//   data_file     the plain-data file the measured data came from, which the save writes back.
 void apply_post_build_fields(const ExperimentBase& e, crysta::ExperimentBase& built) {
     built.name = e.name;
     // Each token below crosses through crysta's converter (crossed, above).
@@ -1873,6 +1930,7 @@ void apply_post_build_fields(const ExperimentBase& e, crysta::ExperimentBase& bu
     built.neutron_scattering_length = crossed(crysta::TokenField::NeutronScatteringLength, built,
                                               e.neutron_scattering_length.value_or(""));
     built.dataset_weight = e.dataset_weight;
+    built.data_file = e.data_file;
     built.excluded_regions = e.excluded_regions;
     // The declared background model, its constants and its terms, through crysta's converter like
     // every token; crysta refuses a model holding another type's rows or constants.
@@ -2077,7 +2135,7 @@ crysta::BraggPdExperiment to_crysta_cwl_experiment(const ExperimentBase& e, bool
                                 param(point->intensity, crysta::BACKGROUND, "intensity"));
     }
     crysta::BraggPdExperiment built(std::move(peak), std::move(instrument),
-                             param(seed_scale(e, for_relations), crysta::SCALE, "scale"), std::move(background));
+                             param(seed_scale(e), crysta::SCALE, "scale"), std::move(background));
     built.cutoff_fwhm = e.peak.cutoff_fwhm;
     built.kind = crysta::BeamModeEnum::ConstantWavelength;  // before the post-build fill: the
     // TOF-only abscor guard reads it
@@ -2146,7 +2204,7 @@ crysta::BraggPdExperiment to_crysta_experiment(const ExperimentBase& e, bool for
         .dtt1(state(e.instrument.calib_d_to_tof_linear))
         .dtt2(state(e.instrument.calib_d_to_tof_quadratic))
         .d_to_tof_reciprocal(state(e.instrument.calib_d_to_tof_reciprocal))
-        .scale(state(seed_scale(e, for_relations)))
+        .scale(state(seed_scale(e)))
         .setup_twotheta_bank(e.instrument.setup_twotheta_bank.value)
         .cutoff_fwhm(e.peak.cutoff_fwhm);
 

@@ -35,9 +35,11 @@ last χ². A failed count above zero is red.
 **Follow**, next to the fitting button, is on when a run starts: the pattern tab shows each file
 as it is fitted. Choosing another dataset turns it off; press it to turn it on again.
 
-**Stop fitting** keeps the files fitted so far. The button then reads **Continue fitting**, which
-fits only the remaining files. Editing the template instead makes the next run start again from
-the first file. Undo after a run puts back the results the run replaced.
+The fitting button reads **Start fitting** while no file is fitted and **Continue fitting** while
+some are not, for example after **Stop fitting**, which keeps the files fitted so far. Continuing
+fits from the first unfitted file. Once every file is fitted the button is disabled. **Reset
+fits**, between the fitting button and Follow, clears every file's result so the scan can be
+fitted again; it is one Undo step. Undo after a run puts back the results the run replaced.
 
 When the run ends, the results window shows its outcome, the files fitted, the converged and
 failed counts and the χ² range, with **Show evolution** to see the results as a chart.

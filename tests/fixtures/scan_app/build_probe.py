@@ -299,6 +299,11 @@ def main():
         if path.is_file()
     }
     receipt['binary'] = hashlib.sha256(Path(receipt['executable']).read_bytes()).hexdigest()
+    io_library = Path((build / 'cmake/scan-io-library.txt').read_text())
+    receipt['io_fault_library'] = {
+        'path': str(io_library),
+        'sha256': hashlib.sha256(io_library.read_bytes()).hexdigest(),
+    }
     (build / 'receipt.json').write_text(json.dumps(receipt, indent=2) + '\n')
 
 

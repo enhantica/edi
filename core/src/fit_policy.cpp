@@ -1,14 +1,19 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "fit_policy.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <map>
+#include <tuple>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
 #include "crysta/model.hpp"
 #include "edi/model.hpp"
+#include "edi/categories.hpp"
+#include "edi/parameter_walk.hpp"
 
 // Lifted verbatim out of adapter.cpp; see the header for what this file is.
 
@@ -139,6 +144,118 @@ int default_max_iterations() { return detail::bounded_max_iterations(0); }
 // project cannot reach it, because the one loader already proved every bank carries measured data.
 // A calculation-only bank (a `_data_range`-generated grid) refuses here too: the project's own
 // contents selected calculate, so a fit on it is a caller error, never a data accident.
+namespace {
+
+bool has_measured_data(const ExperimentBase& experiment) {
+    return experiment.data.has_value() && !experiment.calculation_only;
+}
+
+// Experiments with measured data beside experiments without (a simulation made with Create experiment).
+bool mixed_experiments(const Project& project) {
+    return std::any_of(project.experiments.begin(), project.experiments.end(),
+                       [](const auto& e) { return has_measured_data(*e); }) &&
+           std::any_of(project.experiments.begin(), project.experiments.end(),
+                       [](const auto& e) { return !has_measured_data(*e); });
+}
+
+// A parameter's place in the model, the same in a project and in a copy holding fewer experiments: its identity
+// path is not, since one experiment is `experiment.*` and several are `experiments[name].*`.
+using ParameterKey = std::tuple<std::string, std::string, std::string, std::string, std::string>;
+ParameterKey key_of(const ParameterEntry& entry) {
+    return {entry.block_kind, entry.block_name, entry.category, entry.row_label, entry.name};
+}
+
+std::map<std::string, double> translated(const std::map<std::string, double>& values,
+                                         const std::map<std::string, std::string>& paths) {
+    std::map<std::string, double> out;
+    for (const auto& [path, value] : values) {
+        const auto found = paths.find(path);
+        out.emplace(found != paths.end() ? found->second : path, value);
+    }
+    return out;
+}
+
+// A fit of a mixed project leaves the simulations out. It runs on a copy holding only the measured
+// experiments; every parameter it wrote (value, uncertainty, fit start) is copied back by its place in the model,
+// the paths it reports are translated to the project's own, its fit records are copied by experiment name, and the
+// project's calculated patterns are then refreshed at the fitted values, as every fit completes. A relation naming a
+// simulation's parameter refuses the fit, since the fit cannot see it. Any other project fits itself.
+template <typename Fit>
+FitResultBase fit_measured_experiments(Project& project, const IterationCallback& on_iteration, Fit fit) {
+    Project measured = project;
+    std::vector<ItemVec<BraggPdExperiment>::Ptr> kept;
+    for (const auto& experiment : measured.experiments) {
+        if (has_measured_data(*experiment)) {
+            kept.push_back(experiment);
+        }
+    }
+    measured.experiments.assign(std::move(kept));
+    std::set<std::string> visible;
+    for (const NamedSlot& slot : named_slots(measured)) {
+        visible.insert(slot.unique_name);
+    }
+    for (const auto& alias : project.aliases) {
+        if (!visible.contains(alias->parameter_unique_name.value())) {
+            throw std::invalid_argument("edi fit: the alias '" + alias->id.value() + "' names '" +
+                                        alias->parameter_unique_name.value() +
+                                        "', a parameter of an experiment without measured data, which a fit leaves out");
+        }
+    }
+    std::map<ParameterKey, const ParameterEntry*> by_key;
+    const std::vector<ParameterEntry> targets = parameter_entries(project);
+    for (const ParameterEntry& entry : targets) {
+        by_key.emplace(key_of(entry), &entry);
+    }
+    const std::vector<ParameterEntry> sources = parameter_entries(measured);
+    std::map<std::string, std::string> paths;  // the copy's path -> the project's
+    for (const ParameterEntry& entry : sources) {
+        if (const auto found = by_key.find(key_of(entry)); found != by_key.end()) {
+            paths.emplace(entry.path, found->second->path);
+        }
+    }
+    IterationCallback forward;
+    if (on_iteration) {
+        forward = [&on_iteration, &paths](const IterationRecord& record) {
+            IterationRecord own = record;
+            own.values = translated(record.values, paths);
+            on_iteration(own);
+        };
+    }
+    FitResultBase result = fit(measured, forward);
+    for (const ParameterEntry& entry : sources) {
+        const auto found = by_key.find(key_of(entry));
+        if (found == by_key.end() || found->second->parameter == nullptr || entry.parameter == nullptr) {
+            continue;
+        }
+        Parameter& target = *found->second->parameter;
+        const Parameter& source = *entry.parameter;
+        if (target.value.get() != source.value.get()) {
+            target.value = source.value.get();
+            target.epoch = detail::Epoch();
+        }
+        target.uncertainty = source.uncertainty.get();
+        target.start_value = source.start_value.get();
+        target.start_uncertainty = source.start_uncertainty.get();
+    }
+    result.values = translated(result.values, paths);
+    result.uncertainty = translated(result.uncertainty, paths);
+    result.start = translated(result.start, paths);
+    project.fit_result = measured.fit_result;
+    for (const auto& target : project.experiments) {
+        for (const auto& source : measured.experiments) {
+            if (source->name.value() == target->name.value()) {
+                target->fit_n_data_points = source->fit_n_data_points;
+                target->fit_prof_wr_factor = source->fit_prof_wr_factor;
+                target->fit_chi_square = source->fit_chi_square;
+            }
+        }
+    }
+    project.refresh_calculated_pattern();
+    return result;
+}
+
+}  // namespace
+
 FitResultBase Project::fit(const IterationCallback& on_iteration,
                            const PreambleCallback& on_start, const CancelCallback& should_cancel) {
     // A sequential project reaching the single-bank one-call form would silently fit the
@@ -154,6 +271,15 @@ FitResultBase Project::fit(const IterationCallback& on_iteration,
             "edi fit: _fitting_mode.type is '" + fitting_mode +
             "' - this entry point serves exactly the 'single' mode; use analysis.fit(), which "
             "routes each declared mode to its own entry");
+    }
+    if (mixed_experiments(*this)) {
+        return fit_measured_experiments(*this, on_iteration, [&](Project& measured, const IterationCallback& forward) {
+            return measured.fit(forward, on_start, should_cancel);
+        });
+    }
+    if (experiment().linked_structures.empty()) {
+        throw std::invalid_argument("edi fit: experiment '" + experiment().name +
+                                    "' links no structure; link one before fitting");
     }
     if (!experiment().data.has_value() || experiment().calculation_only) {
         throw std::invalid_argument("edi fit: experiment() '" + experiment().name +
@@ -183,10 +309,19 @@ FitResultBase Project::fit_joint(const IterationCallback& on_iteration,
     if (experiments.empty()) {
         throw std::invalid_argument("edi fit_joint: project has no experiments");
     }
+    if (mixed_experiments(*this)) {
+        return fit_measured_experiments(*this, on_iteration, [&](Project& measured, const IterationCallback& forward) {
+            return measured.fit_joint(forward, on_start, should_cancel);
+        });
+    }
     std::vector<PdDataBase> patterns;
     patterns.reserve(experiments.size());
     for (const auto& bank_item : experiments) {
         const ExperimentBase& bank = *bank_item;
+        if (bank.linked_structures.empty()) {
+            throw std::invalid_argument("edi fit_joint: experiment '" + bank.name +
+                                        "' links no structure; link one before fitting");
+        }
         if (!bank.data.has_value() || bank.calculation_only) {
             throw std::invalid_argument("edi fit_joint: experiment '" + bank.name +
                                         "' carries no measured data (a calculation-only or "
