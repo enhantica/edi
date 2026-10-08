@@ -5,7 +5,6 @@
 #include <unistd.h>
 
 #ifdef __APPLE__
-#include <mach-o/dyld-interposing.h>
 #define SCAN_FAULT_NAME(name) scan_contract_fault_##name
 #else
 #define SCAN_FAULT_NAME(name) name
@@ -142,11 +141,19 @@ extern "C" FILE* fopen64(const char* path, const char* mode) {
 
 #ifdef __APPLE__
 // Darwin's two-level bindings in libc++/libSystem do not resolve to executable
-// definitions by name. Interpose their actual imports; retain the Linux actor.
-DYLD_INTERPOSE(scan_contract_fault_open, open)
-DYLD_INTERPOSE(scan_contract_fault_unlink, unlink)
-DYLD_INTERPOSE(scan_contract_fault_unlinkat, unlinkat)
-DYLD_INTERPOSE(scan_contract_fault_rename, rename)
-DYLD_INTERPOSE(scan_contract_fault_remove, remove)
-DYLD_INTERPOSE(scan_contract_fault_fopen, fopen)
+// definitions by name. dyld reads these replacement/import pairs at launch.
+#define SCAN_INTERPOSE(replacement, replacee)                                           \
+    __attribute__((used, section("__DATA,__interpose"))) static const struct {           \
+        void (*replacement_function)();                                                \
+        void (*replacee_function)();                                                   \
+    } scan_interpose_##replacee = {reinterpret_cast<void (*)()>(&replacement),          \
+                                  reinterpret_cast<void (*)()>(&replacee)};
+
+SCAN_INTERPOSE(scan_contract_fault_open, open)
+SCAN_INTERPOSE(scan_contract_fault_unlink, unlink)
+SCAN_INTERPOSE(scan_contract_fault_unlinkat, unlinkat)
+SCAN_INTERPOSE(scan_contract_fault_rename, rename)
+SCAN_INTERPOSE(scan_contract_fault_remove, remove)
+SCAN_INTERPOSE(scan_contract_fault_fopen, fopen)
+#undef SCAN_INTERPOSE
 #endif
