@@ -53,3 +53,5 @@ in the same change — see `AGENTS.md` §ADRs.
 New cross-cutting decisions that should also bind crysta are authored as **(shared)** and, once the
 Copier agent-OS template exists (ADR-0004), live in its shared-ADR range so `copier update`
 propagates them to both repos.
+
+- [ListView tables](0028-listview-tables.md)
