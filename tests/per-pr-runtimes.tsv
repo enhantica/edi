@@ -10,11 +10,12 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-09T17:40:52Z
+# measured_utc = 2026-10-09T19:47:14Z
 #
 # Recorded from: edi-core-final.log (all 7 new or renamed native GUI table cases measured via doctest --duration=true; 2 stale renamed native holes removed; all other rows banked)
 # Collected tests: 9731; with a reported duration: 4939
 # Module-scoped fixture costs recorded: 29
+# Recorded from: build/app/core/edi_tests --test-case='Example descriptive metadata*' --duration, local Linux diagnostic 2026-10-09 (1 case/20 assertions green, measured 0.075348 s; new native row only; direct root tool output)
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -30,8 +31,8 @@
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 9731
-# inventory_cpp = 307
-# inventory_measured = 9076
+# inventory_cpp = 308
+# inventory_measured = 9077
 # inventory_unmeasured = 962
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
@@ -8852,6 +8853,7 @@ UNMEASURED:expected-red-on-d775b5fd	tests/unit/cpp/test_e05_t1_fit_job.cpp::E05-
 0.000	tests/unit/cpp/test_e09_t55_report_model_adapter.cpp::E09-T55 iteration and machine reports preserve engine-carried facts
 0.000	tests/unit/cpp/test_e09_t55_report_model_adapter.cpp::E09-T55 model collections expose all parameters and only the free subset
 0.000	tests/unit/cpp/test_e09_t55_report_model_adapter.cpp::E09-T55 report tables retain identity paths, starts, uncertainties, and bank metrics
+0.075	tests/unit/cpp/test_example_metadata_roundtrip.cpp::Example descriptive metadata survives native save reopen and shown PROJECT text
 0.000	tests/unit/cpp/test_gui_table_row_ids.cpp::GUI atom ID rename follows aliases with and without an anisotropic row
 0.000	tests/unit/cpp/test_gui_table_row_ids.cpp::GUI background ID rename follows every exact alias and preserves unrelated targets
 0.000	tests/unit/cpp/test_gui_table_row_ids.cpp::GUI exclusion bounds remain aligned with editable IDs and copy independently
