@@ -61,9 +61,7 @@ EaElements.GroupBox {
                     horizontalAlignment: Text.AlignLeft
                     text: qsTr("File")
                 }
-                // Each in a plain item: a repeated label has no parent while it is made, and the table copies a
-                // header cell's alignment onto the row cell at its place, the repeater's own included while a row
-                // has not made its cells yet.
+                // Keep the scan's repeated cells in one width-controlled column (ADR-0028).
                 Item {
                     visible: group.scanColumns.length > 0
                     height: parent.height
@@ -145,6 +143,7 @@ EaElements.GroupBox {
                     height: parent ? parent.height : 0
 
                     EaComponents.TableViewLabel {
+                        width: parent.width - (templateTag.visible ? templateTag.width : 0)
                         visible: !loadData.visible
                         horizontalAlignment: Text.AlignLeft
                         elide: Text.ElideMiddle
@@ -155,6 +154,7 @@ EaElements.GroupBox {
                         objectName: `experiments.template.${row.index}`
                         visible: group.scan && row.isTemplate
                         anchors.right: parent.right
+                        width: implicitWidth
                         elide: Text.ElideNone
                         color: EaStyle.Colors.themeAccent
                         text: qsTr("template")
@@ -167,6 +167,7 @@ EaElements.GroupBox {
                         // datasets and experiments loaded with their data show their file.
                         visible: !group.scan && row.experiment !== null && (row.experiment.canLoadData || row.experiment.calculationOnly)
                         anchors.verticalCenter: parent.verticalCenter
+                        width: parent.width
                         enabled: row.experiment !== null && row.experiment.canLoadData
                         text: row.experiment !== null && !row.experiment.calculationOnly ? row.file : qsTr("Load data…")
                         ToolTip.visible: hovered && row.experiment !== null && !row.experiment.calculationOnly

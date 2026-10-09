@@ -16,9 +16,11 @@ EaComponents.ListView {
     function textColumnWidth(role: string, title: string): real {
         const revision = modelRevision;
         let result = metrics.advanceWidth(title);
-        if (model && typeof model.text === "function") {
-            for (let row = 0; row < count; ++row)
-                result = Math.max(result, metrics.advanceWidth(model.text(row, role)));
+        if (model) {
+            for (let row = 0; row < count; ++row) {
+                const text = typeof model.text === "function" ? model.text(row, role) : typeof model.get === "function" ? String(model.get(row)[role] ?? "") : "";
+                result = Math.max(result, metrics.advanceWidth(text));
+            }
         }
         return Math.ceil(result) + AppSizes.fieldSpacing * 2;
     }

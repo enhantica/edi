@@ -11,7 +11,7 @@ import edi.app
 // `refln`: the reflections the loaded file carries — written by the calculation that saved it
 // (diffraction-lib); edi does not model reflections, so they are shown read-only, as read, and a save
 // does not write them ("loop in .edi — table in gui"): Miller indices, d-spacing, position and F²calc,
-// at six significant digits.
+// with the same numeric-column sizing as the measured-data table (ADR-0028).
 DataTable {
     id: table
 

@@ -26,7 +26,7 @@ DataTable {
     defaultInfoText: qsTr("No fit start state")
     model: analysis ? analysis.fitStart : null
 
-    columnWidths: [numberColumnWidth, -1, EaStyle.Sizes.fontPixelSize * 6, EaStyle.Sizes.fontPixelSize * 6]
+    columnWidths: [numberColumnWidth, textColumnWidth("id", qsTr("parameter")), -1, -1]
 
     header: EaComponents.ListViewHeader {
         EaComponents.TableViewLabel {}

@@ -25,11 +25,12 @@ Column {
         defaultInfoText: qsTr("No custom scattering lengths: the built-in table applies")
         model: group.lengths
 
-        columnWidths: [numberColumnWidth, -1, EaStyle.Sizes.fontPixelSize * 10, AppSizes.iconColumnWidth]
+        columnWidths: [numberColumnWidth, textColumnWidth("typeSymbol", qsTr("type")), -1, AppSizes.iconColumnWidth]
 
         header: EaComponents.ListViewHeader {
             EaComponents.TableViewLabel {}
             EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignLeft
                 text: qsTr("type")
             }
             EaComponents.TableViewLabel {
@@ -51,6 +52,7 @@ Column {
             }
             TextCell {
                 objectName: `scatteringLength.typeSymbol.${row.index}`
+                horizontalAlignment: Text.AlignLeft
                 value: row.typeSymbol
                 onCommitted: text => group.lengths.setTypeSymbol(row.index, text)
             }

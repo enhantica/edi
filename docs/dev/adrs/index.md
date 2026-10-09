@@ -49,9 +49,8 @@ in the same change — see `AGENTS.md` §ADRs.
 | [0025](0025-several-structures-and-linked-structures.md) | Several structures and linked structures | Proposed | 🟡 | High | projects hold several structures keyed by name; `_linked_structure` is one row per phase (`structure_id`, `scale`, `enabled`); with several structures, paths and labels carry the structure; keyed `structures`/`experiments` in Python; the app's shared `BlockSelector` (`name · file`, square previous/next buttons), groups that keep their open state, one Bragg-tick row per phase, and the Linked structures row controls; BEER as a CLI project and verification page |
 | [0026](0026-scan-datasets-and-scale.md) | Scan datasets and their scale | Accepted | 🟡 | High | a scan keeps only its file list per file; `results.csv` is the one store of results, read from its end as each file completes; crysta's driver reads at most four files ahead; views draw what is on screen and the Evolution chart thins above 5,000 points; the gate is 100,000 synthetic files with flat memory (10 %) and flat time per file (1.2×), toward a 1,000,000-file target. **Forward constraint:** no per-file object in memory, no up-front read of every file. |
 | [0027](0027-anisotropic-displacement-parameters.md) | Anisotropic displacement parameters | Proposed | 🟡 | High | a site keeps its declared ADP type (`Biso`, `Uiso`, `Bani`, `Uani`, `beta`); an anisotropic site's tensor is an `atom_site_aniso` row keyed by its id; conversions, site-symmetry ties and equivalent values are crysta's; the app edits the model and draws ellipsoids from the tensors |
+| [0028](0028-listview-tables.md) | ListView tables | Accepted | ✅ | High | table sizing, scrolling, parameter filters and project lists |
 
 New cross-cutting decisions that should also bind crysta are authored as **(shared)** and, once the
 Copier agent-OS template exists (ADR-0004), live in its shared-ADR range so `copier update`
 propagates them to both repos.
-
-- [ListView tables](0028-listview-tables.md)

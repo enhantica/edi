@@ -64,7 +64,7 @@ WorkflowPage {
             id: analysisSidebar
             // The fitted inputs are not edited while a fit runs.
             ParametersGroup {
-                availableHeight: analysisSidebar.height - fitting.height
+                tableViewportHeight: analysisSidebar.height - fitting.height
                 project: page.project
                 enabled: !(page.project && page.project.fit.running)
             }

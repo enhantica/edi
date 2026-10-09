@@ -54,7 +54,10 @@ if(EXISTS "${gui_components_SOURCE_DIR}/.git")
         OUTPUT_VARIABLE _edi_gui_dirty OUTPUT_STRIP_TRAILING_WHITESPACE)
     if(NOT _edi_gui_sha_rc EQUAL 0 OR NOT _edi_gui_sha STREQUAL EDI_GUI_COMPONENTS_SHA)
         message(FATAL_ERROR "gui-components at ${gui_components_SOURCE_DIR} is at '${_edi_gui_sha}', "
-                            "not the pinned ${EDI_GUI_COMPONENTS_SHA}")
+                            "not the pinned ${EDI_GUI_COMPONENTS_SHA}. "
+                            "Run git -C ${gui_components_SOURCE_DIR} fetch origin edi, then "
+                            "git -C ${gui_components_SOURCE_DIR} switch --detach ${EDI_GUI_COMPONENTS_SHA}, "
+                            "or unset EDI_GUI_COMPONENTS_SRC to download the pinned archive.")
     endif()
     if(NOT _edi_gui_dirty STREQUAL "")
         message(FATAL_ERROR "gui-components at ${gui_components_SOURCE_DIR} has local changes under src/; "

@@ -23,7 +23,7 @@ EaElements.GroupBox {
 
     property ProjectViewModel project: null
     property ParameterItem selected: null
-    property real availableHeight: 0
+    property real tableViewportHeight: 0
 
     objectName: "group.parameters"
     collapsible: false
@@ -100,9 +100,8 @@ EaElements.GroupBox {
         DataTable {
             id: table
             objectName: "parameters.list"
-            // The original's (Fittables.qml): seven rows at the minimum window height, one more per row
-            // of height the window adds, so the slider and Start fitting stay in view.
-            maxRowCountShow: Math.max(1, Math.floor((group.availableHeight - group.topPadding - group.bottomPadding - filters.height - sliderRow.height - 2 * AppSizes.groupContentSpacing) / tableRowHeight - 1.5))
+            // Reserve the controls below and half a row as a scroll cue (ADR-0028).
+            maxRowCountShow: Math.max(1, Math.floor((group.tableViewportHeight - group.topPadding - group.bottomPadding - filters.height - sliderRow.height - 2 * AppSizes.groupContentSpacing) / tableRowHeight - 1.5))
             defaultInfoText: qsTr("No parameters")
             model: ParameterFilterModel {
                 id: filter
@@ -180,6 +179,8 @@ EaElements.GroupBox {
                 ParameterCell {
                     objectName: `parameters.value.${row.index}`
                     item: row.parameter
+                    onActiveFocusChanged: if (activeFocus)
+                        group.selected = row.parameter
                 }
                 EaComponents.TableViewLabel {
                     color: EaStyle.Colors.themeForegroundMinor

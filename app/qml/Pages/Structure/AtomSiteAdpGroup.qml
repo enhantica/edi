@@ -5,6 +5,7 @@ import QtQuick
 import QtQuick.Controls
 
 import EasyApplication.Gui.Style as EaStyle
+import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
@@ -19,7 +20,6 @@ Column {
 
     property StructureViewModel structure: null
     readonly property AtomSiteAdpListModel adps: structure ? structure.atomSiteAdps : null
-    readonly property real valueWidth: EaStyle.Sizes.fontPixelSize * 3.7
     readonly property real typeWidth: EaStyle.Sizes.fontPixelSize * 4.5
 
     spacing: AppSizes.groupContentSpacing
@@ -29,6 +29,18 @@ Column {
         objectName: "atomSiteAdps.list"
         defaultInfoText: qsTr("No atom sites defined")
         model: group.adps
+
+        readonly property string isoHeading: {
+            const revision = modelRevision;
+            const names = [];
+            for (let index = 0; group.adps && index < count; ++index) {
+                const type = group.adps.text(index, "adpType");
+                const name = type === "Uani" ? "U eq" : type === "Bani" || type === "beta" ? "B eq" : type;
+                if (!names.includes(name))
+                    names.push(name);
+            }
+            return names.length === 1 ? names[0] : qsTr("iso / eq");
+        }
 
         columnWidths: [numberColumnWidth, textColumnWidth("label", qsTr("label")), group.typeWidth, -1, -1, -1, -1, -1, -1, -1]
 
@@ -42,7 +54,7 @@ Column {
                 text: qsTr("type")
             }
             EaComponents.TableViewLabel {
-                text: qsTr("iso")
+                text: table.isoHeading
             }
             EaComponents.TableViewLabel {
                 text: "ani11"
@@ -111,6 +123,8 @@ Column {
                 objectName: `atomSiteAdp.iso.${row.index}`
                 item: row.adpIso
                 enabled: !row.anisotropic
+                ToolTip.text: row.anisotropic ? qsTr("Equivalent isotropic displacement %1 (Å²)").arg(row.adpType === "Uani" ? "U eq" : "B eq") : qsTr("Isotropic displacement %1 (Å²)").arg(row.adpType)
+                ToolTip.visible: hovered && EaGlobals.Vars.showToolTips
             }
             ParameterCell {
                 objectName: `atomSiteAdp.ani11.${row.index}`

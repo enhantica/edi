@@ -18,8 +18,6 @@ Column {
 
     property StructureViewModel structure: null
     readonly property AtomSiteListModel sites: structure ? structure.atomSites : null
-    // easydiffractionbeta's widths (AtomSite.qml): the label takes what the others leave.
-    readonly property real coordinateWidth: EaStyle.Sizes.fontPixelSize * 4.8
     readonly property real typeWidth: EaStyle.Sizes.fontPixelSize * 4.5
     readonly property real wyckoffWidth: EaStyle.Sizes.fontPixelSize * 2.5
 

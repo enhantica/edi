@@ -17,7 +17,6 @@ Column {
 
     property ExperimentViewModel experiment: null
     readonly property PrefOrientListModel rows: experiment ? experiment.preferredOrientation : null
-    readonly property real indexWidth: EaStyle.Sizes.fontPixelSize * 2.5
 
     spacing: AppSizes.groupContentSpacing
 

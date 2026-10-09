@@ -33,11 +33,13 @@ About opens the dependency table only from its libraries link.
 
 ## Scope
 
+Selected notes: 2, 4, 9, 10, the GUI portion of 11, 14–18, 22, 23, 25 and 26.
 From the supplied GUI notes: atom/experiment/loop widths and IDs, measured-data
 computed fields, overflowing values, free-value styling, analysis layout and
 category filtering, recent/example project tables and About's dependency table.
 The Text tab and persisted `.edi` vocabulary are unchanged by owner request.
-ADP conversion and chart/reflection physics remain separate concerns.
+ADP headers distinguish B/U isotropic and equivalent values, including B eq for
+beta tensors. ADP conversion and chart/reflection physics remain separate concerns.
 
 ## Consequences
 

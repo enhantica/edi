@@ -65,6 +65,7 @@ EaElements.GroupBox {
                     text: row.name
                     minorText: row.description
                     ToolTip.text: row.exampleId
+                    onClicked: Session.openExample(row.exampleId)
                 }
             }
         }
