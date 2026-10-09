@@ -78,6 +78,30 @@ Item {
             verify(index >= 0, "Bundled source example exists: " + id);
             return normalized(Session.examples.text(index, "sample"));
         }
+        function choose(picker, value) {
+            let index = -1;
+            for (let i = 0; i < picker.model.count; ++i) {
+                if (picker.model.text(i, "value") === value)
+                    index = i;
+            }
+            verify(index >= 0, "The real picker contains the requested value: " + value);
+            tryVerify(() => Ui.exposed(picker));
+            const pickerPoint = Ui.clickPoint(picker);
+            mouseClick(picker, pickerPoint.x, pickerPoint.y);
+            tryCompare(picker.popup, "opened", true);
+            const list = picker.popup.contentItem;
+            list.positionViewAtIndex(index, ListView.Contain);
+            list.forceLayout();
+            let entry = null;
+            tryVerify(() => {
+                entry = list.itemAtIndex(index);
+                return entry !== null && Ui.exposed(entry);
+            });
+            const point = Ui.clickPoint(entry);
+            mouseClick(entry, point.x, point.y);
+            tryCompare(picker.popup, "opened", false);
+            tryCompare(picker.popup, "visible", false);
+        }
         function test_properties_and_known_fitting_modes() {
             sameIds(properties().map(p => p.value), ["purpose", "fittingMode", "facilities", "instruments", "sampleForm", "beamMode", "probe", "scatteringType", "dimensionality", "polarisation"]);
             for (const property of properties()) {
@@ -174,6 +198,36 @@ Item {
             compare((latp.match(/alpo4/g) || []).length, 2, "Both AlPO4 polymorphs remain visible beside LATP");
             Session.examples.searchText = "YAlO3 Al2O3";
             verify(ids().includes("pd-neut-cwl_yap-spodi_3k"));
+        }
+        function test_real_facet_pickers_and_search_apply_and_reset() {
+            const group = createTemporaryObject(examplesComponent, parent);
+            verify(group !== null);
+            verify(waitForPolish(group));
+            tryVerify(() => Math.abs(group.height - (group.titleArea.height + group.spacing + group.contentHeight + group.bottomPadding)) < 0.01);
+            const property = Ui.find(group, "examples.property");
+            const value = Ui.find(group, "examples.value");
+            const search = Ui.find(group, "examples.search");
+            verify(property !== null && value !== null && search !== null);
+            choose(property, "fittingMode");
+            compare(Session.examples.filterProperty, "fittingMode");
+            choose(value, "joint");
+            compare(Session.examples.filterValue, "joint");
+            verify(ids().includes("pd-neut-tof_ncaf-wish-2bank_start-3"));
+            verify(!ids().includes("pd-xray-cwl_lif"));
+            mouseClick(search, search.width / 2, search.height / 2);
+            for (const key of [Qt.Key_W, Qt.Key_I, Qt.Key_S, Qt.Key_H])
+                keyClick(key);
+            compare(normalized(Session.examples.searchText), "wish");
+            const expected = sourceIds.filter(id => id.includes("ncaf-wish") && Session.examples.propertyValues(id, "fittingMode").includes("joint"));
+            sameIds(ids(), expected);
+            choose(value, "");
+            compare(Session.examples.filterValue, "");
+            verify(ids().every(id => id.includes("ncaf-wish")));
+            choose(value, "joint");
+            choose(property, "instruments");
+            compare(Session.examples.filterValue, "");
+            choose(value, "WISH");
+            verify(ids().every(id => id.includes("ncaf-wish")));
         }
         function test_filtered_delegate_opens_its_identity() {
             const expected = "pd-xray-cwl_lif";
