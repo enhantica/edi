@@ -42,7 +42,8 @@ QStringList strings(const QJsonArray& array) {
 QString tag(const QString& value) {
     static const QHash<QString, QString> tags{
         {"powder", "pd"},  {"single crystal", "sc"},       {"neutron", "neut"},
-        {"x-ray", "xray"}, {"constant wavelength", "cwl"}, {"time-of-flight", "tof"}};
+        {"x-ray", "xray"}, {"xray", "xray"}, {"constant wavelength", "cwl"},
+        {"time-of-flight", "tof"}};
     return tags.value(value, label(value));
 }
 }  // namespace
