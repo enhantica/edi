@@ -226,33 +226,21 @@ EaElements.StatusBar {
                             font: numberText.font
                             text: "0"
                         }
-                        Canvas {
+                        Text {
                             id: changeArrow
                             objectName: "statusBar.fit.changeArrow"
                             x: numberText.implicitWidth + valuePart.gap
-                            width: numberText.font.pixelSize
-                            height: fitValueMetrics.height
+                            y: fitValueMetrics.ascent + digitInk.tightBoundingRect.y + digitInk.tightBoundingRect.height / 2 - (baselineOffset + arrowInk.tightBoundingRect.y + arrowInk.tightBoundingRect.height / 2)
+                            font.family: EaStyle.Fonts.encodeSansRegular.name
+                            font.pixelSize: numberText.font.pixelSize
+                            color: numberText.color
+                            text: "→"
                             visible: valuePart.hasArrow
-                            property color strokeColor: numberText.color
-                            onStrokeColorChanged: requestPaint()
-                            onPaint: {
-                                const context = getContext("2d");
-                                context.clearRect(0, 0, width, height);
-                                const middle = fitValueMetrics.ascent + digitInk.tightBoundingRect.y + digitInk.tightBoundingRect.height / 2;
-                                const tip = width - 1;
-                                const head = width * 0.28;
-                                context.strokeStyle = strokeColor;
-                                context.lineWidth = Math.max(1, numberText.font.pixelSize * 0.075);
-                                context.lineCap = "round";
-                                context.lineJoin = "round";
-                                context.beginPath();
-                                context.moveTo(1, middle);
-                                context.lineTo(tip, middle);
-                                context.moveTo(tip - head, middle - head);
-                                context.lineTo(tip, middle);
-                                context.lineTo(tip - head, middle + head);
-                                context.stroke();
-                            }
+                        }
+                        TextMetrics {
+                            id: arrowInk
+                            font: changeArrow.font
+                            text: changeArrow.text
                         }
                     }
                 }
