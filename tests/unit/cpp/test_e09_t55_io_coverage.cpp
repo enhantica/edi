@@ -829,7 +829,7 @@ TEST_CASE("E09-T55 refinement refuses a measured pattern wholly removed by exclu
                   "a fully excluded measured pattern must fail before entering the minimizer");
 }
 
-TEST_CASE("GUI table readers generate legacy IDs and reject explicit missing markers") {
+TEST_CASE("GUI table readers generate legacy IDs and retain quoteable literal IDs") {
     const auto fixture = repo_root() / "tests/fixtures/c11_t4_cw_selection/cases/cwl_valid.edi";
     const auto reference = read_text(fixture);
     auto legacy = reference;
@@ -852,15 +852,22 @@ TEST_CASE("GUI table readers generate legacy IDs and reject explicit missing mar
     CHECK(edi::excluded_region_ranges(experiment.excluded_regions) ==
           std::vector<std::pair<double, double>>{{25, 30}, {50, 55}});
     for (const auto& marker : {std::string{"."}, std::string{"?"}}) {
-        auto invalid_background = reference;
-        const auto first = invalid_background.find("1 10 169");
+        auto literal_background = reference;
+        const auto first = literal_background.find("1 10 169");
         REQUIRE(first != std::string::npos);
-        invalid_background.replace(first, 1, marker);
-        check_io_error([&] { static_cast<void>(edi::experiment_from_edi_text(invalid_background)); },
-                       "unrepresentable-id", "explicit missing background IDs must refuse");
-        const auto invalid_exclusion = reference +
+        literal_background.replace(first, 1, marker);
+        const auto literal_exclusion = literal_background +
             "\nloop_\n_excluded_region.id\n_excluded_region.start\n_excluded_region.end\n" + marker + " 25 30\n";
-        check_io_error([&] { static_cast<void>(edi::experiment_from_edi_text(invalid_exclusion)); },
-                       "unrepresentable-id", "explicit missing exclusion IDs must refuse");
+        const auto literal = edi::experiment_from_edi_text(literal_exclusion);
+        REQUIRE(literal.background.size() == 3);
+        CHECK(literal.background[0]->id == marker);
+        CHECK(literal.background[1]->id == "2");
+        CHECK(literal.background[2]->id == "3");
+        CHECK(literal.background[0]->position.get() == 10);
+        CHECK(literal.background[0]->intensity.value.get() == 169);
+        REQUIRE(literal.excluded_regions.size() == 1);
+        CHECK(literal.excluded_regions[0]->id == marker);
+        CHECK(edi::excluded_region_ranges(literal.excluded_regions) ==
+              std::vector<std::pair<double, double>>{{25, 30}});
     }
 }
