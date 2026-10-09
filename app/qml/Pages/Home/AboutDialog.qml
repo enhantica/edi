@@ -17,11 +17,11 @@ import edi.app
 // wordmark and the version are composed as on Home, from the one component (WordmarkWithVersion; edi
 // ADR-0017 §1).
 AppDialog {
-    visible: EaGlobals.Vars.showAppAboutDialog
-    onClosed: EaGlobals.Vars.showAppAboutDialog = false
-
-    title: qsTr("About")
     standardButtons: Dialog.Ok
+    title: qsTr("About")
+    visible: EaGlobals.Vars.showAppAboutDialog
+
+    onClosed: EaGlobals.Vars.showAppAboutDialog = false
 
     Column {
         spacing: EaStyle.Sizes.fontPixelSize * 2.0
@@ -59,9 +59,9 @@ AppDialog {
 
                     required property var modelData
 
-                    objectName: `about.${modelData.name}`
                     anchors.horizontalCenter: parent ? parent.horizontalCenter : undefined
                     color: EaStyle.Colors.link
+                    objectName: `about.${modelData.name}`
                     text: modelData.title
 
                     HoverHandler {
@@ -78,73 +78,70 @@ AppDialog {
         // with room for the words to break.
         EaElements.Label {
             id: descriptionLabel
-            objectName: "about.description"
+
             anchors.horizontalCenter: parent.horizontalCenter
-            width: Math.ceil(descriptionMetrics.advanceWidth / 3 * 1.15)
             horizontalAlignment: Text.AlignHCenter
-            wrapMode: Text.WordWrap
+            objectName: "about.description"
             text: ApplicationInfo.description
+            width: Math.ceil(descriptionMetrics.advanceWidth / 3 * 1.15)
+            wrapMode: Text.WordWrap
 
             TextMetrics {
                 id: descriptionMetrics
+
                 font: descriptionLabel.font
                 text: descriptionLabel.text
             }
         }
 
         // The components the app links or bundles, each with its licence: the list the bundled notices give.
-        EaComponents.TableView {
+        DataTable {
             id: components
 
-            objectName: "about.components"
             anchors.horizontalCenter: parent.horizontalCenter
-            width: AppSizes.aboutComponentsWidth
-            height: AppSizes.aboutComponentsHeight
             clip: true
+            columnWidths: [-1, AppSizes.aboutLicenceColumnWidth]
             defaultInfoText: ""
+            height: AppSizes.aboutComponentsHeight
             model: ApplicationInfo.componentNames
+            objectName: "about.components"
+            width: AppSizes.aboutComponentsWidth
 
-            header: EaComponents.TableViewHeader {
-                EaComponents.TableViewLabel {
-                    flexibleWidth: true
-                    horizontalAlignment: Text.AlignLeft
-                    text: qsTr("Component")
-                }
-                EaComponents.TableViewLabel {
-                    width: AppSizes.aboutLicenceColumnWidth
-                    horizontalAlignment: Text.AlignLeft
-                    text: qsTr("Licence")
-                }
-            }
-
-            delegate: EaComponents.TableViewDelegate {
+            delegate: EaComponents.ListViewDelegate {
                 id: row
 
                 required property int index
                 required property string modelData
 
                 EaComponents.TableViewLabel {
-                    width: components.headerLabelItems.length > 0 ? components.headerLabelItems[0].width : 0
+                    ToolTip.text: ApplicationInfo.componentUses[row.index]
                     horizontalAlignment: Text.AlignLeft
                     text: row.modelData
-                    ToolTip.text: ApplicationInfo.componentUses[row.index]
                 }
                 EaComponents.TableViewLabel {
-                    width: components.headerLabelItems.length > 1 ? components.headerLabelItems[1].width : 0
                     horizontalAlignment: Text.AlignLeft
                     text: ApplicationInfo.componentLicences[row.index]
+                }
+            }
+            header: EaComponents.ListViewHeader {
+                EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignLeft
+                    text: qsTr("Component")
+                }
+                EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignLeft
+                    text: qsTr("Licence")
                 }
             }
         }
 
         // The footer, as easydiffractionbeta's, naming the copyright holder
         EaElements.Label {
-            objectName: "about.copyright"
             anchors.horizontalCenter: parent.horizontalCenter
+            objectName: "about.copyright"
             text: "© %1-%2 %3 • All rights reserved".arg(ApplicationInfo.developerYearsFrom).arg(ApplicationInfo.developerYearsTo).arg(ApplicationInfo.copyrightHolder)
         }
     }
-
     LicenceTextDialog {
         id: licenceDialog
     }

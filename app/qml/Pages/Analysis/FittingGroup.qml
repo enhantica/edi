@@ -19,8 +19,8 @@ EaElements.GroupBox {
 
     readonly property FitViewModel fit: Session.project ? Session.project.fit : null
 
-    objectName: "group.fitting"
     collapsible: false
+    objectName: "group.fitting"
 
     Row {
         id: buttons
@@ -31,33 +31,36 @@ EaElements.GroupBox {
         spacing: EaStyle.Sizes.fontPixelSize
 
         EaElements.SideBarButton {
-            objectName: "fitting.start"
-            width: buttons.scan ? buttons.third : implicitWidth
+            ToolTip.text: group.fit && !group.fit.available && !group.fit.running ? group.fit.unavailableReason : ""
             enabled: group.fit !== null && (group.fit.running || group.fit.available)
             fontIcon: group.fit && group.fit.running ? "stop-circle" : "play-circle"
+            objectName: "fitting.start"
             text: group.fit && group.fit.running ? qsTr("Stop fitting") : group.fit && group.fit.continuable ? qsTr("Continue fitting") : qsTr("Start fitting")
-            ToolTip.text: group.fit && !group.fit.available && !group.fit.running ? group.fit.unavailableReason : ""
+            width: buttons.scan ? buttons.third : implicitWidth
+
             onClicked: group.fit.running ? group.fit.cancel() : group.fit.start()
         }
         EaElements.SideBarButton {
-            objectName: "fitting.reset"
-            visible: buttons.scan
-            width: buttons.third
+            ToolTip.text: qsTr("Clear every dataset's fit result")
             enabled: group.fit !== null && group.fit.canReset
             fontIcon: "eraser"
+            objectName: "fitting.reset"
             text: qsTr("Reset fits")
-            ToolTip.text: qsTr("Clear every dataset's fit result")
+            visible: buttons.scan
+            width: buttons.third
+
             onClicked: group.fit.reset()
         }
         EaElements.SideBarButton {
-            objectName: "fitting.follow"
-            width: buttons.scan ? buttons.third : implicitWidth
-            enabled: group.fit !== null && group.fit.scanning
+            ToolTip.text: qsTr("Show the dataset being fitted")
             checkable: true
             checked: group.fit !== null && group.fit.scanning && group.fit.following
+            enabled: group.fit !== null && group.fit.scanning
             fontIcon: "crosshairs"
+            objectName: "fitting.follow"
             text: qsTr("Follow")
-            ToolTip.text: qsTr("Show the dataset being fitted")
+            width: buttons.scan ? buttons.third : implicitWidth
+
             onToggled: group.fit.following = checked
         }
     }

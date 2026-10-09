@@ -15,72 +15,68 @@ import edi.app
 Column {
     id: group
 
-    property StructureViewModel structure: null
     readonly property ScatteringLengthListModel lengths: structure ? structure.scatteringLengths : null
+    property StructureViewModel structure: null
 
     spacing: AppSizes.groupContentSpacing
 
-    EaComponents.TableView {
-        objectName: "scatteringLengths.list"
+    DataTable {
+        columnWidths: [numberColumnWidth, -1, EaStyle.Sizes.fontPixelSize * 10, AppSizes.iconColumnWidth]
         defaultInfoText: qsTr("No custom scattering lengths: the built-in table applies")
         model: group.lengths
+        objectName: "scatteringLengths.list"
 
-        header: EaComponents.TableViewHeader {
-            EaComponents.TableViewLabel {
-                width: AppSizes.indexColumnWidth
-            }
-            EaComponents.TableViewLabel {
-                flexibleWidth: true
-                text: qsTr("type")
-            }
-            EaComponents.TableViewLabel {
-                width: EaStyle.Sizes.fontPixelSize * 10
-                text: qsTr("b (fm)")
-            }
-            EaComponents.TableViewLabel {
-                width: AppSizes.iconColumnWidth
-            }
-        }
-
-        delegate: EaComponents.TableViewDelegate {
+        delegate: EaComponents.ListViewDelegate {
             id: row
 
             required property int index
-            required property string typeSymbol
             required property real lengthFm
+            required property string typeSymbol
 
             EaComponents.TableViewLabel {
-                width: AppSizes.indexColumnWidth
                 color: EaStyle.Colors.themeForegroundMinor
                 text: row.index + 1
             }
             TextCell {
                 objectName: `scatteringLength.typeSymbol.${row.index}`
-                width: EaStyle.Sizes.fontPixelSize * 10
                 value: row.typeSymbol
+
                 onCommitted: text => group.lengths.setTypeSymbol(row.index, text)
             }
             TextCell {
-                objectName: `scatteringLength.lengthFm.${row.index}`
-                width: EaStyle.Sizes.fontPixelSize * 10
-                value: row.lengthFm
                 accepts: "number"
+                objectName: `scatteringLength.lengthFm.${row.index}`
+                value: row.lengthFm
+
                 onCommitted: text => group.lengths.setLengthFm(row.index, Number(text))
             }
             EaComponents.TableViewButton {
-                objectName: `scatteringLength.remove.${row.index}`
-                fontIcon: "minus-circle"
                 ToolTip.text: qsTr("Remove this scattering length")
+                fontIcon: "minus-circle"
+                objectName: `scatteringLength.remove.${row.index}`
+
                 onClicked: group.lengths.remove(row.index)
             }
         }
+        header: EaComponents.ListViewHeader {
+            EaComponents.TableViewLabel {
+            }
+            EaComponents.TableViewLabel {
+                text: qsTr("type")
+            }
+            EaComponents.TableViewLabel {
+                text: qsTr("b (fm)")
+            }
+            EaComponents.TableViewLabel {
+            }
+        }
     }
-
     EaElements.SideBarButton {
-        objectName: "scatteringLengths.append"
-        wide: true  // the row to itself, as the original's append actions fill theirs
         fontIcon: "plus-circle"
+        objectName: "scatteringLengths.append"
         text: qsTr("Append a scattering length")
+        wide: true  // the row to itself, as the original's append actions fill theirs
+
         onClicked: group.lengths.append()
     }
 }

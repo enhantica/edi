@@ -18,11 +18,11 @@ import edi.app
 Grid {
     id: row
 
-    property ProjectViewModel project: null
+    readonly property real cellWidth: (EaStyle.Sizes.sideBarContentWidth - (row.columns - 1) * row.columnSpacing) / row.columns
+    readonly property bool editable: experiment !== null && experiment.calculationOnly
     property ExperimentViewModel experiment: null
     property int experimentIndex: -1
-    readonly property bool editable: experiment !== null && experiment.calculationOnly
-    readonly property real cellWidth: (EaStyle.Sizes.sideBarContentWidth - (row.columns - 1) * row.columnSpacing) / row.columns
+    property ProjectViewModel project: null
 
     // A choice on one axis: the experiment made anew, or the box back at the stored value.
     function choose(box, axis, index) {
@@ -32,92 +32,104 @@ Grid {
         box.currentIndex = Qt.binding(() => box.permittedValues.indexOf(box.value));
     }
 
-    objectName: "experimentType"
-    columns: 3
     columnSpacing: AppSizes.fieldSpacing
+    columns: 3
+    objectName: "experimentType"
     rowSpacing: AppSizes.groupContentSpacing
 
     EaElements.ParamComboBox {
         id: sampleForm
-        objectName: "experimentType.sampleForm"
-        width: row.cellWidth
-        Component.onCompleted: FieldTitles.align(sampleForm)
-        enabled: row.editable
+
         currentIndex: permittedValues.indexOf(value)
+        enabled: row.editable
+        objectName: "experimentType.sampleForm"
         parameter: ({
                 "value": row.experiment ? row.experiment.sampleFormToken : "",
                 "shortPrettyName": qsTr("sample form"),
                 "permittedValues": ["powder", "single crystal"]
             })
+        width: row.cellWidth
+
+        Component.onCompleted: FieldTitles.align(sampleForm)
         onActivated: index => row.choose(sampleForm, "sampleForm", index)
     }
     EaElements.ParamComboBox {
         id: beamMode
-        objectName: "experimentType.beamMode"
-        width: row.cellWidth
-        Component.onCompleted: FieldTitles.align(beamMode)
-        enabled: row.editable
+
         currentIndex: permittedValues.indexOf(value)
+        enabled: row.editable
+        objectName: "experimentType.beamMode"
         parameter: ({
                 "value": row.experiment ? row.experiment.beamModeToken : "",
                 "shortPrettyName": qsTr("beam mode"),
                 "permittedValues": ["constant wavelength", "time-of-flight"]
             })
+        width: row.cellWidth
+
+        Component.onCompleted: FieldTitles.align(beamMode)
         onActivated: index => row.choose(beamMode, "beamMode", index)
     }
     EaElements.ParamComboBox {
         id: radiationProbe
-        objectName: "experimentType.radiationProbe"
-        width: row.cellWidth
-        Component.onCompleted: FieldTitles.align(radiationProbe)
-        enabled: row.editable
+
         currentIndex: permittedValues.indexOf(value)
+        enabled: row.editable
+        objectName: "experimentType.radiationProbe"
         parameter: ({
                 "value": row.experiment ? row.experiment.radiationProbeToken : "",
                 "shortPrettyName": qsTr("probe"),
                 "permittedValues": ["neutron", "xray"]
             })
+        width: row.cellWidth
+
+        Component.onCompleted: FieldTitles.align(radiationProbe)
         onActivated: index => row.choose(radiationProbe, "radiationProbe", index)
     }
     EaElements.ParamComboBox {
         id: scatteringType
-        objectName: "experimentType.scatteringType"
-        width: row.cellWidth
-        Component.onCompleted: FieldTitles.align(scatteringType)
-        enabled: row.editable
+
         currentIndex: permittedValues.indexOf(value)
+        enabled: row.editable
+        objectName: "experimentType.scatteringType"
         parameter: ({
                 "value": row.experiment ? row.experiment.scatteringTypeToken : "",
                 "shortPrettyName": qsTr("scattering type"),
                 "permittedValues": ["bragg", "total"]
             })
+        width: row.cellWidth
+
+        Component.onCompleted: FieldTitles.align(scatteringType)
         onActivated: index => row.choose(scatteringType, "scatteringType", index)
     }
     EaElements.ParamComboBox {
         id: dimensionality
-        objectName: "experimentType.dimensionality"
-        width: row.cellWidth
-        Component.onCompleted: FieldTitles.align(dimensionality)
-        enabled: false
+
         currentIndex: 0
+        enabled: false
+        objectName: "experimentType.dimensionality"
         parameter: ({
                 "value": "1D",
                 "shortPrettyName": qsTr("dimensionality"),
                 "permittedValues": ["1D"]
             })
+        width: row.cellWidth
+
+        Component.onCompleted: FieldTitles.align(dimensionality)
     }
     EaElements.ParamComboBox {
         id: polarization
-        objectName: "experimentType.polarization"
-        width: row.cellWidth
-        Component.onCompleted: FieldTitles.align(polarization)
-        visible: row.experiment !== null && row.experiment.radiationProbe === ExperimentViewModel.Neutron
-        enabled: false
+
         currentIndex: 0
+        enabled: false
+        objectName: "experimentType.polarization"
         parameter: ({
                 "value": "None",
                 "shortPrettyName": qsTr("polarization"),
                 "permittedValues": ["None"]
             })
+        visible: row.experiment !== null && row.experiment.radiationProbe === ExperimentViewModel.Neutron
+        width: row.cellWidth
+
+        Component.onCompleted: FieldTitles.align(polarization)
     }
 }

@@ -2,6 +2,7 @@
 import QtQuick
 import QtQuick.Controls
 
+import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
@@ -15,15 +16,29 @@ import edi.app
 EaElements.ParamTextField {
     id: field
 
-    required property ParameterItem item
-    property string label: item ? item.shortName : ""
-    // Why the last typed text was refused before reaching the core; the core's own refusal is the item's.
-    property string typedRefusal: ""
-    readonly property string refusal: typedRefusal !== "" ? typedRefusal : item !== null ? item.lastError : ""
-    readonly property bool refinable: item === null || item.refinable
     // A fixed setting is edited but never fitted: no fit toggle.
     readonly property bool canFit: refinable && (item === null || item.fittable)
+    required property ParameterItem item
+    property string label: item ? item.shortName : ""
+    readonly property bool refinable: item === null || item.refinable
+    readonly property string refusal: typedRefusal !== "" ? typedRefusal : item !== null ? item.lastError : ""
+    // Why the last typed text was refused before reaching the core; the core's own refusal is the item's.
+    property string typedRefusal: ""
 
+    // Return and leaving the field both commit; the second of the two finds nothing new.
+    function commit() {
+        if (item !== null && text !== field.value) {
+            typedRefusal = TypedInput.refusal(text, "number");
+            if (typedRefusal === "") {
+                item.value = Number(text);
+            }
+            text = Qt.binding(() => field.value);
+        }
+    }
+
+    ToolTip.text: refusal
+    ToolTip.visible: refusal !== "" && (hovered || activeFocus)
+    color: warned ? EaStyle.Colors.red : !enabled || readOnly ? EaStyle.Colors.themeForegroundMinor : item && item.free && canFit ? EaStyle.Colors.chartForegroundsExtra[1] : EaStyle.Colors.themeForeground
     enabled: refinable
     // The value and its uncertainty as text, by the app's one rule for numbers (NumberText).
     parameter: item ? {
@@ -37,27 +52,13 @@ EaElements.ParamTextField {
         "shortPrettyName": field.label,
         "units": item.displayUnits
     } : ({})
-
     warned: refusal !== ""
+
     // Its title as every field's: left, inset as a combo box's, ending in "…" (edi ADR-0017 §5).
     Component.onCompleted: FieldTitles.align(field)
-    ToolTip.text: refusal
-    ToolTip.visible: refusal !== "" && (hovered || activeFocus)
-
-    onValueChanged: typedRefusal = ""
-    onAccepted: commit()
-    onEditingFinished: commit()
-
-    // Return and leaving the field both commit; the second of the two finds nothing new.
-    function commit() {
-        if (item !== null && text !== field.value) {
-            typedRefusal = TypedInput.refusal(text, "number");
-            if (typedRefusal === "") {
-                item.value = Number(text);
-            }
-            text = Qt.binding(() => field.value);
-        }
-    }
     fitCheckBox.onToggled: if (item !== null)
         item.free = fitCheckBox.checked
+    onAccepted: commit()
+    onEditingFinished: commit()
+    onValueChanged: typedRefusal = ""
 }

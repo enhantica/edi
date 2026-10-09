@@ -21,35 +21,15 @@ Column {
 
     spacing: AppSizes.groupContentSpacing
 
-    EaComponents.TableView {
+    DataTable {
         id: table
-        objectName: "constraints.list"
+
+        columnWidths: [numberColumnWidth, EaStyle.Sizes.fontPixelSize * 7, -1, AppSizes.iconColumnWidth, AppSizes.iconColumnWidth]
         defaultInfoText: qsTr("No constraints")
         model: group.constraints
+        objectName: "constraints.list"
 
-        header: EaComponents.TableViewHeader {
-            EaComponents.TableViewLabel {
-                width: AppSizes.indexColumnWidth
-            }
-            EaComponents.TableViewLabel {
-                width: EaStyle.Sizes.fontPixelSize * 7
-                horizontalAlignment: Text.AlignLeft
-                text: qsTr("id")
-            }
-            EaComponents.TableViewLabel {
-                flexibleWidth: true
-                horizontalAlignment: Text.AlignLeft
-                text: qsTr("expression")
-            }
-            EaComponents.TableViewLabel {
-                width: AppSizes.iconColumnWidth
-            }
-            EaComponents.TableViewLabel {
-                width: AppSizes.iconColumnWidth
-            }
-        }
-
-        delegate: EaComponents.TableViewDelegate {
+        delegate: EaComponents.ListViewDelegate {
             id: row
 
             required property int index
@@ -57,58 +37,76 @@ Column {
             required property var model
 
             EaComponents.TableViewLabel {
-                width: AppSizes.indexColumnWidth
                 color: EaStyle.Colors.themeForegroundMinor
                 text: row.index + 1
             }
             TextCell {
-                objectName: `constraint.id.${row.index}`
-                width: EaStyle.Sizes.fontPixelSize * 7
-                horizontalAlignment: Text.AlignLeft
+                color: row.model.enabled ? EaStyle.Colors.themeForeground : EaStyle.Colors.themeForegroundMinor
                 // A disabled constraint's id and expression cells are both disabled.
                 enabled: row.model.enabled
-                color: row.model.enabled ? EaStyle.Colors.themeForeground : EaStyle.Colors.themeForegroundMinor
+                horizontalAlignment: Text.AlignLeft
+                objectName: `constraint.id.${row.index}`
                 value: row.model.id
+
                 onCommitted: text => group.constraints.setText(row.index, "id", text)
             }
             TextCell {
-                objectName: `constraint.expression.${row.index}`
-                width: table.headerLabelItems.length > 2 ? table.headerLabelItems[2].width : 0
-                horizontalAlignment: Text.AlignLeft
-                enabled: row.model.enabled
                 color: row.model.enabled ? EaStyle.Colors.themeForeground : EaStyle.Colors.themeForegroundMinor
+                enabled: row.model.enabled
+                horizontalAlignment: Text.AlignLeft
+                objectName: `constraint.expression.${row.index}`
                 value: row.model.expression
+
                 onCommitted: text => group.constraints.setText(row.index, "expression", text)
             }
             EaComponents.TableViewButton {
-                objectName: `constraint.enabled.${row.index}`
-                fontIcon: row.model.enabled ? "toggle-on" : "toggle-off"
                 ToolTip.text: row.model.enabled ? qsTr("Disable this constraint") : qsTr("Enable this constraint")
+                fontIcon: row.model.enabled ? "toggle-on" : "toggle-off"
+                objectName: `constraint.enabled.${row.index}`
+
                 onClicked: group.constraints.setEnabled(row.index, !row.model.enabled)
             }
             EaComponents.TableViewButton {
-                objectName: `constraint.remove.${row.index}`
-                fontIcon: "minus-circle"
                 ToolTip.text: qsTr("Remove this constraint")
+                fontIcon: "minus-circle"
+                objectName: `constraint.remove.${row.index}`
+
                 onClicked: group.constraints.remove(row.index)
             }
         }
+        header: EaComponents.ListViewHeader {
+            EaComponents.TableViewLabel {
+            }
+            EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignLeft
+                text: qsTr("id")
+            }
+            EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignLeft
+                text: qsTr("expression")
+            }
+            EaComponents.TableViewLabel {
+            }
+            EaComponents.TableViewLabel {
+            }
+        }
     }
-
     Row {
         spacing: EaStyle.Sizes.fontPixelSize
 
         EaElements.SideBarButton {
-            objectName: "constraints.append"
             fontIcon: "plus-circle"
+            objectName: "constraints.append"
             text: qsTr("Append new constraint")
+
             onClicked: group.constraints.append()
         }
         EaElements.SideBarButton {
-            objectName: "constraints.duplicate"
             enabled: table.currentIndex >= 0 || (group.constraints && group.constraints.count > 0)
             fontIcon: "clone"
+            objectName: "constraints.duplicate"
             text: qsTr("Duplicate selected constraint")
+
             onClicked: group.constraints.duplicate(Math.max(table.currentIndex, 0))
         }
     }

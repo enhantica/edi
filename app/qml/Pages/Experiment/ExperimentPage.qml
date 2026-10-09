@@ -14,9 +14,6 @@ import edi.app
 WorkflowPage {
     id: page
 
-    readonly property ProjectViewModel project: Session.project
-    readonly property ExperimentViewModel experiment: project ? project.currentExperiment : null
-
     // Each category's content, by `.edi` category id.
     readonly property var contents: ({
             "data": rangeContent,
@@ -31,29 +28,31 @@ WorkflowPage {
             "scattering_source": scatteringSourceContent,
             "refln": reflectionsContent
         })
+    readonly property ExperimentViewModel experiment: project ? project.currentExperiment : null
     // Extras shows the same categories, and the Extras part of those that have one.
     readonly property var extrasContents: Object.assign({}, contents, {
         "peak": peakExtrasContent
     })
+    readonly property ProjectViewModel project: Session.project
 
-    pageName: "experiment"
+    blockCurrentOutcome: experiment ? experiment.fitOutcome : ""
+    blockCurrentTemplate: project !== null && project.scan && project.currentExperimentIndex === project.templateIndex
+    blockIndex: project ? project.currentExperimentIndex : -1
+    blockKind: "experiment"
+    blockOneColour: project !== null && project.scan
+    blockOutcomeRole: "fitOutcome"
+    blockSelectorRightInset: chartView.toolbarRightInset
+    // One block selector in the main view's tab bar (edi ADR-0017 §7).
+    blockSelectorShown: true
+    blockTemplateRole: project !== null && project.scan ? "isTemplate" : ""
+    blocks: project ? project.experiments : null
+    blocksTextRole: "label"
+    continueText: qsTr("Continue")
     defaultInfo: experiment ? "" : qsTr("No experiments defined")
-    mainTabs: [
-        IconTabButton {
-            objectName: "mainArea.experiment.tab.chart"
-            // The view's name, text only (edi ADR-0017 §2).
-            text: qsTr("Pattern")
-        }
-    ]
-    mainItems: [
-        ProjectPatternChart {
-            id: chartView
-            experiment: page.experiment
-            shown: page.current && SwipeView.isCurrentItem
-        }
-    ]
     extrasEnabled: experiment !== null
+    pageName: "experiment"
     textEnabled: experiment !== null
+
     basicItem: Component {
         EaComponents.SideBarColumn {
             ExperimentsGroup {
@@ -61,9 +60,10 @@ WorkflowPage {
             }
             Repeater {
                 model: page.experiment ? page.experiment.categories : null
+
                 delegate: CategoryGroup {
-                    shownTier: "Basic"
                     contents: page.contents
+                    shownTier: "Basic"
                 }
             }
         }
@@ -72,72 +72,83 @@ WorkflowPage {
         EaComponents.SideBarColumn {
             Repeater {
                 model: page.experiment ? page.experiment.categories : null
+
                 delegate: CategoryGroup {
-                    shownTier: "Extras"
                     contents: page.extrasContents
+                    shownTier: "Extras"
                 }
             }
         }
     }
+    mainItems: [
+        ProjectPatternChart {
+            id: chartView
+
+            experiment: page.experiment
+            shown: page.current && SwipeView.isCurrentItem
+        }
+    ]
+    mainTabs: [
+        IconTabButton {
+            objectName: "mainArea.experiment.tab.chart"
+            // The view's name, text only (edi ADR-0017 §2).
+            text: qsTr("Pattern")
+        }
+    ]
     textItem: Component {
         TextTab {
             source: page.experiment ? page.experiment.text : null
         }
     }
-    // One block selector in the main view's tab bar (edi ADR-0017 §7).
-    blockSelectorShown: true
-    blockSelectorRightInset: chartView.toolbarRightInset
-    blocks: project ? project.experiments : null
-    blocksTextRole: "label"
-    blockKind: "experiment"
-    blockOutcomeRole: "fitOutcome"
-    blockCurrentOutcome: experiment ? experiment.fitOutcome : ""
-    blockOneColour: project !== null && project.scan
-    blockTemplateRole: project !== null && project.scan ? "isTemplate" : ""
-    blockCurrentTemplate: project !== null && project.scan && project.currentExperimentIndex === project.templateIndex
-    blockIndex: project ? project.currentExperimentIndex : -1
+
     onBlockActivated: index => page.project.currentExperimentIndex = index
-    continueText: qsTr("Continue")
     onContinueClicked: AppState.open(AppState.Page.Analysis)
 
     Component {
         id: rangeContent
+
         MeasuredRangeGroup {
             experiment: page.experiment
         }
     }
     Component {
         id: instrumentContent
+
         InstrumentGroup {
             experiment: page.experiment
         }
     }
     Component {
         id: peakContent
+
         PeakGroup {
             experiment: page.experiment
         }
     }
     Component {
         id: reflectionsContent
+
         ReflectionsGroup {
             experiment: page.experiment
         }
     }
     Component {
         id: peakExtrasContent
+
         PeakExtrasGroup {
             experiment: page.experiment
         }
     }
     Component {
         id: backgroundContent
+
         BackgroundGroup {
             experiment: page.experiment
         }
     }
     Component {
         id: linkedStructureContent
+
         LinkedStructureGroup {
             experiment: page.experiment
             project: page.project
@@ -145,24 +156,28 @@ WorkflowPage {
     }
     Component {
         id: excludedRegionsContent
+
         ExcludedRegionsGroup {
             experiment: page.experiment
         }
     }
     Component {
         id: absorptionContent
+
         AbsorptionGroup {
             experiment: page.experiment
         }
     }
     Component {
         id: preferredOrientationContent
+
         PreferredOrientationGroup {
             experiment: page.experiment
         }
     }
     Component {
         id: scatteringSourceContent
+
         ScatteringSourceGroup {
             experiment: page.experiment
         }

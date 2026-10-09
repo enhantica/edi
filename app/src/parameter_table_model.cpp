@@ -68,6 +68,59 @@ bool ParameterTableModel::setRole(int row, const QString& role, const QVariant& 
 
 ParameterFilterModel::ParameterFilterModel(QObject* parent) : QSortFilterProxyModel(parent) {}
 
+void ParameterFilterModel::setSourceModel(QAbstractItemModel* source) {
+    for (const auto& connection : source_connections_) {
+        disconnect(connection);
+    }
+    source_connections_.clear();
+    QSortFilterProxyModel::setSourceModel(source);
+    if (source != nullptr) {
+        source_connections_.append(connect(source, &QAbstractItemModel::modelReset, this, &ParameterFilterModel::refreshCategories));
+        source_connections_.append(connect(source, &QAbstractItemModel::rowsInserted, this, &ParameterFilterModel::refreshCategories));
+        source_connections_.append(connect(source, &QAbstractItemModel::rowsRemoved, this, &ParameterFilterModel::refreshCategories));
+        source_connections_.append(connect(source, &QAbstractItemModel::dataChanged, this, &ParameterFilterModel::refreshCategories));
+    }
+    refreshCategories();
+}
+
+void ParameterFilterModel::refreshCategories() {
+    QStringList categories;
+    if (sourceModel() != nullptr) {
+        const int role = sourceModel()->roleNames().key("category");
+        for (int row = 0; row < sourceModel()->rowCount(); ++row) {
+            const QString category = sourceModel()->data(sourceModel()->index(row, 0), role).toString();
+            if (!category.isEmpty() && !categories.contains(category)) {
+                categories.append(category);
+            }
+        }
+    }
+    categories.sort();
+    categories.prepend(QString());
+    if (categories != categories_) {
+        categories_ = categories;
+        emit categoriesChanged();
+    }
+    if (!categories_.contains(category_filter_)) {
+        setCategoryFilter({});
+    }
+}
+
+void ParameterFilterModel::setCategoryFilter(const QString& category) {
+    if (category != category_filter_) {
+        beginFilterChange();
+        category_filter_ = category;
+        endFilterChange(Direction::Rows);
+        emit categoryFilterChanged();
+    }
+}
+
+QString ParameterFilterModel::text(int row, const QString& role) const {
+    if (sourceModel() == nullptr || row < 0 || row >= rowCount()) {
+        return {};
+    }
+    return data(index(row, 0), sourceModel()->roleNames().key(role.toUtf8())).toString();
+}
+
 void ParameterFilterModel::setNameFilter(const QString& filter) {
     if (filter != name_filter_) {
         beginFilterChange();
@@ -110,6 +163,9 @@ bool ParameterFilterModel::filterAcceptsRow(int source_row, const QModelIndex& s
     const QModelIndex index = sourceModel()->index(source_row, 0, source_parent);
     const QHash<int, QByteArray> roles = sourceModel()->roleNames();
     const auto value = [&](const char* name) { return sourceModel()->data(index, roles.key(name)); };
+    if (!category_filter_.isEmpty() && value("category").toString() != category_filter_) {
+        return false;
+    }
     const bool free = value("free").toBool();
     if ((variability_ == Free && !free) || (variability_ == Fixed && free)) {
         return false;

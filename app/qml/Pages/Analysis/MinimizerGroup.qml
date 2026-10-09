@@ -15,42 +15,45 @@ Grid {
     property AnalysisViewModel analysis: null
     readonly property real fieldWidth: (EaStyle.Sizes.sideBarContentWidth - row.columnSpacing) / 2
 
-    columns: 2
     columnSpacing: AppSizes.fieldSpacing
+    columns: 2
     rowSpacing: AppSizes.groupContentSpacing
 
     SelectorField {
-        objectName: "minimizer.type"
-        width: row.fieldWidth
         label: qsTr("minimizer")
+        objectName: "minimizer.type"
         options: row.analysis ? row.analysis.minimizerTypeOptions : null
         token: row.analysis ? row.analysis.minimizerType : ""
+        width: row.fieldWidth
     }
     SelectorField {
-        objectName: "minimizer.descent"
-        width: row.fieldWidth
         label: qsTr("descent")
+        objectName: "minimizer.descent"
         options: row.analysis ? row.analysis.descentOptions : null
         token: row.analysis ? row.analysis.descent : ""
+        width: row.fieldWidth
+
         onSelected: token => row.analysis.descent = token
     }
     ValueField {
-        objectName: "minimizer.maxIterations"
-        width: row.fieldWidth
-        label: qsTr("max iterations")
+        accepts: "integer"
         // The declared bound, or the fit's own when none is declared: the value the fit uses, as the
         // tolerance beside it (edi ADR-0017 §5).
         fieldValue: !row.analysis ? "" : row.analysis.hasMaxIterations ? row.analysis.maxIterations : row.analysis.defaultMaxIterations
-        accepts: "integer"
+        label: qsTr("max iterations")
+        objectName: "minimizer.maxIterations"
+        width: row.fieldWidth
+
         onCommitted: text => row.analysis.maxIterations = Number(text)
     }
     ValueField {
-        objectName: "minimizer.chiSquareTolerance"
-        width: row.fieldWidth
-        label: qsTr("tolerance")
+        accepts: "number"
         // The declared tolerance, or crysta's default when none is declared: the value the fit uses.
         fieldValue: !row.analysis ? "" : row.analysis.hasChiSquareTolerance ? row.analysis.chiSquareTolerance : row.analysis.defaultChiSquareTolerance
-        accepts: "number"
+        label: qsTr("tolerance")
+        objectName: "minimizer.chiSquareTolerance"
+        width: row.fieldWidth
+
         onCommitted: text => row.analysis.chiSquareTolerance = Number(text)
     }
 }

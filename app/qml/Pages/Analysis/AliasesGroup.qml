@@ -16,37 +16,20 @@ import edi.app
 Column {
     id: group
 
-    property AnalysisViewModel analysis: null
     readonly property AliasListModel aliases: analysis ? analysis.aliases : null
+    property AnalysisViewModel analysis: null
 
     spacing: AppSizes.groupContentSpacing
 
-    EaComponents.TableView {
+    DataTable {
         id: table
-        objectName: "aliases.list"
+
+        columnWidths: [numberColumnWidth, EaStyle.Sizes.fontPixelSize * 7, -1, AppSizes.iconColumnWidth]
         defaultInfoText: qsTr("No aliases")
         model: group.aliases
+        objectName: "aliases.list"
 
-        header: EaComponents.TableViewHeader {
-            EaComponents.TableViewLabel {
-                width: AppSizes.indexColumnWidth
-            }
-            EaComponents.TableViewLabel {
-                width: EaStyle.Sizes.fontPixelSize * 7
-                horizontalAlignment: Text.AlignLeft
-                text: qsTr("alias")
-            }
-            EaComponents.TableViewLabel {
-                flexibleWidth: true
-                horizontalAlignment: Text.AlignLeft
-                text: qsTr("parameter")
-            }
-            EaComponents.TableViewLabel {
-                width: AppSizes.iconColumnWidth
-            }
-        }
-
-        delegate: EaComponents.TableViewDelegate {
+        delegate: EaComponents.ListViewDelegate {
             id: row
 
             required property int index
@@ -54,53 +37,68 @@ Column {
             required property var model
 
             EaComponents.TableViewLabel {
-                width: AppSizes.indexColumnWidth
                 color: EaStyle.Colors.themeForegroundMinor
                 text: row.index + 1
             }
             TextCell {
-                objectName: `alias.id.${row.index}`
-                width: EaStyle.Sizes.fontPixelSize * 7
                 horizontalAlignment: Text.AlignLeft
+                objectName: `alias.id.${row.index}`
                 value: row.model.id
+
                 onCommitted: text => group.aliases.setText(row.index, "id", text)
             }
             // The base's table combo box (TableViewComboBox), searchable: a project has many parameters.
             SearchableComboBox {
-                objectName: `alias.parameter.${row.index}`
+                ToolTip.text: row.model.parameter
                 anchors.verticalCenter: parent.verticalCenter
-                borderColor: "transparent"
                 backgroundColor: "transparent"
-                width: table.headerLabelItems.length > 2 ? table.headerLabelItems[2].width : 0
-                model: group.aliases ? group.aliases.parameterNames : []
+                borderColor: "transparent"
                 currentIndex: group.aliases ? group.aliases.parameterNames.indexOf(row.model.parameter) : -1
                 displayText: row.model.parameter
-                ToolTip.text: row.model.parameter
+                model: group.aliases ? group.aliases.parameterNames : []
+                objectName: `alias.parameter.${row.index}`
+
                 onActivated: index => group.aliases.setText(row.index, "parameter", group.aliases.parameterNames[index])
             }
             EaComponents.TableViewButton {
-                objectName: `alias.remove.${row.index}`
-                fontIcon: "minus-circle"
                 ToolTip.text: qsTr("Remove this alias")
+                fontIcon: "minus-circle"
+                objectName: `alias.remove.${row.index}`
+
                 onClicked: group.aliases.remove(row.index)
             }
         }
+        header: EaComponents.ListViewHeader {
+            EaComponents.TableViewLabel {
+            }
+            EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignLeft
+                text: qsTr("alias")
+            }
+            EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignLeft
+                text: qsTr("parameter")
+            }
+            EaComponents.TableViewLabel {
+            }
+        }
     }
-
     Row {
         spacing: EaStyle.Sizes.fontPixelSize
 
         EaElements.SideBarButton {
-            objectName: "aliases.append"
             fontIcon: "plus-circle"
+            objectName: "aliases.append"
             text: qsTr("Append new alias")
+
             onClicked: group.aliases.append()
         }
         EaElements.SideBarButton {
-            objectName: "aliases.duplicate"
             enabled: table.currentIndex >= 0 || (group.aliases && group.aliases.count > 0)
             fontIcon: "clone"
+            objectName: "aliases.duplicate"
             text: qsTr("Duplicate selected alias")
+
             onClicked: group.aliases.duplicate(Math.max(table.currentIndex, 0))
         }
     }

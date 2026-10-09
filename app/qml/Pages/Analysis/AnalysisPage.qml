@@ -14,9 +14,7 @@ import edi.app
 WorkflowPage {
     id: page
 
-    readonly property ProjectViewModel project: Session.project
     readonly property AnalysisViewModel analysis: project ? project.analysis : null
-    readonly property ExperimentViewModel experiment: project ? project.currentExperiment : null
 
     // Each category's content, by `.edi` category id.
     readonly property var contents: ({
@@ -29,9 +27,69 @@ WorkflowPage {
             "sequential_fit_extract": sequentialExtractContent,
             "fit_parameter": fitStartContent
         })
+    readonly property ExperimentViewModel experiment: project ? project.currentExperiment : null
+    readonly property ProjectViewModel project: Session.project
 
-    pageName: "analysis"
+    blockCurrentOutcome: experiment ? experiment.fitOutcome : ""
+    blockCurrentTemplate: project !== null && project.scan && project.currentExperimentIndex === project.templateIndex
+    blockIndex: project ? project.currentExperimentIndex : -1
+    blockKind: "experiment"
+    blockOneColour: project !== null && project.scan
+    blockOutcomeRole: "fitOutcome"
+    blockSelectorRightInset: chartView.toolbarRightInset
+    // The same selector as the Experiment page's, over the one current experiment the project holds, so
+    // choosing here or there is one choice (edi ADR-0017 §7).
+    blockSelectorShown: true
+    blockTemplateRole: project !== null && project.scan ? "isTemplate" : ""
+    blocks: project ? project.experiments : null
+    blocksTextRole: "label"
+    continueText: qsTr("Continue")
     defaultInfo: project ? "" : qsTr("No analysis done")
+    extrasEnabled: analysis !== null
+    pageName: "analysis"
+    textEnabled: analysis !== null
+
+    basicItem: Component {
+        EaComponents.SideBarColumn {
+            id: analysisSidebar
+
+            // The fitted inputs are not edited while a fit runs.
+            ParametersGroup {
+                availableHeight: analysisSidebar.height - fitting.height
+                enabled: !(page.project && page.project.fit.running)
+                project: page.project
+            }
+            FittingGroup {
+                id: fitting
+            }
+        }
+    }
+    extrasItem: Component {
+        EaComponents.SideBarColumn {
+            Repeater {
+                model: page.analysis ? page.analysis.categories : null
+
+                delegate: CategoryGroup {
+                    contents: page.contents
+                    shownTier: "Extras"
+                }
+            }
+        }
+    }
+    mainItems: [
+        ProjectPatternChart {
+            id: chartView
+
+            experiment: page.experiment
+            shown: page.current && SwipeView.isCurrentItem
+        },
+        EvolutionChart {
+            id: evolutionChart
+
+            project: page.project
+            shown: page.current && SwipeView.isCurrentItem
+        }
+    ]
     mainTabs: [
         IconTabButton {
             objectName: "mainArea.analysis.tab.fitting"
@@ -40,118 +98,79 @@ WorkflowPage {
         },
         // A fitted parameter across a scan's datasets (edi ADR-0017 §19); a scan project's only.
         IconTabButton {
+            enabled: page.project !== null && page.project.scan
             objectName: "mainArea.analysis.tab.evolution"
             text: qsTr("Evolution")
-            enabled: page.project !== null && page.project.scan
         }
     ]
-    mainItems: [
-        ProjectPatternChart {
-            id: chartView
-            experiment: page.experiment
-            shown: page.current && SwipeView.isCurrentItem
-        },
-        EvolutionChart {
-            id: evolutionChart
-            project: page.project
-            shown: page.current && SwipeView.isCurrentItem
-        }
-    ]
-    extrasEnabled: analysis !== null
-    textEnabled: analysis !== null
-    basicItem: Component {
-        EaComponents.SideBarColumn {
-            // The fitted inputs are not edited while a fit runs.
-            ParametersGroup {
-                project: page.project
-                enabled: !(page.project && page.project.fit.running)
-            }
-            FittingGroup {}
-        }
-    }
-    extrasItem: Component {
-        EaComponents.SideBarColumn {
-            Repeater {
-                model: page.analysis ? page.analysis.categories : null
-                delegate: CategoryGroup {
-                    shownTier: "Extras"
-                    contents: page.contents
-                }
-            }
-        }
-    }
     textItem: Component {
         TextTab {
             source: page.analysis ? page.analysis.text : null
         }
     }
-    // The same selector as the Experiment page's, over the one current experiment the project holds, so
-    // choosing here or there is one choice (edi ADR-0017 §7).
-    blockSelectorShown: true
-    blockSelectorRightInset: chartView.toolbarRightInset
-    blocks: project ? project.experiments : null
-    blocksTextRole: "label"
-    blockKind: "experiment"
-    blockOutcomeRole: "fitOutcome"
-    blockCurrentOutcome: experiment ? experiment.fitOutcome : ""
-    blockOneColour: project !== null && project.scan
-    blockTemplateRole: project !== null && project.scan ? "isTemplate" : ""
-    blockCurrentTemplate: project !== null && project.scan && project.currentExperimentIndex === project.templateIndex
-    blockIndex: project ? project.currentExperimentIndex : -1
+
     onBlockActivated: index => page.project.currentExperimentIndex = index
+    onContinueClicked: AppState.open(AppState.Page.Report)
+
     Connections {
-        target: AppState
         function onEvolutionRequested() {
             page.showMainTab(1);
         }
-    }
-    continueText: qsTr("Continue")
-    onContinueClicked: AppState.open(AppState.Page.Report)
 
+        target: AppState
+    }
     Component {
         id: minimizerContent
+
         MinimizerGroup {
             analysis: page.analysis
         }
     }
     Component {
         id: fittingModeContent
+
         FittingModeGroup {
             analysis: page.analysis
         }
     }
     Component {
         id: aliasesContent
+
         AliasesGroup {
             analysis: page.analysis
         }
     }
     Component {
         id: constraintsContent
+
         ConstraintsGroup {
             analysis: page.analysis
         }
     }
     Component {
         id: jointFitContent
+
         JointFitGroup {
             project: page.project
         }
     }
     Component {
         id: sequentialExtractContent
+
         SequentialExtractGroup {
             analysis: page.analysis
         }
     }
     Component {
         id: fitStartContent
+
         FitStartGroup {
             analysis: page.analysis
         }
     }
     Component {
         id: sequentialFitContent
+
         SequentialFitGroup {
             analysis: page.analysis
         }

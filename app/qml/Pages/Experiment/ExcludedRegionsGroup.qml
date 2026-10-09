@@ -19,68 +19,65 @@ Column {
 
     spacing: AppSizes.groupContentSpacing
 
-    EaComponents.TableView {
-        objectName: "excludedRegions.list"
+    DataTable {
+        columnWidths: [numberColumnWidth, -1, -1, AppSizes.iconColumnWidth]
         defaultInfoText: qsTr("No excluded regions")
         model: group.regions
+        objectName: "excludedRegions.list"
 
-        header: EaComponents.TableViewHeader {
-            EaComponents.TableViewLabel {
-                width: AppSizes.indexColumnWidth
-            }
-            EaComponents.TableViewLabel {
-                flexibleWidth: true
-                text: qsTr("start")
-            }
-            EaComponents.TableViewLabel {
-                width: EaStyle.Sizes.fontPixelSize * 12
-                text: qsTr("end")
-            }
-            EaComponents.TableViewLabel {
-                width: AppSizes.iconColumnWidth
-            }
-        }
-
-        delegate: EaComponents.TableViewDelegate {
+        delegate: EaComponents.ListViewDelegate {
             id: row
 
+            required property real end
             required property int index
             required property real start
-            required property real end
 
             EaComponents.TableViewLabel {
-                width: AppSizes.indexColumnWidth
                 color: EaStyle.Colors.themeForegroundMinor
                 text: row.index + 1
             }
             TextCell {
-                objectName: `excludedRegion.start.${row.index}`
-                width: EaStyle.Sizes.fontPixelSize * 12
-                value: row.start
                 accepts: "number"
+                objectName: `excludedRegion.start.${row.index}`
+                value: row.start
+
                 onCommitted: text => group.regions.setStart(row.index, Number(text))
             }
             TextCell {
-                objectName: `excludedRegion.end.${row.index}`
-                width: EaStyle.Sizes.fontPixelSize * 12
-                value: row.end
                 accepts: "number"
+                objectName: `excludedRegion.end.${row.index}`
+                value: row.end
+
                 onCommitted: text => group.regions.setEnd(row.index, Number(text))
             }
             EaComponents.TableViewButton {
-                objectName: `excludedRegion.remove.${row.index}`
-                fontIcon: "minus-circle"
                 ToolTip.text: qsTr("Remove this region")
+                fontIcon: "minus-circle"
+                objectName: `excludedRegion.remove.${row.index}`
+
                 onClicked: group.regions.remove(row.index)
             }
         }
+        header: EaComponents.ListViewHeader {
+            EaComponents.TableViewLabel {
+                text: qsTr("id")
+            }
+            EaComponents.TableViewLabel {
+                text: qsTr("start")
+            }
+            EaComponents.TableViewLabel {
+                text: qsTr("end")
+            }
+            EaComponents.TableViewLabel {
+            }
+        }
     }
-
     EaElements.SideBarButton {
-        objectName: "excludedRegions.append"
-        wide: true  // the row to itself, as the original's append actions fill theirs
         fontIcon: "plus-circle"
+        objectName: "excludedRegions.append"
         text: qsTr("Append new region")
+        wide: true  // the row to itself, as the original's append actions fill theirs
+
         onClicked: group.regions.append()
     }
 }
