@@ -25,7 +25,7 @@ QtObject {
     readonly property real fieldSpacing: unit * 0.5           // between fields of one GroupRow
     readonly property real groupContentSpacing: unit          // between rows inside a group
     readonly property real indexColumnWidth: unit * 2.5       // a table's row-number column
-    readonly property real iconColumnWidth: unit * 1.75        // a table's action-button column
+    readonly property real iconColumnWidth: EaStyle.Sizes.tableRowHeight        // a table's action-button column
     readonly property real dataIndexColumnWidth: unit * 3.5   // a data table's row number (up to 5 digits)
     readonly property real dataColumnWidth: unit * 6          // a data table's value column
     readonly property real fileColumnWidth: unit * 7          // an explorer table's file column
