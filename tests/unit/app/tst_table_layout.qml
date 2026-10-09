@@ -2,6 +2,7 @@
 import QtQuick
 import QtTest
 import EasyApplication.Gui.Style as EaStyle
+import EasyApplication.Gui.Components as EaComponents
 import edi.app
 
 Item {
@@ -22,6 +23,12 @@ Item {
                 width: 500
                 height: 30
             }
+        }
+    }
+    Component {
+        id: baseTableComponent
+        EaComponents.ListView {
+            model: undefined
         }
     }
     TestCase {
@@ -58,6 +65,15 @@ Item {
             compare(table.resolvedColumnWidths[4], 40);
             rows.setProperty(0, "label", "short");
             tryVerify(() => table.resolvedColumnWidths[1] < table.width * 0.25);
+        }
+        function test_base_selection_initializes_with_undefined_model() {
+            const table = createTemporaryObject(baseTableComponent, parent);
+            verify(table !== null);
+            compare(table.count, 0);
+            table.model = rows;
+            tryCompare(table, "count", 1);
+            table.model = undefined;
+            tryCompare(table, "count", 0);
         }
         function test_arrow_font_is_bundled_and_loaded() {
             tryCompare(EaStyle.Fonts.encodeSansRegular, "status", FontLoader.Ready);
