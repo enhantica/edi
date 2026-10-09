@@ -22,7 +22,7 @@ EaElements.GroupBox {
         DataTable {
             objectName: "recentProjects.list"
             defaultInfoText: qsTr("No recent projects")
-            model: RecentProjects.rows
+            sourceModel: RecentProjects.rows
             columnWidths: [numberColumnWidth, -1, EaStyle.Sizes.fontPixelSize * 4.5, AppSizes.iconColumnWidth]
             header: EaComponents.ListViewHeader {
                 EaComponents.TableViewLabel {

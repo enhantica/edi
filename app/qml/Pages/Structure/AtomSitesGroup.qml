@@ -27,7 +27,7 @@ Column {
         id: table
         objectName: "atomSites.list"
         defaultInfoText: qsTr("No atom sites defined")
-        model: group.sites
+        sourceModel: group.sites
 
         columnWidths: [numberColumnWidth, textColumnWidth("label", qsTr("label")), group.typeWidth, -1, -1, -1, group.wyckoffWidth, -1, AppSizes.iconColumnWidth]
 

@@ -33,7 +33,7 @@ EaElements.GroupBox {
             id: table
             objectName: "structures.list"
             defaultInfoText: qsTr("No structures defined")
-            model: group.project ? group.project.structures : null
+            sourceModel: group.project ? group.project.structures : null
 
             columnWidths: [numberColumnWidth, EaStyle.Sizes.tableRowHeight, -1, AppSizes.iconColumnWidth]
 

@@ -89,7 +89,7 @@ Column {
         objectName: "data.list"
         visible: group.experiment !== null && !group.experiment.calculationOnly
         defaultInfoText: qsTr("No measured points")
-        model: visible ? group.experiment.pattern : null
+        sourceModel: visible ? group.experiment.pattern : null
 
         columnWidths: [numberColumnWidth, -1, -1, -1, -1, -1, -1, -1, -1]
 

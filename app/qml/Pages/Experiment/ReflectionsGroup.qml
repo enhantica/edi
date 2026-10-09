@@ -25,7 +25,7 @@ DataTable {
 
     objectName: "reflections.list"
     defaultInfoText: qsTr("No reflections")
-    model: experiment ? experiment.reflections : null
+    sourceModel: experiment ? experiment.reflections : null
 
     columnWidths: [numberColumnWidth, -1, -1, -1, -1]
 

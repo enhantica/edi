@@ -24,7 +24,7 @@ DataTable {
 
     objectName: "fitStart.list"
     defaultInfoText: qsTr("No fit start state")
-    model: analysis ? analysis.fitStart : null
+    sourceModel: analysis ? analysis.fitStart : null
 
     columnWidths: [numberColumnWidth, textColumnWidth("id", qsTr("parameter")), -1, -1]
 

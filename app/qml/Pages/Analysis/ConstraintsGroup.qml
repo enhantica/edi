@@ -25,7 +25,7 @@ Column {
         id: table
         objectName: "constraints.list"
         defaultInfoText: qsTr("No constraints")
-        model: group.constraints
+        sourceModel: group.constraints
 
         columnWidths: [numberColumnWidth, EaStyle.Sizes.fontPixelSize * 7, -1, AppSizes.iconColumnWidth, AppSizes.iconColumnWidth]
 

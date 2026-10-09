@@ -23,7 +23,7 @@ Column {
     DataTable {
         objectName: "preferredOrientation.list"
         defaultInfoText: qsTr("No preferred orientation")
-        model: group.rows
+        sourceModel: group.rows
 
         columnWidths: [numberColumnWidth, textColumnWidth("structureId", qsTr("structure")), -1, -1, -1, -1, -1, AppSizes.iconColumnWidth]
 

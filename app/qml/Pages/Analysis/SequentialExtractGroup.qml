@@ -19,7 +19,7 @@ DataTable {
 
     objectName: "sequentialExtract.list"
     defaultInfoText: qsTr("No extraction rules")
-    model: analysis ? analysis.sequentialExtract : null
+    sourceModel: analysis ? analysis.sequentialExtract : null
 
     columnWidths: [numberColumnWidth, EaStyle.Sizes.fontPixelSize * 5, EaStyle.Sizes.fontPixelSize * 9, -1, EaStyle.Sizes.fontPixelSize * 4]
 

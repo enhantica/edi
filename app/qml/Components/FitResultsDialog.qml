@@ -57,7 +57,7 @@ AppDialog {
             anchors.fill: parent
             interactive: false
             defaultInfoText: ""
-            model: dialog.results
+            sourceModel: dialog.results
 
             columnWidths: [numberColumnWidth, EaStyle.Sizes.tableRowHeight, -1, EaStyle.Sizes.fontPixelSize * 10]
 

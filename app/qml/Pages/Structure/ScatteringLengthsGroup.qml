@@ -23,7 +23,7 @@ Column {
     DataTable {
         objectName: "scatteringLengths.list"
         defaultInfoText: qsTr("No custom scattering lengths: the built-in table applies")
-        model: group.lengths
+        sourceModel: group.lengths
 
         columnWidths: [numberColumnWidth, textColumnWidth("typeSymbol", qsTr("type")), -1, AppSizes.iconColumnWidth]
 

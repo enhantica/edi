@@ -9,6 +9,9 @@ import edi.app
 EaComponents.ListView {
     id: table
 
+    // The selection model needs an explicit empty model while a page is being attached.
+    property var sourceModel: null
+    model: sourceModel ?? null
     multiSelection: false
     readonly property real numberColumnWidth: Math.ceil(Math.max(metrics.advanceWidth("id"), metrics.advanceWidth(String(Math.max(1, count))))) + AppSizes.fieldSpacing * 2
     property int modelRevision: 0

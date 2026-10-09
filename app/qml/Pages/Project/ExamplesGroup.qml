@@ -26,7 +26,7 @@ EaElements.GroupBox {
             tallRows: true
             maxRowCountShow: 6
             defaultInfoText: qsTr("No examples available")
-            model: Session.examples
+            sourceModel: Session.examples
 
             columnWidths: [numberColumnWidth, -1]
 

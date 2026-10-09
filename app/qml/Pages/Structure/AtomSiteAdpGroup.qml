@@ -28,7 +28,7 @@ Column {
         id: table
         objectName: "atomSiteAdps.list"
         defaultInfoText: qsTr("No atom sites defined")
-        model: group.adps
+        sourceModel: group.adps
 
         readonly property string isoHeading: {
             const revision = modelRevision;

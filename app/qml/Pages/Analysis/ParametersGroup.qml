@@ -103,7 +103,7 @@ EaElements.GroupBox {
             // Reserve the controls below and half a row as a scroll cue (ADR-0028).
             maxRowCountShow: Math.max(1, Math.floor((group.tableViewportHeight - group.topPadding - group.bottomPadding - filters.height - sliderRow.height - 2 * AppSizes.groupContentSpacing) / tableRowHeight - 1.5))
             defaultInfoText: qsTr("No parameters")
-            model: ParameterFilterModel {
+            sourceModel: ParameterFilterModel {
                 id: filter
                 sourceModel: group.project ? group.project.parameters : null
             }

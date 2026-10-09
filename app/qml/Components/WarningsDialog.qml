@@ -65,7 +65,7 @@ AppDialog {
             anchors.fill: parent
             clip: true
             defaultInfoText: ""
-            model: dialog.messages
+            sourceModel: dialog.messages
 
             columnWidths: [EaStyle.Sizes.tableRowHeight, -1, AppSizes.iconColumnWidth]
 

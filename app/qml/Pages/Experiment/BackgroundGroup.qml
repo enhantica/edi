@@ -49,7 +49,7 @@ Column {
                 // At most four rows, then it scrolls (the owner, 2026-10-04; edi ADR-0017 §3).
                 maxRowCountShow: 4
                 defaultInfoText: qsTr("No background points")
-                model: group.points
+                sourceModel: group.points
 
                 columnWidths: [numberColumnWidth, -1, -1, AppSizes.iconColumnWidth]
 

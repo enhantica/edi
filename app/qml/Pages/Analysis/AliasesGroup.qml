@@ -25,7 +25,7 @@ Column {
         id: table
         objectName: "aliases.list"
         defaultInfoText: qsTr("No aliases")
-        model: group.aliases
+        sourceModel: group.aliases
 
         columnWidths: [numberColumnWidth, EaStyle.Sizes.fontPixelSize * 7, -1, AppSizes.iconColumnWidth]
 

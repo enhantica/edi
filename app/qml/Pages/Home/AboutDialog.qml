@@ -135,7 +135,7 @@ AppDialog {
                 height: AppSizes.aboutComponentsHeight
                 clip: true
                 defaultInfoText: ""
-                model: libraryRows
+                sourceModel: libraryRows
 
                 columnWidths: [-1, textColumnWidth("licence", qsTr("Licence"))]
 

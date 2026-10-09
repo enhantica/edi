@@ -29,7 +29,7 @@ Column {
 
         objectName: "linkedStructure.list"
         defaultInfoText: qsTr("No linked structure")
-        model: group.rows
+        sourceModel: group.rows
 
         columnWidths: [numberColumnWidth, EaStyle.Sizes.tableRowHeight, -1, EaStyle.Sizes.fontPixelSize * 8, AppSizes.iconColumnWidth, AppSizes.iconColumnWidth]
 

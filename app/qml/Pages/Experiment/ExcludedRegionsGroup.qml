@@ -22,7 +22,7 @@ Column {
     DataTable {
         objectName: "excludedRegions.list"
         defaultInfoText: qsTr("No excluded regions")
-        model: group.regions
+        sourceModel: group.regions
 
         columnWidths: [numberColumnWidth, -1, -1, AppSizes.iconColumnWidth]
 
