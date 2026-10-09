@@ -82,12 +82,6 @@ EaElements.GroupBox {
                 onTextChanged: filter.nameFilter = text
             }
             SearchableComboBox {
-                objectName: "parameters.variability"
-                width: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.fieldSpacing) / 3
-                model: [qsTr("All parameters (%1)").arg(group.project ? group.project.parameters.count : 0), qsTr("Free parameters (%1)").arg(group.project ? group.project.parameters.freeCount : 0), qsTr("Fixed parameters (%1)").arg(group.project ? group.project.parameters.fixedCount : 0)]
-                onActivated: index => filter.variability = index
-            }
-            SearchableComboBox {
                 id: categoryPicker
                 objectName: "parameters.category"
                 width: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.fieldSpacing) / 3
@@ -130,6 +124,12 @@ EaElements.GroupBox {
                         }
                     }
                 }
+            }
+            SearchableComboBox {
+                objectName: "parameters.variability"
+                width: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.fieldSpacing) / 3
+                model: [qsTr("All parameters (%1)").arg(group.project ? group.project.parameters.count : 0), qsTr("Free parameters (%1)").arg(group.project ? group.project.parameters.freeCount : 0), qsTr("Fixed parameters (%1)").arg(group.project ? group.project.parameters.fixedCount : 0)]
+                onActivated: index => filter.variability = index
             }
         }
 
