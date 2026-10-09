@@ -17,11 +17,11 @@ import edi.app
 // wordmark and the version are composed as on Home, from the one component (WordmarkWithVersion; edi
 // ADR-0017 §1).
 AppDialog {
-    standardButtons: Dialog.Ok
-    title: qsTr("About")
     visible: EaGlobals.Vars.showAppAboutDialog
-
     onClosed: EaGlobals.Vars.showAppAboutDialog = false
+
+    title: qsTr("About")
+    standardButtons: Dialog.Ok
 
     Column {
         spacing: EaStyle.Sizes.fontPixelSize * 2.0
@@ -49,7 +49,7 @@ AppDialog {
                     },
                     {
                         "name": "noticesLink",
-                        "title": qsTr("Dependent Open Source Licenses"),
+                        "title": qsTr("Dependent Open Source Libraries"),
                         "url": ApplicationInfo.noticesUrl
                     }
                 ]
@@ -59,16 +59,21 @@ AppDialog {
 
                     required property var modelData
 
+                    objectName: `about.${modelData.name}`
                     anchors.horizontalCenter: parent ? parent.horizontalCenter : undefined
                     color: EaStyle.Colors.link
-                    objectName: `about.${modelData.name}`
                     text: modelData.title
 
                     HoverHandler {
                         cursorShape: Qt.PointingHandCursor
                     }
                     TapHandler {
-                        onTapped: licenceDialog.showText(link.modelData.title, link.modelData.url)
+                        onTapped: {
+                            if (link.modelData.name === "noticesLink")
+                                librariesDialog.open();
+                            else
+                                licenceDialog.showText(link.modelData.title, link.modelData.url);
+                        }
                     }
                 }
             }
@@ -78,70 +83,107 @@ AppDialog {
         // with room for the words to break.
         EaElements.Label {
             id: descriptionLabel
-
-            anchors.horizontalCenter: parent.horizontalCenter
-            horizontalAlignment: Text.AlignHCenter
             objectName: "about.description"
-            text: ApplicationInfo.description
+            anchors.horizontalCenter: parent.horizontalCenter
             width: Math.ceil(descriptionMetrics.advanceWidth / 3 * 1.15)
+            horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.WordWrap
+            text: ApplicationInfo.description
 
             TextMetrics {
                 id: descriptionMetrics
-
                 font: descriptionLabel.font
                 text: descriptionLabel.text
             }
         }
 
-        // The components the app links or bundles, each with its licence: the list the bundled notices give.
-        DataTable {
-            id: components
-
-            anchors.horizontalCenter: parent.horizontalCenter
-            clip: true
-            columnWidths: [-1, AppSizes.aboutLicenceColumnWidth]
-            defaultInfoText: ""
-            height: AppSizes.aboutComponentsHeight
-            model: ApplicationInfo.componentNames
-            objectName: "about.components"
-            width: AppSizes.aboutComponentsWidth
-
-            delegate: EaComponents.ListViewDelegate {
-                id: row
-
-                required property int index
-                required property string modelData
-
-                EaComponents.TableViewLabel {
-                    ToolTip.text: ApplicationInfo.componentUses[row.index]
-                    horizontalAlignment: Text.AlignLeft
-                    text: row.modelData
-                }
-                EaComponents.TableViewLabel {
-                    horizontalAlignment: Text.AlignLeft
-                    text: ApplicationInfo.componentLicences[row.index]
-                }
-            }
-            header: EaComponents.ListViewHeader {
-                EaComponents.TableViewLabel {
-                    horizontalAlignment: Text.AlignLeft
-                    text: qsTr("Component")
-                }
-                EaComponents.TableViewLabel {
-                    horizontalAlignment: Text.AlignLeft
-                    text: qsTr("Licence")
-                }
-            }
-        }
-
         // The footer, as easydiffractionbeta's, naming the copyright holder
         EaElements.Label {
-            anchors.horizontalCenter: parent.horizontalCenter
             objectName: "about.copyright"
-            text: "© %1-%2 %3 • All rights reserved".arg(ApplicationInfo.developerYearsFrom).arg(ApplicationInfo.developerYearsTo).arg(ApplicationInfo.copyrightHolder)
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: "© %1-%2 %3".arg(ApplicationInfo.developerYearsFrom).arg(ApplicationInfo.developerYearsTo).arg(ApplicationInfo.copyrightHolder)
         }
     }
+
+    AppDialog {
+        id: librariesDialog
+        objectName: "about.librariesDialog"
+        parent: Overlay.overlay
+        title: qsTr("Dependent Open Source Libraries")
+        standardButtons: Dialog.Ok
+        contentWidth: AppSizes.aboutComponentsWidth
+        contentHeight: AppSizes.aboutComponentsHeight + EaStyle.Sizes.tableRowHeight + AppSizes.groupContentSpacing
+
+        ListModel {
+            id: libraryRows
+            Component.onCompleted: {
+                for (let index = 0; index < ApplicationInfo.componentNames.length; ++index)
+                    append({
+                        "component": ApplicationInfo.componentNames[index],
+                        "licence": ApplicationInfo.componentLicences[index],
+                        "use": ApplicationInfo.componentUses[index]
+                    });
+            }
+        }
+        Column {
+            spacing: AppSizes.groupContentSpacing
+            DataTable {
+                id: components
+
+                objectName: "about.components"
+                width: AppSizes.aboutComponentsWidth
+                height: AppSizes.aboutComponentsHeight
+                clip: true
+                defaultInfoText: ""
+                model: libraryRows
+
+                columnWidths: [-1, textColumnWidth("licence", qsTr("Licence"))]
+
+                header: EaComponents.ListViewHeader {
+                    EaComponents.TableViewLabel {
+                        horizontalAlignment: Text.AlignLeft
+                        text: qsTr("Component")
+                    }
+                    EaComponents.TableViewLabel {
+                        horizontalAlignment: Text.AlignLeft
+                        text: qsTr("Licence")
+                    }
+                }
+
+                delegate: EaComponents.ListViewDelegate {
+                    id: row
+
+                    required property int index
+                    required property string component
+                    required property string licence
+                    required property string use
+
+                    EaComponents.TableViewLabel {
+                        horizontalAlignment: Text.AlignLeft
+                        text: row.component
+                        ToolTip.text: row.use
+                    }
+                    EaComponents.TableViewLabel {
+                        horizontalAlignment: Text.AlignLeft
+                        text: row.licence
+                        ToolTip.text: row.licence
+                    }
+                }
+            }
+
+            EaElements.Label {
+                text: qsTr("Licences and notices")
+                color: EaStyle.Colors.link
+                HoverHandler {
+                    cursorShape: Qt.PointingHandCursor
+                }
+                TapHandler {
+                    onTapped: licenceDialog.showText(qsTr("Dependent Open Source Licenses"), ApplicationInfo.noticesUrl)
+                }
+            }
+        }
+    }
+
     LicenceTextDialog {
         id: licenceDialog
     }

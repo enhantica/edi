@@ -22,10 +22,25 @@ DataTable {
         return value === undefined ? "" : NumberText.plain(value, 8);
     }
 
-    columnWidths: [numberColumnWidth, -1, EaStyle.Sizes.fontPixelSize * 6, EaStyle.Sizes.fontPixelSize * 6]
+    objectName: "fitStart.list"
     defaultInfoText: qsTr("No fit start state")
     model: analysis ? analysis.fitStart : null
-    objectName: "fitStart.list"
+
+    columnWidths: [numberColumnWidth, -1, EaStyle.Sizes.fontPixelSize * 6, EaStyle.Sizes.fontPixelSize * 6]
+
+    header: EaComponents.ListViewHeader {
+        EaComponents.TableViewLabel {}
+        EaComponents.TableViewLabel {
+            horizontalAlignment: Text.AlignLeft
+            text: qsTr("parameter")
+        }
+        EaComponents.TableViewLabel {
+            text: qsTr("start value")
+        }
+        EaComponents.TableViewLabel {
+            text: qsTr("start error")
+        }
+    }
 
     delegate: EaComponents.ListViewDelegate {
         id: row
@@ -39,30 +54,16 @@ DataTable {
             text: row.index + 1
         }
         EaComponents.TableViewLabel {
-            ToolTip.text: row.model.id
-            elide: Text.ElideMiddle
             horizontalAlignment: Text.AlignLeft
+            elide: Text.ElideMiddle
             text: row.model.id
+            ToolTip.text: row.model.id
         }
         EaComponents.TableViewLabel {
             text: table.shown(row.model.startValue)
         }
         EaComponents.TableViewLabel {
             text: table.shown(row.model.startUncertainty)
-        }
-    }
-    header: EaComponents.ListViewHeader {
-        EaComponents.TableViewLabel {
-        }
-        EaComponents.TableViewLabel {
-            horizontalAlignment: Text.AlignLeft
-            text: qsTr("parameter")
-        }
-        EaComponents.TableViewLabel {
-            text: qsTr("start value")
-        }
-        EaComponents.TableViewLabel {
-            text: qsTr("start error")
         }
     }
 }

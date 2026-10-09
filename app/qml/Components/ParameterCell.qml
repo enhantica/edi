@@ -19,29 +19,26 @@ import edi.app
 EaComponents.TableViewParameter {
     id: cell
 
-    // A fixed setting is edited but never fitted: no fit toggle.
-    readonly property bool canFit: refinable && (item === null || item.fittable)
     property ParameterItem item: null
-    readonly property bool outsideRange: item !== null && item.outsideRange
-    readonly property bool refinable: item === null || item.refinable
-    readonly property string refusal: typedRefusal !== "" ? typedRefusal : item !== null ? item.lastError : ""
     // Why the last typed text was refused before reaching the core; the core's own refusal is the item's.
     property string typedRefusal: ""
+    readonly property string refusal: typedRefusal !== "" ? typedRefusal : item !== null ? item.lastError : ""
+    readonly property bool outsideRange: item !== null && item.outsideRange
+    readonly property bool refinable: item === null || item.refinable
+    // A fixed setting is edited but never fitted: no fit toggle.
+    readonly property bool canFit: refinable && (item === null || item.fittable)
 
-    // Return and leaving the cell both commit; the second of the two finds nothing new.
-    function commit() {
-        if (item !== null && text !== cell.value) {
-            typedRefusal = TypedInput.refusal(text, "number");
-            if (typedRefusal === "") {
-                item.value = Number(text);
-            }
-            text = Qt.binding(() => cell.value);
-        }
+    onActiveFocusChanged: if (!activeFocus)
+        cursorPosition = 0
+    onTextChanged: if (!activeFocus)
+        cursorPosition = 0
+    color: warned ? EaStyle.Colors.red : !enabled || readOnly ? EaStyle.Colors.themeForegroundMinor : item && item.free && canFit ? EaStyle.Colors.chartForegroundsExtra[1] : EaStyle.Colors.themeForeground
+
+    EaElements.ToolTip {
+        text: cell.text
+        visible: cell.contentWidth > cell.width && cell.hovered && !cell.activeFocus && cell.refusal === "" && EaGlobals.Vars.showToolTips
     }
 
-    ToolTip.text: refusal !== "" ? refusal : outsideRange ? qsTr("Outside its range, %1 to %2").arg(item.minimum).arg(item.maximum) : ""
-    ToolTip.visible: ToolTip.text !== "" && (hovered || activeFocus)
-    color: warned ? EaStyle.Colors.red : !enabled || readOnly ? EaStyle.Colors.themeForegroundMinor : item && item.free && canFit ? EaStyle.Colors.chartForegroundsExtra[1] : EaStyle.Colors.themeForeground
     enabled: refinable
     // The value and its uncertainty as text, by the app's one rule for numbers in cells (NumberText).
     parameter: item ? {
@@ -54,20 +51,25 @@ EaComponents.TableViewParameter {
         "name": item.name,
         "units": item.displayUnits
     } : ({})
-    warned: refusal !== "" || outsideRange
 
+    warned: refusal !== "" || outsideRange
+    ToolTip.text: refusal !== "" ? refusal : outsideRange ? qsTr("Outside its range, %1 to %2").arg(item.minimum).arg(item.maximum) : ""
+    ToolTip.visible: ToolTip.text !== "" && (hovered || activeFocus)
+
+    onValueChanged: typedRefusal = ""
+    onAccepted: commit()
+    onEditingFinished: commit()
+
+    // Return and leaving the cell both commit; the second of the two finds nothing new.
+    function commit() {
+        if (item !== null && text !== cell.value) {
+            typedRefusal = TypedInput.refusal(text, "number");
+            if (typedRefusal === "") {
+                item.value = Number(text);
+            }
+            text = Qt.binding(() => cell.value);
+        }
+    }
     fitCheckBox.onToggled: if (item !== null)
         item.free = fitCheckBox.checked
-    onAccepted: commit()
-    onActiveFocusChanged: if (!activeFocus)
-        cursorPosition = 0
-    onEditingFinished: commit()
-    onTextChanged: if (!activeFocus)
-        cursorPosition = 0
-    onValueChanged: typedRefusal = ""
-
-    EaElements.ToolTip {
-        text: cell.text
-        visible: cell.contentWidth > cell.width && cell.hovered && !cell.activeFocus && cell.refusal === "" && EaGlobals.Vars.showToolTips
-    }
 }

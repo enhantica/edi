@@ -21,99 +21,96 @@ import edi.app
 AppDialog {
     id: dialog
 
+    readonly property WarningListModel messages: Session.loadWarnings
+
+    objectName: "warnings"
+    title: qsTr("Messages")
+    standardButtons: Dialog.Ok
     // The table's height fits its rows (the header is hidden, as Examples' and Recent projects'): at least one
     // one-line row, at most what keeps the dialog inside the window between the app bar and the status bar
     // less a margin at each, above which it scrolls. The width is fixed. The content is sized explicitly, as
     // AppPreferencesDialog's is: a ListView has no implicit size (edi ADR-0017 §14).
     readonly property real chromeHeight: implicitHeaderHeight + implicitFooterHeight + topPadding + bottomPadding + 2 * spacing
     readonly property real maximumListHeight: Math.max(EaStyle.Sizes.tableRowHeight, (parent ? parent.height : 0) - EaStyle.Sizes.appBarHeight - EaStyle.Sizes.statusBarHeight - 2 * EaStyle.Sizes.fontPixelSize - chromeHeight)
-    readonly property WarningListModel messages: Session.loadWarnings
 
-    contentHeight: listArea.height
     contentWidth: listArea.width
-    objectName: "warnings"
-    standardButtons: Dialog.Ok
-    title: qsTr("Messages")
+    contentHeight: listArea.height
+
+    onOpened: if (dialog.messages)
+        dialog.messages.markViewed()
 
     footer: EaElements.DialogButtonBox {
         EaElements.Button {
-            DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
-            enabled: dialog.messages !== null && dialog.messages.count > 0
             objectName: "warnings.dismissAll"
+            enabled: dialog.messages !== null && dialog.messages.count > 0
             text: qsTr("Dismiss all")
-
+            DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
             onClicked: if (dialog.messages)
                 dialog.messages.dismissAll()
         }
     }
-
-    onOpened: if (dialog.messages)
-        dialog.messages.markViewed()
 
     // The table, its empty state, and the table's frame drawn again above both, so rows and the empty state
     // never cover its edges.
     Item {
         id: listArea
 
-        height: Math.min(dialog.maximumListHeight, Math.max(table.tableRowHeight, table.contentHeight))
         width: AppSizes.messagesDialogContentWidth
+        height: Math.min(dialog.maximumListHeight, Math.max(table.tableRowHeight, table.contentHeight))
 
         DataTable {
             id: table
 
+            objectName: "warnings.list"
             anchors.fill: parent
             clip: true
-            columnWidths: [EaStyle.Sizes.tableRowHeight, -1, AppSizes.iconColumnWidth]
             defaultInfoText: ""
             model: dialog.messages
-            objectName: "warnings.list"
+
+            columnWidths: [EaStyle.Sizes.tableRowHeight, -1, AppSizes.iconColumnWidth]
+
+            header: EaComponents.ListViewHeader {
+                visible: false
+                implicitHeight: 0
+                EaComponents.TableViewLabel {}
+                EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignLeft
+                }
+                EaComponents.TableViewLabel {}
+            }
 
             delegate: EaComponents.ListViewDelegate {
                 id: row
 
                 required property int index
-                readonly property bool isError: severity === "error"
                 required property string message
                 required property string severity
+                readonly property bool isError: severity === "error"
 
                 height: Math.max(table.tableRowHeight, messageCell.implicitHeight + EaStyle.Sizes.fontPixelSize)
 
                 IconCell {
+                    objectName: `warnings.kind.${row.index}`
                     icon: row.isError ? "times-circle" : "exclamation-triangle"
                     iconColor: String(row.isError ? EaStyle.Colors.red : EaStyle.Colors.orange)
-                    objectName: `warnings.kind.${row.index}`
                     toolTip: row.isError ? qsTr("Error") : qsTr("Warning")
                 }
                 EaComponents.TableViewLabel {
                     id: messageCell
-
-                    color: row.isError ? EaStyle.Colors.red : EaStyle.Colors.themeForeground
-                    elide: Text.ElideNone
-                    horizontalAlignment: Text.AlignLeft
                     objectName: `warnings.message.${row.index}`
-                    text: row.message
+                    horizontalAlignment: Text.AlignLeft
+                    elide: Text.ElideNone
                     wrapMode: Text.Wrap
+                    color: row.isError ? EaStyle.Colors.red : EaStyle.Colors.themeForeground
+                    text: row.message
                 }
                 EaComponents.TableViewButton {
-                    ToolTip.text: qsTr("Dismiss this message")
+                    objectName: `warnings.dismiss.${row.index}`
                     anchors.verticalCenter: parent.verticalCenter
                     fontIcon: "minus-circle"
-                    objectName: `warnings.dismiss.${row.index}`
-
+                    ToolTip.text: qsTr("Dismiss this message")
                     onClicked: if (dialog.messages)
                         dialog.messages.dismiss(row.index)
-                }
-            }
-            header: EaComponents.ListViewHeader {
-                implicitHeight: 0
-                visible: false
-
-                EaComponents.TableViewLabel {
-                }
-                EaComponents.TableViewLabel {
-                    horizontalAlignment: Text.AlignLeft
-                }
-                EaComponents.TableViewLabel {
                 }
             }
         }
@@ -121,8 +118,8 @@ AppDialog {
         // Empty: a muted icon and "No messages" on one line in the middle of the one-row area.
         Rectangle {
             anchors.fill: parent
-            color: EaStyle.Colors.themeBackground
             visible: table.count === 0
+            color: EaStyle.Colors.themeBackground
 
             Row {
                 anchors.centerIn: parent
@@ -130,22 +127,23 @@ AppDialog {
 
                 EaElements.Label {
                     anchors.verticalCenter: parent.verticalCenter
-                    color: EaStyle.Colors.themeForegroundDisabled
                     font.family: EaStyle.Fonts.iconsFamily
+                    color: EaStyle.Colors.themeForegroundDisabled
                     text: "inbox"
                 }
                 EaElements.Label {
+                    objectName: "warnings.empty"
                     anchors.verticalCenter: parent.verticalCenter
                     color: EaStyle.Colors.themeForegroundDisabled
-                    objectName: "warnings.empty"
                     text: qsTr("No messages")
                 }
             }
         }
+
         Rectangle {
             anchors.fill: parent
-            border.color: EaStyle.Colors.appBarComboBoxBorder
             color: "transparent"
+            border.color: EaStyle.Colors.appBarComboBoxBorder
         }
     }
 }

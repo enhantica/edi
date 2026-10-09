@@ -23,10 +23,29 @@ DataTable {
         return value === undefined || isNaN(value) ? "" : NumberText.plain(value, 10);
     }
 
-    columnWidths: [numberColumnWidth, -1, -1, -1, -1]
+    objectName: "reflections.list"
     defaultInfoText: qsTr("No reflections")
     model: experiment ? experiment.reflections : null
-    objectName: "reflections.list"
+
+    columnWidths: [numberColumnWidth, -1, -1, -1, -1]
+
+    header: EaComponents.ListViewHeader {
+        EaComponents.TableViewLabel {
+            text: qsTr("id")
+        }
+        EaComponents.TableViewLabel {
+            text: qsTr("h k l")
+        }
+        EaComponents.TableViewLabel {
+            text: qsTr("d (Å)")
+        }
+        EaComponents.TableViewLabel {
+            text: table.timeOfFlight ? qsTr("TOF (µs)") : qsTr("2θ (°)")
+        }
+        EaComponents.TableViewLabel {
+            text: qsTr("F² calc")
+        }
+    }
 
     delegate: EaComponents.ListViewDelegate {
         id: row
@@ -49,23 +68,6 @@ DataTable {
         }
         EaComponents.TableViewLabel {
             text: table.shown(row.model.fSquaredCalc)
-        }
-    }
-    header: EaComponents.ListViewHeader {
-        EaComponents.TableViewLabel {
-            text: qsTr("id")
-        }
-        EaComponents.TableViewLabel {
-            text: qsTr("h k l")
-        }
-        EaComponents.TableViewLabel {
-            text: qsTr("d (Å)")
-        }
-        EaComponents.TableViewLabel {
-            text: table.timeOfFlight ? qsTr("TOF (µs)") : qsTr("2θ (°)")
-        }
-        EaComponents.TableViewLabel {
-            text: qsTr("F² calc")
         }
     }
 }

@@ -18,24 +18,21 @@ EaElements.GroupRow {
 
     Repeater {
         model: row.experiment ? row.experiment.scatteringSource : null
-
         delegate: Item {
             id: item
 
             required property var model
 
-            height: selector.height
             width: (EaStyle.Sizes.sideBarContentWidth - (row.experiment.scatteringSource.count - 1) * AppSizes.fieldSpacing) / row.experiment.scatteringSource.count
+            height: selector.height
 
             SelectorField {
                 id: selector
-
-                label: item.model.isDeclared ? item.model.name : qsTr("%1 (default)").arg(item.model.name)
                 objectName: `scatteringSource.${item.model.name}`
+                width: item.width
+                label: item.model.isDeclared ? item.model.name : qsTr("%1 (default)").arg(item.model.name)
                 options: item.model.options
                 token: item.model.effectiveToken
-                width: item.width
-
                 onSelected: token => row.experiment.scatteringSource.select(item.model.name, token)
             }
         }

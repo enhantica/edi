@@ -17,12 +17,10 @@ EaElements.GroupRow {
 
     ValueField {
         id: cutoffField
-
-        accepts: "number"
-        fieldValue: group.experiment ? group.experiment.cutoffFwhm : ""
-        label: qsTr("cutoff (FWHM)")
         objectName: "peak.cutoff_fwhm"
-
+        label: qsTr("cutoff (FWHM)")
+        fieldValue: group.experiment ? group.experiment.cutoffFwhm : ""
+        accepts: "number"
         onCommitted: text => group.experiment.cutoffFwhm = Number(text)
     }
 
@@ -31,17 +29,16 @@ EaElements.GroupRow {
     // up: the base sizes a text field's box by its text and padding and a sidebar button by a fixed token,
     // which differ (edi ADR-0017 §4).
     Item {
-        anchors.bottom: parent.bottom
-        height: autoButton.height
         width: autoButton.width
+        height: autoButton.height
+        anchors.bottom: parent.bottom
 
         EaElements.SideBarButton {
             id: autoButton
-
-            enabled: false
-            fontIcon: "magic"
             height: cutoffField.height - cutoffField.topInset
             objectName: "peak.cutoff_fwhm.auto"
+            enabled: false
+            fontIcon: "magic"
             text: qsTr("Set automatically")
         }
         HoverHandler {

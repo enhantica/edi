@@ -13,56 +13,58 @@ import edi.app
 // Examples (easydiffractionbeta Pages/Project/SideBarBasic/Examples.qml): every project of edi's CLI
 // registry, then the app's X-ray example; a row opens its project.
 EaElements.GroupBox {
-    icon: "database"
     objectName: "group.examples"
     title: qsTr("Examples")
+    icon: "database"
 
     // A Column gives the group its content height (a ListView has no implicit height).
     Column {
         DataTable {
             id: tableView
+            objectName: "examples.list"
+
+            tallRows: true
+            maxRowCountShow: 6
+            defaultInfoText: qsTr("No examples available")
+            model: Session.examples
 
             columnWidths: [numberColumnWidth, -1]
-            defaultInfoText: qsTr("No examples available")
-            maxRowCountShow: 6
-            model: Session.examples
-            objectName: "examples.list"
-            tallRows: true
 
-            delegate: EaComponents.ListViewDelegate {
-                id: row
-
-                required property string description
-                required property string exampleId
-                required property int index
-                required property string name
-
-                objectName: `examples.open.${exampleId}`
-
-                TapHandler {
-                    onTapped: Session.openExample(row.exampleId)
-                }
-                EaComponents.TableViewLabel {
-                    color: EaStyle.Colors.themeForegroundMinor
-                    text: row.index + 1
-                }
-                EaComponents.TableViewTwoRowsAdvancedLabel {
-                    ToolTip.text: row.exampleId
-                    fontIcon: "archive"
-                    minorText: row.description
-                    text: row.name
-                }
-            }
             header: EaComponents.ListViewHeader {
-                implicitHeight: 0
                 visible: false
-
+                implicitHeight: 0
                 EaComponents.TableViewLabel {
                     enabled: false
                 }
                 EaComponents.TableViewLabel {
                     horizontalAlignment: Text.AlignLeft
                     text: qsTr("name / description")
+                }
+            }
+
+            delegate: EaComponents.ListViewDelegate {
+                id: row
+
+                required property int index
+                required property string exampleId
+                required property string name
+                required property string description
+
+                objectName: `examples.open.${exampleId}`
+                TapHandler {
+                    onTapped: Session.openExample(row.exampleId)
+                }
+
+                EaComponents.TableViewLabel {
+                    color: EaStyle.Colors.themeForegroundMinor
+                    text: row.index + 1
+                }
+
+                EaComponents.TableViewTwoRowsAdvancedLabel {
+                    fontIcon: "archive"
+                    text: row.name
+                    minorText: row.description
+                    ToolTip.text: row.exampleId
                 }
             }
         }

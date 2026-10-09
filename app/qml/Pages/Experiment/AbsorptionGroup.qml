@@ -16,11 +16,10 @@ Column {
 
     EaElements.GroupRow {
         SelectorField {
-            label: qsTr("type")
             objectName: "absorption.type"
+            label: qsTr("type")
             options: group.experiment ? group.experiment.absorptionTypeOptions : null
             token: group.experiment ? group.experiment.absorptionType : ""
-
             onSelected: token => group.experiment.absorptionType = token
         }
     }
@@ -29,7 +28,7 @@ Column {
     // ABSCOR2 half each.
     ParameterGrid {
         fields: group.experiment ? group.experiment.absorption : null
-        fillRows: true
         prefix: "absorption"
+        fillRows: true
     }
 }

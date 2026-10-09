@@ -9,8 +9,9 @@ import edi.app
 EaComponents.ListView {
     id: table
 
-    property int modelRevision: 0
+    multiSelection: false
     readonly property real numberColumnWidth: Math.ceil(Math.max(metrics.advanceWidth("id"), metrics.advanceWidth(String(Math.max(1, count))))) + AppSizes.fieldSpacing * 2
+    property int modelRevision: 0
 
     function textColumnWidth(role: string, title: string): real {
         const revision = modelRevision;
@@ -22,26 +23,22 @@ EaComponents.ListView {
         return Math.ceil(result) + AppSizes.fieldSpacing * 2;
     }
 
-    multiSelection: false
-
     FontMetrics {
         id: metrics
-
         font.family: EaStyle.Fonts.fontFamily
         font.pixelSize: EaStyle.Sizes.fontPixelSize
     }
     Connections {
-        function onCountChanged() {
+        target: table.model
+        ignoreUnknownSignals: true
+        function onDataChanged() {
             table.modelRevision++;
         }
-        function onDataChanged() {
+        function onCountChanged() {
             table.modelRevision++;
         }
         function onModelReset() {
             table.modelRevision++;
         }
-
-        ignoreUnknownSignals: true
-        target: table.model
     }
 }

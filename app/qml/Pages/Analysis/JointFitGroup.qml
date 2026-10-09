@@ -17,28 +17,41 @@ DataTable {
 
     property ProjectViewModel project: null
 
+    objectName: "jointFit.list"
+    defaultInfoText: qsTr("No joint-fit weights")
+    model: project ? project.experiments : null
+
     // The common table design (edi ADR-0017 §8): No., the experiment's icon in its colour, its name, then the
     // weight, a number centred at display precision as every table's numbers.
     columnWidths: [numberColumnWidth, EaStyle.Sizes.tableRowHeight, -1, EaStyle.Sizes.fontPixelSize * 8]
-    defaultInfoText: qsTr("No joint-fit weights")
-    model: project ? project.experiments : null
-    objectName: "jointFit.list"
+
+    header: EaComponents.ListViewHeader {
+        EaComponents.TableViewLabel {}
+        EaComponents.TableViewLabel {}
+        EaComponents.TableViewLabel {
+            horizontalAlignment: Text.AlignLeft
+            text: qsTr("experiment")
+        }
+        EaComponents.TableViewLabel {
+            text: qsTr("weight")
+        }
+    }
 
     delegate: EaComponents.ListViewDelegate {
         id: row
 
-        required property ExperimentViewModel experiment
         required property int index  // the base delegate's row colour reads it
         required property string name
+        required property ExperimentViewModel experiment
 
         EaComponents.TableViewLabel {
             color: EaStyle.Colors.themeForegroundMinor
             text: row.index + 1
         }
         IconCell {
+            objectName: `jointFit.color.${row.index}`
             icon: "microscope"
             iconColor: AppColors.experiment(row.index)
-            objectName: `jointFit.color.${row.index}`
             toolTip: qsTr("Measured pattern color")
         }
         EaComponents.TableViewLabel {
@@ -46,24 +59,10 @@ DataTable {
             text: row.name
         }
         TextCell {
-            accepts: "number"
             objectName: `jointFit.weight.${row.index}`
+            accepts: "number"
             value: row.experiment ? row.experiment.datasetWeight : ""
-
             onCommitted: text => row.experiment.datasetWeight = Number(text)
-        }
-    }
-    header: EaComponents.ListViewHeader {
-        EaComponents.TableViewLabel {
-        }
-        EaComponents.TableViewLabel {
-        }
-        EaComponents.TableViewLabel {
-            horizontalAlignment: Text.AlignLeft
-            text: qsTr("experiment")
-        }
-        EaComponents.TableViewLabel {
-            text: qsTr("weight")
         }
     }
 }

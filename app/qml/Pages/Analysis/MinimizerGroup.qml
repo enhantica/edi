@@ -15,45 +15,42 @@ Grid {
     property AnalysisViewModel analysis: null
     readonly property real fieldWidth: (EaStyle.Sizes.sideBarContentWidth - row.columnSpacing) / 2
 
-    columnSpacing: AppSizes.fieldSpacing
     columns: 2
+    columnSpacing: AppSizes.fieldSpacing
     rowSpacing: AppSizes.groupContentSpacing
 
     SelectorField {
-        label: qsTr("minimizer")
         objectName: "minimizer.type"
+        width: row.fieldWidth
+        label: qsTr("minimizer")
         options: row.analysis ? row.analysis.minimizerTypeOptions : null
         token: row.analysis ? row.analysis.minimizerType : ""
-        width: row.fieldWidth
     }
     SelectorField {
-        label: qsTr("descent")
         objectName: "minimizer.descent"
+        width: row.fieldWidth
+        label: qsTr("descent")
         options: row.analysis ? row.analysis.descentOptions : null
         token: row.analysis ? row.analysis.descent : ""
-        width: row.fieldWidth
-
         onSelected: token => row.analysis.descent = token
     }
     ValueField {
-        accepts: "integer"
+        objectName: "minimizer.maxIterations"
+        width: row.fieldWidth
+        label: qsTr("max iterations")
         // The declared bound, or the fit's own when none is declared: the value the fit uses, as the
         // tolerance beside it (edi ADR-0017 §5).
         fieldValue: !row.analysis ? "" : row.analysis.hasMaxIterations ? row.analysis.maxIterations : row.analysis.defaultMaxIterations
-        label: qsTr("max iterations")
-        objectName: "minimizer.maxIterations"
-        width: row.fieldWidth
-
+        accepts: "integer"
         onCommitted: text => row.analysis.maxIterations = Number(text)
     }
     ValueField {
-        accepts: "number"
-        // The declared tolerance, or crysta's default when none is declared: the value the fit uses.
-        fieldValue: !row.analysis ? "" : row.analysis.hasChiSquareTolerance ? row.analysis.chiSquareTolerance : row.analysis.defaultChiSquareTolerance
-        label: qsTr("tolerance")
         objectName: "minimizer.chiSquareTolerance"
         width: row.fieldWidth
-
+        label: qsTr("tolerance")
+        // The declared tolerance, or crysta's default when none is declared: the value the fit uses.
+        fieldValue: !row.analysis ? "" : row.analysis.hasChiSquareTolerance ? row.analysis.chiSquareTolerance : row.analysis.defaultChiSquareTolerance
+        accepts: "number"
         onCommitted: text => row.analysis.chiSquareTolerance = Number(text)
     }
 }

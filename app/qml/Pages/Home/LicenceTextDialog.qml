@@ -64,8 +64,8 @@ AppDialog {
             width: parent.width
             readOnly: true
             wrapMode: TextEdit.Wrap
-            textFormat: dialog.url.endsWith(".md") ? TextEdit.MarkdownText : TextEdit.PlainText
-            font.family: EaStyle.Fonts.monoFontFamily
+            textFormat: (dialog.url.endsWith(".md") || dialog.url === ApplicationInfo.noticesUrl) ? TextEdit.MarkdownText : TextEdit.PlainText
+            font.family: textFormat === TextEdit.MarkdownText ? EaStyle.Fonts.fontFamily : EaStyle.Fonts.monoFontFamily
             text: dialog.url ? ApplicationInfo.licenceText(dialog.url) : ""
             onLinkActivated: link => dialog.followLink(link)
 

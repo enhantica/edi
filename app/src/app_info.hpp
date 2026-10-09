@@ -82,7 +82,7 @@ class ApplicationInfo : public QObject {
    public:
     QString description() const;
     // The holder of the copyright in edi's source (LICENSE), named in the About dialog.
-    QString copyrightHolder() const { return QStringLiteral("Enhantica contributors"); }
+    QString copyrightHolder() const { return QStringLiteral("EasyScience contributors"); }
     // The About dialog's copyright years, as easydiffractionbeta's (Gui/Globals/Configs.qml): from the
     // EasyDiffraction project's first year to the current release's.
     QString developerYearsFrom() const { return QStringLiteral("2019"); }

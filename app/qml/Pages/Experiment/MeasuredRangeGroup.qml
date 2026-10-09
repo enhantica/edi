@@ -21,12 +21,21 @@ import edi.app
 Column {
     id: group
 
-    readonly property bool editable: experiment !== null && experiment.calculationOnly
     property ExperimentViewModel experiment: null
     readonly property RangeViewModel range: experiment ? experiment.measuredRange : null
     readonly property bool timeOfFlight: experiment !== null && experiment.beamMode === ExperimentViewModel.TimeOfFlight
     readonly property string units: timeOfFlight ? "µs" : "°"
+    readonly property bool editable: experiment !== null && experiment.calculationOnly
 
+    // The axis by the app's one rule for numbers (NumberText); an intensity first rounded to three decimals,
+    // so a calculated value that is effectively zero (1e-46 at a pattern's tail, its digits floating-point
+    // noise that differs by platform) reads 0. The table shows the data, it does not edit it.
+    function shown(value) {
+        return value === undefined || isNaN(value) ? "" : NumberText.plain(value, 10);
+    }
+    function intensity(value) {
+        return value === undefined || isNaN(value) ? "" : NumberText.plain(Number(value.toFixed(3)), 10);
+    }
     // "inc": the steps at the base's default precision, as ValueField shows a number.
     function increment(summary) {
         if (!summary)
@@ -35,66 +44,84 @@ Column {
         const largest = EaLogic.Utils.toDefaultPrecision(summary.stepMaximum);
         return smallest === largest ? summary.step : `${smallest}–${largest}`;
     }
-    function intensity(value) {
-        return value === undefined || isNaN(value) ? "" : NumberText.plain(Number(value.toFixed(3)), 10);
-    }
-
-    // The axis by the app's one rule for numbers (NumberText); an intensity first rounded to three decimals,
-    // so a calculated value that is effectively zero (1e-46 at a pattern's tail, its digits floating-point
-    // noise that differs by platform) reads 0. The table shows the data, it does not edit it.
-    function shown(value) {
-        return value === undefined || isNaN(value) ? "" : NumberText.plain(value, 10);
-    }
 
     spacing: AppSizes.groupContentSpacing
 
     EaElements.GroupRow {
         ValueField {
-            accepts: "number"
-            editable: group.editable
-            fieldValue: group.range ? group.range.minimum : ""
-            label: qsTr("min")
             objectName: "range.minimum"
-            unit: group.units
-
+            editable: group.editable
             onCommitted: text => group.experiment.setRange(Number(text), group.range.maximum, group.range.step)
+            accepts: "number"
+            label: qsTr("min")
+            unit: group.units
+            fieldValue: group.range ? group.range.minimum : ""
         }
         ValueField {
-            accepts: "number"
-            editable: group.editable
-            fieldValue: group.range ? group.range.maximum : ""
-            label: qsTr("max")
             objectName: "range.maximum"
-            unit: group.units
-
-            onCommitted: text => group.experiment.setRange(group.range.minimum, Number(text), group.range.step)
-        }
-        ValueField {
-            accepts: "number"
             editable: group.editable
-            fieldValue: group.increment(group.range)
-            label: qsTr("inc")
-            objectName: "range.step"
+            onCommitted: text => group.experiment.setRange(group.range.minimum, Number(text), group.range.step)
+            accepts: "number"
+            label: qsTr("max")
             unit: group.units
-
-            onCommitted: text => group.experiment.setRange(group.range.minimum, group.range.maximum, Number(text))
+            fieldValue: group.range ? group.range.maximum : ""
         }
         ValueField {
-            accepts: "integer"
-            editable: false
-            fieldValue: group.range ? group.range.points : ""
-            label: qsTr("points")
+            objectName: "range.step"
+            editable: group.editable
+            onCommitted: text => group.experiment.setRange(group.range.minimum, group.range.maximum, Number(text))
+            accepts: "number"
+            label: qsTr("inc")
+            unit: group.units
+            fieldValue: group.increment(group.range)
+        }
+        ValueField {
             objectName: "range.points"
+            editable: false
+            accepts: "integer"
+            label: qsTr("points")
+            fieldValue: group.range ? group.range.points : ""
         }
     }
+
     DataTable {
         id: table
-
-        columnWidths: [numberColumnWidth, -1, -1, -1, -1, -1, -1, -1, -1]
-        defaultInfoText: qsTr("No measured points")
-        model: visible ? group.experiment.pattern : null
         objectName: "data.list"
         visible: group.experiment !== null && !group.experiment.calculationOnly
+        defaultInfoText: qsTr("No measured points")
+        model: visible ? group.experiment.pattern : null
+
+        columnWidths: [numberColumnWidth, -1, -1, -1, -1, -1, -1, -1, -1]
+
+        header: EaComponents.ListViewHeader {
+            EaComponents.TableViewLabel {
+                text: qsTr("id")
+            }
+            EaComponents.TableViewLabel {
+                text: group.timeOfFlight ? qsTr("TOF (µs)") : qsTr("2θ (°)")
+            }
+            EaComponents.TableViewLabel {
+                text: qsTr("I meas")
+            }
+            EaComponents.TableViewLabel {
+                text: qsTr("σ(I meas)")
+            }
+            EaComponents.TableViewLabel {
+                text: qsTr("I calc")
+            }
+            EaComponents.TableViewLabel {
+                text: qsTr("d (Å)")
+            }
+            EaComponents.TableViewLabel {
+                text: qsTr("I bkg")
+            }
+            EaComponents.TableViewLabel {
+                text: qsTr("meas − calc")
+            }
+            EaComponents.TableViewLabel {
+                text: qsTr("status")
+            }
+        }
 
         delegate: EaComponents.ListViewDelegate {
             id: row
@@ -130,35 +157,6 @@ Column {
             }
             EaComponents.TableViewLabel {
                 text: table.model.stale ? qsTr("pending") : table.model.calculationError ? qsTr("failed") : row.model.calcStatus ?? ""
-            }
-        }
-        header: EaComponents.ListViewHeader {
-            EaComponents.TableViewLabel {
-                text: qsTr("id")
-            }
-            EaComponents.TableViewLabel {
-                text: group.timeOfFlight ? qsTr("TOF (µs)") : qsTr("2θ (°)")
-            }
-            EaComponents.TableViewLabel {
-                text: qsTr("I meas")
-            }
-            EaComponents.TableViewLabel {
-                text: qsTr("σ(I meas)")
-            }
-            EaComponents.TableViewLabel {
-                text: qsTr("I calc")
-            }
-            EaComponents.TableViewLabel {
-                text: qsTr("d (Å)")
-            }
-            EaComponents.TableViewLabel {
-                text: qsTr("I bkg")
-            }
-            EaComponents.TableViewLabel {
-                text: qsTr("meas − calc")
-            }
-            EaComponents.TableViewLabel {
-                text: qsTr("status")
             }
         }
     }

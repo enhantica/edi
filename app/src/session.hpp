@@ -127,9 +127,14 @@ class Session : public QObject {
     Q_INVOKABLE bool save();
     Q_INVOKABLE bool saveAs(const QUrl& directory);
     Q_INVOKABLE void clearError();
+    /// Whether a saved project directory is present on disk.
+    Q_INVOKABLE bool projectDirectoryExists(const QString& path) const;
+    /// Turn a native directory path into the file URL accepted by openProject.
+    Q_INVOKABLE QUrl projectDirectoryUrl(const QString& path) const;
 
    signals:
     void projectChanged();
+    void projectDirectoryUsed(const QString& path);
     void hasProjectChanged();
     void openedExampleChanged();
     void projectLocationChanged();

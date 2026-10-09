@@ -13,21 +13,21 @@ EaElements.GroupRow {
     readonly property SequentialFitViewModel fit: analysis ? analysis.sequentialFit : null
 
     ValueField {
-        editable: false
-        fieldValue: row.fit ? row.fit.dataDir : ""
-        label: qsTr("data directory")
         objectName: "sequentialFit.dataDir"
+        editable: false
+        label: qsTr("data directory")
+        fieldValue: row.fit ? row.fit.dataDir : ""
     }
     ValueField {
-        editable: false
-        fieldValue: row.fit ? row.fit.filePattern : ""
-        label: qsTr("files")
         objectName: "sequentialFit.filePattern"
+        editable: false
+        label: qsTr("files")
+        fieldValue: row.fit ? row.fit.filePattern : ""
     }
     ValueField {
-        editable: false
-        fieldValue: row.fit ? row.fit.reverse : ""
-        label: qsTr("reverse")
         objectName: "sequentialFit.reverse"
+        editable: false
+        label: qsTr("reverse")
+        fieldValue: row.fit ? row.fit.reverse : ""
     }
 }

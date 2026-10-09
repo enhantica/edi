@@ -13,11 +13,10 @@ EaElements.GroupRow {
     property AnalysisViewModel analysis: null
 
     SelectorField {
-        label: qsTr("mode")
         objectName: "fittingMode.type"
+        label: qsTr("mode")
         options: row.analysis ? row.analysis.fittingModeOptions : null
         token: row.analysis ? row.analysis.fittingMode : ""
-
         onSelected: token => row.analysis.fittingMode = token
     }
 }

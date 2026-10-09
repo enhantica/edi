@@ -16,76 +16,18 @@ Column {
     id: group
 
     property ExperimentViewModel experiment: null
-    readonly property real indexWidth: EaStyle.Sizes.fontPixelSize * 2.5
     readonly property PrefOrientListModel rows: experiment ? experiment.preferredOrientation : null
+    readonly property real indexWidth: EaStyle.Sizes.fontPixelSize * 2.5
 
     spacing: AppSizes.groupContentSpacing
 
     DataTable {
-        columnWidths: [numberColumnWidth, textColumnWidth("structureId", qsTr("structure")), -1, -1, -1, -1, -1, AppSizes.iconColumnWidth]
+        objectName: "preferredOrientation.list"
         defaultInfoText: qsTr("No preferred orientation")
         model: group.rows
-        objectName: "preferredOrientation.list"
 
-        delegate: EaComponents.ListViewDelegate {
-            id: row
+        columnWidths: [numberColumnWidth, textColumnWidth("structureId", qsTr("structure")), -1, -1, -1, -1, -1, AppSizes.iconColumnWidth]
 
-            required property int index
-            required property int indexH
-            required property int indexK
-            required property int indexL
-            required property ParameterItem marchR
-            required property ParameterItem marchRandomFract
-            required property string structureId
-
-            EaComponents.TableViewLabel {
-                color: EaStyle.Colors.themeForegroundMinor
-                text: row.index + 1
-            }
-            TextCell {
-                horizontalAlignment: Text.AlignLeft
-                objectName: `preferredOrientation.structureId.${row.index}`
-                value: row.structureId
-
-                onCommitted: text => group.rows.setStructureId(row.index, text)
-            }
-            TextCell {
-                accepts: "integer"
-                objectName: `preferredOrientation.indexH.${row.index}`
-                value: row.indexH
-
-                onCommitted: text => group.rows.setIndex(row.index, "h", Number(text))
-            }
-            TextCell {
-                accepts: "integer"
-                objectName: `preferredOrientation.indexK.${row.index}`
-                value: row.indexK
-
-                onCommitted: text => group.rows.setIndex(row.index, "k", Number(text))
-            }
-            TextCell {
-                accepts: "integer"
-                objectName: `preferredOrientation.indexL.${row.index}`
-                value: row.indexL
-
-                onCommitted: text => group.rows.setIndex(row.index, "l", Number(text))
-            }
-            ParameterCell {
-                item: row.marchR
-                objectName: `preferredOrientation.marchR.${row.index}`
-            }
-            ParameterCell {
-                item: row.marchRandomFract
-                objectName: `preferredOrientation.marchRandomFract.${row.index}`
-            }
-            EaComponents.TableViewButton {
-                ToolTip.text: qsTr("Remove this row")
-                fontIcon: "minus-circle"
-                objectName: `preferredOrientation.remove.${row.index}`
-
-                onClicked: group.rows.remove(row.index)
-            }
-        }
         header: EaComponents.ListViewHeader {
             EaComponents.TableViewLabel {
                 text: qsTr("id")
@@ -109,17 +51,71 @@ Column {
             EaComponents.TableViewLabel {
                 text: qsTr("random")
             }
+            EaComponents.TableViewLabel {}
+        }
+
+        delegate: EaComponents.ListViewDelegate {
+            id: row
+
+            required property int index
+            required property string structureId
+            required property int indexH
+            required property int indexK
+            required property int indexL
+            required property ParameterItem marchR
+            required property ParameterItem marchRandomFract
+
             EaComponents.TableViewLabel {
+                color: EaStyle.Colors.themeForegroundMinor
+                text: row.index + 1
+            }
+            TextCell {
+                objectName: `preferredOrientation.structureId.${row.index}`
+                horizontalAlignment: Text.AlignLeft
+                value: row.structureId
+                onCommitted: text => group.rows.setStructureId(row.index, text)
+            }
+            TextCell {
+                objectName: `preferredOrientation.indexH.${row.index}`
+                value: row.indexH
+                accepts: "integer"
+                onCommitted: text => group.rows.setIndex(row.index, "h", Number(text))
+            }
+            TextCell {
+                objectName: `preferredOrientation.indexK.${row.index}`
+                value: row.indexK
+                accepts: "integer"
+                onCommitted: text => group.rows.setIndex(row.index, "k", Number(text))
+            }
+            TextCell {
+                objectName: `preferredOrientation.indexL.${row.index}`
+                value: row.indexL
+                accepts: "integer"
+                onCommitted: text => group.rows.setIndex(row.index, "l", Number(text))
+            }
+            ParameterCell {
+                objectName: `preferredOrientation.marchR.${row.index}`
+                item: row.marchR
+            }
+            ParameterCell {
+                objectName: `preferredOrientation.marchRandomFract.${row.index}`
+                item: row.marchRandomFract
+            }
+            EaComponents.TableViewButton {
+                objectName: `preferredOrientation.remove.${row.index}`
+                fontIcon: "minus-circle"
+                ToolTip.text: qsTr("Remove this row")
+                onClicked: group.rows.remove(row.index)
             }
         }
     }
+
     EaElements.SideBarButton {
+        objectName: "preferredOrientation.append"
+        wide: true  // the row to itself, as the original's append actions fill theirs
         enabled: group.rows !== null && group.rows.canAppend
         fontIcon: "plus-circle"
-        objectName: "preferredOrientation.append"
         text: qsTr("Add preferred orientation")
-        wide: true  // the row to itself, as the original's append actions fill theirs
-
         onClicked: group.rows.append()
     }
 }

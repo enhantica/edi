@@ -17,25 +17,27 @@ Column {
     id: group
 
     property ExperimentViewModel experiment: null
+    readonly property BackgroundListModel points: experiment ? experiment.background : null
     // A background type's content by token: a new type needs only its layout here.
     readonly property var layouts: ({
             "line-segment": lineSegmentLayout
         })
-    readonly property BackgroundListModel points: experiment ? experiment.background : null
 
     spacing: AppSizes.groupContentSpacing
 
     EaElements.GroupRow {
         SelectorField {
-            label: qsTr("type")
             objectName: "background.type"
+            label: qsTr("type")
             options: group.experiment ? group.experiment.backgroundTypeOptions : null
             token: group.experiment ? group.experiment.backgroundType : ""
         }
     }
+
     Loader {
         sourceComponent: group.experiment ? group.layouts[group.experiment.backgroundType] ?? null : null
     }
+
     Component {
         id: lineSegmentLayout
 
@@ -43,43 +45,14 @@ Column {
             spacing: AppSizes.groupContentSpacing
 
             DataTable {
-                columnWidths: [numberColumnWidth, -1, -1, AppSizes.iconColumnWidth]
-                defaultInfoText: qsTr("No background points")
+                objectName: "background.list"
                 // At most four rows, then it scrolls (the owner, 2026-10-04; edi ADR-0017 §3).
                 maxRowCountShow: 4
+                defaultInfoText: qsTr("No background points")
                 model: group.points
-                objectName: "background.list"
 
-                delegate: EaComponents.ListViewDelegate {
-                    id: row
+                columnWidths: [numberColumnWidth, -1, -1, AppSizes.iconColumnWidth]
 
-                    required property int index
-                    required property ParameterItem intensity
-                    required property real position
-
-                    EaComponents.TableViewLabel {
-                        color: EaStyle.Colors.themeForegroundMinor
-                        text: row.index + 1
-                    }
-                    TextCell {
-                        accepts: "number"
-                        objectName: `background.position.${row.index}`
-                        value: row.position
-
-                        onCommitted: text => group.points.setPosition(row.index, Number(text))
-                    }
-                    ParameterCell {
-                        item: row.intensity
-                        objectName: `background.intensity.${row.index}`
-                    }
-                    EaComponents.TableViewButton {
-                        ToolTip.text: qsTr("Remove this background point")
-                        fontIcon: "minus-circle"
-                        objectName: `background.remove.${row.index}`
-
-                        onClicked: group.points.remove(row.index)
-                    }
-                }
                 header: EaComponents.ListViewHeader {
                     EaComponents.TableViewLabel {
                         text: qsTr("id")
@@ -90,7 +63,35 @@ Column {
                     EaComponents.TableViewLabel {
                         text: qsTr("intensity")
                     }
+                    EaComponents.TableViewLabel {}
+                }
+
+                delegate: EaComponents.ListViewDelegate {
+                    id: row
+
+                    required property int index
+                    required property real position
+                    required property ParameterItem intensity
+
                     EaComponents.TableViewLabel {
+                        color: EaStyle.Colors.themeForegroundMinor
+                        text: row.index + 1
+                    }
+                    TextCell {
+                        objectName: `background.position.${row.index}`
+                        value: row.position
+                        accepts: "number"
+                        onCommitted: text => group.points.setPosition(row.index, Number(text))
+                    }
+                    ParameterCell {
+                        objectName: `background.intensity.${row.index}`
+                        item: row.intensity
+                    }
+                    EaComponents.TableViewButton {
+                        objectName: `background.remove.${row.index}`
+                        fontIcon: "minus-circle"
+                        ToolTip.text: qsTr("Remove this background point")
+                        onClicked: group.points.remove(row.index)
                     }
                 }
             }
@@ -101,16 +102,15 @@ Column {
                 spacing: EaStyle.Sizes.fontPixelSize
 
                 EaElements.SideBarButton {
-                    fontIcon: "plus-circle"
                     objectName: "background.append"
+                    fontIcon: "plus-circle"
                     text: qsTr("Append new point")
-
                     onClicked: group.points.append()
                 }
                 EaElements.SideBarButton {
+                    objectName: "background.autodetect"
                     enabled: false
                     fontIcon: "undo-alt"
-                    objectName: "background.autodetect"
                     text: qsTr("Reset to autodetected background")
                 }
             }

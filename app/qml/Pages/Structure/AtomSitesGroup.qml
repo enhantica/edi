@@ -16,10 +16,10 @@ import edi.app
 Column {
     id: group
 
+    property StructureViewModel structure: null
+    readonly property AtomSiteListModel sites: structure ? structure.atomSites : null
     // easydiffractionbeta's widths (AtomSite.qml): the label takes what the others leave.
     readonly property real coordinateWidth: EaStyle.Sizes.fontPixelSize * 4.8
-    readonly property AtomSiteListModel sites: structure ? structure.atomSites : null
-    property StructureViewModel structure: null
     readonly property real typeWidth: EaStyle.Sizes.fontPixelSize * 4.5
     readonly property real wyckoffWidth: EaStyle.Sizes.fontPixelSize * 2.5
 
@@ -27,106 +27,14 @@ Column {
 
     DataTable {
         id: table
-
-        columnWidths: [numberColumnWidth, textColumnWidth("label", qsTr("label")), group.typeWidth, -1, -1, -1, group.wyckoffWidth, -1, AppSizes.iconColumnWidth]
+        objectName: "atomSites.list"
         defaultInfoText: qsTr("No atom sites defined")
         model: group.sites
-        objectName: "atomSites.list"
 
-        delegate: EaComponents.ListViewDelegate {
-            id: row
+        columnWidths: [numberColumnWidth, textColumnWidth("label", qsTr("label")), group.typeWidth, -1, -1, -1, group.wyckoffWidth, -1, AppSizes.iconColumnWidth]
 
-            required property ParameterItem fractX
-            required property ParameterItem fractY
-            required property ParameterItem fractZ
-            required property int index
-            required property string label
-            required property ParameterItem occupancy
-            required property string typeSymbol
-            required property string wyckoffLetter
-
-            EaComponents.TableViewLabel {
-                color: EaStyle.Colors.themeForegroundMinor
-                text: row.index + 1
-            }
-            TextCell {
-                horizontalAlignment: Text.AlignLeft
-                objectName: `atomSite.label.${row.index}`
-                value: row.label
-
-                onCommitted: text => group.sites.setText(row.index, "label", text)
-            }
-            // The type picked from the element table or typed into the list's search field (the owner,
-            // 2026-10-06); a type outside the table, as a file may declare it ("Co2+", "157Gd"), is shown as it is.
-            SearchableComboBox {
-                anchors.verticalCenter: parent.verticalCenter
-                currentIndex: ApplicationInfo.elementSymbols.indexOf(row.typeSymbol)
-                displayText: row.typeSymbol
-                inTable: true
-                model: ApplicationInfo.elementSymbols
-                objectName: `atomSite.typeSymbol.${row.index}`
-                popup.width: Math.max(width, EaStyle.Sizes.fontPixelSize * 8)
-                searchThreshold: 0
-
-                // The site's atom icon in its element's colour just before the type, as the Analysis page's parameter
-                // names carry it (the owner, 2026-10-03 and 2026-10-06).
-                contentItem: Item {
-                    clip: true
-
-                    IconLine {
-                        anchors.verticalCenter: parent.verticalCenter
-                        objectName: `atomSite.icon.${row.index}`
-                        segments: [
-                            {
-                                "icon": row.fractX ? row.fractX.categoryIcon : "",
-                                "color": AppColors.element(row.typeSymbol)
-                            },
-                            {
-                                "text": row.typeSymbol
-                            }
-                        ]
-                        x: EaStyle.Sizes.fontPixelSize * 0.5
-                    }
-                }
-
-                onActivated: index => {
-                    group.sites.setText(row.index, "typeSymbol", textAt(index));
-                    currentIndex = Qt.binding(() => ApplicationInfo.elementSymbols.indexOf(row.typeSymbol));
-                }
-            }
-            ParameterCell {
-                item: row.fractX
-                objectName: `atomSite.fractX.${row.index}`
-            }
-            ParameterCell {
-                item: row.fractY
-                objectName: `atomSite.fractY.${row.index}`
-            }
-            ParameterCell {
-                item: row.fractZ
-                objectName: `atomSite.fractZ.${row.index}`
-            }
-            TextCell {
-                objectName: `atomSite.wyckoffLetter.${row.index}`
-                value: row.wyckoffLetter
-
-                onCommitted: text => group.sites.setText(row.index, "wyckoffLetter", text)
-            }
-            ParameterCell {
-                item: row.occupancy
-                objectName: `atomSite.occupancy.${row.index}`
-            }
-            EaComponents.TableViewButton {
-                ToolTip.text: qsTr("Remove this atom site")
-                fontIcon: "minus-circle"
-                objectName: `atomSite.remove.${row.index}`
-
-                onClicked: group.sites.remove(row.index)
-            }
-        }
         header: EaComponents.ListViewHeader {
-            EaComponents.TableViewLabel {
-            }
+            EaComponents.TableViewLabel {}
             EaComponents.TableViewLabel {
                 horizontalAlignment: Text.AlignLeft
                 text: qsTr("label")
@@ -149,26 +57,111 @@ Column {
             EaComponents.TableViewLabel {
                 text: qsTr("occ")
             }
+            EaComponents.TableViewLabel {}
+        }
+
+        delegate: EaComponents.ListViewDelegate {
+            id: row
+
+            required property int index
+            required property string label
+            required property string typeSymbol
+            required property string wyckoffLetter
+            required property ParameterItem fractX
+            required property ParameterItem fractY
+            required property ParameterItem fractZ
+            required property ParameterItem occupancy
+
             EaComponents.TableViewLabel {
+                color: EaStyle.Colors.themeForegroundMinor
+                text: row.index + 1
+            }
+            TextCell {
+                objectName: `atomSite.label.${row.index}`
+                horizontalAlignment: Text.AlignLeft
+                value: row.label
+                onCommitted: text => group.sites.setText(row.index, "label", text)
+            }
+            // The type picked from the element table or typed into the list's search field (the owner,
+            // 2026-10-06); a type outside the table, as a file may declare it ("Co2+", "157Gd"), is shown as it is.
+            SearchableComboBox {
+                objectName: `atomSite.typeSymbol.${row.index}`
+                inTable: true
+                anchors.verticalCenter: parent.verticalCenter
+                searchThreshold: 0
+                model: ApplicationInfo.elementSymbols
+                currentIndex: ApplicationInfo.elementSymbols.indexOf(row.typeSymbol)
+                displayText: row.typeSymbol
+                popup.width: Math.max(width, EaStyle.Sizes.fontPixelSize * 8)
+                // The site's atom icon in its element's colour just before the type, as the Analysis page's parameter
+                // names carry it (the owner, 2026-10-03 and 2026-10-06).
+                contentItem: Item {
+                    clip: true
+
+                    IconLine {
+                        objectName: `atomSite.icon.${row.index}`
+                        x: EaStyle.Sizes.fontPixelSize * 0.5
+                        anchors.verticalCenter: parent.verticalCenter
+                        segments: [
+                            {
+                                "icon": row.fractX ? row.fractX.categoryIcon : "",
+                                "color": AppColors.element(row.typeSymbol)
+                            },
+                            {
+                                "text": row.typeSymbol
+                            }
+                        ]
+                    }
+                }
+                onActivated: index => {
+                    group.sites.setText(row.index, "typeSymbol", textAt(index));
+                    currentIndex = Qt.binding(() => ApplicationInfo.elementSymbols.indexOf(row.typeSymbol));
+                }
+            }
+            ParameterCell {
+                objectName: `atomSite.fractX.${row.index}`
+                item: row.fractX
+            }
+            ParameterCell {
+                objectName: `atomSite.fractY.${row.index}`
+                item: row.fractY
+            }
+            ParameterCell {
+                objectName: `atomSite.fractZ.${row.index}`
+                item: row.fractZ
+            }
+            TextCell {
+                objectName: `atomSite.wyckoffLetter.${row.index}`
+                value: row.wyckoffLetter
+                onCommitted: text => group.sites.setText(row.index, "wyckoffLetter", text)
+            }
+            ParameterCell {
+                objectName: `atomSite.occupancy.${row.index}`
+                item: row.occupancy
+            }
+            EaComponents.TableViewButton {
+                objectName: `atomSite.remove.${row.index}`
+                fontIcon: "minus-circle"
+                ToolTip.text: qsTr("Remove this atom site")
+                onClicked: group.sites.remove(row.index)
             }
         }
     }
+
     Row {
         spacing: EaStyle.Sizes.fontPixelSize
 
         EaElements.SideBarButton {
-            fontIcon: "plus-circle"
             objectName: "atomSites.append"
+            fontIcon: "plus-circle"
             text: qsTr("Append new atom site")
-
             onClicked: group.sites.append()
         }
         EaElements.SideBarButton {
+            objectName: "atomSites.duplicate"
             enabled: table.currentIndex >= 0 || (group.sites && group.sites.count > 0)
             fontIcon: "clone"
-            objectName: "atomSites.duplicate"
             text: qsTr("Duplicate selected atom site")
-
             onClicked: group.sites.duplicate(Math.max(table.currentIndex, 0))
         }
     }

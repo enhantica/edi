@@ -9,6 +9,6 @@ ParameterGrid {
     property ExperimentViewModel experiment: null
 
     fields: experiment ? experiment.instrument : null
-    fillRows: true
     prefix: "instrument"
+    fillRows: true
 }

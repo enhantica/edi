@@ -20,11 +20,10 @@ Column {
 
     EaElements.GroupRow {
         SelectorField {
-            label: qsTr("profile")
             objectName: "peak.type"
+            label: qsTr("profile")
             options: group.experiment ? group.experiment.peakTypeOptions : null
             token: group.experiment ? group.experiment.peakType : ""
-
             onSelected: token => group.experiment.peakType = token
         }
     }
@@ -35,18 +34,18 @@ Column {
     // other field.
     Repeater {
         model: group.experiment ? [group.experiment.peakBackToBack, group.experiment.peakGaussian, group.experiment.peakLorentzian, group.experiment.peakOther] : []
-
         delegate: ParameterGrid {
             required property ParameterListModel modelData
 
+            visible: modelData.usedCount > 0
             fields: modelData
             prefix: "peak"
-            visible: modelData.usedCount > 0
         }
     }
+
     ParameterGrid {
+        visible: group.experiment !== null && group.experiment.peakAsymmetry.usedCount > 0
         fields: group.experiment ? group.experiment.peakAsymmetry : null
         prefix: "peak"
-        visible: group.experiment !== null && group.experiment.peakAsymmetry.usedCount > 0
     }
 }
