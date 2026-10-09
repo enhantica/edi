@@ -145,7 +145,7 @@ Item {
         function test_counts_follow_search_and_zero_results_retain_choice() {
             Session.examples.filterProperty = "fittingMode";
             Session.examples.filterValue = "joint";
-            Session.examples.searchText = "pd-xray-cwl_lif";
+            Session.examples.searchText = "pd-xray-cwl_lif Calculated example";
             compare(Session.examples.filterValue, "joint");
             compare(Session.examples.count, 0);
             compare(option("").count, 1);
@@ -180,7 +180,7 @@ Item {
             verify(sourceIds.indexOf(expected) > 0, "The fixture starts after the first source row");
             const group = createTemporaryObject(examplesComponent, parent);
             verify(group !== null);
-            Session.examples.searchText = expected;
+            Session.examples.searchText = expected + " Calculated example";
             sameIds(ids(), [expected]);
             verify(waitForPolish(group));
             let row = null;
