@@ -19,6 +19,8 @@ DataTable {
 
     objectName: "sequentialExtract.list"
     defaultInfoText: qsTr("No extraction rules")
+    // These text-only columns can share more room than numeric parameter tables.
+    maximumTextColumnShare: 0.4
     sourceModel: analysis ? analysis.sequentialExtract : null
 
     columnWidths: [numberColumnWidth, Math.min(textColumnWidth("id", qsTr("id")), width * 0.3), Math.min(textColumnWidth("target", qsTr("target")), width * 0.4), -1, textColumnWidth("required", qsTr("required"))]
