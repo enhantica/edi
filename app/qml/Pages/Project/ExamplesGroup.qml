@@ -107,6 +107,8 @@ EaElements.GroupBox {
                             horizontalAlignment: Text.AlignLeft
                             elide: Text.ElideRight
                             textFormat: Text.PlainText
+                            // PT Sans lacks several subscript digits; one bundled face keeps formula weights uniform.
+                            font.family: "Noto Sans"
                             font.bold: true
                             text: row.sample + " · " + row.origin
                         }
