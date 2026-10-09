@@ -176,9 +176,9 @@ Item {
                 const popup = picker.popup;
                 const list = popup.contentItem;
                 const expected = data.names.length * EaStyle.Sizes.comboBoxHeight + popup.topPadding + popup.bottomPadding;
-                tryVerify(() => Math.abs(popup.height - expected) < 0.1, "The first opening must not retain a larger default height");
+                tryVerify(() => Math.abs(popup.height - expected) < 0.1, 2000, "The first opening must not retain a larger default height");
                 verify(popup.width >= picker.width && popup.width <= surface.width);
-                tryVerify(() => Math.abs(list.contentY - list.originY) < 0.1, "All categories remains visible even with a later current selection");
+                tryVerify(() => Math.abs(list.contentY - list.originY) < 0.1, 2000, "All categories remains visible even with a later current selection");
                 verify(Ui.exposed(list.itemAtIndex(0)), "The first option is inside the opened popup");
                 if (opening === 0)
                     firstHeight = popup.height;
