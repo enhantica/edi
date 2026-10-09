@@ -55,3 +55,5 @@ in the same change — see `AGENTS.md` §ADRs.
 New cross-cutting decisions that should also bind crysta are authored as **(shared)** and, once the
 Copier agent-OS template exists (ADR-0004), live in its shared-ADR range so `copier update`
 propagates them to both repos.
+
+- [ADR-0030: Example metadata and filters](0030-example-metadata-and-filters.md)

@@ -18,66 +18,7 @@ namespace {
 
 const QString kExamples = QStringLiteral(":/edi/examples");
 
-// "pd-neut-cwl" -> "powder, neutrons, constant wavelength" (the registry's documented id grammar).
-QString technique(const QString& code) {
-    const QStringList parts = code.split(QLatin1Char('-'));
-    const QString form = parts.value(0) == QLatin1String("pd") ? QStringLiteral("powder") : parts.value(0);
-    const QString probe = parts.value(1) == QLatin1String("neut")   ? QStringLiteral("neutrons")
-                          : parts.value(1) == QLatin1String("xray") ? QStringLiteral("X-rays")
-                                                                    : parts.value(1);
-    const QString mode = parts.value(2) == QLatin1String("cwl")   ? QStringLiteral("constant wavelength")
-                         : parts.value(2) == QLatin1String("tof") ? QStringLiteral("time-of-flight")
-                                                                  : parts.value(2);
-    return QStringLiteral("%1, %2, %3").arg(form, probe, mode);
-}
-
 }  // namespace
-
-// ---- ExampleListModel ---------------------------------------------------------------------------
-
-ExampleListModel::ExampleListModel(QObject* parent) : RowTableModel({"exampleId", "name", "description"}, parent) {
-    QList<Row> rows;
-    const QStringList ids = bundledIds();
-    for (qsizetype i = 0; i < ids.size(); ++i) {
-        // <technique>_<sample>[-<instrument>]_<variant>
-        const QStringList parts = ids[i].split(QLatin1Char('_'));
-        const QStringList sample = parts.value(1).split(QLatin1Char('-'));
-        static const QHash<QString, QString> samples{
-            {"cosio", "Co₂SiO₄"}, {"lbco", "La₀.₅Ba₀.₅CoO₃"}, {"ncaf", "Na₂Ca₃Al₂F₁₄"},
-            {"si", "Silicon"}, {"diamond", "Diamond"}, {"lab6", "LaB₆"}, {"pbso4", "PbSO₄"},
-            {"yap", "YAlO₃"}, {"latp", "LATP"}, {"fe", "Iron"}, {"cecoal", "CeCoAl₃"},
-            {"ceo2", "CeO₂"}, {"lif", "LiF"}, {"y2o3", "Y₂O₃"}, {"ferrite", "Ferrite / austenite"}};
-        QString name = samples.value(sample.value(0), sample.value(0));
-        QString instrument = sample.mid(1).join(QLatin1Char(' '));
-        if (sample.value(0) == QLatin1String("ferrite")) {
-            instrument = sample.mid(2).join(QLatin1Char(' '));
-        }
-        if (!instrument.isEmpty()) {
-            name += QStringLiteral(" · ") + instrument.toUpper();
-        }
-        QString description = technique(parts.value(0));
-        const QString variant = parts.value(2);
-        if (variant.startsWith(QLatin1String("scan-"))) {
-            description += tr(" · sequential scan (%1 datasets)").arg(variant.mid(5).chopped(1));
-        } else if (variant.startsWith(QLatin1String("start-"))) {
-            description += tr(" · starting model %1").arg(variant.mid(6));
-        } else if (!variant.isEmpty()) {
-            description += QStringLiteral(" · ") + QString(variant).replace(QLatin1Char('-'), QLatin1Char(' '));
-        } else {
-            description += tr(" · calculated pattern");
-        }
-        rows.append({reinterpret_cast<const void*>(i + 1), {ids[i], name, description}});
-    }
-    setTableRows(rows);
-}
-
-QStringList ExampleListModel::bundledIds() {
-    QFile index(kExamples + QStringLiteral("/index.txt"));
-    if (!index.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        return {};
-    }
-    return QString::fromUtf8(index.readAll()).split(QLatin1Char('\n'), Qt::SkipEmptyParts);
-}
 
 // ---- WarningListModel ---------------------------------------------------------------------------
 

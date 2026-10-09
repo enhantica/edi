@@ -10,24 +10,11 @@
 #include <memory>
 #include <vector>
 
+#include "example_list_model.hpp"
 #include "project_view_model.hpp"
 #include "row_table_model.hpp"
 
 namespace edi_app {
-
-// The Examples list: every project of edi's CLI registry, in registry order, then the app's X-ray
-// example — bundled in the app's resources. Roles `exampleId`, `name` (sample, instrument and
-// variant from the id) and `description` (the technique the id encodes).
-class ExampleListModel : public RowTableModel {
-    Q_OBJECT
-    QML_ELEMENT
-    QML_UNCREATABLE("Belongs to the session")
-
-   public:
-    explicit ExampleListModel(QObject* parent);
-    // The ids in list order, from the bundle's index.
-    static QStringList bundledIds();
-};
 
 // The app's one list of messages (edi ADR-0017 §14): the warnings the last open reported and the errors the
 // views used to show in red — a calculation refusal, one row per distinct refusal. Roles `message` and
