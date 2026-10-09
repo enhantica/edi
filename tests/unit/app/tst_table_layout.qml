@@ -29,6 +29,10 @@ Item {
         id: baseTableComponent
         EaComponents.ListView {
             model: undefined
+            delegate: Item {
+                width: 500
+                height: 30
+            }
         }
     }
     TestCase {

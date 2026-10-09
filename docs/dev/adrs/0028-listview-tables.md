@@ -78,5 +78,6 @@ public Python exclusion property keeps its existing tuple-of-pairs interface.
 
 The upstream ListView selection model binds an undefined model during page construction in
 Qt 6.11. edi replaces that one component at the module seam with the pinned source plus
-`model: listView.model ?? null` on ItemSelectionModel. The upstream checkout stays untouched;
+`model: listView.model ?? null` on ItemSelectionModel and a typed ListViewHeader
+cast for the column-width lookup, allowing the replacement to pass edi's lint gate. The upstream checkout stays untouched;
 the app lifecycle gate covers direct undefined initialization and attach/detach transitions.
