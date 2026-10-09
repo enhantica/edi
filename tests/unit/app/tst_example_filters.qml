@@ -203,6 +203,28 @@ Item {
             Session.examples.searchText = "YAlO3 Al2O3";
             verify(ids().includes("pd-neut-cwl_yap-spodi_3k"));
         }
+        function test_source_metadata_has_space_groups_and_probe_specific_polarisation() {
+            for (const id of sourceIds) {
+                const index = ids().indexOf(id);
+                const identity = Session.examples.text(index, "sample");
+                for (const phase of identity.split(" / "))
+                    verify(/\[[^\[\]\s]+\]$/.test(phase), "Every phase has its compact source space group: " + id);
+                sameIds(Session.examples.propertyValues(id, "dimensionality"), ["1D"]);
+                const probe = Session.examples.propertyValues(id, "probe");
+                const expected = probe.includes("neutron") ? "none" : "__not_applicable__";
+                sameIds(Session.examples.propertyValues(id, "polarisation"), [expected]);
+            }
+            const d20 = sourceIds.indexOf("pd-neut-cwl_cosio-d20_start-1");
+            compare(Session.examples.text(d20, "origin"), "D20 @ ILL");
+            sameIds(Session.examples.propertyValues("pd-xray-cwl_latp_scan-4f", "facilities"), ["SNBL"]);
+            sameIds(Session.examples.propertyValues("pd-xray-cwl_latp_scan-4f", "instruments"), ["__unknown__"]);
+            Session.examples.filterProperty = "polarisation";
+            verify(option("__not_applicable__").title.startsWith("Not applicable"));
+            Session.examples.filterValue = "none";
+            verify(ids().every(id => Session.examples.propertyValues(id, "probe").includes("neutron")));
+            Session.examples.filterValue = "__not_applicable__";
+            verify(ids().every(id => Session.examples.propertyValues(id, "probe").includes("xray")));
+        }
         function test_real_facet_pickers_and_search_apply_and_reset() {
             const group = createTemporaryObject(examplesComponent, parent);
             verify(group !== null);
