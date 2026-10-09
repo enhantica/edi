@@ -68,7 +68,7 @@ Item {
             RecentProjects.refresh();
         }
         function click(control, button) {
-            verify(control !== null && Ui.exposed(control));
+            verify(control !== null && Ui.exposed(control), "The supplied input target is exposed: " + (control ? control.objectName : "null"));
             const point = Ui.clickPoint(control);
             let delay = 0;
             for (let item = control.parent; item; item = item.parent) {
@@ -76,6 +76,14 @@ Item {
                     delay = Math.max(delay, item.pressDelay + 1);
             }
             mouseClick(control, point.x, point.y, button ?? Qt.LeftButton, Qt.NoModifier, delay);
+        }
+        function clickNamed(root, name) {
+            let control = null;
+            tryVerify(() => {
+                control = Ui.find(root, name);
+                return control !== null && Ui.exposed(control);
+            }, 2000, "The rebuilt recent-row input is exposed: " + name);
+            click(control);
         }
         function expanded(group) {
             verify(waitForPolish(group));
@@ -96,22 +104,22 @@ Item {
             tryCompare(table, "count", 2);
             compare(Ui.find(group, "recentProjects.status.0").text, "Missing");
             compare(Ui.find(group, "recentProjects.status.1").text, "Found");
-            click(Ui.find(group, "recentProjects.path.0"));
+            clickNamed(group, "recentProjects.path.0");
             compare(Session.hasProject, false, "A missing row cannot open a project");
             compare(RecentProjects.rows.count, 2);
-            click(Ui.find(group, "recentProjects.path.1"));
+            clickNamed(group, "recentProjects.path.1");
             tryCompare(Session, "hasProject", true);
             compare(Session.projectLocation, found, "Opening the second row uses its directory");
             Session.closeProject();
             RecentProjects.settings.paths = JSON.stringify([missing, found]);
             RecentProjects.refresh();
             tryCompare(table, "count", 2);
-            click(Ui.find(group, "recentProjects.remove.1"));
+            clickNamed(group, "recentProjects.remove.1");
             tryCompare(table, "count", 1);
             compare(Session.hasProject, false, "The delete cell must not trigger the row's open action");
             compare(RecentProjects.rows.get(0).path, missing);
             verify(Session.projectDirectoryExists(found), "Removing history does not delete the saved project");
-            click(Ui.find(group, "recentProjects.remove.0"));
+            clickNamed(group, "recentProjects.remove.0");
             tryCompare(table, "count", 0);
         }
         function test_measured_table_hide_detach_and_reattach() {
