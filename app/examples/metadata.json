@@ -766,8 +766,8 @@
       "samples": [
         "PbSO₄"
       ],
-      "origin": "Not specified",
-      "detail": "beba asymmetry",
+      "origin": "D1A · ILL",
+      "detail": "Berar–Baldinozzi asymmetry",
       "values": {
         "sampleForm": [
           ""
@@ -794,10 +794,10 @@
           "single"
         ],
         "facilities": [
-          ""
+          "ILL"
         ],
         "instruments": [
-          ""
+          "D1A"
         ]
       },
       "searchAliases": [
@@ -919,8 +919,8 @@
       "samples": [
         "Iron"
       ],
-      "origin": "Not specified",
-      "detail": "pseudo voigt",
+      "origin": "BEER · ESS",
+      "detail": "TOF pseudo-Voigt profile",
       "values": {
         "sampleForm": [
           ""
@@ -947,10 +947,10 @@
           "single"
         ],
         "facilities": [
-          ""
+          "ESS"
         ],
         "instruments": [
-          ""
+          "BEER"
         ]
       },
       "searchAliases": [

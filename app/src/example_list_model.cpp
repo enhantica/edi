@@ -90,8 +90,10 @@ ExampleListModel::ExampleListModel(QObject* parent)
         }
         for (const auto& purpose : entry.values.value("purpose"))
             entry.tags.append(label(purpose));
-        for (const QString& key :
-             {QStringLiteral("sampleForm"), QStringLiteral("probe"), QStringLiteral("beamMode")})
+        for (const auto& mode : entry.values.value("fittingMode"))
+            if (mode != unknown) entry.tags.append(label(mode));
+        for (const QString& key : {QStringLiteral("sampleForm"), QStringLiteral("probe"),
+                                   QStringLiteral("beamMode"), QStringLiteral("scatteringType")})
             for (const auto& value : entry.values.value(key))
                 if (value != unknown && !entry.tags.contains(tag(value)))
                     entry.tags.append(tag(value));
