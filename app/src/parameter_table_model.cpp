@@ -111,7 +111,7 @@ void ParameterFilterModel::refreshCategories() {
     }
     QStringList categories;
     QVariantList groups;
-    const auto add = [&](const QString& key, const QString& title, const QString& icon, int depth) {
+    const auto add = [&](const QString& key, const QString& title, const QString& icon, bool datablock = false) {
         int count = 0;
         for (const Row& row : rows) {
             count += matches_group(key, row.kind, row.category, row.name) ? 1 : 0;
@@ -119,12 +119,12 @@ void ParameterFilterModel::refreshCategories() {
         if (count == 0 && !key.isEmpty()) return;
         categories.append(key);
         groups.append(QVariantMap{{"key", key}, {"title", title + QStringLiteral(" (%1)").arg(count)},
-                                  {"icon", icon}, {"depth", depth}, {"count", count}});
+                                  {"icon", icon}, {"datablock", datablock}, {"count", count}});
     };
-    add({}, tr("All categories"), {}, 0);
+    add({}, tr("All categories"), {});
     for (const QString& kind : {QStringLiteral("structure"), QStringLiteral("experiment")}) {
         add(QLatin1Char('@') + kind, kind == QLatin1String("structure") ? tr("Structure") : tr("Experiment"),
-            kind == QLatin1String("structure") ? QStringLiteral("layer-group") : QStringLiteral("microscope"), 0);
+            kind == QLatin1String("structure") ? QStringLiteral("layer-group") : QStringLiteral("microscope"), true);
         QStringList seen;
         for (const Row& row : rows) {
             if (row.kind != kind || seen.contains(row.category)) continue;
@@ -132,20 +132,20 @@ void ParameterFilterModel::refreshCategories() {
             if (row.category == QLatin1String("atom_site") || row.category == QLatin1String("atom_site_aniso")) {
                 if (seen.contains(QStringLiteral("@atoms"))) continue;
                 seen.append(QStringLiteral("@atoms"));
-                add(QStringLiteral("@atoms"), tr("Atom sites"), QStringLiteral("atom"), 1);
-                add(QStringLiteral("@coordinates"), tr("Atomic coordinates"), QStringLiteral("map-marker-alt"), 2);
-                add(QStringLiteral("@occupancies"), tr("Atomic occupancies"), QStringLiteral("fill"), 2);
-                add(QStringLiteral("@displacement"), tr("Atomic displacement"), QStringLiteral("arrows-alt"), 2);
+                add(QStringLiteral("@atoms"), tr("Atom sites"), QStringLiteral("atom"));
+                add(QStringLiteral("@coordinates"), tr("Atomic coordinates"), QStringLiteral("map-marker-alt"));
+                add(QStringLiteral("@occupancies"), tr("Atomic occupancies"), QStringLiteral("fill"));
+                add(QStringLiteral("@displacement"), tr("Atomic displacement"), QStringLiteral("arrows-alt"));
                 continue;
             }
             const auto presentation = category_presentation(row.category);
             QString title = QString::fromUtf8(presentation.title);
             if (row.category == QLatin1String("cell")) title = tr("Unit cell");
             if (title.isEmpty()) { title = row.category; title.replace(QLatin1Char('_'), QLatin1Char(' ')); }
-            add(row.category, title, QString::fromUtf8(presentation.icon), 1);
+            add(row.category, title, QString::fromUtf8(presentation.icon));
             if (row.category == QLatin1String("peak")) {
-                add(QStringLiteral("@peakShape"), tr("Peak shape"), QStringLiteral("shapes"), 2);
-                add(QStringLiteral("@peakAsymmetry"), tr("Peak asymmetry"), QStringLiteral("balance-scale-left"), 2);
+                add(QStringLiteral("@peakShape"), tr("Peak shape"), QStringLiteral("shapes"));
+                add(QStringLiteral("@peakAsymmetry"), tr("Peak asymmetry"), QStringLiteral("balance-scale-left"));
             }
         }
     }
@@ -155,7 +155,7 @@ void ParameterFilterModel::refreshCategories() {
         const auto presentation = category_presentation(row.category);
         QString title = QString::fromUtf8(presentation.title);
         if (title.isEmpty()) { title = row.category; title.replace(QLatin1Char('_'), QLatin1Char(' ')); }
-        add(row.category, title, QString::fromUtf8(presentation.icon), 0);
+        add(row.category, title, QString::fromUtf8(presentation.icon));
     }
     if (categories != categories_ || groups != category_groups_) {
         categories_ = categories;

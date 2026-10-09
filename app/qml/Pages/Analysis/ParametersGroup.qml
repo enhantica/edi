@@ -110,12 +110,12 @@ EaElements.GroupBox {
                         IconLine {
                             id: categoryLine
                             anchors.verticalCenter: parent.verticalCenter
-                            x: categoryEntry.modelData.depth * EaStyle.Sizes.fontPixelSize * 0.75
-                            maximumWidth: parent.width - x
+                            maximumWidth: parent.width
                             textColor: EaStyle.Colors.themeForeground
                             segments: categoryEntry.modelData.icon === "" ? [
                                 {
-                                    text: categoryEntry.modelData.title
+                                    text: categoryEntry.modelData.title,
+                                    bold: categoryEntry.modelData.datablock
                                 }
                             ] : [
                                 {
@@ -123,7 +123,8 @@ EaElements.GroupBox {
                                     color: EaStyle.Colors.themeForegroundMinor
                                 },
                                 {
-                                    text: categoryEntry.modelData.title
+                                    text: categoryEntry.modelData.title,
+                                    bold: categoryEntry.modelData.datablock
                                 }
                             ]
                         }
