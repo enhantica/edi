@@ -2,6 +2,9 @@
 import QtQuick
 import QtQuick.Controls
 
+import EasyApplication.Gui.Style as EaStyle
+import EasyApplication.Gui.Globals as EaGlobals
+import EasyApplication.Gui.Elements as EaElements
 import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
@@ -24,6 +27,17 @@ EaComponents.TableViewParameter {
     readonly property bool refinable: item === null || item.refinable
     // A fixed setting is edited but never fitted: no fit toggle.
     readonly property bool canFit: refinable && (item === null || item.fittable)
+
+    onActiveFocusChanged: if (!activeFocus)
+        cursorPosition = 0
+    onTextChanged: if (!activeFocus)
+        cursorPosition = 0
+    color: warned ? EaStyle.Colors.red : !enabled || readOnly ? EaStyle.Colors.themeForegroundMinor : item && item.free && canFit ? EaStyle.Colors.chartForegroundsExtra[1] : EaStyle.Colors.themeForeground
+
+    EaElements.ToolTip {
+        text: cell.text
+        visible: cell.contentWidth > cell.width && cell.hovered && !cell.activeFocus && cell.refusal === "" && EaGlobals.Vars.showToolTips
+    }
 
     enabled: refinable
     // The value and its uncertainty as text, by the app's one rule for numbers in cells (NumberText).

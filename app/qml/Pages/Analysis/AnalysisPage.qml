@@ -61,12 +61,16 @@ WorkflowPage {
     textEnabled: analysis !== null
     basicItem: Component {
         EaComponents.SideBarColumn {
+            id: analysisSidebar
             // The fitted inputs are not edited while a fit runs.
             ParametersGroup {
+                tableViewportHeight: analysisSidebar.height - fitting.height
                 project: page.project
                 enabled: !(page.project && page.project.fit.running)
             }
-            FittingGroup {}
+            FittingGroup {
+                id: fitting
+            }
         }
     }
     extrasItem: Component {

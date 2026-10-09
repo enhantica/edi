@@ -44,55 +44,69 @@ Column {
         Column {
             spacing: AppSizes.groupContentSpacing
 
-            EaComponents.TableView {
+            DataTable {
                 objectName: "background.list"
                 // At most four rows, then it scrolls (the owner, 2026-10-04; edi ADR-0017 §3).
                 maxRowCountShow: 4
                 defaultInfoText: qsTr("No background points")
-                model: group.points
+                sourceModel: group.points
 
-                header: EaComponents.TableViewHeader {
+                columnWidths: [numberColumnWidth, Math.min(textColumnWidth("id", qsTr("id")), width * 0.25), -1, -1, AppSizes.iconColumnWidth]
+
+                header: EaComponents.ListViewHeader {
                     EaComponents.TableViewLabel {
-                        width: AppSizes.indexColumnWidth
+                        horizontalAlignment: Text.AlignHCenter
                     }
                     EaComponents.TableViewLabel {
-                        flexibleWidth: true
+                        horizontalAlignment: Text.AlignLeft
+                        text: qsTr("id")
+                    }
+                    EaComponents.TableViewLabel {
+                        horizontalAlignment: Text.AlignHCenter
                         text: qsTr("position")
                     }
                     EaComponents.TableViewLabel {
-                        width: EaStyle.Sizes.fontPixelSize * 12
+                        horizontalAlignment: Text.AlignHCenter
                         text: qsTr("intensity")
                     }
                     EaComponents.TableViewLabel {
-                        width: AppSizes.iconColumnWidth
+                        horizontalAlignment: Text.AlignHCenter
                     }
                 }
 
-                delegate: EaComponents.TableViewDelegate {
+                delegate: EaComponents.ListViewDelegate {
                     id: row
 
                     required property int index
+                    required property var model
                     required property real position
                     required property ParameterItem intensity
 
                     EaComponents.TableViewLabel {
-                        width: AppSizes.indexColumnWidth
+                        horizontalAlignment: Text.AlignHCenter
                         color: EaStyle.Colors.themeForegroundMinor
                         text: row.index + 1
                     }
                     TextCell {
+                        horizontalAlignment: Text.AlignLeft
+                        objectName: `background.id.${row.index}`
+                        value: row.model.id
+                        onCommitted: text => group.points.setId(row.index, text)
+                    }
+                    TextCell {
+                        horizontalAlignment: Text.AlignHCenter
                         objectName: `background.position.${row.index}`
-                        width: EaStyle.Sizes.fontPixelSize * 12
                         value: row.position
                         accepts: "number"
                         onCommitted: text => group.points.setPosition(row.index, Number(text))
                     }
                     ParameterCell {
+                        horizontalAlignment: Text.AlignHCenter
                         objectName: `background.intensity.${row.index}`
-                        width: EaStyle.Sizes.fontPixelSize * 12
                         item: row.intensity
                     }
                     EaComponents.TableViewButton {
+                        horizontalAlignment: Text.AlignHCenter
                         objectName: `background.remove.${row.index}`
                         fontIcon: "minus-circle"
                         ToolTip.text: qsTr("Remove this background point")

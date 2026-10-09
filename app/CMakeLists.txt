@@ -33,7 +33,7 @@ configure_file(src/app_build_info.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/app_build_i
 
 # Singletons are marked before the module is declared: qt_add_qml_module reads the property then.
 set_source_files_properties(qml/Globals/AppState.qml qml/Globals/FieldTitles.qml qml/Globals/FitOutcomes.qml qml/Globals/NumberText.qml qml/Globals/ParameterNames.qml
-                            qml/Globals/Preferences.qml qml/Globals/SideBarGroups.qml qml/Globals/TypedInput.qml
+                            qml/Globals/Preferences.qml qml/Globals/RecentProjects.qml qml/Globals/SideBarGroups.qml qml/Globals/TypedInput.qml
                             qml/Style/AppColors.qml qml/Style/AppSizes.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 qt_add_library(edi_app_module STATIC)
 qt_add_qml_module(edi_app_module
@@ -45,6 +45,7 @@ qt_add_qml_module(edi_app_module
     DEPENDENCIES QtGraphs QtQuick3D
     SOURCES
         src/app_info.hpp src/app_info.cpp
+        src/example_list_model.hpp src/example_list_model.cpp
         src/engine_setup.hpp src/engine_setup.cpp
         src/demo_driver.hpp src/demo_driver.cpp
         src/project_editor.hpp
@@ -82,6 +83,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/BlockSelector.qml
         qml/Components/CategoryGroup.qml
         qml/Components/DiagnosticsDialog.qml
+        qml/Components/DataTable.qml
         qml/Components/FitOutcomeLabel.qml
         qml/Components/FitProgressBar.qml
         qml/Components/FitResultsDialog.qml
@@ -119,6 +121,7 @@ qt_add_qml_module(edi_app_module
         qml/Globals/NumberText.qml
         qml/Globals/ParameterNames.qml
         qml/Globals/Preferences.qml
+        qml/Globals/RecentProjects.qml
         qml/Globals/SideBarGroups.qml
         qml/Globals/TypedInput.qml
         qml/Pages/Analysis/AliasesGroup.qml
@@ -212,6 +215,20 @@ endfunction()
 edi_app_bundle_examples(${_cli} ${EDI_APP_EXAMPLE_IDS})
 set(EDI_APP_OWN_EXAMPLES pd-xray-cwl_lif)
 edi_app_bundle_examples(${CMAKE_CURRENT_SOURCE_DIR}/examples ${EDI_APP_OWN_EXAMPLES})
+# Metadata belongs to the app presentation; the CLI registry retains its execution contract.
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/examples/metadata.json" _example_metadata)
+string(JSON _metadata_schema GET "${_example_metadata}" schema)
+if(NOT _metadata_schema EQUAL 1)
+    message(FATAL_ERROR "Unsupported example metadata schema")
+endif()
+foreach(id IN LISTS EDI_APP_EXAMPLE_IDS EDI_APP_OWN_EXAMPLES)
+    string(JSON _entry ERROR_VARIABLE _metadata_error GET "${_example_metadata}" examples "${id}")
+    if(_metadata_error)
+        message(FATAL_ERROR "Example '${id}' has no app metadata")
+    endif()
+endforeach()
+qt_add_resources(edi_app_module "edi_example_metadata" PREFIX "/edi/examples"
+                 BASE ${CMAKE_CURRENT_SOURCE_DIR}/examples FILES ${CMAKE_CURRENT_SOURCE_DIR}/examples/metadata.json)
 list(JOIN EDI_APP_EXAMPLE_IDS "\n" _index)
 list(JOIN EDI_APP_OWN_EXAMPLES "\n" _own)
 file(CONFIGURE OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/examples/index.txt CONTENT "${_index}\n${_own}\n")

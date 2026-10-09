@@ -26,9 +26,31 @@ EaElements.ComboBox {
     // In a table row: no border and no background, as the base's TableViewComboBox, which every other table
     // cell picker is (the owner, 2026-10-06).
     property bool inTable: false
-    // The base table's column sync sets each cell's alignment from its header label's.
+    // Table cells declare the same alignment as their header.
     property int horizontalAlignment: Text.AlignHCenter
     property int searchThreshold: 10
+    // Filters start with their current selection; a fully visible list starts at its first option.
+    function positionPopup() {
+        const list = control.popup.contentItem as ListView;
+        if (!list)
+            return;
+        list.forceLayout();
+        if (list.contentHeight <= list.height)
+            list.positionViewAtBeginning();
+        else
+            list.positionViewAtIndex(Math.max(0, control.currentIndex), ListView.Contain);
+    }
+    readonly property real optionWidth: {
+        let widest = 0;
+        for (let index = 0; index < count; ++index)
+            widest = Math.max(widest, optionMetrics.advanceWidth(textAt(index)));
+        return Math.ceil(widest) + font.pixelSize * 3;
+    }
+    FontMetrics {
+        id: optionMetrics
+        font: control.font
+    }
+    popup.width: inTable ? Math.min(Math.max(width, optionWidth), Math.max(width, control.Window.width - popup.leftMargin - popup.rightMargin)) : width
     readonly property bool searchable: count > searchThreshold
     property string searchText: ""
     readonly property string filter: searchable ? control.folded(searchText) : ""
@@ -58,7 +80,12 @@ EaElements.ComboBox {
         const top = control.mapToItem(null, 0, 0).y;
         const below = window.height - top - control.height - popup.bottomMargin;
         const above = top - popup.topMargin;
-        const wanted = popup.contentItem.implicitHeight + popup.topPadding + popup.bottomPadding;
+        let entries = 0;
+        for (let index = 0; index < control.count; ++index)
+            if (control.matches(control.textAt(index)))
+                entries++;
+        const header = (popup.contentItem as ListView)?.headerItem;
+        const wanted = entries * EaStyle.Sizes.comboBoxHeight + (header ? header.height : 0) + popup.topPadding + popup.bottomPadding;
         if (below >= wanted || below >= above) {
             popup.height = Math.min(wanted, below);
             popup.y = control.height;
@@ -161,6 +188,8 @@ EaElements.ComboBox {
     }
 
     Component.onCompleted: {
+        if (control.contentItemLabel)
+            control.contentItemLabel.horizontalAlignment = Qt.binding(() => control.inTable ? control.horizontalAlignment : Text.AlignLeft);
         control.popup.contentItem.header = searchHeader;
         // The field stays at the top while the list scrolls: a long list opens at its current entry.
         control.popup.contentItem.headerPositioning = ListView.OverlayHeader;
@@ -176,8 +205,13 @@ EaElements.ComboBox {
                 field.clear();
             control.searchText = "";
             control.placePopup();
+            Qt.callLater(() => {
+                control.placePopup();
+                control.positionPopup();
+            });
         }
         function onOpened() {
+            control.positionPopup();
             const field = (control.popup.contentItem as ListView)?.headerItem;
             if (field && control.searchable)
                 field.focusField();

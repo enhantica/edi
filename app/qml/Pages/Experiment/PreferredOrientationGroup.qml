@@ -17,46 +17,50 @@ Column {
 
     property ExperimentViewModel experiment: null
     readonly property PrefOrientListModel rows: experiment ? experiment.preferredOrientation : null
-    readonly property real indexWidth: EaStyle.Sizes.fontPixelSize * 2.5
 
     spacing: AppSizes.groupContentSpacing
 
-    EaComponents.TableView {
+    DataTable {
         objectName: "preferredOrientation.list"
         defaultInfoText: qsTr("No preferred orientation")
-        model: group.rows
+        sourceModel: group.rows
 
-        header: EaComponents.TableViewHeader {
+        columnWidths: [numberColumnWidth, textColumnWidth("structureId", qsTr("structure")), -1, -1, -1, -1, -1, AppSizes.iconColumnWidth]
+
+        header: EaComponents.ListViewHeader {
             EaComponents.TableViewLabel {
-                flexibleWidth: true
+                horizontalAlignment: Text.AlignHCenter
+            }
+            EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignLeft
                 text: qsTr("structure")
             }
             EaComponents.TableViewLabel {
-                width: group.indexWidth
+                horizontalAlignment: Text.AlignHCenter
                 text: "h"
             }
             EaComponents.TableViewLabel {
-                width: group.indexWidth
+                horizontalAlignment: Text.AlignHCenter
                 text: "k"
             }
             EaComponents.TableViewLabel {
-                width: group.indexWidth
+                horizontalAlignment: Text.AlignHCenter
                 text: "l"
             }
             EaComponents.TableViewLabel {
-                width: EaStyle.Sizes.fontPixelSize * 6
+                horizontalAlignment: Text.AlignHCenter
                 text: "r"
             }
             EaComponents.TableViewLabel {
-                width: EaStyle.Sizes.fontPixelSize * 6
+                horizontalAlignment: Text.AlignHCenter
                 text: qsTr("random")
             }
             EaComponents.TableViewLabel {
-                width: AppSizes.iconColumnWidth
+                horizontalAlignment: Text.AlignHCenter
             }
         }
 
-        delegate: EaComponents.TableViewDelegate {
+        delegate: EaComponents.ListViewDelegate {
             id: row
 
             required property int index
@@ -67,44 +71,50 @@ Column {
             required property ParameterItem marchR
             required property ParameterItem marchRandomFract
 
+            EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
+                color: EaStyle.Colors.themeForegroundMinor
+                text: row.index + 1
+            }
             TextCell {
                 objectName: `preferredOrientation.structureId.${row.index}`
-                width: EaStyle.Sizes.fontPixelSize * 8
+                horizontalAlignment: Text.AlignLeft
                 value: row.structureId
                 onCommitted: text => group.rows.setStructureId(row.index, text)
             }
             TextCell {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `preferredOrientation.indexH.${row.index}`
-                width: group.indexWidth
                 value: row.indexH
                 accepts: "integer"
                 onCommitted: text => group.rows.setIndex(row.index, "h", Number(text))
             }
             TextCell {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `preferredOrientation.indexK.${row.index}`
-                width: group.indexWidth
                 value: row.indexK
                 accepts: "integer"
                 onCommitted: text => group.rows.setIndex(row.index, "k", Number(text))
             }
             TextCell {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `preferredOrientation.indexL.${row.index}`
-                width: group.indexWidth
                 value: row.indexL
                 accepts: "integer"
                 onCommitted: text => group.rows.setIndex(row.index, "l", Number(text))
             }
             ParameterCell {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `preferredOrientation.marchR.${row.index}`
-                width: EaStyle.Sizes.fontPixelSize * 6
                 item: row.marchR
             }
             ParameterCell {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `preferredOrientation.marchRandomFract.${row.index}`
-                width: EaStyle.Sizes.fontPixelSize * 6
                 item: row.marchRandomFract
             }
             EaComponents.TableViewButton {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `preferredOrientation.remove.${row.index}`
                 fontIcon: "minus-circle"
                 ToolTip.text: qsTr("Remove this row")

@@ -58,30 +58,32 @@ AppDialog {
         width: AppSizes.messagesDialogContentWidth
         height: Math.min(dialog.maximumListHeight, Math.max(table.tableRowHeight, table.contentHeight))
 
-        EaComponents.TableView {
+        DataTable {
             id: table
 
             objectName: "warnings.list"
             anchors.fill: parent
             clip: true
-            showHeader: false
             defaultInfoText: ""
-            model: dialog.messages
+            sourceModel: dialog.messages
 
-            header: EaComponents.TableViewHeader {
+            columnWidths: [EaStyle.Sizes.tableRowHeight, -1, AppSizes.iconColumnWidth]
+
+            header: EaComponents.ListViewHeader {
+                visible: false
+                implicitHeight: 0
                 EaComponents.TableViewLabel {
-                    width: EaStyle.Sizes.tableRowHeight
+                    horizontalAlignment: Text.AlignHCenter
                 }
                 EaComponents.TableViewLabel {
-                    flexibleWidth: true
                     horizontalAlignment: Text.AlignLeft
                 }
                 EaComponents.TableViewLabel {
-                    width: AppSizes.iconColumnWidth
+                    horizontalAlignment: Text.AlignHCenter
                 }
             }
 
-            delegate: EaComponents.TableViewDelegate {
+            delegate: EaComponents.ListViewDelegate {
                 id: row
 
                 required property int index
@@ -92,6 +94,7 @@ AppDialog {
                 height: Math.max(table.tableRowHeight, messageCell.implicitHeight + EaStyle.Sizes.fontPixelSize)
 
                 IconCell {
+                    horizontalAlignment: Text.AlignHCenter
                     objectName: `warnings.kind.${row.index}`
                     icon: row.isError ? "times-circle" : "exclamation-triangle"
                     iconColor: String(row.isError ? EaStyle.Colors.red : EaStyle.Colors.orange)
@@ -100,7 +103,6 @@ AppDialog {
                 EaComponents.TableViewLabel {
                     id: messageCell
                     objectName: `warnings.message.${row.index}`
-                    width: table.headerLabelItems.length > 1 ? table.headerLabelItems[1].width : 0
                     horizontalAlignment: Text.AlignLeft
                     elide: Text.ElideNone
                     wrapMode: Text.Wrap
@@ -108,6 +110,7 @@ AppDialog {
                     text: row.message
                 }
                 EaComponents.TableViewButton {
+                    horizontalAlignment: Text.AlignHCenter
                     objectName: `warnings.dismiss.${row.index}`
                     anchors.verticalCenter: parent.verticalCenter
                     fontIcon: "minus-circle"

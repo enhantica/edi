@@ -21,35 +21,35 @@ Column {
 
     spacing: AppSizes.groupContentSpacing
 
-    EaComponents.TableView {
+    DataTable {
         id: table
         objectName: "constraints.list"
         defaultInfoText: qsTr("No constraints")
-        model: group.constraints
+        sourceModel: group.constraints
 
-        header: EaComponents.TableViewHeader {
+        columnWidths: [numberColumnWidth, EaStyle.Sizes.fontPixelSize * 7, -1, AppSizes.iconColumnWidth, AppSizes.iconColumnWidth]
+
+        header: EaComponents.ListViewHeader {
             EaComponents.TableViewLabel {
-                width: AppSizes.indexColumnWidth
+                horizontalAlignment: Text.AlignHCenter
             }
             EaComponents.TableViewLabel {
-                width: EaStyle.Sizes.fontPixelSize * 7
                 horizontalAlignment: Text.AlignLeft
                 text: qsTr("id")
             }
             EaComponents.TableViewLabel {
-                flexibleWidth: true
                 horizontalAlignment: Text.AlignLeft
                 text: qsTr("expression")
             }
             EaComponents.TableViewLabel {
-                width: AppSizes.iconColumnWidth
+                horizontalAlignment: Text.AlignHCenter
             }
             EaComponents.TableViewLabel {
-                width: AppSizes.iconColumnWidth
+                horizontalAlignment: Text.AlignHCenter
             }
         }
 
-        delegate: EaComponents.TableViewDelegate {
+        delegate: EaComponents.ListViewDelegate {
             id: row
 
             required property int index
@@ -57,13 +57,12 @@ Column {
             required property var model
 
             EaComponents.TableViewLabel {
-                width: AppSizes.indexColumnWidth
+                horizontalAlignment: Text.AlignHCenter
                 color: EaStyle.Colors.themeForegroundMinor
                 text: row.index + 1
             }
             TextCell {
                 objectName: `constraint.id.${row.index}`
-                width: EaStyle.Sizes.fontPixelSize * 7
                 horizontalAlignment: Text.AlignLeft
                 // A disabled constraint's id and expression cells are both disabled.
                 enabled: row.model.enabled
@@ -73,7 +72,6 @@ Column {
             }
             TextCell {
                 objectName: `constraint.expression.${row.index}`
-                width: table.headerLabelItems.length > 2 ? table.headerLabelItems[2].width : 0
                 horizontalAlignment: Text.AlignLeft
                 enabled: row.model.enabled
                 color: row.model.enabled ? EaStyle.Colors.themeForeground : EaStyle.Colors.themeForegroundMinor
@@ -81,12 +79,14 @@ Column {
                 onCommitted: text => group.constraints.setText(row.index, "expression", text)
             }
             EaComponents.TableViewButton {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `constraint.enabled.${row.index}`
                 fontIcon: row.model.enabled ? "toggle-on" : "toggle-off"
                 ToolTip.text: row.model.enabled ? qsTr("Disable this constraint") : qsTr("Enable this constraint")
                 onClicked: group.constraints.setEnabled(row.index, !row.model.enabled)
             }
             EaComponents.TableViewButton {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `constraint.remove.${row.index}`
                 fontIcon: "minus-circle"
                 ToolTip.text: qsTr("Remove this constraint")

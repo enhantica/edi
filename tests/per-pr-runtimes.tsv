@@ -10,11 +10,12 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-08T18:46:19Z
+# measured_utc = 2026-10-09T19:47:14Z
 #
-# Recorded from: green-shared.log (34 node(s) measured once, 9035 banked, 0 stale row(s) dropped)
-# Collected tests: 9731; with a reported duration: 4935
+# Recorded from: edi-core-final.log (all 7 new or renamed native GUI table cases measured via doctest --duration=true; 2 stale renamed native holes removed; all other rows banked)
+# Collected tests: 9731; with a reported duration: 4939
 # Module-scoped fixture costs recorded: 29
+# Recorded from: build/app/core/edi_tests --test-case='Example descriptive metadata*' --duration, local Linux diagnostic 2026-10-09 (1 case/20 assertions green, measured 0.075348 s; new native row only; direct root tool output)
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -30,9 +31,9 @@
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 9731
-# inventory_cpp = 302
-# inventory_measured = 9069
-# inventory_unmeasured = 964
+# inventory_cpp = 308
+# inventory_measured = 9077
+# inventory_unmeasured = 962
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -8615,8 +8616,8 @@ UNMEASURED:not-produced-by-this-run	tests/unit/cpp/test_c34_t27_geometry_edit_fr
 0.002	tests/unit/cpp/test_c34_t28_failed_admission.cpp::C34-T28 F27 texture first admission is atomic at every allocation
 0.000	tests/unit/cpp/test_c34_t28_foreign_rows.cpp::C34-T28 F19 all keyed families retain foreign and duplicate refusal
 UNMEASURED:failed-in-this-run	tests/unit/cpp/test_c34_t28_foreign_rows.cpp::C34-T28 F19 caller-defined unkeyed schemas retain shared surviving storage
-UNMEASURED:failed-in-this-run	tests/unit/cpp/test_c34_t28_foreign_rows.cpp::C34-T28 F19 duplicate background survivors remain stored after every replacement
-UNMEASURED:failed-in-this-run	tests/unit/cpp/test_c34_t28_foreign_rows.cpp::C34-T28 F19 every foreign background admission route observes its cells
+0.000	tests/unit/cpp/test_c34_t28_foreign_rows.cpp::C34-T28 F19 duplicate unkeyed survivors remain stored after every replacement
+0.000	tests/unit/cpp/test_c34_t28_foreign_rows.cpp::C34-T28 F19 every foreign unkeyed admission route observes its cells
 0.000	tests/unit/cpp/test_c34_t28_held_reads.cpp::C34-T28 axis engagement preserves the still-engaged axis object
 UNMEASURED:failed-in-this-run	tests/unit/cpp/test_c34_t28_held_reads.cpp::C34-T28 measured references survive writes copies and moves
 0.000	tests/unit/cpp/test_c34_t28_held_reads.cpp::C34-T28 plain non-loop native writes keep their prior epoch boundary
@@ -8833,6 +8834,7 @@ UNMEASURED:expected-red-on-d775b5fd	tests/unit/cpp/test_e05_t1_fit_job.cpp::E05-
 0.048	tests/unit/cpp/test_e09_t55_io_coverage.cpp::E09-T55 refinement refuses a measured pattern wholly removed by exclusions
 0.000	tests/unit/cpp/test_e09_t55_io_coverage.cpp::E09-T55 structure schema handles optional identity and ADP branches
 0.002	tests/unit/cpp/test_e09_t55_io_coverage.cpp::E09-T55 writer refuses calculation-only and ragged CW observations
+0.000	tests/unit/cpp/test_e09_t55_io_coverage.cpp::GUI table readers generate legacy IDs and retain quoteable literal IDs
 0.028	tests/unit/cpp/test_e09_t55_numeric_migration.cpp::E09-T55 migrated owner-shape silicon pattern crosses space-group validation
 0.001	tests/unit/cpp/test_e09_t55_private_policy.cpp::E09-T55 canonical encoding detects calculation-affecting mutations
 0.000	tests/unit/cpp/test_e09_t55_private_policy.cpp::E09-T55 joint parameter identities use longest bank prefix and project size
@@ -8851,6 +8853,11 @@ UNMEASURED:expected-red-on-d775b5fd	tests/unit/cpp/test_e05_t1_fit_job.cpp::E05-
 0.000	tests/unit/cpp/test_e09_t55_report_model_adapter.cpp::E09-T55 iteration and machine reports preserve engine-carried facts
 0.000	tests/unit/cpp/test_e09_t55_report_model_adapter.cpp::E09-T55 model collections expose all parameters and only the free subset
 0.000	tests/unit/cpp/test_e09_t55_report_model_adapter.cpp::E09-T55 report tables retain identity paths, starts, uncertainties, and bank metrics
+0.075	tests/unit/cpp/test_example_metadata_roundtrip.cpp::Example descriptive metadata survives native save reopen and shown PROJECT text
+0.000	tests/unit/cpp/test_gui_table_row_ids.cpp::GUI atom ID rename follows aliases with and without an anisotropic row
+0.000	tests/unit/cpp/test_gui_table_row_ids.cpp::GUI background ID rename follows every exact alias and preserves unrelated targets
+0.000	tests/unit/cpp/test_gui_table_row_ids.cpp::GUI exclusion bounds remain aligned with editable IDs and copy independently
+0.000	tests/unit/cpp/test_gui_table_row_ids.cpp::GUI table stored IDs reserve explicit keys and refuse changes atomically
 0.006	tests/unit/cpp/test_report_format.cpp::format_change brackets the non-trivial blanking threshold
 0.007	tests/unit/cpp/test_report_format.cpp::format_change refuses undefined percentages
 0.009	tests/unit/cpp/test_report_format.cpp::format_change uses the starting value as its denominator

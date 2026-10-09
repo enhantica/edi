@@ -86,6 +86,7 @@ void put_experiment(std::string& out, const ExperimentBase& experiment, Scope sc
     put_u64(out, experiment.background.size());
     for (const auto& point_item : experiment.background) {
         const LineSegment& point = *point_item;
+        put_text(out, point.id);
         put_double(out, point.position);  // NOT a Parameter, but it moves the background
         put_parameter(out, point.intensity, scope);
     }
@@ -174,8 +175,9 @@ void put_experiment(std::string& out, const ExperimentBase& experiment, Scope sc
     }
     put_u64(out, experiment.excluded_regions.size());
     for (const auto& region : experiment.excluded_regions) {
-        put_double(out, region.first);
-        put_double(out, region.second);
+        put_text(out, region->id);
+        put_double(out, region->first);
+        put_double(out, region->second);
     }
     // `ExperimentBase::data` is DELIBERATELY NOT ENCODED: the encoding fingerprints the
     // model content, and embedded data alters nothing a forward calculation computes.

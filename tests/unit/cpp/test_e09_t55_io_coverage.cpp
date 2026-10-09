@@ -289,7 +289,9 @@ TEST_CASE("E09-T55 constant-wavelength project writer preserves typed axes and o
     edi::Project project = populated_project(std::move(structure), std::move(experiment));
     project.fitting_mode = "single";
     project.experiment().peak.broad_gauss_u = edi::Parameter{0.125, 1.0e-40, true};
-    project.experiment().excluded_regions = {{25.0, 30.0}};
+    project.experiment().excluded_regions = edi::excluded_region_rows({{25.0, 30.0}});
+    project.experiment().excluded_regions[0]->id = "low angle";
+    project.experiment().background[0]->id = "anchor point";
     TempTree temporary = temp_tree("cwl-roundtrip");
     edi::save_project(project, temporary.path.string());
     edi::save_project(project, temporary.path.string());
@@ -303,8 +305,12 @@ TEST_CASE("E09-T55 constant-wavelength project writer preserves typed axes and o
                   "the CW writer must retain the two-theta axis name");
     CHECK_MESSAGE(restored.experiment().data->axis().size() == 6,
                   "the CW writer must retain all six independently recorded rows");
-    CHECK_MESSAGE(restored.experiment().excluded_regions == project.experiment().excluded_regions,
+    CHECK_MESSAGE(edi::excluded_region_ranges(restored.experiment().excluded_regions) == edi::excluded_region_ranges(project.experiment().excluded_regions),
                   "the CW writer must retain excluded-region pairs");
+    REQUIRE(restored.experiment().excluded_regions.size() == 1);
+    CHECK(restored.experiment().excluded_regions[0]->id == "low angle");
+    REQUIRE(restored.experiment().background.size() == project.experiment().background.size());
+    CHECK(restored.experiment().background[0]->id == "anchor point");
     REQUIRE_MESSAGE(restored.experiment().peak.broad_gauss_u.has_value(),
                     "the CW writer must retain Caglioti U");
     CHECK_MESSAGE(
@@ -808,7 +814,7 @@ TEST_CASE("E09-T55 live peak registration is idempotent and mode-specific") {
 TEST_CASE("E09-T55 refinement refuses a measured pattern wholly removed by exclusions") {
     edi::Project project =
         edi::load_project((repo_root() / "tests/fixtures/e02_t2_ncaf_5bank/project").string());
-    project.experiment().excluded_regions = {{-1.0e9, 1.0e9}};
+    project.experiment().excluded_regions = edi::excluded_region_rows({{-1.0e9, 1.0e9}});
 
     bool raised = false;
     try {
@@ -821,4 +827,47 @@ TEST_CASE("E09-T55 refinement refuses a measured pattern wholly removed by exclu
     }
     CHECK_MESSAGE(raised,
                   "a fully excluded measured pattern must fail before entering the minimizer");
+}
+
+TEST_CASE("GUI table readers generate legacy IDs and retain quoteable literal IDs") {
+    const auto fixture = repo_root() / "tests/fixtures/c11_t4_cw_selection/cases/cwl_valid.edi";
+    const auto reference = read_text(fixture);
+    auto legacy = reference;
+    const auto header = legacy.find("_background.id\n");
+    REQUIRE(header != std::string::npos);
+    legacy.erase(header, std::string("_background.id\n").size());
+    const auto at = legacy.find("1 10 169\n2 90 171.25\n3 165 174.56");
+    REQUIRE(at != std::string::npos);
+    legacy.replace(at, std::string("1 10 169\n2 90 171.25\n3 165 174.56").size(),
+                   "10 169\n90 171.25\n165 174.56");
+    legacy += "\nloop_\n_excluded_region.start\n_excluded_region.end\n25 30\n50 55\n";
+    const auto experiment = edi::experiment_from_edi_text(legacy);
+    REQUIRE(experiment.background.size() == 3);
+    CHECK(experiment.background[0]->id == "1");
+    CHECK(experiment.background[1]->id == "2");
+    CHECK(experiment.background[2]->id == "3");
+    REQUIRE(experiment.excluded_regions.size() == 2);
+    CHECK(experiment.excluded_regions[0]->id == "1");
+    CHECK(experiment.excluded_regions[1]->id == "2");
+    CHECK(edi::excluded_region_ranges(experiment.excluded_regions) ==
+          std::vector<std::pair<double, double>>{{25, 30}, {50, 55}});
+    for (const auto& marker : {std::string{"."}, std::string{"?"}}) {
+        auto literal_background = reference;
+        const auto first = literal_background.find("1 10 169");
+        REQUIRE(first != std::string::npos);
+        literal_background.replace(first, 1, marker);
+        const auto literal_exclusion = literal_background +
+            "\nloop_\n_excluded_region.id\n_excluded_region.start\n_excluded_region.end\n" + marker + " 25 30\n";
+        const auto literal = edi::experiment_from_edi_text(literal_exclusion);
+        REQUIRE(literal.background.size() == 3);
+        CHECK(literal.background[0]->id == marker);
+        CHECK(literal.background[1]->id == "2");
+        CHECK(literal.background[2]->id == "3");
+        CHECK(literal.background[0]->position.get() == 10);
+        CHECK(literal.background[0]->intensity.value.get() == 169);
+        REQUIRE(literal.excluded_regions.size() == 1);
+        CHECK(literal.excluded_regions[0]->id == marker);
+        CHECK(edi::excluded_region_ranges(literal.excluded_regions) ==
+              std::vector<std::pair<double, double>>{{25, 30}});
+    }
 }

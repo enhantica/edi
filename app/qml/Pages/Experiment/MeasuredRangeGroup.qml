@@ -84,36 +84,54 @@ Column {
         }
     }
 
-    EaComponents.TableView {
+    DataTable {
         id: table
         objectName: "data.list"
         visible: group.experiment !== null && !group.experiment.calculationOnly
         defaultInfoText: qsTr("No measured points")
-        model: visible ? group.experiment.pattern : null
+        sourceModel: visible ? group.experiment.pattern : null
 
-        header: EaComponents.TableViewHeader {
+        columnWidths: [numberColumnWidth, -1, -1, -1, -1, -1, -1, -1, -1]
+
+        header: EaComponents.ListViewHeader {
             EaComponents.TableViewLabel {
-                width: AppSizes.dataIndexColumnWidth
+                horizontalAlignment: Text.AlignHCenter
             }
             EaComponents.TableViewLabel {
-                flexibleWidth: true
+                horizontalAlignment: Text.AlignHCenter
                 text: group.timeOfFlight ? qsTr("TOF (µs)") : qsTr("2θ (°)")
             }
             EaComponents.TableViewLabel {
-                width: AppSizes.dataColumnWidth
-                text: qsTr("I meas")
+                horizontalAlignment: Text.AlignHCenter
+                text: qsTr("meas")
             }
             EaComponents.TableViewLabel {
-                width: AppSizes.dataColumnWidth
-                text: qsTr("σ(I meas)")
+                horizontalAlignment: Text.AlignHCenter
+                text: qsTr("s.u.")
             }
             EaComponents.TableViewLabel {
-                width: AppSizes.dataColumnWidth
-                text: qsTr("I calc")
+                horizontalAlignment: Text.AlignHCenter
+                text: qsTr("calc")
+            }
+            EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
+                text: qsTr("d (Å)")
+            }
+            EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
+                text: qsTr("bkg")
+            }
+            EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
+                text: qsTr("resid")
+            }
+            EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
+                text: qsTr("status")
             }
         }
 
-        delegate: EaComponents.TableViewDelegate {
+        delegate: EaComponents.ListViewDelegate {
             id: row
 
             required property int index
@@ -121,25 +139,41 @@ Column {
             required property var model
 
             EaComponents.TableViewLabel {
-                width: AppSizes.dataIndexColumnWidth
+                horizontalAlignment: Text.AlignHCenter
                 color: EaStyle.Colors.themeForegroundMinor
                 text: row.index + 1
             }
             EaComponents.TableViewLabel {
-                width: table.headerLabelItems.length > 1 ? table.headerLabelItems[1].width : 0
+                horizontalAlignment: Text.AlignHCenter
                 text: group.shown(row.model.x)
             }
             EaComponents.TableViewLabel {
-                width: AppSizes.dataColumnWidth
+                horizontalAlignment: Text.AlignHCenter
                 text: group.intensity(row.model.intensityMeas)
             }
             EaComponents.TableViewLabel {
-                width: AppSizes.dataColumnWidth
+                horizontalAlignment: Text.AlignHCenter
                 text: group.intensity(row.model.intensityMeasSu)
             }
             EaComponents.TableViewLabel {
-                width: AppSizes.dataColumnWidth
+                horizontalAlignment: Text.AlignHCenter
                 text: group.intensity(row.model.intensityCalc)
+            }
+            EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
+                text: group.shown(row.model.dSpacing)
+            }
+            EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
+                text: group.intensity(row.model.intensityBkg)
+            }
+            EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
+                text: group.intensity(row.model.residual)
+            }
+            EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
+                text: !table.model ? "" : table.model.stale ? qsTr("pending") : table.model.calculationError ? qsTr("failed") : row.model.calcStatus ?? ""
             }
         }
     }

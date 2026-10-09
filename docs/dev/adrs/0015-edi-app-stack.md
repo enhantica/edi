@@ -39,10 +39,12 @@ original could. Three facts shape the decision:
    port may restructure or rename the QML while keeping the design (sizes, colours, fonts, spacing): edi's
    own design values sit in `app/qml/Style/AppSizes.qml`, each a multiple of the base's font size; colours
    and fonts come only from the base's `EaStyle` tokens.
-2. **The base, unmodified at a pin.** `cmake/EdiGuiBase.cmake` fetches gui-components at the full sha
-   `a573a9695e53a0807de197785e12f9facd06da05` and declares its own QML modules under the upstream URIs
+2. **The base at a verified pin.** `cmake/EdiGuiBase.cmake` fetches gui-components at the full sha
+   `3897d339b60f5707bfe952fed59a20f73340e236` and declares its own QML modules under the upstream URIs
    (`EasyApplication.Gui.{Style,Globals,Logic,Animations,Elements,Components}`,
-   `EasyApplication.Logic.Maintenance`) over an explicit file list. Upstream files are built byte-identical;
+   `EasyApplication.Logic.Maintenance`) over an explicit file list. Upstream files are built byte-identical except the declared
+   replacement seams: ParamTextField and TableViewParameter for parameter menu terminology and units (ADR-0028), Fonts for edi's font inventory (§10), ListView for the null-safe
+   selection-model initialization recorded in ADR-0028;
    configuration refuses another commit or local changes under `src/`. Left out: the Plotly/WebEngine and
    QtCharts charts, `BasicReport` (WebEngine), `GuideWindow`/`GuideWindowContainer`, `JsonListModel`,
    `RemoteController` (QtTest + QtMultimedia) and `Plotting.js` (used only by the charts). The base's Logic
@@ -177,6 +179,7 @@ The app draws text only with fonts it bundles:
 | --- | --- | --- |
 | PT Sans Regular and Bold | all text | gui-components, `Resources/Fonts/PT_Sans` |
 | PT Mono | the Text tabs | gui-components, `Resources/Fonts/PT_Mono` |
+| Encode Sans Regular | the fit summary arrow | gui-components, `Resources/Fonts/Encode_Sans` |
 | Noto Sans Regular | every character PT Sans lacks | edi, `app/resources/fonts/Noto_Sans` |
 | Noto Sans Mono Regular | every character PT Mono lacks | edi, `app/resources/fonts/Noto_Sans_Mono` |
 | Noto Sans Light | the large light main-area text: the placeholders and the project name | edi, `app/resources/fonts/Noto_Sans` |

@@ -111,7 +111,24 @@ TEST_CASE("C34-T28 F25 every aggregate family renews source identity and moves i
     edi::Structure structure;
     standalone(structure.scattering_lengths_fm, std::map<std::string, double>{{"Si", 4.1491}});
     edi::BraggPdExperiment experiment;
-    standalone(experiment.excluded_regions, std::vector<std::pair<double, double>>{{1.25, 4.5}});
+    for (bool assignment : {false, true}) {
+        experiment.excluded_regions = edi::excluded_region_rows({{1.25, 4.5}});
+        auto& source = experiment.excluded_regions;
+        const auto before = source.generation();
+        const auto token = source.token(0);
+        const auto held = source[0];
+        edi::ItemVec<edi::ExcludedRegion> destination;
+        std::optional<edi::ItemVec<edi::ExcludedRegion>> constructed;
+        if (assignment) destination = std::move(source);
+        else constructed.emplace(std::move(source));
+        CHECK_MESSAGE(source.empty(), " F25 moving a keyed exclusion table drains its source");
+        CHECK_MESSAGE(source.generation() > before, " F25 draining a keyed table renews the source generation");
+        const auto& received = assignment ? destination : *constructed;
+        CHECK_MESSAGE((edi::excluded_region_ranges(received) == std::vector<std::pair<double, double>>{{1.25, 4.5}}),
+                      " F25 moving a keyed exclusion table retains every bound");
+        CHECK_MESSAGE((received.token(0) == token && received[0] == held),
+                      " F25 row tokens and held row identity travel with the moved table");
+    }
     edi::CarriedLoop carried;
     standalone(carried.columns, std::vector<std::string>{"h", "k"});
     standalone(carried.rows, std::vector<std::vector<std::string>>{{"1", "2"}, {"3", "4"}});

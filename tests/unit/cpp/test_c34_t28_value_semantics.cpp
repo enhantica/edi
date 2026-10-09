@@ -149,8 +149,23 @@ TEST_CASE("C34-T28 F20 preserved aggregate comparisons retain standard value ord
     ordered(structure.scattering_lengths_fm, std::map<std::string, double>{{"Al", 3.449}},
             std::map<std::string, double>{{"Si", 4.1491}});
     edi::ExperimentBase experiment;
-    ordered(experiment.excluded_regions, std::vector<std::pair<double, double>>{{1.25, 4.5}},
-            std::vector<std::pair<double, double>>{{2.5, 4.5}});
+    const std::vector<std::pair<double, double>> low{{1.25, 4.5}}, high{{2.5, 4.5}};
+    experiment.excluded_regions = edi::excluded_region_rows(low);
+    auto other = edi::excluded_region_rows(high);
+    CHECK_MESSAGE(edi::excluded_region_ranges(experiment.excluded_regions) == low,
+                  " F20 keyed exclusion bounds retain their independently supplied values");
+    CHECK_MESSAGE(edi::excluded_region_ranges(other) == high,
+                  " F20 a second keyed table retains its distinct bounds");
+    const auto actual_low = edi::excluded_region_ranges(experiment.excluded_regions);
+    const auto actual_high = edi::excluded_region_ranges(other);
+    CHECK_MESSAGE((actual_low < actual_high) == (low < high),
+                  " F20 bounds snapshots retain the former standard pair-vector < relation");
+    CHECK_MESSAGE((actual_high > actual_low) == (high > low),
+                  " F20 reversed bounds snapshot operands retain the > relation");
+    CHECK_MESSAGE((actual_low <= actual_high) == (low <= high),
+                  " F20 bounds snapshots retain the standard <= relation");
+    CHECK_MESSAGE((actual_low >= actual_high) == (low >= high),
+                  " F20 bounds snapshots retain the standard >= relation");
     edi::CarriedLoop carried;
     ordered(carried.columns, std::vector<std::string>{"a"}, std::vector<std::string>{"z"});
     ordered(carried.rows, std::vector<std::vector<std::string>>{{"a"}},
