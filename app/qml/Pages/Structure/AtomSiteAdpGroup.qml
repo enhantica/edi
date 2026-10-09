@@ -42,7 +42,7 @@ Column {
             return names.length === 1 ? names[0] : qsTr("iso / eq");
         }
 
-        columnWidths: [numberColumnWidth, textColumnWidth("label", qsTr("label")), group.typeWidth, -1, -1, -1, -1, -1, -1, -1]
+        columnWidths: [numberColumnWidth, textColumnWidth("label", qsTr("id")), group.typeWidth, -1, -1, -1, -1, -1, -1, -1]
 
         header: EaComponents.ListViewHeader {
             EaComponents.TableViewLabel {
@@ -50,7 +50,7 @@ Column {
             }
             EaComponents.TableViewLabel {
                 horizontalAlignment: Text.AlignLeft
-                text: qsTr("label")
+                text: qsTr("id")
             }
             EaComponents.TableViewLabel {
                 horizontalAlignment: Text.AlignHCenter
@@ -108,9 +108,9 @@ Column {
             }
             TextCell {
                 objectName: `atomSiteAdp.label.${row.index}`
-                enabled: false
                 horizontalAlignment: Text.AlignLeft
                 value: row.label
+                onCommitted: text => group.structure.atomSites.setText(row.index, "label", text)
             }
             SearchableComboBox {
                 horizontalAlignment: Text.AlignHCenter

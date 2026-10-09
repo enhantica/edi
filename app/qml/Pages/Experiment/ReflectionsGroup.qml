@@ -32,7 +32,6 @@ DataTable {
     header: EaComponents.ListViewHeader {
         EaComponents.TableViewLabel {
             horizontalAlignment: Text.AlignHCenter
-            text: qsTr("id")
         }
         EaComponents.TableViewLabel {
             horizontalAlignment: Text.AlignHCenter

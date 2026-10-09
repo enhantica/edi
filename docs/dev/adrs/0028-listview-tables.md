@@ -16,7 +16,7 @@ Use those ListView types for every edi table, including dialogs and project
 lists. Keep the upstream sources unmodified and pin the selected `edi` revision
 with the archive and source-tree hashes used by ADR-0015.
 
-Each table declares widths once. Row numbers fit the largest displayed number;
+Each table declares widths once. Read-only row numbers have blank headings and fit the largest displayed number;
 icons, fit controls and remove buttons have compact fixed widths. Labels and
 units fit their content. Numeric columns share the remaining space equally.
 Headers and row cells use the same widths and explicit alignments. In Analysis,
@@ -47,3 +47,11 @@ beta tensors. ADP conversion and chart/reflection physics remain separate concer
 The prior tables, including scan extract columns, follow the same width policy.
 The row models and their editing/undo paths remain the data source. Computed
 pattern cells show only a published calculation and clear on refusal.
+
+## Identifier correction
+
+Row numbering and stored identifiers are distinct columns. Atom-site and
+displacement identifiers are both editable through the same atom-site rename
+operation. Analysis uses “s.u.” and “free” headings. The owner extended this
+task on 2026-10-09 to add persistent editable IDs for background and excluded
+region rows; these IDs belong to the data model and round-trip through `.edi`.

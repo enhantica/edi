@@ -128,7 +128,7 @@ EaElements.GroupBox {
                 }
                 EaComponents.TableViewLabel {
                     horizontalAlignment: Text.AlignHCenter
-                    text: qsTr("error")
+                    text: qsTr("s.u.")
                 }
                 EaComponents.TableViewLabel {
                     horizontalAlignment: Text.AlignHCenter
@@ -140,7 +140,7 @@ EaElements.GroupBox {
                 }
                 EaComponents.TableViewLabel {
                     horizontalAlignment: Text.AlignHCenter
-                    text: qsTr("vary")
+                    text: qsTr("free")
                 }
             }
 

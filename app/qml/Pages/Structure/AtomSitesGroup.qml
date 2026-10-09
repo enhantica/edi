@@ -29,7 +29,7 @@ Column {
         defaultInfoText: qsTr("No atom sites defined")
         sourceModel: group.sites
 
-        columnWidths: [numberColumnWidth, textColumnWidth("label", qsTr("label")), group.typeWidth, -1, -1, -1, group.wyckoffWidth, -1, AppSizes.iconColumnWidth]
+        columnWidths: [numberColumnWidth, textColumnWidth("label", qsTr("id")), group.typeWidth, -1, -1, -1, group.wyckoffWidth, -1, AppSizes.iconColumnWidth]
 
         header: EaComponents.ListViewHeader {
             EaComponents.TableViewLabel {
@@ -37,7 +37,7 @@ Column {
             }
             EaComponents.TableViewLabel {
                 horizontalAlignment: Text.AlignLeft
-                text: qsTr("label")
+                text: qsTr("id")
             }
             EaComponents.TableViewLabel {
                 horizontalAlignment: Text.AlignLeft
