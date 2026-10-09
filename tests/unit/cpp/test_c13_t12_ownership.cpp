@@ -1,5 +1,7 @@
 #include <doctest/doctest.h>
 
+#include "edi/model.hpp"
+
 #include <algorithm>
 #include <functional>
 #include <memory>
@@ -100,7 +102,9 @@ void seed_payload(T& value, double scalar) {
         value.adp_type = "type-" + std::to_string(scalar);
     } else if constexpr (requires { value.dataset_weight; }) {
         value.dataset_weight = scalar;
-        value.excluded_regions = {{scalar, scalar + 1}, {scalar + 2, scalar + 3}};
+        value.excluded_regions = edi::excluded_region_rows({{scalar, scalar + 1}, {scalar + 2, scalar + 3}});
+        value.excluded_regions[0]->id = "low-" + std::to_string(scalar);
+        value.excluded_regions[1]->id = "high-" + std::to_string(scalar);
         if constexpr (requires { value.peak.push_back(value.scale); }) {
             value.peak.push_back(value.scale);
             value.instrument.push_back(value.scale);
@@ -165,7 +169,8 @@ std::string payload(T& value) {
             << '|' << value.adp_type;
     } else if constexpr (requires { value.dataset_weight; }) {
         out << value.dataset_weight << '|';
-        for (auto [a, b] : value.excluded_regions) out << a << ':' << b << '|';
+        for (const auto& row : value.excluded_regions)
+            out << row->id.value() << ':' << row->first.get() << ':' << row->second.get() << '|';
         if constexpr (requires { value.peak.begin(); }) {
             for (auto& p : value.peak) out << number(p) << '|';
             for (auto& p : value.instrument) out << number(p) << '|';
@@ -625,7 +630,6 @@ void no_raw_key_escape() {
     CHECK_MESSAGE(!mutable_character<K>, " character writes cannot bypass collection admission");
 }
 }  // namespace
-#include "edi/model.hpp"
 
 namespace {
 template <class T, class Key>

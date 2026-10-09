@@ -18,7 +18,8 @@ with the archive and source-tree hashes used by ADR-0015.
 
 Each table declares widths once. Read-only row numbers have blank headings and fit the largest displayed number;
 icons, fit controls and remove buttons have compact fixed widths. Labels and
-units fit their content. Numeric columns share the remaining space equally.
+units fit their content, capped at a quarter of the table width so long identifiers
+and paths cannot consume the numeric columns. Numeric columns share the remaining space equally.
 Headers and row cells use the same widths and explicit alignments. In Analysis,
 values, uncertainties and their headers align right, with units aligned left in the adjacent
 column so they sit next to the values. Text editors show the beginning of an overflowing value when idle and expose its full value
@@ -46,7 +47,9 @@ Selected notes: 2, 4, 9, 10, the GUI portion of 11, 14–18, 22, 23, 25 and 26.
 From the supplied GUI notes: atom/experiment/loop widths and IDs, measured-data
 computed fields, overflowing values, free-value styling, analysis layout and
 category filtering, recent/example project tables and About's dependency table.
-The Text tab and persisted `.edi` vocabulary are unchanged by owner request.
+The original scope left the Text tab and persisted `.edi` vocabulary unchanged;
+the identifier extension below adds persistent IDs to the existing background
+and excluded-region loops.
 ADP headers distinguish B/U isotropic and equivalent values, including B eq for
 beta tensors. ADP conversion and chart/reflection physics remain separate concerns.
 
@@ -63,3 +66,17 @@ displacement identifiers are both editable through the same atom-site rename
 operation. Analysis uses “s.u.” and “free” headings. The owner extended this
 task on 2026-10-09 to add persistent editable IDs for background and excluded
 region rows; these IDs belong to the data model and round-trip through `.edi`.
+
+These rows extend ADR-0016/0018's ItemKey, ItemVec and RowSchema design. Legacy
+constructors and files without IDs receive the first unused numeric ID on
+admission, after reserving explicit IDs. Admission rolls back generated detached
+IDs on refusal. Attached IDs must be nonempty and unique. Rename, deletion,
+copy and save preserve the other rows' IDs. Exclusion bounds are recorded
+row cells; numeric consumers receive their existing bounds-only snapshot.
+The adapter carries both IDs and values into crysta's writer (ADR-0083); the
+public Python exclusion property keeps its existing tuple-of-pairs interface.
+
+The upstream ListView selection model binds an undefined model during page construction in
+Qt 6.11. edi replaces that one component at the module seam with the pinned source plus
+`model: listView.model ?? null` on ItemSelectionModel. The upstream checkout stays untouched;
+the app lifecycle gate covers direct undefined initialization and attach/detach transitions.

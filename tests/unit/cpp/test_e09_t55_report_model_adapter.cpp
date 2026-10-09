@@ -229,7 +229,8 @@ TEST_CASE("E09-T55 adapter conversion preserves the complete TOF experiment layo
     source.peak.type = "tof-jorgensen-von-dreele";
     source.experiment_type.beam_mode = edi::BeamModeEnum::TIME_OF_FLIGHT;
     source.dataset_weight = 2.5;
-    source.excluded_regions = {{10.0, 20.0}};
+    source.excluded_regions = edi::excluded_region_rows({{10.0, 20.0}});
+    source.excluded_regions[0]->id = "low angle";
     source.peak.rise_alpha_0 = {1.0, 0.01, true};
     source.peak.rise_alpha_1 = {2.0, 0.02, false};
     source.peak.decay_beta_0 = {3.0, 0.03, true};
@@ -283,8 +284,10 @@ TEST_CASE("E09-T55 adapter conversion preserves the complete TOF experiment layo
     CHECK_MESSAGE((converted.absorption.size() == 2 && converted.absorption[0].value() == 0.2 &&
                    converted.absorption[1].value() == 0.3),
                   "the adapter must preserve the two-term absorption body");
+    CHECK_MESSAGE(converted.excluded_regions[0].id == "low angle",
+                  "the adapter must retain the exclusion's stored ID independently of row number");
     CHECK_MESSAGE(
-        (converted.dataset_weight == 2.5 && converted.excluded_regions == source.excluded_regions),
+        (converted.dataset_weight == 2.5 && crysta::excluded_region_ranges(converted.excluded_regions) == edi::excluded_region_ranges(source.excluded_regions)),
         "the adapter must preserve joint-fit weight and exclusion masks");
 }
 

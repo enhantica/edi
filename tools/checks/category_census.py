@@ -80,6 +80,7 @@ NOT_MODEL = {
     'DataSource': "a handed-out data object's link to its experiment",
     'CategoryRef': "a parameter's link to its category's row",
     'KeyedBase': 'the base of the table class',
+    'DefaultIds': 'the rollback guard for detached row IDs during table admission (ADR-0028)',
     'ItemVec': 'the table class of a loop category',
     'State': "a cell view's state: its value, its last write and the tables that hold its row",
     'TextState': "a text cell's state: its text, its last write and the tables that hold its row",

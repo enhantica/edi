@@ -24,11 +24,15 @@ Column {
         defaultInfoText: qsTr("No excluded regions")
         sourceModel: group.regions
 
-        columnWidths: [numberColumnWidth, -1, -1, AppSizes.iconColumnWidth]
+        columnWidths: [numberColumnWidth, Math.min(textColumnWidth("id", qsTr("id")), width * 0.25), -1, -1, AppSizes.iconColumnWidth]
 
         header: EaComponents.ListViewHeader {
             EaComponents.TableViewLabel {
                 horizontalAlignment: Text.AlignHCenter
+            }
+            EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignLeft
+                text: qsTr("id")
             }
             EaComponents.TableViewLabel {
                 horizontalAlignment: Text.AlignHCenter
@@ -47,6 +51,7 @@ Column {
             id: row
 
             required property int index
+            required property var model
             required property real start
             required property real end
 
@@ -54,6 +59,12 @@ Column {
                 horizontalAlignment: Text.AlignHCenter
                 color: EaStyle.Colors.themeForegroundMinor
                 text: row.index + 1
+            }
+            TextCell {
+                horizontalAlignment: Text.AlignLeft
+                objectName: `excludedRegion.id.${row.index}`
+                value: row.model.id
+                onCommitted: text => group.regions.setId(row.index, text)
             }
             TextCell {
                 horizontalAlignment: Text.AlignHCenter
