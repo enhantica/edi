@@ -46,7 +46,7 @@ class ExampleListModel : public RowTableModel {
    private:
     struct Entry {
         QString id, sample, origin, detail, search;
-        QStringList tags;
+        QStringList tags, tag_icons;
         QHash<QString, QStringList> values;
     };
     void refresh();

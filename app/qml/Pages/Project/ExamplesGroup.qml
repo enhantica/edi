@@ -82,6 +82,7 @@ EaElements.GroupBox {
                 required property string origin
                 required property string detail
                 required property list<string> tagLabels
+                required property list<string> tagIcons
                 objectName: `examples.open.${exampleId}`
                 MouseArea {
                     parent: row
@@ -125,18 +126,30 @@ EaElements.GroupBox {
                                         id: badge
                                         required property string modelData
                                         required property int index
-                                        readonly property color ink: index === 0 ? (modelData === qsTr("Simulation") ? (EaStyle.Colors.isDarkPalette ? "#cba1eb" : "#8354a9") : (EaStyle.Colors.isDarkPalette ? "#9ac776" : "#398648")) : index === 1 ? (EaStyle.Colors.isDarkPalette ? "#e3b06d" : "#96601d") : EaStyle.Colors.themeAccent
+                                        readonly property color ink: index === 0 ? (modelData === qsTr("Simulation") ? (EaStyle.Colors.isDarkPalette ? "#cba1eb" : "#8354a9") : (EaStyle.Colors.isDarkPalette ? "#9ac776" : "#398648")) : index === 1 ? (EaStyle.Colors.isDarkPalette ? "#e3b06d" : "#96601d") : EaStyle.Colors.themeForeground
                                         radius: 3
                                         color: Qt.rgba(ink.r, ink.g, ink.b, 0.13)
-                                        width: badgeText.implicitWidth + AppSizes.fieldSpacing
+                                        width: badgeContent.implicitWidth + AppSizes.fieldSpacing
                                         height: EaStyle.Sizes.fontPixelSize * 1.65
-                                        EaElements.Label {
-                                            id: badgeText
+                                        Row {
+                                            id: badgeContent
                                             anchors.centerIn: parent
-                                            horizontalAlignment: Text.AlignHCenter
-                                            font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.9
-                                            color: badge.ink
-                                            text: badge.modelData
+                                            spacing: AppSizes.fieldSpacing / 2
+                                            EaElements.Label {
+                                                visible: text !== ""
+                                                anchors.verticalCenter: parent.verticalCenter
+                                                font.family: EaStyle.Fonts.iconsFamily
+                                                font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.8
+                                                color: badge.ink
+                                                text: row.tagIcons[badge.index] ?? ""
+                                            }
+                                            EaElements.Label {
+                                                anchors.verticalCenter: parent.verticalCenter
+                                                horizontalAlignment: Text.AlignHCenter
+                                                font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.9
+                                                color: badge.ink
+                                                text: badge.modelData
+                                            }
                                         }
                                     }
                                 }

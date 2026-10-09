@@ -54,8 +54,9 @@ QStringList ExampleListModel::bundledIds() {
     return QString::fromUtf8(index.readAll()).split(QLatin1Char('\n'), Qt::SkipEmptyParts);
 }
 ExampleListModel::ExampleListModel(QObject* parent)
-    : RowTableModel(
-          {"exampleId", "name", "description", "sample", "origin", "detail", "tagLabels"}, parent),
+    : RowTableModel({"exampleId", "name", "description", "sample", "origin", "detail", "tagLabels",
+                     "tagIcons"},
+                    parent),
       properties_({"value", "title"}, this),
       options_({"value", "title", "matchingCount"}, this) {
     QList<Row> properties;
@@ -91,15 +92,28 @@ ExampleListModel::ExampleListModel(QObject* parent)
             if (data.isEmpty()) data.append(unknown);
             entry.values.insert(key, data);
         }
-        for (const auto& purpose : entry.values.value("purpose"))
+        for (const auto& purpose : entry.values.value("purpose")) {
             entry.tags.append(label(purpose));
-        for (const auto& mode : entry.values.value("fittingMode"))
-            if (mode != unknown) entry.tags.append(label(mode));
+            entry.tag_icons.append(QString());
+        }
+        // Glyphs in the bundled Font Awesome 5 face; select by stored enum, never translated
+        // label.
+        const QHash<QString, QString> mode_icons{{"single", "\uf192"},
+                                                 {"joint", "\uf0c1"},
+                                                 {"sequential", "\uf101"},
+                                                 {"independent", "\uf074"}};
+        for (const auto& mode : entry.values.value("fittingMode")) {
+            if (mode == unknown) continue;
+            entry.tags.append(label(mode));
+            entry.tag_icons.append(mode_icons.value(mode));
+        }
         for (const QString& key : {QStringLiteral("sampleForm"), QStringLiteral("probe"),
                                    QStringLiteral("beamMode"), QStringLiteral("scatteringType")})
             for (const auto& value : entry.values.value(key))
-                if (value != unknown && !entry.tags.contains(tag(value)))
+                if (value != unknown && !entry.tags.contains(tag(value))) {
                     entry.tags.append(tag(value));
+                    entry.tag_icons.append(QString());
+                }
         entry.search = normalize(entry.search + " " + entry.tags.join(' '));
         entries_.append(entry);
     }
@@ -158,7 +172,7 @@ void ExampleListModel::refresh() {
             {reinterpret_cast<const void*>(i + 1),
              {entry.id, entry.sample + QStringLiteral(" · ") + entry.origin,
               entry.tags.join(QStringLiteral(" · ")) + QStringLiteral(" · ") + entry.detail,
-              entry.sample, entry.origin, entry.detail, entry.tags}});
+              entry.sample, entry.origin, entry.detail, entry.tags, entry.tag_icons}});
     }
     QStringList choices = counts.keys();
     std::sort(choices.begin(), choices.end(), [](const QString& a, const QString& b) {
