@@ -15,6 +15,8 @@ EaComponents.ListView {
     multiSelection: false
     readonly property real numberColumnWidth: Math.ceil(Math.max(metrics.advanceWidth("id"), metrics.advanceWidth(String(Math.max(1, count))))) + AppSizes.fieldSpacing * 2
     property int modelRevision: 0
+    // Long IDs and paths must leave room for the numeric cells and row controls.
+    property real maximumTextColumnShare: 0.25
 
     function textColumnWidth(role: string, title: string): real {
         const revision = modelRevision;
@@ -25,7 +27,7 @@ EaComponents.ListView {
                 result = Math.max(result, metrics.advanceWidth(text));
             }
         }
-        return Math.ceil(result) + AppSizes.fieldSpacing * 2;
+        return Math.min(Math.ceil(result) + AppSizes.fieldSpacing * 2, width * maximumTextColumnShare);
     }
 
     FontMetrics {
