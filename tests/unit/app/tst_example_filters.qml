@@ -185,6 +185,10 @@ Item {
             for (const property of ["facilities", "instruments", "dimensionality", "polarisation"]) {
                 Session.examples.filterProperty = property;
                 const expected = sourceIds.filter(id => Session.examples.propertyValues(id, property).includes("__unknown__"));
+                if (expected.length === 0) {
+                    verify(!options().some(choice => choice.value === "__unknown__"), "A fully specified axis has no invented unknown choice");
+                    continue;
+                }
                 compare(option("__unknown__").count, expected.length);
                 Session.examples.filterValue = "__unknown__";
                 sameIds(ids(), expected);
