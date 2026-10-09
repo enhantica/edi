@@ -43,7 +43,7 @@ original could. Three facts shape the decision:
    `3897d339b60f5707bfe952fed59a20f73340e236` and declares its own QML modules under the upstream URIs
    (`EasyApplication.Gui.{Style,Globals,Logic,Animations,Elements,Components}`,
    `EasyApplication.Logic.Maintenance`) over an explicit file list. Upstream files are built byte-identical except the declared
-   replacement seams: Fonts for edi's font inventory (§10), and ListView for the null-safe
+   replacement seams: ParamTextField and TableViewParameter for parameter menu terminology and units (ADR-0028), Fonts for edi's font inventory (§10), ListView for the null-safe
    selection-model initialization recorded in ADR-0028;
    configuration refuses another commit or local changes under `src/`. Left out: the Plotly/WebEngine and
    QtCharts charts, `BasicReport` (WebEngine), `GuideWindow`/`GuideWindowContainer`, `JsonListModel`,
