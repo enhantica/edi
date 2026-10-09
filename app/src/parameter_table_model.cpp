@@ -20,8 +20,10 @@ bool matches_group(const QString& group, const QString& kind, const QString& cat
     if (group == QLatin1String("@coordinates")) return category == QLatin1String("atom_site") && name.startsWith(QLatin1String("fract_"));
     if (group == QLatin1String("@occupancies")) return category == QLatin1String("atom_site") && name == QLatin1String("occupancy");
     if (group == QLatin1String("@displacement")) return category == QLatin1String("atom_site_aniso") || (category == QLatin1String("atom_site") && name.startsWith(QLatin1String("adp_")));
-    if (group == QLatin1String("@peakShape")) return category == QLatin1String("peak") && !name.startsWith(QLatin1String("asym_"));
-    if (group == QLatin1String("@peakAsymmetry")) return category == QLatin1String("peak") && name.startsWith(QLatin1String("asym_"));
+    if (group == QLatin1String("@peakBroadening")) return category == QLatin1String("peak") && name.startsWith(QLatin1String("broad_"));
+    if (group == QLatin1String("@peakMixing")) return category == QLatin1String("peak") && name.startsWith(QLatin1String("mixing_"));
+    if (group == QLatin1String("@peakAsymmetry")) return category == QLatin1String("peak") &&
+        (name.startsWith(QLatin1String("asym_")) || name.startsWith(QLatin1String("rise_alpha_")) || name.startsWith(QLatin1String("decay_beta_")));
     return category == group;
 }
 }  // namespace
@@ -111,15 +113,23 @@ void ParameterFilterModel::refreshCategories() {
     }
     QStringList categories;
     QVariantList groups;
-    const auto add = [&](const QString& key, const QString& title, const QString& icon, bool datablock = false) {
+    const auto countGroup = [&](const QString& key) {
         int count = 0;
         for (const Row& row : rows) {
             count += matches_group(key, row.kind, row.category, row.name) ? 1 : 0;
         }
+        return count;
+    };
+    const auto add = [&](const QString& key, const QString& title, const QString& icon, bool datablock = false) {
+        const int count = countGroup(key);
         if (count == 0 && !key.isEmpty()) return;
         categories.append(key);
         groups.append(QVariantMap{{"key", key}, {"title", title + QStringLiteral(" (%1)").arg(count)},
                                   {"icon", icon}, {"datablock", datablock}, {"count", count}});
+    };
+    // A subset must narrow its category; otherwise its second menu entry adds no choice.
+    const auto addSubset = [&](const QString& parent, const QString& key, const QString& title, const QString& icon) {
+        if (countGroup(key) < countGroup(parent)) add(key, title, icon);
     };
     add({}, tr("All categories"), {});
     for (const QString& kind : {QStringLiteral("structure"), QStringLiteral("experiment")}) {
@@ -133,9 +143,9 @@ void ParameterFilterModel::refreshCategories() {
                 if (seen.contains(QStringLiteral("@atoms"))) continue;
                 seen.append(QStringLiteral("@atoms"));
                 add(QStringLiteral("@atoms"), tr("Atom sites"), QStringLiteral("atom"));
-                add(QStringLiteral("@coordinates"), tr("Atomic coordinates"), QStringLiteral("map-marker-alt"));
-                add(QStringLiteral("@occupancies"), tr("Atomic occupancies"), QStringLiteral("fill"));
-                add(QStringLiteral("@displacement"), tr("Atomic displacement"), QStringLiteral("arrows-alt"));
+                addSubset(QStringLiteral("@atoms"), QStringLiteral("@coordinates"), tr("Atomic coordinates"), QStringLiteral("map-marker-alt"));
+                addSubset(QStringLiteral("@atoms"), QStringLiteral("@occupancies"), tr("Atomic occupancies"), QStringLiteral("fill"));
+                addSubset(QStringLiteral("@atoms"), QStringLiteral("@displacement"), tr("Atomic displacement"), QStringLiteral("arrows-alt"));
                 continue;
             }
             const auto presentation = category_presentation(row.category);
@@ -144,8 +154,9 @@ void ParameterFilterModel::refreshCategories() {
             if (title.isEmpty()) { title = row.category; title.replace(QLatin1Char('_'), QLatin1Char(' ')); }
             add(row.category, title, QString::fromUtf8(presentation.icon));
             if (row.category == QLatin1String("peak")) {
-                add(QStringLiteral("@peakShape"), tr("Peak shape"), QStringLiteral("shapes"));
-                add(QStringLiteral("@peakAsymmetry"), tr("Peak asymmetry"), QStringLiteral("balance-scale-left"));
+                addSubset(row.category, QStringLiteral("@peakBroadening"), tr("Peak broadening"), QStringLiteral("arrows-alt-h"));
+                addSubset(row.category, QStringLiteral("@peakMixing"), tr("Peak mixing"), QStringLiteral("shapes"));
+                addSubset(row.category, QStringLiteral("@peakAsymmetry"), tr("Peak asymmetry"), QStringLiteral("balance-scale-left"));
             }
         }
     }
