@@ -144,6 +144,7 @@ edi_gui_base_module(edi_gui_components EasyApplication.Gui.Components Gui/Compon
 # `Qt.resolvedUrl("../Resources/Fonts")` looks: the base's own faces edi keeps, and edi's (ADR-0015 §10).
 set(EDI_GUI_BASE_FONTS
     "PT_Sans/PTSans-Regular.ttf" "PT_Sans/PTSans-Bold.ttf" "PT_Mono/PTMono-Regular.ttf"
+    "Encode_Sans/EncodeSans-Regular.ttf"
     "FontAwesome/Font Awesome 5 Free-Solid-900.otf")
 set(_edi_gui_font_files)
 foreach(font IN LISTS EDI_GUI_BASE_FONTS)
