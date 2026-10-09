@@ -13,7 +13,7 @@ EaComponents.ListView {
     property var sourceModel: null
     model: sourceModel ?? null
     multiSelection: false
-    readonly property real numberColumnWidth: Math.ceil(Math.max(metrics.advanceWidth("id"), metrics.advanceWidth(String(Math.max(1, count))))) + AppSizes.fieldSpacing * 2
+    readonly property real numberColumnWidth: Math.ceil(metrics.advanceWidth(String(Math.max(1, count)))) + AppSizes.fieldSpacing * 2
     property int modelRevision: 0
     // Long IDs and paths must leave room for the numeric cells and row controls.
     property real maximumTextColumnShare: 0.25

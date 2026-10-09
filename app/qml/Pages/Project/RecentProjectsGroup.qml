@@ -20,6 +20,7 @@ EaElements.GroupBox {
 
     Column {
         DataTable {
+            id: table
             objectName: "recentProjects.list"
             defaultInfoText: qsTr("No recent projects")
             sourceModel: RecentProjects.rows
@@ -46,8 +47,12 @@ EaElements.GroupBox {
                 required property string path
                 required property bool available
 
-                TapHandler {
-                    onTapped: {
+                MouseArea {
+                    parent: row
+                    height: row.height
+                    width: row.width - AppSizes.iconColumnWidth - table.rowPadding - EaStyle.Sizes.tableColumnSpacing
+                    cursorShape: row.available ? Qt.PointingHandCursor : Qt.ArrowCursor
+                    onClicked: {
                         if (row.available)
                             Session.openProject(Session.projectDirectoryUrl(row.path));
                     }
