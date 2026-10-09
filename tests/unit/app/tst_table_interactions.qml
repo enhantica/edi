@@ -4,6 +4,7 @@ import QtQuick.Controls
 import QtTest
 import EasyApplication.Gui.Components as EaComponents
 import EasyApplication.Gui.Elements as EaElements
+import EasyApplication.Gui.Style as EaStyle
 import edi.app
 import TableIdTests 1.0
 import "UiInteraction.js" as Ui
@@ -40,6 +41,15 @@ Item {
         EaElements.ParamTextField {
             width: 240
             height: 48
+        }
+    }
+    Component {
+        id: pickerComponent
+        SearchableComboBox {
+            x: 100
+            y: 100
+            width: 160
+            inTable: true
         }
     }
     TestCase {
@@ -139,6 +149,44 @@ Item {
                     component: fieldComponent
                 }
             ];
+        }
+        function test_first_popup_matches_entries_and_exposes_first_option_data() {
+            return [
+                {
+                    tag: "one-entry",
+                    names: ["cosio"]
+                },
+                {
+                    tag: "selected-last",
+                    names: ["All categories", "Atomic coordinates", "Atomic displacement"]
+                }
+            ];
+        }
+        function test_first_popup_matches_entries_and_exposes_first_option(data) {
+            const picker = createTemporaryObject(pickerComponent, surface, {
+                model: data.names,
+                currentIndex: data.names.length - 1
+            });
+            verify(picker !== null);
+            verify(waitForPolish(picker));
+            let firstHeight = 0;
+            for (let opening = 0; opening < 2; ++opening) {
+                click(picker);
+                tryCompare(picker.popup, "opened", true);
+                const popup = picker.popup;
+                const list = popup.contentItem;
+                const expected = data.names.length * EaStyle.Sizes.comboBoxHeight + popup.topPadding + popup.bottomPadding;
+                tryVerify(() => Math.abs(popup.height - expected) < 0.1, "The first opening must not retain a larger default height");
+                verify(popup.width >= picker.width && popup.width <= surface.width);
+                tryVerify(() => Math.abs(list.contentY - list.originY) < 0.1, "All categories remains visible even with a later current selection");
+                verify(Ui.exposed(list.itemAtIndex(0)), "The first option is inside the opened popup");
+                if (opening === 0)
+                    firstHeight = popup.height;
+                else
+                    compare(popup.height, firstHeight, "First and second opening have the same content height");
+                popup.close();
+                tryCompare(popup, "visible", false);
+            }
         }
         function test_parameter_menus(data) {
             const parameter = {
