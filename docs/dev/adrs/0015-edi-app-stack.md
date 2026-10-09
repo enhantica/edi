@@ -177,6 +177,7 @@ The app draws text only with fonts it bundles:
 | --- | --- | --- |
 | PT Sans Regular and Bold | all text | gui-components, `Resources/Fonts/PT_Sans` |
 | PT Mono | the Text tabs | gui-components, `Resources/Fonts/PT_Mono` |
+| Encode Sans Regular | the fit summary arrow | gui-components, `Resources/Fonts/Encode_Sans` |
 | Noto Sans Regular | every character PT Sans lacks | edi, `app/resources/fonts/Noto_Sans` |
 | Noto Sans Mono Regular | every character PT Mono lacks | edi, `app/resources/fonts/Noto_Sans_Mono` |
 | Noto Sans Light | the large light main-area text: the placeholders and the project name | edi, `app/resources/fonts/Noto_Sans` |
