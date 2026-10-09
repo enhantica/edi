@@ -82,8 +82,11 @@ EaElements.GroupBox {
                 required property string detail
                 required property list<string> tagLabels
                 objectName: `examples.open.${exampleId}`
-                TapHandler {
-                    onTapped: Session.openExample(row.exampleId)
+                MouseArea {
+                    parent: row
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: Session.openExample(row.exampleId)
                 }
                 EaComponents.TableViewLabel {
                     horizontalAlignment: Text.AlignHCenter
