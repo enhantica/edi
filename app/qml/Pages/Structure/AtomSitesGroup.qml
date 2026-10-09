@@ -93,39 +93,47 @@ Column {
             }
             // The type picked from the element table or typed into the list's search field (the owner,
             // 2026-10-06); a type outside the table, as a file may declare it ("Co2+", "157Gd"), is shown as it is.
-            SearchableComboBox {
-                horizontalAlignment: Text.AlignLeft
-                objectName: `atomSite.typeSymbol.${row.index}`
-                inTable: true
-                anchors.verticalCenter: parent.verticalCenter
-                searchThreshold: 0
-                model: ApplicationInfo.elementSymbols
-                currentIndex: ApplicationInfo.elementSymbols.indexOf(row.typeSymbol)
-                displayText: row.typeSymbol
-                popup.width: Math.max(width, EaStyle.Sizes.fontPixelSize * 8)
-                // The site's atom icon in its element's colour just before the type, as the Analysis page's parameter
-                // names carry it (the owner, 2026-10-03 and 2026-10-06).
-                contentItem: Item {
-                    clip: true
+            Item {
+                property int horizontalAlignment: Text.AlignLeft
+                height: parent.height
+                SearchableComboBox {
+                    width: Math.min(parent.width, implicitWidth)
+                    x: parent.horizontalAlignment === Text.AlignRight ? parent.width - width : parent.horizontalAlignment === Text.AlignLeft ? 0 : (parent.width - width) / 2
+                    horizontalAlignment: Text.AlignLeft
+                    objectName: `atomSite.typeSymbol.${row.index}`
+                    inTable: true
+                    anchors.verticalCenter: parent.verticalCenter
+                    searchThreshold: 0
+                    model: ApplicationInfo.elementSymbols
+                    currentIndex: ApplicationInfo.elementSymbols.indexOf(row.typeSymbol)
+                    displayText: row.typeSymbol
+                    popup.width: Math.max(width, EaStyle.Sizes.fontPixelSize * 8)
+                    // The site's atom icon in its element's colour just before the type, as the Analysis page's parameter
+                    // names carry it (the owner, 2026-10-03 and 2026-10-06).
+                    contentItem: Item {
+                        implicitWidth: typeLine.implicitWidth + EaStyle.Sizes.fontPixelSize * 0.5
+                        clip: true
 
-                    IconLine {
-                        objectName: `atomSite.icon.${row.index}`
-                        x: EaStyle.Sizes.fontPixelSize * 0.5
-                        anchors.verticalCenter: parent.verticalCenter
-                        segments: [
-                            {
-                                "icon": row.fractX ? row.fractX.categoryIcon : "",
-                                "color": AppColors.element(row.typeSymbol)
-                            },
-                            {
-                                "text": row.typeSymbol
-                            }
-                        ]
+                        IconLine {
+                            id: typeLine
+                            objectName: `atomSite.icon.${row.index}`
+                            x: EaStyle.Sizes.fontPixelSize * 0.5
+                            anchors.verticalCenter: parent.verticalCenter
+                            segments: [
+                                {
+                                    "icon": row.fractX ? row.fractX.categoryIcon : "",
+                                    "color": AppColors.element(row.typeSymbol)
+                                },
+                                {
+                                    "text": row.typeSymbol
+                                }
+                            ]
+                        }
                     }
-                }
-                onActivated: index => {
-                    group.sites.setText(row.index, "typeSymbol", textAt(index));
-                    currentIndex = Qt.binding(() => ApplicationInfo.elementSymbols.indexOf(row.typeSymbol));
+                    onActivated: index => {
+                        group.sites.setText(row.index, "typeSymbol", textAt(index));
+                        currentIndex = Qt.binding(() => ApplicationInfo.elementSymbols.indexOf(row.typeSymbol));
+                    }
                 }
             }
             ParameterCell {

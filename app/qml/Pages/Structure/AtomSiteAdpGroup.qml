@@ -112,21 +112,27 @@ Column {
                 value: row.label
                 onCommitted: text => group.structure.atomSites.setText(row.index, "label", text)
             }
-            SearchableComboBox {
-                horizontalAlignment: Text.AlignHCenter
-                objectName: `atomSiteAdp.type.${row.index}`
-                inTable: true
-                anchors.verticalCenter: parent.verticalCenter
-                model: group.adps ? group.adps.types : []
-                currentIndex: group.adps ? group.adps.types.indexOf(row.adpType) : -1
-                // The type change can add or remove a tensor row, which rebuilds this table: it runs after the
-                // popup has closed.
-                onActivated: index => {
-                    const site = row.index;
-                    const type = textAt(index);
-                    const adps = group.adps;
-                    currentIndex = Qt.binding(() => group.adps ? group.adps.types.indexOf(row.adpType) : -1);
-                    Qt.callLater(() => adps.setType(site, type));
+            Item {
+                property int horizontalAlignment: Text.AlignHCenter
+                height: parent.height
+                SearchableComboBox {
+                    width: Math.min(parent.width, implicitWidth)
+                    x: parent.horizontalAlignment === Text.AlignRight ? parent.width - width : parent.horizontalAlignment === Text.AlignLeft ? 0 : (parent.width - width) / 2
+                    horizontalAlignment: Text.AlignHCenter
+                    objectName: `atomSiteAdp.type.${row.index}`
+                    inTable: true
+                    anchors.verticalCenter: parent.verticalCenter
+                    model: group.adps ? group.adps.types : []
+                    currentIndex: group.adps ? group.adps.types.indexOf(row.adpType) : -1
+                    // The type change can add or remove a tensor row, which rebuilds this table: it runs after the
+                    // popup has closed.
+                    onActivated: index => {
+                        const site = row.index;
+                        const type = textAt(index);
+                        const adps = group.adps;
+                        currentIndex = Qt.binding(() => group.adps ? group.adps.types.indexOf(row.adpType) : -1);
+                        Qt.callLater(() => adps.setType(site, type));
+                    }
                 }
             }
             // The isotropic value in the site's type; an anisotropic site's equivalent value, which follows its

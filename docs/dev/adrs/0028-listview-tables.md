@@ -31,6 +31,9 @@ controls and Continue button. Tables that overflow show part of the next row.
 Recent projects are saved in the app settings, with disk availability and a
 remove action. Bundled examples use readable sample and instrument names.
 About opens the dependency table only from its libraries link.
+Table selector controls fit their current names and arrows within fixed column
+bounds; names of different lengths keep their arrows close without moving the
+other columns. Picker popups retain room for the alternative names.
 
 ## Scope
 

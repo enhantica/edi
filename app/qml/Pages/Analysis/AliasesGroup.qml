@@ -65,17 +65,23 @@ Column {
                 onCommitted: text => group.aliases.setText(row.index, "id", text)
             }
             // The base's table combo box (TableViewComboBox), searchable: a project has many parameters.
-            SearchableComboBox {
-                horizontalAlignment: Text.AlignLeft
-                objectName: `alias.parameter.${row.index}`
-                anchors.verticalCenter: parent.verticalCenter
-                borderColor: "transparent"
-                backgroundColor: "transparent"
-                model: group.aliases ? group.aliases.parameterNames : []
-                currentIndex: group.aliases ? group.aliases.parameterNames.indexOf(row.model.parameter) : -1
-                displayText: row.model.parameter
-                ToolTip.text: row.model.parameter
-                onActivated: index => group.aliases.setText(row.index, "parameter", group.aliases.parameterNames[index])
+            Item {
+                property int horizontalAlignment: Text.AlignLeft
+                height: parent.height
+                SearchableComboBox {
+                    width: Math.min(parent.width, implicitWidth)
+                    x: parent.horizontalAlignment === Text.AlignRight ? parent.width - width : parent.horizontalAlignment === Text.AlignLeft ? 0 : (parent.width - width) / 2
+                    inTable: true
+                    popup.width: parent.width
+                    horizontalAlignment: Text.AlignLeft
+                    objectName: `alias.parameter.${row.index}`
+                    anchors.verticalCenter: parent.verticalCenter
+                    model: group.aliases ? group.aliases.parameterNames : []
+                    currentIndex: group.aliases ? group.aliases.parameterNames.indexOf(row.model.parameter) : -1
+                    displayText: row.model.parameter
+                    ToolTip.text: row.model.parameter
+                    onActivated: index => group.aliases.setText(row.index, "parameter", group.aliases.parameterNames[index])
+                }
             }
             EaComponents.TableViewButton {
                 horizontalAlignment: Text.AlignHCenter

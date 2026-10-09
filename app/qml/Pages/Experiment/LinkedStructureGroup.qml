@@ -78,19 +78,26 @@ Column {
                 toolTip: qsTr("Calculated pattern color")
             }
             // The structure, picked from the project's structures as the aliases table picks a parameter.
-            EaComponents.TableViewComboBox {
-                id: structurePicker
-                horizontalAlignment: Text.AlignLeft
-                Component.onCompleted: structurePicker.contentItemLabel.horizontalAlignment = structurePicker.horizontalAlignment
-                objectName: `linkedStructure.structureId.${row.index}`
-                enabled: row.model.enabled
-                model: group.rows ? group.rows.structureNames : []
-                currentIndex: group.rows ? group.rows.structureNames.indexOf(row.structureId) : -1
-                displayText: row.structureId
-                ToolTip.text: row.structureId
-                onActivated: index => {
-                    group.rows.setStructureId(row.index, group.rows.structureNames[index]);
-                    currentIndex = Qt.binding(() => group.rows ? group.rows.structureNames.indexOf(row.structureId) : -1);
+            Item {
+                property int horizontalAlignment: Text.AlignLeft
+                height: parent.height
+                SearchableComboBox {
+                    width: Math.min(parent.width, implicitWidth)
+                    x: parent.horizontalAlignment === Text.AlignRight ? parent.width - width : parent.horizontalAlignment === Text.AlignLeft ? 0 : (parent.width - width) / 2
+                    inTable: true
+                    popup.width: parent.width
+                    horizontalAlignment: Text.AlignLeft
+                    anchors.verticalCenter: parent.verticalCenter
+                    objectName: `linkedStructure.structureId.${row.index}`
+                    enabled: row.model.enabled
+                    model: group.rows ? group.rows.structureNames : []
+                    currentIndex: group.rows ? group.rows.structureNames.indexOf(row.structureId) : -1
+                    displayText: row.structureId
+                    ToolTip.text: row.structureId
+                    onActivated: index => {
+                        group.rows.setStructureId(row.index, group.rows.structureNames[index]);
+                        currentIndex = Qt.binding(() => group.rows ? group.rows.structureNames.indexOf(row.structureId) : -1);
+                    }
                 }
             }
             ParameterCell {

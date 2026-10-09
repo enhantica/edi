@@ -161,7 +161,8 @@ EaElements.ComboBox {
     }
 
     Component.onCompleted: {
-        control.contentItemLabel.horizontalAlignment = Qt.binding(() => control.inTable ? control.horizontalAlignment : Text.AlignLeft);
+        if (control.contentItemLabel)
+            control.contentItemLabel.horizontalAlignment = Qt.binding(() => control.inTable ? control.horizontalAlignment : Text.AlignLeft);
         control.popup.contentItem.header = searchHeader;
         // The field stays at the top while the list scrolls: a long list opens at its current entry.
         control.popup.contentItem.headerPositioning = ListView.OverlayHeader;
