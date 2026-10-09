@@ -173,7 +173,7 @@ Column {
             }
             EaComponents.TableViewLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: table.model.stale ? qsTr("pending") : table.model.calculationError ? qsTr("failed") : row.model.calcStatus ?? ""
+                text: !table.model ? "" : table.model.stale ? qsTr("pending") : table.model.calculationError ? qsTr("failed") : row.model.calcStatus ?? ""
             }
         }
     }
