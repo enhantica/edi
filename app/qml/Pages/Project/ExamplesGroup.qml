@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Controls
+import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
 import EasyApplication.Gui.Components as EaComponents
@@ -101,6 +102,7 @@ EaElements.GroupBox {
                         width: parent.width
                         spacing: EaStyle.Sizes.fontPixelSize * 0.25
                         EaElements.Label {
+                            id: identityLabel
                             width: parent.width
                             horizontalAlignment: Text.AlignLeft
                             elide: Text.ElideRight
@@ -113,6 +115,7 @@ EaElements.GroupBox {
                             height: EaStyle.Sizes.fontPixelSize * 1.65
                             clip: true
                             Row {
+                                id: tagRow
                                 spacing: AppSizes.fieldSpacing / 2
                                 Repeater {
                                     model: row.tagLabels
@@ -120,7 +123,7 @@ EaElements.GroupBox {
                                         id: badge
                                         required property string modelData
                                         required property int index
-                                        readonly property color ink: index === 0 ? (modelData === qsTr("Simulation") ? "#9662bc" : "#398648") : EaStyle.Colors.themeAccent
+                                        readonly property color ink: index === 0 ? (modelData === qsTr("Simulation") ? (EaStyle.Colors.isDarkPalette ? "#cba1eb" : "#8354a9") : (EaStyle.Colors.isDarkPalette ? "#9ac776" : "#398648")) : index === 1 ? (EaStyle.Colors.isDarkPalette ? "#e3b06d" : "#96601d") : EaStyle.Colors.themeAccent
                                         radius: 3
                                         color: Qt.rgba(ink.r, ink.g, ink.b, 0.13)
                                         width: badgeText.implicitWidth + AppSizes.fieldSpacing
@@ -138,6 +141,7 @@ EaElements.GroupBox {
                             }
                         }
                         EaElements.Label {
+                            id: detailLabel
                             width: parent.width
                             horizontalAlignment: Text.AlignLeft
                             elide: Text.ElideRight
@@ -149,8 +153,10 @@ EaElements.GroupBox {
                     HoverHandler {
                         id: hover
                     }
-                    ToolTip.visible: hover.hovered
-                    ToolTip.text: row.sample + " · " + row.origin + "\n" + row.tagLabels.join(" · ") + "\n" + row.detail
+                    EaElements.ToolTip {
+                        visible: hover.hovered && EaGlobals.Vars.showToolTips && text !== ""
+                        text: [identityLabel.truncated ? identityLabel.text : "", tagRow.width > descriptionCell.width ? row.tagLabels.join(" · ") : "", detailLabel.truncated ? row.detail : ""].filter(line => line !== "").join("\n")
+                    }
                 }
             }
         }

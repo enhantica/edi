@@ -3,10 +3,10 @@
   "examples": {
     "pd-neut-cwl_cosio-d20_start-1": {
       "samples": [
-        "Co₂SiO₄"
+        "Co₂SiO₄ [Pnma]"
       ],
-      "origin": "D20 · ILL",
-      "detail": "Starting model 1",
+      "origin": "D20 @ ILL",
+      "detail": "Olivine structure and profile refinement · Starting model 1",
       "values": {
         "sampleForm": [
           "powder"
@@ -20,12 +20,6 @@
         "scatteringType": [
           "bragg"
         ],
-        "dimensionality": [
-          ""
-        ],
-        "polarisation": [
-          ""
-        ],
         "purpose": [
           "refinement"
         ],
@@ -37,26 +31,32 @@
         ],
         "instruments": [
           "D20"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
         ]
       },
       "searchAliases": [
-        "cosio-d20",
         "pd-neut-cwl_cosio-d20_start-1",
-        " graded start s1 of refine-cosio-d20",
-        "?"
+        "Co₂SiO₄ [Pnma] · D20 @ ILL",
+        "Olivine structure and profile refinement · Starting model 1"
       ],
       "sources": [
         "docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project/project.edi",
         "docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project/experiments/d20.edi"
+        "docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project/experiments/d20.edi",
+        "docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project/structures/cosio.edi"
       ]
     },
     "pd-neut-cwl_cosio-d20_start-4": {
       "samples": [
-        "Co₂SiO₄"
+        "Co₂SiO₄ [Pnma]"
       ],
-      "origin": "D20 · ILL",
-      "detail": "Starting model 4",
+      "origin": "D20 @ ILL",
+      "detail": "Olivine structure and profile refinement · Starting model 4",
       "values": {
         "sampleForm": [
           "powder"
@@ -70,12 +70,6 @@
         "scatteringType": [
           "bragg"
         ],
-        "dimensionality": [
-          ""
-        ],
-        "polarisation": [
-          ""
-        ],
         "purpose": [
           "refinement"
         ],
@@ -87,26 +81,32 @@
         ],
         "instruments": [
           "D20"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
         ]
       },
       "searchAliases": [
-        "cosio-d20",
         "pd-neut-cwl_cosio-d20_start-4",
-        " graded start s4 of refine-cosio-d20",
-        "?"
+        "Co₂SiO₄ [Pnma] · D20 @ ILL",
+        "Olivine structure and profile refinement · Starting model 4"
       ],
       "sources": [
         "docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project/project.edi",
         "docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project/experiments/d20.edi"
+        "docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project/experiments/d20.edi",
+        "docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project/structures/cosio.edi"
       ]
     },
     "pd-neut-cwl_cosio-d20_scan-3f": {
       "samples": [
-        "Co₂SiO₄"
+        "Co₂SiO₄ [Pnma]"
       ],
-      "origin": "D20 · ILL",
-      "detail": "Sequential scan (3 datasets)",
+      "origin": "D20 @ ILL",
+      "detail": "Temperature scan · 3 patterns at 52.3, 299.4 and 497.4 K",
       "values": {
         "sampleForm": [
           "powder"
@@ -120,12 +120,6 @@
         "scatteringType": [
           "bragg"
         ],
-        "dimensionality": [
-          ""
-        ],
-        "polarisation": [
-          ""
-        ],
         "purpose": [
           "refinement"
         ],
@@ -137,26 +131,32 @@
         ],
         "instruments": [
           "D20"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
         ]
       },
       "searchAliases": [
-        "cosio-d20",
         "pd-neut-cwl_cosio-d20_scan-3f",
-        "Co2SiO4 D20 three-temperature sequential scan",
-        " corpus project"
+        "Co₂SiO₄ [Pnma] · D20 @ ILL",
+        "Temperature scan · 3 patterns at 52.3, 299.4 and 497.4 K"
       ],
       "sources": [
         "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project/project.edi",
         "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project/experiments/d20.edi"
+        "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project/experiments/d20.edi",
+        "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project/structures/cosio.edi"
       ]
     },
     "pd-neut-cwl_cosio-d20_scan-162f": {
       "samples": [
-        "Co₂SiO₄"
+        "Co₂SiO₄ [Pnma]"
       ],
-      "origin": "D20 · ILL",
-      "detail": "Sequential scan (162 datasets)",
+      "origin": "D20 @ ILL",
+      "detail": "Cooling scan · 162 patterns from 497.4 to 50.4 K",
       "values": {
         "sampleForm": [
           "powder"
@@ -170,12 +170,6 @@
         "scatteringType": [
           "bragg"
         ],
-        "dimensionality": [
-          ""
-        ],
-        "polarisation": [
-          ""
-        ],
         "purpose": [
           "refinement"
         ],
@@ -187,26 +181,32 @@
         ],
         "instruments": [
           "D20"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
         ]
       },
       "searchAliases": [
-        "cosio-d20",
         "pd-neut-cwl_cosio-d20_scan-162f",
-        "Co2SiO4 D20 cooling scan, 162 files",
-        "The cooling run of the D20 scan, 497.4 K down to 50.4 K"
+        "Co₂SiO₄ [Pnma] · D20 @ ILL",
+        "Cooling scan · 162 patterns from 497.4 to 50.4 K"
       ],
       "sources": [
         "docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project/project.edi",
         "docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project/experiments/d20.edi"
+        "docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project/experiments/d20.edi",
+        "docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project/structures/cosio.edi"
       ]
     },
     "pd-neut-cwl_cosio-d20_scan-324f": {
       "samples": [
-        "Co₂SiO₄"
+        "Co₂SiO₄ [Pnma]"
       ],
-      "origin": "D20 · ILL",
-      "detail": "Sequential scan (324 datasets)",
+      "origin": "D20 @ ILL",
+      "detail": "Cooling and warming scan · 324 patterns between 50.4 and 497.4 K",
       "values": {
         "sampleForm": [
           "powder"
@@ -219,12 +219,6 @@
         ],
         "scatteringType": [
           "bragg"
-        ],
-        "dimensionality": [
-          ""
-        ],
-        "polarisation": [
-          ""
         ],
         "purpose": [
           "refinement"
@@ -237,26 +231,32 @@
         ],
         "instruments": [
           "D20"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
         ]
       },
       "searchAliases": [
-        "cosio-d20",
         "pd-neut-cwl_cosio-d20_scan-324f",
-        "Co2SiO4 D20 three-temperature sequential scan",
-        " corpus project"
+        "Co₂SiO₄ [Pnma] · D20 @ ILL",
+        "Cooling and warming scan · 324 patterns between 50.4 and 497.4 K"
       ],
       "sources": [
         "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/project.edi",
         "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/experiments/d20.edi"
+        "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/experiments/d20.edi",
+        "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/structures/cosio.edi"
       ]
     },
     "pd-neut-cwl_lbco-hrpt_start-2": {
       "samples": [
-        "La₀.₅Ba₀.₅CoO₃"
+        "La₀.₅Ba₀.₅CoO₃ [Pm-3m]"
       ],
-      "origin": "HRPT · PSI",
-      "detail": "Starting model 2",
+      "origin": "HRPT @ PSI",
+      "detail": "Cubic perovskite · Preferred orientation · Starting model 2",
       "values": {
         "sampleForm": [
           "powder"
@@ -270,12 +270,6 @@
         "scatteringType": [
           "bragg"
         ],
-        "dimensionality": [
-          ""
-        ],
-        "polarisation": [
-          ""
-        ],
         "purpose": [
           "refinement"
         ],
@@ -287,26 +281,32 @@
         ],
         "instruments": [
           "HRPT"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
         ]
       },
       "searchAliases": [
-        "lbco-hrpt",
         "pd-neut-cwl_lbco-hrpt_start-2",
-        " graded start s2 of refine-lbco-hrpt",
-        "?"
+        "La₀.₅Ba₀.₅CoO₃ [Pm-3m] · HRPT @ PSI",
+        "Cubic perovskite · Preferred orientation · Starting model 2"
       ],
       "sources": [
         "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project/project.edi",
         "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project/experiments/hrpt.edi"
+        "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project/experiments/hrpt.edi",
+        "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project/structures/lbco.edi"
       ]
     },
     "pd-neut-cwl_lbco-hrpt_start-4": {
       "samples": [
-        "La₀.₅Ba₀.₅CoO₃"
+        "La₀.₅Ba₀.₅CoO₃ [Pm-3m]"
       ],
-      "origin": "HRPT · PSI",
-      "detail": "Starting model 4",
+      "origin": "HRPT @ PSI",
+      "detail": "Cubic perovskite structure and profile refinement · Starting model 4",
       "values": {
         "sampleForm": [
           "powder"
@@ -320,12 +320,6 @@
         "scatteringType": [
           "bragg"
         ],
-        "dimensionality": [
-          ""
-        ],
-        "polarisation": [
-          ""
-        ],
         "purpose": [
           "refinement"
         ],
@@ -337,26 +331,32 @@
         ],
         "instruments": [
           "HRPT"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
         ]
       },
       "searchAliases": [
-        "lbco-hrpt",
         "pd-neut-cwl_lbco-hrpt_start-4",
-        " graded start s4 of refine-lbco-hrpt",
-        "?"
+        "La₀.₅Ba₀.₅CoO₃ [Pm-3m] · HRPT @ PSI",
+        "Cubic perovskite structure and profile refinement · Starting model 4"
       ],
       "sources": [
         "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project/project.edi",
         "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project/experiments/hrpt.edi"
+        "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project/experiments/hrpt.edi",
+        "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project/structures/lbco.edi"
       ]
     },
     "pd-neut-tof_ncaf-wish-2bank_start-3": {
       "samples": [
-        "Na₂Ca₃Al₂F₁₄"
+        "Na₂Ca₃Al₂F₁₄ [I2₁3]"
       ],
-      "origin": "WISH · ISIS",
-      "detail": "2 banks · Starting model 3",
+      "origin": "WISH @ ISIS",
+      "detail": "2 banks · Shared atomic displacement · Jorgensen profile · Starting model 3",
       "values": {
         "sampleForm": [
           "powder"
@@ -370,12 +370,6 @@
         "scatteringType": [
           "bragg"
         ],
-        "dimensionality": [
-          ""
-        ],
-        "polarisation": [
-          ""
-        ],
         "purpose": [
           "refinement"
         ],
@@ -387,27 +381,33 @@
         ],
         "instruments": [
           "WISH"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
         ]
       },
       "searchAliases": [
-        "ncaf-wish-2bank",
         "pd-neut-tof_ncaf-wish-2bank_start-3",
-        " graded start s3 of refine-ncaf-wish-2bank",
-        "?"
+        "Na₂Ca₃Al₂F₁₄ [I2₁3] · WISH @ ISIS",
+        "2 banks · Shared atomic displacement · Jorgensen profile · Starting model 3"
       ],
       "sources": [
         "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/project.edi",
         "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/analysis/analysis.edi",
         "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/experiments/wish_4_7.edi",
-        "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/experiments/wish_5_6.edi"
+        "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/experiments/wish_5_6.edi",
+        "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/structures/ncaf.edi"
       ]
     },
     "pd-neut-tof_ncaf-wish-3bank_start-5": {
       "samples": [
-        "Na₂Ca₃Al₂F₁₄"
+        "Na₂Ca₃Al₂F₁₄ [I2₁3]"
       ],
-      "origin": "WISH · ISIS",
-      "detail": "3 banks · Starting model 5",
+      "origin": "WISH @ ISIS",
+      "detail": "3 banks · Structure and profile refinement · Jorgensen–Von Dreele · Starting model 5",
       "values": {
         "sampleForm": [
           "powder"
@@ -421,12 +421,6 @@
         "scatteringType": [
           "bragg"
         ],
-        "dimensionality": [
-          ""
-        ],
-        "polarisation": [
-          ""
-        ],
         "purpose": [
           "refinement"
         ],
@@ -438,28 +432,34 @@
         ],
         "instruments": [
           "WISH"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
         ]
       },
       "searchAliases": [
-        "ncaf-wish-3bank",
         "pd-neut-tof_ncaf-wish-3bank_start-5",
-        " 3-bank NCAF WISH joint fit, FullProf-verified",
-        "?"
+        "Na₂Ca₃Al₂F₁₄ [I2₁3] · WISH @ ISIS",
+        "3 banks · Structure and profile refinement · Jorgensen–Von Dreele · Starting model 5"
       ],
       "sources": [
         "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/project.edi",
         "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/analysis/analysis.edi",
         "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_2_9.edi",
         "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_4_7.edi",
-        "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_5_6.edi"
+        "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_5_6.edi",
+        "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/structures/ncaf.edi"
       ]
     },
     "pd-neut-tof_ncaf-wish-5bank_start-5": {
       "samples": [
-        "Na₂Ca₃Al₂F₁₄"
+        "Na₂Ca₃Al₂F₁₄ [I2₁3]"
       ],
-      "origin": "WISH · ISIS",
-      "detail": "5 banks · Starting model 5",
+      "origin": "WISH @ ISIS",
+      "detail": "5 banks · FullProf free parameters and exclusions · Starting model 5",
       "values": {
         "sampleForm": [
           "powder"
@@ -473,12 +473,6 @@
         "scatteringType": [
           "bragg"
         ],
-        "dimensionality": [
-          ""
-        ],
-        "polarisation": [
-          ""
-        ],
         "purpose": [
           "refinement"
         ],
@@ -490,13 +484,18 @@
         ],
         "instruments": [
           "WISH"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
         ]
       },
       "searchAliases": [
-        "ncaf-wish-5bank",
         "pd-neut-tof_ncaf-wish-5bank_start-5",
-        "5-bank NCAF WISH joint fit, free set and exclusions of FullProf tmpl_five_banks_p1.pcr",
-        "?"
+        "Na₂Ca₃Al₂F₁₄ [I2₁3] · WISH @ ISIS",
+        "5 banks · FullProf free parameters and exclusions · Starting model 5"
       ],
       "sources": [
         "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/project.edi",
@@ -505,15 +504,16 @@
         "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_2_9.edi",
         "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_3_8.edi",
         "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_4_7.edi",
-        "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_5_6.edi"
+        "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_5_6.edi",
+        "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/structures/ncaf.edi"
       ]
     },
     "pd-neut-tof_ncaf-wish-5bank_start-fullprof": {
       "samples": [
-        "Na₂Ca₃Al₂F₁₄"
+        "Na₂Ca₃Al₂F₁₄ [I2₁3]"
       ],
-      "origin": "WISH · ISIS",
-      "detail": "5 banks · FullProf starting values",
+      "origin": "WISH @ ISIS",
+      "detail": "5 banks · Structure and profile refinement from FullProf’s minimum",
       "values": {
         "sampleForm": [
           "powder"
@@ -526,12 +526,6 @@
         ],
         "scatteringType": [
           "bragg"
-        ],
-        "dimensionality": [
-          ""
-        ],
-        "polarisation": [
-          ""
         ],
         "purpose": [
           "refinement"
@@ -544,13 +538,18 @@
         ],
         "instruments": [
           "WISH"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
         ]
       },
       "searchAliases": [
-        "ncaf-wish-5bank",
         "pd-neut-tof_ncaf-wish-5bank_start-fullprof",
-        "5-bank NCAF WISH joint fit, every value from FullProf tmpl_five_banks_p1.pcr",
-        "?"
+        "Na₂Ca₃Al₂F₁₄ [I2₁3] · WISH @ ISIS",
+        "5 banks · Structure and profile refinement from FullProf’s minimum"
       ],
       "sources": [
         "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/project.edi",
@@ -559,15 +558,16 @@
         "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_2_9.edi",
         "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_3_8.edi",
         "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_4_7.edi",
-        "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_5_6.edi"
+        "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_5_6.edi",
+        "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/structures/ncaf.edi"
       ]
     },
     "pd-neut-tof_si-sepd_start-2": {
       "samples": [
-        "Silicon"
+        "Silicon [Fd-3m]"
       ],
-      "origin": "SEPD · Argonne",
-      "detail": "Starting model 2",
+      "origin": "SEPD @ Argonne",
+      "detail": "Silicon standard · Jorgensen–Von Dreele profile · Starting model 2",
       "values": {
         "sampleForm": [
           "powder"
@@ -581,12 +581,6 @@
         "scatteringType": [
           "bragg"
         ],
-        "dimensionality": [
-          ""
-        ],
-        "polarisation": [
-          ""
-        ],
         "purpose": [
           "refinement"
         ],
@@ -598,26 +592,32 @@
         ],
         "instruments": [
           "SEPD"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
         ]
       },
       "searchAliases": [
-        "si-sepd",
         "pd-neut-tof_si-sepd_start-2",
-        " graded start s2 of refine-si-sepd",
-        "?"
+        "Silicon [Fd-3m] · SEPD @ Argonne",
+        "Silicon standard · Jorgensen–Von Dreele profile · Starting model 2"
       ],
       "sources": [
         "docs/user/cli/pd-neut-tof_si-sepd_start-2/project/project.edi",
         "docs/user/cli/pd-neut-tof_si-sepd_start-2/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-tof_si-sepd_start-2/project/experiments/sepd.edi"
+        "docs/user/cli/pd-neut-tof_si-sepd_start-2/project/experiments/sepd.edi",
+        "docs/user/cli/pd-neut-tof_si-sepd_start-2/project/structures/si.edi"
       ]
     },
     "pd-neut-tof_si-sepd_start-5": {
       "samples": [
-        "Silicon"
+        "Silicon [Fd-3m]"
       ],
-      "origin": "SEPD · Argonne",
-      "detail": "Starting model 5",
+      "origin": "SEPD @ Argonne",
+      "detail": "Silicon standard · Jorgensen–Von Dreele profile · Starting model 5",
       "values": {
         "sampleForm": [
           "powder"
@@ -631,12 +631,6 @@
         "scatteringType": [
           "bragg"
         ],
-        "dimensionality": [
-          ""
-        ],
-        "polarisation": [
-          ""
-        ],
         "purpose": [
           "refinement"
         ],
@@ -648,44 +642,44 @@
         ],
         "instruments": [
           "SEPD"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
         ]
       },
       "searchAliases": [
-        "si-sepd",
         "pd-neut-tof_si-sepd_start-5",
-        " graded start s5 of refine-si-sepd",
-        "?"
+        "Silicon [Fd-3m] · SEPD @ Argonne",
+        "Silicon standard · Jorgensen–Von Dreele profile · Starting model 5"
       ],
       "sources": [
         "docs/user/cli/pd-neut-tof_si-sepd_start-5/project/project.edi",
         "docs/user/cli/pd-neut-tof_si-sepd_start-5/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-tof_si-sepd_start-5/project/experiments/sepd.edi"
+        "docs/user/cli/pd-neut-tof_si-sepd_start-5/project/experiments/sepd.edi",
+        "docs/user/cli/pd-neut-tof_si-sepd_start-5/project/structures/si.edi"
       ]
     },
     "pd-neut-tof_diamond-dream_basic": {
       "samples": [
-        "Diamond"
+        "Diamond [Fd-3m]"
       ],
-      "origin": "DREAM · ESS",
-      "detail": "basic",
+      "origin": "DREAM @ ESS",
+      "detail": "McStas-simulated 90° bank · Jorgensen profile · Scale-only refinement",
       "values": {
         "sampleForm": [
-          ""
+          "powder"
         ],
         "beamMode": [
-          ""
+          "time-of-flight"
         ],
         "probe": [
-          ""
+          "neutron"
         ],
         "scatteringType": [
-          ""
-        ],
-        "dimensionality": [
-          ""
-        ],
-        "polarisation": [
-          ""
+          "bragg"
         ],
         "purpose": [
           "refinement"
@@ -698,44 +692,44 @@
         ],
         "instruments": [
           "DREAM"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
         ]
       },
       "searchAliases": [
-        "diamond-dream",
         "pd-neut-tof_diamond-dream_basic",
-        "Diamond, DREAM (ESS) McStas-simulated TOF data",
-        "?"
+        "Diamond [Fd-3m] · DREAM @ ESS",
+        "McStas-simulated 90° bank · Jorgensen profile · Scale-only refinement"
       ],
       "sources": [
         "docs/user/cli/pd-neut-tof_diamond-dream_basic/project/project.edi",
         "docs/user/cli/pd-neut-tof_diamond-dream_basic/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-tof_diamond-dream_basic/project/experiments/dream.edi"
+        "docs/user/cli/pd-neut-tof_diamond-dream_basic/project/experiments/dream.edi",
+        "docs/user/cli/pd-neut-tof_diamond-dream_basic/project/structures/diamond.edi"
       ]
     },
     "pd-neut-cwl_lab6-echidna_fcj-asymmetry": {
       "samples": [
-        "LaB₆"
+        "LaB₆ [Pm-3m]"
       ],
-      "origin": "ECHIDNA · ANSTO",
-      "detail": "fcj asymmetry",
+      "origin": "ECHIDNA @ ANSTO",
+      "detail": "TCH pseudo-Voigt with FCJ axial divergence · Scale-only refinement",
       "values": {
         "sampleForm": [
-          ""
+          "powder"
         ],
         "beamMode": [
           "constant wavelength"
         ],
         "probe": [
-          ""
+          "neutron"
         ],
         "scatteringType": [
-          ""
-        ],
-        "dimensionality": [
-          ""
-        ],
-        "polarisation": [
-          ""
+          "bragg"
         ],
         "purpose": [
           "refinement"
@@ -748,44 +742,44 @@
         ],
         "instruments": [
           "ECHIDNA"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
         ]
       },
       "searchAliases": [
-        "lab6-echidna",
         "pd-neut-cwl_lab6-echidna_fcj-asymmetry",
-        "LaB6, Echidna (ANSTO), FCJ asymmetry",
-        "?"
+        "LaB₆ [Pm-3m] · ECHIDNA @ ANSTO",
+        "TCH pseudo-Voigt with FCJ axial divergence · Scale-only refinement"
       ],
       "sources": [
         "docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project/project.edi",
         "docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project/experiments/echidna.edi"
+        "docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project/experiments/echidna.edi",
+        "docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project/structures/lab6.edi"
       ]
     },
     "pd-neut-cwl_pbso4_beba-asymmetry": {
       "samples": [
-        "PbSO₄"
+        "PbSO₄ [Pnma]"
       ],
-      "origin": "D1A · ILL",
-      "detail": "Berar–Baldinozzi asymmetry",
+      "origin": "D1A @ ILL",
+      "detail": "Rietveld round-robin data · Bérar–Baldinozzi asymmetry refinement",
       "values": {
         "sampleForm": [
-          ""
+          "powder"
         ],
         "beamMode": [
           "constant wavelength"
         ],
         "probe": [
-          ""
+          "neutron"
         ],
         "scatteringType": [
-          ""
-        ],
-        "dimensionality": [
-          ""
-        ],
-        "polarisation": [
-          ""
+          "bragg"
         ],
         "purpose": [
           "refinement"
@@ -798,79 +792,86 @@
         ],
         "instruments": [
           "D1A"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
         ]
       },
       "searchAliases": [
-        "pbso4",
         "pd-neut-cwl_pbso4_beba-asymmetry",
-        "PbSO4, D1A (ILL), Berar-Baldinozzi asymmetry",
-        "?"
+        "PbSO₄ [Pnma] · D1A @ ILL",
+        "Rietveld round-robin data · Bérar–Baldinozzi asymmetry refinement"
       ],
       "sources": [
         "docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project/project.edi",
         "docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project/experiments/d1a.edi"
+        "docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project/experiments/d1a.edi",
+        "docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project/structures/pbso4.edi"
       ]
     },
     "pd-neut-cwl_yap-spodi_3k": {
       "samples": [
-        "YAlO₃",
-        "Al₂O₃"
+        "YAlO₃ [Pbnm]",
+        "Al₂O₃ [R-3c]"
       ],
-      "origin": "SPODI · FRM II",
-      "detail": "Two phases · 3 K",
+      "origin": "SPODI @ FRM II",
+      "detail": "2 phases at 3 K · Shared Bérar–Baldinozzi profile · Cylinder absorption",
       "values": {
         "sampleForm": [
-          ""
+          "powder"
         ],
         "beamMode": [
           "constant wavelength"
         ],
         "probe": [
-          ""
+          "neutron"
         ],
         "scatteringType": [
-          ""
-        ],
-        "dimensionality": [
-          ""
-        ],
-        "polarisation": [
-          ""
+          "bragg"
         ],
         "purpose": [
           "refinement"
         ],
         "fittingMode": [
-          ""
+          "single"
         ],
         "facilities": [
           "FRM II"
         ],
         "instruments": [
           "SPODI"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
         ]
       },
       "searchAliases": [
-        "yap-spodi",
         "pd-neut-cwl_yap-spodi_3k",
-        "YAlO3 and Al2O3, SPODI (FRM II), two phases",
-        ""
+        "YAlO₃ [Pbnm] / Al₂O₃ [R-3c] · SPODI @ FRM II",
+        "2 phases at 3 K · Shared Bérar–Baldinozzi profile · Cylinder absorption"
       ],
       "sources": [
         "docs/user/cli/pd-neut-cwl_yap-spodi_3k/project/project.edi",
         "docs/user/cli/pd-neut-cwl_yap-spodi_3k/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-cwl_yap-spodi_3k/project/experiments/spodi.edi"
+        "docs/user/cli/pd-neut-cwl_yap-spodi_3k/project/experiments/spodi.edi",
+        "docs/user/cli/pd-neut-cwl_yap-spodi_3k/project/structures/Al2O3.edi",
+        "docs/user/cli/pd-neut-cwl_yap-spodi_3k/project/structures/YAlO3.edi"
       ]
     },
     "pd-xray-cwl_latp_scan-4f": {
       "samples": [
-        "LATP",
-        "AlPO₄ (C222₁)",
-        "AlPO₄ (P6₃mc)"
+        "LATP [R-3c]",
+        "AlPO₄ [C222₁]",
+        "AlPO₄ [P6₃mc]"
       ],
-      "origin": "Not specified",
-      "detail": "Sequential scan · Three phases · Four datasets",
+      "origin": "Unknown instrument @ SNBL",
+      "detail": "3 phases · 4 synchrotron patterns · Linked displacement parameters",
       "values": {
         "sampleForm": [
           "powder"
@@ -884,12 +885,6 @@
         "scatteringType": [
           "bragg"
         ],
-        "dimensionality": [
-          ""
-        ],
-        "polarisation": [
-          ""
-        ],
         "purpose": [
           "refinement"
         ],
@@ -897,80 +892,38 @@
           "sequential"
         ],
         "facilities": [
-          ""
+          "SNBL"
         ],
         "instruments": [
           ""
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "__not_applicable__"
         ]
       },
       "searchAliases": [
-        "latp",
         "pd-xray-cwl_latp_scan-4f",
-        "LATP synchrotron X-ray sequential scan, three phases",
-        "Li1.3Al0.3Ti1.7(PO4)3 with two AlPO4 phases; model from latp.pcr (FullProf chi2 7.05 on s13_150_z20_xrd_sum.dat)"
+        "LATP [R-3c] / AlPO₄ [C222₁] / AlPO₄ [P6₃mc] · Unknown instrument @ SNBL",
+        "3 phases · 4 synchrotron patterns · Linked displacement parameters"
       ],
       "sources": [
         "docs/user/cli/pd-xray-cwl_latp_scan-4f/project/project.edi",
         "docs/user/cli/pd-xray-cwl_latp_scan-4f/project/analysis/analysis.edi",
-        "docs/user/cli/pd-xray-cwl_latp_scan-4f/project/experiments/latp.edi"
+        "docs/user/cli/pd-xray-cwl_latp_scan-4f/project/experiments/latp.edi",
+        "docs/user/cli/pd-xray-cwl_latp_scan-4f/project/structures/alpo4_c2221.edi",
+        "docs/user/cli/pd-xray-cwl_latp_scan-4f/project/structures/alpo4_p63mc.edi",
+        "docs/user/cli/pd-xray-cwl_latp_scan-4f/project/structures/latp.edi"
       ]
     },
     "pd-neut-tof_fe_pseudo-voigt": {
       "samples": [
-        "Iron"
+        "Iron [Im-3m]"
       ],
-      "origin": "BEER · ESS",
-      "detail": "TOF pseudo-Voigt profile",
-      "values": {
-        "sampleForm": [
-          ""
-        ],
-        "beamMode": [
-          ""
-        ],
-        "probe": [
-          ""
-        ],
-        "scatteringType": [
-          ""
-        ],
-        "dimensionality": [
-          ""
-        ],
-        "polarisation": [
-          ""
-        ],
-        "purpose": [
-          "refinement"
-        ],
-        "fittingMode": [
-          "single"
-        ],
-        "facilities": [
-          "ESS"
-        ],
-        "instruments": [
-          "BEER"
-        ]
-      },
-      "searchAliases": [
-        "fe",
-        "pd-neut-tof_fe_pseudo-voigt",
-        "Fe (ferrite), BEER (ESS), TOF pseudo-Voigt",
-        "?"
-      ],
-      "sources": [
-        "docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project/project.edi",
-        "docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project/experiments/beer.edi"
-      ]
-    },
-    "pd-neut-tof_cecoal-polaris_chebyshev": {
-      "samples": [
-        "CeCoAl₃"
-      ],
-      "origin": "POLARIS · ISIS",
-      "detail": "chebyshev",
+      "origin": "BEER @ ESS",
+      "detail": "90° bank · Non-convoluted pseudo-Voigt · Scale-only refinement",
       "values": {
         "sampleForm": [
           "powder"
@@ -984,11 +937,55 @@
         "scatteringType": [
           "bragg"
         ],
+        "purpose": [
+          "refinement"
+        ],
+        "fittingMode": [
+          "single"
+        ],
+        "facilities": [
+          "ESS"
+        ],
+        "instruments": [
+          "BEER"
+        ],
         "dimensionality": [
-          ""
+          "1D"
         ],
         "polarisation": [
-          ""
+          "none"
+        ]
+      },
+      "searchAliases": [
+        "pd-neut-tof_fe_pseudo-voigt",
+        "Iron [Im-3m] · BEER @ ESS",
+        "90° bank · Non-convoluted pseudo-Voigt · Scale-only refinement"
+      ],
+      "sources": [
+        "docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project/project.edi",
+        "docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project/experiments/beer.edi",
+        "docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project/structures/fe.edi"
+      ]
+    },
+    "pd-neut-tof_cecoal-polaris_chebyshev": {
+      "samples": [
+        "CeCoAl₃ [Pmma]"
+      ],
+      "origin": "POLARIS @ ISIS",
+      "detail": "Structure and TOF profile refinement · 24-term Chebyshev background",
+      "values": {
+        "sampleForm": [
+          "powder"
+        ],
+        "beamMode": [
+          "time-of-flight"
+        ],
+        "probe": [
+          "neutron"
+        ],
+        "scatteringType": [
+          "bragg"
         ],
         "purpose": [
           "refinement"
@@ -1001,26 +998,32 @@
         ],
         "instruments": [
           "POLARIS"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
         ]
       },
       "searchAliases": [
-        "cecoal-polaris",
         "pd-neut-tof_cecoal-polaris_chebyshev",
-        "CeCoAl3, POLARIS (ISIS), Chebyshev background",
-        "?"
+        "CeCoAl₃ [Pmma] · POLARIS @ ISIS",
+        "Structure and TOF profile refinement · 24-term Chebyshev background"
       ],
       "sources": [
         "docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project/project.edi",
         "docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project/experiments/polaris.edi"
+        "docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project/experiments/polaris.edi",
+        "docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project/structures/cecoal.edi"
       ]
     },
     "pd-neut-tof_ceo2-pearl_polynomial": {
       "samples": [
-        "CeO₂"
+        "CeO₂ [Fm-3m]"
       ],
-      "origin": "PEARL · ISIS",
-      "detail": "polynomial",
+      "origin": "PEARL @ ISIS",
+      "detail": "NBS SRM 674a standard · TOF profile refinement · 6-term polynomial background",
       "values": {
         "sampleForm": [
           "powder"
@@ -1033,12 +1036,6 @@
         ],
         "scatteringType": [
           "bragg"
-        ],
-        "dimensionality": [
-          ""
-        ],
-        "polarisation": [
-          ""
         ],
         "purpose": [
           "refinement"
@@ -1051,26 +1048,32 @@
         ],
         "instruments": [
           "PEARL"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
         ]
       },
       "searchAliases": [
-        "ceo2-pearl",
         "pd-neut-tof_ceo2-pearl_polynomial",
-        "CeO2, PEARL (ISIS), polynomial background",
-        "?"
+        "CeO₂ [Fm-3m] · PEARL @ ISIS",
+        "NBS SRM 674a standard · TOF profile refinement · 6-term polynomial background"
       ],
       "sources": [
         "docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project/project.edi",
         "docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project/experiments/pearl.edi"
+        "docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project/experiments/pearl.edi",
+        "docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project/structures/ceo2.edi"
       ]
     },
     "pd-neut-cwl_lab6-11b-echidna_tch-fcj": {
       "samples": [
-        "LaB₆"
+        "LaB₆ [Pm-3m]"
       ],
-      "origin": "ECHIDNA · ANSTO",
-      "detail": "¹¹B-enriched LaB₆ · TCH × FCJ · Polynomial background",
+      "origin": "ECHIDNA @ ANSTO",
+      "detail": "¹¹B-enriched standard · TCH × FCJ · Absorption and polynomial background",
       "values": {
         "sampleForm": [
           "powder"
@@ -1084,12 +1087,6 @@
         "scatteringType": [
           "bragg"
         ],
-        "dimensionality": [
-          ""
-        ],
-        "polarisation": [
-          ""
-        ],
         "purpose": [
           "refinement"
         ],
@@ -1101,26 +1098,32 @@
         ],
         "instruments": [
           "ECHIDNA"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
         ]
       },
       "searchAliases": [
-        "lab6-11b-echidna",
         "pd-neut-cwl_lab6-11b-echidna_tch-fcj",
-        "LaB6 (11B), ECHIDNA (ANSTO), TCH x FCJ, polynomial background",
-        "?"
+        "LaB₆ [Pm-3m] · ECHIDNA @ ANSTO",
+        "¹¹B-enriched standard · TCH × FCJ · Absorption and polynomial background"
       ],
       "sources": [
         "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project/project.edi",
         "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project/experiments/echidna.edi"
+        "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project/experiments/echidna.edi",
+        "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project/structures/lab6.edi"
       ]
     },
     "pd-xray-cwl_lif_single": {
       "samples": [
-        "LiF"
+        "LiF [Fm-3m]"
       ],
-      "origin": "Not specified",
-      "detail": "Polarisation parameters · FullProf reference pattern",
+      "origin": "Calculated reference",
+      "detail": "Cu Kα₁ FullProf reference · Monochromator correction refinement",
       "values": {
         "sampleForm": [
           "powder"
@@ -1134,12 +1137,6 @@
         "scatteringType": [
           "bragg"
         ],
-        "dimensionality": [
-          ""
-        ],
-        "polarisation": [
-          ""
-        ],
         "purpose": [
           "refinement"
         ],
@@ -1151,27 +1148,33 @@
         ],
         "instruments": [
           ""
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "__not_applicable__"
         ]
       },
       "searchAliases": [
-        "lif",
         "pd-xray-cwl_lif_single",
-        "LiF, Cu K-alpha1 X-ray, polarization against FullProf",
-        "?"
+        "LiF [Fm-3m] · Calculated reference",
+        "Cu Kα₁ FullProf reference · Monochromator correction refinement"
       ],
       "sources": [
         "docs/user/cli/pd-xray-cwl_lif_single/project/project.edi",
         "docs/user/cli/pd-xray-cwl_lif_single/project/analysis/analysis.edi",
-        "docs/user/cli/pd-xray-cwl_lif_single/project/experiments/cu_ka.edi"
+        "docs/user/cli/pd-xray-cwl_lif_single/project/experiments/cu_ka.edi",
+        "docs/user/cli/pd-xray-cwl_lif_single/project/structures/lif.edi"
       ]
     },
     "pd-neut-tof_ferrite-austenite-beer_joint": {
       "samples": [
-        "Ferrite",
-        "Austenite"
+        "Ferrite [Im-3m]",
+        "Austenite [Fm-3m]"
       ],
-      "origin": "BEER · ESS",
-      "detail": "Joint refinement · McStas data · Two banks",
+      "origin": "BEER @ ESS",
+      "detail": "2 iron phases · 2 McStas-simulated banks · Separate phase scales",
       "values": {
         "sampleForm": [
           "powder"
@@ -1185,12 +1188,6 @@
         "scatteringType": [
           "bragg"
         ],
-        "dimensionality": [
-          ""
-        ],
-        "polarisation": [
-          ""
-        ],
         "purpose": [
           "refinement"
         ],
@@ -1202,45 +1199,46 @@
         ],
         "instruments": [
           "BEER"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
         ]
       },
       "searchAliases": [
-        "ferrite-austenite-beer",
         "pd-neut-tof_ferrite-austenite-beer_joint",
-        "Ferrite and austenite, BEER (ESS, McStas), two phases in two banks",
-        ""
+        "Ferrite [Im-3m] / Austenite [Fm-3m] · BEER @ ESS",
+        "2 iron phases · 2 McStas-simulated banks · Separate phase scales"
       ],
       "sources": [
         "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project/project.edi",
         "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project/analysis/analysis.edi",
         "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project/experiments/expt_n2.edi",
-        "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project/experiments/expt_s2.edi"
+        "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project/experiments/expt_s2.edi",
+        "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project/structures/austenite.edi",
+        "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project/structures/ferrite.edi"
       ]
     },
     "pd-neut-cwl_y2o3_beta-adp": {
       "samples": [
-        "Y₂O₃"
+        "Y₂O₃ [Ia-3]"
       ],
-      "origin": "Not specified",
-      "detail": "beta adp",
+      "origin": "Unknown instrument",
+      "detail": "Symmetry-constrained anisotropic β tensors · Scale-only refinement",
       "values": {
         "sampleForm": [
-          ""
+          "powder"
         ],
         "beamMode": [
           "constant wavelength"
         ],
         "probe": [
-          ""
+          "neutron"
         ],
         "scatteringType": [
-          ""
-        ],
-        "dimensionality": [
-          ""
-        ],
-        "polarisation": [
-          ""
+          "bragg"
         ],
         "purpose": [
           "refinement"
@@ -1253,26 +1251,32 @@
         ],
         "instruments": [
           ""
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
         ]
       },
       "searchAliases": [
-        "y2o3",
         "pd-neut-cwl_y2o3_beta-adp",
-        "Y2O3, beta ADPs, scale against FullProf",
-        "?"
+        "Y₂O₃ [Ia-3] · Unknown instrument",
+        "Symmetry-constrained anisotropic β tensors · Scale-only refinement"
       ],
       "sources": [
         "docs/user/cli/pd-neut-cwl_y2o3_beta-adp/project/project.edi",
         "docs/user/cli/pd-neut-cwl_y2o3_beta-adp/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-cwl_y2o3_beta-adp/project/experiments/y2o3.edi"
+        "docs/user/cli/pd-neut-cwl_y2o3_beta-adp/project/experiments/y2o3.edi",
+        "docs/user/cli/pd-neut-cwl_y2o3_beta-adp/project/structures/y2o3.edi"
       ]
     },
     "pd-xray-cwl_lif": {
       "samples": [
-        "LiF"
+        "LiF [Fm-3m]"
       ],
       "origin": "Calculated example",
-      "detail": "Calculated pattern",
+      "detail": "Cu Kα₁ calculated profile · X-ray scattering factors and dispersion",
       "values": {
         "sampleForm": [
           "powder"
@@ -1286,12 +1290,6 @@
         "scatteringType": [
           "bragg"
         ],
-        "dimensionality": [
-          ""
-        ],
-        "polarisation": [
-          ""
-        ],
         "purpose": [
           "simulation"
         ],
@@ -1303,18 +1301,24 @@
         ],
         "instruments": [
           ""
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "__not_applicable__"
         ]
       },
       "searchAliases": [
-        "lif",
         "pd-xray-cwl_lif",
-        "LiF, X-ray powder diffraction (calculation)",
-        "The app's X-ray example: the constants of docs/dev/verification/pd-xray-cwl_LiF_single.py (its FullProf reference), on a calculation grid"
+        "LiF [Fm-3m] · Calculated example",
+        "Cu Kα₁ calculated profile · X-ray scattering factors and dispersion"
       ],
       "sources": [
         "app/examples/pd-xray-cwl_lif/project/project.edi",
         "app/examples/pd-xray-cwl_lif/project/analysis/analysis.edi",
-        "app/examples/pd-xray-cwl_lif/project/experiments/cu_ka.edi"
+        "app/examples/pd-xray-cwl_lif/project/experiments/cu_ka.edi",
+        "app/examples/pd-xray-cwl_lif/project/structures/lif.edi"
       ]
     }
   }
