@@ -25,15 +25,20 @@ EaElements.GroupBox {
             model: RecentProjects.rows
             columnWidths: [numberColumnWidth, -1, EaStyle.Sizes.fontPixelSize * 4.5, AppSizes.iconColumnWidth]
             header: EaComponents.ListViewHeader {
-                EaComponents.TableViewLabel {}
+                EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
+                }
                 EaComponents.TableViewLabel {
                     text: qsTr("Project directory")
                     horizontalAlignment: Text.AlignLeft
                 }
                 EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
                     text: qsTr("Status")
                 }
-                EaComponents.TableViewLabel {}
+                EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
+                }
             }
             delegate: EaComponents.ListViewDelegate {
                 id: row
@@ -48,6 +53,7 @@ EaElements.GroupBox {
                     }
                 }
                 EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
                     text: row.index + 1
                     color: EaStyle.Colors.themeForegroundMinor
                 }
@@ -58,11 +64,13 @@ EaElements.GroupBox {
                     ToolTip.text: row.path
                 }
                 EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
                     objectName: `recentProjects.status.${row.index}`
                     text: row.available ? qsTr("Found") : qsTr("Missing")
                     color: row.available ? EaStyle.Colors.themeForegroundMinor : EaStyle.Colors.red
                 }
                 EaComponents.TableViewButton {
+                    horizontalAlignment: Text.AlignHCenter
                     objectName: `recentProjects.remove.${row.index}`
                     fontIcon: "minus-circle"
                     ToolTip.text: qsTr("Remove from recent projects")

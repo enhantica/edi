@@ -45,33 +45,43 @@ Column {
         columnWidths: [numberColumnWidth, textColumnWidth("label", qsTr("label")), group.typeWidth, -1, -1, -1, -1, -1, -1, -1]
 
         header: EaComponents.ListViewHeader {
-            EaComponents.TableViewLabel {}
+            EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
+            }
             EaComponents.TableViewLabel {
                 horizontalAlignment: Text.AlignLeft
                 text: qsTr("label")
             }
             EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
                 text: qsTr("type")
             }
             EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
                 text: table.isoHeading
             }
             EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
                 text: "ani11"
             }
             EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
                 text: "ani22"
             }
             EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
                 text: "ani33"
             }
             EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
                 text: "ani12"
             }
             EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
                 text: "ani13"
             }
             EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
                 text: "ani23"
             }
         }
@@ -92,6 +102,7 @@ Column {
             readonly property bool anisotropic: adpType === "Bani" || adpType === "Uani" || adpType === "beta"
 
             EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
                 color: EaStyle.Colors.themeForegroundMinor
                 text: row.index + 1
             }
@@ -102,6 +113,7 @@ Column {
                 value: row.label
             }
             SearchableComboBox {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `atomSiteAdp.type.${row.index}`
                 inTable: true
                 anchors.verticalCenter: parent.verticalCenter
@@ -120,6 +132,7 @@ Column {
             // The isotropic value in the site's type; an anisotropic site's equivalent value, which follows its
             // tensor, is shown disabled.
             ParameterCell {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `atomSiteAdp.iso.${row.index}`
                 item: row.adpIso
                 enabled: !row.anisotropic
@@ -127,36 +140,42 @@ Column {
                 ToolTip.visible: hovered && EaGlobals.Vars.showToolTips
             }
             ParameterCell {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `atomSiteAdp.ani11.${row.index}`
                 enabled: row.anisotropic && !!row.ani11 && refinable
                 item: row.ani11 ? row.ani11 : null
                 text: item !== null ? value : ""
             }
             ParameterCell {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `atomSiteAdp.ani22.${row.index}`
                 enabled: row.anisotropic && !!row.ani22 && refinable
                 item: row.ani22 ? row.ani22 : null
                 text: item !== null ? value : ""
             }
             ParameterCell {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `atomSiteAdp.ani33.${row.index}`
                 enabled: row.anisotropic && !!row.ani33 && refinable
                 item: row.ani33 ? row.ani33 : null
                 text: item !== null ? value : ""
             }
             ParameterCell {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `atomSiteAdp.ani12.${row.index}`
                 enabled: row.anisotropic && !!row.ani12 && refinable
                 item: row.ani12 ? row.ani12 : null
                 text: item !== null ? value : ""
             }
             ParameterCell {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `atomSiteAdp.ani13.${row.index}`
                 enabled: row.anisotropic && !!row.ani13 && refinable
                 item: row.ani13 ? row.ani13 : null
                 text: item !== null ? value : ""
             }
             ParameterCell {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `atomSiteAdp.ani23.${row.index}`
                 enabled: row.anisotropic && !!row.ani23 && refinable
                 item: row.ani23 ? row.ani23 : null

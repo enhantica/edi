@@ -19,8 +19,9 @@ with the archive and source-tree hashes used by ADR-0015.
 Each table declares widths once. Row numbers fit the largest displayed number;
 icons, fit controls and remove buttons have compact fixed widths. Labels and
 units fit their content. Numeric columns share the remaining space equally.
-Headers and row cells use the same widths and explicit alignments. Text editors
-show the beginning of an overflowing value when idle and expose its full value
+Headers and row cells use the same widths and explicit alignments. In Analysis,
+values and their header align right, with units aligned left in the adjacent
+column so they sit next to the values. Text editors show the beginning of an overflowing value when idle and expose its full value
 on hover. Free parameters are bold and green; invalid values retain red.
 
 The analysis table offers name, variability and category filters. Its height

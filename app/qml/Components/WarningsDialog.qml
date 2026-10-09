@@ -72,11 +72,15 @@ AppDialog {
             header: EaComponents.ListViewHeader {
                 visible: false
                 implicitHeight: 0
-                EaComponents.TableViewLabel {}
+                EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
+                }
                 EaComponents.TableViewLabel {
                     horizontalAlignment: Text.AlignLeft
                 }
-                EaComponents.TableViewLabel {}
+                EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
+                }
             }
 
             delegate: EaComponents.ListViewDelegate {
@@ -90,6 +94,7 @@ AppDialog {
                 height: Math.max(table.tableRowHeight, messageCell.implicitHeight + EaStyle.Sizes.fontPixelSize)
 
                 IconCell {
+                    horizontalAlignment: Text.AlignHCenter
                     objectName: `warnings.kind.${row.index}`
                     icon: row.isError ? "times-circle" : "exclamation-triangle"
                     iconColor: String(row.isError ? EaStyle.Colors.red : EaStyle.Colors.orange)
@@ -105,6 +110,7 @@ AppDialog {
                     text: row.message
                 }
                 EaComponents.TableViewButton {
+                    horizontalAlignment: Text.AlignHCenter
                     objectName: `warnings.dismiss.${row.index}`
                     anchors.verticalCenter: parent.verticalCenter
                     fontIcon: "minus-circle"

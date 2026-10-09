@@ -30,7 +30,9 @@ Column {
         columnWidths: [numberColumnWidth, EaStyle.Sizes.fontPixelSize * 7, -1, AppSizes.iconColumnWidth]
 
         header: EaComponents.ListViewHeader {
-            EaComponents.TableViewLabel {}
+            EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
+            }
             EaComponents.TableViewLabel {
                 horizontalAlignment: Text.AlignLeft
                 text: qsTr("alias")
@@ -39,7 +41,9 @@ Column {
                 horizontalAlignment: Text.AlignLeft
                 text: qsTr("parameter")
             }
-            EaComponents.TableViewLabel {}
+            EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
+            }
         }
 
         delegate: EaComponents.ListViewDelegate {
@@ -50,6 +54,7 @@ Column {
             required property var model
 
             EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
                 color: EaStyle.Colors.themeForegroundMinor
                 text: row.index + 1
             }
@@ -61,6 +66,7 @@ Column {
             }
             // The base's table combo box (TableViewComboBox), searchable: a project has many parameters.
             SearchableComboBox {
+                horizontalAlignment: Text.AlignLeft
                 objectName: `alias.parameter.${row.index}`
                 anchors.verticalCenter: parent.verticalCenter
                 borderColor: "transparent"
@@ -72,6 +78,7 @@ Column {
                 onActivated: index => group.aliases.setText(row.index, "parameter", group.aliases.parameterNames[index])
             }
             EaComponents.TableViewButton {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `alias.remove.${row.index}`
                 fontIcon: "minus-circle"
                 ToolTip.text: qsTr("Remove this alias")

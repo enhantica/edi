@@ -31,18 +31,23 @@ DataTable {
 
     header: EaComponents.ListViewHeader {
         EaComponents.TableViewLabel {
+            horizontalAlignment: Text.AlignHCenter
             text: qsTr("id")
         }
         EaComponents.TableViewLabel {
+            horizontalAlignment: Text.AlignHCenter
             text: qsTr("h k l")
         }
         EaComponents.TableViewLabel {
+            horizontalAlignment: Text.AlignHCenter
             text: qsTr("d (Å)")
         }
         EaComponents.TableViewLabel {
+            horizontalAlignment: Text.AlignHCenter
             text: table.timeOfFlight ? qsTr("TOF (µs)") : qsTr("2θ (°)")
         }
         EaComponents.TableViewLabel {
+            horizontalAlignment: Text.AlignHCenter
             text: qsTr("F² calc")
         }
     }
@@ -54,19 +59,24 @@ DataTable {
         required property var model
 
         EaComponents.TableViewLabel {
+            horizontalAlignment: Text.AlignHCenter
             color: EaStyle.Colors.themeForegroundMinor
             text: row.index + 1
         }
         EaComponents.TableViewLabel {
+            horizontalAlignment: Text.AlignHCenter
             text: row.model.hkl
         }
         EaComponents.TableViewLabel {
+            horizontalAlignment: Text.AlignHCenter
             text: table.shown(row.model.dSpacing)
         }
         EaComponents.TableViewLabel {
+            horizontalAlignment: Text.AlignHCenter
             text: table.shown(row.model.position)
         }
         EaComponents.TableViewLabel {
+            horizontalAlignment: Text.AlignHCenter
             text: table.shown(row.model.fSquaredCalc)
         }
     }

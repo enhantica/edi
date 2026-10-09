@@ -29,6 +29,7 @@ Column {
 
         header: EaComponents.ListViewHeader {
             EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
                 text: qsTr("id")
             }
             EaComponents.TableViewLabel {
@@ -36,21 +37,28 @@ Column {
                 text: qsTr("structure")
             }
             EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
                 text: "h"
             }
             EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
                 text: "k"
             }
             EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
                 text: "l"
             }
             EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
                 text: "r"
             }
             EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
                 text: qsTr("random")
             }
-            EaComponents.TableViewLabel {}
+            EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
+            }
         }
 
         delegate: EaComponents.ListViewDelegate {
@@ -65,6 +73,7 @@ Column {
             required property ParameterItem marchRandomFract
 
             EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
                 color: EaStyle.Colors.themeForegroundMinor
                 text: row.index + 1
             }
@@ -75,32 +84,38 @@ Column {
                 onCommitted: text => group.rows.setStructureId(row.index, text)
             }
             TextCell {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `preferredOrientation.indexH.${row.index}`
                 value: row.indexH
                 accepts: "integer"
                 onCommitted: text => group.rows.setIndex(row.index, "h", Number(text))
             }
             TextCell {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `preferredOrientation.indexK.${row.index}`
                 value: row.indexK
                 accepts: "integer"
                 onCommitted: text => group.rows.setIndex(row.index, "k", Number(text))
             }
             TextCell {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `preferredOrientation.indexL.${row.index}`
                 value: row.indexL
                 accepts: "integer"
                 onCommitted: text => group.rows.setIndex(row.index, "l", Number(text))
             }
             ParameterCell {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `preferredOrientation.marchR.${row.index}`
                 item: row.marchR
             }
             ParameterCell {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `preferredOrientation.marchRandomFract.${row.index}`
                 item: row.marchRandomFract
             }
             EaComponents.TableViewButton {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `preferredOrientation.remove.${row.index}`
                 fontIcon: "minus-circle"
                 ToolTip.text: qsTr("Remove this row")

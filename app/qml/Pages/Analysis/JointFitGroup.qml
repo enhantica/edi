@@ -26,13 +26,18 @@ DataTable {
     columnWidths: [numberColumnWidth, EaStyle.Sizes.tableRowHeight, -1, EaStyle.Sizes.fontPixelSize * 8]
 
     header: EaComponents.ListViewHeader {
-        EaComponents.TableViewLabel {}
-        EaComponents.TableViewLabel {}
+        EaComponents.TableViewLabel {
+            horizontalAlignment: Text.AlignHCenter
+        }
+        EaComponents.TableViewLabel {
+            horizontalAlignment: Text.AlignHCenter
+        }
         EaComponents.TableViewLabel {
             horizontalAlignment: Text.AlignLeft
             text: qsTr("experiment")
         }
         EaComponents.TableViewLabel {
+            horizontalAlignment: Text.AlignHCenter
             text: qsTr("weight")
         }
     }
@@ -45,10 +50,12 @@ DataTable {
         required property ExperimentViewModel experiment
 
         EaComponents.TableViewLabel {
+            horizontalAlignment: Text.AlignHCenter
             color: EaStyle.Colors.themeForegroundMinor
             text: row.index + 1
         }
         IconCell {
+            horizontalAlignment: Text.AlignHCenter
             objectName: `jointFit.color.${row.index}`
             icon: "microscope"
             iconColor: AppColors.experiment(row.index)
@@ -59,6 +66,7 @@ DataTable {
             text: row.name
         }
         TextCell {
+            horizontalAlignment: Text.AlignHCenter
             objectName: `jointFit.weight.${row.index}`
             accepts: "number"
             value: row.experiment ? row.experiment.datasetWeight : ""

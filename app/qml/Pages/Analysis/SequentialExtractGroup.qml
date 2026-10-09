@@ -24,7 +24,9 @@ DataTable {
     columnWidths: [numberColumnWidth, EaStyle.Sizes.fontPixelSize * 5, EaStyle.Sizes.fontPixelSize * 9, -1, EaStyle.Sizes.fontPixelSize * 4]
 
     header: EaComponents.ListViewHeader {
-        EaComponents.TableViewLabel {}
+        EaComponents.TableViewLabel {
+            horizontalAlignment: Text.AlignHCenter
+        }
         EaComponents.TableViewLabel {
             horizontalAlignment: Text.AlignLeft
             text: qsTr("id")
@@ -38,6 +40,7 @@ DataTable {
             text: qsTr("pattern")
         }
         EaComponents.TableViewLabel {
+            horizontalAlignment: Text.AlignHCenter
             text: qsTr("required")
         }
     }
@@ -50,6 +53,7 @@ DataTable {
         required property var model
 
         EaComponents.TableViewLabel {
+            horizontalAlignment: Text.AlignHCenter
             color: EaStyle.Colors.themeForegroundMinor
             text: row.index + 1
         }
@@ -71,6 +75,7 @@ DataTable {
             ToolTip.text: row.model.pattern
         }
         EaComponents.TableViewLabel {
+            horizontalAlignment: Text.AlignHCenter
             text: row.model.required ? qsTr("yes") : qsTr("no")
         }
     }

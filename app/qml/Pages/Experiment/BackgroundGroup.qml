@@ -55,15 +55,20 @@ Column {
 
                 header: EaComponents.ListViewHeader {
                     EaComponents.TableViewLabel {
+                        horizontalAlignment: Text.AlignHCenter
                         text: qsTr("id")
                     }
                     EaComponents.TableViewLabel {
+                        horizontalAlignment: Text.AlignHCenter
                         text: qsTr("position")
                     }
                     EaComponents.TableViewLabel {
+                        horizontalAlignment: Text.AlignHCenter
                         text: qsTr("intensity")
                     }
-                    EaComponents.TableViewLabel {}
+                    EaComponents.TableViewLabel {
+                        horizontalAlignment: Text.AlignHCenter
+                    }
                 }
 
                 delegate: EaComponents.ListViewDelegate {
@@ -74,20 +79,24 @@ Column {
                     required property ParameterItem intensity
 
                     EaComponents.TableViewLabel {
+                        horizontalAlignment: Text.AlignHCenter
                         color: EaStyle.Colors.themeForegroundMinor
                         text: row.index + 1
                     }
                     TextCell {
+                        horizontalAlignment: Text.AlignHCenter
                         objectName: `background.position.${row.index}`
                         value: row.position
                         accepts: "number"
                         onCommitted: text => group.points.setPosition(row.index, Number(text))
                     }
                     ParameterCell {
+                        horizontalAlignment: Text.AlignHCenter
                         objectName: `background.intensity.${row.index}`
                         item: row.intensity
                     }
                     EaComponents.TableViewButton {
+                        horizontalAlignment: Text.AlignHCenter
                         objectName: `background.remove.${row.index}`
                         fontIcon: "minus-circle"
                         ToolTip.text: qsTr("Remove this background point")

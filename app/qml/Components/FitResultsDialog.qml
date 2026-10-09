@@ -62,8 +62,12 @@ AppDialog {
             columnWidths: [numberColumnWidth, EaStyle.Sizes.tableRowHeight, -1, EaStyle.Sizes.fontPixelSize * 10]
 
             header: EaComponents.ListViewHeader {
-                EaComponents.TableViewLabel {}
-                EaComponents.TableViewLabel {}
+                EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
+                }
+                EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
+                }
                 EaComponents.TableViewLabel {
                     horizontalAlignment: Text.AlignLeft
                     text: qsTr("Metric")
@@ -87,10 +91,12 @@ AppDialog {
                 required property string outcome
 
                 EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
                     color: EaStyle.Colors.themeForegroundMinor
                     text: row.index + 1
                 }
                 IconCell {
+                    horizontalAlignment: Text.AlignHCenter
                     icon: row.outcome !== "" ? FitOutcomes.icon(row.outcome) : row.icon
                     iconColor: String(row.outcome !== "" ? FitOutcomes.color(row.outcome) : EaStyle.Colors.themeForegroundMinor)
                 }

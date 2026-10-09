@@ -28,15 +28,20 @@ Column {
 
         header: EaComponents.ListViewHeader {
             EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
                 text: qsTr("id")
             }
             EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
                 text: qsTr("start")
             }
             EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
                 text: qsTr("end")
             }
-            EaComponents.TableViewLabel {}
+            EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
+            }
         }
 
         delegate: EaComponents.ListViewDelegate {
@@ -47,22 +52,26 @@ Column {
             required property real end
 
             EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
                 color: EaStyle.Colors.themeForegroundMinor
                 text: row.index + 1
             }
             TextCell {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `excludedRegion.start.${row.index}`
                 value: row.start
                 accepts: "number"
                 onCommitted: text => group.regions.setStart(row.index, Number(text))
             }
             TextCell {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `excludedRegion.end.${row.index}`
                 value: row.end
                 accepts: "number"
                 onCommitted: text => group.regions.setEnd(row.index, Number(text))
             }
             EaComponents.TableViewButton {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `excludedRegion.remove.${row.index}`
                 fontIcon: "minus-circle"
                 ToolTip.text: qsTr("Remove this region")

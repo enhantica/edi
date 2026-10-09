@@ -34,17 +34,26 @@ Column {
         columnWidths: [numberColumnWidth, EaStyle.Sizes.tableRowHeight, -1, EaStyle.Sizes.fontPixelSize * 8, AppSizes.iconColumnWidth, AppSizes.iconColumnWidth]
 
         header: EaComponents.ListViewHeader {
-            EaComponents.TableViewLabel {}
-            EaComponents.TableViewLabel {}
+            EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
+            }
+            EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
+            }
             EaComponents.TableViewLabel {
                 horizontalAlignment: Text.AlignLeft
                 text: qsTr("structure")
             }
             EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
                 text: qsTr("scale")
             }
-            EaComponents.TableViewLabel {}
-            EaComponents.TableViewLabel {}
+            EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
+            }
+            EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
+            }
         }
 
         delegate: EaComponents.ListViewDelegate {
@@ -57,10 +66,12 @@ Column {
             required property var model
 
             EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
                 color: EaStyle.Colors.themeForegroundMinor
                 text: row.index + 1
             }
             IconCell {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `linkedStructure.color.${row.index}`
                 icon: "layer-group"
                 iconColor: AppColors.structure(row.colorIndex)
@@ -68,6 +79,9 @@ Column {
             }
             // The structure, picked from the project's structures as the aliases table picks a parameter.
             EaComponents.TableViewComboBox {
+                id: structurePicker
+                horizontalAlignment: Text.AlignLeft
+                Component.onCompleted: structurePicker.contentItemLabel.horizontalAlignment = structurePicker.horizontalAlignment
                 objectName: `linkedStructure.structureId.${row.index}`
                 enabled: row.model.enabled
                 model: group.rows ? group.rows.structureNames : []
@@ -80,18 +94,21 @@ Column {
                 }
             }
             ParameterCell {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `linkedStructure.scale.${row.index}`
                 enabled: row.model.enabled
                 item: row.model.scale
             }
             // Disabled as a constraint is: kept and saved, but neither calculated nor fitted.
             EaComponents.TableViewButton {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `linkedStructure.enabled.${row.index}`
                 fontIcon: row.model.enabled ? "toggle-on" : "toggle-off"
                 ToolTip.text: row.model.enabled ? qsTr("Disable this linked structure") : qsTr("Enable this linked structure")
                 onClicked: group.rows.setEnabled(row.index, !row.model.enabled)
             }
             EaComponents.TableViewButton {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `linkedStructure.remove.${row.index}`
                 enabled: group.rows !== null && group.rows.canRemove
                 fontIcon: "minus-circle"

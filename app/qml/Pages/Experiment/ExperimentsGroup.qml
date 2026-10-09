@@ -48,9 +48,14 @@ EaElements.GroupBox {
             columnWidths: [numberColumnWidth, group.scan ? 0.001 : AppSizes.iconColumnWidth, AppSizes.iconColumnWidth, textColumnWidth("name", qsTr("Datablock")), -1, group.scanColumns.length ? group.scanColumns.length * AppSizes.dataColumnWidth * 1.4 : 0.001, group.scan ? 0.001 : AppSizes.iconColumnWidth]
 
             header: EaComponents.ListViewHeader {
-                EaComponents.TableViewLabel {}
-                EaComponents.TableViewLabel {}
                 EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
+                }
+                EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
+                }
+                EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
                     text: qsTr("Fit")
                 }
                 EaComponents.TableViewLabel {
@@ -63,6 +68,7 @@ EaElements.GroupBox {
                 }
                 // Keep the scan's repeated cells in one width-controlled column (ADR-0028).
                 Item {
+                    property int horizontalAlignment: Text.AlignHCenter
                     visible: group.scanColumns.length > 0
                     height: parent.height
                     Row {
@@ -86,6 +92,7 @@ EaElements.GroupBox {
                     }
                 }
                 EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
                     visible: !group.scan
                 }
             }
@@ -108,11 +115,13 @@ EaElements.GroupBox {
                 }
 
                 EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
                     color: EaStyle.Colors.themeForegroundMinor
                     text: row.index + 1
                 }
                 // The block's icon in its colour (easydiffractionbeta's colour column; ADR-0017 §8).
                 IconCell {
+                    horizontalAlignment: Text.AlignHCenter
                     objectName: `experiments.color.${row.index}`
                     visible: !group.scan
                     icon: "microscope"
@@ -121,6 +130,7 @@ EaElements.GroupBox {
                 }
                 // How the project's last fit ended on this experiment; "Not fitted" when it took no part.
                 IconCell {
+                    horizontalAlignment: Text.AlignHCenter
                     objectName: `experiments.fit.${row.index}`
                     icon: FitOutcomes.icon(row.fitOutcome)
                     iconColor: String(FitOutcomes.color(row.fitOutcome))
@@ -140,6 +150,7 @@ EaElements.GroupBox {
                 // The data's file: the experiment's own `.edi`, which holds its data, or a scan dataset's data file,
                 // the template dataset's with the word "template" in the accent blue; Load data… without data.
                 Item {
+                    property int horizontalAlignment: Text.AlignLeft
                     height: parent ? parent.height : 0
 
                     EaComponents.TableViewLabel {
@@ -177,6 +188,7 @@ EaElements.GroupBox {
                 }
                 // What the scan's extract rules take from the dataset, with their units.
                 Item {
+                    property int horizontalAlignment: Text.AlignHCenter
                     visible: group.scanColumns.length > 0
                     height: parent.height
                     Row {
@@ -200,6 +212,7 @@ EaElements.GroupBox {
                     }
                 }
                 EaComponents.TableViewButton {
+                    horizontalAlignment: Text.AlignHCenter
                     objectName: `experiments.remove.${row.index}`
                     visible: !group.scan
                     fontIcon: "minus-circle"

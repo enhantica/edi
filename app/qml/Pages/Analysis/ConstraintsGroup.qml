@@ -30,7 +30,9 @@ Column {
         columnWidths: [numberColumnWidth, EaStyle.Sizes.fontPixelSize * 7, -1, AppSizes.iconColumnWidth, AppSizes.iconColumnWidth]
 
         header: EaComponents.ListViewHeader {
-            EaComponents.TableViewLabel {}
+            EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
+            }
             EaComponents.TableViewLabel {
                 horizontalAlignment: Text.AlignLeft
                 text: qsTr("id")
@@ -39,8 +41,12 @@ Column {
                 horizontalAlignment: Text.AlignLeft
                 text: qsTr("expression")
             }
-            EaComponents.TableViewLabel {}
-            EaComponents.TableViewLabel {}
+            EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
+            }
+            EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
+            }
         }
 
         delegate: EaComponents.ListViewDelegate {
@@ -51,6 +57,7 @@ Column {
             required property var model
 
             EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
                 color: EaStyle.Colors.themeForegroundMinor
                 text: row.index + 1
             }
@@ -72,12 +79,14 @@ Column {
                 onCommitted: text => group.constraints.setText(row.index, "expression", text)
             }
             EaComponents.TableViewButton {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `constraint.enabled.${row.index}`
                 fontIcon: row.model.enabled ? "toggle-on" : "toggle-off"
                 ToolTip.text: row.model.enabled ? qsTr("Disable this constraint") : qsTr("Enable this constraint")
                 onClicked: group.constraints.setEnabled(row.index, !row.model.enabled)
             }
             EaComponents.TableViewButton {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `constraint.remove.${row.index}`
                 fontIcon: "minus-circle"
                 ToolTip.text: qsTr("Remove this constraint")

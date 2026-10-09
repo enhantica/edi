@@ -28,15 +28,20 @@ Column {
         columnWidths: [numberColumnWidth, textColumnWidth("typeSymbol", qsTr("type")), -1, AppSizes.iconColumnWidth]
 
         header: EaComponents.ListViewHeader {
-            EaComponents.TableViewLabel {}
+            EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
+            }
             EaComponents.TableViewLabel {
                 horizontalAlignment: Text.AlignLeft
                 text: qsTr("type")
             }
             EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
                 text: qsTr("b (fm)")
             }
-            EaComponents.TableViewLabel {}
+            EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
+            }
         }
 
         delegate: EaComponents.ListViewDelegate {
@@ -47,6 +52,7 @@ Column {
             required property real lengthFm
 
             EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
                 color: EaStyle.Colors.themeForegroundMinor
                 text: row.index + 1
             }
@@ -57,12 +63,14 @@ Column {
                 onCommitted: text => group.lengths.setTypeSymbol(row.index, text)
             }
             TextCell {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `scatteringLength.lengthFm.${row.index}`
                 value: row.lengthFm
                 accepts: "number"
                 onCommitted: text => group.lengths.setLengthFm(row.index, Number(text))
             }
             EaComponents.TableViewButton {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `scatteringLength.remove.${row.index}`
                 fontIcon: "minus-circle"
                 ToolTip.text: qsTr("Remove this scattering length")

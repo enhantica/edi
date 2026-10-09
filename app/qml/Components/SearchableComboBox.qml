@@ -26,7 +26,7 @@ EaElements.ComboBox {
     // In a table row: no border and no background, as the base's TableViewComboBox, which every other table
     // cell picker is (the owner, 2026-10-06).
     property bool inTable: false
-    // The base table's column sync sets each cell's alignment from its header label's.
+    // Table cells declare the same alignment as their header.
     property int horizontalAlignment: Text.AlignHCenter
     property int searchThreshold: 10
     readonly property bool searchable: count > searchThreshold
@@ -161,6 +161,7 @@ EaElements.ComboBox {
     }
 
     Component.onCompleted: {
+        control.contentItemLabel.horizontalAlignment = Qt.binding(() => control.inTable ? control.horizontalAlignment : Text.AlignLeft);
         control.popup.contentItem.header = searchHeader;
         // The field stays at the top while the list scrolls: a long list opens at its current entry.
         control.popup.contentItem.headerPositioning = ListView.OverlayHeader;

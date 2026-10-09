@@ -111,27 +111,35 @@ EaElements.GroupBox {
             columnWidths: [numberColumnWidth, -1, EaStyle.Sizes.fontPixelSize * 5, textColumnWidth("units", ""), EaStyle.Sizes.fontPixelSize * 3.5, EaStyle.Sizes.fontPixelSize * 3, EaStyle.Sizes.fontPixelSize * 3, EaStyle.Sizes.tableColumnAuto]
 
             header: EaComponents.ListViewHeader {
-                EaComponents.TableViewLabel {}
+                EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
+                }
                 EaComponents.TableViewLabel {
                     horizontalAlignment: Text.AlignLeft
                     text: qsTr("name")
                 }
                 EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignRight
                     text: qsTr("value")
                 }
                 EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignLeft
                     text: ""
                 }
                 EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
                     text: qsTr("error")
                 }
                 EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
                     text: qsTr("min")
                 }
                 EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
                     text: qsTr("max")
                 }
                 EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
                     text: qsTr("vary")
                 }
             }
@@ -154,12 +162,14 @@ EaElements.GroupBox {
                 }
 
                 EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
                     color: EaStyle.Colors.themeForegroundMinor
                     text: row.index + 1
                 }
                 // The iconified name on one centre line (edi ADR-0017 §8, §10), with the path in a tooltip on
                 // hover.
                 Item {
+                    property int horizontalAlignment: Text.AlignLeft
                     objectName: `parameters.name.${row.index}`
                     height: parent.height
                     clip: true
@@ -177,6 +187,7 @@ EaElements.GroupBox {
                     }
                 }
                 ParameterCell {
+                    horizontalAlignment: Text.AlignRight
                     objectName: `parameters.value.${row.index}`
                     item: row.parameter
                     onActiveFocusChanged: if (activeFocus)
@@ -188,17 +199,21 @@ EaElements.GroupBox {
                     text: row.units
                 }
                 EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
                     text: row.parameter && row.parameter.hasUncertainty ? NumberText.error(row.parameter.uncertainty) : ""
                 }
                 EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
                     color: EaStyle.Colors.themeForegroundMinor
                     text: group.bound(row.minimum)
                 }
                 EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
                     color: EaStyle.Colors.themeForegroundMinor
                     text: group.bound(row.maximum)
                 }
                 EaComponents.TableViewCheckBox {
+                    horizontalAlignment: Text.AlignHCenter
                     objectName: `parameters.free.${row.index}`
                     checked: row.parameter ? row.parameter.free : false
                     onToggled: row.parameter.free = checked

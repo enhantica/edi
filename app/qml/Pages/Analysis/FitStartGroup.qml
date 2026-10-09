@@ -29,15 +29,19 @@ DataTable {
     columnWidths: [numberColumnWidth, textColumnWidth("id", qsTr("parameter")), -1, -1]
 
     header: EaComponents.ListViewHeader {
-        EaComponents.TableViewLabel {}
+        EaComponents.TableViewLabel {
+            horizontalAlignment: Text.AlignHCenter
+        }
         EaComponents.TableViewLabel {
             horizontalAlignment: Text.AlignLeft
             text: qsTr("parameter")
         }
         EaComponents.TableViewLabel {
+            horizontalAlignment: Text.AlignHCenter
             text: qsTr("start value")
         }
         EaComponents.TableViewLabel {
+            horizontalAlignment: Text.AlignHCenter
             text: qsTr("start error")
         }
     }
@@ -50,6 +54,7 @@ DataTable {
         required property var model
 
         EaComponents.TableViewLabel {
+            horizontalAlignment: Text.AlignHCenter
             color: EaStyle.Colors.themeForegroundMinor
             text: row.index + 1
         }
@@ -60,9 +65,11 @@ DataTable {
             ToolTip.text: row.model.id
         }
         EaComponents.TableViewLabel {
+            horizontalAlignment: Text.AlignHCenter
             text: table.shown(row.model.startValue)
         }
         EaComponents.TableViewLabel {
+            horizontalAlignment: Text.AlignHCenter
             text: table.shown(row.model.startUncertainty)
         }
     }

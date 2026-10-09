@@ -34,6 +34,7 @@ EaElements.GroupBox {
                 visible: false
                 implicitHeight: 0
                 EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
                     enabled: false
                 }
                 EaComponents.TableViewLabel {
@@ -56,11 +57,13 @@ EaElements.GroupBox {
                 }
 
                 EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
                     color: EaStyle.Colors.themeForegroundMinor
                     text: row.index + 1
                 }
 
                 EaComponents.TableViewTwoRowsAdvancedLabel {
+                    horizontalAlignment: Text.AlignLeft
                     fontIcon: "archive"
                     text: row.name
                     minorText: row.description

@@ -32,30 +32,40 @@ Column {
         columnWidths: [numberColumnWidth, textColumnWidth("label", qsTr("label")), group.typeWidth, -1, -1, -1, group.wyckoffWidth, -1, AppSizes.iconColumnWidth]
 
         header: EaComponents.ListViewHeader {
-            EaComponents.TableViewLabel {}
+            EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
+            }
             EaComponents.TableViewLabel {
                 horizontalAlignment: Text.AlignLeft
                 text: qsTr("label")
             }
             EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignLeft
                 text: qsTr("type")
             }
             EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
                 text: "x"
             }
             EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
                 text: "y"
             }
             EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
                 text: "z"
             }
             EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
                 text: qsTr("WL")
             }
             EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
                 text: qsTr("occ")
             }
-            EaComponents.TableViewLabel {}
+            EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
+            }
         }
 
         delegate: EaComponents.ListViewDelegate {
@@ -71,6 +81,7 @@ Column {
             required property ParameterItem occupancy
 
             EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
                 color: EaStyle.Colors.themeForegroundMinor
                 text: row.index + 1
             }
@@ -83,6 +94,7 @@ Column {
             // The type picked from the element table or typed into the list's search field (the owner,
             // 2026-10-06); a type outside the table, as a file may declare it ("Co2+", "157Gd"), is shown as it is.
             SearchableComboBox {
+                horizontalAlignment: Text.AlignLeft
                 objectName: `atomSite.typeSymbol.${row.index}`
                 inTable: true
                 anchors.verticalCenter: parent.verticalCenter
@@ -117,27 +129,33 @@ Column {
                 }
             }
             ParameterCell {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `atomSite.fractX.${row.index}`
                 item: row.fractX
             }
             ParameterCell {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `atomSite.fractY.${row.index}`
                 item: row.fractY
             }
             ParameterCell {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `atomSite.fractZ.${row.index}`
                 item: row.fractZ
             }
             TextCell {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `atomSite.wyckoffLetter.${row.index}`
                 value: row.wyckoffLetter
                 onCommitted: text => group.sites.setText(row.index, "wyckoffLetter", text)
             }
             ParameterCell {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `atomSite.occupancy.${row.index}`
                 item: row.occupancy
             }
             EaComponents.TableViewButton {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `atomSite.remove.${row.index}`
                 fontIcon: "minus-circle"
                 ToolTip.text: qsTr("Remove this atom site")

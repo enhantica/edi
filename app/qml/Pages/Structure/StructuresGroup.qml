@@ -38,13 +38,19 @@ EaElements.GroupBox {
             columnWidths: [numberColumnWidth, EaStyle.Sizes.tableRowHeight, -1, AppSizes.iconColumnWidth]
 
             header: EaComponents.ListViewHeader {
-                EaComponents.TableViewLabel {}
-                EaComponents.TableViewLabel {}
+                EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
+                }
+                EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
+                }
                 EaComponents.TableViewLabel {
                     horizontalAlignment: Text.AlignLeft
                     text: qsTr("Name")
                 }
-                EaComponents.TableViewLabel {}
+                EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
+                }
             }
 
             delegate: EaComponents.ListViewDelegate {
@@ -61,11 +67,13 @@ EaElements.GroupBox {
                 }
 
                 EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
                     color: EaStyle.Colors.themeForegroundMinor
                     text: row.index + 1
                 }
                 // The block's icon in its colour (easydiffractionbeta's colour column; ADR-0017 §8).
                 IconCell {
+                    horizontalAlignment: Text.AlignHCenter
                     objectName: `structures.color.${row.index}`
                     icon: "layer-group"
                     iconColor: AppColors.structure(row.index)
@@ -74,6 +82,7 @@ EaElements.GroupBox {
                 // The datablock name, editable: a refused rename returns the cell to the stored name and shows why.
                 // Editing a name also makes its row current, as a click on the row does.
                 TextCell {
+                    horizontalAlignment: Text.AlignLeft
                     objectName: `structures.name.${row.index}`
                     value: row.name
                     onActiveFocusChanged: if (activeFocus)
@@ -81,6 +90,7 @@ EaElements.GroupBox {
                     onCommitted: text => row.structure.name = text
                 }
                 EaComponents.TableViewButton {
+                    horizontalAlignment: Text.AlignHCenter
                     objectName: `structures.remove.${row.index}`
                     fontIcon: "minus-circle"
                     ToolTip.text: qsTr("Remove this structure")
