@@ -194,6 +194,11 @@ EaElements.StatusBar {
                 const rest = bar.fit.scanSummary ? fitArea.joined([bar.fit.scanFiles].concat(fitArea.counts(), [bar.fit.elapsed, fitArea.chi])) : fitArea.joined([fitArea.iterations, bar.fit.elapsed, fitArea.chi]);
                 return rest === "" ? "" : FitOutcomes.separator.trim() + " " + rest;
             }
+            FontMetrics {
+                id: fitValueMetrics
+                font.family: EaStyle.Fonts.ptMono.name
+                font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.9
+            }
             Row {
                 id: valuePieces
                 Repeater {
@@ -205,9 +210,11 @@ EaElements.StatusBar {
                         readonly property bool hasArrow: index < fitValues.text.split(" → ").length - 1
                         readonly property real gap: EaStyle.Sizes.fontPixelSize * 0.5
                         implicitWidth: numberText.implicitWidth + (hasArrow ? changeArrow.width + 2 * gap : 0)
-                        implicitHeight: numberText.implicitHeight
+                        implicitHeight: fitValueMetrics.height
                         Text {
                             id: numberText
+                            objectName: `statusBar.fit.valuePart.${valuePart.index}`
+                            y: fitValueMetrics.ascent - baselineOffset
                             font.family: EaStyle.Fonts.ptMono.name
                             font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.9
                             textFormat: Text.StyledText
@@ -224,14 +231,14 @@ EaElements.StatusBar {
                             objectName: "statusBar.fit.changeArrow"
                             x: numberText.implicitWidth + valuePart.gap
                             width: numberText.font.pixelSize
-                            height: numberText.implicitHeight
+                            height: fitValueMetrics.height
                             visible: valuePart.hasArrow
                             property color strokeColor: numberText.color
                             onStrokeColorChanged: requestPaint()
                             onPaint: {
                                 const context = getContext("2d");
                                 context.clearRect(0, 0, width, height);
-                                const middle = numberText.baselineOffset + digitInk.tightBoundingRect.y + digitInk.tightBoundingRect.height / 2;
+                                const middle = fitValueMetrics.ascent + digitInk.tightBoundingRect.y + digitInk.tightBoundingRect.height / 2;
                                 const tip = width - 1;
                                 const head = width * 0.28;
                                 context.strokeStyle = strokeColor;
