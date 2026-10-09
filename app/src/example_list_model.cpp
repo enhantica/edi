@@ -92,9 +92,11 @@ ExampleListModel::ExampleListModel(QObject* parent)
             if (data.isEmpty()) data.append(unknown);
             entry.values.insert(key, data);
         }
+        const QHash<QString, QString> purpose_icons{{"refinement", "\uf140"},
+                                                    {"simulation", "\uf83e"}};
         for (const auto& purpose : entry.values.value("purpose")) {
             entry.tags.append(label(purpose));
-            entry.tag_icons.append(QString());
+            entry.tag_icons.append(purpose_icons.value(purpose));
         }
         // Glyphs in the bundled Font Awesome 5 face; select by stored enum, never translated
         // label.
