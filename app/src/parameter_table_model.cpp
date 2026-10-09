@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "parameter_table_model.hpp"
 
+#include "category_list_model.hpp"
 #include "parameter_item.hpp"
 #include "parameter_registry.hpp"
 
@@ -10,6 +11,19 @@ namespace {
 const QStringList kRoles{"parameter", "path",  "blockKind", "blockName", "category", "rowLabel", "name",
                          "displayName", "value", "uncertainty", "hasUncertainty", "free", "minimum",
                          "maximum", "units", "refinable"};
+// One predicate serves menu counts and filtering, so parent groups include all their children.
+bool matches_group(const QString& group, const QString& kind, const QString& category, const QString& name) {
+    if (group.isEmpty()) return true;
+    if (group == QLatin1String("@structure")) return kind == QLatin1String("structure");
+    if (group == QLatin1String("@experiment")) return kind == QLatin1String("experiment");
+    if (group == QLatin1String("@atoms")) return category == QLatin1String("atom_site") || category == QLatin1String("atom_site_aniso");
+    if (group == QLatin1String("@coordinates")) return category == QLatin1String("atom_site") && name.startsWith(QLatin1String("fract_"));
+    if (group == QLatin1String("@occupancies")) return category == QLatin1String("atom_site") && name == QLatin1String("occupancy");
+    if (group == QLatin1String("@displacement")) return category == QLatin1String("atom_site_aniso") || (category == QLatin1String("atom_site") && name.startsWith(QLatin1String("adp_")));
+    if (group == QLatin1String("@peakShape")) return category == QLatin1String("peak") && !name.startsWith(QLatin1String("asym_"));
+    if (group == QLatin1String("@peakAsymmetry")) return category == QLatin1String("peak") && name.startsWith(QLatin1String("asym_"));
+    return category == group;
+}
 }  // namespace
 
 ParameterTableModel::ParameterTableModel(ParameterRegistry& registry, QObject* parent)
@@ -84,20 +98,68 @@ void ParameterFilterModel::setSourceModel(QAbstractItemModel* source) {
 }
 
 void ParameterFilterModel::refreshCategories() {
-    QStringList categories;
+    struct Row { QString kind, category, name; };
+    QList<Row> rows;
     if (sourceModel() != nullptr) {
-        const int role = sourceModel()->roleNames().key("category");
+        const auto roles = sourceModel()->roleNames();
+        const auto value = [&](int row, const char* role) {
+            return sourceModel()->data(sourceModel()->index(row, 0), roles.key(role)).toString();
+        };
         for (int row = 0; row < sourceModel()->rowCount(); ++row) {
-            const QString category = sourceModel()->data(sourceModel()->index(row, 0), role).toString();
-            if (!category.isEmpty() && !categories.contains(category)) {
-                categories.append(category);
+            rows.append({value(row, "blockKind"), value(row, "category"), value(row, "name")});
+        }
+    }
+    QStringList categories;
+    QVariantList groups;
+    const auto add = [&](const QString& key, const QString& title, const QString& icon, int depth) {
+        int count = 0;
+        for (const Row& row : rows) {
+            count += matches_group(key, row.kind, row.category, row.name) ? 1 : 0;
+        }
+        if (count == 0 && !key.isEmpty()) return;
+        categories.append(key);
+        groups.append(QVariantMap{{"key", key}, {"title", title + QStringLiteral(" (%1)").arg(count)},
+                                  {"icon", icon}, {"depth", depth}, {"count", count}});
+    };
+    add({}, tr("All categories"), {}, 0);
+    for (const QString& kind : {QStringLiteral("structure"), QStringLiteral("experiment")}) {
+        add(QLatin1Char('@') + kind, kind == QLatin1String("structure") ? tr("Structure") : tr("Experiment"),
+            kind == QLatin1String("structure") ? QStringLiteral("layer-group") : QStringLiteral("microscope"), 0);
+        QStringList seen;
+        for (const Row& row : rows) {
+            if (row.kind != kind || seen.contains(row.category)) continue;
+            seen.append(row.category);
+            if (row.category == QLatin1String("atom_site") || row.category == QLatin1String("atom_site_aniso")) {
+                if (seen.contains(QStringLiteral("@atoms"))) continue;
+                seen.append(QStringLiteral("@atoms"));
+                add(QStringLiteral("@atoms"), tr("Atom sites"), QStringLiteral("atom"), 1);
+                add(QStringLiteral("@coordinates"), tr("Atomic coordinates"), QStringLiteral("map-marker-alt"), 2);
+                add(QStringLiteral("@occupancies"), tr("Atomic occupancies"), QStringLiteral("fill"), 2);
+                add(QStringLiteral("@displacement"), tr("Atomic displacement"), QStringLiteral("arrows-alt"), 2);
+                continue;
+            }
+            const auto presentation = category_presentation(row.category);
+            QString title = QString::fromUtf8(presentation.title);
+            if (row.category == QLatin1String("cell")) title = tr("Unit cell");
+            if (title.isEmpty()) { title = row.category; title.replace(QLatin1Char('_'), QLatin1Char(' ')); }
+            add(row.category, title, QString::fromUtf8(presentation.icon), 1);
+            if (row.category == QLatin1String("peak")) {
+                add(QStringLiteral("@peakShape"), tr("Peak shape"), QStringLiteral("shapes"), 2);
+                add(QStringLiteral("@peakAsymmetry"), tr("Peak asymmetry"), QStringLiteral("balance-scale-left"), 2);
             }
         }
     }
-    categories.sort();
-    categories.prepend(QString());
-    if (categories != categories_) {
+    // Any additional block kind remains selectable when the parameter walk grows.
+    for (const Row& row : rows) {
+        if (row.kind == QLatin1String("structure") || row.kind == QLatin1String("experiment") || categories.contains(row.category)) continue;
+        const auto presentation = category_presentation(row.category);
+        QString title = QString::fromUtf8(presentation.title);
+        if (title.isEmpty()) { title = row.category; title.replace(QLatin1Char('_'), QLatin1Char(' ')); }
+        add(row.category, title, QString::fromUtf8(presentation.icon), 0);
+    }
+    if (categories != categories_ || groups != category_groups_) {
         categories_ = categories;
+        category_groups_ = groups;
         emit categoriesChanged();
     }
     if (!categories_.contains(category_filter_)) {
@@ -163,7 +225,7 @@ bool ParameterFilterModel::filterAcceptsRow(int source_row, const QModelIndex& s
     const QModelIndex index = sourceModel()->index(source_row, 0, source_parent);
     const QHash<int, QByteArray> roles = sourceModel()->roleNames();
     const auto value = [&](const char* name) { return sourceModel()->data(index, roles.key(name)); };
-    if (!category_filter_.isEmpty() && value("category").toString() != category_filter_) {
+    if (!matches_group(category_filter_, value("blockKind").toString(), value("category").toString(), value("name").toString())) {
         return false;
     }
     const bool free = value("free").toBool();

@@ -24,7 +24,12 @@ values and their header align right, with units aligned left in the adjacent
 column so they sit next to the values. Text editors show the beginning of an overflowing value when idle and expose its full value
 on hover. Free parameters are bold and green; invalid values retain red.
 
-The analysis table offers name, variability and category filters. Its height
+The analysis table offers name, variability and category filters. The category
+picker uses readable titles, icons and counts, with Structure and Experiment
+parent groups and atom/peak subgroups. Every category represented in the parameter
+walk is included, with counts and predicates derived from the same source rows.
+Popups size before their first opening and keep their first option visible when
+all options fit; longer lists scroll to the current selection. Its height
 uses the available sidebar space after reserving the filters, slider, fitting
 controls and Continue button. Tables that overflow show part of the next row.
 
