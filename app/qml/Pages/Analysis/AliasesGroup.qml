@@ -72,7 +72,6 @@ Column {
                     width: Math.min(parent.width, implicitWidth)
                     x: parent.horizontalAlignment === Text.AlignRight ? parent.width - width : parent.horizontalAlignment === Text.AlignLeft ? 0 : (parent.width - width) / 2
                     inTable: true
-                    popup.width: parent.width
                     horizontalAlignment: Text.AlignLeft
                     objectName: `alias.parameter.${row.index}`
                     anchors.verticalCenter: parent.verticalCenter
