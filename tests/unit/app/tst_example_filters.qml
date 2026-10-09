@@ -338,7 +338,10 @@ Item {
             verify(workflowSymbol !== null && workflowLabel !== null && techniqueLabel !== null);
             compare(workflowSymbol.font.family, EaStyle.Fonts.iconsFamily, "Workflow symbols use the bundled icon face");
             compare(workflowSymbol.color, workflowLabel.color);
-            compare(techniqueLabel.color, EaStyle.Colors.themeForeground, "Technique tags use neutral theme ink");
+            compare(techniqueLabel.color, EaStyle.Colors.themeAccent, "Bragg technique uses the selected blue ink");
+            for (const code of ["xray", "cwl"])
+                compare(labelWithText(row, code).color, EaStyle.Colors.themeForeground, "Grey technique code: " + code);
+            compare(labelWithText(row, "pd").color, EaStyle.Colors.themeAccent, "Powder technique uses the selected blue ink");
             const point = Ui.clickPoint(row);
             let delay = 0;
             for (let item = row.parent; item; item = item.parent) {
