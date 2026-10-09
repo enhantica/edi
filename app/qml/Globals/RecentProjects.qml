@@ -12,6 +12,7 @@ QtObject {
 
     readonly property ListModel rows: ListModel {}
     property Settings settings: Settings {
+        id: recentSettings
         location: EaGlobals.Vars.settingsFile
         category: "Edi.RecentProjects"
         property string paths: "[]"
@@ -26,7 +27,7 @@ QtObject {
 
     function paths(): list<string> {
         try {
-            const saved = JSON.parse(settings.paths);
+            const saved = JSON.parse(recentSettings.paths);
             return Array.isArray(saved) ? saved.filter(path => typeof path === "string" && path.length > 0) : [];
         } catch (error) {
             return [];
@@ -45,7 +46,7 @@ QtObject {
             return;
         const saved = paths().filter(item => item !== path);
         saved.unshift(path);
-        settings.paths = JSON.stringify(saved);
+        recentSettings.paths = JSON.stringify(saved);
         refresh();
     }
     function forget(index: int) {
@@ -53,7 +54,7 @@ QtObject {
         if (index < 0 || index >= saved.length)
             return;
         saved.splice(index, 1);
-        settings.paths = JSON.stringify(saved);
+        recentSettings.paths = JSON.stringify(saved);
         refresh();
     }
     Component.onCompleted: {
