@@ -103,15 +103,15 @@ Column {
             }
             EaComponents.TableViewLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: qsTr("I meas")
+                text: qsTr("meas")
             }
             EaComponents.TableViewLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: qsTr("σ(I meas)")
+                text: qsTr("s.u.")
             }
             EaComponents.TableViewLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: qsTr("I calc")
+                text: qsTr("calc")
             }
             EaComponents.TableViewLabel {
                 horizontalAlignment: Text.AlignHCenter
@@ -119,11 +119,11 @@ Column {
             }
             EaComponents.TableViewLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: qsTr("I bkg")
+                text: qsTr("bkg")
             }
             EaComponents.TableViewLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: qsTr("meas − calc")
+                text: qsTr("resid")
             }
             EaComponents.TableViewLabel {
                 horizontalAlignment: Text.AlignHCenter
