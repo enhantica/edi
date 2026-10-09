@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 
