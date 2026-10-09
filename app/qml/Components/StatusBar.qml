@@ -198,30 +198,54 @@ EaElements.StatusBar {
                 id: valuePieces
                 Repeater {
                     model: fitValues.text.split(" → ")
-                    delegate: Row {
+                    delegate: Item {
                         id: valuePart
                         required property string modelData
                         required property int index
-                        spacing: EaStyle.Sizes.fontPixelSize * 0.5
+                        readonly property bool hasArrow: index < fitValues.text.split(" → ").length - 1
+                        readonly property real gap: EaStyle.Sizes.fontPixelSize * 0.5
+                        implicitWidth: numberText.implicitWidth + (hasArrow ? changeArrow.width + 2 * gap : 0)
+                        implicitHeight: numberText.implicitHeight
                         Text {
-                            anchors.verticalCenter: parent.verticalCenter
+                            id: numberText
                             font.family: EaStyle.Fonts.ptMono.name
                             font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.9
                             textFormat: Text.StyledText
                             color: EaStyle.Colors.themeForeground
                             text: valuePart.modelData
                         }
-                        IconLine {
+                        TextMetrics {
+                            id: digitInk
+                            font: numberText.font
+                            text: "0"
+                        }
+                        Canvas {
+                            id: changeArrow
                             objectName: "statusBar.fit.changeArrow"
-                            anchors.verticalCenter: parent.verticalCenter
-                            visible: valuePart.index < fitValues.text.split(" → ").length - 1
-                            pixelSize: EaStyle.Sizes.fontPixelSize * 0.9
-                            textColor: EaStyle.Colors.themeForeground
-                            segments: [
-                                {
-                                    icon: "long-arrow-alt-right"
-                                }
-                            ]
+                            x: numberText.implicitWidth + valuePart.gap
+                            width: numberText.font.pixelSize
+                            height: numberText.implicitHeight
+                            visible: valuePart.hasArrow
+                            property color strokeColor: numberText.color
+                            onStrokeColorChanged: requestPaint()
+                            onPaint: {
+                                const context = getContext("2d");
+                                context.clearRect(0, 0, width, height);
+                                const middle = numberText.baselineOffset + digitInk.tightBoundingRect.y + digitInk.tightBoundingRect.height / 2;
+                                const tip = width - 1;
+                                const head = width * 0.28;
+                                context.strokeStyle = strokeColor;
+                                context.lineWidth = Math.max(1, numberText.font.pixelSize * 0.075);
+                                context.lineCap = "round";
+                                context.lineJoin = "round";
+                                context.beginPath();
+                                context.moveTo(1, middle);
+                                context.lineTo(tip, middle);
+                                context.moveTo(tip - head, middle - head);
+                                context.lineTo(tip, middle);
+                                context.lineTo(tip - head, middle + head);
+                                context.stroke();
+                            }
                         }
                     }
                 }
