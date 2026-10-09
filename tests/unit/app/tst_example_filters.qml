@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
+import QtQml.Models
 import QtTest
+import EasyApplication.Gui.Style as EaStyle
 import edi.app
 import "UiInteraction.js" as Ui
 
@@ -12,6 +14,17 @@ Item {
         ExamplesGroup {
             width: 900
             collapsed: false
+        }
+    }
+    Component {
+        id: tagsComponent
+        Instantiator {
+            model: Session.examples
+            delegate: QtObject {
+                required property string exampleId
+                required property list<string> tagLabels
+                required property list<string> tagIcons
+            }
         }
     }
     TestCase {
@@ -123,6 +136,39 @@ Item {
                 verify(sourceIds.includes(id));
                 sameIds(Session.examples.propertyValues(id, "fittingMode"), [mode]);
             }
+        }
+        function test_workflow_symbols_match_every_source_tag_row() {
+            const witness = createTemporaryObject(tagsComponent, parent);
+            verify(witness !== null);
+            compare(witness.count, sourceIds.length);
+            const labels = {
+                single: qsTr("Single"),
+                joint: qsTr("Joint"),
+                sequential: qsTr("Sequential"),
+                independent: qsTr("Independent")
+            };
+            const symbols = {};
+            for (let i = 0; i < witness.count; ++i) {
+                const row = witness.objectAt(i);
+                verify(row !== null);
+                const modes = Session.examples.propertyValues(row.exampleId, "fittingMode");
+                compare(modes.length, 1);
+                const mode = modes[0];
+                verify(labels[mode] !== undefined, "Every declared workflow has a symbol: " + mode);
+                compare(row.tagIcons.length, row.tagLabels.length, row.exampleId);
+                compare(row.tagLabels[1], labels[mode]);
+                verify(row.tagIcons[1].length > 0, "Workflow symbol is populated: " + row.exampleId);
+                for (let j = 0; j < row.tagLabels.length; ++j) {
+                    if (j !== 1)
+                        compare(row.tagIcons[j], "", "Purpose and technique have no symbols: " + row.exampleId);
+                }
+                if (symbols[mode] !== undefined)
+                    compare(row.tagIcons[1], symbols[mode], "One workflow always uses the same symbol");
+                symbols[mode] = row.tagIcons[1];
+            }
+            for (const mode of ["single", "joint", "sequential"])
+                verify(symbols[mode] !== undefined, "Bundled examples exercise " + mode);
+            compare(new Set(Object.values(symbols)).size, Object.keys(symbols).length, "Different workflows have distinct symbols");
         }
         function test_normalized_words_and_property_are_conjunctive() {
             Session.examples.searchText = "co2sio4 ILL";
@@ -285,6 +331,14 @@ Item {
             verify(row.tagLabels.includes("Bragg") && !row.tagLabels.includes("bragg"));
             for (const code of ["pd", "xray", "cwl"])
                 verify(row.tagLabels.includes(code), "Technique code stays lowercase: " + code);
+            compare(row.tagIcons.length, row.tagLabels.length);
+            const workflowSymbol = labelWithText(row, row.tagIcons[1]);
+            const workflowLabel = labelWithText(row, qsTr("Single"));
+            const techniqueLabel = labelWithText(row, "Bragg");
+            verify(workflowSymbol !== null && workflowLabel !== null && techniqueLabel !== null);
+            compare(workflowSymbol.font.family, EaStyle.Fonts.iconsFamily, "Workflow symbols use the bundled icon face");
+            compare(workflowSymbol.color, workflowLabel.color);
+            compare(techniqueLabel.color, EaStyle.Colors.themeForeground, "Technique tags use neutral theme ink");
             const point = Ui.clickPoint(row);
             let delay = 0;
             for (let item = row.parent; item; item = item.parent) {
