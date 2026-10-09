@@ -148,6 +148,11 @@ Item {
                 independent: qsTr("Independent")
             };
             const symbols = {};
+            const purposeIcons = {
+                refinement: "\uf140",
+                simulation: "\uf83e"
+            };
+            const seenPurposes = new Set();
             for (let i = 0; i < witness.count; ++i) {
                 const row = witness.objectAt(i);
                 verify(row !== null);
@@ -156,18 +161,22 @@ Item {
                 const mode = modes[0];
                 verify(labels[mode] !== undefined, "Every declared workflow has a symbol: " + mode);
                 compare(row.tagIcons.length, row.tagLabels.length, row.exampleId);
+                const purposes = Session.examples.propertyValues(row.exampleId, "purpose");
+                compare(purposes.length, 1);
+                verify(purposeIcons[purposes[0]] !== undefined, "Purpose has an owner-selected symbol: " + row.exampleId);
+                compare(row.tagIcons[0], purposeIcons[purposes[0]], "Purpose glyph follows its stored value: " + row.exampleId);
+                seenPurposes.add(purposes[0]);
                 compare(row.tagLabels[1], labels[mode]);
                 verify(row.tagIcons[1].length > 0, "Workflow symbol is populated: " + row.exampleId);
-                for (let j = 0; j < row.tagLabels.length; ++j) {
-                    if (j !== 1)
-                        compare(row.tagIcons[j], "", "Purpose and technique have no symbols: " + row.exampleId);
-                }
+                for (let j = 2; j < row.tagLabels.length; ++j)
+                    compare(row.tagIcons[j], "", "Technique tags have no symbols: " + row.exampleId);
                 if (symbols[mode] !== undefined)
                     compare(row.tagIcons[1], symbols[mode], "One workflow always uses the same symbol");
                 symbols[mode] = row.tagIcons[1];
             }
             for (const mode of ["single", "joint", "sequential"])
                 verify(symbols[mode] !== undefined, "Bundled examples exercise " + mode);
+            compare(seenPurposes.size, 2, "Both refinement and simulation symbols are exercised");
             compare(new Set(Object.values(symbols)).size, Object.keys(symbols).length, "Different workflows have distinct symbols");
         }
         function test_normalized_words_and_property_are_conjunctive() {
@@ -332,6 +341,12 @@ Item {
             for (const code of ["pd", "xray", "cwl"])
                 verify(row.tagLabels.includes(code), "Technique code stays lowercase: " + code);
             compare(row.tagIcons.length, row.tagLabels.length);
+            const purposeSymbol = labelWithText(row, row.tagIcons[0]);
+            const purposeLabel = labelWithText(row, qsTr("Simulation"));
+            verify(purposeSymbol !== null && purposeLabel !== null);
+            compare(purposeSymbol.text, "\uf83e");
+            compare(purposeSymbol.font.family, EaStyle.Fonts.iconsFamily, "Purpose symbols use the bundled icon face");
+            compare(purposeSymbol.color, purposeLabel.color);
             const workflowSymbol = labelWithText(row, row.tagIcons[1]);
             const workflowLabel = labelWithText(row, qsTr("Single"));
             const techniqueLabel = labelWithText(row, "Bragg");
