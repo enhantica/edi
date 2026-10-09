@@ -162,7 +162,7 @@ EaElements.GroupBox {
                     text: ""
                 }
                 EaComponents.TableViewLabel {
-                    horizontalAlignment: Text.AlignHCenter
+                    horizontalAlignment: Text.AlignRight
                     text: qsTr("s.u.")
                 }
                 EaComponents.TableViewLabel {
@@ -234,7 +234,7 @@ EaElements.GroupBox {
                     text: row.units
                 }
                 EaComponents.TableViewLabel {
-                    horizontalAlignment: Text.AlignHCenter
+                    horizontalAlignment: Text.AlignRight
                     text: row.parameter && row.parameter.hasUncertainty ? NumberText.error(row.parameter.uncertainty) : ""
                 }
                 EaComponents.TableViewLabel {

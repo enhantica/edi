@@ -20,7 +20,7 @@ Each table declares widths once. Read-only row numbers have blank headings and f
 icons, fit controls and remove buttons have compact fixed widths. Labels and
 units fit their content. Numeric columns share the remaining space equally.
 Headers and row cells use the same widths and explicit alignments. In Analysis,
-values and their header align right, with units aligned left in the adjacent
+values, uncertainties and their headers align right, with units aligned left in the adjacent
 column so they sit next to the values. Text editors show the beginning of an overflowing value when idle and expose its full value
 on hover. Free parameters are bold and green; invalid values retain red.
 

@@ -175,17 +175,13 @@ EaElements.StatusBar {
             toolTipText: clickable ? qsTr("%1: click to see the results").arg(FitOutcomes.meaning(outcome)) : FitOutcomes.meaning(outcome)
             onClicked: fitResultsDialog.open()
         }
-        Text {
+        Item {
+            id: fitValues
             objectName: "statusBar.fit.values"
             anchors.verticalCenter: parent.verticalCenter
-            font.family: EaStyle.Fonts.ptMono.name
-            font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.9
-            textFormat: Text.StyledText
-            color: EaStyle.Colors.themeForeground
-            Behavior on color {
-                EaAnimations.ThemeChange {}
-            }
-            text: {
+            implicitWidth: valuePieces.implicitWidth
+            implicitHeight: valuePieces.implicitHeight
+            readonly property string text: {
                 if (!bar.fit)
                     return "";
                 // One order everywhere: progress, the ok and fail counts, time, χ².
@@ -196,6 +192,38 @@ EaElements.StatusBar {
                 // A scan's summary: files, then the ok and fail counts, time, χ².
                 const rest = bar.fit.scanSummary ? fitArea.joined([bar.fit.scanFiles].concat(fitArea.counts(), [bar.fit.elapsed, fitArea.chi])) : fitArea.joined([fitArea.iterations, bar.fit.elapsed, fitArea.chi]);
                 return rest === "" ? "" : FitOutcomes.separator.trim() + " " + rest;
+            }
+            Row {
+                id: valuePieces
+                Repeater {
+                    model: fitValues.text.split(" → ")
+                    delegate: Row {
+                        id: valuePart
+                        required property string modelData
+                        required property int index
+                        spacing: EaStyle.Sizes.fontPixelSize * 0.5
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            font.family: EaStyle.Fonts.ptMono.name
+                            font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.9
+                            textFormat: Text.StyledText
+                            color: EaStyle.Colors.themeForeground
+                            text: valuePart.modelData
+                        }
+                        IconLine {
+                            objectName: "statusBar.fit.changeArrow"
+                            anchors.verticalCenter: parent.verticalCenter
+                            visible: valuePart.index < fitValues.text.split(" → ").length - 1
+                            pixelSize: EaStyle.Sizes.fontPixelSize * 0.9
+                            textColor: EaStyle.Colors.themeForeground
+                            segments: [
+                                {
+                                    icon: "long-arrow-alt-right"
+                                }
+                            ]
+                        }
+                    }
+                }
             }
         }
         // Scan results the template has changed since stay, marked out of date until the next run replaces them.
