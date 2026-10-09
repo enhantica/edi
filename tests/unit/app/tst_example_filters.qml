@@ -78,6 +78,16 @@ Item {
             verify(index >= 0, "Bundled source example exists: " + id);
             return normalized(Session.examples.text(index, "sample"));
         }
+        function labelWithText(root, expected) {
+            if (root.text === expected && root.font !== undefined)
+                return root;
+            for (const child of root.children || []) {
+                const found = labelWithText(child, expected);
+                if (found !== null)
+                    return found;
+            }
+            return null;
+        }
         function choose(picker, value) {
             let index = -1;
             for (let i = 0; i < picker.model.count; ++i) {
@@ -268,6 +278,13 @@ Item {
                 row = Ui.find(group, "examples.open." + expected);
                 return row !== null && Ui.exposed(row);
             });
+            const identity = labelWithText(row, row.sample + " · " + row.origin);
+            verify(identity !== null);
+            compare(identity.font.family, "Noto Sans", "The whole formula uses one bundled face, including subscripts");
+            compare(identity.font.bold, true);
+            verify(row.tagLabels.includes("Bragg") && !row.tagLabels.includes("bragg"));
+            for (const code of ["pd", "xray", "cwl"])
+                verify(row.tagLabels.includes(code), "Technique code stays lowercase: " + code);
             const point = Ui.clickPoint(row);
             let delay = 0;
             for (let item = row.parent; item; item = item.parent) {
