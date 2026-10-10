@@ -223,9 +223,12 @@ def test_results_state_readers_prove_the_supported_kind(
 
 @pytest.mark.parametrize('mode', ['sequential', 'independent'])
 @pytest.mark.parametrize('kind', ['directory', 'fifo'])
-def test_event_termination_reader_refuses_a_replaced_provenance_path(tmp_path, mode, kind):
+def test_event_scan_append_refuses_a_replaced_provenance_path(tmp_path, mode, kind):
     if kind == 'fifo' and not hasattr(os, 'mkfifo'):
         pytest.skip('The platform cannot construct the optional FIFO file-kind witness')
+    # A real solver iteration precedes the next provenance append. The public completion
+    # callback runs only after that append and edi's subsequent termination reread.
+    # This witness proves refusal at the first boundary; it does not isolate the reread.
     directory = phase_scan.materialize(tmp_path / 'project', mode)
     code = """
 import edi, os, sys
@@ -263,13 +266,13 @@ project.analysis.fit(on_scan_start=lambda _: None, on_iteration=replace,
         )
     except subprocess.TimeoutExpired:
         pytest.fail(
-            'The live termination reader must refuse a replaced provenance FIFO before opening it'
+            'The next scan append must refuse a replaced provenance FIFO before opening it'
         )
     assert 'INJECTED' in result.stdout, (
         'A real iteration must replace provenance after native preflight and stream creation'
     )
     assert result.returncode != 0 and 'results-provenance.csv' in result.stderr, (
-        'The termination reader must diagnose unsupported provenance after writes'
+        'The live scan must diagnose unsupported provenance before its next append'
     )
     assert 'ADOPTED-AFTER' not in result.stdout, (
         'Unsupported live provenance must refuse before publishing a completed file record'

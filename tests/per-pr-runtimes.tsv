@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-10T10:54:37Z
+# measured_utc = 2026-10-10T10:56:26Z
 #
-# Recorded from: scan-status.log (7 node(s) measured once, 9352 banked, 0 stale row(s) dropped)
+# Recorded from: scan-provenance.log (4 node(s) measured once, 9357 banked, 4 stale row(s) dropped)
 # Collected tests: 10133; with a reported duration: 5208
 # Module-scoped fixture costs recorded: 32
 #
@@ -4983,10 +4983,10 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_phase_scan_class_boundar
 0.000	tests/integration/py/test_scan_notes_diagnostics.py::test_cli_reports_malformed_notes_once[empty]
 0.000	tests/integration/py/test_scan_notes_diagnostics.py::test_cli_reports_malformed_notes_once[foreign]
 0.000	tests/integration/py/test_scan_notes_diagnostics.py::test_cli_reports_malformed_notes_once[torn]
-0.210	tests/integration/py/test_scan_notes_diagnostics.py::test_event_termination_reader_refuses_a_replaced_provenance_path[directory-independent]
-0.200	tests/integration/py/test_scan_notes_diagnostics.py::test_event_termination_reader_refuses_a_replaced_provenance_path[directory-sequential]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.py::test_event_termination_reader_refuses_a_replaced_provenance_path[fifo-independent]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.py::test_event_termination_reader_refuses_a_replaced_provenance_path[fifo-sequential]
+0.210	tests/integration/py/test_scan_notes_diagnostics.py::test_event_scan_append_refuses_a_replaced_provenance_path[directory-independent]
+0.220	tests/integration/py/test_scan_notes_diagnostics.py::test_event_scan_append_refuses_a_replaced_provenance_path[directory-sequential]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.py::test_event_scan_append_refuses_a_replaced_provenance_path[fifo-independent]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.py::test_event_scan_append_refuses_a_replaced_provenance_path[fifo-sequential]
 0.180	tests/integration/py/test_scan_notes_diagnostics.py::test_nonregular_notes_refuse_on_core_reporting_and_cli[directory-core]
 0.240	tests/integration/py/test_scan_notes_diagnostics.py::test_nonregular_notes_refuse_on_core_reporting_and_cli[directory-dry]
 0.240	tests/integration/py/test_scan_notes_diagnostics.py::test_nonregular_notes_refuse_on_core_reporting_and_cli[directory-fit]
