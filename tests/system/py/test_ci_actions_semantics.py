@@ -30,6 +30,26 @@ from tests.system.py.test_ci_context_boundaries import trigger_control
         ("'false' && 'selected'", 'selected'),
         ("!''", True),
     ],
+    ids=[
+        'value-1',
+        'value-2',
+        'value-3',
+        'value-4',
+        'value-5',
+        'value-6',
+        'value-7',
+        'value-8',
+        'value-9',
+        'value-10',
+        'value-11',
+        'value-12',
+        'value-13',
+        'value-14',
+        'value-15',
+        'value-16',
+        'value-17',
+        'value-18',
+    ],
 )
 def test_actions_value_contract_preserves_comparisons_and_selected_operands(expression, expected):
     result = value(
@@ -62,6 +82,18 @@ def test_actions_value_contract_preserves_comparisons_and_selected_operands(expr
         ("${{ 'It''s true' }}", "It's true"),
         ("prefix-${{ true && 'GROUP' || 'unused' }}", 'prefix-GROUP'),
     ],
+    ids=[
+        'render-1',
+        'render-2',
+        'render-3',
+        'render-4',
+        'render-5',
+        'render-6',
+        'render-7',
+        'render-8',
+        'render-9',
+        'render-10',
+    ],
 )
 def test_actions_rendering_preserves_literals_and_lowercase_boolean_results(source, expected):
     assert render(source, {'github.ref': 'refs/heads/main', 'github.run_id': 790}) == expected, (
@@ -78,6 +110,7 @@ def test_actions_rendering_preserves_literals_and_lowercase_boolean_results(sour
         '[true]',
         '"true"',
     ],
+    ids=['unsupported-1', 'unsupported-2', 'unsupported-3', 'unsupported-4', 'unsupported-5'],
 )
 def test_actions_unsupported_expression_forms_refuse(source):
     with pytest.raises((ValueError, SyntaxError)):
