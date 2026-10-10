@@ -171,3 +171,44 @@ def category_scan(root, mode, background='line-segment', *, texture_only=False):
         '_sequential_fit.file_pattern *.xy\n'
     )
     return root, expected
+
+
+NOTES_CASES = (
+    '1.5',
+    '18446744073709551616',
+    '-1',
+    'torn',
+    'duplicate',
+    'empty',
+    'foreign',
+    'alias',
+    'blank',
+)
+
+
+def malformed_notes(case):
+    header = 'file_path,negative_points,skipped_dataset,refusal\n'
+    row = f'experiments/scan/01.xy,{case},True,\n'
+    if case == 'torn':
+        row = 'experiments/scan/01.xy,1,True,'
+    elif case == 'duplicate':
+        row = 'experiments/scan/01.xy,1,True,\n' * 2
+    elif case == 'empty':
+        return ''
+    elif case == 'foreign':
+        row = 'experiments/scan/foreign.xy,1,True,\n'
+    elif case == 'alias':
+        row = '01.xy,1,True,\nexperiments/scan/01.xy,1,True,\n'
+    elif case == 'blank':
+        row = 'experiments/scan/01.xy,1,True,\n\nexperiments/scan/02.xy,0,True,\n'
+    return header + row
+
+
+def retained_notes(root, engine, case, history, mode='sequential'):
+    directory = materialize(root, mode)
+    if history == 'all-skipped':
+        for data in (directory / 'experiments/scan').glob('*.xy'):
+            data.write_text(''.join(f'{x:.17g} 0 1\n' for x in support.grid()))
+    engine.Project.load(directory).analysis.fit()
+    (directory / 'analysis/scan-notes.csv').write_text(malformed_notes(case))
+    return directory

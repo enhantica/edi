@@ -33,10 +33,13 @@ def observe(root, expected):
 
 
 @pytest.mark.parametrize('mode', ['sequential', 'independent'])
-@pytest.mark.parametrize('skipped', [(), (0,), (1,), (2,), (0, 1, 2), 'resume-leading'])
+@pytest.mark.parametrize(
+    'skipped', [(), (0,), (1,), (2,), (0, 1, 2), 'resume-leading', 'resume-converted']
+)
 def test_app_counts_processed_files_and_reopens_all_phase_results(tmp_path, mode, skipped):
     directory = phase_scan.materialize(tmp_path / 'project', mode)
-    resume = skipped == 'resume-leading'
+    converted = skipped == 'resume-converted'
+    resume = skipped in {'resume-leading', 'resume-converted'}
     skipped = (0,) if resume else skipped
     for index in skipped:
         (directory / f'experiments/scan/{index + 1:02d}.xy').write_text(
@@ -48,12 +51,19 @@ def test_app_counts_processed_files_and_reopens_all_phase_results(tmp_path, mode
         pending.rename(parked)
         edi.Project.load(directory).analysis.fit()
         parked.rename(pending)
+        if converted:
+            original = phase_scan.materialize(tmp_path / 'signal', mode)
+            (directory / 'experiments/scan/01.xy').write_bytes(
+                (original / 'experiments/scan/01.xy').read_bytes()
+            )
+            skipped = ()
     places = [index for index in range(3) if index not in skipped]
     result = observe(
         tmp_path,
         {
             'kind': 'scan',
             'resume': resume,
+            'converted': converted,
             'places': places,
             'values': [phase_scan.COEFFICIENTS[index] for index in places],
         },
@@ -66,16 +76,10 @@ def test_app_counts_processed_files_and_reopens_all_phase_results(tmp_path, mode
     )
 
 
-@pytest.mark.parametrize('count', ['1.5', '18446744073709551616', '-1', 'torn', 'duplicate'])
+@pytest.mark.parametrize('count', phase_scan.NOTES_CASES)
 def test_app_refuses_malformed_notes_with_one_diagnostic(tmp_path, count):
     directory = phase_scan.materialize(tmp_path / 'project')
-    header = 'file_path,negative_points,skipped_dataset,refusal\n'
-    row = f'experiments/scan/01.xy,{count},True,\n'
-    if count == 'torn':
-        row = 'experiments/scan/01.xy,1,True,'
-    elif count == 'duplicate':
-        row = 'experiments/scan/01.xy,1,True,\n' * 2
-    (directory / 'analysis/scan-notes.csv').write_text(header + row)
+    (directory / 'analysis/scan-notes.csv').write_text(phase_scan.malformed_notes(count))
     result = observe(tmp_path, {'kind': 'notes'})
     assert result.returncode == 0, (
         'Malformed persisted counts and torn/duplicate notes must produce one explicit '
