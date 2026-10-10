@@ -249,11 +249,13 @@ def test_actual_workflow_consumes_its_common_output_at_fetch_or_build(tmp_path, 
 
     public = public_profile(document['jobs'])
     area = job_name.removesuffix('-macos')
-    for runner in self_hosted_runners(document['jobs'][job_name]):
+    for index, runner in enumerate(self_hosted_runners(document['jobs'][job_name])):
         platform = {'Linux': 'linux-64', 'macOS': 'osx-arm64'}[runner[1]]
         if public:
             public_build_boundary(document['jobs'], job_name, platform)
-        home = tmp_path / platform
+        # Each independently executing system part gets its own real transport
+        # fixture; parts sharing an SDK must not share a mutable fixture checkout.
+        home = tmp_path / (f'{platform}-part-{index + 1}' if area == 'system' else platform)
         if area == 'native' or public:
             home.mkdir()
             acquired, _ = consumer(home, platform=platform)

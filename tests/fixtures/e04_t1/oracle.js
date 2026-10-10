@@ -7038,6 +7038,275 @@ var frozen = {
       }
     },
     {
+      "id": "pd-xray-cwl_latp_scan-4f",
+      "path": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
+      "metadata": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_metadata.name": "latp_scan",
+        "_metadata.title": "LATP synchrotron X-ray sequential scan, three phases",
+        "_metadata.description": "Li1.3Al0.3Ti1.7(PO4)3 with two AlPO4 phases; model from latp.pcr (FullProf chi2 7.05 on s13_150_z20_xrd_sum.dat)",
+        "_metadata.created": "07 Oct 2026 11:30:00",
+        "_metadata.last_modified": "07 Oct 2026 11:30:00",
+        "_metadata.timestamp": "2026-10-07T09:30:00+00:00",
+        "_rendering_plot.type": "auto",
+        "_report.cif": "false",
+        "_report.html": "true",
+        "_report.tex": "false",
+        "_report.pdf": "false",
+        "_report.html_offline": "false",
+        "_rendering_table.type": "auto",
+        "_rendering_structure.type": "auto",
+        "_structure_view.show_labels": "false",
+        "_structure_view.show_moments": "true",
+        "_structure_view.range_a_min": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_structure_view.range_a_max": {
+          "value": 1.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_structure_view.range_b_min": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_structure_view.range_b_max": {
+          "value": 1.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_structure_view.range_c_min": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_structure_view.range_c_max": {
+          "value": 1.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_structure_style.atom_view": "adp",
+        "_structure_style.color_scheme": "jmol",
+        "_structure_style.adp_probability": {
+          "value": 0.99,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_structure_style.atom_scale": {
+          "value": 0.3,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_verbosity.fit": "short"
+      },
+      "analysis": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_fitting_mode.type": "sequential",
+        "_minimizer.type": "crysta",
+        "_minimizer.max_iterations": {
+          "value": 1000.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_minimizer.descent": "fast_descent",
+        "_minimizer.chi_square_tolerance": {
+          "value": 0.0001,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_sequential_fit.data_dir": "experiments/latp_scan",
+        "_sequential_fit.file_pattern": "*.txt",
+        "_sequential_fit.reverse": "false"
+      },
+      "structures": [
+        {
+          "name": "alpo4_c2221",
+          "atoms": 4,
+          "cellA": 7.126189,
+          "spaceGroup": "C 2 2 21",
+          "cell": [
+            7.126189,
+            7.21926,
+            7.123702,
+            90.0,
+            90.0,
+            90.0
+          ]
+        },
+        {
+          "name": "alpo4_p63mc",
+          "atoms": 4,
+          "cellA": 5.050485,
+          "spaceGroup": "P 63 m c",
+          "cell": [
+            5.050485,
+            5.050485,
+            8.360072,
+            90.0,
+            90.0,
+            120.0
+          ]
+        },
+        {
+          "name": "latp",
+          "atoms": 6,
+          "cellA": 8.378689,
+          "spaceGroup": "R -3 c",
+          "cell": [
+            8.378689,
+            8.378689,
+            20.743496,
+            90.0,
+            90.0,
+            120.0
+          ]
+        }
+      ],
+      "experiments": [
+        "latp"
+      ],
+      "datasets": [
+        {
+          "file": "pattern_0_0001.txt",
+          "sha256": "eae36410cf05b182acade8bd670d00e25958a552b0030b6d4b0ac376104e9564",
+          "range": [
+            1.0041,
+            17.0999,
+            0.005639733707077786,
+            2855
+          ],
+          "samples": [
+            {
+              "index": 0,
+              "values": [
+                1.0041,
+                5940.05029,
+                77.07172172723274
+              ]
+            },
+            {
+              "index": 1427,
+              "values": [
+                9.052,
+                1751.62,
+                41.852359551165094
+              ]
+            },
+            {
+              "index": 2854,
+              "values": [
+                17.0999,
+                911.83801,
+                30.196655609520736
+              ]
+            }
+          ]
+        },
+        {
+          "file": "pattern_0_0002.txt",
+          "sha256": "ac1c4e39dae857ef4e0eb71a7f88a56a9b5cb3195ec46d2e139fa050701a3019",
+          "range": [
+            1.0041,
+            17.0999,
+            0.005639733707077786,
+            2855
+          ]
+        },
+        {
+          "file": "pattern_0_0003.txt",
+          "sha256": "ef8ecd0d177820f049d1fd65fc2efb581d543ddf08c771e987ca78835164d25c",
+          "range": [
+            1.1169,
+            17.0999,
+            0.005639731827805223,
+            2835
+          ],
+          "samples": [
+            {
+              "index": 0,
+              "values": [
+                1.1169,
+                5852.87016,
+                76.5040532259566
+              ]
+            },
+            {
+              "index": 1417,
+              "values": [
+                9.1084,
+                3468.53508,
+                58.89427034950005
+              ]
+            },
+            {
+              "index": 2834,
+              "values": [
+                17.0999,
+                948.31153,
+                30.794667233142818
+              ]
+            }
+          ]
+        },
+        {
+          "file": "pattern_0_0004.txt",
+          "sha256": "e9fa0d3edb3f5f2d595e9c4cf7fdfee9162d17fcfc62cb6bee684dcdfba3e86c",
+          "range": [
+            1.0041,
+            17.0999,
+            0.005639733707077786,
+            2855
+          ],
+          "samples": [
+            {
+              "index": 0,
+              "values": [
+                1.0041,
+                0.0,
+                1.0
+              ]
+            },
+            {
+              "index": 1427,
+              "values": [
+                9.052,
+                0.0,
+                1.0
+              ]
+            },
+            {
+              "index": 2854,
+              "values": [
+                17.0999,
+                0.0,
+                1.0
+              ]
+            }
+          ]
+        }
+      ],
+      "loaderWarning": "",
+      "files": {
+        "project.edi": "94e30e9243ea30e9e0eead4b79584fa5f882b95081828cd511388034ab35c46b",
+        "structures/alpo4_c2221.edi": "38397c4609196c2aa08d24019658331d13d3592249d9f5a9efc6f105b280af65",
+        "structures/alpo4_p63mc.edi": "96a589ebce83fbfddb3f05b79c0888bab799264fd37965fe7c65522eaf56e4c2",
+        "structures/latp.edi": "43c03a58b8813d99e0196532745e7f8e00e94fd9fd1d00cc2844f21e09ba930d",
+        "experiments/latp.edi": "651a5f307d158c673dfc8b15a5730045e353b41ec075461ee7ced4808fc50e96",
+        "analysis/analysis.edi": "30e5b254899ee9ee803ecab5e65f4d24249268562b3011a0e15114d40a838945"
+      }
+    },
+    {
       "id": "pd-neut-tof_fe_pseudo-voigt",
       "path": "docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project",
       "metadata": {
@@ -13229,6 +13498,90 @@ var frozen = {
           "free": false,
           "uncertainty": 0.0
         }
+      },
+      "loops": {}
+    },
+    {
+      "project": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
+      "experiment": "latp",
+      "sha256": "651a5f307d158c673dfc8b15a5730045e353b41ec075461ee7ced4808fc50e96",
+      "peakType": "cwl-pseudo-voigt",
+      "mode": "cwl",
+      "peakFields": [
+        "broad_gauss_u",
+        "broad_gauss_v",
+        "broad_gauss_w",
+        "mixing_eta_0",
+        "mixing_eta_1"
+      ],
+      "unusedFreeFields": [],
+      "peakDefaults": {},
+      "instrumentFields": [
+        "setup_wavelength",
+        "calib_twotheta_offset"
+      ],
+      "range": [
+        1.0041,
+        17.0999,
+        0.005639733707077786,
+        2855
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.beam_mode": "constant wavelength",
+        "_experiment_type.radiation_probe": "xray",
+        "_experiment_type.scattering_type": "bragg",
+        "_scattering_source.xray_form_factor": "it1992",
+        "_scattering_source.xray_dispersion": "sasaki1989",
+        "_calculator.type": "crysta",
+        "_peak.type": "cwl-pseudo-voigt",
+        "_peak.cutoff_fwhm": {
+          "value": 20.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_u": {
+          "value": 0.378068,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_v": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_w": {
+          "value": 0.000659,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.mixing_eta_0": {
+          "value": 0.53317,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.mixing_eta_1": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_wavelength": {
+          "value": 0.28457,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_twotheta_offset": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_absorption.type": "none",
+        "_background.type": "line-segment"
       },
       "loops": {}
     }

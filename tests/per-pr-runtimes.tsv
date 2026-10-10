@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-10T10:03:33Z
+# measured_utc = 2026-10-10T10:28:48Z
 #
-# Recorded from: scan-app-absence.log (1 node(s) measured once, 9347 banked, 0 stale row(s) dropped)
-# Collected tests: 10066; with a reported duration: 5196
+# Recorded from: example-projects.log (27 node(s) measured once, 9335 banked, 0 stale row(s) dropped)
+# Collected tests: 10133; with a reported duration: 5208
 # Module-scoped fixture costs recorded: 32
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 10066
+# inventory_python = 10133
 # inventory_cpp = 302
-# inventory_measured = 9348
-# inventory_unmeasured = 1020
+# inventory_measured = 9359
+# inventory_unmeasured = 1076
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -68,8 +68,9 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.p
 0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_ncaf-wish-5bank_start-fullprof]
 0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_si-sepd_start-2]
 0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_si-sepd_start-5]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-xray-cwl_latp_scan-4f]
 0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-xray-cwl_lif_single]
-0.003	tests/integration/app/test_e04_t1_projects.py::test_existing_projects_open_and_populate_pages
+UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_existing_projects_open_and_populate_pages
 0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_cosio-d20_scan-162f]
 0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_cosio-d20_scan-324f]
 0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_cosio-d20_scan-3f]
@@ -93,6 +94,7 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.p
 0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_ncaf-wish-5bank_start-fullprof]
 0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_si-sepd_start-2]
 0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_si-sepd_start-5]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-xray-cwl_latp_scan-4f]
 0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-xray-cwl_lif_single]
 0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_projects_open_and_populate_pages
 0.430	tests/integration/app/test_e04_t1_runtime_escapes.py::test_missing_property_fails_the_production_qmllint_import_context
@@ -316,8 +318,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_shipment.py:
 0.000	tests/integration/py/test_c11_t41_cpp_unit_coverage.py::test_cpp_coverage_port_is_isolated_explicit_total_and_report_only
 0.000	tests/integration/py/test_c11_t41_cpp_unit_coverage.py::test_cpp_test_is_a_per_commit_gate_once_the_tier_has_cases
 0.000	tests/integration/py/test_c11_t41_cpp_unit_coverage.py::test_edi_cpp_unit_tier_is_one_excluded_doctest_binary
-0.000	tests/integration/py/test_c11_t41_fast_suite_contract.py::test_c11_t41_edi_ci_tiers_name_pr_merge_and_local_surfaces
-0.010	tests/integration/py/test_c11_t41_fast_suite_contract.py::test_c11_t41_edi_hidden_unit_location_is_repo_declared_and_total
+0.060	tests/integration/py/test_c11_t41_fast_suite_contract.py::test_c11_t41_edi_ci_tiers_name_pr_merge_and_local_surfaces
+0.020	tests/integration/py/test_c11_t41_fast_suite_contract.py::test_c11_t41_edi_hidden_unit_location_is_repo_declared_and_total
 0.050	tests/integration/py/test_c11_t41_fast_suite_contract.py::test_c11_t41_edi_uses_only_the_ruled_category_language_layout
 0.050	tests/integration/py/test_c11_t41_fast_suite_contract.py::test_c11_t41_two_pytest_workers_cannot_enter_the_shared_core_build
 0.000	tests/integration/py/test_c11_t41_measurement_provenance.py::test_i5_a_partial_artifact_refuses_rather_than_zeroing
@@ -3683,36 +3685,39 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_supp
 0.000	tests/integration/py/test_e04_t11_ci_order.py::test_condition_observer_distinguishes_implicit_success_and_reporting[failure]
 0.000	tests/integration/py/test_e04_t11_ci_order.py::test_condition_observer_distinguishes_implicit_success_and_reporting[skipped]
 0.000	tests/integration/py/test_e04_t11_ci_order.py::test_condition_observer_distinguishes_implicit_success_and_reporting[success]
-0.030	tests/integration/py/test_e04_t11_ci_order.py::test_full_ci_consumers_run_on_every_event_and_only_skip_core_only_repairs
-0.040	tests/integration/py/test_e04_t11_ci_order.py::test_later_jobs_report_after_core_and_native_results[failure-pull_request]
-0.030	tests/integration/py/test_e04_t11_ci_order.py::test_later_jobs_report_after_core_and_native_results[failure-push]
+0.050	tests/integration/py/test_e04_t11_ci_order.py::test_full_ci_consumers_run_on_every_event_and_only_skip_core_only_repairs
+0.050	tests/integration/py/test_e04_t11_ci_order.py::test_later_jobs_report_after_core_and_native_results[failure-pull_request]
+0.050	tests/integration/py/test_e04_t11_ci_order.py::test_later_jobs_report_after_core_and_native_results[failure-push]
 0.040	tests/integration/py/test_e04_t11_ci_order.py::test_later_jobs_report_after_core_and_native_results[failure-workflow_dispatch]
-0.030	tests/integration/py/test_e04_t11_ci_order.py::test_later_jobs_report_after_core_and_native_results[skipped-pull_request]
-0.030	tests/integration/py/test_e04_t11_ci_order.py::test_later_jobs_report_after_core_and_native_results[skipped-push]
-0.030	tests/integration/py/test_e04_t11_ci_order.py::test_later_jobs_report_after_core_and_native_results[skipped-workflow_dispatch]
-0.030	tests/integration/py/test_e04_t11_ci_order.py::test_later_jobs_report_after_core_and_native_results[success-pull_request]
-0.030	tests/integration/py/test_e04_t11_ci_order.py::test_later_jobs_report_after_core_and_native_results[success-push]
+0.040	tests/integration/py/test_e04_t11_ci_order.py::test_later_jobs_report_after_core_and_native_results[skipped-pull_request]
+0.040	tests/integration/py/test_e04_t11_ci_order.py::test_later_jobs_report_after_core_and_native_results[skipped-push]
+0.040	tests/integration/py/test_e04_t11_ci_order.py::test_later_jobs_report_after_core_and_native_results[skipped-workflow_dispatch]
+0.040	tests/integration/py/test_e04_t11_ci_order.py::test_later_jobs_report_after_core_and_native_results[success-pull_request]
+0.210	tests/integration/py/test_e04_t11_ci_order.py::test_later_jobs_report_after_core_and_native_results[success-push]
 0.040	tests/integration/py/test_e04_t11_ci_order.py::test_later_jobs_report_after_core_and_native_results[success-workflow_dispatch]
-0.030	tests/integration/py/test_e04_t11_ci_order.py::test_newer_heads_still_cancel_superseded_runs
-0.030	tests/integration/py/test_e04_t11_ci_order.py::test_pages_visibility_and_webapp_default_retention_follow_the_public_profile
-0.030	tests/integration/py/test_e04_t11_ci_order.py::test_platform_cores_wait_only_for_their_own_native_build
-0.030	tests/integration/py/test_e04_t11_ci_order.py::test_red_core_reporting_refuses_success_conversion_and_run_cancel_escapes[cancel]
-0.030	tests/integration/py/test_e04_t11_ci_order.py::test_red_core_reporting_refuses_success_conversion_and_run_cancel_escapes[fail-fast]
-0.030	tests/integration/py/test_e04_t11_ci_order.py::test_red_core_reporting_refuses_success_conversion_and_run_cancel_escapes[optional-job]
-0.030	tests/integration/py/test_e04_t11_ci_order.py::test_red_core_reporting_refuses_success_conversion_and_run_cancel_escapes[optional-step]
-0.030	tests/integration/py/test_e04_t11_ci_order.py::test_red_core_reporting_refuses_success_conversion_and_run_cancel_escapes[permission]
-0.030	tests/integration/py/test_e04_t11_ci_order.py::test_reporting_keeps_source_cancellation_and_repair_boundaries[cancelled-pull_request]
+0.040	tests/integration/py/test_e04_t11_ci_order.py::test_newer_heads_still_cancel_superseded_runs
+0.050	tests/integration/py/test_e04_t11_ci_order.py::test_pages_visibility_and_webapp_default_retention_follow_the_public_profile
+0.050	tests/integration/py/test_e04_t11_ci_order.py::test_platform_cores_wait_only_for_their_own_native_build
+0.040	tests/integration/py/test_e04_t11_ci_order.py::test_red_core_reporting_refuses_success_conversion_and_run_cancel_escapes[cancel]
+0.040	tests/integration/py/test_e04_t11_ci_order.py::test_red_core_reporting_refuses_success_conversion_and_run_cancel_escapes[fail-fast]
+0.040	tests/integration/py/test_e04_t11_ci_order.py::test_red_core_reporting_refuses_success_conversion_and_run_cancel_escapes[optional-job]
+0.040	tests/integration/py/test_e04_t11_ci_order.py::test_red_core_reporting_refuses_success_conversion_and_run_cancel_escapes[optional-step]
+0.040	tests/integration/py/test_e04_t11_ci_order.py::test_red_core_reporting_refuses_success_conversion_and_run_cancel_escapes[permission]
+0.040	tests/integration/py/test_e04_t11_ci_order.py::test_reporting_keeps_source_cancellation_and_repair_boundaries[cancelled-pull_request]
 0.040	tests/integration/py/test_e04_t11_ci_order.py::test_reporting_keeps_source_cancellation_and_repair_boundaries[cancelled-push]
-0.030	tests/integration/py/test_e04_t11_ci_order.py::test_reporting_keeps_source_cancellation_and_repair_boundaries[cancelled-workflow_dispatch]
-0.030	tests/integration/py/test_e04_t11_ci_order.py::test_reporting_keeps_source_cancellation_and_repair_boundaries[changes-failed-pull_request]
-0.030	tests/integration/py/test_e04_t11_ci_order.py::test_reporting_keeps_source_cancellation_and_repair_boundaries[changes-failed-push]
-0.030	tests/integration/py/test_e04_t11_ci_order.py::test_reporting_keeps_source_cancellation_and_repair_boundaries[changes-failed-workflow_dispatch]
-0.030	tests/integration/py/test_e04_t11_ci_order.py::test_reporting_keeps_source_cancellation_and_repair_boundaries[changes-skipped-pull_request]
-0.030	tests/integration/py/test_e04_t11_ci_order.py::test_reporting_keeps_source_cancellation_and_repair_boundaries[changes-skipped-push]
-0.040	tests/integration/py/test_e04_t11_ci_order.py::test_reporting_keeps_source_cancellation_and_repair_boundaries[changes-skipped-workflow_dispatch]
-0.030	tests/integration/py/test_e04_t11_ci_order.py::test_reporting_keeps_source_cancellation_and_repair_boundaries[core-only-pull_request]
-0.030	tests/integration/py/test_e04_t11_ci_order.py::test_reporting_keeps_source_cancellation_and_repair_boundaries[core-only-push]
-0.030	tests/integration/py/test_e04_t11_ci_order.py::test_reporting_keeps_source_cancellation_and_repair_boundaries[core-only-workflow_dispatch]
+0.040	tests/integration/py/test_e04_t11_ci_order.py::test_reporting_keeps_source_cancellation_and_repair_boundaries[cancelled-workflow_dispatch]
+0.050	tests/integration/py/test_e04_t11_ci_order.py::test_reporting_keeps_source_cancellation_and_repair_boundaries[changes-failed-pull_request]
+0.050	tests/integration/py/test_e04_t11_ci_order.py::test_reporting_keeps_source_cancellation_and_repair_boundaries[changes-failed-push]
+0.040	tests/integration/py/test_e04_t11_ci_order.py::test_reporting_keeps_source_cancellation_and_repair_boundaries[changes-failed-workflow_dispatch]
+0.040	tests/integration/py/test_e04_t11_ci_order.py::test_reporting_keeps_source_cancellation_and_repair_boundaries[changes-skipped-pull_request]
+0.040	tests/integration/py/test_e04_t11_ci_order.py::test_reporting_keeps_source_cancellation_and_repair_boundaries[changes-skipped-push]
+0.050	tests/integration/py/test_e04_t11_ci_order.py::test_reporting_keeps_source_cancellation_and_repair_boundaries[changes-skipped-workflow_dispatch]
+0.040	tests/integration/py/test_e04_t11_ci_order.py::test_reporting_keeps_source_cancellation_and_repair_boundaries[core-only-pull_request]
+0.040	tests/integration/py/test_e04_t11_ci_order.py::test_reporting_keeps_source_cancellation_and_repair_boundaries[core-only-push]
+0.040	tests/integration/py/test_e04_t11_ci_order.py::test_reporting_keeps_source_cancellation_and_repair_boundaries[core-only-workflow_dispatch]
+0.050	tests/integration/py/test_e04_t11_ci_order.py::test_split_test_step_propagates_each_real_command_failure[core-tests]
+0.050	tests/integration/py/test_e04_t11_ci_order.py::test_split_test_step_propagates_each_real_command_failure[cpp-test]
+0.050	tests/integration/py/test_e04_t11_ci_order.py::test_split_test_step_propagates_each_real_command_failure[system-tests-part]
 0.000	tests/integration/py/test_e04_t11_file_requests.py::test_every_browser_file_receiver_preserves_request_ownership[cancel-then-other-page]
 0.000	tests/integration/py/test_e04_t11_file_requests.py::test_every_browser_file_receiver_preserves_request_ownership[overlapping-folder-uploads]
 0.000	tests/integration/py/test_e04_t11_file_requests.py::test_every_browser_file_receiver_preserves_request_ownership[replacement-during-upload]
@@ -3931,9 +3936,9 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_supp
 0.010	tests/integration/py/test_e04_t1_app_contract.py::test_app_reachability_observer_rejects_missing_group_or_checker[missing-edge]
 0.130	tests/integration/py/test_e04_t1_app_contract.py::test_existing_projects_oracle_covers_the_registry_without_filters
 0.040	tests/integration/py/test_e04_t1_app_contract.py::test_frozen_oracle_inputs_are_the_committed_fixture_bytes
-0.040	tests/integration/py/test_e04_t1_app_contract.py::test_local_and_ci_gates_reach_app_tests
-0.020	tests/integration/py/test_e04_t1_app_contract.py::test_one_shared_labelled_regression_baseline_and_pairs
-0.030	tests/integration/py/test_e04_t1_app_contract.py::test_originals_remain_byte_identical
+0.050	tests/integration/py/test_e04_t1_app_contract.py::test_local_and_ci_gates_reach_app_tests
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e04_t1_app_contract.py::test_one_shared_labelled_regression_baseline_and_pairs
+0.090	tests/integration/py/test_e04_t1_app_contract.py::test_originals_remain_byte_identical
 0.010	tests/integration/py/test_e04_t1_app_contract.py::test_shipped_qml_imports_and_base_pin
 0.020	tests/integration/py/test_e04_t1_app_contract.py::test_shipped_view_model_api_is_typed
 0.000	tests/integration/py/test_e04_t1_app_contract.py::test_typed_api_allows_model_internal_variants
@@ -3946,11 +3951,11 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_supp
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_analysis_inputs_have_no_calculator_category
 0.020	tests/integration/py/test_e04_t2_build_contract.py::test_app_run_launches_existing_binary_without_build_or_network
 0.020	tests/integration/py/test_e04_t2_build_contract.py::test_app_run_missing_binary_is_one_line_hint
-0.070	tests/integration/py/test_e04_t2_build_contract.py::test_ci_job_names_state_area_and_platform_and_share_matrices
+0.090	tests/integration/py/test_e04_t2_build_contract.py::test_ci_job_names_state_area_and_platform_and_share_matrices
 0.070	tests/integration/py/test_e04_t2_build_contract.py::test_crysta_build_and_prefix_are_isolated_by_environment
-0.030	tests/integration/py/test_e04_t2_build_contract.py::test_desktop_ci_builds_once_and_recovery_is_change_scoped
-0.610	tests/integration/py/test_e04_t2_build_contract.py::test_desktop_ci_sequence_builds_once_before_checks[Linux]
-0.620	tests/integration/py/test_e04_t2_build_contract.py::test_desktop_ci_sequence_builds_once_before_checks[macOS]
+0.040	tests/integration/py/test_e04_t2_build_contract.py::test_desktop_ci_builds_once_and_recovery_is_change_scoped
+0.590	tests/integration/py/test_e04_t2_build_contract.py::test_desktop_ci_sequence_builds_once_before_checks[Linux]
+0.560	tests/integration/py/test_e04_t2_build_contract.py::test_desktop_ci_sequence_builds_once_before_checks[macOS]
 0.120	tests/integration/py/test_e04_t2_build_contract.py::test_dispatcher_preserves_explicit_and_inherited_build_identity[False]
 0.120	tests/integration/py/test_e04_t2_build_contract.py::test_dispatcher_preserves_explicit_and_inherited_build_identity[True]
 0.360	tests/integration/py/test_e04_t2_build_contract.py::test_dispatcher_skip_deps_keeps_checker_and_environment[False-options0]
@@ -4033,7 +4038,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_supp
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[tests/fixtures/e04_t1/warning-project/structures/structure.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[tests/fixtures/e04_t1/xray-project/experiments/experiment.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[tests/fixtures/e04_t1/xray-project/structures/structure.edi]
-0.030	tests/integration/py/test_e04_t2_build_contract.py::test_native_cli_placeholder_is_dispatch_only_and_honest
+0.040	tests/integration/py/test_e04_t2_build_contract.py::test_native_cli_placeholder_is_dispatch_only_and_honest
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_owner_note_captures_are_registered_in_the_shared_image_set
 0.080	tests/integration/py/test_e04_t2_build_contract.py::test_qt_check_reads_committed_expectations_without_python_or_build
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_sequence_observer_rejects_wrong_order_or_cardinality[double-build]
@@ -4683,22 +4688,25 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e05_t1_physical_domain.p
 0.090	tests/integration/py/test_e09_t58_completed_controls.py::test_e09_t58_delegated_save_persists_crysta_resolved_identity
 0.060	tests/integration/py/test_e09_t58_project_only_fit_inputs.py::test_declared_exclusions_are_applied_without_a_regions_argument
 0.120	tests/integration/py/test_e09_t58_project_only_fit_inputs.py::test_public_fit_routes_reject_positional_and_keyword_data
-0.030	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_every_default_native_consumer_waits_downloads_and_selects_artifact_mode[app]
+0.050	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_every_default_native_consumer_waits_downloads_and_selects_artifact_mode[app]
 0.040	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_every_default_native_consumer_waits_downloads_and_selects_artifact_mode[audit]
-0.030	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_every_default_native_consumer_waits_downloads_and_selects_artifact_mode[cli-python]
-0.030	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_every_default_native_consumer_waits_downloads_and_selects_artifact_mode[core]
-0.030	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_every_default_native_consumer_waits_downloads_and_selects_artifact_mode[docs]
-0.030	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_every_default_native_consumer_waits_downloads_and_selects_artifact_mode[notebooks]
-0.030	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[app-linux-64]
-0.030	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[app-osx-arm64]
+0.040	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_every_default_native_consumer_waits_downloads_and_selects_artifact_mode[cli-python]
+0.040	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_every_default_native_consumer_waits_downloads_and_selects_artifact_mode[core]
+0.040	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_every_default_native_consumer_waits_downloads_and_selects_artifact_mode[docs]
+0.040	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_every_default_native_consumer_waits_downloads_and_selects_artifact_mode[notebooks]
+0.040	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_every_default_native_consumer_waits_downloads_and_selects_artifact_mode[system]
+0.040	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[app-linux-64]
+0.040	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[app-osx-arm64]
 0.040	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[audit-linux-64]
-0.030	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[cli-python-linux-64]
-0.030	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[cli-python-osx-arm64]
-0.030	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[core-linux-64]
-0.030	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[core-osx-arm64]
-0.030	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[docs-linux-64]
-0.030	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[notebooks-linux-64]
-0.030	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_one_unfiltered_native_matrix_uploads_the_prescribed_artifacts
+0.040	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[cli-python-linux-64]
+0.040	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[cli-python-osx-arm64]
+0.040	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[core-linux-64]
+0.040	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[core-osx-arm64]
+0.040	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[docs-linux-64]
+0.040	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[notebooks-linux-64]
+0.040	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[system-linux-64]
+0.040	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[system-osx-arm64]
+0.040	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_one_unfiltered_native_matrix_uploads_the_prescribed_artifacts
 0.000	tests/integration/py/test_e09_t75_native_workflow.py::test_native_producer_contract_refuses_missing_reordered_or_nonbuilding_work[build-if]
 0.000	tests/integration/py/test_e09_t75_native_workflow.py::test_native_producer_contract_refuses_missing_reordered_or_nonbuilding_work[job-if]
 0.000	tests/integration/py/test_e09_t75_native_workflow.py::test_native_producer_contract_refuses_missing_reordered_or_nonbuilding_work[missing-build]
@@ -4710,7 +4718,10 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e05_t1_physical_domain.p
 0.000	tests/integration/py/test_e09_t75_native_workflow.py::test_public_sdk_boundary_rejects_guard_and_core_only_escapes[github.event.pull_request.head.repo.fork == false && inputs.core_only == true]
 0.000	tests/integration/py/test_e09_t75_native_workflow.py::test_public_sdk_boundary_rejects_guard_and_core_only_escapes[github.event.pull_request.head.repo.fork == false && inputs.unknown != true]
 0.000	tests/integration/py/test_e09_t75_native_workflow.py::test_public_sdk_boundary_rejects_guard_and_core_only_escapes[github.event.pull_request.head.repo.fork == false || inputs.core_only != true]
-0.030	tests/integration/py/test_e09_t75_native_workflow.py::test_public_sdk_boundary_rejects_guard_and_core_only_escapes[true]
+0.050	tests/integration/py/test_e09_t75_native_workflow.py::test_public_sdk_boundary_rejects_guard_and_core_only_escapes[true]
+0.040	tests/integration/py/test_e09_t75_native_workflow.py::test_public_system_boundary_proves_every_part_and_sdk[duplicate-part]
+0.040	tests/integration/py/test_e09_t75_native_workflow.py::test_public_system_boundary_proves_every_part_and_sdk[missing-part]
+0.040	tests/integration/py/test_e09_t75_native_workflow.py::test_public_system_boundary_proves_every_part_and_sdk[wrong-sdk]
 0.210	tests/integration/py/test_e09_t75_sdk_consumer.py::test_d2_diagnostic_sdk_is_used_without_compiling_or_resolving_another_source
 0.360	tests/integration/py/test_e09_t75_sdk_consumer.py::test_d2_empty_cache_fetches_exact_pinned_asset_without_compilation[linux-64]
 0.540	tests/integration/py/test_e09_t75_sdk_consumer.py::test_d2_empty_cache_fetches_exact_pinned_asset_without_compilation[osx-arm64]
@@ -6773,6 +6784,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::te
 UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[pull_request-core-osx-arm64]
 UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[pull_request-docs-linux-64]
 UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[pull_request-notebooks-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[pull_request-system-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[pull_request-system-osx-arm64]
 UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-app-linux-64]
 UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-app-osx-arm64]
 UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-audit-linux-64]
@@ -6782,6 +6795,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::te
 UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-core-osx-arm64]
 UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-docs-linux-64]
 UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-notebooks-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-system-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-system-osx-arm64]
 1.210	tests/system/py/test_c34_t28_native_pairing.py::test_intermediate_native_producer_packs_the_branch_sdk_without_repinning[matching-pull_request-linux-64]
 0.600	tests/system/py/test_c34_t28_native_pairing.py::test_intermediate_native_producer_packs_the_branch_sdk_without_repinning[matching-pull_request-osx-arm64]
 0.580	tests/system/py/test_c34_t28_native_pairing.py::test_intermediate_native_producer_packs_the_branch_sdk_without_repinning[matching-workflow_dispatch-linux-64]
@@ -6965,6 +6980,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::te
 0.250	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project]
 0.230	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project]
 0.840	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project]
+0.220	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-xray-cwl_latp_scan-4f/project]
 0.170	tests/system/py/test_c34_t28_saved_bytes.py::test_new_lif_project_matches_labelled_post_feature_byte_pin[corpus:lif-xray-s1/project]
 0.190	tests/system/py/test_c34_t28_saved_bytes.py::test_new_lif_project_matches_labelled_post_feature_byte_pin[repo:docs/user/cli/pd-xray-cwl_lif_single/project]
 0.190	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[corpus:cosio-d20-s1/project]
@@ -6992,7 +7008,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::te
 0.530	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project]
 0.250	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-tof_si-sepd_start-2/project]
 0.270	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-tof_si-sepd_start-5/project]
-0.200	tests/system/py/test_c34_t28_saved_bytes.py::test_saved_byte_inventory_covers_every_current_cli_and_corpus_project
+0.180	tests/system/py/test_c34_t28_saved_bytes.py::test_saved_byte_inventory_covers_every_current_cli_and_corpus_project
 0.000	tests/system/py/test_c34_t28_storage_decisions.py::test_each_prior_decision_links_its_storage_amendment[0012]
 0.000	tests/system/py/test_c34_t28_storage_decisions.py::test_each_prior_decision_links_its_storage_amendment[0016]
 0.000	tests/system/py/test_c34_t28_storage_decisions.py::test_implemented_decisions_have_no_stale_status[0016]
@@ -7387,15 +7403,15 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t12_public_release.py::te
 0.170	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_sdk_token_grant_route_refuses_another_resource_or_operation[operation]
 0.370	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_sdk_token_grant_route_refuses_another_resource_or_operation[resource]
 0.180	tests/system/py/test_e09_t74_ci_crysta_resolution.py::test_sdk_token_grant_route_refuses_another_resource_or_operation[unknown-option]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[app-wasm]
-1.700	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[app]
-1.680	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[audit]
-1.710	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[cli-python]
-1.600	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[core]
-1.650	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[docs]
-0.250	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[native]
-1.580	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[notebooks]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[system]
+0.310	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[app-wasm]
+0.530	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[app]
+0.280	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[audit]
+0.500	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[cli-python]
+0.510	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[core]
+0.280	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[docs]
+0.520	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[native]
+0.290	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[notebooks]
+1.640	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[system]
 0.100	tests/system/py/test_e09_t74_ci_source_consumption.py::test_new_consumers_really_consuming_the_shared_sha_are_admitted[checkout]
 0.220	tests/system/py/test_e09_t74_ci_source_consumption.py::test_new_consumers_really_consuming_the_shared_sha_are_admitted[composite]
 0.210	tests/system/py/test_e09_t74_ci_source_consumption.py::test_new_consumers_really_consuming_the_shared_sha_are_admitted[run]
@@ -7454,6 +7470,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t74_ci_source_cons
 0.890	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[CRYSTA_SDK_SHA256-core-osx-arm64]
 0.880	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[CRYSTA_SDK_SHA256-docs-linux-64]
 0.880	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[CRYSTA_SDK_SHA256-notebooks-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[CRYSTA_SDK_SHA256-system-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[CRYSTA_SDK_SHA256-system-osx-arm64]
 0.910	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[CRYSTA_SDK_TAG-app-linux-64]
 0.880	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[CRYSTA_SDK_TAG-app-osx-arm64]
 0.890	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[CRYSTA_SDK_TAG-audit-linux-64]
@@ -7463,6 +7481,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t74_ci_source_cons
 0.920	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[CRYSTA_SDK_TAG-core-osx-arm64]
 0.880	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[CRYSTA_SDK_TAG-docs-linux-64]
 0.920	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[CRYSTA_SDK_TAG-notebooks-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[CRYSTA_SDK_TAG-system-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[CRYSTA_SDK_TAG-system-osx-arm64]
 0.950	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[archive-root-app-linux-64]
 0.970	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[archive-root-app-osx-arm64]
 0.950	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[archive-root-audit-linux-64]
@@ -7472,6 +7492,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t74_ci_source_cons
 0.960	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[archive-root-core-osx-arm64]
 0.940	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[archive-root-docs-linux-64]
 0.950	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[archive-root-notebooks-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[archive-root-system-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[archive-root-system-osx-arm64]
 0.890	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[embedded-commit-app-linux-64]
 0.880	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[embedded-commit-app-osx-arm64]
 0.930	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[embedded-commit-audit-linux-64]
@@ -7481,6 +7503,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t74_ci_source_cons
 0.910	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[embedded-commit-core-osx-arm64]
 0.890	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[embedded-commit-docs-linux-64]
 0.960	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[embedded-commit-notebooks-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[embedded-commit-system-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[embedded-commit-system-osx-arm64]
 0.740	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[missing-manifest-app-linux-64]
 0.830	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[missing-manifest-app-osx-arm64]
 0.760	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[missing-manifest-audit-linux-64]
@@ -7490,6 +7514,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t74_ci_source_cons
 0.800	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[missing-manifest-core-osx-arm64]
 0.740	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[missing-manifest-docs-linux-64]
 0.760	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[missing-manifest-notebooks-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[missing-manifest-system-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[missing-manifest-system-osx-arm64]
 3.260	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[missing-tar-app-linux-64]
 3.480	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[missing-tar-app-osx-arm64]
 3.240	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[missing-tar-audit-linux-64]
@@ -7499,6 +7525,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t74_ci_source_cons
 3.220	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[missing-tar-core-osx-arm64]
 3.330	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[missing-tar-docs-linux-64]
 3.150	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[missing-tar-notebooks-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[missing-tar-system-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[missing-tar-system-osx-arm64]
 0.910	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[platform-app-linux-64]
 0.900	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[platform-app-osx-arm64]
 0.890	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[platform-audit-linux-64]
@@ -7508,6 +7536,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t74_ci_source_cons
 0.870	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[platform-core-osx-arm64]
 0.880	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[platform-docs-linux-64]
 0.940	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[platform-notebooks-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[platform-system-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[platform-system-osx-arm64]
 0.890	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[run_id-app-linux-64]
 0.890	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[run_id-app-osx-arm64]
 0.910	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[run_id-audit-linux-64]
@@ -7517,6 +7547,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t74_ci_source_cons
 0.960	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[run_id-core-osx-arm64]
 0.920	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[run_id-docs-linux-64]
 0.880	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[run_id-notebooks-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[run_id-system-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[run_id-system-osx-arm64]
 0.900	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[sha256-app-linux-64]
 0.900	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[sha256-app-osx-arm64]
 0.900	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[sha256-audit-linux-64]
@@ -7526,6 +7558,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t74_ci_source_cons
 0.870	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[sha256-core-osx-arm64]
 0.890	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[sha256-docs-linux-64]
 0.900	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[sha256-notebooks-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[sha256-system-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[sha256-system-osx-arm64]
 0.890	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[source_sha-app-linux-64]
 0.930	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[source_sha-app-osx-arm64]
 0.980	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[source_sha-audit-linux-64]
@@ -7535,6 +7569,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t74_ci_source_cons
 0.920	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[source_sha-core-osx-arm64]
 0.950	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[source_sha-docs-linux-64]
 0.900	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[source_sha-notebooks-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[source_sha-system-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[source_sha-system-osx-arm64]
 0.930	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[source_tree-app-linux-64]
 0.930	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[source_tree-app-osx-arm64]
 0.940	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[source_tree-audit-linux-64]
@@ -7544,6 +7580,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t74_ci_source_cons
 0.970	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[source_tree-core-osx-arm64]
 0.980	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[source_tree-docs-linux-64]
 0.960	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[source_tree-notebooks-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[source_tree-system-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[source_tree-system-osx-arm64]
 0.950	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[tar-bytes-app-linux-64]
 0.880	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[tar-bytes-app-osx-arm64]
 0.970	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[tar-bytes-audit-linux-64]
@@ -7553,6 +7591,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t74_ci_source_cons
 0.920	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[tar-bytes-core-osx-arm64]
 0.910	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[tar-bytes-docs-linux-64]
 0.930	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[tar-bytes-notebooks-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[tar-bytes-system-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[tar-bytes-system-osx-arm64]
 0.930	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[workspace-app-linux-64]
 0.890	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[workspace-app-osx-arm64]
 0.880	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[workspace-audit-linux-64]
@@ -7562,6 +7602,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t74_ci_source_cons
 1.190	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[workspace-core-osx-arm64]
 0.900	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[workspace-docs-linux-64]
 0.900	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[workspace-notebooks-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[workspace-system-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_every_consumer_restores_imports_and_refuses_each_bound_escape[workspace-system-osx-arm64]
 0.390	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[CRYSTA_SDK_SHA256-app-linux-64]
 0.370	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[CRYSTA_SDK_SHA256-app-osx-arm64]
 0.380	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[CRYSTA_SDK_SHA256-audit-linux-64]
@@ -7571,6 +7613,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t74_ci_source_cons
 0.370	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[CRYSTA_SDK_SHA256-core-osx-arm64]
 0.400	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[CRYSTA_SDK_SHA256-docs-linux-64]
 0.370	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[CRYSTA_SDK_SHA256-notebooks-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[CRYSTA_SDK_SHA256-system-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[CRYSTA_SDK_SHA256-system-osx-arm64]
 0.380	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[CRYSTA_SDK_TAG-app-linux-64]
 0.370	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[CRYSTA_SDK_TAG-app-osx-arm64]
 0.400	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[CRYSTA_SDK_TAG-audit-linux-64]
@@ -7580,6 +7624,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t74_ci_source_cons
 0.410	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[CRYSTA_SDK_TAG-core-osx-arm64]
 0.400	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[CRYSTA_SDK_TAG-docs-linux-64]
 0.350	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[CRYSTA_SDK_TAG-notebooks-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[CRYSTA_SDK_TAG-system-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[CRYSTA_SDK_TAG-system-osx-arm64]
 0.340	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[embedded-commit-app-linux-64]
 0.340	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[embedded-commit-app-osx-arm64]
 0.330	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[embedded-commit-audit-linux-64]
@@ -7589,6 +7635,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t74_ci_source_cons
 0.360	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[embedded-commit-core-osx-arm64]
 0.350	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[embedded-commit-docs-linux-64]
 0.340	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[embedded-commit-notebooks-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[embedded-commit-system-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[embedded-commit-system-osx-arm64]
 0.290	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[missing-manifest-app-linux-64]
 0.290	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[missing-manifest-app-osx-arm64]
 0.280	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[missing-manifest-audit-linux-64]
@@ -7598,6 +7646,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t74_ci_source_cons
 0.290	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[missing-manifest-core-osx-arm64]
 0.310	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[missing-manifest-docs-linux-64]
 0.280	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[missing-manifest-notebooks-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[missing-manifest-system-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[missing-manifest-system-osx-arm64]
 0.990	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[missing-tar-app-linux-64]
 0.910	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[missing-tar-app-osx-arm64]
 1.070	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[missing-tar-audit-linux-64]
@@ -7607,6 +7657,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t74_ci_source_cons
 0.830	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[missing-tar-core-osx-arm64]
 1.050	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[missing-tar-docs-linux-64]
 0.850	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[missing-tar-notebooks-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[missing-tar-system-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[missing-tar-system-osx-arm64]
 0.420	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[platform-app-linux-64]
 0.400	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[platform-app-osx-arm64]
 0.480	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[platform-audit-linux-64]
@@ -7616,6 +7668,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t74_ci_source_cons
 0.400	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[platform-core-osx-arm64]
 0.400	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[platform-docs-linux-64]
 0.410	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[platform-notebooks-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[platform-system-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[platform-system-osx-arm64]
 0.420	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[run_id-app-linux-64]
 0.420	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[run_id-app-osx-arm64]
 0.390	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[run_id-audit-linux-64]
@@ -7625,6 +7679,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t74_ci_source_cons
 0.390	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[run_id-core-osx-arm64]
 0.910	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[run_id-docs-linux-64]
 0.380	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[run_id-notebooks-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[run_id-system-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[run_id-system-osx-arm64]
 0.400	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[sha256-app-linux-64]
 0.420	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[sha256-app-osx-arm64]
 0.390	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[sha256-audit-linux-64]
@@ -7634,6 +7690,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t74_ci_source_cons
 0.400	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[sha256-core-osx-arm64]
 0.400	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[sha256-docs-linux-64]
 0.390	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[sha256-notebooks-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[sha256-system-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[sha256-system-osx-arm64]
 0.380	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[source_sha-app-linux-64]
 0.430	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[source_sha-app-osx-arm64]
 0.390	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[source_sha-audit-linux-64]
@@ -7643,6 +7701,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t74_ci_source_cons
 0.390	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[source_sha-core-osx-arm64]
 0.400	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[source_sha-docs-linux-64]
 0.390	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[source_sha-notebooks-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[source_sha-system-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[source_sha-system-osx-arm64]
 0.430	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[source_tree-app-linux-64]
 0.390	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[source_tree-app-osx-arm64]
 0.390	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[source_tree-audit-linux-64]
@@ -7652,6 +7712,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t74_ci_source_cons
 0.400	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[source_tree-core-osx-arm64]
 0.430	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[source_tree-docs-linux-64]
 0.390	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[source_tree-notebooks-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[source_tree-system-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[source_tree-system-osx-arm64]
 0.390	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[tar-bytes-app-linux-64]
 0.390	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[tar-bytes-app-osx-arm64]
 0.400	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[tar-bytes-audit-linux-64]
@@ -7661,6 +7723,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t74_ci_source_cons
 0.380	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[tar-bytes-core-osx-arm64]
 0.420	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[tar-bytes-docs-linux-64]
 0.380	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[tar-bytes-notebooks-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[tar-bytes-system-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[tar-bytes-system-osx-arm64]
 0.420	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[workspace-app-linux-64]
 0.390	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[workspace-app-osx-arm64]
 0.410	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[workspace-audit-linux-64]
@@ -7670,6 +7734,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t74_ci_source_cons
 0.410	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[workspace-core-osx-arm64]
 0.400	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[workspace-docs-linux-64]
 0.540	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[workspace-notebooks-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[workspace-system-linux-64]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[workspace-system-osx-arm64]
 0.000	tests/system/py/test_e09_t75_native_execution.py::test_native_job_path_oracle_rejects_wrong_resource_or_restore_operation[download-if]
 0.000	tests/system/py/test_e09_t75_native_execution.py::test_native_job_path_oracle_rejects_wrong_resource_or_restore_operation[name]
 0.000	tests/system/py/test_e09_t75_native_execution.py::test_native_job_path_oracle_rejects_wrong_resource_or_restore_operation[operation]
@@ -10247,6 +10313,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_c34_t1c_construction_population
 0.000	tests/unit/py/test_e04_t10_runtime_cost.py::test_focused_writer_separates_shared_cost_before_per_test_bound[8.0]
 0.000	tests/unit/py/test_e04_t1_fixture_tokens.py::test_app_oracle_preserves_symbolic_and_incomplete_numeric_tokens
 0.000	tests/unit/py/test_e04_t1_fixture_tokens.py::test_app_oracle_retains_number_free_flag_and_uncertainty
+0.050	tests/unit/py/test_e04_t1_fixture_tokens.py::test_app_text_oracle_preserves_carriage_return_field_separators
 0.000	tests/unit/py/test_e04_t5_calculator.py::test_e04_t5_seed_declares_supported_calculator[cosio-d20-s1]
 0.000	tests/unit/py/test_e04_t5_calculator.py::test_e04_t5_seed_declares_supported_calculator[cosio-d20-s4]
 0.000	tests/unit/py/test_e04_t5_calculator.py::test_e04_t5_seed_declares_supported_calculator[ncaf-wish-2bank-s3]
@@ -10410,8 +10477,8 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # These rows mark and deselect NOTHING - kept for visibility
 # and the stale-module integrity refusal.
 # module-cost: 38.315	tests/integration/app/test_c13_t2_gui.py
-# module-cost: 259.157	tests/integration/app/test_e04_t1_projects.py
-# module-cost: 271.344	tests/integration/app/test_e04_t1_runtime_escapes.py
+# module-cost: 249.923	tests/integration/app/test_e04_t1_projects.py
+# module-cost: 260.077	tests/integration/app/test_e04_t1_runtime_escapes.py
 # module-cost: 0.313	tests/integration/app/test_phase_scan_state.py
 # module-cost: 1.914	tests/integration/py/test_e04_t12_name_allowance.py
 # module-cost: 0.192	tests/integration/py/test_e09_t75_sdk_consumer.py

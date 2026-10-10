@@ -1,6 +1,7 @@
 """Owner 2026-10-04: each core starts early; repair runs cannot count as full CI."""
 
 import copy
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -20,7 +21,9 @@ def test_platform_cores_wait_only_for_their_own_native_build():
     if public_profile(jobs):
         for sdk in ('linux-64', 'osx-arm64'):
             public_build_boundary(jobs, 'core', sdk)
-        cores = [jobs['core']]
+        cores = [jobs['core'], jobs['system']]
+        for sdk in ('linux-64', 'osx-arm64'):
+            public_build_boundary(jobs, 'system', sdk)
     else:
         cores = []
         for core, native, sdk in [
@@ -55,6 +58,8 @@ def test_full_ci_consumers_run_on_every_event_and_only_skip_core_only_repairs():
                 core_only=True,
             ), 'explicitly requested core-only repair skips downstream consumers'
         keys = ['changes', 'pin-currency', 'native', 'core']
+        if public:
+            keys.append('system')
         if not public:
             keys.extend(['native-macos', 'core-macos'])
         for key in keys:
@@ -112,10 +117,24 @@ def assert_core_failure_reporting(core):
     assert not any('/cancel' in step.get('run', '') for step in core['steps']), (
         'a core failure must leave the remaining jobs available to report failures'
     )
-    required = [s for s in core['steps'] if 'pixi run group-quick' in s.get('run', '')]
-    assert len(required) == 1 and 'pixi run group-full' in required[0]['run'], (
-        'the red-run control must reach both real event-selected core test groups'
-    )
+    commands = [s.get('run', '').strip() for s in core['steps']]
+    split = 'pixi run core-tests' in '\n'.join(commands)
+    system = any('pixi run system-tests-part' in c for c in commands)
+    if split or system:
+        expected = (
+            'pixi run system-tests-part ${{ matrix.part }} 3'
+            if system
+            else 'pixi run cpp-test\npixi run core-tests'
+        )
+        required = [s for s in core['steps'] if s.get('run', '').strip() == expected]
+        assert len(required) == 1, (
+            'both CI cadences execute the required core selection or actual system part'
+        )
+    else:
+        required = [s for s in core['steps'] if 'pixi run group-quick' in s.get('run', '')]
+        assert len(required) == 1 and 'pixi run group-full' in required[0]['run'], (
+            'the red-run control must reach both real event-selected core test groups'
+        )
     assert 'if' not in required[0] and not any(
         step.get('continue-on-error') for step in core['steps']
     ), 'core commands must propagate failures rather than convert or skip a red result'
@@ -173,21 +192,54 @@ def test_newer_heads_still_cancel_superseded_runs():
     'escape', ['cancel', 'permission', 'optional-job', 'optional-step', 'fail-fast']
 )
 def test_red_core_reporting_refuses_success_conversion_and_run_cancel_escapes(escape):
-    core = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())['jobs']['core']
-    assert_core_failure_reporting(core)
-    damaged = copy.deepcopy(core)
-    if escape == 'cancel':
-        damaged['steps'].append({'if': 'failure()', 'run': 'gh api run/cancel'})
-    elif escape == 'permission':
-        damaged['permissions'] = {'actions': 'write'}
-    elif escape == 'optional-job':
-        damaged['continue-on-error'] = True
-    elif escape == 'optional-step':
-        damaged['steps'][0]['continue-on-error'] = True
-    else:
-        damaged['strategy']['fail-fast'] = True
-    with pytest.raises(AssertionError):
-        assert_core_failure_reporting(damaged)
+    jobs = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())['jobs']
+    for name in ('core', 'system') if public_profile(jobs) else ('core',):
+        core = jobs[name]
+        assert_core_failure_reporting(core)
+        damaged = copy.deepcopy(core)
+        if escape == 'cancel':
+            damaged['steps'].append({'if': 'failure()', 'run': 'gh api run/cancel'})
+        elif escape == 'permission':
+            damaged['permissions'] = {'actions': 'write'}
+        elif escape == 'optional-job':
+            damaged['continue-on-error'] = True
+        elif escape == 'optional-step':
+            damaged['steps'][0]['continue-on-error'] = True
+        else:
+            damaged['strategy']['fail-fast'] = True
+        with pytest.raises(AssertionError):
+            assert_core_failure_reporting(damaged)
+
+
+@pytest.mark.parametrize('failed_task', ['cpp-test', 'core-tests', 'system-tests-part'])
+def test_split_test_step_propagates_each_real_command_failure(tmp_path, failed_task):
+    jobs = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())['jobs']
+    job = jobs['system' if failed_task == 'system-tests-part' else 'core']
+    assert_core_failure_reporting(job)
+    command = next(
+        step['run'] for step in job['steps'] if f'pixi run {failed_task}' in step.get('run', '')
+    ).replace('${{ matrix.part }}', '2')
+    # Exercise Actions' actual bash -e semantics. Only the test executable is
+    # doubled: its exit and receipt prove that this required step stays red.
+    executable = tmp_path / 'pixi'
+    executable.write_text(
+        f'#!/bin/sh\necho "$*" >> "{tmp_path / "calls"}"\n[ "$2" != "{failed_task}" ] || exit 37\n'
+    )
+    executable.chmod(0o755)
+    import os  # noqa: PLC0415 - scoped runner environment
+
+    result = subprocess.run(
+        ['bash', '-e', '-o', 'pipefail', '-c', command],
+        env={**os.environ, 'PATH': str(tmp_path) + os.pathsep + os.environ['PATH']},
+        capture_output=True,
+        text=True,
+        timeout=2,
+        check=False,
+    )
+    assert result.returncode == 37, 'a red in each split test command must stay a red Actions step'
+    assert f'run {failed_task}' in (tmp_path / 'calls').read_text(), (
+        'the red control must reach its actual workflow-selected test task'
+    )
 
 
 @pytest.mark.parametrize('state', ['success', 'failure', 'skipped'])
