@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <exception>
 #include <limits>
 #include <map>
 
@@ -172,6 +173,16 @@ void EvolutionViewModel::setLayer(MeasuredLayer* layer) {
 
 void EvolutionViewModel::rebuild() {
     points_.clear();
+    try {
+        readPoints();
+    } catch (const std::exception& refusal) {
+        points_.clear();
+        emit refused(QString::fromUtf8(refusal.what()));
+    }
+    finish();
+}
+
+void EvolutionViewModel::readPoints() {
     if (session_ != nullptr && project_ != nullptr && current_ >= 0) {
         // Two reads of the column. The first finds the drawable points' x range and count; above the drawing limit
         // the second keeps per bucket of that range only the lowest and the highest point: the points thinning the
@@ -222,7 +233,6 @@ void EvolutionViewModel::rebuild() {
             }
         }
     }
-    finish();
 }
 
 void EvolutionViewModel::thin() {

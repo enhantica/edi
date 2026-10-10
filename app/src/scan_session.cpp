@@ -327,12 +327,9 @@ void ScanSession::column(const edi::Project& project, const std::string& name,
     if (!found || !index_.error.empty()) {
         return;
     }
-    // A results path that is gone or no longer a regular file gives no values, as a changed header does.
-    try {
-        if (!edi::scan_state_present(analysis_dir(project) / "results.csv", "analysis/results.csv")) {
-            return;
-        }
-    } catch (const std::invalid_argument&) {
+    // A results path that is gone gives no values, as a changed header does; one that is no longer a regular file
+    // refuses (scan_state_present throws), as the row reader does.
+    if (!edi::scan_state_present(analysis_dir(project) / "results.csv", "analysis/results.csv")) {
         return;
     }
     std::ifstream input(analysis_dir(project) / "results.csv", std::ios::binary);

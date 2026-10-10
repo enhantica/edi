@@ -64,6 +64,7 @@ class ScanSession : public QObject {
     // without a row.
     QString outcome(int dataset) const;
     // Calls `visit(dataset, value, uncertainty)` for every row's cells of one parameter column, reading the file once.
+    // Throws std::invalid_argument when the results path is there but no longer a regular file.
     void column(const edi::Project& project, const std::string& name,
                 const std::function<void(int, double, double)>& visit) const;
 

@@ -669,6 +669,10 @@ bool ProjectViewModel::createStructure() {
 
 void ProjectViewModel::loadScan() {
     evolution_ = new EvolutionViewModel(this);
+    connect(evolution_, &EvolutionViewModel::refused, this, [this](const QString& message) {
+        setLastError(message);
+        emit refused(message);
+    });
     const edi::Project& project = *project_;
     if (!project.sequential_fit.declared()) {
         return;
