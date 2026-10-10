@@ -159,7 +159,8 @@ AppDialog {
                 objectName: "about.licence.summary"
                 width: parent.width
                 wrapMode: Text.WordWrap
-                text: qsTr("EasyDiffraction is free software. You may use it for any purpose, and share and change it under the GNU General Public License, version 3. Its source code is also available under the BSD 3-Clause License, so a part of it can be reused on its own.")
+                textFormat: Text.MarkdownText
+                text: qsTr("**EasyDiffraction is free software.** You may:\n\n- use it for any purpose;\n- share copies of it;\n- change it, and share your changes under the same licence, the GNU General Public License, version 3.\n\nIts source code is also available under the BSD 3-Clause License, so a part of it can be reused on its own.")
             }
             Row {
                 spacing: EaStyle.Sizes.fontPixelSize * 2
