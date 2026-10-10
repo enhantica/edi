@@ -1,0 +1,207 @@
+"""Execution-path and concurrency mutations reach the independent gate boundaries."""
+
+# These paths are in intercepted shell argv and are never created by the controls.
+
+from __future__ import annotations
+
+import copy
+import json
+from pathlib import Path
+
+import pytest
+
+from tests.system.py.ci_execution_contract import (
+    concurrency_errors,
+    execution_errors,
+    smoke_errors,
+)
+
+ROOT = Path(__file__).resolve().parents[3]
+
+
+def control(tmp_path):
+    tmp_path.joinpath('pixi.toml').write_text("""[tasks]
+group-nightly-full = { cmd = ['python', 'tools/ci/run-selection.py', '--group', 'nightly-full',
+ '--platform', 'osx-arm64', '--output-dir', '/tmp/ci-selection-probe/result'] }
+""")
+    policy = {
+        'groups': {'nightly-full': {'task': 'group-nightly-full'}},
+        'execution_report': {
+            'run': {'command': ['python', 'tools/ci/run-selection.py']},
+            'command': ['python', 'tools/ci/validate-selection.py'],
+        },
+    }
+    expected = {
+        'job': 'nightly full (macOS)',
+        'steps': [
+            'Execute nightly-full selection',
+            'Validate executed selection',
+            'Upload executed selection',
+        ],
+    }
+    workflow = {
+        'name': 'nightly',
+        'jobs': {
+            'full': {
+                'name': expected['job'],
+                'runs-on': ['self-hosted', 'macOS', 'ARM64'],
+                'steps': [
+                    {'name': expected['steps'][0], 'run': 'pixi run group-nightly-full'},
+                    {
+                        'name': expected['steps'][1],
+                        'run': (
+                            'python tools/ci/validate-selection.py '
+                            '--expected /tmp/ci-selection-probe/result/expected.json '
+                            '--report /tmp/ci-selection-probe/result/results.json '
+                            '--platform osx-arm64'
+                        ),
+                    },
+                    {
+                        'name': expected['steps'][2],
+                        'uses': 'actions/upload-artifact@v5',
+                        'with': {
+                            'name': 'ci-selection-osx-arm64',
+                            'path': '/tmp/ci-selection-probe/result',
+                            'if-no-files-found': 'error',
+                        },
+                    },
+                ],
+            }
+        },
+    }
+    return workflow, policy, expected
+
+
+@pytest.mark.parametrize(
+    'damage',
+    [
+        'disabled-job',
+        'disabled-prerequisite',
+        'unselected-environment',
+        'disabled-step',
+        'wrong-runner',
+        'wrong-architecture',
+        'wrong-platform',
+        'advisory-job',
+        'advisory-run',
+        'advisory-validation',
+        'swallow-run',
+        'swallow-validation',
+        'disconnected-report',
+        'other-job-upload',
+        'missing-retention',
+        'changed-task',
+        'matrix-cancel',
+    ],
+)
+def test_execution_path_auditor_reaches_every_disconnected_or_advisory_boundary(tmp_path, damage):  # noqa: PLR0912
+    workflow, policy, expected = control(tmp_path)
+    assert not execution_errors(
+        tmp_path, workflow, policy, 'schedule', 'osx-arm64', 'nightly-full', expected
+    ), (
+        'CI policy: an independently planted connected collector, validator and '
+        'retention path admits'
+    )
+    bad = copy.deepcopy(workflow)
+    job = bad['jobs']['full']
+    steps = job['steps']
+    if damage == 'disabled-job':
+        job['if'] = False
+    elif damage == 'disabled-prerequisite':
+        job['needs'] = 'disabled'
+        bad['jobs']['disabled'] = {'runs-on': 'ubuntu-latest', 'if': False}
+    elif damage == 'unselected-environment':
+        path = tmp_path / 'pixi.toml'
+        path.write_text(path.read_text().replace('[tasks]', '[feature.unselected.tasks]'))
+    elif damage == 'disabled-step':
+        steps[0]['if'] = False
+    elif damage == 'wrong-runner':
+        job['runs-on'] = ['self-hosted', 'Linux', 'X64']
+    elif damage == 'wrong-architecture':
+        job['runs-on'] = ['self-hosted', 'macOS', 'X64']
+    elif damage == 'wrong-platform':
+        path = tmp_path / 'pixi.toml'
+        path.write_text(path.read_text().replace('osx-arm64', 'linux-64'))
+    elif damage == 'advisory-job':
+        job['continue-on-error'] = True
+    elif damage in {'advisory-run', 'advisory-validation'}:
+        steps[0 if damage == 'advisory-run' else 1]['continue-on-error'] = True
+    elif damage in {'swallow-run', 'swallow-validation'}:
+        steps[0 if damage == 'swallow-run' else 1]['run'] += ' || true'
+    elif damage == 'disconnected-report':
+        steps[1]['run'] = steps[1]['run'].replace(
+            '/result/results.json', '/unrelated/results.json'
+        )
+    elif damage == 'other-job-upload':
+        bad['jobs']['decoration'] = {
+            'runs-on': ['self-hosted', 'macOS', 'ARM64'],
+            'steps': [steps.pop()],
+        }
+    elif damage == 'missing-retention':
+        steps[2]['with']['if-no-files-found'] = 'warn'
+    elif damage == 'changed-task':
+        tmp_path.joinpath('pixi.toml').write_text('[tasks]\ngroup-nightly-full = "true"\n')
+    else:
+        job['strategy'] = {'fail-fast': True}
+    assert execution_errors(
+        tmp_path, bad, policy, 'schedule', 'osx-arm64', 'nightly-full', expected
+    ), 'CI policy: every disconnected, reduced or advisory execution-path mutation reaches refusal'
+
+
+@pytest.mark.parametrize(
+    'damage', ['whitespace-collision', 'job-cancels', 'queued-replacement', 'branch-collision']
+)
+def test_effective_concurrency_controls_cover_workflows_jobs_slots_and_queued_work(damage):
+    first = {
+        'name': 'regular',
+        'concurrency': {
+            'group': 'regular-${{ github.ref }}-${{ github.run_id }}',
+            'cancel-in-progress': False,
+        },
+        'jobs': {'full': {'runs-on': 'ubuntu-latest'}},
+    }
+    second = copy.deepcopy(first)
+    second['name'] = 'nightly'
+    second['concurrency']['group'] = 'nightly-${{github.ref}}-${{github.run_id}}'
+    assert not concurrency_errors([first, second]), (
+        'CI policy: distinct concrete run identities retain queued and active work '
+        'across both slots'
+    )
+    if damage == 'whitespace-collision':
+        second['concurrency']['group'] = 'regular-${{github.ref}}-${{github.run_id}}'
+    elif damage == 'job-cancels':
+        first['jobs']['full']['concurrency'] = {
+            'group': 'job-${{github.ref}}-${{github.run_id}}',
+            'cancel-in-progress': '${{ true }}',
+        }
+    elif damage == 'queued-replacement':
+        first['concurrency']['group'] = 'regular-${{github.ref}}'
+    else:
+        first['concurrency']['group'] = 'regular-${{github.run_id}}'
+    assert concurrency_errors([first, second]), (
+        'CI policy: whitespace, nested cancellation, queued replacement and slot '
+        'collisions are effective refusals'
+    )
+
+
+@pytest.mark.parametrize('category', ['thread', 'scalar', 'simd', 'import', 'cli'])
+def test_smoke_auditor_rejects_same_keyword_non_witnesses(category):
+    witnesses = json.loads((ROOT / 'tests/fixtures/ci_cadence/policy.json').read_text())[
+        'smoke_witnesses'
+    ]
+    good = [node for cohort in witnesses.values() for node in cohort]
+    assert not smoke_errors(good, witnesses), (
+        'CI policy: reviewed behavioral witness identities admit'
+    )
+    decoys = {
+        'thread': 'test_thread_policy.py::test_entrypoint_inventory',
+        'scalar': 'test_dictionary.py::test_refuses_null_scalar',
+        'simd': 'test_build.py::test_simd_flag_string',
+        'import': 'test_constraint.py::test_refuses[__import____os__]',
+        'cli': 'test_adp.py::test_tensor[monoclinic]',
+    }
+    bad = [node for node in good if node not in witnesses[category]] + [decoys[category]]
+    assert category in smoke_errors(bad, witnesses), (
+        'CI policy: a same-keyword declaration, refusal or parameter cannot replace '
+        'behavioral execution'
+    )

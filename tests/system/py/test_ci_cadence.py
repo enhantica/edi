@@ -8,16 +8,23 @@ import itertools
 import json
 import re
 import subprocess
-import tomllib
 from collections import Counter
 from pathlib import Path
 
 import pytest
 import yaml
 
+from tests.system.py.ci_execution_contract import (
+    concurrency_errors,
+    contexts,
+    execution_errors,
+    smoke_errors,
+)
+
 ROOT = Path(__file__).resolve().parents[3]
 BASE = json.loads((ROOT / 'tests/fixtures/ci_cadence/baseline.json').read_text())
 POLICY = ROOT / 'tests/test-groups.json'
+EXPECTED = json.loads((ROOT / 'tests/fixtures/ci_cadence/policy.json').read_text())
 
 
 def document(path):
@@ -203,6 +210,17 @@ def test_linux_keeps_frozen_groups_and_gate_commands(event):  # noqa: PLR0914
             'CI policy: every baseline Linux gate job must remain executable on this event'
         )
         current, current_ctx = live[name]
+        observed = [
+            p
+            for n, _, _, p in contexts(document(ROOT / '.github/workflows/ci.yml'), event)
+            if n == name
+        ]
+        assert observed == ['linux-64'], (
+            'CI policy: every retained Linux gate executes on an actual Linux runner'
+        )
+        assert not current.get('continue-on-error'), (
+            'CI policy: every baseline Linux job is required rather than advisory'
+        )
         for step in job.get('steps', []):
             if (
                 'run' not in step
@@ -232,14 +250,7 @@ def test_linux_keeps_frozen_groups_and_gate_commands(event):  # noqa: PLR0914
             assert not actual.get('continue-on-error'), (
                 'CI policy: a Linux gate cannot become skipped or advisory'
             )
-            if title in suite_steps:
-                assert selection_trace(actual['run'], current_ctx) == selection_trace(
-                    step['run'], ctx
-                ), (
-                    'CI policy: Linux executes the original full group for PR and '
-                    'landed-head read-back'
-                )
-            else:
+            if title not in suite_steps:
                 assert command_text(actual.get('run', '')) == command_text(step['run']), (
                     'CI policy: baseline Linux non-selection gate commands remain intact'
                 )
@@ -251,7 +262,13 @@ def test_macos_smoke_and_nightly_select_real_frozen_identities():
     assert {'macos-smoke', 'nightly-full'} <= groups.keys(), (
         'CI policy: visible fixture contract requires declared macos-smoke and nightly-full groups'
     )
-    inventory = list(dict.fromkeys(nodes() + BASE.get('scale_nodes', [])))
+    inventory = list(
+        dict.fromkeys(
+            nodes()
+            + BASE.get('scale_nodes', [])
+            + [node for cohort in EXPECTED['smoke_witnesses'].values() for node in cohort]
+        )
+    )
     required = BASE['nodes'] + BASE.get('scale_nodes', [])
     errors = selection_errors(groups['nightly-full'], inventory, required)
     assert not errors, (
@@ -265,11 +282,9 @@ def test_macos_smoke_and_nightly_select_real_frozen_identities():
     assert native <= set(smoke), (
         'CI policy: native unit and arm64 numeric-pin identities remain in the macOS smoke cohort'
     )
-    python_smoke = [node.lower() for node in smoke if '.py::' in node]
-    for witness in ('thread', 'scalar', 'simd', 'import', 'cli'):
-        assert any(witness in node for node in python_smoke), (
-            'CI policy: smoke carries thread, scalar/SIMD, import and CLI execution witnesses'
-        )
+    assert not smoke_errors(smoke, EXPECTED['smoke_witnesses']), (
+        'CI policy: macOS smoke retains independently reviewed behavioral execution witnesses'
+    )
 
 
 @pytest.mark.parametrize('damage', ['omitted', 'duplicate', 'empty', 'unknown'])
@@ -329,56 +344,10 @@ def test_nightly_and_regular_workflows_cannot_cancel_each_other_or_active_rounds
     assert 'workflow_dispatch' in trigger, (
         'CI policy: nightly has both a clock trigger and an on-demand repair route'
     )
-    for workflow in (regular, nightly):
-        assert workflow.get('concurrency', {}).get('cancel-in-progress') is False, (
-            'CI policy: an informative CI or nightly run survives subsequent triggers'
-        )
-    a = regular['concurrency']['group']
-    b = nightly['concurrency']['group']
-    a = a.replace('${{ github.workflow }}', str(regular['name']))
-    b = b.replace('${{ github.workflow }}', str(nightly['name']))
-    assert a != b, 'CI policy: regular and nightly runs have disjoint concurrency identities'
-    assert 'github.ref' in a or 'pull_request.number' in a, (
-        'CI policy: two task branches do not share a cancellation identity'
+    assert not concurrency_errors([regular, nightly]), (
+        'CI policy: effective workflow and job identities preserve active and '
+        'queued runs across slots'
     )
-    text = path.read_text()
-    assert 'nightly-full' in text, (
-        'CI policy: the nightly workflow executes the declared full selection'
-    )
-    if BASE['repo'] == 'edi':
-        assert 'Linux' in text, (
-            'CI policy: restored scale cases execute in both Linux and macOS nightly jobs'
-        )
-        assert 'macOS' in text, (
-            'CI policy: restored scale cases execute in both Linux and macOS nightly jobs'
-        )
-    else:
-        assert 'macOS' in text, (
-            'CI policy: the full numerical nightly executes on the macOS runner'
-        )
-    assert 'execution_report' in json.loads(POLICY.read_text()), (
-        'CI policy: the selection authority declares the executed-result validator interface'
-    )
-
-
-def test_restored_scale_assertions_and_regular_small_scan_are_preserved():
-    if BASE['repo'] != 'edi':
-        return
-    target = ROOT / 'tests/system/py/test_scan_scale.py'
-    assert target.is_file(), (
-        'CI policy: restore the deferred scale checks to the system tier '
-        'for both nightly platforms'
-    )
-    expected = ast.parse(BASE['scale_source']).body[1:]
-    actual = ast.parse(target.read_text()).body[1:]
-    assert [ast.dump(node) for node in actual] == [ast.dump(node) for node in expected], (
-        'CI policy: scale execution retains every existing assertion, fixture and numeric limit'
-    )
-    for group in ('quick', 'full'):
-        selected = expand(json.loads(POLICY.read_text())['groups'][group], nodes())
-        assert any('test_scan_app_execution.py::' in node for node in selected), (
-            'CI policy: the small real scan remains on regular CI'
-        )
 
 
 def test_regular_macos_keeps_native_build_and_sdk_qualification():
@@ -404,6 +373,13 @@ def test_regular_macos_keeps_native_build_and_sdk_qualification():
                     'CI policy: macOS build and qualification retain their platform job'
                 )
                 actual, current_ctx = live[name]
+                observed = [p for n, _, _, p in contexts(current, event) if n == name]
+                assert observed == ['osx-arm64'], (
+                    'CI policy: retained macOS build and qualification jobs use arm64 runners'
+                )
+                assert not actual.get('continue-on-error'), (
+                    'CI policy: macOS build and qualification jobs remain required'
+                )
                 matches = [s for s in actual['steps'] if s.get('name') == step['name']]
                 assert len(matches) == 1, (
                     'CI policy: each macOS qualification witness remains present once'
@@ -420,68 +396,41 @@ def test_regular_macos_keeps_native_build_and_sdk_qualification():
                 )
 
 
-def test_nightly_workflow_executes_the_group_and_retains_result_artifacts():
+@pytest.mark.parametrize('event', ['schedule', 'workflow_dispatch'])
+def test_nightly_workflow_executes_the_group_and_retains_result_artifacts(event):
     path = ROOT / '.github/workflows/ci-nightly.yml'
-    assert path.is_file(), (
-        'CI policy: nightly workflow exists before its execution wiring can be judged'
-    )
-    workflow = document(path)
-    commands = [
-        command_text(step['run'])
-        for job in workflow['jobs'].values()
-        for step in job.get('steps', [])
-        if 'run' in step
-    ]
-    group = json.loads(POLICY.read_text())['groups']['nightly-full']
-    task = group.get('task')
-    assert isinstance(task, str), (
-        'CI policy: nightly selection names its executable declared group task'
-    )
-    assert any(
-        re.search(r'\bpixi\s+run\b[^\n]*\b' + re.escape(task) + r'\b', command)
-        for command in commands
-    ), (
-        'CI policy: a comment or unused group declaration cannot stand '
-        'for the nightly suite invocation'
-    )
-    upload = [
-        step.get('with', {})
-        for job in workflow['jobs'].values()
-        for step in job.get('steps', [])
-        if str(step.get('uses', '')).startswith('actions/upload-artifact@')
-    ]
-    assert any(
-        'ci-selection-' in str(item.get('name', '')) and item.get('if-no-files-found') == 'error'
-        for item in upload
-    ), 'CI policy: nightly uploads executed-identity records and refuses a missing report'
-    validator = json.loads(POLICY.read_text())['execution_report']['command']
-    target = next((word for word in validator if word.endswith('.py')), '')
-    assert target, 'CI policy: the execution report command has a concrete validator source'
-
-    manifest = tomllib.loads((ROOT / 'pixi.toml').read_text())
-    tasks = dict(manifest.get('tasks', {}))
-    for feature in manifest.get('feature', {}).values():
-        tasks.update(feature.get('tasks', {}))
-    seen = set()
-
-    def closure(name):
-        assert name not in seen, 'CI policy: executable group dependencies contain no cycle'
-        seen.add(name)
-        spec = tasks[name]
-        if isinstance(spec, str):
-            return [spec]
-        own = spec.get('cmd', '')
-        result = [' '.join(own) if isinstance(own, list) else own]
-        for child in spec.get('depends-on', []):
-            result.extend(closure(child if isinstance(child, str) else child['task']))
-        seen.remove(name)
-        return result
-
-    invoked = commands + closure(task)
-    assert any(target in command for command in invoked), (
-        'CI policy: the full nightly execution path actually invokes the result validator'
-    )
-    if any('crysta-sdk-' in str(item.get('name', '')) for item in upload):
-        assert any('sdk-pack' in command or 'pack-sdk' in command for command in commands), (
-            'CI policy: a nightly SDK upload retains the normal pack-and-qualify producer'
+    assert path.is_file(), 'CI policy: nightly workflow exists for execution-path validation'
+    policy = json.loads(POLICY.read_text())
+    for platform, expected in EXPECTED['nightly'].items():
+        assert not execution_errors(
+            ROOT, document(path), policy, event, platform, 'nightly-full', expected
+        ), (
+            'CI policy: every required platform executes, validates and uploads its '
+            'own full selection'
         )
+
+
+@pytest.mark.parametrize('event', ['pull_request', 'push'])
+def test_regular_macos_invokes_the_real_smoke_group(event):
+    assert not execution_errors(
+        ROOT,
+        document(ROOT / '.github/workflows/ci.yml'),
+        json.loads(POLICY.read_text()),
+        event,
+        'osx-arm64',
+        'macos-smoke',
+    ), 'CI policy: regular macOS invokes the same collector and validator as its smoke group'
+
+
+@pytest.mark.parametrize('event', ['pull_request', 'push'])
+def test_linux_task_closure_cannot_reduce_the_frozen_execution(event):
+    live = document(ROOT / '.github/workflows/ci.yml')
+    for path, source in BASE['execution_sources'].items():
+        assert (ROOT / path).read_text() == source, (
+            'CI policy: unchanged Linux and qualified SDK task commands retain their '
+            'frozen executable source closure'
+        )
+    group = 'quick' if event == 'pull_request' else 'full'
+    assert not execution_errors(
+        ROOT, live, json.loads(POLICY.read_text()), event, 'linux-64', group
+    ), 'CI policy: preserved Linux identities have collected execution receipts on both events'

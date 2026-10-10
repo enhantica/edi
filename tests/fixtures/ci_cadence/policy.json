@@ -1,0 +1,40 @@
+{
+  "repo": "edi",
+  "nightly": {
+    "linux-64": {
+      "job": "nightly full (Linux)",
+      "steps": [
+        "Execute nightly-full selection",
+        "Validate executed selection",
+        "Upload executed selection"
+      ],
+      "artifact": "ci-selection-linux-64"
+    },
+    "osx-arm64": {
+      "job": "nightly full (macOS)",
+      "steps": [
+        "Execute nightly-full selection",
+        "Validate executed selection",
+        "Upload executed selection"
+      ],
+      "artifact": "ci-selection-osx-arm64"
+    }
+  },
+  "smoke_witnesses": {
+    "thread": [
+      "tests/integration/py/test_c22_t22_thread_policy.py::test_c22_t22_edi_extension_honours_explicit_thread_count_exactly"
+    ],
+    "scalar": [
+      "tests/system/py/test_ci_native_modes.py::test_selected_sdk_executes_scalar_and_simd_values[scalar]"
+    ],
+    "simd": [
+      "tests/system/py/test_ci_native_modes.py::test_selected_sdk_executes_scalar_and_simd_values[simd]"
+    ],
+    "import": [
+      "tests/integration/py/test_c22_t22_thread_policy.py::test_c22_t22_edi_extension_inherits_passive_max_minus_two_policy"
+    ],
+    "cli": [
+      "tests/system/py/test_c09_t10_streamed_progress.py::test_c09_t10_human_cli_flushes_each_injected_callback_before_summary"
+    ]
+  }
+}

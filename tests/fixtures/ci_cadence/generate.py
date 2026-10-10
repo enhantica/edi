@@ -26,12 +26,34 @@ snapshot = {
     'commit': old['commit'],
     'files': {path: read(path) for path in old['files']},
 }
-if old['repo'] != 'relay':
+if old['repo'] in {'crysta', 'edi'}:
     snapshot['nodes'] = [
         line.split('\t', 1)[1]
         for line in snapshot['files']['tests/per-pr-runtimes.tsv'].splitlines()
         if line and not line.startswith('#')
     ]
+    snapshot['execution_sources'] = {}
+    pending = (
+        ['tools/ci/cpp-test.sh', 'tools/ci/pack-sdk.sh', 'tools/ci/sdk-smoke/run.sh']
+        if old['repo'] == 'crysta'
+        else ['tools/ci/cpp-test.sh', 'tools/ci/pytest-lenient.sh']
+    )
+    while pending:
+        path = pending.pop()
+        if path in snapshot['execution_sources']:
+            continue
+        body = read(path)
+        snapshot['execution_sources'][path] = body
+        import re
+
+        pending.extend(
+            child
+            for child in re.findall(
+                r'tools/[\w./-]+\.(?:py|sh)',
+                '\n'.join(line.split('#', 1)[0] for line in body.splitlines()),
+            )
+            if child not in snapshot['execution_sources']
+        )
     snapshot['nonexecution'] = {}
     for path in sorted({node.split('::')[0] for node in snapshot['nodes'] if '.py::' in node}):
         calls = sorted(
