@@ -92,7 +92,7 @@ class FitViewModel : public QObject {
     // A running scan (S3): the share of its files processed (fitted or skipped), the bar's text (count, percent, the
     // file just fitted) and the time left at the pace so far.
     Q_PROPERTY(double scanProgress READ scanProgress NOTIFY scanProgressChanged)
-    Q_PROPERTY(int scanProcessed READ scanProcessed NOTIFY scanProgressChanged)
+    Q_PROPERTY(int scanProcessed READ scanProcessed NOTIFY scanProcessedChanged)
     Q_PROPERTY(int scanFitted READ scanFitted NOTIFY scanFittedChanged)
     Q_PROPERTY(int scanTotal READ scanTotal NOTIFY scanTotalChanged)
     Q_PROPERTY(QString scanText READ scanText NOTIFY scanTextChanged)
@@ -103,7 +103,7 @@ class FitViewModel : public QObject {
     // A scan's summary (scan projects): `scanFiles` reads "fitted/files", then the ok and fail counts.
     Q_PROPERTY(bool scanSummary READ scanSummary NOTIFY scanSummaryChanged)
     // The scan's results did not read whole: what is shown is what was last accepted, until a full read succeeds.
-    Q_PROPERTY(bool scanRefused READ scanRefused NOTIFY scanSummaryChanged)
+    Q_PROPERTY(bool scanRefused READ scanRefused NOTIFY scanRefusedChanged)
     Q_PROPERTY(QString scanFiles READ scanFiles NOTIFY scanFilesChanged)
     Q_PROPERTY(int scanOk READ scanOk NOTIFY scanOkChanged)
     Q_PROPERTY(int scanFailed READ scanFailed NOTIFY scanFailedChanged)
@@ -185,6 +185,8 @@ class FitViewModel : public QObject {
     void scanOkChanged();
     void scanFailedChanged();
     void scanProgressChanged();
+    void scanProcessedChanged();
+    void scanRefusedChanged();
     void scanFittedChanged();
     void scanTotalChanged();
     void scanTextChanged();
@@ -209,6 +211,7 @@ class FitViewModel : public QObject {
     void settleScanCounts();
     void scanEnded(const edi::FitReport& report);
     void setScanning(bool scanning);
+    void setScanRefused(bool refused);
     void setContinuable(bool continuable);
     // Continue fitting and Reset fits from the scan's fitted count and the mode.
     void syncScanState();

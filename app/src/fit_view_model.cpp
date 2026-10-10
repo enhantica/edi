@@ -217,13 +217,14 @@ void FitViewModel::showRecord() {
 void FitViewModel::showScan(const ScanSummary& summary, bool scan_last) {
     scan_ = summary;
     scan_last_ = scan_last;
-    scan_refused_ = false;
+    setScanRefused(false);
     sync();
     emit scanSummaryChanged();
     emit scanFilesChanged();
     emit scanOkChanged();
     emit scanFailedChanged();
     emit scanProgressChanged();
+    emit scanProcessedChanged();
     emit scanFittedChanged();
     emit scanTotalChanged();
     // After a single fit on a dataset the status bar and the results window show that fit's own record (also when
@@ -250,7 +251,7 @@ void FitViewModel::showScanRefused(const QString& error, const QString& run_outc
     scan_.outcome = run_outcome.isEmpty() ? QStringLiteral("refused") : run_outcome;
     scan_.seconds = seconds;
     scan_last_ = true;
-    scan_refused_ = true;
+    setScanRefused(true);
     sync();
     emit scanSummaryChanged();
     setProgress(QString(), QString(), outcome_word(scan_.outcome), scan_.outcome);
@@ -302,7 +303,7 @@ void FitViewModel::start() {
         if (scan) {
             scan_resumed_ = 0;
             scan_index_refused_ = false;
-            scan_refused_ = false;
+            setScanRefused(false);
             setScanning(true);
             setScanCounts(scan_, QString());
         }
@@ -465,6 +466,7 @@ void FitViewModel::setScanCounts(const ScanSummary& counts, const QString& file)
     emit scanOkChanged();
     emit scanFailedChanged();
     emit scanProgressChanged();
+    emit scanProcessedChanged();
     emit scanFittedChanged();
     emit scanTotalChanged();
     const int percent = scan_.files > 0 ? static_cast<int>(100.0 * scan_.processed() / scan_.files) : 0;
@@ -488,6 +490,13 @@ void FitViewModel::setScanCounts(const ScanSummary& counts, const QString& file)
     if (eta != eta_) {
         eta_ = eta;
         emit etaChanged();
+    }
+}
+
+void FitViewModel::setScanRefused(bool refused) {
+    if (refused != scan_refused_) {
+        scan_refused_ = refused;
+        emit scanRefusedChanged();
     }
 }
 
