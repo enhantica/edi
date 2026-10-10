@@ -13,7 +13,7 @@ old = json.loads(TARGET.read_text())
 
 def read(path):
     return subprocess.check_output([
-        'git',
+        '/usr/bin/git',
         '-C',
         str(ROOT),
         'show',
@@ -50,4 +50,39 @@ if old['repo'] != 'relay':
             for node in ast.parse(snapshot['scale_source']).body
             if isinstance(node, ast.FunctionDef) and node.name.startswith('test_')
         ]
+allowed = [
+    'tests/system/py/test_c13_t12_cli_paths.py::test_create_new_refuses_real_filesystem_alias_before_publication'
+]
+for relative in (
+    []
+    if old['repo'] == 'crysta'
+    else [
+        'tests/system/py/test_e04_t11_wasm_delivery.py',
+        'tests/system/py/test_e04_t11_wasm_fit.py',
+    ]
+):
+    functions = {
+        node.name: node
+        for node in ast.parse(read(relative)).body
+        if isinstance(node, ast.FunctionDef)
+    }
+    calls = {
+        name: {ast.unparse(node.func) for node in ast.walk(function) if isinstance(node, ast.Call)}
+        for name, function in functions.items()
+    }
+    skipped = {name for name, names in calls.items() if 'pytest.skip' in names}
+    while True:
+        reached = skipped | {name for name, names in calls.items() if names & skipped}
+        if reached == skipped:
+            break
+        skipped = reached
+    allowed += [
+        node
+        for node in snapshot['nodes']
+        if node.split('::')[0] == relative and node.split('::')[1].split('[', 1)[0] in skipped
+    ]
+snapshot['platform_nonexecution'] = {
+    'linux-64': {},
+    'osx-arm64': dict.fromkeys(sorted(allowed), 'skipped'),
+}
 TARGET.write_text(json.dumps(snapshot, indent=2, sort_keys=True) + '\n')

@@ -10113,6 +10113,17 @@
       "Call(func=Attribute(value=Name(id='pytest', ctx=Load()), attr='skip', ctx=Load()), args=[Constant(value='The app configuration is absent from this native-only environment')])"
     ]
   },
+  "platform_nonexecution": {
+    "linux-64": {},
+    "osx-arm64": {
+      "tests/system/py/test_c13_t12_cli_paths.py::test_create_new_refuses_real_filesystem_alias_before_publication": "skipped",
+      "tests/system/py/test_e04_t11_wasm_delivery.py::test_each_build_has_browser_runtime_assets[multithread]": "skipped",
+      "tests/system/py/test_e04_t11_wasm_delivery.py::test_each_build_has_browser_runtime_assets[singlethread]": "skipped",
+      "tests/system/py/test_e04_t11_wasm_delivery.py::test_zip_contains_two_real_modules_loader_shim_and_licences": "skipped",
+      "tests/system/py/test_e04_t11_wasm_fit.py::test_wasm_cli_fit_matches_the_native_cli[multithread]": "skipped",
+      "tests/system/py/test_e04_t11_wasm_fit.py::test_wasm_cli_fit_matches_the_native_cli[singlethread]": "skipped"
+    }
+  },
   "repo": "edi",
   "scale_nodes": [
     "tests/system/py/test_scan_scale.py::test_100000_files_reach_the_actual_optimizer_without_retained_payload_growth",

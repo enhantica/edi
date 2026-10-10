@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[3]
 HEAD = '73' * 20
 
 
-def verify(tmp_path, report, expected=None):
+def verify(tmp_path, report, expected=None, platform='osx-arm64'):
     policy = json.loads((ROOT / 'tests/test-groups.json').read_text())
     command = policy.get('execution_report', {}).get('command')
     assert isinstance(command, list), (
@@ -44,7 +44,7 @@ def verify(tmp_path, report, expected=None):
             '--attempt',
             '2',
             '--platform',
-            'osx-arm64',
+            platform,
         ],
         cwd=ROOT,
         text=True,
@@ -129,3 +129,17 @@ def test_empty_expected_selection_is_rejected_even_with_empty_green_report(tmp_p
         'CI policy: neither an empty smoke nor an empty nightly selection '
         'is valid execution evidence'
     )
+
+
+def test_only_frozen_platform_nonexecution_is_admitted(tmp_path):
+    baseline = json.loads((ROOT / 'tests/fixtures/ci_cadence/baseline.json').read_text())
+    for node in baseline['platform_nonexecution']['osx-arm64']:
+        report = receipt()
+        report['tests'] = [{'nodeid': node, 'outcome': 'skipped'}]
+        assert verify(tmp_path, report, [node]).returncode == 0, (
+            'CI policy: an exact pre-existing macOS skip retains its frozen platform scope'
+        )
+        report['platform'] = 'linux-64'
+        assert verify(tmp_path, report, [node], platform='linux-64').returncode != 0, (
+            'CI policy: the old macOS exception cannot waive required Linux execution'
+        )
