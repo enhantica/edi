@@ -458,7 +458,8 @@ pytest() { return 0; }
             env=env,
             text=True,
             capture_output=True,
-            timeout=2,
+            # Scheduling contention must not masquerade as an invalid invocation.
+            timeout=10,
             check=False,
         )
     lines = result.stdout.splitlines()
@@ -619,8 +620,8 @@ def execution_context_errors(root, workflow, policy, event, platform, group, exp
                         if len(found) != 1:
                             errors.append('independent required step absent ' + title)
                 selected.append(i)
-            except (ValueError, KeyError, StopIteration, subprocess.TimeoutExpired):
-                errors.append('unprovable execution path')
+            except (ValueError, KeyError, StopIteration, subprocess.TimeoutExpired) as exc:
+                errors.append('unprovable execution path: ' + type(exc).__name__)
         if selected:
             covered.append(name)
         sdk_uploads = [
