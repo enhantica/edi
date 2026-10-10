@@ -7,6 +7,7 @@ import edi.app
 import EdiAcceptance 1.0
 import "UiInteraction.js" as Ui
 import "RenderedTable.js" as Render
+import "TableBoundary.js" as Boundary
 
 Item {
     id: surface
@@ -71,6 +72,7 @@ Item {
         }
     }
     TestCase {
+        id: test
         name: "RenderedTableGeometry"
         when: windowShown
         function init() {
@@ -87,6 +89,32 @@ Item {
             const found = supplied.find(row => row.parameter && row.parameter.name === "intensity");
             verify(found !== undefined, "The independent fixture has its intensity parameter");
             return found.parameter;
+        }
+        function assertCellInkFits(cell) {
+            const drawn = Render.texts(cell);
+            const rings = Render.descendants(cell).filter(item => item.visible && item.radius > 0 && item.border && item.border.width > 0);
+            verify(drawn.length + rings.length > 0, "Every fixed column retains actual text, glyph or ring ink");
+            for (const item of drawn) {
+                ink.font = item.font;
+                ink.text = item.text;
+                const needed = Math.ceil(ink.advanceWidth);
+                verify(item.width + 0.6 >= needed, "The actual fixed-column text or glyph viewport fits its independently measured ink");
+                const left = item.mapToItem(cell, 0, 0).x;
+                verify(left >= -0.6 && left + needed <= cell.width + 0.6, "Fixed-column ink remains within its actual cell boundary");
+            }
+            for (const ring of rings) {
+                const left = ring.mapToItem(cell, 0, 0).x;
+                verify(left >= -0.6 && left + ring.width <= cell.width + 0.6, "A fixed status column fits the whole independently drawn ring");
+            }
+        }
+        function assertSuppliedTextFits(cell, supplied, title) {
+            ink.font = cell.font;
+            ink.text = supplied;
+            const bodyNeed = Math.ceil(ink.advanceWidth);
+            ink.text = title;
+            const headingNeed = Math.ceil(ink.advanceWidth);
+            verify(cell.width >= Math.max(bodyNeed, headingNeed), "A compact fixed column fits both its independently supplied content and heading");
+            assertCellInkFits(cell);
         }
         function test_actual_column_geometry_data() {
             const kinds = [
@@ -188,7 +216,9 @@ Item {
             for (let i = 0; i < data.rows; ++i)
                 rows.append(Object.assign({}, seed, {
                     id: "r" + i,
-                    label: "r" + i
+                    label: "r" + i,
+                    name: "r" + i,
+                    structureId: "r" + i
                 }));
             const group = createTemporaryObject(data.component, surface, {
                 width: 610
@@ -226,9 +256,18 @@ Item {
                 verify(body[0].width >= needed && body[0].width <= needed + body[0].font.pixelSize + 1, "Numbering fits the independently measured longest supplied number with at most one em padding");
                 for (const column of data.flex)
                     verify(Math.abs(body[column].width - body[data.flex[0]].width) < 0.6, "The actual main scientific columns share the remaining width equally");
-                for (const column of data.icons)
-                    verify(body[column].width > 0 && body[column].width <= EaStyle.Sizes.fontPixelSize * 2.5, "Rendered icon and action columns remain compact at each sidebar width");
+                for (const column of data.icons) {
+                    assertCellInkFits(body[column]);
+                    verify(body[column].width <= EaStyle.Sizes.fontPixelSize * 2.5, "Rendered icon and action columns remain compact at each sidebar width");
+                }
+                if (data.tag.startsWith("atoms")) {
+                    assertCellInkFits(body[2]);
+                    assertSuppliedTextFits(body[6], "a", "WL");
+                    verify(body[2].width <= EaStyle.Sizes.fontPixelSize * 4.5 + 1, "The atom type column remains compact while fitting its icon and supplied symbol");
+                    verify(body[6].width <= EaStyle.Sizes.fontPixelSize * 2.5 + 1, "The Wyckoff column remains compact while fitting its supplied letter and heading");
+                }
                 if (data.idColumn >= 0) {
+                    assertSuppliedTextFits(body[data.idColumn], "r" + (data.rows - 1), data.tag.startsWith("experiments") ? "Datablock" : "id");
                     verify(body[data.idColumn].width <= table.width * 0.25 + 1, "Identifiers leave scientific columns the remaining space");
                     ink.font = head[data.idColumn].font;
                     ink.text = data.tag.startsWith("experiments") ? "Datablock" : "r111";
@@ -245,8 +284,7 @@ Item {
                 verify(last <= table.width + 0.6 && table.width - last <= EaStyle.Sizes.fontPixelSize * 2, "Rendered cells fill the available table width without overflow or unused right-side space");
                 const next = table.itemAtIndex(4);
                 verify(next !== null, "Each page consumer instantiates its next scrolling row");
-                const fraction = (table.height - next.mapToItem(table, 0, 0).y) / next.height;
-                verify(Math.abs(fraction - 0.5) < 0.06, "Every actual table shows half the next delegate as its scrolling cue");
+                Boundary.check(test, table, next, surface);
             }
             if (data.idColumn >= 0) {
                 for (let i = 0; i < rows.count; ++i) {
@@ -258,11 +296,23 @@ Item {
                 verify(waitForPolish(table), "Long supplied identifiers complete actual cell layout");
                 table.forceLayout();
                 const longCells = Render.cells(table.itemAtIndex(0));
+                const longWidth = longCells[data.idColumn].width;
+                verify(Math.abs(longCells[data.idColumn].width - table.width * 0.25) <= 1, "Long independently supplied IDs expand to the permitted quarter-table cap");
+                verify(longCells[data.idColumn].width > widths[1][data.idColumn], "Long supplied IDs expand the actual ID column beyond its short-content width");
                 verify(longCells[data.idColumn].width <= table.width * 0.25 + 1, "Long IDs cannot consume more than one quarter of the rendered table");
                 for (const column of data.flex)
                     verify(longCells[column].width > 0, "Long IDs leave every real scientific cell usable");
                 for (const column of data.icons)
-                    verify(longCells[column].width > 0, "Long IDs leave every actual row action visible");
+                    assertCellInkFits(longCells[column]);
+                for (let i = 0; i < rows.count; ++i)
+                    for (const role of ["id", "label", "name", "structureId"])
+                        rows.setProperty(i, role, "r" + i);
+                verify(waitForPolish(table), "Returning to short supplied IDs completes rendered layout");
+                table.forceLayout();
+                const shortCells = Render.cells(table.itemAtIndex(0));
+                verify(shortCells[data.idColumn].width < longWidth, "The long-to-short resize restores compact actual ID width");
+                compare(shortCells[data.idColumn].width, widths[1][data.idColumn], "The ID column returns to its original independently supplied short-content width");
+                assertSuppliedTextFits(shortCells[data.idColumn], "r" + (data.rows - 1), data.tag.startsWith("experiments") ? "Datablock" : "id");
             }
             verify(widths[1][data.flex[0]] > widths[0][data.flex[0]], "Rendered main columns receive the extra sidebar width");
             verify(Math.abs(widths[1][0] - widths[0][0]) < 0.6, "Numbering remains content-sized as the sidebar grows");

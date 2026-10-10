@@ -10,6 +10,7 @@ import EasyApplication.Gui.Globals as Globals
 import "UiInteraction.js" as Ui
 import "E04Review.js" as Review
 import "RenderedTable.js" as Render
+import "TableBoundary.js" as Boundary
 
 TestCase {
     id: test
@@ -131,12 +132,15 @@ TestCase {
         open();
         pane("analysis", "basic");
         const table = named(Ui.page(appWindow), "parameters.list");
-        const alignments = [Text.AlignHCenter, Text.AlignLeft, Text.AlignRight, Text.AlignLeft, Text.AlignRight, Text.AlignHCenter, Text.AlignHCenter, Text.AlignHCenter];
-        // Alignment reference: Beta Fittables header/delegate, independent of edi's new QML.
+        const headerAlignments = [Text.AlignHCenter, Text.AlignLeft, Text.AlignRight, Text.AlignLeft, Text.AlignRight, Text.AlignRight, Text.AlignRight, Text.AlignHCenter];
+        const delegateAlignments = [Text.AlignHCenter, Text.AlignHCenter, Text.AlignHCenter, Text.AlignHCenter, Text.AlignHCenter, Text.AlignHCenter, Text.AlignHCenter, Text.AlignHCenter];
+        // Beta v0.9.9 ec1d04ee: Fittables.qml:135-319. Explicit header overrides
+        // differ from delegates inheriting TableViewLabel/Parameter/CheckBox's
+        // centered alignment (gui-components v0.9.1 a573a969, retained reference).
         const header = Render.cells(table.headerItem);
-        compare(header.length, alignments.length, "Analysis retains all Beta scientific columns");
+        compare(header.length, headerAlignments.length, "Analysis retains all Beta scientific columns");
         for (let i = 0; i < header.length; ++i)
-            compare(header[i].horizontalAlignment, alignments[i], "Analysis header follows the Beta alignment reference");
+            compare(header[i].horizontalAlignment, headerAlignments[i], "Analysis header follows the Beta alignment reference");
         compare(header[3].text, "", "Analysis keeps the units column untitled");
         const rows = Probe.rows(table.model);
         verify(rows.some(row => row.units === "Å"), "The independent crystallographic fixture exercises nonempty units");
@@ -148,7 +152,7 @@ TestCase {
             verify(delegate !== null, "Each unit witness is inspected in its real delegate");
             const body = Render.cells(delegate);
             for (let j = 0; j < body.length; ++j)
-                compare(body[j].horizontalAlignment, alignments[j], "The rendered analysis row follows the Beta alignment reference");
+                compare(body[j].horizontalAlignment, delegateAlignments[j], "The rendered analysis row follows the Beta alignment reference");
             ink.font = body[3].font;
             ink.text = rows[i].units;
             verify(body[3].width >= Math.ceil(ink.advanceWidth), "Every actual units cell fits its independently supplied unit text");
@@ -170,8 +174,7 @@ TestCase {
             const nextIndex = Math.floor(rowCount);
             const next = table.itemAtIndex(nextIndex);
             verify(next !== null, "The real Analysis viewport instantiates its scrolling cue row");
-            const fraction = (table.height - next.mapToItem(table, 0, 0).y) / next.height;
-            verify(Math.abs(fraction - 0.5) < 0.06, "The actual Analysis sidebar shows half the next row at either available height");
+            Boundary.check(test, table, next, Ui.windowRoot(appWindow));
             heights.push(table.height);
         }
         verify(heights[1] > heights[0], "The Analysis table uses extra available window height");

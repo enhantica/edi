@@ -6,6 +6,7 @@ import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Components as EaComponents
 import edi.app
 import "UiInteraction.js" as Ui
+import "TableBoundary.js" as Boundary
 
 Item {
     id: surface
@@ -59,6 +60,7 @@ Item {
         }
     }
     TestCase {
+        id: test
         name: "TableNotes"
         when: windowShown
         function init() {
@@ -94,9 +96,7 @@ Item {
                 next = table.itemAtIndex(4);
                 return next !== null;
             }, 2000, "The next delegate exists in the actual viewport");
-            const top = next.mapToItem(table, 0, 0).y;
-            const visibleFraction = (table.height - top) / next.height;
-            verify(Math.abs(visibleFraction - 0.5) < 0.06, "The real clipped delegate shows about half its height as the scrolling cue");
+            Boundary.check(test, table, next, surface);
         }
         function test_template_marker_follows_its_filename() {
             verify(Session.openExample("pd-neut-cwl_cosio-d20_scan-3f"), Session.lastError);
