@@ -2,7 +2,7 @@ _edi.schema_version 3
 
 _metadata.name             pd_neut_cwl_pbso4_beba
 _metadata.title "PbSO₄ [Pnma] · D1A @ ILL"
-_metadata.description "Rietveld round-robin data · Bérar–Baldinozzi asymmetry refinement"
+_metadata.description "Rietveld round-robin data · Bérar-Baldinozzi asymmetry refinement"
 _metadata.created          "26 Sep 2026 10:28:28"
 _metadata.last_modified    "26 Sep 2026 10:28:29"
 _metadata.timestamp        ?

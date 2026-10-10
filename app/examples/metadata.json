@@ -767,7 +767,7 @@
         "PbSO₄ [Pnma]"
       ],
       "origin": "D1A @ ILL",
-      "detail": "Rietveld round-robin data · Bérar–Baldinozzi asymmetry refinement",
+      "detail": "Rietveld round-robin data · Bérar-Baldinozzi asymmetry refinement",
       "values": {
         "sampleForm": [
           "powder"
@@ -803,7 +803,7 @@
       "searchAliases": [
         "pd-neut-cwl_pbso4_beba-asymmetry",
         "PbSO₄ [Pnma] · D1A @ ILL",
-        "Rietveld round-robin data · Bérar–Baldinozzi asymmetry refinement"
+        "Rietveld round-robin data · Bérar-Baldinozzi asymmetry refinement"
       ],
       "sources": [
         "docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project/project.edi",
@@ -818,7 +818,7 @@
         "Al₂O₃ [R-3c]"
       ],
       "origin": "SPODI @ FRM II",
-      "detail": "2 phases at 3 K · Shared Bérar–Baldinozzi profile · Cylinder absorption",
+      "detail": "2 phases at 3 K · Shared Bérar-Baldinozzi profile · Cylinder absorption",
       "values": {
         "sampleForm": [
           "powder"
@@ -854,7 +854,7 @@
       "searchAliases": [
         "pd-neut-cwl_yap-spodi_3k",
         "YAlO₃ [Pbnm] / Al₂O₃ [R-3c] · SPODI @ FRM II",
-        "2 phases at 3 K · Shared Bérar–Baldinozzi profile · Cylinder absorption"
+        "2 phases at 3 K · Shared Bérar-Baldinozzi profile · Cylinder absorption"
       ],
       "sources": [
         "docs/user/cli/pd-neut-cwl_yap-spodi_3k/project/project.edi",
