@@ -113,7 +113,10 @@ class FitViewModel : public QObject {
     bool continuable() const { return continuable_; }
     bool canReset() const { return can_reset_; }
     bool scanning() const { return scanning_; }
-    double scanProgress() const { return scan_.files > 0 ? static_cast<double>(scan_.fitted) / scan_.files : 0.0; }
+    // The completed files (fitted or skipped) of all the scan's files.
+    double scanProgress() const {
+        return scan_.files > 0 ? static_cast<double>(scan_.processed()) / scan_.files : 0.0;
+    }
     QString scanText() const { return scan_text_; }
     QString eta() const { return eta_; }
     bool outOfDate() const { return out_of_date_; }

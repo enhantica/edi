@@ -222,11 +222,15 @@ int ScanSession::addRow(const edi::Project& project, const std::vector<std::stri
         }
         row.offset = index_.end;
         row.termination = termination;
-        // crysta notes a file before appending its row, so what the notes said about it stays.
+        // crysta notes a file before appending its row, so what the notes said about it stays; a file with a
+        // row is fitted, whatever an earlier run noted (the full index's rule), so it leaves the skipped count.
         const edi::ScanResultIndex::Row& noted = index_.rows[dataset];
         row.noted = noted.noted;
         row.negative_points = noted.negative_points;
         row.refusal = noted.refusal;
+        if (noted.skipped) {
+            --index_.skipped;
+        }
         index_.end += length - 1;
         index_.rows[dataset] = std::move(row);
         ++index_.fitted;
