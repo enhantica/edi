@@ -60,3 +60,10 @@ most 12 digits, `skipped_dataset` `True` or `False`, each scan file named once. 
 explicit refusal of the index, not a silently different state. A dataset is **processed** when it has a row or is
 skipped; Start, Continue, Reset, the live count and the scan summary count processed datasets, so a scan whose
 remaining files are all skipped is complete.
+
+A skipped file sends no event of its own, so the live index reads the notes appended before each new row, and the
+app indexes the files on disk again when the run returns, before the running bar closes: files skipped after the
+last row count for every ending (complete, stopped, failed). A refusal while a run writes refuses the whole index,
+as a full read would, and is shown at once; the facts read before it are not kept. `results.csv` and
+`scan-notes.csv` may be absent, but a path that exists must be a regular file: a directory there is refused, never
+read as no results or as an empty file, and a fresh run or Reset that sets the result files aside refuses it too.
