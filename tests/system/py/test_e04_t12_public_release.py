@@ -326,11 +326,14 @@ def test_about_exposes_bundled_notices_and_named_copyright():
     )
     # Before: only the renamed Licence label was checked. After: the labelled app
     # link must open the local notice, whose GPL/BSD split replaces the sentence.
-    assert re.search(
-        r'"title"\s*:\s*qsTr\("(?:Licence|End User Licence Agreement)"\)\s*,\s*'
-        r'"url"\s*:\s*ApplicationInfo\.appLicenseUrl',
-        about,
-    ), 'the About application licence label must bind to the application notice metadata'
+    assert all(
+        name in about
+        for name in (
+            'about.licence.summary',
+            'ApplicationInfo.copyingUrl',
+            'ApplicationInfo.licenseUrl',
+        )
+    ), 'The user licence view must retain its short summary and access to both complete licences'
     assert 'about.licence"' not in about and 'This app is distributed under' not in about, (
         'the About window must omit the superseded distribution sentence'
     )
@@ -345,10 +348,14 @@ def test_about_exposes_bundled_notices_and_named_copyright():
     assert '"app/DISTRIBUTION-LICENSE.md"' in info, (
         'the licence resource reader must admit the application notice linked from About'
     )
-    viewer = (ROOT / 'app/qml/Pages/Home/LicenceTextDialog.qml').read_text()
-    assert 'licenceDialog.showText(link.modelData.title, link.modelData.url)' in about and (
-        'ApplicationInfo.licenceText(dialog.url)' in viewer
-    ), 'activating the About licence link must display the selected bundled resource'
+    # E04-T19 replaces the stacked-dialog route with tabs and inline complete texts.
+    # Bundled-resource and distribution-term assertions above/below remain unchanged.
+    assert 'LicenceTextDialog {' not in about, (
+        'About licence navigation must remain in one window instead of opening a stacked dialog'
+    )
+    assert 'ApplicationInfo.licenceText(' in about and all(
+        name in about for name in ('about.tab.licence', 'about.tab.thirdParty')
+    ), 'About retains access to the selected bundled licence through its single-window views'
     notice = (ROOT / 'app/DISTRIBUTION-LICENSE.md').read_text()
     assert 'GPL-3.0' in notice and 'BSD 3-Clause' in notice, (
         'both the built application GPL status and source BSD status must be reachable from About'

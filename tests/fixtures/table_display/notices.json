@@ -1,0 +1,270 @@
+{
+  "source": "THIRD-PARTY-NOTICES",
+  "sha256": "91c85ff152d6a7146df670ea1e2c6b54e2109ee0ac6bf89df31a337ccb9abeea",
+  "rows": [
+    {
+      "component": "crysta",
+      "version": "",
+      "licence": "BSD-3-Clause",
+      "use": "the diffraction engine, statically linked into the application and the Python extension"
+    },
+    {
+      "component": "SLEEF",
+      "version": "3.9.0",
+      "licence": "BSL-1.0",
+      "use": "vectorised mathematical functions, through crysta"
+    },
+    {
+      "component": "Eigen",
+      "version": "3.4.0",
+      "licence": "MPL-2.0",
+      "use": "linear algebra headers, compiled into crysta and edi"
+    },
+    {
+      "component": "libgomp",
+      "version": "15.2.0",
+      "licence": "GPL-3.0-only WITH GCC-exception-3.1",
+      "use": "the GCC OpenMP runtime (Linux), with the GCC runtime libraries libstdc++ and libgcc_s, under the GCC Runtime Library Exception"
+    },
+    {
+      "component": "llvm-openmp",
+      "version": "23.1.2",
+      "licence": "Apache-2.0 WITH LLVM-exception",
+      "use": "the LLVM OpenMP runtime (macOS)"
+    },
+    {
+      "component": "nanobind",
+      "version": "2.13.0",
+      "licence": "BSD-3-Clause",
+      "use": "the Python bindings, compiled into the Python extension"
+    },
+    {
+      "component": "robin-map",
+      "version": "",
+      "licence": "MIT",
+      "use": "the hash map inside nanobind, compiled into the Python extension"
+    },
+    {
+      "component": "Qt",
+      "version": "6.11.2",
+      "licence": "LGPL-3.0-only",
+      "use": "the application framework: Qt Core, Qt GUI, Qt QML, Qt Quick, Qt Quick Controls and the modules they load"
+    },
+    {
+      "component": "Qt Graphs",
+      "version": "6.11.2",
+      "licence": "GPL-3.0-only",
+      "use": "the pattern chart; linking it makes the distributed application a GPL-3.0 work (COPYING)"
+    },
+    {
+      "component": "Qt Quick 3D",
+      "version": "6.11.2",
+      "licence": "GPL-3.0-only",
+      "use": "the structure view's 3D scene, and the 3D module Qt Graphs loads; GPL-3.0 (COPYING)"
+    },
+    {
+      "component": "Qt Shader Tools",
+      "version": "6.11.2",
+      "licence": "GPL-3.0-only",
+      "use": "the shader tooling Qt Quick 3D uses; GPL-3.0 (COPYING)"
+    },
+    {
+      "component": "EasyScience gui-components",
+      "version": "",
+      "licence": "BSD-3-Clause",
+      "use": "the base QML components and styles of the application"
+    },
+    {
+      "component": "easydiffractionbeta",
+      "version": "",
+      "licence": "BSD-3-Clause",
+      "use": "the application design and QML the application is ported from, and the Jmol element colours and radii in the element table"
+    },
+    {
+      "component": "diffraction-lib",
+      "version": "",
+      "licence": "BSD-3-Clause",
+      "use": "the Python API design edi follows, example data, and the element colour and radius table"
+    },
+    {
+      "component": "pymatgen",
+      "version": "",
+      "licence": "MIT",
+      "use": "VESTA element colours and Shannon ionic radii in the element table, compiled into edi"
+    },
+    {
+      "component": "ICU",
+      "version": "78.3",
+      "licence": "Unicode-3.0",
+      "use": "Unicode and locale support"
+    },
+    {
+      "component": "HarfBuzz",
+      "version": "14.5.0",
+      "licence": "MIT",
+      "use": "text shaping"
+    },
+    {
+      "component": "FreeType",
+      "version": "2.14.3",
+      "licence": "FTL",
+      "use": "font rendering, used under the FreeType License (with its acknowledgement below)"
+    },
+    {
+      "component": "libpng",
+      "version": "1.6.58",
+      "licence": "libpng-2.0",
+      "use": "PNG images"
+    },
+    {
+      "component": "zlib",
+      "version": "1.3.2",
+      "licence": "Zlib",
+      "use": "compression"
+    },
+    {
+      "component": "PCRE2",
+      "version": "10.47",
+      "licence": "BSD-3-Clause WITH PCRE2-exception",
+      "use": "regular expressions"
+    },
+    {
+      "component": "zstd",
+      "version": "1.5.7",
+      "licence": "BSD-3-Clause",
+      "use": "compression"
+    },
+    {
+      "component": "Brotli",
+      "version": "1.2.0",
+      "licence": "MIT",
+      "use": "compression"
+    },
+    {
+      "component": "OpenSSL",
+      "version": "3.6.4",
+      "licence": "Apache-2.0",
+      "use": "cryptography for network access"
+    },
+    {
+      "component": "Expat",
+      "version": "2.8.5",
+      "licence": "MIT",
+      "use": "XML parsing"
+    },
+    {
+      "component": "Graphite2",
+      "version": "1.3.15",
+      "licence": "LGPL-2.1-or-later OR MPL-2.0 OR GPL-2.0-or-later",
+      "use": "font shaping, through HarfBuzz"
+    },
+    {
+      "component": "double-conversion",
+      "version": "3.4.0",
+      "licence": "BSD-3-Clause",
+      "use": "number formatting"
+    },
+    {
+      "component": "libjpeg-turbo",
+      "version": "3.2.0",
+      "licence": "IJG AND BSD-3-Clause AND Zlib",
+      "use": "JPEG images"
+    },
+    {
+      "component": "LibTIFF",
+      "version": "4.7.2",
+      "licence": "libtiff",
+      "use": "TIFF images"
+    },
+    {
+      "component": "libwebp",
+      "version": "1.6.0",
+      "licence": "BSD-3-Clause",
+      "use": "WebP images"
+    },
+    {
+      "component": "GLib",
+      "version": "2.90.0",
+      "licence": "LGPL-2.1-or-later",
+      "use": "the event loop integration (Linux)"
+    },
+    {
+      "component": "D-Bus",
+      "version": "1.16.2",
+      "licence": "AFL-2.1 OR GPL-2.0-or-later",
+      "use": "desktop integration (Linux), used under AFL-2.1"
+    },
+    {
+      "component": "Fontconfig",
+      "version": "2.18.3",
+      "licence": "MIT",
+      "use": "font discovery (Linux)"
+    },
+    {
+      "component": "libxcb",
+      "version": "1.17.0",
+      "licence": "MIT",
+      "use": "the X11 platform plugin (Linux)"
+    },
+    {
+      "component": "libxkbcommon",
+      "version": "1.13.2",
+      "licence": "MIT",
+      "use": "keyboard handling (Linux)"
+    },
+    {
+      "component": "Wayland",
+      "version": "1.26.0",
+      "licence": "MIT",
+      "use": "the Wayland platform plugin (Linux)"
+    },
+    {
+      "component": "libdrm",
+      "version": "2.4.129",
+      "licence": "MIT",
+      "use": "graphics device access (Linux)"
+    },
+    {
+      "component": "libglvnd",
+      "version": "1.7.0",
+      "licence": "MIT-style (libglvnd)",
+      "use": "OpenGL dispatch (Linux)"
+    },
+    {
+      "component": "MIT Kerberos",
+      "version": "1.22.2",
+      "licence": "MIT-style",
+      "use": "network authentication (Linux)"
+    },
+    {
+      "component": "PT Sans, PT Mono",
+      "version": "",
+      "licence": "OFL-1.1",
+      "use": "interface fonts, bundled"
+    },
+    {
+      "component": "Encode Sans",
+      "version": "",
+      "licence": "OFL-1.1",
+      "use": "fit summary arrow, bundled"
+    },
+    {
+      "component": "Noto Sans, Noto Sans Mono",
+      "version": "",
+      "licence": "OFL-1.1",
+      "use": "interface fonts, bundled"
+    },
+    {
+      "component": "Baloo 2",
+      "version": "",
+      "licence": "OFL-1.1",
+      "use": "the wordmark font, bundled"
+    },
+    {
+      "component": "Font Awesome Free",
+      "version": "",
+      "licence": "OFL-1.1 AND CC-BY-4.0",
+      "use": "icons: the font under OFL-1.1, the icon designs under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)"
+    }
+  ]
+}
