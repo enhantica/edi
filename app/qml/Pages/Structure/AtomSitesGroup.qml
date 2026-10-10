@@ -137,17 +137,17 @@ Column {
                 }
             }
             ParameterCell {
-                horizontalAlignment: Text.AlignHCenter
+                columnAlignment: Text.AlignHCenter
                 objectName: `atomSite.fractX.${row.index}`
                 item: row.fractX
             }
             ParameterCell {
-                horizontalAlignment: Text.AlignHCenter
+                columnAlignment: Text.AlignHCenter
                 objectName: `atomSite.fractY.${row.index}`
                 item: row.fractY
             }
             ParameterCell {
-                horizontalAlignment: Text.AlignHCenter
+                columnAlignment: Text.AlignHCenter
                 objectName: `atomSite.fractZ.${row.index}`
                 item: row.fractZ
             }
@@ -158,7 +158,7 @@ Column {
                 onCommitted: text => group.sites.setText(row.index, "wyckoffLetter", text)
             }
             ParameterCell {
-                horizontalAlignment: Text.AlignHCenter
+                columnAlignment: Text.AlignHCenter
                 objectName: `atomSite.occupancy.${row.index}`
                 item: row.occupancy
             }

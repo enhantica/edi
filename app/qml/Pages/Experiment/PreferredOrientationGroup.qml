@@ -104,12 +104,12 @@ Column {
                 onCommitted: text => group.rows.setIndex(row.index, "l", Number(text))
             }
             ParameterCell {
-                horizontalAlignment: Text.AlignHCenter
+                columnAlignment: Text.AlignHCenter
                 objectName: `preferredOrientation.marchR.${row.index}`
                 item: row.marchR
             }
             ParameterCell {
-                horizontalAlignment: Text.AlignHCenter
+                columnAlignment: Text.AlignHCenter
                 objectName: `preferredOrientation.marchRandomFract.${row.index}`
                 item: row.marchRandomFract
             }

@@ -28,6 +28,12 @@ EaComponents.TableViewParameter {
     // A fixed setting is edited but never fitted: no fit toggle.
     readonly property bool canFit: refinable && (item === null || item.fittable)
 
+    // The column's alignment, unless the value is wider than the cell: then it shows from its start and clips at
+    // the end, without an ellipsis (ADR-0029).
+    property int columnAlignment: Text.AlignHCenter
+    readonly property bool overflows: contentWidth > width - leftPadding - rightPadding
+    horizontalAlignment: overflows ? Text.AlignLeft : columnAlignment
+
     // The value as edited: in full, where the cell shows it rounded (NumberText).
     readonly property string editText: item !== null ? NumberText.full(item.value) : value
 

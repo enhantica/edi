@@ -102,7 +102,7 @@ Column {
                         onCommitted: text => group.points.setPosition(row.index, Number(text))
                     }
                     ParameterCell {
-                        horizontalAlignment: Text.AlignHCenter
+                        columnAlignment: Text.AlignHCenter
                         objectName: `background.intensity.${row.index}`
                         item: row.intensity
                     }

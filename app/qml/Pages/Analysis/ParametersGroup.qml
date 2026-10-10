@@ -224,7 +224,7 @@ EaElements.GroupBox {
                     }
                 }
                 ParameterCell {
-                    horizontalAlignment: Text.AlignRight
+                    columnAlignment: Text.AlignRight
                     objectName: `parameters.value.${row.index}`
                     item: row.parameter
                     onActiveFocusChanged: if (activeFocus)
