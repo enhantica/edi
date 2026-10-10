@@ -125,6 +125,12 @@ Item {
             tryCompare(picker.popup, "opened", false);
             tryCompare(picker.popup, "visible", false);
         }
+        function test_verification_projects_stay_outside_the_app_catalogue() {
+            // Independently named FullProf comparison corpus: the owner keeps its purpose.
+            const comparisons = ["pd-neut-tof_diamond-dream_basic", "pd-neut-cwl_lab6-echidna_fcj-asymmetry", "pd-neut-tof_fe_pseudo-voigt", "pd-xray-cwl_lif_single", "pd-neut-cwl_y2o3_beta-adp"];
+            for (const id of comparisons)
+                verify(!sourceIds.includes(id), "A FullProf verification project is not relabelled as an app fitting or simulation example: " + id);
+        }
         function test_properties_and_known_fitting_modes() {
             sameIds(properties().map(p => p.value), ["purpose", "fittingMode", "facilities", "instruments", "sampleForm", "beamMode", "probe", "scatteringType", "dimensionality", "polarisation"]);
             for (const property of properties()) {
@@ -176,7 +182,7 @@ Item {
             }
             for (const mode of ["single", "joint", "sequential"])
                 verify(symbols[mode] !== undefined, "Bundled examples exercise " + mode);
-            compare(seenPurposes.size, 2, "Both refinement and simulation symbols are exercised");
+            compare(seenPurposes.size, 2, "Both fitting and simulation symbols are exercised");
             compare(new Set(Object.values(symbols)).size, Object.keys(symbols).length, "Different workflows have distinct symbols");
         }
         function test_normalized_words_and_property_are_conjunctive() {
@@ -197,11 +203,11 @@ Item {
         }
         function test_purpose_is_separate_from_fitting_mode() {
             const simulation = Session.examples.propertyValues("pd-xray-cwl_lif", "purpose");
-            const refinement = Session.examples.propertyValues("pd-neut-tof_ncaf-wish-2bank_start-3", "purpose");
+            const fitting = Session.examples.propertyValues("pd-neut-tof_ncaf-wish-2bank_start-3", "purpose");
             sameIds(simulation, ["simulation"]);
-            sameIds(refinement, ["refinement"]);
-            verify(simulation[0] !== refinement[0]);
-            verify(simulation[0] !== "__unknown__" && refinement[0] !== "__unknown__");
+            sameIds(fitting, ["refinement"]);
+            verify(simulation[0] !== fitting[0]);
+            verify(simulation[0] !== "__unknown__" && fitting[0] !== "__unknown__");
             Session.examples.filterValue = simulation[0];
             verify(ids().includes("pd-xray-cwl_lif"));
             verify(!ids().includes("pd-neut-tof_ncaf-wish-2bank_start-3"));

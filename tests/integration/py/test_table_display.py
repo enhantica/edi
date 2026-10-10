@@ -1,9 +1,12 @@
 """Exercise the app's real QML arithmetic against the owner's declared display rules."""
 
 import json
+import re
 import shutil
 import subprocess
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
 RUNNER = ROOT / 'tests/fixtures/table_display/run_functions.cjs'
@@ -75,3 +78,26 @@ def test_sequential_count_colours_follow_zero_and_nonzero_state():
         assert actual == expected, (
             'Sequential status colours positive ok green and positive fail red; zero stays neutral'
         )
+
+
+@pytest.mark.parametrize(
+    'project',
+    [
+        'pd-neut-tof_diamond-dream_basic',
+        'pd-neut-cwl_lab6-echidna_fcj-asymmetry',
+        'pd-neut-tof_fe_pseudo-voigt',
+        'pd-xray-cwl_lif_single',
+        'pd-neut-cwl_y2o3_beta-adp',
+    ],
+)
+def test_fullprof_comparison_projects_retain_verification_purpose(project):
+    # The declared FullProf comparison corpus is an input independent of the app filter.
+    text = (ROOT / f'docs/user/cli/{project}/project/project.edi').read_text()
+    match = re.search(r'(?m)^_metadata\.purpose\s+(\S+)', text)
+    assert match and match[1] == 'verification', (
+        'FullProf comparison projects retain verification as their stored purpose'
+    )
+    metadata = json.loads((ROOT / 'app/examples/metadata.json').read_text())
+    assert metadata['examples'][project]['values']['purpose'] == ['verification'], (
+        'The app catalogue preserves verification metadata so it can exclude that workflow'
+    )
