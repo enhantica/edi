@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-08T18:46:19Z
+# measured_utc = 2026-10-10T07:17:40Z
 #
-# Recorded from: green-shared.log (34 node(s) measured once, 9035 banked, 0 stale row(s) dropped)
-# Collected tests: 9731; with a reported duration: 4935
+# Recorded from: c12-t5-tests-app-final.log (17 node(s) measured once, 9118 banked, 0 stale row(s) dropped)
+# Collected tests: 9803; with a reported duration: 4971
 # Module-scoped fixture costs recorded: 29
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 9731
+# inventory_python = 9803
 # inventory_cpp = 302
-# inventory_measured = 9069
-# inventory_unmeasured = 964
+# inventory_measured = 9120
+# inventory_unmeasured = 985
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -110,6 +110,23 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_ui_compare.py::t
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_ui_compare.py::test_production_comparator_similarity_and_missing_escape[tile-threshold-False]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_ui_compare.py::test_production_comparator_similarity_and_missing_escape[whole-image-threshold-False]
 0.590	tests/integration/app/test_e04_t1_ui_compare.py::test_retired_calculation_identity_rows_and_adjacent_text_are_compared
+UNMEASURED:failed-in-this-run	tests/integration/app/test_phase_scan_state.py::test_app_counts_processed_files_and_reopens_all_phase_results[resume-leading-independent]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_phase_scan_state.py::test_app_counts_processed_files_and_reopens_all_phase_results[resume-leading-sequential]
+0.510	tests/integration/app/test_phase_scan_state.py::test_app_counts_processed_files_and_reopens_all_phase_results[skipped0-independent]
+0.500	tests/integration/app/test_phase_scan_state.py::test_app_counts_processed_files_and_reopens_all_phase_results[skipped0-sequential]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_phase_scan_state.py::test_app_counts_processed_files_and_reopens_all_phase_results[skipped1-independent]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_phase_scan_state.py::test_app_counts_processed_files_and_reopens_all_phase_results[skipped1-sequential]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_phase_scan_state.py::test_app_counts_processed_files_and_reopens_all_phase_results[skipped2-independent]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_phase_scan_state.py::test_app_counts_processed_files_and_reopens_all_phase_results[skipped2-sequential]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_phase_scan_state.py::test_app_counts_processed_files_and_reopens_all_phase_results[skipped3-independent]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_phase_scan_state.py::test_app_counts_processed_files_and_reopens_all_phase_results[skipped3-sequential]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_phase_scan_state.py::test_app_counts_processed_files_and_reopens_all_phase_results[skipped4-independent]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_phase_scan_state.py::test_app_counts_processed_files_and_reopens_all_phase_results[skipped4-sequential]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_phase_scan_state.py::test_app_refuses_malformed_notes_with_one_diagnostic[-1]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_phase_scan_state.py::test_app_refuses_malformed_notes_with_one_diagnostic[1.5]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_phase_scan_state.py::test_app_refuses_malformed_notes_with_one_diagnostic[18446744073709551616]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_phase_scan_state.py::test_app_refuses_malformed_notes_with_one_diagnostic[duplicate]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_phase_scan_state.py::test_app_refuses_malformed_notes_with_one_diagnostic[torn]
 0.000	tests/integration/py/test_anisotropic_adps.py::test_an_absent_type_gets_the_biso_default
 0.010	tests/integration/py/test_anisotropic_adps.py::test_anisotropic_site_exposes_the_computed_isotropic_value[Bani]
 0.010	tests/integration/py/test_anisotropic_adps.py::test_anisotropic_site_exposes_the_computed_isotropic_value[Uani]
@@ -3573,6 +3590,15 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_supp
 0.000	tests/integration/py/test_cwl_rename_bytes.py::test_native_reference_and_sample_population_cannot_be_weakened[nonfinite]
 0.010	tests/integration/py/test_cwl_rename_bytes.py::test_tch_rename_preserves_pre_change_regression_bytes[fcj-cwl-tch-pseudo-voigt-fcj]
 0.010	tests/integration/py/test_cwl_rename_bytes.py::test_tch_rename_preserves_pre_change_regression_bytes[tch-cwl-tch-pseudo-voigt]
+0.020	tests/integration/py/test_desk_build.py::test_default_gui_fetch_uses_pinned_archive_with_digest_and_deadline
+0.120	tests/integration/py/test_desk_build.py::test_failed_configure_preserves_attempt_for_next_no_export_build
+0.000	tests/integration/py/test_desk_build.py::test_missing_desktop_login_refuses_without_disclosing_output[empty]
+0.000	tests/integration/py/test_desk_build.py::test_missing_desktop_login_refuses_without_disclosing_output[failed]
+0.000	tests/integration/py/test_desk_build.py::test_missing_desktop_login_refuses_without_disclosing_output[missing]
+0.000	tests/integration/py/test_desk_build.py::test_missing_desktop_login_refuses_without_disclosing_output[timeout]
+0.000	tests/integration/py/test_desk_build.py::test_sdk_uses_cli_login_when_no_token_was_exported[GH_TOKEN]
+0.000	tests/integration/py/test_desk_build.py::test_sdk_uses_cli_login_when_no_token_was_exported[GITHUB_TOKEN]
+0.000	tests/integration/py/test_desk_build.py::test_sdk_uses_cli_login_when_no_token_was_exported[None]
 0.090	tests/integration/py/test_e01_scaffold.py::test_app_is_one_option_gated_cpp_qml_host
 0.140	tests/integration/py/test_e01_scaffold.py::test_checkout_imports_edi_without_path_injection
 0.030	tests/integration/py/test_e01_scaffold.py::test_ci_routes_surfaces_and_uses_strict_self_hosted_jobs
@@ -4660,6 +4686,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e05_t1_physical_domain.p
 0.160	tests/integration/py/test_e09_t75_sdk_consumer.py::test_sdk_download_http_method_remains_bound_to_the_addressed_read[-XPUT-osx-arm64]
 0.160	tests/integration/py/test_e09_t75_sdk_consumer.py::test_sdk_download_http_method_remains_bound_to_the_addressed_read[-dBODY-linux-64]
 0.160	tests/integration/py/test_e09_t75_sdk_consumer.py::test_sdk_download_http_method_remains_bound_to_the_addressed_read[-dBODY-osx-arm64]
+0.000	tests/integration/py/test_latp_reference.py::test_latp_reference_quantities_are_fullprof_values_not_scan_regression_pins
 0.000	tests/integration/py/test_multiphase_app_contract.py::test_linked_structure_rows_use_available_names_and_add_remove_disable_actions
 0.000	tests/integration/py/test_multiphase_app_contract.py::test_shared_block_selector_has_bounded_square_icon_steps_and_file_labels
 0.000	tests/integration/py/test_multiphase_app_contract.py::test_structure_loading_is_not_capped_at_one_and_chart_retains_phase_identity
@@ -4670,6 +4697,36 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e05_t1_physical_domain.p
 0.080	tests/integration/py/test_multiphase_constraints.py::test_same_site_id_in_two_structures_resolves_to_distinct_parameters[datablock]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_multiphase_constraints.py::test_same_site_id_in_two_structures_resolves_to_distinct_parameters[structure]
 0.010	tests/integration/py/test_multiphase_constraints.py::test_structure_added_after_project_creation_participates_in_constraints
+0.220	tests/integration/py/test_phase_scan.py::test_failure_after_solver_step_is_recorded_and_scan_continues[independent]
+0.230	tests/integration/py/test_phase_scan.py::test_failure_after_solver_step_is_recorded_and_scan_continues[sequential]
+0.150	tests/integration/py/test_phase_scan.py::test_fit_from_fitted_start_keeps_dependent_in_range[phase_sum]
+0.170	tests/integration/py/test_phase_scan.py::test_fit_from_fitted_start_keeps_dependent_in_range[scan]
+0.140	tests/integration/py/test_phase_scan.py::test_fit_from_fitted_start_keeps_dependent_in_range[single]
+0.070	tests/integration/py/test_phase_scan.py::test_joint_mode_over_declared_scan_refuses_before_outputs
+0.240	tests/integration/py/test_phase_scan.py::test_negative_points_and_zero_files_preserve_successful_scan[independent]
+0.240	tests/integration/py/test_phase_scan.py::test_negative_points_and_zero_files_preserve_successful_scan[sequential]
+0.370	tests/integration/py/test_phase_scan.py::test_phase_scan_equals_single_fits_and_recovers_linear_coefficients[independent]
+0.390	tests/integration/py/test_phase_scan.py::test_phase_scan_equals_single_fits_and_recovers_linear_coefficients[sequential]
+0.080	tests/integration/py/test_phase_scan.py::test_refusal_before_solver_stops_scan[independent]
+0.080	tests/integration/py/test_phase_scan.py::test_refusal_before_solver_stops_scan[sequential]
+0.010	tests/integration/py/test_phase_scan.py::test_scan_save_reuses_unchanged_data_inodes[save]
+0.010	tests/integration/py/test_phase_scan.py::test_scan_save_reuses_unchanged_data_inodes[save_as]
+0.170	tests/integration/py/test_phase_scan_class_boundaries.py::test_recorded_columns_equal_every_declared_free_category[chebyshev-independent]
+0.170	tests/integration/py/test_phase_scan_class_boundaries.py::test_recorded_columns_equal_every_declared_free_category[chebyshev-sequential]
+0.190	tests/integration/py/test_phase_scan_class_boundaries.py::test_recorded_columns_equal_every_declared_free_category[line-segment-independent]
+0.300	tests/integration/py/test_phase_scan_class_boundaries.py::test_recorded_columns_equal_every_declared_free_category[line-segment-sequential]
+0.170	tests/integration/py/test_phase_scan_class_boundaries.py::test_recorded_columns_equal_every_declared_free_category[polynomial-independent]
+0.170	tests/integration/py/test_phase_scan_class_boundaries.py::test_recorded_columns_equal_every_declared_free_category[polynomial-sequential]
+0.160	tests/integration/py/test_phase_scan_class_boundaries.py::test_refused_terminal_returns_same_state_as_completed_resume[independent]
+0.160	tests/integration/py/test_phase_scan_class_boundaries.py::test_refused_terminal_returns_same_state_as_completed_resume[sequential]
+0.000	tests/integration/py/test_phase_scan_class_boundaries.py::test_scan_save_excludes_its_own_destination_and_links_source[existing-False]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_phase_scan_class_boundaries.py::test_scan_save_excludes_its_own_destination_and_links_source[existing-True]
+0.000	tests/integration/py/test_phase_scan_class_boundaries.py::test_scan_save_excludes_its_own_destination_and_links_source[nested-False]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_phase_scan_class_boundaries.py::test_scan_save_excludes_its_own_destination_and_links_source[nested-True]
+0.010	tests/integration/py/test_phase_scan_class_boundaries.py::test_scan_save_excludes_its_own_destination_and_links_source[same-False]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_phase_scan_class_boundaries.py::test_scan_save_excludes_its_own_destination_and_links_source[same-True]
+0.100	tests/integration/py/test_phase_scan_class_boundaries.py::test_texture_only_scan_records_both_phase_rows[independent]
+0.100	tests/integration/py/test_phase_scan_class_boundaries.py::test_texture_only_scan_records_both_phase_rows[sequential]
 0.000	tests/integration/py/test_plain_data.py::test_nonpositive_retention_escape_is_rejected
 0.000	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[cwl/comma]
 0.000	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[cwl/headers_malformed]
@@ -4795,6 +4852,11 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_multiphase_constraints.p
 0.170	tests/integration/py/test_scan_extended_contract.py::test_selector_moves_to_main_tab_bar_once
 0.010	tests/integration/py/test_scan_extended_contract.py::test_user_page_and_scale_adr_document_approved_limits
 0.000	tests/integration/py/test_scan_extended_contract.py::test_working_copy_observer_rejects_copy_to_an_unrelated_destination
+0.000	tests/integration/py/test_scan_notes_diagnostics.py::test_cli_reports_malformed_notes_once[-1]
+0.000	tests/integration/py/test_scan_notes_diagnostics.py::test_cli_reports_malformed_notes_once[1.5]
+0.000	tests/integration/py/test_scan_notes_diagnostics.py::test_cli_reports_malformed_notes_once[18446744073709551616]
+0.000	tests/integration/py/test_scan_notes_diagnostics.py::test_cli_reports_malformed_notes_once[duplicate]
+0.000	tests/integration/py/test_scan_notes_diagnostics.py::test_cli_reports_malformed_notes_once[torn]
 0.120	tests/integration/py/test_scan_template.py::test_legacy_scan_without_template_field_preserves_model
 0.010	tests/integration/py/test_scan_template.py::test_loader_refuses_outside_template_file[../other/all594687.dat]
 0.010	tests/integration/py/test_scan_template.py::test_loader_refuses_outside_template_file[../outside.dat]
@@ -6230,6 +6292,7 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.p
 0.180	tests/system/py/test_c34_t24_cli_variants.py::test_complete_manifest_dispatches_every_declared_variant[pd-neut-tof_ncaf-wish-5bank_start-fullprof]
 0.200	tests/system/py/test_c34_t24_cli_variants.py::test_complete_manifest_dispatches_every_declared_variant[pd-neut-tof_si-sepd_start-2]
 0.220	tests/system/py/test_c34_t24_cli_variants.py::test_complete_manifest_dispatches_every_declared_variant[pd-neut-tof_si-sepd_start-5]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.py::test_complete_manifest_dispatches_every_declared_variant[pd-xray-cwl_latp_scan-4f]
 0.190	tests/system/py/test_c34_t24_cli_variants.py::test_complete_manifest_dispatches_every_declared_variant[pd-xray-cwl_lif_single]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-cwl_cosio-d20_scan-162f-0]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-cwl_cosio-d20_scan-324f-0]
@@ -6271,6 +6334,7 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.p
 1.070	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-tof_si-sepd_start-5-2]
 1.040	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-tof_si-sepd_start-5-3]
 1.580	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-tof_si-sepd_start-5-4]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-xray-cwl_latp_scan-4f-0]
 0.740	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-xray-cwl_lif_single-0]
 2.670	tests/system/py/test_c34_t24_cli_variants.py::test_later_variant_corruption_is_not_hidden_by_an_earlier_pass
 1.220	tests/system/py/test_c34_t24_declared_fit_conditions.py::test_absent_conditions_equal_explicit_engine_defaults
@@ -6863,7 +6927,14 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_cwl_cli.py::test_each_cw_prof
 0.000	tests/system/py/test_e04_t12_public_release.py::test_secret_prefix_filter_keeps_every_credential_shape[slack-p]
 0.000	tests/system/py/test_e04_t12_public_release.py::test_secret_prefix_filter_keeps_every_credential_shape[slack-r]
 0.000	tests/system/py/test_e04_t12_public_release.py::test_secret_prefix_filter_keeps_every_credential_shape[slack-s]
-2.580	tests/system/py/test_e04_t12_public_release.py::test_secret_scanner_checks_the_prepared_tree
+0.906	tests/system/py/test_e04_t12_public_release.py::test_secret_scanner_checks_the_prepared_tree[0]
+0.380	tests/system/py/test_e04_t12_public_release.py::test_secret_scanner_checks_the_prepared_tree[1]
+0.650	tests/system/py/test_e04_t12_public_release.py::test_secret_scanner_checks_the_prepared_tree[2]
+0.310	tests/system/py/test_e04_t12_public_release.py::test_secret_scanner_checks_the_prepared_tree[3]
+0.670	tests/system/py/test_e04_t12_public_release.py::test_secret_scanner_checks_the_prepared_tree[4]
+0.870	tests/system/py/test_e04_t12_public_release.py::test_secret_scanner_checks_the_prepared_tree[5]
+0.310	tests/system/py/test_e04_t12_public_release.py::test_secret_scanner_checks_the_prepared_tree[6]
+0.370	tests/system/py/test_e04_t12_public_release.py::test_secret_scanner_checks_the_prepared_tree[7]
 0.160	tests/system/py/test_e04_t12_public_release.py::test_secret_scanner_rejects_a_credential_control
 0.000	tests/system/py/test_e04_t12_public_release.py::test_source_and_application_licences_are_complete
 0.720	tests/system/py/test_e04_t12_public_release.py::test_test_and_tool_identity_is_independent_of_checkout_name
@@ -7061,6 +7132,7 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t74_ci_source_cons
 1.650	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[docs]
 0.250	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[native]
 1.580	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[notebooks]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[system]
 0.100	tests/system/py/test_e09_t74_ci_source_consumption.py::test_new_consumers_really_consuming_the_shared_sha_are_admitted[checkout]
 0.220	tests/system/py/test_e09_t74_ci_source_consumption.py::test_new_consumers_really_consuming_the_shared_sha_are_admitted[composite]
 0.210	tests/system/py/test_e09_t74_ci_source_consumption.py::test_new_consumers_really_consuming_the_shared_sha_are_admitted[run]
@@ -10089,7 +10161,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 1.059	tests/system/py/test_c34_t28_native_surface.py
 # module-cost: 1.269	tests/system/py/test_cwl_live_parameter_count.py
 # module-cost: 22.953	tests/system/py/test_e04_t10_latency.py
-# module-cost: 0.680	tests/system/py/test_e04_t12_public_release.py
+# module-cost: 0.044	tests/system/py/test_e04_t12_public_release.py
 # module-cost: 110.331	tests/system/py/test_e04_t9_latency.py
 # module-cost: 4.456	tests/system/py/test_e05_t1_background_provenance.py
 # module-cost: 1.762	tests/system/py/test_e09_t58_start_tied_numeric.py
