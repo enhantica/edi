@@ -97,3 +97,12 @@ changed predicates/messages, missing or wrong links, and receipt re-pinning atte
 
 The public-release fresh-history fixture includes this visible verifier and receipt,
 so its independent one-commit replay has the complete declared inputs.
+
+The later LATP project did not exist at the pre-move build. Its separate
+`post_feature_fixed_points` record in `saved-bytes.json` contains only hashes of
+independently committed source inputs and a second-save fixed-point invariant,
+never a fresh save-output pin. Author it with
+`python -m tests.fixtures.c34_t28_baseline.generate_bytes --add-fixed-point pd-xray-cwl_latp_scan-4f`.
+The inventory admits this one explicit addition and still requires every
+historical case. Its save witness proves complete first/second saved inventories
+and byte equality, while retaining every input byte.

@@ -41,6 +41,8 @@ python = ">=3.12"
 # The pin targets the locked version exactly, so the lock is unchanged by construction.
 ruff = "==0.15.20"
 pytest = "*"
+# CI splits the system tier into parallel jobs by recorded test times (tools/ci/system-tests-part.sh).
+pytest-split = ">=0.11.0,<0.12"
 # Owner ruling 67: the shell is pinned like any other toolchain input, so
 # `pixi run bash …` resolves the same bash on every leg. macOS ships bash 3.2 (2007) while
 # Linux runs 5.x, and edi's CI has a macOS leg. Declared HERE rather than in the linux-64
@@ -138,12 +140,12 @@ nodejs = "==22.23.2"
 # tools/ci/build-crysta.sh reads them from this file. Only an update PR or a paired PR moves them.
 [target.osx-arm64.activation.env]
 MACOSX_DEPLOYMENT_TARGET = '13.4'
-CRYSTA_SDK_TAG = "build-0d14fa4e432efcef119783a3469583b6870879f6"
-CRYSTA_SDK_SHA256 = "71bd61ba3c1245cffa1fa1874e47b95aba2d4fbf7933efdd603624fd7e500208"
+CRYSTA_SDK_TAG = "build-b4d6a484a13ed7b11a9c66ed8196ccdd37f13720"
+CRYSTA_SDK_SHA256 = "cc5823f4bb40993f6cfad33928ed128f35e7a5d503a1b87bead76912af6c31e3"
 
 [target.linux-64.activation.env]
-CRYSTA_SDK_TAG = "build-0d14fa4e432efcef119783a3469583b6870879f6"
-CRYSTA_SDK_SHA256 = "61f9d68aab40589f46e7c769bc39156d718ad84c7f2ac4be1cf99378f909f911"
+CRYSTA_SDK_TAG = "build-b4d6a484a13ed7b11a9c66ed8196ccdd37f13720"
+CRYSTA_SDK_SHA256 = "d4527b181e97766bf6631a1641062d9ba9b1a6cb32114fc44aba6b30f11b6361"
 
 [target.linux-64.dependencies]
 clangxx = "22.*"
@@ -302,6 +304,15 @@ quick-tests = { cmd = [
     "tests/unit", "tests/integration", "tests/system", "--ignore=tests/integration/app",
     "-q",
 ], depends-on = ["core-build"] }
+# CI runs the same selection as parallel jobs (owner, 2026-10-08): `core-tests` (unit and integration) in
+# the core job, and `system-tests-part <part>` for each third of the system tier, split by recorded test
+# times (tools/ci/system-tests-part.sh). Together they are exactly quick-tests' selection.
+core-tests = { cmd = [
+    "python", "-m", "pytest",
+    "tests/unit", "tests/integration", "--ignore=tests/integration/app",
+    "-q",
+], depends-on = ["core-build"] }
+system-tests-part = { cmd = ["bash", "tools/ci/system-tests-part.sh"], depends-on = ["core-build"] }
 # --- core (C++) ---------------------------------------------------------------------- / item 8: the
 # pinned crysta SDK (downloaded or reused, never compiled) and its source, for every prefix reader — also
 # in a consumer job, where core-build only restores the native build.

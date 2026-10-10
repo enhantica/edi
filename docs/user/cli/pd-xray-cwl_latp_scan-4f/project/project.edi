@@ -1,0 +1,36 @@
+_edi.schema_version 3
+
+_metadata.name             latp_scan
+_metadata.title            "LATP synchrotron X-ray sequential scan, three phases"
+_metadata.description      "Li1.3Al0.3Ti1.7(PO4)3 with two AlPO4 phases; model from latp.pcr (FullProf chi2 7.05 on s13_150_z20_xrd_sum.dat)"
+_metadata.created          "07 Oct 2026 11:30:00"
+_metadata.last_modified    "07 Oct 2026 11:30:00"
+_metadata.timestamp        2026-10-07T09:30:00+00:00
+
+_rendering_plot.type auto
+
+_report.cif false
+_report.html true
+_report.tex false
+_report.pdf false
+_report.html_offline false
+
+_rendering_table.type auto
+
+_rendering_structure.type auto
+
+_structure_view.show_labels false
+_structure_view.show_moments true
+_structure_view.range_a_min 0.
+_structure_view.range_a_max 1.
+_structure_view.range_b_min 0.
+_structure_view.range_b_max 1.
+_structure_view.range_c_min 0.
+_structure_view.range_c_max 1.
+
+_structure_style.atom_view adp
+_structure_style.color_scheme jmol
+_structure_style.adp_probability 0.99
+_structure_style.atom_scale 0.3
+
+_verbosity.fit short

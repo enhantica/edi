@@ -724,5 +724,22 @@
     }
   },
   "kind": "pre-move serialization regression pin",
+  "post_feature_fixed_points": {
+    "repo:docs/user/cli/pd-xray-cwl_latp_scan-4f/project": {
+      "input_sha256": {
+        "analysis/analysis.edi": "30e5b254899ee9ee803ecab5e65f4d24249268562b3011a0e15114d40a838945",
+        "experiments/latp.edi": "651a5f307d158c673dfc8b15a5730045e353b41ec075461ee7ced4808fc50e96",
+        "experiments/latp_scan/pattern_0_0001.txt": "eae36410cf05b182acade8bd670d00e25958a552b0030b6d4b0ac376104e9564",
+        "experiments/latp_scan/pattern_0_0002.txt": "ac1c4e39dae857ef4e0eb71a7f88a56a9b5cb3195ec46d2e139fa050701a3019",
+        "experiments/latp_scan/pattern_0_0003.txt": "ef8ecd0d177820f049d1fd65fc2efb581d543ddf08c771e987ca78835164d25c",
+        "experiments/latp_scan/pattern_0_0004.txt": "e9fa0d3edb3f5f2d595e9c4cf7fdfee9162d17fcfc62cb6bee684dcdfba3e86c",
+        "project.edi": "94e30e9243ea30e9e0eead4b79584fa5f882b95081828cd511388034ab35c46b",
+        "structures/alpo4_c2221.edi": "38397c4609196c2aa08d24019658331d13d3592249d9f5a9efc6f105b280af65",
+        "structures/alpo4_p63mc.edi": "96a589ebce83fbfddb3f05b79c0888bab799264fd37965fe7c65522eaf56e4c2",
+        "structures/latp.edi": "43c03a58b8813d99e0196532745e7f8e00e94fd9fd1d00cc2844f21e09ba930d"
+      },
+      "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+    }
+  },
   "source_commit": "f3ea7afea400639f2a66d6acb8d922163f1ef128"
 }

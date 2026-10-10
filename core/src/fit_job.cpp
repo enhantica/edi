@@ -128,7 +128,11 @@ FitFrame scan_frame_of(Project& preview, const std::string& directory, const Sca
     FitFrame frame;
     try {
         if (header.empty()) {
-            std::ifstream input(std::filesystem::path(preview.path) / "analysis" / "results.csv");
+            const std::filesystem::path results = std::filesystem::path(preview.path) / "analysis" / "results.csv";
+            if (!scan_state_present(results, "analysis/results.csv")) {
+                return {};
+            }
+            std::ifstream input(results);
             std::string line;
             if (!std::getline(input, line)) {
                 return {};
