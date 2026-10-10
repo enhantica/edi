@@ -16,6 +16,11 @@ EDI_WASM_CHROME=146.0.7680.153
 EDI_WASM_BROWSERS_NPM=2.13.2
 : "${EDI_WASM_TOOLCHAIN:=$HOME/.cache/edi-wasm}"
 
+# The locked Playwright driver and its WebKit (tools/ci/wasm-webkit.sh), for the route check.
+wasm_playwright_dir() {
+  printf '%s\n' "$EDI_WASM_TOOLCHAIN/playwright"
+}
+
 # wasm_check_emsdk_pin <kit dir>: the kit's recorded Emscripten version must be EDI_WASM_EMSDK.
 wasm_check_emsdk_pin() {
   local want

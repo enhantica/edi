@@ -3,6 +3,7 @@
 
 #include "app_build_info.hpp"
 #include "edi/structure_scene.hpp"
+#include "edi/threading.hpp"
 
 #include <QClipboard>
 #include <QFile>
@@ -151,6 +152,11 @@ QString ApplicationInfo::diagnostics() const {
 #else
     add(QStringLiteral("Threads (OpenMP team)"), QStringLiteral("no OpenMP"));
 #endif
+    // The engine's own report: which backend its parallel fill runs on, with how many threads, and SIMD.
+    const edi::EngineThreading engine = edi::engine_threading();
+    add(QStringLiteral("Engine backend"), QString::fromLatin1(engine.backend));
+    add(QStringLiteral("Engine workers"), QString::number(engine.workers));
+    add(QStringLiteral("WebAssembly SIMD"), engine.wasm_simd ? QStringLiteral("on") : QStringLiteral("off"));
 #ifdef Q_OS_WASM
     using emscripten::val;
     const val window = val::global("window");

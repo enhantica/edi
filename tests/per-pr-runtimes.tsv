@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-08T18:46:19Z
+# measured_utc = 2026-10-08T21:00:31Z
 #
-# Recorded from: green-shared.log (34 node(s) measured once, 9035 banked, 0 stale row(s) dropped)
-# Collected tests: 9731; with a reported duration: 4935
+# Recorded from: merge of banked rows from cc6719c and 855a426d; measured values and declared holes retained
+# Collected tests: 9766; with a reported duration: 4939
 # Module-scoped fixture costs recorded: 29
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 9731
+# inventory_python = 9766
 # inventory_cpp = 302
-# inventory_measured = 9069
-# inventory_unmeasured = 964
+# inventory_measured = 9103
+# inventory_unmeasured = 965
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -8543,6 +8543,12 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_
 1.190	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[follow]
 1.400	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[joint]
 1.000	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[state]
+UNMEASURED:failed-in-this-run	tests/system/py/test_web_parallel_build.py::test_app_pthread_pool_is_preallocated_and_sized_for_the_engine
+0.610	tests/system/py/test_web_parallel_build.py::test_each_kit_selects_its_own_engine_backend_and_simd
+0.180	tests/system/py/test_web_parallel_oracles.py::test_native_fit_retains_the_owner_five_iteration_final_values
+0.000	tests/system/py/test_web_parallel_oracles.py::test_owner_five_bank_reference_is_not_a_generated_web_pin
+0.140	tests/system/py/test_web_parallel_oracles.py::test_web_fit_native_reference_covers_parameters_and_calculated_pattern[lbco]
+1.050	tests/system/py/test_web_parallel_oracles.py::test_web_fit_native_reference_covers_parameters_and_calculated_pattern[ncaf]
 0.010	tests/system/py/test_yap_agreement.py::test_delivered_yap_project_has_both_phases_and_physical_occupancies
 0.000	tests/system/py/test_yap_agreement.py::test_verification_page_executes_the_owner_reference_comparison
 3.160	tests/system/py/test_yap_agreement.py::test_yap_fit_agrees_with_every_other_fullprof_parameter_and_rwp
@@ -10053,6 +10059,35 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 0.000	tests/unit/py/test_verification_helpers.py::test_restrict_to_included_masks_excluded_regions
 0.000	tests/unit/py/test_verification_helpers.py::test_set_reference_as_measured_seeds_grid_observed_and_unit_sigma
 0.000	tests/unit/py/test_verification_helpers.py::test_tabbed_prf_skips_reflection_marker_rows
+0.000	tests/unit/py/test_web_parallel_numeric.py::test_saved_numeric_comparison_retains_document_row_and_token_inventory[actual0]
+0.000	tests/unit/py/test_web_parallel_numeric.py::test_saved_numeric_comparison_retains_document_row_and_token_inventory[actual1]
+0.000	tests/unit/py/test_web_parallel_numeric.py::test_saved_numeric_comparison_retains_document_row_and_token_inventory[actual2]
+0.000	tests/unit/py/test_web_parallel_numeric.py::test_saved_numeric_comparison_retains_document_row_and_token_inventory[actual3]
+0.000	tests/unit/py/test_web_parallel_numeric.py::test_saved_parameter_components_use_numeric_units_and_native_bounds[-.5(3)--0.5(0.3)]
+0.000	tests/unit/py/test_web_parallel_numeric.py::test_saved_parameter_components_use_numeric_units_and_native_bounds[1.0(1)-1.00(10)]
+0.000	tests/unit/py/test_web_parallel_numeric.py::test_saved_parameter_components_use_numeric_units_and_native_bounds[1.234(7)-1.234(.007)]
+0.000	tests/unit/py/test_web_parallel_numeric.py::test_saved_parameter_components_use_numeric_units_and_native_bounds[1.2340(70)-1.234(7)]
+0.000	tests/unit/py/test_web_parallel_numeric.py::test_saved_parameter_components_use_numeric_units_and_native_bounds[18.(1)-18.0(1.0)]
+0.000	tests/unit/py/test_web_parallel_numeric.py::test_saved_parameter_components_use_numeric_units_and_native_bounds[2.125()-2.125000001()]
+0.000	tests/unit/py/test_web_parallel_numeric.py::test_saved_parameter_components_use_numeric_units_and_native_bounds[2.125(.0000000004)-2.125(.000000000001)]
+0.000	tests/unit/py/test_web_parallel_numeric.py::test_saved_parameter_components_use_numeric_units_and_native_bounds[2.125(0.250000001)-2.125(0.25)]
+0.000	tests/unit/py/test_web_parallel_numeric.py::test_saved_parameter_components_use_numeric_units_and_native_bounds[2.125000001(.25)-2.125(.25)]
+0.000	tests/unit/py/test_web_parallel_numeric.py::test_saved_parameter_components_use_numeric_units_and_native_bounds[2.125e3-2125.0]
+0.000	tests/unit/py/test_web_parallel_numeric.py::test_saved_parameter_refuses_changed_components_and_invalid_operands[1.0(1)-1.00(1)]
+0.000	tests/unit/py/test_web_parallel_numeric.py::test_saved_parameter_refuses_changed_components_and_invalid_operands[1.2e3(4)-1.2e3(4)]
+0.000	tests/unit/py/test_web_parallel_numeric.py::test_saved_parameter_refuses_changed_components_and_invalid_operands[2.125()-2.125(0)]
+0.000	tests/unit/py/test_web_parallel_numeric.py::test_saved_parameter_refuses_changed_components_and_invalid_operands[2.125()-2.125]
+0.000	tests/unit/py/test_web_parallel_numeric.py::test_saved_parameter_refuses_changed_components_and_invalid_operands[2.125(-0.25)-2.125(-0.25)]
+0.000	tests/unit/py/test_web_parallel_numeric.py::test_saved_parameter_refuses_changed_components_and_invalid_operands[2.125(.000000002)-2.125(.000000000001)]
+0.000	tests/unit/py/test_web_parallel_numeric.py::test_saved_parameter_refuses_changed_components_and_invalid_operands[2.125(.25)-not-a-number]
+0.000	tests/unit/py/test_web_parallel_numeric.py::test_saved_parameter_refuses_changed_components_and_invalid_operands[2.125(.25)junk-2.125(.25)junk]
+0.000	tests/unit/py/test_web_parallel_numeric.py::test_saved_parameter_refuses_changed_components_and_invalid_operands[2.125(.250000002)-2.125(.25)]
+0.000	tests/unit/py/test_web_parallel_numeric.py::test_saved_parameter_refuses_changed_components_and_invalid_operands[2.125(inf)-2.125(inf)]
+0.000	tests/unit/py/test_web_parallel_numeric.py::test_saved_parameter_refuses_changed_components_and_invalid_operands[2.125(nan)-2.125(nan)]
+0.000	tests/unit/py/test_web_parallel_numeric.py::test_saved_parameter_refuses_changed_components_and_invalid_operands[2.125-2.125(.25)]
+0.000	tests/unit/py/test_web_parallel_numeric.py::test_saved_parameter_refuses_changed_components_and_invalid_operands[2.12501(.25)-2.125(.25)]
+0.000	tests/unit/py/test_web_parallel_numeric.py::test_saved_parameter_refuses_changed_components_and_invalid_operands[inf-inf]
+0.000	tests/unit/py/test_web_parallel_numeric.py::test_saved_parameter_refuses_changed_components_and_invalid_operands[nan-nan]
 0.000	tests/unit/py/test_workflow_event_context.py::test_actions_equality_matches_documented_coercion['' != false-False]
 0.000	tests/unit/py/test_workflow_event_context.py::test_actions_equality_matches_documented_coercion['' == false-True]
 0.000	tests/unit/py/test_workflow_event_context.py::test_actions_equality_matches_documented_coercion['0' == false-True]
