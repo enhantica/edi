@@ -416,17 +416,21 @@ TestCase {
             ink.text = expected[i].licence;
             verify(cells[2].width >= Math.ceil(ink.advanceWidth), "The actual licence column fits each complete independently supplied licence expression");
         }
-        const eigen = expected.findIndex(row => row.component === "Eigen");
-        verify(eigen >= 0, "The frozen notice input contains an independent MPL component witness");
-        table.positionViewAtIndex(eigen, ListView.Center);
-        table.forceLayout();
-        const row = table.itemAtIndex(eigen);
-        mouseClick(row, row.width / 2, row.height / 2);
-        const text = textInDialog(dialog, "about.components.licence");
-        tryVerify(() => text.getText(0, text.length).includes("Mozilla Public License"), 2000, "Selecting a real component shows its own licence text below the table");
-        verify(formatted(text), "Selected third-party licence text uses consistent formatted rendering");
-        verify(text.mapToItem(dialog.contentItem, 0, 0).y >= table.mapToItem(dialog.contentItem, 0, table.height).y, "The selected component licence is rendered below the structured table");
-        singleAbout(original);
+        const licenceTexts = JSON.parse(Probe.readFile("tests/fixtures/table_display/notices.json")).licenceTexts;
+        for (const component of ["SLEEF", "Eigen"]) {
+            const index = expected.findIndex(row => row.component === component);
+            verify(index >= 0, "The frozen notice input contains each independently licensed component witness");
+            table.positionViewAtIndex(index, ListView.Center);
+            table.forceLayout();
+            const row = table.itemAtIndex(index);
+            verify(row !== null, "The selected independent component has a real visible row");
+            mouseClick(row, row.width / 2, row.height / 2);
+            const text = textInDialog(dialog, "about.components.licence");
+            tryVerify(() => normalized(text.getText(0, text.length)) === normalized(licenceTexts[component]), 2000, "Selecting different real components shows each complete independent licence below the table");
+            verify(formatted(text), "Selected third-party licence text uses consistent formatted rendering");
+            verify(text.mapToItem(dialog.contentItem, 0, 0).y >= table.mapToItem(dialog.contentItem, 0, table.height).y, "The selected component licence is rendered below the structured table");
+            singleAbout(original);
+        }
         for (const item of actualText(dialog.contentItem).filter(item => item.objectName.startsWith("about.tab.")))
             verify(item.font.pixelSize <= Style.Sizes.fontPixelSize * 1.25, "About headings retain the app-sized typography");
     }

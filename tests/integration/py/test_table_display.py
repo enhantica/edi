@@ -5,6 +5,7 @@ import re
 import shlex
 import shutil
 import subprocess
+from html.parser import HTMLParser
 from pathlib import Path
 
 import pytest
@@ -128,40 +129,86 @@ def test_displayed_sequential_counts_consume_state_colours(summary, ok, failed):
     pieces = run_functions(
         ROOT / 'app/qml/Components/StatusBar.qml', [], [], fit=fit, consumer='scan'
     )
-    visible = [piece['text'] for piece in pieces]
-    expected_ok = f'<font color="#009900">{ok} ok</font>' if ok else '0 ok'
-    expected_fail = f'<font color="#cc0000">{failed} fail</font>' if failed else '0 fail'
-    assert expected_ok in visible and expected_fail in visible, (
-        'Running scans and completed summaries display state-coloured counts '
-        'through their real consumer bindings'
+
+    class Ink(HTMLParser):
+        def __init__(self, colour):
+            super().__init__()
+            self.stack = [('root', colour)]
+            self.characters = []
+
+        def handle_starttag(self, tag, attrs):
+            values = dict(attrs)
+            colour = values.get('color', self.stack[-1][1])
+            style = re.search(r'(?:^|;)\s*color\s*:\s*([^;]+)', values.get('style', ''))
+            self.stack.append((tag, style[1].strip() if style else colour))
+
+        def handle_endtag(self, tag):
+            for index in range(len(self.stack) - 1, 0, -1):
+                if self.stack[index][0] == tag:
+                    self.stack = self.stack[:index]
+                    break
+
+        def handle_data(self, data):
+            self.characters.extend((char, self.stack[-1][1]) for char in data)
+
+    characters = []
+    for piece in pieces:
+        assert piece['format'] in {1, 2}, (
+            'The visible count Text interprets colour markup instead of displaying literal tags'
+        )
+        ink = Ink(piece['color'])
+        ink.feed(piece['text'])
+        characters.extend(ink.characters)
+        characters.append((' ', '#111111'))
+    displayed = ''.join(char for char, _ in characters)
+    expected_ok, expected_fail = f'{ok} ok', f'{failed} fail'
+    assert expected_ok in displayed and expected_fail in displayed, (
+        'Running scans and completed summaries display both supplied count words'
     )
-    assert all(piece['format'] in {1, 2} for piece in pieces), (
-        'The visible count Text interprets colour markup instead of displaying literal tags'
-    )
+    for word, count, colour in ((expected_ok, ok, '#009900'), (expected_fail, failed, '#cc0000')):
+        start = displayed.index(word)
+        actual = {value for _, value in characters[start : start + len(word)]}
+        assert actual == {colour} if count else actual <= {'#111111', '#666666'}, (
+            'Running scans and completed summaries display state-coloured counts '
+            'through their real consumer bindings; zero remains neutral'
+        )
     assert (
-        visible.index(expected_ok)
-        < visible.index(expected_fail)
-        < visible.index('1s')
-        < visible.index('χ² 1.4')
+        displayed.index(expected_ok)
+        < displayed.index(expected_fail)
+        < displayed.index('1s')
+        < displayed.index('χ² 1.4')
     ), 'The visible sequential consumer retains count, time and goodness-of-fit order'
-    assert any(part.endswith('10 files') for part in visible) == summary and (
-        'eta 2s' in visible
-    ) == (not summary), (
+    assert ('10 files' in displayed) == summary and ('eta 2s' in displayed) == (not summary), (
         'The actual consumer distinguishes running progress from the completed scan summary'
     )
 
 
-def test_scan_consumer_gate_rejects_an_unused_correct_colour_helper(tmp_path, monkeypatch):
+@pytest.mark.parametrize('escape', ['unused-formatter', 'coloured-zero'])
+def test_scan_consumer_gate_rejects_disconnected_or_coloured_zero_display(
+    tmp_path, monkeypatch, escape
+):
     source = (ROOT / 'app/qml/Components/StatusBar.qml').read_text()
     neutral = '[qsTr("%1 ok").arg(bar.fit.scanOk), qsTr("%1 fail").arg(bar.fit.scanFailed)]'
-    mutated = source.replace('fitArea.counts()', neutral)
+    if escape == 'unused-formatter':
+        mutated = source.replace('fitArea.counts()', neutral)
+        ok, failed = 7, 3
+    else:
+        start = source.index('id: numberText')
+        tail = re.sub(
+            r'(?m)^(\s*color:)[^\n]+', r'\1 EaStyle.Colors.green', source[start:], count=1
+        )
+        mutated = source[:start] + tail
+        ok, failed = 0, 0
     assert mutated != source, 'The consumer escape exercise reaches the actual scan text binding'
     target = tmp_path / 'app/qml/Components/StatusBar.qml'
     target.parent.mkdir(parents=True)
     target.write_text(mutated)
+    singleton = tmp_path / 'app/qml/Globals/FitOutcomes.qml'
+    singleton.parent.mkdir(parents=True)
+    singleton.write_text((ROOT / 'app/qml/Globals/FitOutcomes.qml').read_text())
     monkeypatch.setitem(
         test_displayed_sequential_counts_consume_state_colours.__globals__, 'ROOT', tmp_path
     )
     for summary in (False, True):
         with pytest.raises(AssertionError, match='display state-coloured counts'):
-            test_displayed_sequential_counts_consume_state_colours(summary, 7, 3)
+            test_displayed_sequential_counts_consume_state_colours(summary, ok, failed)

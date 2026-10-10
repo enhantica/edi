@@ -1,5 +1,6 @@
 const fs = require("node:fs");
 const vm = require("node:vm");
+const path = require("node:path");
 const request = JSON.parse(fs.readFileSync(0, "utf8"));
 function extract(source, name) {
     const start = source.indexOf("function " + name + "(");
@@ -14,7 +15,7 @@ function extract(source, name) {
     return source.slice(start, end);
 }
 const source = fs.readFileSync(request.source, "utf8");
-const context = vm.createContext({bar: {fit: request.fit}, EaStyle: {Colors: {red: "#cc0000", green: "#009900", orange: "#cc9900", chartForegroundsExtra: ["#000000", "#009900"]}}});
+const context = vm.createContext({bar: {fit: request.fit}, EaStyle: {Colors: {red: "#cc0000", green: "#009900", orange: "#cc9900", themeForeground: "#111111", themeForegroundMinor: "#666666", chartForegroundsExtra: ["#000000", "#009900"]}}});
 vm.runInContext('String.prototype.arg = function(value) { return this.replace("%1", value); }; function qsTr(text) { return text; }; this.NumberText = this;', context);
 const names = new Set([...request.functions, ...Array.from(source.matchAll(/^\s*function (\w+)\(/gm), match => match[1])]);
 vm.runInContext(Array.from(names, name => extract(source, name)).join("\n"), context);
@@ -36,7 +37,10 @@ if (request.consumer === "scan") {
         if (depth) throw new Error("The displayed binding is incomplete");
         return "(function() " + source.slice(start, end) + ")()";
     }
-    context.FitOutcomes = {separator: " → "};
+    const outcomes = fs.readFileSync(path.resolve(path.dirname(request.source), "../Globals/FitOutcomes.qml"), "utf8");
+    const separator = /^\s*readonly property string separator:\s*([^\n]+)/m.exec(outcomes);
+    if (!separator) throw new Error("The actual fit singleton separator binding is absent");
+    context.FitOutcomes = {separator: vm.runInContext(separator[1], context)};
     context.Text = {StyledText: 1, RichText: 2, PlainText: 0};
     context.fitArea = {counts: context.counts, joined: context.joined};
     for (const property of ["running", "scanning", "chi", "iterations"])
@@ -48,7 +52,8 @@ if (request.consumer === "scan") {
     const result = pieces.map((modelData, index) => {
         context.valuePart = {modelData, index};
         return {text: vm.runInContext(binding("numberText", "text"), context),
-            format: vm.runInContext(binding("numberText", "textFormat"), context)};
+            format: vm.runInContext(binding("numberText", "textFormat"), context),
+            color: vm.runInContext(binding("numberText", "color"), context)};
     });
     console.log(JSON.stringify(result));
 } else {
