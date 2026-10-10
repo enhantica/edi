@@ -1232,10 +1232,15 @@ std::filesystem::path scan_results_path(const Project& project) {
 // Why each file's fit stopped, from crysta's ledger (`termination`, its fifth column), read in step with
 // results.csv: crysta writes a file's ledger row just before its results row, so the k-th of each name the same
 // file. Reading both together keeps one row in memory, not the whole scan's. A ledger written before it recorded
-// the reason, none, or one whose row names another file gives nothing from there on.
+// the reason, none, or one whose row names another file gives nothing from there on; a path there that is not a
+// regular file throws (scan_state_present).
 class LedgerReader {
    public:
-    explicit LedgerReader(const std::filesystem::path& path) : input_(path, std::ios::binary) {
+    explicit LedgerReader(const std::filesystem::path& path) {
+        if (!scan_state_present(path, "analysis/results-provenance.csv")) {
+            return;  // no ledger: no reasons
+        }
+        input_.open(path, std::ios::binary);
         std::string line;
         if (std::getline(input_, line)) {
             const std::vector<std::string> header = split_scan_row(line);
@@ -1264,6 +1269,9 @@ class LedgerReader {
 // The termination the ledger's last line records for `file_cell`; empty when that line is another file's, the
 // ledger does not record reasons, or there is none. Reads only the file's end.
 std::string ledger_termination(const std::filesystem::path& path, const std::string& file_cell) {
+    if (!scan_state_present(path, "analysis/results-provenance.csv")) {
+        return {};
+    }
     std::ifstream input(path, std::ios::binary | std::ios::ate);
     if (!input) {
         return {};
@@ -1392,15 +1400,22 @@ std::pair<std::size_t, ScanResultIndex::Row> scan_row_facts(const Project& /*pro
         refuse("names a file that is not one of the scan's");
     }
     ScanResultIndex::Row row;
-    if (!parse_scan_number(cells[index.chi], row.reduced_chi_square) || !std::isfinite(row.reduced_chi_square) ||
-        row.reduced_chi_square < 0.0) {
-        refuse("has no finite, non-negative reduced chi-square");
-    }
     const std::string& success = cells[index.success];
     if (success != "True" && success != "False") {
         refuse("has '" + success + "' for its success, where crysta writes True or False");
     }
     row.converged = success == "True";
+    // A failed row (a refused fit) has `nan` for what its fit never produced.
+    const auto number = [&row](const std::string& cell, double& value) {
+        if (!row.converged && cell == "nan") {
+            value = std::numeric_limits<double>::quiet_NaN();
+            return true;
+        }
+        return parse_scan_number(cell, value) && std::isfinite(value);
+    };
+    if (!number(cells[index.chi], row.reduced_chi_square) || row.reduced_chi_square < 0.0) {
+        refuse("has no finite, non-negative reduced chi-square");
+    }
     double iterations = 0.0;
     if (!parse_scan_number(cells[index.iterations], iterations) || iterations < 0 ||
         iterations != std::floor(iterations) || iterations > std::numeric_limits<int>::max()) {
@@ -1415,13 +1430,124 @@ std::pair<std::size_t, ScanResultIndex::Row> scan_row_facts(const Project& /*pro
         if (!parse_scan_number(cells[parameter.value], value) || !std::isfinite(value)) {
             refuse("has no finite value for '" + parameter.name + "'");
         }
-        if (!parse_scan_number(cells[parameter.uncertainty], uncertainty) || !std::isfinite(uncertainty) ||
-            uncertainty < 0.0) {
+        if (!number(cells[parameter.uncertainty], uncertainty) || uncertainty < 0.0) {
             refuse("has no finite, non-negative uncertainty for '" + parameter.name + "'");
         }
     }
     return {found->second, std::move(row)};
 }
+
+bool scan_state_present(const std::filesystem::path& path, const std::string& label) {
+    std::error_code error;
+    const std::filesystem::file_status link = std::filesystem::symlink_status(path, error);
+    if (link.type() == std::filesystem::file_type::not_found) {
+        return false;
+    }
+    if (link.type() == std::filesystem::file_type::none) {
+        throw std::invalid_argument(label + ": cannot tell whether it exists: " + error.message());
+    }
+    if (!std::filesystem::is_regular_file(std::filesystem::status(path, error))) {
+        throw std::invalid_argument(label + ": it is there but is not a regular file");
+    }
+    return true;
+}
+
+std::int64_t read_scan_notes(const Project& project, const ScanPlaces& places, ScanResultIndex& index,
+                             std::int64_t from, bool writing) {
+    const std::filesystem::path path = scan_results_path(project).parent_path() / "scan-notes.csv";
+    if (!scan_state_present(path, "analysis/scan-notes.csv")) {
+        return from;
+    }
+    std::ifstream input(path, std::ios::binary);
+    if (!input) {
+        throw std::invalid_argument("analysis/scan-notes.csv cannot be read");
+    }
+    const auto refuse = [](const std::string& why) {
+        throw std::invalid_argument("analysis/scan-notes.csv: " + why +
+                                    "; the skipped and refused files cannot be known");
+    };
+    std::string line;
+    std::int64_t end = from;
+    if (from == 0) {
+        if (!std::getline(input, line)) {
+            if (writing && !input.bad()) {
+                return 0;  // created by the run, nothing written yet
+            }
+            refuse(input.bad() ? "it could not be read" : "it is empty");
+        }
+        if (input.eof()) {
+            if (writing) {
+                return 0;
+            }
+            refuse("its header is not complete");
+        }
+        if (split_scan_row(line) !=
+            std::vector<std::string>{"file_path", "negative_points", "skipped_dataset", "refusal"}) {
+            refuse("its header is not file_path,negative_points,skipped_dataset,refusal");
+        }
+        end = input.tellg();
+    } else {
+        input.seekg(from);
+        if (!input) {
+            refuse("it could not be read from where the last read stopped");
+        }
+    }
+    const std::string directory = project.sequential_fit.data_dir + "/";
+    while (std::getline(input, line)) {
+        if (input.eof()) {
+            if (writing) {
+                break;  // a line still being written
+            }
+            refuse("its last line is not complete");
+        }
+        const std::vector<std::string> cells = split_scan_row(line);
+        if (cells.size() != 4) {
+            refuse("a line has " + std::to_string(cells.size()) + " cells, not 4");
+        }
+        std::string_view name(cells[0]);
+        if (name.starts_with(directory)) {
+            name.remove_prefix(directory.size());
+        }
+        const auto found = places.find(std::string(name));
+        if (found == places.end()) {
+            refuse("'" + cells[0] + "' is not one of the scan's files");
+        }
+        // A count of points: decimal digits only, proved in range before it is converted.
+        const std::string& count = cells[1];
+        if (count.empty() || count.size() > 12 ||
+            !std::all_of(count.begin(), count.end(), [](char c) { return c >= '0' && c <= '9'; })) {
+            refuse("the negative_points of '" + cells[0] + "' is '" + count +
+                   "', not a whole number of at most 12 digits");
+        }
+        if (cells[2] != "True" && cells[2] != "False") {
+            refuse("the skipped_dataset of '" + cells[0] + "' is '" + cells[2] + "', not True or False");
+        }
+        ScanResultIndex::Row& row = index.rows[found->second];
+        if (row.noted) {
+            refuse("'" + cells[0] + "' is named twice");
+        }
+        row.noted = true;
+        row.negative_points = static_cast<std::size_t>(std::stoull(count));
+        row.refusal = cells[3];
+        // A file with a results row was fitted, whatever an earlier run noted about it.
+        if (cells[2] == "True" && row.offset < 0) {
+            row.skipped = true;
+            ++index.skipped;
+        }
+        end = input.tellg();
+    }
+    if (input.bad()) {
+        refuse("it could not be read to its end");
+    }
+    return end;
+}
+
+namespace {
+
+ScanResultIndex index_scan_rows(const Project& project, const ScanDatasets& datasets, const ScanPlaces& places,
+                                bool writing);
+
+}  // namespace
 
 ScanResultIndex index_scan_results(const Project& project, const ScanDatasets& datasets, bool writing) {
     return index_scan_results(project, datasets, scan_places(datasets), writing);
@@ -1429,6 +1555,42 @@ ScanResultIndex index_scan_results(const Project& project, const ScanDatasets& d
 
 ScanResultIndex index_scan_results(const Project& project, const ScanDatasets& datasets, const ScanPlaces& places,
                                    bool writing) {
+    ScanResultIndex index = index_scan_rows(project, datasets, places, writing);
+    if (index.error.empty()) {
+        try {
+            index.notes_end = read_scan_notes(project, places, index, 0, writing);
+        } catch (const std::exception& refusal) {
+            ScanResultIndex error;
+            error.error = refusal.what();
+            error.rows.resize(datasets.files.size());
+            return error;
+        }
+    }
+    return index;
+}
+
+ScanNotesReport scan_notes_report(const Project& project) {
+    const ScanDatasets datasets = scan_datasets(project);
+    const ScanResultIndex index = index_scan_results(project, datasets, false);
+    if (!index.error.empty()) {
+        throw std::invalid_argument(index.error);
+    }
+    ScanNotesReport report;
+    report.skipped = index.skipped;
+    for (std::size_t place = 0; place < index.rows.size(); ++place) {
+        const ScanResultIndex::Row& row = index.rows[place];
+        report.negative_points += row.negative_points;
+        if (!row.refusal.empty()) {
+            report.refused.emplace_back(datasets.files[place], row.refusal);
+        }
+    }
+    return report;
+}
+
+namespace {
+
+ScanResultIndex index_scan_rows(const Project& project, const ScanDatasets& datasets, const ScanPlaces& places,
+                                bool writing) {
     ScanResultIndex index;
     index.rows.resize(datasets.files.size());
     const auto refused = [&datasets](const std::string& why) {
@@ -1440,9 +1602,15 @@ ScanResultIndex index_scan_results(const Project& project, const ScanDatasets& d
     // Only a file that is not there is no results; one that is there must read whole: a header, and complete
     // rows. A line still being written is expected only while a run writes (`writing`).
     const std::filesystem::path path = scan_results_path(project);
-    std::error_code status;
-    if (!std::filesystem::exists(path, status)) {
-        return status ? refused("cannot tell whether it exists: " + status.message()) : index;
+    try {
+        if (!scan_state_present(path, "analysis/results.csv")) {
+            return index;
+        }
+    } catch (const std::exception& refusal) {
+        ScanResultIndex error;
+        error.error = refusal.what();
+        error.rows.resize(datasets.files.size());
+        return error;
     }
     std::ifstream input(path, std::ios::binary);
     if (!input) {
@@ -1491,7 +1659,13 @@ ScanResultIndex index_scan_results(const Project& project, const ScanDatasets& d
     return index;
 }
 
+}  // namespace
+
 std::vector<std::string> read_scan_row(const Project& project, std::int64_t offset) {
+    if (!scan_state_present(scan_results_path(project), "analysis/results.csv")) {
+        throw std::invalid_argument("analysis/results.csv is not there; it has no row at byte " +
+                                    std::to_string(offset));
+    }
     std::ifstream input(scan_results_path(project), std::ios::binary);
     std::string line;
     if (!input || offset < 0 || !input.seekg(offset) || !std::getline(input, line) || input.eof()) {
@@ -3679,7 +3853,9 @@ std::optional<ScanFileRecord> scan_record_from_cells(const std::vector<std::stri
     const std::size_t slash = cells[0].rfind('/');
     record.file_name = slash == std::string::npos ? cells[0] : cells[0].substr(slash + 1);
     record.converged = cells[2] == "True";
-    if (!parse_csv_cell(cells[1], record.reduced_chi_square)) {
+    if (!record.converged && cells[1] == "nan") {
+        record.reduced_chi_square = std::numeric_limits<double>::quiet_NaN();  // a refused fit
+    } else if (!parse_csv_cell(cells[1], record.reduced_chi_square)) {
         return std::nullopt;
     }
     if (!parse_csv_cell(cells[3], record.iterations)) {
@@ -3704,11 +3880,14 @@ std::optional<ScanFileRecord> scan_record_from_row(const std::string& line) {
     return scan_record_from_cells(cells);
 }
 
-// Every currently committed data row (header skipped). An unreadable or missing file reads as
-// zero rows — the same view crysta's driver takes of a fresh scan; a torn/foreign file is the
-// driver's own fail-closed refusal, which edi does not preempt here.
+// Every currently committed data row (header skipped). A missing or unreadable file reads as zero rows (the same
+// view crysta's driver takes of a fresh scan) and a path that is not a regular file throws; a torn or foreign file
+// is the driver's own fail-closed refusal, which edi does not preempt here.
 std::vector<ScanFileRecord> read_scan_rows(const std::filesystem::path& csv_path) {
     std::vector<ScanFileRecord> rows;
+    if (!scan_state_present(csv_path, "analysis/results.csv")) {
+        return rows;
+    }
     std::ifstream in(csv_path);
     if (!in) {
         return rows;
@@ -3778,24 +3957,28 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
     }
     validate_descent(descent, "edi fit_sequential");
     try {
-        // Stateless rebuild-per-fit, the single-bank shape: one crysta Project over the shared
-        // structure and the template experiment, with the identity and declarations the
-        // sequential driver reads (structure name and experiment name feed the results.csv
+        // Stateless rebuild-per-fit, the single-bank shape: one crysta Project over the
+        // structures and the template experiment, with the identity and declarations the
+        // sequential driver reads (structure names and experiment name feed the results.csv
         // column grammar; the scan block and iteration bound are the declared inputs).
-        // The engine refuses a sequential or independent fit of several linked structures; this
-        // single-structure build would otherwise fit the first structure alone and ignore the rest.
-        if (structures.size() > 1 || experiment().linked_structures.size() != 1 ||
-            !experiment().linked_structure().enabled.get()) {
-            throw std::invalid_argument(
-                "edi fit_sequential: a sequential or independent fit with several linked structures is not "
-                "supported yet");
-        }
-        crysta::Project cproject = build_crysta_project(structure(), experiment());
+        // Several structures (phases) are all handed over, as the single fit does, and crysta
+        // fits each scan file through its phase-sum residual.
+        const bool phases = structures.size() > 1 || experiment().linked_structures.size() != 1 ||
+                            !experiment().linked_structure().enabled.get();
+        crysta::Project cproject = [&]() -> crysta::Project {
+            if (phases) {
+                return crysta::Project(to_crysta_structures(*this),
+                                       std::vector<crysta::BraggPdExperiment>{detail::to_crysta_experiment(experiment())});
+            }
+            return build_crysta_project(structure(), experiment());
+        }();
         detail::require_populated_participants(cproject, "edi fit_sequential");
         fill_crysta_relations(*this, cproject);
         make_fit_ready(cproject.experiment());
-        cproject.structure().name = structure().name;
-        cproject.structure().scattering_lengths_fm = structure().scattering_lengths_fm;
+        if (!phases) {
+            cproject.structure().name = structure().name;
+            cproject.structure().scattering_lengths_fm = structure().scattering_lengths_fm;
+        }
         // Review-1 F4: forward the DECLARED mode, never a hard-coded one — pinning
         // "sequential" here would have run an `independent` project chained, silently answering
         // a different question than the project declares.
@@ -3825,6 +4008,14 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         const std::filesystem::path data_root(scan_data_root.empty() ? path : scan_data_root);
         cproject.scan_data_root = scan_data_root;
         const std::filesystem::path csv_path = project_root / "analysis" / "results.csv";
+        // The retained state is proven before anything is published: every state file the run reads, here and (for
+        // a dry run that starts from the loaded project's results) there, is absent or a regular file.
+        for (const char* name : {"results.csv", "results-provenance.csv", "scan-notes.csv"}) {
+            scan_state_present(project_root / "analysis" / name, std::string("analysis/") + name);
+            if (!scan_data_root.empty()) {
+                scan_state_present(data_root / "analysis" / name, std::string("analysis/") + name);
+            }
+        }
         bool preamble_delivered = false;
         if (on_scan_start) {
             const std::optional<int> total_files =
@@ -3838,7 +4029,7 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
                 // A dry run's results under `path` start as the loaded project's committed rows
                 // (crysta seeds them when absent), so its resume state is read from there.
                 const std::filesystem::path resume_csv =
-                    std::filesystem::exists(csv_path) || scan_data_root.empty()
+                    scan_state_present(csv_path, "analysis/results.csv") || scan_data_root.empty()
                         ? csv_path
                         : data_root / "analysis" / "results.csv";
                 scan_preamble.completed_rows = read_scan_rows(resume_csv);
@@ -3907,7 +4098,7 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         refined.reserve(result.values.size());
         for (const auto& [label, value] : result.values) {
             std::optional<detail::ResolvedParameter> resolved =
-                detail::resolve_label(structure(), experiment(), label);
+                detail::resolve_project_label(*this, experiment(), label);
             if (!resolved) {
                 throw std::invalid_argument(
                     "edi fit_sequential: crysta result label '" + label +

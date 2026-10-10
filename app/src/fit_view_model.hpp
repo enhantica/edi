@@ -34,6 +34,10 @@ struct ScanSummary {
     int fitted = 0;
     int ok = 0;
     int failed = 0;
+    int skipped = 0;             // files with no intensity above zero, not fitted
+    long long negative_points = 0;  // rows skipped for a negative intensity, over every file
+    // Every completed file: a fitted one has a results row, a skipped one none (crysta writes no row for it).
+    int processed() const { return fitted + skipped; }
     double chi_min = 0.0;
     double chi_max = 0.0;
     double seconds = -1.0;
@@ -85,9 +89,10 @@ class FitViewModel : public QObject {
     Q_PROPERTY(QString status READ status NOTIFY statusChanged)
     Q_PROPERTY(QString outcome READ outcome NOTIFY outcomeChanged)
     Q_PROPERTY(edi_app::FitResultListModel* results READ results CONSTANT)
-    // A running scan (S3): the share of its files fitted, the bar's text (count, percent, the file just fitted) and
-    // the time left at the pace so far.
+    // A running scan (S3): the share of its files processed (fitted or skipped), the bar's text (count, percent, the
+    // file just fitted) and the time left at the pace so far.
     Q_PROPERTY(double scanProgress READ scanProgress NOTIFY scanProgressChanged)
+    Q_PROPERTY(int scanProcessed READ scanProcessed NOTIFY scanProcessedChanged)
     Q_PROPERTY(int scanFitted READ scanFitted NOTIFY scanFittedChanged)
     Q_PROPERTY(int scanTotal READ scanTotal NOTIFY scanTotalChanged)
     Q_PROPERTY(QString scanText READ scanText NOTIFY scanTextChanged)
@@ -97,6 +102,8 @@ class FitViewModel : public QObject {
     Q_PROPERTY(bool outOfDate READ outOfDate NOTIFY outOfDateChanged)
     // A scan's summary (scan projects): `scanFiles` reads "fitted/files", then the ok and fail counts.
     Q_PROPERTY(bool scanSummary READ scanSummary NOTIFY scanSummaryChanged)
+    // The scan's results did not read whole: what is shown is what was last accepted, until a full read succeeds.
+    Q_PROPERTY(bool scanRefused READ scanRefused NOTIFY scanRefusedChanged)
     Q_PROPERTY(QString scanFiles READ scanFiles NOTIFY scanFilesChanged)
     Q_PROPERTY(int scanOk READ scanOk NOTIFY scanOkChanged)
     Q_PROPERTY(int scanFailed READ scanFailed NOTIFY scanFailedChanged)
@@ -109,11 +116,15 @@ class FitViewModel : public QObject {
     bool continuable() const { return continuable_; }
     bool canReset() const { return can_reset_; }
     bool scanning() const { return scanning_; }
-    double scanProgress() const { return scan_.files > 0 ? static_cast<double>(scan_.fitted) / scan_.files : 0.0; }
+    // The completed files (fitted or skipped) of all the scan's files.
+    double scanProgress() const {
+        return scan_.files > 0 ? static_cast<double>(scan_.processed()) / scan_.files : 0.0;
+    }
     QString scanText() const { return scan_text_; }
     QString eta() const { return eta_; }
     bool outOfDate() const { return out_of_date_; }
-    // The files the scan has fitted, of all its files.
+    // The files the scan has processed (fitted or skipped), and those it has fitted, of all its files.
+    int scanProcessed() const { return scan_.processed(); }
     int scanFitted() const { return scan_.fitted; }
     int scanTotal() const { return scan_.files; }
     // Follow is on only while a scan runs: off before one, after one and in the single and joint modes.
@@ -128,14 +139,19 @@ class FitViewModel : public QObject {
     QString status() const { return status_; }
     QString outcome() const { return outcome_; }
     FitResultListModel* results() const { return results_; }
-    // The last run was the scan's (a single fit on a dataset since then shows its own summary).
-    bool scanSummary() const { return scan_.fitted > 0 && scan_last_; }
+    // The last run was the scan's (a single fit on a dataset since then shows its own summary). A scan whose
+    // processed files were all skipped has a summary too: processed, not fitted, says a scan ran.
+    bool scanSummary() const { return scan_.processed() > 0 && scan_last_; }
     QString scanFiles() const { return QStringLiteral("%1/%2").arg(scan_.fitted).arg(scan_.files); }
     int scanOk() const { return scan_.ok; }
     int scanFailed() const { return scan_.failed; }
     // A scan project's results: the status bar's summary and the results window show the run as a whole, unless
     // `scan_last` is false (a single fit on a dataset came after the run, and its own record is shown).
     void showScan(const ScanSummary& summary, bool scan_last);
+    // The scan's results were refused (`error`): the counts last accepted stay, the run's own outcome (Failed,
+    // Stopped, else Refused) and time are shown, and no summary is built from the refused read.
+    void showScanRefused(const QString& error, const QString& run_outcome, double seconds);
+    bool scanRefused() const { return scan_refused_; }
     // The scan results came from another template than the one held now (the owner compares their provenance).
     void setOutOfDate(bool out_of_date);
 
@@ -169,6 +185,8 @@ class FitViewModel : public QObject {
     void scanOkChanged();
     void scanFailedChanged();
     void scanProgressChanged();
+    void scanProcessedChanged();
+    void scanRefusedChanged();
     void scanFittedChanged();
     void scanTotalChanged();
     void scanTextChanged();
@@ -189,8 +207,11 @@ class FitViewModel : public QObject {
     void ended(const edi::FitReport& report);
     void scanStarted(const edi::ScanPreamble& preamble);
     void fileCompleted(const edi::ScanFileRecord& record);
+    // The counts from the files on disk once the driver returned, before the running presentation ends.
+    void settleScanCounts();
     void scanEnded(const edi::FitReport& report);
     void setScanning(bool scanning);
+    void setScanRefused(bool refused);
     void setContinuable(bool continuable);
     // Continue fitting and Reset fits from the scan's fitted count and the mode.
     void syncScanState();
@@ -220,6 +241,8 @@ class FitViewModel : public QObject {
     bool scanning_ = false, continuable_ = false, out_of_date_ = false, scan_last_ = true;
     // The running scan: the files already fitted when it started (a continued scan), for its pace.
     int scan_resumed_ = 0;
+    bool scan_index_refused_ = false;  // this run's index refused and the refusal was shown
+    bool scan_refused_ = false;        // the results shown are the last accepted, the read after them refused
     QString scan_text_, eta_;
     double chi_before_ = 0.0;
     QString unavailable_reason_, iterations_, elapsed_, goodness_of_fit_, status_, outcome_;

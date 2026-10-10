@@ -3,6 +3,7 @@
 #define EDI_SCAN_HPP
 
 #include <cstdint>
+#include <filesystem>
 #include <map>
 #include <string>
 #include <string_view>
@@ -59,6 +60,13 @@ struct ScanResultIndex {
         int iterations = 0;
         std::vector<std::string> extracted;  ///< the extract rules' cells, in rule order
         std::string termination;  ///< why its fit stopped, from crysta's ledger; empty when not recorded
+        /// From crysta's `analysis/scan-notes.csv`: the file's rows skipped for a negative intensity, whether the
+        /// whole file was skipped for having no intensity above zero (it then has no row), and why its fit refused
+        /// (its row is a failed one, with `nan` where the fit produced nothing).
+        std::size_t negative_points = 0;
+        bool skipped = false;
+        std::string refusal;
+        bool noted = false;  ///< the notes file has a row for it
     };
     std::string error;
     std::vector<std::string> header;
@@ -72,6 +80,8 @@ struct ScanResultIndex {
     std::vector<Row> rows;      ///< by dataset place
     std::int64_t end = 0;       ///< the offset after the last complete row (0: no file)
     std::size_t fitted = 0;     ///< datasets with a row
+    std::size_t skipped = 0;    ///< datasets skipped for having no intensity above zero
+    std::int64_t notes_end = 0; ///< the offset after the last complete notes line read (0: none read)
 };
 /// A results file that is there must read whole; `writing`: a run is appending to it, so a last line still being
 /// written is left out rather than refused.
@@ -85,6 +95,28 @@ ScanResultIndex index_scan_results(const Project& project, const ScanDatasets& d
 using ScanPlaces = std::unordered_map<std::string, std::size_t>;
 /// Each dataset's place by its file name.
 ScanPlaces scan_places(const ScanDatasets& datasets);
+/// Whether a scan state file (results.csv, results-provenance.csv, scan-notes.csv) is there. Absent is allowed; a
+/// path that exists must be a regular file or a link to one. Anything else throws std::invalid_argument, starting
+/// with `label`, rather than reading as no state or as an empty file; crysta applies the same rule. Every reader
+/// of those files asks this before it opens one.
+bool scan_state_present(const std::filesystem::path& path, const std::string& label);
+/// crysta's `analysis/scan-notes.csv` (file_path, negative_points, skipped_dataset, refusal), read from byte
+/// `from` onto `index`; returns the offset after the last complete line. A file that is there must be whole and
+/// well formed: the header, four cells a row, negative_points a decimal integer of at most 12 digits,
+/// skipped_dataset True or False, a scan file named once. Anything else throws std::invalid_argument saying why,
+/// since the skipped and refused files cannot then be known. `writing`: a last line still being written is left
+/// for the next read. The CLI (`edi fit`) and crysta's resume read the file by the same rule.
+std::int64_t read_scan_notes(const Project& project, const ScanPlaces& places, ScanResultIndex& index,
+                             std::int64_t from, bool writing);
+/// What a scan's results and notes say about its skipped and refused files, as `edi fit` reports them: read by the
+/// results index, so by the same rule. Throws std::invalid_argument with the index's own message when the results or
+/// the notes cannot be read by their rules.
+struct ScanNotesReport {
+    std::size_t skipped = 0;          ///< datasets skipped for having no intensity above zero
+    std::size_t negative_points = 0;  ///< rows skipped for a negative intensity, over every dataset
+    std::vector<std::pair<std::string, std::string>> refused;  ///< (file, why) per refused dataset
+};
+ScanNotesReport scan_notes_report(const Project& project);
 /// The file a row names: its `file_path` cell is `<data_dir>/<file>` as crysta writes it, or the bare file name;
 /// empty for any other path (a file of another directory is not this scan's, whatever its name).
 std::string scan_row_file(const ScanResultIndex& index, const std::vector<std::string>& cells);

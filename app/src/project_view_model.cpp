@@ -233,7 +233,7 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
         project_->sequential_fit.template_file =
             scan_session_->datasets().files[static_cast<std::size_t>(projected_dataset_)];
         // The last run is this fit now: a reopened project shows its record, not the scan's summary.
-        if (scan_session_->index().fitted > 0) {
+        if (scanProcessed()) {
             ScanSession::Run run = scan_session_->run();
             run.last_single = true;
             if (const QString refusal = scan_session_->writeRun(*project_, run); !refusal.isEmpty()) {
@@ -669,6 +669,10 @@ bool ProjectViewModel::createStructure() {
 
 void ProjectViewModel::loadScan() {
     evolution_ = new EvolutionViewModel(this);
+    connect(evolution_, &EvolutionViewModel::refused, this, [this](const QString& message) {
+        setLastError(message);
+        emit refused(message);
+    });
     const edi::Project& project = *project_;
     if (!project.sequential_fit.declared()) {
         return;
@@ -690,7 +694,7 @@ void ProjectViewModel::loadScan() {
     // there but does not read is no such run: its results are shown out of date, and the reason given.
     if (scan_session_->run().invalid) {
         setLastError(scan_session_->run().error);
-    } else if (scan_session_->run().identity.empty() && scan_session_->index().fitted > 0) {
+    } else if (scan_session_->run().identity.empty() && scanProcessed()) {
         scan_session_->assumeIdentity(ScanSession::templateIdentity(project));
     }
     syncScanAdmission();
@@ -832,8 +836,9 @@ std::vector<edi::Edit::ScanValue> ProjectViewModel::datasetValues(const std::vec
             continue;  // a parameter the results do not record keeps the template's value
         }
         double number = 0.0, uncertainty = 0.0;
+        const std::string& uncertainty_cell = row[found->second->uncertainty];
         if (!edi::parse_scan_number(row[found->second->value], number) ||
-            !edi::parse_scan_number(row[found->second->uncertainty], uncertainty)) {
+            (uncertainty_cell != "nan" && !edi::parse_scan_number(uncertainty_cell, uncertainty))) {
             throw std::invalid_argument("analysis/results.csv: the row's '" + found->second->name +
                                         "' cells are not numbers");
         }
@@ -1031,7 +1036,7 @@ void ProjectViewModel::syncOutOfDate() {
     // Results from a provenance file that does not read, or from more than one template, are out of date too.
     bool stale = false;
     const ScanSession::Run& run = scan_ ? scan_session_->run() : ScanSession::Run{};
-    if (scan_ && scan_session_->index().fitted > 0) {
+    if (scan_ && scanProcessed()) {
         stale = run.invalid || run.mixed ||
                 (!run.identity.empty() && run.identity != ScanSession::templateIdentity(scanTemplateOrModel()));
     }
@@ -1166,6 +1171,13 @@ void ProjectViewModel::showScanResults() {
     syncDatasets();
     evolution_->setScan(scan_session_, project_.get(), scan_columns_.value(0));
     const ScanSession::Run& provenance = scan_session_->run();
+    if (!scan_session_->index().error.empty()) {
+        // A refused read has no rows to summarise: no summary is built from it, the refusal is shown instead.
+        fit_->showScanRefused(QString::fromStdString(scan_session_->index().error), provenance.outcome,
+                              provenance.seconds);
+        syncOutOfDate();
+        return;
+    }
     fit_->showScan(scanSummary(provenance.outcome, provenance.seconds), !provenance.last_single);
     syncOutOfDate();
 }
@@ -1175,21 +1187,27 @@ ScanSummary ProjectViewModel::scanSummary(const QString& run_outcome, double sec
     summary.files = static_cast<int>(scan_session_->datasets().files.size());
     summary.seconds = seconds;
     // The worst file's outcome: Max iterations, then No step, then Not converged (no reason recorded), else Success.
-    static const QStringList severity{QStringLiteral("maxIterations"), QStringLiteral("noStep"),
-                                      QStringLiteral("notConverged")};
+    static const QStringList severity{QStringLiteral("refused"), QStringLiteral("maxIterations"),
+                                      QStringLiteral("noStep"), QStringLiteral("notConverged")};
     QString worst;
     const auto& rows = scan_session_->index().rows;
     bool first = true;
     for (std::size_t index = 0; index < rows.size(); ++index) {
+        summary.negative_points += static_cast<long long>(rows[index].negative_points);
+        if (rows[index].skipped) {
+            ++summary.skipped;
+        }
         if (rows[index].offset < 0) {
             continue;
         }
         ++summary.fitted;
         ++(rows[index].converged ? summary.ok : summary.failed);
         const double chi2 = rows[index].reduced_chi_square;
-        summary.chi_min = first ? chi2 : std::min(summary.chi_min, chi2);
-        summary.chi_max = first ? chi2 : std::max(summary.chi_max, chi2);
-        first = false;
+        if (!std::isnan(chi2)) {  // a refused file has none
+            summary.chi_min = first ? chi2 : std::min(summary.chi_min, chi2);
+            summary.chi_max = first ? chi2 : std::max(summary.chi_max, chi2);
+            first = false;
+        }
         const QString outcome = scan_session_->outcome(static_cast<int>(index));
         const qsizetype rank = severity.indexOf(outcome);
         if (rank >= 0 && (worst.isEmpty() || rank < severity.indexOf(worst))) {
@@ -1197,17 +1215,20 @@ ScanSummary ProjectViewModel::scanSummary(const QString& run_outcome, double sec
         }
     }
     if (summary.fitted == 0) {
-        // A run that failed or was stopped before its first file still says so.
-        summary.outcome = run_outcome == QLatin1String("failed") || run_outcome == QLatin1String("stopped")
-                              ? run_outcome
-                              : QString();
+        // A run that failed or was stopped before its first file still says so; one that skipped every file it
+        // reached is complete when it reached them all.
+        if (run_outcome == QLatin1String("failed") || run_outcome == QLatin1String("stopped")) {
+            summary.outcome = run_outcome;
+        } else if (summary.skipped > 0) {
+            summary.outcome = summary.skipped >= summary.files ? QStringLiteral("skipped") : QStringLiteral("stopped");
+        }
         return summary;
     }
     // The run's own outcome when this app ran it (Failed, Stopped); otherwise the worst file's, a run that left
     // files unfitted reading as stopped part way.
     if (run_outcome == QLatin1String("failed") || run_outcome == QLatin1String("stopped")) {
         summary.outcome = run_outcome;
-    } else if (summary.fitted < summary.files) {
+    } else if (summary.fitted + summary.skipped < summary.files) {
         summary.outcome = QStringLiteral("stopped");
     } else {
         summary.outcome = worst.isEmpty() ? QStringLiteral("success") : worst;
@@ -1215,16 +1236,16 @@ ScanSummary ProjectViewModel::scanSummary(const QString& run_outcome, double sec
     return summary;
 }
 
-void ProjectViewModel::scanFileFitted(const edi::ScanFileRecord& record) {
+int ProjectViewModel::scanFileFitted(const edi::ScanFileRecord& record) {
     if (scan_session_ == nullptr) {
-        return;
+        return -1;
     }
     // The event's own row: checked and indexed where the driver appended it, never read from the moving tail.
     QString error;
     const int index = scan_session_->addRow(*project_, record.cells, record.termination, error);
     if (index < 0) {
         setLastError(error);
-        return;
+        return -1;
     }
     syncDataset(index);
     evolution_->addRow(index, record.cells);
@@ -1232,6 +1253,7 @@ void ProjectViewModel::scanFileFitted(const edi::ScanFileRecord& record) {
     if (index == current_dataset_ && !(fit_ != nullptr && fit_->following())) {
         viewDataset(index, true);
     }
+    return index;
 }
 
 void ProjectViewModel::followScanFile(const std::string& file) {
@@ -1248,11 +1270,21 @@ void ProjectViewModel::showScanFrame(const std::string& file, const edi::FitFram
     }
 }
 
+bool ProjectViewModel::scanProcessed() const {
+    // A scan ran when a file has a row or was skipped: an all-skipped scan has results to describe too.
+    return scan_session_ != nullptr && scan_session_->index().fitted + scan_session_->index().skipped > 0;
+}
+
+void ProjectViewModel::settleScan() {
+    if (scan_session_ != nullptr) {
+        scan_session_->reindex(*project_);
+    }
+}
+
 void ProjectViewModel::scanEnded(edi::FitStatus status, double seconds) {
     if (scan_session_ == nullptr) {
         return;
     }
-    scan_session_->reindex(*project_);
     // The run's provenance: the template it fitted from, its time and outcome, kept beside the results.
     const QString final_outcome = status == edi::FitStatus::ERROR       ? QStringLiteral("failed")
                                   : status == edi::FitStatus::CANCELLED ? QStringLiteral("stopped")
@@ -1269,6 +1301,12 @@ void ProjectViewModel::scanEnded(edi::FitStatus status, double seconds) {
         setLastError(refusal);
     }
     setModified(true);
+    if (!scan_session_->index().error.empty()) {
+        // The results did not read whole: the datasets, the evolution and the counts stay as last accepted, and the
+        // refusal is the state shown until a full read succeeds.
+        fit_->showScanRefused(QString::fromStdString(scan_session_->index().error), final_outcome, provenance.seconds);
+        return;
+    }
     showScanResults();
     // The shown dataset as the rows on disk now give it.
     viewDataset(std::max(0, current_dataset_), true);
@@ -1550,7 +1588,7 @@ QString ProjectViewModel::saveTo(const QString& directory) {
     // from the saved directory.
     if (scan_session_ != nullptr) {
         const ScanSession::Run run = scan_session_->run();
-        if (scan_session_->index().fitted > 0 && !run.identity.empty()) {
+        if (scanProcessed() && !run.identity.empty()) {
             if (const QString refusal = scan_session_->writeRun(*project_, run); !refusal.isEmpty()) {
                 setLastError(refusal);
             }

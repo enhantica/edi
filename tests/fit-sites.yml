@@ -93,3 +93,30 @@ sites:
     case: cosio-d20-scan-3f
   - file: tests/system/py/test_scan_lazy_input.py
     case: cosio-d20-scan-3f
+
+  - file: tests/integration/py/test_phase_scan.py
+    case: multiphase-scales
+    why: Authored two-phase scan controls recover known linear coefficients and compare each file with its single multiphase fit.
+
+
+  - file: tests/integration/py/test_phase_scan_class_boundaries.py
+    case: multiphase-scales
+    why: Authored two-phase scan controls recover known linear coefficients and compare each file with its single multiphase fit.
+
+
+
+  - file: tests/integration/app/test_phase_scan_state.py
+    case: multiphase-scales
+    why: The actual app consumes an authored linear phase scan and a partial fitted-plus-skipped prefix.
+
+  - file: tests/integration/py/test_scan_notes_resume.py
+    case: multiphase-scales
+    why: Authored two-phase inputs isolate retained-state admission and the fitted-plus-skipped population, never new diffraction accuracy.
+
+  - file: tests/integration/py/test_scan_notes_diagnostics.py
+    case: multiphase-scales
+    why: Authored two-phase inputs isolate retained-state admission and the fitted-plus-skipped population, never new diffraction accuracy.
+
+  - file: tests/integration/app/test_phase_scan_progress.py
+    case: multiphase-scales
+    why: Authored two-phase inputs isolate retained-state admission and the fitted-plus-skipped population, never new diffraction accuracy.

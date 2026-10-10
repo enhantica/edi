@@ -95,7 +95,12 @@ var frozen = {
     "tests/fixtures/e04_t1/editable-project/analysis/analysis.edi": "06acc049b2fdfd16e06af5c03634f364d62a2819d2bb2b0ea456cd4b79ba5061",
     "tests/fixtures/e04_t1/warning-project/structures/structure.edi": "3eafe9649956cbc14b8f4be0f687089c0c7234f32ecd48232d75fe93c8d5a166",
     "tests/fixtures/e04_t1/warning-project/experiments/experiment.edi": "b7660875a00c409f028074f3421c47d057086b639980b1327759ece7b23ebb25",
-    "tests/fixtures/e04_t1/warning-project/analysis/analysis.edi": "33c098eabbed069d94371c84c54edd22ba57e04c41fd100032bde29f45e2e167"
+    "tests/fixtures/e04_t1/warning-project/analysis/analysis.edi": "33c098eabbed069d94371c84c54edd22ba57e04c41fd100032bde29f45e2e167",
+    "docs/user/cli/pd-xray-cwl_latp_scan-4f/project/structures/alpo4_c2221.edi": "38397c4609196c2aa08d24019658331d13d3592249d9f5a9efc6f105b280af65",
+    "docs/user/cli/pd-xray-cwl_latp_scan-4f/project/structures/alpo4_p63mc.edi": "96a589ebce83fbfddb3f05b79c0888bab799264fd37965fe7c65522eaf56e4c2",
+    "docs/user/cli/pd-xray-cwl_latp_scan-4f/project/structures/latp.edi": "43c03a58b8813d99e0196532745e7f8e00e94fd9fd1d00cc2844f21e09ba930d",
+    "docs/user/cli/pd-xray-cwl_latp_scan-4f/project/experiments/latp.edi": "651a5f307d158c673dfc8b15a5730045e353b41ec075461ee7ced4808fc50e96",
+    "docs/user/cli/pd-xray-cwl_latp_scan-4f/project/analysis/analysis.edi": "30e5b254899ee9ee803ecab5e65f4d24249268562b3011a0e15114d40a838945"
   },
   "cases": [
     {
@@ -3906,6 +3911,201 @@ var frozen = {
     {
       "tag": "tests/fixtures/e04_t1/warning-project:engines",
       "path": "tests/fixtures/e04_t1/warning-project",
+      "page": "analysis",
+      "tier": "extras",
+      "group": "engines",
+      "selection": null,
+      "fields": [
+        [
+          "statusBar.calculator",
+          "crysta",
+          "label"
+        ],
+        [
+          "statusBar.minimizer",
+          "crysta",
+          "label"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project:space_group:alpo4_c2221",
+      "path": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
+      "page": "structure",
+      "tier": "basic",
+      "group": "space_group",
+      "selection": "alpo4_c2221",
+      "fields": [
+        [
+          "spaceGroup.crystalSystem",
+          "orthorhombic",
+          "readonly"
+        ],
+        [
+          "spaceGroup.itNumber",
+          "20",
+          "text"
+        ],
+        [
+          "spaceGroup.nameHM",
+          "C 2 2 21",
+          "text"
+        ],
+        [
+          "spaceGroup.coordSystemCode",
+          "abc",
+          "text"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project:space_group:alpo4_p63mc",
+      "path": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
+      "page": "structure",
+      "tier": "basic",
+      "group": "space_group",
+      "selection": "alpo4_p63mc",
+      "fields": [
+        [
+          "spaceGroup.crystalSystem",
+          "hexagonal",
+          "readonly"
+        ],
+        [
+          "spaceGroup.itNumber",
+          "186",
+          "text"
+        ],
+        [
+          "spaceGroup.nameHM",
+          "P 63 m c",
+          "text"
+        ],
+        [
+          "spaceGroup.coordSystemCode",
+          "h",
+          "text"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project:space_group:latp",
+      "path": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
+      "page": "structure",
+      "tier": "basic",
+      "group": "space_group",
+      "selection": "latp",
+      "fields": [
+        [
+          "spaceGroup.crystalSystem",
+          "trigonal",
+          "readonly"
+        ],
+        [
+          "spaceGroup.itNumber",
+          "167",
+          "text"
+        ],
+        [
+          "spaceGroup.nameHM",
+          "R -3 c",
+          "text"
+        ],
+        [
+          "spaceGroup.coordSystemCode",
+          "h",
+          "text"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project:experiment_type:latp",
+      "path": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "experiment_type",
+      "selection": "latp",
+      "fields": [
+        [
+          "experimentType.sampleForm",
+          "powder",
+          "disabled"
+        ],
+        [
+          "experimentType.beamMode",
+          "constant wavelength",
+          "disabled"
+        ],
+        [
+          "experimentType.radiationProbe",
+          "xray",
+          "disabled"
+        ],
+        [
+          "experimentType.scatteringType",
+          "bragg",
+          "disabled"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project:data:latp",
+      "path": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
+      "page": "experiment",
+      "tier": "extras",
+      "group": "data",
+      "selection": "latp",
+      "fields": [
+        [
+          "range.minimum",
+          1.0041,
+          "number"
+        ],
+        [
+          "range.maximum",
+          17.0999,
+          "number"
+        ],
+        [
+          "range.step",
+          "0.0056\u20130.0057",
+          "readonly"
+        ],
+        [
+          "range.points",
+          2855,
+          "number"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project:sequential_fit",
+      "path": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
+      "page": "analysis",
+      "tier": "extras",
+      "group": "sequential_fit",
+      "selection": null,
+      "fields": [
+        [
+          "sequentialFit.dataDir",
+          "experiments/latp_scan",
+          "readonly"
+        ],
+        [
+          "sequentialFit.filePattern",
+          "*.txt",
+          "readonly"
+        ],
+        [
+          "sequentialFit.reverse",
+          "false",
+          "readonly"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project:engines",
+      "path": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
       "page": "analysis",
       "tier": "extras",
       "group": "engines",

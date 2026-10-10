@@ -23,6 +23,7 @@ EXTENSION = json.loads(
 )
 
 RELATIONS = json.loads((ROOT / 'tests/fixtures/constraint_expressions/byte-pins.json').read_text())
+NEW_FIXED_POINTS = BASELINE.get('post_feature_fixed_points', {})
 
 #  projects postdate the immutable  pre-move source closure.
 # Their serialization is checked by a second-save fixed point, never a rewritten old pin.
@@ -62,11 +63,18 @@ def test_saved_byte_inventory_covers_every_current_cli_and_corpus_project(tmp_pa
     assert additions.isdisjoint(BASELINE['cases']), (
         '/ no old byte witness is replaced by a post-feature pin'
     )
+    assert set(NEW_FIXED_POINTS) == {'repo:docs/user/cli/pd-xray-cwl_latp_scan-4f/project'}, (
+        'the new LATP input has its own witness without changing historical byte pins'
+    )
+    assert set(NEW_FIXED_POINTS).isdisjoint(BASELINE['cases']), (
+        'a new project invariant cannot replace any old serialization oracle'
+    )
     assert set(REFERENCE.inputs()) == (
         set(BASELINE['cases'])
         | additions
         | set(POLYNOMIAL_CASES)
         | set(ADP_AND_SCAN_CASES)
+        | set(NEW_FIXED_POINTS)
         | (set(RELATION_CASES) & set(REFERENCE.inputs()))
     ), (
         ' I22 every project must retain its pre-move byte witness, labelled '
@@ -269,11 +277,17 @@ def test_byte_witness_observes_value_order_inventory_and_measured_files(tmp_path
     )
 
 
-@pytest.mark.parametrize('case', POLYNOMIAL_CASES + RELATION_CASES + ADP_AND_SCAN_CASES)
+@pytest.mark.parametrize(
+    'case', POLYNOMIAL_CASES + RELATION_CASES + ADP_AND_SCAN_CASES + sorted(NEW_FIXED_POINTS)
+)
 def test_c13_t6_new_projects_have_a_second_save_fixed_point(tmp_path, case):
     inputs = REFERENCE.inputs()
     assert case in inputs, ' every new declared project needs its serialization witness'
     before = REFERENCE.hashes(inputs[case])
+    if case in NEW_FIXED_POINTS:
+        assert before == NEW_FIXED_POINTS[case]['input_sha256'], (
+            'the new fixed-point witness retains every independently recorded input byte'
+        )
     first = tmp_path / 'first'
     second = tmp_path / 'second'
     once = REFERENCE.observe(inputs[case], first)

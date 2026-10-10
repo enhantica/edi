@@ -28,24 +28,30 @@ namespace fs = std::filesystem;
 
 fs::path analysis_dir(const edi::Project& project) { return fs::path(project.path) / "analysis"; }
 
-const char* const kResultFiles[] = {"results.csv", "results-provenance.csv", "scan-run.json"};
+const char* const kResultFiles[] = {"results.csv", "results-provenance.csv", "scan-run.json", "scan-notes.csv"};
+constexpr int kResultFileCount = 4;
 
 std::optional<std::string>* slot(ScanSession::Files& files, int which) {
-    return which == 0 ? &files.results : which == 1 ? &files.provenance : &files.run;
+    return which == 0 ? &files.results : which == 1 ? &files.provenance : which == 2 ? &files.run : &files.skipped;
 }
 
 const std::optional<std::string>* slot(const ScanSession::Files& files, int which) {
-    return which == 0 ? &files.results : which == 1 ? &files.provenance : &files.run;
+    return which == 0 ? &files.results : which == 1 ? &files.provenance : which == 2 ? &files.run : &files.skipped;
 }
 
-// A file's bytes; nullopt when it does not exist; throws when it exists and cannot be read.
+// A file's bytes; nullopt when it does not exist; throws when it exists and cannot be read, or is not a regular
+// file (a directory would otherwise read as an empty file and be put back as one).
 std::optional<std::string> read_file(const fs::path& path) {
     std::error_code error;
-    if (!fs::exists(path, error)) {
-        if (error) {
-            throw std::runtime_error("cannot tell whether " + path.string() + " exists: " + error.message());
-        }
+    const fs::file_status link = fs::symlink_status(path, error);
+    if (link.type() == fs::file_type::not_found) {
         return std::nullopt;
+    }
+    if (link.type() == fs::file_type::none) {
+        throw std::runtime_error("cannot tell whether " + path.string() + " exists: " + error.message());
+    }
+    if (!fs::is_regular_file(fs::status(path, error))) {
+        throw std::runtime_error(path.string() + " is there but is not a regular file");
     }
     std::ifstream input(path, std::ios::binary);
     std::string bytes((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
@@ -187,6 +193,14 @@ QString ScanSession::reindex(const edi::Project& project, bool writing) {
     return QString::fromStdString(index_.error);
 }
 
+void ScanSession::refuseIndex(const std::string& why) {
+    // What was read before the refusal is not adopted: the index is refused as a full read would refuse it.
+    edi::ScanResultIndex refused;
+    refused.error = why;
+    refused.rows.resize(datasets_.files.size());
+    index_ = std::move(refused);
+}
+
 int ScanSession::place(const std::string& file) const {
     const auto found = places_.find(file);
     return found == places_.end() ? -1 : static_cast<int>(found->second);
@@ -203,8 +217,9 @@ int ScanSession::addRow(const edi::Project& project, const std::vector<std::stri
         reindex(project, true);
         const int dataset = cells.size() == index_.header.size() ? place(edi::scan_row_file(index_, cells)) : -1;
         if (!index_.error.empty() || dataset < 0 || index_.rows[static_cast<std::size_t>(dataset)].offset < 0) {
-            error = index_.error.empty() ? QStringLiteral("analysis/results.csv does not hold the row just written")
-                                         : QString::fromStdString(index_.error);
+            refuseIndex(index_.error.empty() ? "analysis/results.csv does not hold the row just written"
+                                             : index_.error);
+            error = QString::fromStdString(index_.error);
             return -1;
         }
         return dataset;
@@ -214,6 +229,9 @@ int ScanSession::addRow(const edi::Project& project, const std::vector<std::stri
         if (index_.rows[dataset].offset >= 0) {
             return static_cast<int>(dataset);  // indexed already, when the run's first row caught up with the file
         }
+        // The notes the run appended since the last row come first (files skipped before this one, its own note):
+        // crysta notes a file before appending its row. A refusal there refuses the index below.
+        index_.notes_end = edi::read_scan_notes(project, places_, index_, index_.notes_end, true);
         // crysta appends the cells joined by commas and a line break: the row starts where the file ended.
         std::int64_t length = 1;
         for (const std::string& cell : cells) {
@@ -221,12 +239,22 @@ int ScanSession::addRow(const edi::Project& project, const std::vector<std::stri
         }
         row.offset = index_.end;
         row.termination = termination;
+        // What the notes say about the file stays; a file with a row is fitted, whatever an earlier run noted (the
+        // full index's rule), so it leaves the skipped count.
+        const edi::ScanResultIndex::Row& noted = index_.rows[dataset];
+        row.noted = noted.noted;
+        row.negative_points = noted.negative_points;
+        row.refusal = noted.refusal;
+        if (noted.skipped) {
+            --index_.skipped;
+        }
         index_.end += length - 1;
         index_.rows[dataset] = std::move(row);
         ++index_.fitted;
         return static_cast<int>(dataset);
     } catch (const std::exception& refusal) {
-        error = QString::fromUtf8(refusal.what());
+        refuseIndex(refusal.what());
+        error = QString::fromStdString(index_.error);
         return -1;
     }
 }
@@ -234,6 +262,9 @@ int ScanSession::addRow(const edi::Project& project, const std::vector<std::stri
 std::vector<std::string> ScanSession::row(const edi::Project& project, int dataset) const {
     if (dataset < 0 || dataset >= static_cast<int>(index_.rows.size()) || index_.rows[dataset].offset < 0) {
         return {};
+    }
+    if (!edi::scan_state_present(analysis_dir(project) / "results.csv", "analysis/results.csv")) {
+        throw std::invalid_argument("analysis/results.csv changed under the app: it is no longer there");
     }
     {
         std::ifstream input(analysis_dir(project) / "results.csv", std::ios::binary);
@@ -258,6 +289,9 @@ std::vector<std::string> ScanSession::row(const edi::Project& project, int datas
 }
 
 QString ScanSession::outcome(int dataset) const {
+    if (dataset >= 0 && dataset < static_cast<int>(index_.rows.size()) && index_.rows[dataset].skipped) {
+        return QStringLiteral("skipped");
+    }
     if (dataset < 0 || dataset >= static_cast<int>(index_.rows.size()) || index_.rows[dataset].offset < 0) {
         return {};
     }
@@ -266,6 +300,9 @@ QString ScanSession::outcome(int dataset) const {
     const edi::ScanResultIndex::Row& row = index_.rows[dataset];
     if (row.converged) {
         return QStringLiteral("success");
+    }
+    if (row.termination == "refused" || !row.refusal.empty()) {
+        return QStringLiteral("refused");
     }
     if (row.termination == "max_iter_exhausted") {
         return QStringLiteral("maxIterations");
@@ -290,6 +327,11 @@ void ScanSession::column(const edi::Project& project, const std::string& name,
     if (!found || !index_.error.empty()) {
         return;
     }
+    // A results path that is gone gives no values, as a changed header does; one that is no longer a regular file
+    // refuses (scan_state_present throws), as the row reader does.
+    if (!edi::scan_state_present(analysis_dir(project) / "results.csv", "analysis/results.csv")) {
+        return;
+    }
     std::ifstream input(analysis_dir(project) / "results.csv", std::ios::binary);
     std::string line;
     // The columns mean what the indexed header says only while the file still has that header.
@@ -305,7 +347,8 @@ void ScanSession::column(const edi::Project& project, const std::string& name,
         }
         const int dataset = place(edi::scan_row_file(index_, cells));
         double value = 0.0, uncertainty = 0.0;
-        if (dataset >= 0 && edi::parse_scan_number(cells[value_column], value) &&
+        // A refused file's row holds the values its fit started from, not a result: it is not drawn.
+        if (dataset >= 0 && cells[index_.chi] != "nan" && edi::parse_scan_number(cells[value_column], value) &&
             edi::parse_scan_number(cells[uncertainty_column], uncertainty)) {
             visit(dataset, value, uncertainty);
         }
@@ -391,7 +434,7 @@ void set_aside(const edi::Project& project, const ScanSession::Files& present, c
                std::vector<int>& moved) {
     const fs::path directory = analysis_dir(project);
     fs::create_directories(aside);
-    for (int which = 0; which < 3; ++which) {
+    for (int which = 0; which < kResultFileCount; ++which) {
         if (*slot(present, which)) {
             move_file(directory / kResultFiles[which], aside / kResultFiles[which]);
             moved.push_back(which);
@@ -428,7 +471,7 @@ QString ScanSession::takeFiles(const edi::Project& project, Files& taken) {
     const fs::path directory = analysis_dir(project);
     taken = {};
     try {
-        for (int which = 0; which < 3; ++which) {
+        for (int which = 0; which < kResultFileCount; ++which) {
             *slot(taken, which) = read_file(directory / kResultFiles[which]);
         }
     } catch (const std::exception& refusal) {
@@ -456,7 +499,7 @@ QString ScanSession::putFiles(const edi::Project& project, const Files& files) {
     Files current;
     try {
         fs::create_directories(directory);
-        for (int which = 0; which < 3; ++which) {
+        for (int which = 0; which < kResultFileCount; ++which) {
             *slot(current, which) = read_file(directory / kResultFiles[which]);
         }
     } catch (const std::exception& refusal) {
@@ -466,7 +509,7 @@ QString ScanSession::putFiles(const edi::Project& project, const Files& files) {
     Files wanted = files;
     std::vector<int> staged;
     try {
-        for (int which = 0; which < 3; ++which) {
+        for (int which = 0; which < kResultFileCount; ++which) {
             if (const std::optional<std::string>& text = *slot(wanted, which)) {
                 const fs::path path = directory / (std::string(kResultFiles[which]) + ".edi-staged");
                 std::ofstream output(path, std::ios::binary | std::ios::trunc);

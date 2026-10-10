@@ -488,9 +488,9 @@ def assert_scan_status(text):
 const FitOutcomes={separator:' | '};
 const bar={fit:{running:true,scanning:true,ok:7,fail:2,scanOk:7,scanFailed:2,elapsed:'TIME',
 
-eta:'ETA',chi:'CHI',goodnessOfFit:'CHI',completed:9,total:24,fraction:0.375,
+eta:'ETA',chi:'CHI',goodnessOfFit:'CHI',completed:12,total:24,fraction:0.5,
 
-percent:37.5,scanFitted:9,scanTotal:24,iterations:'13',outcome:'success'}};
+percent:50,scanFitted:9,scanSkipped:3,scanProcessed:12,scanTotal:24,iterations:'13',outcome:'success'}};
 const fitArea={};const EaStyle={Colors:{red:'red'}};"""
     running = property_value(area, 'running')
     states = [(True, True), (True, False), (False, True)]
@@ -523,8 +523,11 @@ const fitArea={};const EaStyle={Colors:{red:'red'}};"""
                 'Status bar wiring: single fits stripe and scans have determinate fill'
             )
             if scan:
-                assert fill / maximum == 3 / 8, (
-                    'Status bar wiring: the displayed fill is completed datasets '
+                assert isinstance(fill, (int, float)) and isinstance(maximum, (int, float)), (
+                    'Status bar wiring: processed count division produces a numeric fill'
+                )
+                assert maximum > 0 and fill / maximum == 1 / 2, (
+                    'Status bar wiring: the displayed fill includes fitted and skipped datasets '
                     'divided by their total'
                 )
     # Execute the text that is actually displayed, not an unused facts array.
@@ -1099,3 +1102,11 @@ def test_status_observer_rejects_wrong_progress_polarity_fill_producer_and_unuse
         )
         with pytest.raises(AssertionError):
             assert_scan_status(bad)
+
+        if channel == 'fill':
+            fitted = good.replace('bar.fit.scanProcessed', 'bar.fit.scanFitted')
+            assert fitted != good, (
+                'Status bar wiring: the fitted-only escape reaches the processed numerator'
+            )
+            with pytest.raises(AssertionError):
+                assert_scan_status(fitted)

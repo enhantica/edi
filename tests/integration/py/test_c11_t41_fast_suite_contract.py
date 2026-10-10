@@ -330,12 +330,80 @@ def test_c11_t41_edi_ci_tiers_name_pr_merge_and_local_surfaces() -> None:
     tasks = tomllib.loads((ROOT / 'pixi.toml').read_text())['tasks']
     for group in ('quick', 'full'):
         task = groups[group]['task']
-        assert 'pixi run ' + task in workflow and task in tasks, (
-            'Both PR and merge CI must invoke their declared executable test-group tasks'
-        )
+        assert task in tasks, 'both cadences retain a declared executable local test-group task'
         assert {'unit/py', 'unit/cpp', 'integration/py', 'system'} <= set(
             groups[group]['tiers']
         ), 'Both CI cadences must retain the complete unit, integration and system selections'
+        if 'system' not in jobs:
+            assert 'pixi run ' + task in workflow, (
+                'Both PR and merge CI must invoke their declared executable test-group tasks'
+            )
+    if 'system' in jobs:
+        # Before: one event-selected aggregator. After the parallel-jobs
+        # decision: the exact same tier selection across required core and parts.
+        from tests.fixtures.e09_t75_workflow import active  # noqa: PLC0415
+        from tests.integration.py.test_e04_t11_ci_order import (  # noqa: PLC0415
+            assert_core_failure_reporting,
+        )
+        from tests.integration.py.test_e09_t75_native_workflow import (  # noqa: PLC0415
+            public_build_boundary,
+        )
+
+        for group, python_task in (('quick', 'quick-tests'), ('full', 'test')):
+            assert tasks[groups[group]['task']]['depends-on'] == [python_task, 'cpp-test'], (
+                'both local declared groups retain their executable Python and C++ selections'
+            )
+        assert tasks['quick-tests']['cmd'] == [
+            'python',
+            '-m',
+            'pytest',
+            'tests/unit',
+            'tests/integration',
+            'tests/system',
+            '--ignore=tests/integration/app',
+            '-q',
+        ], 'the unsplit local group and split CI jobs must retain identical tier selections'
+        assert tasks['test']['cmd'] == [
+            'bash',
+            'tools/ci/pytest-lenient.sh',
+            '--ignore=tests/integration/app',
+        ], 'the local merge group retains its complete default collection outside the app tier'
+        assert tasks['core-tests']['cmd'] == [
+            'python',
+            '-m',
+            'pytest',
+            'tests/unit',
+            'tests/integration',
+            '--ignore=tests/integration/app',
+            '-q',
+        ], 'the split core task must retain all declared unit and integration selections'
+        assert tasks['system-tests-part']['cmd'] == ['bash', 'tools/ci/system-tests-part.sh'], (
+            'each system part invokes the actual declared partition executable'
+        )
+        partition = (ROOT / 'tools/ci/system-tests-part.sh').read_text()
+        assert re.search(r'exec python -m pytest tests/system -q\s*\\', partition), (
+            'the actual partition runner must execute the complete system tier'
+        )
+        for option in (
+            '--splits "$parts"',
+            '--group "$part"',
+            '--splitting-algorithm least_duration',
+        ):
+            assert option in partition, (
+                'system partitioning retains the complete duration-based split'
+            )
+        for name in ('core', 'system'):
+            assert_core_failure_reporting(jobs[name])
+            for platform in ('linux-64', 'osx-arm64'):
+                public_build_boundary(jobs, name, platform)
+            for event in ('pull_request', 'push', 'workflow_dispatch'):
+                assert active(jobs[name], event, states={'changes': 'success'}), (
+                    'both CI cadences must execute every declared core and system part'
+                )
+        durations = jobs['system-durations']
+        assert (
+            durations.get('if') == "github.event_name == 'push'" and durations['needs'] == 'system'
+        ), 'duration refresh follows all system parts on main pushes only'
     assert 'edi verification' in workflow.lower() or 'crysta-consumer' in workflow
     local = ROOT / 'tools/ci/local-ci.sh'
     assert local.is_file()
