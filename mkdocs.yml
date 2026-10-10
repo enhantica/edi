@@ -59,6 +59,7 @@ nav:
           - dev/adrs/0027-anisotropic-displacement-parameters.md
           - dev/adrs/0028-uncertainty-bound-from-fit-conditioning.md
           - dev/adrs/0029-following-a-scan-latest-finished-file.md
+          - dev/adrs/0030-browser-files-in-wasmfs.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md
