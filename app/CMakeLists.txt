@@ -152,7 +152,6 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Experiment/ScatteringSourceGroup.qml
         qml/Pages/Home/AboutDialog.qml
         qml/Pages/Home/HomePage.qml
-        qml/Pages/Home/LicenceTextDialog.qml
         qml/Pages/Project/BlockNames.qml
         qml/Pages/Project/DescriptionRow.qml
         qml/Pages/Project/DescriptionTab.qml

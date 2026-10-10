@@ -51,11 +51,7 @@ QtObject {
     readonly property real toolbarSpacing: unit * 0.25
     // The messages dialog's fixed width (edi ADR-0017 §14): about the Preferences dialog's.
     readonly property real messagesDialogContentWidth: unit * 38
-    // The About dialog's component table, as wide as the messages dialog and about ten rows high, and the
-    // licence-text viewer it opens.
-    readonly property real aboutComponentsWidth: unit * 38
-    readonly property real aboutComponentsHeight: unit * 16
-    readonly property real aboutLicenceColumnWidth: unit * 16
-    readonly property real licenceTextWidth: unit * 52
-    readonly property real licenceTextHeight: unit * 32
+    // The About window's content: room for the third-party table's columns and a licence text below it.
+    readonly property real aboutWidth: unit * 52
+    readonly property real aboutHeight: unit * 32
 }
