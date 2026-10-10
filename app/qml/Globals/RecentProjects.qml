@@ -33,13 +33,21 @@ QtObject {
             return [];
         }
     }
+    // Rows are updated in place, so a project that goes missing or comes back changes the cell already shown.
     function refresh() {
-        rows.clear();
-        for (const path of paths())
-            rows.append({
-                "path": path,
-                "available": Session.projectDirectoryExists(path)
-            });
+        const saved = paths();
+        for (let index = 0; index < saved.length; ++index) {
+            const row = {
+                "path": saved[index],
+                "available": Session.projectDirectoryExists(saved[index])
+            };
+            if (index < rows.count)
+                rows.set(index, row);
+            else
+                rows.append(row);
+        }
+        if (rows.count > saved.length)
+            rows.remove(saved.length, rows.count - saved.length);
     }
     function remember(path: string) {
         if (!path)
