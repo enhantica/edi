@@ -138,12 +138,13 @@ nodejs = "==22.23.2"
 # tools/ci/build-crysta.sh reads them from this file. Only an update PR or a paired PR moves them.
 [target.osx-arm64.activation.env]
 MACOSX_DEPLOYMENT_TARGET = '13.4'
-CRYSTA_SDK_TAG = "build-d0461faa47a14efa9a606db661179d68990db30a"
-CRYSTA_SDK_SHA256 = "f276317fd77630e851f9f3bc9520f81c2717c0f0a0dff10d6550b3f93ecfcd2d"
+CRYSTA_SDK_TAG = "build-728e2b4dd465053c8695418ce10976c5888c31c8"
+CRYSTA_SDK_SHA256 = "0d3371bf1c7ebe2de20196494d2229343c2fe0d8c6ad8596d12bdf5f808d049a"
+# crysta pack from a failed job, its package steps passed; failed: Hidden numerical suite (cpp surface)
 
 [target.linux-64.activation.env]
-CRYSTA_SDK_TAG = "build-d0461faa47a14efa9a606db661179d68990db30a"
-CRYSTA_SDK_SHA256 = "e36daa4b3b7bc96fe1facef23ec402c515bf115876dbcaec1b9c30a5c22f44fd"
+CRYSTA_SDK_TAG = "build-728e2b4dd465053c8695418ce10976c5888c31c8"
+CRYSTA_SDK_SHA256 = "3d3a7d0498f09e433ca8e81c260b83381a4f978e917cb220de4d42df9d46a1d1"
 
 [target.linux-64.dependencies]
 clangxx = "22.*"
@@ -376,6 +377,9 @@ group-app = { cmd = ["python", "-m", "pytest", "tests/integration/app", "-q"], d
 # The packed web app (wasm-build's zip): the given pytest files and the browser driver in each case, in this
 # environment (the tests import edi): tools/ci/wasm-check.sh.
 wasm-check = { cmd = ["bash", "tools/ci/wasm-check.sh"] }
+# The multithread web app's parallel fit: the browser matrix with its speed ratio, and crysta's executed-body witness
+# (tools/ci/wasm-parallel-check.sh).
+wasm-parallel-check = { cmd = ["bash", "tools/ci/wasm-parallel-check.sh"] }
 # The cadence entry points: `verify-quick` — the static checks, the core build, the audit and
 # the quick group — runs ONCE before handing to review; `verify-full` (== `verify`, the mount
 # `verify:` command and the x-ship gate) runs ONCE when ready to merge, after the accept.
