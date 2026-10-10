@@ -1167,6 +1167,13 @@ void ProjectViewModel::showScanResults() {
     syncDatasets();
     evolution_->setScan(scan_session_, project_.get(), scan_columns_.value(0));
     const ScanSession::Run& provenance = scan_session_->run();
+    if (!scan_session_->index().error.empty()) {
+        // A refused read has no rows to summarise: no summary is built from it, the refusal is shown instead.
+        fit_->showScanRefused(QString::fromStdString(scan_session_->index().error), provenance.outcome,
+                              provenance.seconds);
+        syncOutOfDate();
+        return;
+    }
     fit_->showScan(scanSummary(provenance.outcome, provenance.seconds), !provenance.last_single);
     syncOutOfDate();
 }
@@ -1290,6 +1297,12 @@ void ProjectViewModel::scanEnded(edi::FitStatus status, double seconds) {
         setLastError(refusal);
     }
     setModified(true);
+    if (!scan_session_->index().error.empty()) {
+        // The results did not read whole: the datasets, the evolution and the counts stay as last accepted, and the
+        // refusal is the state shown until a full read succeeds.
+        fit_->showScanRefused(QString::fromStdString(scan_session_->index().error), final_outcome, provenance.seconds);
+        return;
+    }
     showScanResults();
     // The shown dataset as the rows on disk now give it.
     viewDataset(std::max(0, current_dataset_), true);

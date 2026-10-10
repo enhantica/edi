@@ -217,6 +217,7 @@ void FitViewModel::showRecord() {
 void FitViewModel::showScan(const ScanSummary& summary, bool scan_last) {
     scan_ = summary;
     scan_last_ = scan_last;
+    scan_refused_ = false;
     sync();
     emit scanSummaryChanged();
     emit scanFilesChanged();
@@ -243,6 +244,22 @@ void FitViewModel::showScan(const ScanSummary& summary, bool scan_last) {
     setProgress(QString(), chi_range(scan_), outcome_word(scan_.outcome), scan_.outcome);
     setElapsed(scan_.seconds >= 0.0 ? duration(scan_.seconds) : QString());
     results_->setScan(scan_);
+}
+
+void FitViewModel::showScanRefused(const QString& error, const QString& run_outcome, double seconds) {
+    scan_.outcome = run_outcome.isEmpty() ? QStringLiteral("refused") : run_outcome;
+    scan_.seconds = seconds;
+    scan_last_ = true;
+    scan_refused_ = true;
+    sync();
+    emit scanSummaryChanged();
+    setProgress(QString(), QString(), outcome_word(scan_.outcome), scan_.outcome);
+    setElapsed(seconds >= 0.0 ? duration(seconds) : QString());
+    results_->setScan(scan_);
+    if (!scan_index_refused_) {
+        scan_index_refused_ = true;
+        emit refused(error);
+    }
 }
 
 FitViewModel::~FitViewModel() { close(); }
@@ -285,6 +302,7 @@ void FitViewModel::start() {
         if (scan) {
             scan_resumed_ = 0;
             scan_index_refused_ = false;
+            scan_refused_ = false;
             setScanning(true);
             setScanCounts(scan_, QString());
         }
@@ -408,14 +426,15 @@ void FitViewModel::scanStarted(const edi::ScanPreamble& preamble) {
 void FitViewModel::fileCompleted(const edi::ScanFileRecord& record) {
     // The index holds this file's row and the notes of the files skipped before it (a skipped file sends no event
     // of its own), retained rows of an earlier run included: fitted and skipped are its counts.
-    owner_.scanFileFitted(record);
+    const int dataset = owner_.scanFileFitted(record);
     const ScanSession* session = owner_.scanSession();
-    if (session != nullptr && !session->index().error.empty()) {
+    if (session != nullptr && (dataset < 0 || !session->index().error.empty())) {
         // The index refused what the run wrote: nothing more is published until a full read succeeds (the settle
         // when the run returns), and the refusal is shown once.
         if (!scan_index_refused_) {
             scan_index_refused_ = true;
-            emit refused(QString::fromStdString(session->index().error));
+            emit refused(session->index().error.empty() ? tr("The row just written could not be indexed")
+                                                         : QString::fromStdString(session->index().error));
         }
         return;
     }

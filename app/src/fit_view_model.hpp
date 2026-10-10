@@ -102,6 +102,8 @@ class FitViewModel : public QObject {
     Q_PROPERTY(bool outOfDate READ outOfDate NOTIFY outOfDateChanged)
     // A scan's summary (scan projects): `scanFiles` reads "fitted/files", then the ok and fail counts.
     Q_PROPERTY(bool scanSummary READ scanSummary NOTIFY scanSummaryChanged)
+    // The scan's results did not read whole: what is shown is what was last accepted, until a full read succeeds.
+    Q_PROPERTY(bool scanRefused READ scanRefused NOTIFY scanSummaryChanged)
     Q_PROPERTY(QString scanFiles READ scanFiles NOTIFY scanFilesChanged)
     Q_PROPERTY(int scanOk READ scanOk NOTIFY scanOkChanged)
     Q_PROPERTY(int scanFailed READ scanFailed NOTIFY scanFailedChanged)
@@ -146,6 +148,10 @@ class FitViewModel : public QObject {
     // A scan project's results: the status bar's summary and the results window show the run as a whole, unless
     // `scan_last` is false (a single fit on a dataset came after the run, and its own record is shown).
     void showScan(const ScanSummary& summary, bool scan_last);
+    // The scan's results were refused (`error`): the counts last accepted stay, the run's own outcome (Failed,
+    // Stopped, else Refused) and time are shown, and no summary is built from the refused read.
+    void showScanRefused(const QString& error, const QString& run_outcome, double seconds);
+    bool scanRefused() const { return scan_refused_; }
     // The scan results came from another template than the one held now (the owner compares their provenance).
     void setOutOfDate(bool out_of_date);
 
@@ -233,6 +239,7 @@ class FitViewModel : public QObject {
     // The running scan: the files already fitted when it started (a continued scan), for its pace.
     int scan_resumed_ = 0;
     bool scan_index_refused_ = false;  // this run's index refused and the refusal was shown
+    bool scan_refused_ = false;        // the results shown are the last accepted, the read after them refused
     QString scan_text_, eta_;
     double chi_before_ = 0.0;
     QString unavailable_reason_, iterations_, elapsed_, goodness_of_fit_, status_, outcome_;
