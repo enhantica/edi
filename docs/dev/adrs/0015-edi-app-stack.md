@@ -50,7 +50,9 @@ original could. Three facts shape the decision:
    git clone inside CMake could hang without a word). An offline copy (`EDI_GUI_COMPONENTS_SRC`) is a git clone at the
    pin with an unmodified `src/`, or any other copy whose `src/` files match a committed SHA-256 of the pinned tree.
    `tools/ci/app-build.sh` keeps the build identity of a configure that did not finish, so a rerun of the same identity
-   continues in `build/app` instead of starting from nothing. Left out: the Plotly/WebEngine and
+   continues in `build/app` instead of starting from nothing. The pinned commit is the head of gui-components' `edi`
+   branch, which has no release tag yet; it stays fetchable as long as that branch keeps it in its history, and the
+   archive and source-tree digests refuse any other content. Left out: the Plotly/WebEngine and
    QtCharts charts, `BasicReport` (WebEngine), `GuideWindow`/`GuideWindowContainer`, `JsonListModel`,
    `RemoteController` (QtTest + QtMultimedia) and `Plotting.js` (used only by the charts). The base's Logic
    scripts keep their qmldir entries, as the upstream qmldir declares them.
