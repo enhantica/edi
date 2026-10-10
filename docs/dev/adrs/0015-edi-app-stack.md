@@ -468,3 +468,5 @@ So the gap was on the reference side, and the set is now captured on the Xwaylan
 - **`setContextProperty` for edi objects** — defeats `qmllint`'s type checking; rejected.
 - **Auto-generated per-field reflection instead of typed view-models** — untyped; rejected.
 - **A web view for the report** — needs QtWebEngine, which the web build cannot have; rejected for §8.
+
+The source-tree pin uses `edi_gui_tree_sha256`'s ordering of complete relative path strings. Sorting `pathlib.Path` objects instead orders directory components differently from CMake when a file and directory share a prefix (for example `Maintenance.py` and `Maintenance/Updater.qml`). The archive route is validated separately from the git-checkout route, so the pinned downloaded archive must pass the same CMake digest check.
