@@ -87,7 +87,7 @@ def actions_string(item):
 def expression_tokens(text, ctx):
     # Scan literals before identifiers/operators: never rewrite their contents.
     grammar = re.compile(
-        r"\s+|'(?:[^']|'')*'|-?0[xX][0-9a-fA-F]+|-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?"
+        r"\s+|'(?:[^']|'')*'|-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?"
         r'|[A-Za-z_][A-Za-z0-9_-]*(?:\.[A-Za-z_][A-Za-z0-9_-]*)*(?:\(\))?'
         r'|&&|\|\||==|!=|[!()]'
     )
@@ -120,12 +120,14 @@ def expression_tokens(text, ctx):
         elif token in ctx:
             item = ctx[token]
         elif token[0].isdigit() or token.startswith('-'):
-            item = int(token, 16) if '0x' in token.lower() else json.loads(token)
+            item = json.loads(token)
         else:
             message = 'unsupported Actions expression property/function: ' + token
             raise ValueError(message)
-        if type(item) not in {type(None), bool, int, float, str} or (
-            type(item) is int and abs(item) > 2**53
+        if (
+            type(item) not in {type(None), bool, int, float, str}
+            or (type(item) is int and abs(item) > 2**53)
+            or (type(item) is float and not math.isfinite(item))
         ):
             message = 'unsupported Actions expression value'
             raise ValueError(message)

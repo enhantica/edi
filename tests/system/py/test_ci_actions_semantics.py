@@ -129,6 +129,9 @@ def test_actions_rendering_preserves_literals_and_lowercase_boolean_results(sour
         "'1e400' == true",
         "'ß' == 'SS'",
         "'\u0131' == 'I'",
+        '0xFFFFFFFF == -1',
+        '0xff == 255',
+        '1e400',
     ],
     ids=[
         'unsupported-1',
@@ -142,6 +145,9 @@ def test_actions_rendering_preserves_literals_and_lowercase_boolean_results(sour
         'unsupported-9',
         'unsupported-10',
         'unsupported-11',
+        'unsupported-12',
+        'unsupported-13',
+        'unsupported-14',
     ],
 )
 def test_actions_unsupported_expression_forms_refuse(source):
@@ -275,3 +281,13 @@ def test_actions_non_ascii_concurrency_identity_refuses(scope):
     owner['concurrency']['group'] = '\u0131-${{ github.run_id }}'
     with pytest.raises(ValueError, match='non-ASCII'):
         concurrency_errors([workflow])
+
+
+@pytest.mark.parametrize(
+    'number',
+    [float('nan'), float('inf'), -float('inf')],
+    ids=['nan', 'infinity', 'negative-infinity'],
+)
+def test_actions_nonfinite_context_values_refuse(number):
+    with pytest.raises(ValueError, match='unsupported Actions expression value'):
+        value('matrix.number', {'matrix.number': number})
