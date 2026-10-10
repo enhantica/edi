@@ -19,29 +19,31 @@ EaElements.GroupBox {
 
     // A Column gives the group its content height (a ListView has no implicit height).
     Column {
-        EaComponents.TableView {
+        DataTable {
             id: tableView
             objectName: "examples.list"
 
-            showHeader: false
             tallRows: true
             maxRowCountShow: 6
             defaultInfoText: qsTr("No examples available")
-            model: Session.examples
+            sourceModel: Session.examples
 
-            header: EaComponents.TableViewHeader {
+            columnWidths: [numberColumnWidth, -1]
+
+            header: EaComponents.ListViewHeader {
+                visible: false
+                implicitHeight: 0
                 EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
                     enabled: false
-                    width: AppSizes.indexColumnWidth
                 }
                 EaComponents.TableViewLabel {
-                    flexibleWidth: true
                     horizontalAlignment: Text.AlignLeft
                     text: qsTr("name / description")
                 }
             }
 
-            delegate: EaComponents.TableViewDelegate {
+            delegate: EaComponents.ListViewDelegate {
                 id: row
 
                 required property int index
@@ -50,19 +52,23 @@ EaElements.GroupBox {
                 required property string description
 
                 objectName: `examples.open.${exampleId}`
-                mouseArea.onPressed: Session.openExample(row.exampleId)
+                TapHandler {
+                    onTapped: Session.openExample(row.exampleId)
+                }
 
                 EaComponents.TableViewLabel {
-                    width: AppSizes.indexColumnWidth
+                    horizontalAlignment: Text.AlignHCenter
                     color: EaStyle.Colors.themeForegroundMinor
                     text: row.index + 1
                 }
 
                 EaComponents.TableViewTwoRowsAdvancedLabel {
+                    horizontalAlignment: Text.AlignLeft
                     fontIcon: "archive"
                     text: row.name
                     minorText: row.description
                     ToolTip.text: row.exampleId
+                    onClicked: Session.openExample(row.exampleId)
                 }
             }
         }

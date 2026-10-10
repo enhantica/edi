@@ -50,38 +50,38 @@ AppDialog {
         width: AppSizes.messagesDialogContentWidth
         height: table.contentHeight
 
-        EaComponents.TableView {
+        DataTable {
             id: table
 
             objectName: "fit.results.list"
             anchors.fill: parent
             interactive: false
             defaultInfoText: ""
-            model: dialog.results
+            sourceModel: dialog.results
 
-            header: EaComponents.TableViewHeader {
+            columnWidths: [numberColumnWidth, EaStyle.Sizes.tableRowHeight, -1, EaStyle.Sizes.fontPixelSize * 10]
+
+            header: EaComponents.ListViewHeader {
                 EaComponents.TableViewLabel {
-                    width: AppSizes.indexColumnWidth
+                    horizontalAlignment: Text.AlignHCenter
                 }
                 EaComponents.TableViewLabel {
-                    width: EaStyle.Sizes.tableRowHeight
+                    horizontalAlignment: Text.AlignHCenter
                 }
                 EaComponents.TableViewLabel {
-                    flexibleWidth: true
                     horizontalAlignment: Text.AlignLeft
                     text: qsTr("Metric")
                 }
                 // The value column is padded on the right as the metric column is on the left (the owner,
                 // 2026-10-02), as diffraction-lib's table is.
                 EaComponents.TableViewLabel {
-                    width: EaStyle.Sizes.fontPixelSize * 10
                     rightPadding: EaStyle.Sizes.fontPixelSize
                     horizontalAlignment: Text.AlignRight
                     text: qsTr("Value")
                 }
             }
 
-            delegate: EaComponents.TableViewDelegate {
+            delegate: EaComponents.ListViewDelegate {
                 id: row
 
                 required property int index
@@ -91,23 +91,22 @@ AppDialog {
                 required property string outcome
 
                 EaComponents.TableViewLabel {
-                    width: AppSizes.indexColumnWidth
+                    horizontalAlignment: Text.AlignHCenter
                     color: EaStyle.Colors.themeForegroundMinor
                     text: row.index + 1
                 }
                 IconCell {
+                    horizontalAlignment: Text.AlignHCenter
                     icon: row.outcome !== "" ? FitOutcomes.icon(row.outcome) : row.icon
                     iconColor: String(row.outcome !== "" ? FitOutcomes.color(row.outcome) : EaStyle.Colors.themeForegroundMinor)
                 }
                 EaComponents.TableViewLabel {
                     objectName: `fit.results.metric.${row.index}`
-                    width: table.headerLabelItems.length > 2 ? table.headerLabelItems[2].width : 0
                     horizontalAlignment: Text.AlignLeft
                     text: row.metric
                 }
                 EaComponents.TableViewLabel {
                     objectName: `fit.results.value.${row.index}`
-                    width: EaStyle.Sizes.fontPixelSize * 10
                     rightPadding: EaStyle.Sizes.fontPixelSize
                     horizontalAlignment: Text.AlignRight
                     color: row.outcome !== "" ? FitOutcomes.color(row.outcome) : EaStyle.Colors.themeForeground

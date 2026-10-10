@@ -12,41 +12,40 @@ import edi.app
 // `sequential_fit_extract`: the scan's extraction rules — each a pattern read from a scan file into a
 // results column — read-only, as the scan declaration is (scanning is E05). A loop in `.edi`, so a
 // table.
-EaComponents.TableView {
+DataTable {
     id: table
 
     property AnalysisViewModel analysis: null
 
     objectName: "sequentialExtract.list"
     defaultInfoText: qsTr("No extraction rules")
-    model: analysis ? analysis.sequentialExtract : null
+    sourceModel: analysis ? analysis.sequentialExtract : null
 
-    header: EaComponents.TableViewHeader {
+    columnWidths: [numberColumnWidth, EaStyle.Sizes.fontPixelSize * 5, EaStyle.Sizes.fontPixelSize * 9, -1, EaStyle.Sizes.fontPixelSize * 4]
+
+    header: EaComponents.ListViewHeader {
         EaComponents.TableViewLabel {
-            width: AppSizes.indexColumnWidth
+            horizontalAlignment: Text.AlignHCenter
         }
         EaComponents.TableViewLabel {
-            width: EaStyle.Sizes.fontPixelSize * 5
             horizontalAlignment: Text.AlignLeft
             text: qsTr("id")
         }
         EaComponents.TableViewLabel {
-            width: EaStyle.Sizes.fontPixelSize * 9
             horizontalAlignment: Text.AlignLeft
             text: qsTr("target")
         }
         EaComponents.TableViewLabel {
-            flexibleWidth: true
             horizontalAlignment: Text.AlignLeft
             text: qsTr("pattern")
         }
         EaComponents.TableViewLabel {
-            width: EaStyle.Sizes.fontPixelSize * 4
+            horizontalAlignment: Text.AlignHCenter
             text: qsTr("required")
         }
     }
 
-    delegate: EaComponents.TableViewDelegate {
+    delegate: EaComponents.ListViewDelegate {
         id: row
 
         required property int index
@@ -54,32 +53,29 @@ EaComponents.TableView {
         required property var model
 
         EaComponents.TableViewLabel {
-            width: AppSizes.indexColumnWidth
+            horizontalAlignment: Text.AlignHCenter
             color: EaStyle.Colors.themeForegroundMinor
             text: row.index + 1
         }
         EaComponents.TableViewLabel {
-            width: EaStyle.Sizes.fontPixelSize * 5
             horizontalAlignment: Text.AlignLeft
             elide: Text.ElideRight
             text: row.model.id
         }
         EaComponents.TableViewLabel {
-            width: EaStyle.Sizes.fontPixelSize * 9
             horizontalAlignment: Text.AlignLeft
             elide: Text.ElideMiddle
             text: row.model.target
             ToolTip.text: row.model.target
         }
         EaComponents.TableViewLabel {
-            width: table.headerLabelItems.length > 3 ? table.headerLabelItems[3].width : 0
             horizontalAlignment: Text.AlignLeft
             elide: Text.ElideRight
             text: row.model.pattern
             ToolTip.text: row.model.pattern
         }
         EaComponents.TableViewLabel {
-            width: EaStyle.Sizes.fontPixelSize * 4
+            horizontalAlignment: Text.AlignHCenter
             text: row.model.required ? qsTr("yes") : qsTr("no")
         }
     }

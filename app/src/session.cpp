@@ -41,8 +41,32 @@ ExampleListModel::ExampleListModel(QObject* parent) : RowTableModel({"exampleId"
     for (qsizetype i = 0; i < ids.size(); ++i) {
         // <technique>_<sample>[-<instrument>]_<variant>
         const QStringList parts = ids[i].split(QLatin1Char('_'));
-        const QString name = parts.mid(1).join(QLatin1Char(' '));
-        rows.append({reinterpret_cast<const void*>(i + 1), {ids[i], name, technique(parts.value(0))}});
+        const QStringList sample = parts.value(1).split(QLatin1Char('-'));
+        static const QHash<QString, QString> samples{
+            {"cosio", "Co₂SiO₄"}, {"lbco", "La₀.₅Ba₀.₅CoO₃"}, {"ncaf", "Na₂Ca₃Al₂F₁₄"},
+            {"si", "Silicon"}, {"diamond", "Diamond"}, {"lab6", "LaB₆"}, {"pbso4", "PbSO₄"},
+            {"yap", "YAlO₃"}, {"latp", "LATP"}, {"fe", "Iron"}, {"cecoal", "CeCoAl₃"},
+            {"ceo2", "CeO₂"}, {"lif", "LiF"}, {"y2o3", "Y₂O₃"}, {"ferrite", "Ferrite / austenite"}};
+        QString name = samples.value(sample.value(0), sample.value(0));
+        QString instrument = sample.mid(1).join(QLatin1Char(' '));
+        if (sample.value(0) == QLatin1String("ferrite")) {
+            instrument = sample.mid(2).join(QLatin1Char(' '));
+        }
+        if (!instrument.isEmpty()) {
+            name += QStringLiteral(" · ") + instrument.toUpper();
+        }
+        QString description = technique(parts.value(0));
+        const QString variant = parts.value(2);
+        if (variant.startsWith(QLatin1String("scan-"))) {
+            description += tr(" · sequential scan (%1 datasets)").arg(variant.mid(5).chopped(1));
+        } else if (variant.startsWith(QLatin1String("start-"))) {
+            description += tr(" · starting model %1").arg(variant.mid(6));
+        } else if (!variant.isEmpty()) {
+            description += QStringLiteral(" · ") + QString(variant).replace(QLatin1Char('-'), QLatin1Char(' '));
+        } else {
+            description += tr(" · calculated pattern");
+        }
+        rows.append({reinterpret_cast<const void*>(i + 1), {ids[i], name, description}});
     }
     setTableRows(rows);
 }
@@ -170,9 +194,14 @@ bool Session::openProject(const QUrl& directory) {
         }
         read_only_copy_ = true;
         emit needsSaveAsChanged();
+        emit projectDirectoryUsed(folder.absoluteFilePath());
         return true;
     }
-    return open(source, {});
+    const bool opened = open(source, {});
+    if (opened) {
+        emit projectDirectoryUsed(folder.absoluteFilePath());
+    }
+    return opened;
 }
 
 bool Session::copyTree(const QString& source, const QString& target, const QString& linked) {
@@ -223,6 +252,9 @@ bool Session::save() {
     }
     const QString error = project_->saveTo(project_->path());
     setLastError(error);
+    if (error.isEmpty()) {
+        emit projectDirectoryUsed(QFileInfo(project_->path()).absoluteFilePath());
+    }
     return error.isEmpty();
 }
 
@@ -247,6 +279,7 @@ bool Session::saveAs(const QUrl& directory) {
     }
     emit projectLocationChanged();
     emit needsSaveAsChanged();
+    emit projectDirectoryUsed(QFileInfo(directory.toLocalFile()).absoluteFilePath());
     return true;
 }
 
@@ -318,6 +351,14 @@ void Session::syncCalculationMessages() {
     for (const QString& refusal : refusals) {
         warnings_->post(prefix + refusal, tr("Calculation refused: %1").arg(refusal), QStringLiteral("error"));
     }
+}
+
+bool Session::projectDirectoryExists(const QString& path) const {
+    return !path.isEmpty() && QFileInfo(path).isDir();
+}
+
+QUrl Session::projectDirectoryUrl(const QString& path) const {
+    return path.isEmpty() ? QUrl() : QUrl::fromLocalFile(path);
 }
 
 void Session::clearError() { setLastError({}); }

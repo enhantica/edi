@@ -49,7 +49,7 @@ AppDialog {
                     },
                     {
                         "name": "noticesLink",
-                        "title": qsTr("Dependent Open Source Licenses"),
+                        "title": qsTr("Dependent Open Source Libraries"),
                         "url": ApplicationInfo.noticesUrl
                     }
                 ]
@@ -68,7 +68,12 @@ AppDialog {
                         cursorShape: Qt.PointingHandCursor
                     }
                     TapHandler {
-                        onTapped: licenceDialog.showText(link.modelData.title, link.modelData.url)
+                        onTapped: {
+                            if (link.modelData.name === "noticesLink")
+                                librariesDialog.open();
+                            else
+                                licenceDialog.showText(link.modelData.title, link.modelData.url);
+                        }
                     }
                 }
             }
@@ -92,56 +97,90 @@ AppDialog {
             }
         }
 
-        // The components the app links or bundles, each with its licence: the list the bundled notices give.
-        EaComponents.TableView {
-            id: components
-
-            objectName: "about.components"
-            anchors.horizontalCenter: parent.horizontalCenter
-            width: AppSizes.aboutComponentsWidth
-            height: AppSizes.aboutComponentsHeight
-            clip: true
-            defaultInfoText: ""
-            model: ApplicationInfo.componentNames
-
-            header: EaComponents.TableViewHeader {
-                EaComponents.TableViewLabel {
-                    flexibleWidth: true
-                    horizontalAlignment: Text.AlignLeft
-                    text: qsTr("Component")
-                }
-                EaComponents.TableViewLabel {
-                    width: AppSizes.aboutLicenceColumnWidth
-                    horizontalAlignment: Text.AlignLeft
-                    text: qsTr("Licence")
-                }
-            }
-
-            delegate: EaComponents.TableViewDelegate {
-                id: row
-
-                required property int index
-                required property string modelData
-
-                EaComponents.TableViewLabel {
-                    width: components.headerLabelItems.length > 0 ? components.headerLabelItems[0].width : 0
-                    horizontalAlignment: Text.AlignLeft
-                    text: row.modelData
-                    ToolTip.text: ApplicationInfo.componentUses[row.index]
-                }
-                EaComponents.TableViewLabel {
-                    width: components.headerLabelItems.length > 1 ? components.headerLabelItems[1].width : 0
-                    horizontalAlignment: Text.AlignLeft
-                    text: ApplicationInfo.componentLicences[row.index]
-                }
-            }
-        }
-
         // The footer, as easydiffractionbeta's, naming the copyright holder
         EaElements.Label {
             objectName: "about.copyright"
             anchors.horizontalCenter: parent.horizontalCenter
-            text: "© %1-%2 %3 • All rights reserved".arg(ApplicationInfo.developerYearsFrom).arg(ApplicationInfo.developerYearsTo).arg(ApplicationInfo.copyrightHolder)
+            text: "© %1-%2 %3".arg(ApplicationInfo.developerYearsFrom).arg(ApplicationInfo.developerYearsTo).arg(ApplicationInfo.copyrightHolder)
+        }
+    }
+
+    AppDialog {
+        id: librariesDialog
+        objectName: "about.librariesDialog"
+        parent: Overlay.overlay
+        title: qsTr("Dependent Open Source Libraries")
+        standardButtons: Dialog.Ok
+        contentWidth: AppSizes.aboutComponentsWidth
+        contentHeight: AppSizes.aboutComponentsHeight + EaStyle.Sizes.tableRowHeight + AppSizes.groupContentSpacing
+
+        ListModel {
+            id: libraryRows
+            Component.onCompleted: {
+                for (let index = 0; index < ApplicationInfo.componentNames.length; ++index)
+                    append({
+                        "component": ApplicationInfo.componentNames[index],
+                        "licence": ApplicationInfo.componentLicences[index],
+                        "use": ApplicationInfo.componentUses[index]
+                    });
+            }
+        }
+        Column {
+            spacing: AppSizes.groupContentSpacing
+            DataTable {
+                id: components
+
+                objectName: "about.components"
+                width: AppSizes.aboutComponentsWidth
+                height: AppSizes.aboutComponentsHeight
+                clip: true
+                defaultInfoText: ""
+                sourceModel: libraryRows
+
+                columnWidths: [-1, textColumnWidth("licence", qsTr("Licence"))]
+
+                header: EaComponents.ListViewHeader {
+                    EaComponents.TableViewLabel {
+                        horizontalAlignment: Text.AlignLeft
+                        text: qsTr("Component")
+                    }
+                    EaComponents.TableViewLabel {
+                        horizontalAlignment: Text.AlignLeft
+                        text: qsTr("Licence")
+                    }
+                }
+
+                delegate: EaComponents.ListViewDelegate {
+                    id: row
+
+                    required property int index
+                    required property string component
+                    required property string licence
+                    required property string use
+
+                    EaComponents.TableViewLabel {
+                        horizontalAlignment: Text.AlignLeft
+                        text: row.component
+                        ToolTip.text: row.use
+                    }
+                    EaComponents.TableViewLabel {
+                        horizontalAlignment: Text.AlignLeft
+                        text: row.licence
+                        ToolTip.text: row.licence
+                    }
+                }
+            }
+
+            EaElements.Label {
+                text: qsTr("Licences and notices")
+                color: EaStyle.Colors.link
+                HoverHandler {
+                    cursorShape: Qt.PointingHandCursor
+                }
+                TapHandler {
+                    onTapped: licenceDialog.showText(qsTr("Dependent Open Source Licenses"), ApplicationInfo.noticesUrl)
+                }
+            }
         }
     }
 

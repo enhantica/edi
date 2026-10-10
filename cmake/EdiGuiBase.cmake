@@ -14,10 +14,10 @@
 
 include(FetchContent)
 
-set(EDI_GUI_COMPONENTS_SHA a573a9695e53a0807de197785e12f9facd06da05)  # tag v0.9.1
-set(EDI_GUI_COMPONENTS_ARCHIVE_SHA256 df502bdc41f2730531533c9ef81d371ec7db39b04666d54016e65e4a93bb1dba)
+set(EDI_GUI_COMPONENTS_SHA 3897d339b60f5707bfe952fed59a20f73340e236)  # head of the edi branch, ADR-0015
+set(EDI_GUI_COMPONENTS_ARCHIVE_SHA256 3aebde35ff5f714f83b5f76c03e4a54d40a84c196d766f020d6ce4eb683200e1)
 # Every file under src/ at the pinned commit, as edi_gui_tree_sha256 below sums them.
-set(EDI_GUI_COMPONENTS_SRC_SHA256 0da3aa8344714c0199871a2df671840b467370918dc2232d8edf71bb811fe6be)
+set(EDI_GUI_COMPONENTS_SRC_SHA256 a7e0757c62cbbe0fdecb01a8b4b1abcb55eeae4354f16f1cc5155f422d1fd523)
 
 if(NOT FETCHCONTENT_SOURCE_DIR_GUI_COMPONENTS)
     message(STATUS "gui-components: fetching the pinned archive ${EDI_GUI_COMPONENTS_SHA} (8 MB, once per build tree)")
@@ -54,7 +54,10 @@ if(EXISTS "${gui_components_SOURCE_DIR}/.git")
         OUTPUT_VARIABLE _edi_gui_dirty OUTPUT_STRIP_TRAILING_WHITESPACE)
     if(NOT _edi_gui_sha_rc EQUAL 0 OR NOT _edi_gui_sha STREQUAL EDI_GUI_COMPONENTS_SHA)
         message(FATAL_ERROR "gui-components at ${gui_components_SOURCE_DIR} is at '${_edi_gui_sha}', "
-                            "not the pinned ${EDI_GUI_COMPONENTS_SHA}")
+                            "not the pinned ${EDI_GUI_COMPONENTS_SHA}. "
+                            "Run git -C ${gui_components_SOURCE_DIR} fetch origin edi, then "
+                            "git -C ${gui_components_SOURCE_DIR} switch --detach ${EDI_GUI_COMPONENTS_SHA}, "
+                            "or unset EDI_GUI_COMPONENTS_SRC to download the pinned archive.")
     endif()
     if(NOT _edi_gui_dirty STREQUAL "")
         message(FATAL_ERROR "gui-components at ${gui_components_SOURCE_DIR} has local changes under src/; "
@@ -132,7 +135,8 @@ edi_gui_base_module(edi_gui_elements EasyApplication.Gui.Elements Gui/Elements
 edi_gui_base_module(edi_gui_components EasyApplication.Gui.Components Gui/Components
     TYPES AboutDialog ApplicationWindow AppBarCentralTabs AppBarLeftButtons AppBarRightButtons
           ContentPage ContentArea MainContent SideBar SideBarColumn PreferencesDialog
-          ProjectDescriptionDialog TableView TableViewHeader TableViewDelegate TableViewLabel
+          ProjectDescriptionDialog ListView ListViewHeader ListViewDelegate ListViewTextInput
+          TableView TableViewHeader TableViewDelegate TableViewLabel
           TableViewAdvancedLabel TableViewTwoRowsAdvancedLabel TableViewParameter TableViewCheckBox
           TableViewComboBox TableViewButton TableViewLabelControl TableViewTextInput)
 

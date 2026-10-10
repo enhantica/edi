@@ -19,29 +19,31 @@ Column {
 
     spacing: AppSizes.groupContentSpacing
 
-    EaComponents.TableView {
+    DataTable {
         objectName: "excludedRegions.list"
         defaultInfoText: qsTr("No excluded regions")
-        model: group.regions
+        sourceModel: group.regions
 
-        header: EaComponents.TableViewHeader {
+        columnWidths: [numberColumnWidth, -1, -1, AppSizes.iconColumnWidth]
+
+        header: EaComponents.ListViewHeader {
             EaComponents.TableViewLabel {
-                width: AppSizes.indexColumnWidth
+                horizontalAlignment: Text.AlignHCenter
             }
             EaComponents.TableViewLabel {
-                flexibleWidth: true
+                horizontalAlignment: Text.AlignHCenter
                 text: qsTr("start")
             }
             EaComponents.TableViewLabel {
-                width: EaStyle.Sizes.fontPixelSize * 12
+                horizontalAlignment: Text.AlignHCenter
                 text: qsTr("end")
             }
             EaComponents.TableViewLabel {
-                width: AppSizes.iconColumnWidth
+                horizontalAlignment: Text.AlignHCenter
             }
         }
 
-        delegate: EaComponents.TableViewDelegate {
+        delegate: EaComponents.ListViewDelegate {
             id: row
 
             required property int index
@@ -49,25 +51,26 @@ Column {
             required property real end
 
             EaComponents.TableViewLabel {
-                width: AppSizes.indexColumnWidth
+                horizontalAlignment: Text.AlignHCenter
                 color: EaStyle.Colors.themeForegroundMinor
                 text: row.index + 1
             }
             TextCell {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `excludedRegion.start.${row.index}`
-                width: EaStyle.Sizes.fontPixelSize * 12
                 value: row.start
                 accepts: "number"
                 onCommitted: text => group.regions.setStart(row.index, Number(text))
             }
             TextCell {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `excludedRegion.end.${row.index}`
-                width: EaStyle.Sizes.fontPixelSize * 12
                 value: row.end
                 accepts: "number"
                 onCommitted: text => group.regions.setEnd(row.index, Number(text))
             }
             EaComponents.TableViewButton {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `excludedRegion.remove.${row.index}`
                 fontIcon: "minus-circle"
                 ToolTip.text: qsTr("Remove this region")
