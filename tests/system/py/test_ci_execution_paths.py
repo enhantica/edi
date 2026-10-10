@@ -41,6 +41,12 @@ group-nightly-full = { cmd = ['python', 'tools/ci/run-selection.py', '--group', 
     }
     workflow = {
         'name': 'nightly',
+        'on': {
+            'pull_request': None,
+            'push': {'branches': ['main', 'slot-*']},
+            'schedule': [{'cron': '0 3 * * *'}],
+            'workflow_dispatch': None,
+        },
         'jobs': {
             'full': {
                 'name': expected['job'],
@@ -69,6 +75,25 @@ group-nightly-full = { cmd = ['python', 'tools/ci/run-selection.py', '--group', 
             }
         },
     }
+    return workflow, policy, expected
+
+
+def execution_control(tmp_path, platform, group):
+    workflow, policy, expected = control(tmp_path)
+    manifest = tmp_path / 'pixi.toml'
+    manifest.write_text(
+        manifest.read_text().replace('nightly-full', group).replace('osx-arm64', platform)
+    )
+    policy['groups'] = {group: {'task': 'group-' + group}}
+    job = workflow['jobs']['full']
+    job['runs-on'] = (
+        'ubuntu-latest' if platform == 'linux-64' else ['self-hosted', 'macOS', 'ARM64']
+    )
+    for step in job['steps']:
+        if 'run' in step:
+            step['run'] = step['run'].replace('nightly-full', group).replace('osx-arm64', platform)
+        if 'with' in step:
+            step['with']['name'] = 'ci-selection-' + platform
     return workflow, policy, expected
 
 
@@ -154,6 +179,7 @@ def test_execution_path_auditor_reaches_every_disconnected_or_advisory_boundary(
 def test_effective_concurrency_controls_cover_workflows_jobs_slots_and_queued_work(damage):
     first = {
         'name': 'regular',
+        'on': ['pull_request', 'push', 'schedule', 'workflow_dispatch'],
         'concurrency': {
             'group': 'regular-${{ github.ref }}-${{ github.run_id }}',
             'cancel-in-progress': False,
@@ -227,4 +253,126 @@ def test_execution_path_probe_cannot_clean_the_product_build(tmp_path, cleanup):
     )
     assert sentinel.read_text() == 'independent preexisting build', (
         'CI policy: dry-run task tracing cannot delete the product checkout build directory'
+    )
+
+
+@pytest.mark.parametrize('scope', ['workflow', 'job', 'step'])
+@pytest.mark.parametrize('damage', ['shell', 'directory', 'environment'])
+@pytest.mark.parametrize(
+    ('group', 'event', 'platform'),
+    [
+        ('quick', 'pull_request', 'linux-64'),
+        ('full', 'push', 'linux-64'),
+        ('macos-smoke', 'pull_request', 'osx-arm64'),
+        ('macos-smoke', 'push', 'osx-arm64'),
+        ('nightly-full', 'schedule', 'osx-arm64'),
+        ('nightly-full', 'workflow_dispatch', 'osx-arm64'),
+        ('nightly-full', 'schedule', 'linux-64'),
+        ('nightly-full', 'workflow_dispatch', 'linux-64'),
+    ],
+)
+@pytest.mark.parametrize('boundary', ['collector', 'validator'])
+def test_run_overrides_cannot_change_the_proved_execution(
+    tmp_path, scope, damage, event, platform, group, boundary
+):
+    workflow, policy, expected = execution_control(tmp_path, platform, group)
+    assert not execution_errors(tmp_path, workflow, policy, event, platform, group, expected), (
+        'CI policy: the supported default Bash/root-directory execution admits on each event'
+    )
+    bad = copy.deepcopy(workflow)
+    job = bad['jobs']['full']
+    owner = (
+        bad
+        if scope == 'workflow'
+        else job
+        if scope == 'job'
+        else job['steps'][0 if boundary == 'collector' else 1]
+    )
+    if damage == 'environment':
+        owner['env'] = {'BASH_ENV': 'foreign-shell-setup'}
+    else:
+        settings = (
+            owner if scope == 'step' else owner.setdefault('defaults', {}).setdefault('run', {})
+        )
+        settings['shell' if damage == 'shell' else 'working-directory'] = (
+            'bash {0}' if damage == 'shell' else 'different-checkout'
+        )
+    assert execution_errors(tmp_path, bad, policy, event, platform, group, expected), (
+        'CI policy: unsupported execution overrides refuse at every scope and event'
+    )
+
+
+@pytest.mark.parametrize('damage', ['skip-dependencies', 'override-group', 'override-output'])
+@pytest.mark.parametrize(
+    ('group', 'event', 'platform'),
+    [
+        ('quick', 'pull_request', 'linux-64'),
+        ('full', 'push', 'linux-64'),
+        ('macos-smoke', 'pull_request', 'osx-arm64'),
+        ('macos-smoke', 'push', 'osx-arm64'),
+        ('nightly-full', 'schedule', 'osx-arm64'),
+        ('nightly-full', 'workflow_dispatch', 'osx-arm64'),
+        ('nightly-full', 'schedule', 'linux-64'),
+        ('nightly-full', 'workflow_dispatch', 'linux-64'),
+    ],
+)
+def test_pixi_invocation_cannot_invent_skipped_dependencies_or_hide_arguments(
+    tmp_path, damage, event, platform, group
+):
+    workflow, policy, expected = execution_control(tmp_path, platform, group)
+    path = tmp_path / 'pixi.toml'
+    original = path.read_text().replace('group-' + group + ' =', 'execute-full =')
+    path.write_text(original + 'group-' + group + ' = { depends-on = ["execute-full"] }\n')
+    assert not execution_errors(tmp_path, workflow, policy, event, platform, group, expected), (
+        'CI policy: a collector reached through an actual task dependency admits'
+    )
+    step = workflow['jobs']['full']['steps'][0]
+    step['run'] = (
+        'pixi run --skip-deps group-' + group
+        if damage == 'skip-dependencies'
+        else step['run']
+        + (' --group reduced' if damage == 'override-group' else ' --output-dir different-report')
+    )
+    assert execution_errors(tmp_path, workflow, policy, event, platform, group, expected), (
+        'CI policy: task argument overrides and dependency skipping cannot credit full execution'
+    )
+
+
+@pytest.mark.parametrize('scope', ['workflow', 'job'])
+@pytest.mark.parametrize('event', ['pull_request', 'push', 'schedule', 'workflow_dispatch'])
+@pytest.mark.parametrize('damage', ['main-cancellation', 'event-queue-replacement'])
+def test_concurrency_controls_include_main_and_every_triggered_successor(scope, event, damage):
+    workflow = {
+        'name': 'independent control',
+        'on': [event],
+        'concurrency': {
+            'group': 'workflow-${{ github.ref }}-${{ github.run_id }}',
+            'cancel-in-progress': False,
+        },
+        'jobs': {
+            'full': {
+                'runs-on': 'ubuntu-latest',
+                'concurrency': {
+                    'group': 'job-${{ github.ref }}-${{ github.run_id }}',
+                    'cancel-in-progress': False,
+                },
+            }
+        },
+    }
+    assert not concurrency_errors([workflow]), (
+        'CI policy: unique non-cancelling workflow/job run identities admit for each trigger'
+    )
+    owner = workflow if scope == 'workflow' else workflow['jobs']['full']
+    if damage == 'main-cancellation':
+        # PRs have merge refs; exercise the real main ref via push/schedule/manual triggers.
+        workflow['on'] = [event, 'push']
+        owner['concurrency']['cancel-in-progress'] = "${{ github.ref == 'refs/heads/main' }}"
+    else:
+        owner['concurrency']['group'] = (
+            "group-${{ github.ref }}-${{ github.event_name != '"
+            + event
+            + "' && github.run_id || 0 }}"
+        )
+    assert concurrency_errors([workflow]), (
+        'CI policy: main cancellation and event-specific queue replacement refuse at both scopes'
     )

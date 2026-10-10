@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import ast
+import fnmatch
 import itertools
 import json
 import re
@@ -81,11 +82,16 @@ def contexts(workflow, event, branch='main'):
                     if event == 'pull_request'
                     else 'refs/heads/' + branch
                 ),
-                'github.ref_name': branch,
+                'github.ref_name': ('79/merge' if branch == 'slot-a' else '80/merge')
+                if event == 'pull_request'
+                else branch,
                 'github.event.pull_request.number': 79 if branch == 'slot-a' else 80,
                 'github.event.pull_request.head.repo.fork': False,
                 'github.event.pull_request.head.sha': '79' * 20,
                 'github.sha': '79' * 20,
+                'github.token': 'trace-only-token',
+                'github.base_ref': 'main' if event == 'pull_request' else '',
+                'github.head_ref': branch if event == 'pull_request' else '',
                 'github.run_id': 790,
                 'github.run_attempt': 2,
                 'github.event.schedule': '0 3 * * *' if event == 'schedule' else '',
@@ -99,6 +105,8 @@ def contexts(workflow, event, branch='main'):
             for step in job.get('steps', []):
                 if step.get('id'):
                     ctx['steps.' + step['id'] + '.outcome'] = 'success'
+                    if str(step.get('uses', '')).startswith('actions/create-github-app-token@'):
+                        ctx['steps.' + step['id'] + '.outputs.token'] = 'trace-only-token'
             runner = render(job.get('runs-on', ''), ctx)
             osx = 'macOS' in runner or 'macos-' in runner
             arm64 = (
@@ -137,40 +145,96 @@ def prerequisites_ready(workflow, job, ctx, seen=()):
     return True
 
 
-def concurrency_errors(workflows):  # noqa: PLR0912
+def event_refs(workflow):
+    triggers = workflow.get('on', workflow.get(True))
+    if isinstance(triggers, str):
+        triggers = [triggers]
+    if isinstance(triggers, list):
+        triggers = dict.fromkeys(triggers)
+    if not isinstance(triggers, dict):
+        message = 'workflow triggers are required for concurrency execution contexts'
+        raise TypeError(message)
+    for event in ('pull_request', 'push', 'schedule', 'workflow_dispatch'):
+        if event not in triggers:
+            continue
+        config = triggers[event] or {}
+        refs = (
+            ('main',)
+            if event == 'schedule'
+            else ('slot-a', 'slot-b')
+            if event == 'pull_request'
+            else ('main', 'slot-a', 'slot-b', 'repair-topic')
+        )
+        for branch in refs:
+            if event in {'push', 'pull_request'}:
+                target = 'main' if event == 'pull_request' else branch
+                patterns = config.get('branches', ['*'])
+                allowed = not any(not p.startswith('!') for p in patterns)
+                for pattern in patterns:
+                    if fnmatch.fnmatchcase(target, pattern.removeprefix('!')):
+                        allowed = not pattern.startswith('!')
+                if not allowed or any(
+                    fnmatch.fnmatchcase(target, p) for p in config.get('branches-ignore', [])
+                ):
+                    continue
+            yield event, branch
+
+
+def concurrency_errors(workflows):
     errors, identities = [], {}
     for wi, workflow in enumerate(workflows):
-        for event in ('pull_request', 'push', 'schedule', 'workflow_dispatch'):
-            for branch in ('slot-a', 'slot-b'):
-                for name, job, ctx, _platform in contexts(workflow, event, branch):
-                    for scope, spec in [
-                        ('workflow', workflow.get('concurrency')),
-                        ('job:' + name, job.get('concurrency')),
-                    ]:
-                        if spec is None:
-                            continue
-                        item = (
-                            {'group': spec, 'cancel-in-progress': False}
-                            if isinstance(spec, str)
-                            else spec
+        for event, branch in event_refs(workflow):
+            for name, job, ctx, _platform in contexts(workflow, event, branch):
+                for scope, spec in [
+                    ('workflow', workflow.get('concurrency')),
+                    ('job:' + name, job.get('concurrency')),
+                ]:
+                    if spec is None or (scope != 'workflow' and not value(job.get('if'), ctx)):
+                        continue
+                    item = (
+                        {'group': spec, 'cancel-in-progress': False}
+                        if isinstance(spec, str)
+                        else spec
+                    )
+                    if value(item.get('cancel-in-progress', False), ctx) is not False:
+                        errors.append('cancelling ' + event + ' ' + branch + ' ' + scope)
+                    identity = render(item['group'], ctx)
+                    owner = (wi, branch, scope)
+                    previous = identities.setdefault(identity, owner)
+                    if previous != owner:
+                        errors.append('effective collision ' + identity)
+                    later = dict(ctx, **{'github.run_id': 791})
+                    if identity == render(item['group'], later):
+                        errors.append(
+                            'queued run replacement: ' + event + ' ' + branch + ' ' + scope
                         )
-                        if value(item.get('cancel-in-progress', False), ctx) is not False:
-                            errors.append('cancelling ' + scope)
-                        identity = render(item['group'], ctx)
-                        owner = (wi, branch, scope)
-                        previous = identities.setdefault(identity, owner)
-                        if previous != owner:
-                            errors.append('effective collision ' + identity)
-    for workflow in workflows:
-        for _name, job, ctx, _platform in contexts(workflow, 'pull_request', 'slot-a'):
-            for spec in (workflow.get('concurrency'), job.get('concurrency')):
-                if spec is None:
-                    continue
-                group = spec if isinstance(spec, str) else spec['group']
-                later = dict(ctx, **{'github.run_id': 791})
-                if render(group, ctx) == render(group, later):
-                    errors.append('queued run replacement: effective identity reused')
     return errors
+
+
+def run_settings(workflow, job, step, ctx):
+    defaults = {
+        **workflow.get('defaults', {}).get('run', {}),
+        **job.get('defaults', {}).get('run', {}),
+    }
+    shell = step.get('shell', defaults.get('shell'))
+    if shell not in {None, 'bash'}:
+        raise ValueError('unsupported workflow shell: ' + str(shell))
+    directory = step.get('working-directory', defaults.get('working-directory', '.'))
+    if directory != '.':
+        raise ValueError('unsupported workflow working directory: ' + str(directory))
+    combined = {**workflow.get('env', {}), **job.get('env', {}), **step.get('env', {})}
+    if any(
+        key in {'PATH', 'BASH_ENV', 'ENV', 'SHELLOPTS', 'BASHOPTS'} or key.startswith('E09_')
+        for key in combined
+    ):
+        message = 'unsupported shell/probe environment override'
+        raise ValueError(message)
+    return shell, {key: render(val, ctx) for key, val in combined.items()}
+
+
+def probe(root, workflow, job, step, ctx, policy, fail=''):
+    shell, run_env = run_settings(workflow, job, step, ctx)
+    return trace(root, step['run'], ctx, policy, fail, shell=shell, run_env=run_env)
 
 
 def task_commands(text, environment='default'):
@@ -226,7 +290,7 @@ def smoke_errors(selected, witnesses):
     ]
 
 
-def trace(root, script, ctx, policy, fail=''):  # noqa: PLR0914
+def trace(root, script, ctx, policy, fail='', *, shell=None, run_env=None):  # noqa: PLR0914
     runner = policy.get('execution_report', {}).get('run', {}).get('command', [])
     validator = policy.get('execution_report', {}).get('command', [])
     if not runner or not validator:
@@ -245,7 +309,7 @@ def trace(root, script, ctx, policy, fail=''):  # noqa: PLR0914
         tasks = task_commands(manifest_text, environment)
         for name, commands in tasks.items():
             body = []
-            for _task, cmd, env in commands:
+            for invoked_task, cmd, env in commands:
                 if cmd:
                     bindings = ' '.join(
                         k + '=' + shlex.quote(render(v, ctx)) for k, v in env.items()
@@ -254,11 +318,19 @@ def trace(root, script, ctx, policy, fail=''):  # noqa: PLR0914
                         '( '
                         + ('export ' + bindings + '; ' if bindings else '')
                         + render(cmd, ctx)
+                        + (' "$@"' if invoked_task == name == 'sdk-pack' else '')
                         + ' )'
                     )
             function = 't_e' + str(ei) + '_' + name.replace('-', '_')
             functions.append(function + '() {\n' + '\n'.join(body or [':']) + '\n}')
-            dispatches.append(shlex.quote(environment + ':' + name) + ') ' + function + ';;')
+            arguments = '' if name == 'sdk-pack' else '[ "$#" -eq 0 ] || return 94; '
+            dispatches.append(
+                shlex.quote(environment + ':' + name)
+                + ') shift; '
+                + arguments
+                + function
+                + ' "$@";;'
+            )
     dispatch = '\n'.join(dispatches)
     cases = '\n'.join(
         shlex.quote(target)
@@ -278,7 +350,7 @@ def trace(root, script, ctx, policy, fail=''):  # noqa: PLR0914
 python3() { python "$@"; }
 pixi() { [ "$1" = run ] || return 91; shift; local scope=default
  while [ "${1:-}" = -e ] || [ "${1:-}" = --environment ]; do scope=$2; shift 2; done
- [ "${1:-}" != --skip-deps ] || shift
+ [ "${1:-}" != --skip-deps ] || return 93
  case "$scope:$1" in
 """
         + dispatch
@@ -293,6 +365,7 @@ pytest() { return 0; }
 """
     )
     env = {
+        **(run_env or {}),
         'E09_QUAL_FAIL': 'yes' if fail == 'qualification' else 'no',
         'PATH': '/usr/bin:/bin',
         'RUNNER_TEMP': '/tmp/ci-selection-probe',
@@ -309,7 +382,11 @@ pytest() { return 0; }
         result = subprocess.run(
             [
                 '/bin/bash',
-                '-e',
+                *(
+                    ['--noprofile', '--norc', '-e', '-o', 'pipefail']
+                    if shell == 'bash'
+                    else ['-e']
+                ),
                 '-c',
                 '\n'.join(functions) + '\n' + stub + '\n' + render(script, ctx),
             ],
@@ -361,7 +438,7 @@ def execution_errors(root, workflow, policy, event, platform, group, expected=No
             if group not in step['run'] and policy['groups'][group]['task'] not in step['run']:
                 continue
             try:
-                code, observations = trace(root, step['run'], ctx, policy)
+                code, observations = probe(root, workflow, job, step, ctx, policy)
                 collectors = [
                     args
                     for role, args in observations
@@ -377,7 +454,7 @@ def execution_errors(root, workflow, policy, event, platform, group, expected=No
                     continue
                 if (
                     step.get('continue-on-error')
-                    or trace(root, step['run'], ctx, policy, 'collector')[0] == 0
+                    or probe(root, workflow, job, step, ctx, policy, 'collector')[0] == 0
                 ):
                     errors.append('collector failure swallowed')
                 validations = [a for role, a in observations if role == 'validator']
@@ -392,7 +469,7 @@ def execution_errors(root, workflow, policy, event, platform, group, expected=No
                     )
                     if target not in later['run']:
                         continue
-                    code2, observed = trace(root, later['run'], ctx, policy)
+                    code2, observed = probe(root, workflow, job, later, ctx, policy)
                     validations.extend(a for role, a in observed if role == 'validator')
                     validate_steps.append(later)
                     if code2:
@@ -411,7 +488,7 @@ def execution_errors(root, workflow, policy, event, platform, group, expected=No
                     for validation in validate_steps
                     if (
                         validation.get('continue-on-error')
-                        or trace(root, validation['run'], ctx, policy, 'validator')[0] == 0
+                        or probe(root, workflow, job, validation, ctx, policy, 'validator')[0] == 0
                     )
                     and (validation is not step or validations)
                 )
@@ -476,8 +553,16 @@ def execution_errors(root, workflow, policy, event, platform, group, expected=No
                 ]
                 if len(matching) != 1 or matching[0].get('run') != requirement['run']:
                     errors.append('published SDK lacks frozen same-job qualification')
-                elif trace(root, matching[0]['run'], ctx, policy, 'qualification')[0] == 0:
-                    errors.append('SDK qualification failure swallowed')
+                else:
+                    try:
+                        good, _ = probe(root, workflow, job, matching[0], ctx, policy)
+                        bad, _ = probe(
+                            root, workflow, job, matching[0], ctx, policy, 'qualification'
+                        )
+                        if good or not bad:
+                            errors.append('SDK qualification absent or failure swallowed')
+                    except (ValueError, KeyError, StopIteration, subprocess.TimeoutExpired):
+                        errors.append('unprovable SDK qualification invocation')
             old_uploads = [
                 s
                 for _n, j, c, p in contexts(prior, 'pull_request')
@@ -501,10 +586,14 @@ def execution_errors(root, workflow, policy, event, platform, group, expected=No
                     if s.get('name') in {q['name'] for q in qualified}
                 ):
                     errors.append('SDK upload precedes qualification')
-    for name, job, ctx, _actual_platform in contexts(
+    for name, job, ctx, actual_platform in contexts(
         workflow, event, 'repair-topic' if event == 'workflow_dispatch' else 'main'
     ):
-        if not value(job.get('if'), ctx) or not prerequisites_ready(workflow, job, ctx):
+        if (
+            actual_platform != platform
+            or not value(job.get('if'), ctx)
+            or not prerequisites_ready(workflow, job, ctx)
+        ):
             continue
         errors.extend(
             'SDK upload disconnected from required full execution'

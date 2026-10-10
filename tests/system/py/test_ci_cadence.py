@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 import copy
+import hashlib
 import itertools
 import json
 import re
@@ -416,3 +417,94 @@ def test_linux_task_closure_cannot_reduce_the_frozen_execution(event):
     assert not execution_errors(
         ROOT, live, json.loads(POLICY.read_text()), event, 'linux-64', group
     ), 'CI policy: preserved Linux identities have collected execution receipts on both events'
+
+
+def scale_semantics(source):
+    body = ast.parse(source).body
+    if (
+        body
+        and isinstance(body[0], ast.Expr)
+        and isinstance(body[0].value, ast.Constant)
+        and isinstance(body[0].value.value, str)
+    ):
+        body = body[1:]
+    return [ast.dump(node, include_attributes=False) for node in body]
+
+
+def test_restored_scale_assertions_and_regular_small_scan_are_preserved():
+    source = BASE['scale_source']
+    assert hashlib.sha256(source.encode()).hexdigest() == BASE['scale_sha256'], (
+        'CI policy: scale assertion and fixture reference remains the independently frozen source'
+    )
+    target = ROOT / 'tests/system/py/test_scan_scale.py'
+    assert target.is_file(), (
+        'CI policy: deferred scale cases are restored into the regular system tier'
+    )
+    assert scale_semantics(target.read_text()) == scale_semantics(source), (
+        'CI policy: restored scale cases preserve every original assertion, fixture and limit'
+    )
+    small = {
+        node
+        for node in BASE['nodes']
+        if node.startswith('tests/system/py/test_scan_app_execution.py::')
+    }
+    assert small, (
+        'CI policy: frozen regular small-scan identities form a nonempty independent cohort'
+    )
+    groups = json.loads(POLICY.read_text())['groups']
+    for group in ('quick', 'full'):
+        assert small <= set(expand(groups[group], nodes())), (
+            'CI policy: both regular Linux entry points retain every frozen small-scan identity'
+        )
+
+
+@pytest.mark.parametrize(
+    'damage', ['no-op', 'assertion', 'limit', 'fixture', 'skip', 'missing-case']
+)
+def test_scale_semantics_gate_rejects_weakened_bodies_and_limits(damage):
+    source = BASE['scale_source']
+    assert scale_semantics(source) == scale_semantics(
+        '"""changed prose only"""\n' + ast.unparse(ast.parse(source).body[1:])
+    ), 'CI policy: scale preservation compares executable source independently of prose'
+    tree = ast.parse(source)
+    cases = [
+        n
+        for n in tree.body
+        if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) and n.name.startswith('test_')
+    ]
+    case = cases[0]
+    if damage == 'no-op':
+        case.body = [ast.Pass()]
+    elif damage == 'assertion':
+        assertion = next(n for n in ast.walk(case) if isinstance(n, ast.Assert))
+        assertion.test = ast.Constant(True)
+    elif damage == 'limit':
+        number = next(
+            n
+            for n in ast.walk(tree)
+            if isinstance(n, ast.Constant)
+            and isinstance(n.value, (int, float))
+            and not isinstance(n.value, bool)
+        )
+        number.value *= 2
+    elif damage == 'fixture':
+        fixture = next(
+            n
+            for n in tree.body
+            if isinstance(n, ast.FunctionDef) and not n.name.startswith('test_')
+        )
+        fixture.body = [ast.Return(ast.Constant(None))]
+    elif damage == 'skip':
+        case.decorator_list.append(
+            ast.Attribute(
+                ast.Attribute(ast.Name('pytest', ast.Load()), 'mark', ast.Load()),
+                'skip',
+                ast.Load(),
+            )
+        )
+    else:
+        tree.body.remove(case)
+    altered = ast.unparse(ast.fix_missing_locations(tree))
+    assert scale_semantics(altered) != scale_semantics(source), (
+        'CI policy: body, assertion, limit, fixture and skip mutations refuse'
+    )
