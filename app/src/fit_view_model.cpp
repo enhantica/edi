@@ -406,22 +406,26 @@ void FitViewModel::scanStarted(const edi::ScanPreamble& preamble) {
 }
 
 void FitViewModel::fileCompleted(const edi::ScanFileRecord& record) {
-    ScanSummary counts = scan_;
-    ++(record.converged ? counts.ok : counts.failed);
     // The index holds this file's row and the notes of the files skipped before it (a skipped file sends no event
     // of its own), retained rows of an earlier run included: fitted and skipped are its counts.
     owner_.scanFileFitted(record);
     const ScanSession* session = owner_.scanSession();
-    if (session != nullptr && session->index().error.empty()) {
+    if (session != nullptr && !session->index().error.empty()) {
+        // The index refused what the run wrote: nothing more is published until a full read succeeds (the settle
+        // when the run returns), and the refusal is shown once.
+        if (!scan_index_refused_) {
+            scan_index_refused_ = true;
+            emit refused(QString::fromStdString(session->index().error));
+        }
+        return;
+    }
+    ScanSummary counts = scan_;
+    ++(record.converged ? counts.ok : counts.failed);
+    if (session != nullptr) {
         counts.fitted = static_cast<int>(session->index().fitted);
         counts.skipped = static_cast<int>(session->index().skipped);
     } else {
         ++counts.fitted;
-    }
-    // The index refused what the run wrote: the counts follow the events alone, and the refusal is shown once.
-    if (session != nullptr && !session->index().error.empty() && !scan_index_refused_) {
-        scan_index_refused_ = true;
-        emit refused(QString::fromStdString(session->index().error));
     }
     setScanCounts(counts, QString::fromStdString(record.file_name));
     setProgress(QString(), chi(record.reduced_chi_square), tr("Running"));
@@ -519,9 +523,18 @@ void FitViewModel::settleScanCounts() {
     if (session == nullptr || !session->index().error.empty()) {
         return;
     }
+    // Every count from the full read, converged and failed included: events the live index refused are counted
+    // here, once the files read whole.
     ScanSummary counts = scan_;
     counts.fitted = static_cast<int>(session->index().fitted);
     counts.skipped = static_cast<int>(session->index().skipped);
+    counts.ok = 0;
+    counts.failed = 0;
+    for (const edi::ScanResultIndex::Row& row : session->index().rows) {
+        if (row.offset >= 0) {
+            ++(row.converged ? counts.ok : counts.failed);
+        }
+    }
     setScanCounts(counts, QString());
 }
 
