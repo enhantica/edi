@@ -32,6 +32,62 @@ TestCase {
     function test_observe() {
         const expected = JSON.parse(Probe.readFile(decodeURIComponent(String(Probe.referenceUrl("expected.json")).slice(7))));
         Session.openProject(Probe.referenceUrl("project"));
+        if (expected.kind === "state-open") {
+            if (expected.valid) {
+                verify(Session.hasProject, "Absent and regular symlink state opens through the actual app");
+                compare(Probe.scanIndexError(project), "", "Supported state kinds produce a valid complete app index");
+            } else {
+                const diagnostic = Session.hasProject ? project.fit.unavailableReason : Session.lastError;
+                verify(diagnostic.includes(expected.filename), "App open identifies an unsupported results or provenance path");
+                if (Session.hasProject)
+                    verify(!project.fit.available, "Unsupported retained state prevents a misleading app run");
+            }
+            return;
+        }
+        if (expected.kind === "reread") {
+            verify(Session.hasProject, "The post-index witness first opens regular complete results");
+            tryVerify(() => !project.calculating && Probe.datasetReady(project), 3000, "Initial regular dataset projection finishes before path replacement");
+            compare(project.fit.scanFitted, 3, "The actual app accepts three complete rows before the path changes");
+            compare(Probe.scanIndexError(project), "", "The reread witness starts with a valid index");
+            verify(Probe.replaceState(Probe.referenceUrl("project/analysis/results.csv"), Probe.referenceUrl("replacement")), "The authored replacement changes the results path after successful indexing");
+            const diagnostic = Probe.scanReread(project, expected.reader);
+            if (expected.valid)
+                compare(diagnostic, "", "A regular symlink remains readable through every post-index reader");
+            else
+                verify(diagnostic.includes("results.csv"), "Post-index row and Evolution readers explicitly refuse unsupported results paths before opening streams");
+            return;
+        }
+        if (expected.kind === "retained-scan" || expected.kind === "single-after-skips") {
+            verify(Session.hasProject, "The actual app opens retained rowless completed scan history");
+            tryVerify(() => !project.calculating && Probe.datasetReady(project), 3000, "The initial retained dataset view finishes before persistence actions");
+            compare(project.fit.scanFitted, 0, "The retained all-skipped scan has no fitted result rows");
+            compare(project.fit.scanProgress, 1, "All-skipped retained history still accounts for the entire population");
+            const wasScan = project.fit.scanSummary;
+            if (expected.kind === "single-after-skips") {
+                project.currentExperimentIndex = 0;
+                project.analysis.fittingMode = "single";
+                tryVerify(() => !project.calculating && Probe.datasetReady(project) && project.fit.available, 3000, "A positive selected dataset permits an actual single fit after rowless scan history");
+                project.fit.start();
+                tryVerify(() => running.count >= 2 && !project.fit.running, 3000, "The actual single-fit worker finishes after the all-skipped scan");
+                verify(project.fit.canUndo, "The single fit produced a real accepted record rather than a refusal");
+            }
+            const lastSingle = Probe.scanLastSingle(project);
+            const outcome = project.fit.outcome;
+            verify(Session.saveAs(Probe.referenceUrl("saved")), "The actual app saves the newest run over all-skipped history");
+            Session.closeProject();
+            verify(Session.openProject(Probe.referenceUrl("saved")), "The saved all-skipped history reopens through actual indexing");
+            if (expected.kind === "single-after-skips") {
+                verify(lastSingle && Probe.scanLastSingle(project), "A single fit after an all-skipped scan persists last_single and reopens as the latest run");
+                verify(!project.fit.scanSummary, "Reopen selects the last single fit rather than an older rowless scan summary");
+                compare(project.fit.outcome, outcome, "The reopened single fit retains its actual terminal record");
+            } else {
+                verify(wasScan && project.fit.scanSummary, "All-skipped scan summary survives actual app save and reopen");
+                compare(project.fit.scanFitted, 0, "Reopened all-skipped summary retains its rowless fitted count");
+                compare(project.fit.scanProgress, 1, "Reopened all-skipped summary retains complete processed progress");
+                compare(project.fit.outcome, outcome, "All-skipped round trip retains its real scan outcome");
+            }
+            return;
+        }
         if (expected.kind === "notes") {
             const diagnostic = Session.hasProject ? project.fit.unavailableReason : Session.lastError;
             verify(diagnostic.includes("scan-notes.csv"), "Malformed persisted notes require one explicit core/app diagnostic");

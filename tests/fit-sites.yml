@@ -111,12 +111,12 @@ sites:
 
   - file: tests/integration/py/test_scan_notes_resume.py
     case: multiphase-scales
-    why: Authored two-phase inputs isolate retained-notes admission and the fitted-plus-skipped population, never new diffraction accuracy.
+    why: Authored two-phase inputs isolate retained-state admission and the fitted-plus-skipped population, never new diffraction accuracy.
 
   - file: tests/integration/py/test_scan_notes_diagnostics.py
     case: multiphase-scales
-    why: Authored two-phase inputs isolate retained-notes admission and the fitted-plus-skipped population, never new diffraction accuracy.
+    why: Authored two-phase inputs isolate retained-state admission and the fitted-plus-skipped population, never new diffraction accuracy.
 
   - file: tests/integration/app/test_phase_scan_progress.py
     case: multiphase-scales
-    why: Authored two-phase inputs isolate retained-notes admission and the fitted-plus-skipped population, never new diffraction accuracy.
+    why: Authored two-phase inputs isolate retained-state admission and the fitted-plus-skipped population, never new diffraction accuracy.

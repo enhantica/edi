@@ -20,6 +20,10 @@ TestCase {
     property bool invalidOnReport: false
     property bool publishedAfterFault: false
     property bool cancellationRequested: false
+    property int faultFitted: -1
+    property real faultProgress: -1
+    property bool postFaultChange: false
+    property bool followingAtInjection: false
     SignalSpy {
         id: running
         target: test.project ? test.project.fit : null
@@ -35,18 +39,27 @@ TestCase {
         function onRefused(message) {
             test.recordFault(message);
         }
+        function onScanProgressChanged() {
+            if (test.faultReported && test.project.fit.scanProgress !== test.faultProgress)
+                test.postFaultChange = true;
+        }
         function onRunningChanged() {
+            if (test.project.fit.running && test.expectation.sweep)
+                test.project.fit.following = test.expectation.following;
             if (test.project.fit.running && test.expectation.ending === "cancel") {
                 test.cancellationRequested = true;
                 test.project.fit.cancel();
             }
         }
         function onScanFittedChanged() {
+            if (test.faultReported && test.project.fit.scanFitted !== test.faultFitted)
+                test.postFaultChange = true;
             if (test.faultReported && test.project.fit.running && test.project.fit.scanFitted > 2)
                 test.publishedAfterFault = true;
             // The completed second row proves the native notes stream is open. A preamble injection
             // races its initial truncation; this signal is before the third row reaches the GUI index.
             if (test.expectation.channel === "incremental" && !test.injected && test.project.fit.running && test.project.fit.scanFitted === 2) {
+                test.followingAtInjection = test.project.fit.following;
                 const bad = test.expectation.fault === "fraction" ? "experiments/scan/03.xy,1.5,True,\n" : "experiments/scan/foreign.xy,0,True,\n";
                 test.injected = Probe.appendNotes(Probe.referenceUrl("project/analysis/scan-notes.csv"), "experiments/scan/02.xy,0,False,\n" + bad);
             }
@@ -75,8 +88,11 @@ TestCase {
     }
     function recordFault(text) {
         if (text.includes("scan-notes.csv")) {
-            if (!faultReported)
+            if (!faultReported) {
                 invalidOnReport = Probe.scanIndexError(project).includes("scan-notes.csv");
+                faultFitted = project.fit.scanFitted;
+                faultProgress = project.fit.scanProgress;
+            }
             faultReported = true;
         }
     }
@@ -113,7 +129,12 @@ TestCase {
         } else if (expected.channel === "incremental") {
             verify(injected, "A complete later notes line and a bad following line were appended after the app accepted history");
             verify(faultReported, "The actual incremental notes refusal is reported through the app's actual error channel");
-            if (expected.check === "index") {
+            if (expected.sweep) {
+                compare(followingAtInjection, expected.following, "The refusal sweep reaches the actual requested following-dataset mode");
+                verify(!postFaultChange, "No later callback or terminal settlement publishes changed fitted or processed progress after incremental refusal");
+                compare(project.fit.scanFitted, faultFitted, "Terminal presentation retains the refused population without adopting later rows");
+                compare(project.fit.scanProgress, faultProgress, "Terminal presentation never settles refused facts into valid-looking processed progress");
+            } else if (expected.check === "index") {
                 verify(invalidOnReport, "An incremental notes failure invalidates the live index before reporting recovered state");
                 verify(Probe.scanIndexError(project).includes("scan-notes.csv"), "The failed incremental index remains invalid until a successful complete reindex");
             } else {

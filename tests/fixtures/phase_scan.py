@@ -225,3 +225,31 @@ def nonregular_notes(root, kind):
     else:
         os.mkfifo(path)
     return path
+
+
+def scan_state_path(root, filename, kind):
+    """Authored path-kind replacement; a symlink always names retained regular bytes."""
+    path = root / 'analysis' / filename
+    if path.exists():
+        path.rename(path.with_name(filename + '.retained'))
+    if kind == 'directory':
+        path.mkdir()
+        (path / 'keep').write_text('retained source state\n')
+    elif kind == 'fifo':
+        os.mkfifo(path)
+    elif kind == 'symlink':
+        path.symlink_to(filename + '.retained')
+    elif kind != 'absent':
+        raise ValueError(kind)
+    return path
+
+
+def scan_state_fingerprint(root):
+    return {
+        str(path.relative_to(root)): (
+            path.lstat().st_ino,
+            path.lstat().st_mode,
+            path.read_bytes() if path.is_file() else None,
+        )
+        for path in (root / 'analysis').rglob('*')
+    }

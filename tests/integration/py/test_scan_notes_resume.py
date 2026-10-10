@@ -1,6 +1,7 @@
 """Retained scan inputs are proved before resume can change or discard them."""
 
 import os
+import shutil
 import stat
 import subprocess
 import sys
@@ -124,3 +125,71 @@ def test_native_resume_refuses_nonregular_notes_without_blocking(
         assert (notes / 'keep').read_text() == 'retained source state\n', (
             'Refusing a notes directory must preserve its retained contents'
         )
+
+
+@pytest.fixture(scope='module')
+def complete_results_history(tmp_path_factory):
+    """Reuse immutable complete history; timed node work is only the boundary under test."""
+    root = tmp_path_factory.mktemp('complete-results-history')
+    histories = {}
+    for mode in ('sequential', 'independent'):
+        directory = phase_scan.materialize(root / mode, mode)
+        engine.Project.load(directory).analysis.fit()
+        histories[mode] = directory
+    return histories
+
+
+@pytest.mark.parametrize('mode', ['sequential', 'independent'])
+@pytest.mark.parametrize('filename', ['results.csv', 'results-provenance.csv'])
+@pytest.mark.parametrize('kind', ['directory', 'fifo', 'absent', 'symlink'])
+def test_native_results_state_distinguishes_absence_regular_and_unsupported(
+    tmp_path, complete_results_history, mode, filename, kind
+):
+    if kind == 'fifo' and not hasattr(os, 'mkfifo'):
+        pytest.skip('The platform cannot construct the optional FIFO file-kind witness')
+    directory = tmp_path / 'project'
+    if kind == 'absent' and filename == 'results.csv':
+        phase_scan.materialize(directory, mode)
+    else:
+        shutil.copytree(complete_results_history[mode], directory)
+    state = phase_scan.scan_state_path(directory, filename, kind)
+    before = state.lstat() if kind != 'absent' else None
+    code = (
+        'import sys; sys.meta_path[:]=[f for f in sys.meta_path '
+        'if type(f).__module__!="_crysta_editable"]; '
+        'import edi as engine; engine.Project.load(sys.argv[1]).analysis.fit()'
+    )
+    try:
+        result = subprocess.run(
+            [sys.executable, '-c', code, str(directory)],
+            env={
+                **os.environ,
+                'PYTHONPATH': str(Path(engine.__file__).resolve().parents[1])
+                + os.pathsep
+                + os.environ.get('PYTHONPATH', ''),
+            },
+            capture_output=True,
+            text=True,
+            timeout=2,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        pytest.fail('Native state admission must refuse unsupported paths before a blocking open')
+    if kind in {'absent', 'symlink'}:
+        assert result.returncode == 0, (
+            'Genuine absence and regular symlinks must remain supported scan state: '
+            + result.stderr
+        )
+    else:
+        assert result.returncode != 0, 'Native admission must refuse unsupported results state'
+        assert filename in result.stderr, (
+            'Native admission must diagnose unsupported results/provenance paths'
+        )
+        assert (state.lstat().st_ino, stat.S_IFMT(state.lstat().st_mode)) == (
+            before.st_ino,
+            stat.S_IFMT(before.st_mode),
+        ), 'A refused results-state input must retain its inode and file kind'
+        if kind == 'directory':
+            assert (state / 'keep').read_text() == 'retained source state\n', (
+                'Results-state refusal must preserve an existing directory and its contents'
+            )
