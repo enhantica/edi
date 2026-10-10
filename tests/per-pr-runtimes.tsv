@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-10T11:00:16Z
+# measured_utc = 2026-10-10T12:04:48Z
 #
-# Recorded from: scan-rereads.log (9 node(s) measured once, 9354 banked, 0 stale row(s) dropped)
-# Collected tests: 10133; with a reported duration: 5212
+# Recorded from: native-system-consumer.log (24 node(s) measured once, 9363 banked, 0 stale row(s) dropped)
+# Collected tests: 10133; with a reported duration: 5236
 # Module-scoped fixture costs recorded: 32
 #
 # Breaches are decided PER TIER against the table
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 10133
 # inventory_cpp = 302
-# inventory_measured = 9363
-# inventory_unmeasured = 1072
+# inventory_measured = 9387
+# inventory_unmeasured = 1048
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -7613,8 +7613,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_executi
 0.370	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[CRYSTA_SDK_SHA256-core-osx-arm64]
 0.400	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[CRYSTA_SDK_SHA256-docs-linux-64]
 0.370	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[CRYSTA_SDK_SHA256-notebooks-linux-64]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[CRYSTA_SDK_SHA256-system-linux-64]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[CRYSTA_SDK_SHA256-system-osx-arm64]
+0.460	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[CRYSTA_SDK_SHA256-system-linux-64]
+0.420	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[CRYSTA_SDK_SHA256-system-osx-arm64]
 0.380	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[CRYSTA_SDK_TAG-app-linux-64]
 0.370	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[CRYSTA_SDK_TAG-app-osx-arm64]
 0.400	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[CRYSTA_SDK_TAG-audit-linux-64]
@@ -7624,8 +7624,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_executi
 0.410	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[CRYSTA_SDK_TAG-core-osx-arm64]
 0.400	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[CRYSTA_SDK_TAG-docs-linux-64]
 0.350	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[CRYSTA_SDK_TAG-notebooks-linux-64]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[CRYSTA_SDK_TAG-system-linux-64]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[CRYSTA_SDK_TAG-system-osx-arm64]
+0.390	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[CRYSTA_SDK_TAG-system-linux-64]
+0.410	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[CRYSTA_SDK_TAG-system-osx-arm64]
 0.340	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[embedded-commit-app-linux-64]
 0.340	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[embedded-commit-app-osx-arm64]
 0.330	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[embedded-commit-audit-linux-64]
@@ -7635,8 +7635,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_executi
 0.360	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[embedded-commit-core-osx-arm64]
 0.350	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[embedded-commit-docs-linux-64]
 0.340	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[embedded-commit-notebooks-linux-64]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[embedded-commit-system-linux-64]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[embedded-commit-system-osx-arm64]
+0.330	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[embedded-commit-system-linux-64]
+0.350	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[embedded-commit-system-osx-arm64]
 0.290	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[missing-manifest-app-linux-64]
 0.290	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[missing-manifest-app-osx-arm64]
 0.280	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[missing-manifest-audit-linux-64]
@@ -7646,8 +7646,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_executi
 0.290	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[missing-manifest-core-osx-arm64]
 0.310	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[missing-manifest-docs-linux-64]
 0.280	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[missing-manifest-notebooks-linux-64]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[missing-manifest-system-linux-64]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[missing-manifest-system-osx-arm64]
+0.360	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[missing-manifest-system-linux-64]
+0.470	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[missing-manifest-system-osx-arm64]
 0.990	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[missing-tar-app-linux-64]
 0.910	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[missing-tar-app-osx-arm64]
 1.070	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[missing-tar-audit-linux-64]
@@ -7657,8 +7657,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_executi
 0.830	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[missing-tar-core-osx-arm64]
 1.050	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[missing-tar-docs-linux-64]
 0.850	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[missing-tar-notebooks-linux-64]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[missing-tar-system-linux-64]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[missing-tar-system-osx-arm64]
+1.380	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[missing-tar-system-linux-64]
+0.950	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[missing-tar-system-osx-arm64]
 0.420	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[platform-app-linux-64]
 0.400	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[platform-app-osx-arm64]
 0.480	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[platform-audit-linux-64]
@@ -7668,8 +7668,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_executi
 0.400	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[platform-core-osx-arm64]
 0.400	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[platform-docs-linux-64]
 0.410	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[platform-notebooks-linux-64]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[platform-system-linux-64]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[platform-system-osx-arm64]
+0.890	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[platform-system-linux-64]
+0.420	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[platform-system-osx-arm64]
 0.420	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[run_id-app-linux-64]
 0.420	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[run_id-app-osx-arm64]
 0.390	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[run_id-audit-linux-64]
@@ -7679,8 +7679,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_executi
 0.390	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[run_id-core-osx-arm64]
 0.910	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[run_id-docs-linux-64]
 0.380	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[run_id-notebooks-linux-64]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[run_id-system-linux-64]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[run_id-system-osx-arm64]
+0.420	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[run_id-system-linux-64]
+0.410	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[run_id-system-osx-arm64]
 0.400	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[sha256-app-linux-64]
 0.420	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[sha256-app-osx-arm64]
 0.390	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[sha256-audit-linux-64]
@@ -7690,8 +7690,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_executi
 0.400	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[sha256-core-osx-arm64]
 0.400	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[sha256-docs-linux-64]
 0.390	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[sha256-notebooks-linux-64]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[sha256-system-linux-64]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[sha256-system-osx-arm64]
+0.600	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[sha256-system-linux-64]
+0.430	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[sha256-system-osx-arm64]
 0.380	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[source_sha-app-linux-64]
 0.430	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[source_sha-app-osx-arm64]
 0.390	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[source_sha-audit-linux-64]
@@ -7701,8 +7701,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_executi
 0.390	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[source_sha-core-osx-arm64]
 0.400	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[source_sha-docs-linux-64]
 0.390	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[source_sha-notebooks-linux-64]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[source_sha-system-linux-64]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[source_sha-system-osx-arm64]
+0.420	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[source_sha-system-linux-64]
+0.410	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[source_sha-system-osx-arm64]
 0.430	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[source_tree-app-linux-64]
 0.390	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[source_tree-app-osx-arm64]
 0.390	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[source_tree-audit-linux-64]
@@ -7712,8 +7712,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_executi
 0.400	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[source_tree-core-osx-arm64]
 0.430	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[source_tree-docs-linux-64]
 0.390	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[source_tree-notebooks-linux-64]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[source_tree-system-linux-64]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[source_tree-system-osx-arm64]
+0.450	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[source_tree-system-linux-64]
+0.410	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[source_tree-system-osx-arm64]
 0.390	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[tar-bytes-app-linux-64]
 0.390	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[tar-bytes-app-osx-arm64]
 0.400	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[tar-bytes-audit-linux-64]
@@ -7723,8 +7723,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_executi
 0.380	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[tar-bytes-core-osx-arm64]
 0.420	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[tar-bytes-docs-linux-64]
 0.380	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[tar-bytes-notebooks-linux-64]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[tar-bytes-system-linux-64]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[tar-bytes-system-osx-arm64]
+0.430	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[tar-bytes-system-linux-64]
+0.410	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[tar-bytes-system-osx-arm64]
 0.420	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[workspace-app-linux-64]
 0.390	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[workspace-app-osx-arm64]
 0.410	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[workspace-audit-linux-64]
@@ -7734,8 +7734,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_executi
 0.410	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[workspace-core-osx-arm64]
 0.400	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[workspace-docs-linux-64]
 0.540	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[workspace-notebooks-linux-64]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[workspace-system-linux-64]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[workspace-system-osx-arm64]
+0.410	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[workspace-system-linux-64]
+0.410	tests/system/py/test_e09_t75_native_execution.py::test_native_fixture_matching_import_and_every_independent_field_refusal[workspace-system-osx-arm64]
 0.000	tests/system/py/test_e09_t75_native_execution.py::test_native_job_path_oracle_rejects_wrong_resource_or_restore_operation[download-if]
 0.000	tests/system/py/test_e09_t75_native_execution.py::test_native_job_path_oracle_rejects_wrong_resource_or_restore_operation[name]
 0.000	tests/system/py/test_e09_t75_native_execution.py::test_native_job_path_oracle_rejects_wrong_resource_or_restore_operation[operation]
@@ -10498,7 +10498,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 110.331	tests/system/py/test_e04_t9_latency.py
 # module-cost: 4.456	tests/system/py/test_e05_t1_background_provenance.py
 # module-cost: 1.762	tests/system/py/test_e09_t58_start_tied_numeric.py
-# module-cost: 0.180	tests/system/py/test_e09_t75_native_execution.py
+# module-cost: 0.346	tests/system/py/test_e09_t75_native_execution.py
 # module-cost: 3.929	tests/system/py/test_fit_participants_native.py
 # module-cost: 129.839	tests/system/py/test_plain_data_app.py
 # module-cost: 21.241	tests/system/py/test_pytest_child_environment.py
