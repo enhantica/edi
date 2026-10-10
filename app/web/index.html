@@ -5,12 +5,13 @@
   fit runs. Each build's files sit in a folder named by their content (`multithread-<hash>/`, `singlethread-<hash>/`), which
   build.json names and the page reads past every cache: a redeploy cannot pair one build's cached script with another's module. On a
   host that sends no COOP/COEP headers (GitHub Pages), coi-serviceworker.js adds them once it controls the page: the page registers
-  it and reloads once per deploy. `?build=multithread` or `?build=singlethread` forces a build. Why a build was chosen is kept in
-  window.ediBuildInfo for the app's diagnostics view (Preferences > Develop). While the build downloads, compiles and starts,
-  the page shows the logo as a splash, its mark turning as in EasyDiffractionBeta's loading window (mark.svg over name.svg,
-  splash.css: the mark turns as an element, which the compositor keeps drawing while the module's start blocks the main thread); when
-  the page has a message instead of the app, the logo stands still (logo.svg). The page takes the colour scheme the app's settings
-  hold (light, dark, or the system's), as the app will.
+  it and reloads under it, falling back only when that reload is still not isolated. `?build=multithread` or
+  `?build=singlethread` forces a build. Why a build was chosen is kept in window.ediBuildInfo for the app's diagnostics view
+  (Preferences > Develop). While the build downloads, compiles and starts, the page shows the logo as a splash, its mark
+  turning as in EasyDiffractionBeta's loading window (mark.svg over name.svg, splash.css: the mark turns as an element, which
+  the compositor keeps drawing while the module's start blocks the main thread); when the page has a message instead of the
+  app, the logo stands still (logo.svg). The page takes the colour scheme the app's settings hold (light, dark, or the
+  system's), as the app will.
 -->
 <html lang="en">
   <head>
@@ -53,9 +54,10 @@
       })();
     </script>
     <script>
-      // coi-serviceworker's page half only tells the worker which COEP mode this browser takes; this page
-      // registers the worker itself, so that it knows when to give up.
-      window.coi = { shouldRegister: () => false, quiet: true };
+      // coi-serviceworker's page half only tells the worker which COEP mode to send; this page registers the worker
+      // itself, so that it knows when to give up. The mode is require-corp in every browser: every file the app loads
+      // is same-origin, and Safari does not isolate a page under the shim's default there, credentialless.
+      window.coi = { shouldRegister: () => false, coepCredentialless: () => false, quiet: true };
     </script>
     <script src="coi-serviceworker.js"></script>
   </head>
@@ -107,11 +109,17 @@
       }
 
       // The build this browser runs and why ({build, reason}), or null while the page reloads under the service
-      // worker. The reload happens once per deploy (`deploy` names build.json's folders): a page still not isolated
-      // after it falls back, and a new deploy tries again, as a browser may open it before its worker is active.
+      // worker. A page that is not isolated reloads once under the worker, and falls back only if the page that reload
+      // brings (marked by `edi.coi-reloaded`, which each load consumes) is still not isolated. So a later load that found
+      // the worker in a stale state is retried, never taken as the answer.
       async function chooseBuild(deploy) {
         const forced = new URLSearchParams(location.search).get("build");
         const session = sessionStore();
+        const reloaded = session && session.getItem("edi.coi-reloaded");
+        if (session) {
+          session.removeItem("edi.coi-reloaded");
+          session.removeItem("edi.coi-reload");  // the earlier page's marker, which no load consumed
+        }
         if (BUILDS.includes(forced)) {
           const fallback = session && session.getItem("edi.fallback-reason");
           if (fallback) {
@@ -131,13 +139,13 @@
         if (!session) {
           return { build: "singlethread", reason: "no session storage to remember a reload in" };
         }
-        if (session.getItem("edi.coi-reload") === deploy) {
-          return { build: "singlethread", reason: "not cross-origin isolated after the service worker's reload for this deploy" };
+        if (reloaded === deploy) {
+          return { build: "singlethread", reason: "not cross-origin isolated after the service worker's reload" };
         }
         try {
           await navigator.serviceWorker.register("coi-serviceworker.js");
           await navigator.serviceWorker.ready;
-          session.setItem("edi.coi-reload", deploy);
+          session.setItem("edi.coi-reloaded", deploy);
           location.reload();
           return null;
         } catch (e) {
@@ -186,6 +194,12 @@
 
       let loaded = false;
       let started = "";
+      let startedReason = "";
+      // A page being left (a reload, a navigation) aborts its downloads; that is no reason to fall back.
+      let leaving = false;
+      window.addEventListener("pagehide", () => {
+        leaving = true;
+      });
 
       async function start() {
         const folders = await buildFolders();
@@ -195,6 +209,7 @@
         }
         const build = chosen.build;
         started = build;
+        startedReason = chosen.reason;
         // What the app's diagnostics view shows about this choice (Preferences > Develop).
         window.ediBuildInfo = {
           build,
@@ -221,6 +236,9 @@
               screen.style.display = "block";
             },
             onExit: (exit) => {
+              if (leaving) {
+                return;
+              }
               if (!loaded && fallBack(started, exit.text || `code ${exit.code}`)) {
                 return;
               }
@@ -235,10 +253,14 @@
       }
 
       start().catch((e) => {
+        if (leaving) {
+          return;
+        }
         if (!loaded && fallBack(started, e.message)) {
           return;
         }
-        showMessage(`EasyDiffraction could not start: ${e.message}`);
+        const which = started ? ` the ${started} build (chosen because ${startedReason})` : "";
+        showMessage(`EasyDiffraction could not start${which}: ${e.message}`);
         console.error(e);
       });
     </script>

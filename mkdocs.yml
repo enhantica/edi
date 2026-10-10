@@ -57,6 +57,7 @@ nav:
           - dev/adrs/0025-several-structures-and-linked-structures.md
           - dev/adrs/0026-scan-datasets-and-scale.md
           - dev/adrs/0027-anisotropic-displacement-parameters.md
+          - dev/adrs/0028-uncertainty-bound-from-fit-conditioning.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md

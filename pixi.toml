@@ -387,6 +387,9 @@ group-app = { cmd = ["python", "-m", "pytest", "tests/integration/app", "-q"], d
 # The packed web app (wasm-build's zip): the given pytest files and the browser driver in each case, in this
 # environment (the tests import edi): tools/ci/wasm-check.sh.
 wasm-check = { cmd = ["bash", "tools/ci/wasm-check.sh"] }
+# The multithread web app's parallel fit: the browser matrix with its speed ratio, and crysta's executed-body witness
+# (tools/ci/wasm-parallel-check.sh).
+wasm-parallel-check = { cmd = ["bash", "tools/ci/wasm-parallel-check.sh"] }
 # The cadence entry points: `verify-quick` — the static checks, the core build, the audit and
 # the quick group — runs ONCE before handing to review; `verify-full` (== `verify`, the mount
 # `verify:` command and the x-ship gate) runs ONCE when ready to merge, after the accept.
