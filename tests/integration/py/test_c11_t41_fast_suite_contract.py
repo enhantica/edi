@@ -400,6 +400,11 @@ def test_c11_t41_edi_ci_tiers_name_pr_merge_and_local_surfaces() -> None:
     )
 
     jobs = yaml.safe_load(workflow)['jobs']
+    declared = yaml.safe_load(workflow)
+    triggers = declared.get('on', declared.get(True))
+    assert {'pull_request', 'push', 'schedule', 'workflow_dispatch'} <= set(triggers), (
+        'complete system selections retain PR, main, nightly and on-demand workflow triggers'
+    )
     for name in ('native', 'core', 'cli-python', 'app'):
         runners = [
             runner
