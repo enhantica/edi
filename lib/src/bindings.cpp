@@ -3423,6 +3423,22 @@ NB_MODULE(_edi, m) {
             },
             "Internal: undo the last fit (restored slot ids, was_no_op).")
         .def(
+            "_scan_notes",
+            [](edi::Project& self) {
+                const edi::ScanNotesReport report = edi::scan_notes_report(self);
+                nb::list refused;
+                for (const auto& [file, why] : report.refused) {
+                    refused.append(nb::make_tuple(file, why));
+                }
+                nb::dict out;
+                out["skipped"] = report.skipped;
+                out["negative_points"] = report.negative_points;
+                out["refused"] = refused;
+                return out;
+            },
+            "Internal: the scan's skipped and refused files as its results index reads them (edi fit's "
+            "summary). Raises ValueError when the results or analysis/scan-notes.csv break their rules.")
+        .def(
             "_dry_run_into",
             [](edi::Project& self, const std::filesystem::path& directory) {
                 // The CLI's --dry. What a fit writes lands under

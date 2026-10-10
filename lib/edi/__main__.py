@@ -33,7 +33,6 @@ from __future__ import annotations
 import argparse
 import contextlib
 import math
-import re
 import signal
 import sys
 import tempfile
@@ -408,68 +407,20 @@ def _run_human(project: edi.Project, verbosity, project_name: str, *, clock=time
     return _stream_single_fit(project, verbosity, project_name)
 
 
-_NOTES_HEADER = 'file_path,negative_points,skipped_dataset,refusal'
-
-
-def _note_problem(cells: list[str], seen: set[str]) -> str:
-    """Why one notes row breaks the rule, or ''."""
-    if len(cells) != 4:
-        return f'has a line of {len(cells)} cells, not 4'
-    if not re.fullmatch(r'[0-9]{1,12}', cells[1]):
-        return f"gives '{cells[0]}' {cells[1]!r} negative points, not a whole number"
-    if cells[2] not in {'True', 'False'}:
-        return f"gives '{cells[0]}' skipped_dataset {cells[2]!r}, not True or False"
-    if cells[0] in seen:
-        return f"names '{cells[0]}' twice"
-    return ''
-
-
-def _read_notes(text: str) -> tuple[list[list[str]], str]:
-    """The notes' rows, or why the file breaks the rule edi's index and crysta's resume read it by.
-
-    The header, complete lines, four cells a row, negative_points a decimal integer of at most 12
-    digits, skipped_dataset True or False, and each file named once.
-    """
-    lines = text.split('\n')
-    if lines[-1]:
-        return [], 'has a last line that is not complete'
-    if lines[0] != _NOTES_HEADER:
-        return [], f'has no {_NOTES_HEADER} header'
-    rows: list[list[str]] = []
-    seen: set[str] = set()
-    for line in lines[1:-1]:
-        cells = line.removesuffix('\r').split(',')
-        if why := _note_problem(cells, seen):
-            return [], why
-        seen.add(cells[0])
-        rows.append(cells)
-    return rows, ''
-
-
 def _skipped_line(project: edi.Project) -> str:
-    """What crysta noted about the scan's files, from analysis/scan-notes.csv."""
-    directory = getattr(getattr(project, 'metadata', None), 'path', None)
-    if directory is None:
+    """What the scan's results index says about its skipped and refused files.
+
+    The index reads analysis/scan-notes.csv by the rule the app and crysta's resume apply, so a
+    file that breaks it is reported as a diagnostic, never as some other state.
+    """
+    notes = getattr(project, '_scan_notes', None)
+    if notes is None or getattr(getattr(project, 'metadata', None), 'path', None) is None:
         return ''
     try:
-        text = (Path(directory) / 'analysis' / 'scan-notes.csv').read_text('utf-8')
-    except FileNotFoundError:
-        return ''
-    except (OSError, UnicodeDecodeError) as error:
-        return f'Scan notes: analysis/scan-notes.csv cannot be read ({error})'
-    rows, why = _read_notes(text)
-    if why:
-        return (
-            f'Scan notes: analysis/scan-notes.csv {why}; '
-            'the skipped and refused files cannot be reported'
-        )
-    files = points = 0
-    refused = []
-    for name, count, skipped, refusal in rows:
-        points += int(count)
-        files += skipped == 'True'
-        if refusal:
-            refused.append(f'  {name.rsplit("/", 1)[-1]}: {refusal}')
+        report = notes()
+    except ValueError as error:
+        return f'Scan notes: {error}'
+    files, points, refused = report['skipped'], report['negative_points'], report['refused']
     out = []
     if files or points:
         out.append(
@@ -478,7 +429,7 @@ def _skipped_line(project: edi.Project) -> str:
         )
     if refused:
         out.append(f'Refused: {len(refused)} file(s), recorded as failed')
-        out.extend(refused[:10])
+        out.extend(f'  {name}: {why}' for name, why in refused[:10])
         if len(refused) > 10:
             out.append(f'  ... and {len(refused) - 10} more')
     if out:

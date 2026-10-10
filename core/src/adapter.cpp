@@ -1452,7 +1452,10 @@ std::int64_t read_scan_notes(const Project& project, const ScanPlaces& places, S
     std::int64_t end = from;
     if (from == 0) {
         if (!std::getline(input, line)) {
-            return 0;  // created, nothing written yet
+            if (writing && !input.bad()) {
+                return 0;  // created by the run, nothing written yet
+            }
+            refuse(input.bad() ? "it could not be read" : "it is empty");
         }
         if (input.eof()) {
             if (writing) {
@@ -1467,6 +1470,9 @@ std::int64_t read_scan_notes(const Project& project, const ScanPlaces& places, S
         end = input.tellg();
     } else {
         input.seekg(from);
+        if (!input) {
+            refuse("it could not be read from where the last read stopped");
+        }
     }
     const std::string directory = project.sequential_fit.data_dir + "/";
     while (std::getline(input, line)) {
@@ -1512,6 +1518,9 @@ std::int64_t read_scan_notes(const Project& project, const ScanPlaces& places, S
         }
         end = input.tellg();
     }
+    if (input.bad()) {
+        refuse("it could not be read to its end");
+    }
     return end;
 }
 
@@ -1540,6 +1549,24 @@ ScanResultIndex index_scan_results(const Project& project, const ScanDatasets& d
         }
     }
     return index;
+}
+
+ScanNotesReport scan_notes_report(const Project& project) {
+    const ScanDatasets datasets = scan_datasets(project);
+    const ScanResultIndex index = index_scan_results(project, datasets, false);
+    if (!index.error.empty()) {
+        throw std::invalid_argument(index.error);
+    }
+    ScanNotesReport report;
+    report.skipped = index.skipped;
+    for (std::size_t place = 0; place < index.rows.size(); ++place) {
+        const ScanResultIndex::Row& row = index.rows[place];
+        report.negative_points += row.negative_points;
+        if (!row.refusal.empty()) {
+            report.refused.emplace_back(datasets.files[place], row.refusal);
+        }
+    }
+    return report;
 }
 
 namespace {

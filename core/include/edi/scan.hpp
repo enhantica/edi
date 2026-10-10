@@ -102,6 +102,15 @@ ScanPlaces scan_places(const ScanDatasets& datasets);
 /// for the next read. The CLI (`edi fit`) and crysta's resume read the file by the same rule.
 std::int64_t read_scan_notes(const Project& project, const ScanPlaces& places, ScanResultIndex& index,
                              std::int64_t from, bool writing);
+/// What a scan's results and notes say about its skipped and refused files, as `edi fit` reports them: read by the
+/// results index, so by the same rule. Throws std::invalid_argument with the index's own message when the results or
+/// the notes cannot be read by their rules.
+struct ScanNotesReport {
+    std::size_t skipped = 0;          ///< datasets skipped for having no intensity above zero
+    std::size_t negative_points = 0;  ///< rows skipped for a negative intensity, over every dataset
+    std::vector<std::pair<std::string, std::string>> refused;  ///< (file, why) per refused dataset
+};
+ScanNotesReport scan_notes_report(const Project& project);
 /// The file a row names: its `file_path` cell is `<data_dir>/<file>` as crysta writes it, or the bare file name;
 /// empty for any other path (a file of another directory is not this scan's, whatever its name).
 std::string scan_row_file(const ScanResultIndex& index, const std::vector<std::string>& cells);
