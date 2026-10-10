@@ -78,3 +78,5 @@ restart of completed fits.
 New observers have live disconnected, constant or wrong-state controls. Reset and Continue still
 use the actual app/core/worker; optimizer entries bind the fitted file and measured payload.
 The scale actor remains unthrottled and its bounds remain unchanged.
+
+| Native scan observation callback | Public driver and optimizer wrappers accepted only the row-completion callback. | Forward the optional fitted-project callback unchanged through both native entry points and the observed optimizer; retain row receipts and the actual compiled SDK loop. |
