@@ -65,6 +65,8 @@ A skipped file sends no event of its own, so the live index reads the notes appe
 app indexes the files on disk again when the run returns, before the running bar closes: files skipped after the
 last row count for every ending (complete, stopped, failed). A refusal while a run writes refuses the whole index,
 as a full read would, and is shown at once; nothing more is published until the full read at the end succeeds.
+When that read refuses too, the datasets, evolution and counts stay as last accepted, the run keeps its own
+outcome (Failed, Stopped, else Refused), and no summary is built from the refused read.
 A scan whose processed files were all skipped is still a scan that ran: it has a scan summary and run provenance,
 and a single fit after it is recorded as the last run. `results.csv`, `results-provenance.csv` and
 `scan-notes.csv` may be absent, but a path that exists must be a regular file (`edi::scan_state_present`, asked by
