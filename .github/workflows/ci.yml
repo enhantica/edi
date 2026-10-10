@@ -13,6 +13,10 @@ name: CI
 on:
   push:
     branches: [main]
+  # Every night the full group runs on main on both platforms, including the nightly group's files
+  # that pull requests leave out (tests/test-groups.json).
+  schedule:
+    - cron: '45 1 * * *'
   pull_request:
     types: [ready_for_review]
   workflow_dispatch:
@@ -24,8 +28,9 @@ on:
         type: boolean
         default: false
 
+# The schedule is part of the key, so a nightly run and a main push never cancel each other.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ github.event.schedule }}
   cancel-in-progress: true
 
 permissions:
@@ -37,7 +42,7 @@ jobs:
     name: changes
     runs-on: &linux ubuntu-24.04
     outputs:
-      app_build: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.app_build == 'true' }}
+      app_build: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || steps.filter.outputs.app_build == 'true' }}
       crysta_sha: ${{ steps.crysta-source.outputs.sha }}
     steps:
       - uses: actions/checkout@v5

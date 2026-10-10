@@ -9,7 +9,7 @@
         "system"
       ],
       "task": "group-quick",
-      "gap_to_merge": "none on test selection; merge-only JOBS (the macOS leg) differ, never which tests run"
+      "gap_to_merge": "the nightly group's files run on main pushes and nightly, not per pull request; merge-only JOBS (the macOS leg) differ otherwise"
     },
     "app": {
       "tiers": [
@@ -27,6 +27,18 @@
       ],
       "task": "group-full",
       "gap_to_merge": "the merge selection itself"
+    },
+    "nightly": {
+      "tiers": [
+        "system"
+      ],
+      "paths": [
+        "tests/system/py/test_scan_app_execution.py",
+        "tests/system/py/test_scan_accident_paths.py",
+        "tests/system/py/test_plain_data_app.py"
+      ],
+      "task": "group-nightly",
+      "gap_to_merge": "none: full runs these files on every main push, and the scheduled CI run runs full nightly"
     }
   },
   "cadence": {
@@ -37,8 +49,8 @@
   },
   "note": ": quick and full name WHEN verification runs; app names the Qt environment required by integration/app, not another cadence. Core tasks retain their prior selections outside integration/app; app-verify and both app CI jobs execute group-app after app-build. Both verify cadences retain all app cases, and each platform's combined full core/app jobs cover the complete collection. Default pytest collection retains every tier for the runtime inventory. Groups name paths, never predicates over runtime; edi declares no fitting corpus. The per-tier audit refuses marker-based deselection.",
   "local_gap_to_merge": {
-    "statement": "no gap: the review-time quick run (pixi run verify-quick) runs every ruled tier that the merge-time full run and CI-on-merge run; the surfaces differ only in platform (CI adds the macOS runner), not in tiers",
+    "statement": "the review-time quick run (pixi run verify-quick) leaves out the nightly group's three files, which spend minutes building a native host; the merge-time full run and CI on main pushes and nightly run them",
     "omitted_tiers": [],
-    "cost": "none — zero omitted tiers"
+    "cost": "three system files, about 15 minutes of host builds, move from review time to merge time and the nightly run"
   }
 }

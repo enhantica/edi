@@ -297,9 +297,22 @@ test = { cmd = ["bash", "tools/ci/pytest-lenient.sh", "--ignore=tests/integratio
 # before handing to review. The retired `tests/simulation` tier is gone: owner ruling 18 voided
 # its rationale, and cross-engine parity now lives at system level reading paired corpus
 # references (docs/dev/design/where-tests-live.md).
+# The nightly group's files (tests/test-groups.json) run on main pushes and nightly, not per pull request:
+# each spends minutes building a native host before its first case.
 quick-tests = { cmd = [
     "python", "-m", "pytest",
     "tests/unit", "tests/integration", "tests/system", "--ignore=tests/integration/app",
+    "--ignore=tests/system/py/test_scan_app_execution.py",
+    "--ignore=tests/system/py/test_scan_accident_paths.py",
+    "--ignore=tests/system/py/test_plain_data_app.py",
+    "-q",
+], depends-on = ["core-build"] }
+# The nightly group alone, for a local run of what pull requests leave out.
+nightly-tests = { cmd = [
+    "python", "-m", "pytest",
+    "tests/system/py/test_scan_app_execution.py",
+    "tests/system/py/test_scan_accident_paths.py",
+    "tests/system/py/test_plain_data_app.py",
     "-q",
 ], depends-on = ["core-build"] }
 # --- core (C++) ---------------------------------------------------------------------- / item 8: the
@@ -370,6 +383,7 @@ verification-parity-tests = { cmd = [
 # EQUAL between the two.
 group-quick = { depends-on = ["quick-tests", "cpp-test"] }
 group-full = { depends-on = ["test", "cpp-test"] }
+group-nightly = { depends-on = ["nightly-tests"] }
 # Run on its own it builds first, as every app step does: the core the suite's conftest imports and the app,
 # in its own environment; app-verify runs it with --skip-deps on its one build.
 group-app = { cmd = ["python", "-m", "pytest", "tests/integration/app", "-q"], depends-on = ["core-build", { task = "app-build", environment = "app" }] }
