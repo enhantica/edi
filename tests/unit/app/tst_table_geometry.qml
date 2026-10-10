@@ -95,7 +95,10 @@ Item {
             const rings = Render.descendants(cell).filter(item => item.visible && item.radius > 0 && item.border && item.border.width > 0);
             verify(drawn.length + rings.length > 0, "Every fixed column retains actual text, glyph or ring ink");
             for (const item of drawn) {
-                ink.font = item.font;
+                ink.font = Qt.font({
+                    family: item.font.family === EaStyle.Fonts.iconsFamily ? EaStyle.Fonts.iconsFamily : EaStyle.Fonts.fontFamily,
+                    pixelSize: EaStyle.Sizes.fontPixelSize
+                });
                 ink.text = item.text;
                 const needed = Math.ceil(ink.advanceWidth);
                 verify(item.width + 0.6 >= needed, "The actual fixed-column text or glyph viewport fits its independently measured ink");
@@ -103,12 +106,16 @@ Item {
                 verify(left >= -0.6 && left + needed <= cell.width + 0.6, "Fixed-column ink remains within its actual cell boundary");
             }
             for (const ring of rings) {
+                verify(ring.width >= EaStyle.Sizes.fontPixelSize * 0.85, "A status ring retains the independently declared icon ink size");
                 const left = ring.mapToItem(cell, 0, 0).x;
                 verify(left >= -0.6 && left + ring.width <= cell.width + 0.6, "A fixed status column fits the whole independently drawn ring");
             }
         }
         function assertSuppliedTextFits(cell, supplied, title) {
-            ink.font = cell.font;
+            ink.font = Qt.font({
+                family: EaStyle.Fonts.fontFamily,
+                pixelSize: EaStyle.Sizes.fontPixelSize
+            });
             ink.text = supplied;
             const bodyNeed = Math.ceil(ink.advanceWidth);
             ink.text = title;
@@ -250,7 +257,10 @@ Item {
                     verify(Math.abs(body[i].width - head[i].width) < 0.6, "Header and delegate receive the same actual width");
                     verify(Math.abs(body[i].mapToItem(table, 0, 0).x - head[i].mapToItem(table, 0, 0).x) < 0.6, "Actual header and row column boundaries align");
                 }
-                ink.font = body[0].font;
+                ink.font = Qt.font({
+                    family: EaStyle.Fonts.fontFamily,
+                    pixelSize: EaStyle.Sizes.fontPixelSize
+                });
                 ink.text = String(data.rows);
                 const needed = Math.ceil(ink.advanceWidth);
                 verify(body[0].width >= needed && body[0].width <= needed + body[0].font.pixelSize + 1, "Numbering fits the independently measured longest supplied number with at most one em padding");
@@ -261,15 +271,27 @@ Item {
                     verify(body[column].width <= EaStyle.Sizes.fontPixelSize * 2.5, "Rendered icon and action columns remain compact at each sidebar width");
                 }
                 if (data.tag.startsWith("atoms")) {
+                    ink.font = Qt.font({
+                        family: EaStyle.Fonts.fontFamily,
+                        pixelSize: EaStyle.Sizes.fontPixelSize
+                    });
+                    ink.text = "Si";
+                    verify(body[2].width >= Math.ceil(ink.advanceWidth) + ink.font.pixelSize * 1.5, "The type column fits the independently supplied silicon symbol, an atom icon and their spacing");
+                    assertCellInkFits(head[2]);
                     assertCellInkFits(body[2]);
                     assertSuppliedTextFits(body[6], "a", "WL");
+                    assertCellInkFits(head[6]);
                     verify(body[2].width <= EaStyle.Sizes.fontPixelSize * 4.5 + 1, "The atom type column remains compact while fitting its icon and supplied symbol");
                     verify(body[6].width <= EaStyle.Sizes.fontPixelSize * 2.5 + 1, "The Wyckoff column remains compact while fitting its supplied letter and heading");
                 }
                 if (data.idColumn >= 0) {
+                    assertCellInkFits(head[data.idColumn]);
                     assertSuppliedTextFits(body[data.idColumn], "r" + (data.rows - 1), data.tag.startsWith("experiments") ? "Datablock" : "id");
                     verify(body[data.idColumn].width <= table.width * 0.25 + 1, "Identifiers leave scientific columns the remaining space");
-                    ink.font = head[data.idColumn].font;
+                    ink.font = Qt.font({
+                        family: EaStyle.Fonts.fontFamily,
+                        pixelSize: EaStyle.Sizes.fontPixelSize
+                    });
                     ink.text = data.tag.startsWith("experiments") ? "Datablock" : "r111";
                     verify(body[data.idColumn].width <= Math.ceil(ink.advanceWidth) + ink.font.pixelSize + 2, "Short names and IDs use measured content width rather than a fixed wide share");
                     compare(body[data.idColumn].horizontalAlignment, Text.AlignLeft, "Identifiers align left across the loop tables");
@@ -347,6 +369,7 @@ Item {
                 verify(waitForPolish(table), "Independent equal-length loop IDs complete rendered layout");
                 table.forceLayout();
                 const body = Render.cells(table.itemAtIndex(0));
+                assertSuppliedTextFits(body[1], "phase", "id");
                 compare(body[1].text, "phase", "The first visible ID retains the independently supplied stored key");
                 boundaries.push([body[0].mapToItem(table, 0, 0).x, body[1].mapToItem(table, 0, 0).x, body[2].mapToItem(table, 0, 0).x]);
             }

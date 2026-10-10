@@ -30,7 +30,7 @@ function check(test, table, next, captureRoot) {
         const clipped = test.grabImage(captureRoot);
         test.compare(clipped.pixel(x, above), marker.color,
             "The visible half of the actual next delegate must paint inside the table");
-        test.verify(clipped.pixel(x, below) !== marker.color,
+        test.verify(!Qt.colorEqual(clipped.pixel(x, below), marker.color),
             "The hidden half of the actual next delegate must not paint beyond the table");
         for (const ancestor of clips) ancestor.clip = false;
         test.verify(test.waitForRendering(marker), "The no-clipping escape completes a rendered frame");
