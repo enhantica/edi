@@ -41,6 +41,8 @@ python = ">=3.12"
 # The pin targets the locked version exactly, so the lock is unchanged by construction.
 ruff = "==0.15.20"
 pytest = "*"
+# CI splits the system tier into parallel jobs by recorded test times (tools/ci/system-tests-part.sh).
+pytest-split = ">=0.11.0,<0.12"
 # Owner ruling 67: the shell is pinned like any other toolchain input, so
 # `pixi run bash …` resolves the same bash on every leg. macOS ships bash 3.2 (2007) while
 # Linux runs 5.x, and edi's CI has a macOS leg. Declared HERE rather than in the linux-64
@@ -302,6 +304,15 @@ quick-tests = { cmd = [
     "tests/unit", "tests/integration", "tests/system", "--ignore=tests/integration/app",
     "-q",
 ], depends-on = ["core-build"] }
+# CI runs the same selection as parallel jobs (owner, 2026-10-08): `core-tests` (unit and integration) in
+# the core job, and `system-tests-part <part>` for each third of the system tier, split by recorded test
+# times (tools/ci/system-tests-part.sh). Together they are exactly quick-tests' selection.
+core-tests = { cmd = [
+    "python", "-m", "pytest",
+    "tests/unit", "tests/integration", "--ignore=tests/integration/app",
+    "-q",
+], depends-on = ["core-build"] }
+system-tests-part = { cmd = ["bash", "tools/ci/system-tests-part.sh"], depends-on = ["core-build"] }
 # --- core (C++) ---------------------------------------------------------------------- / item 8: the
 # pinned crysta SDK (downloaded or reused, never compiled) and its source, for every prefix reader — also
 # in a consumer job, where core-build only restores the native build.
