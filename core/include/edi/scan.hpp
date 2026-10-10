@@ -3,6 +3,7 @@
 #define EDI_SCAN_HPP
 
 #include <cstdint>
+#include <filesystem>
 #include <map>
 #include <string>
 #include <string_view>
@@ -94,6 +95,11 @@ ScanResultIndex index_scan_results(const Project& project, const ScanDatasets& d
 using ScanPlaces = std::unordered_map<std::string, std::size_t>;
 /// Each dataset's place by its file name.
 ScanPlaces scan_places(const ScanDatasets& datasets);
+/// Whether a scan state file (results.csv, results-provenance.csv, scan-notes.csv) is there. Absent is allowed; a
+/// path that exists must be a regular file or a link to one. Anything else throws std::invalid_argument, starting
+/// with `label`, rather than reading as no state or as an empty file; crysta applies the same rule. Every reader
+/// of those files asks this before it opens one.
+bool scan_state_present(const std::filesystem::path& path, const std::string& label);
 /// crysta's `analysis/scan-notes.csv` (file_path, negative_points, skipped_dataset, refusal), read from byte
 /// `from` onto `index`; returns the offset after the last complete line. A file that is there must be whole and
 /// well formed: the header, four cells a row, negative_points a decimal integer of at most 12 digits,

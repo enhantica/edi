@@ -1232,10 +1232,15 @@ std::filesystem::path scan_results_path(const Project& project) {
 // Why each file's fit stopped, from crysta's ledger (`termination`, its fifth column), read in step with
 // results.csv: crysta writes a file's ledger row just before its results row, so the k-th of each name the same
 // file. Reading both together keeps one row in memory, not the whole scan's. A ledger written before it recorded
-// the reason, none, or one whose row names another file gives nothing from there on.
+// the reason, none, or one whose row names another file gives nothing from there on; a path there that is not a
+// regular file throws (scan_state_present).
 class LedgerReader {
    public:
-    explicit LedgerReader(const std::filesystem::path& path) : input_(path, std::ios::binary) {
+    explicit LedgerReader(const std::filesystem::path& path) {
+        if (!scan_state_present(path, "analysis/results-provenance.csv")) {
+            return;  // no ledger: no reasons
+        }
+        input_.open(path, std::ios::binary);
         std::string line;
         if (std::getline(input_, line)) {
             const std::vector<std::string> header = split_scan_row(line);
@@ -1264,6 +1269,9 @@ class LedgerReader {
 // The termination the ledger's last line records for `file_cell`; empty when that line is another file's, the
 // ledger does not record reasons, or there is none. Reads only the file's end.
 std::string ledger_termination(const std::filesystem::path& path, const std::string& file_cell) {
+    if (!scan_state_present(path, "analysis/results-provenance.csv")) {
+        return {};
+    }
     std::ifstream input(path, std::ios::binary | std::ios::ate);
     if (!input) {
         return {};
@@ -1429,10 +1437,6 @@ std::pair<std::size_t, ScanResultIndex::Row> scan_row_facts(const Project& /*pro
     return {found->second, std::move(row)};
 }
 
-namespace {
-
-// Whether a scan state file is there. Absent is allowed; a path that exists must be a regular file, or a link to one:
-// a directory or a device is refused (crysta refuses it the same way), never read as no state or as an empty file.
 bool scan_state_present(const std::filesystem::path& path, const std::string& label) {
     std::error_code error;
     const std::filesystem::file_status link = std::filesystem::symlink_status(path, error);
@@ -1447,8 +1451,6 @@ bool scan_state_present(const std::filesystem::path& path, const std::string& la
     }
     return true;
 }
-
-}  // namespace
 
 std::int64_t read_scan_notes(const Project& project, const ScanPlaces& places, ScanResultIndex& index,
                              std::int64_t from, bool writing) {
@@ -1660,6 +1662,10 @@ ScanResultIndex index_scan_rows(const Project& project, const ScanDatasets& data
 }  // namespace
 
 std::vector<std::string> read_scan_row(const Project& project, std::int64_t offset) {
+    if (!scan_state_present(scan_results_path(project), "analysis/results.csv")) {
+        throw std::invalid_argument("analysis/results.csv is not there; it has no row at byte " +
+                                    std::to_string(offset));
+    }
     std::ifstream input(scan_results_path(project), std::ios::binary);
     std::string line;
     if (!input || offset < 0 || !input.seekg(offset) || !std::getline(input, line) || input.eof()) {
@@ -3874,11 +3880,14 @@ std::optional<ScanFileRecord> scan_record_from_row(const std::string& line) {
     return scan_record_from_cells(cells);
 }
 
-// Every currently committed data row (header skipped). An unreadable or missing file reads as
-// zero rows — the same view crysta's driver takes of a fresh scan; a torn/foreign file is the
-// driver's own fail-closed refusal, which edi does not preempt here.
+// Every currently committed data row (header skipped). A missing or unreadable file reads as zero rows (the same
+// view crysta's driver takes of a fresh scan) and a path that is not a regular file throws; a torn or foreign file
+// is the driver's own fail-closed refusal, which edi does not preempt here.
 std::vector<ScanFileRecord> read_scan_rows(const std::filesystem::path& csv_path) {
     std::vector<ScanFileRecord> rows;
+    if (!scan_state_present(csv_path, "analysis/results.csv")) {
+        return rows;
+    }
     std::ifstream in(csv_path);
     if (!in) {
         return rows;
@@ -4012,7 +4021,7 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
                 // A dry run's results under `path` start as the loaded project's committed rows
                 // (crysta seeds them when absent), so its resume state is read from there.
                 const std::filesystem::path resume_csv =
-                    std::filesystem::exists(csv_path) || scan_data_root.empty()
+                    scan_state_present(csv_path, "analysis/results.csv") || scan_data_root.empty()
                         ? csv_path
                         : data_root / "analysis" / "results.csv";
                 scan_preamble.completed_rows = read_scan_rows(resume_csv);

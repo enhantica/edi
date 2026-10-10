@@ -258,6 +258,9 @@ std::vector<std::string> ScanSession::row(const edi::Project& project, int datas
     if (dataset < 0 || dataset >= static_cast<int>(index_.rows.size()) || index_.rows[dataset].offset < 0) {
         return {};
     }
+    if (!edi::scan_state_present(analysis_dir(project) / "results.csv", "analysis/results.csv")) {
+        throw std::invalid_argument("analysis/results.csv changed under the app: it is no longer there");
+    }
     {
         std::ifstream input(analysis_dir(project) / "results.csv", std::ios::binary);
         std::string header;
@@ -317,6 +320,14 @@ void ScanSession::column(const edi::Project& project, const std::string& name,
         }
     }
     if (!found || !index_.error.empty()) {
+        return;
+    }
+    // A results path that is gone or no longer a regular file gives no values, as a changed header does.
+    try {
+        if (!edi::scan_state_present(analysis_dir(project) / "results.csv", "analysis/results.csv")) {
+            return;
+        }
+    } catch (const std::invalid_argument&) {
         return;
     }
     std::ifstream input(analysis_dir(project) / "results.csv", std::ios::binary);
