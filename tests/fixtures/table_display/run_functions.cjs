@@ -14,7 +14,8 @@ function extract(source, name) {
     return source.slice(start, end);
 }
 const source = fs.readFileSync(request.source, "utf8");
-const context = vm.createContext({bar: {fit: request.fit}, EaStyle: {Colors: {red: "#cc0000", chartForegroundsExtra: ["#000000", "#009900"]}}});
-vm.runInContext('function qsTr(text) { return {arg: value => text.replace("%1", value)}; }', context);
-vm.runInContext(request.functions.map(name => extract(source, name)).join("\n"), context);
+const context = vm.createContext({bar: {fit: request.fit}, EaStyle: {Colors: {red: "#cc0000", green: "#009900", orange: "#cc9900", chartForegroundsExtra: ["#000000", "#009900"]}}});
+vm.runInContext('String.prototype.arg = function(value) { return this.replace("%1", value); }; function qsTr(text) { return text; }; this.NumberText = this;', context);
+const names = new Set([...request.functions, ...Array.from(source.matchAll(/^\s*function (\w+)\(/gm), match => match[1])]);
+vm.runInContext(Array.from(names, name => extract(source, name)).join("\n"), context);
 console.log(JSON.stringify(request.calls.map(call => context[call.name](...call.args))));
