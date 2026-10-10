@@ -34,11 +34,11 @@ def test_scan_worker_routes_both_modes_to_existing_driver(tmp_path):
     )
     actual = [row.split(':') for row in worker_dispatch(text, tmp_path)]
     assert [row[:1] + row[3:] for row in actual] == [
-        ['sequential', '33', '55', '44'],
-        ['independent', '33', '55', '44'],
+        ['sequential', '33', '55', '44', '66'],
+        ['independent', '33', '55', '44', '66'],
     ], (
         'Scan worker wiring: each scan mode reaches its own driver with cancellation, '
-        'scan-start and per-file completion subscribers'
+        'scan-start, per-file completion and fitted-project subscribers'
     )
     assert all(row[1] in {'0', '11'} and row[2] in {'0', '22'} for row in actual), (
         'Scan worker wiring: optional iteration and fit-preamble callbacks may be absent; '
@@ -969,7 +969,7 @@ def worker_dispatch(text, tmp_path):
 #include <stdexcept>
 using IterationCallback=int; using PreambleCallback=int; using CancelCallback=int;
 
- using FileCompleteCallback=int; using ScanStartCallback=int;
+ using FileCompleteCallback=int; using ScanStartCallback=int; using FileFittedCallback=int;
 using FitResultBase=std::string;
 std::string receipt(std::string mode,std::initializer_list<int> args){
 
@@ -981,21 +981,21 @@ std::string fit(int a,int b,int c){return receipt("single",{a,b,c});
 std::string fit_joint(int a,int b,int c){return receipt("joint",{a,
 b,c});
 }
-std::string fit_sequential(int a,int b,int scan,int d,int c){
-return receipt("sequential",{a,b,c,scan,d});
+std::string fit_sequential(int a,int b,int scan,int d,int c,int fitted){
+return receipt("sequential",{a,b,c,scan,d,fitted});
 }
-std::string fit_independent(int a,int b,int scan,int d,int c){
-return receipt("independent",{a,b,c,scan,d});
+std::string fit_independent(int a,int b,int scan,int d,int c,int fitted){
+return receipt("independent",{a,b,c,scan,d,fitted});
 }};
 std::string effective_fitting_mode(Project& p){return p.mode;}
 BODY
 int main(){for(auto mode:{"sequential","independent"}){Project p{mode}
 
-;try{std::cout<<fit_by_mode(p,11,22,33,55,44)<<"\\n";}catch(std::exception&
+;try{std::cout<<fit_by_mode(p,11,22,33,55,44,66)<<"\\n";}catch(std::exception&
 e){std::cout<<"REFUSED\\n";}}}""".replace('BODY', dispatch)
     if 'ScanStartCallback' not in dispatch:
-        program = program.replace('{a,b,c,scan,d}', '{a,b,c,d}')
-        program = program.replace('fit_by_mode(p,11,22,33,55,44)', 'fit_by_mode(p,11,22,33,44)')
+        program = program.replace('{a,b,c,scan,d,fitted}', '{a,b,c,d,fitted}')
+        program = program.replace('fit_by_mode(p,11,22,33,55,44,66)', 'fit_by_mode(p,11,22,33,44,66)')
     return cpp_probe(program, tmp_path)
 
 
