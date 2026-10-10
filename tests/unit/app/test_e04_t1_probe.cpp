@@ -22,6 +22,7 @@
 #include <sstream>
 #include <edi/io.hpp>
 #include "experiment_view_model.hpp"
+#include "project_view_model.hpp"
 
 class AcceptanceProbe final : public QObject {
     Q_OBJECT
@@ -80,6 +81,18 @@ public:
     }
     Q_INVOKABLE QUrl repoUrl(const QString &path) const {
         return QUrl::fromLocalFile(QDir(root()).absoluteFilePath(path));
+    }
+    Q_INVOKABLE bool appendNotes(const QUrl &url, const QString &text) const {
+        if (!url.isLocalFile() || !QFileInfo(url.toLocalFile()).isFile()) return false;
+        QFile file(url.toLocalFile());
+        if (!file.open(QIODevice::WriteOnly | QIODevice::Append)) return false;
+        const QByteArray bytes = text.toUtf8();
+        return file.write(bytes) == bytes.size() && file.flush();
+    }
+    Q_INVOKABLE QString scanIndexError(QObject *object) const {
+        const auto *project = qobject_cast<edi_app::ProjectViewModel *>(object);
+        if (!project || !project->scanSession()) return QStringLiteral("not a scan project");
+        return QString::fromStdString(project->scanSession()->index().error);
     }
     Q_INVOKABLE QString readFile(const QString &path) const {
         QFile file(QDir(root()).absoluteFilePath(path));

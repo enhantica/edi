@@ -1,5 +1,11 @@
 """Retained scan inputs are proved before resume can change or discard them."""
 
+import os
+import stat
+import subprocess
+import sys
+from pathlib import Path
+
 import edi as engine
 import pytest
 
@@ -63,3 +69,58 @@ def test_native_resume_accepts_complete_retained_history(tmp_path, mode, history
     assert notes.read_bytes() == before, (
         'A valid no-op resume must retain complete notes with and without fitted results'
     )
+
+
+@pytest.mark.parametrize('mode', ['sequential', 'independent'])
+@pytest.mark.parametrize('with_results', [False, True])
+@pytest.mark.parametrize('kind', ['directory', 'fifo'])
+def test_native_resume_refuses_nonregular_notes_without_blocking(
+    tmp_path, mode, with_results, kind
+):
+
+    if kind == 'fifo' and not hasattr(os, 'mkfifo'):
+        pytest.skip('The platform cannot construct the optional FIFO file-kind witness')
+    directory = phase_scan.materialize(tmp_path / 'project', mode)
+    if with_results:
+        engine.Project.load(directory).analysis.fit()
+    notes = phase_scan.nonregular_notes(directory, kind)
+    before = notes.lstat().st_ino, stat.S_IFMT(notes.lstat().st_mode)
+    retained = {p.name: p.read_bytes() for p in (directory / 'analysis').iterdir() if p.is_file()}
+    code = (
+        'import sys; sys.meta_path[:]=[f for f in sys.meta_path '
+        'if type(f).__module__!="_crysta_editable"]; '
+        'import edi as engine; '
+        'engine.Project.load(sys.argv[1]).analysis.fit()'
+    )
+    try:
+        result = subprocess.run(
+            [sys.executable, '-c', code, str(directory)],
+            env={
+                **os.environ,
+                'PYTHONPATH': str(Path(engine.__file__).resolve().parents[1])
+                + os.pathsep
+                + os.environ.get('PYTHONPATH', ''),
+            },
+            capture_output=True,
+            text=True,
+            timeout=0.8,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        pytest.fail('Native resume must refuse a non-regular notes path before a FIFO open blocks')
+    assert result.returncode != 0, (
+        'Native resume must distinguish absence from an existing unsupported notes kind'
+    )
+    assert 'scan-notes.csv' in result.stderr, (
+        'The native non-regular notes refusal must identify the retained input path'
+    )
+    assert (notes.lstat().st_ino, stat.S_IFMT(notes.lstat().st_mode)) == before, (
+        'Native refusal must preserve the non-regular source path and its inode'
+    )
+    assert {
+        p.name: p.read_bytes() for p in (directory / 'analysis').iterdir() if p.is_file()
+    } == retained, 'Unsupported notes admission must refuse before any analysis output is written'
+    if kind == 'directory':
+        assert (notes / 'keep').read_text() == 'retained source state\n', (
+            'Refusing a notes directory must preserve its retained contents'
+        )

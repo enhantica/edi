@@ -1,6 +1,7 @@
 """Two-phase scan inputs from frozen bases and linear coefficients."""
 
 import json
+import os
 from pathlib import Path
 
 import numpy as np
@@ -212,3 +213,15 @@ def retained_notes(root, engine, case, history, mode='sequential'):
     engine.Project.load(directory).analysis.fit()
     (directory / 'analysis/scan-notes.csv').write_text(malformed_notes(case))
     return directory
+
+
+def nonregular_notes(root, kind):
+    path = root / 'analysis/scan-notes.csv'
+    if path.exists():
+        path.unlink()
+    if kind == 'directory':
+        path.mkdir()
+        (path / 'keep').write_text('retained source state\n')
+    else:
+        os.mkfifo(path)
+    return path

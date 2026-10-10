@@ -14,7 +14,7 @@ from tests.integration.app.test_e04_t1_runtime_escapes import runner
 ROOT = Path(__file__).resolve().parents[3]
 
 
-def observe(root, expected):
+def observe(root, expected, *, timeout=10):
     (root / 'expected.json').write_text(json.dumps(expected))
     return subprocess.run(
         [str(runner()), '-input', str(ROOT / 'tests/fixtures/phase_scan_app'), '-o', '-,txt'],
@@ -27,7 +27,7 @@ def observe(root, expected):
         },
         capture_output=True,
         text=True,
-        timeout=10,
+        timeout=timeout,
         check=False,
     )
 
@@ -86,4 +86,25 @@ def test_app_refuses_malformed_notes_with_one_diagnostic(tmp_path, count):
         'core/app diagnostic and prevent misleading recovered completion: '
         + result.stdout
         + result.stderr
+    )
+
+
+@pytest.mark.parametrize('kind', ['directory', 'fifo'])
+def test_app_refuses_nonregular_notes_before_opening_a_stream(tmp_path, kind):
+    if kind == 'fifo' and not hasattr(os, 'mkfifo'):
+        pytest.skip('The platform cannot construct the optional FIFO file-kind witness')
+    directory = phase_scan.materialize(tmp_path / 'project')
+    notes = phase_scan.nonregular_notes(directory, kind)
+    before = notes.lstat().st_ino, notes.lstat().st_mode
+    try:
+        result = observe(tmp_path, {'kind': 'notes'}, timeout=0.8)
+    except subprocess.TimeoutExpired:
+        pytest.fail('The core/app must refuse unsupported notes before opening a blocking FIFO')
+    assert result.returncode == 0, (
+        'The actual app must report existing unsupported notes paths as one explicit refusal: '
+        + result.stdout
+        + result.stderr
+    )
+    assert (notes.lstat().st_ino, notes.lstat().st_mode) == before, (
+        'The app refusal must preserve the retained non-regular source state'
     )
