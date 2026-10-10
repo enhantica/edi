@@ -3,7 +3,7 @@
 #
 # gui-components ships its QML as a Python wheel, with no CMake build and qmldir `module` lines that do
 # not match their import URIs, so edi fetches the pinned sources and declares its own QML modules under
-# the upstream URIs from an explicit file list. Upstream files are never edited or copied into edi; the
+# the upstream URIs from an explicit file list. Upstream files are never edited; the
 # ones that need QtWebEngine, QtCharts, QtTest or QtMultimedia are left out (ADR-0006: WASM-clean).
 #
 # The pinned commit is fetched as GitHub's archive of it, checked against its SHA-256: a plain download
@@ -74,8 +74,8 @@ endif()
 set(EDI_GUI_BASE_DIR ${gui_components_SOURCE_DIR}/src/EasyApplication)
 
 # One base module: its QML types, singletons and JavaScript files, all read from the pinned tree, except
-# the names in REPLACED, which edi builds from app/qml/Base/<subdir>/ in their place (only Style/Fonts:
-# the font set is edi's own, ADR-0015 §10).
+# the names in REPLACED, which edi builds from app/qml/Base/<subdir>/ in their place (Style/Fonts for edi's font set,
+# Components/ListView for Qt selection-model initialization; ADR-0015 §10, ADR-0029).
 function(edi_gui_base_module target uri subdir)
     cmake_parse_arguments(ARG "" "" "TYPES;SINGLETONS;SCRIPTS;REPLACED" ${ARGN})
     set(files)
@@ -138,12 +138,14 @@ edi_gui_base_module(edi_gui_components EasyApplication.Gui.Components Gui/Compon
           ProjectDescriptionDialog ListView ListViewHeader ListViewDelegate ListViewTextInput
           TableView TableViewHeader TableViewDelegate TableViewLabel
           TableViewAdvancedLabel TableViewTwoRowsAdvancedLabel TableViewParameter TableViewCheckBox
-          TableViewComboBox TableViewButton TableViewLabelControl TableViewTextInput)
+          TableViewComboBox TableViewButton TableViewLabelControl TableViewTextInput
+    REPLACED ListView)
 
 # The fonts edi's Style/Fonts.qml (app/qml/Base/Gui/Style) loads, placed where its
 # `Qt.resolvedUrl("../Resources/Fonts")` looks: the base's own faces edi keeps, and edi's (ADR-0015 §10).
 set(EDI_GUI_BASE_FONTS
     "PT_Sans/PTSans-Regular.ttf" "PT_Sans/PTSans-Bold.ttf" "PT_Mono/PTMono-Regular.ttf"
+    "Encode_Sans/EncodeSans-Regular.ttf"
     "FontAwesome/Font Awesome 5 Free-Solid-900.otf")
 set(_edi_gui_font_files)
 foreach(font IN LISTS EDI_GUI_BASE_FONTS)

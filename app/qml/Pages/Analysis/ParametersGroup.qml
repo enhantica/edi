@@ -81,19 +81,55 @@ EaElements.GroupBox {
                 placeholderText: qsTr("Filter by name")
                 onTextChanged: filter.nameFilter = text
             }
-            EaElements.ComboBox {
-                objectName: "parameters.variability"
-                width: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.fieldSpacing) / 3
-                model: [qsTr("All parameters"), qsTr("Free parameters"), qsTr("Fixed parameters")]
-                onActivated: index => filter.variability = index
-            }
-            EaElements.ComboBox {
+            SearchableComboBox {
+                id: categoryPicker
                 objectName: "parameters.category"
                 width: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.fieldSpacing) / 3
-                model: filter.categories
+                model: filter.categoryGroups
+                textRole: "title"
+                searchThreshold: 1000
+                popup.width: Math.max(width, optionWidth + 3 * font.pixelSize)
                 currentIndex: Math.max(0, filter.categories.indexOf(filter.categoryFilter))
-                displayText: currentIndex === 0 ? qsTr("All categories") : currentText.replace(/_/g, " ")
                 onActivated: index => filter.categoryFilter = filter.categories[index]
+                delegate: EaElements.MenuItem {
+                    id: categoryEntry
+                    required property int index
+                    required property var modelData
+                    width: categoryPicker.popup.width
+                    height: EaStyle.Sizes.comboBoxHeight
+                    text: modelData.title
+                    highlighted: categoryPicker.highlightedIndex === index
+                    contentItem: Item {
+                        implicitHeight: categoryLine.implicitHeight
+                        IconLine {
+                            id: categoryLine
+                            anchors.verticalCenter: parent.verticalCenter
+                            maximumWidth: parent.width
+                            textColor: EaStyle.Colors.themeForeground
+                            segments: categoryEntry.modelData.icon === "" ? [
+                                {
+                                    text: categoryEntry.modelData.title,
+                                    bold: categoryEntry.modelData.datablock
+                                }
+                            ] : [
+                                {
+                                    icon: categoryEntry.modelData.icon,
+                                    color: EaStyle.Colors.themeForegroundMinor
+                                },
+                                {
+                                    text: categoryEntry.modelData.title,
+                                    bold: categoryEntry.modelData.datablock
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+            SearchableComboBox {
+                objectName: "parameters.variability"
+                width: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.fieldSpacing) / 3
+                model: [qsTr("All parameters (%1)").arg(group.project ? group.project.parameters.count : 0), qsTr("Free parameters (%1)").arg(group.project ? group.project.parameters.freeCount : 0), qsTr("Fixed parameters (%1)").arg(group.project ? group.project.parameters.fixedCount : 0)]
+                onActivated: index => filter.variability = index
             }
         }
 
@@ -127,7 +163,7 @@ EaElements.GroupBox {
                     text: ""
                 }
                 EaComponents.TableViewLabel {
-                    horizontalAlignment: Text.AlignHCenter
+                    horizontalAlignment: Text.AlignRight
                     text: qsTr("s.u.")
                 }
                 EaComponents.TableViewLabel {
@@ -199,7 +235,7 @@ EaElements.GroupBox {
                     text: row.units
                 }
                 EaComponents.TableViewLabel {
-                    horizontalAlignment: Text.AlignHCenter
+                    horizontalAlignment: Text.AlignRight
                     text: row.parameter && row.parameter.hasUncertainty ? NumberText.error(row.parameter.uncertainty) : ""
                 }
                 EaComponents.TableViewLabel {

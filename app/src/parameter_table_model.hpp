@@ -3,6 +3,7 @@
 #define EDI_APP_PARAMETER_TABLE_MODEL_HPP
 
 #include <QSortFilterProxyModel>
+#include <QVariantList>
 #include <QtQml/qqmlregistration.h>
 
 #include "row_table_model.hpp"
@@ -56,6 +57,7 @@ class ParameterFilterModel : public QSortFilterProxyModel {
     Q_PROPERTY(Variability variability READ variability WRITE setVariability NOTIFY variabilityChanged)
     Q_PROPERTY(QString categoryFilter READ categoryFilter WRITE setCategoryFilter NOTIFY categoryFilterChanged)
     Q_PROPERTY(QStringList categories READ categories NOTIFY categoriesChanged)
+    Q_PROPERTY(QVariantList categoryGroups READ categoryGroups NOTIFY categoriesChanged)
 
    public:
     enum Variability { All, Free, Fixed };
@@ -70,6 +72,7 @@ class ParameterFilterModel : public QSortFilterProxyModel {
     QString categoryFilter() const { return category_filter_; }
     void setCategoryFilter(const QString& category);
     QStringList categories() const { return categories_; }
+    QVariantList categoryGroups() const { return category_groups_; }
     Q_INVOKABLE QString text(int row, const QString& role) const;
     // The shown rows' parameters, for the table's selection (edi ADR-0017 §11): the one at a shown row (null
     // past the end), and whether a parameter is among the shown ones.
@@ -89,6 +92,7 @@ class ParameterFilterModel : public QSortFilterProxyModel {
     void refreshCategories();
     QString category_filter_;
     QStringList categories_{QString()};
+    QVariantList category_groups_;
     QList<QMetaObject::Connection> source_connections_;
     QString name_filter_;
     Variability variability_ = All;

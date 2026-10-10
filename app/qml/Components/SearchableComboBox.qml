@@ -29,6 +29,17 @@ EaElements.ComboBox {
     // Table cells declare the same alignment as their header.
     property int horizontalAlignment: Text.AlignHCenter
     property int searchThreshold: 10
+    // Filters start with their current selection; a fully visible list starts at its first option.
+    function positionPopup() {
+        const list = control.popup.contentItem as ListView;
+        if (!list)
+            return;
+        list.forceLayout();
+        if (list.contentHeight <= list.height)
+            list.positionViewAtBeginning();
+        else
+            list.positionViewAtIndex(Math.max(0, control.currentIndex), ListView.Contain);
+    }
     readonly property real optionWidth: {
         let widest = 0;
         for (let index = 0; index < count; ++index)
@@ -194,9 +205,13 @@ EaElements.ComboBox {
                 field.clear();
             control.searchText = "";
             control.placePopup();
-            Qt.callLater(control.placePopup);
+            Qt.callLater(() => {
+                control.placePopup();
+                control.positionPopup();
+            });
         }
         function onOpened() {
+            control.positionPopup();
             const field = (control.popup.contentItem as ListView)?.headerItem;
             if (field && control.searchable)
                 field.focusField();

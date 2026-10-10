@@ -51,6 +51,7 @@ in the same change — see `AGENTS.md` §ADRs.
 | [0027](0027-anisotropic-displacement-parameters.md) | Anisotropic displacement parameters | Proposed | 🟡 | High | a site keeps its declared ADP type (`Biso`, `Uiso`, `Bani`, `Uani`, `beta`); an anisotropic site's tensor is an `atom_site_aniso` row keyed by its id; conversions, site-symmetry ties and equivalent values are crysta's; the app edits the model and draws ellipsoids from the tensors |
 | [0028](0028-uncertainty-bound-from-fit-conditioning.md) | Uncertainty bound from the fit's conditioning | Accepted | ✅ | Medium | the browser checks bound each fitted uncertainty by `max(5e-10, 5e-9 σ, τσ)`, `τ` derived from the native fit's scaled normal matrix and its size alone; values and patterns keep their bounds; a larger gap is a defect |
 | [0029](0029-listview-tables.md) | ListView tables | Accepted | ✅ | High | table sizing, scrolling, parameter filters and project lists |
+| [0030](0030-parameter-filter-subsets.md) | Parameter filter subsets | Accepted | ✅ | Medium | flat menu with bold datablocks, proper atomic and peak subsets, shared counts and predicates |
 
 New cross-cutting decisions that should also bind crysta are authored as **(shared)** and, once the
 Copier agent-OS template exists (ADR-0004), live in its shared-ADR range so `copier update`

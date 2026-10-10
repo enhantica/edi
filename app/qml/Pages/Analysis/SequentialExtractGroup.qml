@@ -21,7 +21,7 @@ DataTable {
     defaultInfoText: qsTr("No extraction rules")
     sourceModel: analysis ? analysis.sequentialExtract : null
 
-    columnWidths: [numberColumnWidth, EaStyle.Sizes.fontPixelSize * 5, EaStyle.Sizes.fontPixelSize * 9, -1, EaStyle.Sizes.fontPixelSize * 4]
+    columnWidths: [numberColumnWidth, Math.min(textColumnWidth("id", qsTr("id")), width * 0.3), Math.min(textColumnWidth("target", qsTr("target")), width * 0.4), -1, textColumnWidth("required", qsTr("required"))]
 
     header: EaComponents.ListViewHeader {
         EaComponents.TableViewLabel {
@@ -61,6 +61,7 @@ DataTable {
             horizontalAlignment: Text.AlignLeft
             elide: Text.ElideRight
             text: row.model.id
+            ToolTip.text: row.model.id
         }
         EaComponents.TableViewLabel {
             horizontalAlignment: Text.AlignLeft
