@@ -15,6 +15,7 @@ TestCase {
     id: test
     name: "TableOwnerBehaviours"
     when: windowShown
+    property bool savedTooltips
     property var appWindow
     Component {
         id: application
@@ -47,6 +48,7 @@ TestCase {
     function init() {
         failOnWarning(/.*/);
         Session.closeProject();
+        savedTooltips = Globals.Vars.showToolTips;
         Globals.Vars.showToolTips = true;
         appWindow = application.createObject(null);
         verify(appWindow !== null, "Owner-note gates run the production application");
@@ -57,6 +59,7 @@ TestCase {
         Globals.Vars.showAppAboutDialog = false;
         Session.closeProject();
         appWindow.destroy();
+        Globals.Vars.showToolTips = savedTooltips;
     }
     function open() {
         verify(Session.openExample("pd-neut-cwl_cosio-d20_start-1"), "The independently named scientific example opens");
@@ -222,17 +225,17 @@ TestCase {
         const group = expand("peak");
         const fields = Render.descendants(group).filter(item => item.visible && item.item && typeof item.commit === "function" && item.width > 0);
         let exercised = false;
-        for (const first of fields)
-            for (const second of fields) {
-                const left = first.mapToItem(group, 0, 0), right = second.mapToItem(group, 0, 0);
-                if (Math.abs(left.y - right.y) > 0.6 || right.x <= left.x)
+        const grids = [...new Set(fields.map(item => item.parent))];
+        for (const grid of grids) {
+            const members = fields.filter(item => item.parent === grid).sort((a, b) => a.y - b.y || a.x - b.x);
+            for (let i = 1; i < members.length; ++i) {
+                const left = members[i - 1], right = members[i];
+                if (Math.abs(left.y - right.y) > 0.6)
                     continue;
-                const gap = right.x - left.x - first.width;
-                if (gap < expected + first.font.pixelSize) {
-                    verify(Math.abs(gap - expected) < 0.6, "The actual Peak profile grid uses chart-button spacing between adjacent fields");
-                    exercised = true;
-                }
+                verify(Math.abs(right.x - left.x - left.width - expected) < 0.6, "Every actual adjacent Peak field pair uses the chart-button group gap");
+                exercised = true;
             }
+        }
         verify(exercised, "The independently named profile exercises at least one real adjacent parameter-field pair");
     }
     function test_free_colour_and_weight_follow_state_in_cell_and_standalone_field() {
@@ -361,6 +364,8 @@ TestCase {
         const dialog = aboutDialog();
         singleAbout(dialog);
         const original = dialog;
+        const copyright = textInDialog(dialog, "about.copyright");
+        verify(copyright.text.includes("EasyScience") && !/all rights? reserved/i.test(copyright.text), "About names EasyScience contributors without the withdrawn reservation sentence");
         const components = Probe.visibleControl(appWindow, "about.components");
         verify(components === null || !Ui.rendered(components), "The component table is absent from the initially displayed About view");
         const licenceTab = textInDialog(dialog, "about.tab.licence");

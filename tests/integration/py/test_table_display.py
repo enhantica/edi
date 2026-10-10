@@ -144,6 +144,24 @@ def test_displayed_sequential_counts_consume_state_colours(summary, ok, failed):
         < visible.index('1s')
         < visible.index('χ² 1.4')
     ), 'The visible sequential consumer retains count, time and goodness-of-fit order'
-    assert ('10 files' in visible) == summary and ('eta 2s' in visible) == (not summary), (
+    assert any(part.endswith('10 files') for part in visible) == summary and (
+        'eta 2s' in visible
+    ) == (not summary), (
         'The actual consumer distinguishes running progress from the completed scan summary'
     )
+
+
+def test_scan_consumer_gate_rejects_an_unused_correct_colour_helper(tmp_path, monkeypatch):
+    source = (ROOT / 'app/qml/Components/StatusBar.qml').read_text()
+    neutral = '[qsTr("%1 ok").arg(bar.fit.scanOk), qsTr("%1 fail").arg(bar.fit.scanFailed)]'
+    mutated = source.replace('fitArea.counts()', neutral)
+    assert mutated != source, 'The consumer escape exercise reaches the actual scan text binding'
+    target = tmp_path / 'app/qml/Components/StatusBar.qml'
+    target.parent.mkdir(parents=True)
+    target.write_text(mutated)
+    monkeypatch.setitem(
+        test_displayed_sequential_counts_consume_state_colours.__globals__, 'ROOT', tmp_path
+    )
+    for summary in (False, True):
+        with pytest.raises(AssertionError, match='display state-coloured counts'):
+            test_displayed_sequential_counts_consume_state_colours(summary, 7, 3)
