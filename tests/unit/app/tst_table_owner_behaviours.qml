@@ -128,15 +128,21 @@ TestCase {
         keyClick(Qt.Key_Return);
         tryCompare(table, "count", total, 2000, "Choosing All through the same picker restores every visible parameter row");
     }
+    function assertBetaDelegateAlignment(body, expected) {
+        compare(body.length, expected.length, "Every rendered Analysis row retains all Beta columns");
+        for (let j = 0; j < expected.length; ++j)
+            tryCompare(body[j], "horizontalAlignment", expected[j], 2000, "The rendered Analysis column follows the settled Beta alignment reference: " + j);
+    }
     function test_analysis_alignment_units_and_available_height() {
         open();
         pane("analysis", "basic");
         const table = named(Ui.page(appWindow), "parameters.list");
         const headerAlignments = [Text.AlignHCenter, Text.AlignLeft, Text.AlignRight, Text.AlignLeft, Text.AlignRight, Text.AlignRight, Text.AlignRight, Text.AlignHCenter];
-        const delegateAlignments = [Text.AlignHCenter, Text.AlignHCenter, Text.AlignHCenter, Text.AlignHCenter, Text.AlignHCenter, Text.AlignHCenter, Text.AlignHCenter, Text.AlignHCenter];
-        // Beta v0.9.9 ec1d04ee: Fittables.qml:135-319. Explicit header overrides
-        // differ from delegates inheriting TableViewLabel/Parameter/CheckBox's
-        // centered alignment (gui-components v0.9.1 a573a969, retained reference).
+        const delegateAlignments = [Text.AlignHCenter, Text.AlignLeft, Text.AlignRight, Text.AlignLeft, Text.AlignRight, Text.AlignRight, Text.AlignRight, Text.AlignHCenter];
+        // Beta v0.9.9 ec1d04ee: Fittables.qml:135-319 supplies these headers.
+        // gui-components v0.9.1 a573a969 TableView.qml:38,79,129 assigns their
+        // alignment to each delegate after creation; centered cell defaults
+        // are initial state, not the settled reference-row layout.
         const header = Render.cells(table.headerItem);
         compare(header.length, headerAlignments.length, "Analysis retains all Beta scientific columns");
         for (let i = 0; i < header.length; ++i)
@@ -151,8 +157,7 @@ TestCase {
             const delegate = table.itemAtIndex(i);
             verify(delegate !== null, "Each unit witness is inspected in its real delegate");
             const body = Render.cells(delegate);
-            for (let j = 0; j < body.length; ++j)
-                compare(body[j].horizontalAlignment, delegateAlignments[j], "The rendered analysis row follows the Beta alignment reference");
+            assertBetaDelegateAlignment(body, delegateAlignments);
             ink.font = body[3].font;
             ink.text = rows[i].units;
             verify(body[3].width >= Math.ceil(ink.advanceWidth), "Every actual units cell fits its independently supplied unit text");
