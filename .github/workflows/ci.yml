@@ -269,8 +269,8 @@ jobs:
 
   # The declared group's system tier, split into three parts by pytest-split on recorded test times
   # (tools/ci/system-tests-part.sh). A test with no recorded time counts as the average. Each part
-  # keeps its JUnit report and durations as an artifact, and on main the `system durations` job
-  # merges them for the next run's split.
+  # keeps its durations as an artifact, and on main the `system durations` job merges them for the
+  # next run's split.
   system:
     name: system · ${{ matrix.platform }} · ${{ matrix.part }}/3
     if: github.event.pull_request.head.repo.fork == false
@@ -281,13 +281,31 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [Linux, macOS]
-        part: [1, 2, 3]
         include:
           - platform: Linux
+            part: 1
             runner: *linux
+            sdk: linux-64
+          - platform: Linux
+            part: 2
+            runner: *linux
+            sdk: linux-64
+          - platform: Linux
+            part: 3
+            runner: *linux
+            sdk: linux-64
           - platform: macOS
+            part: 1
             runner: *macos
+            sdk: osx-arm64
+          - platform: macOS
+            part: 2
+            runner: *macos
+            sdk: osx-arm64
+          - platform: macOS
+            part: 3
+            runner: *macos
+            sdk: osx-arm64
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v5
@@ -330,14 +348,12 @@ jobs:
         run: pixi run system-tests-part ${{ matrix.part }} 3
         env:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
-      - name: Keep the part's JUnit report and durations
+      - name: Keep the part's durations
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           name: system-${{ matrix.platform }}-${{ matrix.part }}
-          path: |
-            build/junit-system-${{ matrix.part }}.xml
-            build/test-durations-${{ matrix.part }}.json
+          path: build/test-durations-${{ matrix.part }}.json
           if-no-files-found: warn
 
   # On main, the three parts' durations become the recorded times the next runs split by.

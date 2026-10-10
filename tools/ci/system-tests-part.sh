@@ -8,8 +8,8 @@
 # recorded durations in $EDI_TEST_DURATIONS (default build/test-durations.json). A test with no
 # recorded time counts as the average, so a new test needs no list kept by hand; with no file at
 # all the parts are balanced by count. The run writes its own tests' durations to
-# build/test-durations-<part>.json and a JUnit report to build/junit-system-<part>.xml, which CI
-# keeps as artifacts and merges on main (tools/ci/merge_test_durations.py).
+# build/test-durations-<part>.json, which CI keeps as an artifact and merges on main
+# (tools/ci/merge_test_durations.py).
 set -euo pipefail
 part="${1:?usage: system-tests-part <part> [<parts>]}"
 parts="${2:-3}"
@@ -21,5 +21,4 @@ own="build/test-durations-$part.json"
 if [ -f "$recorded" ]; then cp "$recorded" "$own"; else echo '{}' > "$own"; fi
 exec python -m pytest tests/system -q \
     --splits "$parts" --group "$part" --splitting-algorithm least_duration \
-    --durations-path "$own" --store-durations \
-    --junitxml "build/junit-system-$part.xml"
+    --durations-path "$own" --store-durations
