@@ -35,6 +35,10 @@ try. A slow scan (a file every few seconds) can show every file and should.
 4. When the scan ends, its last finished file is shown, whatever the interval skipped.
 5. The desktop app and both web kits use this same path. The scan's counts, notes, evolution and results do not
    change.
+6. Only the pattern waits. What costs nothing to update follows every finished file at once: the current dataset (the
+   evolution's line for the current fit, the highlighted row in the dataset list, the dataset selectors), the file
+   name and the counts. A pattern that arrives after newer files have finished leaves the current dataset on the
+   newest one. A file chosen by hand moves all of them, as before.
 
 A slow scan therefore shows every file as it finishes. A fast scan shows the newest file about twice a second.
 
