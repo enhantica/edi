@@ -128,7 +128,7 @@ def test_actions_rendering_preserves_literals_and_lowercase_boolean_results(sour
         "'Infinity' == 1",
         "'1e400' == true",
         "'ß' == 'SS'",
-        "'ı' == 'I'",
+        "'\u0131' == 'I'",
     ],
     ids=[
         'unsupported-1',
@@ -272,6 +272,6 @@ def test_actions_non_ascii_concurrency_identity_refuses(scope):
         'CI policy: the supported ASCII concurrency identity admits before unsupported damage'
     )
     owner = workflow if scope == 'workflow' else workflow['jobs']['full']
-    owner['concurrency']['group'] = 'ı-${{ github.run_id }}'
+    owner['concurrency']['group'] = '\u0131-${{ github.run_id }}'
     with pytest.raises(ValueError, match='non-ASCII'):
         concurrency_errors([workflow])
