@@ -68,6 +68,18 @@ Item {
         function cleanup() {
             Session.closeProject();
         }
+        function test_experiment_fit_column_retains_icon_and_word_tooltip() {
+            verify(Session.openExample("pd-neut-cwl_cosio-d20_start-1"), "The supplied experiment opens for its fit status column");
+            const group = createTemporaryObject(experimentsComponent, surface, {
+                project: Session.project
+            });
+            verify(group !== null && waitForPolish(group), "The experiment fit column completes actual layout");
+            const cell = Ui.find(group, "experiments.fit.0");
+            verify(cell !== null, "The actual experiment row exposes its fit status cell");
+            compare(cell.toolTip, "Not fitted", "The unfitted experiment names its state in the tooltip");
+            compare(cell.ring, true, "An unfitted experiment retains the fit-family hollow circle");
+            verify(!Ui.text(cell).includes("Not fitted"), "The Fit column keeps the status word in the tooltip");
+        }
         function test_scrollable_tables_expose_half_of_the_next_live_row() {
             scrollRows.clear();
             for (let i = 0; i < 12; ++i)

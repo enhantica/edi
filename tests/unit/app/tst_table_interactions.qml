@@ -102,8 +102,15 @@ Item {
             expanded(group);
             const table = Ui.find(group, "recentProjects.list");
             tryCompare(table, "count", 2);
-            compare(Ui.find(group, "recentProjects.status.0").text, "Missing");
-            compare(Ui.find(group, "recentProjects.status.1").text, "Found");
+            const missingCell = Ui.find(group, "recentProjects.status.0");
+            const foundCell = Ui.find(group, "recentProjects.status.1");
+            compare(foundCell.icon, "check-circle", "Found uses the fit-family check icon");
+            compare(foundCell.iconColor, String(EaStyle.Colors.green), "Found is green");
+            compare(foundCell.toolTip, "Found", "The availability word is the icon tooltip");
+            verify(["exclamation-circle", "exclamation-triangle"].includes(missingCell.icon), "Missing uses a warning icon");
+            verify([String(EaStyle.Colors.red), String(EaStyle.Colors.orange)].includes(missingCell.iconColor), "Missing is red or amber");
+            compare(missingCell.toolTip, "Missing", "Missing remains named in the icon tooltip");
+            verify(!Ui.text(foundCell).includes("Found") && !Ui.text(missingCell).includes("Missing"), "Availability words are tooltips rather than visible column text");
             clickNamed(group, "recentProjects.path.0");
             compare(Session.hasProject, false, "A missing row cannot open a project");
             compare(RecentProjects.rows.count, 2);
