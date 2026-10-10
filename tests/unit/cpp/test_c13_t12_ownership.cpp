@@ -1,7 +1,5 @@
 #include <doctest/doctest.h>
 
-#include "edi/model.hpp"
-
 #include <algorithm>
 #include <functional>
 #include <memory>
@@ -10,6 +8,8 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+
+#include "edi/model.hpp"
 
 // Test-only bounded failure seam. Production never sets this thread-local state.
 // All allocations outside the single operation under examination behave normally.
@@ -102,7 +102,8 @@ void seed_payload(T& value, double scalar) {
         value.adp_type = "type-" + std::to_string(scalar);
     } else if constexpr (requires { value.dataset_weight; }) {
         value.dataset_weight = scalar;
-        value.excluded_regions = edi::excluded_region_rows({{scalar, scalar + 1}, {scalar + 2, scalar + 3}});
+        value.excluded_regions =
+            edi::excluded_region_rows({{scalar, scalar + 1}, {scalar + 2, scalar + 3}});
         value.excluded_regions[0]->id = "low-" + std::to_string(scalar);
         value.excluded_regions[1]->id = "high-" + std::to_string(scalar);
         if constexpr (requires { value.peak.push_back(value.scale); }) {
@@ -731,7 +732,8 @@ TEST_CASE("C13-T12 native Project and Structure copies reattach every keyed memb
     collision([&] { structure.atom_sites[1]->id = "first"; }, "first");
     edi::Project assigned;
     assigned = source;
-    collision([&] { assigned.structures.front()->atom_sites[1]->id = "source-only"; }, "source-only");
+    collision([&] { assigned.structures.front()->atom_sites[1]->id = "source-only"; },
+              "source-only");
     edi::Project moved(std::move(assigned));
     collision([&] { moved.experiments[1]->name = "first"; }, "first");
 }

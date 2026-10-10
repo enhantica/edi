@@ -155,8 +155,8 @@ void keyed_controls(std::type_identity<RowType>) {
     CHECK_THROWS_AS_MESSAGE(replacement.replace_at(0, item), std::invalid_argument,
                             " F19 keyed foreign replacement still refuses before mutation");
     CHECK_MESSAGE((replacement.size() == 1 && replacement.front() == kept &&
-                   replacement.category_stamp() == replacement_stamp &&
-                   first.front() == item && first.category_stamp() == before),
+                   replacement.category_stamp() == replacement_stamp && first.front() == item &&
+                   first.category_stamp() == before),
                   " F19 refused replacement preserves both rows and generations");
 }
 TEST_CASE("C34-T28 F19 all keyed families retain foreign and duplicate refusal") {

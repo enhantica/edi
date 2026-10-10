@@ -27,9 +27,8 @@ void measured(Cell& cell) {
                       " F20 measured-vector equality retains its standard value meaning");
         Cell other;
         other = expected;
-        CHECK_MESSAGE(
-            (cell == other && !(cell != other)),
-            " F20 measured-member equality observes values, not wrapper identity");
+        CHECK_MESSAGE((cell == other && !(cell != other)),
+                      " F20 measured-member equality observes values, not wrapper identity");
         other = Values{9.25};
         CHECK_MESSAGE((cell != other && !(cell == other)),
                       " F20 distinct measured values still compare unequal");
@@ -37,8 +36,7 @@ void measured(Cell& cell) {
         CHECK_MESSAGE(static_cast<const Values&>(cell).empty(),
                       " F20 the preserved empty braced assignment still clears a vector");
     } else
-        CHECK_MESSAGE(false,
-                      " F20 all preserved vector value expressions must be spellable");
+        CHECK_MESSAGE(false, " F20 all preserved vector value expressions must be spellable");
 }
 template <class Axis>
 void axis(Axis& cell) {
@@ -89,13 +87,11 @@ void text(Text& cell) {
                       " F20 preserved string reads retain their actual character values");
         Text other;
         other = "dab";
-        CHECK_MESSAGE(
-            (cell < std::string("dab") && std::string("dab") > cell && cell <= other &&
-             !(cell >= other)),
-            " F20 preserved string ordering retains standard lexicographic order");
+        CHECK_MESSAGE((cell < std::string("dab") && std::string("dab") > cell && cell <= other &&
+                       !(cell >= other)),
+                      " F20 preserved string ordering retains standard lexicographic order");
     } else
-        CHECK_MESSAGE(false,
-                      " F20 each retyped plain string keeps all its const value reads");
+        CHECK_MESSAGE(false, " F20 each retyped plain string keeps all its const value reads");
 }
 template <class Cell, class Value>
 void ordered(Cell& cell, const Value& low, const Value& high) {
@@ -109,9 +105,8 @@ void ordered(Cell& cell, const Value& low, const Value& high) {
         Cell other;
         other = high;
         const bool expected = low < high;
-        CHECK_MESSAGE(
-            (cell < high) == expected,
-            " F20 aggregate ordering follows the former standard-container value");
+        CHECK_MESSAGE(((cell < high) == expected),
+                      " F20 aggregate ordering follows the former standard-container value");
         CHECK_MESSAGE((high > cell) == expected,
                       " F20 reversed aggregate operands retain their ordering meaning");
         CHECK_MESSAGE((cell <= other) == (low <= high),
@@ -119,8 +114,7 @@ void ordered(Cell& cell, const Value& low, const Value& high) {
         CHECK_MESSAGE((cell >= other) == (low >= high),
                       " F20 aggregate wrapper ordering retains the standard >= relation");
     } else
-        CHECK_MESSAGE(false,
-                      " F20 all former aggregate ordering expressions remain spellable");
+        CHECK_MESSAGE(false, " F20 all former aggregate ordering expressions remain spellable");
 }
 }  // namespace
 TEST_CASE("C34-T28 F20 preserved measured expressions retain values and equality") {
@@ -152,9 +146,9 @@ TEST_CASE("C34-T28 F20 preserved aggregate comparisons retain standard value ord
     const std::vector<std::pair<double, double>> low{{1.25, 4.5}}, high{{2.5, 4.5}};
     experiment.excluded_regions = edi::excluded_region_rows(low);
     auto other = edi::excluded_region_rows(high);
-    CHECK_MESSAGE(edi::excluded_region_ranges(experiment.excluded_regions) == low,
+    CHECK_MESSAGE((edi::excluded_region_ranges(experiment.excluded_regions) == low),
                   " F20 keyed exclusion bounds retain their independently supplied values");
-    CHECK_MESSAGE(edi::excluded_region_ranges(other) == high,
+    CHECK_MESSAGE((edi::excluded_region_ranges(other) == high),
                   " F20 a second keyed table retains its distinct bounds");
     const auto actual_low = edi::excluded_region_ranges(experiment.excluded_regions);
     const auto actual_high = edi::excluded_region_ranges(other);
