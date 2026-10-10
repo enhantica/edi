@@ -13,10 +13,11 @@ The browser corpus is LBCO HRPT start 4 and NCAF WISH five-bank start 5. Capture
 include fitted parameters, fit scalars and every measured/calculated pattern
 operand. Parameter values and pattern operands retain the native captures'
 relative tolerance 1e-9 and absolute tolerance 1e-11. Fitted uncertainties use
-the native machine-report conformance bound
-`abs(actual - reference) <= max(5e-9 * abs(reference), 5e-10)`, including its
-absolute floor for uncertainty near zero. This bound predates the wasm build;
-it is not derived from an observed browser difference. Both components of a
+the independent native covariance conditioning derivation in
+[conditioning/README.md](conditioning/README.md), with the pre-existing
+machine-report relative 5e-9 and absolute 5e-10 bounds as minima. The fit's
+native final Jacobian, dimensions and covariance establish the new bound;
+no observed browser gap is an input. Both components of a
 saved `value(uncertainty)` token are compared numerically: decimal uncertainty
 is absolute, while integer uncertainty uses the mantissa's last decimal units.
 An empty uncertainty, zero uncertainty and an unbracketed fixed operand remain

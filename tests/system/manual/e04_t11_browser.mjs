@@ -497,7 +497,8 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
 from tests.fixtures.web_parallel.numeric import scientific, compare_scientific
 actual = scientific(pathlib.Path(sys.argv[1]))
 oracle = json.loads(pathlib.Path(sys.argv[2]).read_text())
-compare_scientific(actual, oracle['scientific'], oracle['relative_tolerance'], oracle['absolute_tolerance'])
+conditioning = json.loads(pathlib.Path(sys.argv[2].replace('-native.json', '-conditioning.json')).read_text())
+compare_scientific(actual, oracle['scientific'], oracle['relative_tolerance'], oracle['absolute_tolerance'], conditioning=conditioning)
 pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
     fileURLToPath(new URL(`../../fixtures/web_parallel/${fitCase}-native.json`, import.meta.url)),
     join(output, `${mode}-${fitCase}-scientific.json`)], {encoding:'utf8',timeout:10000});
