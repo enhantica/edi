@@ -16,6 +16,11 @@ TestCase {
         target: test.project ? test.project.fit : null
         signalName: "runningChanged"
     }
+    SignalSpy {
+        id: rereadRefused
+        target: test.project
+        signalName: "refused"
+    }
     EvolutionChart {
         id: chart
         width: 800
@@ -49,12 +54,23 @@ TestCase {
             tryVerify(() => !project.calculating && Probe.datasetReady(project), 3000, "Initial regular dataset projection finishes before path replacement");
             compare(project.fit.scanFitted, 3, "The actual app accepts three complete rows before the path changes");
             compare(Probe.scanIndexError(project), "", "The reread witness starts with a valid index");
+            if (expected.reader === "evolution") {
+                compare(project.lastError, "", "The Evolution witness begins without an earlier project error");
+                compare(project.evolution.count, 3, "Regular complete results initially draw all three Evolution points");
+                rereadRefused.clear();
+            }
             verify(Probe.replaceState(Probe.referenceUrl("project/analysis/results.csv"), Probe.referenceUrl("replacement")), "The authored replacement changes the results path after successful indexing");
             const diagnostic = Probe.scanReread(project, expected.reader);
             if (expected.valid)
                 compare(diagnostic, "", "A regular symlink remains readable through every post-index reader");
             else
                 verify(diagnostic.includes("results.csv"), "Post-index row and Evolution readers explicitly refuse unsupported results paths before opening streams");
+            if (expected.reader === "evolution") {
+                compare(rereadRefused.count, expected.valid ? 0 : 1, "Evolution rereads report exactly one project refusal only for unsupported paths");
+                compare(project.evolution.count, expected.valid ? 3 : 0, "Evolution rereads retain valid points and clear every point after a refusal");
+                if (!expected.valid)
+                    compare(rereadRefused.signalArguments[0][0], diagnostic, "The project refusal signal and lastError carry the same actual reread diagnostic");
+            }
             return;
         }
         if (expected.kind === "retained-scan" || expected.kind === "single-after-skips") {

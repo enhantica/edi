@@ -125,6 +125,8 @@ public:
                 (void)session->row(project->project(), 0);
             } else if (reader == "evolution") {
                 project->evolution()->setCurrentParameter(1 - project->evolution()->currentParameter());
+                // Evolution catches stream errors and publishes the project error channel.
+                return project->lastError();
             } else {
                 return QStringLiteral("unknown reader");
             }

@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-10T10:56:26Z
+# measured_utc = 2026-10-10T11:00:16Z
 #
-# Recorded from: scan-provenance.log (4 node(s) measured once, 9357 banked, 4 stale row(s) dropped)
-# Collected tests: 10133; with a reported duration: 5208
+# Recorded from: scan-rereads.log (9 node(s) measured once, 9354 banked, 0 stale row(s) dropped)
+# Collected tests: 10133; with a reported duration: 5212
 # Module-scoped fixture costs recorded: 32
 #
 # Breaches are decided PER TIER against the table
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 10133
 # inventory_cpp = 302
-# inventory_measured = 9359
-# inventory_unmeasured = 1076
+# inventory_measured = 9363
+# inventory_unmeasured = 1072
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -168,15 +168,15 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_phase_scan_progress.py:
 0.500	tests/integration/app/test_phase_scan_state.py::test_app_counts_processed_files_and_reopens_all_phase_results[skipped3-sequential]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_phase_scan_state.py::test_app_counts_processed_files_and_reopens_all_phase_results[skipped4-independent]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_phase_scan_state.py::test_app_counts_processed_files_and_reopens_all_phase_results[skipped4-sequential]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_phase_scan_state.py::test_app_post_index_results_reread_checks_the_new_path_kind[directory-evolution]
-0.310	tests/integration/app/test_phase_scan_state.py::test_app_post_index_results_reread_checks_the_new_path_kind[directory-offset]
-0.300	tests/integration/app/test_phase_scan_state.py::test_app_post_index_results_reread_checks_the_new_path_kind[directory-row]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_phase_scan_state.py::test_app_post_index_results_reread_checks_the_new_path_kind[fifo-evolution]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_phase_scan_state.py::test_app_post_index_results_reread_checks_the_new_path_kind[fifo-offset]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_phase_scan_state.py::test_app_post_index_results_reread_checks_the_new_path_kind[fifo-row]
-0.320	tests/integration/app/test_phase_scan_state.py::test_app_post_index_results_reread_checks_the_new_path_kind[symlink-evolution]
+0.320	tests/integration/app/test_phase_scan_state.py::test_app_post_index_results_reread_checks_the_new_path_kind[directory-evolution]
+0.502	tests/integration/app/test_phase_scan_state.py::test_app_post_index_results_reread_checks_the_new_path_kind[directory-offset]
+0.390	tests/integration/app/test_phase_scan_state.py::test_app_post_index_results_reread_checks_the_new_path_kind[directory-row]
+0.340	tests/integration/app/test_phase_scan_state.py::test_app_post_index_results_reread_checks_the_new_path_kind[fifo-evolution]
+0.340	tests/integration/app/test_phase_scan_state.py::test_app_post_index_results_reread_checks_the_new_path_kind[fifo-offset]
+0.340	tests/integration/app/test_phase_scan_state.py::test_app_post_index_results_reread_checks_the_new_path_kind[fifo-row]
+0.440	tests/integration/app/test_phase_scan_state.py::test_app_post_index_results_reread_checks_the_new_path_kind[symlink-evolution]
 0.320	tests/integration/app/test_phase_scan_state.py::test_app_post_index_results_reread_checks_the_new_path_kind[symlink-offset]
-0.300	tests/integration/app/test_phase_scan_state.py::test_app_post_index_results_reread_checks_the_new_path_kind[symlink-row]
+0.310	tests/integration/app/test_phase_scan_state.py::test_app_post_index_results_reread_checks_the_new_path_kind[symlink-row]
 0.260	tests/integration/app/test_phase_scan_state.py::test_app_refuses_malformed_notes_with_one_diagnostic[-1]
 0.250	tests/integration/app/test_phase_scan_state.py::test_app_refuses_malformed_notes_with_one_diagnostic[1.5]
 0.260	tests/integration/app/test_phase_scan_state.py::test_app_refuses_malformed_notes_with_one_diagnostic[18446744073709551616]
@@ -10479,7 +10479,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 38.315	tests/integration/app/test_c13_t2_gui.py
 # module-cost: 249.923	tests/integration/app/test_e04_t1_projects.py
 # module-cost: 260.077	tests/integration/app/test_e04_t1_runtime_escapes.py
-# module-cost: 0.313	tests/integration/app/test_phase_scan_state.py
+# module-cost: 0.258	tests/integration/app/test_phase_scan_state.py
 # module-cost: 1.914	tests/integration/py/test_e04_t12_name_allowance.py
 # module-cost: 0.192	tests/integration/py/test_e09_t75_sdk_consumer.py
 # module-cost: 1.527	tests/integration/py/test_scan_app_contract.py
