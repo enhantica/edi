@@ -64,6 +64,9 @@ remaining files are all skipped is complete.
 A skipped file sends no event of its own, so the live index reads the notes appended before each new row, and the
 app indexes the files on disk again when the run returns, before the running bar closes: files skipped after the
 last row count for every ending (complete, stopped, failed). A refusal while a run writes refuses the whole index,
-as a full read would, and is shown at once; the facts read before it are not kept. `results.csv` and
-`scan-notes.csv` may be absent, but a path that exists must be a regular file: a directory there is refused, never
-read as no results or as an empty file, and a fresh run or Reset that sets the result files aside refuses it too.
+as a full read would, and is shown at once; nothing more is published until the full read at the end succeeds.
+A scan whose processed files were all skipped is still a scan that ran: it has a scan summary and run provenance,
+and a single fit after it is recorded as the last run. `results.csv`, `results-provenance.csv` and
+`scan-notes.csv` may be absent, but a path that exists must be a regular file (`edi::scan_state_present`, asked by
+every reader before it opens one): a directory there is refused, never read as no results or as an empty file,
+and a fresh run or Reset that sets the result files aside refuses it too.
