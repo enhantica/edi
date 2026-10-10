@@ -27,6 +27,7 @@ TestCase {
         Session.closeProject();
         Session.openProject(Probe.repoUrl("tests/fixtures/e04_t1/editable-project"));
         verify(Session.hasProject, "GUI: committed editable project opens");
+        verify(waitForRendering(appWindow.contentItem), "GUI: opened project renders before locating its input controls");
     }
     function cleanupTestCase() {
         Session.closeProject();
@@ -79,6 +80,7 @@ TestCase {
     }
     function textInput(field, keys) {
         field.forceActiveFocus();
+        tryCompare(field, "activeFocus", true, 2000, "GUI: numeric input owns keyboard focus before typing");
         keyClick(Qt.Key_A, Qt.ControlModifier);
         for (const key of keys) keyClick(key);
         keyClick(Qt.Key_Return);
