@@ -1204,10 +1204,13 @@ ScanSummary ProjectViewModel::scanSummary(const QString& run_outcome, double sec
         }
     }
     if (summary.fitted == 0) {
-        // A run that failed or was stopped before its first file still says so.
-        summary.outcome = run_outcome == QLatin1String("failed") || run_outcome == QLatin1String("stopped")
-                              ? run_outcome
-                              : QString();
+        // A run that failed or was stopped before its first file still says so; one that skipped every file it
+        // reached is complete when it reached them all.
+        if (run_outcome == QLatin1String("failed") || run_outcome == QLatin1String("stopped")) {
+            summary.outcome = run_outcome;
+        } else if (summary.skipped > 0) {
+            summary.outcome = summary.skipped >= summary.files ? QStringLiteral("skipped") : QStringLiteral("stopped");
+        }
         return summary;
     }
     // The run's own outcome when this app ran it (Failed, Stopped); otherwise the worst file's, a run that left

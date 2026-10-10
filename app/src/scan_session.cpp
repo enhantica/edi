@@ -222,9 +222,16 @@ int ScanSession::addRow(const edi::Project& project, const std::vector<std::stri
         }
         row.offset = index_.end;
         row.termination = termination;
+        // crysta notes a file before appending its row, so what the notes said about it stays.
+        const edi::ScanResultIndex::Row& noted = index_.rows[dataset];
+        row.noted = noted.noted;
+        row.negative_points = noted.negative_points;
+        row.refusal = noted.refusal;
         index_.end += length - 1;
         index_.rows[dataset] = std::move(row);
         ++index_.fitted;
+        // The notes the run appended since the last row: files skipped before this one, its own note.
+        index_.notes_end = edi::read_scan_notes(project, places_, index_, index_.notes_end, true);
         return static_cast<int>(dataset);
     } catch (const std::exception& refusal) {
         error = QString::fromUtf8(refusal.what());

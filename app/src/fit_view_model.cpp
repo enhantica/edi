@@ -127,13 +127,15 @@ QString outcome_word(const QString& key) {
     if (key == QLatin1String("noStep")) return FitViewModel::tr("No step");
     if (key == QLatin1String("notConverged")) return FitViewModel::tr("Not converged");
     if (key == QLatin1String("stopped")) return FitViewModel::tr("Stopped");
+    if (key == QLatin1String("skipped")) return FitViewModel::tr("Skipped");
+    if (key == QLatin1String("refused")) return FitViewModel::tr("Refused");
     return FitViewModel::tr("Failed");
 }
 
 }  // namespace
 
 void FitResultListModel::setScan(const ScanSummary& summary) {
-    if (summary.fitted == 0 && summary.outcome.isEmpty()) {
+    if (summary.processed() == 0 && summary.outcome.isEmpty()) {
         clear();
         return;
     }
@@ -230,7 +232,8 @@ void FitViewModel::showScan(const ScanSummary& summary, bool scan_last) {
         return;
     }
     if (scan_.fitted == 0) {
-        // A run that failed or was stopped before its first file still says so, here and in the results window.
+        // A run that failed or was stopped before its first file still says so, here and in the results window;
+        // so does one that skipped every file it reached (no χ² to show).
         setProgress(QString(), QString(), scan_.outcome.isEmpty() ? QString() : outcome_word(scan_.outcome),
                     scan_.outcome);
         setElapsed(scan_.seconds >= 0.0 ? duration(scan_.seconds) : QString());
@@ -266,7 +269,7 @@ void FitViewModel::start() {
     // to Undo); otherwise it continues from the first dataset without a row (edi ADR-0017 §17).
     const bool scan = edi::is_scan_fitting_mode(edi::effective_fitting_mode(project_));
     if (scan) {
-        const QString error = owner_.prepareScan(scan_.fitted == 0);
+        const QString error = owner_.prepareScan(scan_.processed() == 0);
         if (!error.isEmpty()) {
             emit refused(error);
             return;
@@ -325,8 +328,8 @@ void FitViewModel::sync() {
     QString reason;
     if (scan) {
         reason = owner_.scanRefusal();
-        if (reason.isEmpty() && !running_ && scan_.files > 0 && scan_.fitted >= scan_.files) {
-            reason = tr("Every dataset is fitted: Reset fits to fit them again");
+        if (reason.isEmpty() && !running_ && scan_.files > 0 && scan_.processed() >= scan_.files) {
+            reason = tr("Every dataset is fitted or skipped: Reset fits to fit them again");
         }
     } else if (mode == QLatin1String("joint") && declared) {
         reason = tr("This project declares a scan (_sequential_fit): its datasets are fitted in the sequential or "
@@ -388,7 +391,11 @@ void FitViewModel::scanStarted(const edi::ScanPreamble& preamble) {
     for (const edi::ScanFileRecord& row : preamble.completed_rows) {
         ++(row.converged ? counts.ok : counts.failed);
     }
-    scan_resumed_ = counts.fitted;
+    // Files an earlier run skipped are done too: the notes it kept say which.
+    if (const ScanSession* session = owner_.scanSession(); session != nullptr && session->index().error.empty()) {
+        counts.skipped = static_cast<int>(session->index().skipped);
+    }
+    scan_resumed_ = counts.processed();
     setScanCounts(counts, preamble.completed_rows.empty()
                               ? QString()
                               : QString::fromStdString(preamble.completed_rows.back().file_name));
@@ -399,12 +406,16 @@ void FitViewModel::scanStarted(const edi::ScanPreamble& preamble) {
 
 void FitViewModel::fileCompleted(const edi::ScanFileRecord& record) {
     ScanSummary counts = scan_;
-    ++counts.fitted;
     ++(record.converged ? counts.ok : counts.failed);
-    // The files are taken in scan order, so every file before this one is done: fitted, or skipped for having
-    // nothing to fit, which sends no event of its own.
-    const int place = owner_.scanFileFitted(record);
-    counts.fitted = std::max(counts.fitted, place + 1);
+    // The index holds this file's row and the notes of the files skipped before it (a skipped file sends no event
+    // of its own), retained rows of an earlier run included: fitted and skipped are its counts.
+    owner_.scanFileFitted(record);
+    if (const ScanSession* session = owner_.scanSession(); session != nullptr && session->index().error.empty()) {
+        counts.fitted = static_cast<int>(session->index().fitted);
+        counts.skipped = static_cast<int>(session->index().skipped);
+    } else {
+        ++counts.fitted;
+    }
     setScanCounts(counts, QString::fromStdString(record.file_name));
     setProgress(QString(), chi(record.reduced_chi_square), tr("Running"));
     if (following()) {
@@ -415,6 +426,7 @@ void FitViewModel::fileCompleted(const edi::ScanFileRecord& record) {
 void FitViewModel::setScanCounts(const ScanSummary& counts, const QString& file) {
     scan_.files = counts.files;
     scan_.fitted = counts.fitted;
+    scan_.skipped = counts.skipped;
     scan_.ok = counts.ok;
     scan_.failed = counts.failed;
     sync();
@@ -425,8 +437,9 @@ void FitViewModel::setScanCounts(const ScanSummary& counts, const QString& file)
     emit scanProgressChanged();
     emit scanFittedChanged();
     emit scanTotalChanged();
-    const int percent = scan_.files > 0 ? static_cast<int>(100.0 * scan_.fitted / scan_.files) : 0;
-    QStringList parts{QStringLiteral("%1/%2").arg(scan_.fitted).arg(scan_.files), QStringLiteral("%1%").arg(percent)};
+    const int percent = scan_.files > 0 ? static_cast<int>(100.0 * scan_.processed() / scan_.files) : 0;
+    QStringList parts{QStringLiteral("%1/%2").arg(scan_.processed()).arg(scan_.files),
+                      QStringLiteral("%1%").arg(percent)};
     if (!file.isEmpty()) {
         parts.append(QFileInfo(file).completeBaseName());
     }
@@ -436,11 +449,11 @@ void FitViewModel::setScanCounts(const ScanSummary& counts, const QString& file)
         emit scanTextChanged();
     }
     // The time left at this run's pace: the files it fitted so far over the time they took.
-    const int done = scan_.fitted - scan_resumed_;
+    const int done = scan_.processed() - scan_resumed_;
     QString eta;
-    if (scanning_ && done > 0 && scan_.files > scan_.fitted) {
+    if (scanning_ && done > 0 && scan_.files > scan_.processed()) {
         const double seconds = static_cast<double>(clock_.elapsed()) / 1000.0;
-        eta = duration(seconds / done * (scan_.files - scan_.fitted));
+        eta = duration(seconds / done * (scan_.files - scan_.processed()));
     }
     if (eta != eta_) {
         eta_ = eta;
@@ -476,10 +489,10 @@ void FitViewModel::syncScanState() {
     // In a scan project the fit button follows the datasets' fits (owner, 2026-10-06): Start fitting while none is
     // fitted, Continue fitting while some are not, unavailable once all are; Reset fits clears them.
     const bool scan = edi::is_scan_fitting_mode(edi::effective_fitting_mode(project_)) && owner_.scan();
-    setContinuable(scan && scan_.fitted > 0 && scan_.fitted < scan_.files);
+    setContinuable(scan && scan_.processed() > 0 && scan_.processed() < scan_.files);
     const ScanSession* session = owner_.scanSession();
     const bool unreadable = session != nullptr && (!session->index().error.empty() || session->run().invalid);
-    const bool can_reset = scan && !running_ && (scan_.fitted > 0 || unreadable);
+    const bool can_reset = scan && !running_ && (scan_.processed() > 0 || unreadable);
     if (can_reset != can_reset_) {
         can_reset_ = can_reset;
         emit canResetChanged();
