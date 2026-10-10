@@ -210,12 +210,16 @@ TestCase {
         filterText(field, "p n m a");
         verify(!field.warned, "owner 2026-10-06: filtering ignores case and spaces");
         keyClick(Qt.Key_Return);
+        // The popup restores focus when its exit transition ends. Typing into the
+        // number field before that boundary can send keys back to the name filter.
+        tryCompare(name.popup, "visible", false, 2000, "GUI: name selection finishes closing before number input");
         tryCompare(group, "itNumber", 62, 2000, "owner 2026-10-06: name edit resolves IT number");
-        compare(group.coordSystemCode, "abc", "International Tables: Pnma has the abc default setting");
+        tryCompare(group, "coordSystemCode", "abc", 2000, "International Tables: Pnma has the abc default setting");
         const number = control("spaceGroup.itNumber");
         textInput(number, [Qt.Key_2, Qt.Key_2, Qt.Key_5]);
-        compare(group.nameHM, "F m -3 m", "owner 2026-10-06: number edit resolves the group name");
-        compare(group.coordSystemCode, "1", "owner example: Fm-3m resolves its default code 1");
+        tryCompare(group, "itNumber", 225, 2000, "owner 2026-10-06: number input commits the exact requested IT number");
+        tryCompare(group, "nameHM", "F m -3 m", 2000, "owner 2026-10-06: number edit resolves the group name");
+        tryCompare(group, "coordSystemCode", "1", 2000, "owner example: Fm-3m resolves its default code 1");
         group.nameHM = "F d -3 m"; group.coordSystemCode = "2";
         const code = control("spaceGroup.coordSystemCode");
         const codeField = search(code, "nosuchcode");
@@ -226,7 +230,8 @@ TestCase {
         filterText(codeField, "1");
         verify(!codeField.warned, "owner 2026-10-06: setting code is filterable");
         keyClick(Qt.Key_Return);
-        compare(group.coordSystemCode, "1", "owner 2026-10-06: selected setting remains editable");
+        tryCompare(code.popup, "visible", false, 2000, "GUI: setting selection finishes closing before checking its identity");
+        tryCompare(group, "coordSystemCode", "1", 2000, "owner 2026-10-06: selected setting remains editable");
         compare(group.itNumber, 227, "owner 2026-10-06: setting edit retains group identity");
     }
     function test_invalid_number_is_red_and_unapplied() {
