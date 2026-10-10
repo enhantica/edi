@@ -80,3 +80,5 @@ use the actual app/core/worker; optimizer entries bind the fitted file and measu
 The scale actor remains unthrottled and its bounds remain unchanged.
 
 | Native scan observation callback | Public driver and optimizer wrappers accepted only the row-completion callback. | Forward the optional fitted-project callback unchanged through both native entry points and the observed optimizer; retain row receipts and the actual compiled SDK loop. |
+
+| Worker dispatch signature observer | The compiled actor supplied only scan-start, completion and cancellation identities. | Supply a distinct fitted-project subscriber identity to both mode branches and reject an actual removed-forwarding escape; retain every existing dispatch and subscriber comparison. |
