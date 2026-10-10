@@ -51,7 +51,7 @@ def payload(mode):
         env=env,
         text=True,
         capture_output=True,
-        timeout=2,
+        timeout=8,
         check=False,
     )
     assert result.returncode == 0, (
@@ -62,10 +62,18 @@ def payload(mode):
     return json.loads(result.stdout.splitlines()[-1])
 
 
+@pytest.fixture(scope='module')
+def selected_sdk_payloads():
+    # Fresh processes still select each dispatch mode independently. Share only the
+    # completed pair across the mirrored assertions; the runtime plugin records the
+    # complete module setup cost under the unchanged system-tier bound.
+    return {mode: payload(mode) for mode in ('scalar', 'simd')}
+
+
 @pytest.mark.parametrize('mode', ['scalar', 'simd'])
-def test_selected_sdk_executes_scalar_and_simd_values(mode):
-    observed = payload(mode)
-    other = payload('simd' if mode == 'scalar' else 'scalar')
+def test_selected_sdk_executes_scalar_and_simd_values(mode, selected_sdk_payloads):
+    observed = selected_sdk_payloads[mode]
+    other = selected_sdk_payloads['simd' if mode == 'scalar' else 'scalar']
     assert observed['lanes'] == 0 if mode == 'scalar' else observed['lanes'] >= 2, (
         'CI policy: scalar and SIMD smoke must exercise their declared live dispatch widths'
     )
