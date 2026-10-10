@@ -2,6 +2,7 @@
 
 import json
 import re
+import shlex
 import shutil
 import subprocess
 from pathlib import Path
@@ -94,7 +95,7 @@ def test_fullprof_comparison_projects_retain_verification_purpose(project):
     # The declared FullProf comparison corpus is an input independent of the app filter.
     text = (ROOT / f'docs/user/cli/{project}/project/project.edi').read_text()
     match = re.search(r'(?m)^_metadata\.purpose\s+(\S+)', text)
-    assert match and match[1] == 'verification', (
+    assert match and shlex.split(match[1]) == ['verification'], (
         'FullProf comparison projects retain verification as their stored purpose'
     )
     metadata = json.loads((ROOT / 'app/examples/metadata.json').read_text())
