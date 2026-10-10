@@ -1429,44 +1429,93 @@ std::pair<std::size_t, ScanResultIndex::Row> scan_row_facts(const Project& /*pro
     return {found->second, std::move(row)};
 }
 
-namespace {
-
-// What crysta noted about the scan's files (`analysis/scan-notes.csv`: file_path, negative_points, skipped_dataset,
-// refusal), onto the datasets it names. A report, not a result: a file that is not there or not in this form adds
-// nothing, and a line still being written is left out.
-void mark_skipped(const Project& project, const ScanDatasets& datasets, ScanResultIndex& index) {
-    std::ifstream input(scan_results_path(project).parent_path() / "scan-notes.csv", std::ios::binary);
-    std::string line;
-    if (!std::getline(input, line) || input.eof() ||
-        split_scan_row(line) !=
-            std::vector<std::string>{"file_path", "negative_points", "skipped_dataset", "refusal"}) {
-        return;
+std::int64_t read_scan_notes(const Project& project, const ScanPlaces& places, ScanResultIndex& index,
+                             std::int64_t from, bool writing) {
+    const std::filesystem::path path = scan_results_path(project).parent_path() / "scan-notes.csv";
+    std::error_code status;
+    if (!std::filesystem::exists(path, status)) {
+        if (status) {
+            throw std::invalid_argument("analysis/scan-notes.csv: cannot tell whether it exists: " +
+                                        status.message());
+        }
+        return from;
     }
-    const ScanPlaces places = scan_places(datasets);
+    std::ifstream input(path, std::ios::binary);
+    if (!input) {
+        throw std::invalid_argument("analysis/scan-notes.csv cannot be read");
+    }
+    const auto refuse = [](const std::string& why) {
+        throw std::invalid_argument("analysis/scan-notes.csv: " + why +
+                                    "; the skipped and refused files cannot be known");
+    };
+    std::string line;
+    std::int64_t end = from;
+    if (from == 0) {
+        if (!std::getline(input, line)) {
+            return 0;  // created, nothing written yet
+        }
+        if (input.eof()) {
+            if (writing) {
+                return 0;
+            }
+            refuse("its header is not complete");
+        }
+        if (split_scan_row(line) !=
+            std::vector<std::string>{"file_path", "negative_points", "skipped_dataset", "refusal"}) {
+            refuse("its header is not file_path,negative_points,skipped_dataset,refusal");
+        }
+        end = input.tellg();
+    } else {
+        input.seekg(from);
+    }
     const std::string directory = project.sequential_fit.data_dir + "/";
-    while (std::getline(input, line) && !input.eof()) {
+    while (std::getline(input, line)) {
+        if (input.eof()) {
+            if (writing) {
+                break;  // a line still being written
+            }
+            refuse("its last line is not complete");
+        }
         const std::vector<std::string> cells = split_scan_row(line);
         if (cells.size() != 4) {
-            continue;
+            refuse("a line has " + std::to_string(cells.size()) + " cells, not 4");
         }
         std::string_view name(cells[0]);
         if (name.starts_with(directory)) {
             name.remove_prefix(directory.size());
         }
         const auto found = places.find(std::string(name));
-        double negative = 0.0;
-        if (found == places.end() || !parse_scan_number(cells[1], negative) || negative < 0.0) {
-            continue;
+        if (found == places.end()) {
+            refuse("'" + cells[0] + "' is not one of the scan's files");
+        }
+        // A count of points: decimal digits only, proved in range before it is converted.
+        const std::string& count = cells[1];
+        if (count.empty() || count.size() > 12 ||
+            !std::all_of(count.begin(), count.end(), [](char c) { return c >= '0' && c <= '9'; })) {
+            refuse("the negative_points of '" + cells[0] + "' is '" + count +
+                   "', not a whole number of at most 12 digits");
+        }
+        if (cells[2] != "True" && cells[2] != "False") {
+            refuse("the skipped_dataset of '" + cells[0] + "' is '" + cells[2] + "', not True or False");
         }
         ScanResultIndex::Row& row = index.rows[found->second];
-        row.negative_points = static_cast<std::size_t>(negative);
+        if (row.noted) {
+            refuse("'" + cells[0] + "' is named twice");
+        }
+        row.noted = true;
+        row.negative_points = static_cast<std::size_t>(std::stoull(count));
         row.refusal = cells[3];
-        if (cells[2] == "True" && row.offset < 0 && !row.skipped) {
+        // A file with a results row was fitted, whatever an earlier run noted about it.
+        if (cells[2] == "True" && row.offset < 0) {
             row.skipped = true;
             ++index.skipped;
         }
+        end = input.tellg();
     }
+    return end;
 }
+
+namespace {
 
 ScanResultIndex index_scan_rows(const Project& project, const ScanDatasets& datasets, const ScanPlaces& places,
                                 bool writing);
@@ -1481,7 +1530,14 @@ ScanResultIndex index_scan_results(const Project& project, const ScanDatasets& d
                                    bool writing) {
     ScanResultIndex index = index_scan_rows(project, datasets, places, writing);
     if (index.error.empty()) {
-        mark_skipped(project, datasets, index);
+        try {
+            index.notes_end = read_scan_notes(project, places, index, 0, writing);
+        } catch (const std::exception& refusal) {
+            ScanResultIndex error;
+            error.error = refusal.what();
+            error.rows.resize(datasets.files.size());
+            return error;
+        }
     }
     return index;
 }

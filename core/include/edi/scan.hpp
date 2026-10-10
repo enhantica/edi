@@ -65,6 +65,7 @@ struct ScanResultIndex {
         std::size_t negative_points = 0;
         bool skipped = false;
         std::string refusal;
+        bool noted = false;  ///< the notes file has a row for it
     };
     std::string error;
     std::vector<std::string> header;
@@ -79,6 +80,7 @@ struct ScanResultIndex {
     std::int64_t end = 0;       ///< the offset after the last complete row (0: no file)
     std::size_t fitted = 0;     ///< datasets with a row
     std::size_t skipped = 0;    ///< datasets skipped for having no intensity above zero
+    std::int64_t notes_end = 0; ///< the offset after the last complete notes line read (0: none read)
 };
 /// A results file that is there must read whole; `writing`: a run is appending to it, so a last line still being
 /// written is left out rather than refused.
@@ -92,6 +94,14 @@ ScanResultIndex index_scan_results(const Project& project, const ScanDatasets& d
 using ScanPlaces = std::unordered_map<std::string, std::size_t>;
 /// Each dataset's place by its file name.
 ScanPlaces scan_places(const ScanDatasets& datasets);
+/// crysta's `analysis/scan-notes.csv` (file_path, negative_points, skipped_dataset, refusal), read from byte
+/// `from` onto `index`; returns the offset after the last complete line. A file that is there must be whole and
+/// well formed: the header, four cells a row, negative_points a decimal integer of at most 12 digits,
+/// skipped_dataset True or False, a scan file named once. Anything else throws std::invalid_argument saying why,
+/// since the skipped and refused files cannot then be known. `writing`: a last line still being written is left
+/// for the next read. The CLI (`edi fit`) and crysta's resume read the file by the same rule.
+std::int64_t read_scan_notes(const Project& project, const ScanPlaces& places, ScanResultIndex& index,
+                             std::int64_t from, bool writing);
 /// The file a row names: its `file_path` cell is `<data_dir>/<file>` as crysta writes it, or the bare file name;
 /// empty for any other path (a file of another directory is not this scan's, whatever its name).
 std::string scan_row_file(const ScanResultIndex& index, const std::vector<std::string>& cells);
