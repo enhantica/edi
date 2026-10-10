@@ -18,7 +18,7 @@ from tests.system.py.test_ci_context_boundaries import trigger_control
         ("'1' == true", True),
         ("'2.5' == 2.5", True),
         ("'not-a-number' == 0", False),
-        ("'00' == 0", False),
+        ("'00' == 0", True),
         ("'false' == false", False),
         ("github.ref == 'REFS/HEADS/MAIN'", True),
         ("'true' == 'TRUE'", True),
@@ -29,6 +29,13 @@ from tests.system.py.test_ci_context_boundaries import trigger_control
         ("0 || 'fallback'", 'fallback'),
         ("'false' && 'selected'", 'selected'),
         ("!''", True),
+        ("' ' == false", True),
+        ("'\t' == null", True),
+        ("'01.00' == true", True),
+        ("'+1' == true", True),
+        ("'.5' == 0.5", True),
+        ("'1.' == true", True),
+        ("'1e0' == true", True),
     ],
     ids=[
         'value-1',
@@ -49,6 +56,13 @@ from tests.system.py.test_ci_context_boundaries import trigger_control
         'value-16',
         'value-17',
         'value-18',
+        'value-19',
+        'value-20',
+        'value-21',
+        'value-22',
+        'value-23',
+        'value-24',
+        'value-25',
     ],
 )
 def test_actions_value_contract_preserves_comparisons_and_selected_operands(expression, expected):
@@ -109,8 +123,26 @@ def test_actions_rendering_preserves_literals_and_lowercase_boolean_results(sour
         'github.ref and true',
         '[true]',
         '"true"',
+        "'0x1' == true",
+        "'0o1' == true",
+        "'Infinity' == 1",
+        "'1e400' == true",
+        "'ß' == 'SS'",
+        "'ı' == 'I'",
     ],
-    ids=['unsupported-1', 'unsupported-2', 'unsupported-3', 'unsupported-4', 'unsupported-5'],
+    ids=[
+        'unsupported-1',
+        'unsupported-2',
+        'unsupported-3',
+        'unsupported-4',
+        'unsupported-5',
+        'unsupported-6',
+        'unsupported-7',
+        'unsupported-8',
+        'unsupported-9',
+        'unsupported-10',
+        'unsupported-11',
+    ],
 )
 def test_actions_unsupported_expression_forms_refuse(source):
     with pytest.raises((ValueError, SyntaxError)):
@@ -231,3 +263,15 @@ def test_actions_matrix_jobs_remain_distinct_owners_when_names_and_group_case_co
     assert concurrency_errors([workflow]), (
         'CI policy: matrix jobs cannot share a case-equivalent group through a shared name'
     )
+
+
+@pytest.mark.parametrize('scope', ['workflow', 'job'])
+def test_actions_non_ascii_concurrency_identity_refuses(scope):
+    workflow = trigger_control()
+    assert not concurrency_errors([workflow]), (
+        'CI policy: the supported ASCII concurrency identity admits before unsupported damage'
+    )
+    owner = workflow if scope == 'workflow' else workflow['jobs']['full']
+    owner['concurrency']['group'] = 'ı-${{ github.run_id }}'
+    with pytest.raises(ValueError, match='non-ASCII'):
+        concurrency_errors([workflow])

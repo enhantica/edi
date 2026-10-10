@@ -19,29 +19,51 @@ import yaml
 
 
 def actions_number(item):
-    if item is None or (isinstance(item, str) and not item):
+    if item is None:
         return 0.0
     if type(item) in {bool, int, float}:
         return float(item)
     if isinstance(item, str):
-        try:
-            parsed = json.loads(item, parse_constant=lambda _text: math.nan)
-        except (ValueError, TypeError):
-            return math.nan
-        return float(parsed) if type(parsed) in {int, float} else math.nan
+        if not item.isascii():
+            message = 'unsupported non-ASCII Actions numeric coercion'
+            raise ValueError(message)
+        item = item.strip(' \t\r\n\v\f')
+        if not item:
+            return 0.0
+        if re.fullmatch(r'[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?', item):
+            parsed = float(item)
+            if math.isfinite(parsed):
+                return parsed
+            message = 'unsupported nonfinite Actions numeric coercion'
+            raise ValueError(message)
+        if item.lower().startswith(('0x', '0o')) or item.lower() in {
+            'nan',
+            'infinity',
+            '+infinity',
+            '-infinity',
+        }:
+            message = 'unsupported Actions numeric coercion form'
+            raise ValueError(message)
     return math.nan
+
+
+def actions_casefold(item):
+    if not item.isascii():
+        message = 'unsupported non-ASCII Actions case identity'
+        raise ValueError(message)
+    return item.lower()
 
 
 def actions_equal(left, right):
     if isinstance(left, str) and isinstance(right, str):
-        return left.casefold() == right.casefold()
+        return actions_casefold(left) == actions_casefold(right)
     if type(left) is type(right):
         return left == right
     return actions_number(left) == actions_number(right)
 
 
 def actions_truthy(item):
-    return bool(item)
+    return False if type(item) is float and math.isnan(item) else bool(item)
 
 
 def actions_string(item):
@@ -377,7 +399,7 @@ def concurrency_errors(workflows):
                     )
                     if value(item.get('cancel-in-progress', False), ctx) is not False:
                         errors.append('cancelling ' + event + ' ' + branch + ' ' + scope)
-                    identity = render(item['group'], ctx).casefold()
+                    identity = actions_casefold(render(item['group'], ctx))
                     owner = (
                         wi,
                         branch,
@@ -393,7 +415,7 @@ def concurrency_errors(workflows):
                     if previous != owner:
                         errors.append('effective collision ' + identity)
                     later = dict(ctx, **{'github.run_id': 791})
-                    if identity == render(item['group'], later).casefold():
+                    if identity == actions_casefold(render(item['group'], later)):
                         errors.append(
                             'queued run replacement: ' + event + ' ' + branch + ' ' + scope
                         )
