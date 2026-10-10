@@ -193,6 +193,14 @@ QString ScanSession::reindex(const edi::Project& project, bool writing) {
     return QString::fromStdString(index_.error);
 }
 
+void ScanSession::refuseIndex(const std::string& why) {
+    // What was read before the refusal is not adopted: the index is refused as a full read would refuse it.
+    edi::ScanResultIndex refused;
+    refused.error = why;
+    refused.rows.resize(datasets_.files.size());
+    index_ = std::move(refused);
+}
+
 int ScanSession::place(const std::string& file) const {
     const auto found = places_.find(file);
     return found == places_.end() ? -1 : static_cast<int>(found->second);
@@ -209,8 +217,9 @@ int ScanSession::addRow(const edi::Project& project, const std::vector<std::stri
         reindex(project, true);
         const int dataset = cells.size() == index_.header.size() ? place(edi::scan_row_file(index_, cells)) : -1;
         if (!index_.error.empty() || dataset < 0 || index_.rows[static_cast<std::size_t>(dataset)].offset < 0) {
-            error = index_.error.empty() ? QStringLiteral("analysis/results.csv does not hold the row just written")
-                                         : QString::fromStdString(index_.error);
+            refuseIndex(index_.error.empty() ? "analysis/results.csv does not hold the row just written"
+                                             : index_.error);
+            error = QString::fromStdString(index_.error);
             return -1;
         }
         return dataset;
@@ -244,11 +253,7 @@ int ScanSession::addRow(const edi::Project& project, const std::vector<std::stri
         ++index_.fitted;
         return static_cast<int>(dataset);
     } catch (const std::exception& refusal) {
-        // What was read before the refusal is not adopted: the index is refused as a full read would refuse it.
-        edi::ScanResultIndex refused;
-        refused.error = refusal.what();
-        refused.rows.resize(datasets_.files.size());
-        index_ = std::move(refused);
+        refuseIndex(refusal.what());
         error = QString::fromStdString(index_.error);
         return -1;
     }

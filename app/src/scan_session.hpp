@@ -108,6 +108,9 @@ class ScanSession : public QObject {
     void metadataLoaded(int first, int last);
 
    private:
+    // Replaces the index with a refused one saying why: no row, no count.
+    void refuseIndex(const std::string& why);
+
     edi::ScanDatasets datasets_;
     edi::ScanPlaces places_;
     edi::ScanResultIndex index_;
