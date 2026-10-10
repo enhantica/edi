@@ -405,11 +405,60 @@ def test_regular_macos_invokes_the_real_smoke_group(event):
     ), 'CI policy: regular macOS invokes the same collector and validator as its smoke group'
 
 
+def execution_source_matches(path, baseline, actual):
+    if actual == baseline:
+        return True
+    accepted = json.loads(
+        (ROOT / 'tests/fixtures/ci_cadence/accepted-main-sdk-source.json').read_text()
+    )
+    if path != accepted['path']:
+        return False
+    # Only the reviewed main-line token function may differ; all qualification code stays frozen.
+
+    def without_token(source):
+        nodes = [
+            node
+            for node in ast.parse(source).body
+            if isinstance(node, ast.FunctionDef) and node.name == 'token'
+        ]
+        if len(nodes) != 1:
+            return None
+        node = nodes[0]
+        lines = source.splitlines(keepends=True)
+        return ''.join(
+            lines[: node.lineno - 1] + ['<accepted token function>\n'] + lines[node.end_lineno :]
+        )
+
+    return actual == accepted['source'] and without_token(actual) == without_token(baseline)
+
+
+@pytest.mark.parametrize(
+    'damage',
+    ['unchanged', 'accepted-token', 'changed-pin', 'changed-sdk-output', 'no-qualification'],
+)
+def test_main_sdk_token_adaptation_preserves_the_frozen_qualification_closure(damage):
+    path = 'tools/ci/crysta_sdk.py'
+    baseline = BASE['execution_sources'][path]
+    accepted = json.loads(
+        (ROOT / 'tests/fixtures/ci_cadence/accepted-main-sdk-source.json').read_text()
+    )
+    source = baseline if damage == 'unchanged' else accepted['source']
+    if damage == 'changed-pin':
+        source += '\n# unreviewed source-pin change\n'
+    elif damage == 'changed-sdk-output':
+        source = source.replace('def download(', 'def unqualified_download(')
+    elif damage == 'no-qualification':
+        source = source.replace('def pin(', 'def unqualified_pin(')
+    assert execution_source_matches(path, baseline, source) is (
+        damage in {'unchanged', 'accepted-token'}
+    ), 'CI policy: only the reviewed main token fallback can extend the frozen SDK closure'
+
+
 @pytest.mark.parametrize('event', ['pull_request', 'push'])
 def test_linux_task_closure_cannot_reduce_the_frozen_execution(event):
     live = document(ROOT / '.github/workflows/ci.yml')
     for path, source in BASE['execution_sources'].items():
-        assert (ROOT / path).read_text() == source, (
+        assert execution_source_matches(path, source, (ROOT / path).read_text()), (
             'CI policy: unchanged Linux and qualified SDK task commands retain their '
             'frozen executable source closure'
         )

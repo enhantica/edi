@@ -179,7 +179,12 @@ def test_execution_path_auditor_reaches_every_disconnected_or_advisory_boundary(
 def test_effective_concurrency_controls_cover_workflows_jobs_slots_and_queued_work(damage):
     first = {
         'name': 'regular',
-        'on': ['pull_request', 'push', 'schedule', 'workflow_dispatch'],
+        'on': {
+            'pull_request': None,
+            'push': None,
+            'schedule': [{'cron': '0 3 * * *'}],
+            'workflow_dispatch': None,
+        },
         'concurrency': {
             'group': 'regular-${{ github.ref }}-${{ github.run_id }}',
             'cancel-in-progress': False,
@@ -344,7 +349,7 @@ def test_pixi_invocation_cannot_invent_skipped_dependencies_or_hide_arguments(
 def test_concurrency_controls_include_main_and_every_triggered_successor(scope, event, damage):
     workflow = {
         'name': 'independent control',
-        'on': [event],
+        'on': {event: [{'cron': '0 3 * * *'}] if event == 'schedule' else None},
         'concurrency': {
             'group': 'workflow-${{ github.ref }}-${{ github.run_id }}',
             'cancel-in-progress': False,
@@ -365,7 +370,7 @@ def test_concurrency_controls_include_main_and_every_triggered_successor(scope, 
     owner = workflow if scope == 'workflow' else workflow['jobs']['full']
     if damage == 'main-cancellation':
         # PRs have merge refs; exercise the real main ref via push/schedule/manual triggers.
-        workflow['on'] = [event, 'push']
+        workflow['on']['push'] = None
         owner['concurrency']['cancel-in-progress'] = "${{ github.ref == 'refs/heads/main' }}"
     else:
         owner['concurrency']['group'] = (
@@ -448,3 +453,112 @@ def test_direct_duplicate_options_cannot_hide_execution_overrides(
     assert execution_errors(tmp_path, workflow, policy, event, platform, group, expected), (
         'CI policy: duplicate direct options cannot conceal group, platform or report overrides'
     )
+
+
+@pytest.mark.parametrize(
+    ('boundary', 'name'),
+    [
+        ('collector', '--group'),
+        ('collector', '--platform'),
+        ('collector', '--output-dir'),
+        ('validator', '--expected'),
+        ('validator', '--report'),
+        ('validator', '--platform'),
+    ],
+)
+@pytest.mark.parametrize('spelling', ['separated-equals', 'equals-separated', 'equals-equals'])
+@pytest.mark.parametrize(
+    ('group', 'event', 'platform'),
+    [
+        ('quick', 'pull_request', 'linux-64'),
+        ('full', 'push', 'linux-64'),
+        ('macos-smoke', 'pull_request', 'osx-arm64'),
+        ('macos-smoke', 'push', 'osx-arm64'),
+        ('nightly-full', 'schedule', 'osx-arm64'),
+        ('nightly-full', 'workflow_dispatch', 'osx-arm64'),
+        ('nightly-full', 'schedule', 'linux-64'),
+        ('nightly-full', 'workflow_dispatch', 'linux-64'),
+    ],
+)
+def test_mixed_equals_options_cannot_override_any_execution_identity(
+    tmp_path, boundary, name, spelling, group, event, platform
+):
+    workflow, policy, expected = execution_control(tmp_path, platform, group)
+    collector = [
+        'python',
+        'tools/ci/run-selection.py',
+        '--group',
+        group,
+        '--platform',
+        platform,
+        '--output-dir',
+        '/tmp/ci-selection-probe/result',
+    ]
+    validator = [
+        'python',
+        'tools/ci/validate-selection.py',
+        '--expected',
+        '/tmp/ci-selection-probe/result/expected.json',
+        '--report',
+        '/tmp/ci-selection-probe/result/results.json',
+        '--platform',
+        platform,
+    ]
+    # Independently fixed argv, with every single value option in equals spelling.
+
+    def plant(*, use_equals, extra=()):
+        command = collector if boundary == 'collector' else validator
+        argv = (
+            command[:2]
+            + [
+                name + '=' + value
+                for name, value in zip(command[2::2], command[3::2], strict=True)
+            ]
+            if use_equals
+            else list(command)
+        )
+        argv += list(extra)
+        if boundary == 'collector':
+            tmp_path.joinpath('pixi.toml').write_text(
+                '[tasks]\ngroup-' + group + ' = { cmd = ' + json.dumps(argv) + ' }\n'
+            )
+        else:
+            workflow['jobs']['full']['steps'][1]['run'] = ' '.join(argv)
+
+    plant(use_equals=spelling != 'separated-equals')
+    assert not execution_errors(tmp_path, workflow, policy, event, platform, group, expected), (
+        'CI policy: unique separated or equals-form options execute the connected full path'
+    )
+    plant(
+        use_equals=spelling != 'separated-equals',
+        extra=[name + '=reduced'] if spelling != 'equals-separated' else [name, 'reduced'],
+    )
+    assert execution_errors(tmp_path, workflow, policy, event, platform, group, expected), (
+        'CI policy: every mixed or repeated equals-form identity/output override must refuse'
+    )
+
+
+@pytest.mark.parametrize('boundary', ['job', 'collector', 'validator'])
+@pytest.mark.parametrize('platform', ['linux-64', 'osx-arm64'])
+@pytest.mark.parametrize(
+    ('event', 'condition'),
+    [
+        ('schedule', "github.event.schedule != '41 5 * * 2'"),
+        ('push', "github.event.pull_request.number != ''"),
+        ('workflow_dispatch', "github.event.pull_request.head.sha != ''"),
+    ],
+)
+def test_real_trigger_payloads_cannot_invent_active_execution(
+    tmp_path, boundary, platform, event, condition
+):
+    workflow, policy, expected = execution_control(tmp_path, platform, 'nightly-full')
+    workflow['on']['schedule'] = [{'cron': '17 2 * * *'}, {'cron': '41 5 * * 2'}]
+    assert not execution_errors(
+        tmp_path, workflow, policy, event, platform, 'nightly-full', expected
+    ), 'CI policy: connected execution admits on every declared cron and non-PR payload'
+    job = workflow['jobs']['full']
+    owner = job if boundary == 'job' else job['steps'][0 if boundary == 'collector' else 1]
+    owner['if'] = '${{ ' + condition + ' }}'
+    assert execution_errors(
+        tmp_path, workflow, policy, event, platform, 'nightly-full', expected
+    ), 'CI policy: real cron and absent PR properties expose disabled execution at every boundary'

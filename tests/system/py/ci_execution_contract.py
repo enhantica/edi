@@ -52,7 +52,8 @@ def value(source, ctx):
         ast.Load,
     )
     if any(not isinstance(n, allowed) for n in ast.walk(tree)):
-        raise ValueError('unsupported workflow expression: ' + str(source))
+        message = 'unsupported workflow expression: ' + str(source)
+        raise ValueError(message)
     return eval(compile(tree, '<ci-policy>', 'eval'), {'__builtins__': {}}, {})  # noqa: S307
 
 
@@ -60,7 +61,18 @@ def render(source, ctx):
     return re.sub(r'\$\{\{(.*?)\}\}', lambda m: str(value(m[1], ctx)), str(source))
 
 
-def contexts(workflow, event, branch='main'):
+def contexts(workflow, event, branch='main', cron=None):
+    crons = schedule_crons(workflow) if event == 'schedule' else ['']
+    if cron is not None:
+        if cron not in crons:
+            message = 'unconfigured schedule context'
+            raise ValueError(message)
+        crons = [cron]
+    for scheduled in crons:
+        yield from job_contexts(workflow, event, branch, scheduled)
+
+
+def job_contexts(workflow, event, branch, scheduled):
     for key, job in workflow['jobs'].items():
         matrix = job.get('strategy', {}).get('matrix', {})
         axes = {k: v for k, v in matrix.items() if k not in {'include', 'exclude'}}
@@ -85,16 +97,20 @@ def contexts(workflow, event, branch='main'):
                 'github.ref_name': ('79/merge' if branch == 'slot-a' else '80/merge')
                 if event == 'pull_request'
                 else branch,
-                'github.event.pull_request.number': 79 if branch == 'slot-a' else 80,
-                'github.event.pull_request.head.repo.fork': False,
-                'github.event.pull_request.head.sha': '79' * 20,
+                'github.event.pull_request.number': (79 if branch == 'slot-a' else 80)
+                if event == 'pull_request'
+                else '',
+                'github.event.pull_request.head.repo.fork': False
+                if event == 'pull_request'
+                else '',
+                'github.event.pull_request.head.sha': '79' * 20 if event == 'pull_request' else '',
                 'github.sha': '79' * 20,
                 'github.token': 'trace-only-token',
                 'github.base_ref': 'main' if event == 'pull_request' else '',
                 'github.head_ref': branch if event == 'pull_request' else '',
                 'github.run_id': 790,
                 'github.run_attempt': 2,
-                'github.event.schedule': '0 3 * * *' if event == 'schedule' else '',
+                'github.event.schedule': scheduled,
                 'runner.temp': '/tmp/ci-selection-probe',
                 'inputs.core_only': False,
                 'needs.changes.result': 'success',
@@ -131,29 +147,38 @@ def contexts(workflow, event, branch='main'):
             yield render(job.get('name', key), ctx), job, ctx, platform
 
 
-def prerequisites_ready(workflow, job, ctx, seen=()):
-    needs = job.get('needs', [])
-    needs = [needs] if isinstance(needs, str) else needs
-    for key in needs:
-        if key in seen or key not in workflow['jobs']:
-            return False
-        predecessor = workflow['jobs'][key]
-        if not value(predecessor.get('if'), ctx) or not prerequisites_ready(
-            workflow, predecessor, ctx, (*seen, key)
-        ):
-            return False
-    return True
-
-
-def event_refs(workflow):
+def triggers_for(workflow):
     triggers = workflow.get('on', workflow.get(True))
     if isinstance(triggers, str):
         triggers = [triggers]
     if isinstance(triggers, list):
         triggers = dict.fromkeys(triggers)
     if not isinstance(triggers, dict):
-        message = 'workflow triggers are required for concurrency execution contexts'
+        message = 'workflow triggers are required for execution contexts'
         raise TypeError(message)
+    return triggers
+
+
+def schedule_crons(workflow):
+    configured = triggers_for(workflow).get('schedule')
+    if not isinstance(configured, list) or not configured:
+        message = 'schedule requires declared cron payloads'
+        raise ValueError(message)
+    crons = []
+    for item in configured:
+        if not isinstance(item, dict) or set(item) != {'cron'}:
+            message = 'unsupported schedule payload'
+            raise ValueError(message)
+        cron = item['cron']
+        if not isinstance(cron, str) or len(cron.split()) != 5:
+            message = 'unsupported cron payload'
+            raise ValueError(message)
+        crons.append(cron)
+    return list(dict.fromkeys(crons))
+
+
+def event_refs(workflow):  # noqa: PLR0912
+    triggers = triggers_for(workflow)
     for event in ('pull_request', 'push', 'schedule', 'workflow_dispatch'):
         if event not in triggers:
             continue
@@ -165,8 +190,14 @@ def event_refs(workflow):
             if event == 'pull_request'
             else ('main', 'slot-a', 'slot-b', 'repair-topic')
         )
+        if event == 'schedule':
+            schedule_crons(workflow)
+        elif not isinstance(config, dict):
+            message = 'unsupported event configuration'
+            raise TypeError(message)
         if event == 'push':
             refs += tuple(p for p in config.get('branches', []) if not any(c in p for c in '*?!['))
+        visited = []
         for branch in dict.fromkeys(refs):
             if event in {'push', 'pull_request'}:
                 target = 'main' if event == 'pull_request' else branch
@@ -179,6 +210,19 @@ def event_refs(workflow):
                     fnmatch.fnmatchcase(target, p) for p in config.get('branches-ignore', [])
                 ):
                     continue
+            visited.append(branch)
+        if not visited:
+            message = 'unrepresented configured event/ref: ' + event
+            raise ValueError(message)
+        if event in {'push', 'pull_request'}:
+            targets = ['main'] if event == 'pull_request' else visited
+            for pattern in config.get('branches', []):
+                if not pattern.startswith('!') and not any(
+                    fnmatch.fnmatchcase(target, pattern) for target in targets
+                ):
+                    message = 'unrepresented configured branch pattern: ' + pattern
+                    raise ValueError(message)
+        for branch in visited:
             yield event, branch
 
 
@@ -213,6 +257,20 @@ def concurrency_errors(workflows):
     return errors
 
 
+def prerequisites_ready(workflow, job, ctx, seen=()):
+    needs = job.get('needs', [])
+    needs = [needs] if isinstance(needs, str) else needs
+    for key in needs:
+        if key in seen or key not in workflow['jobs']:
+            return False
+        predecessor = workflow['jobs'][key]
+        if not value(predecessor.get('if'), ctx) or not prerequisites_ready(
+            workflow, predecessor, ctx, (*seen, key)
+        ):
+            return False
+    return True
+
+
 def run_settings(workflow, job, step, ctx):
     defaults = {
         **workflow.get('defaults', {}).get('run', {}),
@@ -220,10 +278,12 @@ def run_settings(workflow, job, step, ctx):
     }
     shell = step.get('shell', defaults.get('shell'))
     if shell not in {None, 'bash'}:
-        raise ValueError('unsupported workflow shell: ' + str(shell))
+        message = 'unsupported workflow shell: ' + str(shell)
+        raise ValueError(message)
     directory = step.get('working-directory', defaults.get('working-directory', '.'))
     if directory != '.':
-        raise ValueError('unsupported workflow working directory: ' + str(directory))
+        message = 'unsupported workflow working directory: ' + str(directory)
+        raise ValueError(message)
     combined = {**workflow.get('env', {}), **job.get('env', {}), **step.get('env', {})}
     if any(
         key in {'PATH', 'BASH_ENV', 'ENV', 'SHELLOPTS', 'BASHOPTS'} or key.startswith('E09_')
@@ -253,14 +313,16 @@ def task_commands(text, environment='default'):
                 manifest.get('feature', {}).get(feature, {}).get('tasks', {}).items()
             ):
                 if name in tasks and tasks[name] != spec:
-                    raise ValueError('ambiguous selected task ' + name)
+                    message = 'ambiguous selected task ' + name
+                    raise ValueError(message)
                 tasks[name] = spec
         return tasks
 
     def closure(name, selected, stack=()):
         tasks = declarations(selected)
         if (name, selected) in stack or name not in tasks:
-            raise ValueError('unresolvable selected task ' + name)
+            message = 'unresolvable selected task ' + name
+            raise ValueError(message)
         spec = tasks[name]
         if isinstance(spec, str):
             return [(name, spec, {})]
@@ -409,17 +471,43 @@ pytest() { return 0; }
 
 
 def option(args, name):
-    if args.count(name) > 1:
-        raise ValueError('ambiguous duplicated selection option ' + name)
-    if name not in args:
-        return None
-    index = args.index(name) + 1
-    if index == len(args):
-        raise ValueError('missing selection option argument ' + name)
-    return args[index]
+    values = []
+    for index, token in enumerate(args):
+        if token == name:
+            if index + 1 == len(args) or args[index + 1].startswith('--'):
+                message = 'missing selection option argument ' + name
+                raise ValueError(message)
+            values.append(args[index + 1])
+        elif token.startswith(name + '='):
+            values.append(token[len(name) + 1 :])
+    if len(values) > 1:
+        message = 'ambiguous duplicated selection option ' + name
+        raise ValueError(message)
+    if values and not values[0]:
+        message = 'empty selection option argument ' + name
+        raise ValueError(message)
+    return values[0] if values else None
 
 
-def execution_errors(root, workflow, policy, event, platform, group, expected=None):  # noqa: PLR0912, PLR0915, PLR0914
+def execution_errors(root, workflow, policy, event, platform, group, expected=None):
+    refs = [branch for actual_event, branch in event_refs(workflow) if actual_event == event]
+    if not refs:
+        message = 'unconfigured execution event'
+        raise ValueError(message)
+    if event in {'push', 'schedule'} and 'main' not in refs:
+        message = 'unrepresented main execution ref'
+        raise ValueError(message)
+    crons = schedule_crons(workflow) if event == 'schedule' else [None]
+    return [
+        error
+        for cron in crons
+        for error in execution_context_errors(
+            root, workflow, policy, event, platform, group, expected, cron=cron
+        )
+    ]
+
+
+def execution_context_errors(root, workflow, policy, event, platform, group, expected, *, cron):  # noqa: PLR0913, PLR0912, PLR0915, PLR0914
     errors = []
     if group not in policy.get('groups', {}):
         return ['missing selected group']
@@ -427,7 +515,7 @@ def execution_errors(root, workflow, policy, event, platform, group, expected=No
         return ['missing production execution collector']
     covered = []
     for name, job, ctx, actual_platform in contexts(
-        workflow, event, 'repair-topic' if event == 'workflow_dispatch' else 'main'
+        workflow, event, 'repair-topic' if event == 'workflow_dispatch' else 'main', cron
     ):
         if (
             actual_platform != platform
@@ -596,7 +684,7 @@ def execution_errors(root, workflow, policy, event, platform, group, expected=No
                 ):
                     errors.append('SDK upload precedes qualification')
     for name, job, ctx, actual_platform in contexts(
-        workflow, event, 'repair-topic' if event == 'workflow_dispatch' else 'main'
+        workflow, event, 'repair-topic' if event == 'workflow_dispatch' else 'main', cron
     ):
         if (
             actual_platform != platform
