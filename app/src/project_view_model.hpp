@@ -265,6 +265,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // The place of the file's dataset in the scan, or -1 when its row could not be indexed.
     int scanFileFitted(const edi::ScanFileRecord& record);
     void followScanFile(const std::string& file);
+    // A followed scan's newest finished file becomes the current dataset at once (the evolution's line, the list,
+    // the selectors), with no read; its pattern follows when the view is ready (edi ADR-0029).
+    void markScanFile(const std::string& file);
     // No dataset read is in flight: the last one asked for has been shown (or refused).
     bool followReady() const { return !view_reading_ && view_applied_ == view_request_; }
     // The run's driver returned: the rows and notes on disk are indexed again, the files skipped after the last

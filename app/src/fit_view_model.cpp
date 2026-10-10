@@ -456,6 +456,10 @@ void FitViewModel::fileCompleted(const edi::ScanFileRecord& record) {
     setScanCounts(counts, QString::fromStdString(record.file_name));
     setProgress(QString(), chi(record.reduced_chi_square), tr("Running"));
     latest_file_ = record.file_name;
+    if (following()) {
+        // The cheap indicators follow every finished file; only the pattern waits for the view (edi ADR-0029).
+        owner_.markScanFile(latest_file_);
+    }
     followLatest();
 }
 

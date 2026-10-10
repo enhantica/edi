@@ -1028,7 +1028,11 @@ void ProjectViewModel::applyDatasetView(std::uint64_t request, int index, Datase
         publishCalculating();
         return;
     }
-    current_dataset_ = index;
+    // A followed scan may have marked newer files while this one was read: the current dataset stays the newest
+    // finished one, and only the pattern shown is this file's (edi ADR-0029).
+    if (fit_ == nullptr || !fit_->following()) {
+        current_dataset_ = index;
+    }
     projected_dataset_ = index;
     syncDataset(index);
     publishCurrent();
@@ -1262,6 +1266,16 @@ int ProjectViewModel::scanFileFitted(const edi::ScanFileRecord& record) {
         viewDataset(index, true);
     }
     return index;
+}
+
+void ProjectViewModel::markScanFile(const std::string& file) {
+    const int index = scan_ && scan_session_ != nullptr ? scan_session_->place(file) : -1;
+    if (index < 0 || index == current_dataset_) {
+        return;
+    }
+    current_dataset_ = index;
+    syncDataset(index);
+    emit currentExperimentIndexChanged();
 }
 
 void ProjectViewModel::followScanFile(const std::string& file) {
