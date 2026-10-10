@@ -54,6 +54,8 @@ def _conditioning_inverse(expected, conditioning):
         if any(matrix[i][i] <= 0 for i in range(n)):
             raise ValueError('native conditioning requires positive covariance diagonals')
         _positive_matrix(matrix)
+    if any(abs(normal[i][i] - 1) > _gamma(4) for i in range(n)):
+        raise ValueError('native conditioning requires column-normalized Gram quantities')
     u = 2**-53
     norm = max(math.fsum(abs(x) for x in row) for row in inverse)
     normal_norm = max(math.fsum(abs(x) for x in row) for row in normal)

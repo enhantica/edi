@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-10T07:29:33Z
+# measured_utc = 2026-10-10T07:51:20Z
 #
-# Recorded from: durations.log (30 node(s) measured once, 9091 banked, 0 stale row(s) dropped)
-# Collected tests: 9784; with a reported duration: 4939
+# Recorded from: normalization-durations.log (9 node(s) measured once, 9113 banked, 0 stale row(s) dropped)
+# Collected tests: 9785; with a reported duration: 4939
 # Module-scoped fixture costs recorded: 29
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 9784
+# inventory_python = 9785
 # inventory_cpp = 302
-# inventory_measured = 9121
+# inventory_measured = 9122
 # inventory_unmeasured = 965
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
@@ -10075,6 +10075,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 0.000	tests/unit/py/test_web_parallel_conditioning.py::test_invalid_native_conditioning_refuses_instead_of_relaxing_the_gate[missing]
 0.000	tests/unit/py/test_web_parallel_conditioning.py::test_invalid_native_conditioning_refuses_instead_of_relaxing_the_gate[nan]
 0.000	tests/unit/py/test_web_parallel_conditioning.py::test_invalid_native_conditioning_refuses_instead_of_relaxing_the_gate[negative]
+0.000	tests/unit/py/test_web_parallel_conditioning.py::test_invalid_native_conditioning_refuses_instead_of_relaxing_the_gate[normalization]
 0.000	tests/unit/py/test_web_parallel_conditioning.py::test_invalid_native_conditioning_refuses_instead_of_relaxing_the_gate[shape]
 0.000	tests/unit/py/test_web_parallel_conditioning.py::test_invalid_native_conditioning_refuses_instead_of_relaxing_the_gate[singular]
 0.000	tests/unit/py/test_web_parallel_numeric.py::test_saved_numeric_comparison_retains_document_row_and_token_inventory[actual0]

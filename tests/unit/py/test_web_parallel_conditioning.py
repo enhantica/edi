@@ -79,7 +79,18 @@ def test_conditioning_never_changes_parameter_values_or_presence():
 
 
 @pytest.mark.parametrize(
-    'damage', ['hash', 'shape', 'nan', 'singular', 'negative', 'indefinite', 'binding', 'missing']
+    'damage',
+    [
+        'hash',
+        'shape',
+        'nan',
+        'singular',
+        'negative',
+        'indefinite',
+        'normalization',
+        'binding',
+        'missing',
+    ],
 )
 def test_invalid_native_conditioning_refuses_instead_of_relaxing_the_gate(damage):
     expected, conditioning = reference()
@@ -98,6 +109,9 @@ def test_invalid_native_conditioning_refuses_instead_of_relaxing_the_gate(damage
         matrix = [[(1 if i == j else 0) - 2 / 3 for j in range(3)] for i in range(3)]
         conditioning['scaled_normal'] = matrix
         conditioning['scaled_inverse_normal'] = matrix
+    elif damage == 'normalization':
+        conditioning['scaled_normal'] = [[0.1, 0.0], [0.0, 0.1]]
+        conditioning['scaled_inverse_normal'] = [[10.0, 0.0], [0.0, 10.0]]
     elif damage == 'binding':
         conditioning['bindings'][0][3] = 2
     else:
