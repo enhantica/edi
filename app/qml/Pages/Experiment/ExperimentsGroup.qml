@@ -148,27 +148,36 @@ EaElements.GroupBox {
                     onCommitted: text => row.experiment.name = text
                 }
                 // The data's file: the experiment's own `.edi`, which holds its data, or a scan dataset's data file,
-                // the template dataset's with the word "template" in the accent blue; Load data… without data.
+                // the template dataset's followed by the word "template" in the accent blue, as in the selector;
+                // Load data… without data.
                 Item {
+                    id: fileCell
+
                     property int horizontalAlignment: Text.AlignLeft
                     height: parent ? parent.height : 0
 
-                    EaComponents.TableViewLabel {
-                        width: parent.width - (templateTag.visible ? templateTag.width : 0)
+                    Row {
+                        height: parent.height
+                        spacing: EaStyle.Sizes.fontPixelSize * 0.5
                         visible: !loadData.visible
-                        horizontalAlignment: Text.AlignLeft
-                        elide: Text.ElideMiddle
-                        text: row.file
-                    }
-                    EaComponents.TableViewLabel {
-                        id: templateTag
-                        objectName: `experiments.template.${row.index}`
-                        visible: group.scan && row.isTemplate
-                        anchors.right: parent.right
-                        width: implicitWidth
-                        elide: Text.ElideNone
-                        color: EaStyle.Colors.themeAccent
-                        text: qsTr("template")
+
+                        EaComponents.TableViewLabel {
+                            width: Math.min(implicitWidth, fileCell.width - (templateTag.visible ? templateTag.width + parent.spacing : 0))
+                            height: parent.height
+                            horizontalAlignment: Text.AlignLeft
+                            elide: Text.ElideMiddle
+                            text: row.file
+                        }
+                        EaComponents.TableViewLabel {
+                            id: templateTag
+                            objectName: `experiments.template.${row.index}`
+                            visible: group.scan && row.isTemplate
+                            width: implicitWidth
+                            height: parent.height
+                            elide: Text.ElideNone
+                            color: EaStyle.Colors.themeAccent
+                            text: qsTr("template")
+                        }
                     }
                     EaElements.Button {
                         id: loadData

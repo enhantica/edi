@@ -37,7 +37,7 @@ Row {
     // Every entry in the first block's colour: a scan's datasets are one experiment's.
     property bool oneColour: false
     // The blocks' role that marks the template dataset (a scan's `isTemplate`) and whether the shown one is it: its
-    // line carries the word "template" in the accent blue, before its name, which the line elides when long.
+    // line carries the word "template" in the accent blue after its name, which the line elides when long.
     property string templateRole: ""
     property bool currentTemplate: false
 
