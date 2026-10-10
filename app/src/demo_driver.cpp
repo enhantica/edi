@@ -4,6 +4,9 @@
 #include <algorithm>
 
 #include <QCoreApplication>
+#include <QDir>
+#include <QDirIterator>
+#include <QFileInfo>
 #include <QFile>
 #include <QGuiApplication>
 #include <QKeyEvent>
@@ -173,7 +176,8 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // bundled project is refused, so another project's experiment is loaded: its preferred orientation
     // names a structure this project does not have. The project is not a scan, which keeps its one
     // template experiment and refuses a second.
-    steps_.push_back({"t4-03-messages-not-viewed", open_example("pd-neut-tof_fe_pseudo-voigt")});
+    // The example that always has messages is a verification project, which the app does not bundle (ADR-0031).
+    steps_.push_back({"t4-03-messages-not-viewed", {"appBar.tab.project", "open-cli-project:pd-neut-tof_fe_pseudo-voigt"}});
     steps_.push_back({"t4-04-messages-list", {"statusBar.warnings"}});
     steps_.push_back({"t4-05-messages-viewed", {"choose:OK"}});
     steps_.push_back({"t4-06-messages-error",
@@ -480,6 +484,27 @@ bool DemoDriver::perform(const QString& action) {
         }
         auto* content = qvariant_cast<QQuickItem*>(flickable->property("contentItem"));
         flickable->setProperty("contentY", content != nullptr ? view->mapToItem(content, line.topLeft()).y() : line.y());
+        return true;
+    }
+    if (action.startsWith(QLatin1String("open-cli-project:"))) {
+        // open-cli-project:<id> opens a copy of the CLI project docs/user/cli/<id>/project from this build's
+        // source tree, so the image shows a temporary location as an example's does.
+        QQmlEngine* engine = qmlEngine(window_.contentItem());
+        auto* session = engine ? engine->singletonInstance<Session*>("edi.app", "Session") : nullptr;
+        const QString id = action.section(QLatin1Char(':'), 1);
+        const QDir source(QStringLiteral(EDI_CLI_PROJECTS_DIR "/") + id + QStringLiteral("/project"));
+        const QDir target(loaded_files_.filePath(id + QStringLiteral("/project")));
+        bool copied = loaded_files_.isValid() && source.exists();
+        for (QDirIterator files(source.path(), QDir::Files, QDirIterator::Subdirectories); copied && files.hasNext();) {
+            const QString file = files.next();
+            const QString copy = target.filePath(source.relativeFilePath(file));
+            copied = QDir().mkpath(QFileInfo(copy).path()) && QFile::copy(file, copy);
+        }
+        if (!copied || session == nullptr || !session->openProject(QUrl::fromLocalFile(target.path()))) {
+            fail(QStringLiteral("step %1: %2 failed: %3")
+                     .arg(steps_[current_].image, action, session ? session->lastError() : QStringLiteral("no session")));
+            return false;
+        }
         return true;
     }
     if (action.startsWith(QLatin1String("save-as:")) || action.startsWith(QLatin1String("open-project:"))) {
