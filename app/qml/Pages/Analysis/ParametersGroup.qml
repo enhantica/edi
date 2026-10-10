@@ -237,7 +237,7 @@ EaElements.GroupBox {
                 }
                 EaComponents.TableViewLabel {
                     horizontalAlignment: Text.AlignRight
-                    text: row.parameter && row.parameter.hasUncertainty ? NumberText.error(row.parameter.uncertainty) : ""
+                    text: row.parameter && row.parameter.hasUncertainty ? NumberText.error(row.parameter.uncertainty, 0, row.parameter.value) : ""
                 }
                 EaComponents.TableViewLabel {
                     horizontalAlignment: Text.AlignHCenter

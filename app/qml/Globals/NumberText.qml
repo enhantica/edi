@@ -8,9 +8,35 @@ import QtQuick
 // show, never padding or clipping digits. A value that would not fit in `width` characters is written with an
 // exponent instead, keeping the digits its uncertainty allows. The base library's own rounding padded a value
 // smaller than its uncertainty with zeros (`000`) and broke on an exponent (`-4.2e-170000000000000`).
+//
+// A parameter is written whatever the width of its cell, which clips a long one at its edge, and edited in full
+// (`full`). One at or above a million, or below 1e-4 and not zero, is written in scientific notation with four
+// significant digits and its uncertainty in the same exponent (`2.290e7`, `0.010e7`), so a column of large
+// intensities reads at a glance (the owner, 2026-10-10).
 QtObject {
-    // `value` with its uncertainty `error` (0 or absent: none), for a cell `width` characters wide.
-    function parameter(value, error, width) {
+    // Whether `value` is written in scientific notation.
+    function scientific(value) {
+        return typeof value === "number" && isFinite(value) && value !== 0 && (Math.abs(value) >= 1e6 || Math.abs(value) < 1e-4);
+    }
+
+    // The exponent `value` is written with in scientific notation, after rounding (9999600 is 1.000e7).
+    function scientificExponent(value) {
+        const text = value.toExponential(3);
+        return Number(text.slice(text.indexOf("e") + 1));
+    }
+
+    // The value as typed into a field to edit it: every digit it has.
+    function full(value) {
+        return String(value);
+    }
+
+    // A parameter's `value` with its uncertainty `error` (0 or absent: none).
+    function parameter(value, error) {
+        return scientific(value) ? value.toExponential(3).replace("e+", "e") : rounded(value, error, Infinity);
+    }
+
+    // `value` rounded by its uncertainty `error` and to the cell, as the comment at the top says.
+    function rounded(value, error, width) {
         if (typeof value !== "number")
             return String(value);
         if (!isFinite(value))
@@ -32,18 +58,24 @@ QtObject {
         return exponent(value, Math.min(significant, Math.max(1, room - 5)));
     }
 
-    // An uncertainty as the error column shows it: one significant digit, written plainly while it fits.
-    function error(value, width) {
+    // An uncertainty as the error column shows it: one significant digit, written plainly while it fits. Beside
+    // a `parameterValue` in scientific notation it takes that value's exponent and three decimals.
+    function error(value, width, parameterValue) {
         if (typeof value !== "number" || !isFinite(value) || value <= 0)
             return "";
+        if (scientific(parameterValue)) {
+            const power = scientificExponent(parameterValue);
+            return (value * Math.pow(10, -power)).toFixed(3) + "e" + power;
+        }
         const room = width > 0 ? width : 6;
         const text = String(Number(value.toPrecision(1)));
         return text.length <= room ? text : exponent(value, 1);
     }
 
-    // A number with no uncertainty (a range end, a reflection's position), as `parameter` writes it.
+    // A number with no uncertainty (a range end, a reflection's position), rounded as a parameter without the
+    // scientific notation.
     function plain(value, width) {
-        return parameter(value, 0, width);
+        return rounded(value, 0, width);
     }
 
     // `value` in exponent form with `digits` significant digits, without trailing zeros in its mantissa.

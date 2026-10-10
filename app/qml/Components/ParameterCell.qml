@@ -28,8 +28,17 @@ EaComponents.TableViewParameter {
     // A fixed setting is edited but never fitted: no fit toggle.
     readonly property bool canFit: refinable && (item === null || item.fittable)
 
-    onActiveFocusChanged: if (!activeFocus)
-        cursorPosition = 0
+    // The value as edited: in full, where the cell shows it rounded (NumberText).
+    readonly property string editText: item !== null ? NumberText.full(item.value) : value
+
+    onActiveFocusChanged: {
+        if (activeFocus && text === value) {
+            text = editText;
+        } else if (!activeFocus) {
+            commit();
+            cursorPosition = 0;
+        }
+    }
     onTextChanged: if (!activeFocus)
         cursorPosition = 0
     color: warned ? EaStyle.Colors.red : !enabled || readOnly ? EaStyle.Colors.themeForegroundMinor : item && item.free && canFit ? EaStyle.Colors.chartForegroundsExtra[1] : EaStyle.Colors.themeForeground
@@ -42,8 +51,8 @@ EaComponents.TableViewParameter {
     enabled: refinable
     // The value and its uncertainty as text, by the app's one rule for numbers in cells (NumberText).
     parameter: item ? {
-        "value": NumberText.parameter(item.value, item.hasUncertainty ? item.uncertainty : 0, 8),
-        "error": item.hasUncertainty ? NumberText.error(item.uncertainty) : "",
+        "value": NumberText.parameter(item.value, item.hasUncertainty ? item.uncertainty : 0),
+        "error": item.hasUncertainty ? NumberText.error(item.uncertainty, 0, item.value) : "",
         "enabled": cell.refinable,
         "fittable": cell.canFit,
         "fit": item.free && cell.canFit,
@@ -63,15 +72,18 @@ EaComponents.TableViewParameter {
     onAccepted: commit()
     onEditingFinished: commit()
 
-    // Return and leaving the cell both commit; the second of the two finds nothing new.
+    // Return and leaving the cell both commit; the second of the two finds nothing new. Text left as shown, rounded or
+    // in full, changes nothing.
     function commit() {
-        if (item !== null && text !== cell.value) {
+        if (item === null)
+            return;
+        if (text !== cell.value && text !== cell.editText) {
             typedRefusal = TypedInput.refusal(text, "number");
             if (typedRefusal === "") {
                 item.value = Number(text);
             }
-            text = Qt.binding(() => cell.value);
         }
+        text = Qt.binding(() => cell.value);
     }
     fitCheckBox.onToggled: if (item !== null)
         item.free = fitCheckBox.checked
