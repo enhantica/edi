@@ -728,9 +728,10 @@ jobs:
           pixi run --skip-deps wasm-check "$RUNNER_TEMP/edi-webapp-checks" tests/system/manual/e04_t11_browser.mjs
           tests/system/py/test_e04_t11_wasm_fit.py tests/system/py/test_e04_t11_wasm_delivery.py
       # The multithread kit's parallel fit: all three routes timed against each other (the speed ratio is in the log)
-      # and crysta's executed-body witness built from the same crysta source with the same options.
+      # and crysta's executed-body witness built from the same crysta source with the same options. It takes about
+      # 20 minutes, so it runs on main pushes, the nightly run and dispatch, not on pull requests.
       - name: Check the parallel engine in the browser
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && github.event_name != 'pull_request' }}
         run: pixi run --skip-deps wasm-parallel-check "$RUNNER_TEMP/edi-webapp-checks/parallel"
       - name: Upload the browser checks' screenshots and logs
         if: always()

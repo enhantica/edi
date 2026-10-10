@@ -125,8 +125,10 @@ is edi's own few lines of page script), the code behind
 
 ### 6. CI
 
-The `app · WebAssembly` job (pull request and dispatch) installs the toolchain (cached on the runner), builds both
-kits, packs the site and uploads it as the `edi-webapp` artifact; the browser checks run on it.
+The `app · WebAssembly` job installs the toolchain (cached on the runner), builds both kits, packs the site and
+uploads it as the `edi-webapp` artifact; the browser checks run on it. The site check runs on every pull request. The
+parallel engine check, with its speed ratio, takes about 20 minutes and runs on main pushes, the nightly run and
+dispatch.
 
 ### 7. Licence
 
