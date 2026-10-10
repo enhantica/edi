@@ -57,7 +57,7 @@ class ParameterFilterModel : public QSortFilterProxyModel {
     Q_PROPERTY(Variability variability READ variability WRITE setVariability NOTIFY variabilityChanged)
     Q_PROPERTY(QString categoryFilter READ categoryFilter WRITE setCategoryFilter NOTIFY categoryFilterChanged)
     Q_PROPERTY(QStringList categories READ categories NOTIFY categoriesChanged)
-    Q_PROPERTY(QVariantList categoryGroups READ categoryGroups NOTIFY categoriesChanged)
+    Q_PROPERTY(QVariantList categoryGroups READ categoryGroups NOTIFY categoryGroupsChanged)
 
    public:
     enum Variability { All, Free, Fixed };
@@ -84,6 +84,7 @@ class ParameterFilterModel : public QSortFilterProxyModel {
     void variabilityChanged();
     void categoryFilterChanged();
     void categoriesChanged();
+    void categoryGroupsChanged();
 
    protected:
     bool filterAcceptsRow(int source_row, const QModelIndex& source_parent) const override;

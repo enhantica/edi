@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
-// gui-components edi 3897d339; only the selection-model null guard differs.
+// gui-components edi 3897d339; null-safe selection model and typed header lookup.
 import QtQuick
 import QtQuick.Controls
 
@@ -113,7 +113,8 @@ ListView {
             return [];
 
         // Pass 1: resolve auto columns from header implicit widths.
-        const headerWidths = (headerItem && headerItem.implicitColumnWidths) || [];
+        const tableHeader = headerItem as EaComponents.ListViewHeader;
+        const headerWidths = tableHeader ? tableHeader.implicitColumnWidths : [];
         let widths = columnWidths.map((w, i) => {
             if (w === EaStyle.Sizes.tableColumnAuto && i < headerWidths.length)
                 return headerWidths[i] + autoColumnPadding;

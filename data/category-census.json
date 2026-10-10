@@ -274,6 +274,16 @@
       "form": "loop",
       "columns": [
         {
+          "member": "LineSegment::id",
+          "type": "ItemKey",
+          "items": [
+            "id"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
+        },
+        {
           "member": "LineSegment::position",
           "type": "detail::Written<double>",
           "items": [
@@ -309,6 +319,46 @@
       ],
       "variants": [
         "line-segment"
+      ]
+    },
+    {
+      "name": "_excluded_region",
+      "form": "loop",
+      "columns": [
+        {
+          "member": "ExcludedRegion::id",
+          "type": "ItemKey",
+          "items": [
+            "id"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
+        },
+        {
+          "member": "ExcludedRegion::first",
+          "type": "detail::Written<double>",
+          "items": [
+            "start"
+          ],
+          "storage": [
+            "crysta::Column<double>"
+          ]
+        },
+        {
+          "member": "ExcludedRegion::second",
+          "type": "detail::Written<double>",
+          "items": [
+            "end"
+          ],
+          "storage": [
+            "crysta::Column<double>"
+          ]
+        }
+      ],
+      "row": "ExcludedRegion",
+      "legacy": [
+        "_easydiffraction_excluded_region"
       ]
     },
     {
@@ -1539,23 +1589,6 @@
       ]
     },
     {
-      "name": "_excluded_region",
-      "form": "aggregate",
-      "columns": [
-        {
-          "member": "ExperimentBase::excluded_regions",
-          "type": "detail::Written<std::vector<std::pair<double, double>>>",
-          "items": [
-            "start",
-            "end"
-          ]
-        }
-      ],
-      "legacy": [
-        "_easydiffraction_excluded_region"
-      ]
-    },
-    {
       "name": "carried_refln",
       "form": "aggregate",
       "columns": [
@@ -2224,6 +2257,11 @@
       "not_storage": "the table class of a loop category"
     },
     {
+      "member": "DefaultIds::changed_",
+      "type": "std::vector<std::pair<ItemKey*, std::uint64_t>>",
+      "not_storage": "the rollback guard for detached row IDs during table admission (ADR-0029)"
+    },
+    {
       "member": "Store::items_",
       "type": "std::vector<Ptr>",
       "not_storage": "a table class's rows and the stamp of their last structural change"
@@ -2664,6 +2702,11 @@
       "not_storage": "a geometry computed for a view window"
     },
     {
+      "member": "LineSegment::id",
+      "type": "ItemKey",
+      "category": "_background"
+    },
+    {
       "member": "LineSegment::position",
       "type": "detail::Written<double>",
       "category": "_background"
@@ -2680,6 +2723,31 @@
     },
     {
       "member": "LineSegment::epoch",
+      "type": "detail::Epoch",
+      "part": "the row's identity as a calculation input"
+    },
+    {
+      "member": "ExcludedRegion::id",
+      "type": "ItemKey",
+      "category": "_excluded_region"
+    },
+    {
+      "member": "ExcludedRegion::first",
+      "type": "detail::Written<double>",
+      "category": "_excluded_region"
+    },
+    {
+      "member": "ExcludedRegion::second",
+      "type": "detail::Written<double>",
+      "category": "_excluded_region"
+    },
+    {
+      "member": "ExcludedRegion::row",
+      "type": "detail::RowLink",
+      "part": "the row's link to its collection"
+    },
+    {
+      "member": "ExcludedRegion::epoch",
       "type": "detail::Epoch",
       "part": "the row's identity as a calculation input"
     },
@@ -3386,8 +3454,10 @@
     },
     {
       "member": "ExperimentBase::excluded_regions",
-      "type": "detail::Written<std::vector<std::pair<double, double>>>",
-      "category": "_excluded_region"
+      "type": "ItemVec<ExcludedRegion>",
+      "holds": [
+        "_excluded_region"
+      ]
     },
     {
       "member": "ExperimentBase::carried_reflections",

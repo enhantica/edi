@@ -45,16 +45,21 @@ void ParameterListModel::sync() {
 
 BackgroundListModel::BackgroundListModel(edi::ExperimentBase& experiment, ProjectEditor& editor,
                                          ParameterRegistry& registry, QObject* parent)
-    : RowTableModel({"position", "intensity"}, parent), experiment_(experiment), editor_(editor), registry_(registry) {
+    : RowTableModel({"id", "position", "intensity"}, parent), experiment_(experiment), editor_(editor), registry_(registry) {
     sync();
 }
 
 void BackgroundListModel::sync() {
     QList<Row> rows;
     for (const auto& point : experiment_.background) {
-        rows.append({point.get(), {point->position.get(), parameter_role(registry_, &point->intensity)}});
+        rows.append({point.get(), {QString::fromStdString(point->id.value()), point->position.get(), parameter_role(registry_, &point->intensity)}});
     }
     setTableRows(rows);
+}
+
+bool BackgroundListModel::setId(int row, const QString& id) {
+    auto* point = const_cast<edi::LineSegment*>(static_cast<const edi::LineSegment*>(keyAt(row)));
+    return point != nullptr && editor_.apply(edi::Edit::background_id(*point, id.toStdString()), true).isEmpty();
 }
 
 bool BackgroundListModel::setPosition(int row, double position) {
@@ -85,7 +90,7 @@ void BackgroundListModel::remove(int row) {
 
 ExcludedRegionListModel::ExcludedRegionListModel(edi::ExperimentBase& experiment, ProjectEditor& editor,
                                                  QObject* parent)
-    : RowTableModel({"start", "end"}, parent), experiment_(experiment), editor_(editor) {
+    : RowTableModel({"id", "start", "end"}, parent), experiment_(experiment), editor_(editor) {
     sync();
 }
 
@@ -123,13 +128,16 @@ void ReflectionListModel::sync() {
 }
 
 void ExcludedRegionListModel::sync() {
-    // A region is a value pair in a vector, so its row key is its index (a row's identity is its place).
     QList<Row> rows;
-    for (std::size_t i = 0; i < experiment_.excluded_regions.size(); ++i) {
-        const auto& [start, end] = experiment_.excluded_regions[i];
-        rows.append({reinterpret_cast<const void*>(i + 1), {start, end}});
+    for (const auto& region : experiment_.excluded_regions) {
+        rows.append({region.get(), {QString::fromStdString(region->id.value()), region->first.get(), region->second.get()}});
     }
     setTableRows(rows);
+}
+
+bool ExcludedRegionListModel::setId(int row, const QString& id) {
+    auto* region = const_cast<edi::ExcludedRegion*>(static_cast<const edi::ExcludedRegion*>(keyAt(row)));
+    return region != nullptr && editor_.apply(edi::Edit::excluded_region_id(*region, id.toStdString()), true).isEmpty();
 }
 
 bool ExcludedRegionListModel::setStart(int row, double start) {
@@ -146,7 +154,7 @@ bool ExcludedRegionListModel::setEnd(int row, double end) {
 
 void ExcludedRegionListModel::append() {
     edi::ExperimentBase& experiment = experiment_;
-    const double at = experiment.excluded_regions.empty() ? 0.0 : experiment.excluded_regions.back().second;
+    const double at = experiment.excluded_regions.empty() ? 0.0 : experiment.excluded_regions.back()->second.get();
     editor_.apply(edi::Edit::append_excluded_region(experiment, at, at), false);
 }
 

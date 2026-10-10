@@ -168,11 +168,12 @@ void ParameterFilterModel::refreshCategories() {
         if (title.isEmpty()) { title = row.category; title.replace(QLatin1Char('_'), QLatin1Char(' ')); }
         add(row.category, title, QString::fromUtf8(presentation.icon));
     }
-    if (categories != categories_ || groups != category_groups_) {
-        categories_ = categories;
-        category_groups_ = groups;
-        emit categoriesChanged();
-    }
+    const bool keys_changed = categories != categories_;
+    const bool groups_changed = groups != category_groups_;
+    categories_ = std::move(categories);
+    category_groups_ = std::move(groups);
+    if (keys_changed) emit categoriesChanged();
+    if (groups_changed) emit categoryGroupsChanged();
     if (!categories_.contains(category_filter_)) {
         setCategoryFilter({});
     }
