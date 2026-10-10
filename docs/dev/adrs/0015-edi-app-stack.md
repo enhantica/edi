@@ -43,7 +43,12 @@ original could. Three facts shape the decision:
    `a573a9695e53a0807de197785e12f9facd06da05` and declares its own QML modules under the upstream URIs
    (`EasyApplication.Gui.{Style,Globals,Logic,Animations,Elements,Components}`,
    `EasyApplication.Logic.Maintenance`) over an explicit file list. Upstream files are built byte-identical;
-   configuration refuses another commit or local changes under `src/`. Left out: the Plotly/WebEngine and
+   configuration refuses another commit or local changes under `src/`. The pinned commit is downloaded as GitHub's
+   archive of it, checked against a committed SHA-256, with a message and a timeout (a git clone inside CMake could
+   hang without a word). An offline copy (`EDI_GUI_COMPONENTS_SRC`) is a git clone at the pin with an unmodified
+   `src/`, or any other copy whose `src/` files match a committed SHA-256 of the pinned tree. `tools/ci/app-build.sh`
+   keeps the build identity of a configure that did not finish, so a rerun of the same identity continues in
+   `build/app` instead of starting from nothing. Left out: the Plotly/WebEngine and
    QtCharts charts, `BasicReport` (WebEngine), `GuideWindow`/`GuideWindowContainer`, `JsonListModel`,
    `RemoteController` (QtTest + QtMultimedia) and `Plotting.js` (used only by the charts). The base's Logic
    scripts keep their qmldir entries, as the upstream qmldir declares them.

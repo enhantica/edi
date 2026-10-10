@@ -49,3 +49,14 @@ a long experiment.
 | Keep each dataset's fitted model in memory | Rejected: memory grows with the scan, 1,000,000 models do not fit. |
 | Read every file when the project opens | Rejected: minutes of reading before anything shows, for files most users never select. |
 | A database beside `results.csv` | Deferred: one more store to keep in step, for queries nobody asks yet. |
+
+## Amendment, 2026-10: skipped and refused files
+
+crysta writes no `results.csv` row for a file with no intensity above zero, records a file whose fit was refused
+after the solver ran as a failed row, and lists both, with each file's skipped negative points, in
+`analysis/scan-notes.csv`. edi reads that file by one rule wherever it reads it (the results index, the live index
+as rows arrive, and `edi fit`): the header, complete lines of four cells, `negative_points` a decimal integer of at
+most 12 digits, `skipped_dataset` `True` or `False`, each scan file named once. A file that breaks the rule is an
+explicit refusal of the index, not a silently different state. A dataset is **processed** when it has a row or is
+skipped; Start, Continue, Reset, the live count and the scan summary count processed datasets, so a scan whose
+remaining files are all skipped is complete.
