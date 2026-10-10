@@ -39,7 +39,7 @@ TestCase {
         input.forceActiveFocus();
         let warning = null;
         tryVerify(() => {
-            warning = Probe.visiblePopups(appWindow).find(popup => typeof popup.text === "string" && popup.text.toLowerCase().includes("outside"));
+            warning = Probe.visiblePopups(appWindow).find(popup => popup.parent === input && popup.opened && typeof popup.text === "string" && popup.text.toLowerCase().includes("outside"));
             return warning !== undefined;
         }, 3000, "Out-of-range values explain their actual range in a visible tooltip");
         const reference = createTemporaryObject(ordinaryTooltip, input);
@@ -59,6 +59,7 @@ TestCase {
         verify(shadows.some(shadow => String(shadow.shadowColor) === String(input.color)), "The actual tooltip border-shadow uses the warned text colour");
         input.focus = false;
         warning.close();
+        tryCompare(warning, "visible", false, 2000, "The actual range tooltip closes before inspecting another consumer");
     }
     property var animation
     Component {
