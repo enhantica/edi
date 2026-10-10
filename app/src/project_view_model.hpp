@@ -264,8 +264,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     const edi::Project* scanTemplate() const { return scan_template_ ? &*scan_template_ : nullptr; }
     // The place of the file's dataset in the scan, or -1 when its row could not be indexed.
     int scanFileFitted(const edi::ScanFileRecord& record);
-    void showScanFrame(const std::string& file, const edi::FitFrame& frame);
     void followScanFile(const std::string& file);
+    // No dataset read is in flight: the last one asked for has been shown (or refused).
+    bool followReady() const { return !view_reading_ && view_applied_ == view_request_; }
     // The run's driver returned: the rows and notes on disk are indexed again, the files skipped after the last
     // row included (a skipped file sends no event). Comes before scanEnded.
     void settleScan();

@@ -5,6 +5,7 @@
 #include <QHash>
 #include <QMetaObject>
 #include <QPointer>
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QFile>
 #include <algorithm>
@@ -943,10 +944,11 @@ void ProjectViewModel::startViewRead() {
         publishCalculating();
         return;
     }
-    // While a scan runs the worker is its own: a dataset chosen by hand gets its pattern calculated beside it, on
-    // a copy of the template with the same values and data as the shown model. A followed one gets the job's.
+    // While a scan runs the worker is its own: a dataset shown gets its pattern calculated beside it, on a copy of
+    // the template with the same values and data as the shown model, whether chosen by hand or followed (the scan's
+    // worker draws no frame, edi ADR-0029).
     std::optional<edi::Project> shown;
-    if (fit_ != nullptr && fit_->scanning() && !fit_->following()) {
+    if (fit_ != nullptr && fit_->scanning()) {
         shown = *scan_template_;
     }
     const std::string directory = scan_session_->datasets().directory;
@@ -997,6 +999,12 @@ void ProjectViewModel::applyDatasetView(std::uint64_t request, int index, Datase
         return;
     }
     view_applied_ = request;
+    // However this read ends, a followed scan may move to its newest finished file afterwards.
+    const auto shown = qScopeGuard([this] {
+        if (fit_ != nullptr) {
+            fit_->followShown();
+        }
+    });
     if (!scan_ || (fit_ != nullptr && fit_->running() && !fit_->scanning())) {
         publishCalculating();
         return;
@@ -1260,13 +1268,6 @@ void ProjectViewModel::followScanFile(const std::string& file) {
     // Each file as it is fitted: a lookup by name and one read, off the GUI thread.
     if (const int index = scan_session_ != nullptr ? scan_session_->place(file) : -1; index >= 0) {
         viewDataset(index, true);
-    }
-}
-
-void ProjectViewModel::showScanFrame(const std::string& file, const edi::FitFrame& frame) {
-    // The fitted file's pattern, calculated by the job from the same row, for the chart.
-    if (scan_session_ != nullptr && scan_session_->place(file) == current_dataset_ && current_dataset_ >= 0) {
-        showFitFrame(frame);
     }
 }
 
