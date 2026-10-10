@@ -11,8 +11,8 @@
 # build/test-durations-<part>.json, which CI keeps as an artifact and merges on main
 # (tools/ci/merge_test_durations.py).
 #
-# With EDI_SKIP_NIGHTLY_GROUP=true (a pull request) the files of the `nightly` group in tests/test-groups.json
-# are left out; main pushes and the nightly schedule run them.
+# With EDI_SKIP_NIGHTLY_GROUP=true (a macOS pull request) the files of the `nightly` group in
+# tests/test-groups.json are left out; Linux pull requests, main pushes and the nightly schedule run them.
 set -euo pipefail
 part="${1:?usage: system-tests-part <part> [<parts>]}"
 parts="${2:-3}"

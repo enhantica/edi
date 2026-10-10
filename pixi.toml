@@ -299,17 +299,12 @@ test = { cmd = ["bash", "tools/ci/pytest-lenient.sh", "--ignore=tests/integratio
 # before handing to review. The retired `tests/simulation` tier is gone: owner ruling 18 voided
 # its rationale, and cross-engine parity now lives at system level reading paired corpus
 # references (docs/dev/design/where-tests-live.md).
-# The nightly group's files (tests/test-groups.json) run on main pushes and nightly, not per pull request:
-# each spends minutes building a native host before its first case.
 quick-tests = { cmd = [
     "python", "-m", "pytest",
     "tests/unit", "tests/integration", "tests/system", "--ignore=tests/integration/app",
-    "--ignore=tests/system/py/test_scan_app_execution.py",
-    "--ignore=tests/system/py/test_scan_accident_paths.py",
-    "--ignore=tests/system/py/test_plain_data_app.py",
     "-q",
 ], depends-on = ["core-build"] }
-# The nightly group alone, for a local run of what pull requests leave out.
+# The nightly group alone (tests/test-groups.json), the files a macOS pull request leaves out.
 nightly-tests = { cmd = [
     "python", "-m", "pytest",
     "tests/system/py/test_scan_app_execution.py",
@@ -319,8 +314,8 @@ nightly-tests = { cmd = [
 ], depends-on = ["core-build"] }
 # CI runs the same selection as parallel jobs (owner, 2026-10-08): `core-tests` (unit and integration) in
 # the core job, and `system-tests-part <part>` for each third of the system tier, split by recorded test
-# times (tools/ci/system-tests-part.sh). On a pull request they are exactly quick-tests' selection; on main
-# and nightly the system parts also run the nightly group.
+# times (tools/ci/system-tests-part.sh). Together they are exactly quick-tests' selection, except that a macOS
+# pull request leaves out the nightly group.
 core-tests = { cmd = [
     "python", "-m", "pytest",
     "tests/unit", "tests/integration", "--ignore=tests/integration/app",
