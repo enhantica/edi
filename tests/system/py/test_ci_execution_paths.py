@@ -238,7 +238,11 @@ def test_smoke_auditor_rejects_same_keyword_non_witnesses(category):
     )
 
 
-@pytest.mark.parametrize('cleanup', ['rm -rf build', '/bin/rm -rf build', 'command rm -rf build'])
+@pytest.mark.parametrize(
+    'cleanup',
+    ['rm -rf build', '/bin/rm -rf build', 'command rm -rf build'],
+    ids=['plain', 'absolute', 'command'],
+)
 def test_execution_path_probe_cannot_clean_the_product_build(tmp_path, cleanup):
     workflow, policy, expected = control(tmp_path)
     build = tmp_path / 'build'
@@ -547,6 +551,7 @@ def test_mixed_equals_options_cannot_override_any_execution_identity(
         ('push', "github.event.pull_request.number != ''"),
         ('workflow_dispatch', "github.event.pull_request.head.sha != ''"),
     ],
+    ids=['schedule-cron', 'push-absent-number', 'dispatch-absent-head'],
 )
 def test_real_trigger_payloads_cannot_invent_active_execution(
     tmp_path, boundary, platform, event, condition

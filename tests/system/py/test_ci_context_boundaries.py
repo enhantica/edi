@@ -34,7 +34,7 @@ def trigger_control():
 
 @pytest.mark.parametrize('scope', ['workflow', 'job'])
 @pytest.mark.parametrize('damage', ['cancel', 'replace'])
-@pytest.mark.parametrize('cron', ['17 2 * * *', '41 5 * * 2'])
+@pytest.mark.parametrize('cron', ['17 2 * * *', '41 5 * * 2'], ids=['cron-a', 'cron-b'])
 def test_declared_crons_reach_both_concurrency_boundaries(scope, damage, cron):
     workflow = trigger_control()
     assert not concurrency_errors([workflow]), (
