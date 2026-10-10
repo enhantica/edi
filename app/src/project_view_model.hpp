@@ -269,6 +269,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // The run's driver returned: the rows and notes on disk are indexed again, the files skipped after the last
     // row included (a skipped file sends no event). Comes before scanEnded.
     void settleScan();
+    // Whether the scan's results hold any processed file (a row, or a skipped file).
+    bool scanProcessed() const;
     // The run ended: its status, seconds and outcome key (the worst file's, Stopped or Failed).
     void scanEnded(edi::FitStatus status, double seconds);
     // Why the scan modes cannot run here (no single template experiment, no datasets), or empty.

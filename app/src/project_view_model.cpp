@@ -233,7 +233,7 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
         project_->sequential_fit.template_file =
             scan_session_->datasets().files[static_cast<std::size_t>(projected_dataset_)];
         // The last run is this fit now: a reopened project shows its record, not the scan's summary.
-        if (scan_session_->index().fitted > 0) {
+        if (scanProcessed()) {
             ScanSession::Run run = scan_session_->run();
             run.last_single = true;
             if (const QString refusal = scan_session_->writeRun(*project_, run); !refusal.isEmpty()) {
@@ -690,7 +690,7 @@ void ProjectViewModel::loadScan() {
     // there but does not read is no such run: its results are shown out of date, and the reason given.
     if (scan_session_->run().invalid) {
         setLastError(scan_session_->run().error);
-    } else if (scan_session_->run().identity.empty() && scan_session_->index().fitted > 0) {
+    } else if (scan_session_->run().identity.empty() && scanProcessed()) {
         scan_session_->assumeIdentity(ScanSession::templateIdentity(project));
     }
     syncScanAdmission();
@@ -1032,7 +1032,7 @@ void ProjectViewModel::syncOutOfDate() {
     // Results from a provenance file that does not read, or from more than one template, are out of date too.
     bool stale = false;
     const ScanSession::Run& run = scan_ ? scan_session_->run() : ScanSession::Run{};
-    if (scan_ && scan_session_->index().fitted > 0) {
+    if (scan_ && scanProcessed()) {
         stale = run.invalid || run.mixed ||
                 (!run.identity.empty() && run.identity != ScanSession::templateIdentity(scanTemplateOrModel()));
     }
@@ -1257,6 +1257,11 @@ void ProjectViewModel::showScanFrame(const std::string& file, const edi::FitFram
     if (scan_session_ != nullptr && scan_session_->place(file) == current_dataset_ && current_dataset_ >= 0) {
         showFitFrame(frame);
     }
+}
+
+bool ProjectViewModel::scanProcessed() const {
+    // A scan ran when a file has a row or was skipped: an all-skipped scan has results to describe too.
+    return scan_session_ != nullptr && scan_session_->index().fitted + scan_session_->index().skipped > 0;
 }
 
 void ProjectViewModel::settleScan() {
@@ -1566,7 +1571,7 @@ QString ProjectViewModel::saveTo(const QString& directory) {
     // from the saved directory.
     if (scan_session_ != nullptr) {
         const ScanSession::Run run = scan_session_->run();
-        if (scan_session_->index().fitted > 0 && !run.identity.empty()) {
+        if (scanProcessed() && !run.identity.empty()) {
             if (const QString refusal = scan_session_->writeRun(*project_, run); !refusal.isEmpty()) {
                 setLastError(refusal);
             }

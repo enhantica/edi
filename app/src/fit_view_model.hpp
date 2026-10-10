@@ -89,9 +89,10 @@ class FitViewModel : public QObject {
     Q_PROPERTY(QString status READ status NOTIFY statusChanged)
     Q_PROPERTY(QString outcome READ outcome NOTIFY outcomeChanged)
     Q_PROPERTY(edi_app::FitResultListModel* results READ results CONSTANT)
-    // A running scan (S3): the share of its files fitted, the bar's text (count, percent, the file just fitted) and
-    // the time left at the pace so far.
+    // A running scan (S3): the share of its files processed (fitted or skipped), the bar's text (count, percent, the
+    // file just fitted) and the time left at the pace so far.
     Q_PROPERTY(double scanProgress READ scanProgress NOTIFY scanProgressChanged)
+    Q_PROPERTY(int scanProcessed READ scanProcessed NOTIFY scanProgressChanged)
     Q_PROPERTY(int scanFitted READ scanFitted NOTIFY scanFittedChanged)
     Q_PROPERTY(int scanTotal READ scanTotal NOTIFY scanTotalChanged)
     Q_PROPERTY(QString scanText READ scanText NOTIFY scanTextChanged)
@@ -120,7 +121,8 @@ class FitViewModel : public QObject {
     QString scanText() const { return scan_text_; }
     QString eta() const { return eta_; }
     bool outOfDate() const { return out_of_date_; }
-    // The files the scan has fitted, of all its files.
+    // The files the scan has processed (fitted or skipped), and those it has fitted, of all its files.
+    int scanProcessed() const { return scan_.processed(); }
     int scanFitted() const { return scan_.fitted; }
     int scanTotal() const { return scan_.files; }
     // Follow is on only while a scan runs: off before one, after one and in the single and joint modes.
@@ -135,8 +137,9 @@ class FitViewModel : public QObject {
     QString status() const { return status_; }
     QString outcome() const { return outcome_; }
     FitResultListModel* results() const { return results_; }
-    // The last run was the scan's (a single fit on a dataset since then shows its own summary).
-    bool scanSummary() const { return scan_.fitted > 0 && scan_last_; }
+    // The last run was the scan's (a single fit on a dataset since then shows its own summary). A scan whose
+    // processed files were all skipped has a summary too: processed, not fitted, says a scan ran.
+    bool scanSummary() const { return scan_.processed() > 0 && scan_last_; }
     QString scanFiles() const { return QStringLiteral("%1/%2").arg(scan_.fitted).arg(scan_.files); }
     int scanOk() const { return scan_.ok; }
     int scanFailed() const { return scan_.failed; }
