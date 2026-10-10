@@ -19,6 +19,7 @@ Column {
     spacing: AppSizes.groupContentSpacing
 
     EaElements.GroupRow {
+        spacing: AppSizes.inputSpacing
         SelectorField {
             objectName: "peak.type"
             label: qsTr("profile")

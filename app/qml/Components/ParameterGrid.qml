@@ -25,7 +25,7 @@ Grid {
     readonly property int fieldCount: fields ? fields.usedCount : 0
 
     columns: fillRows && fieldCount > 0 ? Math.ceil(fieldCount / Math.ceil(fieldCount / maxColumns)) : maxColumns
-    columnSpacing: AppSizes.fieldSpacing
+    columnSpacing: AppSizes.inputSpacing
     rowSpacing: AppSizes.groupContentSpacing
 
     Repeater {

@@ -75,16 +75,17 @@ EaElements.GroupBox {
 
         EaElements.GroupRow {
             id: filters
+            spacing: AppSizes.inputSpacing
             EaElements.TextField {
                 objectName: "parameters.nameFilter"
-                width: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.fieldSpacing) / 3
+                width: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.inputSpacing) / 3
                 placeholderText: qsTr("Filter by name")
                 onTextChanged: filter.nameFilter = text
             }
             SearchableComboBox {
                 id: categoryPicker
                 objectName: "parameters.category"
-                width: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.fieldSpacing) / 3
+                width: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.inputSpacing) / 3
                 model: filter.categoryGroups
                 textRole: "title"
                 searchThreshold: 1000
@@ -127,7 +128,7 @@ EaElements.GroupBox {
             }
             SearchableComboBox {
                 objectName: "parameters.variability"
-                width: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.fieldSpacing) / 3
+                width: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.inputSpacing) / 3
                 model: [qsTr("All parameters (%1)").arg(group.project ? group.project.parameters.count : 0), qsTr("Free parameters (%1)").arg(group.project ? group.project.parameters.freeCount : 0), qsTr("Fixed parameters (%1)").arg(group.project ? group.project.parameters.fixedCount : 0)]
                 onActivated: index => filter.variability = index
             }

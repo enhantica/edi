@@ -48,6 +48,7 @@ Column {
     spacing: AppSizes.groupContentSpacing
 
     EaElements.GroupRow {
+        spacing: AppSizes.inputSpacing
         ValueField {
             objectName: "range.minimum"
             editable: group.editable

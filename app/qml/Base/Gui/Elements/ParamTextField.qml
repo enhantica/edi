@@ -64,7 +64,8 @@ EaElements.TextField {
     topInset: control.shortPrettyName === '' ? 0 : EaStyle.Sizes.fontPixelSize * 1.5
     topPadding: topInset + padding
 
-    width: (EaStyle.Sizes.sideBarContentWidth - (parent.children.length - 1) * EaStyle.Sizes.fontPixelSize * 0.5) / parent.children.length
+    // Shares the row's width with its siblings at the row's own spacing (edi sets it per group).
+    width: (EaStyle.Sizes.sideBarContentWidth - (parent.children.length - 1) * (parent.spacing ?? EaStyle.Sizes.fontPixelSize * 0.5)) / parent.children.length
 
     text: control.value
     font.bold: control.fit && enabled

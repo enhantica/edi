@@ -26,9 +26,10 @@ EaElements.GroupBox {
     Column {
         spacing: AppSizes.groupContentSpacing
         EaElements.GroupRow {
+            spacing: AppSizes.inputSpacing
             EaElements.TextField {
                 objectName: "examples.search"
-                width: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.fieldSpacing) / 3
+                width: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.inputSpacing) / 3
                 placeholderText: qsTr("Search examples")
                 horizontalAlignment: TextInput.AlignLeft
                 text: Session.examples.searchText
@@ -36,7 +37,7 @@ EaElements.GroupBox {
             }
             SearchableComboBox {
                 objectName: "examples.property"
-                width: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.fieldSpacing) / 3
+                width: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.inputSpacing) / 3
                 horizontalAlignment: Text.AlignLeft
                 model: Session.examples.filterProperties
                 textRole: "title"
@@ -46,7 +47,7 @@ EaElements.GroupBox {
             }
             SearchableComboBox {
                 objectName: "examples.value"
-                width: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.fieldSpacing) / 3
+                width: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.inputSpacing) / 3
                 horizontalAlignment: Text.AlignLeft
                 model: Session.examples.filterOptions
                 textRole: "title"

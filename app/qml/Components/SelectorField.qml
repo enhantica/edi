@@ -2,6 +2,7 @@
 import QtQuick
 import QtQuick.Controls
 
+import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
@@ -21,6 +22,9 @@ EaElements.ParamComboBox {
     property string refusal: ""
     signal selected(string token)
 
+    // Shares the row's width with its siblings at the row's own spacing, as ParamTextField does (the base's
+    // ParamComboBox assumes a fixed gap).
+    width: (EaStyle.Sizes.sideBarContentWidth - (parent.children.length - 1) * (parent.spacing ?? AppSizes.inputSpacing)) / parent.children.length
     parameter: ({
             "value": selector.token,
             "shortPrettyName": selector.label

@@ -26,6 +26,7 @@ Column {
     spacing: AppSizes.groupContentSpacing
 
     EaElements.GroupRow {
+        spacing: AppSizes.inputSpacing
         SelectorField {
             objectName: "background.type"
             label: qsTr("type")

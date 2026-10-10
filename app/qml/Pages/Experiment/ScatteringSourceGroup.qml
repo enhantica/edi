@@ -13,6 +13,7 @@ import edi.app
 // known values, an absent item showing its default.
 EaElements.GroupRow {
     id: row
+    spacing: AppSizes.inputSpacing
 
     property ExperimentViewModel experiment: null
 
@@ -23,7 +24,7 @@ EaElements.GroupRow {
 
             required property var model
 
-            width: (EaStyle.Sizes.sideBarContentWidth - (row.experiment.scatteringSource.count - 1) * AppSizes.fieldSpacing) / row.experiment.scatteringSource.count
+            width: (EaStyle.Sizes.sideBarContentWidth - (row.experiment.scatteringSource.count - 1) * AppSizes.inputSpacing) / row.experiment.scatteringSource.count
             height: selector.height
 
             SelectorField {
