@@ -227,7 +227,9 @@ TEST_CASE("C34-T28 F18 aggregate callbacks cannot retain images outside their co
     edi::Structure structure;
     standalone(structure.scattering_lengths_fm);
     edi::ExperimentBase experiment;
-    standalone(experiment.excluded_regions);
+    experiment.excluded_regions.push_back(edi::ExcludedRegion(1.25, 4.5));
+    alias_exits(experiment.excluded_regions[0]->first, [&] { return experiment.excluded_regions.category_stamp(); });
+    alias_exits(experiment.excluded_regions[0]->second, [&] { return experiment.excluded_regions.category_stamp(); });
     edi::CarriedLoop carried;
     standalone(carried.columns);
     standalone(carried.rows);

@@ -1,0 +1,371 @@
+// SPDX-License-Identifier: BSD-3-Clause
+import QtQuick
+import QtQml.Models
+import QtTest
+import EasyApplication.Gui.Style as EaStyle
+import edi.app
+import "UiInteraction.js" as Ui
+
+Item {
+    width: 1000
+    height: 1000
+    Component {
+        id: examplesComponent
+        ExamplesGroup {
+            width: 900
+            collapsed: false
+        }
+    }
+    Component {
+        id: tagsComponent
+        Instantiator {
+            model: Session.examples
+            delegate: QtObject {
+                required property string exampleId
+                required property list<string> tagLabels
+                required property list<string> tagIcons
+            }
+        }
+    }
+    TestCase {
+        name: "ExampleFilters"
+        when: windowShown
+        property var sourceIds: []
+
+        function resetFilters() {
+            Session.examples.searchText = "";
+            Session.examples.filterProperty = "purpose";
+            Session.examples.filterValue = "";
+        }
+        function init() {
+            failOnWarning(/.*/);
+            Session.closeProject();
+            resetFilters();
+            sourceIds = ids();
+            verify(sourceIds.length > 0);
+        }
+        function cleanup() {
+            resetFilters();
+            Session.closeProject();
+        }
+        function ids() {
+            const result = [];
+            for (let i = 0; i < Session.examples.count; ++i)
+                result.push(Session.examples.text(i, "exampleId"));
+            return result;
+        }
+        function sameIds(actual, expected) {
+            compare(JSON.stringify(actual), JSON.stringify(expected));
+        }
+        function normalized(text) {
+            return String(text).normalize("NFKD").toLowerCase();
+        }
+        function properties() {
+            const result = [];
+            const model = Session.examples.filterProperties;
+            for (let i = 0; i < model.count; ++i)
+                result.push({
+                    value: model.text(i, "value"),
+                    title: model.text(i, "title")
+                });
+            return result;
+        }
+        function options() {
+            const result = [];
+            const model = Session.examples.filterOptions;
+            for (let i = 0; i < model.count; ++i)
+                result.push({
+                    value: model.text(i, "value"),
+                    title: model.text(i, "title"),
+                    count: Number(model.text(i, "matchingCount"))
+                });
+            return result;
+        }
+        function option(value) {
+            const found = options().filter(o => o.value === value);
+            compare(found.length, 1, "Each facet value has exactly one option: " + value);
+            return found[0];
+        }
+        function sample(id) {
+            const index = ids().indexOf(id);
+            verify(index >= 0, "Bundled source example exists: " + id);
+            return normalized(Session.examples.text(index, "sample"));
+        }
+        function labelWithText(root, expected) {
+            if (root.text === expected && root.font !== undefined)
+                return root;
+            for (const child of root.children || []) {
+                const found = labelWithText(child, expected);
+                if (found !== null)
+                    return found;
+            }
+            return null;
+        }
+        function choose(picker, value) {
+            let index = -1;
+            for (let i = 0; i < picker.model.count; ++i) {
+                if (picker.model.text(i, "value") === value)
+                    index = i;
+            }
+            verify(index >= 0, "The real picker contains the requested value: " + value);
+            tryVerify(() => Ui.exposed(picker));
+            const pickerPoint = Ui.clickPoint(picker);
+            mouseClick(picker, pickerPoint.x, pickerPoint.y);
+            tryCompare(picker.popup, "opened", true);
+            const list = picker.popup.contentItem;
+            list.positionViewAtIndex(index, ListView.Contain);
+            list.forceLayout();
+            let entry = null;
+            tryVerify(() => {
+                entry = list.itemAtIndex(index);
+                return entry !== null && Ui.exposed(entry);
+            });
+            const point = Ui.clickPoint(entry);
+            mouseClick(entry, point.x, point.y);
+            tryCompare(picker.popup, "opened", false);
+            tryCompare(picker.popup, "visible", false);
+        }
+        function test_properties_and_known_fitting_modes() {
+            sameIds(properties().map(p => p.value), ["purpose", "fittingMode", "facilities", "instruments", "sampleForm", "beamMode", "probe", "scatteringType", "dimensionality", "polarisation"]);
+            for (const property of properties()) {
+                verify(property.title.length > 0);
+                verify(!/\(\d+\)/.test(property.title), "Property picker does not display counts");
+            }
+            const known = [["pd-neut-cwl_cosio-d20_start-1", "single"], ["pd-neut-tof_ncaf-wish-2bank_start-3", "joint"], ["pd-neut-cwl_cosio-d20_scan-3f", "sequential"], ["pd-xray-cwl_lif", "single"]];
+            for (const [id, mode] of known) {
+                verify(sourceIds.includes(id));
+                sameIds(Session.examples.propertyValues(id, "fittingMode"), [mode]);
+            }
+        }
+        function test_workflow_symbols_match_every_source_tag_row() {
+            const witness = createTemporaryObject(tagsComponent, parent);
+            verify(witness !== null);
+            compare(witness.count, sourceIds.length);
+            const labels = {
+                single: qsTr("Single"),
+                joint: qsTr("Joint"),
+                sequential: qsTr("Sequential"),
+                independent: qsTr("Independent")
+            };
+            const symbols = {};
+            const purposeIcons = {
+                refinement: "\uf140",
+                simulation: "\uf83e"
+            };
+            const seenPurposes = new Set();
+            for (let i = 0; i < witness.count; ++i) {
+                const row = witness.objectAt(i);
+                verify(row !== null);
+                const modes = Session.examples.propertyValues(row.exampleId, "fittingMode");
+                compare(modes.length, 1);
+                const mode = modes[0];
+                verify(labels[mode] !== undefined, "Every declared workflow has a symbol: " + mode);
+                compare(row.tagIcons.length, row.tagLabels.length, row.exampleId);
+                const purposes = Session.examples.propertyValues(row.exampleId, "purpose");
+                compare(purposes.length, 1);
+                verify(purposeIcons[purposes[0]] !== undefined, "Purpose has an owner-selected symbol: " + row.exampleId);
+                compare(row.tagIcons[0], purposeIcons[purposes[0]], "Purpose glyph follows its stored value: " + row.exampleId);
+                seenPurposes.add(purposes[0]);
+                compare(row.tagLabels[1], labels[mode]);
+                verify(row.tagIcons[1].length > 0, "Workflow symbol is populated: " + row.exampleId);
+                for (let j = 2; j < row.tagLabels.length; ++j)
+                    compare(row.tagIcons[j], "", "Technique tags have no symbols: " + row.exampleId);
+                if (symbols[mode] !== undefined)
+                    compare(row.tagIcons[1], symbols[mode], "One workflow always uses the same symbol");
+                symbols[mode] = row.tagIcons[1];
+            }
+            for (const mode of ["single", "joint", "sequential"])
+                verify(symbols[mode] !== undefined, "Bundled examples exercise " + mode);
+            compare(seenPurposes.size, 2, "Both refinement and simulation symbols are exercised");
+            compare(new Set(Object.values(symbols)).size, Object.keys(symbols).length, "Different workflows have distinct symbols");
+        }
+        function test_normalized_words_and_property_are_conjunctive() {
+            Session.examples.searchText = "co2sio4 ILL";
+            const matching = ids();
+            verify(matching.includes("pd-neut-cwl_cosio-d20_start-1"));
+            verify(matching.includes("pd-neut-cwl_cosio-d20_scan-3f"));
+            verify(!matching.includes("pd-neut-cwl_lbco-hrpt_start-2"));
+            Session.examples.filterProperty = "fittingMode";
+            Session.examples.filterValue = "sequential";
+            const expected = matching.filter(id => Session.examples.propertyValues(id, "fittingMode").includes("sequential"));
+            verify(expected.length > 0);
+            sameIds(ids(), expected);
+            Session.examples.searchText = "Co₂SiO₄ ill";
+            sameIds(ids(), expected);
+            Session.examples.searchText = "co2sio4 ILL absent-word-that-no-example-has";
+            compare(Session.examples.count, 0);
+        }
+        function test_purpose_is_separate_from_fitting_mode() {
+            const simulation = Session.examples.propertyValues("pd-xray-cwl_lif", "purpose");
+            const refinement = Session.examples.propertyValues("pd-neut-tof_ncaf-wish-2bank_start-3", "purpose");
+            sameIds(simulation, ["simulation"]);
+            sameIds(refinement, ["refinement"]);
+            verify(simulation[0] !== refinement[0]);
+            verify(simulation[0] !== "__unknown__" && refinement[0] !== "__unknown__");
+            Session.examples.filterValue = simulation[0];
+            verify(ids().includes("pd-xray-cwl_lif"));
+            verify(!ids().includes("pd-neut-tof_ncaf-wish-2bank_start-3"));
+            Session.examples.filterProperty = "fittingMode";
+            compare(Session.examples.filterValue, "");
+            Session.examples.filterValue = "joint";
+            verify(ids().includes("pd-neut-tof_ncaf-wish-2bank_start-3"));
+            verify(!ids().includes("pd-xray-cwl_lif"));
+        }
+        function test_facet_counts_match_unique_source_membership() {
+            for (const property of properties()) {
+                Session.examples.filterProperty = property.value;
+                const choices = options();
+                compare(choices[0].value, "");
+                compare(choices[0].count, sourceIds.length);
+                compare(new Set(choices.map(o => o.value)).size, choices.length);
+                for (const choice of choices.slice(1)) {
+                    const expected = sourceIds.filter(id => Session.examples.propertyValues(id, property.value).includes(choice.value));
+                    verify(expected.length > 0);
+                    compare(choice.count, expected.length, property.value + ": " + choice.value);
+                    verify(choice.title.includes(String(choice.count)));
+                    Session.examples.filterValue = choice.value;
+                    sameIds(ids(), expected);
+                    compare(option("").count, sourceIds.length, "Counts ignore the chosen value");
+                }
+                Session.examples.filterValue = "";
+                sameIds(ids(), sourceIds);
+            }
+        }
+        function test_counts_follow_search_and_zero_results_retain_choice() {
+            Session.examples.filterProperty = "fittingMode";
+            Session.examples.filterValue = "joint";
+            Session.examples.searchText = "pd-xray-cwl_lif Calculated example";
+            compare(Session.examples.filterValue, "joint");
+            compare(Session.examples.count, 0);
+            compare(option("").count, 1);
+            compare(option("single").count, 1);
+            Session.examples.filterValue = "";
+            sameIds(ids(), ["pd-xray-cwl_lif"]);
+            Session.examples.searchText = "";
+            sameIds(ids(), sourceIds);
+        }
+        function test_unknown_metadata_is_not_an_assumed_instrument() {
+            sameIds(Session.examples.propertyValues("pd-xray-cwl_lif", "facilities"), ["__unknown__"]);
+            sameIds(Session.examples.propertyValues("pd-xray-cwl_lif", "instruments"), ["__unknown__"]);
+            for (const property of ["facilities", "instruments", "dimensionality", "polarisation"]) {
+                Session.examples.filterProperty = property;
+                const expected = sourceIds.filter(id => Session.examples.propertyValues(id, property).includes("__unknown__"));
+                if (expected.length === 0) {
+                    verify(!options().some(choice => choice.value === "__unknown__"), "A fully specified axis has no invented unknown choice");
+                    continue;
+                }
+                compare(option("__unknown__").count, expected.length);
+                Session.examples.filterValue = "__unknown__";
+                sameIds(ids(), expected);
+            }
+        }
+        function test_multiphase_identity_includes_every_sample() {
+            const yap = sample("pd-neut-cwl_yap-spodi_3k");
+            verify(yap.includes("yalo3") && yap.includes("al2o3"), "Both YAlO3 and Al2O3 phases appear in the identity");
+            const latp = sample("pd-xray-cwl_latp_scan-4f");
+            verify(latp.includes("latp") || latp.includes("li1.3"));
+            compare((latp.match(/alpo4/g) || []).length, 2, "Both AlPO4 polymorphs remain visible beside LATP");
+            Session.examples.searchText = "YAlO3 Al2O3";
+            verify(ids().includes("pd-neut-cwl_yap-spodi_3k"));
+        }
+        function test_source_metadata_has_space_groups_and_probe_specific_polarisation() {
+            for (const id of sourceIds) {
+                const index = ids().indexOf(id);
+                const identity = Session.examples.text(index, "sample");
+                for (const phase of identity.split(" / "))
+                    verify(/\[[^\[\]\s]+\]$/.test(phase), "Every phase has its compact source space group: " + id);
+                sameIds(Session.examples.propertyValues(id, "dimensionality"), ["1D"]);
+                const probe = Session.examples.propertyValues(id, "probe");
+                const expected = probe.includes("neutron") ? "none" : "__not_applicable__";
+                sameIds(Session.examples.propertyValues(id, "polarisation"), [expected]);
+            }
+            const d20 = sourceIds.indexOf("pd-neut-cwl_cosio-d20_start-1");
+            compare(Session.examples.text(d20, "origin"), "D20 @ ILL");
+            sameIds(Session.examples.propertyValues("pd-xray-cwl_latp_scan-4f", "facilities"), ["SNBL"]);
+            sameIds(Session.examples.propertyValues("pd-xray-cwl_latp_scan-4f", "instruments"), ["__unknown__"]);
+            Session.examples.filterProperty = "polarisation";
+            verify(option("__not_applicable__").title.startsWith("Not applicable"));
+            Session.examples.filterValue = "none";
+            verify(ids().every(id => Session.examples.propertyValues(id, "probe").includes("neutron")));
+            Session.examples.filterValue = "__not_applicable__";
+            verify(ids().every(id => Session.examples.propertyValues(id, "probe").includes("xray")));
+        }
+        function test_real_facet_pickers_and_search_apply_and_reset() {
+            const group = createTemporaryObject(examplesComponent, parent);
+            verify(group !== null);
+            verify(waitForPolish(group));
+            tryVerify(() => Math.abs(group.height - (group.titleArea.height + group.spacing + group.contentHeight + group.bottomPadding)) < 0.01);
+            const property = Ui.find(group, "examples.property");
+            const value = Ui.find(group, "examples.value");
+            const search = Ui.find(group, "examples.search");
+            verify(property !== null && value !== null && search !== null);
+            choose(property, "fittingMode");
+            compare(Session.examples.filterProperty, "fittingMode");
+            choose(value, "joint");
+            compare(Session.examples.filterValue, "joint");
+            verify(ids().includes("pd-neut-tof_ncaf-wish-2bank_start-3"));
+            verify(!ids().includes("pd-xray-cwl_lif"));
+            mouseClick(search, search.width / 2, search.height / 2);
+            for (const key of [Qt.Key_W, Qt.Key_I, Qt.Key_S, Qt.Key_H])
+                keyClick(key);
+            compare(normalized(Session.examples.searchText), "wish");
+            const expected = sourceIds.filter(id => id.includes("ncaf-wish") && Session.examples.propertyValues(id, "fittingMode").includes("joint"));
+            sameIds(ids(), expected);
+            choose(value, "");
+            compare(Session.examples.filterValue, "");
+            verify(ids().every(id => id.includes("ncaf-wish")));
+            choose(value, "joint");
+            choose(property, "instruments");
+            compare(Session.examples.filterValue, "");
+            choose(value, "WISH");
+            verify(ids().every(id => id.includes("ncaf-wish")));
+        }
+        function test_filtered_delegate_opens_its_identity() {
+            const expected = "pd-xray-cwl_lif";
+            verify(sourceIds.indexOf(expected) > 0, "The fixture starts after the first source row");
+            const group = createTemporaryObject(examplesComponent, parent);
+            verify(group !== null);
+            Session.examples.searchText = expected + " Calculated example";
+            sameIds(ids(), [expected]);
+            verify(waitForPolish(group));
+            let row = null;
+            tryVerify(() => {
+                row = Ui.find(group, "examples.open." + expected);
+                return row !== null && Ui.exposed(row);
+            });
+            const identity = labelWithText(row, row.sample + " · " + row.origin);
+            verify(identity !== null);
+            compare(identity.font.family, "Noto Sans", "The whole formula uses one bundled face, including subscripts");
+            compare(identity.font.bold, true);
+            verify(row.tagLabels.includes("Bragg") && !row.tagLabels.includes("bragg"));
+            for (const code of ["pd", "xray", "cwl"])
+                verify(row.tagLabels.includes(code), "Technique code stays lowercase: " + code);
+            compare(row.tagIcons.length, row.tagLabels.length);
+            const purposeSymbol = labelWithText(row, row.tagIcons[0]);
+            const purposeLabel = labelWithText(row, qsTr("Simulation"));
+            verify(purposeSymbol !== null && purposeLabel !== null);
+            compare(purposeSymbol.text, "\uf83e");
+            compare(purposeSymbol.font.family, EaStyle.Fonts.iconsFamily, "Purpose symbols use the bundled icon face");
+            compare(purposeSymbol.color, purposeLabel.color);
+            const workflowSymbol = labelWithText(row, row.tagIcons[1]);
+            const workflowLabel = labelWithText(row, qsTr("Single"));
+            const techniqueLabel = labelWithText(row, "Bragg");
+            verify(workflowSymbol !== null && workflowLabel !== null && techniqueLabel !== null);
+            compare(workflowSymbol.font.family, EaStyle.Fonts.iconsFamily, "Workflow symbols use the bundled icon face");
+            compare(workflowSymbol.color, workflowLabel.color);
+            compare(techniqueLabel.color, EaStyle.Colors.themeAccent, "Bragg technique uses the selected blue ink");
+            for (const code of ["xray", "cwl"])
+                compare(labelWithText(row, code).color, EaStyle.Colors.themeForeground, "Grey technique code: " + code);
+            compare(labelWithText(row, "pd").color, EaStyle.Colors.themeAccent, "Powder technique uses the selected blue ink");
+            const point = Ui.clickPoint(row);
+            let delay = 0;
+            for (let item = row.parent; item; item = item.parent) {
+                if (typeof item.pressDelay === "number")
+                    delay = Math.max(delay, item.pressDelay + 1);
+            }
+            mouseClick(row, point.x, point.y, Qt.LeftButton, Qt.NoModifier, delay);
+            tryCompare(Session, "openedExample", expected);
+            verify(Session.hasProject, Session.lastError);
+        }
+    }
+}
