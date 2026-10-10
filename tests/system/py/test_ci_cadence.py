@@ -5,9 +5,7 @@ from __future__ import annotations
 import ast
 import copy
 import hashlib
-import itertools
 import json
-import re
 from collections import Counter
 from pathlib import Path
 
@@ -18,7 +16,9 @@ from tests.system.py.ci_execution_contract import (
     concurrency_errors,
     contexts,
     execution_errors,
+    render,
     smoke_errors,
+    value,
 )
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -66,91 +66,46 @@ def selection_errors(group, inventory, required):
 
 
 def context(event, row=None):
+    # Independently planted context for consumer controls; production reads use contexts(workflow).
+    row = row or {}
+    workflow = {
+        'on': {event: [{'cron': '0 3 * * *'}] if event == 'schedule' else None},
+        'jobs': {
+            'control': {
+                'runs-on': row.get('runner', 'ubuntu-latest'),
+                'strategy': {'matrix': {'include': [row]}},
+            }
+        },
+    }
+    return next(contexts(workflow, event, 'slot-a' if event == 'pull_request' else 'main'))[2]
+
+
+def expression(condition, ctx):
+    return bool(value(condition, ctx))
+
+
+def rendered(source, ctx):
+    return render(source, ctx)
+
+
+def gate_workflow(workflow):
+    ignored = ('performance', 'wheels', 'publish', 'cli-native')
     return {
-        'github.event_name': event,
-        'github.ref': 'refs/heads/main' if event == 'push' else 'refs/pull/42/merge',
-        'github.event.pull_request.head.repo.fork': False,
-        'github.event.pull_request.number': 42,
-        'inputs.core_only': False,
-        'needs.changes.result': 'success',
-        'needs.changes.outputs.app_build': 'true',
-        'steps.sdk-pack.outcome': 'success',
-        **{'matrix.' + key: value for key, value in (row or {}).items()},
+        **workflow,
+        'jobs': {
+            key: job
+            for key, job in workflow['jobs'].items()
+            if not job.get('name', key).startswith(ignored)
+        },
     }
 
 
-def expression(value, ctx):
-    if isinstance(value, bool) or value is None:
-        return value is not False
-    text = value.strip().removeprefix('${{').removesuffix('}}').strip()
-    for key in sorted(ctx, key=len, reverse=True):
-        text = re.sub(r'(?<![\w.])' + re.escape(key) + r'(?![\w.])', repr(ctx[key]), text)
-    for call, replacement in [
-        ('cancelled()', 'False'),
-        ('success()', 'True'),
-        ('always()', 'True'),
-        ('failure()', 'False'),
-    ]:
-        text = text.replace(call, replacement)
-    text = re.sub(r'\btrue\b', 'True', text)
-    text = re.sub(r'\bfalse\b', 'False', text)
-    text = text.replace('&&', ' and ').replace('||', ' or ')
-    text = re.sub(r'!(?!=)', ' not ', text).strip()
-    tree = ast.parse(text, mode='eval')
-    allowed = (
-        ast.Expression,
-        ast.Constant,
-        ast.BoolOp,
-        ast.And,
-        ast.Or,
-        ast.UnaryOp,
-        ast.Not,
-        ast.Compare,
-        ast.Eq,
-        ast.NotEq,
-        ast.Load,
-    )
-    assert all(isinstance(node, allowed) for node in ast.walk(tree)), (
-        'CI policy: unsupported workflow condition cannot prove retained execution'
-    )
-    return bool(eval(compile(tree, '<workflow-condition>', 'eval'), {'__builtins__': {}}, {}))  # noqa: S307
-
-
-def rendered(value, ctx):
-    def replace(match):
-        key = match[1].strip()
-        assert key in ctx, (
-            'CI policy: every matrix interpolation must have an independent concrete value'
-        )
-        return str(ctx[key])
-
-    return re.sub(r'\$\{\{(.*?)\}\}', replace, str(value))
-
-
 def jobs(workflow, event, platform):
-    result = {}
-    for key, job in workflow['jobs'].items():
-        matrix = job.get('strategy', {}).get('matrix', {})
-        axes = {k: v for k, v in matrix.items() if k not in {'include', 'exclude'}}
-        rows = (
-            [dict(zip(axes, row, strict=True)) for row in itertools.product(*axes.values())]
-            if axes
-            else []
-        )
-        rows += matrix.get('include', [])
-        for row in rows or [{}]:
-            if row.get('platform') not in {None, platform}:
-                continue
-            if any(
-                all(row.get(k) == v for k, v in item.items()) for item in matrix.get('exclude', [])
-            ):
-                continue
-            ctx = context(event, row)
-            if not expression(job.get('if'), ctx):
-                continue
-            name = rendered(job.get('name', key), ctx)
-            result[name] = (job, ctx)
-    return result
+    return {
+        name: (job, ctx)
+        for name, job, ctx, _actual_platform in contexts(gate_workflow(workflow), event)
+        if ctx.get('matrix.platform') in {None, platform} and expression(job.get('if'), ctx)
+    }
 
 
 def command_text(script):
@@ -195,7 +150,9 @@ def test_linux_keeps_frozen_groups_and_gate_commands(event):  # noqa: PLR0914
         current, current_ctx = live[name]
         observed = [
             p
-            for n, _, _, p in contexts(document(ROOT / '.github/workflows/ci.yml'), event)
+            for n, _, _, p in contexts(
+                gate_workflow(document(ROOT / '.github/workflows/ci.yml')), event
+            )
             if n == name
         ]
         assert observed == ['linux-64'], (
@@ -295,14 +252,23 @@ def test_selection_auditor_reaches_each_inventory_escape(damage):
 
 
 def nonexecution_identity(dump):
-    # A pytest.skip reason is diagnostic text, not an additional nonexecution path.
-    prefix = (
-        "Call(func=Attribute(value=Name(id='pytest', ctx=Load()), attr='skip', ctx=Load()), args="
-    )
-    suffix = ', keywords=[])'
-    if dump.startswith(prefix) and dump.endswith(suffix):
-        return prefix + '[<diagnostic reason>]' + suffix
-    return dump
+    tree = ast.parse(dump, mode='eval')
+    outer = tree.body
+    if (
+        isinstance(outer, ast.Call)
+        and isinstance(outer.func, ast.Name)
+        and outer.func.id == 'Call'
+    ):
+        fields = {item.arg: item.value for item in outer.keywords}
+        reference = ast.parse(
+            "Attribute(value=Name(id='pytest', ctx=Load()), attr='skip', ctx=Load())", mode='eval'
+        ).body
+        if 'func' in fields and ast.dump(fields['func']) == ast.dump(reference):
+            args = fields.get('args')
+            if isinstance(args, ast.List) and args.elts:
+                # Only the first reason argument changes; extra args and all keywords stay intact.
+                args.elts[0] = ast.parse("Constant(value='<diagnostic reason>')", mode='eval').body
+    return ast.unparse(tree)
 
 
 @pytest.mark.parametrize('damage', ['reason', 'extra-skip', 'skipif-condition', 'xfail-condition'])
@@ -329,6 +295,53 @@ def test_nonexecution_check_ignores_only_skip_reason_text(damage):
 
     assert bool(identities(actual) - identities(source)) is (damage != 'reason'), (
         'CI policy: skip reason text may change; added paths and skip/xfail conditions refuse'
+    )
+
+
+@pytest.mark.parametrize(
+    'damage', ['positional-flag', 'keyword-flag', 'argument-count', 'missing-reason']
+)
+def test_skip_reason_normalization_preserves_argument_shape_and_module_flags(damage):
+    source = (
+        "pytest.skip('old reason', False)"
+        if damage == 'positional-flag'
+        else (
+            "pytest.skip('old reason', allow_module_level=False)"
+            if damage == 'keyword-flag'
+            else "pytest.skip('old reason')"
+        )
+    )
+    changed_reason = source.replace('old reason', 'new reason')
+
+    def identity(code):
+        return nonexecution_identity(ast.dump(ast.parse(code).body[0].value, show_empty=True))
+
+    assert identity(source) == identity(changed_reason), (
+        'CI policy: changing only a direct skip reason preserves its invocation identity'
+    )
+    damaged = (
+        changed_reason.replace('False', 'True')
+        if damage in {'positional-flag', 'keyword-flag'}
+        else (
+            "pytest.skip('new reason', False)" if damage == 'argument-count' else 'pytest.skip()'
+        )
+    )
+    assert identity(source) != identity(damaged), (
+        'CI policy: diagnostic reason normalization preserves module-skip flags and argument shape'
+    )
+
+
+@pytest.mark.parametrize('event', ['pull_request', 'push'])
+def test_cadence_eligibility_and_rendering_use_the_actions_model(event):
+    ctx = context(event, {'platform': 'macOS'})
+    assert expression('github.event.pull_request.head.repo.fork == false', ctx), (
+        'CI policy: cadence selection admits the existing fork guard on PR and non-PR events'
+    )
+    assert rendered("${{ 'true' }}", ctx) == 'true', (
+        'CI policy: cadence rendering preserves an Actions string literal'
+    )
+    assert expression("github.event_name == '" + event.upper() + "'", ctx), (
+        'CI policy: cadence eligibility uses Actions case-insensitive comparison semantics'
     )
 
 
@@ -394,7 +407,9 @@ def test_regular_macos_keeps_native_build_and_sdk_qualification():
                     'CI policy: macOS build and qualification retain their platform job'
                 )
                 actual, current_ctx = live[name]
-                observed = [p for n, _, _, p in contexts(current, event) if n == name]
+                observed = [
+                    p for n, _, _, p in contexts(gate_workflow(current), event) if n == name
+                ]
                 assert observed == ['osx-arm64'], (
                     'CI policy: retained macOS build and qualification jobs use arm64 runners'
                 )

@@ -562,3 +562,78 @@ def test_real_trigger_payloads_cannot_invent_active_execution(
     assert execution_errors(
         tmp_path, workflow, policy, event, platform, 'nightly-full', expected
     ), 'CI policy: real cron and absent PR properties expose disabled execution at every boundary'
+
+
+@pytest.mark.parametrize('scope', ['workflow', 'job', 'step'])
+@pytest.mark.parametrize('boundary', ['collector', 'validator'])
+@pytest.mark.parametrize('form', ['boolean', 'literal'])
+@pytest.mark.parametrize(
+    ('group', 'event', 'platform'),
+    [
+        ('quick', 'pull_request', 'linux-64'),
+        ('full', 'push', 'linux-64'),
+        ('macos-smoke', 'pull_request', 'osx-arm64'),
+        ('macos-smoke', 'push', 'osx-arm64'),
+        ('nightly-full', 'schedule', 'osx-arm64'),
+        ('nightly-full', 'workflow_dispatch', 'osx-arm64'),
+        ('nightly-full', 'schedule', 'linux-64'),
+        ('nightly-full', 'workflow_dispatch', 'linux-64'),
+    ],
+)
+def test_actions_rendered_environment_cannot_credit_a_shell_early_return(
+    tmp_path, scope, boundary, form, group, event, platform
+):
+    workflow, policy, expected = execution_control(tmp_path, platform, group)
+    job = workflow['jobs']['full']
+    step = job['steps'][0 if boundary == 'collector' else 1]
+    owner = workflow if scope == 'workflow' else job if scope == 'job' else step
+    owner['env'] = {'SELECTION_BYPASS': '${{ false }}' if form == 'boolean' else "${{ 'false' }}"}
+    step['run'] = 'if [ "$SELECTION_BYPASS" = true ]; then exit 0; fi\n' + step['run']
+    assert not execution_errors(tmp_path, workflow, policy, event, platform, group, expected), (
+        'CI policy: false environment reaches the connected collector and validator'
+    )
+    owner['env']['SELECTION_BYPASS'] = '${{ true }}' if form == 'boolean' else "${{ 'true' }}"
+    assert execution_errors(tmp_path, workflow, policy, event, platform, group, expected), (
+        'CI policy: rendered true exposes the shell early return before collected execution'
+    )
+
+
+@pytest.mark.parametrize('boundary', ['job', 'prerequisite', 'collector', 'validator'])
+@pytest.mark.parametrize(
+    ('group', 'event', 'platform'),
+    [
+        ('quick', 'pull_request', 'linux-64'),
+        ('full', 'push', 'linux-64'),
+        ('macos-smoke', 'pull_request', 'osx-arm64'),
+        ('macos-smoke', 'push', 'osx-arm64'),
+        ('nightly-full', 'schedule', 'osx-arm64'),
+        ('nightly-full', 'workflow_dispatch', 'osx-arm64'),
+        ('nightly-full', 'schedule', 'linux-64'),
+        ('nightly-full', 'workflow_dispatch', 'linux-64'),
+    ],
+)
+@pytest.mark.parametrize('comparison', ['loose', 'case'])
+def test_actions_execution_eligibility_reaches_every_guarded_consumer(
+    tmp_path, boundary, group, event, platform, comparison
+):
+    workflow, policy, expected = execution_control(tmp_path, platform, group)
+    job = workflow['jobs']['full']
+    if boundary == 'prerequisite':
+        job['needs'] = 'ready'
+        workflow['jobs']['ready'] = {'runs-on': job['runs-on']}
+        owner = workflow['jobs']['ready']
+    else:
+        owner = job if boundary == 'job' else job['steps'][0 if boundary == 'collector' else 1]
+    guard = (
+        'github.event.pull_request.head.repo.fork == false'
+        if comparison == 'loose'
+        else "github.event_name == '" + event.upper() + "'"
+    )
+    owner['if'] = guard
+    assert not execution_errors(tmp_path, workflow, policy, event, platform, group, expected), (
+        'CI policy: loose and case-insensitive guards admit each required execution consumer'
+    )
+    owner['if'] = '!(' + guard + ')'
+    assert execution_errors(tmp_path, workflow, policy, event, platform, group, expected), (
+        'CI policy: each disabled execution consumer refuses collected execution'
+    )

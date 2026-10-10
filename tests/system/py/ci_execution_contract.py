@@ -5,10 +5,10 @@
 
 from __future__ import annotations
 
-import ast
 import fnmatch
 import itertools
 import json
+import math
 import re
 import shlex
 import subprocess
@@ -18,50 +18,183 @@ import tomllib
 import yaml
 
 
+def actions_number(item):
+    if item is None or (isinstance(item, str) and not item):
+        return 0.0
+    if type(item) in {bool, int, float}:
+        return float(item)
+    if isinstance(item, str):
+        try:
+            parsed = json.loads(item, parse_constant=lambda _text: math.nan)
+        except (ValueError, TypeError):
+            return math.nan
+        return float(parsed) if type(parsed) in {int, float} else math.nan
+    return math.nan
+
+
+def actions_equal(left, right):
+    if isinstance(left, str) and isinstance(right, str):
+        return left.casefold() == right.casefold()
+    if type(left) is type(right):
+        return left == right
+    return actions_number(left) == actions_number(right)
+
+
+def actions_truthy(item):
+    return bool(item)
+
+
+def actions_string(item):
+    if item is None:
+        return ''
+    if isinstance(item, bool):
+        return 'true' if item else 'false'
+    if isinstance(item, str):
+        return item
+    if (
+        type(item) in {int, float}
+        and math.isfinite(item)
+        and item == int(item)
+        and abs(item) <= 2**53
+    ):
+        return str(int(item))
+    message = 'unsupported Actions string conversion'
+    raise ValueError(message)
+
+
+def expression_tokens(text, ctx):
+    # Scan literals before identifiers/operators: never rewrite their contents.
+    grammar = re.compile(
+        r"\s+|'(?:[^']|'')*'|-?0[xX][0-9a-fA-F]+|-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?"
+        r'|[A-Za-z_][A-Za-z0-9_-]*(?:\.[A-Za-z_][A-Za-z0-9_-]*)*(?:\(\))?'
+        r'|&&|\|\||==|!=|[!()]'
+    )
+    tokens, index = [], 0
+    constants = {
+        'true': True,
+        'false': False,
+        'null': None,
+        'always()': True,
+        'success()': True,
+        'failure()': False,
+        'cancelled()': False,
+    }
+    while index < len(text):
+        match = grammar.match(text, index)
+        if match is None:
+            message = 'unsupported Actions expression syntax'
+            raise ValueError(message)
+        token = match[0]
+        index = match.end()
+        if token.isspace():
+            continue
+        if token in {'&&', '||', '==', '!=', '!', '(', ')'}:
+            tokens.append((token, None))
+            continue
+        if token.startswith("'"):
+            item = token[1:-1].replace("''", "'")
+        elif token in constants:
+            item = constants[token]
+        elif token in ctx:
+            item = ctx[token]
+        elif token[0].isdigit() or token.startswith('-'):
+            item = int(token, 16) if '0x' in token.lower() else json.loads(token)
+        else:
+            message = 'unsupported Actions expression property/function: ' + token
+            raise ValueError(message)
+        if type(item) not in {type(None), bool, int, float, str} or (
+            type(item) is int and abs(item) > 2**53
+        ):
+            message = 'unsupported Actions expression value'
+            raise ValueError(message)
+        tokens.append(('atom', item))
+    return tokens
+
+
+def actions_expression(text, ctx):
+    tokens = expression_tokens(text, ctx)
+    precedence = {'||': 1, '&&': 2, '==': 3, '!=': 3}
+    index = 0
+
+    def parse(minimum=0):
+        nonlocal index
+        if index == len(tokens):
+            message = 'missing Actions expression operand'
+            raise ValueError(message)
+        kind, item = tokens[index]
+        index += 1
+        if kind == 'atom':
+            node = ('atom', item)
+        elif kind == '!':
+            node = ('!', parse(4))
+        elif kind == '(':
+            node = parse()
+            if index == len(tokens) or tokens[index][0] != ')':
+                message = 'unclosed Actions expression group'
+                raise ValueError(message)
+            index += 1
+        else:
+            message = 'unsupported Actions expression operand'
+            raise ValueError(message)
+        while index < len(tokens) and precedence.get(tokens[index][0], -1) >= minimum:
+            operator = tokens[index][0]
+            if operator in {'==', '!='} and node[0] in {'==', '!='}:
+                message = 'unsupported chained Actions comparison'
+                raise ValueError(message)
+            index += 1
+            node = (operator, node, parse(precedence[operator] + 1))
+        return node
+
+    def evaluate(node):
+        operator = node[0]
+        if operator == 'atom':
+            return node[1]
+        if operator == '!':
+            return not actions_truthy(evaluate(node[1]))
+        left = evaluate(node[1])
+        if operator == '&&':
+            return evaluate(node[2]) if actions_truthy(left) else left
+        if operator == '||':
+            return left if actions_truthy(left) else evaluate(node[2])
+        equal = actions_equal(left, evaluate(node[2]))
+        return equal if operator == '==' else not equal
+
+    tree = parse()
+    if index != len(tokens):
+        message = 'unsupported trailing Actions expression'
+        raise ValueError(message)
+    return evaluate(tree)
+
+
 def value(source, ctx):
     if source is None or isinstance(source, bool):
         return True if source is None else source
     text = str(source).strip().removeprefix('${{').removesuffix('}}').strip()
-    for key in sorted(ctx, key=len, reverse=True):
-        text = re.sub(r'(?<![\w.])' + re.escape(key) + r'(?![\w.])', repr(ctx[key]), text)
-    for call, result in [
-        ('always()', True),
-        ('success()', True),
-        ('failure()', False),
-        ('cancelled()', False),
-    ]:
-        text = text.replace(call, repr(result))
-    text = re.sub(r'\btrue\b', 'True', text)
-    text = re.sub(r'\bfalse\b', 'False', text)
-    text = re.sub(r'!(?!=)', ' not ', text.replace('&&', ' and ').replace('||', ' or ')).strip()
-    tree = ast.parse(text, mode='eval')
-    allowed = (
-        ast.Expression,
-        ast.Constant,
-        ast.List,
-        ast.Tuple,
-        ast.Dict,
-        ast.BoolOp,
-        ast.And,
-        ast.Or,
-        ast.UnaryOp,
-        ast.Not,
-        ast.Compare,
-        ast.Eq,
-        ast.NotEq,
-        ast.Load,
-    )
-    if any(not isinstance(n, allowed) for n in ast.walk(tree)):
-        message = 'unsupported workflow expression: ' + str(source)
-        raise ValueError(message)
-    return eval(compile(tree, '<ci-policy>', 'eval'), {'__builtins__': {}}, {})  # noqa: S307
+    return actions_expression(text, ctx)
 
 
 def render(source, ctx):
-    return re.sub(r'\$\{\{(.*?)\}\}', lambda m: str(value(m[1], ctx)), str(source))
+    return re.sub(
+        r'\$\{\{(.*?)\}\}',
+        lambda match: actions_string(value(match[1], ctx)),
+        actions_string(source),
+    )
 
 
-def contexts(workflow, event, branch='main', cron=None):
+def runner_labels(source, ctx):
+    if isinstance(source, str):
+        match = re.fullmatch(r'\$\{\{\s*([\w.-]+)\s*\}\}', source)
+        if match and match[1] in ctx:
+            source = ctx[match[1]]
+    if isinstance(source, list):
+        if not all(isinstance(label, str) for label in source):
+            message = 'unsupported structured runner labels'
+            raise ValueError(message)
+        return ' '.join(render(label, ctx) for label in source)
+    return render(source, ctx)
+
+
+def contexts(workflow, event, branch='main', cron=None, *, names=True):
     crons = schedule_crons(workflow) if event == 'schedule' else ['']
     if cron is not None:
         if cron not in crons:
@@ -69,10 +202,10 @@ def contexts(workflow, event, branch='main', cron=None):
             raise ValueError(message)
         crons = [cron]
     for scheduled in crons:
-        yield from job_contexts(workflow, event, branch, scheduled)
+        yield from job_contexts(workflow, event, branch, scheduled, names=names)
 
 
-def job_contexts(workflow, event, branch, scheduled):
+def job_contexts(workflow, event, branch, scheduled, *, names=True):
     for key, job in workflow['jobs'].items():
         matrix = job.get('strategy', {}).get('matrix', {})
         axes = {k: v for k, v in matrix.items() if k not in {'include', 'exclude'}}
@@ -123,7 +256,7 @@ def job_contexts(workflow, event, branch, scheduled):
                     ctx['steps.' + step['id'] + '.outcome'] = 'success'
                     if str(step.get('uses', '')).startswith('actions/create-github-app-token@'):
                         ctx['steps.' + step['id'] + '.outputs.token'] = 'trace-only-token'
-            runner = render(job.get('runs-on', ''), ctx)
+            runner = runner_labels(job.get('runs-on', ''), ctx)
             osx = 'macOS' in runner or 'macos-' in runner
             arm64 = (
                 'ARM64' in runner
@@ -144,7 +277,7 @@ def job_contexts(workflow, event, branch, scheduled):
             )
             ctx['runner.os'] = 'macOS' if osx else 'Linux'
             ctx['runner.arch'] = 'ARM64' if arm64 else 'X64'
-            yield render(job.get('name', key), ctx), job, ctx, platform
+            yield render(job.get('name', key), ctx) if names else key, job, ctx, platform
 
 
 def triggers_for(workflow):
@@ -230,10 +363,10 @@ def concurrency_errors(workflows):
     errors, identities = [], {}
     for wi, workflow in enumerate(workflows):
         for event, branch in event_refs(workflow):
-            for name, job, ctx, _platform in contexts(workflow, event, branch):
+            for _name, job, ctx, _platform in contexts(workflow, event, branch, names=False):
                 for scope, spec in [
                     ('workflow', workflow.get('concurrency')),
-                    ('job:' + name, job.get('concurrency')),
+                    ('job:' + ctx['github.job'], job.get('concurrency')),
                 ]:
                     if spec is None or (scope != 'workflow' and not value(job.get('if'), ctx)):
                         continue
@@ -244,13 +377,23 @@ def concurrency_errors(workflows):
                     )
                     if value(item.get('cancel-in-progress', False), ctx) is not False:
                         errors.append('cancelling ' + event + ' ' + branch + ' ' + scope)
-                    identity = render(item['group'], ctx)
-                    owner = (wi, branch, scope)
+                    identity = render(item['group'], ctx).casefold()
+                    owner = (
+                        wi,
+                        branch,
+                        scope,
+                        json.dumps(
+                            {key: val for key, val in ctx.items() if key.startswith('matrix.')}
+                            if scope != 'workflow'
+                            else {},
+                            sort_keys=True,
+                        ),
+                    )
                     previous = identities.setdefault(identity, owner)
                     if previous != owner:
                         errors.append('effective collision ' + identity)
                     later = dict(ctx, **{'github.run_id': 791})
-                    if identity == render(item['group'], later):
+                    if identity == render(item['group'], later).casefold():
                         errors.append(
                             'queued run replacement: ' + event + ' ' + branch + ' ' + scope
                         )
@@ -490,6 +633,25 @@ def option(args, name):
     return values[0] if values else None
 
 
+def selection_workflow(workflow, policy, group):
+    # Resolve display names only for jobs whose execution/publication this proof claims.
+    task = policy['groups'][group]['task']
+    selected = {
+        key: job
+        for key, job in workflow['jobs'].items()
+        if any(
+            group in step.get('run', '')
+            or task in step.get('run', '')
+            or (
+                str(step.get('uses', '')).startswith('actions/upload-artifact@')
+                and 'crysta-sdk-' in str(step.get('with', {}).get('name', ''))
+            )
+            for step in job.get('steps', [])
+        )
+    }
+    return {**workflow, 'jobs': selected}
+
+
 def execution_errors(root, workflow, policy, event, platform, group, expected=None):
     refs = [branch for actual_event, branch in event_refs(workflow) if actual_event == event]
     if not refs:
@@ -516,7 +678,10 @@ def execution_context_errors(root, workflow, policy, event, platform, group, exp
         return ['missing production execution collector']
     covered = []
     for name, job, ctx, actual_platform in contexts(
-        workflow, event, 'repair-topic' if event == 'workflow_dispatch' else 'main', cron
+        selection_workflow(workflow, policy, group),
+        event,
+        'repair-topic' if event == 'workflow_dispatch' else 'main',
+        cron,
     ):
         if (
             actual_platform != platform
@@ -634,6 +799,15 @@ def execution_context_errors(root, workflow, policy, event, platform, group, exp
             frozen = json.loads((root / 'tests/fixtures/ci_cadence/baseline.json').read_text())
 
             prior = yaml.safe_load(frozen['files']['.github/workflows/ci.yml'])
+            prior['jobs'] = {
+                key: candidate
+                for key, candidate in prior['jobs'].items()
+                if any(
+                    step.get('name', '').startswith(('Pack and qualify', 'SDK consumer smoke'))
+                    or 'crysta-sdk-' in str(step.get('with', {}).get('name', ''))
+                    for step in candidate.get('steps', [])
+                )
+            }
             qualified = [
                 s
                 for _n, j, c, p in contexts(prior, 'pull_request')
@@ -685,7 +859,10 @@ def execution_context_errors(root, workflow, policy, event, platform, group, exp
                 ):
                     errors.append('SDK upload precedes qualification')
     for name, job, ctx, actual_platform in contexts(
-        workflow, event, 'repair-topic' if event == 'workflow_dispatch' else 'main', cron
+        selection_workflow(workflow, policy, group),
+        event,
+        'repair-topic' if event == 'workflow_dispatch' else 'main',
+        cron,
     ):
         if (
             actual_platform != platform
