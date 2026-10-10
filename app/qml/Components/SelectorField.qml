@@ -35,7 +35,10 @@ EaElements.ParamComboBox {
     enabled: writable && options !== null && options.count > 0
     currentIndex: options ? options.indexOf(token) : -1
     ToolTip.text: refusal
-    ToolTip.visible: refusal !== "" && hovered
+    WarningToolTip {
+        text: selector.refusal
+        visible: text !== "" && selector.hovered
+    }
 
     onTokenChanged: refusal = ""
     // Its title as every field's: left, inset as a combo box's, ending in "…" (edi ADR-0017 §5).

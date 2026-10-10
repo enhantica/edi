@@ -45,7 +45,10 @@ EaElements.ParamTextField {
     // Its title as every field's: left, inset as a combo box's, ending in "…" (edi ADR-0017 §5).
     Component.onCompleted: FieldTitles.align(field)
     ToolTip.text: refusal
-    ToolTip.visible: refusal !== "" && (hovered || activeFocus)
+    WarningToolTip {
+        text: field.refusal
+        visible: text !== "" && (field.hovered || field.activeFocus)
+    }
 
     onValueChanged: typedRefusal = ""
     onAccepted: commit()

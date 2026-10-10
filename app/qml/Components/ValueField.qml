@@ -45,7 +45,10 @@ EaElements.ParamTextField {
     readOnly: !editable
     warned: refusal !== "" || !typedAdmitted
     ToolTip.text: refusal
-    ToolTip.visible: refusal !== "" && (hovered || activeFocus)
+    WarningToolTip {
+        text: field.refusal
+        visible: text !== "" && (field.hovered || field.activeFocus)
+    }
 
     onFieldValueChanged: refusal = ""
     // Its title as every field's: left, inset as a combo box's, ending in "…" (edi ADR-0017 §5).

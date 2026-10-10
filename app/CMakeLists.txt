@@ -112,6 +112,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/TextTab.qml
         qml/Components/ToolbarComboBox.qml
         qml/Components/ValueField.qml
+        qml/Components/WarningToolTip.qml
         qml/Components/WarningsDialog.qml
         qml/Components/Wordmark.qml
         qml/Components/WordmarkWithVersion.qml

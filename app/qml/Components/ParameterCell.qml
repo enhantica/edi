@@ -36,7 +36,7 @@ EaComponents.TableViewParameter {
 
     EaElements.ToolTip {
         text: cell.text
-        visible: cell.contentWidth > cell.width && cell.hovered && !cell.activeFocus && cell.refusal === "" && EaGlobals.Vars.showToolTips
+        visible: cell.contentWidth > cell.width && cell.hovered && !cell.activeFocus && cell.ToolTip.text === "" && EaGlobals.Vars.showToolTips
     }
 
     enabled: refinable
@@ -54,7 +54,10 @@ EaComponents.TableViewParameter {
 
     warned: refusal !== "" || outsideRange
     ToolTip.text: refusal !== "" ? refusal : outsideRange ? qsTr("Outside its range, %1 to %2").arg(item.minimum).arg(item.maximum) : ""
-    ToolTip.visible: ToolTip.text !== "" && (hovered || activeFocus)
+    WarningToolTip {
+        text: cell.ToolTip.text
+        visible: text !== "" && (cell.hovered || cell.activeFocus)
+    }
 
     onValueChanged: typedRefusal = ""
     onAccepted: commit()
