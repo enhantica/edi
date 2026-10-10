@@ -682,7 +682,7 @@
           "bragg"
         ],
         "purpose": [
-          "refinement"
+          "verification"
         ],
         "fittingMode": [
           "single"
@@ -732,7 +732,7 @@
           "bragg"
         ],
         "purpose": [
-          "refinement"
+          "verification"
         ],
         "fittingMode": [
           "single"
@@ -938,7 +938,7 @@
           "bragg"
         ],
         "purpose": [
-          "refinement"
+          "verification"
         ],
         "fittingMode": [
           "single"
@@ -1138,7 +1138,7 @@
           "bragg"
         ],
         "purpose": [
-          "refinement"
+          "verification"
         ],
         "fittingMode": [
           "single"
@@ -1241,7 +1241,7 @@
           "bragg"
         ],
         "purpose": [
-          "refinement"
+          "verification"
         ],
         "fittingMode": [
           "single"

@@ -10,7 +10,7 @@ _metadata.timestamp        ?
 # Deliberately unsupported (edi ADR-0017 §14): opening this project warns
 # `unsupported _rendering_plot.type "plotly" - using auto`, a third message for the app's list.
 _rendering_plot.type plotly
-_metadata.purpose "refinement"
+_metadata.purpose "verification"
 _metadata.dimensionality "1D"
 _metadata.instrument "BEER"
 _metadata.facility "ESS"

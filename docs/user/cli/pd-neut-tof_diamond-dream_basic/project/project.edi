@@ -6,7 +6,7 @@ _metadata.description "McStas-simulated 90° bank · Jorgensen profile · Scale-
 _metadata.created          "24 Sep 2026 18:42:48"
 _metadata.last_modified    "24 Sep 2026 18:42:49"
 _metadata.timestamp        ?
-_metadata.purpose "refinement"
+_metadata.purpose "verification"
 _metadata.dimensionality "1D"
 _metadata.instrument "DREAM"
 _metadata.facility "ESS"
