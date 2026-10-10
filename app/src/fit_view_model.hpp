@@ -196,6 +196,8 @@ class FitViewModel : public QObject {
     void ended(const edi::FitReport& report);
     void scanStarted(const edi::ScanPreamble& preamble);
     void fileCompleted(const edi::ScanFileRecord& record);
+    // The counts from the files on disk once the driver returned, before the running presentation ends.
+    void settleScanCounts();
     void scanEnded(const edi::FitReport& report);
     void setScanning(bool scanning);
     void setContinuable(bool continuable);
@@ -227,6 +229,7 @@ class FitViewModel : public QObject {
     bool scanning_ = false, continuable_ = false, out_of_date_ = false, scan_last_ = true;
     // The running scan: the files already fitted when it started (a continued scan), for its pace.
     int scan_resumed_ = 0;
+    bool scan_index_refused_ = false;  // this run's index refused and the refusal was shown
     QString scan_text_, eta_;
     double chi_before_ = 0.0;
     QString unavailable_reason_, iterations_, elapsed_, goodness_of_fit_, status_, outcome_;

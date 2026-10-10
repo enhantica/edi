@@ -266,6 +266,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     int scanFileFitted(const edi::ScanFileRecord& record);
     void showScanFrame(const std::string& file, const edi::FitFrame& frame);
     void followScanFile(const std::string& file);
+    // The run's driver returned: the rows and notes on disk are indexed again, the files skipped after the last
+    // row included (a skipped file sends no event). Comes before scanEnded.
+    void settleScan();
     // The run ended: its status, seconds and outcome key (the worst file's, Stopped or Failed).
     void scanEnded(edi::FitStatus status, double seconds);
     // Why the scan modes cannot run here (no single template experiment, no datasets), or empty.

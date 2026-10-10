@@ -1259,11 +1259,16 @@ void ProjectViewModel::showScanFrame(const std::string& file, const edi::FitFram
     }
 }
 
+void ProjectViewModel::settleScan() {
+    if (scan_session_ != nullptr) {
+        scan_session_->reindex(*project_);
+    }
+}
+
 void ProjectViewModel::scanEnded(edi::FitStatus status, double seconds) {
     if (scan_session_ == nullptr) {
         return;
     }
-    scan_session_->reindex(*project_);
     // The run's provenance: the template it fitted from, its time and outcome, kept beside the results.
     const QString final_outcome = status == edi::FitStatus::ERROR       ? QStringLiteral("failed")
                                   : status == edi::FitStatus::CANCELLED ? QStringLiteral("stopped")

@@ -284,6 +284,7 @@ void FitViewModel::start() {
         }
         if (scan) {
             scan_resumed_ = 0;
+            scan_index_refused_ = false;
             setScanning(true);
             setScanCounts(scan_, QString());
         }
@@ -410,11 +411,17 @@ void FitViewModel::fileCompleted(const edi::ScanFileRecord& record) {
     // The index holds this file's row and the notes of the files skipped before it (a skipped file sends no event
     // of its own), retained rows of an earlier run included: fitted and skipped are its counts.
     owner_.scanFileFitted(record);
-    if (const ScanSession* session = owner_.scanSession(); session != nullptr && session->index().error.empty()) {
+    const ScanSession* session = owner_.scanSession();
+    if (session != nullptr && session->index().error.empty()) {
         counts.fitted = static_cast<int>(session->index().fitted);
         counts.skipped = static_cast<int>(session->index().skipped);
     } else {
         ++counts.fitted;
+    }
+    // The index refused what the run wrote: the counts follow the events alone, and the refusal is shown once.
+    if (session != nullptr && !session->index().error.empty() && !scan_index_refused_) {
+        scan_index_refused_ = true;
+        emit refused(QString::fromStdString(session->index().error));
     }
     setScanCounts(counts, QString::fromStdString(record.file_name));
     setProgress(QString(), chi(record.reduced_chi_square), tr("Running"));
@@ -506,6 +513,18 @@ void FitViewModel::setOutOfDate(bool out_of_date) {
     }
 }
 
+void FitViewModel::settleScanCounts() {
+    owner_.settleScan();
+    const ScanSession* session = owner_.scanSession();
+    if (session == nullptr || !session->index().error.empty()) {
+        return;
+    }
+    ScanSummary counts = scan_;
+    counts.fitted = static_cast<int>(session->index().fitted);
+    counts.skipped = static_cast<int>(session->index().skipped);
+    setScanCounts(counts, QString());
+}
+
 void FitViewModel::scanEnded(const edi::FitReport& report) {
     setScanning(false);
     const double seconds = static_cast<double>(clock_.elapsed()) / 1000.0;
@@ -524,6 +543,9 @@ void FitViewModel::ended(const edi::FitReport& report) {
     clock_timer_.stop();
     pending_frame_.reset();
     if (scanning_) {
+        // Files skipped after the last row have sent no event: the counts are settled first, so the running bar
+        // closes on every file the run processed, whatever it ended as.
+        settleScanCounts();
         setRunning(false);
         scanEnded(report);
         return;
