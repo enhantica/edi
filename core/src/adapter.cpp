@@ -4008,6 +4008,14 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         const std::filesystem::path data_root(scan_data_root.empty() ? path : scan_data_root);
         cproject.scan_data_root = scan_data_root;
         const std::filesystem::path csv_path = project_root / "analysis" / "results.csv";
+        // The retained state is proven before anything is published: every state file the run reads, here and (for
+        // a dry run that starts from the loaded project's results) there, is absent or a regular file.
+        for (const char* name : {"results.csv", "results-provenance.csv", "scan-notes.csv"}) {
+            scan_state_present(project_root / "analysis" / name, std::string("analysis/") + name);
+            if (!scan_data_root.empty()) {
+                scan_state_present(data_root / "analysis" / name, std::string("analysis/") + name);
+            }
+        }
         bool preamble_delivered = false;
         if (on_scan_start) {
             const std::optional<int> total_files =
