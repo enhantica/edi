@@ -13,10 +13,16 @@ ROOT = Path(__file__).resolve().parents[3]
 RUNNER = ROOT / 'tests/fixtures/table_display/run_functions.cjs'
 
 
-def run_functions(source, names, calls, *, fit=None):
+def run_functions(source, names, calls, *, fit=None, consumer=None):
     node = shutil.which('node')
     assert node, 'Scientific display gates require the declared Node runtime'
-    request = {'source': str(source), 'functions': names, 'calls': calls, 'fit': fit}
+    request = {
+        'source': str(source),
+        'functions': names,
+        'calls': calls,
+        'fit': fit,
+        'consumer': consumer,
+    }
     result = subprocess.run(
         [node, str(RUNNER)],
         input=json.dumps(request),
@@ -101,4 +107,43 @@ def test_fullprof_comparison_projects_retain_verification_purpose(project):
     metadata = json.loads((ROOT / 'app/examples/metadata.json').read_text())
     assert metadata['examples'][project]['values']['purpose'] == ['verification'], (
         'The app catalogue preserves verification metadata so it can exclude that workflow'
+    )
+
+
+@pytest.mark.parametrize('summary', [False, True], ids=['running', 'completed-summary'])
+@pytest.mark.parametrize(('ok', 'failed'), [(0, 0), (7, 0), (0, 3), (7, 3)])
+def test_displayed_sequential_counts_consume_state_colours(summary, ok, failed):
+    fit = {
+        'scanOk': ok,
+        'scanFailed': failed,
+        'scanning': not summary,
+        'running': not summary,
+        'scanSummary': summary,
+        'scanFiles': '10 files',
+        'elapsed': '1s',
+        'eta': '2s',
+        'goodnessOfFit': '1.4',
+        'iterations': '8',
+    }
+    pieces = run_functions(
+        ROOT / 'app/qml/Components/StatusBar.qml', [], [], fit=fit, consumer='scan'
+    )
+    visible = [piece['text'] for piece in pieces]
+    expected_ok = f'<font color="#009900">{ok} ok</font>' if ok else '0 ok'
+    expected_fail = f'<font color="#cc0000">{failed} fail</font>' if failed else '0 fail'
+    assert expected_ok in visible and expected_fail in visible, (
+        'Running scans and completed summaries display state-coloured counts '
+        'through their real consumer bindings'
+    )
+    assert all(piece['format'] in {1, 2} for piece in pieces), (
+        'The visible count Text interprets colour markup instead of displaying literal tags'
+    )
+    assert (
+        visible.index(expected_ok)
+        < visible.index(expected_fail)
+        < visible.index('1s')
+        < visible.index('χ² 1.4')
+    ), 'The visible sequential consumer retains count, time and goodness-of-fit order'
+    assert ('10 files' in visible) == summary and ('eta 2s' in visible) == (not summary), (
+        'The actual consumer distinguishes running progress from the completed scan summary'
     )
