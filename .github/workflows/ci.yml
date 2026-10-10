@@ -263,6 +263,8 @@ jobs:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
       - name: The two-thread witness (ThreadSanitizer)
         if: matrix.platform == 'Linux'
+        # It takes about 7 minutes; a hang must fail the step instead of holding the run.
+        timeout-minutes: 20
         run: pixi run --skip-deps tsan-worker
         env:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
