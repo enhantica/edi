@@ -376,3 +376,32 @@ def test_concurrency_controls_include_main_and_every_triggered_successor(scope, 
     assert concurrency_errors([workflow]), (
         'CI policy: main cancellation and event-specific queue replacement refuse at both scopes'
     )
+
+
+@pytest.mark.parametrize('scope', ['workflow', 'job'])
+def test_concurrency_includes_the_configured_literal_push_branch(scope):
+    workflow = {
+        'name': 'literal branch control',
+        'on': {'push': {'branches': ['repair-other']}},
+        'concurrency': {
+            'group': 'workflow-${{ github.ref }}-${{ github.run_id }}',
+            'cancel-in-progress': False,
+        },
+        'jobs': {
+            'full': {
+                'runs-on': 'ubuntu-latest',
+                'concurrency': {
+                    'group': 'job-${{ github.ref }}-${{ github.run_id }}',
+                    'cancel-in-progress': False,
+                },
+            }
+        },
+    }
+    assert not concurrency_errors([workflow]), (
+        'CI policy: configured literal branch admits with independent concurrency identities'
+    )
+    owner = workflow if scope == 'workflow' else workflow['jobs']['full']
+    owner['concurrency']['cancel-in-progress'] = "${{ github.ref == 'refs/heads/repair-other' }}"
+    assert concurrency_errors([workflow]), (
+        'CI policy: configured literal branch cancellation cannot escape concurrency proof'
+    )

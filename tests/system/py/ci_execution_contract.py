@@ -165,7 +165,9 @@ def event_refs(workflow):
             if event == 'pull_request'
             else ('main', 'slot-a', 'slot-b', 'repair-topic')
         )
-        for branch in refs:
+        if event == 'push':
+            refs += tuple(p for p in config.get('branches', []) if not any(c in p for c in '*?!['))
+        for branch in dict.fromkeys(refs):
             if event in {'push', 'pull_request'}:
                 target = 'main' if event == 'pull_request' else branch
                 patterns = config.get('branches', ['*'])
