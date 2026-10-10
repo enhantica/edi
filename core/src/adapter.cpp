@@ -1429,15 +1429,31 @@ std::pair<std::size_t, ScanResultIndex::Row> scan_row_facts(const Project& /*pro
     return {found->second, std::move(row)};
 }
 
+namespace {
+
+// Whether a scan state file is there. Absent is allowed; a path that exists must be a regular file, or a link to one:
+// a directory or a device is refused (crysta refuses it the same way), never read as no state or as an empty file.
+bool scan_state_present(const std::filesystem::path& path, const std::string& label) {
+    std::error_code error;
+    const std::filesystem::file_status link = std::filesystem::symlink_status(path, error);
+    if (link.type() == std::filesystem::file_type::not_found) {
+        return false;
+    }
+    if (link.type() == std::filesystem::file_type::none) {
+        throw std::invalid_argument(label + ": cannot tell whether it exists: " + error.message());
+    }
+    if (!std::filesystem::is_regular_file(std::filesystem::status(path, error))) {
+        throw std::invalid_argument(label + ": it is there but is not a regular file");
+    }
+    return true;
+}
+
+}  // namespace
+
 std::int64_t read_scan_notes(const Project& project, const ScanPlaces& places, ScanResultIndex& index,
                              std::int64_t from, bool writing) {
     const std::filesystem::path path = scan_results_path(project).parent_path() / "scan-notes.csv";
-    std::error_code status;
-    if (!std::filesystem::exists(path, status)) {
-        if (status) {
-            throw std::invalid_argument("analysis/scan-notes.csv: cannot tell whether it exists: " +
-                                        status.message());
-        }
+    if (!scan_state_present(path, "analysis/scan-notes.csv")) {
         return from;
     }
     std::ifstream input(path, std::ios::binary);
@@ -1584,9 +1600,15 @@ ScanResultIndex index_scan_rows(const Project& project, const ScanDatasets& data
     // Only a file that is not there is no results; one that is there must read whole: a header, and complete
     // rows. A line still being written is expected only while a run writes (`writing`).
     const std::filesystem::path path = scan_results_path(project);
-    std::error_code status;
-    if (!std::filesystem::exists(path, status)) {
-        return status ? refused("cannot tell whether it exists: " + status.message()) : index;
+    try {
+        if (!scan_state_present(path, "analysis/results.csv")) {
+            return index;
+        }
+    } catch (const std::exception& refusal) {
+        ScanResultIndex error;
+        error.error = refusal.what();
+        error.rows.resize(datasets.files.size());
+        return error;
     }
     std::ifstream input(path, std::ios::binary);
     if (!input) {

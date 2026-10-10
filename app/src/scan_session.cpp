@@ -39,14 +39,19 @@ const std::optional<std::string>* slot(const ScanSession::Files& files, int whic
     return which == 0 ? &files.results : which == 1 ? &files.provenance : which == 2 ? &files.run : &files.skipped;
 }
 
-// A file's bytes; nullopt when it does not exist; throws when it exists and cannot be read.
+// A file's bytes; nullopt when it does not exist; throws when it exists and cannot be read, or is not a regular
+// file (a directory would otherwise read as an empty file and be put back as one).
 std::optional<std::string> read_file(const fs::path& path) {
     std::error_code error;
-    if (!fs::exists(path, error)) {
-        if (error) {
-            throw std::runtime_error("cannot tell whether " + path.string() + " exists: " + error.message());
-        }
+    const fs::file_status link = fs::symlink_status(path, error);
+    if (link.type() == fs::file_type::not_found) {
         return std::nullopt;
+    }
+    if (link.type() == fs::file_type::none) {
+        throw std::runtime_error("cannot tell whether " + path.string() + " exists: " + error.message());
+    }
+    if (!fs::is_regular_file(fs::status(path, error))) {
+        throw std::runtime_error(path.string() + " is there but is not a regular file");
     }
     std::ifstream input(path, std::ios::binary);
     std::string bytes((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
@@ -215,6 +220,9 @@ int ScanSession::addRow(const edi::Project& project, const std::vector<std::stri
         if (index_.rows[dataset].offset >= 0) {
             return static_cast<int>(dataset);  // indexed already, when the run's first row caught up with the file
         }
+        // The notes the run appended since the last row come first (files skipped before this one, its own note):
+        // crysta notes a file before appending its row. A refusal there refuses the index below.
+        index_.notes_end = edi::read_scan_notes(project, places_, index_, index_.notes_end, true);
         // crysta appends the cells joined by commas and a line break: the row starts where the file ended.
         std::int64_t length = 1;
         for (const std::string& cell : cells) {
@@ -222,8 +230,8 @@ int ScanSession::addRow(const edi::Project& project, const std::vector<std::stri
         }
         row.offset = index_.end;
         row.termination = termination;
-        // crysta notes a file before appending its row, so what the notes said about it stays; a file with a
-        // row is fitted, whatever an earlier run noted (the full index's rule), so it leaves the skipped count.
+        // What the notes say about the file stays; a file with a row is fitted, whatever an earlier run noted (the
+        // full index's rule), so it leaves the skipped count.
         const edi::ScanResultIndex::Row& noted = index_.rows[dataset];
         row.noted = noted.noted;
         row.negative_points = noted.negative_points;
@@ -234,11 +242,14 @@ int ScanSession::addRow(const edi::Project& project, const std::vector<std::stri
         index_.end += length - 1;
         index_.rows[dataset] = std::move(row);
         ++index_.fitted;
-        // The notes the run appended since the last row: files skipped before this one, its own note.
-        index_.notes_end = edi::read_scan_notes(project, places_, index_, index_.notes_end, true);
         return static_cast<int>(dataset);
     } catch (const std::exception& refusal) {
-        error = QString::fromUtf8(refusal.what());
+        // What was read before the refusal is not adopted: the index is refused as a full read would refuse it.
+        edi::ScanResultIndex refused;
+        refused.error = refusal.what();
+        refused.rows.resize(datasets_.files.size());
+        index_ = std::move(refused);
+        error = QString::fromStdString(index_.error);
         return -1;
     }
 }

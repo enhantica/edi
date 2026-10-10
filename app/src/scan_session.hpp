@@ -54,7 +54,8 @@ class ScanSession : public QObject {
     const edi::ScanResultIndex& index() const { return index_; }
     int place(const std::string& file) const;
     // A row a run just appended (the event's own cells): checked against the header, indexed at the file's end.
-    // The dataset's place, or -1 with the refusal in `error`.
+    // The dataset's place, or -1 with the refusal in `error`; a refusal leaves the index refused (`index().error`),
+    // never holding part of what was read.
     int addRow(const edi::Project& project, const std::vector<std::string>& cells, const std::string& termination,
                QString& error);
     // The cells of a dataset's row, read at its offset and checked to name that dataset; empty without a row.
