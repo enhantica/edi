@@ -405,3 +405,46 @@ def test_concurrency_includes_the_configured_literal_push_branch(scope):
     assert concurrency_errors([workflow]), (
         'CI policy: configured literal branch cancellation cannot escape concurrency proof'
     )
+
+
+@pytest.mark.parametrize('boundary', ['collector', 'validator'])
+@pytest.mark.parametrize('damage', ['identity', 'output'])
+@pytest.mark.parametrize(
+    ('group', 'event', 'platform'),
+    [
+        ('quick', 'pull_request', 'linux-64'),
+        ('full', 'push', 'linux-64'),
+        ('macos-smoke', 'pull_request', 'osx-arm64'),
+        ('macos-smoke', 'push', 'osx-arm64'),
+        ('nightly-full', 'schedule', 'osx-arm64'),
+        ('nightly-full', 'workflow_dispatch', 'osx-arm64'),
+        ('nightly-full', 'schedule', 'linux-64'),
+        ('nightly-full', 'workflow_dispatch', 'linux-64'),
+    ],
+)
+def test_direct_duplicate_options_cannot_hide_execution_overrides(
+    tmp_path, boundary, damage, group, event, platform
+):
+    workflow, policy, expected = execution_control(tmp_path, platform, group)
+    assert not execution_errors(tmp_path, workflow, policy, event, platform, group, expected), (
+        'CI policy: unique direct collector and validator options admit before argument damage'
+    )
+    if boundary == 'collector':
+        manifest = tmp_path / 'pixi.toml'
+        extra = '--group reduced' if damage == 'identity' else '--output-dir other-report'
+        manifest.write_text(
+            '[tasks]\ngroup-' + group + ' = { cmd = "python tools/ci/run-selection.py '
+            '--group '
+            + group
+            + ' --platform '
+            + platform
+            + ' --output-dir /tmp/ci-selection-probe/result '
+            + extra
+            + '" }\n'
+        )
+    else:
+        extra = '--platform wrong-platform' if damage == 'identity' else '--report other-report'
+        workflow['jobs']['full']['steps'][1]['run'] += ' ' + extra
+    assert execution_errors(tmp_path, workflow, policy, event, platform, group, expected), (
+        'CI policy: duplicate direct options cannot conceal group, platform or report overrides'
+    )

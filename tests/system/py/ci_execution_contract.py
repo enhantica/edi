@@ -409,7 +409,14 @@ pytest() { return 0; }
 
 
 def option(args, name):
-    return args[args.index(name) + 1] if name in args else None
+    if args.count(name) > 1:
+        raise ValueError('ambiguous duplicated selection option ' + name)
+    if name not in args:
+        return None
+    index = args.index(name) + 1
+    if index == len(args):
+        raise ValueError('missing selection option argument ' + name)
+    return args[index]
 
 
 def execution_errors(root, workflow, policy, event, platform, group, expected=None):  # noqa: PLR0912, PLR0915, PLR0914
