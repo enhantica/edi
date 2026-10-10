@@ -209,7 +209,10 @@ class FitViewModel : public QObject {
     void ended(const edi::FitReport& report);
     void scanStarted(const edi::ScanPreamble& preamble);
     void fileCompleted(const edi::ScanFileRecord& record);
-    // Follow shows the newest finished file once the one before is shown and kFollowIntervalMs has passed.
+    // A followed file's pattern, as its fit left it.
+    void scanFrame(const std::string& file, const edi::FitFrame& frame);
+    // Follow asks for the next finished file's pattern once the one before is shown and kFollowIntervalMs has
+    // passed.
     void followLatest();
     // The counts from the files on disk once the driver returned, before the running presentation ends.
     void settleScanCounts();
@@ -237,10 +240,12 @@ class FitViewModel : public QObject {
     // once this one is shown).
     std::optional<edi::FitFrame> pending_frame_;
     QTimer frame_timer_;
-    // A followed scan: the newest finished file, the one last asked for, when, and the wait for the interval.
+    // A followed scan: the newest finished file, the one last shown, when, the wait for the interval, and whether
+    // the job is to send the next file's pattern.
     std::string latest_file_, followed_file_;
     QElapsedTimer follow_clock_;
     QTimer follow_timer_;
+    bool frame_requested_ = false;
     // The running fit's clock, shown once a second.
     QElapsedTimer clock_;
     QTimer clock_timer_;

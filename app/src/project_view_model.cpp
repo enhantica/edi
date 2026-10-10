@@ -945,10 +945,10 @@ void ProjectViewModel::startViewRead() {
         return;
     }
     // While a scan runs the worker is its own: a dataset shown gets its pattern calculated beside it, on a copy of
-    // the template with the same values and data as the shown model, whether chosen by hand or followed (the scan's
-    // worker draws no frame, edi ADR-0029).
+    // the template with the same values and data as the shown model, unless the scan's fit sent the followed file's
+    // pattern with it (edi ADR-0029).
     std::optional<edi::Project> shown;
-    if (fit_ != nullptr && fit_->scanning()) {
+    if (fit_ != nullptr && fit_->scanning() && !(follow_frame_ && follow_frame_->first == index)) {
         shown = *scan_template_;
     }
     const std::string directory = scan_session_->datasets().directory;
@@ -999,6 +999,11 @@ void ProjectViewModel::applyDatasetView(std::uint64_t request, int index, Datase
         return;
     }
     view_applied_ = request;
+    // The fit's pattern of a followed file goes with that file's view, and only while the scan runs.
+    if (follow_frame_ && follow_frame_->first == index && fit_ != nullptr && fit_->scanning() && !view.frame) {
+        view.frame = std::move(follow_frame_->second);
+    }
+    follow_frame_.reset();
     // However this read ends, a followed scan may move to its newest finished file afterwards.
     const auto shown = qScopeGuard([this] {
         if (fit_ != nullptr) {
@@ -1281,6 +1286,14 @@ void ProjectViewModel::markScanFile(const std::string& file) {
 void ProjectViewModel::followScanFile(const std::string& file) {
     // Each file as it is fitted: a lookup by name and one read, off the GUI thread.
     if (const int index = scan_session_ != nullptr ? scan_session_->place(file) : -1; index >= 0) {
+        viewDataset(index, true);
+    }
+}
+
+void ProjectViewModel::followScanFrame(const std::string& file, const edi::FitFrame& frame) {
+    // The file's data are still read off the GUI thread for the model; its pattern is the one given.
+    if (const int index = scan_session_ != nullptr ? scan_session_->place(file) : -1; index >= 0) {
+        follow_frame_.emplace(index, frame);
         viewDataset(index, true);
     }
 }

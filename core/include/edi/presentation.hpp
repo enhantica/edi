@@ -55,6 +55,16 @@ struct PatternSource {
 // computed categories are current; otherwise they are absent and `current` is false.
 PatternSource capture_pattern(const Project& project, std::size_t experiment_index);
 
+// One experiment's `_refln` rows grouped into phases, one per structure id in the order the ids first
+// appear. A phase's place is its structure's place in `structure_names` (its first place when there
+// is no such name). capture_pattern groups this way, and so does a scan's fitted file.
+std::vector<PatternSource::Phase> group_reflections(std::span<const std::string> structure_id,
+                                                    std::span<const double> position,
+                                                    std::span<const std::int32_t> index_h,
+                                                    std::span<const std::int32_t> index_k,
+                                                    std::span<const std::int32_t> index_l,
+                                                    std::span<const std::string> structure_names);
+
 // What the renderer asks for.
 struct PatternView {
     std::optional<double> x_min, x_max;  // absent: the data's full range

@@ -62,8 +62,9 @@ class FitJob {
         std::function<void(const ScanPreamble&)> scan_started;
         // A scan: once per file it fitted, after the file's results.csv row is on disk, in order.
         std::function<void(const ScanFileRecord&)> file_completed;
-        // A scan while it is followed (`follow`): the file just fitted and its pattern at the fitted values, in place
-        // of the frames a single fit draws. The job draws the next only after `frame_shown`.
+        // A scan while it is followed (`follow`): a file just fitted and its pattern as the fit left it, right after
+        // its `file_completed`, in place of the frames a single fit draws. Nothing is calculated for it. The job
+        // sends the next only after `frame_shown`, with the next file it fits (edi ADR-0029).
         std::function<void(const std::string& file, const FitFrame&)> file_frame;
     };
     // Test instrumentation: production constructs a FitJob without it.
