@@ -183,9 +183,12 @@ def test_reporting_keeps_source_cancellation_and_repair_boundaries(event, block)
 def test_newer_heads_still_cancel_superseded_runs():
     workflow = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
     assert workflow['concurrency'] == {
-        'group': '${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}',
+        'group': (
+            '${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}'
+            '-${{ github.event.schedule }}'
+        ),
         'cancel-in-progress': True,
-    }, 'only a newer run on the same PR or ref cancels the superseded head'
+    }, 'newer runs supersede the same PR/ref and schedule; nightly cannot cancel a main push'
 
 
 @pytest.mark.parametrize(
