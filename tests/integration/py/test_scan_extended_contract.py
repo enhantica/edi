@@ -616,6 +616,16 @@ foreach(command include configure_file qt_add_library
  function(${{command}})
  endfunction()
 endforeach()
+function(target_sources target)
+ foreach(source IN LISTS ARGN)
+  if(source MATCHES "^(PRIVATE|PUBLIC|INTERFACE)$")
+   continue()
+  endif()
+  if(NOT source MATCHES "[.](cpp|c|h|hpp|mm)$")
+   message(FATAL_ERROR "Examples: unobserved non-compilation target source ${{source}}")
+  endif()
+ endforeach()
+endfunction()
 function(target_link_libraries target)
  set(scope PUBLIC)
  foreach(edge IN LISTS ARGN)
@@ -916,6 +926,20 @@ def test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden
         assert_web_exclusion(hidden, index)
 
 
+@pytest.mark.parametrize(
+    'sources', ['resource.dat', 'resource.qrc', '"$<IF:$<BOOL:1>,resource.dat,source.cpp>"']
+)
+def test_resource_observer_refuses_non_compilation_target_sources(
+    tmp_path, bundle_control, sources
+):
+    cmake, _, _ = bundle_control
+    good, index = resource_inventory(tmp_path / 'positive', True, cmake)
+    assert_web_exclusion(good, index)
+    unsupported = cmake + '\ntarget_sources(edi_app PRIVATE ' + sources + ')\n'
+    with pytest.raises(AssertionError, match='unobserved non-compilation target source'):
+        resource_inventory(tmp_path / 'unsupported', True, unsupported)
+
+
 def test_user_page_and_scale_adr_document_approved_limits():
     nav = (ROOT / 'mkdocs.yml').read_text()
     pages = [
@@ -995,7 +1019,9 @@ int main(){for(auto mode:{"sequential","independent"}){Project p{mode}
 e){std::cout<<"REFUSED\\n";}}}""".replace('BODY', dispatch)
     if 'ScanStartCallback' not in dispatch:
         program = program.replace('{a,b,c,scan,d,fitted}', '{a,b,c,d,fitted}')
-        program = program.replace('fit_by_mode(p,11,22,33,55,44,66)', 'fit_by_mode(p,11,22,33,44,66)')
+        program = program.replace(
+            'fit_by_mode(p,11,22,33,55,44,66)', 'fit_by_mode(p,11,22,33,44,66)'
+        )
     return cpp_probe(program, tmp_path)
 
 

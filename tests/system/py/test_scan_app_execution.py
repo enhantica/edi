@@ -14,6 +14,7 @@ from tests.fixtures.scan_app.harness import (
     FULL,
     SMALL,
     Harness,
+    columns_hash,
     copy_project,
     csv_text,
     files,
@@ -22,6 +23,7 @@ from tests.fixtures.scan_app.harness import (
     projection_csv,
     read_csv,
     scale_project,
+    template_measured,
 )
 
 MODES = ('sequential', 'independent')
@@ -141,7 +143,10 @@ def transition_observations(harness, root, observed):
         )
         expected_data = root / (mode + '-measured.json')
         expected_data.write_text(
-            json.dumps({path.name: measured_hash(path) for path in files(target)})
+            json.dumps({
+                '_template': columns_hash(template_measured(target / 'experiments/d20.edi')),
+                **{path.name: measured_hash(path) for path in files(target)},
+            })
         )
         observed[mode + '-flow'] = harness.invoke('flow', target, expected_data, observe=True)
         holes = copy_project(FULL, root / (mode + '-holes'), mode, iterations=1)
@@ -452,17 +457,27 @@ def test_continue_starts_at_first_unfitted_and_skips_later_fitted_datasets(
 def test_follow_tracks_worker_and_manual_selection_until_reenabled(transition_execution, mode):
     execution = transition_execution
     flow = execution[mode + '-flow']
+    assert_follow_observations(flow, execution['modes'][mode]['files'])
+    changed = copy.deepcopy(flow)
+    changed_event = next(event for event in changed['events'] if event['stage'] == 'stop')
+    changed_event['pattern'][0][1] += abs(changed_event['pattern'][0][1]) + 1.0
+    with pytest.raises(AssertionError, match='Follow:'):
+        assert_follow_observations(changed, execution['modes'][mode]['files'])
+
+
+def assert_follow_observations(flow, paths):
     events = [event for event in flow.get('events', []) if event['stage'] == 'stop']
     assert len(events) == 40, (
         'Follow: worker-driven observations must reach every pre-stop dataset'
     )
     assert not flow['stop']['before']['following'], 'Follow: it is off before a scan'
-    paths = execution['modes'][mode]['files']
+    template = template_measured(FULL / 'experiments/d20.edi')
+    shown_followed = []
     for index, event in enumerate(events):
         state = event['state']
         assert event['projectionReady'], (
-            'Follow: each observation reaches its fitted count and independent '
-            'shown measured columns'
+            'Follow: each observation reaches its fitted count; manual selection settles '
+            'its independent measured columns'
         )
         expected = 17 if 13 <= index <= 20 else index
         assert state['scanning'] and state['running'], (
@@ -475,15 +490,46 @@ def test_follow_tracks_worker_and_manual_selection_until_reenabled(transition_ex
             'Follow: the displayed dataset must track worker progress or the manual choice'
         )
         points = event['pattern']
-        expected_points = measured(paths[expected])
+        shown = event['patternFile']
+        assert shown == '_template' or shown in {path.name for path in paths}, (
+            'Follow: every actual pattern identifies independently supplied measured bytes'
+        )
+        if not state['following']:
+            assert shown == paths[17].name, (
+                'Follow: the manual selection must display its own independently measured pattern'
+            )
+        elif shown != '_template':
+            shown_index = next(i for i, path in enumerate(paths) if path.name == shown)
+            assert shown_index <= index, (
+                'Follow: a deferred frame must belong to an already completed scan file'
+            )
+            shown_followed.append(shown_index)
+        expected_points = (
+            template
+            if shown == '_template'
+            else measured(next(path for path in paths if path.name == shown))
+        )
         assert len(points) == len(expected_points), (
             'Follow: the shown worker/manual dataset must expose its measured pattern'
         )
         for sample in (0, len(points) // 2, len(points) - 1):
             assert points[sample][:3] == pytest.approx(expected_points[sample]), (
-                'Follow: the pattern must belong to the displayed dataset rather than just '
-                'changing an index'
+                'Follow: a published pattern must contain its independently identified '
+                'measured columns'
             )
+
+    assert shown_followed, (
+        'Follow: the actor must observe an actual fitted-file frame while the scan is running'
+    )
+    final_points = flow['stop']['afterPattern']
+    final_reference = measured(paths[39])
+    assert flow['stop']['after']['selected'] == 39 and len(final_points) == len(final_reference), (
+        'Follow: Stop settles the final completed dataset and its complete measured pattern'
+    )
+    for sample in (0, len(final_points) // 2, len(final_points) - 1):
+        assert final_points[sample][:3] == pytest.approx(final_reference[sample]), (
+            'Follow: the settled final pattern must belong to the last completed dataset'
+        )
 
 
 def test_single_fit_persists_template_tag_and_selection(execution):
