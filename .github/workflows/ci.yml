@@ -252,13 +252,13 @@ jobs:
           pixi run --skip-deps python-surface-superset
           pixi run --skip-deps python-surface-check
           pixi run --skip-deps cli-vocabulary-check
-      - name: Tests (declared group)
+      # The declared group runs as parallel jobs (owner, 2026-10-08): the C++ unit tests, unit and
+      # integration here, and the system tier in the three `system` jobs below. The same selection on a
+      # pull request and on main.
+      - name: Tests (declared group, C++ unit, unit and integration)
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            pixi run group-quick
-          else
-            pixi run group-full
-          fi
+          pixi run cpp-test
+          pixi run core-tests
         env:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
       - name: The two-thread witness (ThreadSanitizer)
@@ -266,6 +266,116 @@ jobs:
         run: pixi run --skip-deps tsan-worker
         env:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
+
+  # The declared group's system tier, split into three parts by pytest-split on recorded test times
+  # (tools/ci/system-tests-part.sh). A test with no recorded time counts as the average. Each part
+  # keeps its JUnit report and durations as an artifact, and on main the `system durations` job
+  # merges them for the next run's split.
+  system:
+    name: system · ${{ matrix.platform }} · ${{ matrix.part }}/3
+    if: github.event.pull_request.head.repo.fork == false
+    environment: crysta-sdk
+    needs: changes
+    env:
+      CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [Linux, macOS]
+        part: [1, 2, 3]
+        include:
+          - platform: Linux
+            runner: *linux
+          - platform: macOS
+            runner: *macos
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-pixi
+      # The compiler cache (core), between runs: the native job keeps it; this job only reads it.
+      - id: ccache
+        uses: ./.github/actions/ccache
+        with:
+          max-size: 400M
+      - uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/edi-ccache
+          key: ccache-core-${{ steps.ccache.outputs.key-prefix }}${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ccache-core-${{ steps.ccache.outputs.key-prefix }}
+            ccache-core-${{ runner.os }}-${{ runner.arch }}-
+      - name: Mint a crysta installation token
+        id: crysta-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.ENHANTICA_APP_ID }}
+          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          owner: enhantica
+          repositories: crysta
+          permission-contents: read
+          permission-actions: read
+      - name: Build the native code
+        run: pixi run core-build
+        env:
+          GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
+      - name: Restore the recorded test durations
+        uses: actions/cache/restore@v4
+        with:
+          path: build/test-durations.json
+          key: test-durations-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: test-durations-${{ runner.os }}-
+      - name: Tests (declared group, system part)
+        run: pixi run system-tests-part ${{ matrix.part }} 3
+        env:
+          GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
+      - name: Keep the part's JUnit report and durations
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: system-${{ matrix.platform }}-${{ matrix.part }}
+          path: |
+            build/junit-system-${{ matrix.part }}.xml
+            build/test-durations-${{ matrix.part }}.json
+          if-no-files-found: warn
+
+  # On main, the three parts' durations become the recorded times the next runs split by.
+  system-durations:
+    name: system durations · ${{ matrix.platform }}
+    if: github.event_name == 'push'
+    needs: system
+    strategy:
+      matrix:
+        include:
+          - platform: Linux
+            runner: *linux
+          - platform: macOS
+            runner: *macos
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Restore the recorded test durations
+        uses: actions/cache/restore@v4
+        with:
+          path: build/test-durations.json
+          key: test-durations-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: test-durations-${{ runner.os }}-
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: system-${{ matrix.platform }}-*
+          path: build/parts
+          merge-multiple: true
+      - name: Merge the parts' durations
+        run: |
+          python3 tools/ci/merge_test_durations.py --recorded build/test-durations.json \
+            --out build/merged/test-durations.json build/parts/test-durations-*.json
+          mv build/merged/test-durations.json build/test-durations.json
+      - name: Record the durations for the next runs
+        uses: actions/cache/save@v4
+        with:
+          path: build/test-durations.json
+          key: test-durations-${{ runner.os }}-${{ github.run_id }}
 
   notebooks:
     name: notebooks
