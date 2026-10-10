@@ -59,6 +59,11 @@ The prior tables, including scan extract columns, follow the same width policy.
 The row models and their editing/undo paths remain the data source. Computed
 pattern cells show only a published calculation and clear on refusal.
 
+Messages retain their content-dependent row heights. Their wrapped label binds
+its initial width to the resolved text column before the delegate applies widths;
+the legacy label's height-dependent default width would otherwise make wrapping
+and row height depend on each other during construction.
+
 ## Identifier correction
 
 Row numbering and stored identifiers are distinct columns. Atom-site and

@@ -12,7 +12,7 @@ import edi.app
 
 // The messages, opened from the status bar's messages item (edi ADR-0017 §14): the same dialog as About and
 // Preferences, of a fixed width, as tall as its rows need within the window. Its list is a sidebar table (the
-// base TableView, headerless and framed as Examples and Recent projects), over every message of the session's
+// base ListView, headerless and framed as Examples and Recent projects), over every message of the session's
 // one list — the loader's warnings and the calculation's refusals — each marked by its kind (a warning's
 // orange triangle; an error's red cross and red text), wrapped to as many lines as it needs, with its own
 // dismiss button. Empty, it shows a muted icon and "No messages" in one row. Dismiss all sits in the dialog's
@@ -103,6 +103,8 @@ AppDialog {
                 EaComponents.TableViewLabel {
                     id: messageCell
                     objectName: `warnings.message.${row.index}`
+                    // Wrapping determines the row height, so its initial width must not depend on that height.
+                    width: table.resolvedColumnWidths[1] ?? 0
                     horizontalAlignment: Text.AlignLeft
                     elide: Text.ElideNone
                     wrapMode: Text.Wrap
