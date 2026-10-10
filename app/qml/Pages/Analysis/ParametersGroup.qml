@@ -168,11 +168,11 @@ EaElements.GroupBox {
                     text: qsTr("s.u.")
                 }
                 EaComponents.TableViewLabel {
-                    horizontalAlignment: Text.AlignHCenter
+                    horizontalAlignment: Text.AlignRight
                     text: qsTr("min")
                 }
                 EaComponents.TableViewLabel {
-                    horizontalAlignment: Text.AlignHCenter
+                    horizontalAlignment: Text.AlignRight
                     text: qsTr("max")
                 }
                 EaComponents.TableViewLabel {
@@ -240,12 +240,12 @@ EaElements.GroupBox {
                     text: row.parameter && row.parameter.hasUncertainty ? NumberText.error(row.parameter.uncertainty, 0, row.parameter.value) : ""
                 }
                 EaComponents.TableViewLabel {
-                    horizontalAlignment: Text.AlignHCenter
+                    horizontalAlignment: Text.AlignRight
                     color: EaStyle.Colors.themeForegroundMinor
                     text: group.bound(row.minimum)
                 }
                 EaComponents.TableViewLabel {
-                    horizontalAlignment: Text.AlignHCenter
+                    horizontalAlignment: Text.AlignRight
                     color: EaStyle.Colors.themeForegroundMinor
                     text: group.bound(row.maximum)
                 }
