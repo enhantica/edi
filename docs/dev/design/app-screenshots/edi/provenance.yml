@@ -8,7 +8,7 @@ source_commit: a980104ffc32f1e6f6fe1ccb2f523bceb42ab24d
 platform: Linux x86_64, QT_QPA_PLATFORM=xcb (Xwayland on headless Weston, Mesa llvmpipe OpenGL)
 qt_version: 6.11.2
 window: 1280x768, device-pixel ratio 1
-images: 73
+images: 77
 # 40 of the 68 were replaced one by one at 147a9cb, after the note above was written; the other 28 are
 # unchanged from source_commit above.
 reblessed:
