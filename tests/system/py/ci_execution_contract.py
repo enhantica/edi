@@ -11,6 +11,7 @@ import json
 import re
 import shlex
 import subprocess
+import tempfile
 import tomllib
 
 import yaml
@@ -301,15 +302,24 @@ pytest() { return 0; }
         'GITHUB_EVENT_NAME': ctx['github.event_name'],
     }
     # Only commands on the collector's dependency path enter this bounded probe.
-    result = subprocess.run(
-        ['/bin/bash', '-e', '-c', '\n'.join(functions) + '\n' + stub + '\n' + render(script, ctx)],
-        cwd=root,
-        env=env,
-        text=True,
-        capture_output=True,
-        timeout=2,
-        check=False,
-    )
+    # Candidate task bodies are dry-run inputs, including inline cleanup commands.
+    # Never execute them from the checkout or its shared build directory.
+    with tempfile.TemporaryDirectory(prefix='ci-cadence-trace-') as scratch:
+        env['GITHUB_WORKSPACE'] = scratch
+        result = subprocess.run(
+            [
+                '/bin/bash',
+                '-e',
+                '-c',
+                '\n'.join(functions) + '\n' + stub + '\n' + render(script, ctx),
+            ],
+            cwd=scratch,
+            env=env,
+            text=True,
+            capture_output=True,
+            timeout=2,
+            check=False,
+        )
     lines = result.stdout.splitlines()
     observations = [
         (line.removeprefix('E09TRACE '), shlex.split(lines[i + 1]))

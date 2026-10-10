@@ -205,3 +205,26 @@ def test_smoke_auditor_rejects_same_keyword_non_witnesses(category):
         'CI policy: a same-keyword declaration, refusal or parameter cannot replace '
         'behavioral execution'
     )
+
+
+@pytest.mark.parametrize('cleanup', ['rm -rf build', '/bin/rm -rf build', 'command rm -rf build'])
+def test_execution_path_probe_cannot_clean_the_product_build(tmp_path, cleanup):
+    workflow, policy, expected = control(tmp_path)
+    build = tmp_path / 'build'
+    build.mkdir()
+    sentinel = build / 'native-build-preserved'
+    sentinel.write_text('independent preexisting build')
+    tmp_path.joinpath('pixi.toml').write_text(
+        '[tasks]\ngroup-nightly-full = "' + cleanup + ' && python tools/ci/run-selection.py '
+        '--group nightly-full --platform osx-arm64 '
+        '--output-dir /tmp/ci-selection-probe/result"\n'
+    )
+    assert not execution_errors(
+        tmp_path, workflow, policy, 'schedule', 'osx-arm64', 'nightly-full', expected
+    ), 'CI policy: a connected task remains traceable when it contains inline cleanup'
+    assert sentinel.is_file(), (
+        'CI policy: dry-run task tracing retains the preexisting build directory'
+    )
+    assert sentinel.read_text() == 'independent preexisting build', (
+        'CI policy: dry-run task tracing cannot delete the product checkout build directory'
+    )

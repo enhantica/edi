@@ -7,7 +7,6 @@ import copy
 import itertools
 import json
 import re
-import subprocess
 from collections import Counter
 from pathlib import Path
 
@@ -159,23 +158,6 @@ def command_text(script):
         for line in script.splitlines()
         if line.strip() and not line.lstrip().startswith('#')
     )
-
-
-def selection_trace(script, ctx):
-    source = rendered(script, ctx)
-    run = subprocess.run(
-        ['/bin/bash', '-e', '-c', 'pixi() { printf "%s\\n" "$*"; };\n' + source],
-        env={'PATH': '/usr/bin:/bin'},
-        cwd=ROOT,
-        text=True,
-        capture_output=True,
-        timeout=2,
-        check=False,
-    )
-    assert run.returncode == 0, (
-        'CI policy: the concrete Linux group command must execute without a hidden failing branch'
-    )
-    return run.stdout.splitlines()
 
 
 @pytest.mark.parametrize('event', ['pull_request', 'push'])
