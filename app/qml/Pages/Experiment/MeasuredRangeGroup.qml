@@ -172,9 +172,16 @@ Column {
                 horizontalAlignment: Text.AlignHCenter
                 text: group.intensity(row.model.residual)
             }
-            EaComponents.TableViewLabel {
+            // The point's calculation status as an icon, the word in its tooltip, as the experiments' fit column.
+            IconCell {
+                readonly property string status: !table.model ? "" : table.model.stale ? "pending" : table.model.calculationError ? "failed" : row.model.calcStatus ?? ""
+
                 horizontalAlignment: Text.AlignHCenter
-                text: !table.model ? "" : table.model.stale ? qsTr("pending") : table.model.calculationError ? qsTr("failed") : row.model.calcStatus ?? ""
+                objectName: `data.status.${row.index}`
+                icon: status === "incl" ? FitOutcomes.icon("success") : status === "excl" ? "minus-circle" : status === "failed" ? FitOutcomes.icon("failed") : ""
+                iconColor: String(status === "incl" ? EaStyle.Colors.green : status === "failed" ? EaStyle.Colors.red : EaStyle.Colors.themeForegroundMinor)
+                ring: status === "pending"
+                toolTip: status === "incl" ? qsTr("Included") : status === "excl" ? qsTr("Excluded") : status === "pending" ? qsTr("Pending") : status === "failed" ? qsTr("Failed") : ""
             }
         }
     }

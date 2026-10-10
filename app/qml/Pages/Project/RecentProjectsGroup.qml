@@ -68,11 +68,13 @@ EaElements.GroupBox {
                     horizontalAlignment: Text.AlignLeft
                     ToolTip.text: row.path
                 }
-                EaComponents.TableViewLabel {
+                // Found or missing on disk as an icon, the word in its tooltip, as the experiments' fit column.
+                IconCell {
                     horizontalAlignment: Text.AlignHCenter
                     objectName: `recentProjects.status.${row.index}`
-                    text: row.available ? qsTr("Found") : qsTr("Missing")
-                    color: row.available ? EaStyle.Colors.themeForegroundMinor : EaStyle.Colors.red
+                    icon: row.available ? FitOutcomes.icon("success") : "exclamation-triangle"
+                    iconColor: String(row.available ? EaStyle.Colors.green : EaStyle.Colors.red)
+                    toolTip: row.available ? qsTr("Found") : qsTr("Missing")
                 }
                 EaComponents.TableViewButton {
                     horizontalAlignment: Text.AlignHCenter
