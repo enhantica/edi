@@ -27,3 +27,7 @@ Execution tracing supports the default Bash shell and explicit `bash`, the repos
 Concurrency resolves each configured supported event and its matching main, slot or repair ref. Consecutive push, schedule and manual runs receive the same queued-successor protection as PR runs, at workflow and job scope.
 
 The restored scale source is compared against the frozen executable AST, including imports, fixtures, assertions and limits; only the module docstring may change. Mutation controls reject weakened or missing bodies. Both regular Linux groups must retain every frozen small-scan identity.
+
+Direct collector/validator arguments accept separated and equals-form values, require nonempty values, and refuse duplicates across both spellings. Each configured schedule contributes its own cron payload; non-PR events have absent PR properties. Every supported configured event and positive branch pattern must have a valid representative, otherwise the bounded checker refuses rather than proving an empty loop. The full-task policy stays stronger than the fast-path schedule-separated supersession.
+
+`accepted-main-sdk-source.json` independently pins main commit `7d04d1c`: only its desktop token fallback may extend the original SDK source closure; every other byte remains frozen. Skip inventory compares explicit empty AST fields across pinned Python versions and ignores only the direct `pytest.skip` diagnostic reason, retaining call counts and skip/xfail conditions.

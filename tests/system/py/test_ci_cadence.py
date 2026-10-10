@@ -294,6 +294,44 @@ def test_selection_auditor_reaches_each_inventory_escape(damage):
     )
 
 
+def nonexecution_identity(dump):
+    # A pytest.skip reason is diagnostic text, not an additional nonexecution path.
+    prefix = (
+        "Call(func=Attribute(value=Name(id='pytest', ctx=Load()), attr='skip', ctx=Load()), args="
+    )
+    suffix = ', keywords=[])'
+    if dump.startswith(prefix) and dump.endswith(suffix):
+        return prefix + '[<diagnostic reason>]' + suffix
+    return dump
+
+
+@pytest.mark.parametrize('damage', ['reason', 'extra-skip', 'skipif-condition', 'xfail-condition'])
+def test_nonexecution_check_ignores_only_skip_reason_text(damage):
+    source = "pytest.skip('missing corpus')"
+    actual = (
+        "pytest.skip('corpus not installed')"
+        if damage == 'reason'
+        else (
+            source + "\npytest.skip('added skip')"
+            if damage == 'extra-skip'
+            else 'pytest.mark.skipif(True, reason="missing corpus")'
+            if damage == 'skipif-condition'
+            else 'pytest.mark.xfail(True, reason="missing corpus")'
+        )
+    )
+
+    def identities(text):
+        return Counter(
+            nonexecution_identity(ast.dump(node, include_attributes=False, show_empty=True))
+            for node in ast.walk(ast.parse(text))
+            if isinstance(node, ast.Call)
+        )
+
+    assert bool(identities(actual) - identities(source)) is (damage != 'reason'), (
+        'CI policy: skip reason text may change; added paths and skip/xfail conditions refuse'
+    )
+
+
 def test_moved_tests_gain_no_skip_or_xfail():
     for path in {node.split('::')[0] for node in BASE['nodes'] if '.py::' in node}:
         file = ROOT / path
@@ -302,14 +340,14 @@ def test_moved_tests_gain_no_skip_or_xfail():
         )
         tree = ast.parse(file.read_text())
         calls = Counter(
-            ast.dump(node, include_attributes=False)
+            nonexecution_identity(ast.dump(node, include_attributes=False, show_empty=True))
             for node in ast.walk(tree)
             if isinstance(node, ast.Call)
             and any(token in ast.unparse(node.func) for token in ('skip', 'xfail'))
         )
-        assert not calls - Counter(BASE['nonexecution'].get(path, [])), (
-            'CI policy: moving tests does not add skips or expected failures to the frozen sources'
-        )
+        assert not calls - Counter(
+            nonexecution_identity(item) for item in BASE['nonexecution'].get(path, [])
+        ), 'CI policy: moving tests does not add skips or expected failures to the frozen sources'
 
 
 def test_nightly_and_regular_workflows_cannot_cancel_each_other_or_active_rounds():
@@ -444,9 +482,9 @@ def test_main_sdk_token_adaptation_preserves_the_frozen_qualification_closure(da
     )
     source = baseline if damage == 'unchanged' else accepted['source']
     if damage == 'changed-pin':
-        source += '\n# unreviewed source-pin change\n'
+        source = source.replace('return tag, digest', "return tag, 'unchecked'")
     elif damage == 'changed-sdk-output':
-        source = source.replace('def download(', 'def unqualified_download(')
+        source = source.replace('print(home)', "print('unqualified SDK')")
     elif damage == 'no-qualification':
         source = source.replace('def pin(', 'def unqualified_pin(')
     assert execution_source_matches(path, baseline, source) is (
