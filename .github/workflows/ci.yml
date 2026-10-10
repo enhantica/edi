@@ -576,7 +576,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/edi-wasm
-          key: edi-wasm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/ci/wasm-env.sh') }}
+          key: edi-wasm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/ci/wasm-env.sh', 'tests/fixtures/web_parallel/package-lock.json') }}
       - name: Install the WebAssembly toolchain  # Emscripten, Qt's wasm kits, Eigen, Chrome
         run: pixi run -e app wasm-toolchain
       - name: Build both kits and pack the site
@@ -594,6 +594,11 @@ jobs:
         run: >-
           pixi run --skip-deps wasm-check "$RUNNER_TEMP/edi-webapp-checks" tests/system/manual/e04_t11_browser.mjs
           tests/system/py/test_e04_t11_wasm_fit.py tests/system/py/test_e04_t11_wasm_delivery.py
+      # The multithread kit's parallel fit: all three routes timed against each other (the speed ratio is in the log)
+      # and crysta's executed-body witness built from the same crysta source with the same options.
+      - name: Check the parallel engine in the browser
+        if: ${{ !cancelled() }}
+        run: pixi run --skip-deps wasm-parallel-check "$RUNNER_TEMP/edi-webapp-checks/parallel"
       - name: Upload the browser checks' screenshots and logs
         if: always()
         uses: actions/upload-artifact@v4
