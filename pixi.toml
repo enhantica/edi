@@ -319,7 +319,8 @@ nightly-tests = { cmd = [
 ], depends-on = ["core-build"] }
 # CI runs the same selection as parallel jobs (owner, 2026-10-08): `core-tests` (unit and integration) in
 # the core job, and `system-tests-part <part>` for each third of the system tier, split by recorded test
-# times (tools/ci/system-tests-part.sh). Together they are exactly quick-tests' selection.
+# times (tools/ci/system-tests-part.sh). On a pull request they are exactly quick-tests' selection; on main
+# and nightly the system parts also run the nightly group.
 core-tests = { cmd = [
     "python", "-m", "pytest",
     "tests/unit", "tests/integration", "--ignore=tests/integration/app",

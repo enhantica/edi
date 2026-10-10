@@ -10,6 +10,9 @@
 # all the parts are balanced by count. The run writes its own tests' durations to
 # build/test-durations-<part>.json, which CI keeps as an artifact and merges on main
 # (tools/ci/merge_test_durations.py).
+#
+# With EDI_SKIP_NIGHTLY_GROUP=true (a pull request) the files of the `nightly` group in tests/test-groups.json
+# are left out; main pushes and the nightly schedule run them.
 set -euo pipefail
 part="${1:?usage: system-tests-part <part> [<parts>]}"
 parts="${2:-3}"
@@ -19,6 +22,12 @@ mkdir -p build
 recorded="${EDI_TEST_DURATIONS:-build/test-durations.json}"
 own="build/test-durations-$part.json"
 if [ -f "$recorded" ]; then cp "$recorded" "$own"; else echo '{}' > "$own"; fi
-exec python -m pytest tests/system -q \
+set --
+if [ "${EDI_SKIP_NIGHTLY_GROUP:-false}" = true ]; then
+  nightly="$(python -c 'import json; print("\n".join(json.load(open("tests/test-groups.json"))["groups"]["nightly"]["paths"]))')"
+  [ -n "$nightly" ] || { echo "system-tests-part: the nightly group names no files" >&2; exit 2; }
+  while IFS= read -r path; do set -- "$@" "--ignore=$path"; done <<< "$nightly"
+fi
+exec python -m pytest tests/system -q "$@" \
     --splits "$parts" --group "$part" --splitting-algorithm least_duration \
     --durations-path "$own" --store-durations
