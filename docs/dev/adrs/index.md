@@ -52,6 +52,7 @@ in the same change — see `AGENTS.md` §ADRs.
 | [0028](0028-uncertainty-bound-from-fit-conditioning.md) | Uncertainty bound from the fit's conditioning | Accepted | ✅ | Medium | the browser checks bound each fitted uncertainty by `max(5e-10, 5e-9 σ, τσ)`, `τ` derived from the native fit's scaled normal matrix and its size alone; values and patterns keep their bounds; a larger gap is a defect |
 | [0029](0029-listview-tables.md) | ListView tables | Accepted | ✅ | High | table sizing, scrolling, parameter filters and project lists |
 | [0030](0030-parameter-filter-subsets.md) | Parameter filter subsets | Accepted | ✅ | Medium | flat menu with bold datablocks, proper atomic and peak subsets, shared counts and predicates |
+| [0031](0031-example-metadata-and-filters.md) | Example metadata and filters | Accepted | ✅ | Medium | the app's bundled `examples/metadata.json` describes each example; the catalogue filters and searches it without changing an example's identity |
 
 New cross-cutting decisions that should also bind crysta are authored as **(shared)** and, once the
 Copier agent-OS template exists (ADR-0004), live in its shared-ADR range so `copier update`

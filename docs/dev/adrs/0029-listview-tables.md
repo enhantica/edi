@@ -81,3 +81,17 @@ Qt 6.11. edi replaces that one component at the module seam with the pinned sour
 `model: listView.model ?? null` on ItemSelectionModel and a typed ListViewHeader
 cast for the column-width lookup, allowing the replacement to pass edi's lint gate. The upstream checkout stays untouched;
 the app lifecycle gate covers direct undefined initialization and attach/detach transitions.
+
+## Parameter menus
+
+The field and table-cell parameter menus use the same s.u./free terminology as
+Analysis and show a units column whenever the parameter has units. Both pinned
+parameter controls are replaced through ADR-0015's declared host seam; their edit
+and fit-toggle behavior stays shared with the original controls.
+
+## Opening project rows
+
+Examples and Recent projects use an explicit row-parent mouse area for opening.
+A second default-property TapHandler competes with the pinned delegate's selection
+handler and can lose the click. Recent projects reserve the remove button's column
+outside the opening area; missing projects stay visible without opening.

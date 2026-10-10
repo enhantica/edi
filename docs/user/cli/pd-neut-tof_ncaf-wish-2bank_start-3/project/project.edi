@@ -1,5 +1,10 @@
 _edi.schema_version 2
 
 _metadata.name             ncaf_wish_2bank_s3
-_metadata.title            " graded start s3 of refine-ncaf-wish-2bank"
-_metadata.description      ?
+_metadata.title "Na₂Ca₃Al₂F₁₄ [I2₁3] · WISH @ ISIS"
+_metadata.description "2 banks · Shared atomic displacement · Jorgensen profile · Starting model 3"
+_metadata.purpose "refinement"
+_metadata.dimensionality "1D"
+_metadata.instrument "WISH"
+_metadata.facility "ISIS"
+_metadata.polarisation "none"

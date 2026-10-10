@@ -1,8 +1,13 @@
 _edi.schema_version 3
 
 _metadata.name             pd_neut_cwl_y2o3_beta_adp
-_metadata.title            "Y2O3, beta ADPs, scale against FullProf"
-_metadata.description      ?
+_metadata.title "Y₂O₃ [Ia-3] · Unknown instrument"
+_metadata.description "Symmetry-constrained anisotropic β tensors · Scale-only refinement"
 _metadata.created          "06 Oct 2026 16:43:16"
 _metadata.last_modified    "06 Oct 2026 16:43:17"
 _metadata.timestamp        ?
+_metadata.purpose "refinement"
+_metadata.dimensionality "1D"
+_metadata.instrument ?
+_metadata.facility ?
+_metadata.polarisation "none"

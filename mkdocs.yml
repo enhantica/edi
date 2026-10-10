@@ -60,6 +60,7 @@ nav:
           - dev/adrs/0028-uncertainty-bound-from-fit-conditioning.md
           - dev/adrs/0029-listview-tables.md
           - dev/adrs/0030-parameter-filter-subsets.md
+          - dev/adrs/0031-example-metadata-and-filters.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md

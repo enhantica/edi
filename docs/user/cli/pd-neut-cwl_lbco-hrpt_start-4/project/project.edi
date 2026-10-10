@@ -1,5 +1,10 @@
 _edi.schema_version 2
 
 _metadata.name             lbco_hrpt_s4
-_metadata.title            " graded start s4 of refine-lbco-hrpt"
-_metadata.description      ?
+_metadata.title "La₀.₅Ba₀.₅CoO₃ [Pm-3m] · HRPT @ PSI"
+_metadata.description "Cubic perovskite structure and profile refinement · Starting model 4"
+_metadata.purpose "refinement"
+_metadata.dimensionality "1D"
+_metadata.instrument "HRPT"
+_metadata.facility "PSI"
+_metadata.polarisation "none"
