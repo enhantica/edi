@@ -352,9 +352,9 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                              "expand:group.joint_fit"}});
     steps_.push_back({"t17-74-mode-scan", start + open_example("pd-neut-cwl_cosio-d20_scan-3f")
                                               + QStringList{analysis, extras, "expand:group.fitting_mode", "fittingMode.type"}});
-    // A right click on the parameter table's "free" title: the shown rows' state, then all of them fixed at once.
+    // A click on the parameter table's "free" title: the shown rows' state, then all of them fixed at once.
     steps_.push_back({"t17-75-free-header", start + open_example("pd-neut-cwl_lbco-hrpt_start-2")
-                                                + QStringList{analysis, basic, "right-click:parameters.freeHeader"}});
+                                                + QStringList{analysis, basic, "parameters.freeHeader"}});
     steps_.push_back({"t17-76-free-header-fixed", {"parameters.freeHeader.fixed"}});
     // Reset to the initial state lands on the Project page (owner, 2026-10-11).
     steps_.push_back({"t17-77-reset", {"appBar.button.reset"}});

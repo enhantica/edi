@@ -45,70 +45,68 @@ EaElements.Menu {
 
     width: layout.implicitWidth
 
-    Grid {
+    // Three rows, each an Analysis-table row high, a count right after its label (the owner, 2026-10-11).
+    component StateRow: Row {
+        id: stateRow
+
+        property string buttonName: ""
+        property string label: ""
+        property string count: ""
+        property bool choosable: true
+        property bool selected: false
+        property bool active: true
+        signal chosen
+
+        height: EaStyle.Sizes.tableRowHeight
+        spacing: 0.5 * EaStyle.Sizes.fontPixelSize
+
+        EaElements.RadioButton {
+            objectName: stateRow.buttonName
+            anchors.verticalCenter: parent.verticalCenter
+            verticalPadding: 0
+            text: stateRow.label
+            autoExclusive: false
+            checkable: stateRow.choosable
+            enabled: stateRow.active
+            checked: stateRow.selected
+            onClicked: stateRow.chosen()
+        }
+        EaElements.Label {
+            anchors.verticalCenter: parent.verticalCenter
+            color: EaStyle.Colors.themeForegroundMinor
+            text: stateRow.count
+        }
+    }
+
+    Column {
         id: layout
 
-        leftPadding: 1.25 * EaStyle.Sizes.fontPixelSize
+        leftPadding: 0.75 * EaStyle.Sizes.fontPixelSize
         rightPadding: 1.25 * EaStyle.Sizes.fontPixelSize
-        topPadding: 0.5 * EaStyle.Sizes.fontPixelSize
-        bottomPadding: 0.75 * EaStyle.Sizes.fontPixelSize
-        rowSpacing: 0.25 * EaStyle.Sizes.fontPixelSize
-        columnSpacing: 1.5 * EaStyle.Sizes.fontPixelSize
-        columns: 2
-        verticalItemAlignment: Grid.AlignVCenter
 
-        EaElements.Label {
-            color: EaStyle.Colors.themeForegroundMinor
-            text: menu.shown.length === 1 ? qsTr("Free · 1 shown parameter") : qsTr("Free · %1 shown parameters").arg(menu.shown.length)
+        StateRow {
+            buttonName: "parameters.freeHeader.free"
+            label: qsTr("Free")
+            count: qsTr("all %1").arg(menu.shown.length)
+            active: menu.shown.length > 0
+            selected: menu.shown.length > 0 && menu.fixedCount === 0
+            onChosen: menu.apply(true)
         }
-        Item {
-            width: 1
-            height: 1
+        StateRow {
+            buttonName: "parameters.freeHeader.fixed"
+            label: qsTr("Fixed")
+            count: qsTr("all %1").arg(menu.shown.length)
+            active: menu.shown.length > 0
+            selected: menu.shown.length > 0 && menu.freeCount === 0
+            onChosen: menu.apply(false)
         }
-
-        EaElements.RadioButton {
-            objectName: "parameters.freeHeader.free"
-            text: qsTr("Free")
-            autoExclusive: false
-            enabled: menu.shown.length > 0
-            checked: menu.shown.length > 0 && menu.fixedCount === 0
-            onClicked: menu.apply(true)
-        }
-        EaElements.Label {
-            color: EaStyle.Colors.themeForegroundMinor
-            text: qsTr("all %1").arg(menu.shown.length)
-        }
-
-        EaElements.RadioButton {
-            objectName: "parameters.freeHeader.fixed"
-            text: qsTr("Fixed")
-            autoExclusive: false
-            enabled: menu.shown.length > 0
-            checked: menu.shown.length > 0 && menu.freeCount === 0
-            onClicked: menu.apply(false)
-        }
-        EaElements.Label {
-            color: EaStyle.Colors.themeForegroundMinor
-            text: qsTr("all %1").arg(menu.shown.length)
-        }
-
-        EaElements.RadioButton {
-            objectName: "parameters.freeHeader.mixed"
-            text: qsTr("Mixed")
-            autoExclusive: false
-            checkable: false
-            enabled: menu.freeCount > 0 && menu.fixedCount > 0
-            checked: enabled
-        }
-        EaElements.Label {
-            color: EaStyle.Colors.themeForegroundMinor
-            text: qsTr("%1 free · %2 fixed").arg(menu.freeCount).arg(menu.fixedCount)
-        }
-
-        EaElements.Label {
-            topPadding: 0.5 * EaStyle.Sizes.fontPixelSize
-            color: EaStyle.Colors.themeForegroundMinor
-            text: qsTr("Applies to the rows the filters show. Undo with Ctrl+Z.")
+        StateRow {
+            buttonName: "parameters.freeHeader.mixed"
+            label: qsTr("Mixed")
+            count: qsTr("%1 free · %2 fixed").arg(menu.freeCount).arg(menu.fixedCount)
+            choosable: false
+            active: menu.freeCount > 0 && menu.fixedCount > 0
+            selected: active
         }
     }
 }

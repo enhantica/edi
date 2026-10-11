@@ -175,22 +175,27 @@ EaElements.GroupBox {
                     horizontalAlignment: Text.AlignRight
                     text: qsTr("max")
                 }
-                // A right click on the title frees or fixes every row the filters show, as one Undo step (the owner,
-                // 2026-10-11).
+                // The title is a button: a click frees or fixes every row the filters show, as one Undo step (the
+                // owner, 2026-10-11).
                 EaComponents.TableViewLabel {
                     id: freeTitle
                     objectName: "parameters.freeHeader"
                     horizontalAlignment: Text.AlignHCenter
+                    color: freeArea.containsMouse ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
                     text: qsTr("free")
 
+                    // On the header itself, over this cell: the header's own click area covers its cells.
                     MouseArea {
-                        anchors.fill: parent
-                        acceptedButtons: Qt.RightButton
+                        id: freeArea
+                        parent: freeTitle.parent ? freeTitle.parent.parent : freeTitle
+                        z: 1
+                        x: freeTitle.parent ? freeTitle.parent.x + freeTitle.x : 0
+                        y: freeTitle.y
+                        width: freeTitle.width
+                        height: freeTitle.height
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
                         onClicked: freeMenu.popup()
-                        onPressAndHold: mouse => {
-                            if (mouse.source === Qt.MouseEventNotSynthesized)
-                                freeMenu.popup();
-                        }
                     }
                     FreeHeaderMenu {
                         id: freeMenu
