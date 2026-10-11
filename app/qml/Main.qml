@@ -158,7 +158,7 @@ EaComponents.ApplicationWindow {
         Loader {
             id: experimentLoader
 
-            active: AppState.experimentPageEnabled
+            active: AppState.experimentPageReached
             sourceComponent: Component {
                 ExperimentPage {
                     current: experimentLoader.SwipeView.isCurrentItem
@@ -168,7 +168,7 @@ EaComponents.ApplicationWindow {
         Loader {
             id: analysisLoader
 
-            active: AppState.analysisPageEnabled
+            active: AppState.analysisPageReached
             sourceComponent: Component {
                 AnalysisPage {
                     current: analysisLoader.SwipeView.isCurrentItem
@@ -178,7 +178,7 @@ EaComponents.ApplicationWindow {
         Loader {
             id: reportLoader
 
-            active: AppState.reportPageEnabled
+            active: AppState.reportPageReached
             sourceComponent: Component {
                 ReportPage {
                     current: reportLoader.SwipeView.isCurrentItem
