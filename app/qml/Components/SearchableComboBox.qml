@@ -48,8 +48,12 @@ EaElements.ComboBox {
     }
     FontMetrics {
         id: optionMetrics
-        font: control.font
+        font.family: control.listFontFamily
+        font.pixelSize: control.font.pixelSize
     }
+    // The family the list's entries are drawn in: the box's own, unless its entries need characters only another
+    // bundled font has (the Wyckoff positions' fractions; never a platform fallback).
+    property string listFontFamily: font.family
     popup.width: inTable ? Math.min(Math.max(width, optionWidth), Math.max(width, control.Window.width - popup.leftMargin - popup.rightMargin)) : width
     readonly property bool searchable: count > searchThreshold
     property string searchText: ""
@@ -141,7 +145,7 @@ EaElements.ComboBox {
         width: entry.parent !== null ? entry.parent.width : 0
         height: matching ? EaStyle.Sizes.comboBoxHeight : 0
         opacity: matching ? 1 : 0
-        font.family: control.font.family
+        font.family: control.listFontFamily
         textFormat: control.textFormat
         elide: control.elide
         text: control.textRole ? (Array.isArray(control.model) ? entry.model.modelData[control.textRole] : entry.model[control.textRole]) : entry.model.modelData

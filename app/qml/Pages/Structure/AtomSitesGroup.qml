@@ -179,6 +179,8 @@ Column {
                     inTable: true
                     anchors.verticalCenter: parent.verticalCenter
                     model: group.sites ? group.sites.wyckoffLabels : []
+                    // PT Sans lacks the thirds, sixths and eighths in the coordinates; Noto Sans has them.
+                    listFontFamily: "Noto Sans"
                     currentIndex: letterIndex
                     displayText: letterIndex >= 0 ? group.sites.wyckoffNames[letterIndex] : row.wyckoffLetter
                     onActivated: index => {
