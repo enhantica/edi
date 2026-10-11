@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-11T02:35:53Z
+# measured_utc = 2026-10-11T02:45:09Z
 #
-# Recorded from: measure-retry.log (46 node(s) measured once, 9527 banked, 0 stale row(s) dropped)
-# Collected tests: 10274; with a reported duration: 5266
+# Recorded from: sequence-measure-final.log (28 node(s) measured once, 9546 banked, 0 stale row(s) dropped)
+# Collected tests: 10275; with a reported duration: 5267
 # Module-scoped fixture costs recorded: 32
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 10274
+# inventory_python = 10275
 # inventory_cpp = 302
-# inventory_measured = 9573
+# inventory_measured = 9574
 # inventory_unmeasured = 1003
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
@@ -3993,22 +3993,22 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e04_t1_app_contract.py::
 0.090	tests/integration/py/test_e04_t2_build_contract.py::test_ci_job_names_state_area_and_platform_and_share_matrices
 0.070	tests/integration/py/test_e04_t2_build_contract.py::test_crysta_build_and_prefix_are_isolated_by_environment
 0.040	tests/integration/py/test_e04_t2_build_contract.py::test_desktop_ci_builds_once_and_recovery_is_change_scoped
-0.590	tests/integration/py/test_e04_t2_build_contract.py::test_desktop_ci_sequence_builds_once_before_checks[Linux]
-0.560	tests/integration/py/test_e04_t2_build_contract.py::test_desktop_ci_sequence_builds_once_before_checks[macOS]
-0.120	tests/integration/py/test_e04_t2_build_contract.py::test_dispatcher_preserves_explicit_and_inherited_build_identity[False]
-0.120	tests/integration/py/test_e04_t2_build_contract.py::test_dispatcher_preserves_explicit_and_inherited_build_identity[True]
-0.360	tests/integration/py/test_e04_t2_build_contract.py::test_dispatcher_skip_deps_keeps_checker_and_environment[False-options0]
-0.360	tests/integration/py/test_e04_t2_build_contract.py::test_dispatcher_skip_deps_keeps_checker_and_environment[False-options1]
-0.350	tests/integration/py/test_e04_t2_build_contract.py::test_dispatcher_skip_deps_keeps_checker_and_environment[False-options2]
-0.380	tests/integration/py/test_e04_t2_build_contract.py::test_dispatcher_skip_deps_keeps_checker_and_environment[True-options0]
-0.380	tests/integration/py/test_e04_t2_build_contract.py::test_dispatcher_skip_deps_keeps_checker_and_environment[True-options1]
-0.370	tests/integration/py/test_e04_t2_build_contract.py::test_dispatcher_skip_deps_keeps_checker_and_environment[True-options2]
-0.260	tests/integration/py/test_e04_t2_build_contract.py::test_full_sequence_builds_once_before_checks[app-gates]
-0.260	tests/integration/py/test_e04_t2_build_contract.py::test_full_sequence_builds_once_before_checks[app-verify]
-0.260	tests/integration/py/test_e04_t2_build_contract.py::test_full_sequence_builds_once_before_checks[merge-tasks]
-0.260	tests/integration/py/test_e04_t2_build_contract.py::test_full_sequence_builds_once_before_checks[verify-full]
-0.280	tests/integration/py/test_e04_t2_build_contract.py::test_full_sequence_builds_once_before_checks[verify-quick]
-0.250	tests/integration/py/test_e04_t2_build_contract.py::test_full_sequence_builds_once_before_checks[verify]
+0.920	tests/integration/py/test_e04_t2_build_contract.py::test_desktop_ci_sequence_builds_once_before_checks[Linux]
+0.820	tests/integration/py/test_e04_t2_build_contract.py::test_desktop_ci_sequence_builds_once_before_checks[macOS]
+0.250	tests/integration/py/test_e04_t2_build_contract.py::test_dispatcher_preserves_explicit_and_inherited_build_identity[False]
+0.240	tests/integration/py/test_e04_t2_build_contract.py::test_dispatcher_preserves_explicit_and_inherited_build_identity[True]
+0.830	tests/integration/py/test_e04_t2_build_contract.py::test_dispatcher_skip_deps_keeps_checker_and_environment[False-options0]
+0.510	tests/integration/py/test_e04_t2_build_contract.py::test_dispatcher_skip_deps_keeps_checker_and_environment[False-options1]
+0.520	tests/integration/py/test_e04_t2_build_contract.py::test_dispatcher_skip_deps_keeps_checker_and_environment[False-options2]
+0.770	tests/integration/py/test_e04_t2_build_contract.py::test_dispatcher_skip_deps_keeps_checker_and_environment[True-options0]
+0.510	tests/integration/py/test_e04_t2_build_contract.py::test_dispatcher_skip_deps_keeps_checker_and_environment[True-options1]
+0.530	tests/integration/py/test_e04_t2_build_contract.py::test_dispatcher_skip_deps_keeps_checker_and_environment[True-options2]
+0.580	tests/integration/py/test_e04_t2_build_contract.py::test_full_sequence_builds_once_before_checks[app-gates]
+0.570	tests/integration/py/test_e04_t2_build_contract.py::test_full_sequence_builds_once_before_checks[app-verify]
+0.630	tests/integration/py/test_e04_t2_build_contract.py::test_full_sequence_builds_once_before_checks[merge-tasks]
+0.590	tests/integration/py/test_e04_t2_build_contract.py::test_full_sequence_builds_once_before_checks[verify-full]
+0.570	tests/integration/py/test_e04_t2_build_contract.py::test_full_sequence_builds_once_before_checks[verify-quick]
+0.880	tests/integration/py/test_e04_t2_build_contract.py::test_full_sequence_builds_once_before_checks[verify]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/analysis/analysis.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/experiments/d20.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/structures/cosio.edi]
@@ -4084,17 +4084,18 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e04_t1_app_contract.py::
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_sequence_observer_rejects_wrong_order_or_cardinality[late-build]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_sequence_observer_rejects_wrong_order_or_cardinality[missing-build]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_sequence_observer_rejects_wrong_order_or_cardinality[missing-check]
-0.130	tests/integration/py/test_e04_t2_build_contract.py::test_standalone_failed_build_prevents_checks[app-build-recovery]
-0.130	tests/integration/py/test_e04_t2_build_contract.py::test_standalone_failed_build_prevents_checks[app-format-check]
-0.140	tests/integration/py/test_e04_t2_build_contract.py::test_standalone_failed_build_prevents_checks[app-lint]
-0.130	tests/integration/py/test_e04_t2_build_contract.py::test_standalone_failed_build_prevents_checks[app-test]
-0.130	tests/integration/py/test_e04_t2_build_contract.py::test_standalone_failed_build_prevents_checks[app-ui-test]
-0.140	tests/integration/py/test_e04_t2_build_contract.py::test_standalone_failed_build_prevents_checks[group-app]
-0.220	tests/integration/py/test_e04_t2_build_contract.py::test_standalone_step_builds_first_every_time[app-format-check]
-0.320	tests/integration/py/test_e04_t2_build_contract.py::test_standalone_step_builds_first_every_time[app-lint]
-0.220	tests/integration/py/test_e04_t2_build_contract.py::test_standalone_step_builds_first_every_time[app-test]
-0.210	tests/integration/py/test_e04_t2_build_contract.py::test_standalone_step_builds_first_every_time[app-ui-test]
-0.190	tests/integration/py/test_e04_t2_build_contract.py::test_standalone_step_builds_first_every_time[group-app]
+0.700	tests/integration/py/test_e04_t2_build_contract.py::test_sequence_retains_the_source_checker_failure_barrier
+0.250	tests/integration/py/test_e04_t2_build_contract.py::test_standalone_failed_build_prevents_checks[app-build-recovery]
+0.230	tests/integration/py/test_e04_t2_build_contract.py::test_standalone_failed_build_prevents_checks[app-format-check]
+0.230	tests/integration/py/test_e04_t2_build_contract.py::test_standalone_failed_build_prevents_checks[app-lint]
+0.240	tests/integration/py/test_e04_t2_build_contract.py::test_standalone_failed_build_prevents_checks[app-test]
+0.620	tests/integration/py/test_e04_t2_build_contract.py::test_standalone_failed_build_prevents_checks[app-ui-test]
+0.370	tests/integration/py/test_e04_t2_build_contract.py::test_standalone_failed_build_prevents_checks[group-app]
+0.330	tests/integration/py/test_e04_t2_build_contract.py::test_standalone_step_builds_first_every_time[app-format-check]
+0.920	tests/integration/py/test_e04_t2_build_contract.py::test_standalone_step_builds_first_every_time[app-lint]
+0.370	tests/integration/py/test_e04_t2_build_contract.py::test_standalone_step_builds_first_every_time[app-test]
+0.430	tests/integration/py/test_e04_t2_build_contract.py::test_standalone_step_builds_first_every_time[app-ui-test]
+0.290	tests/integration/py/test_e04_t2_build_contract.py::test_standalone_step_builds_first_every_time[group-app]
 0.000	tests/integration/py/test_e04_t2_gate_escapes.py::test_image_family_inventory_rejects_damage[capture-missing]
 0.000	tests/integration/py/test_e04_t2_gate_escapes.py::test_image_family_inventory_rejects_damage[capture-unmapped]
 0.000	tests/integration/py/test_e04_t2_gate_escapes.py::test_image_family_inventory_rejects_damage[duplicate-state]
