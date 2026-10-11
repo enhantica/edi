@@ -71,12 +71,15 @@ EaElements.ComboBox {
     }
     // The list opens below the box, or above it where there is more room, never over it, so the box keeps
     // showing its value while one searches; it is as tall as its entries or the room allows, and keeps that
-    // height while a search shortens it.
+    // height while a search shortens it. A list wider than the box is moved left where it would pass the
+    // window's right edge.
     function placePopup() {
         const popup = control.popup;
         const window = control.Window.window;
         if (!window)
             return;
+        const left = control.mapToItem(null, 0, 0).x;
+        popup.x = Math.min(0, window.width - Math.max(0, popup.rightMargin) - popup.width - left);
         const top = control.mapToItem(null, 0, 0).y;
         const below = window.height - top - control.height - popup.bottomMargin;
         const above = top - popup.topMargin;

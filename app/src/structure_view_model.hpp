@@ -117,15 +117,18 @@ class AtomSiteListModel : public RowTableModel {
     Q_OBJECT
     QML_ELEMENT
     QML_UNCREATABLE("Belongs to a structure")
-    // The space group's Wyckoff positions (edi::wyckoff_positions): the letters, and what the WP column shows for
-    // each, its multiplicity, letter and coordinates ("4a (0,0,0)"; the owner, 2026-10-08).
+    // The space group's Wyckoff positions (edi::wyckoff_positions): the letters; each position's name, its
+    // multiplicity and letter ("4a"), which the closed WP box shows; and its list entry, the name and its coordinates
+    // with fraction glyphs ("8c: x, ¼, −x+½"; the owner, 2026-10-08 and 2026-10-11). Display only.
     Q_PROPERTY(QStringList wyckoffLetters READ wyckoffLetters NOTIFY wyckoffLettersChanged)
+    Q_PROPERTY(QStringList wyckoffNames READ wyckoffNames NOTIFY wyckoffNamesChanged)
     Q_PROPERTY(QStringList wyckoffLabels READ wyckoffLabels NOTIFY wyckoffLabelsChanged)
 
    public:
     AtomSiteListModel(edi::Structure& structure, ProjectEditor& editor, ParameterRegistry& registry, QObject* parent);
     void sync();
     QStringList wyckoffLetters() const { return wyckoff_letters_; }
+    QStringList wyckoffNames() const { return wyckoff_names_; }
     QStringList wyckoffLabels() const { return wyckoff_labels_; }
     Q_INVOKABLE bool setText(int row, const QString& role, const QString& value);
     // A random atom (edi::new_atom_site), from this model's random source.
@@ -137,6 +140,7 @@ class AtomSiteListModel : public RowTableModel {
 
    signals:
     void wyckoffLettersChanged();
+    void wyckoffNamesChanged();
     void wyckoffLabelsChanged();
 
    protected:
@@ -147,6 +151,7 @@ class AtomSiteListModel : public RowTableModel {
     ProjectEditor& editor_;
     ParameterRegistry& registry_;
     QStringList wyckoff_letters_;
+    QStringList wyckoff_names_;
     QStringList wyckoff_labels_;
     static std::optional<std::uint64_t>& fixedSeed();
     std::optional<std::mt19937_64> random_;

@@ -19,8 +19,22 @@ Column {
     property StructureViewModel structure: null
     readonly property AtomSiteListModel sites: structure ? structure.atomSites : null
     readonly property real typeWidth: EaStyle.Sizes.fontPixelSize * 4.5
-    // The WP column shows a position as "4a (0,0,0)" (the owner, 2026-10-08).
-    readonly property real wyckoffWidth: EaStyle.Sizes.fontPixelSize * 8.5
+    // The WP column fits the widest position name ("48n") and the box's arrow; its list shows the coordinates too (the
+    // owner, 2026-10-11).
+    readonly property real wyckoffWidth: {
+        let widest = 0;
+        const names = sites ? sites.wyckoffNames : [];
+        for (let i = 0; i < names.length; ++i)
+            widest = Math.max(widest, wyckoffMetrics.advanceWidth(names[i]));
+        return Math.ceil(Math.max(widest, wyckoffMetrics.advanceWidth("WP"))) + EaStyle.Sizes.fontPixelSize * 2.5;
+    }
+
+    FontMetrics {
+        id: wyckoffMetrics
+
+        font.family: EaStyle.Fonts.fontFamily
+        font.pixelSize: EaStyle.Sizes.fontPixelSize
+    }
 
     spacing: AppSizes.groupContentSpacing
 
@@ -166,8 +180,7 @@ Column {
                     anchors.verticalCenter: parent.verticalCenter
                     model: group.sites ? group.sites.wyckoffLabels : []
                     currentIndex: letterIndex
-                    displayText: letterIndex >= 0 ? group.sites.wyckoffLabels[letterIndex] : row.wyckoffLetter
-                    popup.width: Math.max(width, EaStyle.Sizes.fontPixelSize * 12)
+                    displayText: letterIndex >= 0 ? group.sites.wyckoffNames[letterIndex] : row.wyckoffLetter
                     onActivated: index => {
                         group.sites.setText(row.index, "wyckoffLetter", group.sites.wyckoffLetters[index]);
                         currentIndex = Qt.binding(() => letterIndex);

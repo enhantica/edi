@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "structure_view_model.hpp"
 
+#include <QRegularExpression>
 #include <QSet>
 #include <algorithm>
 #include <filesystem>
+#include <map>
 
 #include "edi/categories.hpp"
 #include "edi/edits.hpp"
@@ -181,6 +183,39 @@ AtomSiteListModel::AtomSiteListModel(edi::Structure& structure, ProjectEditor& e
     sync();
 }
 
+namespace {
+
+// A Wyckoff representative as crysta's table spells it ("1/2*x+1/2*y,1/2*x+1/2*y,z") as the WP list shows it
+// ("½x+½y, ½x+½y, z"): the common fractions as one glyph, no multiplication sign, a minus sign and a space after
+// each comma. Display only.
+QString wyckoff_coordinates_display(const std::string& representative) {
+    static const std::map<QString, QString> glyphs{
+        {QStringLiteral("1/2"), QStringLiteral("\u00BD")}, {QStringLiteral("1/3"), QStringLiteral("\u2153")},
+        {QStringLiteral("2/3"), QStringLiteral("\u2154")}, {QStringLiteral("1/4"), QStringLiteral("\u00BC")},
+        {QStringLiteral("3/4"), QStringLiteral("\u00BE")}, {QStringLiteral("1/6"), QStringLiteral("\u2159")},
+        {QStringLiteral("5/6"), QStringLiteral("\u215A")}, {QStringLiteral("1/8"), QStringLiteral("\u215B")},
+        {QStringLiteral("3/8"), QStringLiteral("\u215C")}, {QStringLiteral("5/8"), QStringLiteral("\u215D")},
+        {QStringLiteral("7/8"), QStringLiteral("\u215E")}};
+    QString text = QString::fromStdString(representative);
+    static const QRegularExpression fraction(QStringLiteral("(\\d+)/(\\d+)"));
+    QString out;
+    qsizetype last = 0;
+    for (QRegularExpressionMatchIterator match = fraction.globalMatch(text); match.hasNext();) {
+        const QRegularExpressionMatch found = match.next();
+        out += text.mid(last, found.capturedStart() - last);
+        const auto glyph = glyphs.find(found.captured(0));
+        out += glyph != glyphs.end() ? glyph->second : found.captured(0);
+        last = found.capturedEnd();
+    }
+    out += text.mid(last);
+    out.remove(QLatin1Char('*'));
+    out.replace(QLatin1Char('-'), QChar(0x2212));
+    out.replace(QLatin1Char(','), QStringLiteral(", "));
+    return out;
+}
+
+}  // namespace
+
 void AtomSiteListModel::sync() {
     QList<Row> rows;
     for (const auto& site : structure_.atom_sites) {
@@ -193,16 +228,21 @@ void AtomSiteListModel::sync() {
     }
     setTableRows(rows);
     QStringList letters;
+    QStringList names;
     QStringList labels;
     for (const edi::WyckoffOption& option : edi::wyckoff_positions(structure_)) {
+        const QString name = QStringLiteral("%1%2").arg(option.multiplicity).arg(QString::fromStdString(option.letter));
         letters.append(QString::fromStdString(option.letter));
-        labels.append(QStringLiteral("%1%2 (%3)")
-                          .arg(option.multiplicity)
-                          .arg(QString::fromStdString(option.letter), QString::fromStdString(option.coordinates)));
+        names.append(name);
+        labels.append(name + QStringLiteral(": ") + wyckoff_coordinates_display(option.coordinates));
     }
     if (letters != wyckoff_letters_) {
         wyckoff_letters_ = letters;
         emit wyckoffLettersChanged();
+    }
+    if (names != wyckoff_names_) {
+        wyckoff_names_ = names;
+        emit wyckoffNamesChanged();
     }
     if (labels != wyckoff_labels_) {
         wyckoff_labels_ = labels;
