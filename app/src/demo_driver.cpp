@@ -310,6 +310,9 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // 5 and 6: without an experiment Analysis and Summary are disabled; without a structure Experiment too.
     steps_.push_back({"t17-22-no-experiment", {"experiments.remove.0"}});
     steps_.push_back({"t17-23-no-structure", {"appBar.tab.structure", basic, "expand:group.structures", "structures.remove.0"}});
+    // 8: a created experiment's Load data… button, left-aligned under Data file.
+    steps_.push_back({"t17-24-load-data", start + open_example("pd-neut-cwl_cosio-d20_start-1")
+                                              + QStringList{experiment, basic, "expand:group.experiments", "experiments.create"}});
     // The polynomial and Chebyshev backgrounds' terms, and a type switch that asks before it removes the points.
     const QString background = QStringLiteral("expand:group.background");
     steps_.push_back({"t17-10-polynomial-terms", start + open_example("pd-neut-cwl_lab6-11b-echidna_tch-fcj")

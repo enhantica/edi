@@ -15,7 +15,7 @@ import edi.app
 // experiments, one current, each with how the last fit ended on it (Fit) and the file its data is in; under
 // the table the selected experiment's type (ExperimentTypeGroup), then Load experiment (`.edi` block files,
 // several at once, each with its type, data and parameters) and Create experiment (a new experiment without
-// data, a simulation). A row made with Create experiment has a Load data… button in its File cell until data is
+// data, a simulation). A row made with Create experiment has a Load data… button in its Data file cell until data is
 // loaded into it: a plain two- or three-column file whose rows become its measured data. Create, Load and Load
 // data are each one undoable step.
 EaElements.GroupBox {
@@ -64,7 +64,7 @@ EaElements.GroupBox {
                 }
                 EaComponents.TableViewLabel {
                     horizontalAlignment: Text.AlignLeft
-                    text: qsTr("File")
+                    text: qsTr("Data file")
                 }
                 // Keep the scan's repeated cells in one width-controlled column (ADR-0029).
                 Item {
@@ -179,7 +179,8 @@ EaElements.GroupBox {
                             text: qsTr("template")
                         }
                     }
-                    EaElements.Button {
+                    // A button, left-aligned in the Data file column and as wide as its text (the owner, 2026-10-08).
+                    EaElements.SideBarButton {
                         id: loadData
                         objectName: `experiments.loadData.${row.index}`
                         // An experiment made with Create experiment: Load data…, then the loaded file's name, which
@@ -187,12 +188,20 @@ EaElements.GroupBox {
                         // datasets and experiments loaded with their data show their file.
                         visible: !group.scan && row.experiment !== null && (row.experiment.canLoadData || row.experiment.calculationOnly)
                         anchors.verticalCenter: parent.verticalCenter
-                        width: parent.width
+                        width: Math.min(parent.width, Math.ceil(loadDataText.advanceWidth) + 2 * EaStyle.Sizes.fontPixelSize)
+                        height: parent.height - 2 * EaStyle.Sizes.borderThickness - 4
                         enabled: row.experiment !== null && row.experiment.canLoadData
                         text: row.experiment !== null && !row.experiment.calculationOnly ? row.file : qsTr("Load data…")
-                        ToolTip.visible: hovered && row.experiment !== null && !row.experiment.calculationOnly
-                        ToolTip.text: qsTr("Load another data file in place of this one")
+                        spacing: 0
+                        ToolTip.text: row.experiment !== null && !row.experiment.calculationOnly ? qsTr("Load another data file in place of this one") : ""
                         onClicked: group.chooseData(row.experiment)
+
+                        TextMetrics {
+                            id: loadDataText
+
+                            font: loadData.font
+                            text: loadData.text
+                        }
                     }
                 }
                 // What the scan's extract rules take from the dataset, with their units.
