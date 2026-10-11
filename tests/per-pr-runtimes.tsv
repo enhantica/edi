@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-11T17:21:58Z
+# measured_utc = 2026-10-11T19:35:07Z
 #
-# Recorded from: links-current.log (3 node(s) measured once, 9632 banked, 1 stale row(s) dropped)
-# Collected tests: 10370; with a reported duration: 5339
+# Recorded from: before-save.log (2 expected-red nodes), current-native.log (3 measured native nodes)
+# Collected tests: 10677; with a reported duration: 5342
 # Module-scoped fixture costs recorded: 34
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 10370
-# inventory_cpp = 302
-# inventory_measured = 9635
-# inventory_unmeasured = 1037
+# inventory_python = 10372
+# inventory_cpp = 305
+# inventory_measured = 9638
+# inventory_unmeasured = 1039
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -3719,6 +3719,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_supp
 0.000	tests/integration/py/test_cwl_rename_bytes.py::test_native_reference_and_sample_population_cannot_be_weakened[nonfinite]
 0.010	tests/integration/py/test_cwl_rename_bytes.py::test_tch_rename_preserves_pre_change_regression_bytes[fcj-cwl-tch-pseudo-voigt-fcj]
 0.010	tests/integration/py/test_cwl_rename_bytes.py::test_tch_rename_preserves_pre_change_regression_bytes[tch-cwl-tch-pseudo-voigt]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_datablock_rename.py::test_datablock_alias_rename_saves_and_reopens[experiment-hrpt-experiment1-hrpt.instrument.calib_twotheta_offset]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_datablock_rename.py::test_datablock_alias_rename_saves_and_reopens[structure-lbco-structure1-lbco.atom_site.La.adp_iso]
 0.000	tests/integration/py/test_descriptive_oracle_adaptation.py::test_descriptive_adaptation_refuses_nonpresentation_and_wrong_old_witnesses[duplicate]
 0.000	tests/integration/py/test_descriptive_oracle_adaptation.py::test_descriptive_adaptation_refuses_nonpresentation_and_wrong_old_witnesses[old-extra]
 0.000	tests/integration/py/test_descriptive_oracle_adaptation.py::test_descriptive_adaptation_refuses_nonpresentation_and_wrong_old_witnesses[old-hash]
@@ -9308,6 +9310,9 @@ UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_transitions.cpp::Na
 0.067	tests/unit/cpp/test_cwl_admission.cpp::CW native optional profile slots use declared defaults
 0.026	tests/unit/cpp/test_cwl_admission.cpp::CW native save admits only a matching token and slot block
 0.005	tests/unit/cpp/test_cwl_admission.cpp::CW real coefficient remains selectable with the fixed limit descriptor
+0.000	tests/unit/cpp/test_datablock_rename.cpp::Experiment rename follows all relation categories and exact name boundaries
+0.001	tests/unit/cpp/test_datablock_rename.cpp::Refused datablock rename preserves every reference
+0.001	tests/unit/cpp/test_datablock_rename.cpp::Structure rename follows all relation categories and exact name boundaries
 UNMEASURED:not-produced-by-this-run	tests/unit/cpp/test_e04_t10_scene.cpp::E04-T10 gate 1 every CLI scene equals independently loaded crysta geometry
 0.030	tests/unit/cpp/test_e05_t1_fit_job.cpp::E05-T1 gate 3 engine checkpoint cancel retains partial values and undo
 0.036	tests/unit/cpp/test_e05_t1_fit_job.cpp::E05-T1 gate 3 joint engine checkpoint cancel retains partial values and undo
