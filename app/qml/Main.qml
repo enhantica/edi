@@ -308,6 +308,40 @@ EaComponents.ApplicationWindow {
             text: fitError.message
         }
     }
+    // A refused open (a project, an example) or a refused change of the project (a load of experiments, a structure
+    // or data, …) always says why: never a silent no-op (the owner, 2026-10-11).
+    AppDialog {
+        id: refusal
+        objectName: "refusal.dialog"
+        property string message: ""
+        parent: Overlay.overlay
+        standardButtons: Dialog.Ok
+        contentWidth: AppSizes.messagesDialogContentWidth
+        contentHeight: refusalText.implicitHeight
+
+        EaElements.Label {
+            id: refusalText
+            width: refusal.contentWidth
+            wrapMode: Text.Wrap
+            text: refusal.message
+        }
+    }
+    Connections {
+        target: Session
+        function onLoadFailed(message) {
+            refusal.title = qsTr("The project was not opened");
+            refusal.message = message;
+            refusal.open();
+        }
+    }
+    Connections {
+        target: Session.project
+        function onRefused(message) {
+            refusal.title = qsTr("The change was not made");
+            refusal.message = message;
+            refusal.open();
+        }
+    }
     Connections {
         target: Session.project ? Session.project.fit : null
         function onFinished() {

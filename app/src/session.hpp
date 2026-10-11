@@ -129,8 +129,13 @@ class Session : public QObject {
     void projectLocationChanged();
     void needsSaveAsChanged();
     void lastErrorChanged();
+    // A project or an example could not be opened: every refused open says why (the window shows it), never a silent
+    // no-op.
+    void loadFailed(const QString& message);
 
    private:
+    bool openProjectAt(const QUrl& directory);
+    bool openExampleNamed(const QString& exampleId);
     bool open(const QString& directory, const QString& example);
     // Opens `source` (a read-only folder) from a writable copy at `target`: the project and its results are copied, and
     // a scan's data files linked, not duplicated.

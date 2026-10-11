@@ -112,6 +112,22 @@ Session::Session(QObject* parent)
 Session::~Session() = default;
 
 bool Session::openProject(const QUrl& directory) {
+    if (openProjectAt(directory)) {
+        return true;
+    }
+    emit loadFailed(last_error_.isEmpty() ? tr("The project could not be opened") : last_error_);
+    return false;
+}
+
+bool Session::openExample(const QString& exampleId) {
+    if (openExampleNamed(exampleId)) {
+        return true;
+    }
+    emit loadFailed(last_error_.isEmpty() ? tr("The project could not be opened") : last_error_);
+    return false;
+}
+
+bool Session::openProjectAt(const QUrl& directory) {
     if (!directory.isLocalFile()) {
         setLastError(QStringLiteral("cannot open %1: only local project directories (file: URLs) can be opened")
                          .arg(directory.toString()));
@@ -224,7 +240,7 @@ bool Session::saveAs(const QUrl& directory) {
     return true;
 }
 
-bool Session::openExample(const QString& exampleId) {
+bool Session::openExampleNamed(const QString& exampleId) {
     const QString source = kExamples + QLatin1Char('/') + exampleId + QStringLiteral("/project");
     if (!ExampleListModel::bundledIds().contains(exampleId) || !QFileInfo(source).isDir()) {
         setLastError(QStringLiteral("no bundled example named '%1'").arg(exampleId));
