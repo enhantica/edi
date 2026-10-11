@@ -304,9 +304,18 @@ quick-tests = { cmd = [
     "tests/unit", "tests/integration", "tests/system", "--ignore=tests/integration/app",
     "-q",
 ], depends-on = ["core-build"] }
+# The nightly group alone (tests/test-groups.json), the files a macOS pull request leaves out.
+nightly-tests = { cmd = [
+    "python", "-m", "pytest",
+    "tests/system/py/test_scan_app_execution.py",
+    "tests/system/py/test_scan_accident_paths.py",
+    "tests/system/py/test_plain_data_app.py",
+    "-q",
+], depends-on = ["core-build"] }
 # CI runs the same selection as parallel jobs (owner, 2026-10-08): `core-tests` (unit and integration) in
 # the core job, and `system-tests-part <part>` for each third of the system tier, split by recorded test
-# times (tools/ci/system-tests-part.sh). Together they are exactly quick-tests' selection.
+# times (tools/ci/system-tests-part.sh). Together they are exactly quick-tests' selection, except that a macOS
+# pull request leaves out the nightly group.
 core-tests = { cmd = [
     "python", "-m", "pytest",
     "tests/unit", "tests/integration", "--ignore=tests/integration/app",
@@ -381,6 +390,7 @@ verification-parity-tests = { cmd = [
 # EQUAL between the two.
 group-quick = { depends-on = ["quick-tests", "cpp-test"] }
 group-full = { depends-on = ["test", "cpp-test"] }
+group-nightly = { depends-on = ["nightly-tests"] }
 # Run on its own it builds first, as every app step does: the core the suite's conftest imports and the app,
 # in its own environment; app-verify runs it with --skip-deps on its one build.
 group-app = { cmd = ["python", "-m", "pytest", "tests/integration/app", "-q"], depends-on = ["core-build", { task = "app-build", environment = "app" }] }
