@@ -37,11 +37,13 @@ EaElements.GroupBox {
         font.pixelSize: EaStyle.Sizes.fontPixelSize
         text: qsTr("free")
     }
+    // The arrow is measured in the font it is drawn in: the hidden label's in the column below (the group box sizes
+    // itself by one content item), which the arrow takes too. A metrics font built from the family alone can
+    // resolve a face without the glyph and send Qt to the platform's fonts (FreeType warnings on macOS).
     TextMetrics {
         id: freeArrowText
-        font.family: EaStyle.Fonts.iconsFamily
-        font.pixelSize: EaStyle.Sizes.fontPixelSize
-        text: "\uf0d7"
+        font: freeArrowProbe.font
+        text: freeArrowProbe.text
     }
 
     objectName: "group.parameters"
@@ -92,6 +94,13 @@ EaElements.GroupBox {
     Column {
         spacing: AppSizes.groupContentSpacing
 
+        EaElements.Label {
+            id: freeArrowProbe
+            visible: false
+            font.family: EaStyle.Fonts.iconsFamily
+            font.pixelSize: EaStyle.Sizes.fontPixelSize
+            text: "\uf0d7"
+        }
         EaElements.GroupRow {
             id: filters
             spacing: AppSizes.inputSpacing
@@ -209,10 +218,9 @@ EaElements.GroupBox {
                         id: freeArrow
                         x: (freeTitle.width - freeTitle.rightPadding + freeTitle.contentWidth) / 2 + group.freeGap
                         anchors.verticalCenter: parent.verticalCenter
-                        font.family: EaStyle.Fonts.iconsFamily
-                        font.pixelSize: EaStyle.Sizes.fontPixelSize
+                        font: freeArrowProbe.font
                         color: group.freeTitleColor
-                        text: "\uf0d7"
+                        text: freeArrowProbe.text
                     }
 
                     // On the header itself, over this cell: the header's own click area covers its cells.
