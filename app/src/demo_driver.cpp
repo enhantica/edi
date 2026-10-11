@@ -334,10 +334,12 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // 8: a created experiment's Load data… button, left-aligned under Data file.
     steps_.push_back({"t17-24-load-data", start + open_example("pd-neut-cwl_cosio-d20_start-1")
                                               + QStringList{experiment, basic, "expand:group.experiments", "experiments.create"}});
+    steps_.push_back({"t17-24b-load-data-dark", {"theme:dark"}});
     // The polynomial and Chebyshev backgrounds' terms, and a type switch that asks before it removes the points.
     const QString background = QStringLiteral("expand:group.background");
-    steps_.push_back({"t17-10-polynomial-terms", start + open_example("pd-neut-cwl_lab6-11b-echidna_tch-fcj")
-                                                     + QStringList{experiment, basic, background}});
+    steps_.push_back({"t17-10-polynomial-terms",
+                      QStringList{"theme:light"} + start + open_example("pd-neut-cwl_lab6-11b-echidna_tch-fcj")
+                          + QStringList{experiment, basic, background}});
     steps_.push_back({"t17-11-polynomial-term-removed", {"background.removeTerm.2"}});
     steps_.push_back({"t17-12-polynomial-term-appended", {"background.appendTerm"}});
     steps_.push_back({"t17-13-chebyshev-terms", start + open_example("pd-neut-tof_cecoal-polaris_chebyshev")

@@ -28,6 +28,9 @@ EaElements.GroupBox {
     // One column per extract rule, with its unit, from the table's own model. The table lays a row's cells out
     // by their place among the header's, so the header and each row repeat over the same list.
     readonly property var scanColumns: project ? project.experiments.columns : []
+    // The Fit column is as wide as its title or its icon, so the Fit icon sits as close to the colour icon as the
+    // Structures table's icon to its name: one margin between them, not each column's own (the owner, 2026-10-11).
+    readonly property real fitColumnWidth: Math.ceil(Math.max(fitTitle.advanceWidth, EaStyle.Sizes.fontPixelSize * 1.15))
 
     objectName: "group.experiments"
     title: qsTr("Experiments (%1)").arg(project ? project.experiments.count : 0)
@@ -35,6 +38,13 @@ EaElements.GroupBox {
     last: SideBarGroups.isLast(group)
     // Open at the start, unlike the category groups (owner, 2026-10-05; edi ADR-0017 §3).
     collapsed: false
+
+    TextMetrics {
+        id: fitTitle
+        font.family: EaStyle.Fonts.fontFamily
+        font.pixelSize: EaStyle.Sizes.fontPixelSize
+        text: qsTr("Fit")
+    }
 
     Column {
         spacing: AppSizes.groupContentSpacing
@@ -45,7 +55,7 @@ EaElements.GroupBox {
             defaultInfoText: qsTr("No experiments defined")
             sourceModel: group.project ? group.project.experiments : null
 
-            columnWidths: [numberColumnWidth, group.scan ? 0.001 : AppSizes.iconOnlyColumnWidth, AppSizes.iconOnlyColumnWidth, textColumnWidth("name", qsTr("Datablock")), -1, group.scanColumns.length ? group.scanColumns.length * AppSizes.dataColumnWidth * 1.4 : 0.001, group.scan ? 0.001 : AppSizes.iconColumnWidth]
+            columnWidths: [numberColumnWidth, group.scan ? 0.001 : AppSizes.iconOnlyColumnWidth, group.scan ? AppSizes.iconOnlyColumnWidth : group.fitColumnWidth, textColumnWidth("name", qsTr("Datablock")), -1, group.scanColumns.length ? group.scanColumns.length * AppSizes.dataColumnWidth * 1.4 : 0.001, group.scan ? 0.001 : AppSizes.iconColumnWidth]
 
             header: EaComponents.ListViewHeader {
                 EaComponents.TableViewLabel {
@@ -180,8 +190,9 @@ EaElements.GroupBox {
                         }
                     }
                     // A button filling the Data file column up to the remove button, its file name elided in the middle
-                    // when too long (the owner, 2026-10-08 and 2026-10-11).
-                    EaElements.SideBarButton {
+                    // when too long (the owner, 2026-10-08 and 2026-10-11). It is the remove button's kind, so it has
+                    // its background, hover and pointer (the owner, 2026-10-11).
+                    EaComponents.TableViewButton {
                         id: loadData
                         objectName: `experiments.loadData.${row.index}`
                         // An experiment made with Create experiment: Load data…, then the loaded file's name, which
@@ -190,7 +201,7 @@ EaElements.GroupBox {
                         visible: !group.scan && row.experiment !== null && (row.experiment.canLoadData || row.experiment.calculationOnly)
                         anchors.verticalCenter: parent.verticalCenter
                         width: parent.width
-                        height: parent.height - 2 * EaStyle.Sizes.borderThickness - 4
+                        checkable: false
                         enabled: row.experiment !== null && row.experiment.canLoadData
                         text: row.experiment !== null && !row.experiment.calculationOnly ? row.file : qsTr("Load data…")
                         ToolTip.text: row.experiment !== null && !row.experiment.calculationOnly ? qsTr("%1: load another data file in place of this one").arg(row.file) : ""
@@ -200,7 +211,7 @@ EaElements.GroupBox {
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
                             elide: Text.ElideMiddle
-                            color: loadData.enabled ? EaStyle.Colors.themeForeground : EaStyle.Colors.themeForegroundDisabled
+                            color: loadData.foregroundColor()
                             text: loadData.text
                         }
                         onClicked: group.chooseData(row.experiment)
