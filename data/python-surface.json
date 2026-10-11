@@ -2314,6 +2314,53 @@
      "verdict": "public"
     }
    },
+   "FitParameterCorrelationItem": {
+    "correlation": {
+     "reason": "C",
+     "verdict": "public",
+     "need": {
+      "by": "counterpart",
+      "ref": "FitParameterCorrelationItem.correlation",
+      "verdict": "keep"
+     }
+    },
+    "id": {
+     "reason": "C",
+     "verdict": "public",
+     "need": {
+      "by": "counterpart",
+      "ref": "FitParameterCorrelationItem.id",
+      "verdict": "keep"
+     }
+    },
+    "parameter_unique_name_i": {
+     "reason": "C",
+     "verdict": "public",
+     "need": {
+      "by": "counterpart",
+      "ref": "FitParameterCorrelationItem.parameter_unique_name_i",
+      "verdict": "keep"
+     }
+    },
+    "parameter_unique_name_j": {
+     "reason": "C",
+     "verdict": "public",
+     "need": {
+      "by": "counterpart",
+      "ref": "FitParameterCorrelationItem.parameter_unique_name_j",
+      "verdict": "keep"
+     }
+    },
+    "source_kind": {
+     "reason": "C",
+     "verdict": "public",
+     "need": {
+      "by": "counterpart",
+      "ref": "FitParameterCorrelationItem.source_kind",
+      "verdict": "keep"
+     }
+    }
+   },
    "FitPreamble": {
     "pre_fit": {
      "need": {
@@ -2343,6 +2390,15 @@
      },
      "reason": "C",
      "verdict": "public"
+    },
+    "fit_parameter_correlations": {
+     "reason": "C",
+     "verdict": "public",
+     "need": {
+      "by": "deviation",
+      "ref": "D47",
+      "verdict": "keep"
+     }
     },
     "fitting_time": {
      "need": {
@@ -2718,6 +2774,15 @@
      },
      "reason": "C",
      "verdict": "public"
+    },
+    "fit_parameter_correlations": {
+     "reason": "C",
+     "verdict": "public",
+     "need": {
+      "by": "deviation",
+      "ref": "D47",
+      "verdict": "keep"
+     }
     },
     "fitting_time": {
      "need": {
@@ -5708,6 +5773,15 @@
     "reason": "C",
     "verdict": "public"
    },
+   "FitParameterCorrelationItem": {
+    "reason": "C",
+    "verdict": "public",
+    "need": {
+     "by": "counterpart",
+     "ref": "FitParameterCorrelationItem",
+     "verdict": "keep"
+    }
+   },
    "FitPreamble": {
     "need": {
      "by": "deviation",
@@ -6681,6 +6755,16 @@
     "values"
    ]
   },
+  "FitParameterCorrelationItem": {
+   "kind": "class",
+   "members": [
+    "correlation",
+    "id",
+    "parameter_unique_name_i",
+    "parameter_unique_name_j",
+    "source_kind"
+   ]
+  },
   "FitPreamble": {
    "kind": "class",
    "members": [
@@ -6692,6 +6776,7 @@
    "members": [
     "banks",
     "converged",
+    "fit_parameter_correlations",
     "fitting_time",
     "iterations",
     "reduced_chi_square",
@@ -6773,6 +6858,7 @@
    "members": [
     "banks",
     "converged",
+    "fit_parameter_correlations",
     "fitting_time",
     "iterations",
     "reduced_chi_square",
