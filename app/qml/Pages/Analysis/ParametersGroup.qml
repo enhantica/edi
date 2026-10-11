@@ -26,6 +26,9 @@ EaElements.GroupBox {
     property real tableViewportHeight: 0
     // The free column fits its title and the arrow after it, with a table column's padding (the owner, 2026-10-11).
     readonly property real freeGap: 0.25 * EaStyle.Sizes.fontPixelSize
+    // The free title's word and arrow share one colour, each with the labels' own colour transition.
+    property bool freeTitleHovered: false
+    readonly property color freeTitleColor: freeTitleHovered ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
     readonly property real freeColumnWidth: Math.ceil(freeTitleText.advanceWidth + freeGap + freeArrowText.advanceWidth) + AppSizes.fieldSpacing * 2
 
     TextMetrics {
@@ -199,7 +202,7 @@ EaElements.GroupBox {
                     objectName: "parameters.freeHeader"
                     horizontalAlignment: Text.AlignHCenter
                     rightPadding: freeArrow.width + group.freeGap
-                    color: freeArea.containsMouse ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
+                    color: group.freeTitleColor
                     text: qsTr("free")
 
                     EaElements.Label {
@@ -208,7 +211,7 @@ EaElements.GroupBox {
                         anchors.verticalCenter: parent.verticalCenter
                         font.family: EaStyle.Fonts.iconsFamily
                         font.pixelSize: 0.8 * EaStyle.Sizes.fontPixelSize
-                        color: freeTitle.color
+                        color: group.freeTitleColor
                         text: "\uf0d7"
                     }
 
@@ -223,6 +226,7 @@ EaElements.GroupBox {
                         height: freeTitle.height
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
+                        onContainsMouseChanged: group.freeTitleHovered = containsMouse
                         onClicked: freeMenu.popup()
                     }
                     FreeHeaderMenu {
