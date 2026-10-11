@@ -28,10 +28,9 @@ Item {
     readonly property real sideMargin: AppSizes.mainAreaMargin
     readonly property real toolbarRightInset: sideMargin
 
-    // diffraction-lib's colour scale (plotly.py _correlation_colorscale_for_background) and its cell lines.
+    // diffraction-lib's colour scale (plotly.py _correlation_colorscale_for_background).
     readonly property color negativeColor: "#d73027"
     readonly property color positiveColor: "#4575b4"
-    readonly property color lineColor: EaStyle.Colors.chartAxis
 
     readonly property var labels: correlations ? correlations.labels : []
     readonly property var values: correlations ? correlations.values : []
@@ -55,28 +54,22 @@ Item {
         color: EaStyle.Colors.chartBackground
     }
 
-    // The toolbar: the correlation level and the number of parameters.
+    // The toolbar: the correlation level and the number of parameters, each a box with its name and an editable number,
+    // set apart as the pattern chart's axis boxes are (owner, 2026-10-11).
     Row {
         id: toolbar
 
         x: chart.sideMargin
         y: chart.em
         height: AppSizes.toolbarControlSize
-        spacing: AppSizes.toolbarSpacing * 2
+        spacing: AppSizes.toolbarSpacing
 
-        EaElements.Label {
-            anchors.verticalCenter: parent.verticalCenter
-            color: EaStyle.Colors.chartLabels
-            text: qsTr("Correlation level")
-        }
-        EaElements.TextField {
-            id: levelField
-
+        NumberBox {
             objectName: "correlations.toolbar.level"
-            width: chart.em * 4
-            height: AppSizes.toolbarControlSize
-            horizontalAlignment: TextInput.AlignRight
-            enabled: chart.correlations !== null
+            label: qsTr("Correlation level")
+            toolTip: qsTr("The smallest absolute correlation shown, 0 to 1: weaker pairs are left blank")
+            widestText: "0.00"
+            shown: chart.correlations ? chart.correlations.level.toFixed(2) : ""
             validator: DoubleValidator {
                 bottom: 0
                 top: 1
@@ -84,56 +77,101 @@ Item {
                 notation: DoubleValidator.StandardNotation
                 locale: "C"
             }
-            text: chart.correlations ? chart.correlations.level.toFixed(2) : ""
-            onEditingFinished: {
+            onCommitted: text => {
                 const level = Number(text);
                 if (!isNaN(level))
                     chart.correlations.level = level;
-                text = Qt.binding(() => chart.correlations ? chart.correlations.level.toFixed(2) : "");
-            }
-            EaElements.ToolTip {
-                text: qsTr("The smallest absolute correlation shown, 0 to 1: weaker pairs are left blank")
-                visible: levelField.hovered && EaGlobals.Vars.showToolTips
             }
         }
-        Item {
-            width: chart.em
-            height: 1
-        }
-        EaElements.Label {
-            anchors.verticalCenter: parent.verticalCenter
-            color: EaStyle.Colors.chartLabels
-            text: qsTr("Parameters")
-        }
-        EaElements.TextField {
-            id: countField
-
+        NumberBox {
             objectName: "correlations.toolbar.parameters"
-            width: chart.em * 3
-            height: AppSizes.toolbarControlSize
-            horizontalAlignment: TextInput.AlignRight
-            enabled: chart.correlations !== null
+            label: qsTr("Parameters")
+            toolTip: qsTr("The most parameters shown: those most correlated with another")
+            widestText: "999"
+            shown: chart.correlations ? String(chart.correlations.maxParameters) : ""
             validator: IntValidator {
                 bottom: 2
                 top: 999
             }
-            text: chart.correlations ? String(chart.correlations.maxParameters) : ""
-            onEditingFinished: {
+            onCommitted: text => {
                 const count = parseInt(text);
                 if (!isNaN(count))
                     chart.correlations.maxParameters = count;
-                text = Qt.binding(() => chart.correlations ? String(chart.correlations.maxParameters) : "");
-            }
-            EaElements.ToolTip {
-                text: qsTr("The most parameters shown: those most correlated with another")
-                visible: countField.hovered && EaGlobals.Vars.showToolTips
             }
         }
         EaElements.Label {
             anchors.verticalCenter: parent.verticalCenter
+            leftPadding: AppSizes.toolbarSpacing
             visible: chart.correlations !== null && chart.correlations.available > 0
             color: EaStyle.Colors.themeForegroundMinor
             text: chart.correlations ? qsTr("of %1").arg(chart.correlations.available) : ""
+        }
+    }
+
+    // A toolbar box as the pattern chart's axis boxes look (ToolbarComboBox): its name, then its number, which alone
+    // is edited; a hover colours the number and the border only.
+    component NumberBox: Rectangle {
+        id: box
+
+        property string label: ""
+        property string toolTip: ""
+        // The widest number the box shows, for its width.
+        property string widestText: ""
+        // The model's number as text; an edit is committed on Return or on leaving the number.
+        property string shown: ""
+        property alias validator: number.validator
+        readonly property bool hovered: hover.hovered
+        signal committed(string text)
+
+        width: name.implicitWidth + numberMetrics.advanceWidth(widestText) + chart.em * 1.75 + AppSizes.toolbarSpacing * 2
+        height: AppSizes.toolbarControlSize
+        radius: 2
+        enabled: chart.correlations !== null
+        color: Qt.tint(EaStyle.Colors.contentBackground, EaStyle.Colors.appBarComboBoxBackground)
+        border.color: !enabled ? EaStyle.Colors.themeBackgroundDisabled : box.hovered || number.activeFocus ? EaStyle.Colors.themeForegroundHovered : EaStyle.Colors.appBarComboBoxBorder
+
+        HoverHandler {
+            id: hover
+        }
+        FontMetrics {
+            id: numberMetrics
+
+            font: number.font
+        }
+        EaElements.Label {
+            id: name
+
+            x: chart.em * 0.75
+            anchors.verticalCenter: parent.verticalCenter
+            color: box.enabled ? EaStyle.Colors.themeForeground : EaStyle.Colors.themeForegroundDisabled
+            text: box.label
+        }
+        TextInput {
+            id: number
+
+            objectName: box.objectName + ".number"
+            anchors.left: name.right
+            anchors.leftMargin: AppSizes.toolbarSpacing * 2
+            anchors.right: parent.right
+            anchors.rightMargin: chart.em
+            anchors.verticalCenter: parent.verticalCenter
+            horizontalAlignment: TextInput.AlignRight
+            font.family: EaStyle.Fonts.fontFamily
+            font.pixelSize: EaStyle.Sizes.fontPixelSize
+            selectByMouse: true
+            selectionColor: EaStyle.Colors.themeAccent
+            selectedTextColor: EaStyle.Colors.themeBackground
+            color: !box.enabled ? EaStyle.Colors.themeForegroundDisabled : box.hovered || activeFocus ? EaStyle.Colors.themeForegroundHovered : EaStyle.Colors.themeForeground
+            text: box.shown
+            onEditingFinished: {
+                if (text !== box.shown)
+                    box.committed(text);
+                text = Qt.binding(() => box.shown);
+            }
+        }
+        EaElements.ToolTip {
+            text: box.toolTip
+            visible: text !== "" && box.hovered && EaGlobals.Vars.showToolTips
         }
     }
 
@@ -202,31 +240,31 @@ Item {
                     }
                 }
             }
-            // The lines between the cells, then the frame, twice as wide.
+            // The lines between the cells and the frame over them, as the pattern chart's grid and border (owner,
+            // 2026-10-11).
             Repeater {
                 model: Math.max(0, chart.count - 1)
                 delegate: Item {
                     required property int index
                     Rectangle {
                         x: Math.round((parent.index + 1) * area.cell)
-                        width: 1
+                        width: EaStyle.Sizes.borderThickness
                         height: grid.height
-                        color: chart.lineColor
+                        color: EaStyle.Colors.chartGridLine
                     }
                     Rectangle {
                         y: Math.round((parent.index + 1) * area.cell)
                         width: grid.width
-                        height: 1
-                        color: chart.lineColor
+                        height: EaStyle.Sizes.borderThickness
+                        color: EaStyle.Colors.chartGridLine
                     }
                 }
             }
             Rectangle {
                 anchors.fill: parent
-                anchors.margins: -1
                 color: "transparent"
-                border.color: chart.lineColor
-                border.width: 2
+                border.color: EaStyle.Colors.chartAxis
+                border.width: EaStyle.Sizes.borderThickness
             }
 
             // The value of the cell under the pointer.
@@ -295,8 +333,8 @@ Item {
 
             Rectangle {
                 anchors.fill: parent
-                border.color: chart.lineColor
-                border.width: 1
+                border.color: EaStyle.Colors.chartAxis
+                border.width: EaStyle.Sizes.borderThickness
                 gradient: Gradient {
                     GradientStop {
                         position: 0

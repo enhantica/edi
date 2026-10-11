@@ -292,8 +292,8 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                       QStringList{"resize:1280x768"} + start + open_example("pd-neut-cwl_cosio-d20_start-1")
                           + QStringList{analysis, basic, correlations}});
     steps_.push_back({"t17-02-correlations-fitted", {"fitting.start", "wait-fit", "choose:OK"}});
-    steps_.push_back({"t17-03-correlations-ten", {"correlations.toolbar.parameters", "key:Ctrl+A", "type:10", "key:Return"}});
-    steps_.push_back({"t17-04-correlations-level", {"correlations.toolbar.level", "key:Ctrl+A", "type:0.5", "key:Return"}});
+    steps_.push_back({"t17-03-correlations-ten", {"correlations.toolbar.parameters.number", "key:Ctrl+A", "type:10", "key:Return"}});
+    steps_.push_back({"t17-04-correlations-level", {"correlations.toolbar.level.number", "key:Ctrl+A", "type:0.5", "key:Return"}});
     steps_.push_back({"t17-05-beer-correlations", start + open_example("pd-neut-tof_ferrite-austenite-beer_joint")
                                                       + QStringList{analysis, basic, "fitting.start", "wait-fit",
                                                                     "choose:OK", correlations}});
