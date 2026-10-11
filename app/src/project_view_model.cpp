@@ -162,11 +162,14 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
         },
         this);
     loadScan();
+    correlations_ = new CorrelationViewModel(this);
+    connect(this, &ProjectViewModel::currentExperimentIndexChanged, this, &ProjectViewModel::syncCorrelations);
     syncBlocks();
     report_ = new ReportViewModel(*this, this);
     current_structure_ = structure_models_.isEmpty() ? -1 : 0;
     current_experiment_ = experiment_models_.isEmpty() ? -1 : 0;
     syncParameterTable();
+    syncCorrelations();
     published_name_ = name();
     published_title_ = title();
     published_description_ = description();
@@ -1637,6 +1640,7 @@ void ProjectViewModel::publish(bool structural) {
         syncDatasets();
     }
     analysis_->sync();
+    syncCorrelations();
     syncParameterTable(false);  // the report is refreshed below, once everything it reads is published
     publishMetadata();
     // What a save writes changed now, not at the recalculation: a Text read in this same turn sees it.
@@ -1646,6 +1650,15 @@ void ProjectViewModel::publish(bool structural) {
     if (fit_ != nullptr) {
         fit_->sync();
     }
+}
+
+void ProjectViewModel::syncCorrelations() {
+    if (correlations_ == nullptr) {
+        return;
+    }
+    const ExperimentViewModel* experiment = currentExperiment();
+    correlations_->setRecord(*project_, current_experiment_,
+                             experiment != nullptr && !experiment->fitOutcome().isEmpty());
 }
 
 void ProjectViewModel::publishFit() {

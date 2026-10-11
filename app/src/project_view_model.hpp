@@ -29,6 +29,7 @@
 #include "edi/model.hpp"
 #include "edi/scan.hpp"
 #include "edi/worker.hpp"
+#include "correlation_view_model.hpp"
 #include "evolution_view_model.hpp"
 #include "scan_session.hpp"
 #include "experiment_view_model.hpp"
@@ -148,6 +149,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_PROPERTY(int templateIndex READ templateIndex NOTIFY templateIndexChanged)
     // The Evolution tab: a fitted parameter across the scan's datasets (scan projects).
     Q_PROPERTY(edi_app::EvolutionViewModel* evolution READ evolution CONSTANT)
+    // The Correlations tab: the last fit's parameter correlations for the shown experiment.
+    Q_PROPERTY(edi_app::CorrelationViewModel* correlations READ correlations CONSTANT)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
     // The app bar's Undo (edi ADR-0024): the newest recorded change — an edit of the aliases or
     // constraints, or a fit — is undone, so they undo in the order they were made.
@@ -195,6 +198,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool scan() const { return scan_; }
     QStringList scanColumns() const { return scan_columns_; }
     EvolutionViewModel* evolution() const { return evolution_; }
+    CorrelationViewModel* correlations() const { return correlations_; }
     int templateIndex() const;
     QString lastError() const { return last_error_; }
     bool calculating() const { return calculating_; }
@@ -400,6 +404,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool scan_ = false;
     QString scan_refusal_;
     EvolutionViewModel* evolution_ = nullptr;
+    CorrelationViewModel* correlations_ = nullptr;
+    // The Correlations tab follows the last fit and the shown experiment.
+    void syncCorrelations();
     QStringList scan_columns_;
     ScanSession* scan_session_ = nullptr;
     int current_dataset_ = -1;

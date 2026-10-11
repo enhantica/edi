@@ -285,6 +285,19 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                           + QStringList{"appBar.tab.project", "open-cli-project:pd-xray-cwl_lif_single", experiment, basic, "expand:group.experiments",
                       "experiments.create", "save-as:created", "open-project:created", experiment, "mainArea.blocks.box",
                        "choose:experiment1 · experiment1.edi", text, "scroll-to:text.view:_data_range"}});
+    // The Correlations tab: empty before a fit, the fitted matrix, a correlation level and a parameter count
+    // typed into the toolbar, and a joint fit's two experiments.
+    const QString correlations = QStringLiteral("mainArea.analysis.tab.correlations");
+    steps_.push_back({"t17-01-correlations-empty",
+                      QStringList{"resize:1280x768"} + start + open_example("pd-neut-cwl_cosio-d20_start-1")
+                          + QStringList{analysis, basic, correlations}});
+    steps_.push_back({"t17-02-correlations-fitted", {"fitting.start", "wait-fit", "choose:OK"}});
+    steps_.push_back({"t17-03-correlations-ten", {"correlations.toolbar.parameters", "key:Ctrl+A", "type:10", "key:Return"}});
+    steps_.push_back({"t17-04-correlations-level", {"correlations.toolbar.level", "key:Ctrl+A", "type:0.5", "key:Return"}});
+    steps_.push_back({"t17-05-beer-correlations", start + open_example("pd-neut-tof_ferrite-austenite-beer_joint")
+                                                      + QStringList{analysis, basic, "fitting.start", "wait-fit",
+                                                                    "choose:OK", correlations}});
+    steps_.push_back({"t17-06-beer-second-experiment", {"mainArea.blocks.down"}});
     if (!only.isEmpty()) {
         std::erase_if(steps_, [&only](const Step& step) { return !step.image.startsWith(only); });
     }

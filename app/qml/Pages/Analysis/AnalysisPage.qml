@@ -43,6 +43,11 @@ WorkflowPage {
             objectName: "mainArea.analysis.tab.evolution"
             text: qsTr("Evolution")
             enabled: page.project !== null && page.project.scan
+        },
+        // The last fit's parameter correlations for the shown experiment (diffraction-lib's correlation heatmap).
+        IconTabButton {
+            objectName: "mainArea.analysis.tab.correlations"
+            text: qsTr("Correlations")
         }
     ]
     mainItems: [
@@ -53,6 +58,10 @@ WorkflowPage {
         },
         EvolutionChart {
             id: evolutionChart
+            project: page.project
+            shown: page.current && SwipeView.isCurrentItem
+        },
+        CorrelationChart {
             project: page.project
             shown: page.current && SwipeView.isCurrentItem
         }
