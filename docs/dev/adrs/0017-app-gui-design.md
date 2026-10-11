@@ -521,11 +521,11 @@ code (`QtCharts1dTab.qml` and the base's `QtCharts1dBase.qml`; the owner, 2026-1
   toolbar and below the x title. The main area's margin, `AppSizes.mainAreaMargin` (2 em), from the plot areas'
   right border to the chart's right edge, from the chart's left edge to the toolbar's drop-downs, and from the
   toolbar buttons' bottom to the main plot area's top border (the owner, 2026-10-05).
-- **Toolbar.** A row of square buttons (2.5 em, with a fill and a border in the axis colour) that ends at the plot
-  areas' right border: legend, hover coordinates, a spacer, pan, box zoom, reset (the Home icon, as the structure
-  view's), Home last. The y scale is a drop-down of linear, square root and log at the chart's left, a margin in, in
-  the toolbar drop-down style (`ToolbarComboBox.qml`, §16) (the owner, 2026-10-02; moved left 2026-10-05), and right
-  of it the x axis, 2θ, time-of-flight or d-spacing, showing the experiment's own axis; it is disabled until the
+- **Toolbar.** One line centred under the block selector row (the owner, 2026-10-11): the axis boxes, then, a
+  toolbar group's spacing apart, a row of square buttons (2.5 em, with a fill and a border in the axis colour):
+  legend, hover coordinates, a spacer, pan, box zoom, reset (the Home icon, as the structure view's), Home last. The
+  y scale is a drop-down of linear, square root and log in the toolbar drop-down style (`ToolbarComboBox.qml`, §16)
+  (the owner, 2026-10-02), and right of it the x axis, 2θ, time-of-flight or d-spacing, showing the experiment's own axis; it is disabled until the
   axis can be switched (owner, 2026-10-05). Closed, each box names its axis, *y: linear* and *x: 2θ*, *x: TOF* or
   *x: d*; its list keeps the plain choices (`ToolbarComboBox.closedTexts`). The controls are `AppSizes.toolbarControlSize` tall and
   `AppSizes.toolbarSpacing` apart within a group.
@@ -655,15 +655,15 @@ computes no geometry: it draws what `edi::present_structure` and `edi::scene_dra
   camera stands far back along the view direction: Qt's lighting takes each view ray from the camera's position,
   and from there the rays are parallel, as an orthographic camera's are in three.js, so every atom carries the
   same highlight.
-- **Placement.** Inside the view: the toolbar at the top right, one em from the top edge and the main area's
-  margin (§15) from the right; the element legend at the top left, the same margin from the left; the pointer hint at the bottom left (*drag = rotate*, *wheel = zoom*, *right-drag =
-  pan*, on three lines as diffraction-lib draws it); the download button at the bottom right; the hover label
-  beside the pointer.
+- **Placement.** Inside the view: the colour scheme and the toolbar in one line centred under the block selector
+  row, a toolbar group's spacing apart, one em from the top edge; the element legend at the bottom left, the main
+  area's margin (§15) from the left; the hover label beside the pointer. The pointer hint and the download button
+  are gone (the owner, 2026-10-11).
 - **Colours.** Every style colour is EasyApp's `EaStyle.Colors`, bound and never written as a literal, as
   easydiffractionbeta's structure view (`StructureViewTab.qml`) uses them (the owner, 2026-10-02), so all follow the
   theme switch: the scene's background `chartBackground`, painted opaque behind the 3D item and its clear colour;
   the cell edges `grey`; the a, b and c axes and their letters `red`, `green` and `blue`; the labels
-  `themeForeground` over a halo of the background; the legend and hint panels `mainContentBackgroundHalfTransparent`
+  `themeForeground` over a halo of the background; the legend panel `mainContentBackgroundHalfTransparent`
   with a `chartGridLine` border; the buttons' `chartAxis` border. A theme switch redraws once. The atom colours
   are diffraction-lib's palettes, the same in both themes.
 - **Toolbar.** diffraction-lib's modebar, as `ChartToolButton`s with the chart toolbar's spacing and spacer:
@@ -673,13 +673,10 @@ computes no geometry: it draws what `edi::present_structure` and `edi::scene_dra
   all, asymmetric unit, none — *Atoms: all / asymmetric unit / none*, or *Atoms: show / hide* with no atom outside
   the asymmetric unit), labels (`tag`), bonds (`link`, when crysta found a bond), cell (`vector-square`), axes
   (`location-arrow`); a structure with no site has only cell and axes. A feature that is on shows its icon in the
-  accent colour. The colour scheme is a drop-down (`jmol`, `vesta`) at the view's left, after the atoms legend
-  (whose box is at least a toolbar control tall), in the toolbar drop-down style
+  accent colour. The colour scheme is a drop-down (`jmol`, `vesta`) before the buttons, in the toolbar drop-down style
   (`ToolbarComboBox.qml`, shared with the pattern chart's y scale): the sidebar drop-downs' background, the base's
   translucent combo-box colour over the content background (the owner, 2026-10-02), at the buttons' height, as narrow as its
-  widest entry with the arrow and the padding. *Download PNG*
-  (`camera`) saves the view as drawn — the scene, its labels, legend and triad, without the buttons and the hint —
-  to a file the user names, proposed as the structure's name with `.png`.
+  widest entry with the arrow and the padding.
 - **Appearance.** The atom view (`covalent`, `vdw`, `ionic`) and the atom scale (above 0, at most 1), which
   diffraction-lib's modebar does not carry, are an Appearance group on the Structure page's Extras tab, as in
   easydiffractionbeta, laid out and styled as the Instrument group (the owner, 2026-10-02): a muted caption above

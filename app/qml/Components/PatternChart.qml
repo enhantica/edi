@@ -340,39 +340,42 @@ Item {
         yMax: controller.yMax
     }
 
-    // How far the toolbar's right edge is from the chart's: the block selector row above ends there too.
-    readonly property real toolbarRightInset: width - (toolbar.x + toolbar.width)
+    // How far the plot areas' right border is from the chart's edge: the block selector row above ends there too.
+    readonly property real toolbarRightInset: width - (mainView.x + mainView.plotArea.x + mainView.plotArea.width)
 
-    ChartToolbar {
-        id: toolbar
-
-        x: mainView.x + mainView.plotArea.x + mainView.plotArea.width - width
-        y: chart.topMargin
-        onResetClicked: controller.reset()
-    }
-    // The y scale, linear, square root or log, and the x axis, 2θ, time-of-flight or d-spacing, at the chart's
-    // left (owner, 2026-10-05). The x axis shows the experiment's own and is disabled until switching exists.
+    // The toolbar line, centred under the block selector row (the owner, 2026-10-11): the y scale, linear, square
+    // root or log, and the x axis, 2θ, time-of-flight or d-spacing (owner, 2026-10-05; the x axis shows the
+    // experiment's own and is disabled until switching exists), then the buttons, a toolbar group's spacing apart.
     Row {
-        x: chart.toolbarLeft
+        x: Math.round(chart.toolbarLeft + (chart.width - chart.toolbarRightInset - chart.toolbarLeft - width) / 2)
         y: chart.topMargin
-        spacing: AppSizes.toolbarSpacing
+        spacing: EaStyle.Sizes.fontPixelSize * 0.5 + 2 * AppSizes.toolbarSpacing
 
-        ToolbarComboBox {
-            objectName: "chart.toolbar.yscale"
-            toolTip: qsTr("Y scale")
-            model: [qsTr("linear"), qsTr("square root"), qsTr("log")]
-            // The closed box names its axis (owner, 2026-10-05).
-            closedTexts: [qsTr("y: linear"), qsTr("y: square root"), qsTr("y: log")]
-            currentIndex: controller.yScale
-            onActivated: index => controller.yScale = index
+        Row {
+            spacing: AppSizes.toolbarSpacing
+
+            ToolbarComboBox {
+                objectName: "chart.toolbar.yscale"
+                toolTip: qsTr("Y scale")
+                model: [qsTr("linear"), qsTr("square root"), qsTr("log")]
+                // The closed box names its axis (owner, 2026-10-05).
+                closedTexts: [qsTr("y: linear"), qsTr("y: square root"), qsTr("y: log")]
+                currentIndex: controller.yScale
+                onActivated: index => controller.yScale = index
+            }
+            ToolbarComboBox {
+                objectName: "chart.toolbar.xaxis"
+                enabled: false
+                toolTip: qsTr("X axis")
+                model: [qsTr("2θ"), qsTr("time-of-flight"), qsTr("d-spacing")]
+                closedTexts: [qsTr("x: 2θ"), qsTr("x: TOF"), qsTr("x: d")]
+                currentIndex: ["twoTheta", "timeOfFlight", "dSpacing"].indexOf(chart.xAxis)
+            }
         }
-        ToolbarComboBox {
-            objectName: "chart.toolbar.xaxis"
-            enabled: false
-            toolTip: qsTr("X axis")
-            model: [qsTr("2θ"), qsTr("time-of-flight"), qsTr("d-spacing")]
-            closedTexts: [qsTr("x: 2θ"), qsTr("x: TOF"), qsTr("x: d")]
-            currentIndex: ["twoTheta", "timeOfFlight", "dSpacing"].indexOf(chart.xAxis)
+        ChartToolbar {
+            id: toolbar
+
+            onResetClicked: controller.reset()
         }
     }
 

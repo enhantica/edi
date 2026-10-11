@@ -55,12 +55,12 @@ Item {
     }
 
     // The toolbar: the correlation level and the number of parameters, each a box with its icon, name and an editable
-    // number, set apart as the pattern chart's axis boxes are and at the row's right end, as its buttons are (owner,
-    // 2026-10-11).
+    // number, set apart as the pattern chart's axis boxes are and centred under the block selector row, as every
+    // chart's toolbar line is (owner, 2026-10-11).
     Row {
         id: toolbar
 
-        x: chart.width - chart.toolbarRightInset - width
+        x: Math.round(chart.sideMargin + (chart.width - chart.toolbarRightInset - chart.sideMargin - width) / 2)
         y: chart.em
         height: AppSizes.toolbarControlSize
         spacing: AppSizes.toolbarSpacing

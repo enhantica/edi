@@ -299,6 +299,9 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                       + QStringList{analysis, basic, "fitting.start", "wait-fit",
                                                                     "choose:OK", correlations}});
     steps_.push_back({"t17-06-beer-second-experiment", {"mainArea.blocks.down"}});
+    // The main-view chart toolbars centred in one line (owner, 2026-10-11): the structure view and the pattern chart.
+    steps_.push_back({"t17-08-structure-toolbar", {"appBar.tab.structure", basic}});
+    steps_.push_back({"t17-09-pattern-toolbar", {analysis, "mainArea.analysis.tab.fitting"}});
     // The polynomial and Chebyshev backgrounds' terms, and a type switch that asks before it removes the points.
     const QString background = QStringLiteral("expand:group.background");
     steps_.push_back({"t17-10-polynomial-terms", start + open_example("pd-neut-cwl_lab6-11b-echidna_tch-fcj")

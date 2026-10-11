@@ -2,7 +2,6 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Dialogs
 import QtQuick3D
 
 import EasyApplication.Gui.Style as EaStyle
@@ -13,9 +12,9 @@ import edi.app
 // The structure view (edi ADR-0017 §16, ADR-0022): the core's structure scene on Qt Quick 3D,
 // diffraction-lib's view in easydiffractionbeta's toolbar style. The atoms and the bonds are instanced from
 // C++ (one table per mesh, filled by the controller), with no QML object per atom, bond, edge or label. The
-// toolbar sits inside the view at its top right, the legend at its top left, the pointer hint at its bottom
-// left and the download button at its bottom right, as diffraction-lib's renders show them. The 3D item exists
-// only where Qt Quick draws through a 3D API; elsewhere the view shows a line of text, with the same state.
+// colour scheme and the toolbar share one line centred at the view's top, and the element legend sits at its
+// bottom left (owner, 2026-10-11). The 3D item exists only where Qt Quick draws through a 3D API; elsewhere the
+// view shows a line of text, with the same state.
 Rectangle {
     id: view
 
@@ -46,12 +45,6 @@ Rectangle {
     readonly property real toolbarRightInset: sideMargin
     readonly property View3D view3d: scene.item as View3D
 
-    // Saves the view as drawn — the scene with its labels, legend and triad, without the buttons and the
-    // hint — to a PNG file.
-    function saveImage(file) {
-        capture.grabToImage(result => result.saveToFile(file));
-    }
-
     objectName: "structure.view"
     // EasyApp's chart background, as easydiffractionbeta's structure view (the owner, 2026-10-02), opaque behind
     // the 3D item, which clears to it too.
@@ -77,7 +70,7 @@ Rectangle {
         haloColor: EaStyle.Colors.chartBackground
         viewportWidth: view.width
         viewportHeight: view.height
-        // The band kept clear at the top for the toolbar and the legend: the toolbar's height with its margins.
+        // The band kept clear at the top for the toolbar: its height with its margins.
         topBand: toolbar.height + 2 * view.margin
         spheres: structureScene.spheres
         cylinders: structureScene.cylinders
@@ -94,7 +87,7 @@ Rectangle {
         controller: controller
     }
 
-    // What the PNG holds.
+    // The scene, its labels and the legend.
     Item {
         id: capture
 
@@ -139,7 +132,7 @@ Rectangle {
             objectName: "structure.view.legend"
             minimumHeight: AppSizes.toolbarControlSize
             anchors.left: parent.left
-            anchors.top: parent.top
+            anchors.bottom: parent.bottom
             anchors.margins: view.margin
             anchors.leftMargin: view.sideMargin
             entries: controller.legend
@@ -184,60 +177,26 @@ Rectangle {
         onWheel: wheel => controller.zoomAt(wheel.x, wheel.y, wheel.angleDelta.y)
     }
 
-    // The colour scheme, after the legend at the view's left (owner, 2026-10-05).
-    ToolbarComboBox {
-        objectName: "structure.toolbar.colors"
-        x: legend.visible ? view.sideMargin + legend.width + view.margin : view.sideMargin
+    // The colour scheme and the toolbar, a toolbar group's spacing apart, in one line centred under the block
+    // selector row (owner, 2026-10-11).
+    Row {
+        x: Math.round(view.sideMargin + (view.width - view.toolbarRightInset - view.sideMargin - width) / 2)
         y: view.margin
-        toolTip: qsTr("Colour scheme")
-        model: ["jmol", "vesta"]
-        currentIndex: view.options && view.options.colorScheme === "vesta" ? 1 : 0
-        onActivated: index => view.options.colorScheme = index === 1 ? "vesta" : "jmol"
-    }
+        spacing: EaStyle.Sizes.fontPixelSize * 0.5 + 2 * AppSizes.toolbarSpacing
 
-    StructureToolbar {
-        id: toolbar
-
-        anchors.top: parent.top
-        anchors.right: parent.right
-        anchors.margins: view.margin
-        anchors.rightMargin: view.sideMargin
-        controller: controller
-        options: view.options
-    }
-
-    // The pointer hint, diffraction-lib's text on its three lines (`templates/structure.html.j2`), in a panel like
-    // the legend's.
-    Rectangle {
-        anchors.left: parent.left
-        anchors.bottom: parent.bottom
-        anchors.margins: view.margin
-        width: hint.width
-        height: hint.height
-        color: EaStyle.Colors.mainContentBackgroundHalfTransparent
-        border.color: EaStyle.Colors.chartGridLine
-        border.width: EaStyle.Sizes.borderThickness
-
-        EaElements.Label {
-            id: hint
-
-            objectName: "structure.view.hint"
-            padding: view.margin * 0.5
-            leftPadding: view.margin
-            rightPadding: view.margin
-            font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.85
-            text: qsTr("drag = rotate\nwheel = zoom\nright-drag = pan")
+        ToolbarComboBox {
+            objectName: "structure.toolbar.colors"
+            toolTip: qsTr("Colour scheme")
+            model: ["jmol", "vesta"]
+            currentIndex: view.options && view.options.colorScheme === "vesta" ? 1 : 0
+            onActivated: index => view.options.colorScheme = index === 1 ? "vesta" : "jmol"
         }
-    }
+        StructureToolbar {
+            id: toolbar
 
-    ChartToolButton {
-        objectName: "structure.toolbar.download"
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        anchors.margins: view.margin
-        fontIcon: "camera"
-        toolTip: qsTr("Download PNG")
-        onClicked: saveDialog.open()
+            controller: controller
+            options: view.options
+        }
     }
 
     // The atom under the pointer: its label, its parts and its coordinates, beside the pointer.
@@ -266,16 +225,5 @@ Rectangle {
 
             padding: view.margin * 0.5
         }
-    }
-
-    FileDialog {
-        id: saveDialog
-
-        title: qsTr("Save the structure view as a PNG image")
-        fileMode: FileDialog.SaveFile
-        nameFilters: [qsTr("PNG images (*.png)")]
-        defaultSuffix: "png"
-        currentFile: (view.structure ? view.structure.name : "structure") + ".png"
-        onAccepted: view.saveImage(selectedFile)
     }
 }
