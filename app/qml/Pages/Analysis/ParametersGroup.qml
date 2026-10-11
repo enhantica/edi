@@ -40,7 +40,7 @@ EaElements.GroupBox {
     TextMetrics {
         id: freeArrowText
         font.family: EaStyle.Fonts.iconsFamily
-        font.pixelSize: 0.8 * EaStyle.Sizes.fontPixelSize
+        font.pixelSize: EaStyle.Sizes.fontPixelSize
         text: "\uf0d7"
     }
 
@@ -210,7 +210,7 @@ EaElements.GroupBox {
                         x: (freeTitle.width - freeTitle.rightPadding + freeTitle.contentWidth) / 2 + group.freeGap
                         anchors.verticalCenter: parent.verticalCenter
                         font.family: EaStyle.Fonts.iconsFamily
-                        font.pixelSize: 0.8 * EaStyle.Sizes.fontPixelSize
+                        font.pixelSize: EaStyle.Sizes.fontPixelSize
                         color: group.freeTitleColor
                         text: "\uf0d7"
                     }
