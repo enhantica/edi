@@ -94,6 +94,11 @@ Analysis and show a units column whenever the parameter has units. Both pinned
 parameter controls are replaced through ADR-0015's declared host seam; their edit
 and fit-toggle behavior stays shared with the original controls.
 
+A menu is made the first time it opens, never with its control: a page holds
+hundreds of parameters, and building every menu up front was most of a large
+project's page build. The free toggle reports through the control's
+`fitToggled` signal, so a consumer needs no menu to exist.
+
 ## Opening project rows
 
 Examples and Recent projects use an explicit row-parent mouse area for opening.
