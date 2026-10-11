@@ -7,7 +7,8 @@
    "sites": [
     "app/qml/Pages/Home/AboutDialog.qml"
    ],
-   "drawn_by": "PT Sans"
+   "drawn_by": "PT Sans",
+   "weight": 400
   },
   {
    "char": "°",
@@ -19,7 +20,19 @@
     "app/src/report_view_model.cpp",
     "core/src/presentation.cpp"
    ],
-   "drawn_by": "PT Sans"
+   "drawn_by": "PT Sans",
+   "weight": 400
+  },
+  {
+   "char": "²",
+   "code": "U+00B2",
+   "font": "PT Mono",
+   "sites": [
+    "app/qml/Components/StatusBar.qml",
+    "app/src/fit_view_model.cpp"
+   ],
+   "drawn_by": "PT Mono",
+   "weight": 400
   },
   {
    "char": "²",
@@ -32,7 +45,8 @@
     "app/src/fit_view_model.cpp",
     "core/include/edi/parameter_spec.hpp"
    ],
-   "drawn_by": "PT Sans"
+   "drawn_by": "PT Sans",
+   "weight": 400
   },
   {
    "char": "µ",
@@ -43,7 +57,19 @@
     "app/qml/Pages/Experiment/ReflectionsGroup.qml",
     "core/src/presentation.cpp"
    ],
-   "drawn_by": "PT Sans"
+   "drawn_by": "PT Sans",
+   "weight": 400
+  },
+  {
+   "char": "·",
+   "code": "U+00B7",
+   "font": "PT Mono",
+   "sites": [
+    "app/qml/Globals/FitOutcomes.qml",
+    "app/src/fit_view_model.cpp"
+   ],
+   "drawn_by": "PT Mono",
+   "weight": 400
   },
   {
    "char": "·",
@@ -59,7 +85,8 @@
     "app/src/project_view_model.cpp",
     "core/include/edi/parameter_spec.hpp"
    ],
-   "drawn_by": "PT Sans"
+   "drawn_by": "PT Sans",
+   "weight": 400
   },
   {
    "char": "¼",
@@ -68,7 +95,8 @@
    "sites": [
     "app/src/structure_view_model.cpp"
    ],
-   "drawn_by": "Noto Sans"
+   "drawn_by": "Noto Sans",
+   "weight": 400
   },
   {
    "char": "½",
@@ -77,7 +105,8 @@
    "sites": [
     "app/src/structure_view_model.cpp"
    ],
-   "drawn_by": "Noto Sans"
+   "drawn_by": "Noto Sans",
+   "weight": 400
   },
   {
    "char": "¾",
@@ -86,7 +115,8 @@
    "sites": [
     "app/src/structure_view_model.cpp"
    ],
-   "drawn_by": "Noto Sans"
+   "drawn_by": "Noto Sans",
+   "weight": 400
   },
   {
    "char": "Å",
@@ -101,7 +131,8 @@
     "app/src/report_view_model.cpp",
     "core/include/edi/parameter_spec.hpp"
    ],
-   "drawn_by": "PT Sans"
+   "drawn_by": "PT Sans",
+   "weight": 400
   },
   {
    "char": "×",
@@ -110,7 +141,8 @@
    "sites": [
     "app/src/structure_view_controller.cpp"
    ],
-   "drawn_by": "PT Sans"
+   "drawn_by": "PT Sans",
+   "weight": 400
   },
   {
    "char": "é",
@@ -119,7 +151,8 @@
    "sites": [
     "core/src/selectors.cpp"
    ],
-   "drawn_by": "PT Sans"
+   "drawn_by": "PT Sans",
+   "weight": 400
   },
   {
    "char": "α",
@@ -131,7 +164,8 @@
     "app/src/report_view_model.cpp",
     "core/include/edi/parameter_spec.hpp"
    ],
-   "drawn_by": "Noto Sans"
+   "drawn_by": "Noto Sans",
+   "weight": 400
   },
   {
    "char": "β",
@@ -143,7 +177,8 @@
     "app/src/report_view_model.cpp",
     "core/include/edi/parameter_spec.hpp"
    ],
-   "drawn_by": "Noto Sans"
+   "drawn_by": "Noto Sans",
+   "weight": 400
   },
   {
    "char": "γ",
@@ -154,7 +189,8 @@
     "app/src/parameter_item.cpp",
     "app/src/report_view_model.cpp"
    ],
-   "drawn_by": "Noto Sans"
+   "drawn_by": "Noto Sans",
+   "weight": 400
   },
   {
    "char": "θ",
@@ -169,7 +205,8 @@
     "core/src/presentation.cpp",
     "core/include/edi/parameter_spec.hpp"
    ],
-   "drawn_by": "Noto Sans"
+   "drawn_by": "Noto Sans",
+   "weight": 400
   },
   {
    "char": "μ",
@@ -180,7 +217,8 @@
     "app/src/report_view_model.cpp",
     "core/include/edi/parameter_spec.hpp"
    ],
-   "drawn_by": "PT Sans"
+   "drawn_by": "PT Sans",
+   "weight": 400
   },
   {
    "char": "σ",
@@ -190,7 +228,19 @@
     "app/src/parameter_item.cpp",
     "app/src/project_view_model.cpp"
    ],
-   "drawn_by": "Noto Sans"
+   "drawn_by": "Noto Sans",
+   "weight": 400
+  },
+  {
+   "char": "χ",
+   "code": "U+03C7",
+   "font": "PT Mono",
+   "sites": [
+    "app/qml/Components/StatusBar.qml",
+    "app/src/fit_view_model.cpp"
+   ],
+   "drawn_by": "Noto Sans Mono",
+   "weight": 400
   },
   {
    "char": "χ",
@@ -200,7 +250,18 @@
     "app/qml/Components/StatusBar.qml",
     "app/src/fit_view_model.cpp"
    ],
-   "drawn_by": "Noto Sans"
+   "drawn_by": "Noto Sans",
+   "weight": 400
+  },
+  {
+   "char": "–",
+   "code": "U+2013",
+   "font": "PT Mono",
+   "sites": [
+    "app/src/fit_view_model.cpp"
+   ],
+   "drawn_by": "PT Mono",
+   "weight": 400
   },
   {
    "char": "–",
@@ -210,7 +271,8 @@
     "app/qml/Pages/Experiment/MeasuredRangeGroup.qml",
     "app/src/fit_view_model.cpp"
    ],
-   "drawn_by": "PT Sans"
+   "drawn_by": "PT Sans",
+   "weight": 400
   },
   {
    "char": "—",
@@ -222,7 +284,8 @@
     "core/include/edi/model.hpp",
     "core/include/edi/selectors.hpp"
    ],
-   "drawn_by": "PT Sans"
+   "drawn_by": "PT Sans",
+   "weight": 400
   },
   {
    "char": "•",
@@ -231,7 +294,8 @@
    "sites": [
     "app/qml/Main.qml"
    ],
-   "drawn_by": "PT Sans"
+   "drawn_by": "PT Sans",
+   "weight": 400
   },
   {
    "char": "…",
@@ -242,7 +306,8 @@
     "app/qml/Pages/Project/BlockNames.qml",
     "app/qml/Pages/Project/GetStartedGroup.qml"
    ],
-   "drawn_by": "PT Sans"
+   "drawn_by": "PT Sans",
+   "weight": 400
   },
   {
    "char": "₀",
@@ -251,7 +316,8 @@
    "sites": [
     "core/include/edi/parameter_spec.hpp"
    ],
-   "drawn_by": "Noto Sans"
+   "drawn_by": "Noto Sans",
+   "weight": 400
   },
   {
    "char": "₁",
@@ -260,7 +326,8 @@
    "sites": [
     "core/include/edi/parameter_spec.hpp"
    ],
-   "drawn_by": "PT Sans"
+   "drawn_by": "PT Sans",
+   "weight": 400
   },
   {
    "char": "⅓",
@@ -269,7 +336,8 @@
    "sites": [
     "app/src/structure_view_model.cpp"
    ],
-   "drawn_by": "Noto Sans"
+   "drawn_by": "Noto Sans",
+   "weight": 400
   },
   {
    "char": "⅔",
@@ -278,7 +346,8 @@
    "sites": [
     "app/src/structure_view_model.cpp"
    ],
-   "drawn_by": "Noto Sans"
+   "drawn_by": "Noto Sans",
+   "weight": 400
   },
   {
    "char": "⅙",
@@ -287,7 +356,8 @@
    "sites": [
     "app/src/structure_view_model.cpp"
    ],
-   "drawn_by": "Noto Sans"
+   "drawn_by": "Noto Sans",
+   "weight": 400
   },
   {
    "char": "⅚",
@@ -296,7 +366,8 @@
    "sites": [
     "app/src/structure_view_model.cpp"
    ],
-   "drawn_by": "Noto Sans"
+   "drawn_by": "Noto Sans",
+   "weight": 400
   },
   {
    "char": "⅛",
@@ -305,7 +376,8 @@
    "sites": [
     "app/src/structure_view_model.cpp"
    ],
-   "drawn_by": "Noto Sans"
+   "drawn_by": "Noto Sans",
+   "weight": 400
   },
   {
    "char": "⅜",
@@ -314,7 +386,8 @@
    "sites": [
     "app/src/structure_view_model.cpp"
    ],
-   "drawn_by": "Noto Sans"
+   "drawn_by": "Noto Sans",
+   "weight": 400
   },
   {
    "char": "⅝",
@@ -323,7 +396,8 @@
    "sites": [
     "app/src/structure_view_model.cpp"
    ],
-   "drawn_by": "Noto Sans"
+   "drawn_by": "Noto Sans",
+   "weight": 400
   },
   {
    "char": "⅞",
@@ -332,7 +406,8 @@
    "sites": [
     "app/src/structure_view_model.cpp"
    ],
-   "drawn_by": "Noto Sans"
+   "drawn_by": "Noto Sans",
+   "weight": 400
   },
   {
    "char": "→",
@@ -342,7 +417,8 @@
     "app/qml/Components/StatusBar.qml",
     "app/src/fit_view_model.cpp"
    ],
-   "drawn_by": "Encode Sans"
+   "drawn_by": "Encode Sans",
+   "weight": 400
   },
   {
    "char": "−",
@@ -351,7 +427,8 @@
    "sites": [
     "app/src/structure_view_model.cpp"
    ],
-   "drawn_by": "Noto Sans"
+   "drawn_by": "Noto Sans",
+   "weight": 400
   },
   {
    "char": "−",
@@ -360,7 +437,8 @@
    "sites": [
     "core/src/presentation.cpp"
    ],
-   "drawn_by": "PT Sans"
+   "drawn_by": "PT Sans",
+   "weight": 400
   },
   {
    "char": "√",
@@ -369,7 +447,8 @@
    "sites": [
     "app/src/project_view_model.cpp"
    ],
-   "drawn_by": "PT Sans"
+   "drawn_by": "PT Sans",
+   "weight": 400
   },
   {
    "char": "≤",
@@ -378,43 +457,8 @@
    "sites": [
     "app/src/project_view_model.cpp"
    ],
-   "drawn_by": "PT Sans"
-  },
-  {
-   "char": "─",
-   "code": "U+2500",
-   "font": "PT Sans",
-   "sites": [
-    "app/src/pattern_chart_controller.cpp"
-   ],
-   "drawn_by": null
-  },
-  {
-   "char": "━",
-   "code": "U+2501",
-   "font": "PT Sans",
-   "sites": [
-    "app/src/pattern_chart_controller.cpp"
-   ],
-   "drawn_by": null
-  },
-  {
-   "char": "│",
-   "code": "U+2502",
-   "font": "PT Sans",
-   "sites": [
-    "app/src/pattern_chart_controller.cpp"
-   ],
-   "drawn_by": null
-  },
-  {
-   "char": "●",
-   "code": "U+25CF",
-   "font": "PT Sans",
-   "sites": [
-    "app/src/structure_view_controller.cpp"
-   ],
-   "drawn_by": null
+   "drawn_by": "PT Sans",
+   "weight": 400
   },
   {
    "char": "",
@@ -423,7 +467,8 @@
    "sites": [
     "app/src/example_list_model.cpp"
    ],
-   "drawn_by": "Font Awesome"
+   "drawn_by": "Font Awesome",
+   "weight": 900
   },
   {
    "char": "",
@@ -432,7 +477,8 @@
    "sites": [
     "app/src/example_list_model.cpp"
    ],
-   "drawn_by": "Font Awesome"
+   "drawn_by": "Font Awesome",
+   "weight": 900
   },
   {
    "char": "",
@@ -441,7 +487,8 @@
    "sites": [
     "app/qml/Pages/Analysis/ParametersGroup.qml"
    ],
-   "drawn_by": "Font Awesome"
+   "drawn_by": "Font Awesome",
+   "weight": 900
   },
   {
    "char": "",
@@ -450,7 +497,8 @@
    "sites": [
     "app/src/example_list_model.cpp"
    ],
-   "drawn_by": "Font Awesome"
+   "drawn_by": "Font Awesome",
+   "weight": 900
   },
   {
    "char": "",
@@ -459,7 +507,8 @@
    "sites": [
     "app/src/example_list_model.cpp"
    ],
-   "drawn_by": "Font Awesome"
+   "drawn_by": "Font Awesome",
+   "weight": 900
   },
   {
    "char": "",
@@ -468,7 +517,8 @@
    "sites": [
     "app/src/example_list_model.cpp"
    ],
-   "drawn_by": "Font Awesome"
+   "drawn_by": "Font Awesome",
+   "weight": 900
   },
   {
    "char": "",
@@ -477,7 +527,9 @@
    "sites": [
     "app/src/example_list_model.cpp"
    ],
-   "drawn_by": "Font Awesome"
+   "drawn_by": "Font Awesome",
+   "weight": 900
   }
- ]
+ ],
+ "icon_metrics": []
 }
