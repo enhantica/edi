@@ -139,6 +139,28 @@ class Edit {
     static Edit assign(detail::Written<bool>& field, bool value) {
         return Edit([&field, value] { field = value; });
     }
+    // Free or fix several parameters, by unique name, all or none (the parameter table's "free" header; the owner,
+    // 2026-10-11): every name is resolved before any flag is written. Its undo is the same edit with the flags as
+    // they were.
+    static Edit set_free(Project& project, std::vector<std::pair<std::string, bool>> flags) {
+        return Edit([&project, flags = std::move(flags)] {
+            std::map<std::string, Parameter*> by_name;
+            for (const NamedSlot& slot : named_slots(project)) {
+                by_name.emplace(slot.unique_name, slot.parameter);
+            }
+            std::vector<std::pair<Parameter*, bool>> resolved;
+            for (const auto& [name, free] : flags) {
+                const auto found = by_name.find(name);
+                if (found == by_name.end()) {
+                    throw std::invalid_argument("'" + name + "' is not a refinable parameter of this project");
+                }
+                resolved.emplace_back(found->second, free);
+            }
+            for (const auto& [parameter, free] : resolved) {
+                parameter->free = free;
+            }
+        });
+    }
     static Edit assign(double& field, double value) {
         return Edit([&field, value] { field = value; });
     }

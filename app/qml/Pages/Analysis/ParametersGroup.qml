@@ -175,9 +175,28 @@ EaElements.GroupBox {
                     horizontalAlignment: Text.AlignRight
                     text: qsTr("max")
                 }
+                // A right click on the title frees or fixes every row the filters show, as one Undo step (the owner,
+                // 2026-10-11).
                 EaComponents.TableViewLabel {
+                    id: freeTitle
+                    objectName: "parameters.freeHeader"
                     horizontalAlignment: Text.AlignHCenter
                     text: qsTr("free")
+
+                    MouseArea {
+                        anchors.fill: parent
+                        acceptedButtons: Qt.RightButton
+                        onClicked: freeMenu.popup()
+                        onPressAndHold: mouse => {
+                            if (mouse.source === Qt.MouseEventNotSynthesized)
+                                freeMenu.popup();
+                        }
+                    }
+                    FreeHeaderMenu {
+                        id: freeMenu
+                        project: group.project
+                        filter: filter
+                    }
                 }
             }
 

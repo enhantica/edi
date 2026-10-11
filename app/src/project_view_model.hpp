@@ -11,6 +11,7 @@
 #include <QTimer>
 #include <QString>
 #include <QUrl>
+#include <QVariantList>
 #include <QtQml/qqmlregistration.h>
 #include <functional>
 #include <map>
@@ -228,6 +229,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Duplicate structure: a copy of the current structure (edi::structure_copy) named `<name>_copy`, selected and
     // linked to no experiment. One undoable step.
     Q_INVOKABLE bool duplicateStructure();
+    // The parameter table's "free" header: free or fix every one of `parameters` (the rows the filters show) that can
+    // be fitted, as one edit with one Undo step (the owner, 2026-10-11).
+    Q_INVOKABLE bool setParametersFree(const QVariantList& parameters, bool free);
     Q_INVOKABLE void removeExperiment(int index);
     // A new experiment without data (edi::simulation_experiment), selected: powder, constant wavelength,
     // neutron, Bragg, linked to every structure. One undoable step, as a load of experiments is.
@@ -365,8 +369,12 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         const edi::ExperimentBase* experiment = nullptr;
         std::shared_ptr<const edi::BraggPdExperiment> before;
     };
-    using UndoRecord =
-        std::variant<std::monostate, edi::RelationsUndo, AddedExperiments, ScanRun, LoadedData, edi::StructuresUndo>;
+    // The table header's free or fixed: each parameter's flag as it was, by unique name.
+    struct FreeFlags {
+        std::vector<std::pair<std::string, bool>> before;
+    };
+    using UndoRecord = std::variant<std::monostate, edi::RelationsUndo, AddedExperiments, ScanRun, LoadedData,
+                                    edi::StructuresUndo, FreeFlags>;
     // An experiment replaced by Load data, a type change or their undo: the undo records follow it.
     void experimentReplaced(const edi::ExperimentBase* before, const edi::ExperimentBase* after);
     // Each experiment view's Load data… state: every experiment but a scan's.
