@@ -106,6 +106,31 @@ std::vector<std::string> supported_fitting_modes() {
     return {"single", "joint", "sequential", "independent"};
 }
 
+std::vector<std::string> applicable_fitting_modes(const Project& project) {
+    if (project.sequential_fit.declared()) {
+        return {"sequential", "independent", "single"};
+    }
+    if (project.experiments.size() > 1) {
+        return {"joint"};
+    }
+    return {"single"};
+}
+
+std::string fitting_mode_label(const std::string& token) {
+    static const std::vector<std::pair<std::string, std::string>> labels{
+        {"single", "Single experiment"},
+        {"joint", "Joint: all experiments at once"},
+        {"sequential", "Sequential: each from the previous"},
+        {"independent", "Independent: each from the same start"},
+    };
+    for (const auto& [known, label] : labels) {
+        if (known == token) {
+            return label;
+        }
+    }
+    return token;
+}
+
 void select_peak_profile(ExperimentBase& experiment, const std::string& token) {
     const BeamModeEnum mode = experiment.effective_beam_mode();
     const std::optional<BeamModeEnum> token_mode = peak_type_beam_mode(token);

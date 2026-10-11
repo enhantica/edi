@@ -106,6 +106,12 @@ std::vector<std::string> supported_background_types();
 std::vector<std::string> supported_minimizer_types();
 // The declared fitting modes (model.hpp is_declared_fitting_mode), in `.edi` order.
 std::vector<std::string> supported_fitting_modes();
+// The fitting modes that apply to a project (model.hpp's definitions; the owner, 2026-10-11): a declared scan's two
+// modes and `single`, which fits the shown dataset and makes it the template; `joint` for several experiments;
+// else `single`.
+std::vector<std::string> applicable_fitting_modes(const Project& project);
+// What a fitting-mode selector shows for a token (the owner, 2026-10-11); `.edi` keeps the token.
+std::string fitting_mode_label(const std::string& token);
 // The registered descent flows (model.hpp descent_ids, crysta's registration order).
 std::vector<std::string> supported_descents();
 

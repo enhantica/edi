@@ -343,6 +343,15 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                         "load-experiments:pd-neut-cwl_lbco-hrpt_start-2/project/experiments/"
                                         "hrpt.edi|data_hrpt=data_large|lbco 10.0()=lbco 30000000()",
                                         analysis, "mainArea.analysis.tab.fitting"}});
+    // The fitting modes that apply, by their names (owner, 2026-10-11): one experiment, single only; several, joint
+    // with its weights; a scan, its two modes and single.
+    steps_.push_back({"t17-72-mode-single", QStringList{"key:Escape"} + start + open_example("pd-neut-cwl_lbco-hrpt_start-2")
+                                                + QStringList{analysis, extras, "expand:group.fitting_mode"}});
+    steps_.push_back({"t17-73-mode-joint", start + open_example("pd-neut-tof_ferrite-austenite-beer_joint")
+                                               + QStringList{analysis, extras, "expand:group.fitting_mode",
+                                                             "expand:group.joint_fit"}});
+    steps_.push_back({"t17-74-mode-scan", start + open_example("pd-neut-cwl_cosio-d20_scan-3f")
+                                              + QStringList{analysis, extras, "expand:group.fitting_mode", "fittingMode.type"}});
     // 8: a created experiment's Load data… button, left-aligned under Data file.
     steps_.push_back({"t17-24-load-data", start + open_example("pd-neut-cwl_cosio-d20_start-1")
                                               + QStringList{experiment, basic, "expand:group.experiments", "experiments.create"}});
