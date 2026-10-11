@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-11T15:13:11Z
+# measured_utc = 2026-10-11T15:36:45Z
 #
-# Recorded from: priority-final.log (31 node(s) measured once, 9572 banked, 0 stale row(s) dropped)
-# Collected tests: 10344; with a reported duration: 5324
+# Recorded from: api-baseline.log (7 node(s) measured once, 9603 banked, 0 stale row(s) dropped)
+# Collected tests: 10350; with a reported duration: 5324
 # Module-scoped fixture costs recorded: 32
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 10344
+# inventory_python = 10350
 # inventory_cpp = 302
 # inventory_measured = 9603
-# inventory_unmeasured = 1043
+# inventory_unmeasured = 1049
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -4872,6 +4872,9 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e05_t1_physical_domain.p
 0.080	tests/integration/py/test_multiphase_constraints.py::test_same_site_id_in_two_structures_resolves_to_distinct_parameters[datablock]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_multiphase_constraints.py::test_same_site_id_in_two_structures_resolves_to_distinct_parameters[structure]
 0.010	tests/integration/py/test_multiphase_constraints.py::test_structure_added_after_project_creation_participates_in_constraints
+UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_cli_machine_report_names_external_correlation_count[1]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_cli_machine_report_names_external_correlation_count[2]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_cli_machine_report_names_external_correlation_count[3]
 0.000	tests/integration/py/test_parameter_correlations.py::test_empty_free_set_never_invents_pairs
 0.010	tests/integration/py/test_parameter_correlations.py::test_external_loop_does_not_change_unrelated_project_files
 UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_external_loop_survives_load_and_save_byte_for_byte
@@ -4879,6 +4882,9 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.p
 0.140	tests/integration/py/test_parameter_correlations.py::test_polynomial_fit_stores_external_correlations[1]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_polynomial_fit_stores_external_correlations[2]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_polynomial_fit_stores_external_correlations[3]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_python_fit_result_exposes_external_correlations[1]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_python_fit_result_exposes_external_correlations[2]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_python_fit_result_exposes_external_correlations[3]
 0.010	tests/integration/py/test_parameter_correlations.py::test_unfitted_analysis_stays_byte_identical
 0.220	tests/integration/py/test_phase_scan.py::test_failure_after_solver_step_is_recorded_and_scan_continues[independent]
 0.230	tests/integration/py/test_phase_scan.py::test_failure_after_solver_step_is_recorded_and_scan_continues[sequential]

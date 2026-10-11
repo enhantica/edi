@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import json
 import math
+import re
 import shlex
 import shutil
+import subprocess
+import sys
 from pathlib import Path
 
 import edi
@@ -79,6 +82,66 @@ def test_polynomial_fit_stores_external_correlations(tmp_path, count):
     )
     project.analysis.fit()
     check_pairs(saved_analysis(project, tmp_path / 'fitted'), count)
+
+
+@pytest.mark.parametrize('count', [1, 2, 3])
+def test_python_fit_result_exposes_external_correlations(count):
+    project = edi.Project.load(FIXTURE / f'polynomial-{count}')
+    result = project.analysis.fit()
+    assert hasattr(result, 'correlations'), (
+        'The returned Python fit result must expose its parameter correlations'
+    )
+    rows = result.correlations
+    expected = REFERENCE['cases'][str(count)]['rows']
+    assert len(rows) == len(expected), (
+        'Python must expose every distinct free-parameter pair and no diagonal or stale pairs'
+    )
+    pairs = {
+        tuple(sorted((row.parameter_unique_name_i, row.parameter_unique_name_j))): row.correlation
+        for row in rows
+    }
+    assert len(pairs) == len(rows), 'Python fit correlations must contain no duplicate pairs'
+    for row in expected:
+        key = tuple(sorted((row['parameter_unique_name_i'], row['parameter_unique_name_j'])))
+        assert key in pairs, 'Python correlation labels must identify the external free set'
+        assert math.isfinite(pairs[key]), 'Python correlation coefficients must be finite'
+        assert pairs[key] == pytest.approx(row['correlation'], abs=2e-4), (
+            'Python fit-result correlations must match diffraction-lib normalized normal equations'
+        )
+
+
+@pytest.mark.parametrize('count', [1, 2, 3])
+def test_cli_machine_report_names_external_correlation_count(tmp_path, count):
+    source = tmp_path / 'input'
+    shutil.copytree(FIXTURE / f'polynomial-{count}', source)
+    result = subprocess.run(
+        [
+            sys.executable,
+            '-m',
+            'edi',
+            'fit',
+            str(source),
+            '--report',
+            'machine',
+            '--verbosity',
+            'compact',
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, 'The CLI must fit the independent polynomial input successfully'
+    assert 'record=fit' in result.stdout, 'The CLI must emit a terminal machine fit record'
+    # The decision requires a named count, but does not prescribe its key spelling.
+    counts = re.findall(
+        r'^(?:x-edi\.)?(?:n_correlations|correlation_count|correlations)=(\d+)$',
+        result.stdout,
+        re.MULTILINE,
+    )
+    assert len(counts) == 1, 'The CLI machine fit record must name its correlation count once'
+    assert int(counts[0]) == len(REFERENCE['cases'][str(count)]['rows']), (
+        'The CLI correlation count must match the same external pairs as the core and Python'
+    )
 
 
 def test_external_loop_survives_load_and_save_byte_for_byte(tmp_path):

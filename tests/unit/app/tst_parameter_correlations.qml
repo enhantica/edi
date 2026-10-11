@@ -102,6 +102,7 @@ TestCase {
     function test_positions_show_multiplicity_letter_and_coordinates() {
         open("tests/fixtures/e04_t1/editable-project");
         click("appBar.tab.structure");
+        Ui.expandGroup(test, Probe, appWindow, "group.atom_site");
         const position = control("atomSite.wyckoffLetter.0");
         verify(position !== null, "The atom-site WP control must be present");
         verify(typeof position.currentIndex === "number", "The WP field must offer a combobox choice");
@@ -141,7 +142,7 @@ TestCase {
         click("appBar.tab.analysis");
         click("mainArea.analysis.tab.correlations");
         const chart = control("correlations");
-        verify(chart !== null, "The third Analysis tab must show the production chart");
+        verify(chart !== null, "The Correlations tab must show the production chart");
         compare(chart.count, 0, "A project before fitting must show an empty correlation view");
         compare(String(chart.cellColor(-1)), "#d73027", "Negative unit correlation must use the external red endpoint");
         compare(String(chart.cellColor(0)), "#ffffff", "Zero correlation on the light chart must be white");
@@ -168,6 +169,7 @@ TestCase {
     function test_background_coefficients_have_editing_parity() {
         open("tests/fixtures/correlations/polynomial-3");
         click("appBar.tab.experiment");
+        Ui.expandGroup(test, Probe, appWindow, "group.background");
         const experiment = Session.project.currentExperiment;
         const terms = experiment.backgroundTerms;
         verify(control("background.terms") !== null, "Polynomial must show its term table");
@@ -178,6 +180,14 @@ TestCase {
         verify(!terms.setOrder(count, 0), "A duplicate coefficient order must be refused");
         verify(!terms.setOrder(count, 6), "Polynomial orders above five must be refused");
         verify(terms.setOrder(count, 5), "A unique supported order must be editable");
+        const coefficient = control("background.coef.0");
+        verify(coefficient !== null, "The coefficient value must have a visible editing control");
+        coefficient.forceActiveFocus();
+        keyClick(Qt.Key_A, Qt.ControlModifier);
+        for (const key of [Qt.Key_6, Qt.Key_Period, Qt.Key_2, Qt.Key_5])
+            keyClick(key);
+        keyClick(Qt.Key_Return);
+        compare(Probe.rows(terms)[0].coef.value, 6.25, "Typing a coefficient must update the production model");
         click("background.removeTerm." + count);
         compare(terms.count, count, "Remove must erase exactly the selected coefficient");
         const selector = control("background.type");
@@ -188,6 +198,7 @@ TestCase {
         question.reject();
         compare(experiment.backgroundType, "polynomial", "Cancel must retain the existing background type");
         compare(terms.count, count, "Cancel must preserve every coefficient row");
+        compare(Probe.rows(terms)[0].coef.value, 6.25, "Cancel must preserve edited coefficient values");
         selector.selected("chebyshev");
         question.accept();
         tryCompare(experiment, "backgroundType", "chebyshev", 2000, "Accept must apply the chosen type");

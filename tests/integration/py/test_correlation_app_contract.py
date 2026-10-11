@@ -20,14 +20,14 @@ def text(path):
 def test_correlations_follows_the_existing_analysis_tabs():
     source = text('Pages/Analysis/AnalysisPage.qml')
     positions = [
-        source.find(f'qsTr("{name}")') for name in ('Pattern', 'Evolution', 'Correlations')
+        source.find(f'qsTr("{name}")') for name in ('Pattern', 'Correlations', 'Evolution')
     ]
     assert all(position >= 0 for position in positions), (
         'Analysis must offer Pattern, Evolution and Correlations'
     )
-    assert positions == sorted(positions), 'Correlations must be the third Analysis main-view tab'
+    assert positions == sorted(positions), 'Correlations must sit between Pattern and Evolution'
     assert 'CorrelationChart {' in source, (
-        'The third tab must instantiate the production correlation chart'
+        'The Correlations tab must instantiate the production correlation chart'
     )
     assert 'currentExperimentIndex' in source and 'blockSelectorShown: true' in source, (
         'Correlations must share Analysis experiment selection with Pattern and Evolution'
