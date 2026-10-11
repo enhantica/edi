@@ -46,66 +46,48 @@ EaElements.Menu {
     width: layout.implicitWidth
     verticalPadding: 0
 
-    // Three rows, as high and as far in as the filter combo boxes' list entries, with no padding above or below as
-    // in their list; a count after each label and a dot (the owner, 2026-10-11).
-    component StateRow: Row {
-        id: stateRow
-
-        property string buttonName: ""
-        property string label: ""
-        property string count: ""
+    // Three rows, each one text ("Free · all 48"), a filter combo box's list entry apart; the same margin on every
+    // side, the list entries' side padding (the owner, 2026-10-11 and 2026-10-12).
+    component StateRow: EaElements.RadioButton {
         property bool choosable: true
         property bool selected: false
         property bool active: true
         signal chosen
 
-        height: EaStyle.Sizes.comboBoxHeight
-        spacing: 0.5 * EaStyle.Sizes.fontPixelSize
-
-        EaElements.RadioButton {
-            objectName: stateRow.buttonName
-            anchors.verticalCenter: parent.verticalCenter
-            verticalPadding: 0
-            text: stateRow.label
-            autoExclusive: false
-            checkable: stateRow.choosable
-            enabled: stateRow.active
-            checked: stateRow.selected
-            onClicked: stateRow.chosen()
-        }
-        EaElements.Label {
-            anchors.verticalCenter: parent.verticalCenter
-            color: EaStyle.Colors.themeForegroundMinor
-            text: stateRow.count
-        }
+        // One text line high: the button's own height counts its touch area, which would widen the top and bottom
+        // margins past the sides'.
+        implicitHeight: AppSizes.legendRowHeight
+        padding: 0
+        autoExclusive: false
+        checkable: choosable
+        enabled: active
+        checked: selected
+        onClicked: chosen()
     }
 
     Column {
         id: layout
 
-        leftPadding: AppSizes.listItemPadding
-        rightPadding: AppSizes.listItemPadding
+        padding: AppSizes.listItemPadding
+        spacing: EaStyle.Sizes.comboBoxHeight - AppSizes.legendRowHeight
 
         StateRow {
-            buttonName: "parameters.freeHeader.free"
-            label: qsTr("Free")
-            count: qsTr("· all %1").arg(menu.shown.length)
+            objectName: "parameters.freeHeader.free"
+            text: qsTr("Free · all %1").arg(menu.shown.length)
             active: menu.shown.length > 0
             selected: menu.shown.length > 0 && menu.fixedCount === 0
             onChosen: menu.apply(true)
         }
         StateRow {
-            buttonName: "parameters.freeHeader.fixed"
-            label: qsTr("Fixed")
-            count: qsTr("· all %1").arg(menu.shown.length)
+            objectName: "parameters.freeHeader.fixed"
+            text: qsTr("Fixed · all %1").arg(menu.shown.length)
             active: menu.shown.length > 0
             selected: menu.shown.length > 0 && menu.freeCount === 0
             onChosen: menu.apply(false)
         }
         StateRow {
-            buttonName: "parameters.freeHeader.mixed"
-            label: qsTr("Mixed")
-            count: qsTr("· %1 free · %2 fixed").arg(menu.freeCount).arg(menu.fixedCount)
+            objectName: "parameters.freeHeader.mixed"
+            text: qsTr("Mixed · %1 free · %2 fixed").arg(menu.freeCount).arg(menu.fixedCount)
             choosable: false
             active: menu.freeCount > 0 && menu.fixedCount > 0
             selected: active
