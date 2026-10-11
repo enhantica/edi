@@ -175,14 +175,25 @@ EaElements.GroupBox {
                     horizontalAlignment: Text.AlignRight
                     text: qsTr("max")
                 }
-                // The title is a button: a click frees or fixes every row the filters show, as one Undo step (the
-                // owner, 2026-10-11).
+                // The title is a button, marked by the combo boxes' arrow: a click frees or fixes every row the
+                // filters show, as one Undo step (the owner, 2026-10-11). The column keeps the word's width; the arrow
+                // sits after it.
                 EaComponents.TableViewLabel {
                     id: freeTitle
                     objectName: "parameters.freeHeader"
                     horizontalAlignment: Text.AlignHCenter
                     color: freeArea.containsMouse ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
                     text: qsTr("free")
+
+                    EaElements.Label {
+                        id: freeArrow
+                        x: (freeTitle.width + freeTitle.contentWidth) / 2 + 0.25 * EaStyle.Sizes.fontPixelSize
+                        anchors.verticalCenter: parent.verticalCenter
+                        font.family: EaStyle.Fonts.iconsFamily
+                        font.pixelSize: 0.8 * EaStyle.Sizes.fontPixelSize
+                        color: freeTitle.color
+                        text: "\uf0d7"
+                    }
 
                     // On the header itself, over this cell: the header's own click area covers its cells.
                     MouseArea {
@@ -191,7 +202,7 @@ EaElements.GroupBox {
                         z: 1
                         x: freeTitle.parent ? freeTitle.parent.x + freeTitle.x : 0
                         y: freeTitle.y
-                        width: freeTitle.width
+                        width: freeArrow.x + freeArrow.width
                         height: freeTitle.height
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
