@@ -310,6 +310,9 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // 5 and 6: without an experiment Analysis and Summary are disabled; without a structure Experiment too.
     steps_.push_back({"t17-22-no-experiment", {"experiments.remove.0"}});
     steps_.push_back({"t17-23-no-structure", {"appBar.tab.structure", basic, "expand:group.structures", "structures.remove.0"}});
+    // 1: Create project's location, one separator between the folder and the name (not accepted: the demo writes
+    // no project into the user's documents).
+    steps_.push_back({"t17-25-create-project", {"key:Escape", "appBar.tab.project", basic, "expand:group.getStarted", "project.create", "createProject.name", "type:Corr"}});
     // 8: a created experiment's Load data… button, left-aligned under Data file.
     steps_.push_back({"t17-24-load-data", start + open_example("pd-neut-cwl_cosio-d20_start-1")
                                               + QStringList{experiment, basic, "expand:group.experiments", "experiments.create"}});

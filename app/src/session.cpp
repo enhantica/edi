@@ -258,7 +258,7 @@ bool Session::openExample(const QString& exampleId) {
     return open(target, exampleId);
 }
 
-bool Session::createProject(const QString& name, const QString& description) {
+bool Session::createProject(const QString& name, const QString& description, const QString& location) {
     ProjectViewModel* created = nullptr;
     try {
         created = new ProjectViewModel(edi::empty_project(name.toStdString(), description.toStdString()), this);
@@ -267,6 +267,17 @@ bool Session::createProject(const QString& name, const QString& description) {
         return false;
     }
     replaceProject(created, {}, {});
+    if (location.isEmpty()) {
+        return true;
+    }
+    const QString error = project_->saveTo(location);
+    setLastError(error);
+    if (!error.isEmpty()) {
+        return false;
+    }
+    emit projectLocationChanged();
+    emit needsSaveAsChanged();
+    emit projectDirectoryUsed(QFileInfo(location).absoluteFilePath());
     return true;
 }
 

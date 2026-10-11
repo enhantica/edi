@@ -104,7 +104,9 @@ class Session : public QObject {
     Q_INVOKABLE bool openProject(const QUrl& directory);
     // Open a bundled example: extracted to this session's temporary directory, then opened whole.
     Q_INVOKABLE bool openExample(const QString& exampleId);
-    Q_INVOKABLE bool createProject(const QString& name, const QString& description);
+    // A new empty project; with a `location` it is saved there at once, so it is that folder's project from the start
+    // and Save writes in place (the owner, 2026-10-08). A refused save keeps the project, unsaved, and says why.
+    Q_INVOKABLE bool createProject(const QString& name, const QString& description, const QString& location = QString());
     Q_INVOKABLE void closeProject();
     // The open project's calculation refusals into the message list, after each recalculation (§14).
     void syncCalculationMessages();
