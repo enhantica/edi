@@ -63,10 +63,11 @@ QtObject {
         EaGlobals.Vars.appBarCurrentIndex = page;
     }
 
-    // The app bar's reset: close the project and return Home with only Home open.
+    // The app bar's reset: close the project and open the Project page, where a new project starts (the owner,
+    // 2026-10-11).
     function reset() {
         Session.closeProject();
-        reached = AppState.Page.Home;
-        EaGlobals.Vars.appBarCurrentIndex = AppState.Page.Home;
+        reached = AppState.Page.Project;
+        EaGlobals.Vars.appBarCurrentIndex = AppState.Page.Project;
     }
 }
