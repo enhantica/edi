@@ -127,7 +127,9 @@ Item {
         width: content.implicitWidth + chart.em * 1.75
         height: AppSizes.toolbarControlSize
         radius: 2
-        enabled: chart.correlations !== null
+        // Disabled while the selected experiment has no correlations (owner, 2026-10-11); a level that hides every pair
+        // keeps them enabled, so it can be lowered again.
+        enabled: chart.correlations !== null && chart.correlations.available >= 2
         color: Qt.tint(EaStyle.Colors.contentBackground, EaStyle.Colors.appBarComboBoxBackground)
         border.color: !enabled ? EaStyle.Colors.themeBackgroundDisabled : box.hovered || number.activeFocus ? EaStyle.Colors.themeForegroundHovered : EaStyle.Colors.appBarComboBoxBorder
 
