@@ -348,7 +348,7 @@ def test_about_exposes_bundled_notices_and_named_copyright():
     assert '"app/DISTRIBUTION-LICENSE.md"' in info, (
         'the licence resource reader must admit the application notice linked from About'
     )
-    # E04-T19 replaces the stacked-dialog route with tabs and inline complete texts.
+    # About uses tabs and inline complete texts instead of stacked dialogs.
     # Bundled-resource and distribution-term assertions above/below remain unchanged.
     assert 'LicenceTextDialog {' not in about, (
         'About licence navigation must remain in one window instead of opening a stacked dialog'
