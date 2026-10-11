@@ -19,7 +19,7 @@ namespace edi_app {
 // the lower triangle of the matrix over the parameters shown, in the fit's order, with the diagonal left blank.
 // The shown experiment's parameters and the structures' are shown; another experiment's (a joint fit's other banks)
 // are not. Of those, a parameter is shown when its strongest correlation with another reaches `level`, and of these
-// the `maxParameters` most correlated; a pair weaker than `level` is left blank. The two are one filter (owner,
+// the `maxParameters` most correlated; every pair among the shown parameters is drawn (owner, 2026-10-11). The two are one filter (owner,
 // 2026-10-11): a level sets the count to the parameters reaching it, a count sets the level to the strongest
 // correlation of the count-th most correlated parameter, and a new matrix keeps the count.
 class CorrelationViewModel : public QObject {
@@ -28,13 +28,13 @@ class CorrelationViewModel : public QObject {
     QML_UNCREATABLE("Belongs to a project")
     // The shown parameters' unique names, rows and columns alike.
     Q_PROPERTY(QStringList labels READ labels NOTIFY labelsChanged)
-    // The cells, row by row over `labels`: a coefficient below the diagonal, NaN where nothing is drawn.
+    // The cells, row by row over `labels`: every finite coefficient below the diagonal, NaN where nothing is drawn.
     Q_PROPERTY(QList<qreal> values READ values NOTIFY valuesChanged)
     // The parameters the shown experiment's correlations name: the most `maxParameters` can show.
     Q_PROPERTY(int available READ available NOTIFY availableChanged)
     // Why nothing is drawn; empty when the matrix is.
     Q_PROPERTY(QString emptyText READ emptyText NOTIFY emptyTextChanged)
-    // The smallest absolute correlation shown, 0 to 1; setting it sets maxParameters.
+    // The smallest absolute correlation a shown parameter has with another, 0 to 1; setting it sets maxParameters.
     Q_PROPERTY(double level READ level WRITE setLevel NOTIFY levelChanged)
     // The most parameters shown, 2 to `available`; setting it sets level.
     Q_PROPERTY(int maxParameters READ maxParameters WRITE setMaxParameters NOTIFY maxParametersChanged)

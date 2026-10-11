@@ -150,9 +150,10 @@ void CorrelationViewModel::rebuild() {
                 labels.append(QString::fromStdString(names_[row]));
                 for (std::size_t column : kept) {
                     const double value = matrix_[row * n + column];
-                    values.append(column < row && std::isfinite(value) && std::abs(value) >= level_
-                                       ? value
-                                       : std::numeric_limits<double>::quiet_NaN());
+                    // Every pair among the shown parameters, whatever its size; the level chose the parameters
+                    // (owner, 2026-10-11).
+                    values.append(column < row && std::isfinite(value) ? value
+                                                                       : std::numeric_limits<double>::quiet_NaN());
                 }
             }
         }

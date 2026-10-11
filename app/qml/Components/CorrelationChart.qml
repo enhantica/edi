@@ -69,7 +69,7 @@ Item {
             objectName: "correlations.toolbar.level"
             icon: "filter"
             label: qsTr("Correlation level:")
-            toolTip: qsTr("The smallest absolute correlation shown, 0 to 1: weaker pairs are left blank")
+            toolTip: qsTr("Shows the parameters with a correlation of at least this size, 0 to 1, and every pair among them")
             widestText: "0.00"
             shown: chart.correlations ? chart.correlations.level.toFixed(2) : ""
             validator: DoubleValidator {
