@@ -4188,9 +4188,11 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
             };
         const std::filesystem::path ledger_path = project_root / "analysis" / "results-provenance.csv";
         auto completed_files = std::make_shared<std::size_t>(0);
-        const crysta::FileCompleteCallback engine_file_complete =
-            [file_history, last_file_history, ledger_path, completed_files,
-             &on_file_complete](const std::vector<std::string>& row) {
+        // Each file's event carries its own fit result, so its correlations are taken from its covariance as a
+        // single fit's are, against the template experiment its labels name.
+        const crysta::FileResultCallback engine_file_result =
+            [this, file_history, last_file_history, ledger_path, completed_files, &on_file_complete](
+                const std::vector<std::string>& row, const crysta::FitResultBase& file_result) {
                 ++*completed_files;
                 std::swap(*last_file_history, *file_history);
                 file_history->clear();
@@ -4200,12 +4202,16 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
                         // The driver wrote this file's ledger row just before its results row and waits
                         // here, so the ledger's last line is this file's.
                         record->termination = ledger_termination(ledger_path, row.empty() ? std::string() : row[0]);
+                        record->correlations =
+                            fit_correlations(*this, file_result, [this](const std::string& label) {
+                                return detail::resolve_project_label(*this, experiment(), label);
+                            });
                         on_file_complete(*record);
                     }
                 }
             };
         const crysta::FitResultBase result =
-            crysta::fit_project(cproject, engine_callback, should_cancel, engine_file_complete);
+            crysta::fit_project(cproject, engine_callback, should_cancel, {}, engine_file_result);
         const double elapsed_ms = std::chrono::duration<double, std::milli>(
                                       std::chrono::steady_clock::now() - fit_start)
                                       .count();

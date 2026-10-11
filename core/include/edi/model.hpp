@@ -3908,6 +3908,15 @@ using PreambleCallback = std::function<void(const FitPreamble&)>;
 // `file_name` is the scan file's own name, no directory. `converged` mirrors the row's success
 // cell — the field a progress line's ok/fail split and a summary's NAMED failures both come
 // from.
+// One pair of the fit's free parameters and their correlation coefficient, as diffraction-lib's
+// `_fit_parameter_correlation` row: the two unique names (`<datablock>.<category>[.<entry>].<name>`) in the
+// fit's column order (i before j) and the coefficient, in [-1, 1].
+struct FitParameterCorrelation {
+    std::string parameter_unique_name_i;
+    std::string parameter_unique_name_j;
+    double correlation = 0.0;
+};
+
 struct ScanFileRecord {
     std::string file_name;
     bool converged = false;
@@ -3918,6 +3927,9 @@ struct ScanFileRecord {
     // Why the file's fit stopped, as crysta's ledger (results-provenance.csv) records it beside the row; empty when
     // it was not recorded.
     std::string termination;
+    // The file's own parameter correlations, from its fit's covariance as a single fit's are (the live event; empty
+    // for a resumed row read back or a fit with no usable covariance).
+    std::vector<FitParameterCorrelation> correlations;
 };
 
 // Optional per-file completion subscriber. Passing none costs nothing: with no
@@ -4206,15 +4218,6 @@ struct SequentialFitConfig {
     bool declared() const { return !data_dir.empty(); }
     // ADR-0018: the row of this object's non-loop categories.
     detail::CategoryRow table_row;
-};
-
-// One pair of the fit's free parameters and their correlation coefficient, as diffraction-lib's
-// `_fit_parameter_correlation` row: the two unique names (`<datablock>.<category>[.<entry>].<name>`) in the
-// fit's column order (i before j) and the coefficient, in [-1, 1].
-struct FitParameterCorrelation {
-    std::string parameter_unique_name_i;
-    std::string parameter_unique_name_j;
-    double correlation = 0.0;
 };
 
 // The last fit's result, as analysis.edi persists it in diffraction-lib's `_fit_result` category

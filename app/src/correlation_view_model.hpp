@@ -48,6 +48,8 @@ class CorrelationViewModel : public QObject {
     // The project's last fit and the shown experiment (its index, and whether the last fit included it), after
     // every publication and every change of the shown experiment.
     void setRecord(const edi::Project& project, int experiment, bool fitted);
+    // A scan dataset's own correlations, from its file's fit (all its parameters are the template experiment's).
+    void setPairs(const std::vector<edi::FitParameterCorrelation>& pairs);
 
     QStringList labels() const { return labels_; }
     QList<qreal> values() const { return values_; }
@@ -69,6 +71,9 @@ class CorrelationViewModel : public QObject {
    private:
     // The level and the count, which edit each other, then the matrix they show.
     void apply(double level, int count);
+    // The matrix of `pairs` without the parameters named under `hidden` prefixes; `reason` when fewer than two remain.
+    void show(const std::vector<edi::FitParameterCorrelation>& pairs, const std::vector<std::string>& hidden,
+              const QString& reason);
     void rebuild();
 
     // The shown experiment's correlations: the parameters in the fit's order and the full matrix over them

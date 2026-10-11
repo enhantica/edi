@@ -1112,6 +1112,8 @@ QString ProjectViewModel::resetScan() {
     if (scan_template_) {
         scan_template_->fit_result = {};
     }
+    scan_correlations_.clear();
+    syncCorrelations();
     undo_history_.emplace_back(std::move(run));
     syncUndo();
     setModified(true);
@@ -1252,6 +1254,10 @@ int ProjectViewModel::scanFileFitted(const edi::ScanFileRecord& record) {
     }
     syncDataset(index);
     evolution_->addRow(index, record.cells);
+    scan_correlations_[index] = record.correlations;
+    if (index == current_dataset_) {
+        syncCorrelations();
+    }
     // The shown dataset got its result: it is shown again with it.
     if (index == current_dataset_ && !(fit_ != nullptr && fit_->following())) {
         viewDataset(index, true);
@@ -1654,6 +1660,12 @@ void ProjectViewModel::publish(bool structural) {
 
 void ProjectViewModel::syncCorrelations() {
     if (correlations_ == nullptr) {
+        return;
+    }
+    if (scan_) {
+        const auto found = scan_correlations_.find(current_dataset_);
+        correlations_->setPairs(found != scan_correlations_.end() ? found->second
+                                                                  : std::vector<edi::FitParameterCorrelation>{});
         return;
     }
     const ExperimentViewModel* experiment = currentExperiment();

@@ -320,6 +320,14 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"t17-28-wyckoff-list", {"atomSite.wyckoffLetter.0"}});
     steps_.push_back({"t17-29-new-atom", {"key:Escape", "atomSites.append"}});
     steps_.push_back({"t17-29b-new-atom-text", {text}});
+    // A sequential scan keeps each dataset's correlations from its own fit, and the Correlations tab follows the
+    // shown dataset (owner, 2026-10-11).
+    steps_.push_back({"t17-40-scan-correlations", QStringList{"key:Escape"} + start
+                                                      + open_example("pd-neut-cwl_cosio-d20_scan-3f")
+                                                      + QStringList{analysis, basic, "fitting.start", "wait-fit",
+                                                                    "choose:OK", "mainArea.analysis.tab.correlations"}});
+    steps_.push_back({"t17-41-scan-second-dataset", {"mainArea.blocks.up"}});
+    steps_.push_back({"t17-42-scan-first-dataset", {"mainArea.blocks.up"}});
     // 8: a created experiment's Load data… button, left-aligned under Data file.
     steps_.push_back({"t17-24-load-data", start + open_example("pd-neut-cwl_cosio-d20_start-1")
                                               + QStringList{experiment, basic, "expand:group.experiments", "experiments.create"}});

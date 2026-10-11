@@ -405,6 +405,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     QString scan_refusal_;
     EvolutionViewModel* evolution_ = nullptr;
     CorrelationViewModel* correlations_ = nullptr;
+    // A scan's correlations by dataset, from each file's fit as the run reports it (owner, 2026-10-11): the
+    // Correlations tab shows the shown dataset's.
+    std::map<int, std::vector<edi::FitParameterCorrelation>> scan_correlations_;
     // The Correlations tab follows the last fit and the shown experiment.
     void syncCorrelations();
     QStringList scan_columns_;

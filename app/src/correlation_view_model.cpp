@@ -14,15 +14,12 @@ namespace edi_app {
 CorrelationViewModel::CorrelationViewModel(QObject* parent) : QObject(parent) {}
 
 void CorrelationViewModel::setRecord(const edi::Project& project, int experiment, bool fitted) {
-    names_.clear();
-    matrix_.clear();
-    reason_.clear();
     const std::vector<edi::FitParameterCorrelation>& pairs = project.fit_result.correlations;
     const int experiments = static_cast<int>(project.experiments.size());
     if (!project.fit_result.held() || pairs.empty()) {
-        reason_ = tr("No correlations yet");
+        show({}, {}, tr("No correlations yet"));
     } else if (experiment < 0 || experiment >= experiments || !fitted) {
-        reason_ = tr("Not in the last fit");
+        show({}, {}, tr("Not in the last fit"));
     } else {
         // Another experiment's parameters are named by its datablock key (io.cpp's parameter slot walk).
         std::vector<std::string> others;
@@ -33,40 +30,52 @@ void CorrelationViewModel::setRecord(const edi::Project& project, int experiment
                                  ".");
             }
         }
-        const auto shown = [&others](const std::string& name) {
-            return std::none_of(others.begin(), others.end(),
-                                [&name](const std::string& prefix) { return name.starts_with(prefix); });
-        };
-        std::map<std::string, std::size_t> index;
-        for (const edi::FitParameterCorrelation& pair : pairs) {
-            for (const std::string* name : {&pair.parameter_unique_name_i, &pair.parameter_unique_name_j}) {
-                if (shown(*name) && !index.contains(*name)) {
-                    index.emplace(*name, names_.size());
-                    names_.push_back(*name);
-                }
+        show(pairs, others, tr("No correlations for this experiment"));
+    }
+}
+
+void CorrelationViewModel::setPairs(const std::vector<edi::FitParameterCorrelation>& pairs) {
+    show(pairs, {}, pairs.empty() ? tr("No correlations yet") : tr("No correlations for this experiment"));
+}
+
+void CorrelationViewModel::show(const std::vector<edi::FitParameterCorrelation>& pairs,
+                                const std::vector<std::string>& hidden, const QString& reason) {
+    names_.clear();
+    matrix_.clear();
+    reason_.clear();
+    const auto shown = [&hidden](const std::string& name) {
+        return std::none_of(hidden.begin(), hidden.end(),
+                            [&name](const std::string& prefix) { return name.starts_with(prefix); });
+    };
+    std::map<std::string, std::size_t> index;
+    for (const edi::FitParameterCorrelation& pair : pairs) {
+        for (const std::string* name : {&pair.parameter_unique_name_i, &pair.parameter_unique_name_j}) {
+            if (shown(*name) && !index.contains(*name)) {
+                index.emplace(*name, names_.size());
+                names_.push_back(*name);
             }
-        }
-        const std::size_t n = names_.size();
-        matrix_.assign(n * n, std::numeric_limits<double>::quiet_NaN());
-        for (std::size_t i = 0; i < n; ++i) {
-            matrix_[i * n + i] = 1.0;
-        }
-        for (const edi::FitParameterCorrelation& pair : pairs) {
-            const auto i = index.find(pair.parameter_unique_name_i);
-            const auto j = index.find(pair.parameter_unique_name_j);
-            if (i != index.end() && j != index.end()) {
-                matrix_[i->second * n + j->second] = pair.correlation;
-                matrix_[j->second * n + i->second] = pair.correlation;
-            }
-        }
-        if (n < 2) {
-            names_.clear();
-            matrix_.clear();
-            reason_ = tr("No correlations for this experiment");
         }
     }
+    std::size_t n = names_.size();
+    matrix_.assign(n * n, std::numeric_limits<double>::quiet_NaN());
+    for (std::size_t i = 0; i < n; ++i) {
+        matrix_[i * n + i] = 1.0;
+    }
+    for (const edi::FitParameterCorrelation& pair : pairs) {
+        const auto i = index.find(pair.parameter_unique_name_i);
+        const auto j = index.find(pair.parameter_unique_name_j);
+        if (i != index.end() && j != index.end()) {
+            matrix_[i->second * n + j->second] = pair.correlation;
+            matrix_[j->second * n + i->second] = pair.correlation;
+        }
+    }
+    if (n < 2) {
+        names_.clear();
+        matrix_.clear();
+        reason_ = reason;
+        n = 0;
+    }
     // Each parameter's strongest correlation with another, and those strengths from the strongest down.
-    const std::size_t n = names_.size();
     strength_.assign(n, 0.0);
     for (std::size_t i = 0; i < n; ++i) {
         for (std::size_t j = 0; j < n; ++j) {
