@@ -232,6 +232,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // The parameter table's "free" header: free or fix every one of `parameters` (the rows the filters show) that can
     // be fitted, as one edit with one Undo step (the owner, 2026-10-11).
     Q_INVOKABLE bool setParametersFree(const QVariantList& parameters, bool free);
+    // Name points by position: the current experiment's line-segment points take ids from their positions
+    // (edi::position_point_ids), every reference following, as one edit with one Undo step (the owner, 2026-10-11).
+    Q_INVOKABLE bool namePointsByPosition();
     Q_INVOKABLE void removeExperiment(int index);
     // A new experiment without data (edi::simulation_experiment), selected: powder, constant wavelength,
     // neutron, Bragg, linked to every structure. One undoable step, as a load of experiments is.
@@ -373,8 +376,13 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     struct FreeFlags {
         std::vector<std::pair<std::string, bool>> before;
     };
+    // Name points by position: the experiment's background point ids as they were, in order.
+    struct PointIds {
+        const edi::ExperimentBase* experiment = nullptr;
+        std::vector<std::string> before;
+    };
     using UndoRecord = std::variant<std::monostate, edi::RelationsUndo, AddedExperiments, ScanRun, LoadedData,
-                                    edi::StructuresUndo, FreeFlags>;
+                                    edi::StructuresUndo, FreeFlags, PointIds>;
     // An experiment replaced by Load data, a type change or their undo: the undo records follow it.
     void experimentReplaced(const edi::ExperimentBase* before, const edi::ExperimentBase* after);
     // Each experiment view's Load data… state: every experiment but a scan's.

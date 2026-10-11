@@ -681,6 +681,29 @@ bool ProjectViewModel::createStructure() {
     return true;
 }
 
+bool ProjectViewModel::namePointsByPosition() {
+    if (current_experiment_ < 0 || current_experiment_ >= static_cast<int>(project_->experiments.size())) {
+        return false;
+    }
+    edi::ExperimentBase& experiment = *project_->experiments[static_cast<std::size_t>(current_experiment_)];
+    PointIds record{&experiment, {}};
+    for (const auto& point : experiment.background) {
+        record.before.push_back(point->id.value());
+    }
+    std::vector<std::string> ids = edi::position_point_ids(experiment);
+    if (ids == record.before) {
+        return true;
+    }
+    const QString error = apply(edi::Edit::background_point_ids(experiment, std::move(ids)), true);
+    if (!error.isEmpty()) {
+        emit refused(error);
+        return false;
+    }
+    undo_history_.emplace_back(std::move(record));
+    syncUndo();
+    return true;
+}
+
 bool ProjectViewModel::setParametersFree(const QVariantList& parameters, bool free) {
     std::map<const edi::Parameter*, std::string> names;
     for (const edi::NamedSlot& slot : edi::named_slots(*project_)) {
@@ -1574,6 +1597,14 @@ void ProjectViewModel::undo() {
         undone = apply(edi::Edit::restore_structures(*project_, *structures), true).isEmpty();
     } else if (const auto* flags = std::get_if<FreeFlags>(&undo_history_.back())) {
         undone = apply(edi::Edit::set_free(*project_, flags->before), false).isEmpty();
+    } else if (const auto* ids = std::get_if<PointIds>(&undo_history_.back())) {
+        const auto found = std::find_if(project_->experiments.begin(), project_->experiments.end(),
+                                        [ids](const auto& held) { return held.get() == ids->experiment; });
+        if (found == project_->experiments.end()) {
+            setLastError(tr("undo: the experiment is no longer in the project"));
+        } else {
+            undone = apply(edi::Edit::background_point_ids(**found, ids->before), true).isEmpty();
+        }
     } else {
         // A single fit on a scan dataset made it the template and the last fit. Its Undo is refused, with nothing
         // changed, while the model's dataset is still being read, and when the run record is there but cannot be

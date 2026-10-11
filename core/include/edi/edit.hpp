@@ -225,6 +225,9 @@ class Edit {
     }
     // A polynomial or Chebyshev background's terms: one appended at the lowest free order, a term's order, the
     // polynomial's origin and an end of the Chebyshev domain, each under its rule.
+    static Edit background_point_ids(ExperimentBase& experiment, std::vector<std::string> ids) {
+        return Edit([&experiment, ids = std::move(ids)] { set_background_point_ids(experiment, ids); });
+    }
     static Edit append_background_term(ExperimentBase& experiment) {
         return Edit([&experiment] { experiment.background_terms.push_back(next_background_term(experiment)); });
     }

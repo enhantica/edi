@@ -6,8 +6,14 @@
 
 #include <algorithm>
 #include <cmath>
+#include <iomanip>
+#include <locale>
+#include <map>
+#include <set>
+#include <sstream>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 #include "edi/io.hpp"
 
@@ -241,6 +247,73 @@ PolynomialTerm next_background_term(const ExperimentBase& experiment) {
     }
     throw std::invalid_argument("this " + experiment.background_type + " background holds every order 0.." +
                                 std::to_string(highest));
+}
+
+std::vector<std::string> position_point_ids(const ExperimentBase& experiment) {
+    const std::size_t n = experiment.background.size();
+    std::vector<int> decimals(n, 0);
+    std::vector<std::string> ids(n);
+    const auto spelled = [](double position, int places) {
+        std::ostringstream text;
+        text.imbue(std::locale::classic());
+        text << std::fixed << std::setprecision(places) << position;
+        return text.str() == "-0" ? std::string("0") : text.str();
+    };
+    for (int round = 0; round < 16; ++round) {
+        for (std::size_t i = 0; i < n; ++i) {
+            ids[i] = spelled(experiment.background[i]->position.get(), decimals[i]);
+        }
+        std::map<std::string, std::vector<std::size_t>> holders;
+        for (std::size_t i = 0; i < n; ++i) {
+            holders[ids[i]].push_back(i);
+        }
+        bool shared = false;
+        for (const auto& [id, rows] : holders) {
+            if (rows.size() > 1) {
+                shared = true;
+                for (const std::size_t row : rows) {
+                    ++decimals[row];
+                }
+            }
+        }
+        if (!shared) {
+            return ids;
+        }
+    }
+    // Positions equal to every printed decimal: the rows keep apart by their place.
+    for (std::size_t i = 0; i < n; ++i) {
+        ids[i] += "-" + std::to_string(i + 1);
+    }
+    return ids;
+}
+
+void set_background_point_ids(ExperimentBase& experiment, const std::vector<std::string>& ids) {
+    if (ids.size() != experiment.background.size()) {
+        throw std::invalid_argument("background point ids: " + std::to_string(ids.size()) + " ids for " +
+                                    std::to_string(experiment.background.size()) + " points");
+    }
+    const std::set<std::string> distinct(ids.begin(), ids.end());
+    if (distinct.size() != ids.size() || distinct.contains(std::string())) {
+        throw std::invalid_argument("background point ids must be distinct and not empty");
+    }
+    // Two passes, so no rename meets an id another point still holds: first to names no point holds, then to the
+    // ids asked for.
+    std::set<std::string> held;
+    for (const auto& point : experiment.background) {
+        held.insert(point->id.value());
+    }
+    held.insert(ids.begin(), ids.end());
+    std::size_t counter = 0;
+    for (const auto& point : experiment.background) {
+        std::string spare;
+        do {
+            spare = "renaming-" + std::to_string(++counter);
+        } while (held.contains(spare));
+        point->id = spare;
+    }
+    for (std::size_t i = 0; i < ids.size(); ++i) {
+        experiment.background[i]->id = ids[i];
+    }
 }
 
 void set_background_term_order(ExperimentBase& experiment, PolynomialTerm& term, int order) {

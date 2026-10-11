@@ -380,6 +380,13 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                                 "choose:chebyshev"}});
     steps_.push_back({"t17-15-type-chebyshev", {"choose:OK"}});
     steps_.push_back({"t17-16-chebyshev-term-appended", {"background.appendTerm", "background.appendTerm"}});
+    // Name points by position (owner, 2026-10-11): the line-segment points' ids from their positions, and the
+    // parameter table naming them so.
+    steps_.push_back({"t17-80-name-points", start + open_example("pd-neut-cwl_lbco-hrpt_start-2")
+                                                + QStringList{experiment, basic, "expand:group.background",
+                                                              "background.namePoints"}});
+    steps_.push_back({"t17-81-named-points-in-table",
+                      {analysis, basic, "parameters.nameFilter", "type:background"}});
     // Every loop row is named by its id in the parameter table (owner, 2026-10-11): the Chebyshev terms here.
     steps_.push_back({"t17-17-term-ids-in-table", start + open_example("pd-neut-tof_cecoal-polaris_chebyshev")
                                                       + QStringList{analysis, basic, "parameters.nameFilter",

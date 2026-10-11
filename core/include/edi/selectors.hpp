@@ -136,6 +136,13 @@ void select_background_type(ExperimentBase& experiment, const std::string& token
 // A new term for a polynomial or Chebyshev background: the lowest order the experiment does not hold, coefficient 0.
 // Refused for a line-segment background and when every order the type admits is held.
 PolynomialTerm next_background_term(const ExperimentBase& experiment);
+// Ids for a line-segment background's points from their positions (the owner, 2026-10-11): each position rounded to
+// whole units (2θ 24.873 → `25`), one more decimal only for the points that would share an id, until they differ.
+std::vector<std::string> position_point_ids(const ExperimentBase& experiment);
+// The background points renamed to `ids`, in their order; each rename carries the aliases and correlations that
+// name the point (the rename-propagation rule). Refused, with nothing renamed, when the count differs or two ids are
+// equal or empty.
+void set_background_point_ids(ExperimentBase& experiment, const std::vector<std::string>& ids);
 // A term's order, refused outside 0..background_max_order of the experiment's type or when another term holds it.
 void set_background_term_order(ExperimentBase& experiment, PolynomialTerm& term, int order);
 // The polynomial background's origin: finite and not zero (crysta's rule).

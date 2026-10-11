@@ -158,19 +158,35 @@ Column {
                 }
             }
 
-            // Append, and reset to the autodetected background — not implemented yet, so disabled (edi
-            // ADR-0017 §4).
+            // Append; name every point by its position, rounded as strongly as keeps the names apart (the owner,
+            // 2026-10-11); and reset to the autodetected background — not implemented yet, so disabled (edi
+            // ADR-0017 §4). Three at equal widths.
             Row {
+                id: pointButtons
+
+                readonly property real buttonWidth: (EaStyle.Sizes.sideBarContentWidth - 2 * spacing) / 3
+
                 spacing: EaStyle.Sizes.fontPixelSize
 
                 EaElements.SideBarButton {
                     objectName: "background.append"
+                    width: pointButtons.buttonWidth
                     fontIcon: "plus-circle"
                     text: qsTr("Append new point")
                     onClicked: group.points.append()
                 }
                 EaElements.SideBarButton {
+                    objectName: "background.namePoints"
+                    width: pointButtons.buttonWidth
+                    enabled: Session.project !== null && group.points !== null && group.points.count > 0
+                    fontIcon: "tag"
+                    text: qsTr("Name points by position")
+                    ToolTip.text: qsTr("Name each point by its position, rounded, so the parameter table shows where it is")
+                    onClicked: Session.project.namePointsByPosition()
+                }
+                EaElements.SideBarButton {
                     objectName: "background.autodetect"
+                    width: pointButtons.buttonWidth
                     enabled: false
                     fontIcon: "undo-alt"
                     text: qsTr("Reset to autodetected background")
