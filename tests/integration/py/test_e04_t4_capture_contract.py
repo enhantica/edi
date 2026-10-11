@@ -207,6 +207,9 @@ VERIFIED_CAPTURES: dict[str, dict[str, object]] = {
             '(t4-04-messages-list.png)'
         },
     },
+    # The unchanged PNG was rechecked: full scientist names remain visible.
+    # The observation uses ASCII hyphens as prose punctuation; exact comparison
+    # below still refuses any alternative wording or producer-owned certification.
     '17-experiment-profile-selector.png': {
         'sha256': '01809fd6ed10a8b2e10c1540885a09fcd67737053b4b3af65cc81b0324318472',
         'checks': {
@@ -215,9 +218,9 @@ VERIFIED_CAPTURES: dict[str, dict[str, object]] = {
             '18': 'withdrawn; final feedback: the profile list opens over a group with '
             'no subheading',
             '3': 'the profile list names each profile in full: Gaussian, Lorentzian, '
-            'Pseudo-Voigt, Pseudo-Voigt + Bérar\u2013Baldinozzi asymmetry, '
-            'Thompson\u2013Cox\u2013Hastings pseudo-Voigt (TCH), and the TCH with '
-            'Finger\u2013Cox\u2013Jephcoat asymmetry (FCJ)',
+            'Pseudo-Voigt, Pseudo-Voigt + Bérar-Baldinozzi asymmetry, '
+            'Thompson-Cox-Hastings pseudo-Voigt (TCH), and the TCH with '
+            'Finger-Cox-Jephcoat asymmetry (FCJ)',
         },
     },
     '18-experiment-tch.png': {
@@ -921,5 +924,34 @@ def test_producer_cannot_self_certify_or_replace_checked_image_pins(monkeypatch)
     supplied_bytes = content
     supplied[0]['sha256'] = hashlib.sha256(content).hexdigest()
     supplied[0]['checks']['1'] = 'A producer substitutes an unchecked About observation.'
+    with pytest.raises(AssertionError, match='independently checked image pins'):
+        test_every_final_visible_idea_has_checked_capture_evidence()
+
+
+@pytest.mark.parametrize(
+    ('full_name', 'substitute'),
+    [
+        ('Bérar-Baldinozzi', 'Bérar'),
+        ('Thompson-Cox-Hastings', 'TCH'),
+        ('Finger-Cox-Jephcoat', 'Finger-Cox-Jackson'),
+    ],
+    ids=['truncated-asymmetry-name', 'abbreviated-profile-name', 'wrong-scientist-name'],
+)
+def test_profile_observation_spelling_does_not_admit_changed_claims(
+    full_name, substitute, monkeypatch
+):
+    payload = json.loads(read('docs/dev/design/app-example-captures.json'))
+    row = next(row for row in payload if row['image'] == '17-experiment-profile-selector.png')
+    assert full_name in row['checks']['3'], (
+        'gate 3: the checked selector observation preserves each complete scientist name'
+    )
+    original_read = read
+
+    def candidate(path):
+        return json.dumps(payload).encode() if path.endswith('.json') else original_read(path)
+
+    monkeypatch.setattr(sys.modules[__name__], 'read', candidate)
+    test_every_final_visible_idea_has_checked_capture_evidence()
+    row['checks']['3'] = row['checks']['3'].replace(full_name, substitute)
     with pytest.raises(AssertionError, match='independently checked image pins'):
         test_every_final_visible_idea_has_checked_capture_evidence()

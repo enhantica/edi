@@ -1794,15 +1794,18 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
 
     const Loop* excluded = block.loop_with("_excluded_region.start");
     if (excluded != nullptr) {
-        std::vector<std::pair<double, double>> regions;
+        std::vector<std::shared_ptr<ExcludedRegion>> regions;
         for (const auto& row : excluded->rows) {
             const double start = to_double(loop_cell(*excluded, row, "_excluded_region.start", where),
                                            where);
             const double end =
                 to_double(loop_cell(*excluded, row, "_excluded_region.end", where), where);
-            regions.emplace_back(start, end);
+            ExcludedRegion region(start, end);
+            if (excluded->column("_excluded_region.id") >= 0)
+                region.id = loop_cell(*excluded, row, "_excluded_region.id", where);
+            regions.push_back(std::make_shared<ExcludedRegion>(region));
         }
-        experiment.excluded_regions = std::move(regions);
+        experiment.excluded_regions.assign(std::move(regions));
     }
 
     // The file's reflections, kept as read (model.hpp ExperimentBase::carried_reflections).
@@ -1866,16 +1869,20 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
 
     const Loop* background = block.loop_with("_background.position");
     if (background != nullptr) {
+        std::vector<std::shared_ptr<LineSegment>> points;
         for (const auto& row : background->rows) {
             LineSegment point;
+            if (background->column("_background.id") >= 0)
+                point.id = loop_cell(*background, row, "_background.id", where);
             point.position = to_double(loop_cell(*background, row, "_background.position", where), where);
             read_into(point.intensity,
                       parse_parameter(loop_cell(*background, row,
                                                 spec::background_intensity.edi_names[0], where),
                                       where),
                       where);
-            experiment.background.push_back(std::move(point));
+            points.push_back(std::make_shared<LineSegment>(std::move(point)));
         }
+        experiment.background.assign(std::move(points));
     }
     experiment.data = parse_measured_data(block, resolved.mode, where);
 
@@ -2167,9 +2174,9 @@ auto parameter_slots(ProjectT& project) {
         // intensities, or a polynomial or Chebyshev model's coefficients.
         if (experiment.background_type == "line-segment") {
             for (std::size_t index = 0; index < experiment.background.size(); ++index) {
-                // The written `_background.id` is the row ordinal, from 1.
+                // Persisted names use the stored ID; the engine address remains an ordinal.
                 add(prefix + "background[" + std::to_string(index) + "]",
-                    prefix + "background." + std::to_string(index + 1) + ".intensity",
+                    prefix + "background." + experiment.background[index]->id.value() + ".intensity",
                     &experiment.background[index]->intensity);
             }
         } else {

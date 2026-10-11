@@ -2105,7 +2105,13 @@ void apply_post_build_fields(const ExperimentBase& e, crysta::ExperimentBase& bu
                                               e.neutron_scattering_length.value_or(""));
     built.dataset_weight = e.dataset_weight;
     built.data_file = e.data_file;
-    built.excluded_regions = e.excluded_regions;
+    std::vector<crysta::ExcludedRegion> regions;
+    regions.reserve(e.excluded_regions.size());
+    for (const auto& region : e.excluded_regions) {
+        regions.emplace_back(region->first.get(), region->second.get());
+        regions.back().id = region->id.value();
+    }
+    built.excluded_regions = regions;
     // The declared background model, its constants and its terms, through crysta's converter like
     // every token; crysta refuses a model holding another type's rows or constants.
     built.background_type = crossed(crysta::TokenField::BackgroundType, built, e.background_type);
@@ -2307,6 +2313,7 @@ crysta::BraggPdExperiment to_crysta_cwl_experiment(const ExperimentBase& e, bool
     for (const auto& point : e.background) {
         background.emplace_back(point->position,
                                 param(point->intensity, crysta::BACKGROUND, "intensity"));
+        background.back().id = point->id.value();
     }
     crysta::BraggPdExperiment built(std::move(peak), std::move(instrument),
                              param(seed_scale(e), crysta::SCALE, "scale"), std::move(background));
@@ -2387,6 +2394,7 @@ crysta::BraggPdExperiment to_crysta_experiment(const ExperimentBase& e, bool for
     for (const auto& point : e.background) {
         background.emplace_back(point->position,
                                 param(point->intensity, crysta::BACKGROUND, "intensity"));
+        background.back().id = point->id.value();
     }
     builder.background(std::move(background));
     crysta::BraggPdExperiment built = builder.build();
@@ -3556,7 +3564,7 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
         // must be taken here: apply_exclusions replaces `measured`, and the provider only ever
         // sees the masked pattern.
         const std::size_t n_points_loaded = measured.grid.size();
-        measured = crysta::apply_exclusions(measured, experiment().excluded_regions);
+        measured = crysta::apply_exclusions(measured, excluded_region_ranges(experiment().excluded_regions));
         if (measured.grid.empty()) {
             throw std::invalid_argument(
                 "edi fit: no measured data remains after applying the excluded regions");
@@ -4226,7 +4234,7 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
             n_points_loaded += patterns[bank].axis().size();
             crysta::ResidualPattern pattern{patterns[bank].axis(), patterns[bank].intensity_meas,
                                             patterns[bank].intensity_meas_su};
-            pattern = crysta::apply_exclusions(pattern, experiments[bank]->excluded_regions);
+            pattern = crysta::apply_exclusions(pattern, excluded_region_ranges(experiments[bank]->excluded_regions));
             if (pattern.grid.empty()) {
                 throw std::invalid_argument(
                     "edi fit_joint: no measured data remains for bank '" +

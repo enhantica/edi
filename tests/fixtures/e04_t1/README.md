@@ -13,6 +13,15 @@ Regenerate both with `python tests/fixtures/e04_t1/generate.py` and
 from the committed `.edi` files; CeCoAl's `P m m a` display identity is ITA 51,
 orthorhombic (also independently frozen in crysta's space-group oracle).
 
+Descriptive catalogue updates use
+`python -m tests.fixtures.e04_t1.adapt_descriptive_inputs`. The source-only
+`table_display/metadata-inputs.zip` archive proves whole before/after files and
+admits only declared descriptive/type fields. The generator preserves the old
+scientific values, warnings, datasets, case order and every displayed value;
+only exact source hashes and input-derived descriptors change. Repeating the
+same adaptation is stable. Unrecognised source hashes, changed scientific bytes,
+duplicate declarations and inconsistent old scalar witnesses refuse.
+
 The app acceptance tier is `tests/unit/app`. Build its `test_*.cpp` support sources
 into the Qt Quick Test runner (AUTOMOC), linked to the same registered `edi.app`
 module and engine setup the production host uses. Run its `tst_*.qml` files with

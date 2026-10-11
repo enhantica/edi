@@ -15,6 +15,7 @@ Column {
     spacing: AppSizes.groupContentSpacing
 
     EaElements.GroupRow {
+        spacing: AppSizes.inputSpacing
         SelectorField {
             objectName: "absorption.type"
             label: qsTr("type")

@@ -1,8 +1,8 @@
 _edi.schema_version 2
 
 _metadata.name             cosio_d20_scan
-_metadata.title            "Co2SiO4 D20 three-temperature sequential scan"
-_metadata.description      " corpus project"
+_metadata.title "Co₂SiO₄ [Pnma] · D20 @ ILL"
+_metadata.description "Temperature scan · 3 patterns at 52.3, 299.4 and 497.4 K"
 _metadata.created          "09 Sep 2026 07:33:40"
 _metadata.last_modified    "09 Sep 2026 07:34:27"
 _metadata.timestamp        2026-09-09T07:34:35+00:00
@@ -34,3 +34,8 @@ _structure_style.adp_probability 0.99
 _structure_style.atom_scale 0.3
 
 _verbosity.fit short
+_metadata.purpose "refinement"
+_metadata.dimensionality "1D"
+_metadata.instrument "D20"
+_metadata.facility "ILL"
+_metadata.polarisation "none"

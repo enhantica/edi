@@ -9,7 +9,10 @@ TestCase {
     name: "C13T2Gui"
     when: windowShown
     property var appWindow
-    Component { id: application; Main {} }
+    Component {
+        id: application
+        Main {}
+    }
     function initTestCase() {
         failOnWarning(/.*/);
         appWindow = application.createObject(null);
@@ -19,11 +22,8 @@ TestCase {
     function init() {
         // Offscreen software has no GL context; changing a tensor also refreshes the 3D scene.
         // Keep all other warnings fatal, including every warning in cases without a scene refresh.
-        const refreshesScene = ["test_adp_view_uses_probability_in_atom_scale_position",
-            "test_each_declared_adp_type_has_the_required_editor_state",
-            "test_analysis_tensor_rows_stay_with_their_site"].includes(qtest_results.functionName);
-        failOnWarning(refreshesScene
-            ? /\A(?!QRhiGles2: Failed to create (?:temporary context|context)\z)[\s\S]*\z/ : /.*/);
+        const refreshesScene = ["test_adp_view_uses_probability_in_atom_scale_position", "test_each_declared_adp_type_has_the_required_editor_state", "test_analysis_tensor_rows_stay_with_their_site"].includes(qtest_results.functionName);
+        failOnWarning(refreshesScene ? /\A(?!QRhiGles2: Failed to create (?:temporary context|context)\z)[\s\S]*\z/ : /.*/);
         Session.closeProject();
         Session.openProject(Probe.repoUrl("tests/fixtures/e04_t1/editable-project"));
         verify(Session.hasProject, "GUI: committed editable project opens");
@@ -33,14 +33,21 @@ TestCase {
         verify(waitForRendering(appWindow.contentItem), "GUI: page teardown settles");
         appWindow.destroy();
     }
-    function click(name) { Ui.click(test, Probe, appWindow, name); }
-    function control(name) { return Ui.control(Probe, appWindow, name); }
+    function click(name) {
+        Ui.click(test, Probe, appWindow, name);
+    }
+    function control(name) {
+        return Ui.control(Probe, appWindow, name);
+    }
     function discover(root, name) {
-        if (!root || !root.visible) return null;
-        if (root.objectName === name && Ui.inPane(Ui.target(root))) return root;
+        if (!root || !root.visible)
+            return null;
+        if (root.objectName === name && Ui.inPane(Ui.target(root)))
+            return root;
         for (const child of root.children || []) {
             const found = discover(child, name);
-            if (found) return found;
+            if (found)
+                return found;
         }
         return null;
     }
@@ -48,8 +55,10 @@ TestCase {
         click("appBar.tab." + page);
         click("sideBar.tab." + tier);
         let header = null;
-        tryVerify(() => { header = discover(Ui.page(appWindow), "group." + group); return header !== null; },
-                  2000, "GUI: declared category belongs to the selected pane: " + group);
+        tryVerify(() => {
+            header = discover(Ui.page(appWindow), "group." + group);
+            return header !== null;
+        }, 2000, "GUI: declared category belongs to the selected pane: " + group);
         Ui.scrollIntoView(Ui.target(header));
         Ui.expandGroup(test, Probe, appWindow, "group." + group);
         tryVerify(() => control(name) !== null, 2000, "GUI: category exposes its control: " + name);
@@ -74,56 +83,53 @@ TestCase {
         }
     }
     function expectRed(field) {
-        tryVerify(() => field.color.r > field.color.g + 0.15 && field.color.r > field.color.b + 0.15,
-                  1000, "owner 2026-10-06: rejected text actually renders red after the colour transition");
+        tryVerify(() => field.color.r > field.color.g + 0.15 && field.color.r > field.color.b + 0.15, 1000, "owner 2026-10-06: rejected text actually renders red after the colour transition");
     }
     function textInput(field, keys) {
         field.forceActiveFocus();
         keyClick(Qt.Key_A, Qt.ControlModifier);
-        for (const key of keys) keyClick(key);
+        for (const key of keys)
+            keyClick(key);
         keyClick(Qt.Key_Return);
     }
-    function headers(table) { return Array.from(table.headerLabelItems).map(item => item.text); }
+    function headers(table) {
+        const row = Array.from(table.headerItem.children).find(item => item.children.length === table.columnWidths.length);
+        verify(row !== undefined, "The ListView header exposes one label per column");
+        return Array.from(row.children).map(item => item.text);
+    }
     function test_separate_adp_table_and_isotropic_controls() {
         const atoms = reveal("structure", "basic", "atom_site", "atomSites.list");
-        compare(JSON.stringify(headers(atoms)), JSON.stringify(["", "label", "type", "x", "y", "z", "WL", "occ", ""]),
-                "owner 2026-10-06: Atom sites has an unlabelled index, WL, and no ADP columns");
+        compare(JSON.stringify(headers(atoms)), JSON.stringify(["", "id", "type", "x", "y", "z", "WL", "occ", ""]), "owner 2026-10-06: Atom sites has an unlabelled index, WL, and no ADP columns");
         const picker = control("atomSite.typeSymbol.0");
         const icon = control("atomSite.icon.0");
-        verify(picker !== null && icon !== null && icon.parent === picker.contentItem,
-               "owner 2026-10-06: atom icon sits inside the type picker without a separate column");
-        verify(atoms.headerLabelItems[2].width < atoms.headerLabelItems[3].width,
-               "owner 2026-10-06: atom type column is compact beside coordinates");
+        verify(picker !== null && icon !== null && icon.parent === picker.contentItem, "owner 2026-10-06: atom icon sits inside the type picker without a separate column");
+        verify(atoms.resolvedColumnWidths[2] < atoms.resolvedColumnWidths[3], "owner 2026-10-06: atom type column is compact beside coordinates");
         const table = reveal("structure", "basic", "atom_site_aniso", "atomSiteAdps.list");
-        compare(JSON.stringify(headers(table)), JSON.stringify(["", "label", "type", "iso", "ani11", "ani22", "ani33", "ani12", "ani13", "ani23"]),
-                "owner 2026-10-06: Atomic displacement owns the complete scalar and tensor table");
+        compare(JSON.stringify(headers(table)), JSON.stringify(["", "id", "type", "Biso", "ani11", "ani22", "ani33", "ani12", "ani13", "ani23"]), "owner 2026-10-06: Atomic displacement owns the complete scalar and tensor table");
         const sites = Probe.rows(Session.project.currentStructure.atomSites);
         const adps = Probe.rows(Session.project.currentStructure.atomSiteAdps);
-        compare(JSON.stringify(adps.map(row => row.label)), JSON.stringify(sites.map(row => row.label)),
-                "owner 2026-10-06: ADP labels copy Atom sites in exactly the same order");
-        verify(!control("atomSiteAdp.label.0").enabled, "owner 2026-10-06: copied ADP label is disabled");
+        compare(JSON.stringify(adps.map(row => row.label)), JSON.stringify(sites.map(row => row.label)), "owner 2026-10-06: ADP labels copy Atom sites in exactly the same order");
+        verify(control("atomSiteAdp.label.0").enabled, "owner 2026-10-09: ADP id is editable through the atom-site rename");
         verify(control("atomSiteAdp.iso.0").enabled, "owner 2026-10-06: Biso scalar is editable");
         for (const component of ["11", "22", "33", "12", "13", "23"]) {
             const field = control("atomSiteAdp.ani" + component + ".0");
-            verify(field !== null && !field.enabled && field.text === "",
-                   "owner 2026-10-06: isotropic sites leave all tensor fields empty and disabled");
+            verify(field !== null && !field.enabled && field.text === "", "owner 2026-10-06: isotropic sites leave all tensor fields empty and disabled");
         }
     }
     function test_each_declared_adp_type_has_the_required_editor_state() {
         const picker = reveal("structure", "basic", "atom_site_aniso", "atomSiteAdp.type.0");
-        compare(JSON.stringify(Array.from(picker.model)), JSON.stringify(["Biso", "Uiso", "Bani", "Uani", "beta"]),
-                "ADP: all five declared ADP types are selectable");
+        compare(JSON.stringify(Array.from(picker.model)), JSON.stringify(["Biso", "Uiso", "Bani", "Uani", "beta"]), "ADP: all five declared ADP types are selectable");
         for (const type of ["Uiso", "Bani", "Uani", "beta", "Biso"]) {
             Ui.scrollIntoView(picker);
             click("atomSiteAdp.type.0");
             tryCompare(picker.popup, "opened", true, 2000, "ADP: ADP list opens through input");
             const index = Array.from(picker.model).indexOf(type);
             keyClick(Qt.Key_Home);
-            for (let i = 0; i < index; ++i) keyClick(Qt.Key_Down);
+            for (let i = 0; i < index; ++i)
+                keyClick(Qt.Key_Down);
             keyClick(Qt.Key_Return);
             tryCompare(picker.popup, "visible", false, 2000, "ADP: selection finishes closing the ADP popup");
-            tryVerify(() => Probe.rows(Session.project.currentStructure.atomSiteAdps)[0].adpType === type,
-                      2000, "ADP: real ADP selection reaches the row model: " + type);
+            tryVerify(() => Probe.rows(Session.project.currentStructure.atomSiteAdps)[0].adpType === type, 2000, "ADP: real ADP selection reaches the row model: " + type);
             const anisotropic = ["Bani", "Uani", "beta"].includes(type);
             // Before: non-Biso selected a retired preview object. After: the same
             // iso cell edits both scalar types and displays the tensor equivalent.
@@ -150,35 +156,33 @@ TestCase {
             click("atomSiteAdp.type." + siteIndex);
             tryCompare(picker.popup, "opened", true, 2000, "Analysis: the real ADP selector opens");
             keyClick(Qt.Key_Home);
-            for (let i = 0; i < Array.from(picker.model).indexOf("Uani"); ++i) keyClick(Qt.Key_Down);
+            for (let i = 0; i < Array.from(picker.model).indexOf("Uani"); ++i)
+                keyClick(Qt.Key_Down);
             keyClick(Qt.Key_Return);
             tryCompare(picker.popup, "visible", false, 2000, "Analysis: the ADP selection closes");
-            tryVerify(() => Probe.rows(Session.project.currentStructure.atomSiteAdps)[siteIndex].adpType === "Uani",
-                      2000, "Analysis: the selected site changes to Uani");
-            click("appBar.tab.analysis"); click("sideBar.tab.basic");
+            tryVerify(() => Probe.rows(Session.project.currentStructure.atomSiteAdps)[siteIndex].adpType === "Uani", 2000, "Analysis: the selected site changes to Uani");
+            click("appBar.tab.analysis");
+            click("sideBar.tab.basic");
             let table = null;
-            tryVerify(() => { table = discover(Ui.page(appWindow), "parameters.list"); return table !== null; },
-                      2000, "Analysis: inspect the parameter table displayed in the selected pane");
-            const rows = Probe.rows(table.model).filter(row =>
-                row.category === "atom_site" || row.category === "atom_site_aniso");
-            verify(rows.some(row => row.category === "atom_site_aniso" && row.rowLabel === labels[siteIndex]),
-                   "Analysis: the selected site's independent tensor parameters are actually listed");
+            tryVerify(() => {
+                table = discover(Ui.page(appWindow), "parameters.list");
+                return table !== null;
+            }, 2000, "Analysis: inspect the parameter table displayed in the selected pane");
+            const rows = Probe.rows(table.model).filter(row => row.category === "atom_site" || row.category === "atom_site_aniso");
+            verify(rows.some(row => row.category === "atom_site_aniso" && row.rowLabel === labels[siteIndex]), "Analysis: the selected site's independent tensor parameters are actually listed");
             const groups = rows.map(row => row.rowLabel).filter((label, index, values) => index === 0 || label !== values[index - 1]);
-            compare(JSON.stringify(groups), JSON.stringify(labels),
-                    "owner 2026-10-07: Analysis keeps tensor rows contiguous with their own site in atom order");
+            compare(JSON.stringify(groups), JSON.stringify(labels), "owner 2026-10-07: Analysis keeps tensor rows contiguous with their own site in atom order");
             const ownRows = rows.filter(row => row.rowLabel === labels[siteIndex]);
-            verify(ownRows[ownRows.length - 1].category === "atom_site_aniso",
-                   "Analysis: a site's tensor components follow its visible scalar fields");
-            compare(new Set(rows.map(row => row.path)).size, rows.length,
-                    "Analysis: regrouping retains unique canonical parameter paths");
+            verify(ownRows[ownRows.length - 1].category === "atom_site_aniso", "Analysis: a site's tensor components follow its visible scalar fields");
+            compare(new Set(rows.map(row => row.path)).size, rows.length, "Analysis: regrouping retains unique canonical parameter paths");
             const field = control("parameters.nameFilter");
             verify(field !== null, "Analysis: the displayed table exposes its real name filter");
             filterText(field, labels[siteIndex]);
-            const filtered = Probe.rows(table.model).filter(row =>
-                row.category === "atom_site" || row.category === "atom_site_aniso");
-            compare(JSON.stringify(filtered.map(row => row.path)), JSON.stringify(ownRows.map(row => row.path)),
-                    "Analysis: filtering a site retains the same ordered scalar and tensor parameter identities");
-            field.forceActiveFocus(); keyClick(Qt.Key_A, Qt.ControlModifier); keyClick(Qt.Key_Backspace);
+            const filtered = Probe.rows(table.model).filter(row => row.category === "atom_site" || row.category === "atom_site_aniso");
+            compare(JSON.stringify(filtered.map(row => row.path)), JSON.stringify(ownRows.map(row => row.path)), "Analysis: filtering a site retains the same ordered scalar and tensor parameter identities");
+            field.forceActiveFocus();
+            keyClick(Qt.Key_A, Qt.ControlModifier);
+            keyClick(Qt.Key_Backspace);
         }
     }
     function test_atom_filter_recovers_from_red_and_commits_element() {
@@ -188,20 +192,20 @@ TestCase {
         expectRed(field);
         const before = Probe.rows(Session.project.currentStructure.atomSites)[0].typeSymbol;
         keyClick(Qt.Key_Return);
-        compare(Probe.rows(Session.project.currentStructure.atomSites)[0].typeSymbol, before,
-                "owner 2026-10-06: invalid filter never commits an atom type");
+        compare(Probe.rows(Session.project.currentStructure.atomSites)[0].typeSymbol, before, "owner 2026-10-06: invalid filter never commits an atom type");
         field.forceActiveFocus();
         keyClick(Qt.Key_A, Qt.ControlModifier);
-        keyClick(Qt.Key_C); keyClick(Qt.Key_E);
+        keyClick(Qt.Key_C);
+        keyClick(Qt.Key_E);
         verify(!field.warned && picker.anyMatch, "owner 2026-10-06: valid atom text clears red");
         keyClick(Qt.Key_Return);
-        tryVerify(() => Probe.rows(Session.project.currentStructure.atomSites)[0].typeSymbol === "Ce", 2000,
-                  "owner 2026-10-06: Enter chooses the exact valid element through the filter");
+        tryVerify(() => Probe.rows(Session.project.currentStructure.atomSites)[0].typeSymbol === "Ce", 2000, "owner 2026-10-06: Enter chooses the exact valid element through the filter");
     }
     function test_space_group_name_and_number_choose_new_default() {
         const name = reveal("structure", "basic", "space_group", "spaceGroup.nameHM");
         const group = Session.project.currentStructure.spaceGroup;
-        group.nameHM = "F d -3 m"; group.coordSystemCode = "1";
+        group.nameHM = "F d -3 m";
+        group.coordSystemCode = "1";
         const field = search(name, "nosuchgroup");
         verify(field.warned && !name.anyMatch, "owner 2026-10-06: unmatched space-group names warn");
         expectRed(field);
@@ -216,7 +220,8 @@ TestCase {
         textInput(number, [Qt.Key_2, Qt.Key_2, Qt.Key_5]);
         compare(group.nameHM, "F m -3 m", "owner 2026-10-06: number edit resolves the group name");
         compare(group.coordSystemCode, "1", "owner example: Fm-3m resolves its default code 1");
-        group.nameHM = "F d -3 m"; group.coordSystemCode = "2";
+        group.nameHM = "F d -3 m";
+        group.coordSystemCode = "2";
         const code = control("spaceGroup.coordSystemCode");
         const codeField = search(code, "nosuchcode");
         verify(codeField.warned && !code.anyMatch, "owner 2026-10-06: unmatched setting codes warn");
@@ -236,63 +241,70 @@ TestCase {
             textInput(field, keys);
             verify(field.warned, "owner 2026-10-06: only whole IT numbers in 1..230 are admitted");
             expectRed(field);
-            compare(Session.project.currentStructure.spaceGroup.itNumber, before,
-                    "owner 2026-10-06: invalid IT number leaves space-group identity intact");
+            compare(Session.project.currentStructure.spaceGroup.itNumber, before, "owner 2026-10-06: invalid IT number leaves space-group identity intact");
         }
         textInput(field, [Qt.Key_6, Qt.Key_2]);
         verify(!field.warned, "owner 2026-10-06: valid IT number clears red");
         compare(Session.project.currentStructure.spaceGroup.itNumber, 62, "owner 2026-10-06: valid IT number commits");
     }
     function nativeAtomGlyph(root) {
-        if (!root || !root.visible) return null;
-        if (root.isIcon && root.modelData.icon === "atom" && Probe.nativeText(root) && Ui.rendered(root)) return root;
+        if (!root || !root.visible)
+            return null;
+        if (root.isIcon && root.modelData.icon === "atom" && Probe.nativeText(root) && Ui.rendered(root))
+            return root;
         for (const child of root.children || []) {
             const found = nativeAtomGlyph(child);
-            if (found) return found;
+            if (found)
+                return found;
         }
         return null;
     }
     function test_atom_icon_colours_follow_structure_palette_in_both_tables() {
-        const colours = [{scheme: "jmol", value: "#70d4ff"}, {scheme: "vesta", value: "#5ac449"}];
+        const colours = [
+            {
+                scheme: "jmol",
+                value: "#70d4ff"
+            },
+            {
+                scheme: "vesta",
+                value: "#5ac449"
+            }
+        ];
         for (const palette of colours) {
             Session.project.structureViewOptions.colorScheme = palette.scheme;
             const picker = reveal("structure", "basic", "atom_site", "atomSite.typeSymbol.0");
             const glyph = nativeAtomGlyph(control("atomSite.icon.0"));
             verify(glyph !== null, "owner 2026-10-06: Atom sites draws its coloured atom glyph beside the type");
-            tryCompare(glyph, "color", palette.value, 2000,
-                       "published-elements.tsv: La icon follows its independent Jmol/VESTA colour");
-            click("appBar.tab.analysis"); click("sideBar.tab.basic");
+            tryCompare(glyph, "color", palette.value, 2000, "published-elements.tsv: La icon follows its independent Jmol/VESTA colour");
+            click("appBar.tab.analysis");
+            click("sideBar.tab.basic");
             const rows = Probe.rows(Session.project.parameters);
             const index = rows.findIndex(row => row.parameter && row.parameter.rowLabel === "La" && row.parameter.name === "occupancy");
             verify(index >= 0, "owner 2026-10-06: Analysis contains the same La occupancy row");
             let table = null;
-            tryVerify(() => { table = discover(Ui.page(appWindow), "parameters.list"); return table !== null; },
-                      2000, "owner 2026-10-06: Analysis parameter table belongs to the selected pane");
+            tryVerify(() => {
+                table = discover(Ui.page(appWindow), "parameters.list");
+                return table !== null;
+            }, 2000, "owner 2026-10-06: Analysis parameter table belongs to the selected pane");
             table.positionViewAtIndex(index, ListView.Center);
-            tryVerify(() => control("parameters.name." + index) !== null, 2000,
-                      "owner 2026-10-06: the selected Analysis name is exposed");
+            tryVerify(() => control("parameters.name." + index) !== null, 2000, "owner 2026-10-06: the selected Analysis name is exposed");
             const line = control("parameters.name." + index);
             const atom = nativeAtomGlyph(line);
             verify(atom !== null, "owner 2026-10-06: Analysis draws its atom glyph");
-            tryCompare(atom, "color", palette.value, 2000,
-                       "owner 2026-10-06: Analysis and Atom sites draw the same independent palette colour");
+            tryCompare(atom, "color", palette.value, 2000, "owner 2026-10-06: Analysis and Atom sites draw the same independent palette colour");
         }
     }
     function test_adp_view_uses_probability_in_atom_scale_position() {
         const scale = reveal("structure", "extras", "appearance", "structure.appearance.atomScale");
         const location = scale.mapToItem(appWindow.contentItem, 0, 0);
         Session.project.structureViewOptions.atomView = "adp";
-        tryVerify(() => control("structure.appearance.adpProbability") !== null, 2000,
-                  "owner 2026-10-06: ADP atom view exposes ellipsoid probability");
+        tryVerify(() => control("structure.appearance.adpProbability") !== null, 2000, "owner 2026-10-06: ADP atom view exposes ellipsoid probability");
         const probability = control("structure.appearance.adpProbability");
         compare(Number(probability.text), 0.99, "diffraction-lib v0.21.1: ellipsoid probability defaults to 0.99");
-        verify(control("structure.appearance.atomScale") === null,
-               "owner 2026-10-06: ADP view replaces the ball atom scale field");
+        verify(control("structure.appearance.atomScale") === null, "owner 2026-10-06: ADP view replaces the ball atom scale field");
         verify(waitForPolish(appWindow, 2000), "owner 2026-10-06: replacement field finishes layout");
-        tryVerify(() => probability.mapToItem(appWindow.contentItem, 0, 0).x === location.x, 2000,
-                  "owner 2026-10-06: probability occupies the atom scale column");
-        tryVerify(() => probability.mapToItem(appWindow.contentItem, 0, 0).y === location.y, 2000,
-                  "owner 2026-10-06: probability occupies the atom scale row");
+        tryVerify(() => probability.mapToItem(appWindow.contentItem, 0, 0).x === location.x, 2000, "owner 2026-10-06: probability occupies the atom scale column");
+        tryVerify(() => probability.mapToItem(appWindow.contentItem, 0, 0).y === location.y, 2000, "owner 2026-10-06: probability occupies the atom scale row");
     }
     function test_minimizer_is_two_rows_of_two() {
         const type = reveal("analysis", "extras", "minimizer", "minimizer.type");
@@ -302,9 +314,7 @@ TestCase {
         const positions = [type, descent, iterations, tolerance].map(item => item.mapToItem(appWindow.contentItem, 0, 0));
         compare(positions[0].y, positions[1].y, "owner 2026-10-06: minimizer and descent share the first row");
         compare(positions[2].y, positions[3].y, "owner 2026-10-06: iteration bound and tolerance share the second row");
-        verify(positions[2].y > positions[0].y && positions[1].x > positions[0].x,
-               "owner 2026-10-06: minimizer uses two rows and two columns");
-        verify(descent.width >= type.width && descent.width >= iterations.width,
-               "owner 2026-10-06: descent names have a full half-row");
+        verify(positions[2].y > positions[0].y && positions[1].x > positions[0].x, "owner 2026-10-06: minimizer uses two rows and two columns");
+        verify(descent.width >= type.width && descent.width >= iterations.width, "owner 2026-10-06: descent names have a full half-row");
     }
 }

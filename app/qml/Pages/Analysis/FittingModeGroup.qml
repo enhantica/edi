@@ -9,6 +9,7 @@ import edi.app
 // the joint-fit weights, the scan modes the sequential-fit declaration.
 EaElements.GroupRow {
     id: row
+    spacing: AppSizes.inputSpacing
 
     property AnalysisViewModel analysis: null
 

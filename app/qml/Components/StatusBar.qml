@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 
@@ -139,10 +140,11 @@ EaElements.StatusBar {
 
         readonly property bool running: bar.fit !== null && bar.fit.running
         readonly property bool scanning: bar.fit !== null && bar.fit.scanning
-        // The ok and fail counts, a fail count above zero in red.
+        // The ok and fail counts: an ok count above zero in green, a fail count above zero in red.
         function counts() {
+            const ok = qsTr("%1 ok").arg(bar.fit.scanOk);
             const fail = qsTr("%1 fail").arg(bar.fit.scanFailed);
-            return [qsTr("%1 ok").arg(bar.fit.scanOk), bar.fit.scanFailed > 0 ? `<font color="${EaStyle.Colors.red}">${fail}</font>` : fail];
+            return [bar.fit.scanOk > 0 ? `<font color="${EaStyle.Colors.green}">${ok}</font>` : ok, bar.fit.scanFailed > 0 ? `<font color="${EaStyle.Colors.red}">${fail}</font>` : fail];
         }
         readonly property string chi: bar.fit && bar.fit.goodnessOfFit !== "" ? `χ² ${bar.fit.goodnessOfFit}` : ""
         readonly property string iterations: bar.fit && bar.fit.iterations !== "" ? qsTr("it %1").arg(bar.fit.iterations) : ""
@@ -175,17 +177,13 @@ EaElements.StatusBar {
             toolTipText: clickable ? qsTr("%1: click to see the results").arg(FitOutcomes.meaning(outcome)) : FitOutcomes.meaning(outcome)
             onClicked: fitResultsDialog.open()
         }
-        Text {
+        Item {
+            id: fitValues
             objectName: "statusBar.fit.values"
             anchors.verticalCenter: parent.verticalCenter
-            font.family: EaStyle.Fonts.ptMono.name
-            font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.9
-            textFormat: Text.StyledText
-            color: EaStyle.Colors.themeForeground
-            Behavior on color {
-                EaAnimations.ThemeChange {}
-            }
-            text: {
+            implicitWidth: valuePieces.implicitWidth
+            implicitHeight: valuePieces.implicitHeight
+            readonly property string text: {
                 if (!bar.fit)
                     return "";
                 // One order everywhere: progress, the ok and fail counts, time, χ².
@@ -196,6 +194,57 @@ EaElements.StatusBar {
                 // A scan's summary: files, then the ok and fail counts, time, χ².
                 const rest = bar.fit.scanSummary ? fitArea.joined([bar.fit.scanFiles].concat(fitArea.counts(), [bar.fit.elapsed, fitArea.chi])) : fitArea.joined([fitArea.iterations, bar.fit.elapsed, fitArea.chi]);
                 return rest === "" ? "" : FitOutcomes.separator.trim() + " " + rest;
+            }
+            FontMetrics {
+                id: fitValueMetrics
+                font.family: EaStyle.Fonts.ptMono.name
+                font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.9
+            }
+            Row {
+                id: valuePieces
+                Repeater {
+                    model: fitValues.text.split(" → ")
+                    delegate: Item {
+                        id: valuePart
+                        required property string modelData
+                        required property int index
+                        readonly property bool hasArrow: index < fitValues.text.split(" → ").length - 1
+                        readonly property real gap: EaStyle.Sizes.fontPixelSize * 0.5
+                        implicitWidth: numberText.implicitWidth + (hasArrow ? changeArrow.width + 2 * gap : 0)
+                        implicitHeight: fitValueMetrics.height
+                        Text {
+                            id: numberText
+                            objectName: `statusBar.fit.valuePart.${valuePart.index}`
+                            y: fitValueMetrics.ascent - baselineOffset
+                            font.family: EaStyle.Fonts.ptMono.name
+                            font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.9
+                            textFormat: Text.StyledText
+                            color: EaStyle.Colors.themeForeground
+                            text: valuePart.modelData
+                        }
+                        TextMetrics {
+                            id: digitInk
+                            font: numberText.font
+                            text: "0"
+                        }
+                        Text {
+                            id: changeArrow
+                            objectName: "statusBar.fit.changeArrow"
+                            x: numberText.implicitWidth + valuePart.gap
+                            y: fitValueMetrics.ascent + digitInk.tightBoundingRect.y + digitInk.tightBoundingRect.height / 2 - (baselineOffset + arrowInk.tightBoundingRect.y + arrowInk.tightBoundingRect.height / 2)
+                            font.family: EaStyle.Fonts.encodeSansRegular.name
+                            font.pixelSize: numberText.font.pixelSize
+                            color: numberText.color
+                            text: "→"
+                            visible: valuePart.hasArrow
+                        }
+                        TextMetrics {
+                            id: arrowInk
+                            font: changeArrow.font
+                            text: changeArrow.text
+                        }
+                    }
+                }
             }
         }
         // Scan results the template has changed since stay, marked out of date until the next run replaces them.

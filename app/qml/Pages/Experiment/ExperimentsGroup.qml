@@ -39,58 +39,65 @@ EaElements.GroupBox {
     Column {
         spacing: AppSizes.groupContentSpacing
 
-        EaComponents.TableView {
+        DataTable {
             id: table
             objectName: "experiments.list"
             defaultInfoText: qsTr("No experiments defined")
-            model: group.project ? group.project.experiments : null
+            sourceModel: group.project ? group.project.experiments : null
 
-            header: EaComponents.TableViewHeader {
+            columnWidths: [numberColumnWidth, group.scan ? 0.001 : AppSizes.iconColumnWidth, AppSizes.iconColumnWidth, textColumnWidth("name", qsTr("Datablock")), -1, group.scanColumns.length ? group.scanColumns.length * AppSizes.dataColumnWidth * 1.4 : 0.001, group.scan ? 0.001 : AppSizes.iconColumnWidth]
+
+            header: EaComponents.ListViewHeader {
                 EaComponents.TableViewLabel {
-                    width: AppSizes.indexColumnWidth
+                    horizontalAlignment: Text.AlignHCenter
                 }
                 EaComponents.TableViewLabel {
-                    width: group.scan ? 0 : EaStyle.Sizes.tableRowHeight
+                    horizontalAlignment: Text.AlignHCenter
                 }
                 EaComponents.TableViewLabel {
-                    width: EaStyle.Sizes.tableRowHeight
+                    horizontalAlignment: Text.AlignHCenter
                     text: qsTr("Fit")
                 }
                 EaComponents.TableViewLabel {
-                    flexibleWidth: true
                     horizontalAlignment: Text.AlignLeft
                     text: qsTr("Datablock")
                 }
                 EaComponents.TableViewLabel {
-                    width: group.scan ? AppSizes.datasetFileColumnWidth : AppSizes.fileColumnWidth
                     horizontalAlignment: Text.AlignLeft
                     text: qsTr("File")
                 }
-                // Each in a plain item: a repeated label has no parent while it is made, and the table copies a
-                // header cell's alignment onto the row cell at its place, the repeater's own included while a row
-                // has not made its cells yet.
-                Repeater {
+                // Keep the scan's repeated cells in one width-controlled column (ADR-0029).
+                Item {
                     property int horizontalAlignment: Text.AlignHCenter
-                    model: group.scanColumns
-                    delegate: Item {
-                        id: column
-                        required property string modelData
-                        property int horizontalAlignment: Text.AlignHCenter
-                        width: AppSizes.dataColumnWidth * 1.4
-                        height: EaStyle.Sizes.tableRowHeight
-                        EaComponents.TableViewLabel {
-                            anchors.fill: parent
-                            horizontalAlignment: column.horizontalAlignment
-                            text: column.modelData
+                    visible: group.scanColumns.length > 0
+                    height: parent.height
+                    Row {
+                        height: parent.height
+                        Repeater {
+                            property int horizontalAlignment: Text.AlignHCenter
+                            model: group.scanColumns
+                            delegate: Item {
+                                id: column
+                                required property string modelData
+                                property int horizontalAlignment: Text.AlignHCenter
+                                width: AppSizes.dataColumnWidth * 1.4
+                                height: EaStyle.Sizes.tableRowHeight
+                                EaComponents.TableViewLabel {
+                                    anchors.fill: parent
+                                    horizontalAlignment: column.horizontalAlignment
+                                    text: column.modelData
+                                }
+                            }
                         }
                     }
                 }
                 EaComponents.TableViewLabel {
-                    width: group.scan ? 0 : AppSizes.iconColumnWidth
+                    horizontalAlignment: Text.AlignHCenter
+                    visible: !group.scan
                 }
             }
 
-            delegate: EaComponents.TableViewDelegate {
+            delegate: EaComponents.ListViewDelegate {
                 id: row
 
                 required property int index
@@ -103,24 +110,27 @@ EaElements.GroupBox {
 
                 objectName: `experiments.row.${index}`
                 color: group.project && group.project.currentExperimentIndex === index ? EaStyle.Colors.tableHighlight : (index % 2 ? EaStyle.Colors.themeBackgroundHovered2 : EaStyle.Colors.themeBackgroundHovered1)
-                mouseArea.onPressed: group.project.currentExperimentIndex = row.index
+                TapHandler {
+                    onTapped: group.project.currentExperimentIndex = row.index
+                }
 
                 EaComponents.TableViewLabel {
-                    width: AppSizes.indexColumnWidth
+                    horizontalAlignment: Text.AlignHCenter
                     color: EaStyle.Colors.themeForegroundMinor
                     text: row.index + 1
                 }
                 // The block's icon in its colour (easydiffractionbeta's colour column; ADR-0017 §8).
                 IconCell {
+                    horizontalAlignment: Text.AlignHCenter
                     objectName: `experiments.color.${row.index}`
                     visible: !group.scan
-                    width: group.scan ? 0 : EaStyle.Sizes.tableRowHeight
                     icon: "microscope"
                     iconColor: AppColors.experiment(row.index)
                     toolTip: qsTr("Measured pattern color")
                 }
                 // How the project's last fit ended on this experiment; "Not fitted" when it took no part.
                 IconCell {
+                    horizontalAlignment: Text.AlignHCenter
                     objectName: `experiments.fit.${row.index}`
                     icon: FitOutcomes.icon(row.fitOutcome)
                     iconColor: String(FitOutcomes.color(row.fitOutcome))
@@ -131,34 +141,43 @@ EaElements.GroupBox {
                 // Editing a name also makes its row current, as a click on the row does.
                 TextCell {
                     objectName: `experiments.name.${row.index}`
-                    width: table.headerLabelItems.length > 3 ? table.headerLabelItems[3].width : 0
+                    horizontalAlignment: Text.AlignLeft
                     value: row.name
                     onActiveFocusChanged: if (activeFocus)
                         group.project.currentExperimentIndex = row.index
                     onCommitted: text => row.experiment.name = text
                 }
                 // The data's file: the experiment's own `.edi`, which holds its data, or a scan dataset's data file,
-                // the template dataset's with the word "template" in the accent blue; Load data… without data.
+                // the template dataset's followed by the word "template" in the accent blue, as in the selector;
+                // Load data… without data.
                 Item {
-                    width: group.scan ? AppSizes.datasetFileColumnWidth : AppSizes.fileColumnWidth
+                    id: fileCell
+
+                    property int horizontalAlignment: Text.AlignLeft
                     height: parent ? parent.height : 0
 
-                    EaComponents.TableViewLabel {
+                    Row {
+                        height: parent.height
+                        spacing: EaStyle.Sizes.fontPixelSize * 0.5
                         visible: !loadData.visible
-                        width: parent.width - (templateTag.visible ? templateTag.width : 0)
-                        horizontalAlignment: Text.AlignLeft
-                        elide: Text.ElideMiddle
-                        text: row.file
-                    }
-                    EaComponents.TableViewLabel {
-                        id: templateTag
-                        objectName: `experiments.template.${row.index}`
-                        visible: group.scan && row.isTemplate
-                        anchors.right: parent.right
-                        width: implicitWidth
-                        elide: Text.ElideNone
-                        color: EaStyle.Colors.themeAccent
-                        text: qsTr("template")
+
+                        EaComponents.TableViewLabel {
+                            width: Math.min(implicitWidth, fileCell.width - (templateTag.visible ? templateTag.width + parent.spacing : 0))
+                            height: parent.height
+                            horizontalAlignment: Text.AlignLeft
+                            elide: Text.ElideMiddle
+                            text: row.file
+                        }
+                        EaComponents.TableViewLabel {
+                            id: templateTag
+                            objectName: `experiments.template.${row.index}`
+                            visible: group.scan && row.isTemplate
+                            width: implicitWidth
+                            height: parent.height
+                            elide: Text.ElideNone
+                            color: EaStyle.Colors.themeAccent
+                            text: qsTr("template")
+                        }
                     }
                     EaElements.Button {
                         id: loadData
@@ -177,25 +196,34 @@ EaElements.GroupBox {
                     }
                 }
                 // What the scan's extract rules take from the dataset, with their units.
-                Repeater {
+                Item {
                     property int horizontalAlignment: Text.AlignHCenter
-                    model: group.scanColumns.length
-                    delegate: Item {
-                        id: value
-                        required property int index
-                        property int horizontalAlignment: Text.AlignHCenter
-                        height: EaStyle.Sizes.tableRowHeight
-                        EaComponents.TableViewLabel {
-                            anchors.fill: parent
-                            horizontalAlignment: value.horizontalAlignment
-                            text: row.extracted && row.extracted.length > value.index ? row.extracted[value.index] : ""
+                    visible: group.scanColumns.length > 0
+                    height: parent.height
+                    Row {
+                        height: parent.height
+                        Repeater {
+                            property int horizontalAlignment: Text.AlignHCenter
+                            model: group.scanColumns.length
+                            delegate: Item {
+                                id: value
+                                required property int index
+                                property int horizontalAlignment: Text.AlignHCenter
+                                width: AppSizes.dataColumnWidth * 1.4
+                                height: EaStyle.Sizes.tableRowHeight
+                                EaComponents.TableViewLabel {
+                                    anchors.fill: parent
+                                    horizontalAlignment: value.horizontalAlignment
+                                    text: row.extracted && row.extracted.length > value.index ? row.extracted[value.index] : ""
+                                }
+                            }
                         }
                     }
                 }
                 EaComponents.TableViewButton {
+                    horizontalAlignment: Text.AlignHCenter
                     objectName: `experiments.remove.${row.index}`
                     visible: !group.scan
-                    width: group.scan ? 0 : AppSizes.iconColumnWidth
                     fontIcon: "minus-circle"
                     ToolTip.text: qsTr("Remove this experiment")
                     onClicked: group.project.removeExperiment(row.index)

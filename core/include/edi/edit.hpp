@@ -336,29 +336,25 @@ class Edit {
     // A row-level removal cannot see the project's scan declaration: the app removes experiments through
     // erase_experiment, which keeps a scan's one template experiment.
     static Edit erase(ItemVec<BraggPdExperiment>& rows, std::size_t index) { return erasing(rows, index); }
-    // An excluded region: its row added at the end, removed, or one of its two bounds assigned. The
-    // regions are one recorded field (ADR-0018), written through its `modify`, which records a write
-    // even when its callback throws: a missing row is therefore refused before it.
-    using Regions = std::vector<std::pair<double, double>>;
+    /// Rename a background row under its collection's uniqueness rule.
+    static Edit background_id(LineSegment& point, std::string id) {
+        return Edit([&point, id = std::move(id)] { point.id = id; });
+    }
+    /// Rename an exclusion row under its collection's uniqueness rule.
+    static Edit excluded_region_id(ExcludedRegion& region, std::string id) {
+        return Edit([&region, id = std::move(id)] { region.id = id; });
+    }
     static Edit append_excluded_region(ExperimentBase& experiment, double start, double end) {
-        return Edit([&experiment, start, end] {
-            experiment.excluded_regions.modify([start, end](Regions& regions) { regions.emplace_back(start, end); });
-        });
+        return Edit([&experiment, start, end] { experiment.excluded_regions.push_back(ExcludedRegion(start, end)); });
     }
     static Edit erase_excluded_region(ExperimentBase& experiment, std::size_t row) {
-        return Edit([&experiment, row] {
-            require_region(experiment, row);
-            experiment.excluded_regions.modify(
-                [row](Regions& regions) { regions.erase(regions.begin() + static_cast<std::ptrdiff_t>(row)); });
-        });
+        return Edit([&experiment, row] { require_region(experiment, row); experiment.excluded_regions.erase_at(row); });
     }
     static Edit excluded_region_bound(ExperimentBase& experiment, std::size_t row, bool end, double value) {
         return Edit([&experiment, row, end, value] {
             require_region(experiment, row);
-            experiment.excluded_regions.modify([row, end, value](Regions& regions) {
-                auto& region = regions[row];
-                (end ? region.second : region.first) = value;
-            });
+            auto& region = *experiment.excluded_regions[row];
+            (end ? region.second : region.first) = value;
         });
     }
     // A space-group setting chosen whole (assign_space_group_setting): name, code and IT number never contradict

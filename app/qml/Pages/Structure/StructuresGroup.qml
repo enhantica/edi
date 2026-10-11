@@ -29,30 +29,31 @@ EaElements.GroupBox {
     Column {
         spacing: AppSizes.groupContentSpacing
 
-        EaComponents.TableView {
+        DataTable {
             id: table
             objectName: "structures.list"
             defaultInfoText: qsTr("No structures defined")
-            model: group.project ? group.project.structures : null
+            sourceModel: group.project ? group.project.structures : null
 
-            header: EaComponents.TableViewHeader {
+            columnWidths: [numberColumnWidth, EaStyle.Sizes.tableRowHeight, -1, AppSizes.iconColumnWidth]
+
+            header: EaComponents.ListViewHeader {
                 EaComponents.TableViewLabel {
-                    width: AppSizes.indexColumnWidth
+                    horizontalAlignment: Text.AlignHCenter
                 }
                 EaComponents.TableViewLabel {
-                    width: EaStyle.Sizes.tableRowHeight
+                    horizontalAlignment: Text.AlignHCenter
                 }
                 EaComponents.TableViewLabel {
-                    flexibleWidth: true
                     horizontalAlignment: Text.AlignLeft
                     text: qsTr("Name")
                 }
                 EaComponents.TableViewLabel {
-                    width: AppSizes.iconColumnWidth
+                    horizontalAlignment: Text.AlignHCenter
                 }
             }
 
-            delegate: EaComponents.TableViewDelegate {
+            delegate: EaComponents.ListViewDelegate {
                 id: row
 
                 required property int index
@@ -61,15 +62,18 @@ EaElements.GroupBox {
 
                 objectName: `structures.row.${index}`
                 color: group.project && group.project.currentStructureIndex === index ? EaStyle.Colors.tableHighlight : (index % 2 ? EaStyle.Colors.themeBackgroundHovered2 : EaStyle.Colors.themeBackgroundHovered1)
-                mouseArea.onPressed: group.project.currentStructureIndex = row.index
+                TapHandler {
+                    onTapped: group.project.currentStructureIndex = row.index
+                }
 
                 EaComponents.TableViewLabel {
-                    width: AppSizes.indexColumnWidth
+                    horizontalAlignment: Text.AlignHCenter
                     color: EaStyle.Colors.themeForegroundMinor
                     text: row.index + 1
                 }
                 // The block's icon in its colour (easydiffractionbeta's colour column; ADR-0017 §8).
                 IconCell {
+                    horizontalAlignment: Text.AlignHCenter
                     objectName: `structures.color.${row.index}`
                     icon: "layer-group"
                     iconColor: AppColors.structure(row.index)
@@ -78,14 +82,15 @@ EaElements.GroupBox {
                 // The datablock name, editable: a refused rename returns the cell to the stored name and shows why.
                 // Editing a name also makes its row current, as a click on the row does.
                 TextCell {
+                    horizontalAlignment: Text.AlignLeft
                     objectName: `structures.name.${row.index}`
-                    width: table.headerLabelItems.length > 2 ? table.headerLabelItems[2].width : 0
                     value: row.name
                     onActiveFocusChanged: if (activeFocus)
                         group.project.currentStructureIndex = row.index
                     onCommitted: text => row.structure.name = text
                 }
                 EaComponents.TableViewButton {
+                    horizontalAlignment: Text.AlignHCenter
                     objectName: `structures.remove.${row.index}`
                     fontIcon: "minus-circle"
                     ToolTip.text: qsTr("Remove this structure")

@@ -73,15 +73,15 @@ function rendered(item) {
     return true;
 }
 
-function find(root, name) {
+function find(root, name, forScrolling = false) {
     if (!root || !root.visible)
         return null;
-    if (root.objectName === name && rendered(target(root)))
+    if (root.objectName === name && (forScrolling ? inPane(target(root)) : rendered(target(root))))
         return root;
     // Repeater/ListView delegates are visual children, not necessarily QObject children.
     const children = root.children || [];
     for (let i = 0; i < children.length; ++i) {
-        const found = find(children[i], name);
+        const found = find(children[i], name, forScrolling);
         if (found !== null) return found;
     }
     return null;
@@ -158,7 +158,9 @@ function click(testCase, probe, window, name) {
 function expandGroup(testCase, probe, window, name) {
     let group = null;
     testCase.tryVerify(() => {
-        group = control(probe, window, name);
+        // Discover a vertical scroll target only in the active horizontal pane.
+        // Input still uses the fully clipped control() lookup after scrolling.
+        group = find(page(window), name, true);
         return group !== null;
     }, 2000, "I10/I19: the group exposure target belongs to the active visible pane: " + name);
     testCase.verify(group !== null, "I10/I19: the selected page owns the requested group: " + name);

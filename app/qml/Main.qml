@@ -324,5 +324,8 @@ EaComponents.ApplicationWindow {
 
     // edi's preferences go to the base once everything, the base's hidden dialog and its settings
     // included, is complete (Preferences.apply).
-    Component.onCompleted: Qt.callLater(Preferences.apply)
+    Component.onCompleted: Qt.callLater(() => {
+        Preferences.apply();
+        RecentProjects.refresh();
+    })
 }
