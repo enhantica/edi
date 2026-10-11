@@ -288,8 +288,8 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                           + QStringList{"appBar.tab.project", "open-cli-project:pd-xray-cwl_lif_single", experiment, basic, "expand:group.experiments",
                       "experiments.create", "save-as:created", "open-project:created", experiment, "mainArea.blocks.box",
                        "choose:experiment1 · experiment1.edi", text, "scroll-to:text.view:_data_range"}});
-    // The Correlations tab: empty before a fit, the fitted matrix, a correlation level and a parameter count
-    // typed into the toolbar, and a joint fit's two experiments.
+    // The Correlations tab: empty before a fit, the fitted matrix, a correlation level and a parameter
+    // count typed into the toolbar, and a joint fit's two experiments.
     const QString correlations = QStringLiteral("mainArea.analysis.tab.correlations");
     steps_.push_back({"t17-01-correlations-empty",
                       QStringList{"resize:1280x768"} + start + open_example("pd-neut-cwl_cosio-d20_start-1")
@@ -352,6 +352,10 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                              "expand:group.joint_fit"}});
     steps_.push_back({"t17-74-mode-scan", start + open_example("pd-neut-cwl_cosio-d20_scan-3f")
                                               + QStringList{analysis, extras, "expand:group.fitting_mode", "fittingMode.type"}});
+    // A right click on the parameter table's "free" title: the shown rows' state, then all of them fixed at once.
+    steps_.push_back({"t17-75-free-header", start + open_example("pd-neut-cwl_lbco-hrpt_start-2")
+                                                + QStringList{analysis, basic, "right-click:parameters.freeHeader"}});
+    steps_.push_back({"t17-76-free-header-fixed", {"parameters.freeHeader.fixed"}});
     // 8: a created experiment's Load data… button, left-aligned under Data file.
     steps_.push_back({"t17-24-load-data", start + open_example("pd-neut-cwl_cosio-d20_start-1")
                                               + QStringList{experiment, basic, "expand:group.experiments", "experiments.create"}});
