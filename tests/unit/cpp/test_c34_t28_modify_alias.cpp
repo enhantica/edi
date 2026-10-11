@@ -56,9 +56,8 @@ void aggregate_matches(Cell& cell) {
             keys.push_back(key);
             values.push_back(value);
         }
-        CHECK_MESSAGE(
-            (cell.table().key.values() == keys && cell.table().value.values() == values),
-            " F18 every callback exit keeps aggregate key and value columns aligned");
+        CHECK_MESSAGE((cell.table().key.values() == keys && cell.table().value.values() == values),
+                      " F18 every callback exit keeps aggregate key and value columns aligned");
     } else if constexpr (requires {
                              cell.table().first;
                              cell.table().second;
@@ -72,9 +71,8 @@ void aggregate_matches(Cell& cell) {
             (cell.table().first.values() == first && cell.table().second.values() == second),
             " F18 every callback exit keeps aggregate pair columns aligned");
     } else if constexpr (std::is_same_v<T, std::vector<std::string>>) {
-        CHECK_MESSAGE(
-            cell.table().names.values() == cell.get(),
-            " F18 carried name images agree with their callback-published column");
+        CHECK_MESSAGE((cell.table().names.values() == cell.get()),
+                      " F18 carried name images agree with their callback-published column");
     } else if constexpr (std::is_same_v<T, std::vector<std::vector<std::string>>>) {
         std::size_t width = 0;
         for (const auto& row : cell.get()) width = std::max(width, row.size());
@@ -86,9 +84,8 @@ void aggregate_matches(Cell& cell) {
         for (std::size_t col = 0; col < width; ++col) {
             std::vector<std::string> values;
             for (const auto& row : cell.get()) values.push_back(col < row.size() ? row[col] : "");
-            CHECK_MESSAGE(
-                cell.table().columns[col].values() == values,
-                " F18 every carried callback-published column retains its exact cells");
+            CHECK_MESSAGE((cell.table().columns[col].values() == values),
+                          " F18 every carried callback-published column retains its exact cells");
         }
     }
 }
@@ -140,17 +137,15 @@ void alias_exits(Cell& cell, Generation generation) {
         CHECK_MESSAGE(generation() != before,
                       " F18 both callback exits publish a write to the holder");
         aggregate_matches(cell);
-        CHECK_MESSAGE(
-            escaped != &cell.get(),
-            " F18 a returned callback alias cannot name the protected live payload");
+        CHECK_MESSAGE((escaped != &cell.get()),
+                      " F18 a returned callback alias cannot name the protected live payload");
         // The repaired callback may return a short-lived work value. Do not
         // dereference that pointer. Exercise the live escape only if it exists.
         if (escaped == &cell.get()) {
             const auto after = generation();
             *escaped = *escaped;
-            CHECK_MESSAGE(
-                generation() != after,
-                " F18 a reachable retained alias cannot bypass equal-write currency");
+            CHECK_MESSAGE((generation() != after),
+                          " F18 a reachable retained alias cannot bypass equal-write currency");
             if constexpr (requires {
                               escaped->clear();
                               escaped->erase(escaped->begin());
@@ -228,8 +223,10 @@ TEST_CASE("C34-T28 F18 aggregate callbacks cannot retain images outside their co
     standalone(structure.scattering_lengths_fm);
     edi::ExperimentBase experiment;
     experiment.excluded_regions.push_back(edi::ExcludedRegion(1.25, 4.5));
-    alias_exits(experiment.excluded_regions[0]->first, [&] { return experiment.excluded_regions.category_stamp(); });
-    alias_exits(experiment.excluded_regions[0]->second, [&] { return experiment.excluded_regions.category_stamp(); });
+    alias_exits(experiment.excluded_regions[0]->first,
+                [&] { return experiment.excluded_regions.category_stamp(); });
+    alias_exits(experiment.excluded_regions[0]->second,
+                [&] { return experiment.excluded_regions.category_stamp(); });
     edi::CarriedLoop carried;
     standalone(carried.columns);
     standalone(carried.rows);

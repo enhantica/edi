@@ -1,7 +1,7 @@
 _edi.schema_version 3
 _metadata.name pd_neut_cwl_yap_spodi_3k
 _metadata.title "YAlO₃ [Pbnm] / Al₂O₃ [R-3c] · SPODI @ FRM II"
-_metadata.description "2 phases at 3 K · Shared Bérar–Baldinozzi profile · Cylinder absorption"
+_metadata.description "2 phases at 3 K · Shared Bérar-Baldinozzi profile · Cylinder absorption"
 _metadata.purpose "refinement"
 _metadata.dimensionality "1D"
 _metadata.instrument "SPODI"

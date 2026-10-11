@@ -69,8 +69,7 @@ void bound_text(std::type_identity<R>, Member member) {
         rows.push_back(row);
         auto& cell = row.get()->*member;
         drain(cell, std::string(97, 'X'), [&] { return rows.category_stamp(); }, assignment);
-        CHECK_MESSAGE(cell.bound(),
-                      " F25 moving a field preserves its source row attachment");
+        CHECK_MESSAGE(cell.bound(), " F25 moving a field preserves its source row attachment");
     }
 }
 void standalone(auto& cell, const auto& supplied) {
@@ -119,12 +118,16 @@ TEST_CASE("C34-T28 F25 every aggregate family renews source identity and moves i
         const auto held = source[0];
         edi::ItemVec<edi::ExcludedRegion> destination;
         std::optional<edi::ItemVec<edi::ExcludedRegion>> constructed;
-        if (assignment) destination = std::move(source);
-        else constructed.emplace(std::move(source));
-        CHECK_MESSAGE(source.empty(), " F25 moving a keyed exclusion table drains its source");
-        CHECK_MESSAGE(source.generation() > before, " F25 draining a keyed table renews the source generation");
+        if (assignment)
+            destination = std::move(source);
+        else
+            constructed.emplace(std::move(source));
+        CHECK_MESSAGE((source.empty()), " F25 moving a keyed exclusion table drains its source");
+        CHECK_MESSAGE((source.generation() > before),
+                      " F25 draining a keyed table renews the source generation");
         const auto& received = assignment ? destination : *constructed;
-        CHECK_MESSAGE((edi::excluded_region_ranges(received) == std::vector<std::pair<double, double>>{{1.25, 4.5}}),
+        CHECK_MESSAGE((edi::excluded_region_ranges(received) ==
+                       std::vector<std::pair<double, double>>{{1.25, 4.5}}),
                       " F25 moving a keyed exclusion table retains every bound");
         CHECK_MESSAGE((received.token(0) == token && received[0] == held),
                       " F25 row tokens and held row identity travel with the moved table");
@@ -139,9 +142,9 @@ TEST_CASE("C34-T28 F25 throwing emplacement renews both axes and public optional
         cell.emplace(Value{typename Value::value_type{}});
         const auto before = cell.written();
         const auto encoded = encoding(cell);
-        CHECK_THROWS_AS_MESSAGE(
-            cell.emplace(std::numeric_limits<std::size_t>::max()), std::length_error,
-            " F25 oversized native emplacement propagates length_error");
+        CHECK_THROWS_AS_MESSAGE(cell.emplace(std::numeric_limits<std::size_t>::max()),
+                                std::length_error,
+                                " F25 oversized native emplacement propagates length_error");
         CHECK_MESSAGE(!cell.has_value(),
                       " F25 the throwing vector constructor really disengages the axis");
         CHECK_MESSAGE(cell.written() > before,

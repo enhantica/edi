@@ -6,7 +6,7 @@ _metadata.description "TCH pseudo-Voigt with FCJ axial divergence · Scale-only 
 _metadata.created          "26 Sep 2026 10:29:37"
 _metadata.last_modified    "26 Sep 2026 10:29:38"
 _metadata.timestamp        ?
-_metadata.purpose "refinement"
+_metadata.purpose "verification"
 _metadata.dimensionality "1D"
 _metadata.instrument "ECHIDNA"
 _metadata.facility "ANSTO"

@@ -284,11 +284,12 @@ TEST_CASE("E09-T55 adapter conversion preserves the complete TOF experiment layo
     CHECK_MESSAGE((converted.absorption.size() == 2 && converted.absorption[0].value() == 0.2 &&
                    converted.absorption[1].value() == 0.3),
                   "the adapter must preserve the two-term absorption body");
-    CHECK_MESSAGE(converted.excluded_regions[0].id == "low angle",
+    CHECK_MESSAGE((converted.excluded_regions[0].id == "low angle"),
                   "the adapter must retain the exclusion's stored ID independently of row number");
-    CHECK_MESSAGE(
-        (converted.dataset_weight == 2.5 && crysta::excluded_region_ranges(converted.excluded_regions) == edi::excluded_region_ranges(source.excluded_regions)),
-        "the adapter must preserve joint-fit weight and exclusion masks");
+    CHECK_MESSAGE((converted.dataset_weight == 2.5 &&
+                   crysta::excluded_region_ranges(converted.excluded_regions) ==
+                       edi::excluded_region_ranges(source.excluded_regions)),
+                  "the adapter must preserve joint-fit weight and exclusion masks");
 }
 
 TEST_CASE("E09-T55 adapter conversion preserves CW layout and refuses incomplete models") {

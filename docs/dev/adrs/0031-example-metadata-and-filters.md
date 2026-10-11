@@ -19,3 +19,8 @@ Purpose tags are green/purple and fitting-mode tags amber, with readable dark-pa
 Word tags use sentence case; compact technique codes (`pd`, `neut`, `xray`, `cwl`, `tof`) remain lowercase. The bold identity line uses bundled Noto Sans for the entire title: PT Sans Bold contains some Unicode subscript digits but lacks others, producing visibly mixed weights when fallback fonts are combined.
 
 Purpose badges use the owner's selected bundled Font Awesome 5 symbols: `bullseye` for refinement and `wave-square` for simulation. The paired icon roles are selected from stored purpose values, so translation does not change the symbols.
+
+The app's examples are refinement and simulation examples only (owner, 2026-10-10). A CLI project whose model is exactly
+FullProf's, fitted only for its scale or against FullProf's own calculated pattern, records `_metadata.purpose
+verification`; it stays in the CLI registry and its checks, and the app does not bundle it. Configuration refuses any
+other purpose.

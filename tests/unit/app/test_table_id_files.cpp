@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: BSD-3-Clause
+#include <QtQml/qqml.h>
+
 #include <QCoreApplication>
 #include <QObject>
 #include <QTemporaryDir>
 #include <QUrl>
-#include <QtQml/qqml.h>
 
 class TableIdFiles : public QObject {
     Q_OBJECT
    public:
     using QObject::QObject;
     Q_INVOKABLE QUrl directory() const { return QUrl::fromLocalFile(directory_.path()); }
+
    private:
     QTemporaryDir directory_;
 };

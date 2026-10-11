@@ -183,10 +183,10 @@ if(EMSCRIPTEN)
     target_link_libraries(edi_app_module PRIVATE Qt6::GuiPrivate)
 endif()
 
-# The Examples: every project edi's CLI registry lists, in registry order, then the app's own X-ray
-# example, each with its scan data (a scan's datasets are browsed in the app). The web app leaves out the
-# 324-file scan (19 MB); the 162-file cooling run is its scan example. Configuration fails when the registry
-# and the project directories disagree.
+# The Examples: every refinement and simulation project edi's CLI registry lists, in registry order, then the
+# app's own X-ray example, each with its scan data (a scan's datasets are browsed in the app). Verification
+# projects stay CLI projects only (ADR-0031). The web app leaves out the 324-file scan (19 MB); the 162-file
+# cooling run is its scan example. Configuration fails when the registry and the project directories disagree.
 set(_cli ${PROJECT_SOURCE_DIR}/docs/user/cli)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${_cli}/projects.yml)
 file(STRINGS ${_cli}/projects.yml _id_lines REGEX "^  - id: ")
@@ -207,15 +207,7 @@ endforeach()
 if(EMSCRIPTEN)
     list(REMOVE_ITEM EDI_APP_EXAMPLE_IDS pd-neut-cwl_cosio-d20_scan-324f)
 endif()
-function(edi_app_bundle_examples root)
-    foreach(id IN LISTS ARGN)
-        file(GLOB_RECURSE files CONFIGURE_DEPENDS ${root}/${id}/project/*)
-        qt_add_resources(edi_app_module "edi_example_${id}" PREFIX "/edi/examples" BASE ${root} FILES ${files})
-    endforeach()
-endfunction()
-edi_app_bundle_examples(${_cli} ${EDI_APP_EXAMPLE_IDS})
 set(EDI_APP_OWN_EXAMPLES pd-xray-cwl_lif)
-edi_app_bundle_examples(${CMAKE_CURRENT_SOURCE_DIR}/examples ${EDI_APP_OWN_EXAMPLES})
 # Metadata belongs to the app presentation; the CLI registry retains its execution contract.
 file(READ "${CMAKE_CURRENT_SOURCE_DIR}/examples/metadata.json" _example_metadata)
 string(JSON _metadata_schema GET "${_example_metadata}" schema)
@@ -223,11 +215,24 @@ if(NOT _metadata_schema EQUAL 1)
     message(FATAL_ERROR "Unsupported example metadata schema")
 endif()
 foreach(id IN LISTS EDI_APP_EXAMPLE_IDS EDI_APP_OWN_EXAMPLES)
-    string(JSON _entry ERROR_VARIABLE _metadata_error GET "${_example_metadata}" examples "${id}")
+    string(JSON _purpose ERROR_VARIABLE _metadata_error GET "${_example_metadata}" examples "${id}" values purpose 0)
     if(_metadata_error)
         message(FATAL_ERROR "Example '${id}' has no app metadata")
     endif()
+    if(_purpose STREQUAL "verification")
+        list(REMOVE_ITEM EDI_APP_EXAMPLE_IDS ${id})
+    elseif(NOT _purpose STREQUAL "refinement" AND NOT _purpose STREQUAL "simulation")
+        message(FATAL_ERROR "Example '${id}' has purpose '${_purpose}', not refinement, simulation or verification")
+    endif()
 endforeach()
+function(edi_app_bundle_examples root)
+    foreach(id IN LISTS ARGN)
+        file(GLOB_RECURSE files CONFIGURE_DEPENDS ${root}/${id}/project/*)
+        qt_add_resources(edi_app_module "edi_example_${id}" PREFIX "/edi/examples" BASE ${root} FILES ${files})
+    endforeach()
+endfunction()
+edi_app_bundle_examples(${_cli} ${EDI_APP_EXAMPLE_IDS})
+edi_app_bundle_examples(${CMAKE_CURRENT_SOURCE_DIR}/examples ${EDI_APP_OWN_EXAMPLES})
 qt_add_resources(edi_app_module "edi_example_metadata" PREFIX "/edi/examples"
                  BASE ${CMAKE_CURRENT_SOURCE_DIR}/examples FILES ${CMAKE_CURRENT_SOURCE_DIR}/examples/metadata.json)
 list(JOIN EDI_APP_EXAMPLE_IDS "\n" _index)
