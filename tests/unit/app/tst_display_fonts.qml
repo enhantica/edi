@@ -23,10 +23,10 @@ TestCase {
         compare(proof.failures(characters, data.family, data.weight, data.style, data.face).join("\n"), "",
                 "Actual Qt glyph runs must use a nonzero glyph from a packaged font, never a system face");
     }
-    function test_system_font_cannot_satisfy_coverage() {
-        // Request an installed platform font. Even if it draws ASCII correctly,
-        // the provenance check must refuse its unbundled font tables.
-        verify(proof.failures("A", "monospace", 400, "", 400).length > 0,
-               "A system font must not satisfy the bundled rendering invariant");
+    function test_unbundled_face_cannot_satisfy_coverage() {
+        const family = proof.unbundledFamily();
+        verify(family.length > 0, "The escape witness must load an actual unbundled test face");
+        verify(proof.failures("A", family, 400, "", 400).length > 0,
+               "An unbundled font must not satisfy the actual rendering-face invariant");
     }
 }

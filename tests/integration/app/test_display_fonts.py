@@ -34,6 +34,6 @@ def test_display_alphabet_uses_only_packaged_rendering_fonts():
             f'test_actual_shaping_uses_only_packaged_faces({case})'
         ) in output, 'Every selected rendering font must execute its actual Qt shaping witness'
     assert (
-        'PASS   : edi_app::BundledDisplayFonts::test_system_font_cannot_satisfy_coverage()'
+        'PASS   : edi_app::BundledDisplayFonts::test_unbundled_face_cannot_satisfy_coverage()'
         in output
-    ), 'The system-font escape must be attempted in the real shaping witness'
+    ), 'The unbundled-face escape must be attempted in the real shaping witness'

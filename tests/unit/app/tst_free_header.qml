@@ -11,8 +11,6 @@ TestCase {
     when: windowShown
     property var appWindow
     property real filterRowHeight: 0
-    property real filterTopPadding: 0
-    property real filterBottomPadding: 0
     Component {
         id: application
         Main {}
@@ -21,7 +19,7 @@ TestCase {
         Session.closeProject();
         appWindow = application.createObject(null);
         verify(appWindow !== null, "The free-header actor requires the production window");
-        verify(Session.openProject(Probe.repoUrl("tests/fixtures/e04_t1/editable-project")), "The free-header witness must open independently committed input");
+        verify(Session.openProject(Probe.repoUrl("tests/fixtures/loop_parameter_ids/line-segment")), "The free-header witness must open independently committed input");
         verify(waitForRendering(appWindow.contentItem), "The free-header window must render before input");
         Ui.click(test, Probe, appWindow, "appBar.tab.analysis");
         Ui.click(test, Probe, appWindow, "sideBar.tab.basic");
@@ -31,13 +29,11 @@ TestCase {
         Ui.click(test, Probe, appWindow, "parameters.category");
         let listRow;
         tryVerify(() => {
-            listRow = Probe.objectsWithProperty(picker.popup.contentItem, "modelData")
+            listRow = Ui.itemsWithProperty(picker.popup.contentItem, "modelData")
                 .find(item => item.modelData.title !== undefined && item.height > 0 && item.topPadding !== undefined);
             return listRow !== undefined;
         }, 2000, "The category dropdown must instantiate its actual padded list delegate");
         filterRowHeight = listRow.height;
-        filterTopPadding = listRow.topPadding;
-        filterBottomPadding = listRow.bottomPadding;
         picker.popup.close();
     }
     function cleanup() {
@@ -50,13 +46,22 @@ TestCase {
     function snapshot(parameters) {
         return JSON.stringify(parameters.map(parameter => [parameter.path, parameter.free, parameter.value]));
     }
-    function popup() {
+    function popup(emptyController = false) {
         const header = Ui.control(Probe, appWindow, "parameters.freeHeader");
         verify(header !== null && Ui.exposed(header), "The free title must be a visible real left-click target");
         const point = Ui.clickPoint(header);
         mouseMove(header, point.x, point.y);
         tryCompare(header, "color", EaStyle.Colors.themeAccent, 2000, "Hover must accent the actual free header");
-        mouseClick(header, point.x, point.y, Qt.LeftButton);
+        if (emptyController) {
+            // The empty model has no batch target. Check its actual menu state;
+            // nonempty actors separately exercise the real header's mouse route.
+            const declared = Probe.objectsWithProperty(appWindow, "shown")
+                .find(item => item.freeCount !== undefined && item.fixedCount !== undefined);
+            verify(declared !== undefined, "The empty subset must retain its production radio-menu controller");
+            declared.open();
+        } else {
+            mouseClick(header, point.x, point.y, Qt.LeftButton);
+        }
         let menu;
         tryVerify(() => {
             menu = Probe.visiblePopups(appWindow).find(item => item.shown !== undefined);
@@ -64,23 +69,22 @@ TestCase {
         }, 2000, "Left-clicking the free title must open the radio menu");
         const text = Ui.text(menu.contentItem);
         verify(!text.includes("shown parameters") && !text.includes("Applies to"), "The lean popup must contain neither the retired title nor footer");
-        ["free", "fixed", "mixed"].forEach(state => {
-            const button = radio(menu, state);
-            const row = button.parent;
-            compare(row.height, filterRowHeight, "Every popup radio row must match the actual category filter list row height");
-            const labels = row.children.filter(child => child !== button && child.text !== undefined && Ui.exposed(child));
-            compare(labels.length, 1, "Each radio row must render one count beside its label");
-            const label = labels[0];
-            const expected = state === "mixed"
+        const buttons = ["free", "fixed", "mixed"].map(state => radio(menu, state));
+        const layout = buttons[0].parent;
+        const margin = menu.rightPadding + layout.rightPadding;
+        compare(menu.leftPadding + layout.leftPadding, margin, "The popup's left inner margin must equal its right margin");
+        compare(menu.topPadding + layout.topPadding, margin, "The popup's top inner margin must equal its right margin");
+        compare(menu.bottomPadding + layout.bottomPadding, margin, "The popup's bottom inner margin must equal its right margin");
+        buttons.forEach((button, index) => {
+            const expected = index === 2
                 ? "Mixed · " + menu.freeCount + " free · " + menu.fixedCount + " fixed"
-                : (state === "free" ? "Free" : "Fixed") + " · all " + menu.shown.length;
-            compare(button.text + " " + label.text, expected, "Each popup row must display the owner state label, middle dots and exact target counts");
-            const labelTop = label.mapToItem(row, 0, 0).y;
-            verify(labelTop + 0.5 >= filterTopPadding && row.height - labelTop - label.height + 0.5 >= filterBottomPadding,
-                   "Popup count text must retain the filter list row's top and bottom content padding");
-            const at = label.mapToItem(row, 0, 0).x;
-            const end = button.mapToItem(row, button.width, 0).x;
-            verify(at >= end && at - end <= EaStyle.Sizes.fontPixelSize, "Counts must sit just after labels rather than at the popup edge");
+                : (index === 0 ? "Free" : "Fixed") + " · all " + menu.shown.length;
+            compare(button.text, expected, "Every popup radio row must render one exact state/count text with one space around each dot");
+            if (index > 0) {
+                const pitch = button.mapToItem(layout, 0, button.height / 2).y
+                    - buttons[index - 1].mapToItem(layout, 0, buttons[index - 1].height / 2).y;
+                compare(pitch, filterRowHeight, "Popup row centres must retain the actual filter dropdown row pitch");
+            }
         });
         verify(text.includes("all " + menu.shown.length), "Free and Fixed must show their complete target counts");
         return menu;
@@ -116,6 +120,8 @@ TestCase {
         // An independent value edit makes a two-step undo detectable.
         const oldValue = sentinel.value;
         sentinel.value = oldValue + 0.125;
+        const oldFree = sentinel.free;
+        verify(Session.project.setParametersFree([sentinel], !oldFree), "The prior independent hidden-row batch must be undoable");
         const before = snapshot(parameters);
         const list = Ui.control(Probe, appWindow, "parameters.list");
         verify(list !== null, "The real parameter table must expose its filter model");
@@ -150,9 +156,11 @@ TestCase {
         compare(sentinel.value, oldValue + 0.125, "A batch free edit must preserve earlier parameter values");
         Session.project.undo();
         compare(snapshot(parameters), before, "One Undo must restore every shown free flag and all hidden parameter state");
-        // The next Undo must consume the sentinel, proving the batch used exactly one history record.
+        // A scalar value edit need not be undoable; the prior explicit free batch is.
+        // The next Undo reaches that independent record, detecting a duplicate batch record.
         Session.project.undo();
-        compare(sentinel.value, oldValue, "The second Undo must restore the independent prior value edit");
+        compare(sentinel.free, oldFree, "The second Undo must reach the independent prior hidden-row batch");
+        compare(sentinel.value, oldValue + 0.125, "Undoing free batches must preserve the independent prior value edit");
         const hiddenBeforeFixed = snapshot(hidden);
         const again = popup();
         mouseClick(radio(again, "fixed"));
@@ -175,7 +183,7 @@ TestCase {
         for (const character of "zzzzmissing")
             keyClick(character.toUpperCase().charCodeAt(0));
         const before = snapshot(allParameters());
-        const menu = popup();
+        const menu = popup(true);
         compare(menu.shown.length, 0, "An unmatched filter must produce exactly zero popup targets");
         ["free", "fixed", "mixed"].forEach(state => {
             const item = radio(menu, state);

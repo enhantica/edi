@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-11T21:59:15Z
+# measured_utc = 2026-10-11T22:48:15Z
 #
-# Recorded from: final31-popup-before.log (1 node(s) measured once, 9641 banked, 0 stale row(s) dropped)
-# Collected tests: 10419; with a reported duration: 5329
-# Module-scoped fixture costs recorded: 34
+# Recorded from: final-actors.log (changed modules actually collected; untouched committed inventory retained)
+# Collected tests: 10422; with a reported duration: 5334
+# Module-scoped fixture costs recorded: 35
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 10419
+# inventory_python = 10422
 # inventory_cpp = 306
-# inventory_measured = 9641
-# inventory_unmeasured = 1084
+# inventory_measured = 9649
+# inventory_unmeasured = 1079
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -44,7 +44,7 @@
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_separate_adp_table_and_isotropic_controls]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_space_group_name_and_number_choose_new_default]
 0.005	tests/integration/app/test_c13_t2_gui.py::test_gui_owner_decisions_pass_in_the_production_host
-UNMEASURED:failed-in-this-run	tests/integration/app/test_display_fonts.py::test_display_alphabet_uses_only_packaged_rendering_fonts
+0.250	tests/integration/app/test_display_fonts.py::test_display_alphabet_uses_only_packaged_rendering_fonts
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
 0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_cosio-d20_scan-162f]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_cosio-d20_scan-324f]
@@ -113,7 +113,10 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_ui_compare.py::t
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_ui_compare.py::test_production_comparator_similarity_and_missing_escape[tile-threshold-False]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_ui_compare.py::test_production_comparator_similarity_and_missing_escape[whole-image-threshold-False]
 0.590	tests/integration/app/test_e04_t1_ui_compare.py::test_retired_calculation_identity_rows_and_adjacent_text_are_compared
-UNMEASURED:failed-in-this-run	tests/integration/app/test_legend_marks.py::test_actual_legend_marks_preserve_geometry_and_element_parity
+0.003	tests/integration/app/test_legend_marks.py::test_actual_legend_marks_preserve_geometry_and_element_parity
+0.000	tests/integration/app/test_legend_marks.py::test_each_legend_boundary_executes_in_the_actual_host[jmol]
+0.000	tests/integration/app/test_legend_marks.py::test_each_legend_boundary_executes_in_the_actual_host[pattern]
+0.000	tests/integration/app/test_legend_marks.py::test_each_legend_boundary_executes_in_the_actual_host[vesta]
 0.600	tests/integration/app/test_phase_scan_progress.py::test_app_converted_skip_live_population_matches_reopen[independent]
 0.600	tests/integration/app/test_phase_scan_progress.py::test_app_converted_skip_live_population_matches_reopen[sequential]
 0.570	tests/integration/app/test_phase_scan_progress.py::test_app_incremental_notes_failure_invalidates_before_progress[index-foreign-independent]
@@ -248,8 +251,8 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_phase_scan_state.py::te
 UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_shipment.py::test_y2o3_page_and_cli_project_are_registered
 UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_shipment.py::test_y2o3_reference_is_vendored_byte_identically_and_named
 0.010	tests/integration/py/test_background_position_button.py::test_line_segment_background_exposes_the_position_naming_action
-UNMEASURED:failed-in-this-run	tests/integration/py/test_bundled_display_fonts.py::test_default_label_formatter_alphabet_has_no_missing_glyphs
-UNMEASURED:failed-in-this-run	tests/integration/py/test_bundled_display_fonts.py::test_display_census_includes_literals_escapes_and_formatter_domain
+0.050	tests/integration/py/test_bundled_display_fonts.py::test_default_label_formatter_alphabet_has_no_missing_glyphs
+0.050	tests/integration/py/test_bundled_display_fonts.py::test_display_census_includes_literals_escapes_and_formatter_domain
 0.000	tests/integration/py/test_bundled_display_fonts.py::test_each_recorded_display_site_has_a_real_glyph_in_its_rendering_face[Baloo 2]
 0.000	tests/integration/py/test_bundled_display_fonts.py::test_each_recorded_display_site_has_a_real_glyph_in_its_rendering_face[Encode Sans]
 0.000	tests/integration/py/test_bundled_display_fonts.py::test_each_recorded_display_site_has_a_real_glyph_in_its_rendering_face[Font Awesome]
@@ -4893,7 +4896,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_fitting_mode_weights.py:
 0.030	tests/integration/py/test_fitting_mode_weights.py::test_joint_weights_load_in_every_mode_and_save_only_in_joint[joint]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_fitting_mode_weights.py::test_joint_weights_load_in_every_mode_and_save_only_in_joint[sequential]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_fitting_mode_weights.py::test_joint_weights_load_in_every_mode_and_save_only_in_joint[single]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_free_header_declaration.py::test_analysis_free_header_declares_the_owner_radio_popup
+0.010	tests/integration/py/test_free_header_declaration.py::test_analysis_free_header_declares_the_owner_radio_popup
 0.000	tests/integration/py/test_latp_reference.py::test_latp_reference_quantities_are_fullprof_values_not_scan_regression_pins
 0.010	tests/integration/py/test_legacy_project_load.py::test_pre_id_engine_save_recovers_every_background_start_by_row[chebyshev]
 0.020	tests/integration/py/test_legacy_project_load.py::test_pre_id_engine_save_recovers_every_background_start_by_row[line-segment]
@@ -10769,6 +10772,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 38.315	tests/integration/app/test_c13_t2_gui.py
 # module-cost: 288.713	tests/integration/app/test_e04_t1_projects.py
 # module-cost: 323.880	tests/integration/app/test_e04_t1_runtime_escapes.py
+# module-cost: 10.317	tests/integration/app/test_legend_marks.py
 # module-cost: 0.258	tests/integration/app/test_phase_scan_state.py
 # module-cost: 1.914	tests/integration/py/test_e04_t12_name_allowance.py
 # module-cost: 0.192	tests/integration/py/test_e09_t75_sdk_consumer.py

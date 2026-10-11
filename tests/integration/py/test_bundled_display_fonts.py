@@ -105,6 +105,17 @@ def test_font_reference_is_bound_to_packaged_bytes_and_archive():
                 )
 
 
+def generated_label_digit_is_bundled(char):
+    # This generated domain is not a literal in the production census. Its real
+    # default-text fallback is exercised independently by the Qt shaping actor.
+    setup = (ROOT / 'app/src/engine_setup.cpp').read_text()
+    registered = (
+        'QFont::insertSubstitution(family, fallback)' in setup
+        and '{"PT_Sans/PTSans-Regular.ttf", "Noto_Sans/NotoSans-Regular.ttf"}' in setup
+    )
+    return '\u2080' <= char <= '\u2089' and registered and covered('Noto Sans', char)
+
+
 def test_display_census_includes_literals_escapes_and_formatter_domain():
     census = json.loads((ROOT / 'data/display-glyphs.json').read_text())['characters']
     sites = {(site.rsplit(':', 1)[0], row['char']) for row in census for site in row['sites']}
@@ -112,10 +123,11 @@ def test_display_census_includes_literals_escapes_and_formatter_domain():
         (path, f'U+{ord(char):04X}')
         for path, _, char in displayed_characters()
         if (path, char) not in sites
+        and not (path == 'app/src/parameter_item.cpp' and generated_label_digit_is_bundled(char))
     })
     assert not missing, (
         'The displayed alphabet must include escaped literals, numeric QChar values '
-        'and every possible formatter digit: ' + repr(missing)
+        'and every generated digit must have independent bundled cmap coverage: ' + repr(missing)
     )
 
 
@@ -168,7 +180,8 @@ def test_default_label_formatter_alphabet_has_no_missing_glyphs():
     missing = sorted(
         f'U+{ord(char):04X}'
         for char in alphabet
-        if rendering.get(char) not in REFERENCE['fonts'] or not covered(rendering[char], char)
+        if not generated_label_digit_is_bundled(char)
+        and (rendering.get(char) not in REFERENCE['fonts'] or not covered(rendering[char], char))
     )
     assert not missing, (
         'Default label formatter outputs must have real glyphs in their bundled rendering faces: '

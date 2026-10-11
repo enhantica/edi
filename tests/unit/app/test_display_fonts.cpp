@@ -6,6 +6,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QFont>
+#include <QFontDatabase>
 #include <QGlyphRun>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -68,9 +69,11 @@ public:
                 const auto indexes = run.glyphIndexes();
                 if (!font.isValid() || !font.supportsCharacter(code) || indexes.isEmpty()
                     || indexes.contains(0) || !packaged.contains(fingerprint(font))
-                    || font.weight() != expectedFaceWeight) {
+                    || faceWeight(font) != expectedFaceWeight) {
                     errors.append(QString("U+%1 selected %2 but shaped with unbundled/missing %3")
-                                      .arg(code, 4, 16, QLatin1Char('0')).arg(family, font.familyName()));
+                                      .arg(code, 4, 16, QLatin1Char('0')).arg(family, font.familyName())
+                                      + QString(" (physical weight %1, requested %2, style %3)")
+                                            .arg(faceWeight(font)).arg(font.weight()).arg(font.styleName()));
                 } else {
                     present = true;
                 }
@@ -80,10 +83,35 @@ public:
         }
         return errors;
     }
+    Q_INVOKABLE QString unbundledFamily() const {
+        // Plant an application-loaded face outside the packaged resource bytes.
+        // Generic "monospace" may legitimately resolve to a bundled face on CI.
+        QFile source(":/qt/qml/EasyApplication/Gui/Resources/Fonts/PT_Sans/PTSans-Regular.ttf");
+        if (!source.open(QIODevice::ReadOnly)) return {};
+        auto bytes = source.readAll();
+        bytes.replace("PT Sans", "TZProbe");
+        const char before[] = {'\0','P','\0','T','\0',' ','\0','S','\0','a','\0','n','\0','s'};
+        const char after[] = {'\0','T','\0','Z','\0','P','\0','r','\0','o','\0','b','\0','e'};
+        bytes.replace(QByteArray(before, sizeof(before)), QByteArray(after, sizeof(after)));
+        const int id = QFontDatabase::addApplicationFontFromData(bytes);
+        const auto names = QFontDatabase::applicationFontFamilies(id);
+        return names.isEmpty() ? QString() : names.constFirst();
+    }
 private:
+    static int faceWeight(const QRawFont& font) {
+        const auto table = font.fontTable("OS/2");
+        return table.size() < 6 ? -1 : static_cast<unsigned char>(table[4]) * 256
+                                           + static_cast<unsigned char>(table[5]);
+    }
     static QByteArray fingerprint(const QRawFont& font) {
-        return font.fontTable("cmap") + font.fontTable("head") + font.fontTable("maxp")
-            + QByteArray::number(font.weight()) + font.styleName().toUtf8();
+        QByteArray result;
+        // Compare physical tables; Qt can report the request's weight/style for a
+        // correctly selected face. Include identity and outlines, not only cmap.
+        for (const char* tag : {"cmap", "head", "maxp", "OS/2", "name", "glyf", "CFF ", "CFF2", "hmtx"}) {
+            const auto table = font.fontTable(tag);
+            result += QByteArray::number(table.size()) + ':' + table;
+        }
+        return result;
     }
 };
 static void register_display_fonts() {

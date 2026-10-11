@@ -174,3 +174,12 @@ function expandGroup(testCase, probe, window, name) {
         (group.titleArea.height + group.spacing + group.contentHeight + group.bottomPadding)) < 0.01,
         2000, "I10/I19: group expansion finishes before its content is positioned or used: " + name);
 }
+
+// Delegates follow the visual parent graph used by find(), rather than QObject ownership.
+function itemsWithProperty(root, property) {
+    if (!root) return [];
+    let items = root[property] !== undefined ? [root] : [];
+    const children = root.children || [];
+    children.forEach(child => items = items.concat(itemsWithProperty(child, property)));
+    return items;
+}

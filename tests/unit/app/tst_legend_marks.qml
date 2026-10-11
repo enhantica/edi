@@ -1,5 +1,6 @@
 import QtQuick
 import QtTest
+import EasyApplication.Gui.Style as EaStyle
 import edi.app
 import EdiAcceptance 1.0
 import "UiInteraction.js" as Ui
@@ -26,8 +27,9 @@ TestCase {
     }
     function test_pattern_marks_are_drawn_with_series_widths() {
         Ui.click(test, Probe, appWindow, "appBar.tab.experiment");
-        const legend = Ui.control(Probe, appWindow, "chart.legend");
-        verify(legend !== null, "The actual pattern legend must be reached");
+        let legend;
+        tryVerify(() => { legend = Ui.control(Probe, appWindow, "chart.legend"); return legend !== null; }, 3000,
+                  "The actual pattern legend must be reached after chart population");
         tryVerify(() => Probe.rows(legend.entries).length > 0, 2000, "The pattern legend must expose its series");
         const rows = Probe.rows(legend.entries);
         verify(rows.some(row => row.mark === "line") && rows.some(row => row.mark === "tick"),
@@ -36,11 +38,11 @@ TestCase {
             verify(row.mark === "line" || row.mark === "tick", "Pattern marks must be geometry kinds, never Unicode characters");
             verify(row.markWidth > 0, "Every pattern mark must carry its series' positive width");
         });
-        const entries = Probe.objectsWithProperty(legend, "segments");
+        const entries = Ui.itemsWithProperty(legend, "segments");
         compare(entries.length, rows.length, "Every pattern series must instantiate one shared-height legend row");
         entries.forEach(entry => compare(entry.height, AppSizes.legendRowHeight,
-            "Pattern legend rows must use the same height as structure and popup rows"));
-        const shapes = Probe.objectsWithProperty(legend, "thickness").filter(item => item.visible);
+            "Pattern legend rows must retain the default legend spacing"));
+        const shapes = Ui.itemsWithProperty(legend, "thickness").filter(item => item.visible);
         compare(shapes.length, rows.length, "Every pattern legend mark must instantiate a real drawn shape");
         shapes.forEach(shape => {
             compare(shape.parent.text, "", "The shape's container must not draw a text glyph for its mark");
@@ -63,7 +65,7 @@ TestCase {
         const legend = Ui.control(Probe, appWindow, "structure.view.legend");
         verify(tableIcon !== null && legend !== null, "The actual table and structure legend must be reached");
         let entries = [];
-        tryVerify(() => { entries = Probe.objectsWithProperty(legend, "segments"); return entries.length > 0; }, 2000, "The structure legend must create its real element entries");
+        tryVerify(() => { entries = Ui.itemsWithProperty(legend, "segments"); return entries.length > 0; }, 2000, "The structure legend must create its real element entries");
         const element = entries.find(entry => entry.label === "La");
         verify(element !== undefined, "The minimal structure's element must have a legend entry");
         const expected = tableIcon.segments[0];
@@ -71,8 +73,9 @@ TestCase {
                    "The legend must use the exact atom icon emitted by the table");
         tryVerify(() => String(element.segments[0].color) === String(tableIcon.segments[0].color), 2000,
                   "The legend and table must share the selected scheme's element colour");
-        entries.forEach(entry => compare(entry.height, AppSizes.legendRowHeight,
-            "Structure legend rows must use the same height as pattern and popup rows"));
+        const midpoint = Math.round((AppSizes.legendRowHeight + EaStyle.Sizes.comboBoxHeight) / 2);
+        entries.forEach(entry => compare(entry.height, midpoint,
+            "Structure legend rows must sit halfway between pattern and filter-dropdown spacing"));
         verify(element.segments[0].dot !== true && element.segments[0].text === undefined,
                "The element icon must replace both circle shapes and text dots");
     }
