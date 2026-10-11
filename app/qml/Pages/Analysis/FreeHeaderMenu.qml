@@ -44,8 +44,10 @@ EaElements.Menu {
     }
 
     width: layout.implicitWidth
+    verticalPadding: 0
 
-    // Three rows, a legend row apart, a count right after its label and a dot (the owner, 2026-10-11).
+    // Three rows, as high and as far in as the filter combo boxes' list entries, with no padding above or below as
+    // in their list; a count after each label and a dot (the owner, 2026-10-11).
     component StateRow: Row {
         id: stateRow
 
@@ -57,7 +59,7 @@ EaElements.Menu {
         property bool active: true
         signal chosen
 
-        height: AppSizes.legendRowHeight
+        height: EaStyle.Sizes.comboBoxHeight
         spacing: 0.5 * EaStyle.Sizes.fontPixelSize
 
         EaElements.RadioButton {
@@ -81,8 +83,8 @@ EaElements.Menu {
     Column {
         id: layout
 
-        leftPadding: 0.75 * EaStyle.Sizes.fontPixelSize
-        rightPadding: 1.25 * EaStyle.Sizes.fontPixelSize
+        leftPadding: AppSizes.listItemPadding
+        rightPadding: AppSizes.listItemPadding
 
         StateRow {
             buttonName: "parameters.freeHeader.free"

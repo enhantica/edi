@@ -50,9 +50,11 @@ QtObject {
     // inset on the right, and the pattern chart's gap from its toolbar down to the main plot area.
     readonly property real mainAreaMargin: unit * 2
     readonly property real toolbarSpacing: unit * 0.25
-    // One row of a legend (the pattern chart's, the structure view's) and of the free column's menu: one text
-    // line's height, the pattern legend's spacing (the owner, 2026-10-11).
+    // One row of a legend (the pattern chart's, the structure view's): one text line's height, the pattern
+    // legend's spacing (the owner, 2026-10-11).
     readonly property real legendRowHeight: Math.round(unit * 1.3)
+    // A combo box list entry's side padding: the base MenuItem's (a literal 16 there).
+    readonly property real listItemPadding: 16
     // Between the input boxes of one group, as between a chart toolbar's buttons (the owner's note 23).
     readonly property real inputSpacing: toolbarSpacing
     // The messages dialog's fixed width (edi ADR-0017 §14): about the Preferences dialog's.
