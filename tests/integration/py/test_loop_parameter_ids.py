@@ -111,15 +111,23 @@ def test_legacy_positional_aliases_and_constraints_migrate_on_load(kind, tmp_pat
         (
             'left',
             'bank.background[0]' if line else 'bank.background.1.coef',
-            'bank.background.pA.intensity' if line else 'bank.background.base.coef',
+            {'bank.background.pA.intensity', 'bank.background[pA]'}
+            if line
+            else {'bank.background.base.coef'},
         ),
         (
             'right',
             'bank.background[1]' if line else 'bank.background.2.coef',
-            'bank.background.pB.intensity' if line else 'bank.background.ramp.coef',
+            {'bank.background.pB.intensity', 'bank.background[pB]'}
+            if line
+            else {'bank.background.ramp.coef'},
         ),
-        ('scale', 'bank.scale', 'bank.linked_structure.phase.scale'),
-        ('texture', 'bank.march_r', 'bank.preferred_orientation.phase.march_r'),
+        ('scale', 'bank.scale', {'bank.linked_structure.phase.scale', 'bank.phase.scale'}),
+        (
+            'texture',
+            'bank.march_r',
+            {'bank.preferred_orientation.phase.march_r', 'bank.phase.march_r'},
+        ),
     ]
     analysis = private / 'analysis/analysis.edi'
     analysis.write_text(
@@ -133,9 +141,14 @@ def test_legacy_positional_aliases_and_constraints_migrate_on_load(kind, tmp_pat
     destination = tmp_path / 'saved'
     project.save_as(destination)
     tokens = shlex.split((destination / 'analysis/analysis.edi').read_text())
-    assert all(new in tokens and old not in tokens for _, old, new in targets), (
-        'Load must migrate every legacy positional alias to its declared row id before save'
+    alias_start = tokens.index('_alias.parameter_unique_name') + 1
+    alias_end = tokens.index('loop_', alias_start)
+    aliases = dict(
+        zip(tokens[alias_start:alias_end:2], tokens[alias_start + 1 : alias_end : 2], strict=True)
     )
+    assert all(
+        aliases[alias] in names and old not in aliases.values() for alias, old, names in targets
+    ), 'Load must migrate every legacy positional alias to its declared row id before save'
     assert 'right = 2*left' in tokens, (
         'Alias migration must preserve the constraint expression and its alias identities'
     )

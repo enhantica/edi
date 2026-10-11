@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-11T20:47:13Z
+# measured_utc = 2026-10-11T20:51:52Z
 #
-# Recorded from: label-current.log (2 node(s) measured once, 9625 banked, 0 stale row(s) dropped)
+# Recorded from: edi-ids-grammar-before.log (3 node(s) measured once, 9626 banked, 0 stale row(s) dropped)
 # Collected tests: 10396; with a reported duration: 5325
 # Module-scoped fixture costs recorded: 34
 #

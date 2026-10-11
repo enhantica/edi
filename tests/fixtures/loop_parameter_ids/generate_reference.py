@@ -22,7 +22,8 @@ def main():
 
     git = shutil.which('git')
     if git is None:
-        raise RuntimeError('The reference revision requires an installed git executable')
+        message = 'The reference revision requires an installed git executable'
+        raise RuntimeError(message)
     root = Path(__file__).parent
     result = {
         'reference_revision': subprocess.check_output(
