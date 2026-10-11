@@ -39,3 +39,9 @@ mk pattern_0_0004.txt 0 0
 - `reduced_chi_square` and `iterations`: **regression pins** of this project's own sequential fit, measured by
   `python -m edi fit --report machine` with `OMP_NUM_THREADS=1` on edi `ddb1219` linked against crysta
   `d703cd2c`.
+
+## Catalogue metadata
+
+`project/project.edi` carries the app's example metadata (ADR-0031, the owner's enrichment of 2026-10-09): its
+title and description name the sample and scan, and `_metadata.purpose`, `.dimensionality`, `.instrument`,
+`.facility` were added. Every other file is unchanged.
