@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-11T20:34:26Z
+# measured_utc = 2026-10-11T20:47:13Z
 #
-# Recorded from: canonical Python bank + seq18/before-paths.log; experiment id paths expected-red
-# Collected tests: 10701; with a reported duration: 5324
+# Recorded from: label-current.log (2 node(s) measured once, 9625 banked, 0 stale row(s) dropped)
+# Collected tests: 10396; with a reported duration: 5325
 # Module-scoped fixture costs recorded: 34
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 10395
+# inventory_python = 10396
 # inventory_cpp = 306
-# inventory_measured = 9625
+# inventory_measured = 9626
 # inventory_unmeasured = 1076
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
@@ -245,7 +245,7 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_phase_scan_state.py::te
 0.030	tests/integration/py/test_anisotropic_adps.py::test_y2o3_all_three_types_match_the_same_fullprof_profile[beta]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_shipment.py::test_y2o3_page_and_cli_project_are_registered
 UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_shipment.py::test_y2o3_reference_is_vendored_byte_identically_and_named
-UNMEASURED:failed-in-this-run	tests/integration/py/test_background_position_button.py::test_line_segment_background_exposes_the_position_naming_action
+0.010	tests/integration/py/test_background_position_button.py::test_line_segment_background_exposes_the_position_naming_action
 0.000	tests/integration/py/test_c09_t12_general_jacobian_pin.py::test_c09_t12_round_trip_fixture_is_locked_to_independent_biso_reference
 0.100	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_decimal_brackets_are_absolute_on_edi
 0.030	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_decimal_su_save_load_preserves_reference_value_exactly[.5(1.5)]
@@ -5016,6 +5016,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_phase_scan_class_boundar
 0.660	tests/integration/py/test_scan_app_contract.py::test_long_parameter_pickers_use_shared_search_component[ConstraintsGroup]
 0.000	tests/integration/py/test_scan_app_contract.py::test_messages_is_first_in_both_layout_and_width_inventory
 0.150	tests/integration/py/test_scan_app_contract.py::test_outcome_gate_rejects_a_different_results_word
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_scan_app_contract.py::test_qml_spans_ignore_comment_apostrophes_and_quoted_braces
 0.170	tests/integration/py/test_scan_app_contract.py::test_result_row_and_status_summary_share_outcome_presentation
 0.630	tests/integration/py/test_scan_app_contract.py::test_search_accepts_direct_field_and_state_compositions
 0.010	tests/integration/py/test_scan_app_contract.py::test_sidebar_tabs_have_requested_names

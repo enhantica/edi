@@ -39,7 +39,7 @@ TestCase {
         const experiment = Session.project.currentExperiment.text.text;
         Ui.click(test, Probe, appWindow, "appBar.tab.experiment");
         Ui.expandGroup(test, Probe, appWindow, "group.background");
-        const buttons = Probe.objectsWithProperty(appWindow, "text").filter(item => Ui.exposed(item) && item.text === "Name points by position");
+        const buttons = Probe.objectsWithProperty(appWindow, "text").filter(item => Ui.exposed(item) && item.text === "Ids from positions");
         compare(buttons.length, 1, "The background table must expose one actual position-naming button");
         mouseClick(buttons[0]);
         compare(JSON.stringify(ids()), JSON.stringify(next), "Only colliding points may gain extra decimal places");
