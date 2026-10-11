@@ -1,6 +1,5 @@
 import QtQuick
 import QtTest
-import QtQuick.Controls
 import edi.app
 import EdiAcceptance 1.0
 import "UiInteraction.js" as Ui
@@ -39,8 +38,10 @@ TestCase {
         const selector = Ui.control(Probe, appWindow, "fittingMode.type");
         verify(selector !== null, "The applicable-mode selector must be exposed in its group");
         compare(selector.enabled, expected.length > 1, "A single applicable mode must be shown disabled");
-        if (expected.length === 1)
-            verify(selector.ToolTip.text.length > 0, "A disabled single-mode selector must explain why");
+        if (expected.length === 1) {
+            mouseMove(selector.parent, selector.parent.width / 2, selector.parent.height / 2);
+            tryVerify(() => Probe.objectsWithProperty(selector.parent, "text").some(item => item.visible && /one experiment|several experiments/.test(item.text)), 3000, "Hovering the disabled mode row must show its explanatory tooltip");
+        }
     }
     function jointCategory(expected) {
         const present = Probe.rows(Session.project.analysis.categories).some(row => row.categoryId === "joint_fit");
@@ -55,7 +56,7 @@ TestCase {
         Session.project.analysis.fittingMode = "joint";
         jointCategory(true);
         Session.project.undo();
-        Session.project.undo();
+        tryCompare(Session.project.analysis, "fittingMode", "single", 2000, "Undoing the added experiment must restore the applicable single mode");
         options([["single", "Single experiment"]]);
         jointCategory(false);
     }
