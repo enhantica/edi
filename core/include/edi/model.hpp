@@ -4205,11 +4205,20 @@ struct SequentialFitConfig {
     detail::CategoryRow table_row;
 };
 
+// One pair of the fit's free parameters and their correlation coefficient, as diffraction-lib's
+// `_fit_parameter_correlation` row: the two unique names (`<datablock>.<category>[.<entry>].<name>`) in the
+// fit's column order (i before j) and the coefficient, in [-1, 1].
+struct FitParameterCorrelation {
+    std::string parameter_unique_name_i;
+    std::string parameter_unique_name_j;
+    double correlation = 0.0;
+};
+
 // The last fit's result, as analysis.edi persists it in diffraction-lib's `_fit_result` category
 // (crysta's FitResultRecord, which a save hands it to). A fit records it (Project::fit,
 // Project::fit_joint), an undo clears it, a load restores it; held while `result_kind` is set. Fields
-// crysta does not compute yet (the profile R factor, the expected R, shift/s.u., correlations, the
-// single-crystal R factors) are not carried; each bank's share of a joint fit is on its experiment.
+// crysta does not compute yet (the profile R factor, the expected R, shift/s.u., the single-crystal R
+// factors) are not carried; each bank's share of a joint fit is on its experiment.
 struct FitResultRecord {
     std::string result_kind;  // `deterministic`; empty: no fit result is held
     bool success = false;
@@ -4231,6 +4240,10 @@ struct FitResultRecord {
     // The descent that produced the result, so a reopened result names its own minimizer rather than the
     // one selected since; empty in a record written before it.
     std::string descent;
+    // The free parameters' correlations from the fit's covariance, every pair of the upper triangle in the
+    // fit's column order (diffraction-lib's `_store_correlation_projection`); empty when the fit had fewer
+    // than two free parameters or no usable covariance.
+    std::vector<FitParameterCorrelation> correlations;
     bool held() const { return !result_kind.empty(); }
     // ADR-0018: the row of this object's non-loop categories.
     detail::CategoryRow table_row;
