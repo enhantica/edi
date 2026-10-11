@@ -7,6 +7,7 @@ import zipfile
 import pytest
 
 from tests.fixtures.table_display import metadata_bytes, stored_id_bytes
+from tests.system.py import test_c34_t28_saved_bytes as pins
 
 
 @pytest.mark.parametrize(
@@ -161,3 +162,34 @@ def test_source_metadata_archive_refuses_rebanked_whitelist_escapes(tmp_path, mo
     monkeypatch.setattr(metadata_bytes, 'HERE', tmp_path)
     with pytest.raises(AssertionError):
         metadata_bytes.pair(name)
+
+
+@pytest.mark.parametrize('damage', ['science', 'data', 'missing', 'extra', 'row-order'])
+def test_reviewed_input_byte_projection_refuses_changes_through_the_saved_pin_caller(
+    tmp_path, monkeypatch, damage
+):
+    case = 'repo:docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project'
+    source = metadata_bytes.restore(pins.REFERENCE.inputs()[case], tmp_path / 'input')
+    monkeypatch.setattr(pins.REFERENCE, 'inputs', lambda: {case: source})
+    pins.test_save_matches_the_labelled_pre_move_regression_pin(tmp_path / 'control', case)
+    if damage == 'science':
+        with (source / 'experiments/d20.edi').open('a') as stream:
+            stream.write('\n_peak.cutoff_fwhm 3.125\n')
+    elif damage == 'data':
+        target = source / 'experiments/d20.edi'
+        lines = target.read_bytes().splitlines(keepends=True)
+        first = max(i for i, line in enumerate(lines) if line.startswith(b'_data.')) + 1
+        fields = lines[first].split()
+        fields[3] = str(float(fields[3]) + 0.125).encode()
+        lines[first] = b' '.join(fields) + b'\n'
+        target.write_bytes(b''.join(lines))
+    elif damage == 'missing':
+        (source / 'analysis/analysis.edi').unlink()
+    elif damage == 'extra':
+        (source / 'extra.edi').write_text('data_unreviewed\n')
+    else:
+        target = source / 'experiments/d20.edi'
+        lines = target.read_bytes().splitlines(keepends=True)
+        target.write_bytes(b''.join(reversed(lines)))
+    with pytest.raises(AssertionError, match='complete reviewed pre-catalogue input'):
+        pins.test_save_matches_the_labelled_pre_move_regression_pin(tmp_path / 'escape', case)

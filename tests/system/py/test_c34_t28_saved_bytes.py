@@ -6,8 +6,10 @@ check/remove exactly one canonical calculator block per saved experiment,
 and compare every other byte and the full file inventory to the same pins.
 """
 
+import hashlib
 import importlib.util
 import json
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -231,29 +233,32 @@ def test_save_matches_the_labelled_pre_move_regression_pin(tmp_path, case):
         ), 'The retired TCH plus asymmetry byte subject is replaced by the declared Npr5 model'
         return
     if case.startswith('repo:') and REFERENCE.hashes(source) != expected['input_sha256']:
-        # Main's independently merged example edits cannot rewrite a storage
-        # regression pin. Check their provenance and still save the old input.
-        main = REFERENCE.committed_input(
-            ROOT / case.removeprefix('repo:'), tmp_path / 'main', 'origin/main'
+        reviewed = json.loads(
+            (ROOT / 'tests/fixtures/table_display/regression-inputs.json').read_text()
         )
-        live_hashes, main_hashes = REFERENCE.hashes(source), REFERENCE.hashes(main)
-        metadata = json.loads(
-            (ROOT / 'tests/fixtures/e04_t12_public_release/project-metadata.json').read_text()
+        relative = case.removeprefix('repo:') + '/'
+        expected_live = {
+            name.removeprefix(relative): digest
+            for name, digest in reviewed['files'].items()
+            if name.startswith(relative)
+        }
+        assert expected_live, 'Every adapted input must have a committed reviewed byte witness'
+        with zipfile.ZipFile(
+            ROOT / 'tests/fixtures/table_display/regression-inputs.zip'
+        ) as archive:
+            for name, digest in expected_live.items():
+                assert hashlib.sha256(archive.read(relative + name)).hexdigest() == digest, (
+                    'Reviewed input bytes and the full inventory must retain the committed pin'
+                )
+        live_raw = {
+            path.relative_to(source).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+            for path in source.rglob('*')
+            if path.is_file()
+        }
+        assert live_raw == expected_live, (
+            'Changed live example bytes must equal the complete reviewed pre-catalogue input, '
+            'independently of the position of main'
         )
-        assert live_hashes.keys() == main_hashes.keys(), (
-            'public metadata adaptation must retain the entire main project inventory'
-        )
-        for name, digest in live_hashes.items():
-            if digest == main_hashes[name]:
-                continue
-            adaptation = metadata.get(case.removeprefix('repo:') + '/' + name, {})
-            assert (
-                adaptation.get('after_sha256') == digest
-                and adaptation.get('before_sha256') == main_hashes[name]
-            ), (
-                'changed live example bytes must equal the exact reviewed descriptive '
-                'adaptation of independently merged main'
-            )
         source = REFERENCE.committed_input(
             ROOT / case.removeprefix('repo:'), tmp_path / 'pre-move'
         )
