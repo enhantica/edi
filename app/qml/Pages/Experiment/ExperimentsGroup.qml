@@ -179,7 +179,8 @@ EaElements.GroupBox {
                             text: qsTr("template")
                         }
                     }
-                    // A button, left-aligned in the Data file column and as wide as its text (the owner, 2026-10-08).
+                    // A button filling the Data file column up to the remove button, its file name elided in the middle
+                    // when too long (the owner, 2026-10-08 and 2026-10-11).
                     EaElements.SideBarButton {
                         id: loadData
                         objectName: `experiments.loadData.${row.index}`
@@ -188,20 +189,21 @@ EaElements.GroupBox {
                         // datasets and experiments loaded with their data show their file.
                         visible: !group.scan && row.experiment !== null && (row.experiment.canLoadData || row.experiment.calculationOnly)
                         anchors.verticalCenter: parent.verticalCenter
-                        width: Math.min(parent.width, Math.ceil(loadDataText.advanceWidth) + 2 * EaStyle.Sizes.fontPixelSize)
+                        width: parent.width
                         height: parent.height - 2 * EaStyle.Sizes.borderThickness - 4
                         enabled: row.experiment !== null && row.experiment.canLoadData
                         text: row.experiment !== null && !row.experiment.calculationOnly ? row.file : qsTr("Load data…")
-                        spacing: 0
-                        ToolTip.text: row.experiment !== null && !row.experiment.calculationOnly ? qsTr("Load another data file in place of this one") : ""
-                        onClicked: group.chooseData(row.experiment)
-
-                        TextMetrics {
-                            id: loadDataText
-
-                            font: loadData.font
+                        ToolTip.text: row.experiment !== null && !row.experiment.calculationOnly ? qsTr("%1: load another data file in place of this one").arg(row.file) : ""
+                        contentItem: EaElements.Label {
+                            leftPadding: EaStyle.Sizes.fontPixelSize * 0.5
+                            rightPadding: EaStyle.Sizes.fontPixelSize * 0.5
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                            elide: Text.ElideMiddle
+                            color: loadData.enabled ? EaStyle.Colors.themeForeground : EaStyle.Colors.themeForegroundDisabled
                             text: loadData.text
                         }
+                        onClicked: group.chooseData(row.experiment)
                     }
                 }
                 // What the scan's extract rules take from the dataset, with their units.
