@@ -1449,6 +1449,12 @@ QString ProjectViewModel::apply(const edi::Edit& change, bool structural) {
         return pending;
     }
     pending_structural_ = structural;
+    // A structural edit can rename a structure or an experiment, which renames the parameters a scan's correlations
+    // name: they go into the shown model's record first, follow the rename there, and are read back after it.
+    const bool scan_pairs = structural && scan_ && !applying_view_;
+    if (scan_pairs) {
+        writeScanCorrelations(*project_);
+    }
     try {
         preview_->apply(change);
     } catch (const std::exception& refusal) {
@@ -1474,6 +1480,9 @@ QString ProjectViewModel::apply(const edi::Edit& change, bool structural) {
         }
         // The results' outdated state follows any change of the template's identity, the minimizer's settings included.
         markTemplateChanged();
+    }
+    if (scan_pairs) {
+        readScanCorrelations();
     }
     setLastError({});
     setModified(true);
@@ -1711,11 +1720,14 @@ void ProjectViewModel::readScanCorrelations() {
 }
 
 void ProjectViewModel::writeScanCorrelations() {
+    writeScanCorrelations(scan_template_ ? *scan_template_ : *project_);
+}
+
+void ProjectViewModel::writeScanCorrelations(edi::Project& saved) {
     if (!scan_ || scan_session_ == nullptr) {
         return;
     }
-    // The record a save writes keeps a fit's own pairs and takes the scan's, in the datasets' order.
-    edi::Project& saved = scan_template_ ? *scan_template_ : *project_;
+    // The record keeps a fit's own pairs and takes the scan's, in the datasets' order.
     std::vector<edi::FitParameterCorrelation> pairs;
     for (const auto& row : saved.fit_result.correlations) {
         if (row->file_path.empty()) {

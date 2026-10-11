@@ -41,6 +41,7 @@
 namespace edi {
 
 struct ExperimentBase;
+struct BraggPdExperiment;
 struct Structure;
 struct AtomSite;
 struct AtomSiteAniso;
@@ -58,6 +59,7 @@ class KeyedBase;
 // Renames every link and texture row of `project` that names the structure `from` to `to`, all or
 // none (defined after Project).
 inline void rename_structure_links(Project& project, const std::string& from, const std::string& to);
+inline void follow_datablock_rename(Project& project, const char* kind, const std::string& from, const std::string& to);
 
 // The membership record an ItemVec owns and its attached items share. Items hold it STRONGLY —
 // ADR-0013 prohibits production weak references — and the collection revokes it (owner =
@@ -2157,7 +2159,10 @@ class ItemVec final : public detail::KeyedBase {
         if constexpr (std::is_same_v<T, Structure>) {
             if (Project* project = host()) {
                 detail::rename_structure_links(*project, key.value(), next);
+                detail::follow_datablock_rename(*project, "structure", key.value(), next);
             }
+        } else if constexpr (std::is_same_v<T, BraggPdExperiment>) {
+            if (Project* project = host()) detail::follow_datablock_rename(*project, "experiment", key.value(), next);
         } else if constexpr (std::is_same_v<T, LineSegment>) {
             if (Project* project = host()) detail::follow_background_aliases(*project, key, next);
         } else if constexpr (std::is_same_v<T, AtomSite>) {
@@ -4699,6 +4704,33 @@ inline void follow_site_references(Project* project, Structure* structure, const
     // A refused tensor rename must leave aliases unchanged too.
     follow_site_rename(structure, from, to);
     for (auto& [alias, value] : changes) alias->parameter_unique_name = std::move(value);
+}
+
+// A structure's or an experiment's parameters are named `<datablock>.<category>...` wherever the project names
+// one: the analysis aliases, the fit's parameter correlations and the scan's extract rules. A rename of the
+// datablock rewrites each, so the project saves and reopens under the new name.
+inline void follow_datablock_rename(Project& project, const char* kind, const std::string& from, const std::string& to) {
+    const std::string old_prefix = datablock_key(from, kind) + ".";
+    const std::string new_prefix = datablock_key(to, kind) + ".";
+    if (old_prefix == new_prefix) {
+        return;
+    }
+    const auto renamed = [&](const std::string& name) -> std::optional<std::string> {
+        if (!name.starts_with(old_prefix)) {
+            return std::nullopt;
+        }
+        return new_prefix + name.substr(old_prefix.size());
+    };
+    for (const auto& alias : project.aliases) {
+        if (auto next = renamed(alias->parameter_unique_name.value())) alias->parameter_unique_name = std::move(*next);
+    }
+    for (const auto& pair : project.fit_result.correlations) {
+        if (auto next = renamed(pair->parameter_unique_name_i.value())) pair->parameter_unique_name_i = std::move(*next);
+        if (auto next = renamed(pair->parameter_unique_name_j.value())) pair->parameter_unique_name_j = std::move(*next);
+    }
+    for (const auto& rule : project.sequential_fit.extract) {
+        if (auto next = renamed(rule->target.value())) rule->target = std::move(*next);
+    }
 }
 
 inline void rename_structure_links(Project& project, const std::string& from, const std::string& to) {

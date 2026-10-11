@@ -416,6 +416,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     std::map<std::string, std::vector<edi::FitParameterCorrelation>> scan_correlations_;
     void readScanCorrelations();
     void writeScanCorrelations();
+    void writeScanCorrelations(edi::Project& record);
     // The Correlations tab follows the last fit and the shown experiment.
     void syncCorrelations();
     QStringList scan_columns_;
