@@ -184,45 +184,70 @@ def test_scan_explorer_header_has_declared_columns_in_order():
         'Dataset list labels: the unlabelled number column precedes fit, datablock and file'
     )
     number_column = block(header, 'EaComponents.TableViewLabel {')
-    assert 'width: AppSizes.indexColumnWidth' in number_column and 'text:' not in number_column, (
+    assert 'text:' not in number_column, (
         'Dataset list labels: the first number column stays present with an empty header'
     )
     repeater = block(header, 'Repeater {')
-    table = block(qml, 'EaComponents.TableView {')
+    table = block(qml, 'DataTable {')
+    common = source('qml/Components/DataTable.qml')
     table_id = property_value(table, 'id')
     context = (
         'const project={experiments:{columns:["temperature (K)","field '
         '(T)"],extractColumns:["temperature (K)","field (T)"]}};const group={project};const '
         + table_id
-        + '={model:('
-        + property_value(table, 'model')
-        + ')};'
-    )
-    assert evaluate(table_id + '.model === project.experiments', context), (
-        'Dataset list wiring: displayed extract headers belong to the dataset table actually shown'
+        + '={sourceModel:('
+        + property_value(table, 'sourceModel')
+        + ')};const sourceModel='
+        + table_id
+        + '.sourceModel;'
+        + table_id
+        + '.model=('
+        + property_value(common, 'model')
+        + ');'
     )
     model = property_value(repeater, 'model')
-    if model == 'group.scanColumns':
-        columns = property_value(qml, 'scanColumns')
-        context += 'group.scanColumns=(' + columns + ');'
-    assert evaluate(model, context) == ['temperature (K)', 'field (T)'], (
+    refresh = (
+        'group.scanColumns=(' + property_value(qml, 'scanColumns') + ');'
+        if model == 'group.scanColumns'
+        else ''
+    )
+    label = block(repeater, 'EaComponents.TableViewLabel {')
+    program = (
+        context + 'group.scan=true;'
+        'const AppSizes={fieldSpacing:4,iconColumnWidth:16,dataColumnWidth:32};'
+        'const count=29;const metrics={advanceWidth:s=>s==="29"?12.25:99};'
+        'const numberColumnWidth=(' + property_value(common, 'numberColumnWidth') + ');'
+        'const textColumnWidth=()=>30;const qsTr=s=>s;'
+        'const column={modelData:"field (T)"};const modelData=column.modelData;'
+        + refresh
+        + 'const observed={connected:('
+        + table_id
+        + '.model===project.experiments),'
+        'width:(' + property_value(table, 'columnWidths') + ')[0],'
+        'columns:(' + model + '),label:(' + property_value(label, 'text') + ')};'
+        'project.experiments.columns=["pressure (bar)"];'
+        'project.experiments.extractColumns=["pressure (bar)"];'
+        + refresh
+        + 'observed.changed=('
+        + model
+        + ');'
+        'console.log(JSON.stringify(observed));'
+    )
+    observed = javascript(program)
+    assert observed['connected'], (
+        'Dataset list wiring: displayed extract headers belong to the dataset table actually shown'
+    )
+    assert observed['width'] == 21, (
+        'The empty number header retains the measured row-number width and both field spacings'
+    )
+    assert observed['columns'] == ['temperature (K)', 'field (T)'], (
         'Dataset list wiring: the displayed header uses every extract rule '
         'label and unit in model order'
     )
-    label = block(repeater, 'EaComponents.TableViewLabel {')
-    label_context = (
-        context + 'const column={modelData:"field (T)"};const modelData=column.modelData;'
-    )
-    assert evaluate(property_value(label, 'text'), label_context) == 'field (T)', (
+    assert observed['label'] == 'field (T)', (
         'Dataset list wiring: each repeated extract header displays its own label and unit'
     )
-    context += (
-        'project.experiments.columns=["pressure (bar)"];'
-        'project.experiments.extractColumns=["pressure (bar)"];'
-    )
-    if model == 'group.scanColumns':
-        context += 'group.scanColumns=(' + columns + ');'
-    assert evaluate(model, context) == ['pressure (bar)'], (
+    assert observed['changed'] == ['pressure (bar)'], (
         'Dataset list wiring: changing the selected table model changes its '
         'displayed extract headers'
     )

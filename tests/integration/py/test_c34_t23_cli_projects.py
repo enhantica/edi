@@ -62,13 +62,17 @@ def registry():
 
 
 @pytest.mark.parametrize('project_id', sorted(SOURCE['projects']))
-def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id):
+def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id, tmp_path):
     expected = SOURCE['projects'][project_id]
     directory = CLI / PROJECT_IDS[project_id]
     assert (directory / 'project').is_dir(), ' must seed every existing crysta fitting project'
     assert not (CLI / project_id).exists(), (
         ' renamed seeds must not leave obsolete kebab-only project directories'
     )
+    from tests.fixtures.table_display.metadata_bytes import restore  # noqa: PLC0415
+
+    live_directory = directory
+    directory = restore(directory, tmp_path / 'retained-seed')
     paths = {
         str(path.relative_to(directory)): path
         for path in (directory / 'project').rglob('*')
@@ -85,7 +89,7 @@ def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id):
         assert path.is_file() and not path.is_symlink(), (
             ' seed files must be materialized regular files'
         )
-        adaptation = public_metadata.get(path.relative_to(ROOT).as_posix())
+        adaptation = public_metadata.get((live_directory / name).relative_to(ROOT).as_posix())
         if adaptation and name != 'project/analysis/analysis.edi':
             assert adaptation['before_blob'] == expected[name], (
                 'the metadata adaptation must retain its independently inventoried upstream blob'
@@ -147,7 +151,7 @@ def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id):
             )['sha256']
             assert (
                 hashlib.sha256(original_tokens(path.read_bytes())).hexdigest()
-                == extension[path.relative_to(ROOT).as_posix()]
+                == extension[(live_directory / name).relative_to(ROOT).as_posix()]
             ), ' only the reviewed March extension bytes replace the original LBCO seed'
             continue
         if project_id in {

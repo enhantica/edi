@@ -19,7 +19,7 @@ TARGETS = [
     ('instrument', 'bank.instrument.setup_wavelength', 1.54),
     ('profile', 'bank.peak.broad_gauss_w', 0.15),
     ('scale', 'bank.linked_structure.phase.scale', 1.0),
-    ('point', 'bank.background.1.intensity', 3.0),
+    ('point', 'bank.background.left.intensity', 3.0),
     ('term', 'bank.background.1.coef', 4.0),
     ('texture', 'bank.preferred_orientation.phase.march_r', 0.9),
     ('absorption', 'bank.absorption.mu_r', 0.1),

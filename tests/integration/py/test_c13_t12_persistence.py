@@ -48,7 +48,7 @@ def test_distinct_literal_quotes_and_control_like_ids_load(literal, route):
 
 
 @pytest.mark.parametrize('category', ['background', 'excluded_region', 'data'])
-def test_positional_declared_ids_are_rewritten_as_ordinals(tmp_path, category):
+def test_declared_ids_obey_stored_and_ordinal_category_contract(tmp_path, category):
     model = loops._load(tmp_path / 'input', category, 'project')[0]
     model.save_as(tmp_path / 'saved')
     text = (tmp_path / 'saved/experiments/experiment.edi').read_text()
@@ -64,7 +64,27 @@ def test_positional_declared_ids_are_rewritten_as_ordinals(tmp_path, category):
         tags.append(lexemes[start][0])
         start += 1
     actual = [lexemes[start + column + i * len(tags)][1] for i in range(2)]
-    assert actual == ['1', '2'], ' positional row identity is the written one-based ordinal'
+    expected = {
+        'background': ['p17', 'p93'],
+        'excluded_region': ['r17', 'r93'],
+        'data': ['1', '2'],
+    }[category]
+    assert actual == expected, (
+        'Background and exclusion keys are stored; measured rows retain one-based ordinal identity'
+    )
+    restored = engine.Project.load(tmp_path / 'saved')
+    restored.save_as(tmp_path / 'saved-again')
+    again = tokens((tmp_path / 'saved-again/experiments/experiment.edi').read_text())
+    key_at = next(i for i, token in enumerate(again) if token[0] == key)
+    start = key_at
+    while start > 0 and again[start - 1][0].startswith('_'):
+        start -= 1
+    column = key_at - start
+    while again[start][0].startswith('_'):
+        start += 1
+    assert [again[start + column + i * len(tags)][1] for i in range(2)] == expected, (
+        'Both stored and ordinal identities must survive the complete save/load/save boundary'
+    )
 
 
 def test_fit_state_uses_literal_dictionary_slots_and_undo(tmp_path):

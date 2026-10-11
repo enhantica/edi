@@ -6,7 +6,7 @@ from tests.integration.py import test_scan_extended_contract as contract
 from tests.integration.py.test_scan_app_contract import item, property_value, source
 
 
-@pytest.mark.parametrize('channel', ['model', 'labels', 'table'])
+@pytest.mark.parametrize('channel', ['model', 'labels', 'table', 'number-width', 'number-label'])
 def test_header_observer_rejects_disconnected_model_and_displayed_labels(monkeypatch, channel):
     path = 'qml/Pages/Experiment/ExperimentsGroup.qml'
     good = source(path)
@@ -14,7 +14,19 @@ def test_header_observer_rejects_disconnected_model_and_displayed_labels(monkeyp
     old, new = {
         'model': ('model: group.scanColumns', 'model: []'),
         'labels': ('text: column.modelData', 'text: "unused"'),
-        'table': ('model: group.project ? group.project.experiments : null', 'model: null'),
+        'table': (
+            'sourceModel: group.project ? group.project.experiments : null',
+            'sourceModel: null',
+        ),
+        'number-width': ('columnWidths: [numberColumnWidth,', 'columnWidths: [0,'),
+        'number-label': (
+            'header: EaComponents.ListViewHeader {\n                EaComponents.TableViewLabel {',
+            (
+                'header: EaComponents.ListViewHeader {\n'
+                '                EaComponents.TableViewLabel {\n'
+                '                    text: "unexpected"'
+            ),
+        ),
     }[channel]
     changed = good.replace(old, new)
     assert changed != good, (

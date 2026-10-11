@@ -12,6 +12,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.table_display import metadata_bytes, stored_id_bytes
+
 ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / 'tests/fixtures/c34_t28_baseline'
 BASELINE = json.loads((FIXTURE / 'saved-bytes.json').read_text())
@@ -24,6 +26,27 @@ EXTENSION = json.loads(
 
 RELATIONS = json.loads((ROOT / 'tests/fixtures/constraint_expressions/byte-pins.json').read_text())
 NEW_FIXED_POINTS = BASELINE.get('post_feature_fixed_points', {})
+
+
+def restored_source(source, tmp_path):
+    restored = metadata_bytes.restore(source, tmp_path / 'descriptive-input')
+    if REFERENCE.hashes(restored) != REFERENCE.hashes(source):
+        old_saved, new_saved = tmp_path / 'descriptive-old', tmp_path / 'descriptive-new'
+        REFERENCE.observe(restored, old_saved)
+        REFERENCE.observe(source, new_saved)
+        metadata_bytes.check_saved(source, old_saved, new_saved)
+    else:
+        return source
+    return restored
+
+
+def observe_legacy_pin(source, destination, *, calculator=False):
+    REFERENCE.observe(source, destination, calculator=calculator)
+    legacy = stored_id_bytes.ordinal_copy(
+        source, destination, destination.with_name('ordinal-pin')
+    )
+    return REFERENCE.saved_hashes(legacy) if calculator else REFERENCE.hashes(legacy)
+
 
 #  projects postdate the immutable  pre-move source closure.
 # Their serialization is checked by a second-save fixed point, never a rewritten old pin.
@@ -147,7 +170,7 @@ def test_saved_byte_inventory_covers_every_current_cli_and_corpus_project(tmp_pa
 
 @pytest.mark.parametrize('case', sorted(BASELINE['cases']))
 def test_save_matches_the_labelled_pre_move_regression_pin(tmp_path, case):
-    source = REFERENCE.inputs()[case]
+    source = restored_source(REFERENCE.inputs()[case], tmp_path)
     expected = BASELINE['cases'][case]
     public_rows = json.loads(
         (ROOT / 'tests/fixtures/e04_t12_public_release/saved-metadata.json').read_text()
@@ -193,7 +216,7 @@ def test_save_matches_the_labelled_pre_move_regression_pin(tmp_path, case):
             'the current model must match the explicitly labelled post-change regression pin'
         )
         assert (
-            REFERENCE.observe(source, tmp_path / 'saved', calculator=True)
+            observe_legacy_pin(source, tmp_path / 'saved', calculator=True)
             == expected['saved_sha256']
         ), 'the complete saved project must match the labelled model-change regression pin'
         return
@@ -210,7 +233,9 @@ def test_save_matches_the_labelled_pre_move_regression_pin(tmp_path, case):
     if case.startswith('repo:') and REFERENCE.hashes(source) != expected['input_sha256']:
         # Main's independently merged example edits cannot rewrite a storage
         # regression pin. Check their provenance and still save the old input.
-        main = REFERENCE.committed_input(source, tmp_path / 'main', 'origin/main')
+        main = REFERENCE.committed_input(
+            ROOT / case.removeprefix('repo:'), tmp_path / 'main', 'origin/main'
+        )
         live_hashes, main_hashes = REFERENCE.hashes(source), REFERENCE.hashes(main)
         metadata = json.loads(
             (ROOT / 'tests/fixtures/e04_t12_public_release/project-metadata.json').read_text()
@@ -221,7 +246,7 @@ def test_save_matches_the_labelled_pre_move_regression_pin(tmp_path, case):
         for name, digest in live_hashes.items():
             if digest == main_hashes[name]:
                 continue
-            adaptation = metadata.get((source / name).relative_to(ROOT).as_posix(), {})
+            adaptation = metadata.get(case.removeprefix('repo:') + '/' + name, {})
             assert (
                 adaptation.get('after_sha256') == digest
                 and adaptation.get('before_sha256') == main_hashes[name]
@@ -229,23 +254,25 @@ def test_save_matches_the_labelled_pre_move_regression_pin(tmp_path, case):
                 'changed live example bytes must equal the exact reviewed descriptive '
                 'adaptation of independently merged main'
             )
-        source = REFERENCE.committed_input(source, tmp_path / 'pre-move')
+        source = REFERENCE.committed_input(
+            ROOT / case.removeprefix('repo:'), tmp_path / 'pre-move'
+        )
     assert REFERENCE.legacy_input_hashes(source, case) == expected['input_sha256'], (
         ' I22 the storage move cannot alter inputs to hide a serialization regression'
     )
     assert (
-        REFERENCE.observe(source, tmp_path / 'saved', calculator=True) == expected['saved_sha256']
+        observe_legacy_pin(source, tmp_path / 'saved', calculator=True) == expected['saved_sha256']
     ), ' I22 save must retain the pre-move bytes of every file in this project'
 
 
 @pytest.mark.parametrize('case', sorted(EXTENSION['cases']))
 def test_new_lif_project_matches_labelled_post_feature_byte_pin(tmp_path, case):
-    source = REFERENCE.inputs()[case]
+    source = restored_source(REFERENCE.inputs()[case], tmp_path)
     expected = EXTENSION['cases'][case]
     assert REFERENCE.hashes(source) == expected['input_sha256'], (
         ' post-feature regression pin retains all input bytes and measured files'
     )
-    assert REFERENCE.observe(source, tmp_path / 'saved') == expected['saved_sha256'], (
+    assert observe_legacy_pin(source, tmp_path / 'saved') == expected['saved_sha256'], (
         ' post-feature serialization regression pin retains the full saved inventory and bytes'
     )
 
@@ -285,7 +312,8 @@ def test_c13_t6_new_projects_have_a_second_save_fixed_point(tmp_path, case):
     assert case in inputs, ' every new declared project needs its serialization witness'
     before = REFERENCE.hashes(inputs[case])
     if case in NEW_FIXED_POINTS:
-        assert before == NEW_FIXED_POINTS[case]['input_sha256'], (
+        retained = restored_source(inputs[case], tmp_path)
+        assert REFERENCE.hashes(retained) == NEW_FIXED_POINTS[case]['input_sha256'], (
             'the new fixed-point witness retains every independently recorded input byte'
         )
     first = tmp_path / 'first'
