@@ -25,7 +25,6 @@ class ApplicationInfo : public QObject {
     Q_PROPERTY(QString contactUrl READ contactUrl CONSTANT)
     Q_PROPERTY(QString licenseUrl READ licenseUrl CONSTANT)
     Q_PROPERTY(QString appLicenseUrl READ appLicenseUrl CONSTANT)
-    Q_PROPERTY(QString copyingUrl READ copyingUrl CONSTANT)
     Q_PROPERTY(QString noticesUrl READ noticesUrl CONSTANT)
     Q_PROPERTY(QStringList componentNames READ componentNames CONSTANT)
     Q_PROPERTY(QStringList componentVersions READ componentVersions CONSTANT)
@@ -59,7 +58,6 @@ class ApplicationInfo : public QObject {
     // ADR-0015 §6), and the notices of every component the app links or bundles.
     QString licenseUrl() const { return QStringLiteral("qrc:/LICENSE"); }
     QString appLicenseUrl() const { return QStringLiteral("qrc:/app/DISTRIBUTION-LICENSE.md"); }
-    QString copyingUrl() const { return QStringLiteral("qrc:/COPYING"); }
     QString noticesUrl() const { return QStringLiteral("qrc:/THIRD-PARTY-NOTICES"); }
     // The components the notices list, in their order: their names, versions (empty when the notices give none),
     // licences and uses, index for index.

@@ -13,18 +13,30 @@ import edi.app
 
 // The About window (easydiffractionbeta Pages/Home/AboutDialog.qml), filled from ApplicationInfo: one dialog with
 // three tabs, as Preferences has, so nothing opens on top of it (the owner, 2026-10-10). About shows the wordmark
-// with the version, the description and the copyright; Licence a short text for users, with either full licence
-// text below it on request; Third-party software the components the app links or bundles, from the notices'
+// with the version, the description and the copyright; Licence a short text for users, with the app's licence
+// notice below it on request; Third-party software the components the app links or bundles, from the notices'
 // list, with the selected one's licence text below.
 AppDialog {
     id: dialog
 
-    // A licence text: read-only, in the monospaced font, scrolling within the space it is given.
+    // A licence text: read-only, scrolling within the space it is given. Plain texts are in the monospaced font;
+    // the app's notice is Markdown, and a link in it to another bundled licence text (COPYING, LICENSE,
+    // THIRD-PARTY-NOTICES) opens that text here (ADR-0015 §6).
     component LicenceText: Flickable {
         id: flickable
 
+        // The bundled text shown, by its URL; or `text` set directly.
+        property string url: ""
         property alias text: textArea.text
         property alias textObjectName: textArea.objectName
+        readonly property bool markdown: url.endsWith(".md") || url === ApplicationInfo.noticesUrl
+
+        // Opens the bundled text a link leads to; ApplicationInfo admits only the bundled licence texts.
+        function followLink(link: string) {
+            const target = ApplicationInfo.licenceLinkTarget(flickable.url, link);
+            if (target)
+                flickable.url = target;
+        }
 
         contentHeight: textArea.implicitHeight
         clip: true
@@ -38,8 +50,21 @@ AppDialog {
             width: flickable.width
             readOnly: true
             wrapMode: TextEdit.Wrap
-            textFormat: TextEdit.PlainText
-            font.family: EaStyle.Fonts.monoFontFamily
+            textFormat: flickable.markdown ? TextEdit.MarkdownText : TextEdit.PlainText
+            font.family: flickable.markdown ? EaStyle.Fonts.fontFamily : EaStyle.Fonts.monoFontFamily
+            text: flickable.url ? ApplicationInfo.licenceText(flickable.url) : ""
+            onLinkActivated: link => flickable.followLink(link)
+            HoverHandler {
+                cursorShape: textArea.hoveredLink ? Qt.PointingHandCursor : Qt.IBeamCursor
+            }
+            // A read-only text area does not activate its links on a click by itself, so the tap is read here.
+            TapHandler {
+                onTapped: eventPoint => {
+                    const link = textArea.linkAt(eventPoint.position.x, eventPoint.position.y);
+                    if (link)
+                        flickable.followLink(link);
+                }
+            }
         }
     }
     // A link-coloured label that runs `activated` on a click.
@@ -146,12 +171,10 @@ AppDialog {
             }
         }
 
-        // Licence: what a user may do, in a few lines, and the full texts on request (ADR-0015 §6).
+        // Licence: what a user may do, in a few lines, and on request the app's licence notice, whose links open the
+        // full texts in the same place (ADR-0015 §6), or the source code's BSD licence.
         Column {
             id: licencePage
-
-            // The full text shown below the summary: none, the app's (GPL-3.0) or the source code's (BSD 3-Clause).
-            property string shownUrl: ""
 
             spacing: EaStyle.Sizes.fontPixelSize
 
@@ -165,23 +188,25 @@ AppDialog {
             Row {
                 spacing: EaStyle.Sizes.fontPixelSize * 2
 
+                // The app's licence notice, which links the full GPL text.
                 LinkLabel {
                     objectName: "about.licence.gpl"
                     text: qsTr("GNU General Public License")
-                    onActivated: licencePage.shownUrl = ApplicationInfo.copyingUrl
+                    onActivated: licenceText.url = ApplicationInfo.appLicenseUrl
                 }
                 LinkLabel {
                     objectName: "about.licence.bsd"
                     text: qsTr("BSD 3-Clause License")
-                    onActivated: licencePage.shownUrl = ApplicationInfo.licenseUrl
+                    onActivated: licenceText.url = ApplicationInfo.licenseUrl
                 }
             }
             LicenceText {
+                id: licenceText
+
                 textObjectName: "about.licence.text"
-                visible: licencePage.shownUrl !== ""
+                visible: url !== ""
                 width: parent.width
                 height: licencePage.height - y
-                text: licencePage.shownUrl ? ApplicationInfo.licenceText(licencePage.shownUrl) : ""
             }
         }
 
