@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Pinned gui-components copy; edi terminology and units in the parameter menu (ADR-0029).
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Templates as T
 import QtQuick.Controls
@@ -56,7 +57,18 @@ EaElements.TextField {
     property string url: parameter.url ?? ''
     property string cifDict: parameter.cifDict ?? ''
 
-    property alias fitCheckBox: fitCheckBox
+    // The value's menu (its name, value, units, s.u. and free toggle) is made the first time it opens: a page
+    // holds many values, and a menu each made up front was most of a large project's page build.
+    property EaElements.Menu contextMenu: null
+    // The menu's free toggle, once the menu is made.
+    property EaElements.CheckBox fitCheckBox: null
+    signal fitToggled(bool checked)
+
+    function openContextMenu(parentItem) {
+        if (contextMenu === null)
+            contextMenu = contextMenuComponent.createObject(parentItem);
+        contextMenu.popup();
+    }
 
     readOnly: !parameter.enabled ?? false
 
@@ -105,93 +117,98 @@ EaElements.TextField {
 
     //Mouse area to react on click events
     MouseArea {
+        id: menuArea
         anchors.fill: parent
         acceptedButtons: Qt.RightButton
         cursorShape: undefined  // prevents changing the cursor
         hoverEnabled: false
         onClicked: mouse => {
             if (mouse.button === Qt.RightButton) {
-                contextMenu.popup();
+                control.openContextMenu(menuArea);
             }
         }
         onPressAndHold: mouse => {
             if (mouse.source === Qt.MouseEventNotSynthesized) {
-                contextMenu.popup();
+                control.openContextMenu(menuArea);
             }
         }
         // Menu
-        EaElements.Menu {
-            id: contextMenu
+        Component {
+            id: contextMenuComponent
 
-            width: layout.implicitWidth
+            EaElements.Menu {
+                width: layout.implicitWidth
 
-            // Layout
-            Grid {
-                id: layout
+                // Layout
+                Grid {
+                    id: layout
 
-                leftPadding: 1.25 * EaStyle.Sizes.fontPixelSize
-                rightPadding: 1.25 * EaStyle.Sizes.fontPixelSize
-                topPadding: 0.5 * EaStyle.Sizes.fontPixelSize
-                bottomPadding: 0.75 * EaStyle.Sizes.fontPixelSize
-                rowSpacing: 0.75 * EaStyle.Sizes.fontPixelSize
-                columnSpacing: 1.5 * EaStyle.Sizes.fontPixelSize
+                    leftPadding: 1.25 * EaStyle.Sizes.fontPixelSize
+                    rightPadding: 1.25 * EaStyle.Sizes.fontPixelSize
+                    topPadding: 0.5 * EaStyle.Sizes.fontPixelSize
+                    bottomPadding: 0.75 * EaStyle.Sizes.fontPixelSize
+                    rowSpacing: 0.75 * EaStyle.Sizes.fontPixelSize
+                    columnSpacing: 1.5 * EaStyle.Sizes.fontPixelSize
 
-                rows: 2
+                    rows: 2
 
-                // Header
-                EaElements.Label {
-                    color: EaStyle.Colors.themeForegroundMinor
-                    text: control.cifDict ? 'cif name' : 'cif-like name'
-                }
-                EaElements.Label {
-                    color: EaStyle.Colors.themeForegroundMinor
-                    text: 'value'
-                }
-                EaElements.Label {
-                    visible: control.units !== ''
-                    color: EaStyle.Colors.themeForegroundMinor
-                    text: qsTr("units")
-                }
-                EaElements.Label {
-                    visible: control.fittable && control.error !== ''
-                    color: EaStyle.Colors.themeForegroundMinor
-                    text: qsTr("s.u.")
-                }
-                EaElements.Label {
-                    visible: control.fittable && !control.readOnly
-                    color: EaStyle.Colors.themeForegroundMinor
-                    text: qsTr("free")
-                }
-                // Headert
+                    // Header
+                    EaElements.Label {
+                        color: EaStyle.Colors.themeForegroundMinor
+                        text: control.cifDict ? 'cif name' : 'cif-like name'
+                    }
+                    EaElements.Label {
+                        color: EaStyle.Colors.themeForegroundMinor
+                        text: 'value'
+                    }
+                    EaElements.Label {
+                        visible: control.units !== ''
+                        color: EaStyle.Colors.themeForegroundMinor
+                        text: qsTr("units")
+                    }
+                    EaElements.Label {
+                        visible: control.fittable && control.error !== ''
+                        color: EaStyle.Colors.themeForegroundMinor
+                        text: qsTr("s.u.")
+                    }
+                    EaElements.Label {
+                        visible: control.fittable && !control.readOnly
+                        color: EaStyle.Colors.themeForegroundMinor
+                        text: qsTr("free")
+                    }
+                    // Headert
 
-                // Content
-                EaElements.Button {
-                    text: `${control.category}.${control.name}`
-                    checked: true
-                    onClicked: Qt.openUrlExternally(control.url)
+                    // Content
+                    EaElements.Button {
+                        text: `${control.category}.${control.name}`
+                        checked: true
+                        onClicked: Qt.openUrlExternally(control.url)
+                    }
+                    EaElements.Label {
+                        text: control.value
+                        font.bold: control.fit
+                    }
+                    EaElements.Label {
+                        visible: control.units !== ''
+                        text: control.units
+                        color: EaStyle.Colors.themeForegroundMinor
+                    }
+                    EaElements.Label {
+                        visible: control.fittable && control.error !== ''
+                        text: control.error
+                    }
+                    EaElements.CheckBox {
+                        id: fitBox
+                        visible: control.fittable && !control.readOnly
+                        padding: 0
+                        checked: control.fit
+                        onToggled: control.fitToggled(checked)
+                        Component.onCompleted: control.fitCheckBox = fitBox
+                    }
+                    // Content
                 }
-                EaElements.Label {
-                    text: control.value
-                    font.bold: control.fit
-                }
-                EaElements.Label {
-                    visible: control.units !== ''
-                    text: control.units
-                    color: EaStyle.Colors.themeForegroundMinor
-                }
-                EaElements.Label {
-                    visible: control.fittable && control.error !== ''
-                    text: control.error
-                }
-                EaElements.CheckBox {
-                    id: fitCheckBox
-                    visible: control.fittable && !control.readOnly
-                    padding: 0
-                    checked: control.fit
-                }
-                // Content
+                // Layout
             }
-            // Layout
         }
         // Menu
     }

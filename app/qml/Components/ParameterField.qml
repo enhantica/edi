@@ -80,6 +80,8 @@ EaElements.ParamTextField {
         }
         text = Qt.binding(() => field.value);
     }
-    fitCheckBox.onToggled: if (item !== null)
-        item.free = fitCheckBox.checked
+    onFitToggled: checked => {
+        if (item !== null)
+            item.free = checked;
+    }
 }

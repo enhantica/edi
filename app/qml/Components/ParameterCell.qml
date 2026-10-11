@@ -94,6 +94,8 @@ EaComponents.TableViewParameter {
         }
         text = Qt.binding(() => cell.value);
     }
-    fitCheckBox.onToggled: if (item !== null)
-        item.free = fitCheckBox.checked
+    onFitToggled: checked => {
+        if (item !== null)
+            item.free = checked;
+    }
 }
