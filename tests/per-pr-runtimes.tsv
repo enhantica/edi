@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-11T19:59:15Z
+# measured_utc = 2026-10-11T20:34:26Z
 #
-# Recorded from: edi-bank-input.log (34 node(s) measured once, 9612 banked, 0 stale row(s) dropped)
-# Collected tests: 10384; with a reported duration: 5322
+# Recorded from: canonical Python bank + seq18/before-paths.log; experiment id paths expected-red
+# Collected tests: 10701; with a reported duration: 5324
 # Module-scoped fixture costs recorded: 34
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 10384
-# inventory_cpp = 305
-# inventory_measured = 9626
-# inventory_unmeasured = 1063
+# inventory_python = 10395
+# inventory_cpp = 306
+# inventory_measured = 9625
+# inventory_unmeasured = 1076
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -245,6 +245,7 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_phase_scan_state.py::te
 0.030	tests/integration/py/test_anisotropic_adps.py::test_y2o3_all_three_types_match_the_same_fullprof_profile[beta]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_shipment.py::test_y2o3_page_and_cli_project_are_registered
 UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_shipment.py::test_y2o3_reference_is_vendored_byte_identically_and_named
+UNMEASURED:failed-in-this-run	tests/integration/py/test_background_position_button.py::test_line_segment_background_exposes_the_position_naming_action
 0.000	tests/integration/py/test_c09_t12_general_jacobian_pin.py::test_c09_t12_round_trip_fixture_is_locked_to_independent_biso_reference
 0.100	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_decimal_brackets_are_absolute_on_edi
 0.030	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_decimal_su_save_load_preserves_reference_value_exactly[.5(1.5)]
@@ -4876,8 +4877,14 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_fitting_mode_weights.py:
 0.030	tests/integration/py/test_fitting_mode_weights.py::test_joint_weights_load_in_every_mode_and_save_only_in_joint[joint]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_fitting_mode_weights.py::test_joint_weights_load_in_every_mode_and_save_only_in_joint[sequential]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_fitting_mode_weights.py::test_joint_weights_load_in_every_mode_and_save_only_in_joint[single]
-0.000	tests/integration/py/test_free_header_declaration.py::test_analysis_free_header_declares_the_owner_radio_popup
+UNMEASURED:failed-in-this-run	tests/integration/py/test_free_header_declaration.py::test_analysis_free_header_declares_the_owner_radio_popup
 0.000	tests/integration/py/test_latp_reference.py::test_latp_reference_quantities_are_fullprof_values_not_scan_regression_pins
+UNMEASURED:failed-in-this-run	tests/integration/py/test_loop_parameter_ids.py::test_legacy_positional_aliases_and_constraints_migrate_on_load[chebyshev]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_loop_parameter_ids.py::test_legacy_positional_aliases_and_constraints_migrate_on_load[line-segment]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_loop_parameter_ids.py::test_legacy_positional_aliases_and_constraints_migrate_on_load[polynomial]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_loop_parameter_ids.py::test_loop_parameter_names_match_independent_declared_ids[chebyshev]
+0.050	tests/integration/py/test_loop_parameter_ids.py::test_loop_parameter_names_match_independent_declared_ids[line-segment]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_loop_parameter_ids.py::test_loop_parameter_names_match_independent_declared_ids[polynomial]
 0.000	tests/integration/py/test_multiphase_app_contract.py::test_linked_structure_rows_use_available_names_and_add_remove_disable_actions
 0.000	tests/integration/py/test_multiphase_app_contract.py::test_shared_block_selector_has_bounded_square_icon_steps_and_file_labels
 0.000	tests/integration/py/test_multiphase_app_contract.py::test_structure_loading_is_not_capped_at_one_and_chart_retains_phase_identity
@@ -4978,85 +4985,89 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_phase_scan_class_boundar
 0.280	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[wrong-chosen-row]
 0.260	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[wrong-desktop-row]
 0.300	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[wrong-multiplicity]
-0.000	tests/integration/py/test_scan_app_contract.py::test_button_names_and_follow_have_live_model_bindings
-0.320	tests/integration/py/test_scan_app_contract.py::test_create_experiment_is_enabled_and_routes_to_view_model
+0.160	tests/integration/py/test_reset_and_required.py::test_reset_closes_the_project_and_lands_on_project
+0.250	tests/integration/py/test_reset_and_required.py::test_reset_observer_detects_wrong_destination_and_unclosed_project[home]
+0.310	tests/integration/py/test_reset_and_required.py::test_reset_observer_detects_wrong_destination_and_unclosed_project[open-project]
+0.160	tests/integration/py/test_reset_and_required.py::test_scan_rule_required_is_an_unlabelled_editable_icon_toggle
+0.010	tests/integration/py/test_scan_app_contract.py::test_button_names_and_follow_have_live_model_bindings
+0.270	tests/integration/py/test_scan_app_contract.py::test_create_experiment_is_enabled_and_routes_to_view_model
 0.160	tests/integration/py/test_scan_app_contract.py::test_data_free_experiment_type_has_a_write_boundary[beamMode]
-0.150	tests/integration/py/test_scan_app_contract.py::test_data_free_experiment_type_has_a_write_boundary[radiationProbe]
-0.160	tests/integration/py/test_scan_app_contract.py::test_data_free_experiment_type_has_a_write_boundary[sampleForm]
+0.170	tests/integration/py/test_scan_app_contract.py::test_data_free_experiment_type_has_a_write_boundary[radiationProbe]
+0.130	tests/integration/py/test_scan_app_contract.py::test_data_free_experiment_type_has_a_write_boundary[sampleForm]
 0.150	tests/integration/py/test_scan_app_contract.py::test_data_free_experiment_type_has_a_write_boundary[scatteringType]
-0.150	tests/integration/py/test_scan_app_contract.py::test_disabled_placeholders_and_load_data_are_present
-0.150	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[block-delegate]
+0.160	tests/integration/py/test_scan_app_contract.py::test_disabled_placeholders_and_load_data_are_present
+0.160	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[block-delegate]
 0.330	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[outcome-color]
-0.300	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[outcome-icon]
-0.330	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[outcome-word]
-0.160	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[search-header]
-0.200	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[search-height]
+0.330	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[outcome-icon]
+0.340	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[outcome-word]
+0.150	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[search-header]
+0.150	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[search-height]
 0.300	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[search-index]
-0.210	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[search-input]
-0.150	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[search-opacity]
-0.140	tests/integration/py/test_scan_app_contract.py::test_explorer_fit_column_has_outcome_model_roles
-0.300	tests/integration/py/test_scan_app_contract.py::test_explorer_observer_rejects_untaken_mapping_branches[icon-"times-circle"]
-0.310	tests/integration/py/test_scan_app_contract.py::test_explorer_observer_rejects_untaken_mapping_branches[iconColor-"red"]
+0.140	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[search-input]
+0.170	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[search-opacity]
+0.130	tests/integration/py/test_scan_app_contract.py::test_explorer_fit_column_has_outcome_model_roles
+0.360	tests/integration/py/test_scan_app_contract.py::test_explorer_observer_rejects_untaken_mapping_branches[icon-"times-circle"]
+0.340	tests/integration/py/test_scan_app_contract.py::test_explorer_observer_rejects_untaken_mapping_branches[iconColor-"red"]
 0.290	tests/integration/py/test_scan_app_contract.py::test_explorer_observer_rejects_untaken_mapping_branches[toolTip-"Failed"]
 0.000	tests/integration/py/test_scan_app_contract.py::test_follow_observer_rejects_disconnected_controls_and_unrelated_handlers
-0.800	tests/integration/py/test_scan_app_contract.py::test_forwarding_controls_reject_wrong_selected_index_token_range_and_visibility
-0.150	tests/integration/py/test_scan_app_contract.py::test_javascript_uses_declared_runtime_with_empty_path
-0.680	tests/integration/py/test_scan_app_contract.py::test_long_parameter_pickers_use_shared_search_component[AliasesGroup]
-0.590	tests/integration/py/test_scan_app_contract.py::test_long_parameter_pickers_use_shared_search_component[ConstraintsGroup]
+0.880	tests/integration/py/test_scan_app_contract.py::test_forwarding_controls_reject_wrong_selected_index_token_range_and_visibility
+0.130	tests/integration/py/test_scan_app_contract.py::test_javascript_uses_declared_runtime_with_empty_path
+0.600	tests/integration/py/test_scan_app_contract.py::test_long_parameter_pickers_use_shared_search_component[AliasesGroup]
+0.660	tests/integration/py/test_scan_app_contract.py::test_long_parameter_pickers_use_shared_search_component[ConstraintsGroup]
 0.000	tests/integration/py/test_scan_app_contract.py::test_messages_is_first_in_both_layout_and_width_inventory
-0.160	tests/integration/py/test_scan_app_contract.py::test_outcome_gate_rejects_a_different_results_word
-0.180	tests/integration/py/test_scan_app_contract.py::test_result_row_and_status_summary_share_outcome_presentation
-0.620	tests/integration/py/test_scan_app_contract.py::test_search_accepts_direct_field_and_state_compositions
+0.150	tests/integration/py/test_scan_app_contract.py::test_outcome_gate_rejects_a_different_results_word
+0.170	tests/integration/py/test_scan_app_contract.py::test_result_row_and_status_summary_share_outcome_presentation
+0.630	tests/integration/py/test_scan_app_contract.py::test_search_accepts_direct_field_and_state_compositions
 0.010	tests/integration/py/test_scan_app_contract.py::test_sidebar_tabs_have_requested_names
-0.140	tests/integration/py/test_scan_app_contract.py::test_simulation_range_fields_have_live_write_bindings[maximum]
-0.150	tests/integration/py/test_scan_app_contract.py::test_simulation_range_fields_have_live_write_bindings[minimum]
+0.150	tests/integration/py/test_scan_app_contract.py::test_simulation_range_fields_have_live_write_bindings[maximum]
+0.130	tests/integration/py/test_scan_app_contract.py::test_simulation_range_fields_have_live_write_bindings[minimum]
 0.140	tests/integration/py/test_scan_app_contract.py::test_simulation_range_fields_have_live_write_bindings[step]
-0.290	tests/integration/py/test_scan_app_contract.py::test_status_fit_area_binds_live_progress_and_terminal_summary
-0.270	tests/integration/py/test_scan_app_contract.py::test_status_observer_rejects_wrong_progress_polarity_fill_producer_and_unused_facts[facts]
-0.300	tests/integration/py/test_scan_app_contract.py::test_status_observer_rejects_wrong_progress_polarity_fill_producer_and_unused_facts[fill]
-0.140	tests/integration/py/test_scan_app_contract.py::test_status_observer_rejects_wrong_progress_polarity_fill_producer_and_unused_facts[polarity]
-0.130	tests/integration/py/test_scan_app_contract.py::test_status_observer_rejects_wrong_progress_polarity_fill_producer_and_unused_facts[producer]
+0.390	tests/integration/py/test_scan_app_contract.py::test_status_fit_area_binds_live_progress_and_terminal_summary
+0.370	tests/integration/py/test_scan_app_contract.py::test_status_observer_rejects_wrong_progress_polarity_fill_producer_and_unused_facts[facts]
+0.350	tests/integration/py/test_scan_app_contract.py::test_status_observer_rejects_wrong_progress_polarity_fill_producer_and_unused_facts[fill]
+0.150	tests/integration/py/test_scan_app_contract.py::test_status_observer_rejects_wrong_progress_polarity_fill_producer_and_unused_facts[polarity]
+0.200	tests/integration/py/test_scan_app_contract.py::test_status_observer_rejects_wrong_progress_polarity_fill_producer_and_unused_facts[producer]
 0.000	tests/integration/py/test_scan_app_contract.py::test_type_selectors_live_in_explorer_and_follow_selected_row
-0.003	tests/integration/py/test_scan_app_contract.py::test_typed_status_producer_matches_the_shared_outcome_keys[actual]
+0.000	tests/integration/py/test_scan_app_contract.py::test_typed_status_producer_matches_the_shared_outcome_keys[actual]
 0.000	tests/integration/py/test_scan_app_contract.py::test_typed_status_producer_matches_the_shared_outcome_keys[wrongMAX]
-0.170	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[failed]
-0.190	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[maxIterations]
-0.160	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[noStep]
-0.140	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[stopped]
-0.150	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[success]
-0.150	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[superseded]
+0.160	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[failed]
+0.160	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[maxIterations]
+0.150	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[noStep]
+0.130	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[stopped]
+0.130	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[success]
+0.170	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[superseded]
 0.000	tests/integration/py/test_scan_extended_contract.py::test_bundled_project_load_and_save_as_use_the_writable_copy_routes
-0.460	tests/integration/py/test_scan_extended_contract.py::test_effective_bundle_contains_selected_scan_payloads[desktop]
-0.280	tests/integration/py/test_scan_extended_contract.py::test_effective_bundle_contains_selected_scan_payloads[web]
+0.520	tests/integration/py/test_scan_extended_contract.py::test_effective_bundle_contains_selected_scan_payloads[desktop]
+0.370	tests/integration/py/test_scan_extended_contract.py::test_effective_bundle_contains_selected_scan_payloads[web]
 0.000	tests/integration/py/test_scan_extended_contract.py::test_empty_selectors_are_hidden_on_experiment_and_structure_pages
 0.010	tests/integration/py/test_scan_extended_contract.py::test_example_gate_rejects_swapped_names_with_matching_local_provenance[162]
 0.010	tests/integration/py/test_scan_extended_contract.py::test_example_gate_rejects_swapped_names_with_matching_local_provenance[324]
-0.360	tests/integration/py/test_scan_extended_contract.py::test_old_scan_results_are_retained_with_out_of_date_state
-0.700	tests/integration/py/test_scan_extended_contract.py::test_parameter_evolution_connects_rendered_errors_axis_and_point_selection
-0.950	tests/integration/py/test_scan_extended_contract.py::test_rendered_evolution_and_stale_observers_reject_unrelated_models_handlers_and_flags
-0.460	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_accepts_a_separately_linked_example_library
-0.370	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_distinguishes_executable_and_library_interfaces[INTERFACE]
-0.440	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_distinguishes_executable_and_library_interfaces[PRIVATE]
-0.490	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_distinguishes_executable_and_library_interfaces[PUBLIC]
-0.450	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_distinguishes_executable_and_library_interfaces[library-interface]
-0.740	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_a_second_payload_at_the_index_address
-0.690	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_comment_only_and_inactive_bundle_calls
-0.550	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_excluded_payload_in_the_live_qml_module[alias]
-0.560	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_excluded_payload_in_the_live_qml_module[default]
-0.620	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_excluded_payload_in_the_live_qml_module[prefix]
-0.410	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[alias]
-0.410	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[hidden]
-0.460	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[index]
-0.390	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[metadata]
-0.436	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[prefix]
-0.450	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[target]
-0.830	tests/integration/py/test_scan_extended_contract.py::test_scan_availability_and_joint_mode_follow_scan_declaration
+0.330	tests/integration/py/test_scan_extended_contract.py::test_old_scan_results_are_retained_with_out_of_date_state
+0.780	tests/integration/py/test_scan_extended_contract.py::test_parameter_evolution_connects_rendered_errors_axis_and_point_selection
+0.920	tests/integration/py/test_scan_extended_contract.py::test_rendered_evolution_and_stale_observers_reject_unrelated_models_handlers_and_flags
+0.550	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_accepts_a_separately_linked_example_library
+0.480	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_distinguishes_executable_and_library_interfaces[INTERFACE]
+0.430	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_distinguishes_executable_and_library_interfaces[PRIVATE]
+0.440	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_distinguishes_executable_and_library_interfaces[PUBLIC]
+0.480	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_distinguishes_executable_and_library_interfaces[library-interface]
+0.780	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_a_second_payload_at_the_index_address
+0.930	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_comment_only_and_inactive_bundle_calls
+0.560	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_excluded_payload_in_the_live_qml_module[alias]
+0.730	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_excluded_payload_in_the_live_qml_module[default]
+0.700	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_excluded_payload_in_the_live_qml_module[prefix]
+0.430	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[alias]
+0.450	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[hidden]
+0.560	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[index]
+0.440	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[metadata]
+0.629	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[prefix]
+0.510	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[target]
+0.760	tests/integration/py/test_scan_extended_contract.py::test_scan_availability_and_joint_mode_follow_scan_declaration
 0.040	tests/integration/py/test_scan_extended_contract.py::test_scan_examples_have_exact_source_file_inventory_and_checksums[162]
 0.080	tests/integration/py/test_scan_extended_contract.py::test_scan_examples_have_exact_source_file_inventory_and_checksums[324]
-0.150	tests/integration/py/test_scan_extended_contract.py::test_scan_explorer_header_has_declared_columns_in_order
-0.710	tests/integration/py/test_scan_extended_contract.py::test_scan_stop_continue_and_follow_have_model_state
-0.660	tests/integration/py/test_scan_extended_contract.py::test_scan_worker_routes_both_modes_to_existing_driver
-0.170	tests/integration/py/test_scan_extended_contract.py::test_selector_moves_to_main_tab_bar_once
+0.160	tests/integration/py/test_scan_extended_contract.py::test_scan_explorer_header_has_declared_columns_in_order
+0.660	tests/integration/py/test_scan_extended_contract.py::test_scan_stop_continue_and_follow_have_model_state
+0.710	tests/integration/py/test_scan_extended_contract.py::test_scan_worker_routes_both_modes_to_existing_driver
+0.180	tests/integration/py/test_scan_extended_contract.py::test_selector_moves_to_main_tab_bar_once
 0.010	tests/integration/py/test_scan_extended_contract.py::test_user_page_and_scale_adr_document_approved_limits
 0.000	tests/integration/py/test_scan_extended_contract.py::test_working_copy_observer_rejects_copy_to_an_unrelated_destination
 0.340	tests/integration/py/test_scan_notes_diagnostics.py::test_cli_accepts_valid_all_skipped_resume[False-human]
@@ -5276,7 +5287,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.p
 0.000	tests/integration/py/test_space_group_edits.py::test_changing_only_the_setting_keeps_the_space_group_identity
 0.010	tests/integration/py/test_space_group_edits.py::test_changing_space_group_replaces_old_setting_and_resolves_identity[name]
 0.000	tests/integration/py/test_space_group_edits.py::test_changing_space_group_replaces_old_setting_and_resolves_identity[number]
-0.000	tests/integration/py/test_status_columns.py::test_every_status_column_is_in_the_convention_census
+0.010	tests/integration/py/test_status_columns.py::test_every_status_column_is_in_the_convention_census
 0.000	tests/integration/py/test_status_columns.py::test_nested_declarations_and_comment_icons_cannot_fake_a_status_cell
 0.000	tests/integration/py/test_status_columns.py::test_status_columns_use_shared_icons_with_word_tooltips[Experiment/ExperimentsGroup.qml]
 0.000	tests/integration/py/test_status_columns.py::test_status_columns_use_shared_icons_with_word_tooltips[Experiment/MeasuredRangeGroup.qml]
@@ -5407,10 +5418,10 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_c06_t6_fitting_corpus.
 0.050	tests/system/py/test_c11_t43_rejection_classes.py::test_completed_resume_partitions_terminal_outcome_on_python[all-failed]
 0.050	tests/system/py/test_c11_t43_rejection_classes.py::test_completed_resume_partitions_terminal_outcome_on_python[all-success]
 0.050	tests/system/py/test_c11_t43_rejection_classes.py::test_completed_resume_partitions_terminal_outcome_on_python[failed-tail]
-0.230	tests/system/py/test_c11_t43_rejection_classes.py::test_completed_resume_recovers_recorded_cause_or_legacy_unknown_on_python[max-iter-legacy]
-0.240	tests/system/py/test_c11_t43_rejection_classes.py::test_completed_resume_recovers_recorded_cause_or_legacy_unknown_on_python[max-iter-recorded]
-0.220	tests/system/py/test_c11_t43_rejection_classes.py::test_completed_resume_recovers_recorded_cause_or_legacy_unknown_on_python[no-step-legacy]
-0.250	tests/system/py/test_c11_t43_rejection_classes.py::test_completed_resume_recovers_recorded_cause_or_legacy_unknown_on_python[no-step-recorded]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c11_t43_rejection_classes.py::test_completed_resume_recovers_recorded_cause_or_legacy_unknown_on_python[max-iter-legacy]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c11_t43_rejection_classes.py::test_completed_resume_recovers_recorded_cause_or_legacy_unknown_on_python[max-iter-recorded]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c11_t43_rejection_classes.py::test_completed_resume_recovers_recorded_cause_or_legacy_unknown_on_python[no-step-legacy]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c11_t43_rejection_classes.py::test_completed_resume_recovers_recorded_cause_or_legacy_unknown_on_python[no-step-recorded]
 1.490	tests/system/py/test_c11_t43_rejection_classes.py::test_declared_mode_by_native_entry_matrix_is_exact
 0.010	tests/system/py/test_c11_t43_rejection_classes.py::test_edi_data_dir_lexical_escape_refuses_at_load[absolute]
 0.010	tests/system/py/test_c11_t43_rejection_classes.py::test_edi_data_dir_lexical_escape_refuses_at_load[parent]
@@ -9452,6 +9463,7 @@ UNMEASURED:expected-red-on-d775b5fd	tests/unit/cpp/test_e05_t1_fit_job.cpp::E05-
 0.000	tests/unit/cpp/test_e09_t55_report_model_adapter.cpp::E09-T55 iteration and machine reports preserve engine-carried facts
 0.000	tests/unit/cpp/test_e09_t55_report_model_adapter.cpp::E09-T55 model collections expose all parameters and only the free subset
 0.000	tests/unit/cpp/test_e09_t55_report_model_adapter.cpp::E09-T55 report tables retain identity paths, starts, uncertainties, and bank metrics
+UNMEASURED:failed-in-native-replay-fe3d181	tests/unit/cpp/test_loop_parameter_paths.cpp::Every experiment loop path names the declared row id
 0.006	tests/unit/cpp/test_report_format.cpp::format_change brackets the non-trivial blanking threshold
 0.007	tests/unit/cpp/test_report_format.cpp::format_change refuses undefined percentages
 0.009	tests/unit/cpp/test_report_format.cpp::format_change uses the starting value as its denominator
@@ -10623,7 +10635,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e04_t9_sanitizer.py::test_sanit
 0.020	tests/unit/py/test_e09_t58_project_only_inputs.py::test_declared_grid_is_the_grid_that_is_calculated
 0.030	tests/unit/py/test_e09_t58_project_only_inputs.py::test_declared_scattering_map_and_default_lookup_both_reach_calculation
 0.020	tests/unit/py/test_e09_t58_project_only_inputs.py::test_project_calculation_accepts_no_second_source_of_truth
-0.000	tests/unit/py/test_e09_t58_project_only_inputs.py::test_survey_is_complete_and_model_state_cannot_reenter_signatures
+UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t58_project_only_inputs.py::test_survey_is_complete_and_model_state_cannot_reenter_signatures
 0.020	tests/unit/py/test_e09_t58_start_state_roundtrip.py::test_start_value_and_uncertainty_round_trip_through_the_single_loader
 0.010	tests/unit/py/test_e09_t58_writer_delegation.py::test_e09_t58_edi_project_save_has_one_delegating_writer_and_no_local_serializer
 0.030	tests/unit/py/test_e09_t74_ci_source_wiring.py::test_crysta_app_tokens_request_only_contents_read
@@ -10736,8 +10748,8 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 0.258	tests/integration/app/test_phase_scan_state.py
 # module-cost: 1.914	tests/integration/py/test_e04_t12_name_allowance.py
 # module-cost: 0.192	tests/integration/py/test_e09_t75_sdk_consumer.py
-# module-cost: 1.527	tests/integration/py/test_scan_app_contract.py
-# module-cost: 0.384	tests/integration/py/test_scan_extended_contract.py
+# module-cost: 1.780	tests/integration/py/test_scan_app_contract.py
+# module-cost: 0.361	tests/integration/py/test_scan_extended_contract.py
 # module-cost: 0.257	tests/integration/py/test_scan_notes_diagnostics.py
 # module-cost: 0.352	tests/integration/py/test_scan_notes_resume.py
 # module-cost: 2.937	tests/system/py/test_atom_position_contract.py

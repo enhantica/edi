@@ -1,5 +1,6 @@
 import QtQuick
 import QtTest
+import EasyApplication.Gui.Style as EaStyle
 import edi.app
 import EdiAcceptance 1.0
 import "UiInteraction.js" as Ui
@@ -35,17 +36,29 @@ TestCase {
     }
     function popup() {
         const header = Ui.control(Probe, appWindow, "parameters.freeHeader");
-        verify(header !== null && Ui.exposed(header), "The free title must be a visible real right-click target");
+        verify(header !== null && Ui.exposed(header), "The free title must be a visible real left-click target");
         const point = Ui.clickPoint(header);
-        mouseClick(header, point.x, point.y, Qt.RightButton);
+        mouseMove(header, point.x, point.y);
+        tryCompare(header, "color", EaStyle.Colors.themeAccent, 2000, "Hover must accent the actual free header");
+        mouseClick(header, point.x, point.y, Qt.LeftButton);
         let menu;
         tryVerify(() => {
             menu = Probe.visiblePopups(appWindow).find(item => item.shown !== undefined);
             return menu !== undefined;
-        }, 2000, "Right-clicking the free title must open the radio menu");
+        }, 2000, "Left-clicking the free title must open the radio menu");
         const text = Ui.text(menu.contentItem);
-        verify(text.includes("Free · " + menu.shown.length + " shown parameters"), "The popup title must name the exact shown parameter count");
-        verify(text.includes("Applies to the rows the filters show. Undo with Ctrl+Z."), "The popup must explain its filter scope and undo action");
+        verify(!text.includes("shown parameters") && !text.includes("Applies to"), "The lean popup must contain neither the retired title nor footer");
+        ["free", "fixed", "mixed"].forEach(state => {
+            const button = radio(menu, state);
+            const row = button.parent;
+            compare(row.height, EaStyle.Sizes.tableRowHeight, "Every radio row must be one Analysis-table row high");
+            const labels = row.children.filter(child => child !== button && child.text !== undefined && Ui.exposed(child));
+            compare(labels.length, 1, "Each radio row must render one count beside its label");
+            const label = labels[0];
+            const at = label.mapToItem(row, 0, 0).x;
+            const end = button.mapToItem(row, button.width, 0).x;
+            verify(at >= end && at - end <= EaStyle.Sizes.fontPixelSize, "Counts must sit just after labels rather than at the popup edge");
+        });
         verify(text.includes("all " + menu.shown.length), "Free and Fixed must show their complete target counts");
         return menu;
     }

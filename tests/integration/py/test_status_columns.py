@@ -9,6 +9,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.integration.py.test_scan_app_contract import block
+
 ROOT = Path(__file__).resolve().parents[3]
 PAGES = ROOT / 'app/qml/Pages'
 COLUMNS = {
@@ -66,7 +68,11 @@ def table_cells(source):
 def test_every_status_column_is_in_the_convention_census():
     actual = {}
     for path in PAGES.rglob('*.qml'):
-        headings = re.findall(r'text\s*:\s*qsTr\("(Status|status|Fit)"\)', path.read_text())
+        contents = path.read_text()
+        if 'header:' not in contents:
+            continue
+        header = block(contents, 'header:')
+        headings = re.findall(r'text\s*:\s*qsTr\("(Status|status|Fit)"\)', header)
         if headings:
             actual[path.relative_to(PAGES).as_posix()] = headings
     assert actual == {path: [heading] for path, (heading, _) in COLUMNS.items()}, (

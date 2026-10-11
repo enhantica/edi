@@ -74,7 +74,7 @@ TestCase {
     }
     function test_scan(data) {
         open("tests/fixtures/correlations/scan-" + data.mode);
-        options([["sequential", "Sequential: each from the previous"], ["independent", "Independent: each from the same start"]]);
+        options([["sequential", "Sequential: each from the previous"], ["independent", "Independent: each from the same start"], ["single", "Single experiment"]]);
         jointCategory(false);
         const other = data.mode === "sequential" ? "independent" : "sequential";
         Session.project.analysis.fittingMode = other;

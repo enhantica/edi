@@ -225,7 +225,7 @@ TestCase {
             ordered(tokens(project.analysis.minimizerTypeOptions), ["crysta"], "I17: minimizer selector offers exactly the supported engine");
             const declaration = Oracle.frozen.projects.find(p => p.path === expected.project);
             const scanDeclared = declaration !== undefined && declaration.analysis["_sequential_fit.data_dir"] !== undefined;
-            const modes = scanDeclared ? ["independent", "sequential"] : project.experiments.count > 1 ? ["joint"] : ["single"];
+            const modes = scanDeclared ? ["independent", "sequential", "single"] : project.experiments.count > 1 ? ["joint"] : ["single"];
             ordered(tokens(project.analysis.fittingModeOptions).sort(), modes, "The selector offers only the modes applicable to the committed experiment and scan input");
             ordered(tokens(experiment.absorptionTypeOptions).sort(), (expected.mode === "cwl" ? ["none", "cylinder-hewat", "cylinder-lobanov"] : ["none", "cylinder"]).sort(), "I17: exactly the beam-scoped absorption families");
             compare(experiment.beamModeToken, expected.mode === "cwl" ? "constant wavelength" : "time-of-flight", "seam 7: spaced token and effective undeclared beam mode");
