@@ -19,7 +19,9 @@ namespace edi_app {
 // the lower triangle of the matrix over the parameters shown, in the fit's order, with the diagonal left blank.
 // The shown experiment's parameters and the structures' are shown; another experiment's (a joint fit's other banks)
 // are not. Of those, a parameter is shown when its strongest correlation with another reaches `level`, and of these
-// the `maxParameters` most correlated; a pair weaker than `level` is left blank.
+// the `maxParameters` most correlated; a pair weaker than `level` is left blank. The two are one filter (owner,
+// 2026-10-11): a level sets the count to the parameters reaching it, a count sets the level to the strongest
+// correlation of the count-th most correlated parameter, and a new matrix keeps the count.
 class CorrelationViewModel : public QObject {
     Q_OBJECT
     QML_ELEMENT
@@ -32,9 +34,9 @@ class CorrelationViewModel : public QObject {
     Q_PROPERTY(int available READ available NOTIFY availableChanged)
     // Why nothing is drawn; empty when the matrix is.
     Q_PROPERTY(QString emptyText READ emptyText NOTIFY emptyTextChanged)
-    // The smallest absolute correlation shown, 0 to 1.
+    // The smallest absolute correlation shown, 0 to 1; setting it sets maxParameters.
     Q_PROPERTY(double level READ level WRITE setLevel NOTIFY levelChanged)
-    // The most parameters shown, at least 2.
+    // The most parameters shown, 2 to `available`; setting it sets level.
     Q_PROPERTY(int maxParameters READ maxParameters WRITE setMaxParameters NOTIFY maxParametersChanged)
 
    public:
@@ -65,12 +67,17 @@ class CorrelationViewModel : public QObject {
     void maxParametersChanged();
 
    private:
+    // The level and the count, which edit each other, then the matrix they show.
+    void apply(double level, int count);
     void rebuild();
 
     // The shown experiment's correlations: the parameters in the fit's order and the full matrix over them
     // (row-major, 1 on the diagonal).
     std::vector<std::string> names_;
     std::vector<double> matrix_;
+    // Each parameter's strongest correlation with another, in the fit's order, and from the strongest down.
+    std::vector<double> strength_;
+    std::vector<double> ranked_;
     QString reason_;
     QStringList labels_;
     QList<qreal> values_;

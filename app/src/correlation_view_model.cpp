@@ -5,6 +5,7 @@
 #include <bit>
 #include <cmath>
 #include <cstdint>
+#include <functional>
 #include <limits>
 #include <map>
 
@@ -64,25 +65,54 @@ void CorrelationViewModel::setRecord(const edi::Project& project, int experiment
             reason_ = tr("The last fit has no correlations among this experiment's parameters");
         }
     }
-    rebuild();
+    // Each parameter's strongest correlation with another, and those strengths from the strongest down.
+    const std::size_t n = names_.size();
+    strength_.assign(n, 0.0);
+    for (std::size_t i = 0; i < n; ++i) {
+        for (std::size_t j = 0; j < n; ++j) {
+            const double value = matrix_[i * n + j];
+            if (i != j && std::isfinite(value)) {
+                strength_[i] = std::max(strength_[i], std::abs(value));
+            }
+        }
+    }
+    ranked_ = strength_;
+    std::sort(ranked_.begin(), ranked_.end(), std::greater<>());
+    // A new matrix keeps the parameter count and sets the level from it.
+    if (n >= 2) {
+        setMaxParameters(max_parameters_);
+    } else {
+        rebuild();
+    }
 }
 
 void CorrelationViewModel::setLevel(double level) {
     level = std::isfinite(level) ? std::clamp(level, 0.0, 1.0) : 0.0;
-    if (level != level_) {
-        level_ = level;
-        emit levelChanged();
-        rebuild();
-    }
+    // The count follows: the parameters whose strongest correlation reaches the level (owner, 2026-10-11).
+    const int count = static_cast<int>(std::count_if(strength_.begin(), strength_.end(),
+                                                     [level](double strength) { return strength >= level; }));
+    apply(level, strength_.size() >= 2 ? count : max_parameters_);
 }
 
 void CorrelationViewModel::setMaxParameters(int count) {
-    count = std::max(2, count);
-    if (count != max_parameters_) {
-        max_parameters_ = count;
-        emit maxParametersChanged();
-        rebuild();
+    const int available = static_cast<int>(strength_.size());
+    count = std::clamp(count, 2, std::max(2, available));
+    // The level follows: the strongest correlation of the count-th most correlated parameter, so that many remain.
+    apply(available >= count ? ranked_[static_cast<std::size_t>(count - 1)] : level_, count);
+}
+
+void CorrelationViewModel::apply(double level, int count) {
+    const bool level_changed = level != level_;
+    const bool count_changed = count != max_parameters_;
+    level_ = level;
+    max_parameters_ = count;
+    if (level_changed) {
+        emit levelChanged();
     }
+    if (count_changed) {
+        emit maxParametersChanged();
+    }
+    rebuild();
 }
 
 void CorrelationViewModel::rebuild() {
@@ -91,17 +121,9 @@ void CorrelationViewModel::rebuild() {
     QString empty_text = reason_;
     const std::size_t n = names_.size();
     if (n >= 2) {
-        // Each parameter's strongest correlation with another: those reaching the level are kept, as
-        // diffraction-lib's _filter_correlation_dataframe keeps them, and the most correlated of these are shown.
-        std::vector<double> strength(n, 0.0);
-        for (std::size_t i = 0; i < n; ++i) {
-            for (std::size_t j = 0; j < n; ++j) {
-                const double value = matrix_[i * n + j];
-                if (i != j && std::isfinite(value)) {
-                    strength[i] = std::max(strength[i], std::abs(value));
-                }
-            }
-        }
+        // The parameters whose strongest correlation reaches the level, as diffraction-lib's
+        // _filter_correlation_dataframe keeps them, and the most correlated of these.
+        const std::vector<double>& strength = strength_;
         std::vector<std::size_t> kept;
         for (std::size_t i = 0; i < n; ++i) {
             if (strength[i] >= level_) {

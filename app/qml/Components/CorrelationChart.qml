@@ -54,19 +54,21 @@ Item {
         color: EaStyle.Colors.chartBackground
     }
 
-    // The toolbar: the correlation level and the number of parameters, each a box with its name and an editable number,
-    // set apart as the pattern chart's axis boxes are (owner, 2026-10-11).
+    // The toolbar: the correlation level and the number of parameters, each a box with its icon, name and an editable
+    // number, set apart as the pattern chart's axis boxes are and at the row's right end, as its buttons are (owner,
+    // 2026-10-11).
     Row {
         id: toolbar
 
-        x: chart.sideMargin
+        x: chart.width - chart.toolbarRightInset - width
         y: chart.em
         height: AppSizes.toolbarControlSize
         spacing: AppSizes.toolbarSpacing
 
         NumberBox {
             objectName: "correlations.toolbar.level"
-            label: qsTr("Correlation level")
+            icon: "filter"
+            label: qsTr("Correlation level:")
             toolTip: qsTr("The smallest absolute correlation shown, 0 to 1: weaker pairs are left blank")
             widestText: "0.00"
             shown: chart.correlations ? chart.correlations.level.toFixed(2) : ""
@@ -85,9 +87,11 @@ Item {
         }
         NumberBox {
             objectName: "correlations.toolbar.parameters"
-            label: qsTr("Parameters")
+            icon: "list-ol"
+            label: qsTr("Parameters:")
             toolTip: qsTr("The most parameters shown: those most correlated with another")
             widestText: "999"
+            suffix: chart.correlations && chart.correlations.available > 0 ? qsTr("of %1").arg(chart.correlations.available) : ""
             shown: chart.correlations ? String(chart.correlations.maxParameters) : ""
             validator: IntValidator {
                 bottom: 2
@@ -99,13 +103,6 @@ Item {
                     chart.correlations.maxParameters = count;
             }
         }
-        EaElements.Label {
-            anchors.verticalCenter: parent.verticalCenter
-            leftPadding: AppSizes.toolbarSpacing
-            visible: chart.correlations !== null && chart.correlations.available > 0
-            color: EaStyle.Colors.themeForegroundMinor
-            text: chart.correlations ? qsTr("of %1").arg(chart.correlations.available) : ""
-        }
     }
 
     // A toolbar box as the pattern chart's axis boxes look (ToolbarComboBox): its name, then its number, which alone
@@ -113,17 +110,21 @@ Item {
     component NumberBox: Rectangle {
         id: box
 
+        // A Font Awesome name, drawn before the label.
+        property string icon: ""
         property string label: ""
         property string toolTip: ""
         // The widest number the box shows, for its width.
         property string widestText: ""
         // The model's number as text; an edit is committed on Return or on leaving the number.
         property string shown: ""
+        // Grey text after the number ("of 16"); empty: none.
+        property string suffix: ""
         property alias validator: number.validator
         readonly property bool hovered: hover.hovered
         signal committed(string text)
 
-        width: name.implicitWidth + numberMetrics.advanceWidth(widestText) + chart.em * 1.75 + AppSizes.toolbarSpacing * 2
+        width: content.implicitWidth + chart.em * 1.75
         height: AppSizes.toolbarControlSize
         radius: 2
         enabled: chart.correlations !== null
@@ -138,35 +139,55 @@ Item {
 
             font: number.font
         }
-        EaElements.Label {
-            id: name
+        Row {
+            id: content
 
             x: chart.em * 0.75
             anchors.verticalCenter: parent.verticalCenter
-            color: box.enabled ? EaStyle.Colors.themeForeground : EaStyle.Colors.themeForegroundDisabled
-            text: box.label
-        }
-        TextInput {
-            id: number
+            spacing: AppSizes.toolbarSpacing * 2
 
-            objectName: box.objectName + ".number"
-            anchors.left: name.right
-            anchors.leftMargin: AppSizes.toolbarSpacing * 2
-            anchors.right: parent.right
-            anchors.rightMargin: chart.em
-            anchors.verticalCenter: parent.verticalCenter
-            horizontalAlignment: TextInput.AlignRight
-            font.family: EaStyle.Fonts.fontFamily
-            font.pixelSize: EaStyle.Sizes.fontPixelSize
-            selectByMouse: true
-            selectionColor: EaStyle.Colors.themeAccent
-            selectedTextColor: EaStyle.Colors.themeBackground
-            color: !box.enabled ? EaStyle.Colors.themeForegroundDisabled : box.hovered || activeFocus ? EaStyle.Colors.themeForegroundHovered : EaStyle.Colors.themeForeground
-            text: box.shown
-            onEditingFinished: {
-                if (text !== box.shown)
-                    box.committed(text);
-                text = Qt.binding(() => box.shown);
+            IconLine {
+                anchors.verticalCenter: parent.verticalCenter
+                textColor: box.enabled ? EaStyle.Colors.themeForeground : EaStyle.Colors.themeForegroundDisabled
+                segments: [
+                    {
+                        "icon": box.icon
+                    },
+                    {
+                        "text": box.label
+                    }
+                ]
+            }
+            TextInput {
+                id: number
+
+                objectName: box.objectName + ".number"
+                width: Math.ceil(numberMetrics.advanceWidth(box.widestText))
+                anchors.verticalCenter: parent.verticalCenter
+                horizontalAlignment: TextInput.AlignRight
+                font.family: EaStyle.Fonts.fontFamily
+                font.pixelSize: EaStyle.Sizes.fontPixelSize
+                selectByMouse: true
+                selectionColor: EaStyle.Colors.themeAccent
+                selectedTextColor: EaStyle.Colors.themeBackground
+                color: !box.enabled ? EaStyle.Colors.themeForegroundDisabled : box.hovered || activeFocus ? EaStyle.Colors.themeForegroundHovered : EaStyle.Colors.themeForeground
+                text: box.shown
+                onEditingFinished: {
+                    if (text !== box.shown)
+                        box.committed(text);
+                    text = Qt.binding(() => box.shown);
+                }
+
+                // The text cursor over the number, which is what is edited (owner, 2026-10-11).
+                HoverHandler {
+                    cursorShape: Qt.IBeamCursor
+                }
+            }
+            EaElements.Label {
+                anchors.verticalCenter: parent.verticalCenter
+                visible: box.suffix !== ""
+                color: EaStyle.Colors.themeForegroundMinor
+                text: box.suffix
             }
         }
         EaElements.ToolTip {
