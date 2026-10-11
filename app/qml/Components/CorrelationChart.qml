@@ -400,14 +400,11 @@ Item {
         }
     }
 
-    EaElements.Label {
+    EmptyStateLabel {
         objectName: "correlations.empty"
         anchors.centerIn: parent
         visible: !area.visible
         width: Math.min(implicitWidth, parent.width - 2 * chart.sideMargin)
-        wrapMode: Text.WordWrap
-        horizontalAlignment: Text.AlignHCenter
-        color: EaStyle.Colors.themeForegroundMinor
         text: chart.correlations ? chart.correlations.emptyText : ""
     }
 }

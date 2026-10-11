@@ -20,9 +20,9 @@ void CorrelationViewModel::setRecord(const edi::Project& project, int experiment
     const std::vector<edi::FitParameterCorrelation>& pairs = project.fit_result.correlations;
     const int experiments = static_cast<int>(project.experiments.size());
     if (!project.fit_result.held() || pairs.empty()) {
-        reason_ = tr("No correlations yet: they are shown after a fit with two or more free parameters");
+        reason_ = tr("No correlations yet");
     } else if (experiment < 0 || experiment >= experiments || !fitted) {
-        reason_ = tr("The last fit did not include this experiment");
+        reason_ = tr("Not in the last fit");
     } else {
         // Another experiment's parameters are named by its datablock key (io.cpp's parameter slot walk).
         std::vector<std::string> others;
@@ -62,7 +62,7 @@ void CorrelationViewModel::setRecord(const edi::Project& project, int experiment
         if (n < 2) {
             names_.clear();
             matrix_.clear();
-            reason_ = tr("The last fit has no correlations among this experiment's parameters");
+            reason_ = tr("No correlations for this experiment");
         }
     }
     // Each parameter's strongest correlation with another, and those strengths from the strongest down.
@@ -135,7 +135,7 @@ void CorrelationViewModel::rebuild() {
         kept.resize(std::min(kept.size(), static_cast<std::size_t>(max_parameters_)));
         std::sort(kept.begin(), kept.end());
         if (kept.size() < 2) {
-            empty_text = tr("No two parameters correlate by %1 or more").arg(level_, 0, 'f', 2);
+            empty_text = tr("No pairs at this level");
         } else {
             for (std::size_t row : kept) {
                 labels.append(QString::fromStdString(names_[row]));
