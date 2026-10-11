@@ -1,0 +1,65 @@
+data_bank
+
+_edi.schema_version 3
+
+_experiment_type.sample_form "powder"
+_experiment_type.beam_mode "constant wavelength"
+_experiment_type.radiation_probe "neutron"
+_experiment_type.scattering_type "bragg"
+
+_calculator.type crysta
+
+_peak.broad_gauss_u 0
+_peak.broad_gauss_v 0
+_peak.broad_gauss_w 0.15
+_peak.broad_lorentz_x 0
+_peak.broad_lorentz_y 0
+_peak.cutoff_fwhm 5
+_peak.type cwl-tch-pseudo-voigt
+
+_instrument.setup_wavelength 1.54
+_instrument.calib_twotheta_offset 0
+
+_absorption.type none
+
+loop_
+_preferred_orientation.structure_id
+_preferred_orientation.march_r
+_preferred_orientation.index_h
+_preferred_orientation.index_k
+_preferred_orientation.index_l
+_preferred_orientation.march_random_fract
+phase 0.73 0 0 1 0.2
+
+loop_
+_linked_structure.structure_id
+_linked_structure.scale
+phase 0.7
+
+_background.type line-segment
+
+loop_
+_background.id
+_background.position
+_background.intensity
+pA 10.011 4()
+pB 10.019 5()
+pC 24.873 6()
+pD 25.111 7()
+pE 30.87 8()
+pF 72.321 9()
+
+loop_
+_data.two_theta
+_data.id
+_data.intensity_meas
+_data.intensity_meas_su
+40 1 5.048484848484849 1
+44 2 5.108787878787879 1
+48 3 5.620432900432901 1
+52 4 5.7834199134199125 1
+56 5 6.397748917748918 1
+60 6 6.663419913419913 1
+64 7 7.380432900432901 1
+68 8 7.748787878787879 1
+72 9 8.568484848484848 1

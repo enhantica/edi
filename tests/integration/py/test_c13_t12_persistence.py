@@ -323,7 +323,8 @@ def test_every_writer_encodes_the_actual_identity_source(tmp_path):
     )
     experiment = experiment.replace('data_experiment', 'data__bank')
     experiment = experiment.replace('\nstructure ', "\n'_phase' ")
-    analysis = """_sequential_fit.data_dir scan
+    analysis = """_fitting_mode.type joint
+_sequential_fit.data_dir scan
 loop_
 _sequential_fit_extract.id
 _sequential_fit_extract.target

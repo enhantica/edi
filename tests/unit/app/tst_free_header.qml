@@ -10,6 +10,9 @@ TestCase {
     name: "FilteredFreeHeader"
     when: windowShown
     property var appWindow
+    property real filterRowHeight: 0
+    property real filterTopPadding: 0
+    property real filterBottomPadding: 0
     Component {
         id: application
         Main {}
@@ -23,6 +26,19 @@ TestCase {
         Ui.click(test, Probe, appWindow, "appBar.tab.analysis");
         Ui.click(test, Probe, appWindow, "sideBar.tab.basic");
         Ui.expandGroup(test, Probe, appWindow, "group.parameters");
+        const picker = Ui.control(Probe, appWindow, "parameters.category");
+        verify(picker !== null, "The spacing witness requires the actual category filter");
+        Ui.click(test, Probe, appWindow, "parameters.category");
+        let listRow;
+        tryVerify(() => {
+            listRow = Probe.objectsWithProperty(picker.popup.contentItem, "modelData")
+                .find(item => item.modelData.title !== undefined && item.height > 0 && item.topPadding !== undefined);
+            return listRow !== undefined;
+        }, 2000, "The category dropdown must instantiate its actual padded list delegate");
+        filterRowHeight = listRow.height;
+        filterTopPadding = listRow.topPadding;
+        filterBottomPadding = listRow.bottomPadding;
+        picker.popup.close();
     }
     function cleanup() {
         Session.closeProject();
@@ -51,10 +67,17 @@ TestCase {
         ["free", "fixed", "mixed"].forEach(state => {
             const button = radio(menu, state);
             const row = button.parent;
-            compare(row.height, EaStyle.Sizes.tableRowHeight, "Every radio row must be one Analysis-table row high");
+            compare(row.height, filterRowHeight, "Every popup radio row must match the actual category filter list row height");
             const labels = row.children.filter(child => child !== button && child.text !== undefined && Ui.exposed(child));
             compare(labels.length, 1, "Each radio row must render one count beside its label");
             const label = labels[0];
+            const expected = state === "mixed"
+                ? "Mixed · " + menu.freeCount + " free · " + menu.fixedCount + " fixed"
+                : (state === "free" ? "Free" : "Fixed") + " · all " + menu.shown.length;
+            compare(button.text + " " + label.text, expected, "Each popup row must display the owner state label, middle dots and exact target counts");
+            const labelTop = label.mapToItem(row, 0, 0).y;
+            verify(labelTop + 0.5 >= filterTopPadding && row.height - labelTop - label.height + 0.5 >= filterBottomPadding,
+                   "Popup count text must retain the filter list row's top and bottom content padding");
             const at = label.mapToItem(row, 0, 0).x;
             const end = button.mapToItem(row, button.width, 0).x;
             verify(at >= end && at - end <= EaStyle.Sizes.fontPixelSize, "Counts must sit just after labels rather than at the popup edge");
