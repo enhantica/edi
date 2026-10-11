@@ -172,7 +172,7 @@ AppDialog {
         }
 
         // Licence: what a user may do, in a few lines, and on request the app's licence notice, whose links open the
-        // full texts in the same place (ADR-0015 §6), or the source code's BSD licence.
+        // full texts in the same place (ADR-0015 §6), the full GPL text or the source code's BSD licence.
         Column {
             id: licencePage
 
@@ -188,11 +188,16 @@ AppDialog {
             Row {
                 spacing: EaStyle.Sizes.fontPixelSize * 2
 
-                // The app's licence notice, which links the full GPL text.
+                // The app's licence notice, which links the full texts, then each full text.
                 LinkLabel {
                     objectName: "about.licence.gpl"
                     text: qsTr("GNU General Public License")
                     onActivated: licenceText.url = ApplicationInfo.appLicenseUrl
+                }
+                LinkLabel {
+                    objectName: "about.licence.copying"
+                    text: qsTr("Full GPL text")
+                    onActivated: licenceText.url = ApplicationInfo.copyingUrl
                 }
                 LinkLabel {
                     objectName: "about.licence.bsd"
