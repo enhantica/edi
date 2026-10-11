@@ -39,3 +39,11 @@ all saved pairs and unchanged analysis bytes on reload. The app actor checks the
 association by switching 0 → 1 → 0 → 1 before saving and 1 → 0 → 1 → 0 after loading.
 The Qt actor is authored separately from the executed core proof; its execution
 must be reported explicitly when an app runner is available.
+
+`selection_probe.cpp` supplies only standard container and notification carriers
+for the unedited production `CorrelationViewModel::rebuild` method. Its compiled
+output tests selection and numeric masking without a GUI build. The weak positive
+and weak negative pairs use the two external matrices above, with levels that keep
+all three parameters; a higher level removes the first parameter, and NaN and both
+infinities stay blank along with the diagonal and upper triangle. This probe makes
+no claim about Qt painting, popup delivery or the application's experiment wiring.

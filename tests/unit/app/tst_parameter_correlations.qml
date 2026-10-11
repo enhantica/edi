@@ -238,10 +238,25 @@ TestCase {
                 verify(Math.abs(chart.valueAt(row * 3 + col) - reference.matrix[i][j]) < 2e-4, "Each shown coefficient must match the external correlation matrix");
             }
         }
+        Session.project.correlations.level = 0.8;
+        compare(chart.count, 3, "The level chooses three parameters through their strongest pairs");
+        const row = chart.labels.indexOf(reference.names[2]);
+        const column = chart.labels.indexOf(reference.names[0]);
+        const cells = findChild(chart, "correlations.cells");
+        verify(cells !== null, "The chart must expose its actual cell delegates");
+        const weak = cells.itemAt(row * 3 + column);
+        verify(Math.abs(weak.value - reference.matrix[2][0]) < 2e-4, "A below-level pair between shown parameters must keep its independent coefficient");
+        compare(String(weak.color), String(chart.cellColor(weak.value)), "The below-level pair must retain its diverging colour");
+        const pointer = control("correlations.pointer");
+        mouseMove(pointer, (column + 0.5) * pointer.width / 3, (row + 0.5) * pointer.height / 3);
+        const popup = findChild(chart, "correlations.toolTip");
+        verify(popup !== null, "A shown weak pair must retain its coefficient popup");
+        tryVerify(() => popup.visible, 2000, "Hovering a below-level finite pair must show its popup");
+        verify(popup.text.includes(reference.matrix[2][0].toFixed(2)), "The weak pair's popup must name its independent coefficient");
         Session.project.correlations.maxParameters = 2;
         compare(chart.count, 2, "The parameter-count control must keep exactly the two strongest-correlated parameters");
         Session.project.correlations.level = 1;
-        compare(chart.count, 0, "The absolute-correlation control must hide every pair below the chosen level");
+        compare(chart.count, 0, "A level above every finite pair must select no parameters");
     }
 
     function test_background_coefficients_have_editing_parity() {

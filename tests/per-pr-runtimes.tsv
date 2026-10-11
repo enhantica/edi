@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-11T16:40:23Z
+# measured_utc = 2026-10-11T16:47:46Z
 #
-# Recorded from: feature-current-final.log (21 node(s) measured once, 9603 banked, 0 stale row(s) dropped)
-# Collected tests: 10357; with a reported duration: 5334
-# Module-scoped fixture costs recorded: 32
+# Recorded from: mask-current.log (6 node(s) measured once, 9622 banked, 0 stale row(s) dropped)
+# Collected tests: 10363; with a reported duration: 5337
+# Module-scoped fixture costs recorded: 33
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 10357
+# inventory_python = 10363
 # inventory_cpp = 302
-# inventory_measured = 9622
+# inventory_measured = 9628
 # inventory_unmeasured = 1037
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
@@ -7229,6 +7229,12 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_value_expressions.py:
 0.010	tests/system/py/test_constraint_surfaces.py::test_cosio_scan_projects_restore_the_constraint_and_execute[pd-neut-cwl_cosio-d20_scan-324f]
 0.010	tests/system/py/test_constraint_surfaces.py::test_cosio_scan_projects_restore_the_constraint_and_execute[pd-neut-cwl_cosio-d20_scan-3f]
 0.000	tests/system/py/test_constraint_surfaces.py::test_tied_biso_notebook_executes_its_fullprof_comparison_and_fit
+0.010	tests/system/py/test_correlation_selection.py::test_every_finite_lower_pair_of_selected_parameters_remains_visible[inf]
+0.000	tests/system/py/test_correlation_selection.py::test_every_finite_lower_pair_of_selected_parameters_remains_visible[nan]
+0.000	tests/system/py/test_correlation_selection.py::test_every_finite_lower_pair_of_selected_parameters_remains_visible[negative-inf]
+0.000	tests/system/py/test_correlation_selection.py::test_every_finite_lower_pair_of_selected_parameters_remains_visible[parameter-selection]
+0.010	tests/system/py/test_correlation_selection.py::test_every_finite_lower_pair_of_selected_parameters_remains_visible[weak-negative]
+0.009	tests/system/py/test_correlation_selection.py::test_every_finite_lower_pair_of_selected_parameters_remains_visible[weak-positive]
 UNMEASURED:failed-in-this-run	tests/system/py/test_cwl_cli.py::test_each_cw_profile_is_selectable_from_the_cli[cwl-gaussian]
 UNMEASURED:failed-in-this-run	tests/system/py/test_cwl_cli.py::test_each_cw_profile_is_selectable_from_the_cli[cwl-lorentzian]
 UNMEASURED:failed-in-this-run	tests/system/py/test_cwl_cli.py::test_each_cw_profile_is_selectable_from_the_cli[cwl-pseudo-voigt-berar-baldinozzi]
@@ -10716,6 +10722,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 3.252	tests/system/py/test_c34_t28_census_binding.py
 # module-cost: 0.011	tests/system/py/test_c34_t28_census_escapes.py
 # module-cost: 1.059	tests/system/py/test_c34_t28_native_surface.py
+# module-cost: 1.201	tests/system/py/test_correlation_selection.py
 # module-cost: 1.269	tests/system/py/test_cwl_live_parameter_count.py
 # module-cost: 22.953	tests/system/py/test_e04_t10_latency.py
 # module-cost: 0.044	tests/system/py/test_e04_t12_public_release.py
