@@ -2964,6 +2964,58 @@ void rename_experiment(Project& project, ExperimentBase& experiment, const std::
     experiment.name = name;
 }
 
+namespace {
+
+// The first `<name>_copy`, `<name>_copy2`, … that `held` (lower case) does not contain.
+std::string copy_name(const std::string& name, const std::set<std::string>& held) {
+    const auto lower = [](std::string text) {
+        std::transform(text.begin(), text.end(), text.begin(),
+                       [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        return text;
+    };
+    for (int n = 1;; ++n) {
+        std::string candidate = name + "_copy" + (n == 1 ? std::string() : std::to_string(n));
+        if (!held.contains(lower(candidate))) {
+            return candidate;
+        }
+    }
+}
+
+std::set<std::string> lower_names(const std::vector<std::string>& names) {
+    std::set<std::string> out;
+    for (std::string name : names) {
+        std::transform(name.begin(), name.end(), name.begin(),
+                       [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        out.insert(std::move(name));
+    }
+    return out;
+}
+
+}  // namespace
+
+BraggPdExperiment experiment_copy(const Project& project, const BraggPdExperiment& experiment) {
+    std::vector<std::string> names;
+    for (const auto& held : project.experiments) {
+        names.push_back(KeyTraits<BraggPdExperiment>::canonical(held->name));
+    }
+    BraggPdExperiment copy(experiment);
+    copy.name = copy_name(KeyTraits<BraggPdExperiment>::canonical(experiment.name), lower_names(names));
+    copy.fit_n_data_points.reset();
+    copy.fit_prof_wr_factor.reset();
+    copy.fit_chi_square.reset();
+    return copy;
+}
+
+Structure structure_copy(const Project& project, const Structure& structure) {
+    std::vector<std::string> names;
+    for (const auto& held : project.structures) {
+        names.push_back(KeyTraits<Structure>::canonical(held->name));
+    }
+    Structure copy(structure);
+    copy.name = copy_name(KeyTraits<Structure>::canonical(structure.name), lower_names(names));
+    return copy;
+}
+
 Project empty_project(const std::string& name, const std::string& description) {
     Project project;
     project.structures.clear();

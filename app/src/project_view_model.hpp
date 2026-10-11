@@ -225,10 +225,16 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // (P b n m, a = 10, b = 6, c = 5 Å, one O site at the origin), selected and linked to no experiment. One
     // undoable step.
     Q_INVOKABLE bool createStructure();
+    // Duplicate structure: a copy of the current structure (edi::structure_copy) named `<name>_copy`, selected and
+    // linked to no experiment. One undoable step.
+    Q_INVOKABLE bool duplicateStructure();
     Q_INVOKABLE void removeExperiment(int index);
     // A new experiment without data (edi::simulation_experiment), selected: powder, constant wavelength,
     // neutron, Bragg, linked to every structure. One undoable step, as a load of experiments is.
     Q_INVOKABLE bool createExperiment();
+    // Duplicate experiment: a copy of the current experiment with its data (edi::experiment_copy) named
+    // `<name>_copy`, selected. Refused in a scan project, as Create experiment is. One undoable step.
+    Q_INVOKABLE bool duplicateExperiment();
     // Load data…: the plain-data file's rows (crysta's reader) become the measured data of experiment `index`, one
     // made with Create experiment; its type then locks and its range shows the data's. An experiment still named
     // experiment1, experiment2, … takes the file's name. A second load replaces the data. One undoable step, and

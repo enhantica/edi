@@ -266,11 +266,17 @@ EaElements.GroupBox {
             experimentIndex: group.project ? group.project.currentExperimentIndex : -1
         }
 
+        // Load, Create and Duplicate side by side at equal widths (the owner, 2026-10-11).
         Row {
+            id: buttons
+
+            readonly property real buttonWidth: (EaStyle.Sizes.sideBarContentWidth - 2 * spacing) / 3
+
             spacing: EaStyle.Sizes.fontPixelSize
 
             EaElements.SideBarButton {
                 objectName: "experiments.load"
+                width: buttons.buttonWidth
                 enabled: group.project !== null
                 fontIcon: "upload"
                 text: qsTr("Load experiment")
@@ -288,11 +294,23 @@ EaElements.GroupBox {
             }
             EaElements.SideBarButton {
                 objectName: "experiments.create"
+                width: buttons.buttonWidth
                 enabled: group.project !== null && group.project.canCreateExperiment
                 fontIcon: "plus-circle"
                 text: qsTr("Create experiment")
                 ToolTip.text: enabled ? qsTr("Add an experiment without data, to calculate its pattern or load data into") : qsTr("A scan project fits its one template experiment")
                 onClicked: group.project.createExperiment()
+            }
+            // A copy of the selected experiment with its data, named <name>_copy; its Data file cell then loads
+            // another file in place of the copied one.
+            EaElements.SideBarButton {
+                objectName: "experiments.duplicate"
+                width: buttons.buttonWidth
+                enabled: group.project !== null && group.project.canCreateExperiment && group.project.currentExperiment !== null
+                fontIcon: "clone"
+                text: qsTr("Duplicate experiment")
+                ToolTip.text: group.scan ? qsTr("A scan project fits its one template experiment") : qsTr("Add a copy of the selected experiment, with its data")
+                onClicked: group.project.duplicateExperiment()
             }
         }
     }

@@ -343,6 +343,10 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"t17-24-load-data", start + open_example("pd-neut-cwl_cosio-d20_start-1")
                                               + QStringList{experiment, basic, "expand:group.experiments", "experiments.create"}});
     steps_.push_back({"t17-24b-load-data-dark", {"theme:dark"}});
+    // Duplicate experiment and Duplicate structure, and the disabled Load from COD (the owner, 2026-10-11).
+    steps_.push_back({"t17-60-duplicate-experiment", {"theme:light", "mainArea.blocks.up", "experiments.duplicate"}});
+    steps_.push_back({"t17-61-duplicate-structure",
+                      {"appBar.tab.structure", basic, "expand:group.structures", "structures.duplicate"}});
     // The polynomial and Chebyshev backgrounds' terms, and a type switch that asks before it removes the points.
     const QString background = QStringLiteral("expand:group.background");
     steps_.push_back({"t17-10-polynomial-terms",

@@ -100,8 +100,10 @@ EaElements.GroupBox {
         }
 
         // Load and Create side by side, as easydiffractionbeta's Load and Define manually: Create adds
-        // easydiffractionbeta's default phase as structure1, structure2, … (edi ADR-0017 §4).
-        Row {
+        // easydiffractionbeta's default phase as structure1, structure2, … (edi ADR-0017 §4). Under them Duplicate,
+        // and Load from COD, not available yet (the owner, 2026-10-11).
+        Grid {
+            columns: 2
             spacing: EaStyle.Sizes.fontPixelSize
 
             EaElements.SideBarButton {
@@ -126,6 +128,21 @@ EaElements.GroupBox {
                 text: qsTr("Create structure")
                 ToolTip.text: qsTr("Add a structure with one atom site, to edit into the one you need")
                 onClicked: group.project.createStructure()
+            }
+            EaElements.SideBarButton {
+                objectName: "structures.duplicate"
+                enabled: group.project !== null && group.project.currentStructure !== null
+                fontIcon: "clone"
+                text: qsTr("Duplicate structure")
+                ToolTip.text: qsTr("Add a copy of the selected structure, linked to no experiment")
+                onClicked: group.project.duplicateStructure()
+            }
+            EaElements.SideBarButton {
+                objectName: "structures.loadCod"
+                enabled: false
+                fontIcon: "cloud-download-alt"
+                text: qsTr("Load from COD")
+                ToolTip.text: qsTr("Loading from the Crystallography Open Database is not available yet")
             }
         }
     }

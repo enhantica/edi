@@ -443,6 +443,29 @@ bool ProjectViewModel::createExperiment() {
     return true;
 }
 
+bool ProjectViewModel::duplicateExperiment() {
+    edi::Project& project = *project_;
+    if (current_experiment_ < 0 || current_experiment_ >= static_cast<int>(project.experiments.size())) {
+        return false;
+    }
+    QString error;
+    try {
+        const edi::BraggPdExperiment& source = *project.experiments[static_cast<std::size_t>(current_experiment_)];
+        error = apply(edi::Edit::create_experiment(project, edi::experiment_copy(project, source)), true);
+    } catch (const std::exception& refusal) {
+        error = QString::fromUtf8(refusal.what());
+        setLastError(error);
+    }
+    if (!error.isEmpty()) {
+        emit refused(error);
+        return false;
+    }
+    syncLoadState();
+    noteAddedExperiments(project.experiments.size() - 1);
+    setCurrentExperimentIndex(static_cast<int>(experiment_models_.size()) - 1);
+    return true;
+}
+
 bool ProjectViewModel::setExperimentType(int index, const QString& axis, const QString& token) {
     if (index < 0 || index >= experiment_models_.size()) {
         return false;
@@ -642,6 +665,30 @@ bool ProjectViewModel::createStructure() {
     QString error;
     try {
         error = apply(edi::Edit::add_structure(project, edi::structure_from_edi_text(text)), true);
+    } catch (const std::exception& refusal) {
+        error = QString::fromUtf8(refusal.what());
+        setLastError(error);
+    }
+    if (!error.isEmpty()) {
+        emit refused(error);
+        return false;
+    }
+    undo_history_.emplace_back(std::move(before));
+    syncUndo();
+    setCurrentStructureIndex(static_cast<int>(structure_models_.size()) - 1);
+    return true;
+}
+
+bool ProjectViewModel::duplicateStructure() {
+    edi::Project& project = *project_;
+    if (current_structure_ < 0 || current_structure_ >= static_cast<int>(project.structures.size())) {
+        return false;
+    }
+    edi::StructuresUndo before = edi::capture_structures(project);
+    QString error;
+    try {
+        const edi::Structure& source = *project.structures[static_cast<std::size_t>(current_structure_)];
+        error = apply(edi::Edit::add_structure(project, edi::structure_copy(project, source)), true);
     } catch (const std::exception& refusal) {
         error = QString::fromUtf8(refusal.what());
         setLastError(error);
