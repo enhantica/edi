@@ -140,12 +140,12 @@ nodejs = "==22.23.2"
 # tools/ci/build-crysta.sh reads them from this file. Only an update PR or a paired PR moves them.
 [target.osx-arm64.activation.env]
 MACOSX_DEPLOYMENT_TARGET = '13.4'
-CRYSTA_SDK_TAG = "build-b4d6a484a13ed7b11a9c66ed8196ccdd37f13720"
-CRYSTA_SDK_SHA256 = "cc5823f4bb40993f6cfad33928ed128f35e7a5d503a1b87bead76912af6c31e3"
+CRYSTA_SDK_TAG = "build-36dfb70c8e7c84302c1eff1a4585be01e468e762"
+CRYSTA_SDK_SHA256 = "aa4ffe0250e1f04ef170a8016f42b767f94e7392ca64cccdc7970bf2401926a5"
 
 [target.linux-64.activation.env]
-CRYSTA_SDK_TAG = "build-b4d6a484a13ed7b11a9c66ed8196ccdd37f13720"
-CRYSTA_SDK_SHA256 = "d4527b181e97766bf6631a1641062d9ba9b1a6cb32114fc44aba6b30f11b6361"
+CRYSTA_SDK_TAG = "build-36dfb70c8e7c84302c1eff1a4585be01e468e762"
+CRYSTA_SDK_SHA256 = "2137be8dbd1a447aa168dac08833b388da9956d92b1109fe09ffd36379f67df2"
 
 [target.linux-64.dependencies]
 clangxx = "22.*"
