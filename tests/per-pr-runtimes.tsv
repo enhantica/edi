@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-11T19:35:07Z
+# measured_utc = 2026-10-11T19:59:15Z
 #
-# Recorded from: before-save.log (2 expected-red nodes), current-native.log (3 measured native nodes)
-# Collected tests: 10677; with a reported duration: 5342
+# Recorded from: edi-bank-input.log (34 node(s) measured once, 9612 banked, 0 stale row(s) dropped)
+# Collected tests: 10384; with a reported duration: 5322
 # Module-scoped fixture costs recorded: 34
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 10372
+# inventory_python = 10384
 # inventory_cpp = 305
-# inventory_measured = 9638
-# inventory_unmeasured = 1039
+# inventory_measured = 9626
+# inventory_unmeasured = 1063
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -4871,6 +4871,12 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e05_t1_physical_domain.p
 0.160	tests/integration/py/test_e09_t75_sdk_consumer.py::test_sdk_download_http_method_remains_bound_to_the_addressed_read[-XPUT-osx-arm64]
 0.160	tests/integration/py/test_e09_t75_sdk_consumer.py::test_sdk_download_http_method_remains_bound_to_the_addressed_read[-dBODY-linux-64]
 0.160	tests/integration/py/test_e09_t75_sdk_consumer.py::test_sdk_download_http_method_remains_bound_to_the_addressed_read[-dBODY-osx-arm64]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_fitting_mode_weights.py::test_gui_fitting_modes_use_the_owner_descriptions
+UNMEASURED:failed-in-this-run	tests/integration/py/test_fitting_mode_weights.py::test_joint_weights_load_in_every_mode_and_save_only_in_joint[independent]
+0.030	tests/integration/py/test_fitting_mode_weights.py::test_joint_weights_load_in_every_mode_and_save_only_in_joint[joint]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_fitting_mode_weights.py::test_joint_weights_load_in_every_mode_and_save_only_in_joint[sequential]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_fitting_mode_weights.py::test_joint_weights_load_in_every_mode_and_save_only_in_joint[single]
+0.000	tests/integration/py/test_free_header_declaration.py::test_analysis_free_header_declares_the_owner_radio_popup
 0.000	tests/integration/py/test_latp_reference.py::test_latp_reference_quantities_are_fullprof_values_not_scan_regression_pins
 0.000	tests/integration/py/test_multiphase_app_contract.py::test_linked_structure_rows_use_available_names_and_add_remove_disable_actions
 0.000	tests/integration/py/test_multiphase_app_contract.py::test_shared_block_selector_has_bounded_square_icon_steps_and_file_labels
@@ -7158,33 +7164,33 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::te
 0.230	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project]
 0.660	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project]
 0.400	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-xray-cwl_latp_scan-4f/project]
-0.180	tests/system/py/test_c34_t28_saved_bytes.py::test_new_lif_project_matches_labelled_post_feature_byte_pin[corpus:lif-xray-s1/project]
-0.300	tests/system/py/test_c34_t28_saved_bytes.py::test_new_lif_project_matches_labelled_post_feature_byte_pin[repo:docs/user/cli/pd-xray-cwl_lif_single/project]
-0.150	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[corpus:cosio-d20-s1/project]
-0.130	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[corpus:cosio-d20-s4/project]
-0.140	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[corpus:cosio-d20-scan-3f/project]
-0.140	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[corpus:lbco-hrpt-s2/project]
-0.150	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[corpus:lbco-hrpt-s4/project]
-0.390	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[corpus:ncaf-wish-2bank-s3/project]
-0.380	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[corpus:ncaf-wish-3bank-s5/project]
-0.200	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[corpus:si-sepd-s2/project]
-0.210	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[corpus:si-sepd-s5/project]
-1.180	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project]
-0.480	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project]
-0.200	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project]
-0.190	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project]
-1.980	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project]
-0.230	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project]
-0.240	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project]
-0.960	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project]
-0.640	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-tof_diamond-dream_basic/project]
-1.740	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project]
-0.770	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project]
-0.880	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project]
-1.830	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project]
-1.400	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project]
-0.400	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-tof_si-sepd_start-2/project]
-0.390	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-tof_si-sepd_start-5/project]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_saved_bytes.py::test_new_lif_project_matches_labelled_post_feature_byte_pin[corpus:lif-xray-s1/project]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_saved_bytes.py::test_new_lif_project_matches_labelled_post_feature_byte_pin[repo:docs/user/cli/pd-xray-cwl_lif_single/project]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[corpus:cosio-d20-s1/project]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[corpus:cosio-d20-s4/project]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[corpus:cosio-d20-scan-3f/project]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[corpus:lbco-hrpt-s2/project]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[corpus:lbco-hrpt-s4/project]
+0.360	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[corpus:ncaf-wish-2bank-s3/project]
+0.390	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[corpus:ncaf-wish-3bank-s5/project]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[corpus:si-sepd-s2/project]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[corpus:si-sepd-s5/project]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project]
+1.000	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-tof_diamond-dream_basic/project]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project]
+1.060	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project]
+0.970	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project]
+1.490	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project]
+1.460	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-tof_si-sepd_start-2/project]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-tof_si-sepd_start-5/project]
 0.000	tests/system/py/test_c34_t28_saved_bytes.py::test_saved_byte_inventory_covers_every_current_cli_and_corpus_project
 0.000	tests/system/py/test_c34_t28_storage_decisions.py::test_each_prior_decision_links_its_storage_amendment[0012]
 0.000	tests/system/py/test_c34_t28_storage_decisions.py::test_each_prior_decision_links_its_storage_amendment[0016]
@@ -10628,6 +10634,12 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e04_t9_sanitizer.py::test_sanit
 UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::test_every_ci_consumer_uses_one_shared_crysta_resolution
 0.010	tests/unit/py/test_e09_t74_ci_source_wiring.py::test_source_sweep_catches_a_new_consumer_bypassing_resolution
 0.010	tests/unit/py/test_e09_t74_runtime_headers.py::test_inventory_writer_keeps_unmeasured_rows_and_rejects_a_hand_edited_header
+0.000	tests/unit/py/test_inactive_weight_bytes.py::test_inactive_weight_projection_preserves_every_other_byte[independent]
+0.000	tests/unit/py/test_inactive_weight_bytes.py::test_inactive_weight_projection_preserves_every_other_byte[sequential]
+0.000	tests/unit/py/test_inactive_weight_bytes.py::test_inactive_weight_projection_preserves_every_other_byte[single]
+0.000	tests/unit/py/test_inactive_weight_bytes.py::test_inactive_weight_projection_refuses_undeclared_input_rows[duplicate]
+0.000	tests/unit/py/test_inactive_weight_bytes.py::test_inactive_weight_projection_refuses_undeclared_input_rows[extra-column]
+0.000	tests/unit/py/test_inactive_weight_bytes.py::test_inactive_weight_projection_refuses_undeclared_input_rows[unknown]
 0.000	tests/unit/py/test_verification_helpers.py::test_agreeing_pair_passes_the_default_gate
 0.000	tests/unit/py/test_verification_helpers.py::test_array_layout_bac_reconstructs_grid_from_header
 0.000	tests/unit/py/test_verification_helpers.py::test_bac_zero_shift_realigns_axis_before_subtraction

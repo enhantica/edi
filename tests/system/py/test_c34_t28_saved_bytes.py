@@ -14,6 +14,7 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.fitting_modes.historical_bytes import historical_analysis
 from tests.fixtures.table_display import metadata_bytes, stored_id_bytes
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -47,6 +48,9 @@ def observe_legacy_pin(source, destination, *, calculator=False):
     legacy = stored_id_bytes.ordinal_copy(
         source, destination, destination.with_name('ordinal-pin')
     )
+    analysis = legacy / 'analysis/analysis.edi'
+    if analysis.is_file():
+        analysis.write_bytes(historical_analysis(source, analysis.read_bytes()))
     return REFERENCE.saved_hashes(legacy) if calculator else REFERENCE.hashes(legacy)
 
 

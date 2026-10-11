@@ -53,7 +53,8 @@ TestCase {
         Ui.expandGroup(test, Probe, appWindow, "group." + kind + "s");
         Ui.click(test, Probe, appWindow, kind + "s.name.0");
         keyClick(Qt.Key_A, Qt.ControlModifier);
-        keyClicks(next);
+        for (const character of next)
+            keyClick(character.toUpperCase().charCodeAt(0));
         keyClick(Qt.Key_Return);
     }
     function texts() {

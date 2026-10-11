@@ -129,7 +129,7 @@ TestCase {
                 if (counts[key] !== undefined)
                     compare(actual.find(r => r.categoryId === key).itemCount, counts[key], "I7: category row counts come from committed project loops: " + key);
             });
-            categories(project.analysis.categories, [["minimizer", "Extras"], ["fitting_mode", "Extras"], ["joint_fit", "Extras"]]);
+            categories(project.analysis.categories, [["minimizer", "Extras"], ["fitting_mode", "Extras"]]);
             // : the frozen universe is retained in the editors, while Analysis
             // omits the symmetry-dependent subset supplied independently by crysta.
             const dependent = SymmetryOracle.structure(Probe.repoUrl("docs/user/cli/" + expected.id + "/project").toString().replace("file://", "")).filter(row => !row.independent);
@@ -224,12 +224,9 @@ TestCase {
             ordered(tokens(experiment.backgroundTypeOptions), ["line-segment", "chebyshev", "polynomial"], "The background selector offers exactly the independently declared computable families");
             ordered(tokens(project.analysis.minimizerTypeOptions), ["crysta"], "I17: minimizer selector offers exactly the supported engine");
             const declaration = Oracle.frozen.projects.find(p => p.path === expected.project);
-            const scanDeclared = declaration !== undefined
-                && declaration.analysis["_sequential_fit.data_dir"] !== undefined;
-            const modes = scanDeclared ? ["independent", "sequential", "single"]
-                                       : ["independent", "joint", "sequential", "single"];
-            ordered(tokens(project.analysis.fittingModeOptions).sort(), modes,
-                    "The app offers joint only for inputs without a declared scan");
+            const scanDeclared = declaration !== undefined && declaration.analysis["_sequential_fit.data_dir"] !== undefined;
+            const modes = scanDeclared ? ["independent", "sequential"] : project.experiments.count > 1 ? ["joint"] : ["single"];
+            ordered(tokens(project.analysis.fittingModeOptions).sort(), modes, "The selector offers only the modes applicable to the committed experiment and scan input");
             ordered(tokens(experiment.absorptionTypeOptions).sort(), (expected.mode === "cwl" ? ["none", "cylinder-hewat", "cylinder-lobanov"] : ["none", "cylinder"]).sort(), "I17: exactly the beam-scoped absorption families");
             compare(experiment.beamModeToken, expected.mode === "cwl" ? "constant wavelength" : "time-of-flight", "seam 7: spaced token and effective undeclared beam mode");
         });
@@ -362,8 +359,8 @@ TestCase {
         project.analysis.fittingMode = "sequential";
         verify(rows(project.analysis.categories).some(r => r.categoryId === "sequential_fit"), "I17: scan declaration is shown");
         project.analysis.fittingMode = "single";
-        categories(project.analysis.categories, [["minimizer", "Extras"], ["fitting_mode", "Extras"], ["joint_fit", "Extras"]]);
-        ordered(rows(project.analysis.jointWeights).map(r => [r.experiment, r.weight]), [["hrpt", 1]], "I17/ note 6: single mode retains the joint table and excludes scan categories");
+        categories(project.analysis.categories, [["minimizer", "Extras"], ["fitting_mode", "Extras"]]);
+        ordered(rows(project.analysis.jointWeights).map(r => [r.experiment, r.weight]), [["hrpt", 1]], "Inactive joint weights remain in the model while their category and scan categories are hidden");
         project = example(1);
         exp = project.currentExperiment;
         exp.peakType = "tof-jorgensen";
@@ -457,7 +454,11 @@ TestCase {
             compare(ExperimentText.structureProblem(project.currentStructure.text.text, reference.texts["structures/" + expected.structure + ".edi"]), "", "I8: structure Text keeps exact writer fields and tolerant calculated columns");
             const frozenExperiment = reference.texts["experiments/" + expected.experiment + ".edi"];
             compare(ExperimentText.problem(experiment.text.text, frozenExperiment), "", " experiment Text equals Python writer bytes without identity masking");
-            compare(project.analysis.text.text, reference.texts["analysis/analysis.edi"], "I8: Analysis Text equals the Python writer bytes");
+            const frozenAnalysis = reference.texts["analysis/analysis.edi"];
+            verify(frozenAnalysis.includes("_fitting_mode.type single"), "The retained Analysis pin must declare the single mode");
+            const removedLoop = "\nloop_\n_joint_fit.experiment_id\n_joint_fit.weight\n" + expected.experiment + " 1\n";
+            verify(frozenAnalysis.endsWith(removedLoop), "The retained single-mode pin must end in its declared inactive weights loop");
+            compare(project.analysis.text.text, frozenAnalysis.slice(0, -removedLoop.length), "Analysis Text must retain every frozen byte except the owner-removed inactive joint loop");
         });
     }
     function test_encoded_url_and_unused_free_field() {
