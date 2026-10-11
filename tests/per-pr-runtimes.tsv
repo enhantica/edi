@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-11T01:35:22Z
+# measured_utc = 2026-10-11T01:52:48Z
 #
-# Recorded from: frozen-final-durations.log (43 node(s) measured once, 9486 banked, 0 stale row(s) dropped)
-# Collected tests: 10230; with a reported duration: 5314
+# Recorded from: measured-durations.log (27 node(s) measured once, 9525 banked, 0 stale row(s) dropped)
+# Collected tests: 10253; with a reported duration: 5314
 # Module-scoped fixture costs recorded: 32
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 10230
+# inventory_python = 10253
 # inventory_cpp = 302
-# inventory_measured = 9529
+# inventory_measured = 9552
 # inventory_unmeasured = 1003
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
@@ -3663,8 +3663,26 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_supp
 0.000	tests/integration/py/test_cwl_rename_bytes.py::test_native_reference_and_sample_population_cannot_be_weakened[nonfinite]
 0.010	tests/integration/py/test_cwl_rename_bytes.py::test_tch_rename_preserves_pre_change_regression_bytes[fcj-cwl-tch-pseudo-voigt-fcj]
 0.010	tests/integration/py/test_cwl_rename_bytes.py::test_tch_rename_preserves_pre_change_regression_bytes[tch-cwl-tch-pseudo-voigt]
+0.000	tests/integration/py/test_descriptive_oracle_adaptation.py::test_descriptive_adaptation_refuses_nonpresentation_and_wrong_old_witnesses[duplicate]
+0.000	tests/integration/py/test_descriptive_oracle_adaptation.py::test_descriptive_adaptation_refuses_nonpresentation_and_wrong_old_witnesses[old-extra]
+0.000	tests/integration/py/test_descriptive_oracle_adaptation.py::test_descriptive_adaptation_refuses_nonpresentation_and_wrong_old_witnesses[old-hash]
+0.000	tests/integration/py/test_descriptive_oracle_adaptation.py::test_descriptive_adaptation_refuses_nonpresentation_and_wrong_old_witnesses[old-value]
+0.000	tests/integration/py/test_descriptive_oracle_adaptation.py::test_descriptive_adaptation_refuses_nonpresentation_and_wrong_old_witnesses[science]
+0.000	tests/integration/py/test_descriptive_oracle_adaptation.py::test_descriptive_adaptation_refuses_nonpresentation_and_wrong_old_witnesses[unexpected-field]
+0.000	tests/integration/py/test_descriptive_oracle_adaptation.py::test_descriptive_adaptation_retains_every_scientific_display_and_inventory_witness
 0.020	tests/integration/py/test_desk_build.py::test_default_gui_fetch_uses_pinned_archive_with_digest_and_deadline
 0.120	tests/integration/py/test_desk_build.py::test_failed_configure_preserves_attempt_for_next_no_export_build
+0.000	tests/integration/py/test_desk_build.py::test_gui_archive_observer_refuses_url_digest_and_deadline_escapes[digest]
+0.000	tests/integration/py/test_desk_build.py::test_gui_archive_observer_refuses_url_digest_and_deadline_escapes[duplicate]
+0.000	tests/integration/py/test_desk_build.py::test_gui_archive_observer_refuses_url_digest_and_deadline_escapes[missing-stall]
+0.000	tests/integration/py/test_desk_build.py::test_gui_archive_observer_refuses_url_digest_and_deadline_escapes[missing-total]
+0.000	tests/integration/py/test_desk_build.py::test_gui_archive_observer_refuses_url_digest_and_deadline_escapes[missing-value]
+0.000	tests/integration/py/test_desk_build.py::test_gui_archive_observer_refuses_url_digest_and_deadline_escapes[nonnumeric]
+0.000	tests/integration/py/test_desk_build.py::test_gui_archive_observer_refuses_url_digest_and_deadline_escapes[unbounded-stall]
+0.000	tests/integration/py/test_desk_build.py::test_gui_archive_observer_refuses_url_digest_and_deadline_escapes[unbounded-total]
+0.000	tests/integration/py/test_desk_build.py::test_gui_archive_observer_refuses_url_digest_and_deadline_escapes[url]
+0.000	tests/integration/py/test_desk_build.py::test_gui_archive_observer_refuses_url_digest_and_deadline_escapes[zero-stall]
+0.000	tests/integration/py/test_desk_build.py::test_gui_archive_observer_refuses_url_digest_and_deadline_escapes[zero-total]
 0.000	tests/integration/py/test_desk_build.py::test_missing_desktop_login_refuses_without_disclosing_output[empty]
 0.000	tests/integration/py/test_desk_build.py::test_missing_desktop_login_refuses_without_disclosing_output[failed]
 0.000	tests/integration/py/test_desk_build.py::test_missing_desktop_login_refuses_without_disclosing_output[missing]
@@ -3934,8 +3952,13 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_supp
 0.000	tests/integration/py/test_e04_t1_app_contract.py::test_adr_records_the_decision_and_comparison_plan
 0.010	tests/integration/py/test_e04_t1_app_contract.py::test_app_reachability_observer_rejects_missing_group_or_checker[empty-checker]
 0.010	tests/integration/py/test_e04_t1_app_contract.py::test_app_reachability_observer_rejects_missing_group_or_checker[missing-edge]
-0.130	tests/integration/py/test_e04_t1_app_contract.py::test_existing_projects_oracle_covers_the_registry_without_filters
-0.040	tests/integration/py/test_e04_t1_app_contract.py::test_frozen_oracle_inputs_are_the_committed_fixture_bytes
+0.120	tests/integration/py/test_e04_t1_app_contract.py::test_existing_projects_oracle_covers_the_registry_without_filters
+0.050	tests/integration/py/test_e04_t1_app_contract.py::test_frozen_oracle_inputs_are_the_committed_fixture_bytes
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_gui_pin_rejects_identity_digest_and_declaration_escapes[archive]
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_gui_pin_rejects_identity_digest_and_declaration_escapes[comment]
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_gui_pin_rejects_identity_digest_and_declaration_escapes[commit]
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_gui_pin_rejects_identity_digest_and_declaration_escapes[duplicate]
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_gui_pin_rejects_identity_digest_and_declaration_escapes[source]
 0.050	tests/integration/py/test_e04_t1_app_contract.py::test_local_and_ci_gates_reach_app_tests
 UNMEASURED:failed-in-this-run	tests/integration/py/test_e04_t1_app_contract.py::test_one_shared_labelled_regression_baseline_and_pairs
 0.090	tests/integration/py/test_e04_t1_app_contract.py::test_originals_remain_byte_identical
