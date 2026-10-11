@@ -172,7 +172,8 @@ Column {
                     objectName: "background.append"
                     width: pointButtons.buttonWidth
                     fontIcon: "plus-circle"
-                    text: qsTr("Append new point")
+                    text: qsTr("Add point")
+                    ToolTip.text: qsTr("Append new point")
                     onClicked: group.points.append()
                 }
                 EaElements.SideBarButton {
@@ -180,8 +181,8 @@ Column {
                     width: pointButtons.buttonWidth
                     enabled: Session.project !== null && group.points !== null && group.points.count > 0
                     fontIcon: "tag"
-                    text: qsTr("Name points by position")
-                    ToolTip.text: qsTr("Name each point by its position, rounded, so the parameter table shows where it is")
+                    text: qsTr("Ids from positions")
+                    ToolTip.text: qsTr("Name points by position: each point takes its position, rounded, as its name")
                     onClicked: Session.project.namePointsByPosition()
                 }
                 EaElements.SideBarButton {
@@ -189,7 +190,8 @@ Column {
                     width: pointButtons.buttonWidth
                     enabled: false
                     fontIcon: "undo-alt"
-                    text: qsTr("Reset to autodetected background")
+                    text: qsTr("Autodetect")
+                    ToolTip.text: qsTr("Reset to autodetected background")
                 }
             }
         }
@@ -318,7 +320,8 @@ Column {
                 objectName: "background.appendTerm"
                 width: EaStyle.Sizes.sideBarContentWidth
                 fontIcon: "plus-circle"
-                text: qsTr("Append new term")
+                text: qsTr("Add term")
+                ToolTip.text: qsTr("Append new term")
                 onClicked: group.terms.append()
             }
         }
