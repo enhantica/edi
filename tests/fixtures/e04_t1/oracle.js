@@ -1,4 +1,4 @@
-// Independent category oracle. Regenerate only with generate.py.
+// Independent source oracle; descriptive updates use adapt_descriptive_inputs.py.
 var frozen = {
   "source": "diffraction-lib 0ffba46f declarations +  §2b D-a..D-j + CLI files",
   "profiles": {
@@ -767,8 +767,13 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "cosio_d20_s1",
-        "_metadata.title": " graded start s1 of refine-cosio-d20",
-        "_metadata.description": "?"
+        "_metadata.title": "Co₂SiO₄ [Pnma] · D20 @ ILL",
+        "_metadata.description": "Olivine structure and profile refinement · Starting model 1",
+        "_metadata.purpose": "refinement",
+        "_metadata.dimensionality": "1D",
+        "_metadata.instrument": "D20",
+        "_metadata.facility": "ILL",
+        "_metadata.polarisation": "none"
       },
       "analysis": {
         "_edi.schema_version": {
@@ -806,7 +811,7 @@ var frozen = {
       "datasets": [],
       "loaderWarning": "",
       "files": {
-        "project.edi": "87d25fc29d7193ca138b24714a0afeafd7551daee12ba60919b4d097e72b2269",
+        "project.edi": "aa78efd1d198d70bcf767443289b59d2f8b062c7f739ab8906e6cf4d7b39e9e5",
         "structures/cosio.edi": "7ec9ca0fb52e1c29aa6a5aa68ca0e6a58db75ccc369a613f32d2036221994b48",
         "experiments/d20.edi": "c0ef1ce128acbcc94eda9294f6afd63fd80c059eb7f7e5f1c5981f3efb07fbca",
         "analysis/analysis.edi": "06acc049b2fdfd16e06af5c03634f364d62a2819d2bb2b0ea456cd4b79ba5061"
@@ -822,8 +827,13 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "cosio_d20_s4",
-        "_metadata.title": " graded start s4 of refine-cosio-d20",
-        "_metadata.description": "?"
+        "_metadata.title": "Co₂SiO₄ [Pnma] · D20 @ ILL",
+        "_metadata.description": "Olivine structure and profile refinement · Starting model 4",
+        "_metadata.purpose": "refinement",
+        "_metadata.dimensionality": "1D",
+        "_metadata.instrument": "D20",
+        "_metadata.facility": "ILL",
+        "_metadata.polarisation": "none"
       },
       "analysis": {
         "_edi.schema_version": {
@@ -861,7 +871,7 @@ var frozen = {
       "datasets": [],
       "loaderWarning": "",
       "files": {
-        "project.edi": "af9f1f2177a007e7979e8ef30ae768972acfe1849b1e4b8c452f3f5c3e44c216",
+        "project.edi": "323236eceba657b425f9c512f5313e0a1bf944cd90b410d492d72d45ab2a8a22",
         "structures/cosio.edi": "7ec9ca0fb52e1c29aa6a5aa68ca0e6a58db75ccc369a613f32d2036221994b48",
         "experiments/d20.edi": "6b86e5db73f55ae128b14d5ab237595530483f4543886f7e8d4012d30e05e1be",
         "analysis/analysis.edi": "06acc049b2fdfd16e06af5c03634f364d62a2819d2bb2b0ea456cd4b79ba5061"
@@ -877,8 +887,6 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "cosio_d20_scan",
-        "_metadata.title": "Co2SiO4 D20 three-temperature sequential scan",
-        "_metadata.description": " corpus project",
         "_metadata.created": "09 Sep 2026 07:33:40",
         "_metadata.last_modified": "09 Sep 2026 07:34:27",
         "_metadata.timestamp": "2026-09-09T07:34:35+00:00",
@@ -934,7 +942,14 @@ var frozen = {
           "free": false,
           "uncertainty": 0.0
         },
-        "_verbosity.fit": "short"
+        "_verbosity.fit": "short",
+        "_metadata.title": "Co₂SiO₄ [Pnma] · D20 @ ILL",
+        "_metadata.description": "Temperature scan · 3 patterns at 52.3, 299.4 and 497.4 K",
+        "_metadata.purpose": "refinement",
+        "_metadata.dimensionality": "1D",
+        "_metadata.instrument": "D20",
+        "_metadata.facility": "ILL",
+        "_metadata.polarisation": "none"
       },
       "analysis": {
         "_edi.schema_version": {
@@ -1090,7 +1105,7 @@ var frozen = {
       ],
       "loaderWarning": "Warning: unsupported _minimizer.type \"crysta (lm)\" - using crysta",
       "files": {
-        "project.edi": "d230f1049d75c2b5b01c2b848e4d9287086c69ddf191d3881fccf0e1a38064df",
+        "project.edi": "2df73c15c9ade1937ba7ab0729c7c4cf73331cf6b735ef80a40ab1a947221e31",
         "structures/cosio.edi": "1b3afde2d3a8184d6cb9789fa3fc8fa5dd026756a51e44a2cca6b80b9df8103a",
         "experiments/d20.edi": "0c97d871957341359beee76e7029f77d1bf0ed4eb8e4709733fe794fe3516a1c",
         "analysis/analysis.edi": "fde9a40134aaf6794cde3e396a01067e1018d78871c394d4646c95052416f726"
@@ -1106,8 +1121,6 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "cosio_d20_scan_162f",
-        "_metadata.title": "Co2SiO4 D20 cooling scan, 162 files",
-        "_metadata.description": "The cooling run of the D20 scan, 497.4 K down to 50.4 K",
         "_metadata.created": "09 Sep 2026 07:33:40",
         "_metadata.last_modified": "23 Sep 2026 14:06:27",
         "_metadata.timestamp": "2026-09-09T07:34:35+00:00",
@@ -1163,7 +1176,14 @@ var frozen = {
           "free": false,
           "uncertainty": 0.0
         },
-        "_verbosity.fit": "short"
+        "_verbosity.fit": "short",
+        "_metadata.title": "Co₂SiO₄ [Pnma] · D20 @ ILL",
+        "_metadata.description": "Cooling scan · 162 patterns from 497.4 to 50.4 K",
+        "_metadata.purpose": "refinement",
+        "_metadata.dimensionality": "1D",
+        "_metadata.instrument": "D20",
+        "_metadata.facility": "ILL",
+        "_metadata.polarisation": "none"
       },
       "analysis": {
         "_edi.schema_version": {
@@ -2902,7 +2922,7 @@ var frozen = {
       ],
       "loaderWarning": "",
       "files": {
-        "project.edi": "873fda837296755c4b0586a54c1b3a838044393f2136bb45e3f69a6e7b3d5bdf",
+        "project.edi": "13a55749dc2a65de3ff5d952d4009af27a5e882709c14747c59ca6aed6c6fd5b",
         "structures/cosio.edi": "4538c66b979d5783c2c3b5ba8c06494a54efeea3fc83c5488e89d5a10c0bb899",
         "experiments/d20.edi": "53ba4c8c28755334c633f23040fa411149d66294dc102862918ff461b09eca73",
         "analysis/analysis.edi": "b732d6abb6017d11a7f25d30349975e45b2ba72a25cf13f8c702376ea4d6bbf9"
@@ -2918,8 +2938,6 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "cosio_d20_scan",
-        "_metadata.title": "Co2SiO4 D20 three-temperature sequential scan",
-        "_metadata.description": " corpus project",
         "_metadata.created": "09 Sep 2026 07:33:40",
         "_metadata.last_modified": "23 Sep 2026 14:06:27",
         "_metadata.timestamp": "2026-09-09T07:34:35+00:00",
@@ -2975,7 +2993,14 @@ var frozen = {
           "free": false,
           "uncertainty": 0.0
         },
-        "_verbosity.fit": "short"
+        "_verbosity.fit": "short",
+        "_metadata.title": "Co₂SiO₄ [Pnma] · D20 @ ILL",
+        "_metadata.description": "Cooling and warming scan · 324 patterns between 50.4 and 497.4 K",
+        "_metadata.purpose": "refinement",
+        "_metadata.dimensionality": "1D",
+        "_metadata.instrument": "D20",
+        "_metadata.facility": "ILL",
+        "_metadata.polarisation": "none"
       },
       "analysis": {
         "_edi.schema_version": {
@@ -6334,7 +6359,7 @@ var frozen = {
       ],
       "loaderWarning": "",
       "files": {
-        "project.edi": "90b4453599694b4beb76074b1b1f9b2944e36b551345d6ba1b1b1e72e2b2bc1a",
+        "project.edi": "313e0481b2d7f3e0ebfd805cb6b1433c66c4ed26fb72595abefedb8646a911a2",
         "structures/cosio.edi": "4538c66b979d5783c2c3b5ba8c06494a54efeea3fc83c5488e89d5a10c0bb899",
         "experiments/d20.edi": "53ba4c8c28755334c633f23040fa411149d66294dc102862918ff461b09eca73",
         "analysis/analysis.edi": "b732d6abb6017d11a7f25d30349975e45b2ba72a25cf13f8c702376ea4d6bbf9"
@@ -6350,8 +6375,13 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "lbco_hrpt_s2",
-        "_metadata.title": " graded start s2 of refine-lbco-hrpt",
-        "_metadata.description": "?"
+        "_metadata.title": "La₀.₅Ba₀.₅CoO₃ [Pm-3m] · HRPT @ PSI",
+        "_metadata.description": "Cubic perovskite · Preferred orientation · Starting model 2",
+        "_metadata.purpose": "refinement",
+        "_metadata.dimensionality": "1D",
+        "_metadata.instrument": "HRPT",
+        "_metadata.facility": "PSI",
+        "_metadata.polarisation": "none"
       },
       "analysis": {
         "_edi.schema_version": {
@@ -6389,7 +6419,7 @@ var frozen = {
       "datasets": [],
       "loaderWarning": "",
       "files": {
-        "project.edi": "8d04523f74e1d78a1ef9948f97a84c2bddc4bced0c6b18771c1cf2298bb0263f",
+        "project.edi": "7402a40811051477f1f62fbf1506ec553ca8240d23845db54fc64b52bf3b4f08",
         "structures/lbco.edi": "1c8421e95c44cad8dce012f78e57ed2bcabd783c76443eddf0d5d16873cba5c3",
         "experiments/hrpt.edi": "5063e9ea674694f4ba201a2b7f77b985ae7a8c74111091912f6f9999e15ee2df",
         "analysis/analysis.edi": "06acc049b2fdfd16e06af5c03634f364d62a2819d2bb2b0ea456cd4b79ba5061"
@@ -6405,8 +6435,13 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "lbco_hrpt_s4",
-        "_metadata.title": " graded start s4 of refine-lbco-hrpt",
-        "_metadata.description": "?"
+        "_metadata.title": "La₀.₅Ba₀.₅CoO₃ [Pm-3m] · HRPT @ PSI",
+        "_metadata.description": "Cubic perovskite structure and profile refinement · Starting model 4",
+        "_metadata.purpose": "refinement",
+        "_metadata.dimensionality": "1D",
+        "_metadata.instrument": "HRPT",
+        "_metadata.facility": "PSI",
+        "_metadata.polarisation": "none"
       },
       "analysis": {
         "_edi.schema_version": {
@@ -6444,7 +6479,7 @@ var frozen = {
       "datasets": [],
       "loaderWarning": "",
       "files": {
-        "project.edi": "0f1ffd2f044fec55a27dc56a158827d246506e7cdceab58912c0431fe568f5c8",
+        "project.edi": "b47088ce8a1198fba99f4cca2fdee1b317230e0c66fbdc2602273344bdbab721",
         "structures/lbco.edi": "1c8421e95c44cad8dce012f78e57ed2bcabd783c76443eddf0d5d16873cba5c3",
         "experiments/hrpt.edi": "c7a093e4cdee2aeca6553b84cca81293b748caeb6270d2083b5a043724128c26",
         "analysis/analysis.edi": "06acc049b2fdfd16e06af5c03634f364d62a2819d2bb2b0ea456cd4b79ba5061"
@@ -6460,8 +6495,13 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "ncaf_wish_2bank_s3",
-        "_metadata.title": " graded start s3 of refine-ncaf-wish-2bank",
-        "_metadata.description": "?"
+        "_metadata.title": "Na₂Ca₃Al₂F₁₄ [I2₁3] · WISH @ ISIS",
+        "_metadata.description": "2 banks · Shared atomic displacement · Jorgensen profile · Starting model 3",
+        "_metadata.purpose": "refinement",
+        "_metadata.dimensionality": "1D",
+        "_metadata.instrument": "WISH",
+        "_metadata.facility": "ISIS",
+        "_metadata.polarisation": "none"
       },
       "analysis": {
         "_edi.schema_version": {
@@ -6505,7 +6545,7 @@ var frozen = {
       "datasets": [],
       "loaderWarning": "",
       "files": {
-        "project.edi": "47ff67e67248bd33c3924c458f8f973f902451c1b36c3a0257b6719d7b9ccb79",
+        "project.edi": "06de1407f4dfeb5784c0dbcb5078f3f3bb54782d9cf2c0a7af35937726e8af85",
         "structures/ncaf.edi": "f61f4922cf075908b47b4fd3b14c32f7aefef8e339d6161a5fece184396f865b",
         "experiments/wish_4_7.edi": "15a16d72f02eb93f4aa0eda13b5cfb77a05c2abcee6689821caba5b47f37636d",
         "experiments/wish_5_6.edi": "936b75830a0eb724abc277846c574328b303f95568fa74b067bfc812b3224bfc",
@@ -6522,8 +6562,13 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "ncaf_wish_3bank_s5",
-        "_metadata.title": " 3-bank NCAF WISH joint fit, FullProf-verified",
-        "_metadata.description": "?"
+        "_metadata.title": "Na₂Ca₃Al₂F₁₄ [I2₁3] · WISH @ ISIS",
+        "_metadata.description": "3 banks · Structure and profile refinement · Jorgensen–Von Dreele · Starting model 5",
+        "_metadata.purpose": "refinement",
+        "_metadata.dimensionality": "1D",
+        "_metadata.instrument": "WISH",
+        "_metadata.facility": "ISIS",
+        "_metadata.polarisation": "none"
       },
       "analysis": {
         "_edi.schema_version": {
@@ -6557,7 +6602,7 @@ var frozen = {
       "datasets": [],
       "loaderWarning": "",
       "files": {
-        "project.edi": "b0b564c63fa39e8369bd89bfba31e0288e5fd6bfb9ec737c537d7b0054c73e96",
+        "project.edi": "c898a54766c3cc7caa5b0db874b896ca507b893b918e4b83fd4c1413167e2540",
         "structures/ncaf.edi": "1f231ef2dc1ec210d95b9f52452dacb6102b7c515b6af603f205199a3aaf0e1d",
         "experiments/wish_2_9.edi": "761e2bed99259c0c0e679bdbfa5455671422ea953774f5450ba3edff6bd2200b",
         "experiments/wish_4_7.edi": "e63425979da16bed1c0cb0061700d1855a5847fb48e5ce0477bf293284cf204e",
@@ -6575,8 +6620,13 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "ncaf_wish_5bank_s5",
-        "_metadata.title": "5-bank NCAF WISH joint fit, free set and exclusions of FullProf tmpl_five_banks_p1.pcr",
-        "_metadata.description": "?"
+        "_metadata.title": "Na₂Ca₃Al₂F₁₄ [I2₁3] · WISH @ ISIS",
+        "_metadata.description": "5 banks · FullProf free parameters and exclusions · Starting model 5",
+        "_metadata.purpose": "refinement",
+        "_metadata.dimensionality": "1D",
+        "_metadata.instrument": "WISH",
+        "_metadata.facility": "ISIS",
+        "_metadata.polarisation": "none"
       },
       "analysis": {
         "_edi.schema_version": {
@@ -6617,7 +6667,7 @@ var frozen = {
       "datasets": [],
       "loaderWarning": "",
       "files": {
-        "project.edi": "95a8dc39779c96a985966891e022ae4e4b01cfc96057dbfa7414b2d873ec3e3a",
+        "project.edi": "3f486373dd1d409fbf5f1da64303b34f1ce46a1d77ea87eecf7a1637facbcf09",
         "structures/ncaf.edi": "1f231ef2dc1ec210d95b9f52452dacb6102b7c515b6af603f205199a3aaf0e1d",
         "experiments/wish_1_10.edi": "6893edefb924126beb3817b349dc4f263ff11308172d7cfff70dd9b003b6b67c",
         "experiments/wish_2_9.edi": "cf1953881302612f1dd7f659ac76026c2f75dfd929f6a846b7c0c822328eef19",
@@ -6637,8 +6687,13 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "ncaf_wish_5bank_fullprof",
-        "_metadata.title": "5-bank NCAF WISH joint fit, every value from FullProf tmpl_five_banks_p1.pcr",
-        "_metadata.description": "?"
+        "_metadata.title": "Na₂Ca₃Al₂F₁₄ [I2₁3] · WISH @ ISIS",
+        "_metadata.description": "5 banks · Structure and profile refinement from FullProf’s minimum",
+        "_metadata.purpose": "refinement",
+        "_metadata.dimensionality": "1D",
+        "_metadata.instrument": "WISH",
+        "_metadata.facility": "ISIS",
+        "_metadata.polarisation": "none"
       },
       "analysis": {
         "_edi.schema_version": {
@@ -6679,7 +6734,7 @@ var frozen = {
       "datasets": [],
       "loaderWarning": "",
       "files": {
-        "project.edi": "d305abe73a4c83fdefaed9cfe71f0d0739853328190d81cf6ac2f77252dfa136",
+        "project.edi": "21f6cc048a9dc4bcc486402c1bb1342d1be1cd95e643b6b34ab6357c991d437c",
         "structures/ncaf.edi": "44fe96e2d76e9a75815b831c6d060773e6129c8589aa5da5cd7e5b9e6b853eee",
         "experiments/wish_1_10.edi": "1daf13e94e0fde89c44822d226109b527c2bde097c33b8f20465d6e83ba7b1d5",
         "experiments/wish_2_9.edi": "7258aadc1cef7d305d237f7c5e031ee27251f0756159b61ad726cb24bfed435b",
@@ -6699,8 +6754,13 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "si_sepd_s2",
-        "_metadata.title": " graded start s2 of refine-si-sepd",
-        "_metadata.description": "?"
+        "_metadata.title": "Silicon [Fd-3m] · SEPD @ Argonne",
+        "_metadata.description": "Silicon standard · Jorgensen–Von Dreele profile · Starting model 2",
+        "_metadata.purpose": "refinement",
+        "_metadata.dimensionality": "1D",
+        "_metadata.instrument": "SEPD",
+        "_metadata.facility": "Argonne",
+        "_metadata.polarisation": "none"
       },
       "analysis": {
         "_edi.schema_version": {
@@ -6743,7 +6803,7 @@ var frozen = {
       "datasets": [],
       "loaderWarning": "",
       "files": {
-        "project.edi": "8e7e658dd7a5db4a3015299487b181f6641a229fd99dfaae88797a74e547db20",
+        "project.edi": "ac3f1d57a3bb4e2643cf402533d76d9c6927b5bcb490b39d0e58419b6210a51f",
         "structures/si.edi": "531d657005b89223d20b18265ace558c8fba96473890fb91a86e77dd80ca8f94",
         "experiments/sepd.edi": "0b1167d3ccd41b2da642e443d5beb606932eea98580cd08364e21e51a4350152",
         "analysis/analysis.edi": "9f58295877950335b95efa1716755b1247203d5be0475d9520960a0584d2b17f"
@@ -6759,8 +6819,13 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "si_sepd_s5",
-        "_metadata.title": " graded start s5 of refine-si-sepd",
-        "_metadata.description": "?"
+        "_metadata.title": "Silicon [Fd-3m] · SEPD @ Argonne",
+        "_metadata.description": "Silicon standard · Jorgensen–Von Dreele profile · Starting model 5",
+        "_metadata.purpose": "refinement",
+        "_metadata.dimensionality": "1D",
+        "_metadata.instrument": "SEPD",
+        "_metadata.facility": "Argonne",
+        "_metadata.polarisation": "none"
       },
       "analysis": {
         "_edi.schema_version": {
@@ -6803,7 +6868,7 @@ var frozen = {
       "datasets": [],
       "loaderWarning": "",
       "files": {
-        "project.edi": "3ccc4026ad79bb21bba46cb9f323175515950d9d70736e3b8ca617963da7f886",
+        "project.edi": "d977fa9bc32f98700add27b6ca71de2149fb320530e9ae8fc7c22815c2b6e96f",
         "structures/si.edi": "531d657005b89223d20b18265ace558c8fba96473890fb91a86e77dd80ca8f94",
         "experiments/sepd.edi": "4e49721b5e31d508798e5ad56db99fa37ba83bfd324df051776713402deeffc0",
         "analysis/analysis.edi": "9f58295877950335b95efa1716755b1247203d5be0475d9520960a0584d2b17f"
@@ -6819,11 +6884,16 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "pd_neut_tof_diamond_dream",
-        "_metadata.title": "Diamond, DREAM (ESS) McStas-simulated TOF data",
-        "_metadata.description": "?",
         "_metadata.created": "24 Sep 2026 18:42:48",
         "_metadata.last_modified": "24 Sep 2026 18:42:49",
-        "_metadata.timestamp": "?"
+        "_metadata.timestamp": "?",
+        "_metadata.title": "Diamond [Fd-3m] · DREAM @ ESS",
+        "_metadata.description": "McStas-simulated 90° bank · Jorgensen profile · Scale-only refinement",
+        "_metadata.purpose": "verification",
+        "_metadata.dimensionality": "1D",
+        "_metadata.instrument": "DREAM",
+        "_metadata.facility": "ESS",
+        "_metadata.polarisation": "none"
       },
       "analysis": {
         "_edi.schema_version": {
@@ -6855,9 +6925,9 @@ var frozen = {
       "datasets": [],
       "loaderWarning": "",
       "files": {
-        "project.edi": "b1cbe30308b98db16513d2927910cd116b4d777ccbc922f4621b0a3c6ae1c5ab",
+        "project.edi": "f98e3df911acb3c08111ad6d035bc36eb7a569ba9e3d6f702da04d45a12e0bef",
         "structures/diamond.edi": "57650796c81a5963ee142a26847f89d9dac23cb6bc018406c77c6141a68f2613",
-        "experiments/dream.edi": "8fd1f452e2d02e32dddef6ef8cfedd101d954092f99a2e302b203d46868c0a9c",
+        "experiments/dream.edi": "82cab19d185fb4bf3a4706995e43af5b6b60a365d1db808fda958bdaaafba249",
         "analysis/analysis.edi": "c859cfebc586252e3b1572cd54f854592d55a143b97302621120483df4733340"
       }
     },
@@ -6871,11 +6941,16 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "pd_neut_cwl_lab6_echidna_fcj",
-        "_metadata.title": "LaB6, Echidna (ANSTO), FCJ asymmetry",
-        "_metadata.description": "?",
         "_metadata.created": "26 Sep 2026 10:29:37",
         "_metadata.last_modified": "26 Sep 2026 10:29:38",
-        "_metadata.timestamp": "?"
+        "_metadata.timestamp": "?",
+        "_metadata.title": "LaB₆ [Pm-3m] · ECHIDNA @ ANSTO",
+        "_metadata.description": "TCH pseudo-Voigt with FCJ axial divergence · Scale-only refinement",
+        "_metadata.purpose": "verification",
+        "_metadata.dimensionality": "1D",
+        "_metadata.instrument": "ECHIDNA",
+        "_metadata.facility": "ANSTO",
+        "_metadata.polarisation": "none"
       },
       "analysis": {
         "_edi.schema_version": {
@@ -6907,9 +6982,9 @@ var frozen = {
       "datasets": [],
       "loaderWarning": "",
       "files": {
-        "project.edi": "bfef00c92dddfb3e04cecc03e50c63c8dd7dcb18080365fe04062641d805e1db",
+        "project.edi": "a9e92b9e43d8021cec4b797480c3077e418c57b1ddf2acc05c26bb88e5b09d02",
         "structures/lab6.edi": "ae52d392119f81a94e77ba4128ee2afc447fbcd3bdd9cdc6e2fea56eba54074d",
-        "experiments/echidna.edi": "133539d1a5bfb8611e3afbe487b7397f817aeb79e65376929ea4681cd91fdb2e",
+        "experiments/echidna.edi": "80f077806e554470a5b4943991e795c465db78266fc072a6c07f9390e8117d6b",
         "analysis/analysis.edi": "622953d9f61a1927cfdde76b6296bf57805006e83817b80cd36f851b35d8ef79"
       }
     },
@@ -6923,11 +6998,16 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "pd_neut_cwl_pbso4_beba",
-        "_metadata.title": "PbSO4, D1A (ILL), Berar-Baldinozzi asymmetry",
-        "_metadata.description": "?",
         "_metadata.created": "26 Sep 2026 10:28:28",
         "_metadata.last_modified": "26 Sep 2026 10:28:29",
-        "_metadata.timestamp": "?"
+        "_metadata.timestamp": "?",
+        "_metadata.title": "PbSO₄ [Pnma] · D1A @ ILL",
+        "_metadata.description": "Rietveld round-robin data · Bérar-Baldinozzi asymmetry refinement",
+        "_metadata.purpose": "refinement",
+        "_metadata.dimensionality": "1D",
+        "_metadata.instrument": "D1A",
+        "_metadata.facility": "ILL",
+        "_metadata.polarisation": "none"
       },
       "analysis": {
         "_edi.schema_version": {
@@ -6959,9 +7039,9 @@ var frozen = {
       "datasets": [],
       "loaderWarning": "",
       "files": {
-        "project.edi": "7dc0e51c1ed6782a661c0f2223d1ee751cd09aaed4fc86f00a2f9bf94cc60dc1",
+        "project.edi": "91943d913a9800c06acbcb7bd3c2a8782996fddff8acbded15f2ab01d6b55a09",
         "structures/pbso4.edi": "d14b19ea6dc7f6f3a129fa5fb3538f7413fc3cb727950c2f70fb9e2e6e3f2520",
-        "experiments/d1a.edi": "f02575053ccb68d9047209eada95ef0042fc632ffdef67024c5bd1198d5a8ddb",
+        "experiments/d1a.edi": "f494c2665e6d1a9986165650e677af2214e5fa63a797ce3ad15e8599064ce2e2",
         "analysis/analysis.edi": "494db6eaa33dd5b4e18e6fc2d28282486b2d9bfc50a8e52098e6ad34422062fd"
       }
     },
@@ -6975,7 +7055,13 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "pd_neut_cwl_yap_spodi_3k",
-        "_metadata.title": "YAlO3 and Al2O3, SPODI (FRM II), two phases"
+        "_metadata.title": "YAlO₃ [Pbnm] / Al₂O₃ [R-3c] · SPODI @ FRM II",
+        "_metadata.description": "2 phases at 3 K · Shared Bérar-Baldinozzi profile · Cylinder absorption",
+        "_metadata.purpose": "refinement",
+        "_metadata.dimensionality": "1D",
+        "_metadata.instrument": "SPODI",
+        "_metadata.facility": "FRM II",
+        "_metadata.polarisation": "none"
       },
       "analysis": {
         "_edi.schema_version": {
@@ -6992,7 +7078,8 @@ var frozen = {
           "value": 1e-08,
           "free": false,
           "uncertainty": 0.0
-        }
+        },
+        "_fitting_mode.type": "single"
       },
       "structures": [
         {
@@ -7030,11 +7117,11 @@ var frozen = {
       "datasets": [],
       "loaderWarning": "Warning: structures[Al2O3].atom_sites[Al1].adp_iso = -0.13591 is outside its admissible range [0, 10]; loaded as saved (a fit may leave a value there)",
       "files": {
-        "project.edi": "20ac0d91bda14553a8c7b18ad5af5bca90557b10c20b068227dbe783685631ae",
+        "project.edi": "654e819625fe2f4f8681a3b6e9e96350a9ad2ef1d3d30bd94f43eab38a32b40e",
         "structures/Al2O3.edi": "f5d727bf0362dae6abfb4c2503669e83085bc897cbb09db913b359eb37999472",
         "structures/YAlO3.edi": "7a4c6c27b6314bca5d179350c2ee75e1e27565a6c59629c17ed11662e29a2ccb",
-        "experiments/spodi.edi": "f89b143912601bef9a62b3f61c6ff25c6988759785333e7186244c130b3d5e62",
-        "analysis/analysis.edi": "77ef8e7ab8edb6b3f1addcde5a59c0c3b0f8e7cba8e0a4f116b30b4792210066"
+        "experiments/spodi.edi": "524a651bf9680b706da031ee998f1f8be52d6c1e2bf9038124ee89a5d3890279",
+        "analysis/analysis.edi": "8cae35fd43bf1ae284f382fb2156e824f67d8a4ee2bd5ad0e47a5ae21785506f"
       }
     },
     {
@@ -7047,8 +7134,6 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "latp_scan",
-        "_metadata.title": "LATP synchrotron X-ray sequential scan, three phases",
-        "_metadata.description": "Li1.3Al0.3Ti1.7(PO4)3 with two AlPO4 phases; model from latp.pcr (FullProf chi2 7.05 on s13_150_z20_xrd_sum.dat)",
         "_metadata.created": "07 Oct 2026 11:30:00",
         "_metadata.last_modified": "07 Oct 2026 11:30:00",
         "_metadata.timestamp": "2026-10-07T09:30:00+00:00",
@@ -7104,7 +7189,13 @@ var frozen = {
           "free": false,
           "uncertainty": 0.0
         },
-        "_verbosity.fit": "short"
+        "_verbosity.fit": "short",
+        "_metadata.title": "LATP [R-3c] / AlPO₄ [C222₁] / AlPO₄ [P6₃mc] · Unknown instrument @ SNBL",
+        "_metadata.description": "3 phases · 4 synchrotron patterns · Linked displacement parameters",
+        "_metadata.purpose": "refinement",
+        "_metadata.dimensionality": "1D",
+        "_metadata.instrument": "?",
+        "_metadata.facility": "SNBL"
       },
       "analysis": {
         "_edi.schema_version": {
@@ -7298,7 +7389,7 @@ var frozen = {
       ],
       "loaderWarning": "",
       "files": {
-        "project.edi": "94e30e9243ea30e9e0eead4b79584fa5f882b95081828cd511388034ab35c46b",
+        "project.edi": "de470e851516df1846cbb8ebbd10300ebb1c859a29bcaaba821d57c6dd4e7cea",
         "structures/alpo4_c2221.edi": "38397c4609196c2aa08d24019658331d13d3592249d9f5a9efc6f105b280af65",
         "structures/alpo4_p63mc.edi": "96a589ebce83fbfddb3f05b79c0888bab799264fd37965fe7c65522eaf56e4c2",
         "structures/latp.edi": "43c03a58b8813d99e0196532745e7f8e00e94fd9fd1d00cc2844f21e09ba930d",
@@ -7316,12 +7407,17 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "pd_neut_tof_fe_pseudo_voigt",
-        "_metadata.title": "Fe (ferrite), BEER (ESS), TOF pseudo-Voigt",
-        "_metadata.description": "?",
         "_metadata.created": "26 Sep 2026 10:28:28",
         "_metadata.last_modified": "26 Sep 2026 10:28:29",
         "_metadata.timestamp": "?",
-        "_rendering_plot.type": "plotly"
+        "_rendering_plot.type": "plotly",
+        "_metadata.title": "Iron [Im-3m] · BEER @ ESS",
+        "_metadata.description": "90° bank · Non-convoluted pseudo-Voigt · Scale-only refinement",
+        "_metadata.purpose": "verification",
+        "_metadata.dimensionality": "1D",
+        "_metadata.instrument": "BEER",
+        "_metadata.facility": "ESS",
+        "_metadata.polarisation": "none"
       },
       "analysis": {
         "_edi.schema_version": {
@@ -7354,9 +7450,9 @@ var frozen = {
       "datasets": [],
       "loaderWarning": "Warning: unsupported _calculator.type \"cryspy\" - using crysta\nWarning: unsupported _minimizer.type \"bumps (lm)\" - using crysta\nWarning: unsupported _rendering_plot.type \"plotly\" - using auto",
       "files": {
-        "project.edi": "983169b6363c73f9aedd28527282043c545f532443849b42a3c9f478074aa9df",
+        "project.edi": "95296a0d13ebb570f256c228a5e1663c886b5eb53fafe60534ab39c891a78735",
         "structures/fe.edi": "9ee23e6fff7c5eb544677380a5c3176ee7425e3e790cbe7b50dca77472a16c29",
-        "experiments/beer.edi": "21dcae63234608537b5d9f17a25e2d0554978df3f39d8476660a382e965739dd",
+        "experiments/beer.edi": "830696bd336668d52a2d0358fae8748d7447a2e01fb21df34953a4475ab0607f",
         "analysis/analysis.edi": "7936851a579a0171a425595f5090909d327362a0da203615725f2f2ceacbf642"
       }
     },
@@ -7370,8 +7466,13 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "pd_neut_tof_cecoal_polaris_chebyshev",
-        "_metadata.title": "CeCoAl3, POLARIS (ISIS), Chebyshev background",
-        "_metadata.description": "?"
+        "_metadata.title": "CeCoAl₃ [Pmma] · POLARIS @ ISIS",
+        "_metadata.description": "Structure and TOF profile refinement · 24-term Chebyshev background",
+        "_metadata.purpose": "refinement",
+        "_metadata.dimensionality": "1D",
+        "_metadata.instrument": "POLARIS",
+        "_metadata.facility": "ISIS",
+        "_metadata.polarisation": "none"
       },
       "analysis": {
         "_edi.schema_version": {
@@ -7414,7 +7515,7 @@ var frozen = {
       "datasets": [],
       "loaderWarning": "",
       "files": {
-        "project.edi": "061021e84b5f917bc48b283c88f624277c87242c04d42a6034169d0cc7092a0f",
+        "project.edi": "b96f7a0f77fc7266fb1bbd4782508a55e43aee425378168ab9e269109973a8bd",
         "structures/cecoal.edi": "f6939b1d7fe11a4b7e8451ec9a4acb468c21522ef4a29af3995b86758e910616",
         "experiments/polaris.edi": "afce3099188fcfab304513b8aaae8cf32cffc4f9c3177df8b7f3dbbd5b87adf0",
         "analysis/analysis.edi": "603772c6d4c286e53eb8554e6d2be4843c8f560cb942fec808bb8ca138eb993f"
@@ -7430,8 +7531,13 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "pd_neut_tof_ceo2_pearl_polynomial",
-        "_metadata.title": "CeO2, PEARL (ISIS), polynomial background",
-        "_metadata.description": "?"
+        "_metadata.title": "CeO₂ [Fm-3m] · PEARL @ ISIS",
+        "_metadata.description": "NBS SRM 674a standard · TOF profile refinement · 6-term polynomial background",
+        "_metadata.purpose": "refinement",
+        "_metadata.dimensionality": "1D",
+        "_metadata.instrument": "PEARL",
+        "_metadata.facility": "ISIS",
+        "_metadata.polarisation": "none"
       },
       "analysis": {
         "_edi.schema_version": {
@@ -7474,7 +7580,7 @@ var frozen = {
       "datasets": [],
       "loaderWarning": "",
       "files": {
-        "project.edi": "3ae471fd97bb60f4876bffef1a05a9df3ac28556f5f2183088b01c68127e9fec",
+        "project.edi": "44d95712746310b2fe328c448521383ad2f270062175750f985a61d63bc4f3e8",
         "structures/ceo2.edi": "aedac6b487103b77e50f106e073b5701214efed16a787a9832391ce2c3b4b79c",
         "experiments/pearl.edi": "a0ecad005d7d2b5729a2822b8cda98b8bfffae586361491dcbc5f8454ca69dd6",
         "analysis/analysis.edi": "603772c6d4c286e53eb8554e6d2be4843c8f560cb942fec808bb8ca138eb993f"
@@ -7490,8 +7596,13 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "pd_neut_cwl_lab6_11b_echidna_tch_fcj",
-        "_metadata.title": "LaB6 (11B), ECHIDNA (ANSTO), TCH x FCJ, polynomial background",
-        "_metadata.description": "?"
+        "_metadata.title": "LaB₆ [Pm-3m] · ECHIDNA @ ANSTO",
+        "_metadata.description": "¹¹B-enriched standard · TCH × FCJ · Absorption and polynomial background",
+        "_metadata.purpose": "refinement",
+        "_metadata.dimensionality": "1D",
+        "_metadata.instrument": "ECHIDNA",
+        "_metadata.facility": "ANSTO",
+        "_metadata.polarisation": "none"
       },
       "analysis": {
         "_edi.schema_version": {
@@ -7534,7 +7645,7 @@ var frozen = {
       "datasets": [],
       "loaderWarning": "",
       "files": {
-        "project.edi": "0f0754b37ba56b1ce05b6a5e4e545f91f5ef8b78b9b6d840fe01daefb9d6f839",
+        "project.edi": "80af9044b177f3f28acd9d19322a1694b73375080dfab72f2c870925a6e782aa",
         "structures/lab6.edi": "06d8ee9eadd4dd9c5f72aed4f264446172a15f81a0571e4a02adfba6156a53fd",
         "experiments/echidna.edi": "6c9fc1b2b342f03c4b15ed7fb41f6afe9f9029ec1b3f05eaa6348e526d70c72e",
         "analysis/analysis.edi": "603772c6d4c286e53eb8554e6d2be4843c8f560cb942fec808bb8ca138eb993f"
@@ -7550,11 +7661,15 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "pd_xray_cwl_lif_single",
-        "_metadata.title": "LiF, Cu K-alpha1 X-ray, polarization against FullProf",
-        "_metadata.description": "?",
         "_metadata.created": "02 Oct 2026 14:28:55",
         "_metadata.last_modified": "02 Oct 2026 14:28:56",
-        "_metadata.timestamp": "?"
+        "_metadata.timestamp": "?",
+        "_metadata.title": "LiF [Fm-3m] · Calculated reference",
+        "_metadata.description": "Cu Kα₁ FullProf reference · Monochromator correction refinement",
+        "_metadata.purpose": "verification",
+        "_metadata.dimensionality": "1D",
+        "_metadata.instrument": "?",
+        "_metadata.facility": "?"
       },
       "analysis": {
         "_edi.schema_version": {
@@ -7586,7 +7701,7 @@ var frozen = {
       "datasets": [],
       "loaderWarning": "",
       "files": {
-        "project.edi": "efa38eadd5af94f919ccb2c5ba29cd7f775bd5bf01954ac6e5d87fdfa5958866",
+        "project.edi": "7d2e40fbcd7071804f6301006785f843e3f0396a6fe3d81ebf7aa20f3e558858",
         "structures/lif.edi": "b68e864053c85ea3bb0e7a14b37131c7319cd2cd047b89d4dc4d8b30ff4033fe",
         "experiments/cu_ka.edi": "5be14a0525ce8a09124e9f1beaa52fc12f3b49d9bf8201f19b6ac2c68948de5b",
         "analysis/analysis.edi": "76917b3672c7268e7fee9fb901c0ed8ffdd5ffcf29c6fc1083d470ad5b501e72"
@@ -7602,7 +7717,13 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "beer_mcstas",
-        "_metadata.title": "Ferrite and austenite, BEER (ESS, McStas), two phases in two banks"
+        "_metadata.title": "Ferrite [Im-3m] / Austenite [Fm-3m] · BEER @ ESS",
+        "_metadata.description": "2 iron phases · 2 McStas-simulated banks · Separate phase scales",
+        "_metadata.purpose": "refinement",
+        "_metadata.dimensionality": "1D",
+        "_metadata.instrument": "BEER",
+        "_metadata.facility": "ESS",
+        "_metadata.polarisation": "none"
       },
       "analysis": {
         "_edi.schema_version": {
@@ -7660,7 +7781,7 @@ var frozen = {
       "datasets": [],
       "loaderWarning": "Warning: unsupported _calculator.type \"cryspy\" - using crysta\nWarning: unsupported _minimizer.type \"lmfit (leastsq)\" - using crysta",
       "files": {
-        "project.edi": "d190c5040e2190f0e76c223373752abd50eaf6302d266a7237df6a019c1c3c9e",
+        "project.edi": "649381af16dcc18e541345aa267e75b0115da8f806fce83345bc13548213470e",
         "structures/austenite.edi": "6b3eb1dab5b142687ed34263f04986ab3474bedfcaf9ce0d0ee7831f69929c93",
         "structures/ferrite.edi": "500fcf2007cefefb4b4477e10006596520d8e1cb8e61945d0791ff14ef27521c",
         "experiments/expt_n2.edi": "6e8f4ac836219d4ba503ff5583823b1d12eb523f788e16c03d86b2b5d2bacdda",
@@ -7678,11 +7799,16 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "pd_neut_cwl_y2o3_beta_adp",
-        "_metadata.title": "Y2O3, beta ADPs, scale against FullProf",
-        "_metadata.description": "?",
         "_metadata.created": "06 Oct 2026 16:43:16",
         "_metadata.last_modified": "06 Oct 2026 16:43:17",
-        "_metadata.timestamp": "?"
+        "_metadata.timestamp": "?",
+        "_metadata.title": "Y₂O₃ [Ia-3] · Unknown instrument",
+        "_metadata.description": "Symmetry-constrained anisotropic β tensors · Scale-only refinement",
+        "_metadata.purpose": "verification",
+        "_metadata.dimensionality": "1D",
+        "_metadata.instrument": "?",
+        "_metadata.facility": "?",
+        "_metadata.polarisation": "none"
       },
       "analysis": {
         "_edi.schema_version": {
@@ -7714,9 +7840,9 @@ var frozen = {
       "datasets": [],
       "loaderWarning": "",
       "files": {
-        "project.edi": "539e990301b80e0b83d75d930100d367c10d60aa79458fbe0dd678753e5aa95c",
+        "project.edi": "eb50aaa2bdec7eacb505b37b1a63bcd6066031d38008e2b14b1d1addcf688628",
         "structures/y2o3.edi": "dcacdbe2ddd6490b390aa7b4b36eeaf7e09d43b62f6b31b25a52121ffa295382",
-        "experiments/y2o3.edi": "403bcc7ce6bcc112b9dc5d4c612b61389667c0b80c7163e00c790a19645b533a",
+        "experiments/y2o3.edi": "caa9b49442b995beef7b830e8709e1b62dfd015bc140fdf7a96c4719b62ed72d",
         "analysis/analysis.edi": "64a5254af5f390f3c3a49e84affc9bd4a6a074d2fe50ea5f97e5864c444c7f71"
       }
     }
@@ -8512,7 +8638,7 @@ var frozen = {
     {
       "project": "docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project",
       "experiment": "echidna",
-      "sha256": "133539d1a5bfb8611e3afbe487b7397f817aeb79e65376929ea4681cd91fdb2e",
+      "sha256": "80f077806e554470a5b4943991e795c465db78266fc072a6c07f9390e8117d6b",
       "peakType": "cwl-tch-pseudo-voigt-fcj",
       "mode": "cwl",
       "peakFields": [
@@ -8542,7 +8668,6 @@ var frozen = {
           "free": false,
           "uncertainty": 0.0
         },
-        "_experiment_type.beam_mode": "constant wavelength",
         "_scattering_source.neutron_scattering_length": "sears1992",
         "_peak.broad_gauss_u": {
           "value": 0.143431,
@@ -8596,7 +8721,11 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_absorption.type": "none",
-        "_background.type": "line-segment"
+        "_background.type": "line-segment",
+        "_experiment_type.beam_mode": "constant wavelength",
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.radiation_probe": "neutron",
+        "_experiment_type.scattering_type": "bragg"
       },
       "loops": {}
     },
@@ -8933,7 +9062,7 @@ var frozen = {
     {
       "project": "docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project",
       "experiment": "d1a",
-      "sha256": "f02575053ccb68d9047209eada95ef0042fc632ffdef67024c5bd1198d5a8ddb",
+      "sha256": "f494c2665e6d1a9986165650e677af2214e5fa63a797ce3ad15e8599064ce2e2",
       "peakType": "cwl-pseudo-voigt-berar-baldinozzi",
       "mode": "cwl",
       "peakFields": [
@@ -8966,7 +9095,6 @@ var frozen = {
           "free": false,
           "uncertainty": 0.0
         },
-        "_experiment_type.beam_mode": "constant wavelength",
         "_scattering_source.neutron_scattering_length": "sears1992",
         "_calculator.type": "crysta",
         "_peak.broad_gauss_u": {
@@ -9036,14 +9164,18 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_absorption.type": "none",
-        "_background.type": "line-segment"
+        "_background.type": "line-segment",
+        "_experiment_type.beam_mode": "constant wavelength",
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.radiation_probe": "neutron",
+        "_experiment_type.scattering_type": "bragg"
       },
       "loops": {}
     },
     {
       "project": "docs/user/cli/pd-neut-cwl_y2o3_beta-adp/project",
       "experiment": "y2o3",
-      "sha256": "403bcc7ce6bcc112b9dc5d4c612b61389667c0b80c7163e00c790a19645b533a",
+      "sha256": "caa9b49442b995beef7b830e8709e1b62dfd015bc140fdf7a96c4719b62ed72d",
       "peakType": "cwl-tch-pseudo-voigt",
       "mode": "cwl",
       "peakFields": [
@@ -9071,7 +9203,6 @@ var frozen = {
           "free": false,
           "uncertainty": 0.0
         },
-        "_experiment_type.beam_mode": "constant wavelength",
         "_scattering_source.neutron_scattering_length": "sears1992",
         "_calculator.type": "crysta",
         "_peak.broad_gauss_u": {
@@ -9116,14 +9247,18 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_absorption.type": "none",
-        "_background.type": "line-segment"
+        "_background.type": "line-segment",
+        "_experiment_type.beam_mode": "constant wavelength",
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.radiation_probe": "neutron",
+        "_experiment_type.scattering_type": "bragg"
       },
       "loops": {}
     },
     {
       "project": "docs/user/cli/pd-neut-cwl_yap-spodi_3k/project",
       "experiment": "spodi",
-      "sha256": "f89b143912601bef9a62b3f61c6ff25c6988759785333e7186244c130b3d5e62",
+      "sha256": "524a651bf9680b706da031ee998f1f8be52d6c1e2bf9038124ee89a5d3890279",
       "peakType": "cwl-pseudo-voigt-berar-baldinozzi",
       "mode": "cwl",
       "peakFields": [
@@ -9156,7 +9291,6 @@ var frozen = {
           "free": false,
           "uncertainty": 0.0
         },
-        "_experiment_type.beam_mode": "constant wavelength",
         "_scattering_source.neutron_scattering_length": "sears1992",
         "_instrument.setup_wavelength": {
           "value": 1.54816,
@@ -9230,7 +9364,11 @@ var frozen = {
           "free": false,
           "uncertainty": 0.0
         },
-        "_background.type": "line-segment"
+        "_background.type": "line-segment",
+        "_experiment_type.beam_mode": "constant wavelength",
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.radiation_probe": "neutron",
+        "_experiment_type.scattering_type": "bragg"
       },
       "loops": {}
     },
@@ -9582,7 +9720,7 @@ var frozen = {
     {
       "project": "docs/user/cli/pd-neut-tof_diamond-dream_basic/project",
       "experiment": "dream",
-      "sha256": "8fd1f452e2d02e32dddef6ef8cfedd101d954092f99a2e302b203d46868c0a9c",
+      "sha256": "82cab19d185fb4bf3a4706995e43af5b6b60a365d1db808fda958bdaaafba249",
       "peakType": "tof-jorgensen",
       "mode": "tof",
       "peakFields": [
@@ -9719,14 +9857,18 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_absorption.type": "none",
-        "_background.type": "line-segment"
+        "_background.type": "line-segment",
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.beam_mode": "time-of-flight",
+        "_experiment_type.radiation_probe": "neutron",
+        "_experiment_type.scattering_type": "bragg"
       },
       "loops": {}
     },
     {
       "project": "docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project",
       "experiment": "beer",
-      "sha256": "21dcae63234608537b5d9f17a25e2d0554978df3f39d8476660a382e965739dd",
+      "sha256": "830696bd336668d52a2d0358fae8748d7447a2e01fb21df34953a4475ab0607f",
       "peakType": "tof-pseudo-voigt",
       "mode": "tof",
       "peakFields": [
@@ -9866,7 +10008,11 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_absorption.type": "none",
-        "_background.type": "line-segment"
+        "_background.type": "line-segment",
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.beam_mode": "time-of-flight",
+        "_experiment_type.radiation_probe": "neutron",
+        "_experiment_type.scattering_type": "bragg"
       },
       "loops": {}
     },

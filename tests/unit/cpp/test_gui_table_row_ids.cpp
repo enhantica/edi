@@ -9,7 +9,7 @@
 
 namespace {
 template <class Row>
-void ordinal_admission() {
+void ordinal_admission(Row*) {
     edi::ItemVec<Row> rows;
     auto generated = std::make_shared<Row>();
     auto explicit_one = std::make_shared<Row>();
@@ -84,8 +84,8 @@ void alias(edi::Project& project, const char* id, const char* target) {
 }  // namespace
 
 TEST_CASE("GUI table stored IDs reserve explicit keys and refuse changes atomically") {
-    ordinal_admission<edi::LineSegment>();
-    ordinal_admission<edi::ExcludedRegion>();
+    ordinal_admission(static_cast<edi::LineSegment*>(nullptr));
+    ordinal_admission(static_cast<edi::ExcludedRegion*>(nullptr));
 }
 
 TEST_CASE("GUI exclusion bounds remain aligned with editable IDs and copy independently") {

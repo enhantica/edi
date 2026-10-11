@@ -241,7 +241,7 @@ def test_reserved_alias_names_are_refused(tmp_path, name):
 
 
 def test_chain_is_topological_and_direct_target_writes_are_replaced(tmp_path):
-    aliases = [*ALIASES, ('c', 'bank.background.2.intensity')]
+    aliases = [*ALIASES, ('c', 'bank.background.right.intensity')]
     project = engine.Project.load(MATERIALIZE(tmp_path, aliases, ['c = 3*b + 2', 'b = 2*a + 1']))
     a, b = pair(project)
     for value in (0.41, 0.19, 0.41):
@@ -355,19 +355,19 @@ def test_quoted_loops_round_trip_and_default_id_is_written(tmp_path):
 
 
 def test_background_address_uses_row_id_after_reordering(tmp_path):
-    aliases = [('a', 'bank.background.2.intensity'), ('b', 'phase.atom_site.B.adp_iso')]
+    aliases = [('a', 'bank.background.right.intensity'), ('b', 'phase.atom_site.B.adp_iso')]
     directory = MATERIALIZE(tmp_path, aliases, ['b = a/10'])
     path = directory / 'experiments/bank.edi'
     project = engine.Project.load(directory)
     project.analysis.calculate()
     assert pair(project)[1].value == pytest.approx(0.9), (
-        'the second background ordinal must resolve despite nonordinal declared ids'
+        'the declared background key must resolve at its supplied row'
     )
     path.write_text(path.read_text().replace('left 20 3\nright 100 9', 'right 100 9\nleft 20 3'))
     project = engine.Project.load(directory)
     project.analysis.calculate()
-    assert pair(project)[1].value == pytest.approx(0.3), (
-        'background references must follow one-based row ordinals after reordering'
+    assert pair(project)[1].value == pytest.approx(0.9), (
+        'background references must follow their stored key after row reordering'
     )
 
 
@@ -375,9 +375,13 @@ def test_projects_without_constraints_keep_the_pre_feature_writer_regression_pin
     fixture = ROOT / 'tests/fixtures/constraint_expressions'
     snapshot = runpy.run_path(str(fixture / 'freeze_unconstrained.py'))['snapshot']
     expected = json.loads((fixture / 'unconstrained_regression.json').read_text())
-    project = engine.Project.load(MATERIALIZE(tmp_path / 'input'))
+    from tests.fixtures.table_display.stored_id_bytes import ordinal_copy  # noqa: PLC0415
+
+    source = MATERIALIZE(tmp_path / 'input')
+    project = engine.Project.load(source)
     project.save_as(tmp_path / 'saved')
-    assert snapshot(tmp_path / 'saved') == expected, (
+    legacy = ordinal_copy(source, tmp_path / 'saved', tmp_path / 'ordinal-pin')
+    assert snapshot(legacy) == expected, (
         'without relation loops saved files must retain their pre-feature regression bytes, '
         'normalizing only the two metadata clock fields'
     )

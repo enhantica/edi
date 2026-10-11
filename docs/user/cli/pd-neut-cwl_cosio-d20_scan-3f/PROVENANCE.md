@@ -43,3 +43,9 @@ again, as its crysta source does: Co1 Biso is refined and Co2 Biso follows it, w
 refined alone. The pins moved: 52.345 K 4.784745 → 4.824059, 299.394 K 4.382172 → 4.428567, 497.379 K 3.887590 →
 3.888231 (4, 6 and 12 iterations; the last was 10), measured by `tools/checks/cli_projects.py` against crysta
 `91a319e2`, `OMP_NUM_THREADS=1`. `n_free` did not move.
+
+## Catalogue metadata
+
+`project/project.edi` carries the app's example metadata (ADR-0031, the owner's enrichment of 2026-10-09): its
+title and description name the sample and scan, and `_metadata.purpose`, `.dimensionality`, `.instrument`,
+`.facility` and `.polarisation` were added. Every other file is unchanged.

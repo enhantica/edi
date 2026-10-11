@@ -112,7 +112,7 @@ void ParameterFilterModel::refreshCategories() {
         }
     }
     QStringList categories;
-    QVariantList groups;
+    QList<CategoryGroup> groups;
     const auto countGroup = [&](const QString& key) {
         int count = 0;
         for (const Row& row : rows) {
@@ -124,8 +124,7 @@ void ParameterFilterModel::refreshCategories() {
         const int count = countGroup(key);
         if (count == 0 && !key.isEmpty()) return;
         categories.append(key);
-        groups.append(QVariantMap{{"key", key}, {"title", title + QStringLiteral(" (%1)").arg(count)},
-                                  {"icon", icon}, {"datablock", datablock}, {"count", count}});
+        groups.append(CategoryGroup{key, title + QStringLiteral(" (%1)").arg(count), icon, datablock, count});
     };
     // A subset must narrow its category; otherwise its second menu entry adds no choice.
     const auto addSubset = [&](const QString& parent, const QString& key, const QString& title, const QString& icon) {

@@ -15,8 +15,9 @@ QtObject {
         id: recentSettings
         location: EaGlobals.Vars.settingsFile
         category: "Edi.RecentProjects"
-        property string paths: "[]"
-        onPathsChanged: recent.refresh()
+        // The project directories, most recent first.
+        property list<string> projectPaths: []
+        onProjectPathsChanged: recent.refresh()
     }
     property Connections sessionConnection: Connections {
         target: Session
@@ -26,12 +27,7 @@ QtObject {
     }
 
     function paths(): list<string> {
-        try {
-            const saved = JSON.parse(recentSettings.paths);
-            return Array.isArray(saved) ? saved.filter(path => typeof path === "string" && path.length > 0) : [];
-        } catch (error) {
-            return [];
-        }
+        return recentSettings.projectPaths.filter(path => path.length > 0);
     }
     // Rows are updated in place, so a project that goes missing or comes back changes the cell already shown.
     function refresh() {
@@ -54,7 +50,7 @@ QtObject {
             return;
         const saved = paths().filter(item => item !== path);
         saved.unshift(path);
-        recentSettings.paths = JSON.stringify(saved);
+        recentSettings.projectPaths = saved;
         refresh();
     }
     function forget(index: int) {
@@ -62,7 +58,7 @@ QtObject {
         if (index < 0 || index >= saved.length)
             return;
         saved.splice(index, 1);
-        recentSettings.paths = JSON.stringify(saved);
+        recentSettings.projectPaths = saved;
         refresh();
     }
     Component.onCompleted: {
