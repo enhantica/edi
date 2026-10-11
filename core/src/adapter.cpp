@@ -1999,7 +1999,7 @@ void save_project_via_crysta(const Project& model, const std::string& directory)
             copy.source_kind = row->source_kind.value();
             copy.parameter_unique_name_i = row->parameter_unique_name_i.value();
             copy.parameter_unique_name_j = row->parameter_unique_name_j.value();
-            copy.correlation = row->correlation.get();
+            copy.correlation = row->correlation.value();
             copy.file_path = row->file_path.value();
         }
         to.correlations.assign(rows);
@@ -3585,51 +3585,19 @@ void publish_fit_state(Project& project, crysta::Project& converted) {
     project.refresh_calculated_pattern();  // The pattern follows the model it describes
 }
 
-// The free parameters' correlations from the fit's covariance (diffraction-lib analysis.py
-// `_correlation_matrix_from_covariance` and `_store_correlation_projection`): r_ij = C_ij / sqrt(C_ii C_jj) for
-// every pair of the upper triangle, by unique name in the fit's column order, clipped to [-1, 1]. None when a
-// variance is not positive or a coefficient is not finite (diffraction-lib then stores no matrix), or when a column
-// does not name a model parameter.
-template <typename Resolve>
-std::vector<FitParameterCorrelation> fit_correlations(Project& project, const crysta::FitResultBase& result,
-                                                      const Resolve& resolve) {
-    const std::size_t n = result.covariance_labels.size();
-    if (n < 2 || result.covariance.size() != n * n) {
-        return {};
+// The fit's parameter correlations as crysta computes them over the project it fitted (crysta::fit_correlations:
+// diffraction-lib's pairs from the covariance, by unique name, in crysta's shortest form), as edi's rows. One
+// computation serves the app, Python and both CLIs.
+std::vector<FitParameterCorrelation> crysta_correlations(crysta::Project& fitted, const crysta::FitResultBase& result) {
+    std::vector<FitParameterCorrelation> rows;
+    for (const crysta::FitParameterCorrelation& pair : crysta::fit_correlations(fitted, result)) {
+        FitParameterCorrelation& row = rows.emplace_back();
+        row.source_kind = pair.source_kind.get();
+        row.parameter_unique_name_i = pair.parameter_unique_name_i.get();
+        row.parameter_unique_name_j = pair.parameter_unique_name_j.get();
+        row.correlation = pair.correlation.get();
     }
-    std::map<const Parameter*, std::string> names;
-    for (const NamedSlot& slot : named_slots(project)) {
-        names.emplace(slot.parameter, slot.unique_name);
-    }
-    std::vector<std::string> unique_names;
-    std::vector<double> scales;
-    for (std::size_t i = 0; i < n; ++i) {
-        const std::optional<detail::ResolvedParameter> resolved = resolve(result.covariance_labels[i]);
-        const auto found = resolved ? names.find(resolved->target) : names.end();
-        const double variance = result.covariance[i * n + i];
-        if (found == names.end() || !(variance > 0.0) || !std::isfinite(variance)) {
-            return {};
-        }
-        unique_names.push_back(found->second);
-        scales.push_back(std::sqrt(variance));
-    }
-    std::vector<FitParameterCorrelation> correlations;
-    correlations.reserve(n * (n - 1) / 2);
-    for (std::size_t i = 0; i + 1 < n; ++i) {
-        for (std::size_t j = i + 1; j < n; ++j) {
-            const double correlation = result.covariance[i * n + j] / (scales[i] * scales[j]);
-            if (!std::isfinite(correlation)) {
-                return {};
-            }
-            FitParameterCorrelation row;
-            row.source_kind = std::string("deterministic");
-            row.parameter_unique_name_i = unique_names[i];
-            row.parameter_unique_name_j = unique_names[j];
-            row.correlation = std::clamp(correlation, -1.0, 1.0);
-            correlations.push_back(row);
-        }
-    }
-    return correlations;
+    return rows;
 }
 
 // The fit's result as the project records it (`_fit_result`, diffraction-lib's names, and each bank's share
@@ -3948,9 +3916,7 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
             crysta::write_fit_result_into(project, result);  // crysta completes the dependents
             publish_fit_state(*this, project);
             record_fit_result(*this, outcome, considered,
-                              fit_correlations(*this, result, [this](const std::string& label) {
-                                  return detail::resolve_project_label(*this, experiment(), label);
-                              }));
+                              crysta_correlations(project, result));
             return outcome;
         };
         if (phases) {
@@ -4319,10 +4285,10 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
             };
         const std::filesystem::path ledger_path = project_root / "analysis" / "results-provenance.csv";
         auto completed_files = std::make_shared<std::size_t>(0);
-        // Each file's event carries its own fit result, so its correlations are taken from its covariance as a
-        // single fit's are, against the template experiment its labels name.
+        // Each file's event carries its own fit result, so its correlations are crysta's from its covariance, as a
+        // single fit's are, over the template project its labels name.
         const crysta::FileResultCallback engine_file_result =
-            [this, file_history, last_file_history, ledger_path, completed_files, &on_file_complete](
+            [this, file_history, last_file_history, ledger_path, completed_files, &on_file_complete, &cproject](
                 const std::vector<std::string>& row, const crysta::FitResultBase& file_result) {
                 ++*completed_files;
                 std::swap(*last_file_history, *file_history);
@@ -4333,10 +4299,7 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
                         // The driver wrote this file's ledger row just before its results row and waits
                         // here, so the ledger's last line is this file's.
                         record->termination = ledger_termination(ledger_path, row.empty() ? std::string() : row[0]);
-                        record->correlations =
-                            fit_correlations(*this, file_result, [this](const std::string& label) {
-                                return detail::resolve_project_label(*this, experiment(), label);
-                            });
+                        record->correlations = crysta_correlations(cproject, file_result);
                         on_file_complete(*record);
                     }
                 }
@@ -4612,9 +4575,7 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
             crysta::write_fit_result_into(project, result);  // crysta completes the dependents
             publish_fit_state(*this, project);
             record_fit_result(*this, outcome, considered,
-                              fit_correlations(*this, result, [this](const std::string& label) {
-                                  return detail::resolve_joint_project_label(*this, label);
-                              }));
+                              crysta_correlations(project, result));
             // Before shared items this copied bank 0 into the single-bank mirror (the loader set it
             // up that way), so `experiment` never reports stale values after a joint refinement.
             // `experiment()` IS the first bank now, so nothing is copied back: that

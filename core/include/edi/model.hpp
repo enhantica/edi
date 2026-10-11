@@ -3916,14 +3916,15 @@ using PreambleCallback = std::function<void(const FitPreamble&)>;
 // One pair of the fit's free parameters and their correlation coefficient, diffraction-lib's
 // `_fit_parameter_correlation` row: its id, how it was computed (`deterministic`: from the covariance), the
 // two unique names (`<datablock>.<category>[.<entry>].<name>`) in the fit's column order (i before j) and the
-// coefficient, in [-1, 1]. A scan's row also names the file whose fit it came from (`file_path`, the
-// results.csv key); a single or joint fit's leaves it empty.
+// coefficient, in [-1, 1], as the text it was read with, so a loaded loop saves back byte for byte (a computed
+// one is crysta's shortest form; correlation_value reads it). A scan's row also names the file whose fit it came
+// from (`file_path`, the results.csv key); a single or joint fit's leaves it empty.
 struct FitParameterCorrelation {
     ItemKey id;
     detail::WrittenText source_kind;
     detail::WrittenText parameter_unique_name_i;
     detail::WrittenText parameter_unique_name_j;
-    detail::Written<double> correlation;
+    detail::WrittenText correlation;
     detail::WrittenText file_path;
 };
 

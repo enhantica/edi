@@ -632,12 +632,12 @@
         },
         {
           "member": "FitParameterCorrelation::correlation",
-          "type": "detail::Written<double>",
+          "type": "detail::WrittenText",
           "items": [
             "correlation"
           ],
           "storage": [
-            "crysta::Column<double>"
+            "crysta::Column<std::string>"
           ]
         },
         {
@@ -3674,7 +3674,7 @@
     },
     {
       "member": "FitParameterCorrelation::correlation",
-      "type": "detail::Written<double>",
+      "type": "detail::WrittenText",
       "category": "_fit_parameter_correlation"
     },
     {

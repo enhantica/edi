@@ -9,6 +9,8 @@
 #include <limits>
 #include <map>
 
+#include "edi/io.hpp"
+
 namespace edi_app {
 
 CorrelationViewModel::CorrelationViewModel(QObject* parent) : QObject(parent) {}
@@ -71,8 +73,9 @@ void CorrelationViewModel::show(const std::vector<edi::FitParameterCorrelation>&
         const auto i = index.find(pair.parameter_unique_name_i.value());
         const auto j = index.find(pair.parameter_unique_name_j.value());
         if (i != index.end() && j != index.end()) {
-            matrix_[i->second * n + j->second] = pair.correlation.get();
-            matrix_[j->second * n + i->second] = pair.correlation.get();
+            const double value = edi::correlation_value(pair);
+            matrix_[i->second * n + j->second] = value;
+            matrix_[j->second * n + i->second] = value;
         }
     }
     if (n < 2) {

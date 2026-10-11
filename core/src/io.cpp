@@ -3427,7 +3427,7 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
                     throw IoError("_fit_parameter_correlation row '" + pair->id.value() + "' has correlation '" + text +
                                   "' outside [-1, 1]: " + where);
                 }
-                pair->correlation = value;
+                pair->correlation = text;
                 if (per_file) {
                     pair->file_path = loop_cell(*correlations, row, "_fit_parameter_correlation.file_path", where);
                 }
@@ -3922,6 +3922,14 @@ void copy_fit_result(Project& to, const Project& from) {
         target.fit_prof_wr_factor = source.fit_prof_wr_factor;
         target.fit_chi_square = source.fit_chi_square;
     }
+}
+
+double correlation_value(const FitParameterCorrelation& row) {
+    double value = 0.0;
+    std::istringstream stream(row.correlation.value());
+    stream.imbue(std::locale::classic());
+    stream >> value;
+    return stream.fail() || !stream.eof() ? std::numeric_limits<double>::quiet_NaN() : value;
 }
 
 std::vector<ItemVec<FitParameterCorrelation>::Ptr> numbered_correlations(

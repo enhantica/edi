@@ -222,6 +222,8 @@ UndoFitOutcome restore_fit_start(Project& project);
 // `clear_fit_result` leaves none. An undo clears it (restore_fit_start), as diffraction-lib's undo does.
 void copy_fit_result(Project& to, const Project& from);
 void clear_fit_result(Project& project);
+// A correlation row's coefficient as a number (its text, read in the C locale); NaN when it is not one.
+double correlation_value(const FitParameterCorrelation& row);
 // Correlation pairs as a record holds them (FitResultRecord::correlations): ids 1, 2, … in their order, as
 // diffraction-lib numbers its `_fit_parameter_correlation` rows.
 std::vector<ItemVec<FitParameterCorrelation>::Ptr> numbered_correlations(
