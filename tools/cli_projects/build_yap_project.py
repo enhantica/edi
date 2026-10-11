@@ -160,9 +160,11 @@ def main() -> int:
     (TARGET / 'project.edi').write_text(
         '_edi.schema_version 3\n_metadata.name pd_neut_cwl_yap_spodi_3k\n'
         '_metadata.title "YAlO₃ [Pbnm] / Al₂O₃ [R-3c] · SPODI @ FRM II"\n'
-        '_metadata.description "2 phases at 3 K · Shared Bérar-Baldinozzi profile · Cylinder absorption"\n'
+        '_metadata.description "2 phases at 3 K · Shared Bérar-Baldinozzi profile · '
+        'Cylinder absorption"\n'
         # The example catalogue's tags (ADR-0031).
-        '_metadata.purpose "refinement"\n_metadata.dimensionality "1D"\n_metadata.instrument "SPODI"\n'
+        '_metadata.purpose "refinement"\n_metadata.dimensionality "1D"\n'
+        '_metadata.instrument "SPODI"\n'
         '_metadata.facility "FRM II"\n_metadata.polarisation "none"\n'
     )
     cell = [
