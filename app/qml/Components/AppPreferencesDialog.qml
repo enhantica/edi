@@ -250,6 +250,8 @@ AppDialog {
                 text: qsTr("Logging level") + ":"
             }
             EaElements.ComboBox {
+                id: loggingLevel
+
                 model: ["Debug", "Info", "Error", "Disabled"]
                 currentIndex: model.indexOf(EaGlobals.Vars.loggingLevel)
                 onActivated: EaGlobals.Vars.loggingLevel = currentValue
@@ -259,8 +261,11 @@ AppDialog {
             EaElements.Label {
                 text: qsTr("Diagnostics") + ":"
             }
-            EaElements.Button {
+            // A button, as the sidebar's, the Logging level box's size (the owner, 2026-10-08).
+            EaElements.SideBarButton {
                 objectName: "preferences.diagnostics"
+                width: loggingLevel.width
+                height: loggingLevel.height
                 text: qsTr("Show")
                 onClicked: diagnostics.open()
             }
