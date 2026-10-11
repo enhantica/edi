@@ -24,6 +24,9 @@ EaElements.GroupBox {
     }
 
     Column {
+        // Hidden while collapsed, so each row's accessible box is placed when it shows: the web platform does
+        // not move an accessible box when only an ancestor moves.
+        visible: !group.collapsed || group.implicitHeight > group.topPadding
         spacing: AppSizes.groupContentSpacing
         EaElements.GroupRow {
             spacing: AppSizes.inputSpacing
@@ -85,17 +88,17 @@ EaElements.GroupBox {
                 required property list<string> tagLabels
                 required property list<string> tagIcons
                 objectName: `examples.open.${exampleId}`
+                // Screen readers and browser checks find a row by its id and title, which the three lines show
+                // only in part. The row itself carries them, as the list moves the row.
+                Accessible.role: Accessible.Button
+                Accessible.name: `${row.exampleId}: ${row.sample} · ${row.origin}`
+                Accessible.description: row.detail
+                Accessible.onPressAction: Session.openExample(row.exampleId)
                 MouseArea {
                     parent: row
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
                     onClicked: Session.openExample(row.exampleId)
-                    // Screen readers and browser checks find a row by its id and title, which the three lines
-                    // show only in part.
-                    Accessible.role: Accessible.Button
-                    Accessible.name: `${row.exampleId}: ${row.sample} · ${row.origin}`
-                    Accessible.description: row.detail
-                    Accessible.onPressAction: Session.openExample(row.exampleId)
                 }
                 EaComponents.TableViewLabel {
                     horizontalAlignment: Text.AlignHCenter

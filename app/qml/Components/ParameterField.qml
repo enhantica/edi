@@ -24,6 +24,9 @@ EaElements.ParamTextField {
     readonly property bool refinable: item === null || item.refinable
     // A fixed setting is edited but never fitted: no fit toggle.
     readonly property bool canFit: refinable && (item === null || item.fittable)
+    // A value outside its range (a fit writes its values unchecked) is red with the range, as in a table cell.
+    readonly property bool outsideRange: item !== null && item.outsideRange
+    readonly property string warningText: refusal !== "" ? refusal : outsideRange ? qsTr("Outside its range, %1 to %2").arg(item.minimum).arg(item.maximum) : ""
 
     color: warned ? EaStyle.Colors.red : !enabled || readOnly ? EaStyle.Colors.themeForegroundMinor : item && item.free && canFit ? EaStyle.Colors.chartForegroundsExtra[1] : EaStyle.Colors.themeForeground
 
@@ -51,13 +54,13 @@ EaElements.ParamTextField {
             commit();
     }
 
-    warned: refusal !== ""
+    warned: warningText !== ""
     // Its title as every field's: left, inset as a combo box's, ending in "…" (edi ADR-0017 §5).
     Component.onCompleted: FieldTitles.align(field)
-    ToolTip.text: refusal
+    ToolTip.text: warningText
     WarningToolTip {
-        text: field.refusal
-        visible: text !== "" && (field.hovered || field.activeFocus)
+        text: field.warningText
+        visible: field.warned && (field.hovered || field.activeFocus)
     }
 
     onValueChanged: typedRefusal = ""

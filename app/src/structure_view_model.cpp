@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "structure_view_model.hpp"
 
+#include <QSet>
 #include <algorithm>
 #include <filesystem>
 
@@ -28,14 +29,21 @@ const std::vector<edi::SpaceGroupSettingName>& space_group_settings() {
 }  // namespace
 
 QStringList SpaceGroupViewModel::names() const {
-    QStringList names;
-    for (const edi::SpaceGroupSettingName& setting : space_group_settings()) {
-        const QString name = QString::fromStdString(setting.name_h_m);
-        if (!names.contains(name)) {
-            names.append(name);
+    // The settings table never changes, so its names are collected once: the name box reads them on every
+    // change of the group, and collecting them took about a tenth of a second.
+    static const QStringList all = [] {
+        QStringList names;
+        QSet<QString> seen;
+        for (const edi::SpaceGroupSettingName& setting : space_group_settings()) {
+            const QString name = QString::fromStdString(setting.name_h_m);
+            if (!seen.contains(name)) {
+                seen.insert(name);
+                names.append(name);
+            }
         }
-    }
-    return names;
+        return names;
+    }();
+    return all;
 }
 
 void SpaceGroupViewModel::setNameHM(const QString& name) {

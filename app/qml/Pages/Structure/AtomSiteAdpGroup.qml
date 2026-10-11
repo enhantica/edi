@@ -143,7 +143,8 @@ Column {
                 item: row.adpIso
                 enabled: !row.anisotropic
                 ToolTip.text: row.anisotropic ? qsTr("Equivalent isotropic displacement %1 (Å²)").arg(row.adpType === "Uani" ? "U eq" : "B eq") : qsTr("Isotropic displacement %1 (Å²)").arg(row.adpType)
-                ToolTip.visible: hovered && EaGlobals.Vars.showToolTips
+                // Help, hidden while the cell shows why its value is red.
+                ToolTip.visible: hovered && !warned && EaGlobals.Vars.showToolTips
             }
             ParameterCell {
                 columnAlignment: Text.AlignHCenter

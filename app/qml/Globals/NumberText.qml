@@ -21,7 +21,11 @@ QtObject {
 
     // The exponent `value` is written with in scientific notation, after rounding (9999600 is 1.000e7).
     function scientificExponent(value) {
-        const text = value.toExponential(3);
+        return exponentOf(value.toExponential(3));
+    }
+
+    // The exponent of a number written by toExponential.
+    function exponentOf(text) {
         return Number(text.slice(text.indexOf("e") + 1));
     }
 
@@ -46,10 +50,18 @@ QtObject {
         let text;
         let significant = 6;
         if (known) {
-            // The place of the uncertainty's first digit, after rounding it to that one digit.
-            const place = Math.floor(Math.log10(Number(error.toPrecision(1))));
-            text = place >= 0 ? String(Math.round(value / Math.pow(10, place)) * Math.pow(10, place) + 0) : value.toFixed(Math.min(-place, 100));
+            // The place of the uncertainty's first digit, after rounding it to that one digit. Read from the text, as
+            // the rounded digit can lie past the largest number (an uncertainty near 1.8e308 rounds to 2e308).
+            const place = exponentOf(error.toExponential(0));
+            // A rounded whole number is written as its digits and zeros, never multiplied back: that could overflow.
+            const digits = Math.round(value / Math.pow(10, place));
             significant = value === 0 ? 1 : Math.max(1, Math.floor(Math.log10(Math.abs(value))) - place + 1);
+            if (place < 0)
+                text = value.toFixed(Math.min(-place, 100));
+            else if (Math.abs(digits) < 1e21)
+                text = digits === 0 ? "0" : String(digits) + "0".repeat(place);
+            else
+                text = exponent(value, significant);
         } else {
             text = String(Number(value.toPrecision(6)));
         }
@@ -65,11 +77,33 @@ QtObject {
             return "";
         if (scientific(parameterValue)) {
             const power = scientificExponent(parameterValue);
-            return (value * Math.pow(10, -power)).toFixed(3) + "e" + power;
+            const mantissa = value * Math.pow(10, -power);
+            if (isFinite(mantissa) && mantissa < 1e21)
+                return mantissa.toFixed(3) + "e" + power;
+            return sharedExponent(value, power) + "e" + power;
         }
         const room = width > 0 ? width : 6;
         const text = String(Number(value.toPrecision(1)));
         return text.length <= room ? text : exponent(value, 1);
+    }
+
+    // A positive `value` written in units of 10^power with three decimals, from its decimal digits: for an
+    // uncertainty so far from its value that scaling the number overflows (1e-288 beside 1e-309) or writes
+    // itself with an exponent (1e30 beside 1e6), which would leave or garble the value's exponent.
+    function sharedExponent(value, power) {
+        // The number of thousandths of 10^power the value rounds to, as digits.
+        const shift = exponentOf(value.toExponential()) - power;
+        let thousandths;
+        if (shift + 3 < 0) {
+            thousandths = String(Math.round(Number(value.toExponential().split("e")[0]) * Math.pow(10, shift + 3)));
+        } else {
+            // At most the 15 significant digits a number keeps exactly; the rest are zeros.
+            const text = value.toExponential(Math.min(shift + 3, 14));
+            const digits = text.slice(0, text.indexOf("e")).replace(".", "");
+            thousandths = digits + "0".repeat(Math.max(0, exponentOf(text) - (power - 3) - (digits.length - 1)));
+        }
+        const padded = thousandths.padStart(4, "0");
+        return padded.slice(0, -3) + "." + padded.slice(-3);
     }
 
     // A number with no uncertainty (a range end, a reflection's position), rounded as a parameter without the

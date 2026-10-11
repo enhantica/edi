@@ -24,6 +24,9 @@ EaComponents.TableViewParameter {
     property string typedRefusal: ""
     readonly property string refusal: typedRefusal !== "" ? typedRefusal : item !== null ? item.lastError : ""
     readonly property bool outsideRange: item !== null && item.outsideRange
+    // Why the value is red: refused, or outside its range. Its own binding, so a cell that gives the attached
+    // tooltip help text (the ADP cells) keeps the warning and its style.
+    readonly property string warningText: refusal !== "" ? refusal : outsideRange ? qsTr("Outside its range, %1 to %2").arg(item.minimum).arg(item.maximum) : ""
     readonly property bool refinable: item === null || item.refinable
     // A fixed setting is edited but never fitted: no fit toggle.
     readonly property bool canFit: refinable && (item === null || item.fittable)
@@ -51,7 +54,7 @@ EaComponents.TableViewParameter {
 
     EaElements.ToolTip {
         text: cell.text
-        visible: cell.contentWidth > cell.width && cell.hovered && !cell.activeFocus && cell.ToolTip.text === "" && EaGlobals.Vars.showToolTips
+        visible: cell.contentWidth > cell.width && cell.hovered && !cell.activeFocus && !cell.warned && cell.ToolTip.text === "" && EaGlobals.Vars.showToolTips
     }
 
     enabled: refinable
@@ -67,11 +70,11 @@ EaComponents.TableViewParameter {
         "units": item.displayUnits
     } : ({})
 
-    warned: refusal !== "" || outsideRange
-    ToolTip.text: refusal !== "" ? refusal : outsideRange ? qsTr("Outside its range, %1 to %2").arg(item.minimum).arg(item.maximum) : ""
+    warned: warningText !== ""
+    ToolTip.text: warningText
     WarningToolTip {
-        text: cell.ToolTip.text
-        visible: text !== "" && (cell.hovered || cell.activeFocus)
+        text: cell.warningText
+        visible: cell.warned && (cell.hovered || cell.activeFocus)
     }
 
     onValueChanged: typedRefusal = ""
