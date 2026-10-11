@@ -19,6 +19,7 @@
 #include <cstdio>
 
 #include "session.hpp"
+#include "structure_view_model.hpp"
 
 namespace edi_app {
 namespace {
@@ -43,6 +44,8 @@ QStringList open_example(const QString& id) {
 
 DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QString& only, QObject* parent)
     : QObject(parent), window_(window), output_dir_(output_dir) {
+    // A new atom is random (edi::new_atom_site): the demo draws it from one seed, so its images repeat.
+    AtomSiteListModel::fixRandomSeed(17);
     const QString experiment = QStringLiteral("appBar.tab.experiment");
     const QString basic = QStringLiteral("sideBar.tab.basic");
     const QString extras = QStringLiteral("sideBar.tab.extras");

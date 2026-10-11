@@ -7,7 +7,10 @@
 #include <QStringList>
 #include <QtQml/qqmlregistration.h>
 
+#include <cstdint>
 #include <map>
+#include <optional>
+#include <random>
 
 #include "block_text.hpp"
 #include "category_list_model.hpp"
@@ -125,8 +128,11 @@ class AtomSiteListModel : public RowTableModel {
     QStringList wyckoffLetters() const { return wyckoff_letters_; }
     QStringList wyckoffLabels() const { return wyckoff_labels_; }
     Q_INVOKABLE bool setText(int row, const QString& role, const QString& value);
+    // A random atom (edi::new_atom_site), from this model's random source.
     Q_INVOKABLE void append();
     Q_INVOKABLE void duplicate(int row);
+    // The demo driver's and the tests' seam: every model made after it draws from this seed; the app never sets it.
+    static void fixRandomSeed(std::uint64_t seed);
     Q_INVOKABLE void remove(int row);
 
    signals:
@@ -142,6 +148,8 @@ class AtomSiteListModel : public RowTableModel {
     ParameterRegistry& registry_;
     QStringList wyckoff_letters_;
     QStringList wyckoff_labels_;
+    static std::optional<std::uint64_t>& fixedSeed();
+    std::optional<std::mt19937_64> random_;
 };
 
 // The Atomic displacement group (the owner, 2026-10-06): one row per atom site, in the sites' order — its label,

@@ -11,6 +11,7 @@
 // Implemented in the adapter (the one crysta-touching TU; edi-only signature, ADR-0003).
 
 #include <array>
+#include <functional>
 #include <optional>
 #include <string>
 #include <vector>
@@ -50,6 +51,14 @@ struct WyckoffOption {
 // The structure's Wyckoff positions, a to z then the capital letters; none when crysta cannot resolve its space
 // group.
 std::vector<WyckoffOption> wyckoff_positions(const Structure& structure);
+
+// A new atom site for `structure` (the owner, 2026-10-11): an element crysta computes for neutrons and for X-rays,
+// preferring one the structure does not hold yet, labelled by its element and the next free number; on the space
+// group's general position (its highest-multiplicity letter) at random fractional coordinates rounded to three
+// decimals, drawn again while a symmetry operation other than the identity maps them onto themselves. `random`
+// returns numbers in [0, 1): the caller's random source, so a test can fix it. A space group crysta cannot resolve
+// leaves the site without a letter.
+AtomSite new_atom_site(const Structure& structure, const std::function<double()>& random);
 
 // Sets a site's ADP type and converts its values, through crysta's conversion (ADR-0027):
 // to an isotropic type the site keeps its equivalent isotropic value; to an anisotropic one it

@@ -235,28 +235,21 @@ bool AtomSiteListModel::setText(int row, const QString& role, const QString& val
     return editor_.apply(edit, label || role == QLatin1String("adpType")).isEmpty();
 }
 
+std::optional<std::uint64_t>& AtomSiteListModel::fixedSeed() {
+    static std::optional<std::uint64_t> seed;
+    return seed;
+}
+
+void AtomSiteListModel::fixRandomSeed(std::uint64_t seed) { fixedSeed() = seed; }
+
 void AtomSiteListModel::append() {
     edi::Structure& structure = structure_;
-    edi::AtomSite site;
-    site.id = unused_name("X", [&structure](const std::string& name) {
-        for (const auto& existing : structure.atom_sites) {
-            if (existing->id == name) {
-                return true;
-            }
-        }
-        return false;
-    });
-    site.type_symbol = "H";
-    // A new site sits on the space group's position a, at its coordinates with x, y and z at 0, so it has a letter
-    // the group knows (the owner, 2026-10-08); a group crysta cannot resolve leaves it as before.
-    for (const edi::WyckoffOption& position : edi::wyckoff_positions(structure)) {
-        if (position.letter == "a") {
-            site.wyckoff_letter = position.letter;
-            site.fract_x.value = position.origin[0];
-            site.fract_y.value = position.origin[1];
-            site.fract_z.value = position.origin[2];
-        }
+    // A random element on the general position at random coordinates (the owner, 2026-10-11, edi::new_atom_site).
+    if (!random_.has_value()) {
+        random_.emplace(fixedSeed().value_or(std::random_device{}()));
     }
+    std::uniform_real_distribution<double> unit(0.0, 1.0);
+    edi::AtomSite site = edi::new_atom_site(structure, [this, &unit] { return unit(*random_); });
     editor_.apply(edi::Edit::append(structure.atom_sites, std::move(site)), true);
 }
 

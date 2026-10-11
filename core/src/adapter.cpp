@@ -51,6 +51,7 @@
 #include "edi/categories.hpp"
 #include "edi/io.hpp"
 #include "edi/model.hpp"
+#include "edi/structure_scene.hpp"
 #include "edi/symmetry.hpp"
 #include "edi/threading.hpp"
 #include "edi/validation.hpp"
@@ -353,6 +354,113 @@ std::vector<WyckoffOption> wyckoff_positions(const Structure& structure) {
         return one_capital != other_capital ? !one_capital : one.letter < other.letter;
     });
     return options;
+}
+
+namespace {
+
+// The elements a new atom may take: those the app styles that crysta's default neutron table and its default X-ray
+// form factors both hold, so the atom computes whatever the probe.
+const std::vector<std::string>& new_site_elements() {
+    static const std::vector<std::string> elements = [] {
+        std::vector<std::string> out;
+        const crysta::NeutronScattering neutron = crysta::load_neutron_scattering();
+        for (const ElementStyle& style : element_style_table()) {
+            if (!neutron.b_c.contains(style.symbol)) {
+                continue;
+            }
+            try {
+                crysta::xray_scattering({"", "none", 0.0}, {style.symbol});
+            } catch (const std::exception&) {
+                continue;
+            }
+            out.push_back(style.symbol);
+        }
+        return out;
+    }();
+    return elements;
+}
+
+}  // namespace
+
+AtomSite new_atom_site(const Structure& structure, const std::function<double()>& random) {
+    const auto draw_index = [&random](std::size_t count) {
+        return std::min(count - 1, static_cast<std::size_t>(random() * static_cast<double>(count)));
+    };
+    AtomSite site;
+    // The element: one the structure does not hold yet when there is one.
+    std::vector<std::string> unused;
+    for (const std::string& element : new_site_elements()) {
+        const bool held = std::any_of(structure.atom_sites.begin(), structure.atom_sites.end(),
+                                      [&element](const auto& existing) { return existing->type_symbol.value() == element; });
+        if (!held) {
+            unused.push_back(element);
+        }
+    }
+    const std::vector<std::string>& candidates = unused.empty() ? new_site_elements() : unused;
+    site.type_symbol = candidates.empty() ? std::string("H") : candidates[draw_index(candidates.size())];
+    // The label: the element and the next free number.
+    for (int number = 1;; ++number) {
+        const std::string label = site.type_symbol.value() + std::to_string(number);
+        const bool taken = std::any_of(structure.atom_sites.begin(), structure.atom_sites.end(),
+                                       [&label](const auto& existing) { return existing->id.value() == label; });
+        if (!taken) {
+            site.id = label;
+            break;
+        }
+    }
+    // The coordinates: three decimals, drawn again on a special position.
+    std::vector<crysta::SymmetryOperation> operations;
+    try {
+        const crysta::SpaceGroup group = resolve_group(structure);
+        operations = crysta::symmetry_operations(group);
+        int highest = 0;
+        for (const auto& [letter, position] : group.wyckoff) {
+            if (position.multiplicity > highest) {
+                highest = position.multiplicity;
+                site.wyckoff_letter = letter;
+            }
+        }
+    } catch (const std::exception&) {
+        operations.clear();
+    }
+    const auto special = [&operations](const std::array<double, 3>& x) {
+        for (const crysta::SymmetryOperation& operation : operations) {
+            const bool identity = operation.rotation == std::array<int, 9>{1, 0, 0, 0, 1, 0, 0, 0, 1} &&
+                                  operation.translation == std::array<double, 3>{0.0, 0.0, 0.0};
+            if (identity) {
+                continue;
+            }
+            bool fixed = true;
+            for (std::size_t row = 0; row < 3 && fixed; ++row) {
+                double image = operation.translation[row];
+                for (std::size_t column = 0; column < 3; ++column) {
+                    image += operation.rotation[row * 3 + column] * x[column];
+                }
+                const double shift = image - x[row];
+                fixed = std::abs(shift - std::round(shift)) < 1e-6;
+            }
+            if (fixed) {
+                return true;
+            }
+        }
+        return false;
+    };
+    std::array<double, 3> x{};
+    for (int attempt = 0; attempt < 1000; ++attempt) {
+        for (double& coordinate : x) {
+            coordinate = std::round(random() * 1000.0) / 1000.0;
+            if (coordinate >= 1.0) {
+                coordinate = 0.0;
+            }
+        }
+        if (!special(x)) {
+            break;
+        }
+    }
+    site.fract_x.value = x[0];
+    site.fract_y.value = x[1];
+    site.fract_z.value = x[2];
+    return site;
 }
 
 std::optional<std::array<double, 6>> site_u_star(const Structure& s, const AtomSite& site) {
