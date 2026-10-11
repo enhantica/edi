@@ -16,7 +16,6 @@
 #      conversion, and the check reads nothing but moc's record.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
-python3 tools/dev/example_metadata.py --check
 python3 tests/integration/cmake/check_gui_base.py --build-dir build/app
 qmllint="${EDI_APP_QMLLINT:-${CONDA_PREFIX:?run this in the app pixi environment}/lib/qt6/bin/qmllint}"
 if [ ! -d build/app/qml/edi/app ]; then

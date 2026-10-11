@@ -371,8 +371,9 @@ notebook-lint-check = "ruff check docs/dev/verification/"
 # docs/user/cli/projects.yml's EXECUTING set runs through `python -m edi fit` on a disposable copy
 # and is compared with its expected.json; any deviation is red. The same step runs in both verify
 # chains AND in CI's pull-request `cli-projects` job (a gate never lives in only one of the two).
-# The whole set, never a subset — subsetting on runtime is the owner's call.
-cli-projects = { cmd = ["python", "tools/checks/cli_projects.py"], depends-on = ["core-build"] }
+# The whole set, never a subset — subsetting on runtime is the owner's call. First, the app's example index
+# must match the registry's project records (ADR-0031).
+cli-projects = { cmd = "python tools/dev/example_metadata.py --check && python tools/checks/cli_projects.py", depends-on = ["core-build"] }
 # --- the fast per-PR physics signal ----------------------------------------- The
 # independent-reference signal a crysta pull request runs against edi, rehomed: the retired
 # `tests/simulation` page-executing tier is replaced by cross-engine parity at system level, which
