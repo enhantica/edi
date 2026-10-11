@@ -295,6 +295,66 @@ crysta::Cell completed_cell(const Structure& s) {
 }
 }  // namespace
 
+namespace {
+
+// One coordinate of a Wyckoff representative ("1/2*x+1/2*y", "-x+1/4", "1/8") with x, y and z at 0: the sum of its
+// terms without a variable.
+double coordinate_at_origin(const std::string& expression) {
+    double sum = 0.0;
+    std::size_t start = 0;
+    while (start < expression.size()) {
+        std::size_t end = start + 1;
+        while (end < expression.size() && expression[end] != '+' && expression[end] != '-') {
+            ++end;
+        }
+        std::string term = expression.substr(start, end - start);
+        start = end;
+        const double sign = !term.empty() && term.front() == '-' ? -1.0 : 1.0;
+        if (!term.empty() && (term.front() == '+' || term.front() == '-')) {
+            term.erase(0, 1);
+        }
+        if (term.empty() || term.find_first_of("xyz") != std::string::npos) {
+            continue;
+        }
+        const std::size_t slash = term.find('/');
+        const double value = slash == std::string::npos
+                                 ? std::stod(term)
+                                 : std::stod(term.substr(0, slash)) / std::stod(term.substr(slash + 1));
+        sum += sign * value;
+    }
+    return sum;
+}
+
+}  // namespace
+
+std::vector<WyckoffOption> wyckoff_positions(const Structure& structure) {
+    crysta::SpaceGroup group;
+    try {
+        group = resolve_group(structure);
+    } catch (const std::exception&) {
+        return {};
+    }
+    std::vector<WyckoffOption> options;
+    for (const auto& [letter, position] : group.wyckoff) {
+        WyckoffOption option{letter, position.multiplicity, position.representative, {}};
+        std::size_t start = 0;
+        for (std::size_t axis = 0; axis < 3; ++axis) {
+            const std::size_t comma = position.representative.find(',', start);
+            option.origin[axis] = coordinate_at_origin(position.representative.substr(start, comma - start));
+            start = comma == std::string::npos ? position.representative.size() : comma + 1;
+        }
+        options.push_back(std::move(option));
+    }
+    // The table's order: a to z, then the capital letters (`A`, alpha, after `z`).
+    std::stable_sort(options.begin(), options.end(), [](const WyckoffOption& one, const WyckoffOption& other) {
+        const bool one_capital = !one.letter.empty() && std::isupper(static_cast<unsigned char>(one.letter.front()));
+        const bool other_capital =
+            !other.letter.empty() && std::isupper(static_cast<unsigned char>(other.letter.front()));
+        return one_capital != other_capital ? !one_capital : one.letter < other.letter;
+    });
+    return options;
+}
+
 std::optional<std::array<double, 6>> site_u_star(const Structure& s, const AtomSite& site) {
     try {
         const crysta::AdpForm form = crysta::adp_form_of(site.adp_type.value());

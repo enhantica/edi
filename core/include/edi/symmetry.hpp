@@ -38,6 +38,19 @@ struct ParameterTie {
 // with its own message, and a page that could not edit the offending field could not repair it.
 std::vector<ParameterTie> structure_ties(const Structure& structure);
 
+// One Wyckoff position of a structure's space group, from crysta's table: its letter, its multiplicity, its
+// representative coordinates as the table spells them ("0,0,0", "1/2,y,z") and the coordinates it gives with x, y and
+// z at 0, a point on the position.
+struct WyckoffOption {
+    std::string letter;
+    int multiplicity = 0;
+    std::string coordinates;
+    std::array<double, 3> origin{};
+};
+// The structure's Wyckoff positions, a to z then the capital letters; none when crysta cannot resolve its space
+// group.
+std::vector<WyckoffOption> wyckoff_positions(const Structure& structure);
+
 // Sets a site's ADP type and converts its values, through crysta's conversion (ADR-0027):
 // to an isotropic type the site keeps its equivalent isotropic value; to an anisotropic one it
 // gets a tensor row holding the tensor of its current values, and a row it no longer needs is

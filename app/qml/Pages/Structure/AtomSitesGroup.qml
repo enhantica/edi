@@ -11,7 +11,7 @@ import EasyApplication.Gui.Components as EaComponents
 import edi.app
 
 // `atom_site` (easydiffractionbeta Pages/Model/SideBarBasic/AtomSite.qml): label, the type with its atom icon,
-// coordinates, Wyckoff letter and occupancy; append, duplicate and remove as the library's AtomSites do. The ADP
+// coordinates, Wyckoff position and occupancy; append, duplicate and remove as the library's AtomSites do. The ADP
 // columns are the Atomic displacement group's (the owner, 2026-10-06).
 Column {
     id: group
@@ -19,7 +19,8 @@ Column {
     property StructureViewModel structure: null
     readonly property AtomSiteListModel sites: structure ? structure.atomSites : null
     readonly property real typeWidth: EaStyle.Sizes.fontPixelSize * 4.5
-    readonly property real wyckoffWidth: EaStyle.Sizes.fontPixelSize * 2.5
+    // The WP column shows a position as "4a (0,0,0)" (the owner, 2026-10-08).
+    readonly property real wyckoffWidth: EaStyle.Sizes.fontPixelSize * 8.5
 
     spacing: AppSizes.groupContentSpacing
 
@@ -57,7 +58,7 @@ Column {
             }
             EaComponents.TableViewLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: qsTr("WL")
+                text: qsTr("WP")
             }
             EaComponents.TableViewLabel {
                 horizontalAlignment: Text.AlignHCenter
@@ -151,11 +152,27 @@ Column {
                 objectName: `atomSite.fractZ.${row.index}`
                 item: row.fractZ
             }
-            TextCell {
-                horizontalAlignment: Text.AlignHCenter
-                objectName: `atomSite.wyckoffLetter.${row.index}`
-                value: row.wyckoffLetter
-                onCommitted: text => group.sites.setText(row.index, "wyckoffLetter", text)
+            // The Wyckoff position, chosen among the space group's: its multiplicity, letter and coordinates
+            // (the owner, 2026-10-08). A letter the group does not know is shown as it is.
+            Item {
+                property int horizontalAlignment: Text.AlignHCenter
+                height: parent.height
+                SearchableComboBox {
+                    readonly property int letterIndex: group.sites ? group.sites.wyckoffLetters.indexOf(row.wyckoffLetter) : -1
+
+                    width: parent.width
+                    objectName: `atomSite.wyckoffLetter.${row.index}`
+                    inTable: true
+                    anchors.verticalCenter: parent.verticalCenter
+                    model: group.sites ? group.sites.wyckoffLabels : []
+                    currentIndex: letterIndex
+                    displayText: letterIndex >= 0 ? group.sites.wyckoffLabels[letterIndex] : row.wyckoffLetter
+                    popup.width: Math.max(width, EaStyle.Sizes.fontPixelSize * 12)
+                    onActivated: index => {
+                        group.sites.setText(row.index, "wyckoffLetter", group.sites.wyckoffLetters[index]);
+                        currentIndex = Qt.binding(() => letterIndex);
+                    }
+                }
             }
             ParameterCell {
                 columnAlignment: Text.AlignHCenter

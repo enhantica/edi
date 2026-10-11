@@ -114,14 +114,24 @@ class AtomSiteListModel : public RowTableModel {
     Q_OBJECT
     QML_ELEMENT
     QML_UNCREATABLE("Belongs to a structure")
+    // The space group's Wyckoff positions (edi::wyckoff_positions): the letters, and what the WP column shows for
+    // each, its multiplicity, letter and coordinates ("4a (0,0,0)"; the owner, 2026-10-08).
+    Q_PROPERTY(QStringList wyckoffLetters READ wyckoffLetters NOTIFY wyckoffLettersChanged)
+    Q_PROPERTY(QStringList wyckoffLabels READ wyckoffLabels NOTIFY wyckoffLabelsChanged)
 
    public:
     AtomSiteListModel(edi::Structure& structure, ProjectEditor& editor, ParameterRegistry& registry, QObject* parent);
     void sync();
+    QStringList wyckoffLetters() const { return wyckoff_letters_; }
+    QStringList wyckoffLabels() const { return wyckoff_labels_; }
     Q_INVOKABLE bool setText(int row, const QString& role, const QString& value);
     Q_INVOKABLE void append();
     Q_INVOKABLE void duplicate(int row);
     Q_INVOKABLE void remove(int row);
+
+   signals:
+    void wyckoffLettersChanged();
+    void wyckoffLabelsChanged();
 
    protected:
     bool setRole(int row, const QString& role, const QVariant& value) override { return setText(row, role, value.toString()); }
@@ -130,6 +140,8 @@ class AtomSiteListModel : public RowTableModel {
     edi::Structure& structure_;
     ProjectEditor& editor_;
     ParameterRegistry& registry_;
+    QStringList wyckoff_letters_;
+    QStringList wyckoff_labels_;
 };
 
 // The Atomic displacement group (the owner, 2026-10-06): one row per atom site, in the sites' order — its label,

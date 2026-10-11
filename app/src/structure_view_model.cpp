@@ -8,6 +8,7 @@
 #include "edi/categories.hpp"
 #include "edi/edits.hpp"
 #include "edi/io.hpp"
+#include "edi/symmetry.hpp"
 #include "parameter_registry.hpp"
 #include "project_editor.hpp"
 
@@ -191,6 +192,22 @@ void AtomSiteListModel::sync() {
                       parameter_role(registry_, &site->adp_iso)}});
     }
     setTableRows(rows);
+    QStringList letters;
+    QStringList labels;
+    for (const edi::WyckoffOption& option : edi::wyckoff_positions(structure_)) {
+        letters.append(QString::fromStdString(option.letter));
+        labels.append(QStringLiteral("%1%2 (%3)")
+                          .arg(option.multiplicity)
+                          .arg(QString::fromStdString(option.letter), QString::fromStdString(option.coordinates)));
+    }
+    if (letters != wyckoff_letters_) {
+        wyckoff_letters_ = letters;
+        emit wyckoffLettersChanged();
+    }
+    if (labels != wyckoff_labels_) {
+        wyckoff_labels_ = labels;
+        emit wyckoffLabelsChanged();
+    }
 }
 
 bool AtomSiteListModel::setText(int row, const QString& role, const QString& value) {
