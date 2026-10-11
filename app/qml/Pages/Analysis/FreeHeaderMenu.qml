@@ -45,7 +45,7 @@ EaElements.Menu {
 
     width: layout.implicitWidth
 
-    // Three rows, each an Analysis-table row high, a count right after its label (the owner, 2026-10-11).
+    // Three rows, a legend row apart, a count right after its label and a dot (the owner, 2026-10-11).
     component StateRow: Row {
         id: stateRow
 
@@ -57,7 +57,7 @@ EaElements.Menu {
         property bool active: true
         signal chosen
 
-        height: EaStyle.Sizes.tableRowHeight
+        height: AppSizes.legendRowHeight
         spacing: 0.5 * EaStyle.Sizes.fontPixelSize
 
         EaElements.RadioButton {
@@ -87,7 +87,7 @@ EaElements.Menu {
         StateRow {
             buttonName: "parameters.freeHeader.free"
             label: qsTr("Free")
-            count: qsTr("all %1").arg(menu.shown.length)
+            count: qsTr("· all %1").arg(menu.shown.length)
             active: menu.shown.length > 0
             selected: menu.shown.length > 0 && menu.fixedCount === 0
             onChosen: menu.apply(true)
@@ -95,7 +95,7 @@ EaElements.Menu {
         StateRow {
             buttonName: "parameters.freeHeader.fixed"
             label: qsTr("Fixed")
-            count: qsTr("all %1").arg(menu.shown.length)
+            count: qsTr("· all %1").arg(menu.shown.length)
             active: menu.shown.length > 0
             selected: menu.shown.length > 0 && menu.freeCount === 0
             onChosen: menu.apply(false)
@@ -103,7 +103,7 @@ EaElements.Menu {
         StateRow {
             buttonName: "parameters.freeHeader.mixed"
             label: qsTr("Mixed")
-            count: qsTr("%1 free · %2 fixed").arg(menu.freeCount).arg(menu.fixedCount)
+            count: qsTr("· %1 free · %2 fixed").arg(menu.freeCount).arg(menu.fixedCount)
             choosable: false
             active: menu.freeCount > 0 && menu.fixedCount > 0
             selected: active

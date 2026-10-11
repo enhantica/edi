@@ -65,6 +65,9 @@ Item {
 
     Row {
         id: row
+
+        // Centred in a line given more height than one text line (a legend's row).
+        y: Math.round((line.height - line.implicitHeight) / 2)
         spacing: line.spacing
 
         Repeater {

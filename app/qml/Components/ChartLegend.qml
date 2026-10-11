@@ -60,6 +60,7 @@ Rectangle {
                 required property real markWidth
 
                 objectName: "chart.legend.entry"
+                height: AppSizes.legendRowHeight
                 textColor: color
                 segments: bragg ? [legend.markPiece(mark, markWidth, color),
                     {
