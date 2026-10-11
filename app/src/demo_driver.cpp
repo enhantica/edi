@@ -298,6 +298,19 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                       + QStringList{analysis, basic, "fitting.start", "wait-fit",
                                                                     "choose:OK", correlations}});
     steps_.push_back({"t17-06-beer-second-experiment", {"mainArea.blocks.down"}});
+    // The polynomial and Chebyshev backgrounds' terms, and a type switch that asks before it removes the points.
+    const QString background = QStringLiteral("expand:group.background");
+    steps_.push_back({"t17-10-polynomial-terms", start + open_example("pd-neut-cwl_lab6-11b-echidna_tch-fcj")
+                                                     + QStringList{experiment, basic, background}});
+    steps_.push_back({"t17-11-polynomial-term-removed", {"background.removeTerm.2"}});
+    steps_.push_back({"t17-12-polynomial-term-appended", {"background.appendTerm"}});
+    steps_.push_back({"t17-13-chebyshev-terms", start + open_example("pd-neut-tof_cecoal-polaris_chebyshev")
+                                                    + QStringList{experiment, basic, background}});
+    steps_.push_back({"t17-14-type-question", start + open_example("pd-neut-cwl_cosio-d20_start-1")
+                                                  + QStringList{experiment, basic, background, "background.type",
+                                                                "choose:chebyshev"}});
+    steps_.push_back({"t17-15-type-chebyshev", {"choose:OK"}});
+    steps_.push_back({"t17-16-chebyshev-term-appended", {"background.appendTerm", "background.appendTerm"}});
     if (!only.isEmpty()) {
         std::erase_if(steps_, [&only](const Step& step) { return !step.image.startsWith(only); });
     }
