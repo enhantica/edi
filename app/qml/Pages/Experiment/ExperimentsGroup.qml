@@ -6,6 +6,7 @@ import QtQuick.Controls
 import QtQuick.Dialogs
 
 import EasyApplication.Gui.Style as EaStyle
+import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Elements as EaElements
 import EasyApplication.Gui.Components as EaComponents
 
@@ -15,9 +16,9 @@ import edi.app
 // experiments, one current, each with how the last fit ended on it (Fit) and the file its data is in; under
 // the table the selected experiment's type (ExperimentTypeGroup), then Load experiment (`.edi` block files,
 // several at once, each with its type, data and parameters) and Create experiment (a new experiment without
-// data, a simulation). A row made with Create experiment has a Load data… button in its Data file cell until data is
-// loaded into it: a plain two- or three-column file whose rows become its measured data. Create, Load and Load
-// data are each one undoable step.
+// data, a simulation). A row made with Create experiment reads Load data… in its Data file cell until data is loaded
+// into it: a plain two- or three-column file whose rows become its measured data. Clicking a file name loads another
+// file in its place. Create, Load and Load data are each one undoable step.
 EaElements.GroupBox {
     id: group
 
@@ -189,32 +190,37 @@ EaElements.GroupBox {
                             text: qsTr("template")
                         }
                     }
-                    // A button filling the Data file column up to the remove button, its file name elided in the middle
-                    // when too long (the owner, 2026-10-08 and 2026-10-11). It is the remove button's kind, so it has
-                    // its background, hover and pointer (the owner, 2026-10-11).
-                    EaComponents.TableViewButton {
+                    // The file name as left-aligned text that loads another file in its place: the accent blue and a
+                    // pointing hand on hover, and "Load data…" in the accent blue before any data (the owner,
+                    // 2026-10-11). Every experiment but a scan's dataset can load data.
+                    EaComponents.TableViewLabel {
                         id: loadData
+
+                        readonly property bool empty: row.experiment !== null && row.experiment.calculationOnly
+
+                        signal clicked
+
                         objectName: `experiments.loadData.${row.index}`
-                        // An experiment made with Create experiment: Load data…, then the loaded file's name, which
-                        // loads another file in its place. A simulation loaded from `.edi` shows it disabled; a scan's
-                        // datasets and experiments loaded with their data show their file.
-                        visible: !group.scan && row.experiment !== null && (row.experiment.canLoadData || row.experiment.calculationOnly)
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: parent.width
-                        checkable: false
-                        enabled: row.experiment !== null && row.experiment.canLoadData
-                        text: row.experiment !== null && !row.experiment.calculationOnly ? row.file : qsTr("Load data…")
-                        ToolTip.text: row.experiment !== null && !row.experiment.calculationOnly ? qsTr("%1: load another data file in place of this one").arg(row.file) : ""
-                        contentItem: EaElements.Label {
-                            leftPadding: EaStyle.Sizes.fontPixelSize * 0.5
-                            rightPadding: EaStyle.Sizes.fontPixelSize * 0.5
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                            elide: Text.ElideMiddle
-                            color: loadData.foregroundColor()
-                            text: loadData.text
-                        }
+                        visible: !group.scan && row.experiment !== null && row.experiment.canLoadData
+                        width: Math.min(implicitWidth, fileCell.width)
+                        height: parent.height
+                        horizontalAlignment: Text.AlignLeft
+                        elide: Text.ElideMiddle
+                        color: empty || loadDataHover.hovered ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
+                        text: empty ? qsTr("Load data…") : row.file
                         onClicked: group.chooseData(row.experiment)
+
+                        HoverHandler {
+                            id: loadDataHover
+                            cursorShape: Qt.PointingHandCursor
+                        }
+                        TapHandler {
+                            onTapped: loadData.clicked()
+                        }
+                        EaElements.ToolTip {
+                            text: qsTr("Load another data file in place of this one")
+                            visible: loadDataHover.hovered && EaGlobals.Vars.showToolTips
+                        }
                     }
                 }
                 // What the scan's extract rules take from the dataset, with their units.
