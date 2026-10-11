@@ -297,8 +297,10 @@ Column {
                 }
             }
 
+            // As wide as the table, as the line-segment points' buttons together are (owner, 2026-10-11).
             EaElements.SideBarButton {
                 objectName: "background.appendTerm"
+                width: EaStyle.Sizes.sideBarContentWidth
                 fontIcon: "plus-circle"
                 text: qsTr("Append new term")
                 onClicked: group.terms.append()
