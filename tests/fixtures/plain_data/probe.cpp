@@ -44,8 +44,8 @@ QJsonObject state(edi_app::ProjectViewModel& view) {
         const auto& e = *p.experiments[i];
         auto* vm = view.experimentModels()[i];
         QJsonArray excluded;
-        for (const auto& region : e.excluded_regions.get())
-            excluded.append(QJsonArray{region.first, region.second});
+        for (const auto& region : e.excluded_regions)
+            excluded.append(QJsonArray{region->first.get(), region->second.get()});
         QJsonObject row{
             {"excluded", excluded},
             {"name", QString::fromStdString(e.name.value())},
@@ -149,8 +149,8 @@ void configure(edi_app::ProjectViewModel& view, const QString& beam, bool rename
     } else {
         experiment.background[0]->intensity.value = 4.25;
     }
-    experiment.excluded_regions = std::vector<std::pair<double, double>>{
-        {beam == "tof" ? 9000 : 60, beam == "tof" ? 9100 : 61}};
+    experiment.excluded_regions = edi::excluded_region_rows({
+        {beam == "tof" ? 9000 : 60, beam == "tof" ? 9100 : 61}});
 }
 }  // namespace
 int main(int argc, char** argv) {

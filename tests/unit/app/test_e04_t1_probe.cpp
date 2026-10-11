@@ -180,6 +180,9 @@ public:
             "EDI_ACCEPTANCE_REFERENCE", QDir(root()).filePath("tests/fixtures/e04_t1/reference"));
         return QUrl::fromLocalFile(QDir(base).absoluteFilePath(path));
     }
+    Q_INVOKABLE QString readReferenceFile(const QString &path) const {
+        return readFile(referenceUrl(path).toLocalFile());
+    }
     Q_INVOKABLE QVariantList reference() const {
         QFile file(referenceUrl("reference.json").toLocalFile());
         if (!file.open(QIODevice::ReadOnly)) {

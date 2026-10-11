@@ -90,6 +90,12 @@ EaElements.GroupBox {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
                     onClicked: Session.openExample(row.exampleId)
+                    // Screen readers and browser checks find a row by its id and title, which the three lines
+                    // show only in part.
+                    Accessible.role: Accessible.Button
+                    Accessible.name: `${row.exampleId}: ${row.sample} · ${row.origin}`
+                    Accessible.description: row.detail
+                    Accessible.onPressAction: Session.openExample(row.exampleId)
                 }
                 EaComponents.TableViewLabel {
                     horizontalAlignment: Text.AlignHCenter

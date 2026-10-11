@@ -11,7 +11,8 @@ import assert from 'node:assert/strict';
 import { inflateSync } from 'node:zlib';
 import { inspectDevelopDiagnostics } from './web_develop_diagnostics.mjs';
 import { beginFitProgress, endFitProgress, isLiveFitProgress } from './web_fit_progress.mjs';
-import { controlPointer } from './web_control_geometry.mjs';
+import { controlPointer, restoreCanvasViewport } from './web_control_geometry.mjs';
+import { assertSavedProject, assertNativeChi } from './web_saved_fit.mjs';
 import { fittingObservationKind, hasRunningProgress } from '../../fixtures/e04_t11_wasm/browser_observations.mjs';
 
 const [siteArg, mode, outputArg, chromeArg] = process.argv.slice(2);
@@ -157,12 +158,15 @@ try {
     } while (Date.now() < deadline);
     throw Error('page navigation must finish rendering before the next pointer action');
   };
-  const click = async (regex, role, nativeObjectName) => {
+  const click = async (regex, role, nativeObjectName, containerName) => {
+    await restoreCanvasViewport(evaluate);
     const node = await waitAX(regex, true, role);
     console.log(`browser ${mode}: click ${node.name?.value}`);
     assert(node.backendDOMNodeId, 'UI actions require a real browser-backed accessible control');
+    if (node.role?.value === 'tab' && /^(Home|Project|Structure|Experiment|Analysis|Report)$/.test(node.name?.value || ''))
+      nativeObjectName ||= `appBar.tab.${node.name.value.toLowerCase()}`;
     let x, y;
-    if (nativeObjectName) ({x,y} = await controlPointer(evaluate,nativeObjectName));
+    if (nativeObjectName) ({x,y} = await controlPointer(evaluate,nativeObjectName,containerName));
     else {
       const model = await send('DOM.getBoxModel', { backendNodeId: node.backendDOMNodeId });
       const q = model.model.content;
@@ -186,6 +190,25 @@ try {
       assert(selected,'page navigation must select the requested tab, not reuse labels from a hidden page');
     }
 
+  };
+  const openExampleRow = async (exampleId, exampleName) => {
+    // Filter through real keyboard input so the requested row is materialised and unclipped.
+    // Qt's recycled AX name remains a witness; fresh native geometry locates the actual input.
+    await restoreCanvasViewport(evaluate);
+    const search = await controlPointer(evaluate, 'examples.search');
+    for (const type of ['mousePressed', 'mouseReleased'])
+      await send('Input.dispatchMouseEvent', {type, ...search, button:'left', clickCount:1});
+    for (const type of ['keyDown','keyUp'])
+      await send('Input.dispatchKeyEvent', {type,key:'a',code:'KeyA',modifiers:2,windowsVirtualKeyCode:65});
+    await send('Input.insertText', {text:exampleId});
+    await settleRenderedPage();
+    const viewport = await restoreCanvasViewport(evaluate);
+    await writeFile(join(output, `${mode}-${exampleId}-viewport.json`), JSON.stringify(viewport,null,2));
+    await writeFile(join(output, `${mode}-${exampleId}-target.json`), JSON.stringify({
+      exampleId, row:await evaluate(`window.ediControlGeometry(${JSON.stringify(`examples.open.${exampleId}`)})`),
+      list:await evaluate('window.ediControlGeometry("examples.list")'),
+    }, null, 2));
+    await click(exampleName, 'button', `examples.open.${exampleId}`, 'examples.list');
   };
   const modalIsDrawn = async () => {
     const data = Buffer.from((await send('Page.captureScreenshot', {format:'png'})).data, 'base64');
@@ -325,16 +348,8 @@ try {
     'example opening must start without a live project or enabled Analysis tab');
   await click(/Examples$/, 'button');
   const exampleName = fitCase === 'ncaf' ? /ncaf.*wish.*5bank.*(?:start[- ]?)?5/i : /lbco.*hrpt.*(?:start[- ]?)?4/i;
-  if (fitCase === 'ncaf') {
-    // Qt recycles the clipped table delegates while its AX names/rectangles can stay stale.
-    // Use the existing native Session action; the saved archive below proves the actual project.
-    assert(await evaluate('typeof window.ediOpenExample === "function"'),
-      'The five-bank browser check requires the live native Session.openExample bridge');
-    assert.equal(await evaluate('window.ediOpenExample("pd-neut-tof_ncaf-wish-5bank_start-5")'),true,
-      'The live Session must successfully open its bundled five-bank start-5 example');
-  } else {
-    await click(exampleName, 'button');
-  }
+  const exampleId = fitCase === 'ncaf' ? 'pd-neut-tof_ncaf-wish-5bank_start-5' : 'pd-neut-cwl_lbco-hrpt_start-4';
+  await openExampleRow(exampleId, exampleName);
   await waitAX(/^Analysis$/,true,'tab');
   await waitAX(/^Save project as/, true, 'button');
   await click(/^Structure$/); await waitAX(/Cell|Space group/i); await shot('structure');
@@ -430,8 +445,7 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   await click(/Get started$/, 'button');
   const saved = await saveArchive();
   const before = inspectArchive(saved);
-  if (fitCase === 'ncaf') assert.equal(before.name, 'ncaf_wish_5bank_s5',
-    'The real saved project must be the five-bank owner reference, independent of AX names or bridge reports');
+  assertSavedProject(before.name, fitCase);
   const nativeOracle = JSON.parse(await readFile(new URL('../../fixtures/e04_t11_wasm/native.json', import.meta.url)));
   assert(/_fit_result.success\s+true/.test(before.analysis) &&
     /_fit_result.iterations\s+[1-9]\d*/.test(before.analysis),
@@ -439,8 +453,10 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   const chi = Number(before.analysis.match(/^_fit_result.reduced_chi_square\s+(\S+)/m)?.[1]);
   const referenceChi = fitCase === 'ncaf' ? 9.50 : nativeOracle.reduced_chi_square;
   const chiTolerance = fitCase === 'ncaf' ? 0.005 : nativeOracle.absolute_tolerance + nativeOracle.relative_tolerance*Math.abs(referenceChi);
-  assert(Number.isFinite(chi) && Math.abs(chi-referenceChi) <= chiTolerance,
-    'browser saved fit must agree with the independent committed native CLI chi square');
+  assertNativeChi(chi, referenceChi, chiTolerance);
+  await writeFile(join(output, `${mode}-saved-fit.json`), JSON.stringify({
+    project:before.name, chi, referenceChi, chiTolerance,
+  }, null, 2));
 
   const iterations = Number(before.analysis.match(/^_fit_result.iterations\s+(\S+)/m)?.[1]);
   const rwp = Number(before.analysis.match(/^_fit_result.prof_wr_factor\s+(\S+)/m)?.[1]);
@@ -583,40 +599,27 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
     };
     const snapshot = async () => { await projectPage(); return inspectArchive(await saveArchive()); };
     const createEmpty = async name => {
-      await projectPage(); await accessiblePress(/^Create a new project$/);
+      await projectPage(); await click(/^Create a new project$/, 'button', 'project.create');
+      await settleRenderedPage();
+      const beforeInput = await restoreCanvasViewport(evaluate);
+      await writeFile(join(output, `${mode}-create-${name}-before-input.json`), JSON.stringify(beforeInput,null,2));
+      await shot(`create-${name}-before-input`);
       // Qt omits popup editors from AX, as it omits the fit table. The real rendered name
       // input at the fixed 1280x768 viewport is recorded in the screenshot; type through native input.
       for (const type of ['mousePressed','mouseReleased']) await send('Input.dispatchMouseEvent',
         {type,x:640,y:325,button:'left',clickCount:1});
       for (const type of ['keyDown','keyUp']) await send('Input.dispatchKeyEvent',
         {type,key:'a',code:'KeyA',modifiers:2,windowsVirtualKeyCode:65});
-      await send('Input.insertText',{text:name});
+      for (const key of name) {
+        await send('Input.dispatchKeyEvent', {type:'keyDown',key,text:key});
+        await send('Input.dispatchKeyEvent', {type:'keyUp',key});
+      }
       for (const type of ['keyDown','keyUp']) await send('Input.dispatchKeyEvent',
         {type,key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
       await waitName(name);
       await settleRenderedPage();
-      const viewport = await evaluate(`(() => {
-        const canvases=[];
-        const walk=root=>{for(const item of root.querySelectorAll('*')) {
-          if(item.tagName==='CANVAS') canvases.push(item);
-          if(item.shadowRoot) walk(item.shadowRoot);
-        }};
-        walk(document.getElementById('screen'));
-        const visible=canvases.filter(item=>item.getBoundingClientRect().width>0);
-        if(visible.length!==1) throw Error('the published app must have one visible canvas');
-        const canvas=visible[0], before=canvas.getBoundingClientRect().toJSON(), scrolled=[];
-        for(let item=canvas.parentElement;item;item=item.parentElement||item.getRootNode().host) {
-          if(item.scrollTop||item.scrollLeft) {
-            scrolled.push({x:item.scrollLeft,y:item.scrollTop}); item.scrollTo(0,0);
-          }
-        }
-        return {before,after:canvas.getBoundingClientRect().toJSON(),scrolled};
-      })()`);
+      const viewport = await restoreCanvasViewport(evaluate);
       await writeFile(join(output, `${mode}-create-${name}-viewport.json`), JSON.stringify(viewport,null,2));
-      assert.equal(viewport.after.x,0,'trusted app pointers require the actual fixed canvas origin');
-      assert.equal(viewport.after.y,0,'trusted app pointers require the actual fixed canvas origin');
-      assert.equal(viewport.after.width,1280,'trusted app pointers require the actual fixed canvas width');
-      assert.equal(viewport.after.height,768,'trusted app pointers require the actual fixed canvas height');
       await settleRenderedPage();
     };
     // Capture the browser's actual reads, hold promises, and release on explicit observable states.
@@ -671,11 +674,7 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
     await waitBrowser('window.__e04Reads.length===1','replacement exercise must reach a pending upload');
     await click(/Get started$/, 'button'); getStartedOpen = false;
     await accessiblePress(/Examples$/);
-    // The first delegate's Qt AX rectangle predates table layout. Input location is from
-    // the rendered table at the fixed viewport; project identity below is the oracle.
-    for (const type of ['mousePressed','mouseReleased']) await send('Input.dispatchMouseEvent',
-      {type,x:992.5,y:239.5,button:'left',clickCount:1});
-    await settleRenderedPage();
+    await openExampleRow('pd-neut-cwl_cosio-d20_start-1', /cosio.*d20.*start[- ]?1/i);
     await waitName('cosio_d20_s1');
     await settleRenderedPage();
     const replacementBefore=await snapshot();

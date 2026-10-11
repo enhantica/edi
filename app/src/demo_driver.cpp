@@ -279,8 +279,10 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                                      "mainArea.analysis.tab.evolution", "fitting.start",
                                                                      "wait-files:200", "capture-now"}});
     steps_.push_back({"t16-78-evolution-stopped", {"fitting.start", "wait-fit", "choose:OK"}});
+    // LiF is a verification project, which the app does not bundle (ADR-0031): it opens from the CLI projects.
     steps_.push_back({"t16-40-created-saved-reopened",
-                      QStringList{"resize:1280x768"} + start + open_example("pd-xray-cwl_lif") + QStringList{experiment, basic, "expand:group.experiments",
+                      QStringList{"resize:1280x768"} + start
+                          + QStringList{"appBar.tab.project", "open-cli-project:pd-xray-cwl_lif_single", experiment, basic, "expand:group.experiments",
                       "experiments.create", "save-as:created", "open-project:created", experiment, "mainArea.blocks.box",
                        "choose:experiment1 · experiment1.edi", text, "scroll-to:text.view:_data_range"}});
     if (!only.isEmpty()) {
