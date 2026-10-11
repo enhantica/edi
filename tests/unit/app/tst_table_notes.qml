@@ -6,6 +6,7 @@ import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Components as EaComponents
 import edi.app
 import "UiInteraction.js" as Ui
+import "TableBoundary.js" as Boundary
 
 Item {
     id: surface
@@ -59,6 +60,7 @@ Item {
         }
     }
     TestCase {
+        id: test
         name: "TableNotes"
         when: windowShown
         function init() {
@@ -94,9 +96,7 @@ Item {
                 next = table.itemAtIndex(4);
                 return next !== null;
             }, 2000, "The next delegate exists in the actual viewport");
-            const top = next.mapToItem(table, 0, 0).y;
-            const visibleFraction = (table.height - top) / next.height;
-            verify(Math.abs(visibleFraction - 0.5) < 0.06, "The real clipped delegate shows about half its height as the scrolling cue");
+            Boundary.check(test, table, next, surface);
         }
         function test_template_marker_follows_its_filename() {
             verify(Session.openExample("pd-neut-cwl_cosio-d20_scan-3f"), Session.lastError);
@@ -181,26 +181,6 @@ Item {
             cell.focus = false;
             tryCompare(cell, "cursorPosition", 0, 2000, "An unfocused number is visible from its start");
             compare(cell.horizontalAlignment, Text.AlignLeft, "A long number clips its end while retaining its beginning");
-        }
-        function test_atom_columns_use_content_width_and_equal_numeric_space() {
-            verify(Session.openExample("pd-neut-cwl_cosio-d20_start-1"), Session.lastError);
-            const group = createTemporaryObject(atomsComponent, surface, {
-                structure: Session.project.currentStructure
-            });
-            verify(group !== null, "The actual atom table is instantiated");
-            verify(waitForPolish(group), "The actual atom table completes layout");
-            const table = Ui.find(group, "atomSites.list");
-            verify(table !== null, "The actual atom table remains exposed");
-            const widths = table.resolvedColumnWidths;
-            compare(widths.length, 9, "The atom table retains every scientific and action column");
-            compare(widths[0], table.numberColumnWidth, "Numbering takes its measured content width");
-            for (const column of [4, 5, 7])
-                compare(widths[column], widths[3], "Coordinates and occupancy share the remaining width equally");
-            verify(widths[0] < widths[3], "Numbering leaves room for scientific values");
-            group.width = 1000;
-            verify(waitForPolish(group), "The wider sidebar completes layout");
-            compare(table.resolvedColumnWidths[0], widths[0], "Numbering stays fixed as the sidebar widens");
-            verify(table.resolvedColumnWidths[3] > widths[3], "Main columns receive the added sidebar width");
         }
         function test_analysis_filter_units_heading_and_free_colour() {
             verify(Session.openExample("pd-neut-cwl_cosio-d20_start-1"), Session.lastError);

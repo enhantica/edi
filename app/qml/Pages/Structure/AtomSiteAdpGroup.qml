@@ -138,7 +138,7 @@ Column {
             // The isotropic value in the site's type; an anisotropic site's equivalent value, which follows its
             // tensor, is shown disabled.
             ParameterCell {
-                horizontalAlignment: Text.AlignHCenter
+                columnAlignment: Text.AlignHCenter
                 objectName: `atomSiteAdp.iso.${row.index}`
                 item: row.adpIso
                 enabled: !row.anisotropic
@@ -146,42 +146,42 @@ Column {
                 ToolTip.visible: hovered && EaGlobals.Vars.showToolTips
             }
             ParameterCell {
-                horizontalAlignment: Text.AlignHCenter
+                columnAlignment: Text.AlignHCenter
                 objectName: `atomSiteAdp.ani11.${row.index}`
                 enabled: row.anisotropic && !!row.ani11 && refinable
                 item: row.ani11 ? row.ani11 : null
                 text: item !== null ? value : ""
             }
             ParameterCell {
-                horizontalAlignment: Text.AlignHCenter
+                columnAlignment: Text.AlignHCenter
                 objectName: `atomSiteAdp.ani22.${row.index}`
                 enabled: row.anisotropic && !!row.ani22 && refinable
                 item: row.ani22 ? row.ani22 : null
                 text: item !== null ? value : ""
             }
             ParameterCell {
-                horizontalAlignment: Text.AlignHCenter
+                columnAlignment: Text.AlignHCenter
                 objectName: `atomSiteAdp.ani33.${row.index}`
                 enabled: row.anisotropic && !!row.ani33 && refinable
                 item: row.ani33 ? row.ani33 : null
                 text: item !== null ? value : ""
             }
             ParameterCell {
-                horizontalAlignment: Text.AlignHCenter
+                columnAlignment: Text.AlignHCenter
                 objectName: `atomSiteAdp.ani12.${row.index}`
                 enabled: row.anisotropic && !!row.ani12 && refinable
                 item: row.ani12 ? row.ani12 : null
                 text: item !== null ? value : ""
             }
             ParameterCell {
-                horizontalAlignment: Text.AlignHCenter
+                columnAlignment: Text.AlignHCenter
                 objectName: `atomSiteAdp.ani13.${row.index}`
                 enabled: row.anisotropic && !!row.ani13 && refinable
                 item: row.ani13 ? row.ani13 : null
                 text: item !== null ? value : ""
             }
             ParameterCell {
-                horizontalAlignment: Text.AlignHCenter
+                columnAlignment: Text.AlignHCenter
                 objectName: `atomSiteAdp.ani23.${row.index}`
                 enabled: row.anisotropic && !!row.ani23 && refinable
                 item: row.ani23 ? row.ani23 : null

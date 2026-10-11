@@ -100,7 +100,7 @@ Column {
                 }
             }
             ParameterCell {
-                horizontalAlignment: Text.AlignHCenter
+                columnAlignment: Text.AlignHCenter
                 objectName: `linkedStructure.scale.${row.index}`
                 enabled: row.model.enabled
                 item: row.model.scale

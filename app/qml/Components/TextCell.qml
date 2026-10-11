@@ -28,7 +28,10 @@ EaComponents.ListViewTextInput {
     text: shown
     warned: refusal !== ""
     ToolTip.text: refusal
-    ToolTip.visible: refusal !== "" && (hovered || activeFocus)
+    WarningToolTip {
+        text: cell.refusal
+        visible: text !== "" && (cell.hovered || cell.activeFocus)
+    }
     onValueChanged: refusal = ""
     onAccepted: commit()
     onEditingFinished: commit()

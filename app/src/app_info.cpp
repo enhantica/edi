@@ -90,10 +90,48 @@ QStringList ApplicationInfo::componentColumn(int column) {
         if (!inList || !line.startsWith(QLatin1String("- ")) || cells.size() != 3) {
             continue;
         }
+        if (column == 0 || column == 3) {
+            // "- Qt Graphs 6.11.2": the name, then the version when the last word is a dotted number ("Baloo 2" is a
+            // name).
+            const QString named = cells[0].trimmed().mid(2);
+            const qsizetype space = named.lastIndexOf(QLatin1Char(' '));
+            const bool versioned =
+                space > 0 && named.at(space + 1).isDigit() && named.indexOf(QLatin1Char('.'), space) > 0;
+            values.append(column == 0 ? (versioned ? named.left(space) : named) : (versioned ? named.mid(space + 1) : QString()));
+            continue;
+        }
         const QString cell = cells[column].trimmed();
-        values.append(column == 0 ? cell.mid(2) : column == 1 ? QString(cell).remove(QLatin1String("licence: ")) : cell);
+        values.append(column == 1 ? QString(cell).remove(QLatin1String("licence: ")) : cell);
     }
     return values;
+}
+
+// The notices' "## <name>" section of a component: its indented licence text, the indent removed.
+QString ApplicationInfo::componentLicenceText(int index) const {
+    const QStringList names = componentNames();
+    if (index < 0 || index >= names.size()) {
+        return {};
+    }
+    const QStringList lines = read_resource(QStringLiteral(":/THIRD-PARTY-NOTICES")).split(QLatin1Char('\n'));
+    const QString heading = QStringLiteral("## ") + names[index];
+    QStringList text;
+    bool inSection = false;
+    for (const QString& line : lines) {
+        if (line.startsWith(QLatin1Char('#'))) {
+            if (inSection) {
+                break;
+            }
+            inSection = line == heading;
+            continue;
+        }
+        if (inSection && (text.size() > 0 || line.startsWith(QLatin1String("    ")))) {
+            text.append(line.startsWith(QLatin1String("    ")) ? line.mid(4) : line);
+        }
+    }
+    while (!text.isEmpty() && text.last().trimmed().isEmpty()) {
+        text.removeLast();
+    }
+    return text.join(QLatin1Char('\n'));
 }
 
 QStringList ApplicationInfo::elementSymbols() const {

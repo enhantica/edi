@@ -11,11 +11,12 @@ import edi.app
 // system code — which always agree with one another.
 EaElements.GroupRow {
     id: row
+    spacing: AppSizes.inputSpacing
 
     property StructureViewModel structure: null
     readonly property SpaceGroupViewModel spaceGroup: structure ? structure.spaceGroup : null
     // Four fields side by side, as the base sizes a row's fields.
-    readonly property real fieldWidth: (EaStyle.Sizes.sideBarContentWidth - 3 * EaStyle.Sizes.fontPixelSize * 0.5) / 4
+    readonly property real fieldWidth: (EaStyle.Sizes.sideBarContentWidth - 3 * AppSizes.inputSpacing) / 4
 
     ValueField {
         objectName: "spaceGroup.crystalSystem"

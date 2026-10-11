@@ -140,10 +140,11 @@ EaElements.StatusBar {
 
         readonly property bool running: bar.fit !== null && bar.fit.running
         readonly property bool scanning: bar.fit !== null && bar.fit.scanning
-        // The ok and fail counts, a fail count above zero in red.
+        // The ok and fail counts: an ok count above zero in green, a fail count above zero in red.
         function counts() {
+            const ok = qsTr("%1 ok").arg(bar.fit.scanOk);
             const fail = qsTr("%1 fail").arg(bar.fit.scanFailed);
-            return [qsTr("%1 ok").arg(bar.fit.scanOk), bar.fit.scanFailed > 0 ? `<font color="${EaStyle.Colors.red}">${fail}</font>` : fail];
+            return [bar.fit.scanOk > 0 ? `<font color="${EaStyle.Colors.green}">${ok}</font>` : ok, bar.fit.scanFailed > 0 ? `<font color="${EaStyle.Colors.red}">${fail}</font>` : fail];
         }
         readonly property string chi: bar.fit && bar.fit.goodnessOfFit !== "" ? `χ² ${bar.fit.goodnessOfFit}` : ""
         readonly property string iterations: bar.fit && bar.fit.iterations !== "" ? qsTr("it %1").arg(bar.fit.iterations) : ""

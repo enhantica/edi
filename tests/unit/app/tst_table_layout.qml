@@ -57,19 +57,7 @@ Item {
             table.sourceModel = undefined;
             tryCompare(table, "count", 0);
         }
-        function test_long_ids_preserve_numeric_columns_and_actions() {
-            const table = createTemporaryObject(tableComponent, parent, {
-                sourceModel: rows
-            });
-            verify(table !== null);
-            rows.setProperty(0, "label", "long.identifier.".repeat(100));
-            tryVerify(() => Math.abs(table.resolvedColumnWidths[1] - table.width * 0.25) < 0.1);
-            verify(table.resolvedColumnWidths[2] > 0);
-            compare(table.resolvedColumnWidths[2], table.resolvedColumnWidths[3]);
-            compare(table.resolvedColumnWidths[4], 40);
-            rows.setProperty(0, "label", "short");
-            tryVerify(() => table.resolvedColumnWidths[1] < table.width * 0.25);
-        }
+        // Long-ID acceptance measures actual production cells in tst_table_geometry.qml.
         function test_base_selection_initializes_with_undefined_model() {
             const table = createTemporaryObject(baseTableComponent, parent);
             verify(table !== null);

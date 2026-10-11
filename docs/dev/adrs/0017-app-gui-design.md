@@ -470,7 +470,9 @@ Saving is active:
   `unsupported _calculator.type "cryspy" - using crysta`,
   `unsupported _minimizer.type "bumps (lm)" - using crysta` and
   `unsupported _rendering_plot.type "plotly" - using auto` (the owner's widening of idea 26: *"and something
-  else for that project to see more warning messages"*). Its comments and `PROVENANCE.md` say so.
+  else for that project to see more warning messages"*). Its comments and `PROVENANCE.md` say so. It is a
+  verification project, so since 2026-10-10 the app no longer lists it among its examples (ADR-0031); the demo
+  opens a copy of it from the CLI projects instead.
 - **The UI test's images show it** (`t4-03` to `t4-06`): the count before the messages are viewed, the list,
   the count after, and a refused calculation's error row over the neutral chart placeholder. (`t4-01` and
   `t4-02` show the Experiment type grid, §2, and Measured data's single increment, §6.)

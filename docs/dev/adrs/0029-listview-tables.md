@@ -100,3 +100,16 @@ Examples and Recent projects use an explicit row-parent mouse area for opening.
 A second default-property TapHandler competes with the pinned delegate's selection
 handler and can lose the click. Recent projects reserve the remove button's column
 outside the opening area; missing projects stay visible without opening.
+
+## Numbers in parameter cells
+
+A parameter's value is rounded to its uncertainty's first digit, or to six
+significant digits without one (`NumberText`). The width of its cell never
+changes the text: a long value starts at the left and clips at the cell's edge,
+without an ellipsis, and editing shows the full value.
+
+A value at or above 1e6, or below 1e-4 and not zero, is written in scientific
+notation with four significant digits, and its uncertainty in the same exponent
+with three decimals: `2.290e7` with s.u. `0.010e7`. The exponent has no `+`.
+The threshold follows the owner's request for the large intensities of a
+sequential fit; plain numbers outside parameter cells keep their own rule.
