@@ -24,6 +24,22 @@ EaElements.GroupBox {
     property ProjectViewModel project: null
     property ParameterItem selected: null
     property real tableViewportHeight: 0
+    // The free column fits its title and the arrow after it, with a table column's padding (the owner, 2026-10-11).
+    readonly property real freeGap: 0.25 * EaStyle.Sizes.fontPixelSize
+    readonly property real freeColumnWidth: Math.ceil(freeTitleText.advanceWidth + freeGap + freeArrowText.advanceWidth) + AppSizes.fieldSpacing * 2
+
+    TextMetrics {
+        id: freeTitleText
+        font.family: EaStyle.Fonts.fontFamily
+        font.pixelSize: EaStyle.Sizes.fontPixelSize
+        text: qsTr("free")
+    }
+    TextMetrics {
+        id: freeArrowText
+        font.family: EaStyle.Fonts.iconsFamily
+        font.pixelSize: 0.8 * EaStyle.Sizes.fontPixelSize
+        text: "\uf0d7"
+    }
 
     objectName: "group.parameters"
     collapsible: false
@@ -145,7 +161,7 @@ EaElements.GroupBox {
                 sourceModel: group.project ? group.project.parameters : null
             }
 
-            columnWidths: [numberColumnWidth, -1, EaStyle.Sizes.fontPixelSize * 5, textColumnWidth("units", ""), EaStyle.Sizes.fontPixelSize * 3.5, EaStyle.Sizes.fontPixelSize * 3, EaStyle.Sizes.fontPixelSize * 3, EaStyle.Sizes.tableColumnAuto]
+            columnWidths: [numberColumnWidth, -1, EaStyle.Sizes.fontPixelSize * 5, textColumnWidth("units", ""), EaStyle.Sizes.fontPixelSize * 3.5, EaStyle.Sizes.fontPixelSize * 3, EaStyle.Sizes.fontPixelSize * 3, group.freeColumnWidth]
 
             header: EaComponents.ListViewHeader {
                 EaComponents.TableViewLabel {
@@ -176,18 +192,19 @@ EaElements.GroupBox {
                     text: qsTr("max")
                 }
                 // The title is a button, marked by the combo boxes' arrow: a click frees or fixes every row the
-                // filters show, as one Undo step (the owner, 2026-10-11). The column keeps the word's width; the arrow
-                // sits after it.
+                // filters show, as one Undo step (the owner, 2026-10-11). The word and the arrow are centred together
+                // over the checkboxes.
                 EaComponents.TableViewLabel {
                     id: freeTitle
                     objectName: "parameters.freeHeader"
                     horizontalAlignment: Text.AlignHCenter
+                    rightPadding: freeArrow.width + group.freeGap
                     color: freeArea.containsMouse ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
                     text: qsTr("free")
 
                     EaElements.Label {
                         id: freeArrow
-                        x: (freeTitle.width + freeTitle.contentWidth) / 2 + 0.25 * EaStyle.Sizes.fontPixelSize
+                        x: (freeTitle.width - freeTitle.rightPadding + freeTitle.contentWidth) / 2 + group.freeGap
                         anchors.verticalCenter: parent.verticalCenter
                         font.family: EaStyle.Fonts.iconsFamily
                         font.pixelSize: 0.8 * EaStyle.Sizes.fontPixelSize
@@ -202,7 +219,7 @@ EaElements.GroupBox {
                         z: 1
                         x: freeTitle.parent ? freeTitle.parent.x + freeTitle.x : 0
                         y: freeTitle.y
-                        width: freeArrow.x + freeArrow.width
+                        width: freeTitle.width
                         height: freeTitle.height
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
