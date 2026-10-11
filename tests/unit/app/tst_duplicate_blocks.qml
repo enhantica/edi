@@ -111,7 +111,7 @@ TestCase {
                 Probe.rows(copy.backgroundTerms)[0].coef.value += 17.125;
         }
         compare(source.text.text, before, "Editing the duplicate must leave every original category unchanged");
-        verify(current(kind).text.text !== before, "The independent copy must record its edited categories");
+        verify(categories(current(kind).text.text) !== categories(before), "The independent copy must record its edited categories beyond the datablock name");
         Session.project.undo();
         Session.project.undo();
         Session.project.undo();
