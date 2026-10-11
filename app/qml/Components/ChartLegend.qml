@@ -13,13 +13,25 @@ import edi.app
 Rectangle {
     id: legend
 
-    // The rows: the chart controller's legend model, with the roles `label`, `color`, `mark` and `bragg`.
+    // The rows: the chart controller's legend model, with the roles `label`, `color`, `mark`, `markWidth` and `bragg`.
     property ChartLegendModel entries: null
     // The name in the series' colour too, as a chart's legend shows it; the structure view's legend colours only
     // the mark, as a pale element colour (Ce, S) cannot be read on the view's background.
     property bool labelInColor: true
     // The box is at least this tall, its rows centred in it (the structure legend: a toolbar control's height).
     property real minimumHeight: 0
+
+    // An entry's mark: an element's is the atom icon the Atom sites table shows, a series' a drawn line or tick.
+    function markPiece(mark, width, color) {
+        return mark === "atom" ? {
+            "icon": "atom",
+            "color": color
+        } : {
+            "mark": mark,
+            "width": width,
+            "color": color
+        };
+    }
 
     width: column.width
     height: Math.max(column.height, minimumHeight)
@@ -45,12 +57,13 @@ Rectangle {
                 required property color color
                 required property string mark
                 required property bool bragg
+                required property real markWidth
 
                 objectName: "chart.legend.entry"
                 textColor: color
-                segments: bragg ? [
+                segments: bragg ? [legend.markPiece(mark, markWidth, color),
                     {
-                        "text": mark + "  " + qsTr("Bragg peaks")
+                        "text": qsTr("Bragg peaks")
                     },
                     {
                         "icon": "layer-group",
@@ -59,18 +72,10 @@ Rectangle {
                     {
                         "text": label
                     }
-                ] : legend.labelInColor ? [
-                    {
-                        "text": mark + "  " + label
-                    }
-                ] : [
-                    {
-                        "text": mark,
-                        "color": color
-                    },
+                ] : [legend.markPiece(mark, markWidth, color),
                     {
                         "text": label,
-                        "color": EaStyle.Colors.themeForeground
+                        "color": legend.labelInColor ? color : EaStyle.Colors.themeForeground
                     }
                 ]
             }

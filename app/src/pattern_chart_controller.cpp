@@ -333,9 +333,14 @@ void PatternChartController::refresh() {
     QList<ChartLegendModel::Entry> legend;
     const auto entry = [&](const edi::PatternSeries& series) {
         const bool bragg = series.kind == edi::SeriesKind::BraggTicks;
-        const bool thin = series.kind == edi::SeriesKind::Background;
+        double width = 1.0;
+        for (const edi::SeriesStyle& style : edi::pattern_style_table()) {
+            if (style.key == series.style) {
+                width = style.width_px;
+            }
+        }
         legend.append({QString::fromStdString(series.label), color(QString::fromStdString(series.style)),
-                       bragg ? QStringLiteral("│") : thin ? QStringLiteral("─") : QStringLiteral("━"), bragg});
+                       bragg ? QStringLiteral("tick") : QStringLiteral("line"), bragg, width});
     };
     int rows = 0;
     for (const edi::PatternSeries& series : shown_.series) {
