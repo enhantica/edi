@@ -127,6 +127,26 @@ TestCase {
         verify(/^\d+[a-z]$/.test(position.displayText), "The closed Wyckoff box must show only multiplicity and letter");
         verify(position.model.includes("24m: ½x+½y, ½x+½y, z"), "The Pm-3m catalogue’s 24m entry must use fraction glyphs");
         verify(position.model.includes("12i: 0, ½y+½z, ½y+½z"), "The Pm-3m catalogue’s 12i entry must retain its coordinates");
+        const catalogue = JSON.parse(Probe.readFile("tests/fixtures/c34_t25_fullprof/wyckoff.json")).groups;
+        const fractions = {
+            "1/2": "½",
+            "1/3": "⅓",
+            "2/3": "⅔",
+            "1/4": "¼",
+            "3/4": "¾",
+            "1/6": "⅙",
+            "5/6": "⅚",
+            "1/8": "⅛",
+            "3/8": "⅜",
+            "5/8": "⅝",
+            "7/8": "⅞"
+        };
+        for (const group of ["Pm-3m", "Pnma"]) {
+            Session.project.currentStructure.spaceGroup.nameHM = group;
+            const expected = catalogue[group].wyckoff.map(wp => wp.multiplicity + wp.letter + ": " + wp.special_op.replace(/\d+\/\d+/g, value => fractions[value] || value).replace(/\*/g, "").replace(/-/g, "−").replace(/,/g, ", "));
+            compare(JSON.stringify(Array.from(position.model).sort()), JSON.stringify(expected.sort()), "Every displayed WP choice must match the independent catalogue with fraction and minus glyphs");
+            verify(/^\d+[a-z]$/.test(position.displayText), "Changing the space group must retain a WP-only closed display");
+        }
         const glyphs = /[½⅓⅔¼¾⅙⅚⅛⅜⅝⅞−]/;
         verify(Session.saveAs(Probe.repoUrl("build/test-tmp/wyckoff-display")), "The displayed Wyckoff choices must permit saving the project");
         const saved = Probe.readFile("build/test-tmp/wyckoff-display/structures/lbco.edi");
