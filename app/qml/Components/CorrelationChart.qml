@@ -146,8 +146,12 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             spacing: AppSizes.toolbarSpacing * 2
 
+            // The name, the number and the count share the name's text baseline (owner, 2026-10-11).
             IconLine {
+                id: name
+
                 anchors.verticalCenter: parent.verticalCenter
+                baselineOffset: numberMetrics.ascent
                 textColor: box.enabled ? EaStyle.Colors.themeForeground : EaStyle.Colors.themeForegroundDisabled
                 segments: [
                     {
@@ -163,7 +167,7 @@ Item {
 
                 objectName: box.objectName + ".number"
                 width: Math.ceil(numberMetrics.advanceWidth(box.widestText))
-                anchors.verticalCenter: parent.verticalCenter
+                anchors.baseline: name.baseline
                 horizontalAlignment: TextInput.AlignRight
                 font.family: EaStyle.Fonts.fontFamily
                 font.pixelSize: EaStyle.Sizes.fontPixelSize
@@ -184,7 +188,7 @@ Item {
                 }
             }
             EaElements.Label {
-                anchors.verticalCenter: parent.verticalCenter
+                anchors.baseline: name.baseline
                 visible: box.suffix !== ""
                 color: EaStyle.Colors.themeForegroundMinor
                 text: box.suffix
@@ -223,9 +227,13 @@ Item {
         readonly property real columnLabelHeight: slanted ? Math.min(widestLabel, width * 0.4) * Math.SQRT1_2 + chart.em * 1.5 : flatLabelHeight
         readonly property real cell: chart.count > 0 ? Math.max(0, Math.floor(Math.min(gridWidth, height - columnLabelHeight) / chart.count)) : 0
         readonly property real side: cell * chart.count
+        // Every k-th name on each axis, k as small as keeps neighbours a line apart: a row's names stand a cell apart,
+        // the slanted column names a cell times sin 45° apart (owner, 2026-10-11). The tool tip names every cell.
+        readonly property int rowLabelStep: cell > 0 ? Math.max(1, Math.ceil(metrics.height / cell)) : 1
+        readonly property int columnLabelStep: cell > 0 && slanted ? Math.max(1, Math.ceil(metrics.height / (cell * Math.SQRT1_2))) : 1
 
         x: chart.sideMargin
-        y: toolbar.y + toolbar.height + chart.sideMargin
+        y: Math.round(toolbar.y + toolbar.height + chart.sideMargin)
         width: parent.width - 2 * chart.sideMargin
         height: parent.height - y - chart.em
         visible: chart.count >= 2 && cell > 0
@@ -234,7 +242,7 @@ Item {
             id: grid
 
             objectName: "correlations.grid"
-            x: area.rowLabelWidth + (area.gridWidth - area.side) / 2
+            x: Math.round(area.rowLabelWidth + (area.gridWidth - area.side) / 2)
             width: area.side
             height: area.side
 
@@ -319,6 +327,7 @@ Item {
             model: chart.count
             delegate: EaElements.Label {
                 required property int index
+                visible: index % area.rowLabelStep === 0
                 x: grid.x - width - chart.em * 0.5
                 y: grid.y + (index + 0.5) * area.cell - height / 2
                 width: Math.min(implicitWidth, area.rowLabelWidth - chart.em * 0.5)
@@ -333,6 +342,7 @@ Item {
             model: chart.count
             delegate: EaElements.Label {
                 required property int index
+                visible: index % area.columnLabelStep === 0
                 width: Math.min(implicitWidth, area.width * 0.4)
                 elide: Text.ElideLeft
                 color: EaStyle.Colors.chartLabels
@@ -344,18 +354,18 @@ Item {
             }
         }
 
-        // The colour bar: 1 at the top, -1 at the bottom.
+        // The colour bar: 1 at the top, -1 at the bottom, as high as the matrix and framed as it is, the frame drawn
+        // over the gradient so it shows.
         Item {
             id: colourBar
 
-            x: grid.x + area.side + chart.em * 1.5
-            width: chart.em
+            x: grid.x + area.side + Math.round(chart.em * 1.5)
+            y: grid.y
+            width: Math.round(chart.em)
             height: area.side
 
             Rectangle {
                 anchors.fill: parent
-                border.color: EaStyle.Colors.chartAxis
-                border.width: EaStyle.Sizes.borderThickness
                 gradient: Gradient {
                     GradientStop {
                         position: 0
@@ -370,6 +380,12 @@ Item {
                         color: chart.negativeColor
                     }
                 }
+            }
+            Rectangle {
+                anchors.fill: parent
+                color: "transparent"
+                border.color: EaStyle.Colors.chartAxis
+                border.width: EaStyle.Sizes.borderThickness
             }
             Repeater {
                 model: [1, 0.5, 0, -0.5, -1]

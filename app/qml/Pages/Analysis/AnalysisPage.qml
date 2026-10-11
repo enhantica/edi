@@ -38,16 +38,17 @@ WorkflowPage {
             // The view's name, text only (edi ADR-0017 §2).
             text: qsTr("Pattern")
         },
+        // The last fit's parameter correlations for the shown experiment (diffraction-lib's correlation heatmap),
+        // before Evolution: every fit has them (owner, 2026-10-11).
+        IconTabButton {
+            objectName: "mainArea.analysis.tab.correlations"
+            text: qsTr("Correlations")
+        },
         // A fitted parameter across a scan's datasets (edi ADR-0017 §19); a scan project's only.
         IconTabButton {
             objectName: "mainArea.analysis.tab.evolution"
             text: qsTr("Evolution")
             enabled: page.project !== null && page.project.scan
-        },
-        // The last fit's parameter correlations for the shown experiment (diffraction-lib's correlation heatmap).
-        IconTabButton {
-            objectName: "mainArea.analysis.tab.correlations"
-            text: qsTr("Correlations")
         }
     ]
     mainItems: [
@@ -56,12 +57,12 @@ WorkflowPage {
             experiment: page.experiment
             shown: page.current && SwipeView.isCurrentItem
         },
-        EvolutionChart {
-            id: evolutionChart
+        CorrelationChart {
             project: page.project
             shown: page.current && SwipeView.isCurrentItem
         },
-        CorrelationChart {
+        EvolutionChart {
+            id: evolutionChart
             project: page.project
             shown: page.current && SwipeView.isCurrentItem
         }
@@ -115,7 +116,7 @@ WorkflowPage {
     Connections {
         target: AppState
         function onEvolutionRequested() {
-            page.showMainTab(1);
+            page.showMainTab(2);
         }
     }
     continueText: qsTr("Continue")

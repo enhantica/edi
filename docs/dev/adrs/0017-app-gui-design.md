@@ -55,7 +55,7 @@ The decisions it rests on, unchanged here:
 
 - **Main-area tab names name the view** (owner, 2026-10-05; until then they were the current block's icon and name,
   ideas 6–8 and 23): **Project** on Project, **Structure** on Structure, **Pattern** on Experiment and Analysis (Analysis
-  had *Fitting*), **Summary** on Report; the Analysis tabs read Pattern, Evolution and, later, Correlations. The block
+  had *Fitting*), **Summary** on Report; the Analysis tabs read Pattern, Correlations and Evolution (owner, 2026-10-11). The block
   is named by the selector row above the view (§7). **Every tab is text only** (owner, 2026-10-05), in the main view
   and the sidebar alike. `Components/IconTabButton.qml` is the base's `TabButton` with its content drawn as one icon
   line (§10); without an icon it draws the name alone.
@@ -887,7 +887,7 @@ refuses to write its bank rows into it.
 - **A dataset's Fit outcome** comes from its results row: *Success* when it converged; otherwise *Max iterations* when
   its iteration count reached the bound, else *No step*; *Not fitted* without a row. Its extracted values come from
   its row, or from its file when a view shows its entry.
-- **The Evolution tab** (Analysis, after Pattern; text only like every tab, §2) draws one fitted parameter across
+- **The Evolution tab** (Analysis, after Correlations; text only like every tab, §2) draws one fitted parameter across
   the datasets (`Components/EvolutionChart.qml`, `EvolutionViewModel`): a point per fitted dataset with its
   uncertainty as an error bar, drawn as the pattern chart draws measured points. The page's selector row keeps listing the
   datasets, as on the Pattern tab; a selector in the chart's own toolbar, beside the x box, chooses among the
