@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-11T17:06:28Z
+# measured_utc = 2026-10-11T17:21:58Z
 #
-# Recorded from: position-current.log (5 node(s) measured once, 9628 banked, 0 stale row(s) dropped)
-# Collected tests: 10368; with a reported duration: 5339
+# Recorded from: links-current.log (3 node(s) measured once, 9632 banked, 1 stale row(s) dropped)
+# Collected tests: 10370; with a reported duration: 5339
 # Module-scoped fixture costs recorded: 34
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 10368
+# inventory_python = 10370
 # inventory_cpp = 302
-# inventory_measured = 9633
+# inventory_measured = 9635
 # inventory_unmeasured = 1037
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
@@ -2070,9 +2070,11 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.
 0.130	tests/integration/py/test_correlation_app_contract.py::test_create_location_joins_folder_and_edited_name_once[C:\\chosen\\\\-first-C:\\chosen\\first]
 0.000	tests/integration/py/test_correlation_app_contract.py::test_create_project_passes_the_chosen_location_to_the_session
 0.000	tests/integration/py/test_correlation_app_contract.py::test_diagnostics_uses_a_button_with_a_declared_combobox_width
+0.000	tests/integration/py/test_correlation_app_contract.py::test_duplicate_group_action_is_reachable[experiment-Experiment/ExperimentsGroup.qml-duplicateExperiment]
+0.000	tests/integration/py/test_correlation_app_contract.py::test_duplicate_group_action_is_reachable[structure-Structure/StructuresGroup.qml-duplicateStructure]
 0.000	tests/integration/py/test_correlation_app_contract.py::test_each_coefficient_background_has_a_table_layout[chebyshev]
 0.000	tests/integration/py/test_correlation_app_contract.py::test_each_coefficient_background_has_a_table_layout[polynomial]
-0.150	tests/integration/py/test_correlation_app_contract.py::test_experiment_data_header_and_button_are_declared
+0.300	tests/integration/py/test_correlation_app_contract.py::test_experiment_data_header_and_link_are_declared
 0.140	tests/integration/py/test_correlation_app_contract.py::test_save_asks_once_then_uses_the_existing_location
 0.000	tests/integration/py/test_correlation_app_contract.py::test_supported_only_selectors_are_disabled_and_explain_the_reason
 0.580	tests/integration/py/test_correlation_app_contract.py::test_workflow_pages_follow_structure_and_experiment_presence[analysisPageEnabled-True]

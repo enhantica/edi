@@ -149,16 +149,62 @@ def test_wyckoff_open_list_and_closed_display_have_separate_formats():
     ), 'The open WP choices must join the catalogue name and formatted coordinates with a colon'
 
 
-def test_experiment_data_header_and_button_are_declared():
+def test_experiment_data_header_and_link_are_declared():
     source = text('Pages/Experiment/ExperimentsGroup.qml')
     assert 'qsTr("Data file")' in source, (
         'The experiments table must label its data column Data file'
     )
-    assert re.search(
-        r'(?:Button|DataFileCell)\s*\{[^{}]*(?:\{[^{}]*\}[^{}]*)*qsTr\("Load data…"\)',
-        source,
-        re.DOTALL,
-    ), 'Loading measured data must use a button rather than a clickable text label'
+    marker = source.index('id: loadData')
+    opening = source.rfind('EaComponents.TableViewLabel {', 0, marker)
+    assert opening >= 0, 'The load-data cell must be a plain table label'
+    cell = body(source[opening:], 'EaComponents.TableViewLabel')
+    assert 'id: loadData' in cell and 'horizontalAlignment: Text.AlignLeft' in cell, (
+        'The data-file link must use left-aligned plain text'
+    )
+    assert 'Qt.PointingHandCursor' in cell and 'HoverHandler' in cell, (
+        'The data-file link must offer a pointing-hand hover target'
+    )
+    assert 'TapHandler' in cell and 'onTapped: loadData.clicked()' in cell, (
+        'Pointer input on the data-file link must reach its production click signal'
+    )
+    assert 'onClicked: group.chooseData(row.experiment)' in cell, (
+        'The link click must load data into its own experiment'
+    )
+    assert 'Load another data file in place of this one' in cell and 'ToolTip' in cell, (
+        'The data-file link must explain in-place loading in its tooltip'
+    )
+    expressions = {
+        key: re.search(r'(?m)^\s*' + key + r':\s*([^\n]+)', cell).group(1)
+        for key in ('color', 'text', 'visible')
+    }
+    script = (
+        'const EaStyle={Colors:{themeAccent:"blue",themeForeground:"normal"}}; const qsTr=s=>s;'
+    )
+    script += 'let cases=[]; for(const empty of [false,true]) for(const hovered of [false,true]) {'
+    script += 'const row={file:"data.xy",experiment:{canLoadData:true}},group={scan:false};'
+    script += 'const loadDataHover={hovered};'
+    script += (
+        'cases.push(['
+        + expressions['color']
+        + ','
+        + expressions['text']
+        + ','
+        + expressions['visible']
+        + ']);}'
+    )
+    script += 'process.stdout.write(JSON.stringify(cases));'
+    result = subprocess.run(
+        ['node', '-e', script], capture_output=True, text=True, timeout=3, check=False
+    )
+    assert result.returncode == 0, (
+        'The actual link colour, label and visibility expressions must evaluate'
+    )
+    assert json.loads(result.stdout) == [
+        ['normal', 'data.xy', True],
+        ['blue', 'data.xy', True],
+        ['blue', 'Load data…', True],
+        ['blue', 'Load data…', True],
+    ], 'The existing filename must turn blue on hover and the empty link must stay blue'
     widths = re.search(r'columnWidths:\s*(\[[^\n]+\])', source)
     assert widths, 'The Experiments table must declare each column width'
     script = (
@@ -303,3 +349,32 @@ def test_coefficient_editing_and_constants_have_writable_controls():
     assert 'setOrder(' in source and 'ParameterCell {' in source, (
         'Order must commit to the model and coefficient must retain parameter editing parity'
     )
+
+
+@pytest.mark.parametrize(
+    ('kind', 'page', 'method'),
+    [
+        ('experiment', 'Experiment/ExperimentsGroup.qml', 'duplicateExperiment'),
+        ('structure', 'Structure/StructuresGroup.qml', 'duplicateStructure'),
+    ],
+)
+def test_duplicate_group_action_is_reachable(kind, page, method):
+    source = text('Pages/' + page)
+    marker = f'objectName: "{kind}s.duplicate"'
+    assert marker in source, 'The group must expose its independent Duplicate action'
+    start = source.rfind('EaElements.SideBarButton {', 0, source.index(marker))
+    action = body(source[start:], 'EaElements.SideBarButton')
+    assert f'qsTr("Duplicate {kind}")' in action, (
+        'The group Duplicate action must name its block kind'
+    )
+    assert 'group.project.' + method + '()' in action, (
+        'The Duplicate action must dispatch the production project operation'
+    )
+    header = (ROOT / 'app/src/project_view_model.hpp').read_text()
+    assert 'Q_INVOKABLE bool ' + method + '();' in header, (
+        'The project must expose the Duplicate operation to the actual app'
+    )
+    if kind == 'experiment':
+        assert 'canCreateExperiment' in action, (
+            'Scan admission must disable experiment duplication'
+        )

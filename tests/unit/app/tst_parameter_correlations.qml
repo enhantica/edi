@@ -235,7 +235,7 @@ TestCase {
             checkExperiment(reference, index);
     }
 
-    function test_data_file_header_button_and_free_width() {
+    function test_data_file_header_link_and_free_width() {
         verify(Session.createProject("empty-experiment", "Data file layout witness"), "The data-file witness must create a project");
         verify(Session.project.createStructure(), "The data-file witness must create a structure");
         verify(Session.project.createExperiment(), "The data-file witness must create an experiment");
@@ -246,8 +246,24 @@ TestCase {
         verify(Ui.text(list).includes("Data file"), "The free-width data column must have its Data file header");
         compare(list.columnWidths[4], -1, "Data file must own the table's free width");
         const load = control("experiments.loadData.0");
-        verify(load !== null && load.text === "Load data…", "An experiment without data must offer a real Load data button");
-        verify(load.width > 0 && load.enabled, "The Load data button must have a usable width and accept input");
+        verify(load !== null && load.text === "Load data…", "An experiment without data must offer a Load data text link");
+        verify(load.width > 0 && load.enabled, "The Load data link must have a usable width and accept input");
+        compare(load.horizontalAlignment, Text.AlignLeft, "The data-file link must be left aligned");
+        compare(String(load.color), String(Style.Colors.themeAccent), "An empty data-file link must use accent blue");
+        open("tests/fixtures/e04_t1/editable-project");
+        click("appBar.tab.experiment");
+        Ui.expandGroup(test, Probe, appWindow, "group.experiments");
+        const loaded = control("experiments.loadData.0");
+        verify(loaded !== null && loaded.text.length > 0, "An experiment loaded from disk must retain its data-file link");
+        const point = Ui.clickPoint(loaded);
+        verify(point !== null, "The loaded filename must expose a pointer target");
+        mouseMove(loaded, point.x, point.y);
+        tryCompare(loaded, "color", Style.Colors.themeAccent, 1000, "Hovering the loaded filename must turn it accent blue");
+        verify(Session.saveAs(Probe.repoUrl("build/test-tmp/data-link-reload")), "The linked experiment must save for reload");
+        open("build/test-tmp/data-link-reload");
+        click("appBar.tab.experiment");
+        Ui.expandGroup(test, Probe, appWindow, "group.experiments");
+        verify(control("experiments.loadData.0") !== null, "The data-file link must remain available after a save and reload");
     }
 
     function test_diagnostics_button_matches_logging_level_size() {
