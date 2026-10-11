@@ -366,6 +366,16 @@
       "form": "loop",
       "columns": [
         {
+          "member": "PolynomialTerm::id",
+          "type": "ItemKey",
+          "items": [
+            "id"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
+        },
+        {
           "member": "PolynomialTerm::order",
           "type": "detail::Written<int>",
           "items": [
@@ -2817,6 +2827,11 @@
       "member": "ExcludedRegion::epoch",
       "type": "detail::Epoch",
       "part": "the row's identity as a calculation input"
+    },
+    {
+      "member": "PolynomialTerm::id",
+      "type": "ItemKey",
+      "category": "_background"
     },
     {
       "member": "PolynomialTerm::order",

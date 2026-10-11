@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
+#include <string>
 
 #include "edi/io.hpp"
 
@@ -226,6 +227,15 @@ PolynomialTerm next_background_term(const ExperimentBase& experiment) {
         if (!held) {
             PolynomialTerm term;
             term.order = order;
+            // Named by the first number no other term holds, as a loaded term without an id is numbered.
+            for (int number = 1;; ++number) {
+                const std::string id = std::to_string(number);
+                if (std::none_of(experiment.background_terms.begin(), experiment.background_terms.end(),
+                                 [&id](const auto& held_term) { return held_term->id.value() == id; })) {
+                    term.id = id;
+                    break;
+                }
+            }
             return term;
         }
     }

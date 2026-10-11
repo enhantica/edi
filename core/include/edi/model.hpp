@@ -1341,6 +1341,7 @@ inline std::string datablock_key(const std::string& name, const std::string& def
 
 class ItemKey;
 struct LineSegment;
+struct PolynomialTerm;
 
 namespace detail {
 
@@ -2163,7 +2164,7 @@ class ItemVec final : public detail::KeyedBase {
             }
         } else if constexpr (std::is_same_v<T, BraggPdExperiment>) {
             if (Project* project = host()) detail::follow_datablock_rename(*project, "experiment", key.value(), next);
-        } else if constexpr (std::is_same_v<T, LineSegment>) {
+        } else if constexpr (std::is_same_v<T, LineSegment> || std::is_same_v<T, PolynomialTerm>) {
             if (Project* project = host()) detail::follow_background_aliases(*project, key, next);
         } else if constexpr (std::is_same_v<T, AtomSite>) {
             detail::follow_site_references(host(), holder(), key.value(), next);
@@ -3055,8 +3056,10 @@ inline ItemVec<ExcludedRegion> excluded_region_rows(const std::vector<std::pair<
 
 
 // One term of a polynomial or Chebyshev background (diffraction-lib
-// `PolynomialTerm`): its fixed order m and its refinable coefficient B_m.
+// `PolynomialTerm`): its id, which names its coefficient (`background.<id>.coef`, as every loop row is named;
+// a term read without one takes its ordinal), its fixed order m and its refinable coefficient B_m.
 struct PolynomialTerm : std::enable_shared_from_this<PolynomialTerm> {
+    ItemKey id;
     detail::Written<int> order{0};
     Parameter coef{0.0};
 
@@ -3068,6 +3071,18 @@ struct PolynomialTerm : std::enable_shared_from_this<PolynomialTerm> {
     detail::RowLink row;
     // This row's identity as a calculation input.
     detail::Epoch epoch;
+};
+
+template <>
+struct KeyTraits<PolynomialTerm> {
+    static constexpr bool ordinal_defaults = true;
+    static ItemKey& key(PolynomialTerm& term) { return term.id; }
+    static const ItemKey& key(const PolynomialTerm& term) { return term.id; }
+    static std::string canonical(const std::string& id) {
+        if (id.empty()) throw std::invalid_argument("background term id must not be empty");
+        return id;
+    }
+    static const char* category() { return "background term"; }
 };
 
 // A background term is a row of its experiment's `background_terms`.
@@ -3090,8 +3105,9 @@ namespace crysta {
 template <>
 struct RowSchema<edi::PolynomialTerm> {
     static constexpr const char* name = "_background";
-    static constexpr auto fields = std::tuple{&edi::PolynomialTerm::order, &edi::PolynomialTerm::coef};
-    static constexpr std::array items{"order", "coef"};
+    static constexpr auto fields =
+        std::tuple{&edi::PolynomialTerm::id, &edi::PolynomialTerm::order, &edi::PolynomialTerm::coef};
+    static constexpr std::array items{"id", "order", "coef"};
     static constexpr std::array variants{"chebyshev", "polynomial"};
 };
 }  // namespace crysta
@@ -4668,20 +4684,31 @@ inline void link_nested(ExperimentBase& experiment, const std::shared_ptr<const 
     }
 }
 
+// A background row's parameter is named by the row's id (`<experiment>.background.<id>.intensity`, or `.coef` for
+// a polynomial or Chebyshev term), so a rename carries every alias, and the fit's correlations, to the new id.
 inline void follow_background_aliases(Project& project, const ItemKey& key, const std::string& next) {
     for (const auto& experiment : project.experiments) {
+        const char* field = nullptr;
         for (const auto& point : experiment->background) {
-            if (&point->id != &key) continue;
-            const auto root = datablock_key(experiment->name.value(), "experiment") + ".background.";
-            const auto from = root + key.value() + ".intensity";
-            const auto to = root + next + ".intensity";
-            std::vector<std::pair<ParameterAlias*, std::string>> changes;
-            for (const auto& alias : project.aliases) {
-                if (alias->parameter_unique_name.value() == from) changes.emplace_back(alias.get(), to);
-            }
-            for (auto& [alias, value] : changes) alias->parameter_unique_name = std::move(value);
-            return;
+            if (&point->id == &key) field = ".intensity";
         }
+        for (const auto& term : experiment->background_terms) {
+            if (&term->id == &key) field = ".coef";
+        }
+        if (field == nullptr) continue;
+        const auto root = datablock_key(experiment->name.value(), "experiment") + ".background.";
+        const auto from = root + key.value() + field;
+        const auto to = root + next + field;
+        std::vector<std::pair<ParameterAlias*, std::string>> changes;
+        for (const auto& alias : project.aliases) {
+            if (alias->parameter_unique_name.value() == from) changes.emplace_back(alias.get(), to);
+        }
+        for (const auto& pair : project.fit_result.correlations) {
+            if (pair->parameter_unique_name_i.value() == from) pair->parameter_unique_name_i = to;
+            if (pair->parameter_unique_name_j.value() == from) pair->parameter_unique_name_j = to;
+        }
+        for (auto& [alias, value] : changes) alias->parameter_unique_name = std::move(value);
+        return;
     }
 }
 

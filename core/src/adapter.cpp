@@ -1054,15 +1054,16 @@ Index build_index(Project& model, crysta::Project& cproject) {
                   Slot{&cexperiment.instrument[2], &experiment.instrument.calib_d_to_tof_quadratic});
     index.emplace("experiment.instrument.calib_d_to_tof_reciprocal",
                   Slot{&cexperiment.instrument[3], &experiment.instrument.calib_d_to_tof_reciprocal});
-    index.emplace("experiment.linked_structure.scale",
+    // A loop row by its id, never its position (the owner, 2026-10-11), as parameter_paths names it.
+    index.emplace("experiment.linked_structures[" + experiment.linked_structure().structure_id.value() + "].scale",
                   Slot{&cexperiment.scale(), &experiment.linked_structure().scale});
     for (std::size_t i = 0; i < experiment.background.size(); ++i) {
         index.emplace(
-            "experiment.background[" + std::to_string(i) + "].intensity",
+            "experiment.background[" + experiment.background[i]->id.value() + "].intensity",
             Slot{&cexperiment.background[i].intensity, &experiment.background[i]->intensity});
     }
     for (std::size_t i = 0; i < experiment.background_terms.size(); ++i) {
-        index.emplace("experiment.background[" + std::to_string(i) + "].coef",
+        index.emplace("experiment.background[" + experiment.background_terms[i]->id.value() + "].coef",
                       Slot{&cexperiment.background_terms[i].coef, &experiment.background_terms[i]->coef});
     }
     // Presence-tracked: a model that never declared abscor1 has no such path, so a set() on it is an
@@ -1083,9 +1084,9 @@ Index build_index(Project& model, crysta::Project& cproject) {
     // The one preferred-orientation row, crysta's [march_r, march_random_fract] layout.
     if (experiment.preferred_orientation.size() != 0 && cexperiment.texture() != nullptr) {
         PrefOrient& row = *experiment.preferred_orientation[0];
-        index.emplace("experiment.preferred_orientation[0].march_r",
-                      Slot{cexperiment.texture()->march.data(), &row.march_r});
-        index.emplace("experiment.preferred_orientation[0].march_random_fract",
+        const std::string texture = "experiment.preferred_orientation[" + row.structure_id.value() + "].";
+        index.emplace(texture + "march_r", Slot{cexperiment.texture()->march.data(), &row.march_r});
+        index.emplace(texture + "march_random_fract",
                       Slot{cexperiment.texture()->march.data() + 1, &row.march_random_fract});
     }
     return index;
@@ -2304,8 +2305,9 @@ void apply_post_build_fields(const ExperimentBase& e, crysta::ExperimentBase& bu
         terms.reserve(e.background_terms.size());
         for (const auto& term : e.background_terms) {
             terms.emplace_back(term->order.get(), param(term->coef, crysta::BACKGROUND, "coef"));
+            terms.back().id = term->id.value();
         }
-        built.background_terms = std::move(terms);
+        built.background_terms.assign(terms);
     }
     // The declared family token crosses on the CALCULATE path too — crysta's CW kernel
     // resolves it (cwl_absorption_form on `absorption_type`), while its TOF derivation stays

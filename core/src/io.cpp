@@ -1863,6 +1863,9 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
             read_into(term.coef,
                       parse_parameter(loop_cell(*terms, row, spec::background_coef.edi_names[0], where), where),
                       where);
+            // The term's id names its coefficient; a file without ids gives each its ordinal, as crysta's reader does.
+            term.id = terms->column("_background.id") >= 0 ? loop_cell(*terms, row, "_background.id", where)
+                                                            : std::to_string(experiment.background_terms.size() + 1);
             experiment.background_terms.push_back(std::move(term));
         }
     }
@@ -2053,16 +2056,14 @@ auto parameter_slots(ProjectT& project) {
         // ADR-0016: the canonical datablock key, as crysta's writer composes it.
         const std::string prefix = datablock_key(experiment.name, "experiment") + ".";
         // A link with no structure id names its scale by the project's structure, as crysta's walk
-        // does (structure_link_id); several links prefix their own slots by structure.
+        // does (structure_link_id). Every link prefixes its own slots by its structure, whatever their
+        // number, as every loop row is named by its id (the owner, 2026-10-11).
         const auto entry_of = [&](const std::string& linked) {
             return datablock_key(
                 linked.empty() && !project.structures.empty() ? project.structures.front()->name.value() : linked,
                 "structure");
         };
-        const bool several_links = experiment.linked_structures.size() > 1;
-        const auto phase_prefix = [&](const std::string& structure_id) {
-            return several_links ? prefix + datablock_key(structure_id, "structure") + "." : prefix;
-        };
+        const auto phase_prefix = [&](const std::string& structure_id) { return prefix + entry_of(structure_id) + "."; };
         const auto peak = [&](const std::string& name, ParameterPtr parameter) {
             add(prefix + name, prefix + "peak." + name, parameter);
         };
@@ -2172,18 +2173,16 @@ auto parameter_slots(ProjectT& project) {
         }
         // The declared model's parameters by row (crysta fit_state.hpp) — the line-segment
         // intensities, or a polynomial or Chebyshev model's coefficients.
+        // Each row by its id, never its position (the owner, 2026-10-11).
         if (experiment.background_type == "line-segment") {
-            for (std::size_t index = 0; index < experiment.background.size(); ++index) {
-                // Persisted names use the stored ID; the engine address remains an ordinal.
-                add(prefix + "background[" + std::to_string(index) + "]",
-                    prefix + "background." + experiment.background[index]->id.value() + ".intensity",
-                    &experiment.background[index]->intensity);
+            for (const auto& point : experiment.background) {
+                add(prefix + "background[" + point->id.value() + "]",
+                    prefix + "background." + point->id.value() + ".intensity", &point->intensity);
             }
         } else {
-            for (std::size_t index = 0; index < experiment.background_terms.size(); ++index) {
-                add(prefix + "background[" + std::to_string(index) + "]",
-                    prefix + "background." + std::to_string(index + 1) + ".coef",
-                    &experiment.background_terms[index]->coef);
+            for (const auto& term : experiment.background_terms) {
+                add(prefix + "background[" + term->id.value() + "]",
+                    prefix + "background." + term->id.value() + ".coef", &term->coef);
             }
         }
     }
@@ -2199,6 +2198,70 @@ auto fit_state_slots(ProjectT& project) {
         slots.emplace_back(std::move(slot.id), slot.parameter);
     }
     return slots;
+}
+
+// A parameter name an older file wrote while loop rows were named by position, as the project names it now, by
+// the row's id (crysta's current_parameter_name, the same rule): `<experiment>.background[<index>]` and
+// `<experiment>.background.<ordinal>.coef` take the row's id, and a one-link experiment's `<experiment>.scale`,
+// `.march_r` and `.march_random_fract` its structure. A name that resolves already, or matches none of these, is
+// returned as it is. The loader passes every alias and `_fit_parameter.id` through it.
+std::string current_parameter_name(Project& project, const std::string& name) {
+    std::set<std::string> known;
+    for (auto& slot : parameter_slots(project)) {
+        known.insert(slot.id);
+        known.insert(slot.unique_name);
+    }
+    if (known.contains(name)) {
+        return name;
+    }
+    const auto ordinal = [](const std::string& text) -> std::optional<std::size_t> {
+        if (text.empty() || text.size() > 9 ||
+            !std::all_of(text.begin(), text.end(), [](unsigned char c) { return std::isdigit(c) != 0; })) {
+            return std::nullopt;
+        }
+        return static_cast<std::size_t>(std::stoul(text));
+    };
+    for (const auto& experiment : project.experiments) {
+        const std::string prefix = datablock_key(experiment->name, "experiment") + ".";
+        if (!name.starts_with(prefix)) {
+            continue;
+        }
+        const std::string rest = name.substr(prefix.size());
+        const bool line_segment = experiment->background_type == "line-segment";
+        const auto row_id = [&](std::size_t index) -> std::optional<std::string> {
+            if (line_segment) {
+                return index < experiment->background.size()
+                           ? std::optional<std::string>(experiment->background[index]->id.value())
+                           : std::nullopt;
+            }
+            return index < experiment->background_terms.size()
+                       ? std::optional<std::string>(experiment->background_terms[index]->id.value())
+                       : std::nullopt;
+        };
+        std::optional<std::string> candidate;
+        if (rest.starts_with("background[") && rest.ends_with("]")) {
+            if (const auto index = ordinal(rest.substr(11, rest.size() - 12))) {
+                if (const auto id = row_id(*index)) {
+                    candidate = prefix + "background[" + *id + "]";
+                }
+            }
+        } else if (!line_segment && rest.starts_with("background.") && rest.ends_with(".coef")) {
+            if (const auto number = ordinal(rest.substr(11, rest.size() - 16)); number && *number > 0) {
+                if (const auto id = row_id(*number - 1)) {
+                    candidate = prefix + "background." + *id + ".coef";
+                }
+            }
+        } else if ((rest == "scale" || rest == "march_r" || rest == "march_random_fract") &&
+                   experiment->linked_structures.size() == 1 && !project.structures.empty()) {
+            const std::string& linked = experiment->linked_structures[0]->structure_id.value();
+            const std::string structure = linked.empty() ? project.structures.front()->name.value() : linked;
+            candidate = prefix + datablock_key(structure, "structure") + "." + rest;
+        }
+        if (candidate && known.contains(*candidate)) {
+            return *candidate;
+        }
+    }
+    return name;
 }
 
 }  // namespace
@@ -3258,8 +3321,9 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
             for (const auto& row : aliases->rows) {
                 ParameterAlias alias;
                 alias.id = loop_cell(*aliases, row, "_alias.id", analysis_file.string());
-                alias.parameter_unique_name = loop_cell(*aliases, row, "_alias.parameter_unique_name",
-                                                        analysis_file.string());
+                // An older file's position name is read by the row's id.
+                alias.parameter_unique_name = current_parameter_name(
+                    project, loop_cell(*aliases, row, "_alias.parameter_unique_name", analysis_file.string()));
                 project.aliases.push_back(std::move(alias));
             }
         }
@@ -3462,8 +3526,9 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
             const bool has_tied = fit_rows->column("_fit_parameter.start_tied") >= 0;
             std::vector<std::pair<Parameter*, std::optional<std::string>>> tied_rows;
             for (const auto& row : fit_rows->rows) {
-                const std::string& id =
-                    loop_cell(*fit_rows, row, "_fit_parameter.id", analysis_file.string());
+                // An older file's position name is read by the row's id.
+                const std::string id = current_parameter_name(
+                    project, loop_cell(*fit_rows, row, "_fit_parameter.id", analysis_file.string()));
                 const auto slot = slot_map.find(id);
                 if (slot == slot_map.end()) {
                     throw IoError("analysis.edi: _fit_parameter row '" + id +

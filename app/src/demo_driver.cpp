@@ -380,6 +380,10 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                                 "choose:chebyshev"}});
     steps_.push_back({"t17-15-type-chebyshev", {"choose:OK"}});
     steps_.push_back({"t17-16-chebyshev-term-appended", {"background.appendTerm", "background.appendTerm"}});
+    // Every loop row is named by its id in the parameter table (owner, 2026-10-11): the Chebyshev terms here.
+    steps_.push_back({"t17-17-term-ids-in-table", start + open_example("pd-neut-tof_cecoal-polaris_chebyshev")
+                                                      + QStringList{analysis, basic, "parameters.nameFilter",
+                                                                    "type:background"}});
     if (!only.isEmpty()) {
         std::erase_if(steps_, [&only](const Step& step) { return !step.image.startsWith(only); });
     }
