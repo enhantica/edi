@@ -2391,7 +2391,7 @@
      "reason": "C",
      "verdict": "public"
     },
-    "fit_parameter_correlations": {
+    "correlations": {
      "reason": "C",
      "verdict": "public",
      "need": {
@@ -2775,7 +2775,7 @@
      "reason": "C",
      "verdict": "public"
     },
-    "fit_parameter_correlations": {
+    "correlations": {
      "reason": "C",
      "verdict": "public",
      "need": {
@@ -6776,7 +6776,7 @@
    "members": [
     "banks",
     "converged",
-    "fit_parameter_correlations",
+    "correlations",
     "fitting_time",
     "iterations",
     "reduced_chi_square",
@@ -6858,7 +6858,7 @@
    "members": [
     "banks",
     "converged",
-    "fit_parameter_correlations",
+    "correlations",
     "fitting_time",
     "iterations",
     "reduced_chi_square",

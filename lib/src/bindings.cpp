@@ -3156,7 +3156,7 @@ NB_MODULE(_edi, m) {
         // single-file result carries no per-bank block.
         .def_ro("banks", &edi::FitResultBase::banks)
         .def_prop_ro(
-            "fit_parameter_correlations",
+            "correlations",
             [](const edi::FitResultBase& self) {
                 nb::list out;
                 for (const edi::FitParameterCorrelation& pair : self.correlations) {
