@@ -53,6 +53,9 @@ QtObject {
     // One row of a legend (the pattern chart's, the structure view's): one text line's height, the pattern
     // legend's spacing (the owner, 2026-10-11).
     readonly property real legendRowHeight: Math.round(unit * 1.3)
+    // The structure view's legend rows: halfway between a legend row and a combo box list entry (the owner,
+    // 2026-10-11).
+    readonly property real structureLegendRowHeight: Math.round((legendRowHeight + EaStyle.Sizes.comboBoxHeight) / 2)
     // A combo box list entry's side padding: the base MenuItem's (a literal 16 there).
     readonly property real listItemPadding: 16
     // Between the input boxes of one group, as between a chart toolbar's buttons (the owner's note 23).

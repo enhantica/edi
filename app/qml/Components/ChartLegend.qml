@@ -20,6 +20,8 @@ Rectangle {
     property bool labelInColor: true
     // The box is at least this tall, its rows centred in it (the structure legend: a toolbar control's height).
     property real minimumHeight: 0
+    // Each row's height.
+    property real rowHeight: AppSizes.legendRowHeight
 
     // An entry's mark: an element's is the atom icon the Atom sites table shows, a series' a drawn line or tick.
     function markPiece(mark, width, color) {
@@ -60,7 +62,7 @@ Rectangle {
                 required property real markWidth
 
                 objectName: "chart.legend.entry"
-                height: AppSizes.legendRowHeight
+                height: legend.rowHeight
                 textColor: color
                 segments: bragg ? [legend.markPiece(mark, markWidth, color),
                     {

@@ -131,6 +131,7 @@ Rectangle {
             id: legend
             objectName: "structure.view.legend"
             minimumHeight: AppSizes.toolbarControlSize
+            rowHeight: AppSizes.structureLegendRowHeight
             anchors.left: parent.left
             anchors.bottom: parent.bottom
             anchors.margins: view.margin
