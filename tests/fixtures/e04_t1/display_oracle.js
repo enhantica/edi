@@ -183,7 +183,7 @@ var frozen = {
         ],
         [
           "range.step",
-          "0.1–0.3",
+          "0.1\u20130.3",
           "readonly"
         ],
         [
@@ -293,7 +293,7 @@ var frozen = {
         ],
         [
           "range.step",
-          "0.1–0.3",
+          "0.1\u20130.3",
           "readonly"
         ],
         [
@@ -403,7 +403,7 @@ var frozen = {
         ],
         [
           "range.step",
-          "0.1–0.2",
+          "0.1\u20130.2",
           "readonly"
         ],
         [
@@ -538,7 +538,7 @@ var frozen = {
         ],
         [
           "range.step",
-          "0.1–0.2",
+          "0.1\u20130.2",
           "readonly"
         ],
         [
@@ -673,7 +673,7 @@ var frozen = {
         ],
         [
           "range.step",
-          "0.1–0.2",
+          "0.1\u20130.2",
           "readonly"
         ],
         [
@@ -1028,7 +1028,7 @@ var frozen = {
         ],
         [
           "range.step",
-          "4.96–72.3",
+          "4.96\u201372.3",
           "readonly"
         ],
         [
@@ -1088,7 +1088,7 @@ var frozen = {
         ],
         [
           "range.step",
-          "4.69–66.6",
+          "4.69\u201366.6",
           "readonly"
         ],
         [
@@ -1198,7 +1198,7 @@ var frozen = {
         ],
         [
           "range.step",
-          "4.51–200",
+          "4.51\u2013200",
           "readonly"
         ],
         [
@@ -1258,7 +1258,7 @@ var frozen = {
         ],
         [
           "range.step",
-          "4.96–72.3",
+          "4.96\u201372.3",
           "readonly"
         ],
         [
@@ -1318,7 +1318,7 @@ var frozen = {
         ],
         [
           "range.step",
-          "4.71–66.6",
+          "4.71\u201366.6",
           "readonly"
         ],
         [
@@ -1428,7 +1428,7 @@ var frozen = {
         ],
         [
           "range.step",
-          "4.58–1190",
+          "4.58\u20131190",
           "readonly"
         ],
         [
@@ -1488,7 +1488,7 @@ var frozen = {
         ],
         [
           "range.step",
-          "4.51–200",
+          "4.51\u2013200",
           "readonly"
         ],
         [
@@ -1548,7 +1548,7 @@ var frozen = {
         ],
         [
           "range.step",
-          "5.21–80.7",
+          "5.21\u201380.7",
           "readonly"
         ],
         [
@@ -1608,7 +1608,7 @@ var frozen = {
         ],
         [
           "range.step",
-          "4.96–72.3",
+          "4.96\u201372.3",
           "readonly"
         ],
         [
@@ -1668,7 +1668,7 @@ var frozen = {
         ],
         [
           "range.step",
-          "4.71–66.6",
+          "4.71\u201366.6",
           "readonly"
         ],
         [
@@ -1778,7 +1778,7 @@ var frozen = {
         ],
         [
           "range.step",
-          "4.58–1190",
+          "4.58\u20131190",
           "readonly"
         ],
         [
@@ -1838,7 +1838,7 @@ var frozen = {
         ],
         [
           "range.step",
-          "4.51–200",
+          "4.51\u2013200",
           "readonly"
         ],
         [
@@ -1898,7 +1898,7 @@ var frozen = {
         ],
         [
           "range.step",
-          "5.21–80.7",
+          "5.21\u201380.7",
           "readonly"
         ],
         [
@@ -1958,7 +1958,7 @@ var frozen = {
         ],
         [
           "range.step",
-          "4.96–72.3",
+          "4.96\u201372.3",
           "readonly"
         ],
         [
@@ -2018,7 +2018,7 @@ var frozen = {
         ],
         [
           "range.step",
-          "4.71–66.6",
+          "4.71\u201366.6",
           "readonly"
         ],
         [
@@ -2458,7 +2458,7 @@ var frozen = {
         ],
         [
           "range.step",
-          "0.0304–0.0772",
+          "0.0304\u20130.0772",
           "readonly"
         ],
         [
@@ -2928,7 +2928,7 @@ var frozen = {
         ],
         [
           "range.step",
-          "1.5–9.49",
+          "1.5\u20139.49",
           "readonly"
         ],
         [
@@ -3038,7 +3038,7 @@ var frozen = {
         ],
         [
           "range.step",
-          "2–19.4",
+          "2\u201319.4",
           "readonly"
         ],
         [
@@ -3148,7 +3148,7 @@ var frozen = {
         ],
         [
           "range.step",
-          "0.0304–0.0772",
+          "0.0304\u20130.0772",
           "readonly"
         ],
         [
@@ -4068,7 +4068,7 @@ var frozen = {
         ],
         [
           "range.step",
-          "0.0056–0.0057",
+          "0.0056\u20130.0057",
           "readonly"
         ],
         [

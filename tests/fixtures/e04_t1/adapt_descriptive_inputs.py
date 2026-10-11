@@ -88,7 +88,9 @@ def generate():
     for name, data in [('oracle.js', oracle), ('display_oracle.js', display)]:
         (HERE / name).write_text(
             '// Independent source oracle; descriptive updates use adapt_descriptive_inputs.py.\n'
-            'var frozen = ' + json.dumps(data, indent=2, ensure_ascii=False) + ';\n'
+            'var frozen = '
+            + json.dumps(data, indent=2, ensure_ascii=name == 'display_oracle.js')
+            + ';\n'
         )
 
 
