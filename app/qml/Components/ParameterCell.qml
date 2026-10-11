@@ -2,6 +2,9 @@
 import QtQuick
 import QtQuick.Controls
 
+import EasyApplication.Gui.Style as EaStyle
+import EasyApplication.Gui.Globals as EaGlobals
+import EasyApplication.Gui.Elements as EaElements
 import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
@@ -25,11 +28,37 @@ EaComponents.TableViewParameter {
     // A fixed setting is edited but never fitted: no fit toggle.
     readonly property bool canFit: refinable && (item === null || item.fittable)
 
+    // The column's alignment, unless the value is wider than the cell: then it shows from its start and clips at
+    // the end, without an ellipsis (ADR-0029).
+    property int columnAlignment: Text.AlignHCenter
+    readonly property bool overflows: contentWidth > width - leftPadding - rightPadding
+    horizontalAlignment: overflows ? Text.AlignLeft : columnAlignment
+
+    // The value as edited: in full, where the cell shows it rounded (NumberText).
+    readonly property string editText: item !== null ? NumberText.full(item.value) : value
+
+    onActiveFocusChanged: {
+        if (activeFocus && text === value) {
+            text = editText;
+        } else if (!activeFocus) {
+            commit();
+            cursorPosition = 0;
+        }
+    }
+    onTextChanged: if (!activeFocus)
+        cursorPosition = 0
+    color: warned ? EaStyle.Colors.red : !enabled || readOnly ? EaStyle.Colors.themeForegroundMinor : item && item.free && canFit ? EaStyle.Colors.chartForegroundsExtra[1] : EaStyle.Colors.themeForeground
+
+    EaElements.ToolTip {
+        text: cell.text
+        visible: cell.contentWidth > cell.width && cell.hovered && !cell.activeFocus && cell.ToolTip.text === "" && EaGlobals.Vars.showToolTips
+    }
+
     enabled: refinable
     // The value and its uncertainty as text, by the app's one rule for numbers in cells (NumberText).
     parameter: item ? {
-        "value": NumberText.parameter(item.value, item.hasUncertainty ? item.uncertainty : 0, 8),
-        "error": item.hasUncertainty ? NumberText.error(item.uncertainty) : "",
+        "value": NumberText.parameter(item.value, item.hasUncertainty ? item.uncertainty : 0),
+        "error": item.hasUncertainty ? NumberText.error(item.uncertainty, 0, item.value) : "",
         "enabled": cell.refinable,
         "fittable": cell.canFit,
         "fit": item.free && cell.canFit,
@@ -40,21 +69,27 @@ EaComponents.TableViewParameter {
 
     warned: refusal !== "" || outsideRange
     ToolTip.text: refusal !== "" ? refusal : outsideRange ? qsTr("Outside its range, %1 to %2").arg(item.minimum).arg(item.maximum) : ""
-    ToolTip.visible: ToolTip.text !== "" && (hovered || activeFocus)
+    WarningToolTip {
+        text: cell.ToolTip.text
+        visible: text !== "" && (cell.hovered || cell.activeFocus)
+    }
 
     onValueChanged: typedRefusal = ""
     onAccepted: commit()
     onEditingFinished: commit()
 
-    // Return and leaving the cell both commit; the second of the two finds nothing new.
+    // Return and leaving the cell both commit; the second of the two finds nothing new. Text left as shown, rounded or
+    // in full, changes nothing.
     function commit() {
-        if (item !== null && text !== cell.value) {
+        if (item === null)
+            return;
+        if (text !== cell.value && text !== cell.editText) {
             typedRefusal = TypedInput.refusal(text, "number");
             if (typedRefusal === "") {
                 item.value = Number(text);
             }
-            text = Qt.binding(() => cell.value);
         }
+        text = Qt.binding(() => cell.value);
     }
     fitCheckBox.onToggled: if (item !== null)
         item.free = fitCheckBox.checked

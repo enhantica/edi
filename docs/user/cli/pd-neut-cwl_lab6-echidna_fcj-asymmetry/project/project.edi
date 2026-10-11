@@ -1,8 +1,13 @@
 _edi.schema_version 3
 
 _metadata.name             pd_neut_cwl_lab6_echidna_fcj
-_metadata.title            "LaB6, Echidna (ANSTO), FCJ asymmetry"
-_metadata.description      ?
+_metadata.title "LaB₆ [Pm-3m] · ECHIDNA @ ANSTO"
+_metadata.description "TCH pseudo-Voigt with FCJ axial divergence · Scale-only refinement"
 _metadata.created          "26 Sep 2026 10:29:37"
 _metadata.last_modified    "26 Sep 2026 10:29:38"
 _metadata.timestamp        ?
+_metadata.purpose "verification"
+_metadata.dimensionality "1D"
+_metadata.instrument "ECHIDNA"
+_metadata.facility "ANSTO"
+_metadata.polarisation "none"

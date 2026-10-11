@@ -8,6 +8,7 @@ import edi.app
 // `sequential_fit`: the scan declaration of a scan mode (scanning is E05).
 EaElements.GroupRow {
     id: row
+    spacing: AppSizes.inputSpacing
 
     property AnalysisViewModel analysis: null
     readonly property SequentialFitViewModel fit: analysis ? analysis.sequentialFit : null

@@ -157,6 +157,12 @@ def test_value_expression_keeps_its_old_header_admission(
         ' F20 the immutable old headers must admit the actual value expression: '
         + reference.stderr
     )
+    if member == 'excluded_regions':
+        # Stored rows expose bounds through the declared snapshot projection.
+        # Keep the frozen vector premise and every relational operand intact.
+        expression = expression.replace(
+            'other.excluded_regions', 'edi::excluded_region_ranges(other.excluded_regions)'
+        ).replace('o.excluded_regions', 'edi::excluded_region_ranges(o.excluded_regions)')
     current = compile_values(tmp_path, ROOT / 'core/include', owner, expression, standard_headers)
     assert current.returncode == 0, (
         f' I20/F20 preserves {owner}::{member} {route}, outside the four removed forms: '

@@ -283,7 +283,7 @@ PatternSource capture_pattern(const Project& project, std::size_t experiment_ind
     PatternSource source;
     const ExperimentBase& experiment = *project.experiments[experiment_index];
     source.experiment_place = experiment_index;
-    for (const auto& [start, end] : experiment.excluded_regions) {
+    for (const auto& [start, end] : excluded_region_ranges(experiment.excluded_regions)) {
         source.excluded.push_back({std::min(start, end), std::max(start, end)});
     }
     if (!experiment.data.has_value()) {

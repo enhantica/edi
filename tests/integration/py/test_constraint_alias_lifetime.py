@@ -17,7 +17,7 @@ TARGETS = [
     ('instrument', 'bank.instrument.setup_wavelength', 1.54),
     ('profile', 'bank.peak.broad_gauss_w', 0.15),
     ('scale', 'bank.linked_structure.phase.scale', 1.0),
-    ('background', 'bank.background.1.intensity', 3.0),
+    ('background', 'bank.background.left.intensity', 3.0),
 ]
 CHILD = r"""
 import gc

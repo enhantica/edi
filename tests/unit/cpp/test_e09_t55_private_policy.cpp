@@ -372,12 +372,12 @@ TEST_CASE("E09-T55 canonical encoding detects calculation-affecting mutations") 
             p.experiments[0]->instrument.setup_wavelength = edi::Parameter{1.54};
         }),
         "engaging an optional instrument parameter must invalidate the canonical source encoding");
-    CHECK_MESSAGE(distinct_after([](edi::Project& p) {
-                      auto values = static_cast<const std::vector<std::pair<double, double>>&>(
-                          p.experiments[0]->excluded_regions);
+    CHECK_MESSAGE((distinct_after([](edi::Project& p) {
+                      auto values =
+                          edi::excluded_region_ranges(p.experiments[0]->excluded_regions);
                       values.emplace_back(1.0, 2.0);
-                      p.experiments[0]->excluded_regions = std::move(values);
-                  }),
+                      p.experiments[0]->excluded_regions = edi::excluded_region_rows(values);
+                  })),
                   "an excluded-region mutation must invalidate the canonical source encoding");
     CHECK_MESSAGE(distinct_after([](edi::Project& p) { p.fitting_mode = "joint"; }),
                   "a fitting-mode mutation must invalidate the canonical source encoding");

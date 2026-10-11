@@ -34,7 +34,7 @@ Grid {
 
     objectName: "experimentType"
     columns: 3
-    columnSpacing: AppSizes.fieldSpacing
+    columnSpacing: AppSizes.inputSpacing
     rowSpacing: AppSizes.groupContentSpacing
 
     EaElements.ParamComboBox {

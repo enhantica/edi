@@ -6,6 +6,8 @@ import EdiAcceptance 1.0
 import EdiChartReference 1.0
 import EdiFitReference 1.0
 import EasyApplication.Gui.Style as Style
+import EasyApplication.Gui.Elements as Elements
+import "RenderedTable.js" as Render
 import "UiInteraction.js" as Ui
 import "E04Review.js" as Review
 
@@ -19,6 +21,45 @@ TestCase {
     Component {
         id: application
         Main {}
+    }
+    Component {
+        id: rangeField
+        ParameterField {
+            width: 220
+            label: ""
+        }
+    }
+    Component {
+        id: ordinaryTooltip
+        Elements.ToolTip {
+            text: "independent style reference"
+        }
+    }
+    function rangeTooltip(input) {
+        input.forceActiveFocus();
+        let warning = null;
+        tryVerify(() => {
+            warning = Probe.visiblePopups(appWindow).find(popup => popup.parent === input && popup.opened && typeof popup.text === "string" && popup.text.toLowerCase().includes("outside"));
+            return warning !== undefined;
+        }, 3000, "Out-of-range values explain their actual range in a visible tooltip");
+        const reference = createTemporaryObject(ordinaryTooltip, input);
+        verify(reference !== null, "The normal app tooltip supplies the independently retained style reference");
+        compare(warning.font.family, reference.font.family, "Range tooltips retain the ordinary app tooltip font");
+        compare(warning.font.pixelSize, reference.font.pixelSize, "Range tooltips retain the ordinary app tooltip text size");
+        compare(warning.leftPadding, reference.leftPadding, "Range tooltips retain the ordinary app tooltip padding");
+        compare(warning.topPadding, reference.topPadding, "Range tooltips retain the ordinary app tooltip arrow spacing");
+        const backgrounds = Render.descendants(warning.background).filter(item => item.visible && item.radius > 0 && item.color);
+        verify(backgrounds.length > 0, "The actual range tooltip has the rounded app background");
+        for (const background of backgrounds) {
+            compare(background.radius, reference.borderRadius, "Range tooltips retain the ordinary rounded background geometry");
+            verify(background.color.r >= reference.backgroundColor.r && background.color.g < reference.backgroundColor.g && background.color.b < reference.backgroundColor.b, "The actual tooltip background is tinted by the red warned text");
+        }
+        const shadows = Probe.objectsWithProperty(warning.background, "shadowColor");
+        verify(shadows.length > 0, "The warning tooltip has its actual app border-shadow effect");
+        verify(shadows.some(shadow => String(shadow.shadowColor) === String(input.color)), "The actual tooltip border-shadow uses the warned text colour");
+        input.focus = false;
+        warning.close();
+        tryCompare(warning, "visible", false, 2000, "The actual range tooltip closes before inspecting another consumer");
     }
     property var animation
     Component {
@@ -176,8 +217,16 @@ TestCase {
     }
     function test_producing_minimizer_survives_reopen_data() {
         return [
-            { tag: "completed", cancelled: false, path: "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project" },
-            { tag: "cancelled", cancelled: true, path: "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project" }
+            {
+                tag: "completed",
+                cancelled: false,
+                path: "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project"
+            },
+            {
+                tag: "cancelled",
+                cancelled: true,
+                path: "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project"
+            }
         ];
     }
     function test_producing_minimizer_survives_reopen(data) {
@@ -188,15 +237,13 @@ TestCase {
             verify(Session.project.fit.running, " gate 8 cancelled provenance witness starts the actual fit");
             mouseClick(button(), button().width / 2, button().height / 2, Qt.LeftButton, Qt.NoModifier, 0);
         }
-        tryVerify(() => Session.project.fit && !Session.project.fit.running && Session.project.fit.iterations !== "", 20000,
-                  " gate 8 historical provenance starts with a delivered terminal result");
+        tryVerify(() => Session.project.fit && !Session.project.fit.running && Session.project.fit.iterations !== "", 20000, " gate 8 historical provenance starts with a delivered terminal result");
         if (data.cancelled)
             compare(canonicalStatus(Session.project.fit.status), "cancelled", " gate 8 provenance exercises a cancelled partial result");
         const dialog = fitPopup("fit.results");
         verify(dialog !== null && dialog.visible, " gate 8 terminal result opens the real Popup QObject");
         const before = Probe.rows(Session.project.fit.results);
-        compare(before.find(row => row.metric === "Minimizer").value, expected.minimizer,
-                " gate 8 producing minimizer matches the independent CLI input and result");
+        compare(before.find(row => row.metric === "Minimizer").value, expected.minimizer, " gate 8 producing minimizer matches the independent CLI input and result");
         mouseClick(dialog.standardButton(Dialog.Ok));
         const changed = expected.minimizer.includes("(fast_descent)") ? "ladder" : "fast_descent";
         Session.project.analysis.descent = changed;
@@ -207,8 +254,7 @@ TestCase {
         verify(Session.openProject(target), " gate 8 edited minimizer and historical result reopen together");
         compare(Session.project.analysis.descent, changed, " gate 8 reopened settings preserve the changed minimizer control");
         const after = Probe.rows(Session.project.fit.results);
-        compare(after.find(row => row.metric === "Minimizer").value, expected.minimizer,
-                " gate 8 reopened historical table names the producing CLI minimizer rather than current settings");
+        compare(after.find(row => row.metric === "Minimizer").value, expected.minimizer, " gate 8 reopened historical table names the producing CLI minimizer rather than current settings");
         before.forEach(row => {
             const retained = after.find(value => value.metric === row.metric);
             verify(retained !== undefined, " gate 8 reopening retains each named historical result row");
@@ -407,9 +453,19 @@ TestCase {
             tryVerify(() => Review.find(table, "parameters.value." + index) !== null, 2000, " scope 11 scrolling instantiates every actual fitted value cell");
             const cell = Review.find(table, "parameters.value." + index);
             tryVerify(() => (String(cell.color).toLowerCase() === String(Style.Colors.red).toLowerCase()) === reference.outside, 2000, " scope 11 value text is red exactly for fitted rows outside ParameterSpec.range");
-            if (reference.outside)
+            if (reference.outside) {
+                rangeTooltip(cell);
+                const field = createTemporaryObject(rangeField, appWindow.contentItem, {
+                    item: rows[index].parameter,
+                    x: 10,
+                    y: 10
+                });
+                verify(field !== null, "The outside-range CLI parameter also reaches the standalone field");
+                compare(field.color, Style.Colors.red, "Standalone and table consumers both colour retained outside-range values red");
+                rangeTooltip(field);
+                field.destroy();
                 ++outside;
-            else
+            } else
                 ++inside;
         });
         verify(inside > 0, " scope 11 in-range fitted rows provide the non-red control");

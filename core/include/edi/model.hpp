@@ -1338,6 +1338,7 @@ inline std::string datablock_key(const std::string& name, const std::string& def
 }
 
 class ItemKey;
+struct LineSegment;
 
 namespace detail {
 
@@ -1406,6 +1407,8 @@ inline void link_nested(ExperimentBase& experiment, const std::shared_ptr<const 
 // An anisotropic site's tensor row is keyed by the site's id: a site rename renames its row too,
 // and a row is never renamed on its own while its site holds it (defined after Structure).
 inline void follow_site_rename(Structure* structure, const std::string& from, const std::string& to);
+inline void follow_site_references(Project* project, Structure* structure, const std::string& from, const std::string& to);
+inline void follow_background_aliases(Project& project, const ItemKey& key, const std::string& next);
 inline void follow_tensor_rename(Structure* structure, const std::string& from, const std::string& to);
 
 // A keyed collection, as its members' ids see it.
@@ -2053,6 +2056,7 @@ class ItemVec final : public detail::KeyedBase {
     void push_back(Ptr item) {
         std::vector<Ptr> candidate = store_.items();
         candidate.push_back(item);
+        DefaultIds defaults(candidate);
         require_admissible(candidate, "insertion");
         std::shared_ptr<detail::Membership> record = first_record();
         std::unique_ptr<Table> made = first_table();
@@ -2069,6 +2073,7 @@ class ItemVec final : public detail::KeyedBase {
         table_->take(*store_.items().back(), std::move(hold), store_.items().size() - 1);
         table_->anchors.fill_last(std::move(anchor), table_.get());
         attach_all();
+        defaults.commit();
     }
     // Appends a copy of a value.
     void push_back(T value) { push_back(std::make_shared<T>(std::move(value))); }
@@ -2076,14 +2081,18 @@ class ItemVec final : public detail::KeyedBase {
     void replace_at(std::size_t i, Ptr item) {
         std::vector<Ptr> candidate = store_.items();
         candidate.at(i) = std::move(item);
+        DefaultIds defaults(candidate);
         require_admissible(candidate, "replacement");
         replace_rows(std::move(candidate));
+        defaults.commit();
     }
     // Wholesale replacement sharing the passed items (a reordering of this collection's own items
     // included); refused when two share an id or another live collection holds one.
     void assign(std::vector<Ptr> items) {
+        DefaultIds defaults(items);
         require_admissible(items, "assignment");
         replace_rows(std::move(items));
+        defaults.commit();
     }
     void erase_at(std::size_t i) {
         const Ptr old = store_.items().at(i);
@@ -2149,8 +2158,10 @@ class ItemVec final : public detail::KeyedBase {
             if (Project* project = host()) {
                 detail::rename_structure_links(*project, key.value(), next);
             }
+        } else if constexpr (std::is_same_v<T, LineSegment>) {
+            if (Project* project = host()) detail::follow_background_aliases(*project, key, next);
         } else if constexpr (std::is_same_v<T, AtomSite>) {
-            detail::follow_site_rename(holder(), key.value(), next);
+            detail::follow_site_references(host(), holder(), key.value(), next);
         } else if constexpr (std::is_same_v<T, AtomSiteAniso>) {
             detail::follow_tensor_rename(holder(), key.value(), next);
         } else {
@@ -2162,6 +2173,49 @@ class ItemVec final : public detail::KeyedBase {
    private:
     // Admission of a candidate storage: every item is new to this collection or already its own,
     // appears once, is held by no other live collection, and the ids are unique by canonical key.
+    class DefaultIds {
+       public:
+        explicit DefaultIds(const std::vector<Ptr>& candidate) {
+            if constexpr (requires { KeyTraits<T>::ordinal_defaults; }) {
+                std::set<std::string> used;
+                std::set<const T*> seen;
+                std::vector<std::pair<ItemKey*, std::string>> planned;
+                planned.reserve(candidate.size());
+                changed_.reserve(candidate.size());
+                for (const Ptr& item : candidate) {
+                    if (!item) throw std::invalid_argument("admission refuses an empty item");
+                    if (!seen.insert(item.get()).second)
+                        throw std::invalid_argument("admission refuses the same item twice");
+                    const auto& key = KeyTraits<T>::key(*item);
+                    if (!key.empty() && !used.insert(KeyTraits<T>::canonical(key.value())).second)
+                        throw std::invalid_argument(std::string("admission refuses duplicate ") + KeyTraits<T>::category() + " id '" + detail::printable_id(key.value()) + "'");
+                }
+                for (const Ptr& item : candidate) {
+                    auto& key = KeyTraits<T>::key(*item);
+                    if (!key.empty()) continue;
+                    if (key.attached()) throw std::invalid_argument("an attached id must not be empty");
+                    std::size_t ordinal = 1;
+                    while (used.contains(std::to_string(ordinal))) ++ordinal;
+                    auto id = std::to_string(ordinal);
+                    used.insert(id);
+                    planned.emplace_back(&key, std::move(id));
+                }
+                for (auto& [key, id] : planned) {
+                    changed_.emplace_back(key, key->written());
+                    key->rename(std::move(id));
+                }
+            }
+        }
+        ~DefaultIds() {
+            for (auto [key, written] : changed_) {
+                key->rename({});
+                key->written_ = written;
+            }
+        }
+        void commit() noexcept { changed_.clear(); }
+       private:
+        std::vector<std::pair<ItemKey*, std::uint64_t>> changed_;
+    };
     void require_admissible(const std::vector<Ptr>& candidate, const std::string& where) const {
         if constexpr (KeyedItem<T>) {
             for (std::size_t index = 0; index < candidate.size(); ++index) {
@@ -2890,6 +2944,7 @@ namespace edi {
 
 // One line-segment background anchor: fixed position (TOF), refinable intensity.
 struct LineSegment : std::enable_shared_from_this<LineSegment> {
+    ItemKey id;
     detail::Written<double> position{0.0};
     Parameter intensity{0.0};
 
@@ -2901,6 +2956,45 @@ struct LineSegment : std::enable_shared_from_this<LineSegment> {
     detail::RowLink row;
     // This row's identity as a calculation input.
     detail::Epoch epoch;
+};
+
+template <>
+struct KeyTraits<LineSegment> {
+    static constexpr bool ordinal_defaults = true;
+    static ItemKey& key(LineSegment& point) { return point.id; }
+    static const ItemKey& key(const LineSegment& point) { return point.id; }
+    static std::string canonical(const std::string& id) {
+        if (id.empty()) throw std::invalid_argument("background id must not be empty");
+        return id;
+    }
+    static const char* category() { return "background point"; }
+};
+
+/// An exclusion interval with a collection-owned stored identifier (ADR-0029).
+struct ExcludedRegion : std::enable_shared_from_this<ExcludedRegion> {
+    ItemKey id;
+    detail::Written<double> first{0.0};
+    detail::Written<double> second{0.0};
+    detail::RowLink row;
+    detail::Epoch epoch;
+    ExcludedRegion(double start = 0.0, double end = 0.0) : first(start), second(end) {}
+};
+template <>
+struct KeyTraits<ExcludedRegion> {
+    static constexpr bool ordinal_defaults = true;
+    static ItemKey& key(ExcludedRegion& region) { return region.id; }
+    static const ItemKey& key(const ExcludedRegion& region) { return region.id; }
+    static std::string canonical(const std::string& id) {
+        if (id.empty()) throw std::invalid_argument("excluded-region id must not be empty");
+        return id;
+    }
+    static const char* category() { return "excluded region"; }
+};
+template <>
+struct RowTraits<ExcludedRegion> {
+    static void link(ExcludedRegion& region, const std::shared_ptr<detail::Membership>& record) noexcept { region.row.link(record); }
+    static void unlink(ExcludedRegion& region) noexcept { region.row.unlink(); }
+    static const detail::RowLink* primary(const ExcludedRegion& region) noexcept { return &region.row; }
 };
 
 // A background point is a row of its experiment's `background`.
@@ -2920,8 +3014,8 @@ namespace crysta {
 template <>
 struct RowSchema<edi::LineSegment> {
     static constexpr const char* name = "_background";
-    static constexpr auto fields = std::tuple{&edi::LineSegment::position, &edi::LineSegment::intensity};
-    static constexpr std::array items{"position", "intensity"};
+    static constexpr auto fields = std::tuple{&edi::LineSegment::id, &edi::LineSegment::position, &edi::LineSegment::intensity};
+    static constexpr std::array items{"id", "position", "intensity"};
     static constexpr std::array legacy{"_pd_background", "_easydiffraction_background"};
     static constexpr std::array cif{"_pd_background_line_segment_X", "_pd_background_line_segment_intensity"};
     // The `_background.type` this table serves.
@@ -2929,7 +3023,31 @@ struct RowSchema<edi::LineSegment> {
 };
 }  // namespace crysta
 
+namespace crysta {
+template <>
+struct RowSchema<edi::ExcludedRegion> {
+    static constexpr const char* name = "_excluded_region";
+    static constexpr auto fields = std::tuple{&edi::ExcludedRegion::id, &edi::ExcludedRegion::first, &edi::ExcludedRegion::second};
+    static constexpr std::array items{"id", "start", "end"};
+    static constexpr std::array legacy{"_easydiffraction_excluded_region"};
+};
+}
+
 namespace edi {
+/// Snapshot exclusion bounds for numerical consumers.
+inline std::vector<std::pair<double, double>> excluded_region_ranges(const ItemVec<ExcludedRegion>& rows) {
+    std::vector<std::pair<double, double>> ranges;
+    ranges.reserve(rows.size());
+    for (const auto& region : rows) ranges.emplace_back(region->first.get(), region->second.get());
+    return ranges;
+}
+/// Construct rows for the bounds-only replacement API.
+inline ItemVec<ExcludedRegion> excluded_region_rows(const std::vector<std::pair<double, double>>& ranges) {
+    ItemVec<ExcludedRegion> rows;
+    for (const auto& [start, end] : ranges) rows.push_back(ExcludedRegion(start, end));
+    return rows;
+}
+
 
 // One term of a polynomial or Chebyshev background (diffraction-lib
 // `PolynomialTerm`): its fixed order m and its refinable coefficient B_m.
@@ -3536,7 +3654,7 @@ struct ExperimentBase : std::enable_shared_from_this<ExperimentBase> {
     std::optional<double> background_x_min;
     std::optional<double> background_x_max;
     // (start, end) axis pairs. A loop category held in one cell.
-    detail::Written<std::vector<std::pair<double, double>>> excluded_regions;
+    ItemVec<ExcludedRegion> excluded_regions;
     // The `_refln` loop a file carries — the reflections of the calculation that wrote it
     // (diffraction-lib writes them; crysta's writer does not). edi does not model reflections, so the
     // rows are kept as read, verbatim, shown read-only and never written back. Disengaged = the file
@@ -4497,6 +4615,45 @@ inline void link_nested(ExperimentBase& experiment, const std::shared_ptr<const 
     }
 }
 
+inline void follow_background_aliases(Project& project, const ItemKey& key, const std::string& next) {
+    for (const auto& experiment : project.experiments) {
+        for (const auto& point : experiment->background) {
+            if (&point->id != &key) continue;
+            const auto root = datablock_key(experiment->name.value(), "experiment") + ".background.";
+            const auto from = root + key.value() + ".intensity";
+            const auto to = root + next + ".intensity";
+            std::vector<std::pair<ParameterAlias*, std::string>> changes;
+            for (const auto& alias : project.aliases) {
+                if (alias->parameter_unique_name.value() == from) changes.emplace_back(alias.get(), to);
+            }
+            for (auto& [alias, value] : changes) alias->parameter_unique_name = std::move(value);
+            return;
+        }
+    }
+}
+
+inline void follow_site_references(Project* project, Structure* structure, const std::string& from, const std::string& to) {
+    std::vector<std::pair<ParameterAlias*, std::string>> changes;
+    if (project != nullptr && structure != nullptr) {
+        const auto block = datablock_key(structure->name.value(), "structure") + ".";
+        for (const auto& alias : project->aliases) {
+            const auto& name = alias->parameter_unique_name.value();
+            const auto note = [&](const char* category, const char* field) {
+                const auto root = block + category + ".";
+                if (name == root + from + "." + field)
+                    changes.emplace_back(alias.get(), root + to + "." + field);
+            };
+            for (const char* field : {"fract_x", "fract_y", "fract_z", "occupancy", "adp_iso"})
+                note("atom_site", field);
+            for (const char* field : {"adp_11", "adp_22", "adp_33", "adp_12", "adp_13", "adp_23"})
+                note("atom_site_aniso", field);
+        }
+    }
+    // A refused tensor rename must leave aliases unchanged too.
+    follow_site_rename(structure, from, to);
+    for (auto& [alias, value] : changes) alias->parameter_unique_name = std::move(value);
+}
+
 inline void rename_structure_links(Project& project, const std::string& from, const std::string& to) {
     const std::string named = KeyTraits<Structure>::canonical(from);
     if (named == KeyTraits<Structure>::canonical(to)) {
@@ -4722,14 +4879,6 @@ struct ScatteringLengthCategory {
     static constexpr std::array items{"type_symbol length_fm"};
 };
 static_assert(detail::one_entry_per_column(ScatteringLengthCategory::columns, ScatteringLengthCategory::items));
-
-struct ExcludedRegionCategory {
-    static constexpr const char* name = "_excluded_region";
-    static constexpr auto columns = std::tuple{&ExperimentBase::excluded_regions};
-    static constexpr std::array items{"start end"};
-    static constexpr std::array legacy{"_easydiffraction_excluded_region"};
-};
-static_assert(detail::one_entry_per_column(ExcludedRegionCategory::columns, ExcludedRegionCategory::items));
 
 // An imported file's own `_refln` loop, kept as read: the item names, and each row's cells as
 // written. It is written back until a calculation publishes the computed `_refln` (ReflnCategory).

@@ -39,16 +39,20 @@ original could. Three facts shape the decision:
    port may restructure or rename the QML while keeping the design (sizes, colours, fonts, spacing): edi's
    own design values sit in `app/qml/Style/AppSizes.qml`, each a multiple of the base's font size; colours
    and fonts come only from the base's `EaStyle` tokens.
-2. **The base, unmodified at a pin.** `cmake/EdiGuiBase.cmake` fetches gui-components at the full sha
-   `a573a9695e53a0807de197785e12f9facd06da05` and declares its own QML modules under the upstream URIs
+2. **The base at a verified pin.** `cmake/EdiGuiBase.cmake` fetches gui-components at the full sha
+   `3897d339b60f5707bfe952fed59a20f73340e236` and declares its own QML modules under the upstream URIs
    (`EasyApplication.Gui.{Style,Globals,Logic,Animations,Elements,Components}`,
-   `EasyApplication.Logic.Maintenance`) over an explicit file list. Upstream files are built byte-identical;
-   configuration refuses another commit or local changes under `src/`. The pinned commit is downloaded as GitHub's
-   archive of it, checked against a committed SHA-256, with a message and a timeout (a git clone inside CMake could
-   hang without a word). An offline copy (`EDI_GUI_COMPONENTS_SRC`) is a git clone at the pin with an unmodified
-   `src/`, or any other copy whose `src/` files match a committed SHA-256 of the pinned tree. `tools/ci/app-build.sh`
-   keeps the build identity of a configure that did not finish, so a rerun of the same identity continues in
-   `build/app` instead of starting from nothing. Left out: the Plotly/WebEngine and
+   `EasyApplication.Logic.Maintenance`) over an explicit file list. Upstream files are built byte-identical except the
+   declared replacement seams: ParamTextField and TableViewParameter for parameter menu terminology and units (ADR-0029),
+   Fonts for edi's font inventory (§10), and ListView for the null-safe selection-model
+   initialization recorded in ADR-0029; configuration refuses another commit or local changes under `src/`. The pinned
+   commit is downloaded as GitHub's archive of it, checked against a committed SHA-256, with a message and a timeout (a
+   git clone inside CMake could hang without a word). An offline copy (`EDI_GUI_COMPONENTS_SRC`) is a git clone at the
+   pin with an unmodified `src/`, or any other copy whose `src/` files match a committed SHA-256 of the pinned tree.
+   `tools/ci/app-build.sh` keeps the build identity of a configure that did not finish, so a rerun of the same identity
+   continues in `build/app` instead of starting from nothing. The pinned commit is the head of gui-components' `edi`
+   branch, which has no release tag yet; it stays fetchable as long as that branch keeps it in its history, and the
+   archive and source-tree digests refuse any other content. Left out: the Plotly/WebEngine and
    QtCharts charts, `BasicReport` (WebEngine), `GuideWindow`/`GuideWindowContainer`, `JsonListModel`,
    `RemoteController` (QtTest + QtMultimedia) and `Plotting.js` (used only by the charts). The base's Logic
    scripts keep their qmldir entries, as the upstream qmldir declares them.
@@ -182,6 +186,7 @@ The app draws text only with fonts it bundles:
 | --- | --- | --- |
 | PT Sans Regular and Bold | all text | gui-components, `Resources/Fonts/PT_Sans` |
 | PT Mono | the Text tabs | gui-components, `Resources/Fonts/PT_Mono` |
+| Encode Sans Regular | the fit summary arrow | gui-components, `Resources/Fonts/Encode_Sans` |
 | Noto Sans Regular | every character PT Sans lacks | edi, `app/resources/fonts/Noto_Sans` |
 | Noto Sans Mono Regular | every character PT Mono lacks | edi, `app/resources/fonts/Noto_Sans_Mono` |
 | Noto Sans Light | the large light main-area text: the placeholders and the project name | edi, `app/resources/fonts/Noto_Sans` |
@@ -470,3 +475,5 @@ So the gap was on the reference side, and the set is now captured on the Xwaylan
 - **`setContextProperty` for edi objects** — defeats `qmllint`'s type checking; rejected.
 - **Auto-generated per-field reflection instead of typed view-models** — untyped; rejected.
 - **A web view for the report** — needs QtWebEngine, which the web build cannot have; rejected for §8.
+
+The source-tree pin uses `edi_gui_tree_sha256`'s ordering of complete relative path strings. Sorting `pathlib.Path` objects instead orders directory components differently from CMake when a file and directory share a prefix (for example `Maintenance.py` and `Maintenance/Updater.qml`). The archive route is validated separately from the git-checkout route, so the pinned downloaded archive must pass the same CMake digest check.

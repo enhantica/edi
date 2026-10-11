@@ -8,6 +8,7 @@ import edi.app
 // `cell` (easydiffractionbeta Pages/Model/SideBarBasic/Cell.qml): the six cell parameters in one row.
 EaElements.GroupRow {
     id: row
+    spacing: AppSizes.inputSpacing
 
     property StructureViewModel structure: null
     readonly property CellViewModel cell: structure ? structure.cell : null

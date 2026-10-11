@@ -2611,12 +2611,12 @@ NB_MODULE(_edi, m) {
             [](const edi::ExperimentBase& self) {
                 nb::list out;
                 for (const auto& region : self.excluded_regions) {
-                    out.append(nb::make_tuple(region.first, region.second));
+                    out.append(nb::make_tuple(region->first.get(), region->second.get()));
                 }
                 return nb::tuple(out);
             },
             [](edi::ExperimentBase& self, std::vector<std::pair<double, double>> regions) {
-                self.excluded_regions = std::move(regions);
+                self.excluded_regions = edi::excluded_region_rows(regions);
             });
 
     nb::class_<edi::ScExperimentBase, edi::ExperimentBase>(m, "ScExperimentBase");

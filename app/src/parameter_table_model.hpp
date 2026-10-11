@@ -48,12 +48,35 @@ class ParameterTableModel : public RowTableModel {
     int fixed_count_ = 0;
 };
 
+// One entry of the Analysis category picker: the filter key, its title with the parameter count, its icon, and
+// whether it stands for a whole datablock kind (shown bold). QML reads a list of them as an array (edi ADR-0030).
+struct CategoryGroup {
+    Q_GADGET
+    QML_VALUE_TYPE(categoryGroup)
+    Q_PROPERTY(QString key MEMBER key CONSTANT)
+    Q_PROPERTY(QString title MEMBER title CONSTANT)
+    Q_PROPERTY(QString icon MEMBER icon CONSTANT)
+    Q_PROPERTY(bool datablock MEMBER datablock CONSTANT)
+    Q_PROPERTY(int count MEMBER count CONSTANT)
+
+   public:
+    QString key;
+    QString title;
+    QString icon;
+    bool datablock = false;
+    int count = 0;
+    bool operator==(const CategoryGroup&) const = default;
+};
+
 // The Analysis table's filter: a name substring and the variability (all, free or fixed).
 class ParameterFilterModel : public QSortFilterProxyModel {
     Q_OBJECT
     QML_ELEMENT
     Q_PROPERTY(QString nameFilter READ nameFilter WRITE setNameFilter NOTIFY nameFilterChanged)
     Q_PROPERTY(Variability variability READ variability WRITE setVariability NOTIFY variabilityChanged)
+    Q_PROPERTY(QString categoryFilter READ categoryFilter WRITE setCategoryFilter NOTIFY categoryFilterChanged)
+    Q_PROPERTY(QStringList categories READ categories NOTIFY categoriesChanged)
+    Q_PROPERTY(QList<edi_app::CategoryGroup> categoryGroups READ categoryGroups NOTIFY categoryGroupsChanged)
 
    public:
     enum Variability { All, Free, Fixed };
@@ -64,6 +87,12 @@ class ParameterFilterModel : public QSortFilterProxyModel {
     void setNameFilter(const QString& filter);
     Variability variability() const { return variability_; }
     void setVariability(Variability variability);
+    void setSourceModel(QAbstractItemModel* source) override;
+    QString categoryFilter() const { return category_filter_; }
+    void setCategoryFilter(const QString& category);
+    QStringList categories() const { return categories_; }
+    QList<CategoryGroup> categoryGroups() const { return category_groups_; }
+    Q_INVOKABLE QString text(int row, const QString& role) const;
     // The shown rows' parameters, for the table's selection (edi ADR-0017 §11): the one at a shown row (null
     // past the end), and whether a parameter is among the shown ones.
     Q_INVOKABLE edi_app::ParameterItem* parameterAt(int row) const;
@@ -72,11 +101,19 @@ class ParameterFilterModel : public QSortFilterProxyModel {
    signals:
     void nameFilterChanged();
     void variabilityChanged();
+    void categoryFilterChanged();
+    void categoriesChanged();
+    void categoryGroupsChanged();
 
    protected:
     bool filterAcceptsRow(int source_row, const QModelIndex& source_parent) const override;
 
    private:
+    void refreshCategories();
+    QString category_filter_;
+    QStringList categories_{QString()};
+    QList<CategoryGroup> category_groups_;
+    QList<QMetaObject::Connection> source_connections_;
     QString name_filter_;
     Variability variability_ = All;
 };

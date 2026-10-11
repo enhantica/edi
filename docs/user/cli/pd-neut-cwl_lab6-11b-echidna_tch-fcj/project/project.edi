@@ -1,5 +1,10 @@
 _edi.schema_version 3
 
 _metadata.name             pd_neut_cwl_lab6_11b_echidna_tch_fcj
-_metadata.title            "LaB6 (11B), ECHIDNA (ANSTO), TCH x FCJ, polynomial background"
-_metadata.description      ?
+_metadata.title "LaB₆ [Pm-3m] · ECHIDNA @ ANSTO"
+_metadata.description "¹¹B-enriched standard · TCH × FCJ · Absorption and polynomial background"
+_metadata.purpose "refinement"
+_metadata.dimensionality "1D"
+_metadata.instrument "ECHIDNA"
+_metadata.facility "ANSTO"
+_metadata.polarisation "none"

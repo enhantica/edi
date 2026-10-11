@@ -5,6 +5,7 @@ import QtQuick
 import QtQuick.Controls
 
 import EasyApplication.Gui.Style as EaStyle
+import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
@@ -19,60 +20,73 @@ Column {
 
     property StructureViewModel structure: null
     readonly property AtomSiteAdpListModel adps: structure ? structure.atomSiteAdps : null
-    readonly property real valueWidth: EaStyle.Sizes.fontPixelSize * 3.7
     readonly property real typeWidth: EaStyle.Sizes.fontPixelSize * 4.5
 
     spacing: AppSizes.groupContentSpacing
 
-    EaComponents.TableView {
+    DataTable {
         id: table
         objectName: "atomSiteAdps.list"
         defaultInfoText: qsTr("No atom sites defined")
-        model: group.adps
+        sourceModel: group.adps
 
-        header: EaComponents.TableViewHeader {
+        readonly property string isoHeading: {
+            const revision = modelRevision;
+            const names = [];
+            for (let index = 0; group.adps && index < count; ++index) {
+                const type = group.adps.text(index, "adpType");
+                const name = type === "Uani" ? "U eq" : type === "Bani" || type === "beta" ? "B eq" : type;
+                if (!names.includes(name))
+                    names.push(name);
+            }
+            return names.length === 1 ? names[0] : qsTr("iso / eq");
+        }
+
+        columnWidths: [numberColumnWidth, textColumnWidth("label", qsTr("id")), group.typeWidth, -1, -1, -1, -1, -1, -1, -1]
+
+        header: EaComponents.ListViewHeader {
             EaComponents.TableViewLabel {
-                width: AppSizes.indexColumnWidth
+                horizontalAlignment: Text.AlignHCenter
             }
             EaComponents.TableViewLabel {
-                flexibleWidth: true
-                text: qsTr("label")
+                horizontalAlignment: Text.AlignLeft
+                text: qsTr("id")
             }
             EaComponents.TableViewLabel {
-                width: group.typeWidth
+                horizontalAlignment: Text.AlignHCenter
                 text: qsTr("type")
             }
             EaComponents.TableViewLabel {
-                width: group.valueWidth
-                text: qsTr("iso")
+                horizontalAlignment: Text.AlignHCenter
+                text: table.isoHeading
             }
             EaComponents.TableViewLabel {
-                width: group.valueWidth
+                horizontalAlignment: Text.AlignHCenter
                 text: "ani11"
             }
             EaComponents.TableViewLabel {
-                width: group.valueWidth
+                horizontalAlignment: Text.AlignHCenter
                 text: "ani22"
             }
             EaComponents.TableViewLabel {
-                width: group.valueWidth
+                horizontalAlignment: Text.AlignHCenter
                 text: "ani33"
             }
             EaComponents.TableViewLabel {
-                width: group.valueWidth
+                horizontalAlignment: Text.AlignHCenter
                 text: "ani12"
             }
             EaComponents.TableViewLabel {
-                width: group.valueWidth
+                horizontalAlignment: Text.AlignHCenter
                 text: "ani13"
             }
             EaComponents.TableViewLabel {
-                width: group.valueWidth
+                horizontalAlignment: Text.AlignHCenter
                 text: "ani23"
             }
         }
 
-        delegate: EaComponents.TableViewDelegate {
+        delegate: EaComponents.ListViewDelegate {
             id: row
 
             required property int index
@@ -88,79 +102,87 @@ Column {
             readonly property bool anisotropic: adpType === "Bani" || adpType === "Uani" || adpType === "beta"
 
             EaComponents.TableViewLabel {
-                width: AppSizes.indexColumnWidth
+                horizontalAlignment: Text.AlignHCenter
                 color: EaStyle.Colors.themeForegroundMinor
                 text: row.index + 1
             }
             TextCell {
                 objectName: `atomSiteAdp.label.${row.index}`
-                width: table.headerLabelItems.length > 1 ? table.headerLabelItems[1].width : 0
-                enabled: false
+                horizontalAlignment: Text.AlignLeft
                 value: row.label
+                onCommitted: text => group.structure.atomSites.setText(row.index, "label", text)
             }
-            SearchableComboBox {
-                objectName: `atomSiteAdp.type.${row.index}`
-                width: group.typeWidth
-                inTable: true
-                anchors.verticalCenter: parent.verticalCenter
-                model: group.adps ? group.adps.types : []
-                currentIndex: group.adps ? group.adps.types.indexOf(row.adpType) : -1
-                // The type change can add or remove a tensor row, which rebuilds this table: it runs after the
-                // popup has closed.
-                onActivated: index => {
-                    const site = row.index;
-                    const type = textAt(index);
-                    const adps = group.adps;
-                    currentIndex = Qt.binding(() => group.adps ? group.adps.types.indexOf(row.adpType) : -1);
-                    Qt.callLater(() => adps.setType(site, type));
+            Item {
+                property int horizontalAlignment: Text.AlignHCenter
+                height: parent.height
+                SearchableComboBox {
+                    width: Math.min(parent.width, implicitWidth)
+                    x: parent.horizontalAlignment === Text.AlignRight ? parent.width - width : parent.horizontalAlignment === Text.AlignLeft ? 0 : (parent.width - width) / 2
+                    horizontalAlignment: Text.AlignHCenter
+                    objectName: `atomSiteAdp.type.${row.index}`
+                    inTable: true
+                    anchors.verticalCenter: parent.verticalCenter
+                    model: group.adps ? group.adps.types : []
+                    currentIndex: group.adps ? group.adps.types.indexOf(row.adpType) : -1
+                    // The type change can add or remove a tensor row, which rebuilds this table: it runs after the
+                    // popup has closed.
+                    onActivated: index => {
+                        const site = row.index;
+                        const type = textAt(index);
+                        const adps = group.adps;
+                        currentIndex = Qt.binding(() => group.adps ? group.adps.types.indexOf(row.adpType) : -1);
+                        Qt.callLater(() => adps.setType(site, type));
+                    }
                 }
             }
             // The isotropic value in the site's type; an anisotropic site's equivalent value, which follows its
             // tensor, is shown disabled.
             ParameterCell {
+                columnAlignment: Text.AlignHCenter
                 objectName: `atomSiteAdp.iso.${row.index}`
-                width: group.valueWidth
                 item: row.adpIso
                 enabled: !row.anisotropic
+                ToolTip.text: row.anisotropic ? qsTr("Equivalent isotropic displacement %1 (Å²)").arg(row.adpType === "Uani" ? "U eq" : "B eq") : qsTr("Isotropic displacement %1 (Å²)").arg(row.adpType)
+                ToolTip.visible: hovered && EaGlobals.Vars.showToolTips
             }
             ParameterCell {
+                columnAlignment: Text.AlignHCenter
                 objectName: `atomSiteAdp.ani11.${row.index}`
-                width: group.valueWidth
                 enabled: row.anisotropic && !!row.ani11 && refinable
                 item: row.ani11 ? row.ani11 : null
                 text: item !== null ? value : ""
             }
             ParameterCell {
+                columnAlignment: Text.AlignHCenter
                 objectName: `atomSiteAdp.ani22.${row.index}`
-                width: group.valueWidth
                 enabled: row.anisotropic && !!row.ani22 && refinable
                 item: row.ani22 ? row.ani22 : null
                 text: item !== null ? value : ""
             }
             ParameterCell {
+                columnAlignment: Text.AlignHCenter
                 objectName: `atomSiteAdp.ani33.${row.index}`
-                width: group.valueWidth
                 enabled: row.anisotropic && !!row.ani33 && refinable
                 item: row.ani33 ? row.ani33 : null
                 text: item !== null ? value : ""
             }
             ParameterCell {
+                columnAlignment: Text.AlignHCenter
                 objectName: `atomSiteAdp.ani12.${row.index}`
-                width: group.valueWidth
                 enabled: row.anisotropic && !!row.ani12 && refinable
                 item: row.ani12 ? row.ani12 : null
                 text: item !== null ? value : ""
             }
             ParameterCell {
+                columnAlignment: Text.AlignHCenter
                 objectName: `atomSiteAdp.ani13.${row.index}`
-                width: group.valueWidth
                 enabled: row.anisotropic && !!row.ani13 && refinable
                 item: row.ani13 ? row.ani13 : null
                 text: item !== null ? value : ""
             }
             ParameterCell {
+                columnAlignment: Text.AlignHCenter
                 objectName: `atomSiteAdp.ani23.${row.index}`
-                width: group.valueWidth
                 enabled: row.anisotropic && !!row.ani23 && refinable
                 item: row.ani23 ? row.ani23 : null
                 text: item !== null ? value : ""

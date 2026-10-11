@@ -16,7 +16,7 @@ Grid {
     readonly property real fieldWidth: (EaStyle.Sizes.sideBarContentWidth - row.columnSpacing) / 2
 
     columns: 2
-    columnSpacing: AppSizes.fieldSpacing
+    columnSpacing: AppSizes.inputSpacing
     rowSpacing: AppSizes.groupContentSpacing
 
     SelectorField {

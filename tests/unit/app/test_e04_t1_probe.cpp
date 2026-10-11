@@ -12,6 +12,8 @@
 #include <QQmlEngine>
 #include <QSignalSpy>
 #include <QQuickItem>
+#include <QQuickWindow>
+#include <QCursor>
 #include <QRegularExpression>
 #include <QStandardPaths>
 #include <QTextDocument>
@@ -40,6 +42,36 @@ class AcceptanceProbe final : public QObject {
     }
 public:
     using QObject::QObject;
+    Q_INVOKABLE QVariantList objectsWithProperty(QObject *root, const QString &name) const {
+        QVariantList result;
+        if (!root) return result;
+        auto objects = root->findChildren<QObject *>();
+        objects.prepend(root);
+        for (auto *object : objects)
+            if (object->property(name.toUtf8().constData()).isValid()) result.append(QVariant::fromValue(object));
+        return result;
+    }
+    Q_INVOKABLE int cursorShape(QObject *object) const {
+        const auto *item = qobject_cast<QQuickItem *>(object);
+        return item && item->window() ? static_cast<int>(item->window()->cursor().shape()) : -1;
+    }
+    Q_INVOKABLE QVariantList visiblePopups(QObject *root) const {
+        QVariantList result;
+        if (!root) return result;
+        for (auto *object : root->findChildren<QObject *>()) {
+            if (object->property("opened").isValid() && object->property("visible").toBool())
+                result.append(QVariant::fromValue(object));
+        }
+        return result;
+    }
+    Q_INVOKABLE QVariantList visibleDialogs(QObject *root) const {
+        QVariantList result;
+        for (const auto &entry : visiblePopups(root)) {
+            auto *object = entry.value<QObject *>();
+            if (object && object->property("standardButtons").isValid()) result.append(entry);
+        }
+        return result;
+    }
     Q_INVOKABLE bool nativeText(QObject *object) const {
         return object && (object->inherits("QQuickTextEdit") || object->inherits("QQuickText"));
     }

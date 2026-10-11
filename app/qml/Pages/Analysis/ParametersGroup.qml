@@ -23,6 +23,7 @@ EaElements.GroupBox {
 
     property ProjectViewModel project: null
     property ParameterItem selected: null
+    property real tableViewportHeight: 0
 
     objectName: "group.parameters"
     collapsible: false
@@ -73,68 +74,114 @@ EaElements.GroupBox {
         spacing: AppSizes.groupContentSpacing
 
         EaElements.GroupRow {
+            id: filters
+            spacing: AppSizes.inputSpacing
             EaElements.TextField {
                 objectName: "parameters.nameFilter"
-                width: (EaStyle.Sizes.sideBarContentWidth - AppSizes.fieldSpacing) / 2
+                width: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.inputSpacing) / 3
                 placeholderText: qsTr("Filter by name")
                 onTextChanged: filter.nameFilter = text
             }
-            EaElements.ComboBox {
+            SearchableComboBox {
+                id: categoryPicker
+                objectName: "parameters.category"
+                width: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.inputSpacing) / 3
+                model: filter.categoryGroups
+                textRole: "title"
+                searchThreshold: 1000
+                popup.width: Math.max(width, optionWidth + 3 * font.pixelSize)
+                currentIndex: Math.max(0, filter.categories.indexOf(filter.categoryFilter))
+                onActivated: index => filter.categoryFilter = filter.categories[index]
+                delegate: EaElements.MenuItem {
+                    id: categoryEntry
+                    required property int index
+                    required property var modelData
+                    width: categoryPicker.popup.width
+                    height: EaStyle.Sizes.comboBoxHeight
+                    text: modelData.title
+                    highlighted: categoryPicker.highlightedIndex === index
+                    contentItem: Item {
+                        implicitHeight: categoryLine.implicitHeight
+                        IconLine {
+                            id: categoryLine
+                            anchors.verticalCenter: parent.verticalCenter
+                            maximumWidth: parent.width
+                            textColor: EaStyle.Colors.themeForeground
+                            segments: categoryEntry.modelData.icon === "" ? [
+                                {
+                                    text: categoryEntry.modelData.title,
+                                    bold: categoryEntry.modelData.datablock
+                                }
+                            ] : [
+                                {
+                                    icon: categoryEntry.modelData.icon,
+                                    color: EaStyle.Colors.themeForegroundMinor
+                                },
+                                {
+                                    text: categoryEntry.modelData.title,
+                                    bold: categoryEntry.modelData.datablock
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+            SearchableComboBox {
                 objectName: "parameters.variability"
-                width: (EaStyle.Sizes.sideBarContentWidth - AppSizes.fieldSpacing) / 2
-                model: [qsTr("All parameters"), qsTr("Free parameters"), qsTr("Fixed parameters")]
+                width: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.inputSpacing) / 3
+                model: [qsTr("All parameters (%1)").arg(group.project ? group.project.parameters.count : 0), qsTr("Free parameters (%1)").arg(group.project ? group.project.parameters.freeCount : 0), qsTr("Fixed parameters (%1)").arg(group.project ? group.project.parameters.fixedCount : 0)]
                 onActivated: index => filter.variability = index
             }
         }
 
-        EaComponents.TableView {
+        DataTable {
             id: table
             objectName: "parameters.list"
-            // The original's (Fittables.qml): seven rows at the minimum window height, one more per row
-            // of height the window adds, so the slider and Start fitting stay in view.
-            maxRowCountShow: 7 + Math.max(0, Math.trunc((Window.height - EaStyle.Sizes.appWindowMinimumHeight) / EaStyle.Sizes.tableRowHeight))
+            // Reserve the controls below and half a row as a scroll cue (ADR-0029).
+            maxRowCountShow: Math.max(1, Math.floor((group.tableViewportHeight - group.topPadding - group.bottomPadding - filters.height - sliderRow.height - 2 * AppSizes.groupContentSpacing) / tableRowHeight - 1.5))
             defaultInfoText: qsTr("No parameters")
-            model: ParameterFilterModel {
+            sourceModel: ParameterFilterModel {
                 id: filter
                 sourceModel: group.project ? group.project.parameters : null
             }
 
-            header: EaComponents.TableViewHeader {
+            columnWidths: [numberColumnWidth, -1, EaStyle.Sizes.fontPixelSize * 5, textColumnWidth("units", ""), EaStyle.Sizes.fontPixelSize * 3.5, EaStyle.Sizes.fontPixelSize * 3, EaStyle.Sizes.fontPixelSize * 3, EaStyle.Sizes.tableColumnAuto]
+
+            header: EaComponents.ListViewHeader {
                 EaComponents.TableViewLabel {
-                    width: AppSizes.indexColumnWidth
+                    horizontalAlignment: Text.AlignHCenter
                 }
                 EaComponents.TableViewLabel {
-                    flexibleWidth: true
                     horizontalAlignment: Text.AlignLeft
                     text: qsTr("name")
                 }
                 EaComponents.TableViewLabel {
-                    width: EaStyle.Sizes.fontPixelSize * 5
+                    horizontalAlignment: Text.AlignRight
                     text: qsTr("value")
                 }
                 EaComponents.TableViewLabel {
-                    width: EaStyle.Sizes.fontPixelSize * 2.5
-                    text: qsTr("units")
+                    horizontalAlignment: Text.AlignLeft
+                    text: ""
                 }
                 EaComponents.TableViewLabel {
-                    width: EaStyle.Sizes.fontPixelSize * 3.5
-                    text: qsTr("error")
+                    horizontalAlignment: Text.AlignRight
+                    text: qsTr("s.u.")
                 }
                 EaComponents.TableViewLabel {
-                    width: EaStyle.Sizes.fontPixelSize * 3
+                    horizontalAlignment: Text.AlignRight
                     text: qsTr("min")
                 }
                 EaComponents.TableViewLabel {
-                    width: EaStyle.Sizes.fontPixelSize * 3
+                    horizontalAlignment: Text.AlignRight
                     text: qsTr("max")
                 }
                 EaComponents.TableViewLabel {
-                    width: EaStyle.Sizes.fontPixelSize * 2.5
-                    text: qsTr("vary")
+                    horizontalAlignment: Text.AlignHCenter
+                    text: qsTr("free")
                 }
             }
 
-            delegate: EaComponents.TableViewDelegate {
+            delegate: EaComponents.ListViewDelegate {
                 id: row
 
                 required property int index
@@ -147,18 +194,20 @@ EaElements.GroupBox {
                 objectName: `parameters.row.${index}`
                 // The selected row is highlighted, as the block tables' current row.
                 color: group.selected === row.parameter ? EaStyle.Colors.tableHighlight : (index % 2 ? EaStyle.Colors.themeBackgroundHovered2 : EaStyle.Colors.themeBackgroundHovered1)
-                mouseArea.onPressed: group.selected = row.parameter
+                TapHandler {
+                    onTapped: group.selected = row.parameter
+                }
 
                 EaComponents.TableViewLabel {
-                    width: AppSizes.indexColumnWidth
+                    horizontalAlignment: Text.AlignHCenter
                     color: EaStyle.Colors.themeForegroundMinor
                     text: row.index + 1
                 }
                 // The iconified name on one centre line (edi ADR-0017 §8, §10), with the path in a tooltip on
                 // hover.
                 Item {
+                    property int horizontalAlignment: Text.AlignLeft
                     objectName: `parameters.name.${row.index}`
-                    width: table.headerLabelItems.length > 1 ? table.headerLabelItems[1].width : 0
                     height: parent.height
                     clip: true
 
@@ -175,32 +224,34 @@ EaElements.GroupBox {
                     }
                 }
                 ParameterCell {
+                    columnAlignment: Text.AlignRight
                     objectName: `parameters.value.${row.index}`
-                    width: EaStyle.Sizes.fontPixelSize * 5
                     item: row.parameter
+                    onActiveFocusChanged: if (activeFocus)
+                        group.selected = row.parameter
                 }
                 EaComponents.TableViewLabel {
-                    width: EaStyle.Sizes.fontPixelSize * 2.5
                     color: EaStyle.Colors.themeForegroundMinor
+                    horizontalAlignment: Text.AlignLeft
                     text: row.units
                 }
                 EaComponents.TableViewLabel {
-                    width: EaStyle.Sizes.fontPixelSize * 3.5
-                    text: row.parameter && row.parameter.hasUncertainty ? NumberText.error(row.parameter.uncertainty) : ""
+                    horizontalAlignment: Text.AlignRight
+                    text: row.parameter && row.parameter.hasUncertainty ? NumberText.error(row.parameter.uncertainty, 0, row.parameter.value) : ""
                 }
                 EaComponents.TableViewLabel {
-                    width: EaStyle.Sizes.fontPixelSize * 3
+                    horizontalAlignment: Text.AlignRight
                     color: EaStyle.Colors.themeForegroundMinor
                     text: group.bound(row.minimum)
                 }
                 EaComponents.TableViewLabel {
-                    width: EaStyle.Sizes.fontPixelSize * 3
+                    horizontalAlignment: Text.AlignRight
                     color: EaStyle.Colors.themeForegroundMinor
                     text: group.bound(row.maximum)
                 }
                 EaComponents.TableViewCheckBox {
+                    horizontalAlignment: Text.AlignHCenter
                     objectName: `parameters.free.${row.index}`
-                    width: EaStyle.Sizes.fontPixelSize * 2.5
                     checked: row.parameter ? row.parameter.free : false
                     onToggled: row.parameter.free = checked
                 }

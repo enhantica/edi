@@ -140,12 +140,12 @@ nodejs = "==22.23.2"
 # tools/ci/build-crysta.sh reads them from this file. Only an update PR or a paired PR moves them.
 [target.osx-arm64.activation.env]
 MACOSX_DEPLOYMENT_TARGET = '13.4'
-CRYSTA_SDK_TAG = "build-b4d6a484a13ed7b11a9c66ed8196ccdd37f13720"
-CRYSTA_SDK_SHA256 = "cc5823f4bb40993f6cfad33928ed128f35e7a5d503a1b87bead76912af6c31e3"
+CRYSTA_SDK_TAG = "build-36dfb70c8e7c84302c1eff1a4585be01e468e762"
+CRYSTA_SDK_SHA256 = "aa4ffe0250e1f04ef170a8016f42b767f94e7392ca64cccdc7970bf2401926a5"
 
 [target.linux-64.activation.env]
-CRYSTA_SDK_TAG = "build-b4d6a484a13ed7b11a9c66ed8196ccdd37f13720"
-CRYSTA_SDK_SHA256 = "d4527b181e97766bf6631a1641062d9ba9b1a6cb32114fc44aba6b30f11b6361"
+CRYSTA_SDK_TAG = "build-36dfb70c8e7c84302c1eff1a4585be01e468e762"
+CRYSTA_SDK_SHA256 = "2137be8dbd1a447aa168dac08833b388da9956d92b1109fe09ffd36379f67df2"
 
 [target.linux-64.dependencies]
 clangxx = "22.*"
@@ -371,8 +371,9 @@ notebook-lint-check = "ruff check docs/dev/verification/"
 # docs/user/cli/projects.yml's EXECUTING set runs through `python -m edi fit` on a disposable copy
 # and is compared with its expected.json; any deviation is red. The same step runs in both verify
 # chains AND in CI's pull-request `cli-projects` job (a gate never lives in only one of the two).
-# The whole set, never a subset — subsetting on runtime is the owner's call.
-cli-projects = { cmd = ["python", "tools/checks/cli_projects.py"], depends-on = ["core-build"] }
+# The whole set, never a subset — subsetting on runtime is the owner's call. First, the app's example index
+# must match the registry's project records (ADR-0031).
+cli-projects = { cmd = "python tools/dev/example_metadata.py --check && python tools/checks/cli_projects.py", depends-on = ["core-build"] }
 # --- the fast per-PR physics signal ----------------------------------------- The
 # independent-reference signal a crysta pull request runs against edi, rehomed: the retired
 # `tests/simulation` page-executing tier is replaced by cross-engine parity at system level, which

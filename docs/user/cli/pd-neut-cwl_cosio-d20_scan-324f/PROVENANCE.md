@@ -47,3 +47,9 @@ no acceptance command executes fp2k.
 Biso follows it, and the stale fit-start row of Co2's Biso is gone. The terminal reduced χ² moved 4.805953672 →
 4.800664903, still at 4 iterations, measured by `tools/checks/cli_projects.py --project` against crysta `91a319e2`,
 `OMP_NUM_THREADS=1`. `n_free` did not move: one Co Biso is free before and after.
+
+## Catalogue metadata
+
+`project/project.edi` carries the app's example metadata (ADR-0031, the owner's enrichment of 2026-10-09): its
+title and description name the sample and scan, and `_metadata.purpose`, `.dimensionality`, `.instrument`,
+`.facility` and `.polarisation` were added. Every other file is unchanged.

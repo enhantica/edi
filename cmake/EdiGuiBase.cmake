@@ -3,7 +3,7 @@
 #
 # gui-components ships its QML as a Python wheel, with no CMake build and qmldir `module` lines that do
 # not match their import URIs, so edi fetches the pinned sources and declares its own QML modules under
-# the upstream URIs from an explicit file list. Upstream files are never edited or copied into edi; the
+# the upstream URIs from an explicit file list. Upstream files are never edited; the
 # ones that need QtWebEngine, QtCharts, QtTest or QtMultimedia are left out (ADR-0006: WASM-clean).
 #
 # The pinned commit is fetched as GitHub's archive of it, checked against its SHA-256: a plain download
@@ -14,10 +14,10 @@
 
 include(FetchContent)
 
-set(EDI_GUI_COMPONENTS_SHA a573a9695e53a0807de197785e12f9facd06da05)  # tag v0.9.1
-set(EDI_GUI_COMPONENTS_ARCHIVE_SHA256 df502bdc41f2730531533c9ef81d371ec7db39b04666d54016e65e4a93bb1dba)
+set(EDI_GUI_COMPONENTS_SHA 3897d339b60f5707bfe952fed59a20f73340e236)  # head of the edi branch, ADR-0015
+set(EDI_GUI_COMPONENTS_ARCHIVE_SHA256 3aebde35ff5f714f83b5f76c03e4a54d40a84c196d766f020d6ce4eb683200e1)
 # Every file under src/ at the pinned commit, as edi_gui_tree_sha256 below sums them.
-set(EDI_GUI_COMPONENTS_SRC_SHA256 0da3aa8344714c0199871a2df671840b467370918dc2232d8edf71bb811fe6be)
+set(EDI_GUI_COMPONENTS_SRC_SHA256 5e6ee5d998c030c0517a0b8adb19f13d22f63e1ea8c199bb5ec2076081db5888)
 
 if(NOT FETCHCONTENT_SOURCE_DIR_GUI_COMPONENTS)
     message(STATUS "gui-components: fetching the pinned archive ${EDI_GUI_COMPONENTS_SHA} (8 MB, once per build tree)")
@@ -54,7 +54,10 @@ if(EXISTS "${gui_components_SOURCE_DIR}/.git")
         OUTPUT_VARIABLE _edi_gui_dirty OUTPUT_STRIP_TRAILING_WHITESPACE)
     if(NOT _edi_gui_sha_rc EQUAL 0 OR NOT _edi_gui_sha STREQUAL EDI_GUI_COMPONENTS_SHA)
         message(FATAL_ERROR "gui-components at ${gui_components_SOURCE_DIR} is at '${_edi_gui_sha}', "
-                            "not the pinned ${EDI_GUI_COMPONENTS_SHA}")
+                            "not the pinned ${EDI_GUI_COMPONENTS_SHA}. "
+                            "Run git -C ${gui_components_SOURCE_DIR} fetch origin edi, then "
+                            "git -C ${gui_components_SOURCE_DIR} switch --detach ${EDI_GUI_COMPONENTS_SHA}, "
+                            "or unset EDI_GUI_COMPONENTS_SRC to download the pinned archive.")
     endif()
     if(NOT _edi_gui_dirty STREQUAL "")
         message(FATAL_ERROR "gui-components at ${gui_components_SOURCE_DIR} has local changes under src/; "
@@ -71,8 +74,8 @@ endif()
 set(EDI_GUI_BASE_DIR ${gui_components_SOURCE_DIR}/src/EasyApplication)
 
 # One base module: its QML types, singletons and JavaScript files, all read from the pinned tree, except
-# the names in REPLACED, which edi builds from app/qml/Base/<subdir>/ in their place (only Style/Fonts:
-# the font set is edi's own, ADR-0015 §10).
+# the names in REPLACED, which edi builds from app/qml/Base/<subdir>/ in their place (Style/Fonts for edi's font set,
+# Components/ListView for Qt selection-model initialization; ADR-0015 §10, ADR-0029).
 function(edi_gui_base_module target uri subdir)
     cmake_parse_arguments(ARG "" "" "TYPES;SINGLETONS;SCRIPTS;REPLACED" ${ARGN})
     set(files)
@@ -126,20 +129,24 @@ edi_gui_base_module(edi_gui_elements EasyApplication.Gui.Elements Gui/Elements
           Dialog DialogButtonBox GroupBox GroupButton GroupColumn GroupRow Label LinkedImage Menu
           MenuItem ParamComboBox Parameter ParamTextField RadioButton RemotePointer RunningLabel
           ScrollBar ScrollIndicator SideBarButton Slider SliderHandle SpinBox StatusBar
-          StatusBarItem TabBar TabButton TextArea TextField TextInput ToolButton ToolTip ToolTipShadow)
+          StatusBarItem TabBar TabButton TextArea TextField TextInput ToolButton ToolTip ToolTipShadow
+    REPLACED ParamTextField)
 # Left out of Components: BasicReport (QtWebEngine), GuideWindow and GuideWindowContainer (they need a
 # host `Gui.Globals` module), JsonListModel (the dict/JSON model edi does not use).
 edi_gui_base_module(edi_gui_components EasyApplication.Gui.Components Gui/Components
     TYPES AboutDialog ApplicationWindow AppBarCentralTabs AppBarLeftButtons AppBarRightButtons
           ContentPage ContentArea MainContent SideBar SideBarColumn PreferencesDialog
-          ProjectDescriptionDialog TableView TableViewHeader TableViewDelegate TableViewLabel
+          ProjectDescriptionDialog ListView ListViewHeader ListViewDelegate ListViewTextInput
+          TableView TableViewHeader TableViewDelegate TableViewLabel
           TableViewAdvancedLabel TableViewTwoRowsAdvancedLabel TableViewParameter TableViewCheckBox
-          TableViewComboBox TableViewButton TableViewLabelControl TableViewTextInput)
+          TableViewComboBox TableViewButton TableViewLabelControl TableViewTextInput
+    REPLACED ListView TableViewParameter)
 
 # The fonts edi's Style/Fonts.qml (app/qml/Base/Gui/Style) loads, placed where its
 # `Qt.resolvedUrl("../Resources/Fonts")` looks: the base's own faces edi keeps, and edi's (ADR-0015 §10).
 set(EDI_GUI_BASE_FONTS
     "PT_Sans/PTSans-Regular.ttf" "PT_Sans/PTSans-Bold.ttf" "PT_Mono/PTMono-Regular.ttf"
+    "Encode_Sans/EncodeSans-Regular.ttf"
     "FontAwesome/Font Awesome 5 Free-Solid-900.otf")
 set(_edi_gui_font_files)
 foreach(font IN LISTS EDI_GUI_BASE_FONTS)

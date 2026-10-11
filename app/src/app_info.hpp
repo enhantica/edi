@@ -25,8 +25,10 @@ class ApplicationInfo : public QObject {
     Q_PROPERTY(QString contactUrl READ contactUrl CONSTANT)
     Q_PROPERTY(QString licenseUrl READ licenseUrl CONSTANT)
     Q_PROPERTY(QString appLicenseUrl READ appLicenseUrl CONSTANT)
+    Q_PROPERTY(QString copyingUrl READ copyingUrl CONSTANT)
     Q_PROPERTY(QString noticesUrl READ noticesUrl CONSTANT)
     Q_PROPERTY(QStringList componentNames READ componentNames CONSTANT)
+    Q_PROPERTY(QStringList componentVersions READ componentVersions CONSTANT)
     Q_PROPERTY(QStringList componentLicences READ componentLicences CONSTANT)
     Q_PROPERTY(QStringList componentUses READ componentUses CONSTANT)
     Q_PROPERTY(QString description READ description CONSTANT)
@@ -57,11 +59,17 @@ class ApplicationInfo : public QObject {
     // ADR-0015 §6), and the notices of every component the app links or bundles.
     QString licenseUrl() const { return QStringLiteral("qrc:/LICENSE"); }
     QString appLicenseUrl() const { return QStringLiteral("qrc:/app/DISTRIBUTION-LICENSE.md"); }
+    QString copyingUrl() const { return QStringLiteral("qrc:/COPYING"); }
     QString noticesUrl() const { return QStringLiteral("qrc:/THIRD-PARTY-NOTICES"); }
-    // The components the notices list, in their order: their names, licences and uses, index for index.
+    // The components the notices list, in their order: their names, versions (empty when the notices give none),
+    // licences and uses, index for index.
     QStringList componentNames() const { return componentColumn(0); }
+    QStringList componentVersions() const { return componentColumn(3); }
     QStringList componentLicences() const { return componentColumn(1); }
     QStringList componentUses() const { return componentColumn(2); }
+    // The licence text the notices give for the component at `index` in the lists above, without its indent;
+    // empty for an index out of range.
+    Q_INVOKABLE QString componentLicenceText(int index) const;
     // The text of a bundled licence resource (one of the URLs above); empty for any other URL.
     Q_INVOKABLE QString licenceText(const QString& url) const;
     // The diagnostics view's text (the owner, 2026-10-06): the platform and browser, the build flavour and why it
@@ -76,13 +84,13 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE QString licenceLinkTarget(const QString& from, const QString& link) const;
 
    private:
-    // One column of the notices' "Components" list: 0 the name, 1 the licence, 2 the use.
+    // One column of the notices' "Components" list: 0 the name, 1 the licence, 2 the use, 3 the version.
     static QStringList componentColumn(int column);
 
    public:
     QString description() const;
     // The holder of the copyright in edi's source (LICENSE), named in the About dialog.
-    QString copyrightHolder() const { return QStringLiteral("Enhantica contributors"); }
+    QString copyrightHolder() const { return QStringLiteral("EasyScience contributors"); }
     // The About dialog's copyright years, as easydiffractionbeta's (Gui/Globals/Configs.qml): from the
     // EasyDiffraction project's first year to the current release's.
     QString developerYearsFrom() const { return QStringLiteral("2019"); }

@@ -24,38 +24,39 @@ Column {
 
     spacing: AppSizes.groupContentSpacing
 
-    EaComponents.TableView {
+    DataTable {
         id: table
 
         objectName: "linkedStructure.list"
         defaultInfoText: qsTr("No linked structure")
-        model: group.rows
+        sourceModel: group.rows
 
-        header: EaComponents.TableViewHeader {
+        columnWidths: [numberColumnWidth, EaStyle.Sizes.tableRowHeight, -1, EaStyle.Sizes.fontPixelSize * 8, AppSizes.iconColumnWidth, AppSizes.iconColumnWidth]
+
+        header: EaComponents.ListViewHeader {
             EaComponents.TableViewLabel {
-                width: AppSizes.indexColumnWidth
+                horizontalAlignment: Text.AlignHCenter
             }
             EaComponents.TableViewLabel {
-                width: EaStyle.Sizes.tableRowHeight
+                horizontalAlignment: Text.AlignHCenter
             }
             EaComponents.TableViewLabel {
-                flexibleWidth: true
                 horizontalAlignment: Text.AlignLeft
                 text: qsTr("structure")
             }
             EaComponents.TableViewLabel {
-                width: EaStyle.Sizes.fontPixelSize * 8
+                horizontalAlignment: Text.AlignHCenter
                 text: qsTr("scale")
             }
             EaComponents.TableViewLabel {
-                width: AppSizes.iconColumnWidth
+                horizontalAlignment: Text.AlignHCenter
             }
             EaComponents.TableViewLabel {
-                width: AppSizes.iconColumnWidth
+                horizontalAlignment: Text.AlignHCenter
             }
         }
 
-        delegate: EaComponents.TableViewDelegate {
+        delegate: EaComponents.ListViewDelegate {
             id: row
 
             required property int index
@@ -65,44 +66,55 @@ Column {
             required property var model
 
             EaComponents.TableViewLabel {
-                width: AppSizes.indexColumnWidth
+                horizontalAlignment: Text.AlignHCenter
                 color: EaStyle.Colors.themeForegroundMinor
                 text: row.index + 1
             }
             IconCell {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `linkedStructure.color.${row.index}`
                 icon: "layer-group"
                 iconColor: AppColors.structure(row.colorIndex)
                 toolTip: qsTr("Calculated pattern color")
             }
             // The structure, picked from the project's structures as the aliases table picks a parameter.
-            EaComponents.TableViewComboBox {
-                objectName: `linkedStructure.structureId.${row.index}`
-                width: table.headerLabelItems.length > 2 ? table.headerLabelItems[2].width : 0
-                enabled: row.model.enabled
-                model: group.rows ? group.rows.structureNames : []
-                currentIndex: group.rows ? group.rows.structureNames.indexOf(row.structureId) : -1
-                displayText: row.structureId
-                ToolTip.text: row.structureId
-                onActivated: index => {
-                    group.rows.setStructureId(row.index, group.rows.structureNames[index]);
-                    currentIndex = Qt.binding(() => group.rows ? group.rows.structureNames.indexOf(row.structureId) : -1);
+            Item {
+                property int horizontalAlignment: Text.AlignLeft
+                height: parent.height
+                SearchableComboBox {
+                    width: Math.min(parent.width, implicitWidth)
+                    x: parent.horizontalAlignment === Text.AlignRight ? parent.width - width : parent.horizontalAlignment === Text.AlignLeft ? 0 : (parent.width - width) / 2
+                    inTable: true
+                    horizontalAlignment: Text.AlignLeft
+                    anchors.verticalCenter: parent.verticalCenter
+                    objectName: `linkedStructure.structureId.${row.index}`
+                    enabled: row.model.enabled
+                    model: group.rows ? group.rows.structureNames : []
+                    currentIndex: group.rows ? group.rows.structureNames.indexOf(row.structureId) : -1
+                    displayText: row.structureId
+                    ToolTip.text: row.structureId
+                    onActivated: index => {
+                        group.rows.setStructureId(row.index, group.rows.structureNames[index]);
+                        currentIndex = Qt.binding(() => group.rows ? group.rows.structureNames.indexOf(row.structureId) : -1);
+                    }
                 }
             }
             ParameterCell {
+                columnAlignment: Text.AlignHCenter
                 objectName: `linkedStructure.scale.${row.index}`
-                width: EaStyle.Sizes.fontPixelSize * 8
                 enabled: row.model.enabled
                 item: row.model.scale
             }
             // Disabled as a constraint is: kept and saved, but neither calculated nor fitted.
             EaComponents.TableViewButton {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `linkedStructure.enabled.${row.index}`
                 fontIcon: row.model.enabled ? "toggle-on" : "toggle-off"
                 ToolTip.text: row.model.enabled ? qsTr("Disable this linked structure") : qsTr("Enable this linked structure")
                 onClicked: group.rows.setEnabled(row.index, !row.model.enabled)
             }
             EaComponents.TableViewButton {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `linkedStructure.remove.${row.index}`
                 enabled: group.rows !== null && group.rows.canRemove
                 fontIcon: "minus-circle"

@@ -18,57 +18,57 @@ Column {
 
     property StructureViewModel structure: null
     readonly property AtomSiteListModel sites: structure ? structure.atomSites : null
-    // easydiffractionbeta's widths (AtomSite.qml): the label takes what the others leave.
-    readonly property real coordinateWidth: EaStyle.Sizes.fontPixelSize * 4.8
     readonly property real typeWidth: EaStyle.Sizes.fontPixelSize * 4.5
     readonly property real wyckoffWidth: EaStyle.Sizes.fontPixelSize * 2.5
 
     spacing: AppSizes.groupContentSpacing
 
-    EaComponents.TableView {
+    DataTable {
         id: table
         objectName: "atomSites.list"
         defaultInfoText: qsTr("No atom sites defined")
-        model: group.sites
+        sourceModel: group.sites
 
-        header: EaComponents.TableViewHeader {
+        columnWidths: [numberColumnWidth, textColumnWidth("label", qsTr("id")), group.typeWidth, -1, -1, -1, group.wyckoffWidth, -1, AppSizes.iconColumnWidth]
+
+        header: EaComponents.ListViewHeader {
             EaComponents.TableViewLabel {
-                width: AppSizes.indexColumnWidth
+                horizontalAlignment: Text.AlignHCenter
             }
             EaComponents.TableViewLabel {
-                flexibleWidth: true
-                text: qsTr("label")
+                horizontalAlignment: Text.AlignLeft
+                text: qsTr("id")
             }
             EaComponents.TableViewLabel {
-                width: group.typeWidth
+                horizontalAlignment: Text.AlignLeft
                 text: qsTr("type")
             }
             EaComponents.TableViewLabel {
-                width: group.coordinateWidth
+                horizontalAlignment: Text.AlignHCenter
                 text: "x"
             }
             EaComponents.TableViewLabel {
-                width: group.coordinateWidth
+                horizontalAlignment: Text.AlignHCenter
                 text: "y"
             }
             EaComponents.TableViewLabel {
-                width: group.coordinateWidth
+                horizontalAlignment: Text.AlignHCenter
                 text: "z"
             }
             EaComponents.TableViewLabel {
-                width: group.wyckoffWidth
+                horizontalAlignment: Text.AlignHCenter
                 text: qsTr("WL")
             }
             EaComponents.TableViewLabel {
-                width: group.coordinateWidth
+                horizontalAlignment: Text.AlignHCenter
                 text: qsTr("occ")
             }
             EaComponents.TableViewLabel {
-                width: AppSizes.iconColumnWidth
+                horizontalAlignment: Text.AlignHCenter
             }
         }
 
-        delegate: EaComponents.TableViewDelegate {
+        delegate: EaComponents.ListViewDelegate {
             id: row
 
             required property int index
@@ -81,80 +81,89 @@ Column {
             required property ParameterItem occupancy
 
             EaComponents.TableViewLabel {
-                width: AppSizes.indexColumnWidth
+                horizontalAlignment: Text.AlignHCenter
                 color: EaStyle.Colors.themeForegroundMinor
                 text: row.index + 1
             }
             TextCell {
                 objectName: `atomSite.label.${row.index}`
-                width: table.headerLabelItems.length > 1 ? table.headerLabelItems[1].width : 0
+                horizontalAlignment: Text.AlignLeft
                 value: row.label
                 onCommitted: text => group.sites.setText(row.index, "label", text)
             }
             // The type picked from the element table or typed into the list's search field (the owner,
             // 2026-10-06); a type outside the table, as a file may declare it ("Co2+", "157Gd"), is shown as it is.
-            SearchableComboBox {
-                objectName: `atomSite.typeSymbol.${row.index}`
-                width: group.typeWidth
-                inTable: true
-                anchors.verticalCenter: parent.verticalCenter
-                searchThreshold: 0
-                model: ApplicationInfo.elementSymbols
-                currentIndex: ApplicationInfo.elementSymbols.indexOf(row.typeSymbol)
-                displayText: row.typeSymbol
-                popup.width: Math.max(width, EaStyle.Sizes.fontPixelSize * 8)
-                // The site's atom icon in its element's colour just before the type, as the Analysis page's parameter
-                // names carry it (the owner, 2026-10-03 and 2026-10-06).
-                contentItem: Item {
-                    clip: true
+            Item {
+                property int horizontalAlignment: Text.AlignLeft
+                height: parent.height
+                SearchableComboBox {
+                    width: Math.min(parent.width, implicitWidth)
+                    x: parent.horizontalAlignment === Text.AlignRight ? parent.width - width : parent.horizontalAlignment === Text.AlignLeft ? 0 : (parent.width - width) / 2
+                    horizontalAlignment: Text.AlignLeft
+                    objectName: `atomSite.typeSymbol.${row.index}`
+                    inTable: true
+                    anchors.verticalCenter: parent.verticalCenter
+                    searchThreshold: 0
+                    model: ApplicationInfo.elementSymbols
+                    currentIndex: ApplicationInfo.elementSymbols.indexOf(row.typeSymbol)
+                    displayText: row.typeSymbol
+                    popup.width: Math.max(width, EaStyle.Sizes.fontPixelSize * 8)
+                    // The site's atom icon in its element's colour just before the type, as the Analysis page's parameter
+                    // names carry it (the owner, 2026-10-03 and 2026-10-06).
+                    contentItem: Item {
+                        implicitWidth: typeLine.implicitWidth + EaStyle.Sizes.fontPixelSize * 0.5
+                        clip: true
 
-                    IconLine {
-                        objectName: `atomSite.icon.${row.index}`
-                        x: EaStyle.Sizes.fontPixelSize * 0.5
-                        anchors.verticalCenter: parent.verticalCenter
-                        segments: [
-                            {
-                                "icon": row.fractX ? row.fractX.categoryIcon : "",
-                                "color": AppColors.element(row.typeSymbol)
-                            },
-                            {
-                                "text": row.typeSymbol
-                            }
-                        ]
+                        IconLine {
+                            id: typeLine
+                            objectName: `atomSite.icon.${row.index}`
+                            x: EaStyle.Sizes.fontPixelSize * 0.5
+                            anchors.verticalCenter: parent.verticalCenter
+                            segments: [
+                                {
+                                    "icon": row.fractX ? row.fractX.categoryIcon : "",
+                                    "color": AppColors.element(row.typeSymbol)
+                                },
+                                {
+                                    "text": row.typeSymbol
+                                }
+                            ]
+                        }
                     }
-                }
-                onActivated: index => {
-                    group.sites.setText(row.index, "typeSymbol", textAt(index));
-                    currentIndex = Qt.binding(() => ApplicationInfo.elementSymbols.indexOf(row.typeSymbol));
+                    onActivated: index => {
+                        group.sites.setText(row.index, "typeSymbol", textAt(index));
+                        currentIndex = Qt.binding(() => ApplicationInfo.elementSymbols.indexOf(row.typeSymbol));
+                    }
                 }
             }
             ParameterCell {
+                columnAlignment: Text.AlignHCenter
                 objectName: `atomSite.fractX.${row.index}`
-                width: group.coordinateWidth
                 item: row.fractX
             }
             ParameterCell {
+                columnAlignment: Text.AlignHCenter
                 objectName: `atomSite.fractY.${row.index}`
-                width: group.coordinateWidth
                 item: row.fractY
             }
             ParameterCell {
+                columnAlignment: Text.AlignHCenter
                 objectName: `atomSite.fractZ.${row.index}`
-                width: group.coordinateWidth
                 item: row.fractZ
             }
             TextCell {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `atomSite.wyckoffLetter.${row.index}`
-                width: group.wyckoffWidth
                 value: row.wyckoffLetter
                 onCommitted: text => group.sites.setText(row.index, "wyckoffLetter", text)
             }
             ParameterCell {
+                columnAlignment: Text.AlignHCenter
                 objectName: `atomSite.occupancy.${row.index}`
-                width: group.coordinateWidth
                 item: row.occupancy
             }
             EaComponents.TableViewButton {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `atomSite.remove.${row.index}`
                 fontIcon: "minus-circle"
                 ToolTip.text: qsTr("Remove this atom site")

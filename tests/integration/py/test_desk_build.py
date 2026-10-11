@@ -9,6 +9,8 @@ from types import SimpleNamespace
 
 import pytest
 
+from tests.fixtures.table_display import gui_base
+
 ROOT = Path(__file__).resolve().parents[3]
 
 
@@ -131,6 +133,24 @@ exit 0
     )
 
 
+def assert_default_gui_fetch(fields):
+    for name in ('URL', 'URL_HASH', 'INACTIVITY_TIMEOUT', 'TIMEOUT'):
+        assert fields.count(name) == 1 and fields.index(name) + 1 < len(fields), (
+            'GUI archive acquisition must declare each URL, digest and deadline exactly once'
+        )
+    assert fields[fields.index('URL') + 1] == (
+        'https://github.com/easyscience/gui-components/archive/' + gui_base.PIN + '.tar.gz'
+    ), 'Desktop builds must fetch the immutable upstream GUI commit from ADR-0015'
+    assert fields[fields.index('URL_HASH') + 1] == 'SHA256=' + gui_base.ARCHIVE_SHA256, (
+        'Desktop GUI acquisition must verify the independently frozen upstream archive digest'
+    )
+    for name, bound in [('INACTIVITY_TIMEOUT', 60), ('TIMEOUT', 600)]:
+        value = fields[fields.index(name) + 1]
+        assert value.isdecimal() and 0 < int(value) <= bound, (
+            'The default archive acquisition must retain bounded stalled and total download time'
+        )
+
+
 def test_default_gui_fetch_uses_pinned_archive_with_digest_and_deadline(tmp_path):
     modules = tmp_path / 'modules'
     modules.mkdir()
@@ -158,14 +178,58 @@ endfunction()
         'The default GUI source observer must reach the real acquisition declaration'
     )
     fields = (tmp_path / 'observed-declaration.txt').read_text().split(';')
-    assert fields[fields.index('URL') + 1] == (
-        'https://github.com/easyscience/gui-components/archive/'
-        'a573a9695e53a0807de197785e12f9facd06da05.tar.gz'
-    ), 'Desktop builds must fetch the immutable upstream GUI commit from ADR-0015'
-    assert fields[fields.index('URL_HASH') + 1] == (
-        'SHA256=df502bdc41f2730531533c9ef81d371ec7db39b04666d54016e65e4a93bb1dba'
-    ), 'Desktop GUI acquisition must verify the frozen upstream archive digest'
-    assert (
-        int(fields[fields.index('INACTIVITY_TIMEOUT') + 1]) > 0
-        and int(fields[fields.index('TIMEOUT') + 1]) > 0
-    ), 'The default archive acquisition must bound both stalled and total download time'
+    assert_default_gui_fetch(fields)
+
+
+@pytest.mark.parametrize(
+    'damage',
+    [
+        'url',
+        'digest',
+        'missing-stall',
+        'missing-total',
+        'zero-stall',
+        'zero-total',
+        'unbounded-stall',
+        'unbounded-total',
+        'nonnumeric',
+        'missing-value',
+        'duplicate',
+    ],
+)
+def test_gui_archive_observer_refuses_url_digest_and_deadline_escapes(damage):
+    fields = [
+        'gui_components',
+        'URL',
+        'https://github.com/easyscience/gui-components/archive/' + gui_base.PIN + '.tar.gz',
+        'URL_HASH',
+        'SHA256=' + gui_base.ARCHIVE_SHA256,
+        'INACTIVITY_TIMEOUT',
+        '60',
+        'TIMEOUT',
+        '600',
+    ]
+    assert_default_gui_fetch(fields)
+    if damage == 'url':
+        fields[2] = fields[2].replace(gui_base.PIN, 'master')
+    elif damage == 'digest':
+        fields[4] = 'SHA256=' + '0' * 64
+    elif damage.startswith('missing-'):
+        index = fields.index('INACTIVITY_TIMEOUT' if damage == 'missing-stall' else 'TIMEOUT')
+        del fields[index : index + 2]
+    elif damage == 'zero-stall':
+        fields[6] = '0'
+    elif damage == 'unbounded-total':
+        fields[8] = '601'
+    elif damage == 'zero-total':
+        fields[8] = '0'
+    elif damage == 'unbounded-stall':
+        fields[6] = '61'
+    elif damage == 'nonnumeric':
+        fields[8] = 'unbounded'
+    elif damage == 'missing-value':
+        fields.pop()
+    else:
+        fields += ['URL', fields[2]]
+    with pytest.raises(AssertionError):
+        assert_default_gui_fetch(fields)
