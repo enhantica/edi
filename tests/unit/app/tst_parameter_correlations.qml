@@ -2,6 +2,7 @@ import QtQuick
 import QtTest
 import edi.app
 import EdiAcceptance 1.0
+import EasyApplication.Gui.Style as Style
 import "UiInteraction.js" as Ui
 
 TestCase {
@@ -9,12 +10,15 @@ TestCase {
     name: "ParameterCorrelations"
     when: windowShown
     property var appWindow
+    property int savedTheme
     Component {
         id: application
         Main {}
     }
 
     function initTestCase() {
+        savedTheme = Style.Colors.theme;
+        Style.Colors.theme = Style.Colors.LightTheme;
         appWindow = application.createObject(null);
         verify(appWindow !== null, "The production window must load for correlation and editing checks");
         verify(waitForRendering(appWindow.contentItem), "The production window must render before input");
@@ -26,6 +30,7 @@ TestCase {
     function cleanupTestCase() {
         Session.closeProject();
         appWindow.destroy();
+        Style.Colors.theme = savedTheme;
     }
     function click(name) {
         Ui.click(test, Probe, appWindow, name);
