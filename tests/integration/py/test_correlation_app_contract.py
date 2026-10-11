@@ -17,6 +17,16 @@ def text(path):
     return (QML / path).read_text()
 
 
+def body(source, declaration):
+    start = source.index('{', source.index(declaration)) + 1
+    depth = 1
+    for i in range(start, len(source)):
+        depth += (source[i] == '{') - (source[i] == '}')
+        if depth == 0:
+            return source[start:i]
+    raise ValueError('The production QML declaration must close its block')
+
+
 def test_correlations_follows_the_existing_analysis_tabs():
     source = text('Pages/Analysis/AnalysisPage.qml')
     positions = [
@@ -59,7 +69,21 @@ def test_workflow_pages_follow_structure_and_experiment_presence(property_name, 
             'const AppState={reached:5,Page:{Home:0,Project:1,Structure:2,'
             'Experiment:3,Analysis:4,Report:5}}; const reached=5;'
         )
-        script += 'process.stdout.write(JSON.stringify(Boolean(' + match[1] + ')));'
+        definitions = dict(re.findall(r'property bool (\w+):\s*([^\n]+)', source))
+        pending = [property_name]
+        ordered = []
+
+        def visit(name, definitions=definitions, ordered=ordered):
+            if name in ordered:
+                return
+            for word in re.findall(r'\b\w+\b', definitions[name]):
+                if word in definitions:
+                    visit(word)
+            ordered.append(name)
+
+        visit(pending[0])
+        script += ''.join('const ' + name + '=' + definitions[name] + ';' for name in ordered)
+        script += 'process.stdout.write(JSON.stringify(Boolean(' + property_name + ')));'
         outcome = subprocess.run(
             ['node', '-e', script], capture_output=True, text=True, timeout=3, check=False
         )
@@ -75,8 +99,8 @@ def test_workflow_pages_follow_structure_and_experiment_presence(property_name, 
 
 def test_create_project_passes_the_chosen_location_to_the_session():
     source = text('Pages/Project/GetStartedGroup.qml')
-    accepted = re.search(r'onAccepted:\s*([^\n]+)', source)
-    assert accepted and 'projectLocation' in accepted[1], (
+    accepted = body(source, 'onAccepted:')
+    assert re.search(r'Session\.createProject\([^;]*createDialog\.projectLocation', accepted), (
         'Create project must use the location chosen in its dialog'
     )
 
@@ -121,6 +145,21 @@ def test_experiment_data_header_and_button_are_declared():
         source,
         re.DOTALL,
     ), 'Loading measured data must use a button rather than a clickable text label'
+    widths = re.search(r'columnWidths:\s*(\[[^\n]+\])', source)
+    assert widths, 'The Experiments table must declare each column width'
+    script = (
+        'const numberColumnWidth=20, group={scan:false,scanColumns:[]};'
+        'const AppSizes={iconColumnWidth:25,dataColumnWidth:80};'
+        'const qsTr=value=>value;'
+        'const textColumnWidth=()=>73;'
+        'process.stdout.write(JSON.stringify(' + widths[1] + '));'
+    )
+    result = subprocess.run(['node', '-e', script], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, 'The production Experiments column widths must evaluate'
+    actual = json.loads(result.stdout)
+    assert actual[3] == 73 and actual[4] == -1 and actual.count(-1) == 1, (
+        'Data file must take the sole free width while Datablock takes its measured text width'
+    )
 
 
 def test_diagnostics_uses_a_button_with_a_declared_combobox_width():
@@ -129,8 +168,57 @@ def test_diagnostics_uses_a_button_with_a_declared_combobox_width():
         r'(?:EaElements\.)?Button\s*\{\s*objectName:\s*"preferences.diagnostics"([^}]+)', source
     )
     assert match and 'qsTr("Show")' in match[1], 'Diagnostics Show must be an actual button'
-    assert re.search(r'(?:implicitWidth|width|Layout.preferredWidth):', match[1]), (
+    assert re.search(r'\bwidth:\s*loggingLevel\.width\b', match[1]), (
         'The diagnostics button must explicitly take the Logging level combobox width'
+    )
+
+
+@pytest.mark.parametrize(
+    ('folder', 'name', 'expected'),
+    [
+        ('/chosen///', 'first', '/chosen/first'),
+        ('/chosen/', 'renamed', '/chosen/renamed'),
+        ('/', 'first', '/first'),
+        ('C:\\chosen\\\\', 'first', 'C:\\chosen\\first'),
+    ],
+)
+def test_create_location_joins_folder_and_edited_name_once(folder, name, expected):
+    source = text('Base/Gui/Components/ProjectDescriptionDialog.qml')
+    separator = '\\' if folder.startswith('C:') else '/'
+    script = 'const EaLogic={Utils:{osPathSep:()=>' + json.dumps(separator) + '}};'
+    script += 'function joinedPath(folder,name){' + body(source, 'function joinedPath(') + '}'
+    script += (
+        'process.stdout.write(joinedPath(' + json.dumps(folder) + ',' + json.dumps(name) + '));'
+    )
+    result = subprocess.run(
+        ['node', '-e', script], capture_output=True, text=True, timeout=3, check=False
+    )
+    assert result.returncode == 0, 'The actual create-dialog path join must execute'
+    assert result.stdout == expected, (
+        'A chosen folder and an edited project name must join with exactly one native separator'
+    )
+
+
+def test_save_asks_once_then_uses_the_existing_location():
+    source = text('Main.qml')
+    script = """let asks=0,saves=0;
+    const WebFiles={available:false};const saveFolder={open(){asks++}};
+    const saveError={open(){throw Error('save failed')}};
+    const Session={project:{path:'/chosen/first'},needsSaveAs:true,save(){saves++;return true}};
+    """
+    script += 'function saveProject(){' + body(source, 'function saveProject(') + '}'
+    script += 'function saveProjectAs(){' + body(source, 'function saveProjectAs(') + '}'
+    script += 'const window={saveProjectAs};'
+    script += 'saveProject();Session.needsSaveAs=false;saveProject();'
+    script += 'process.stdout.write(JSON.stringify([asks,saves]));'
+    result = subprocess.run(
+        ['node', '-e', script], capture_output=True, text=True, timeout=3, check=False
+    )
+    assert result.returncode == 0, (
+        'The production Save action must execute through both lifecycle states'
+    )
+    assert json.loads(result.stdout) == [1, 1], (
+        'Save must ask for a directory once and save later changes in place without another dialog'
     )
 
 

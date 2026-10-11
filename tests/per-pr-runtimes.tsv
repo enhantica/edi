@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-11T15:42:15Z
+# measured_utc = 2026-10-11T16:40:23Z
 #
-# Recorded from: current-correlation-final.log (1 node(s) measured once, 9603 banked, 0 stale row(s) dropped)
-# Collected tests: 10350; with a reported duration: 5324
+# Recorded from: feature-current-final.log (21 node(s) measured once, 9603 banked, 0 stale row(s) dropped)
+# Collected tests: 10357; with a reported duration: 5334
 # Module-scoped fixture costs recorded: 32
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 10350
+# inventory_python = 10357
 # inventory_cpp = 302
-# inventory_measured = 9604
-# inventory_unmeasured = 1048
+# inventory_measured = 9622
+# inventory_unmeasured = 1037
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -2059,20 +2059,25 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[window-replace-no-loop-coordinate]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[window-replace-standalone-cell]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[window-replace-standalone-coordinate]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_correlation_app_contract.py::test_atom_site_position_column_uses_a_choice_with_coordinates
-UNMEASURED:failed-in-this-run	tests/integration/py/test_correlation_app_contract.py::test_background_switch_requires_confirmation_before_discarding_rows
-UNMEASURED:failed-in-this-run	tests/integration/py/test_correlation_app_contract.py::test_background_type_selector_applies_the_choice
+0.000	tests/integration/py/test_correlation_app_contract.py::test_atom_site_position_column_uses_a_choice_with_coordinates
+0.140	tests/integration/py/test_correlation_app_contract.py::test_background_switch_requires_confirmation_before_discarding_rows
+0.000	tests/integration/py/test_correlation_app_contract.py::test_background_type_selector_applies_the_choice
 0.000	tests/integration/py/test_correlation_app_contract.py::test_coefficient_editing_and_constants_have_writable_controls
-UNMEASURED:failed-in-this-run	tests/integration/py/test_correlation_app_contract.py::test_correlations_follows_the_existing_analysis_tabs
-UNMEASURED:failed-in-this-run	tests/integration/py/test_correlation_app_contract.py::test_create_project_passes_the_chosen_location_to_the_session
-UNMEASURED:failed-in-this-run	tests/integration/py/test_correlation_app_contract.py::test_diagnostics_uses_a_button_with_a_declared_combobox_width
-UNMEASURED:failed-in-this-run	tests/integration/py/test_correlation_app_contract.py::test_each_coefficient_background_has_a_table_layout[chebyshev]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_correlation_app_contract.py::test_each_coefficient_background_has_a_table_layout[polynomial]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_correlation_app_contract.py::test_experiment_data_header_and_button_are_declared
-UNMEASURED:failed-in-this-run	tests/integration/py/test_correlation_app_contract.py::test_supported_only_selectors_are_disabled_and_explain_the_reason
-UNMEASURED:failed-in-this-run	tests/integration/py/test_correlation_app_contract.py::test_workflow_pages_follow_structure_and_experiment_presence[analysisPageEnabled-True]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_correlation_app_contract.py::test_workflow_pages_follow_structure_and_experiment_presence[experimentPageEnabled-False]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_correlation_app_contract.py::test_workflow_pages_follow_structure_and_experiment_presence[reportPageEnabled-True]
+0.000	tests/integration/py/test_correlation_app_contract.py::test_correlations_follows_the_existing_analysis_tabs
+0.130	tests/integration/py/test_correlation_app_contract.py::test_create_location_joins_folder_and_edited_name_once[/-first-/first]
+0.140	tests/integration/py/test_correlation_app_contract.py::test_create_location_joins_folder_and_edited_name_once[/chosen/-renamed-/chosen/renamed]
+0.150	tests/integration/py/test_correlation_app_contract.py::test_create_location_joins_folder_and_edited_name_once[/chosen///-first-/chosen/first]
+0.130	tests/integration/py/test_correlation_app_contract.py::test_create_location_joins_folder_and_edited_name_once[C:\\chosen\\\\-first-C:\\chosen\\first]
+0.000	tests/integration/py/test_correlation_app_contract.py::test_create_project_passes_the_chosen_location_to_the_session
+0.000	tests/integration/py/test_correlation_app_contract.py::test_diagnostics_uses_a_button_with_a_declared_combobox_width
+0.000	tests/integration/py/test_correlation_app_contract.py::test_each_coefficient_background_has_a_table_layout[chebyshev]
+0.000	tests/integration/py/test_correlation_app_contract.py::test_each_coefficient_background_has_a_table_layout[polynomial]
+0.150	tests/integration/py/test_correlation_app_contract.py::test_experiment_data_header_and_button_are_declared
+0.140	tests/integration/py/test_correlation_app_contract.py::test_save_asks_once_then_uses_the_existing_location
+0.000	tests/integration/py/test_correlation_app_contract.py::test_supported_only_selectors_are_disabled_and_explain_the_reason
+0.580	tests/integration/py/test_correlation_app_contract.py::test_workflow_pages_follow_structure_and_experiment_presence[analysisPageEnabled-True]
+0.670	tests/integration/py/test_correlation_app_contract.py::test_workflow_pages_follow_structure_and_experiment_presence[experimentPageEnabled-False]
+0.580	tests/integration/py/test_correlation_app_contract.py::test_workflow_pages_follow_structure_and_experiment_presence[reportPageEnabled-True]
 0.000	tests/integration/py/test_cwl_admission.py::test_cif_nonzero_mixing_survives_import_without_default_substitution[collection-classic-cwl-pseudo-voigt-berar-baldinozzi]
 0.000	tests/integration/py/test_cwl_admission.py::test_cif_nonzero_mixing_survives_import_without_default_substitution[collection-classic-cwl-pseudo-voigt]
 0.000	tests/integration/py/test_cwl_admission.py::test_cif_nonzero_mixing_survives_import_without_default_substitution[collection-dot-cwl-pseudo-voigt-berar-baldinozzi]
@@ -4885,6 +4890,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.p
 UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_python_fit_result_exposes_external_correlations[1]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_python_fit_result_exposes_external_correlations[2]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_python_fit_result_exposes_external_correlations[3]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_scan_retains_each_experiments_external_pairs_on_save_and_reload[independent]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_scan_retains_each_experiments_external_pairs_on_save_and_reload[sequential]
 0.010	tests/integration/py/test_parameter_correlations.py::test_unfitted_analysis_stays_byte_identical
 0.220	tests/integration/py/test_phase_scan.py::test_failure_after_solver_step_is_recorded_and_scan_continues[independent]
 0.230	tests/integration/py/test_phase_scan.py::test_failure_after_solver_step_is_recorded_and_scan_continues[sequential]

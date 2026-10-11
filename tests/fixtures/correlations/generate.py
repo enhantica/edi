@@ -7,6 +7,7 @@ import ast
 import hashlib
 import json
 import runpy
+import shutil
 import subprocess
 from contextlib import suppress
 from pathlib import Path
@@ -286,6 +287,67 @@ def generate(reference_root):  # noqa: PLR0912, PLR0914, PLR0915 - one authoring
         'shape_count': len(figure.layout.shapes),
     }
     (HERE / 'reference.json').write_text(json.dumps(result, indent=2) + '\n')
+    generate_scans(projection, result)
+
+
+def generate_scans(projection, provenance):
+    """Different measured grids make sharing the last covariance observably wrong."""
+    cases = []
+    grids = [np.arange(9, dtype=float) / 10, np.array([-0.7, -0.5, -0.1, 0, 0.2, 0.6, 1, 1.1])]
+    for index, t in enumerate(grids):
+        design = np.column_stack([t**power for power in range(3)])
+        covariance = np.linalg.inv(design.T @ design)
+        noise = np.asarray([(-1) ** i / 10 for i in range(len(t))])
+        residual = noise - design @ covariance @ design.T @ noise
+        coefficients = (5, 2, 3) if index == 0 else (5.3, 0.8, 1.7)
+        observed = design @ np.asarray(coefficients) + residual
+        matrix = projection._correlation_matrix_from_covariance(covariance)
+        rows = []
+        names = provenance['cases']['3']['names']
+        projection.fit_parameter_correlations = SimpleNamespace(
+            create=lambda _rows=rows, **row: _rows.append(row)
+        )
+        projection._store_correlation_projection(
+            unique_names=names,
+            correlation_matrix=matrix,
+            source_kind=SimpleNamespace(value='deterministic'),
+        )
+        cases.append({
+            'file': f'{index + 1:02d}.xy',
+            'names': names,
+            'matrix': matrix.tolist(),
+            'rows': rows,
+            'coefficients': coefficients,
+            'observations': list(zip(40 * (1 + t), observed, strict=True)),
+        })
+    for mode in ('sequential', 'independent'):
+        directory = HERE / f'scan-{mode}'
+        if directory.exists():
+            shutil.rmtree(directory)
+        shutil.copytree(HERE / 'polynomial-3', directory)
+        scan = directory / 'experiments/scan'
+        scan.mkdir()
+        for case in cases:
+            (scan / case['file']).write_text(
+                ''.join(f'{x:.17g} {y:.17g} 1\n' for x, y in case['observations'])
+            )
+        (directory / 'analysis/analysis.edi').write_text(
+            '_edi.schema_version 3\n_minimizer.max_iterations 80\n'
+            f'_fitting_mode.type {mode}\n_sequential_fit.data_dir experiments/scan\n'
+            '_sequential_fit.file_pattern *.xy\n'
+        )
+    (HERE / 'scan-reference.json').write_text(
+        json.dumps(
+            {
+                'reference_revision': provenance['reference_revision'],
+                'reference_sources': provenance['reference_sources'],
+                'method': provenance['method'],
+                'cases': cases,
+            },
+            indent=2,
+        )
+        + '\n'
+    )
 
 
 if __name__ == '__main__':

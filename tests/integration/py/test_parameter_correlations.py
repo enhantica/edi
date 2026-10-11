@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import json
 import math
 import re
@@ -221,4 +222,56 @@ def test_empty_free_set_never_invents_pairs(tmp_path):
     assert not project.free_parameters, 'The empty-control input must have no free parameters'
     assert not correlations(saved_analysis(project, tmp_path / 'saved')), (
         'An empty free set must have no fabricated correlations'
+    )
+
+
+@pytest.mark.parametrize('mode', ['sequential', 'independent'])
+def test_scan_retains_each_experiments_external_pairs_on_save_and_reload(tmp_path, mode):
+    reference = json.loads((FIXTURE / 'scan-reference.json').read_text())
+    source = tmp_path / 'input'
+    shutil.copytree(FIXTURE / f'scan-{mode}', source)
+    project = edi.Project.load(source)
+    project.analysis.fit()
+    assert (source / 'analysis/results.csv').is_file(), (
+        'The per-experiment correlation witness must execute a real scan'
+    )
+    with (source / 'analysis/results.csv').open() as stream:
+        fitted = list(csv.DictReader(stream))
+    assert [Path(row['file_path']).name for row in fitted] == [
+        case['file'] for case in reference['cases']
+    ], 'The covariance witness must actually fit both independently authored experiments'
+    assert all(row['fit_result.success'].casefold() == 'true' for row in fitted), (
+        'Both experiment fits must succeed before claiming their covariance reference'
+    )
+    once = saved_analysis(project, tmp_path / 'once')
+    # The owner did not prescribe how a dataset is identified in analysis.edi. Audit
+    # every correlation loop here; the app actor below checks association by selection.
+    lines = once.splitlines(keepends=True)
+    starts = [i for i, line in enumerate(lines) if line.startswith(PREFIX + 'id')]
+    rows = [row for i in starts for row in correlations(''.join(lines[i:]))]
+    expected = [row for case in reference['cases'] for row in case['rows']]
+    assert len(rows) == len(expected), (
+        'Sequential and independent fits must retain all experiment pairs, not just the last fit'
+    )
+    for pair in (('base', 'ramp'), ('base', 'curve'), ('ramp', 'curve')):
+
+        def identity(row):
+            return tuple(
+                sorted(
+                    row[key].split('.')[-2]
+                    for key in ('parameter_unique_name_i', 'parameter_unique_name_j')
+                )
+            )
+
+        target = tuple(sorted(pair))
+        actual = sorted(float(row['correlation']) for row in rows if identity(row) == target)
+        truth = sorted(row['correlation'] for row in expected if identity(row) == target)
+        assert actual == pytest.approx(truth, abs=2e-4), (
+            'Each experiment must retain its own independently normalized covariance, '
+            'including signs'
+        )
+    twice = saved_analysis(edi.Project.load(tmp_path / 'once'), tmp_path / 'twice')
+    assert once == twice, (
+        'Save and load must preserve every per-experiment correlation and its '
+        'association byte-for-byte'
     )

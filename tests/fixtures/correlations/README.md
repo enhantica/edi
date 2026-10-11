@@ -27,3 +27,15 @@ The inputs derive from the existing constraint-covariance corpus vehicle:
 the same structure, instrument and polynomial background, with the constraint
 removed and one, two or three coefficients selected independently. The fit-site
 registry declares these disposable variants against that corpus case.
+
+The sequential and independent inputs retain this same polynomial vehicle and
+fit two scan files. `scan-reference.json` freezes the covariance projection for
+each file's measured grid separately. The second grid spans negative and positive
+t and uses different polynomial coefficients, so its least-squares solve is real
+even after sequential seeding. Its base/ramp pair is positive and base/curve pair
+negative; both signs differ from the first experiment. Reusing the last matrix
+for both experiments therefore cannot satisfy the reference. The core gate checks
+all saved pairs and unchanged analysis bytes on reload. The app actor checks the
+association by switching 0 → 1 → 0 → 1 before saving and 1 → 0 → 1 → 0 after loading.
+The Qt actor is authored separately from the executed core proof; its execution
+must be reported explicitly when an app runner is available.

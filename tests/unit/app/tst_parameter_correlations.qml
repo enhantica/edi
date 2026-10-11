@@ -42,7 +42,7 @@ TestCase {
         verify(Session.openProject(Probe.repoUrl(path)), "The independently authored project must open");
     }
     function findBy(root, property, value) {
-        if (root && root[property] === value)
+        if (root && (property === "model" ? JSON.stringify(root[property]) === JSON.stringify(value) : root[property] === value))
             return root;
         for (const child of root && root.children ? root.children : []) {
             const found = findBy(child, property, value);
@@ -135,6 +135,84 @@ TestCase {
             verify(field !== null && !field.enabled, "A supported-only type choice must be shown disabled");
             verify(Ui.text(field).length > 0, "The disabled choice must still display its supported value");
         }
+    }
+
+    function test_scan_correlations_data() {
+        return [
+            {
+                tag: "sequential",
+                mode: "sequential"
+            },
+            {
+                tag: "independent",
+                mode: "independent"
+            }
+        ];
+    }
+
+    function checkExperiment(reference, index) {
+        Session.project.currentExperimentIndex = index;
+        tryVerify(() => !Session.project.calculating && Probe.datasetReady(Session.project), 3000, "Selecting an experiment must finish its own dataset projection");
+        const chart = control("correlations");
+        verify(chart !== null, "The selected experiment must have the production Correlations chart");
+        compare(chart.count, 3, "Each completed experiment must retain all three correlated parameters");
+        const truth = reference.cases[index];
+        for (let row = 0; row < 3; ++row) {
+            for (let column = 0; column < row; ++column) {
+                const i = truth.names.indexOf(chart.labels[row]);
+                const j = truth.names.indexOf(chart.labels[column]);
+                verify(i >= 0 && j >= 0, "The selected experiment must show the independent parameter identities");
+                verify(Math.abs(chart.valueAt(row * 3 + column) - truth.matrix[i][j]) < 2e-4, "Switching experiments must show that experiment's own independent covariance, including its sign");
+            }
+        }
+    }
+
+    function test_scan_correlations(data) {
+        const reference = JSON.parse(Probe.readFile("tests/fixtures/correlations/scan-reference.json"));
+        open("tests/fixtures/correlations/scan-" + data.mode);
+        click("appBar.tab.analysis");
+        click("mainArea.analysis.tab.correlations");
+        tryVerify(() => !Session.project.calculating && Probe.datasetReady(Session.project), 3000, "The scan witness must finish its initial experiment projection before fitting");
+        Session.project.fit.start();
+        tryCompare(Session.project.fit, "running", false, 5000, "The two independent polynomial experiment fits must complete");
+        compare(Session.project.fit.scanFitted, 2, "The switching witness must really fit both experiments");
+        for (const index of [0, 1, 0, 1])
+            checkExperiment(reference, index);
+        const saved = Probe.repoUrl("build/test-tmp/correlation-scan-" + data.mode);
+        verify(Session.saveAs(saved), "The app must save every experiment's own correlations");
+        Session.closeProject();
+        verify(Session.openProject(saved), "The app must reopen persisted per-experiment correlations");
+        click("appBar.tab.analysis");
+        click("mainArea.analysis.tab.correlations");
+        for (const index of [1, 0, 1, 0])
+            checkExperiment(reference, index);
+    }
+
+    function test_data_file_header_button_and_free_width() {
+        verify(Session.createProject("empty-experiment", "Data file layout witness"), "The data-file witness must create a project");
+        verify(Session.project.createStructure(), "The data-file witness must create a structure");
+        verify(Session.project.createExperiment(), "The data-file witness must create an experiment");
+        click("appBar.tab.experiment");
+        Ui.expandGroup(test, Probe, appWindow, "group.experiments");
+        const list = control("experiments.list");
+        verify(list !== null, "The Experiments table must show its production ListView");
+        verify(Ui.text(list).includes("Data file"), "The free-width data column must have its Data file header");
+        compare(list.columnWidths[4], -1, "Data file must own the table's free width");
+        const load = control("experiments.loadData.0");
+        verify(load !== null && load.text === "Load data…", "An experiment without data must offer a real Load data button");
+        verify(load.width > 0 && load.enabled, "The Load data button must have a usable width and accept input");
+    }
+
+    function test_diagnostics_button_matches_logging_level_size() {
+        click("appBar.button.preferences");
+        const button = control("preferences.diagnostics");
+        verify(button !== null && button.text === "Show", "Diagnostics must offer a real Show button");
+        const dialog = Probe.visibleDialogs(appWindow).find(item => Ui.text(item).includes("Logging level"));
+        verify(dialog !== undefined, "Preferences must expose the Logging level control beside Diagnostics");
+        const logging = findBy(dialog.contentItem, "model", ["Debug", "Info", "Error", "Disabled"]);
+        verify(logging !== null, "The Logging level combobox must be present for the size comparison");
+        compare(button.width, logging.width, "Diagnostics Show must be the Logging level combobox's width");
+        dialog.reject();
     }
 
     function test_correlation_scale_empty_state_and_fit_values() {
