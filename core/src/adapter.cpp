@@ -4527,4 +4527,8 @@ EngineThreading engine_threading() noexcept {
     return {crysta::threading::parallel_backend(), crysta::threading::parallel_workers(), crysta::threading::wasm_simd()};
 }
 
+void set_engine_threads(int count) noexcept { crysta::threading::set_thread_count(count); }
+
+int engine_threads_setting() noexcept { return crysta::threading::thread_count_setting(); }
+
 }  // namespace edi

@@ -35,6 +35,10 @@ class ApplicationInfo : public QObject {
     Q_PROPERTY(QString developerYearsTo READ developerYearsTo CONSTANT)
     // The element symbols of the core's element table, H to Og: what an atom-type picker lists.
     Q_PROPERTY(QStringList elementSymbols READ elementSymbols CONSTANT)
+    // The Develop preference's engine thread counts: whether this build can run fills on several threads
+    // (the single-thread web build cannot), and the largest count it offers.
+    Q_PROPERTY(bool engineThreadsSelectable READ engineThreadsSelectable CONSTANT)
+    Q_PROPERTY(int engineThreadsMaximum READ engineThreadsMaximum CONSTANT)
 
    public:
     explicit ApplicationInfo(QObject* parent = nullptr) : QObject(parent) {}
@@ -70,6 +74,12 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE QString diagnostics() const;
     // Puts `text` on the clipboard (the web build's needs the click that asks for it).
     Q_INVOKABLE void copyText(const QString& text) const;
+    bool engineThreadsSelectable() const;
+    // Twice the cores the platform reports, at least 16 and at most 64: a browser may report fewer cores
+    // than the machine has (Brave reports 4 of an M2's 12), so a larger count can still be tried.
+    int engineThreadsMaximum() const;
+    // Sets the engine's thread count for every fill: 0 for Auto, else that many threads.
+    Q_INVOKABLE void setEngineThreads(int count) const;
     // Where a link inside the bundled licence text at `from` leads, resolved against that text's own location
     // (the app notice's "../COPYING" is qrc:/COPYING): the URL when it is one of the bundled licence texts above,
     // empty for anything else, so a link opens only what licenceText reads.
