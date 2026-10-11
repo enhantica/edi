@@ -313,6 +313,13 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // 1: Create project's location, one separator between the folder and the name (not accepted: the demo writes
     // no project into the user's documents).
     steps_.push_back({"t17-25-create-project", {"key:Escape", "appBar.tab.project", basic, "expand:group.getStarted", "project.create", "createProject.name", "type:Corr"}});
+    // 3 and 4: the Wyckoff position column and its list; a new atom on position a, and the structure's Text with no
+    // error.
+    steps_.push_back({"t17-27-wyckoff-column", QStringList{"key:Escape"} + start + open_example("pd-neut-cwl_lbco-hrpt_start-2")
+                                                   + QStringList{"appBar.tab.structure", basic, "expand:group.atom_site"}});
+    steps_.push_back({"t17-28-wyckoff-list", {"atomSite.wyckoffLetter.0"}});
+    steps_.push_back({"t17-29-new-atom", {"key:Escape", "atomSites.append"}});
+    steps_.push_back({"t17-29b-new-atom-text", {text}});
     // 8: a created experiment's Load data… button, left-aligned under Data file.
     steps_.push_back({"t17-24-load-data", start + open_example("pd-neut-cwl_cosio-d20_start-1")
                                               + QStringList{experiment, basic, "expand:group.experiments", "experiments.create"}});

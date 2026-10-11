@@ -247,6 +247,16 @@ void AtomSiteListModel::append() {
         return false;
     });
     site.type_symbol = "H";
+    // A new site sits on the space group's position a, at its coordinates with x, y and z at 0, so it has a letter
+    // the group knows (the owner, 2026-10-08); a group crysta cannot resolve leaves it as before.
+    for (const edi::WyckoffOption& position : edi::wyckoff_positions(structure)) {
+        if (position.letter == "a") {
+            site.wyckoff_letter = position.letter;
+            site.fract_x.value = position.origin[0];
+            site.fract_y.value = position.origin[1];
+            site.fract_z.value = position.origin[2];
+        }
+    }
     editor_.apply(edi::Edit::append(structure.atom_sites, std::move(site)), true);
 }
 
