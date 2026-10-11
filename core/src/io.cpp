@@ -2173,15 +2173,17 @@ auto parameter_slots(ProjectT& project) {
         }
         // The declared model's parameters by row (crysta fit_state.hpp) — the line-segment
         // intensities, or a polynomial or Chebyshev model's coefficients.
-        // Each row by its id, never its position (the owner, 2026-10-11).
+        // Each row by its id, never its position (the owner, 2026-10-11), as `<experiment>.background.<id>`; the
+        // bracket spelling `background[<index>]` stays the older files' position name, which current_parameter_name
+        // reads.
         if (experiment.background_type == "line-segment") {
             for (const auto& point : experiment.background) {
-                add(prefix + "background[" + point->id.value() + "]",
+                add(prefix + "background." + point->id.value(),
                     prefix + "background." + point->id.value() + ".intensity", &point->intensity);
             }
         } else {
             for (const auto& term : experiment.background_terms) {
-                add(prefix + "background[" + term->id.value() + "]",
+                add(prefix + "background." + term->id.value(),
                     prefix + "background." + term->id.value() + ".coef", &term->coef);
             }
         }
@@ -2201,8 +2203,8 @@ auto fit_state_slots(ProjectT& project) {
 }
 
 // A parameter name an older file wrote while loop rows were named by position, as the project names it now, by
-// the row's id (crysta's current_parameter_name, the same rule): `<experiment>.background[<index>]` and
-// `<experiment>.background.<ordinal>.coef` take the row's id, and a one-link experiment's `<experiment>.scale`,
+// the row's id (crysta's current_parameter_name, the same rule): `<experiment>.background[<index>]` (a position from
+// 0) becomes `<experiment>.background.<id>`, `<experiment>.background.<ordinal>.coef` takes the row's id, and a one-link experiment's `<experiment>.scale`,
 // `.march_r` and `.march_random_fract` its structure. A name that resolves already, or matches none of these, is
 // returned as it is. The loader passes every alias and `_fit_parameter.id` through it.
 std::string current_parameter_name(Project& project, const std::string& name) {
@@ -2242,7 +2244,7 @@ std::string current_parameter_name(Project& project, const std::string& name) {
         if (rest.starts_with("background[") && rest.ends_with("]")) {
             if (const auto index = ordinal(rest.substr(11, rest.size() - 12))) {
                 if (const auto id = row_id(*index)) {
-                    candidate = prefix + "background[" + *id + "]";
+                    candidate = prefix + "background." + *id;
                 }
             }
         } else if (!line_segment && rest.starts_with("background.") && rest.ends_with(".coef")) {
