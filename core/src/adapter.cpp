@@ -1990,6 +1990,19 @@ void save_project_via_crysta(const Project& model, const std::string& directory)
         to.profile_function = from.profile_function;
         to.background_function = from.background_function;
         to.descent = from.descent;
+        // A scan's per-file pairs are held with no result, so they cross whether or not one is held.
+        std::vector<crysta::FitParameterCorrelation> rows;
+        rows.reserve(from.correlations.size());
+        for (const auto& row : from.correlations) {
+            crysta::FitParameterCorrelation& copy = rows.emplace_back();
+            copy.id = row->id.value();
+            copy.source_kind = row->source_kind.value();
+            copy.parameter_unique_name_i = row->parameter_unique_name_i.value();
+            copy.parameter_unique_name_j = row->parameter_unique_name_j.value();
+            copy.correlation = row->correlation.get();
+            copy.file_path = row->file_path.value();
+        }
+        to.correlations.assign(rows);
     }
     // The declared scan block round-trips through the delegated save exactly as the fitting
     // mode does — a save that dropped it would turn a sequential project into a single one on
@@ -3608,7 +3621,12 @@ std::vector<FitParameterCorrelation> fit_correlations(Project& project, const cr
             if (!std::isfinite(correlation)) {
                 return {};
             }
-            correlations.push_back({unique_names[i], unique_names[j], std::clamp(correlation, -1.0, 1.0)});
+            FitParameterCorrelation row;
+            row.source_kind = std::string("deterministic");
+            row.parameter_unique_name_i = unique_names[i];
+            row.parameter_unique_name_j = unique_names[j];
+            row.correlation = std::clamp(correlation, -1.0, 1.0);
+            correlations.push_back(row);
         }
     }
     return correlations;
@@ -3618,7 +3636,7 @@ std::vector<FitParameterCorrelation> fit_correlations(Project& project, const cr
 // for a joint fit), from what the fit returned — the same numbers the reports print. The status label is
 // crysta's machine-record spelling; the profile function is the peak type the experiments share (left out
 // when they differ), the background edi's only one.
-void record_fit_result(Project& project, const FitResultBase& outcome, std::size_t considered,
+void record_fit_result(Project& project, FitResultBase& outcome, std::size_t considered,
                        std::vector<FitParameterCorrelation> correlations) {
     FitResultRecord record;
     record.result_kind = "deterministic";
@@ -3673,7 +3691,12 @@ void record_fit_result(Project& project, const FitResultBase& outcome, std::size
         record.background_function = *background;
     }
     record.descent = outcome.descent;  // review-1 F3: the descent that produced it
-    record.correlations = std::move(correlations);
+    const std::vector<ItemVec<FitParameterCorrelation>::Ptr> rows = numbered_correlations(correlations);
+    outcome.correlations.clear();
+    for (const auto& row : rows) {
+        outcome.correlations.push_back(*row);
+    }
+    record.correlations.assign(rows);
     project.fit_result = std::move(record);
     for (const auto& experiment_item : project.experiments) {
         ExperimentBase& experiment = *experiment_item;

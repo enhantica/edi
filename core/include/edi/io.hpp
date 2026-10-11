@@ -222,6 +222,10 @@ UndoFitOutcome restore_fit_start(Project& project);
 // `clear_fit_result` leaves none. An undo clears it (restore_fit_start), as diffraction-lib's undo does.
 void copy_fit_result(Project& to, const Project& from);
 void clear_fit_result(Project& project);
+// Correlation pairs as a record holds them (FitResultRecord::correlations): ids 1, 2, … in their order, as
+// diffraction-lib numbers its `_fit_parameter_correlation` rows.
+std::vector<ItemVec<FitParameterCorrelation>::Ptr> numbered_correlations(
+    const std::vector<FitParameterCorrelation>& pairs);
 
 // Build one entity from text (diffraction-lib `StructureFactory.from_cif_str` /
 // `ExperimentFactory.from_cif_str` — ruling absorb-ten-26). BOTH entries accept the dot-form

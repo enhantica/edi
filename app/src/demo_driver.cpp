@@ -331,6 +331,10 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                                     "choose:OK", "mainArea.analysis.tab.correlations"}});
     steps_.push_back({"t17-41-scan-second-dataset", {"mainArea.blocks.up"}});
     steps_.push_back({"t17-42-scan-first-dataset", {"mainArea.blocks.up"}});
+    // A save keeps every dataset's correlations in analysis.edi, and the reopened project shows them.
+    steps_.push_back({"t17-43-scan-reopened", {"save-as:scan", "open-project:scan", analysis,
+                                               "mainArea.analysis.tab.correlations"}});
+    steps_.push_back({"t17-44-scan-reopened-other-dataset", {"mainArea.blocks.down"}});
     // Large intensities on the y axes in NumberText's scientific form, clear of the titles (owner, 2026-10-11): the
     // example's experiment loaded again with its scale raised, so the calculated pattern reaches about 1e9.
     steps_.push_back({"t17-50-axis-scientific",

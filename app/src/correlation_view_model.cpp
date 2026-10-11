@@ -14,7 +14,13 @@ namespace edi_app {
 CorrelationViewModel::CorrelationViewModel(QObject* parent) : QObject(parent) {}
 
 void CorrelationViewModel::setRecord(const edi::Project& project, int experiment, bool fitted) {
-    const std::vector<edi::FitParameterCorrelation>& pairs = project.fit_result.correlations;
+    // The fit's own pairs; a scan file's (named by `file_path`) are the scan's, shown per dataset (setPairs).
+    std::vector<edi::FitParameterCorrelation> pairs;
+    for (const auto& row : project.fit_result.correlations) {
+        if (row->file_path.empty()) {
+            pairs.push_back(*row);
+        }
+    }
     const int experiments = static_cast<int>(project.experiments.size());
     if (!project.fit_result.held() || pairs.empty()) {
         show({}, {}, tr("No correlations yet"));
@@ -49,7 +55,7 @@ void CorrelationViewModel::show(const std::vector<edi::FitParameterCorrelation>&
     };
     std::map<std::string, std::size_t> index;
     for (const edi::FitParameterCorrelation& pair : pairs) {
-        for (const std::string* name : {&pair.parameter_unique_name_i, &pair.parameter_unique_name_j}) {
+        for (const std::string* name : {&pair.parameter_unique_name_i.value(), &pair.parameter_unique_name_j.value()}) {
             if (shown(*name) && !index.contains(*name)) {
                 index.emplace(*name, names_.size());
                 names_.push_back(*name);
@@ -62,11 +68,11 @@ void CorrelationViewModel::show(const std::vector<edi::FitParameterCorrelation>&
         matrix_[i * n + i] = 1.0;
     }
     for (const edi::FitParameterCorrelation& pair : pairs) {
-        const auto i = index.find(pair.parameter_unique_name_i);
-        const auto j = index.find(pair.parameter_unique_name_j);
+        const auto i = index.find(pair.parameter_unique_name_i.value());
+        const auto j = index.find(pair.parameter_unique_name_j.value());
         if (i != index.end() && j != index.end()) {
-            matrix_[i->second * n + j->second] = pair.correlation;
-            matrix_[j->second * n + i->second] = pair.correlation;
+            matrix_[i->second * n + j->second] = pair.correlation.get();
+            matrix_[j->second * n + i->second] = pair.correlation.get();
         }
     }
     if (n < 2) {

@@ -3908,13 +3908,26 @@ using PreambleCallback = std::function<void(const FitPreamble&)>;
 // `file_name` is the scan file's own name, no directory. `converged` mirrors the row's success
 // cell — the field a progress line's ok/fail split and a summary's NAMED failures both come
 // from.
-// One pair of the fit's free parameters and their correlation coefficient, as diffraction-lib's
-// `_fit_parameter_correlation` row: the two unique names (`<datablock>.<category>[.<entry>].<name>`) in the
-// fit's column order (i before j) and the coefficient, in [-1, 1].
+// One pair of the fit's free parameters and their correlation coefficient, diffraction-lib's
+// `_fit_parameter_correlation` row: its id, how it was computed (`deterministic`: from the covariance), the
+// two unique names (`<datablock>.<category>[.<entry>].<name>`) in the fit's column order (i before j) and the
+// coefficient, in [-1, 1]. A scan's row also names the file whose fit it came from (`file_path`, the
+// results.csv key); a single or joint fit's leaves it empty.
 struct FitParameterCorrelation {
-    std::string parameter_unique_name_i;
-    std::string parameter_unique_name_j;
-    double correlation = 0.0;
+    ItemKey id;
+    detail::WrittenText source_kind;
+    detail::WrittenText parameter_unique_name_i;
+    detail::WrittenText parameter_unique_name_j;
+    detail::Written<double> correlation;
+    detail::WrittenText file_path;
+};
+
+template <>
+struct KeyTraits<FitParameterCorrelation> {
+    static ItemKey& key(FitParameterCorrelation& row) { return row.id; }
+    static const ItemKey& key(const FitParameterCorrelation& row) { return row.id; }
+    static std::string canonical(const std::string& id) { return id; }
+    static const char* category() { return "fit parameter correlation"; }
 };
 
 struct ScanFileRecord {
@@ -3993,6 +4006,9 @@ struct FitResultBase {
     // refinement only — empty for a single-bank fit**, mirroring crysta exactly: its
     // single-file result carries no per-bank block, and its `full` per-bank line is joint-only.
     std::vector<BankMetric> banks;
+    // The free parameters' correlations, as the project's record keeps them (FitResultRecord::correlations); empty
+    // for a scan, whose files each keep their own.
+    std::vector<FitParameterCorrelation> correlations;
     double rwp = 0.0;                 // weighted-profile R-factor (global)
     double reduced_chi_square = 0.0;  // reduced chi-square (goodness-of-fit)
     int iterations = 0;
@@ -4188,6 +4204,17 @@ struct KeyTraits<ParameterConstraint> {
 
 namespace crysta {
 template <>
+struct RowSchema<edi::FitParameterCorrelation> {
+    static constexpr const char* name = "_fit_parameter_correlation";
+    static constexpr auto fields =
+        std::tuple{&edi::FitParameterCorrelation::id, &edi::FitParameterCorrelation::source_kind,
+                   &edi::FitParameterCorrelation::parameter_unique_name_i,
+                   &edi::FitParameterCorrelation::parameter_unique_name_j,
+                   &edi::FitParameterCorrelation::correlation, &edi::FitParameterCorrelation::file_path};
+    static constexpr std::array items{"id",          "source_kind", "parameter_unique_name_i", "parameter_unique_name_j",
+                                      "correlation", "file_path"};
+};
+template <>
 struct RowSchema<edi::ParameterAlias> {
     static constexpr const char* name = "_alias";
     static constexpr auto fields = std::tuple{&edi::ParameterAlias::id, &edi::ParameterAlias::parameter_unique_name};
@@ -4248,8 +4275,9 @@ struct FitResultRecord {
     std::string descent;
     // The free parameters' correlations from the fit's covariance, every pair of the upper triangle in the
     // fit's column order (diffraction-lib's `_store_correlation_projection`); empty when the fit had fewer
-    // than two free parameters or no usable covariance.
-    std::vector<FitParameterCorrelation> correlations;
+    // than two free parameters or no usable covariance. A scan holds no result but keeps each file's pairs,
+    // each naming its file.
+    ItemVec<FitParameterCorrelation> correlations;
     bool held() const { return !result_kind.empty(); }
     // ADR-0018: the row of this object's non-loop categories.
     detail::CategoryRow table_row;

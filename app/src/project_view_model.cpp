@@ -254,6 +254,7 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     // A scan project opens on its template dataset, else on its first, read before the project is shown.
     if (scan_) {
         scan_template_ = *project_;
+        readScanCorrelations();
         viewDatasetNow(std::max(0, templateIndex()), true);
     }
     preview_->recalculate();
@@ -1134,6 +1135,7 @@ QString ProjectViewModel::resetScan() {
         setLastError(refusal);
         return refusal;
     }
+    writeScanCorrelations();  // the run's Undo puts the earlier run's pairs back with the records
     run.fit_records = FitRecords{project_->fit_result, scan_template_ ? std::optional(scan_template_->fit_result) : std::nullopt};
     // The values the model shows now (a dataset's projection, or a single fit's result on it), which its Undo
     // restores as they are rather than as the older results would project them.
@@ -1172,6 +1174,7 @@ bool ProjectViewModel::restoreScanRun(const ScanRun& run) {
         if (scan_template_ && run.fit_records->stash) {
             scan_template_->fit_result = *run.fit_records->stash;
         }
+        readScanCorrelations();
     }
     setModified(true);
     scan_refusal_ = scan_session_->load(*project_);
@@ -1287,7 +1290,12 @@ int ProjectViewModel::scanFileFitted(const edi::ScanFileRecord& record) {
     }
     syncDataset(index);
     evolution_->addRow(index, record.cells);
-    scan_correlations_[index] = record.correlations;
+    const std::string& file = scan_session_->datasets().files[static_cast<std::size_t>(index)];
+    std::vector<edi::FitParameterCorrelation>& pairs = scan_correlations_[file];
+    pairs = record.correlations;
+    for (edi::FitParameterCorrelation& pair : pairs) {
+        pair.file_path = file;
+    }
     if (index == current_dataset_) {
         syncCorrelations();
     }
@@ -1608,6 +1616,7 @@ QString ProjectViewModel::saveTo(const QString& directory) {
     }
     // While a scan dataset is shown, the template is what a save writes; the shown model follows it to the new
     // directory, so a scan started next reads and writes there.
+    writeScanCorrelations();
     try {
         if (scan_template_) {
             edi::save_project_as(*scan_template_, directory.toStdString());
@@ -1691,12 +1700,46 @@ void ProjectViewModel::publish(bool structural) {
     }
 }
 
+void ProjectViewModel::readScanCorrelations() {
+    scan_correlations_.clear();
+    for (const auto& row : scanTemplateOrModel().fit_result.correlations) {
+        if (!row->file_path.empty()) {
+            scan_correlations_[row->file_path.value()].push_back(*row);
+        }
+    }
+    syncCorrelations();
+}
+
+void ProjectViewModel::writeScanCorrelations() {
+    if (!scan_ || scan_session_ == nullptr) {
+        return;
+    }
+    // The record a save writes keeps a fit's own pairs and takes the scan's, in the datasets' order.
+    edi::Project& saved = scan_template_ ? *scan_template_ : *project_;
+    std::vector<edi::FitParameterCorrelation> pairs;
+    for (const auto& row : saved.fit_result.correlations) {
+        if (row->file_path.empty()) {
+            pairs.push_back(*row);
+        }
+    }
+    for (const std::string& file : scan_session_->datasets().files) {
+        const auto found = scan_correlations_.find(file);
+        if (found != scan_correlations_.end()) {
+            pairs.insert(pairs.end(), found->second.begin(), found->second.end());
+        }
+    }
+    saved.fit_result.correlations.assign(edi::numbered_correlations(pairs));
+}
+
 void ProjectViewModel::syncCorrelations() {
     if (correlations_ == nullptr) {
         return;
     }
     if (scan_) {
-        const auto found = scan_correlations_.find(current_dataset_);
+        const std::vector<std::string>& files = scan_session_->datasets().files;
+        const auto found = current_dataset_ >= 0 && current_dataset_ < static_cast<int>(files.size())
+                               ? scan_correlations_.find(files[static_cast<std::size_t>(current_dataset_)])
+                               : scan_correlations_.end();
         correlations_->setPairs(found != scan_correlations_.end() ? found->second
                                                                   : std::vector<edi::FitParameterCorrelation>{});
         return;

@@ -2974,7 +2974,7 @@ std::string copy_name(const std::string& name, const std::set<std::string>& held
         return text;
     };
     for (int n = 1;; ++n) {
-        std::string candidate = name + "_copy" + (n == 1 ? std::string() : std::to_string(n));
+        std::string candidate = name + '_' + "copy" + (n == 1 ? std::string() : std::to_string(n));
         if (!held.contains(lower(candidate))) {
             return candidate;
         }
@@ -3404,6 +3404,36 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
                     }
                 }
             }
+        }
+        // The fit's parameter correlations (diffraction-lib's `_fit_parameter_correlation`), crysta's read mirrored:
+        // read whether or not a result is held, as a scan keeps each file's pairs with none. `file_path` is optional;
+        // a coefficient outside [-1, 1] fails closed.
+        if (const Loop* correlations = block.loop_with("_fit_parameter_correlation.id")) {
+            const std::string where = analysis_file.string();
+            const bool per_file = correlations->column("_fit_parameter_correlation.file_path") >= 0;
+            std::vector<ItemVec<FitParameterCorrelation>::Ptr> rows;
+            rows.reserve(correlations->rows.size());
+            for (const auto& row : correlations->rows) {
+                auto pair = std::make_shared<FitParameterCorrelation>();
+                pair->id = loop_cell(*correlations, row, "_fit_parameter_correlation.id", where);
+                pair->source_kind = loop_cell(*correlations, row, "_fit_parameter_correlation.source_kind", where);
+                pair->parameter_unique_name_i =
+                    loop_cell(*correlations, row, "_fit_parameter_correlation.parameter_unique_name_i", where);
+                pair->parameter_unique_name_j =
+                    loop_cell(*correlations, row, "_fit_parameter_correlation.parameter_unique_name_j", where);
+                const std::string& text = loop_cell(*correlations, row, "_fit_parameter_correlation.correlation", where);
+                const double value = to_double(text, where);
+                if (std::isnan(value) || value < -1.0 || value > 1.0) {
+                    throw IoError("_fit_parameter_correlation row '" + pair->id.value() + "' has correlation '" + text +
+                                  "' outside [-1, 1]: " + where);
+                }
+                pair->correlation = value;
+                if (per_file) {
+                    pair->file_path = loop_cell(*correlations, row, "_fit_parameter_correlation.file_path", where);
+                }
+                rows.push_back(std::move(pair));
+            }
+            project.fit_result.correlations.assign(std::move(rows));
         }
         // Read the persisted pre-fit snapshot back onto the model. Each row's id resolves
         // through the SAME slot walk the writer emits from, so the two cannot drift; an
@@ -3892,6 +3922,18 @@ void copy_fit_result(Project& to, const Project& from) {
         target.fit_prof_wr_factor = source.fit_prof_wr_factor;
         target.fit_chi_square = source.fit_chi_square;
     }
+}
+
+std::vector<ItemVec<FitParameterCorrelation>::Ptr> numbered_correlations(
+    const std::vector<FitParameterCorrelation>& pairs) {
+    std::vector<ItemVec<FitParameterCorrelation>::Ptr> rows;
+    rows.reserve(pairs.size());
+    for (const FitParameterCorrelation& pair : pairs) {
+        auto row = std::make_shared<FitParameterCorrelation>(pair);
+        row->id = std::to_string(rows.size() + 1);
+        rows.push_back(std::move(row));
+    }
+    return rows;
 }
 
 void clear_fit_result(Project& project) {
