@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-11T06:58:43Z
+# measured_utc = 2026-10-11T14:59:15Z
 #
-# Recorded from: protocol-measure.log (2 node(s) measured once, 9591 banked, 0 stale row(s) dropped)
-# Collected tests: 10316; with a reported duration: 5312
+# Recorded from: baseline.log (22 node(s) measured once, 9593 banked, 0 stale row(s) dropped)
+# Collected tests: 10338; with a reported duration: 5315
 # Module-scoped fixture costs recorded: 32
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 10316
+# inventory_python = 10338
 # inventory_cpp = 302
-# inventory_measured = 9593
-# inventory_unmeasured = 1025
+# inventory_measured = 9597
+# inventory_unmeasured = 1043
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -2059,6 +2059,20 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[window-replace-no-loop-coordinate]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[window-replace-standalone-cell]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.py::test_warmed_geometry_follows_current_relation_owner[window-replace-standalone-coordinate]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_correlation_app_contract.py::test_atom_site_position_column_uses_a_choice_with_coordinates
+UNMEASURED:failed-in-this-run	tests/integration/py/test_correlation_app_contract.py::test_background_switch_requires_confirmation_before_discarding_rows
+UNMEASURED:failed-in-this-run	tests/integration/py/test_correlation_app_contract.py::test_background_type_selector_applies_the_choice
+UNMEASURED:failed-in-this-run	tests/integration/py/test_correlation_app_contract.py::test_coefficient_editing_and_constants_have_writable_controls
+UNMEASURED:failed-in-this-run	tests/integration/py/test_correlation_app_contract.py::test_correlations_follows_the_existing_analysis_tabs
+UNMEASURED:failed-in-this-run	tests/integration/py/test_correlation_app_contract.py::test_create_project_passes_the_chosen_location_to_the_session
+UNMEASURED:failed-in-this-run	tests/integration/py/test_correlation_app_contract.py::test_diagnostics_uses_a_button_with_a_declared_combobox_width
+UNMEASURED:failed-in-this-run	tests/integration/py/test_correlation_app_contract.py::test_each_coefficient_background_has_a_table_layout[chebyshev]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_correlation_app_contract.py::test_each_coefficient_background_has_a_table_layout[polynomial]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_correlation_app_contract.py::test_experiment_data_header_and_button_are_declared
+UNMEASURED:failed-in-this-run	tests/integration/py/test_correlation_app_contract.py::test_supported_only_selectors_are_disabled_and_explain_the_reason
+UNMEASURED:failed-in-this-run	tests/integration/py/test_correlation_app_contract.py::test_workflow_pages_follow_structure_and_experiment_presence[analysisPageEnabled-True]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_correlation_app_contract.py::test_workflow_pages_follow_structure_and_experiment_presence[experimentPageEnabled-False]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_correlation_app_contract.py::test_workflow_pages_follow_structure_and_experiment_presence[reportPageEnabled-True]
 0.000	tests/integration/py/test_cwl_admission.py::test_cif_nonzero_mixing_survives_import_without_default_substitution[collection-classic-cwl-pseudo-voigt-berar-baldinozzi]
 0.000	tests/integration/py/test_cwl_admission.py::test_cif_nonzero_mixing_survives_import_without_default_substitution[collection-classic-cwl-pseudo-voigt]
 0.000	tests/integration/py/test_cwl_admission.py::test_cif_nonzero_mixing_survives_import_without_default_substitution[collection-dot-cwl-pseudo-voigt-berar-baldinozzi]
@@ -4858,6 +4872,14 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e05_t1_physical_domain.p
 0.080	tests/integration/py/test_multiphase_constraints.py::test_same_site_id_in_two_structures_resolves_to_distinct_parameters[datablock]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_multiphase_constraints.py::test_same_site_id_in_two_structures_resolves_to_distinct_parameters[structure]
 0.010	tests/integration/py/test_multiphase_constraints.py::test_structure_added_after_project_creation_participates_in_constraints
+0.000	tests/integration/py/test_parameter_correlations.py::test_empty_free_set_never_invents_pairs
+0.010	tests/integration/py/test_parameter_correlations.py::test_external_loop_does_not_change_unrelated_project_files
+UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_external_loop_survives_load_and_save_byte_for_byte
+UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_fixed_parameter_preserves_history_and_refit_replaces_pairs
+0.140	tests/integration/py/test_parameter_correlations.py::test_polynomial_fit_stores_external_correlations[1]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_polynomial_fit_stores_external_correlations[2]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_polynomial_fit_stores_external_correlations[3]
+0.010	tests/integration/py/test_parameter_correlations.py::test_unfitted_analysis_stays_byte_identical
 0.220	tests/integration/py/test_phase_scan.py::test_failure_after_solver_step_is_recorded_and_scan_continues[independent]
 0.230	tests/integration/py/test_phase_scan.py::test_failure_after_solver_step_is_recorded_and_scan_continues[sequential]
 0.150	tests/integration/py/test_phase_scan.py::test_fit_from_fitted_start_keeps_dependent_in_range[phase_sum]
