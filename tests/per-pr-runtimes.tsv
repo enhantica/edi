@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-11T15:36:45Z
+# measured_utc = 2026-10-11T15:42:15Z
 #
-# Recorded from: api-baseline.log (7 node(s) measured once, 9603 banked, 0 stale row(s) dropped)
+# Recorded from: current-correlation-final.log (1 node(s) measured once, 9603 banked, 0 stale row(s) dropped)
 # Collected tests: 10350; with a reported duration: 5324
 # Module-scoped fixture costs recorded: 32
 #
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 10350
 # inventory_cpp = 302
-# inventory_measured = 9603
-# inventory_unmeasured = 1049
+# inventory_measured = 9604
+# inventory_unmeasured = 1048
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -2062,7 +2062,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.
 UNMEASURED:failed-in-this-run	tests/integration/py/test_correlation_app_contract.py::test_atom_site_position_column_uses_a_choice_with_coordinates
 UNMEASURED:failed-in-this-run	tests/integration/py/test_correlation_app_contract.py::test_background_switch_requires_confirmation_before_discarding_rows
 UNMEASURED:failed-in-this-run	tests/integration/py/test_correlation_app_contract.py::test_background_type_selector_applies_the_choice
-UNMEASURED:failed-in-this-run	tests/integration/py/test_correlation_app_contract.py::test_coefficient_editing_and_constants_have_writable_controls
+0.000	tests/integration/py/test_correlation_app_contract.py::test_coefficient_editing_and_constants_have_writable_controls
 UNMEASURED:failed-in-this-run	tests/integration/py/test_correlation_app_contract.py::test_correlations_follows_the_existing_analysis_tabs
 UNMEASURED:failed-in-this-run	tests/integration/py/test_correlation_app_contract.py::test_create_project_passes_the_chosen_location_to_the_session
 UNMEASURED:failed-in-this-run	tests/integration/py/test_correlation_app_contract.py::test_diagnostics_uses_a_button_with_a_declared_combobox_width

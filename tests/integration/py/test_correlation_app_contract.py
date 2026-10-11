@@ -195,7 +195,7 @@ def test_background_switch_requires_confirmation_before_discarding_rows():
 def test_coefficient_editing_and_constants_have_writable_controls():
     source = text('Pages/Experiment/BackgroundGroup.qml')
     for identity in ('origin', 'xMin', 'xMax', 'order', 'coef'):
-        assert re.search(r'background\.' + identity + r'(?:\.\$\{[^}]+\})?"', source), (
+        assert re.search(r'background\.' + identity + r'(?:\.\$\{[^}]+\})?["`]', source), (
             'Coefficient backgrounds must expose editable constants, order and coefficients'
         )
     assert 'setOrder(' in source and 'ParameterCell {' in source, (
