@@ -361,11 +361,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     };
     using UndoRecord =
         std::variant<std::monostate, edi::RelationsUndo, AddedExperiments, ScanRun, LoadedData, edi::StructuresUndo>;
-    // The experiments made with Create experiment (they take Load data…), kept by identity: a replaced experiment
-    // (Load data, a type change, their undo) passes its entry on.
-    std::set<const edi::ExperimentBase*> created_;
-    void experimentReplaced(const edi::ExperimentBase* before, const edi::ExperimentBase* after, bool created);
-    // Each experiment view's Load data… state, from the set above.
+    // An experiment replaced by Load data, a type change or their undo: the undo records follow it.
+    void experimentReplaced(const edi::ExperimentBase* before, const edi::ExperimentBase* after);
+    // Each experiment view's Load data… state: every experiment but a scan's.
     void syncLoadState();
     // Applies an experiment's replacement by Load data or its undo; the refusal, if any.
     QString replaceData(int index, edi::BraggPdExperiment replacement);

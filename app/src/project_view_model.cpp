@@ -437,7 +437,6 @@ bool ProjectViewModel::createExperiment() {
         emit refused(error);
         return false;
     }
-    created_.insert(project.experiments.back().get());
     syncLoadState();
     noteAddedExperiments(project.experiments.size() - 1);
     setCurrentExperimentIndex(static_cast<int>(experiment_models_.size()) - 1);
@@ -478,11 +477,10 @@ bool ProjectViewModel::setExperimentType(int index, const QString& axis, const Q
             replacement.data = experiment.data;
         }
         const edi::ExperimentBase* before = &experiment;
-        const bool created = created_.contains(before);
         error = apply(edi::Edit::replace_experiment(project, experiment, std::move(replacement)), true);
         if (error.isEmpty()) {
             // Undo of the experiment's creation removes it in its new type.
-            experimentReplaced(before, project.experiments[static_cast<std::size_t>(index)].get(), created);
+            experimentReplaced(before, project.experiments[static_cast<std::size_t>(index)].get());
             syncDatasets();
         }
     } catch (const std::exception& refusal) {
@@ -496,8 +494,7 @@ bool ProjectViewModel::setExperimentType(int index, const QString& axis, const Q
     return true;
 }
 
-void ProjectViewModel::experimentReplaced(const edi::ExperimentBase* before, const edi::ExperimentBase* after,
-                                          bool created) {
+void ProjectViewModel::experimentReplaced(const edi::ExperimentBase* before, const edi::ExperimentBase* after) {
     for (UndoRecord& record : undo_history_) {
         if (auto* added = std::get_if<AddedExperiments>(&record)) {
             std::replace(added->experiments.begin(), added->experiments.end(), before, after);
@@ -509,30 +506,20 @@ void ProjectViewModel::experimentReplaced(const edi::ExperimentBase* before, con
             }
         }
     }
-    // The edit's own publication has already dropped `before`'s entry (syncLoadState): it comes from the caller.
-    created_.erase(before);
-    if (created) {
-        created_.insert(after);
-    }
     syncLoadState();
 }
 
 void ProjectViewModel::syncLoadState() {
-    // Entries of experiments no longer in the project go: a new experiment could take a gone one's address.
-    std::set<const edi::ExperimentBase*> held;
-    for (const auto& experiment : project_->experiments) {
-        held.insert(experiment.get());
-    }
-    std::erase_if(created_, [&held](const edi::ExperimentBase* experiment) { return !held.contains(experiment); });
+    // Every experiment but a scan's takes Load data, made in this session or read from its file (the owner,
+    // 2026-10-11): a scan's datasets take their data from the scan's files.
     for (ExperimentViewModel* model : experiment_models_) {
-        model->setCanLoadData(created_.contains(model->experiment()));
+        model->setCanLoadData(!scan_);
     }
 }
 
 QString ProjectViewModel::replaceData(int index, edi::BraggPdExperiment replacement) {
     edi::Project& project = *project_;
     const edi::ExperimentBase* before = project.experiments[static_cast<std::size_t>(index)].get();
-    const bool created = created_.contains(before);
     QString error;
     try {
         error = apply(edi::Edit::load_data(project, *before, std::move(replacement)), true);
@@ -543,7 +530,7 @@ QString ProjectViewModel::replaceData(int index, edi::BraggPdExperiment replacem
     if (!error.isEmpty()) {
         return error;
     }
-    experimentReplaced(before, project.experiments[static_cast<std::size_t>(index)].get(), created);
+    experimentReplaced(before, project.experiments[static_cast<std::size_t>(index)].get());
     syncDatasets();
     return {};
 }
@@ -562,9 +549,8 @@ bool ProjectViewModel::loadData(int index, const QUrl& file) {
     }
     edi::Project& project = *project_;
     const edi::BraggPdExperiment& experiment = *project.experiments[static_cast<std::size_t>(index)];
-    if (!created_.contains(&experiment)) {
-        return refuse(tr("Load data works on an experiment made with Create experiment; '%1' has its data from its "
-                         "file")
+    if (scan_) {
+        return refuse(tr("A scan's datasets take their data from the scan's files; '%1' loads none of its own")
                           .arg(QString::fromStdString(experiment.name)));
     }
     // A name the user has not changed (experiment1, experiment2, …) gives way to the file's.

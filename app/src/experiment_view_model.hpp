@@ -56,8 +56,8 @@ class ExperimentViewModel : public QObject {
     Q_PROPERTY(QString linkedStructureId READ linkedStructureId WRITE setLinkedStructureId NOTIFY linkedStructureIdChanged)
     Q_PROPERTY(double datasetWeight READ datasetWeight WRITE setDatasetWeight NOTIFY datasetWeightChanged)
     Q_PROPERTY(bool calculationOnly READ calculationOnly CONSTANT)
-    // Load data… reads a plain-data file into this experiment: only one made with Create experiment (an
-    // experiment loaded from `.edi` has its data). `dataFile`: the plain-data file its data came from, or empty.
+    // Load data… reads a plain-data file into this experiment, in place of any data it has: every experiment but a
+    // scan's (the owner, 2026-10-11). `dataFile`: the plain-data file its data came from, or empty.
     Q_PROPERTY(bool canLoadData READ canLoadData NOTIFY canLoadDataChanged)
     Q_PROPERTY(QString dataFile READ dataFile CONSTANT)
     Q_PROPERTY(edi_app::CategoryListModel* categories READ categories CONSTANT)
