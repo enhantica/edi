@@ -4059,6 +4059,9 @@ std::string default_descent();
 std::vector<std::string> absorption_file_tokens(BeamModeEnum mode);
 std::string absorption_file_token(BeamModeEnum mode, const std::string& token);
 std::string absorption_registry_token(BeamModeEnum mode, const std::string& file_token);
+// The highest term order a background type admits, from crysta's table: 5 for `polynomial`, 23 for `chebyshev`,
+// -1 for `line-segment`, which has no terms.
+int background_max_order(const std::string& type);
 // A peak type registered at run time (edi::register_peak_type, the Python registration seam) is
 // registered with crysta's peak registry too, which is the vocabulary the crossing reads: a type
 // edi alone knew would be refused there. It computes with its family's base profile, as before.

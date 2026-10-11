@@ -5,6 +5,7 @@
 #include "edi/selectors.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <stdexcept>
 
 #include "edi/io.hpp"
@@ -148,6 +149,99 @@ void select_absorption(ExperimentBase& experiment, const std::string& value) {
     // through the adapter — edi lists and maps nothing itself.
     apply_absorption_family(experiment.absorption,
                             absorption_file_token(experiment.effective_beam_mode(), value));
+}
+
+void select_background_type(ExperimentBase& experiment, const std::string& token) {
+    const std::vector<std::string> types = supported_background_types();
+    if (std::find(types.begin(), types.end(), token) == types.end()) {
+        throw std::invalid_argument("background type '" + token + "' is not one edi computes (line-segment, " +
+                                    "chebyshev, polynomial)");
+    }
+    if (token == experiment.background_type) {
+        return;
+    }
+    // The measured axis's ends, for the constants the new type needs.
+    double low = 0.0;
+    double high = 1.0;
+    if (experiment.data.has_value()) {
+        try {
+            const std::vector<double>& axis = experiment.data->axis();
+            const auto [lowest, highest] = std::minmax_element(axis.begin(), axis.end());
+            if (lowest != axis.end() && std::isfinite(*lowest) && std::isfinite(*highest) && *lowest < *highest) {
+                low = *lowest;
+                high = *highest;
+            }
+        } catch (const std::exception&) {
+            // No single engaged axis: the defaults stand.
+        }
+    }
+    const double middle = low + (high - low) / 2.0;
+    experiment.background.clear();
+    experiment.background_terms.clear();
+    experiment.background_origin.reset();
+    experiment.background_x_min.reset();
+    experiment.background_x_max.reset();
+    experiment.background_type = token;
+    if (token == "polynomial") {
+        experiment.background_origin = middle != 0.0 ? middle : 1.0;
+    } else if (token == "chebyshev") {
+        experiment.background_x_min = low;
+        experiment.background_x_max = high;
+    }
+}
+
+PolynomialTerm next_background_term(const ExperimentBase& experiment) {
+    const int highest = background_max_order(experiment.background_type);
+    if (highest < 0) {
+        throw std::invalid_argument("a " + experiment.background_type + " background has points, not terms");
+    }
+    for (int order = 0; order <= highest; ++order) {
+        const bool held = std::any_of(experiment.background_terms.begin(), experiment.background_terms.end(),
+                                      [order](const auto& term) { return term->order.get() == order; });
+        if (!held) {
+            PolynomialTerm term;
+            term.order = order;
+            return term;
+        }
+    }
+    throw std::invalid_argument("this " + experiment.background_type + " background holds every order 0.." +
+                                std::to_string(highest));
+}
+
+void set_background_term_order(ExperimentBase& experiment, PolynomialTerm& term, int order) {
+    const int highest = background_max_order(experiment.background_type);
+    if (order < 0 || order > highest) {
+        throw std::invalid_argument("a " + experiment.background_type + " background's term order is 0.." +
+                                    std::to_string(highest));
+    }
+    for (const auto& other : experiment.background_terms) {
+        if (other.get() != &term && other->order.get() == order) {
+            throw std::invalid_argument("another term has order " + std::to_string(order));
+        }
+    }
+    term.order = order;
+}
+
+void set_background_origin(ExperimentBase& experiment, double origin) {
+    if (experiment.background_type != "polynomial") {
+        throw std::invalid_argument("only a polynomial background has an origin");
+    }
+    if (!std::isfinite(origin) || origin == 0.0) {
+        throw std::invalid_argument("the polynomial background's origin must be a finite number other than 0");
+    }
+    experiment.background_origin = origin;
+}
+
+void set_background_domain(ExperimentBase& experiment, bool end, double value) {
+    if (experiment.background_type != "chebyshev") {
+        throw std::invalid_argument("only a Chebyshev background has a domain");
+    }
+    const double low = end ? experiment.background_x_min.value_or(value) : value;
+    const double high = end ? value : experiment.background_x_max.value_or(value);
+    if (!std::isfinite(value) || !(low < high)) {
+        throw std::invalid_argument("the Chebyshev background's x min must be a finite number below its x max");
+    }
+    (end ? experiment.background_x_max : experiment.background_x_min) = value;
 }
 
 void select_scattering_source(ExperimentBase& experiment, ScatteringSourceItem item,

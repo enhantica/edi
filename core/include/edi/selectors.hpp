@@ -122,6 +122,20 @@ void conform_peak_slots(PeakBase& peak, const std::string& token);
 // AbsorptionBase.type setter's vocabulary and messages (a TOF "cylinder-hewat" is its "cylinder"),
 // then apply the family contract (apply_absorption_family).
 void select_absorption(ExperimentBase& experiment, const std::string& token);
+// Switch the background model as diffraction-lib's `_replace_background` does: the new type starts empty, and the
+// old type's points or terms and its constants are removed. The constants the new type needs start from the measured
+// axis: the polynomial origin at the middle of its range, the Chebyshev domain at its ends (1, and 0..1, without
+// data). Refuses a type edi does not compute.
+void select_background_type(ExperimentBase& experiment, const std::string& token);
+// A new term for a polynomial or Chebyshev background: the lowest order the experiment does not hold, coefficient 0.
+// Refused for a line-segment background and when every order the type admits is held.
+PolynomialTerm next_background_term(const ExperimentBase& experiment);
+// A term's order, refused outside 0..background_max_order of the experiment's type or when another term holds it.
+void set_background_term_order(ExperimentBase& experiment, PolynomialTerm& term, int order);
+// The polynomial background's origin: finite and not zero (crysta's rule).
+void set_background_origin(ExperimentBase& experiment, double origin);
+// One end of the Chebyshev background's domain (`end`: x_max, else x_min): finite, x_min below x_max.
+void set_background_domain(ExperimentBase& experiment, bool end, double value);
 // Set one scattering-source item under scattering_source_refusal (the loader's rule and message).
 // An empty token clears the item back to its default.
 void select_scattering_source(ExperimentBase& experiment, ScatteringSourceItem item,

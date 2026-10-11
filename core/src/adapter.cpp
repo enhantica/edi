@@ -2930,6 +2930,10 @@ void restore_dependents(Project& project) {
     }
 }
 
+int background_max_order(const std::string& type) {
+    return crysta::background_max_order(crysta::background_form_of(type));
+}
+
 std::vector<std::string> absorption_file_tokens(BeamModeEnum mode) {
     return crysta::file_tokens(crysta::TokenField::AbsorptionType, crysta_kind(mode));
 }

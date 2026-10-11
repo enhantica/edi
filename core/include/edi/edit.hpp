@@ -197,6 +197,24 @@ class Edit {
     static Edit absorption(ExperimentBase& experiment, std::string token) {
         return Edit([&experiment, token = std::move(token)] { select_absorption(experiment, token); });
     }
+    // The background model, the old type's rows and constants removed (select_background_type).
+    static Edit background_type(ExperimentBase& experiment, std::string token) {
+        return Edit([&experiment, token = std::move(token)] { select_background_type(experiment, token); });
+    }
+    // A polynomial or Chebyshev background's terms: one appended at the lowest free order, a term's order, the
+    // polynomial's origin and an end of the Chebyshev domain, each under its rule.
+    static Edit append_background_term(ExperimentBase& experiment) {
+        return Edit([&experiment] { experiment.background_terms.push_back(next_background_term(experiment)); });
+    }
+    static Edit background_term_order(ExperimentBase& experiment, PolynomialTerm& term, int order) {
+        return Edit([&experiment, &term, order] { set_background_term_order(experiment, term, order); });
+    }
+    static Edit background_origin(ExperimentBase& experiment, double origin) {
+        return Edit([&experiment, origin] { set_background_origin(experiment, origin); });
+    }
+    static Edit background_domain(ExperimentBase& experiment, bool end, double value) {
+        return Edit([&experiment, end, value] { set_background_domain(experiment, end, value); });
+    }
     static Edit scattering_source(ExperimentBase& experiment, ScatteringSourceItem item, std::string token) {
         return Edit(
             [&experiment, item, token = std::move(token)] { select_scattering_source(experiment, item, token); });
@@ -328,6 +346,7 @@ class Edit {
         });
     }
     static Edit erase(ItemVec<LineSegment>& rows, std::size_t index) { return erasing(rows, index); }
+    static Edit erase(ItemVec<PolynomialTerm>& rows, std::size_t index) { return erasing(rows, index); }
     static Edit erase(ItemVec<PrefOrient>& rows, std::size_t index) { return erasing(rows, index); }
     static Edit erase(ItemVec<LinkedStructure>& rows, std::size_t index) { return erasing(rows, index); }
     static Edit erase(ItemVec<ParameterAlias>& rows, std::size_t index) { return erasing(rows, index); }
