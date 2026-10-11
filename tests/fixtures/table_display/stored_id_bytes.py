@@ -12,7 +12,7 @@ import shutil
 from tests.fixtures.cwl_family.historical import current_tokens
 
 
-def rows(data):
+def rows(data, *, generated=False):
     data = current_tokens(data)
     lines = data.splitlines(keepends=True)
     groups = {}
@@ -47,10 +47,10 @@ def rows(data):
         if category is None:
             continue
         key = ('_' + category + '.id').encode()
-        assert key in tags and category not in groups, (
+        assert (key in tags or generated) and category not in groups, (
             'Stored-key mapping requires exactly one declared identity column per category'
         )
-        column = tags.index(key)
+        column = tags.index(key) if key in tags else None
         values = []
         while index < len(lines):
             line = lines[index]
@@ -64,10 +64,15 @@ def rows(data):
             assert len(cells) == len(tags), (
                 'Stored-key mapping must reach complete rows without dropping any scientific cell'
             )
-            cell = cells[column]
-            decoded = shlex.split(cell[0].decode())
-            assert len(decoded) == 1, 'A stored row key must decode to exactly one supplied value'
-            values.append((decoded[0], offset + cell.start(), offset + cell.end()))
+            if column is None:
+                values.append((str(len(values) + 1), 0, 0))
+            else:
+                cell = cells[column]
+                decoded = shlex.split(cell[0].decode())
+                assert len(decoded) == 1, (
+                    'A stored row key must decode to exactly one supplied value'
+                )
+                values.append((decoded[0], offset + cell.start(), offset + cell.end()))
             offset += len(line)
             index += 1
         groups[category] = values
@@ -79,7 +84,7 @@ def ordinal_copy(source, saved, destination):
     for path in (saved / 'experiments').glob('*.edi'):
         input_path = source / 'experiments' / path.name
         assert input_path.is_file(), 'A saved stored-key witness must retain its input experiment'
-        _, supplied = rows(input_path.read_bytes())
+        _, supplied = rows(input_path.read_bytes(), generated=True)
         data, written = rows(path.read_bytes())
         for category, entries in written.items():
             expected = [entry[0] for entry in supplied.get(category, ())]

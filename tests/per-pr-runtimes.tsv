@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-11T01:23:29Z
+# measured_utc = 2026-10-11T01:35:22Z
 #
-# Recorded from: optimized-durations.log (8 node(s) measured once, 9519 banked, 0 stale row(s) dropped)
-# Collected tests: 10228; with a reported duration: 5314
+# Recorded from: frozen-final-durations.log (43 node(s) measured once, 9486 banked, 0 stale row(s) dropped)
+# Collected tests: 10230; with a reported duration: 5314
 # Module-scoped fixture costs recorded: 32
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 10228
+# inventory_python = 10230
 # inventory_cpp = 302
-# inventory_measured = 9527
+# inventory_measured = 9529
 # inventory_unmeasured = 1003
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
@@ -5163,12 +5163,14 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.p
 0.000	tests/integration/py/test_table_byte_adaptations.py::test_descriptive_saved_mapping_refuses_every_nonpresentation_change[missing]
 0.000	tests/integration/py/test_table_byte_adaptations.py::test_descriptive_saved_mapping_refuses_every_nonpresentation_change[title]
 0.000	tests/integration/py/test_table_byte_adaptations.py::test_descriptive_saved_mapping_refuses_every_nonpresentation_change[value]
+0.000	tests/integration/py/test_table_byte_adaptations.py::test_legacy_input_without_a_key_column_requires_generated_saved_keys
 0.000	tests/integration/py/test_table_byte_adaptations.py::test_source_metadata_archive_refuses_rebanked_whitelist_escapes[duplicate]
 0.000	tests/integration/py/test_table_byte_adaptations.py::test_source_metadata_archive_refuses_rebanked_whitelist_escapes[missing]
 0.000	tests/integration/py/test_table_byte_adaptations.py::test_source_metadata_archive_refuses_rebanked_whitelist_escapes[scientific]
 0.000	tests/integration/py/test_table_byte_adaptations.py::test_source_metadata_archive_refuses_rebanked_whitelist_escapes[unknown]
 0.000	tests/integration/py/test_table_byte_adaptations.py::test_stored_key_projection_retains_identity_values_order_and_inventory[extra]
 0.000	tests/integration/py/test_table_byte_adaptations.py::test_stored_key_projection_retains_identity_values_order_and_inventory[key]
+0.000	tests/integration/py/test_table_byte_adaptations.py::test_stored_key_projection_retains_identity_values_order_and_inventory[missing-key]
 0.000	tests/integration/py/test_table_byte_adaptations.py::test_stored_key_projection_retains_identity_values_order_and_inventory[missing]
 0.000	tests/integration/py/test_table_byte_adaptations.py::test_stored_key_projection_retains_identity_values_order_and_inventory[order]
 0.000	tests/integration/py/test_table_byte_adaptations.py::test_stored_key_projection_retains_identity_values_order_and_inventory[value]
@@ -5710,29 +5712,29 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c11_t62_scan_contract.py::tes
 0.000	tests/system/py/test_c13_t12_cli_paths.py::test_platform_alias_evidence_and_linux_domain_limit
 0.540	tests/system/py/test_c13_t12_cli_paths.py::test_real_cli_valid_write_is_idempotent
 0.000	tests/system/py/test_c13_t12_compatibility.py::test_baseline_anchor_is_main_reachable_and_population_is_total
-0.020	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[app/examples/pd-xray-cwl_lif/project]
-0.910	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project]
-0.040	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project]
+0.170	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[app/examples/pd-xray-cwl_lif/project]
+0.880	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project]
+0.050	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project]
 0.040	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project]
 0.040	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project]
-0.460	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project]
+0.390	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project]
 0.050	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project]
 0.050	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project]
-0.170	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project]
+0.160	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project]
 0.050	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[docs/user/cli/pd-neut-tof_diamond-dream_basic/project]
-0.170	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project]
-0.260	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project]
-0.320	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project]
-0.100	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[docs/user/cli/pd-neut-tof_si-sepd_start-2/project]
-0.100	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[docs/user/cli/pd-neut-tof_si-sepd_start-5/project]
-0.520	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[tests/fixtures/c09_t6_ncaf_5bank_absorption/expected/desired_writer/jvd_absorption]
+0.160	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project]
+0.240	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project]
+0.360	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project]
+0.120	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[docs/user/cli/pd-neut-tof_si-sepd_start-2/project]
+0.110	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[docs/user/cli/pd-neut-tof_si-sepd_start-5/project]
+0.540	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[tests/fixtures/c09_t6_ncaf_5bank_absorption/expected/desired_writer/jvd_absorption]
 0.110	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[tests/fixtures/c09_t6_ncaf_5bank_absorption/expected/desired_writer/key_absent]
-0.120	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[tests/fixtures/c09_t6_ncaf_5bank_absorption/expected/desired_writer/no_code_type_none]
-0.120	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[tests/fixtures/c09_t6_ncaf_5bank_absorption/expected/desired_writer/type_none]
-0.110	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[tests/fixtures/c09_t6_ncaf_5bank_absorption/key_absent_project]
-0.110	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[tests/fixtures/c09_t6_ncaf_5bank_absorption/type_none_project]
-0.530	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[tests/fixtures/e02_t2_ncaf_5bank/project]
-0.040	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[tests/fixtures/e04_t1/editable-project]
+0.140	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[tests/fixtures/c09_t6_ncaf_5bank_absorption/expected/desired_writer/no_code_type_none]
+0.110	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[tests/fixtures/c09_t6_ncaf_5bank_absorption/expected/desired_writer/type_none]
+0.100	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[tests/fixtures/c09_t6_ncaf_5bank_absorption/key_absent_project]
+0.100	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[tests/fixtures/c09_t6_ncaf_5bank_absorption/type_none_project]
+0.550	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[tests/fixtures/e02_t2_ncaf_5bank/project]
+0.050	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[tests/fixtures/e04_t1/editable-project]
 0.010	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[tests/fixtures/e04_t1/warning-project]
 0.010	tests/system/py/test_c13_t12_compatibility.py::test_frozen_project_bytes_or_named_identity_only_difference[tests/fixtures/e04_t1/xray-project]
 0.000	tests/system/py/test_c13_t12_compatibility.py::test_independent_delimiter_classifier_rejects_semantic_escapes[comment]

@@ -42,7 +42,7 @@ def test_descriptive_saved_mapping_refuses_every_nonpresentation_change(tmp_path
         metadata_bytes.check_saved(source, old, new)
 
 
-@pytest.mark.parametrize('damage', ['key', 'order', 'value', 'missing', 'extra'])
+@pytest.mark.parametrize('damage', ['key', 'order', 'value', 'missing', 'extra', 'missing-key'])
 def test_stored_key_projection_retains_identity_values_order_and_inventory(tmp_path, damage):
     source, saved = tmp_path / 'input', tmp_path / 'saved'
     data = (
@@ -74,9 +74,13 @@ def test_stored_key_projection_retains_identity_values_order_and_inventory(tmp_p
         target.write_bytes(data.replace(b'3.75', b'3.76'))
     elif damage == 'missing':
         target.write_bytes(data.replace(b'end 7.125 9.75\n', b''))
+    elif damage == 'missing-key':
+        target.write_bytes(
+            data.replace(b'_background.id\n', b'').replace(b'left ', b'').replace(b'right ', b'')
+        )
     else:
         (saved / 'unexpected.dat').write_bytes(b'12.5 31.25 0.75\n')
-    if damage in {'key', 'order', 'missing'}:
+    if damage in {'key', 'order', 'missing', 'missing-key'}:
         with pytest.raises(AssertionError):
             stored_id_bytes.ordinal_copy(source, saved, tmp_path / 'escape')
     else:
@@ -90,6 +94,25 @@ def test_stored_key_projection_retains_identity_values_order_and_inventory(tmp_p
             'experiments/bank.edi': expected,
             'measured.dat': b'12.5 31.25 0.75\n',
         }, 'The full byte witness must expose every changed scientific value or inventory entry'
+
+
+def test_legacy_input_without_a_key_column_requires_generated_saved_keys(tmp_path):
+    source, saved = tmp_path / 'input', tmp_path / 'saved'
+    before = (
+        b'data_bank\nloop_\n_background.position\n_background.intensity\n20.125 3.75\n100.5 9.25\n'
+    )
+    after = before.replace(b'loop_\n', b'loop_\n_background.id\n')
+    after = after.replace(b'20.125 ', b'1 20.125 ').replace(b'100.5 ', b'2 100.5 ')
+    for directory, data in ((source, before), (saved, after)):
+        (directory / 'experiments').mkdir(parents=True)
+        (directory / 'experiments/bank.edi').write_bytes(data)
+    control = stored_id_bytes.ordinal_copy(source, saved, tmp_path / 'control')
+    assert (control / 'experiments/bank.edi').read_bytes() == after, (
+        'Legacy inputs without declared keys generate exactly the one-based stored row keys'
+    )
+    (saved / 'experiments/bank.edi').write_bytes(after.replace(b'2 100.5', b'9 100.5'))
+    with pytest.raises(AssertionError):
+        stored_id_bytes.ordinal_copy(source, saved, tmp_path / 'escape')
 
 
 @pytest.mark.parametrize('damage', ['scientific', 'unknown', 'duplicate', 'missing'])

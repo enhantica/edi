@@ -14,6 +14,7 @@ import pytest
 from tests.fixtures.c34_t28_baseline.generate_bytes import observe
 from tests.fixtures.constraint_expressions.ncaf_follower_bytes import historical_followers
 from tests.fixtures.cwl_family.historical import current_tokens
+from tests.fixtures.table_display.stored_id_bytes import ordinal_copy
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/integration/py'))
@@ -193,6 +194,11 @@ def test_frozen_project_bytes_or_named_identity_only_difference(tmp_path, row, r
     if set(before) != set(after):
         record_property('group', 'e-other')
         pytest.fail(' identity spelling changed the saved file population: ' + row['path'])
+    # Prove the newly stored keys against the frozen input before projecting
+    # them onto the original ordinal byte witness. All other bytes remain.
+    after = snapshot(
+        ordinal_copy(tmp_path / 'input', tmp_path / 'saved', tmp_path / 'ordinal-pin')
+    )
     retain_follower_witness(row['path'], after)
     changed = []
     for name, previous in before.items():
