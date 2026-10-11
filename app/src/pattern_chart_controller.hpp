@@ -169,6 +169,8 @@ class PatternChartController : public QObject {
     // An axis label: the original value of a display value Qt Graphs printed on `scale`. The scale is an
     // argument so that a label bound to `yScale` is printed again when the scale changes.
     Q_INVOKABLE QString axisLabel(const QString& text, YScale scale) const;
+    // The original value of a display value on `scale`, for a y label NumberText writes.
+    Q_INVOKABLE double originalValue(double display, YScale scale) const;
     Q_INVOKABLE void refresh();
 
    signals:

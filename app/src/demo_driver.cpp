@@ -331,6 +331,14 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                                     "choose:OK", "mainArea.analysis.tab.correlations"}});
     steps_.push_back({"t17-41-scan-second-dataset", {"mainArea.blocks.up"}});
     steps_.push_back({"t17-42-scan-first-dataset", {"mainArea.blocks.up"}});
+    // Large intensities on the y axes in NumberText's scientific form, clear of the titles (owner, 2026-10-11): the
+    // example's experiment loaded again with its scale raised, so the calculated pattern reaches about 1e9.
+    steps_.push_back({"t17-50-axis-scientific",
+                      QStringList{"key:Escape"} + start + open_example("pd-neut-cwl_lbco-hrpt_start-2")
+                          + QStringList{experiment, basic,
+                                        "load-experiments:pd-neut-cwl_lbco-hrpt_start-2/project/experiments/"
+                                        "hrpt.edi|data_hrpt=data_large|lbco 10.0()=lbco 30000000()",
+                                        analysis, "mainArea.analysis.tab.fitting"}});
     // 8: a created experiment's Load data… button, left-aligned under Data file.
     steps_.push_back({"t17-24-load-data", start + open_example("pd-neut-cwl_cosio-d20_start-1")
                                               + QStringList{experiment, basic, "expand:group.experiments", "experiments.create"}});

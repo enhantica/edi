@@ -584,4 +584,8 @@ QString PatternChartController::axisLabel(const QString& text, YScale scale) con
     return ok ? QString::fromStdString(edi::axis_label(display, core_scale(scale))) : text;
 }
 
+double PatternChartController::originalValue(double display, YScale scale) const {
+    return edi::from_display(display, core_scale(scale));
+}
+
 }  // namespace edi_app

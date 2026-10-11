@@ -70,6 +70,61 @@ Item {
     // rows, else the main pane.
     readonly property GraphsView bottomView: controller.hasResidual ? residualView : controller.braggRows > 0 ? braggView : mainView
 
+    // The values at an axis' ticks: its anchor and every whole interval from it, within its range.
+    function tickValues(axis: ValueAxis): list<real> {
+        const out = [];
+        const span = axis.max - axis.min;
+        if (!(axis.tickInterval > 0) || !(span > 0))
+            return out;
+        const first = Math.ceil((axis.min - axis.tickAnchor) / axis.tickInterval - 1e-9);
+        for (let i = first; out.length < 64; ++i) {
+            const value = axis.tickAnchor + i * axis.tickInterval;
+            if ((value - axis.min) / span > 1 + 1e-9)
+                break;
+            out.push(value);
+        }
+        return out;
+    }
+    // The y labels are NumberText's (the owner, 2026-10-11): `2.5e8` on an axis of large intensities, one
+    // exponent for the axis. Each axis' ticks are written in one form, on the main pane in their original
+    // values on its scale.
+    function yValues(axis: ValueAxis, scale: int): list<real> {
+        return tickValues(axis).map(value => controller.originalValue(value, scale));
+    }
+    readonly property var mainYFormat: NumberText.axisFormat(yValues(mainY, controller.yScale), controller.yScale !== PatternChartController.Log10)
+    readonly property var residualYFormat: NumberText.axisFormat(yValues(residualY, PatternChartController.Linear), true)
+    // A y label's text: Qt Graphs gives the label its own text of the tick's display value, which names the
+    // nearest tick.
+    function yLabelText(text: string, axis: ValueAxis, scale: int, format: var): string {
+        const shown = Number(text);
+        let display = NaN;
+        for (const value of tickValues(axis)) {
+            if (isNaN(display) || Math.abs(value - shown) < Math.abs(display - shown))
+                display = value;
+        }
+        return isFinite(shown) && !isNaN(display) ? NumberText.axisTick(controller.originalValue(display, scale), format) : text;
+    }
+    FontMetrics {
+        id: labelMetrics
+        font: titleProbe.font
+    }
+    EaElements.Label {
+        id: titleProbe
+        visible: false
+    }
+    // The room the widest y label takes beside the plot areas, so the y titles stay clear of the labels.
+    readonly property real yLabelsRoom: {
+        let widest = 0;
+        for (const value of yValues(mainY, controller.yScale))
+            widest = Math.max(widest, labelMetrics.advanceWidth(NumberText.axisTick(value, mainYFormat)));
+        if (controller.hasResidual) {
+            for (const value of yValues(residualY, PatternChartController.Linear))
+                widest = Math.max(widest, labelMetrics.advanceWidth(NumberText.axisTick(value, residualYFormat)));
+        }
+        return Math.ceil(widest + em * 0.5);
+    }
+    onYLabelsRoomChanged: Qt.callLater(alignPanes)
+
     // The three plot areas share their left edge. Each view lays its own y labels out, and their widths
     // differ, so each view's left margin makes up the difference. Assigned, not bound: the plot area follows
     // the margin, and a binding on it would read as a loop.
@@ -81,7 +136,7 @@ Item {
             mainAxisHeight = under(mainView);
         const mainAxis = mainView.plotArea.x - mainView.marginLeft;
         const residualAxis = residualView.visible ? residualView.plotArea.x - residualView.marginLeft : 0;
-        const edge = Math.round(sideMargin + titleGutter + Math.max(mainAxis, residualAxis));
+        const edge = Math.round(sideMargin + titleGutter + Math.max(mainAxis, residualAxis, yLabelsRoom));
         const set = (view, margin) => {
             if (Math.abs(view.marginLeft - margin) > 0.5)
                 view.marginLeft = margin;
@@ -123,8 +178,10 @@ Item {
         property string text: ""
         property int horizontalAlignment: Text.AlignHCenter
         property int verticalAlignment: Text.AlignVCenter
-        property bool original: false
-        // The scale `original` values are read on: the label is printed again when it changes.
+        // A y axis' label is written by NumberText (`yLabelText`); an x label is Qt Graphs' text.
+        property ValueAxis axis: null
+        property var format: null
+        // The scale the axis' values are read on: the label is printed again when it changes.
         property int valueScale: PatternChartController.Linear
         // Where the label is moved to, from where Qt Graphs put it.
         property real moveX: 0
@@ -142,7 +199,7 @@ Item {
             horizontalAlignment: axisLabel.horizontalAlignment
             verticalAlignment: axisLabel.verticalAlignment
             color: EaStyle.Colors.chartLabels
-            text: axisLabel.original ? controller.axisLabel(axisLabel.text, axisLabel.valueScale) : axisLabel.text
+            text: axisLabel.axis !== null && axisLabel.format !== null ? chart.yLabelText(axisLabel.text, axisLabel.axis, axisLabel.valueScale, axisLabel.format) : axisLabel.text
         }
     }
 
@@ -161,18 +218,7 @@ Item {
 
         // The ticks of one axis as shares of its range: the anchor and every whole interval from it.
         function ticks(axis: ValueAxis): list<real> {
-            const out = [];
-            const span = axis.max - axis.min;
-            if (!(axis.tickInterval > 0) || !(span > 0))
-                return out;
-            const first = Math.ceil((axis.min - axis.tickAnchor) / axis.tickInterval - 1e-9);
-            for (let i = first; out.length < 64; ++i) {
-                const share = (axis.tickAnchor + i * axis.tickInterval - axis.min) / span;
-                if (share > 1 + 1e-9)
-                    break;
-                out.push(share);
-            }
-            return out;
+            return chart.tickValues(axis).map(value => (value - axis.min) / (axis.max - axis.min));
         }
 
         x: pane.x + pane.plotArea.x
@@ -282,6 +328,8 @@ Item {
         AxisLabel {
             horizontalAlignment: Text.AlignRight
             moveX: chart.tickRoom
+            axis: residualY
+            format: chart.residualYFormat
         }
     }
     // The main y axis has one delegate on every scale: Qt Graphs keeps the labels it made when the delegate is
@@ -292,7 +340,8 @@ Item {
         AxisLabel {
             horizontalAlignment: Text.AlignRight
             moveX: chart.tickRoom
-            original: controller.yScale !== PatternChartController.Linear
+            axis: mainY
+            format: chart.mainYFormat
             valueScale: controller.yScale
         }
     }
