@@ -56,11 +56,13 @@ TestCase {
         AppState.reached = AppState.Page.Project;
         click("appBar.tab.project");
         click("project.create");
-        const dialog = findBy(Ui.windowRoot(appWindow), "title", "Create project");
+        const dialogs = Probe.visibleDialogs(appWindow).filter(item => typeof item.projectName === "string");
+        compare(dialogs.length, 1, "Create project must expose exactly one project description dialog");
+        const dialog = dialogs[0];
         verify(dialog !== null, "Create project must show its production dialog");
         dialog.projectParentDirectory = Probe.repoUrl("build/test-tmp/correlation-create/");
         dialog.projectName = "created";
-        const location = findBy(dialog, "placeholderText", "Enter project location here");
+        const location = findBy(dialog.contentItem, "placeholderText", "Enter project location here");
         verify(location !== null, "Create project must expose its location field");
         verify(!location.text.includes("//"), "The chosen native directory must not acquire doubled separators");
         dialog.projectName = "renamed";
@@ -181,7 +183,7 @@ TestCase {
         const selector = control("background.type");
         verify(selector !== null, "Coefficient backgrounds must retain the type selector");
         selector.selected("chebyshev");
-        const question = control("background.typeQuestion");
+        const question = findChild(appWindow, "background.typeQuestion");
         verify(question !== null && question.visible, "Replacing rows must ask for confirmation");
         question.reject();
         compare(experiment.backgroundType, "polynomial", "Cancel must retain the existing background type");
