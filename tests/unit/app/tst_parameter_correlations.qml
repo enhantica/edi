@@ -86,14 +86,31 @@ TestCase {
         verify(!Session.needsSaveAs, "The second save must not request Save As again");
     }
 
-    function test_appended_atom_has_a_valid_position_and_no_text_error() {
+    function test_appended_atom_is_random_general_and_has_no_text_error() {
         open("tests/fixtures/e04_t1/editable-project");
         const sites = Session.project.currentStructure.atomSites;
         const count = sites.count;
+        const existing = Probe.rows(sites).map(site => site.typeSymbol);
         sites.append();
         compare(sites.count, count + 1, "Appending must add exactly one atom site");
         const row = Probe.rows(sites)[count];
-        verify(row.wyckoffLetter.length > 0, "An appended atom must receive a nonempty Wyckoff letter");
+        const supported = JSON.parse(Probe.readFile("tests/fixtures/correlations/atom-reference.json")).supported;
+        verify(supported.includes(row.typeSymbol), "The random atom must be supported by the engine’s neutron and X-ray tables");
+        verify(!existing.includes(row.typeSymbol), "A new atom must prefer an element absent from this structure");
+        compare(row.wyckoffLetter, "n", "The cctbx Pm-3m catalogue requires a new atom on general position 48n");
+        verify(/^[A-Z][a-z]?\d+$/.test(row.label), "A new atom label must be its element and a free number");
+        compare(row.label.replace(/\d+$/, ""), row.typeSymbol, "The new atom label must use its selected element");
+        for (const coordinate of [row.fractX.value, row.fractY.value, row.fractZ.value]) {
+            verify(coordinate >= 0 && coordinate < 1, "New atom coordinates must lie in the fractional unit cell");
+            verify(Math.abs(coordinate * 1000 - Math.round(coordinate * 1000)) < 1e-8, "New atom coordinates must have three decimal places");
+        }
+        const symmetry = JSON.parse(Probe.readFile("tests/fixtures/c34_t25_fullprof/wyckoff.json")).groups["Pm-3m"];
+        const xyz = [row.fractX.value, row.fractY.value, row.fractZ.value];
+        const orbit = new Set(symmetry.operations.map(op => [0, 1, 2].map(axis => {
+                const image = op.t[axis] + op.r[3 * axis] * xyz[0] + op.r[3 * axis + 1] * xyz[1] + op.r[3 * axis + 2] * xyz[2];
+                return Math.round(((image % 1 + 1) % 1) * 1e9) / 1e9;
+            }).join(",")));
+        compare(orbit.size, symmetry.general, "The new atom must have the independent general-position orbit rather than a special-position orbit");
         click("appBar.tab.structure");
         click("sideBar.tab.text");
         verify(!Ui.text(Ui.windowRoot(appWindow)).includes("Wyckoff letter ''"), "The appended atom must not create a model error in Text");
@@ -106,7 +123,17 @@ TestCase {
         const position = control("atomSite.wyckoffLetter.0");
         verify(position !== null, "The atom-site WP control must be present");
         verify(typeof position.currentIndex === "number", "The WP field must offer a combobox choice");
-        verify(/\d+[a-z]\s*\([^)]*\)/.test(position.currentText), "The WP choice must show multiplicity, letter and coordinates");
+        verify(/^\d+[a-z]: /.test(position.currentText), "Open-list Wyckoff entries must show multiplicity, letter, colon and coordinates");
+        verify(/^\d+[a-z]$/.test(position.displayText), "The closed Wyckoff box must show only multiplicity and letter");
+        verify(position.model.includes("24m: ½x+½y, ½x+½y, z"), "The Pm-3m catalogue’s 24m entry must use fraction glyphs");
+        verify(position.model.includes("12i: 0, ½y+½z, ½y+½z"), "The Pm-3m catalogue’s 12i entry must retain its coordinates");
+        const glyphs = /[½⅓⅔¼¾⅙⅚⅛⅜⅝⅞−]/;
+        verify(Session.saveAs(Probe.repoUrl("build/test-tmp/wyckoff-display")), "The displayed Wyckoff choices must permit saving the project");
+        const saved = Probe.readFile("build/test-tmp/wyckoff-display/structures/lbco.edi");
+        verify(saved.includes("_atom_site.wyckoff_letter"), "The saved structure must retain its ASCII Wyckoff field");
+        verify(!glyphs.test(saved), "Unicode Wyckoff display must not change saved .edi text");
+        click("sideBar.tab.text");
+        verify(!glyphs.test(Ui.text(Ui.windowRoot(appWindow))), "The structure Text tab must retain ASCII data");
     }
 
     function test_removing_last_structure_disables_dependent_pages() {

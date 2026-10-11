@@ -135,6 +135,20 @@ def test_atom_site_position_column_uses_a_choice_with_coordinates():
     )
 
 
+def test_wyckoff_open_list_and_closed_display_have_separate_formats():
+    source = text('Pages/Structure/AtomSitesGroup.qml')
+    assert (
+        'wyckoffLabels' in source
+        and 'displayText:' in source
+        and 'wyckoffNames[letterIndex]' in source
+    ), 'The open WP list must use coordinate labels while the closed display uses only WP names'
+    model = (ROOT / 'app/src/structure_view_model.cpp').read_text()
+    assert (
+        'QStringLiteral(": ")' in model
+        and 'wyckoff_coordinates_display(option.coordinates)' in model
+    ), 'The open WP choices must join the catalogue name and formatted coordinates with a colon'
+
+
 def test_experiment_data_header_and_button_are_declared():
     source = text('Pages/Experiment/ExperimentsGroup.qml')
     assert 'qsTr("Data file")' in source, (

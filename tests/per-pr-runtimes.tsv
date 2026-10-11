@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-11T16:47:46Z
+# measured_utc = 2026-10-11T17:06:28Z
 #
-# Recorded from: mask-current.log (6 node(s) measured once, 9622 banked, 0 stale row(s) dropped)
-# Collected tests: 10363; with a reported duration: 5337
-# Module-scoped fixture costs recorded: 33
+# Recorded from: position-current.log (5 node(s) measured once, 9628 banked, 0 stale row(s) dropped)
+# Collected tests: 10368; with a reported duration: 5339
+# Module-scoped fixture costs recorded: 34
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 10363
+# inventory_python = 10368
 # inventory_cpp = 302
-# inventory_measured = 9628
+# inventory_measured = 9633
 # inventory_unmeasured = 1037
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
@@ -2078,6 +2078,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.
 0.580	tests/integration/py/test_correlation_app_contract.py::test_workflow_pages_follow_structure_and_experiment_presence[analysisPageEnabled-True]
 0.670	tests/integration/py/test_correlation_app_contract.py::test_workflow_pages_follow_structure_and_experiment_presence[experimentPageEnabled-False]
 0.580	tests/integration/py/test_correlation_app_contract.py::test_workflow_pages_follow_structure_and_experiment_presence[reportPageEnabled-True]
+0.000	tests/integration/py/test_correlation_app_contract.py::test_wyckoff_open_list_and_closed_display_have_separate_formats
 0.000	tests/integration/py/test_cwl_admission.py::test_cif_nonzero_mixing_survives_import_without_default_substitution[collection-classic-cwl-pseudo-voigt-berar-baldinozzi]
 0.000	tests/integration/py/test_cwl_admission.py::test_cif_nonzero_mixing_survives_import_without_default_substitution[collection-classic-cwl-pseudo-voigt]
 0.000	tests/integration/py/test_cwl_admission.py::test_cif_nonzero_mixing_survives_import_without_default_substitution[collection-dot-cwl-pseudo-voigt-berar-baldinozzi]
@@ -5317,6 +5318,10 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.p
 0.150	tests/integration/py/test_table_display.py::test_scientific_thresholds_and_signed_four_digit_values
 0.600	tests/integration/py/test_table_display.py::test_sequential_count_colours_follow_zero_and_nonzero_state
 0.160	tests/integration/py/test_ui_input_settling.py::test_real_input_waits_for_motion_and_rendering_but_refuses_a_stuck_viewport
+0.000	tests/system/py/test_atom_position_contract.py::test_random_atom_obeys_general_position_and_injected_stream[all-used-next-free]
+0.013	tests/system/py/test_atom_position_contract.py::test_random_atom_obeys_general_position_and_injected_stream[prefer-unused-rounded]
+0.000	tests/system/py/test_atom_position_contract.py::test_random_atom_obeys_general_position_and_injected_stream[redraw-rounded-special]
+0.010	tests/system/py/test_atom_position_contract.py::test_random_atom_obeys_general_position_and_injected_stream[redraw-special-origin]
 0.000	tests/system/py/test_beer_fullprof_agreement.py::test_beer_fit_agrees_with_every_fullprof_parameter
 0.000	tests/system/py/test_beer_fullprof_agreement.py::test_delivered_beer_project_preserves_shared_biso_and_free_set
 0.000	tests/system/py/test_beer_fullprof_agreement.py::test_fullprof_beer_reference_preserves_all_independent_variables
@@ -10716,6 +10721,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 0.384	tests/integration/py/test_scan_extended_contract.py
 # module-cost: 0.257	tests/integration/py/test_scan_notes_diagnostics.py
 # module-cost: 0.352	tests/integration/py/test_scan_notes_resume.py
+# module-cost: 2.937	tests/system/py/test_atom_position_contract.py
 # module-cost: 2.511	tests/system/py/test_c09_t9_output_contract_and_cli.py
 # module-cost: 0.228	tests/system/py/test_c11_t62_native_scan_io.py
 # module-cost: 4.399	tests/system/py/test_c15_t2_native_family.py
