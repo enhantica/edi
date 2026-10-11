@@ -189,7 +189,7 @@ Column {
                     objectName: "background.autodetect"
                     width: pointButtons.buttonWidth
                     enabled: false
-                    fontIcon: "undo-alt"
+                    fontIcon: "magic"
                     text: qsTr("Autodetect")
                     ToolTip.text: qsTr("Reset to autodetected background")
                 }
