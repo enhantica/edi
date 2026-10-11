@@ -3806,6 +3806,14 @@ struct ScanFileRecord {
 // subscriber the adapter never reads the CSV mid-scan at all.
 using FileCompleteCallback = std::function<void(const ScanFileRecord&)>;
 
+struct PatternSource;  // presentation.hpp
+// Optional per-file pattern subscriber, fired just before a fitted file's completion event: the file's name and a
+// function that returns its pattern as the fit left it (shared columns, nothing calculated again). The function is
+// valid only during the call, and a subscriber that does not want this file's pattern does not call it. A file the
+// fit refused fires none (edi ADR-0029).
+using FileFittedCallback =
+    std::function<void(const std::string& file_name, const std::function<PatternSource()>& pattern)>;
+
 // The whole-scan preamble, fired exactly once before the first file's fit — the seam a progress
 // surface takes its `N` from (the count comes from HERE, never from counting iteration
 // restarts). `total_files` is the declared walk's size; `completed_rows` is every row ALREADY
@@ -4308,7 +4316,8 @@ class Project : public detail::ProjectAnchor {
                                     const PreambleCallback& on_start = {},
                                     const ScanStartCallback& on_scan_start = {},
                                     const FileCompleteCallback& on_file_complete = {},
-                                    const CancelCallback& should_cancel = {});
+                                    const CancelCallback& should_cancel = {},
+                                    const FileFittedCallback& on_file_fitted = {});
     // The `independent` scan mode's native entry point, beside
     // `fit_sequential` — one named entry per declared scan mode, so a caller reaching for a
     // mode by name finds it instead of falling back to a single-bank refine. Same driver, same
@@ -4317,7 +4326,8 @@ class Project : public detail::ProjectAnchor {
                                      const PreambleCallback& on_start = {},
                                      const ScanStartCallback& on_scan_start = {},
                                      const FileCompleteCallback& on_file_complete = {},
-                                     const CancelCallback& should_cancel = {});
+                                     const CancelCallback& should_cancel = {},
+                                     const FileFittedCallback& on_file_fitted = {});
     // The shared scan implementation both public scan entries delegate to AFTER each has
     // proved its own exact mode token. It is deliberately not bound to Python — making the
     // public entries aliases of one another is exactly what let an `independent` project
@@ -4326,7 +4336,8 @@ class Project : public detail::ProjectAnchor {
                               const PreambleCallback& on_start = {},
                               const ScanStartCallback& on_scan_start = {},
                               const FileCompleteCallback& on_file_complete = {},
-                              const CancelCallback& should_cancel = {});
+                              const CancelCallback& should_cancel = {},
+                              const FileFittedCallback& on_file_fitted = {});
 
     // PLURAL storage — a collection holding one element is honest, and the in-repo
     // `experiments` precedent now has its structures half. The singular accessors below are the

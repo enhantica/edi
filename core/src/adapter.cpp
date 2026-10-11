@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "edi/calculation.hpp"
+#include "edi/presentation.hpp"
 #include "edi/scan.hpp"
 #include "adapter_test_access.hpp"  // edi::detail conversion seam (core/src only; test-only, not installed)
 #include "canonical_encoding.hpp"  // edi-only logic: core/src-private, never installed
@@ -3730,7 +3731,8 @@ FitResultBase Project::fit_independent(const IterationCallback& on_iteration,
                                           const PreambleCallback& on_start,
                                           const ScanStartCallback& on_scan_start,
                                           const FileCompleteCallback& on_file_complete,
-                                          const CancelCallback& should_cancel) {
+                                          const CancelCallback& should_cancel,
+                                          const FileFittedCallback& on_file_fitted) {
     // Review-2 F2: this entry serves EXACTLY `independent`, and it reaches the shared scan body
     // DIRECTLY. It used to delegate to fit_sequential(), which accepted either scan mode — so
     // an `independent` project also succeeded through the explicitly sequential entry, whose
@@ -3741,21 +3743,22 @@ FitResultBase Project::fit_independent(const IterationCallback& on_iteration,
                                     fitting_mode +
                                     "' - this entry point serves exactly the 'independent' mode");
     }
-    return fit_scan(on_iteration, on_start, on_scan_start, on_file_complete, should_cancel);
+    return fit_scan(on_iteration, on_start, on_scan_start, on_file_complete, should_cancel, on_file_fitted);
 }
 
 FitResultBase Project::fit_sequential(const IterationCallback& on_iteration,
                                          const PreambleCallback& on_start,
                                          const ScanStartCallback& on_scan_start,
                                          const FileCompleteCallback& on_file_complete,
-                                         const CancelCallback& should_cancel) {
+                                         const CancelCallback& should_cancel,
+                                         const FileFittedCallback& on_file_fitted) {
     // Serves EXACTLY `sequential` — the scan family is no longer accepted here.
     if (fitting_mode != "sequential") {
         throw std::invalid_argument("edi fit_sequential: _fitting_mode.type is '" +
                                     fitting_mode +
                                     "' - this entry point serves exactly the 'sequential' mode");
     }
-    return fit_scan(on_iteration, on_start, on_scan_start, on_file_complete, should_cancel);
+    return fit_scan(on_iteration, on_start, on_scan_start, on_file_complete, should_cancel, on_file_fitted);
 }
 
 namespace {
@@ -3910,6 +3913,42 @@ std::vector<ScanFileRecord> read_scan_rows(const std::filesystem::path& csv_path
     return rows;
 }
 
+// A scan file's pattern as crysta's fit left it on `fitted`: the measured and computed columns shared, not copied,
+// the reflections grouped as capture_pattern groups them, the excluded regions and phase places from the template
+// `model`. What a calculation of that file at its fitted values would show, without calculating it again.
+PatternSource fitted_scan_pattern(const Project& model, const crysta::Project& fitted) {
+    PatternSource source;
+    const ExperimentBase& experiment = model.experiment();
+    for (const auto& [start, end] : experiment.excluded_regions) {
+        source.excluded.push_back({std::min(start, end), std::max(start, end)});
+    }
+    source.x_title = experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH ? "2θ (°)" : "TOF (µs)";
+    const crysta::ComputedView view = crysta::peek(fitted, fitted.experiment());
+    const auto shared = [](const crysta::ColumnSnapshot<double>& column) -> PatternSource::Column {
+        return column.empty() ? nullptr : column.buffer();
+    };
+    source.x = shared(view.data.axis);
+    source.meas = shared(view.data.intensity_meas);
+    source.su = shared(view.data.intensity_meas_su);
+    source.current = view.data_state == crysta::ComputedState::Current &&
+                     view.refln_state == crysta::ComputedState::Current;
+    if (!source.current) {
+        return source;
+    }
+    source.calc = shared(view.data.intensity_calc);
+    source.bkg = shared(view.data.intensity_bkg);
+    source.resid = shared(view.data.residual);
+    std::vector<std::string> names;
+    names.reserve(model.structures.size());
+    for (const auto& structure : model.structures) {
+        names.push_back(structure->name);
+    }
+    source.phases = group_reflections(view.refln.structure_id.values(), view.refln.position.values(),
+                                      view.refln.index_h.values(), view.refln.index_k.values(),
+                                      view.refln.index_l.values(), names);
+    return source;
+}
+
 }  // namespace
 
 // The ONE scan implementation. Both public scan entries reach it after proving their own exact
@@ -3918,7 +3957,8 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
                                    const PreambleCallback& on_start,
                                    const ScanStartCallback& on_scan_start,
                                    const FileCompleteCallback& on_file_complete,
-                                   const CancelCallback& should_cancel) {
+                                   const CancelCallback& should_cancel,
+                                   const FileFittedCallback& on_file_fitted) {
     // The ONE native entry point the `sequential` fitting mode delegates to. The whole loop, the
     // carry-forward/resume state (the CSV) and the results.csv writer are crysta's — one
     // crysta::fit_project call on the converted project (criterion 6's one writer, literal); edi
@@ -4085,8 +4125,18 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
                     }
                 }
             };
-        const crysta::FitResultBase result =
-            crysta::fit_project(cproject, engine_callback, should_cancel, engine_file_complete);
+        crysta::FileFittedCallback engine_file_fitted;
+        if (on_file_fitted) {
+            engine_file_fitted = [this, &on_file_fitted](const std::vector<std::string>& row,
+                                                         const crysta::Project& fitted) {
+                if (row.empty()) {
+                    return;
+                }
+                on_file_fitted(row[0], [this, &fitted] { return fitted_scan_pattern(*this, fitted); });
+            };
+        }
+        const crysta::FitResultBase result = crysta::fit_project(cproject, engine_callback, should_cancel,
+                                                                 engine_file_complete, engine_file_fitted);
         const double elapsed_ms = std::chrono::duration<double, std::milli>(
                                       std::chrono::steady_clock::now() - fit_start)
                                       .count();
@@ -4476,5 +4526,9 @@ void apply_engine_thread_defaults() noexcept { crysta::threading::apply_process_
 EngineThreading engine_threading() noexcept {
     return {crysta::threading::parallel_backend(), crysta::threading::parallel_workers(), crysta::threading::wasm_simd()};
 }
+
+void set_engine_threads(int count) noexcept { crysta::threading::set_thread_count(count); }
+
+int engine_threads_setting() noexcept { return crysta::threading::thread_count_setting(); }
 
 }  // namespace edi

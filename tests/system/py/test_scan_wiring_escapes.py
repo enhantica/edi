@@ -19,7 +19,7 @@ def test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_w
 ):
     if channel == 'dispatch':
         dispatch = (Path(__file__).resolve().parents[3] / 'core/src/fit_job.cpp').read_text()
-        expected = ['sequential:0:0:33:55:44', 'independent:0:0:33:55:44']
+        expected = ['sequential:0:0:33:55:44:66', 'independent:0:0:33:55:44:66']
         assert worker_dispatch(dispatch, tmp_path) == expected, (
             'Scan worker wiring: the control must forward distinct subscriber identities'
         )
@@ -39,6 +39,14 @@ def test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_w
         assert worker_dispatch(wrong, tmp_path) != expected, (
             'Scan worker wiring: subscriber identities cannot be swapped '
             'while calls remain present'
+        )
+        missing_fitted = dispatch.replace('should_cancel, on_file_fitted)', 'should_cancel, {})')
+        assert missing_fitted != dispatch, (
+            'Scan worker wiring: the escape must remove actual fitted-project forwarding'
+        )
+        assert worker_dispatch(missing_fitted, tmp_path) != expected, (
+            'Scan worker wiring: the fitted-project subscriber cannot disappear while '
+            'row-completion and cancellation forwarding stay correct'
         )
     if channel == 'joint':
         model = source('src/analysis_view_model.cpp')

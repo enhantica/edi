@@ -264,8 +264,15 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     const edi::Project* scanTemplate() const { return scan_template_ ? &*scan_template_ : nullptr; }
     // The place of the file's dataset in the scan, or -1 when its row could not be indexed.
     int scanFileFitted(const edi::ScanFileRecord& record);
-    void showScanFrame(const std::string& file, const edi::FitFrame& frame);
     void followScanFile(const std::string& file);
+    // A followed file with its pattern as the fit left it: shown like followScanFile, its pattern not calculated
+    // again (edi ADR-0029).
+    void followScanFrame(const std::string& file, const edi::FitFrame& frame);
+    // A followed scan's newest finished file becomes the current dataset at once (the evolution's line, the list,
+    // the selectors), with no read; its pattern follows when the view is ready (edi ADR-0029).
+    void markScanFile(const std::string& file);
+    // No dataset read is in flight: the last one asked for has been shown (or refused).
+    bool followReady() const { return !view_reading_ && view_applied_ == view_request_; }
     // The run's driver returned: the rows and notes on disk are indexed again, the files skipped after the last
     // row included (a skipped file sends no event). Comes before scanEnded.
     void settleScan();
@@ -411,6 +418,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     int view_wanted_ = -1;       // the dataset of the newest request
     int projected_dataset_ = -1;  // the dataset the model holds now (a failed read leaves the one before)
     bool view_reading_ = false;  // a read is in flight
+    // A followed file's pattern from the scan's fit (its dataset and the frame), until its dataset is shown.
+    std::optional<std::pair<int, edi::FitFrame>> follow_frame_;
     // Reads the newest requested dataset off the GUI thread; its delivery applies it, or reads a newer one.
     void startViewRead();
     // Shows a dataset at once: the one a project opens on (`reread`: its file is read), or the shown one again from

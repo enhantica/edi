@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-10T12:21:40Z
+# measured_utc = 2026-10-10T23:40:04Z
 #
-# Recorded from: the merged rows of this branch and main
-# Collected tests: 10489; with a reported duration: 5240
+# Recorded from: c22-t26-tests-seq2-follow-pytest.log (2 node(s) measured once, 9440 banked, 0 stale row(s) dropped)
+# Collected tests: 10190; with a reported duration: 5242
 # Module-scoped fixture costs recorded: 32
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 10187
+# inventory_python = 10190
 # inventory_cpp = 302
-# inventory_measured = 9440
-# inventory_unmeasured = 1049
+# inventory_measured = 9442
+# inventory_unmeasured = 1050
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -4902,7 +4902,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_phase_scan_class_boundar
 0.150	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[superseded]
 0.000	tests/integration/py/test_scan_extended_contract.py::test_bundled_project_load_and_save_as_use_the_writable_copy_routes
 0.460	tests/integration/py/test_scan_extended_contract.py::test_effective_bundle_contains_selected_scan_payloads[desktop]
-0.280	tests/integration/py/test_scan_extended_contract.py::test_effective_bundle_contains_selected_scan_payloads[web]
+0.290	tests/integration/py/test_scan_extended_contract.py::test_effective_bundle_contains_selected_scan_payloads[web]
 0.000	tests/integration/py/test_scan_extended_contract.py::test_empty_selectors_are_hidden_on_experiment_and_structure_pages
 0.010	tests/integration/py/test_scan_extended_contract.py::test_example_gate_rejects_swapped_names_with_matching_local_provenance[162]
 0.010	tests/integration/py/test_scan_extended_contract.py::test_example_gate_rejects_swapped_names_with_matching_local_provenance[324]
@@ -4914,13 +4914,16 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_phase_scan_class_boundar
 0.440	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_distinguishes_executable_and_library_interfaces[PRIVATE]
 0.490	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_distinguishes_executable_and_library_interfaces[PUBLIC]
 0.450	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_distinguishes_executable_and_library_interfaces[library-interface]
+0.660	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_refuses_non_compilation_target_sources["$<IF:$<BOOL:1>,resource.dat,source.cpp>"]
+0.500	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_refuses_non_compilation_target_sources[resource.dat]
+0.460	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_refuses_non_compilation_target_sources[resource.qrc]
 0.740	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_a_second_payload_at_the_index_address
 0.690	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_comment_only_and_inactive_bundle_calls
-0.550	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_excluded_payload_in_the_live_qml_module[alias]
-0.560	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_excluded_payload_in_the_live_qml_module[default]
-0.620	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_excluded_payload_in_the_live_qml_module[prefix]
+0.570	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_excluded_payload_in_the_live_qml_module[alias]
+0.540	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_excluded_payload_in_the_live_qml_module[default]
+0.570	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_excluded_payload_in_the_live_qml_module[prefix]
 0.410	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[alias]
-0.410	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[hidden]
+0.388	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[hidden]
 0.460	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[index]
 0.390	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[metadata]
 0.436	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[prefix]
@@ -4930,7 +4933,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_phase_scan_class_boundar
 0.080	tests/integration/py/test_scan_extended_contract.py::test_scan_examples_have_exact_source_file_inventory_and_checksums[324]
 0.650	tests/integration/py/test_scan_extended_contract.py::test_scan_explorer_header_has_declared_columns_in_order
 0.710	tests/integration/py/test_scan_extended_contract.py::test_scan_stop_continue_and_follow_have_model_state
-0.660	tests/integration/py/test_scan_extended_contract.py::test_scan_worker_routes_both_modes_to_existing_driver
+0.670	tests/integration/py/test_scan_extended_contract.py::test_scan_worker_routes_both_modes_to_existing_driver
 0.170	tests/integration/py/test_scan_extended_contract.py::test_selector_moves_to_main_tab_bar_once
 0.010	tests/integration/py/test_scan_extended_contract.py::test_user_page_and_scale_adr_document_approved_limits
 0.000	tests/integration/py/test_scan_extended_contract.py::test_working_copy_observer_rejects_copy_to_an_unrelated_destination
@@ -8721,8 +8724,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_
 0.020	tests/system/py/test_scan_app_execution.py::test_fitted_selection_projects_csv_values_errors_and_calculated_pattern[98]
 0.020	tests/system/py/test_scan_app_execution.py::test_fitted_selection_projects_csv_values_errors_and_calculated_pattern[99]
 0.020	tests/system/py/test_scan_app_execution.py::test_fitted_selection_projects_csv_values_errors_and_calculated_pattern[9]
-0.070	tests/system/py/test_scan_app_execution.py::test_follow_tracks_worker_and_manual_selection_until_reenabled[independent]
-0.080	tests/system/py/test_scan_app_execution.py::test_follow_tracks_worker_and_manual_selection_until_reenabled[sequential]
+2.890	tests/system/py/test_scan_app_execution.py::test_follow_tracks_worker_and_manual_selection_until_reenabled[independent]
+2.780	tests/system/py/test_scan_app_execution.py::test_follow_tracks_worker_and_manual_selection_until_reenabled[sequential]
 0.010	tests/system/py/test_scan_app_execution.py::test_initial_dataset_and_labels_follow_template_and_independent_extract
 0.000	tests/system/py/test_scan_app_execution.py::test_joint_mode_cannot_be_selected_in_a_scan_project
 0.070	tests/system/py/test_scan_app_execution.py::test_large_evolution_thins_points_and_regression_bucket_partition_preserves_extrema
@@ -8940,12 +8943,12 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_
 1.450	tests/system/py/test_scan_projection_wiring_escapes.py::test_scene_graph_observer_rejects_disconnected_layer_hit_and_uncertainty[low]
 0.790	tests/system/py/test_scan_projection_wiring_escapes.py::test_scene_graph_observer_rejects_disconnected_layer_hit_and_uncertainty[selection]
 0.830	tests/system/py/test_scan_projection_wiring_escapes.py::test_scene_graph_observer_rejects_disconnected_layer_hit_and_uncertainty[target]
-1.830	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[dispatch]
+3.170	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[dispatch]
 1.190	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[follow]
 1.400	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[joint]
 1.000	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[state]
 UNMEASURED:failed-in-this-run	tests/system/py/test_web_parallel_build.py::test_app_pthread_pool_is_preallocated_and_sized_for_the_engine
-0.610	tests/system/py/test_web_parallel_build.py::test_each_kit_selects_its_own_engine_backend_and_simd
+UNMEASURED:failed-in-this-run	tests/system/py/test_web_parallel_build.py::test_each_kit_selects_its_own_engine_backend_and_simd
 0.180	tests/system/py/test_web_parallel_oracles.py::test_native_fit_retains_the_owner_five_iteration_final_values
 0.000	tests/system/py/test_web_parallel_oracles.py::test_owner_five_bank_reference_is_not_a_generated_web_pin
 0.290	tests/system/py/test_web_parallel_oracles.py::test_web_fit_native_reference_covers_parameters_and_calculated_pattern[lbco]
@@ -10537,7 +10540,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 1.914	tests/integration/py/test_e04_t12_name_allowance.py
 # module-cost: 0.192	tests/integration/py/test_e09_t75_sdk_consumer.py
 # module-cost: 1.527	tests/integration/py/test_scan_app_contract.py
-# module-cost: 0.384	tests/integration/py/test_scan_extended_contract.py
+# module-cost: 0.352	tests/integration/py/test_scan_extended_contract.py
 # module-cost: 0.257	tests/integration/py/test_scan_notes_diagnostics.py
 # module-cost: 0.352	tests/integration/py/test_scan_notes_resume.py
 # module-cost: 2.511	tests/system/py/test_c09_t9_output_contract_and_cli.py
@@ -10556,8 +10559,8 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 3.929	tests/system/py/test_fit_participants_native.py
 # module-cost: 129.839	tests/system/py/test_plain_data_app.py
 # module-cost: 21.241	tests/system/py/test_pytest_child_environment.py
-# module-cost: 349.085	tests/system/py/test_scan_accident_paths.py
-# module-cost: 557.564	tests/system/py/test_scan_app_execution.py
+# module-cost: 0.483	tests/system/py/test_scan_accident_paths.py
+# module-cost: 139.444	tests/system/py/test_scan_app_execution.py
 # module-cost: 17.635	tests/system/py/test_scan_driver_resume.py
 # module-cost: 1.016	tests/system/py/test_scan_lazy_input.py
 # module-cost: 2.483	tests/unit/py/test_e04_t9_latency_ratchet.py

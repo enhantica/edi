@@ -130,6 +130,8 @@ class FitViewModel : public QObject {
     // Follow is on only while a scan runs: off before one, after one and in the single and joint modes.
     bool following() const { return scanning_ && following_; }
     void setFollowing(bool following);
+    // The owner has shown the dataset it was asked for: a newer finished file may be followed now (edi ADR-0029).
+    void followShown();
     bool available() const { return available_; }
     QString unavailableReason() const { return unavailable_reason_; }
     bool canUndo() const { return can_undo_; }
@@ -207,6 +209,11 @@ class FitViewModel : public QObject {
     void ended(const edi::FitReport& report);
     void scanStarted(const edi::ScanPreamble& preamble);
     void fileCompleted(const edi::ScanFileRecord& record);
+    // A followed file's pattern, as its fit left it.
+    void scanFrame(const std::string& file, const edi::FitFrame& frame);
+    // Follow asks for the next finished file's pattern once the one before is shown and kFollowIntervalMs has
+    // passed.
+    void followLatest();
     // The counts from the files on disk once the driver returned, before the running presentation ends.
     void settleScanCounts();
     void scanEnded(const edi::FitReport& report);
@@ -233,6 +240,12 @@ class FitViewModel : public QObject {
     // once this one is shown).
     std::optional<edi::FitFrame> pending_frame_;
     QTimer frame_timer_;
+    // A followed scan: the newest finished file, the one last shown, when, the wait for the interval, and whether
+    // the job is to send the next file's pattern.
+    std::string latest_file_, followed_file_;
+    QElapsedTimer follow_clock_;
+    QTimer follow_timer_;
+    bool frame_requested_ = false;
     // The running fit's clock, shown once a second.
     QElapsedTimer clock_;
     QTimer clock_timer_;

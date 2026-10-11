@@ -25,6 +25,12 @@ struct EngineThreading {
 };
 EngineThreading engine_threading() noexcept;
 
+// The engine's thread count for every fill, the Develop preference (crysta ADR-0063): 0 is Auto, the
+// engine's policy unchanged; N >= 1 runs each fill on N threads, in place of OMP_NUM_THREADS. It never
+// changes a result.
+void set_engine_threads(int count) noexcept;
+int engine_threads_setting() noexcept;
+
 }  // namespace edi
 
 #endif  // EDI_THREADING_HPP

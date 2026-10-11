@@ -368,6 +368,12 @@ owner, 2026-10-04), half the value's magnitude (at least 0.001) otherwise.
 - **Appearance**: Theme; **Sidebar — Left or Right** (the owner, 2026-09-29); Auto collapse. **The 1D plotting
   row is removed** (the owner, 2026-09-29): edi has no choice of chart library.
 - **Updates and Experimental**: shown disabled (§4).
+- **Develop — Engine threads** (the owner, 2026-10-10): "Auto", the engine's own thread policy (crysta ADR-0063),
+  or a count from 1 to twice the cores the platform reports (at least 16, at most 64; a browser can report fewer
+  cores than the machine has), for every fit and calculation. It replaces `OMP_NUM_THREADS` and never changes a
+  result. It is saved per machine under `develop/engineThreads` (0 is Auto) and applied when the window is
+  complete and on every change; the diagnostics show the preference and the resulting engine workers. The
+  single-thread web build shows "1 (single-thread build)", disabled.
 - **Persistence**: tool tips, auto collapse and the sidebar's side persist in the app's settings file (the
   base's `Settings` mechanism and file, `EaGlobals.Vars.settingsFile`) under edi's own category
   `Edi.Preferences` (`Globals/Preferences.qml`); the theme and the logging level keep the base's own

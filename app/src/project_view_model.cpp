@@ -5,6 +5,7 @@
 #include <QHash>
 #include <QMetaObject>
 #include <QPointer>
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QFile>
 #include <algorithm>
@@ -943,10 +944,11 @@ void ProjectViewModel::startViewRead() {
         publishCalculating();
         return;
     }
-    // While a scan runs the worker is its own: a dataset chosen by hand gets its pattern calculated beside it, on
-    // a copy of the template with the same values and data as the shown model. A followed one gets the job's.
+    // While a scan runs the worker is its own: a dataset shown gets its pattern calculated beside it, on a copy of
+    // the template with the same values and data as the shown model, unless the scan's fit sent the followed file's
+    // pattern with it (edi ADR-0029).
     std::optional<edi::Project> shown;
-    if (fit_ != nullptr && fit_->scanning() && !fit_->following()) {
+    if (fit_ != nullptr && fit_->scanning() && !(follow_frame_ && follow_frame_->first == index)) {
         shown = *scan_template_;
     }
     const std::string directory = scan_session_->datasets().directory;
@@ -997,6 +999,17 @@ void ProjectViewModel::applyDatasetView(std::uint64_t request, int index, Datase
         return;
     }
     view_applied_ = request;
+    // The fit's pattern of a followed file goes with that file's view, and only while the scan runs.
+    if (follow_frame_ && follow_frame_->first == index && fit_ != nullptr && fit_->scanning() && !view.frame) {
+        view.frame = std::move(follow_frame_->second);
+    }
+    follow_frame_.reset();
+    // However this read ends, a followed scan may move to its newest finished file afterwards.
+    const auto shown = qScopeGuard([this] {
+        if (fit_ != nullptr) {
+            fit_->followShown();
+        }
+    });
     if (!scan_ || (fit_ != nullptr && fit_->running() && !fit_->scanning())) {
         publishCalculating();
         return;
@@ -1020,7 +1033,11 @@ void ProjectViewModel::applyDatasetView(std::uint64_t request, int index, Datase
         publishCalculating();
         return;
     }
-    current_dataset_ = index;
+    // A followed scan may have marked newer files while this one was read: the current dataset stays the newest
+    // finished one, and only the pattern shown is this file's (edi ADR-0029).
+    if (fit_ == nullptr || !fit_->following()) {
+        current_dataset_ = index;
+    }
     projected_dataset_ = index;
     syncDataset(index);
     publishCurrent();
@@ -1256,6 +1273,16 @@ int ProjectViewModel::scanFileFitted(const edi::ScanFileRecord& record) {
     return index;
 }
 
+void ProjectViewModel::markScanFile(const std::string& file) {
+    const int index = scan_ && scan_session_ != nullptr ? scan_session_->place(file) : -1;
+    if (index < 0 || index == current_dataset_) {
+        return;
+    }
+    current_dataset_ = index;
+    syncDataset(index);
+    emit currentExperimentIndexChanged();
+}
+
 void ProjectViewModel::followScanFile(const std::string& file) {
     // Each file as it is fitted: a lookup by name and one read, off the GUI thread.
     if (const int index = scan_session_ != nullptr ? scan_session_->place(file) : -1; index >= 0) {
@@ -1263,10 +1290,11 @@ void ProjectViewModel::followScanFile(const std::string& file) {
     }
 }
 
-void ProjectViewModel::showScanFrame(const std::string& file, const edi::FitFrame& frame) {
-    // The fitted file's pattern, calculated by the job from the same row, for the chart.
-    if (scan_session_ != nullptr && scan_session_->place(file) == current_dataset_ && current_dataset_ >= 0) {
-        showFitFrame(frame);
+void ProjectViewModel::followScanFrame(const std::string& file, const edi::FitFrame& frame) {
+    // The file's data are still read off the GUI thread for the model; its pattern is the one given.
+    if (const int index = scan_session_ != nullptr ? scan_session_->place(file) : -1; index >= 0) {
+        follow_frame_.emplace(index, frame);
+        viewDataset(index, true);
     }
 }
 
