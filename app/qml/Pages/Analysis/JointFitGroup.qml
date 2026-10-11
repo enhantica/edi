@@ -23,7 +23,7 @@ DataTable {
 
     // The common table design (edi ADR-0017 §8): No., the experiment's icon in its colour, its name, then the
     // weight, a number centred at display precision as every table's numbers.
-    columnWidths: [numberColumnWidth, EaStyle.Sizes.tableRowHeight, -1, EaStyle.Sizes.fontPixelSize * 8]
+    columnWidths: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, -1, EaStyle.Sizes.fontPixelSize * 8]
 
     header: EaComponents.ListViewHeader {
         EaComponents.TableViewLabel {

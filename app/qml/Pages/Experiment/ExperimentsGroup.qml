@@ -45,7 +45,7 @@ EaElements.GroupBox {
             defaultInfoText: qsTr("No experiments defined")
             sourceModel: group.project ? group.project.experiments : null
 
-            columnWidths: [numberColumnWidth, group.scan ? 0.001 : AppSizes.iconColumnWidth, AppSizes.iconColumnWidth, textColumnWidth("name", qsTr("Datablock")), -1, group.scanColumns.length ? group.scanColumns.length * AppSizes.dataColumnWidth * 1.4 : 0.001, group.scan ? 0.001 : AppSizes.iconColumnWidth]
+            columnWidths: [numberColumnWidth, group.scan ? 0.001 : AppSizes.iconOnlyColumnWidth, AppSizes.iconOnlyColumnWidth, textColumnWidth("name", qsTr("Datablock")), -1, group.scanColumns.length ? group.scanColumns.length * AppSizes.dataColumnWidth * 1.4 : 0.001, group.scan ? 0.001 : AppSizes.iconColumnWidth]
 
             header: EaComponents.ListViewHeader {
                 EaComponents.TableViewLabel {

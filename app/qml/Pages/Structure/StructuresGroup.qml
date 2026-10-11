@@ -35,7 +35,7 @@ EaElements.GroupBox {
             defaultInfoText: qsTr("No structures defined")
             sourceModel: group.project ? group.project.structures : null
 
-            columnWidths: [numberColumnWidth, EaStyle.Sizes.tableRowHeight, -1, AppSizes.iconColumnWidth]
+            columnWidths: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, -1, AppSizes.iconColumnWidth]
 
             header: EaComponents.ListViewHeader {
                 EaComponents.TableViewLabel {

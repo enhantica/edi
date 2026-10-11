@@ -67,7 +67,7 @@ AppDialog {
             defaultInfoText: ""
             sourceModel: dialog.messages
 
-            columnWidths: [EaStyle.Sizes.tableRowHeight, -1, AppSizes.iconColumnWidth]
+            columnWidths: [AppSizes.iconOnlyColumnWidth, -1, AppSizes.iconColumnWidth]
 
             header: EaComponents.ListViewHeader {
                 visible: false

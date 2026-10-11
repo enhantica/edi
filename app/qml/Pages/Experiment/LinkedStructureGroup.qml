@@ -31,7 +31,7 @@ Column {
         defaultInfoText: qsTr("No linked structure")
         sourceModel: group.rows
 
-        columnWidths: [numberColumnWidth, EaStyle.Sizes.tableRowHeight, -1, EaStyle.Sizes.fontPixelSize * 8, AppSizes.iconColumnWidth, AppSizes.iconColumnWidth]
+        columnWidths: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, -1, EaStyle.Sizes.fontPixelSize * 8, AppSizes.iconColumnWidth, AppSizes.iconColumnWidth]
 
         header: EaComponents.ListViewHeader {
             EaComponents.TableViewLabel {
