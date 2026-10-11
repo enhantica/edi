@@ -19,6 +19,7 @@ import pytest
 import yaml
 
 from tests.fixtures.cwl_family.historical import original_tokens
+from tests.fixtures.table_display.metadata_bytes import pre_catalogue_bytes
 
 ROOT = Path(__file__).resolve().parents[3]
 MANIFEST = tomllib.loads((ROOT / 'pixi.toml').read_text())
@@ -266,7 +267,7 @@ def test_loop_expectations_cover_fixture_bytes(source):
     )
     for case in cases:
         digest = case['sha256']
-        contents = original_tokens(path.read_bytes())
+        contents = original_tokens(pre_catalogue_bytes(path))
         replacement = json.loads(
             (ROOT / 'tests/fixtures/e04_t2/replacement-input.json').read_text()
         )

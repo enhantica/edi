@@ -57,6 +57,26 @@ def remainder(data, fields=FIELDS):
     )
 
 
+def unchanged_effective_types(before, after):
+    old, new = records(before), records(after)
+    peak = records(before, {'_peak.type'}).get('_peak.type', '')
+    defaults = {
+        '_experiment_type.sample_form': 'powder',
+        '_experiment_type.beam_mode': (
+            'time-of-flight' if peak.startswith('tof-') else 'constant wavelength'
+        ),
+        '_experiment_type.radiation_probe': 'neutron',
+        '_experiment_type.scattering_type': 'bragg',
+        '_fitting_mode.type': 'single',
+    }
+    for key, default in defaults.items():
+        if key in old or key in new:
+            assert old.get(key, default) == new.get(key, default), (
+                'Explicit catalogue types must retain the prior effective experiment '
+                'and fitting modes'
+            )
+
+
 def pair(name):
     with zipfile.ZipFile(HERE / 'metadata-inputs.zip') as archive:
         before, after = archive.read('before/' + name), archive.read('after/' + name)
@@ -66,10 +86,28 @@ def pair(name):
     )
     records(before)
     records(after)
+    unchanged_effective_types(before, after)
     assert remainder(before) == remainder(after), (
         'Example presentation changes must preserve every byte outside declared descriptive fields'
     )
     return before, after
+
+
+def pre_catalogue_bytes(path):
+    """Bind a live descriptive file to its whole source pair before retaining old bytes."""
+    data = path.read_bytes()
+    if path.suffix != '.edi' or not path.is_relative_to(ROOT):
+        return data
+    name = path.relative_to(ROOT).as_posix()
+    pins = json.loads((HERE / 'metadata-inputs.json').read_text())['files']
+    if name not in pins:
+        return data
+    before, after = pair(name)
+    assert data == after, (
+        'A live descriptive input must match its entire independently archived source, '
+        'including every scientific byte'
+    )
+    return before
 
 
 def restore(source, destination):
@@ -83,12 +121,7 @@ def restore(source, destination):
         name = path.relative_to(ROOT).as_posix()
         if name not in pins:
             continue
-        before, after = pair(name)
-        assert path.read_bytes() == after, (
-            'A live example must match the entire declared descriptive input, '
-            'including all scientific bytes'
-        )
-        (destination / path.relative_to(source)).write_bytes(before)
+        (destination / path.relative_to(source)).write_bytes(pre_catalogue_bytes(path))
     return destination
 
 
@@ -179,6 +212,7 @@ def main():
                 continue
             records(before)
             records(after)
+            unchanged_effective_types(before, after)
             assert remainder(before) == remainder(after), (
                 'Source archive authoring must refuse changes outside declared descriptive fields'
             )

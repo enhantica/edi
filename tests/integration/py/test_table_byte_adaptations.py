@@ -115,7 +115,20 @@ def test_legacy_input_without_a_key_column_requires_generated_saved_keys(tmp_pat
         stored_id_bytes.ordinal_copy(source, saved, tmp_path / 'escape')
 
 
-@pytest.mark.parametrize('damage', ['scientific', 'unknown', 'duplicate', 'missing'])
+@pytest.mark.parametrize(
+    'damage',
+    [
+        'scientific',
+        'unknown',
+        'duplicate',
+        'missing',
+        'sample',
+        'beam',
+        'radiation',
+        'scattering',
+        'fitting',
+    ],
+)
 def test_source_metadata_archive_refuses_rebanked_whitelist_escapes(tmp_path, monkeypatch, damage):
     name = 'docs/user/cli/sample/project/project.edi'
     before = b'_metadata.title "old"\n_cell.length_a 4.125\n'
@@ -126,8 +139,17 @@ def test_source_metadata_archive_refuses_rebanked_whitelist_escapes(tmp_path, mo
         after += b'_metadata.unknown "extra"\n'
     elif damage == 'duplicate':
         after += b'_metadata.title "new"\n'
-    else:
+    elif damage == 'missing':
         after = after.replace(b'_cell.length_a 4.125\n', b'')
+    else:
+        changed = {
+            'sample': b'_experiment_type.sample_form "single crystal"\n',
+            'beam': b'_experiment_type.beam_mode "time-of-flight"\n',
+            'radiation': b'_experiment_type.radiation_probe "xray"\n',
+            'scattering': b'_experiment_type.scattering_type "total"\n',
+            'fitting': b'_fitting_mode.type "joint"\n',
+        }
+        after += changed[damage]
     with zipfile.ZipFile(tmp_path / 'metadata-inputs.zip', 'w') as archive:
         archive.writestr('before/' + name, before)
         archive.writestr('after/' + name, after)
