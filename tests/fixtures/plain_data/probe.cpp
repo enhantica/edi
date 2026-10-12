@@ -68,14 +68,16 @@ QString block_name(edi_app::ProjectViewModel& view, const std::string& kind) {
                                : view.experimentModels()[0]->name();
 }
 QJsonObject rename_lifecycle(const QString& fixture, const QString& work, const std::string& kind,
-                             bool undo_rename = false, bool scan = false, bool refused = false) {
+                             bool undo_rename = false, bool scan = false, bool refused = false,
+                             bool historical = false) {
     const auto input = std::filesystem::path(work.toStdString()) / "input";
     std::filesystem::copy(fixture.toStdString(), input, std::filesystem::copy_options::recursive);
     auto core = edi::load_project(input.string());
     if (scan) {
         std::filesystem::create_directories(input / "experiments/scan");
         for (const char* file : {"01.xy", "02.xy"})
-            std::ofstream(input / "experiments/scan" / file) << "40 5.125 1\n44 6.375 1\n";
+            if (!std::filesystem::exists(input / "experiments/scan" / file))
+                std::ofstream(input / "experiments/scan" / file) << "40 5.125 1\n44 6.375 1\n";
         core.fitting_mode = "sequential";
         core.sequential_fit.data_dir = "experiments/scan";
         core.sequential_fit.file_pattern = "*.xy";
@@ -93,12 +95,57 @@ QJsonObject rename_lifecycle(const QString& fixture, const QString& work, const 
             core.fitting_mode = "joint";
         }
     }
+    if (historical) {
+        if (scan)
+            core.fit_sequential();
+        else
+            core.fit();
+        if (core.fit_result.correlations.empty())
+            throw std::runtime_error("a real fit must produce history before the row disappears");
+        std::vector<edi::FitParameterCorrelation> reverse;
+        for (const auto& row : core.fit_result.correlations) {
+            edi::FitParameterCorrelation pair = *row;
+            pair.id = pair.id.value() + "_reverse";
+            const std::string first = pair.parameter_unique_name_i;
+            pair.parameter_unique_name_i = pair.parameter_unique_name_j.value();
+            pair.parameter_unique_name_j = first;
+            reverse.push_back(pair);
+        }
+        for (const auto& pair : reverse) core.fit_result.correlations.push_back(pair);
+        std::vector<std::shared_ptr<edi::PolynomialTerm>> kept;
+        for (const auto& term : core.experiment().background_terms)
+            if (term->id.value() != "curve") kept.push_back(term);
+        core.experiment().background_terms.assign(std::move(kept));
+    }
+    if (core.structure().name.value() == "structure") {
+        auto& cell = core.structure().cell;
+        for (auto* parameter : {&cell.length_a, &cell.length_b, &cell.length_c, &cell.angle_alpha,
+                                &cell.angle_beta, &cell.angle_gamma}) {
+            parameter->start_value = parameter->value.get() + .125;
+            parameter->start_uncertainty = .03125;
+        }
+    }
     std::vector<std::string> names;
-    if (kind == "structure" || kind == "experiment")
-        names = {"phase.cell.length_a", "bank.instrument.setup_wavelength",
-                 "bank.linked_structure.phase.scale", "bank.preferred_orientation.phase.march_r",
-                 "bank.preferred_orientation.phase.march_random_fract"};
-    else if (kind == "site")
+    if (kind == "structure" || kind == "experiment") {
+        const std::string structure_name = core.structure().name.value();
+        const std::string experiment_name = core.experiment().name.value();
+        for (const std::string field :
+             {"length_a", "length_b", "length_c", "angle_alpha", "angle_beta", "angle_gamma"})
+            names.push_back(structure_name + ".cell." + field);
+        names.push_back(experiment_name + ".instrument.setup_wavelength");
+        names.push_back(experiment_name + ".linked_structure." + structure_name + ".scale");
+        if (core.experiment().preferred_orientation.empty()) {
+            edi::PrefOrient texture;
+            texture.structure_id = structure_name;
+            texture.march_r = .73;
+            texture.march_random_fract = .2;
+            texture.index_l = 1;
+            core.experiment().preferred_orientation.push_back(texture);
+        }
+        names.push_back(experiment_name + ".preferred_orientation." + structure_name + ".march_r");
+        names.push_back(experiment_name + ".preferred_orientation." + structure_name +
+                        ".march_random_fract");
+    } else if (kind == "site")
         for (const std::string field : {"fract_x", "fract_y", "fract_z", "occupancy", "adp_iso"})
             names.push_back("phase.atom_site.A." + field);
     else
@@ -113,8 +160,10 @@ QJsonObject rename_lifecycle(const QString& fixture, const QString& work, const 
             edi::FitParameterCorrelation pair;
             pair.id = "pair" + std::to_string(ordinal) + (first ? "i" : "j");
             pair.source_kind = "deterministic";
-            pair.parameter_unique_name_i = first ? name : "phase.cell.length_b";
-            pair.parameter_unique_name_j = first ? "phase.cell.length_b" : name;
+            pair.parameter_unique_name_i =
+                first ? name : core.structure().name.value() + ".cell.length_b";
+            pair.parameter_unique_name_j =
+                first ? core.structure().name.value() + ".cell.length_b" : name;
             pair.correlation = "-0.625";
             if (scan) pair.file_path = "02.xy";
             core.fit_result.correlations.push_back(pair);
@@ -345,6 +394,90 @@ QJsonObject correlation_lifecycle(const std::string& action, const QString& fixt
     }
     return result;
 }
+QJsonObject correlation_save_stability(const QString& fixture, const QString& work,
+                                       const QString& mode, const std::string& scenario,
+                                       bool later) {
+    const auto input = std::filesystem::path(work.toStdString()) / "input";
+    std::filesystem::copy(fixture.toStdString(), input, std::filesystem::copy_options::recursive);
+    std::filesystem::copy_file(input / "experiments/scan/02.xy", input / "experiments/scan/03.xy");
+    if (scenario == "partial") {
+        // A larger third input lets the actual UI stop after the first two completion events.
+        std::ofstream third(input / "experiments/scan/03.xy");
+        for (int index = 0; index < 100000; ++index) {
+            const double x = 40.0 + 12.0 * index / 99999.0;
+            const double offset = x - 40.0;
+            third << x << ' ' << 4.125 + .75 * offset + .125 * offset * offset << " 1\n";
+        }
+    }
+    auto core = edi::load_project(input.string());
+    core.sequential_fit.template_file = later ? "02.xy" : "01.xy";
+    edi::save_project(core, input.string());
+    edi_app::Session session;
+    if (!session.openProject(QUrl::fromLocalFile(QString::fromStdString(input.string()))))
+        throw std::runtime_error(session.lastError().toStdString());
+    auto& view = *session.project();
+    view.analysis()->setFittingMode(mode);
+    const auto stop = QObject::connect(view.fit(), &edi_app::FitViewModel::scanFittedChanged, [&] {
+        if (scenario == "partial" && view.fit()->scanFitted() >= 2) view.fit()->cancel();
+    });
+    bool finished = false;
+    const auto finish = QObject::connect(view.fit(), &edi_app::FitViewModel::scanFinished,
+                                         [&] { finished = true; });
+    view.fit()->start();
+    QElapsedTimer timer;
+    timer.start();
+    while (!finished && timer.elapsed() < 20000)
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 10);
+    QObject::disconnect(stop);
+    QObject::disconnect(finish);
+    if (!finished || view.fit()->running() || view.fit()->scanFitted() < 2)
+        throw std::runtime_error(
+            "the real scan must complete enough datasets to reach a later template");
+    QJsonObject result{{"fitted", view.fit()->scanFitted()},
+                       {"outcome", view.fit()->outcome()},
+                       {"template", later ? "02.xy" : "01.xy"}};
+    for (int index : {0, 1}) {
+        view.setCurrentExperimentIndex(index);
+        settle_projection(view);
+        result[index == 0 ? "firstLive" : "laterLive"] = matrix(view);
+    }
+    if (scenario == "single-undo") {
+        view.setCurrentExperimentIndex(later ? 1 : 0);
+        settle_projection(view);
+        view.analysis()->setFittingMode("single");
+        fit_and_wait(view);
+        view.undo();
+        settle_projection(view);
+    } else if (scenario == "reset-undo") {
+        view.fit()->reset();
+        view.undo();
+        settle_projection(view);
+    }
+    const QString saved = work + "/saved";
+    if (!session.saveAs(QUrl::fromLocalFile(saved)))
+        throw std::runtime_error(session.lastError().toStdString());
+    result["savedPairs"] = correlation_pairs(edi::load_project(saved.toStdString()));
+    result["otherAfterSave"] = matrix(view);
+    // Core's unchanged save is a control for the app's cache aggregation.
+    auto restored_core = edi::load_project(saved.toStdString());
+    edi::save_project_as(restored_core, (work + "/core-copy").toStdString());
+    session.closeProject();
+    if (!session.openProject(QUrl::fromLocalFile(saved)))
+        throw std::runtime_error(session.lastError().toStdString());
+    for (int index : {0, 1}) {
+        session.project()->setCurrentExperimentIndex(index);
+        settle_projection(*session.project());
+        result[index == 0 ? "firstReopened" : "laterReopened"] = matrix(*session.project());
+    }
+    if (!session.saveAs(QUrl::fromLocalFile(work + "/saved-again")))
+        throw std::runtime_error(session.lastError().toStdString());
+    session.closeProject();
+    if (!session.openProject(QUrl::fromLocalFile(work + "/saved-again")))
+        throw std::runtime_error(session.lastError().toStdString());
+    if (!session.saveAs(QUrl::fromLocalFile(work + "/saved-third")))
+        throw std::runtime_error(session.lastError().toStdString());
+    return result;
+}
 QJsonObject template_persistence(const QString& fixture, const QString& work) {
     const auto input = std::filesystem::path(work.toStdString()) / "input";
     std::filesystem::copy(fixture.toStdString(), input, std::filesystem::copy_options::recursive);
@@ -536,9 +669,25 @@ int main(int argc, char** argv) {
     const QString beam = QString::fromLocal8Bit(argv[4]);
     QJsonObject result;
     try {
+        if (mode == "correlation-historical-rename") {
+            result = rename_lifecycle(fixture, work, escape, true, beam == "scan", false, true);
+            std::cout << QJsonDocument(result).toJson(QJsonDocument::Compact).constData() << '\n';
+            return 0;
+        }
+        if (mode == "correlation-default-rename") {
+            result = rename_lifecycle(fixture, work, "structure", true, beam == "scan");
+            std::cout << QJsonDocument(result).toJson(QJsonDocument::Compact).constData() << '\n';
+            return 0;
+        }
         if (mode == "correlation-rename-undo") {
             result = rename_lifecycle(fixture, work, escape, true, beam == "scan",
                                       std::string(argv[6]) == "refusal");
+            std::cout << QJsonDocument(result).toJson(QJsonDocument::Compact).constData() << '\n';
+            return 0;
+        }
+        if (mode == "correlation-save-stability") {
+            result = correlation_save_stability(fixture, work, beam, escape,
+                                                std::string(argv[6]) == "later");
             std::cout << QJsonDocument(result).toJson(QJsonDocument::Compact).constData() << '\n';
             return 0;
         }

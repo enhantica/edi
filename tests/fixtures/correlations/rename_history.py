@@ -145,3 +145,12 @@ def frozen_loop(namespace):
             identity, source, first, second, value = fields
             reversed_rows.append(' '.join([identity + '_reverse', source, second, first, value]))
     return text.rstrip() + '\n' + '\n'.join(reversed_rows) + '\n'
+
+
+def literal_source(directory):
+    shutil.copytree(ROOT.parent / 'loop_parameter_ids/line-segment', directory)
+    path = directory / 'structures/phase.edi'
+    path.write_text(path.read_text().replace('data_phase', 'data_structure', 1))
+    bank = directory / 'experiments/bank.edi'
+    bank.write_text(bank.read_text().replace('phase ', 'structure '))
+    return directory
