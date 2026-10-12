@@ -241,7 +241,10 @@ def _loop_parameter_paths(rows, roots):
     for position, row in enumerate(rows):
         for field in ('intensity', 'coef'):
             if f'_background.{field}' in row:
-                row_id = row.get('_background.id', str(position + 1))
+                assert '_background.id' in row, (
+                    'saved by an older version: missing _background.id in corpus input'
+                )
+                row_id = row['_background.id']
                 paths.update({
                     f'{root}background[{position}].{field}': f'{root}background[{row_id}].{field}'
                     for root in roots
@@ -305,7 +308,8 @@ def test_fitting_case_matches_expected_through_edi(
     # The copy also keeps a re-run of a completed sequential case a FIT rather than a resume.
     project_dir = tmp_path / 'project'
     shutil.copytree(_resolve_project_dir(case_dir, case['id']), project_dir)
-    # ADR-0016: translate archived corpus positions from input rows, before fitting.
+    # The archived oracle labels are reference selectors. Project addresses themselves
+    # must pass the newest-format load boundary; this projection never migrates a project.
     parameter_paths = _corpus_parameter_paths(project_dir)
     #  (the sides flips): realize through the analysis facade, which dispatches by the
     # project's declared fitting mode — a joint case realized down the single path would

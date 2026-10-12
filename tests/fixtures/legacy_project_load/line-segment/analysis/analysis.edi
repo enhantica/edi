@@ -1,22 +1,15 @@
 _edi.schema_version 3
-
 _fitting_mode.type single
-
 _minimizer.max_iterations 80
-
-loop_
-_joint_fit.experiment_id
-_joint_fit.weight
-bank 1
 
 loop_
 _fit_parameter.id
 _fit_parameter.start_value
 _fit_parameter.start_uncertainty
 _fit_parameter.start_tied
-bank.background[0] 1.25 0.03125 .
-bank.background[1] 1.625 0.0625 .
-bank.background[2] 2 0.09375 .
-bank.background[3] 2.375 0.125 .
-bank.background[4] 2.75 0.15625 .
-bank.background[5] 3.125 0.1875 .
+bank.background.pA 1.25 0.03125 .
+bank.background.pB 1.625 0.0625 .
+bank.background.pC 2.0 0.09375 .
+bank.background.pD 2.375 0.125 .
+bank.background.pE 2.75 0.15625 .
+bank.background.pF 3.125 0.1875 .

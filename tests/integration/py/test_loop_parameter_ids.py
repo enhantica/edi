@@ -7,7 +7,6 @@ the reference's text and integer descriptors. No engine-produced name is an orac
 
 import hashlib
 import json
-import shlex
 import shutil
 from pathlib import Path
 
@@ -103,58 +102,28 @@ def test_loop_parameter_names_match_independent_declared_ids(kind, tmp_path):
 
 
 @pytest.mark.parametrize('kind', ['line-segment', 'polynomial', 'chebyshev'])
-def test_legacy_positional_aliases_and_constraints_migrate_on_load(kind, tmp_path):
+def test_positional_alias_with_constraint_is_refused_on_load(kind, tmp_path):
     private = tmp_path / 'input'
     shutil.copytree(FIXTURE / kind, private)
-    line = kind == 'line-segment'
-    targets = [
-        (
-            'left',
-            'bank.background[0]' if line else 'bank.background.1.coef',
-            {'bank.background.pA.intensity', 'bank.background[pA]'}
-            if line
-            else {'bank.background.base.coef'},
-        ),
-        (
-            'right',
-            'bank.background[1]' if line else 'bank.background.2.coef',
-            {'bank.background.pB.intensity', 'bank.background[pB]'}
-            if line
-            else {'bank.background.ramp.coef'},
-        ),
-        ('scale', 'bank.scale', {'bank.linked_structure.phase.scale', 'bank.phase.scale'}),
-        (
-            'texture',
-            'bank.march_r',
-            {'bank.preferred_orientation.phase.march_r', 'bank.phase.march_r'},
-        ),
-    ]
+    older = 'bank.background[0]' if kind == 'line-segment' else 'bank.background.1.coef'
     analysis = private / 'analysis/analysis.edi'
     analysis.write_text(
         analysis.read_text()
         + '\nloop_\n_alias.id\n_alias.parameter_unique_name\n'
-        + '\n'.join(alias + ' ' + old for alias, old, _ in targets)
-        + '\n\nloop_\n_constraint.id\n_constraint.expression\n'
+        + f'left {older}\nright bank.linked_structure.phase.scale\n'
+        + '\nloop_\n_constraint.id\n_constraint.expression\n'
         + 'bind "right = 2*left"\n'
     )
-    project = engine.Project.load(private)
-    destination = tmp_path / 'saved'
-    project.save_as(destination)
-    tokens = shlex.split((destination / 'analysis/analysis.edi').read_text())
-    alias_start = tokens.index('_alias.parameter_unique_name') + 1
-    alias_end = tokens.index('loop_', alias_start)
-    aliases = dict(
-        zip(tokens[alias_start:alias_end:2], tokens[alias_start + 1 : alias_end : 2], strict=True)
+    before = analysis.read_bytes()
+    with pytest.raises((ValueError, RuntimeError)) as caught:
+        engine.Project.load(private)
+    assert older in str(caught.value), (
+        'A positional alias must be refused with its name even when a constraint uses it'
     )
-    assert all(
-        aliases[alias] in names and old not in aliases.values() for alias, old, names in targets
-    ), 'Load must migrate every legacy positional alias to its declared row id before save'
-    assert 'right = 2*left' in tokens, (
-        'Alias migration must preserve the constraint expression and its alias identities'
+    assert 'older version' in str(caught.value).lower(), (
+        'An old alias must produce the short version refusal instead of migration'
     )
-    reopened = engine.Project.load(destination)
-    second = tmp_path / 'reopened'
-    reopened.save_as(second)
-    assert (second / 'analysis/analysis.edi').read_bytes() == (
-        destination / 'analysis/analysis.edi'
-    ).read_bytes(), 'Migrated aliases and constraints must reach a stable saved representation'
+    assert len(str(caught.value)) <= 240, 'The older-alias load diagnostic must stay short'
+    assert analysis.read_bytes() == before, (
+        'Refusing an old alias must preserve the original constraint and every input byte'
+    )

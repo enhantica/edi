@@ -40,16 +40,14 @@ def test_corpus_positions_follow_input_ids_and_row_order(field, tmp_path):
     ), 'Reordering input rows must reorder the position mapping without consulting fitted values'
 
 
-def test_corpus_old_terms_without_ids_use_one_based_input_ordinals(tmp_path):
+def test_corpus_old_terms_without_ids_are_refused_with_the_missing_name(tmp_path):
     experiments = tmp_path / 'experiments'
     experiments.mkdir()
     (experiments / 'bank.edi').write_text(
         'loop_\n_background.order\n_background.coef\n4 12\n0 31\n'
     )
-    assert _paths(tmp_path)['experiment.background[0].coef'] == 'experiment.background[1].coef', (
-        'An old term without an id gets its one-based row ordinal, '
-        'rather than its polynomial order'
-    )
+    with pytest.raises(AssertionError, match=r'older version: missing _background.id'):
+        _paths(tmp_path)
 
 
 @pytest.mark.parametrize('links', ['phase 12\n', 'phase 12\nother 31\n'])

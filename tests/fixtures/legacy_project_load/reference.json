@@ -1,5 +1,5 @@
 {
-  "producer": "edi b301b6f2, sealed pre-loop-id extension; SDK a1e0ba6d",
+  "producer": "generate.py; ids from loop_parameter_ids, assigned closed-form starts",
   "inputs_are_regression_witnesses": true,
   "projects": {
     "line-segment": {
@@ -64,18 +64,18 @@
     }
   },
   "files": {
-    "line-segment/project.edi": "e4eab7ae63c2c0ee89e58fad1f4deff6b5477cebfc8609f1e2d3a3cf9854c7a0",
-    "line-segment/analysis/analysis.edi": "ab7f562764264748e3dedc04b804146307d87d11701424f164d7bc094c72029d",
-    "line-segment/structures/phase.edi": "2db50607baf934990cc9a770fa3d72cc1d27626c92b5da4a04520bce01cc02eb",
-    "line-segment/experiments/bank.edi": "379a4e297f11b16eeec0321c8c21c3c6fc1b3487c6aa2a26c356b114cc4c84a3",
-    "polynomial/project.edi": "e4eab7ae63c2c0ee89e58fad1f4deff6b5477cebfc8609f1e2d3a3cf9854c7a0",
-    "polynomial/analysis/analysis.edi": "8b24c9dbf72bebf1b82e42207e793e0c3970d9749c2e90fb67e5d5af2a535a00",
-    "polynomial/structures/phase.edi": "2db50607baf934990cc9a770fa3d72cc1d27626c92b5da4a04520bce01cc02eb",
-    "polynomial/experiments/bank.edi": "ffe11bfc91d7e3c7b78529b73fd299cb410c850d8e83266801b28ec4a8587c98",
-    "chebyshev/project.edi": "e4eab7ae63c2c0ee89e58fad1f4deff6b5477cebfc8609f1e2d3a3cf9854c7a0",
-    "chebyshev/analysis/analysis.edi": "8b24c9dbf72bebf1b82e42207e793e0c3970d9749c2e90fb67e5d5af2a535a00",
-    "chebyshev/structures/phase.edi": "2db50607baf934990cc9a770fa3d72cc1d27626c92b5da4a04520bce01cc02eb",
-    "chebyshev/experiments/bank.edi": "7d19f99a49984c972b3cc3615c74ae49f7b4863ae46621f71268b8f6b1e31dbe",
-    "invalid/project.edi": "76b409441cc57efc3eca28654d5e77a95177a60a08225474468f3e90e5a8bdf4"
+    "line-segment/project.edi": "13f9e09d2515c4b80d08df7d4d11587672401973f91332e914b217d871421658",
+    "line-segment/analysis/analysis.edi": "e86010b4a338df72d9d01dcd6a83d2c3578fbdb0a9aca9e8ee64a3ff1808c108",
+    "line-segment/structures/phase.edi": "9d14a713bb34dbb02f1876d33eade4b2a825ec5c51bd87e6a1f6b714ae6a45a4",
+    "line-segment/experiments/bank.edi": "ed5cc42ba427053a482ef02ab1498aa34103906a4f2e12be40a57f1140ef85d2",
+    "polynomial/project.edi": "13f9e09d2515c4b80d08df7d4d11587672401973f91332e914b217d871421658",
+    "polynomial/analysis/analysis.edi": "8bdff74d76ef550269ef6cd152c4f4d275efcd7ca0ae623e6b2f51beb1afaaea",
+    "polynomial/structures/phase.edi": "9d14a713bb34dbb02f1876d33eade4b2a825ec5c51bd87e6a1f6b714ae6a45a4",
+    "polynomial/experiments/bank.edi": "43fc26c640586faff66df69d4eefa56e71e707e562a0d3137290462d19467647",
+    "chebyshev/project.edi": "13f9e09d2515c4b80d08df7d4d11587672401973f91332e914b217d871421658",
+    "chebyshev/analysis/analysis.edi": "8bdff74d76ef550269ef6cd152c4f4d275efcd7ca0ae623e6b2f51beb1afaaea",
+    "chebyshev/structures/phase.edi": "9d14a713bb34dbb02f1876d33eade4b2a825ec5c51bd87e6a1f6b714ae6a45a4",
+    "chebyshev/experiments/bank.edi": "c774f4fc2e87d3e98479fc93b8112b548ae74255cfb33d36861f2d4549e599a8",
+    "invalid/project.edi": "e2edccbd98cbb037bf904fc47794580ab9881998619a5b2d6af09a4ab8e78bdc"
   }
 }

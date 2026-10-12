@@ -1,47 +1,57 @@
-"""Save small background-row witnesses using the sealed pre-id engine.
+"""Generate current-format load fixtures with assigned nontrivial start states.
 
-Run with the producer's Python and explicit edi extension directory. Saved bytes
-are regression inputs, not numerical oracles; start values are assigned constants.
+Old spellings are introduced only in disposable copies by the acceptance actors.
+No fitting engine supplies the numerical constants or fixture identities.
 """
 
 import hashlib
 import json
+import shlex
 import shutil
 from pathlib import Path
 
 
 def main():
-    import edi  # noqa: PLC0415
-
     root = Path(__file__).parent
     manifest = {
-        'producer': 'edi b301b6f2, sealed pre-loop-id extension; SDK a1e0ba6d',
+        'producer': 'generate.py; ids from loop_parameter_ids, assigned closed-form starts',
         'inputs_are_regression_witnesses': True,
         'projects': {},
     }
     for kind in ('line-segment', 'polynomial', 'chebyshev'):
         source = root.parent / 'loop_parameter_ids' / kind
-        project = edi.Project.load(source)
-        bank = project.experiments['bank']
-        parameters = (
-            [row.intensity for row in bank.background]
-            if kind == 'line-segment'
-            else [row.coef for row in bank.background_terms]
-        )
-        starts = []
-        for index, parameter in enumerate(parameters):
-            value, uncertainty = 1.25 + index * 0.375, 0.03125 * (index + 1)
-            parameter.start_value = value
-            parameter.start_uncertainty = uncertainty
-            starts.append([value, uncertainty])
         destination = root / kind
         if destination.exists():
             shutil.rmtree(destination)
-        project.save_as(destination)
+        shutil.copytree(source, destination)
+        tokens = shlex.split((source / 'experiments/bank.edi').read_text(), comments=True)
+        start = tokens.index('_background.id')
+        end = start
+        while end < len(tokens) and tokens[end].startswith('_'):
+            end += 1
+        width = end - start
+        rows = []
+        while end < len(tokens) and not tokens[end].startswith(('_', 'loop_', 'data_')):
+            rows.append(tokens[end])
+            end += width
+        states = []
+        starts = []
+        for index, identity in enumerate(rows):
+            value, uncertainty = 1.25 + index * 0.375, 0.03125 * (index + 1)
+            starts.append([value, uncertainty])
+            states.append(f'bank.background.{identity} {value} {uncertainty} .')
+        path = destination / 'analysis/analysis.edi'
+        path.write_text(
+            path.read_text() + '\nloop_\n_fit_parameter.id\n_fit_parameter.start_value\n'
+            '_fit_parameter.start_uncertainty\n_fit_parameter.start_tied\n'
+            + '\n'.join(states)
+            + '\n'
+        )
         manifest['projects'][kind] = {'starts': starts}
     invalid = root / 'invalid'
     invalid.mkdir(exist_ok=True)
-    (invalid / 'project.edi').write_text('_edi.schema_version 999\n')
+    # A current-schema but incomplete project still exercises all failed-load routes.
+    (invalid / 'project.edi').write_text('_edi.schema_version 3\n')
     manifest['files'] = {
         file.relative_to(root).as_posix(): hashlib.sha256(file.read_bytes()).hexdigest()
         for category in ('line-segment', 'polynomial', 'chebyshev', 'invalid')

@@ -1,7 +1,2 @@
 _edi.schema_version 3
-_metadata.name             relations
-_metadata.title            "Untitled Project"
-_metadata.description      ?
-_metadata.created          "11 Oct 2026 21:06:18"
-_metadata.last_modified    "11 Oct 2026 21:06:19"
-_metadata.timestamp        ?
+_metadata.name relations

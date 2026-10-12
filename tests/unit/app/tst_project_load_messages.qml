@@ -90,12 +90,17 @@ TestCase {
             dialogs[0].close();
         }
     }
-    function test_legacy_save_data() {
+    function test_older_save_refusal_data() {
         return [{tag: "line-segment"}, {tag: "polynomial"}, {tag: "chebyshev"}];
     }
-    function test_legacy_save(row) {
-        verify(Session.openProject(Probe.repoUrl("tests/fixtures/legacy_project_load/" + row.tag)), "A minimal previous-writer project must open through the production Session");
-        compare(Session.lastError, "", "A successful legacy load must clear stale refusal text");
-        verify(Session.hasProject, "A successful legacy load must install its project");
+    function test_older_save_refusal(row) {
+        const retained = Session.project;
+        const older = archives.olderProject("tests/fixtures/legacy_project_load/" + row.tag);
+        verify(String(older).length > 0, "The Session refusal actor must supply an actual older saved-slot input");
+        verify(!Session.openProject(older), "A positional saved slot must be refused by the production Session");
+        verify(Session.lastError.includes("bank.background[0]"), "The failed-load message must name the older spelling it found");
+        verify(Session.lastError.toLowerCase().includes("older version"), "The failed-load message must explain the version incompatibility");
+        verify(Session.lastError.length <= 240, "The older-project diagnostic must be short enough for the load dialog");
+        compare(Session.project, retained, "An older project refusal must retain the current project");
     }
 }

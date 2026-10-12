@@ -1,17 +1,10 @@
-# Legacy project-load regression witnesses
+# Project-load boundary fixtures
 
-The three small projects are actual saved outputs of sealed Edi b301b6f2 with
-SDK a1e0ba6d, before loop rows used ids in fit-state slots. Run `generate.py`
-with that producer's pinned Python, matching `lib/edi` wrapper and explicit
-`EDI_EXTENSION_DIR`. Inputs come from the committed loop_parameter_ids projects;
-start values and uncertainties are assigned closed-form constants. Saved outputs
-are regression inputs, never numerical correctness oracles.
-
-Polynomial and Chebyshev saves have one-based numeric row ids and zero-based
-persisted fit-state slots: their overlap reproduces the migration collision with
-only three terms. The line-segment save is the corresponding positive control.
-No owner archive or data is included. The invalid project is only an unsupported
-schema declaration. Qt's zip-completion actor packs and unpacks the minimal project through the
-production archive boundary, then exercises its request-id load routing. A
-malformed archive also supplies the real decoder's message to its frontend
-failure event. The browser chooser and JavaScript file-copy step are not run.
+All committed projects use the current schema and declared background row ids.
+Run `python3 generate.py` to copy the independent loop-identity fixtures and add
+assigned start values `1.25 + index * 0.375` and uncertainties `0.03125 * (index + 1)`.
+The values are closed-form constants; no fit supplies them. The Python load gates
+introduce old saved-slot names in disposable copies and require a short refusal
+naming the offending spelling. The Qt actors do the same at the real Session load
+boundary. The incomplete current-schema project exercises failed-load routes and
+archive pack/unpack; it contains no structure files. No owner data is included.

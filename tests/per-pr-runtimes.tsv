@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-12T07:36:35Z
+# measured_utc = 2026-10-12T07:39:56Z
 #
-# Recorded from: seq43/plain-final.log and seq38/native-edi-final.log; isolated complete collection; native six-case measurements
-# Collected tests: 10450; with a reported duration: 5374
+# Recorded from: edi-final-format.log (48 node(s) measured once, 9691 banked, 7 stale row(s) dropped)
+# Collected tests: 10483; with a reported duration: 5373
 # Module-scoped fixture costs recorded: 35
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 10450
+# inventory_python = 10483
 # inventory_cpp = 309
-# inventory_measured = 9701
-# inventory_unmeasured = 1058
+# inventory_measured = 9730
+# inventory_unmeasured = 1062
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -4898,15 +4898,15 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_fitting_mode_weights.py:
 UNMEASURED:failed-in-this-run	tests/integration/py/test_fitting_mode_weights.py::test_joint_weights_load_in_every_mode_and_save_only_in_joint[single]
 0.010	tests/integration/py/test_free_header_declaration.py::test_analysis_free_header_declares_the_owner_radio_popup
 0.000	tests/integration/py/test_latp_reference.py::test_latp_reference_quantities_are_fullprof_values_not_scan_regression_pins
-0.010	tests/integration/py/test_legacy_project_load.py::test_pre_id_engine_save_recovers_every_background_start_by_row[chebyshev]
-0.020	tests/integration/py/test_legacy_project_load.py::test_pre_id_engine_save_recovers_every_background_start_by_row[line-segment]
-0.010	tests/integration/py/test_legacy_project_load.py::test_pre_id_engine_save_recovers_every_background_start_by_row[polynomial]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_loop_parameter_ids.py::test_legacy_positional_aliases_and_constraints_migrate_on_load[chebyshev]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_loop_parameter_ids.py::test_legacy_positional_aliases_and_constraints_migrate_on_load[line-segment]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_loop_parameter_ids.py::test_legacy_positional_aliases_and_constraints_migrate_on_load[polynomial]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_loop_parameter_ids.py::test_loop_parameter_names_match_independent_declared_ids[chebyshev]
-0.050	tests/integration/py/test_loop_parameter_ids.py::test_loop_parameter_names_match_independent_declared_ids[line-segment]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_loop_parameter_ids.py::test_loop_parameter_names_match_independent_declared_ids[polynomial]
+0.000	tests/integration/py/test_legacy_project_load.py::test_old_engine_start_state_is_refused_with_its_name[chebyshev]
+0.000	tests/integration/py/test_legacy_project_load.py::test_old_engine_start_state_is_refused_with_its_name[line-segment]
+0.000	tests/integration/py/test_legacy_project_load.py::test_old_engine_start_state_is_refused_with_its_name[polynomial]
+0.030	tests/integration/py/test_loop_parameter_ids.py::test_loop_parameter_names_match_independent_declared_ids[chebyshev]
+0.040	tests/integration/py/test_loop_parameter_ids.py::test_loop_parameter_names_match_independent_declared_ids[line-segment]
+0.030	tests/integration/py/test_loop_parameter_ids.py::test_loop_parameter_names_match_independent_declared_ids[polynomial]
+0.000	tests/integration/py/test_loop_parameter_ids.py::test_positional_alias_with_constraint_is_refused_on_load[chebyshev]
+0.000	tests/integration/py/test_loop_parameter_ids.py::test_positional_alias_with_constraint_is_refused_on_load[line-segment]
+0.000	tests/integration/py/test_loop_parameter_ids.py::test_positional_alias_with_constraint_is_refused_on_load[polynomial]
 0.000	tests/integration/py/test_multiphase_app_contract.py::test_linked_structure_rows_use_available_names_and_add_remove_disable_actions
 0.000	tests/integration/py/test_multiphase_app_contract.py::test_shared_block_selector_has_bounded_square_icon_steps_and_file_labels
 0.000	tests/integration/py/test_multiphase_app_contract.py::test_structure_loading_is_not_capped_at_one_and_chart_retains_phase_identity
@@ -4917,6 +4917,38 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_loop_parameter_ids.py::t
 0.080	tests/integration/py/test_multiphase_constraints.py::test_same_site_id_in_two_structures_resolves_to_distinct_parameters[datablock]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_multiphase_constraints.py::test_same_site_id_in_two_structures_resolves_to_distinct_parameters[structure]
 0.010	tests/integration/py/test_multiphase_constraints.py::test_structure_added_after_project_creation_participates_in_constraints
+0.000	tests/integration/py/test_newest_project_format.py::test_current_public_alias_and_compact_slot_keep_their_own_role[alias]
+0.020	tests/integration/py/test_newest_project_format.py::test_current_public_alias_and_compact_slot_keep_their_own_role[fit-state]
+0.000	tests/integration/py/test_newest_project_format.py::test_older_project_addresses_are_refused_with_their_name[alias-chebyshev-bank.background.1.coef]
+0.000	tests/integration/py/test_newest_project_format.py::test_older_project_addresses_are_refused_with_their_name[alias-chebyshev-bank.background[2]]
+0.000	tests/integration/py/test_newest_project_format.py::test_older_project_addresses_are_refused_with_their_name[alias-line-segment-bank.background.1.intensity]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_newest_project_format.py::test_older_project_addresses_are_refused_with_their_name[alias-line-segment-bank.background[0].intensity]
+0.000	tests/integration/py/test_newest_project_format.py::test_older_project_addresses_are_refused_with_their_name[alias-line-segment-bank.background[0]]
+0.000	tests/integration/py/test_newest_project_format.py::test_older_project_addresses_are_refused_with_their_name[alias-line-segment-bank.background[1]]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_newest_project_format.py::test_older_project_addresses_are_refused_with_their_name[alias-line-segment-bank.linked_structure.0.scale]
+0.000	tests/integration/py/test_newest_project_format.py::test_older_project_addresses_are_refused_with_their_name[alias-line-segment-bank.march_r]
+0.000	tests/integration/py/test_newest_project_format.py::test_older_project_addresses_are_refused_with_their_name[alias-line-segment-bank.march_random_fract]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_newest_project_format.py::test_older_project_addresses_are_refused_with_their_name[alias-line-segment-bank.preferred_orientation.0.march_r]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_newest_project_format.py::test_older_project_addresses_are_refused_with_their_name[alias-line-segment-bank.preferred_orientation.0.march_random_fract]
+0.000	tests/integration/py/test_newest_project_format.py::test_older_project_addresses_are_refused_with_their_name[alias-line-segment-bank.scale]
+0.000	tests/integration/py/test_newest_project_format.py::test_older_project_addresses_are_refused_with_their_name[alias-polynomial-bank.background.1.coef]
+0.000	tests/integration/py/test_newest_project_format.py::test_older_project_addresses_are_refused_with_their_name[alias-polynomial-bank.background.2.coef]
+0.000	tests/integration/py/test_newest_project_format.py::test_older_project_addresses_are_refused_with_their_name[alias-polynomial-bank.background[0]]
+0.000	tests/integration/py/test_newest_project_format.py::test_older_project_addresses_are_refused_with_their_name[fit-state-chebyshev-bank.background.1.coef]
+0.000	tests/integration/py/test_newest_project_format.py::test_older_project_addresses_are_refused_with_their_name[fit-state-chebyshev-bank.background[2]]
+0.000	tests/integration/py/test_newest_project_format.py::test_older_project_addresses_are_refused_with_their_name[fit-state-line-segment-bank.background.1.intensity]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_newest_project_format.py::test_older_project_addresses_are_refused_with_their_name[fit-state-line-segment-bank.background[0].intensity]
+0.000	tests/integration/py/test_newest_project_format.py::test_older_project_addresses_are_refused_with_their_name[fit-state-line-segment-bank.background[0]]
+0.000	tests/integration/py/test_newest_project_format.py::test_older_project_addresses_are_refused_with_their_name[fit-state-line-segment-bank.background[1]]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_newest_project_format.py::test_older_project_addresses_are_refused_with_their_name[fit-state-line-segment-bank.linked_structure.0.scale]
+0.000	tests/integration/py/test_newest_project_format.py::test_older_project_addresses_are_refused_with_their_name[fit-state-line-segment-bank.march_r]
+0.000	tests/integration/py/test_newest_project_format.py::test_older_project_addresses_are_refused_with_their_name[fit-state-line-segment-bank.march_random_fract]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_newest_project_format.py::test_older_project_addresses_are_refused_with_their_name[fit-state-line-segment-bank.preferred_orientation.0.march_r]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_newest_project_format.py::test_older_project_addresses_are_refused_with_their_name[fit-state-line-segment-bank.preferred_orientation.0.march_random_fract]
+0.000	tests/integration/py/test_newest_project_format.py::test_older_project_addresses_are_refused_with_their_name[fit-state-line-segment-bank.scale]
+0.000	tests/integration/py/test_newest_project_format.py::test_older_project_addresses_are_refused_with_their_name[fit-state-polynomial-bank.background.1.coef]
+0.000	tests/integration/py/test_newest_project_format.py::test_older_project_addresses_are_refused_with_their_name[fit-state-polynomial-bank.background.2.coef]
+0.000	tests/integration/py/test_newest_project_format.py::test_older_project_addresses_are_refused_with_their_name[fit-state-polynomial-bank.background[0]]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_cli_machine_report_names_external_correlation_count[1]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_cli_machine_report_names_external_correlation_count[2]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_cli_machine_report_names_external_correlation_count[3]
@@ -8263,6 +8295,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_phase_sum
 UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_texture_is_local_to_phase_and_invariant_under_axis_sign
 UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_two_free_scales_recover_unequal_independent_contributions
 UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_two_named_phases_load_and_roundtrip
+UNMEASURED:failed-in-this-run	tests/system/py/test_newest_project_census.py::test_every_committed_project_file_has_no_retired_positional_reference
 0.070	tests/system/py/test_plain_data_app.py::test_app_rename_follows_all_saved_references_and_undo[experiment]
 0.080	tests/system/py/test_plain_data_app.py::test_app_rename_follows_all_saved_references_and_undo[point]
 0.080	tests/system/py/test_plain_data_app.py::test_app_rename_follows_all_saved_references_and_undo[site]
@@ -9810,7 +9843,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_c34_t1c_construction_population
 0.000	tests/unit/py/test_constraint_app_structure.py::test_relation_tables_expose_live_append_duplicate_and_remove_actions[AliasesGroup]
 0.000	tests/unit/py/test_constraint_app_structure.py::test_relation_tables_expose_live_append_duplicate_and_remove_actions[ConstraintsGroup]
 0.000	tests/unit/py/test_corpus_parameter_paths.py::test_corpus_identity_mapping_refuses_incomplete_input_rows
-0.010	tests/unit/py/test_corpus_parameter_paths.py::test_corpus_old_terms_without_ids_use_one_based_input_ordinals
+0.000	tests/unit/py/test_corpus_parameter_paths.py::test_corpus_old_terms_without_ids_are_refused_with_the_missing_name
 0.010	tests/unit/py/test_corpus_parameter_paths.py::test_corpus_positions_follow_input_ids_and_row_order[coef]
 0.010	tests/unit/py/test_corpus_parameter_paths.py::test_corpus_positions_follow_input_ids_and_row_order[intensity]
 0.000	tests/unit/py/test_corpus_parameter_paths.py::test_corpus_scale_shortcut_requires_one_declared_link[phase 12\n]
