@@ -3991,6 +3991,19 @@ struct KeyTraits<FitParameterCorrelation> {
     static const char* category() { return "fit parameter correlation"; }
 };
 
+// ADR-0034: one fit's correlations as numbers, made once and never changed. `names[k]` is the unique name of the
+// fit's column k; `values` holds the pairs i < j row by row (I1, I2). Both are shared: a scan's files with the same
+// columns share one names object, and a rename makes new names over the same values (I5, I11).
+struct CorrelationTable {
+    std::shared_ptr<const std::vector<std::string>> names;
+    std::shared_ptr<const std::vector<double>> values;
+};
+
+// ADR-0034: one scan file's results, made once by its fit and shared by every copy of the fit record.
+struct ScanFileResult {
+    std::shared_ptr<const CorrelationTable> correlations;  // none when the fit has no usable covariance
+};
+
 struct ScanFileRecord {
     std::string file_name;
     bool converged = false;
@@ -4001,9 +4014,8 @@ struct ScanFileRecord {
     // Why the file's fit stopped, as crysta's ledger (results-provenance.csv) records it beside the row; empty when
     // it was not recorded.
     std::string termination;
-    // The file's own parameter correlations, from its fit's covariance as a single fit's are (the live event; empty
-    // for a resumed row read back or a fit with no usable covariance).
-    std::vector<FitParameterCorrelation> correlations;
+    // The file's own results, its correlations among them (the live event; none for a resumed row read back).
+    std::shared_ptr<const ScanFileResult> result;
 };
 
 // Optional per-file completion subscriber. Passing none costs nothing: with no
@@ -4345,8 +4357,12 @@ struct FitResultRecord {
     // The free parameters' correlations from the fit's covariance, every pair of the upper triangle in the
     // fit's column order (diffraction-lib's `_store_correlation_projection`); empty when the fit had fewer
     // than two free parameters or no usable covariance. A scan holds no result but keeps each file's pairs,
-    // each naming its file.
+    // each naming its file. Since ADR-0034 a scan's loop holds only what a save writes: the template file's pairs, and
+    // rows read from a file until a fit replaces them.
     ItemVec<FitParameterCorrelation> correlations;
+    // ADR-0034: a scan's results by file, each made once by that file's fit and shared, never rebuilt or copied. Not
+    // saved: a save writes the template's rows above.
+    std::map<std::string, std::shared_ptr<const ScanFileResult>> scan_results;
     bool held() const { return !result_kind.empty(); }
     // ADR-0018: the row of this object's non-loop categories.
     detail::CategoryRow table_row;
@@ -4734,6 +4750,44 @@ inline void link_nested(ExperimentBase& experiment, const std::shared_ptr<const 
     }
 }
 
+// ADR-0034 I11: a rename gives each names object holding a renamed parameter one renamed copy, which every table that
+// held the old one then holds; values and pair order stay. `renamed` maps a name to its new spelling, or to nothing.
+template <typename Renamed>
+void rename_scan_results(FitResultRecord& record, const Renamed& renamed) {
+    std::map<const std::vector<std::string>*, std::shared_ptr<const std::vector<std::string>>> copies;
+    std::map<std::string, std::shared_ptr<const ScanFileResult>> next = record.scan_results;
+    bool changed = false;
+    for (auto& [file, result] : next) {
+        if (!result || !result->correlations || !result->correlations->names) {
+            continue;
+        }
+        const auto& names = result->correlations->names;
+        auto [at, added] = copies.emplace(names.get(), nullptr);
+        if (added) {
+            std::vector<std::string> spelled = *names;
+            bool any = false;
+            for (std::string& name : spelled) {
+                if (std::optional<std::string> to = renamed(name)) {
+                    name = std::move(*to);
+                    any = true;
+                }
+            }
+            at->second = any ? std::make_shared<const std::vector<std::string>>(std::move(spelled)) : nullptr;
+        }
+        if (at->second) {
+            auto table = std::make_shared<CorrelationTable>(*result->correlations);
+            table->names = at->second;
+            auto bundle = std::make_shared<ScanFileResult>(*result);
+            bundle->correlations = std::move(table);
+            result = std::move(bundle);
+            changed = true;
+        }
+    }
+    if (changed) {
+        record.scan_results = std::move(next);
+    }
+}
+
 // A background row's parameter is named by the row's id (`<experiment>.background.<id>.intensity`, or `.coef` for
 // a polynomial or Chebyshev term), so a rename carries every alias, and the fit's correlations, to the new id.
 inline void follow_background_aliases(Project& project, const ItemKey& key, const std::string& next) {
@@ -4757,6 +4811,9 @@ inline void follow_background_aliases(Project& project, const ItemKey& key, cons
             if (pair->parameter_unique_name_i.value() == from) pair->parameter_unique_name_i = to;
             if (pair->parameter_unique_name_j.value() == from) pair->parameter_unique_name_j = to;
         }
+        rename_scan_results(project.fit_result, [&](const std::string& name) -> std::optional<std::string> {
+            return name == from ? std::optional<std::string>(to) : std::nullopt;
+        });
         for (auto& [alias, value] : changes) alias->parameter_unique_name = std::move(value);
         return;
     }
@@ -4786,6 +4843,21 @@ inline void follow_site_references(Project* project, Structure* structure, const
     // A refused tensor rename must leave every reference unchanged too.
     follow_site_rename(structure, from, to);
     for (auto& [text, value] : changes) *text = std::move(value);
+    if (project != nullptr && structure != nullptr) {
+        const auto block = datablock_key(structure->name.value(), "structure") + ".";
+        rename_scan_results(project->fit_result, [&](const std::string& name) -> std::optional<std::string> {
+            for (const char* category : {"atom_site.", "atom_site_aniso."}) {
+                const auto root = block + category + from + ".";
+                if (name.starts_with(root)) {
+                    const std::string field = name.substr(root.size());
+                    if (field.find('.') == std::string::npos) {
+                        return block + category + to + "." + field;
+                    }
+                }
+            }
+            return std::nullopt;
+        });
+    }
 }
 
 // A structure's or an experiment's parameters are named `<datablock>.<category>...` wherever the project names
@@ -4848,6 +4920,7 @@ inline void follow_parameter_renames(Project& project, const ParameterRenames& r
     for (const auto& rule : project.sequential_fit.extract) {
         if (auto next = renamed(rule->target.value())) rule->target = std::move(*next);
     }
+    rename_scan_results(project.fit_result, renamed);
 }
 
 inline void rename_structure_links(Project& project, const std::string& from, const std::string& to) {

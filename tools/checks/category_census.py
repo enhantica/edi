@@ -98,6 +98,8 @@ NOT_MODEL = {
     'ComputedSource': "what an experiment's computed categories were computed from",
     'ViewWindow': 'view state passed to a geometry read, never stored in the model',
     'ParameterRenames': "a block rename's old and new parameter names, made for the rename",
+    'CorrelationTable': "one fit's correlations as numbers, made once and shared (ADR-0034)",
+    'ScanFileResult': "one scan file's results, made once by its fit and shared (ADR-0034)",
     'CwlProfileSlots': 'the peak slots a CW profile token carries, read from the token',
     'OptionalParameter': 'one optional parameter, kept detached once removed (ADR-0012)',
     'ParameterCell': 'an optional parameter and the link it reports once removed',
@@ -118,6 +120,7 @@ NOT_STORAGE = {
     'ExperimentBase::computed_source': 'what the computed categories were computed from',
     'Project::edits_': "the project's editor record",
     'Project::tail_': "the project's last member, which links its collections to its record",
+    'FitResultRecord::scan_results': "a scan's results by file, shared, not saved (ADR-0034)",
 }
 # Member types that are a part of a table, not a cell of it.
 PARTS = {

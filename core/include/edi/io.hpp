@@ -228,6 +228,15 @@ double correlation_value(const FitParameterCorrelation& row);
 // with one an earlier pair took, gets the first free number of 1, 2, … (diffraction-lib numbers its
 // `_fit_parameter_correlation` rows so). A scan's template file's pairs come first, as a save keeps only those (the
 // owner, 2026-10-12): their ids are never the ones replaced, so an unchanged save after a reload writes the same loop.
+// ADR-0034 I6: a table's rows as a save writes them: numbered 1, 2, … in pair order, `deterministic`, the pair's two
+// names and the coefficient in crysta's shortest round-trip text, `file` naming the scan file (empty for a single fit).
+std::vector<FitParameterCorrelation> correlation_rows(const CorrelationTable& table, const std::string& file);
+// ADR-0034: a scan file's new results into a fit record: its bundle by file, with the rows read for the file dropped
+// (I7) and, for the template file, the saved rows made from its table (I6). The cost is the record's own rows, not the
+// scan's pairs.
+void adopt_scan_file_result(FitResultRecord& record, const std::string& file,
+                            std::shared_ptr<const ScanFileResult> result, const std::string& template_file);
+
 std::vector<ItemVec<FitParameterCorrelation>::Ptr> numbered_correlations(
     const std::vector<FitParameterCorrelation>& pairs, const std::string& template_file = {});
 
