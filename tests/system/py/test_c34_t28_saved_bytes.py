@@ -15,6 +15,7 @@ from pathlib import Path
 import pytest
 
 from tests.fixtures.fitting_modes.historical_bytes import historical_analysis
+from tests.fixtures.loop_parameter_ids.historical_fit_ids import historical_fit_ids
 from tests.fixtures.table_display import metadata_bytes, stored_id_bytes
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -43,6 +44,16 @@ def restored_source(source, tmp_path):
     return restored
 
 
+def historical_input_hashes(source):
+    result = REFERENCE.hashes(source)
+    analysis = source / 'analysis/analysis.edi'
+    if analysis.is_file():
+        result['analysis/analysis.edi'] = hashlib.sha256(
+            historical_fit_ids(source, analysis.read_bytes())
+        ).hexdigest()
+    return result
+
+
 def observe_legacy_pin(source, destination, *, calculator=False):
     REFERENCE.observe(source, destination, calculator=calculator)
     legacy = stored_id_bytes.ordinal_copy(
@@ -50,7 +61,9 @@ def observe_legacy_pin(source, destination, *, calculator=False):
     )
     analysis = legacy / 'analysis/analysis.edi'
     if analysis.is_file():
-        analysis.write_bytes(historical_analysis(source, analysis.read_bytes()))
+        analysis.write_bytes(
+            historical_analysis(source, historical_fit_ids(source, analysis.read_bytes()))
+        )
     return REFERENCE.saved_hashes(legacy) if calculator else REFERENCE.hashes(legacy)
 
 
@@ -218,7 +231,7 @@ def test_save_matches_the_labelled_pre_move_regression_pin(tmp_path, case):
             'input_sha256': extension['after_input_sha256'],
             'saved_sha256': extension['after_saved_sha256'],
         }
-        assert REFERENCE.hashes(source) == expected['input_sha256'], (
+        assert historical_input_hashes(source) == expected['input_sha256'], (
             'the current model must match the explicitly labelled post-change regression pin'
         )
         assert (
