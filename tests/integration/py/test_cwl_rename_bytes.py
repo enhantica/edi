@@ -1,6 +1,7 @@
 """Renaming TCH profiles must retain their pre-change calculation bytes."""
 
 import base64
+import copy
 import hashlib
 import json
 import platform
@@ -17,6 +18,7 @@ from tests.fixtures.cwl_family.regression_comparison import (
     compare_pin,
     read_reference,
     rename_project,
+    require_dispatch_reference,
 )
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -54,7 +56,7 @@ def test_native_reference_and_sample_population_cannot_be_weakened(damage):
     actual = reference.copy()
     if damage == 'low-bit':
         actual[0] = np.nextafter(actual[0], np.inf)
-    elif damage == 'nonfinite':
+    elif damage in {'nonfinite', 'bound', 'bytes'}:
         actual[1] = np.nan
     else:
         actual = actual[:-1]
@@ -109,3 +111,53 @@ def test_native_capture_inputs_cannot_change_under_the_same_reference(tmp_path, 
     path.write_text(text)
     with pytest.raises(AssertionError, match='identical serialized'):
         rename_project(inputs, tmp_path / 'damaged', 'tch', profiles.TOKENS[4], record)
+
+
+@pytest.mark.parametrize(
+    'damage',
+    [
+        'platform',
+        'source',
+        'production-object',
+        'sdk',
+        'input',
+        'historical',
+        'population',
+        'nonfinite',
+        'bound',
+        'bytes',
+        'move',
+    ],
+)
+def test_c22_t26_dispatch_pin_adaptation_retains_native_identity_and_value_bound(damage):
+    home = ROOT / 'tests/fixtures/cwl_family'
+    historical = json.loads((home / 'tch-regression-Linux.json').read_text())
+    original = json.loads((home / 'tch-dispatch-Linux.json').read_text())
+    require_dispatch_reference(original, historical, home, 'Linux')
+    altered = copy.deepcopy(original)
+    if damage == 'platform':
+        altered['platform'] = 'Darwin'
+    elif damage == 'source':
+        altered['engine_source'] = '0' * 40
+    elif damage == 'production-object':
+        altered['source_objects']['src'] = '0' * 40
+    elif damage == 'sdk':
+        altered['sdk_manifest']['platform'] = 'osx-arm64'
+    elif damage == 'input':
+        altered['input_sha256'][next(iter(altered['input_sha256']))] = '0' * 64
+    elif damage == 'historical':
+        altered['historical_sha256'] = '0' * 64
+    elif damage == 'population':
+        altered['pins'].pop('fcj')
+    elif damage in {'nonfinite', 'bound', 'bytes'}:
+        values = np.frombuffer(base64.b64decode(altered['pins']['tch']), dtype='<f8').copy()
+        values[0] = (
+            np.nan
+            if damage == 'nonfinite'
+            else (values[0] + 1 if damage == 'bound' else np.nextafter(values[0], np.inf))
+        )
+        altered['pins']['tch'] = base64.b64encode(values.tobytes()).decode()
+    else:
+        altered['moves']['tch']['normwise'] = 1
+    with pytest.raises(AssertionError):
+        require_dispatch_reference(altered, historical, home, 'Linux')

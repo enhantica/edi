@@ -135,6 +135,7 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Analysis/JointFitGroup.qml
         qml/Pages/Analysis/MinimizerGroup.qml
         qml/Pages/Analysis/ParametersGroup.qml
+        qml/Pages/Analysis/PatternUpdatesGroup.qml
         qml/Pages/Analysis/SequentialExtractGroup.qml
         qml/Pages/Analysis/SequentialFitGroup.qml
         qml/Pages/Experiment/AbsorptionGroup.qml
@@ -268,6 +269,11 @@ if(EMSCRIPTEN)
     if(QT_FEATURE_thread)
         target_link_options(edi_app PRIVATE -sDEFAULT_PTHREAD_STACK_SIZE=8MB)
     endif()
+    # ADR-0030: the page's files live in WasmFS, so a worker reads and writes them on its own thread instead of
+    # waiting for the page's. FORCE_FILESYSTEM keeps the JavaScript FS calls the folder upload uses (mkdirTree,
+    # writeFile); the stubs stand in for the socket library a WasmFS link leaves out.
+    target_sources(edi_app PRIVATE src/wasmfs_socket_stubs.cpp)
+    target_link_options(edi_app PRIVATE -sWASMFS -sFORCE_FILESYSTEM)
 endif()
 
 # The measured-layer benchmark (edi ADR-0017 §15): test tooling, never part of the host. It reads the

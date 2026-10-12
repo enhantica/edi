@@ -7,6 +7,8 @@ import QtCore
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Globals as EaGlobals
 
+import edi.app
+
 // edi's application preferences (edi ADR-0017 §12), shown by edi's own dialog (AppPreferencesDialog) in
 // place of the base's: the base's dialog offers no way to hide or add a row, and edi changes several. The
 // values persist in the app's settings file (the base's Settings mechanism, `EaGlobals.Vars.settingsFile`;
@@ -24,6 +26,11 @@ QtObject {
     // Where the workflow pages show their sidebar: "Right" (the default) or "Left" (WorkflowPage).
     property string sideBarSide: "Right"
     readonly property bool sideBarOnLeft: sideBarSide === "Left"
+    // The engine's thread count for every fill (Develop): 0 is Auto, the engine's own policy.
+    property int engineThreads: 0
+    // How a followed scan redraws the pattern (Analysis, Extras; edi ADR-0029): FitViewModel.patternUpdates, 2 is
+    // adaptive. The open project's fit takes it, whichever project is open.
+    property int scanPatternUpdates: 2
 
     property Settings settings: Settings {
         location: EaGlobals.Vars.settingsFile
@@ -33,12 +40,40 @@ QtObject {
         property alias sideBarSide: preferences.sideBarSide
     }
 
+    property Settings developSettings: Settings {
+        location: EaGlobals.Vars.settingsFile
+        category: "develop"
+        property alias engineThreads: preferences.engineThreads
+    }
+
+    property Settings analysisSettings: Settings {
+        location: EaGlobals.Vars.settingsFile
+        category: "analysis"
+        property alias scanPatternUpdates: preferences.scanPatternUpdates
+    }
+
+    property Binding fitPatternUpdates: Binding {
+        target: Session.project ? Session.project.fit : null
+        property: "patternUpdates"
+        value: preferences.scanPatternUpdates
+        when: Session.project !== null
+    }
+
     onToolTipsChanged: EaGlobals.Vars.showToolTips = toolTips
     onAutoCollapseChanged: EaGlobals.Vars.autoCollapseSideBarGroups = autoCollapse
+    onEngineThreadsChanged: {
+        ApplicationInfo.setEngineThreads(engineThreads);
+        // Saved at once rather than on the Settings' own schedule: a browser reload or a restart soon after the
+        // change must find it.
+        developSettings.setValue("engineThreads", engineThreads);
+        developSettings.sync();
+        ApplicationInfo.storeSettings();
+    }
 
     function apply() {
         EaGlobals.Vars.showToolTips = preferences.toolTips;
         EaGlobals.Vars.autoCollapseSideBarGroups = preferences.autoCollapse;
+        ApplicationInfo.setEngineThreads(preferences.engineThreads);
         EaGlobals.Vars.checkUpdateOnAppStart = false;
         EaStyle.Sizes.defaultScale = 100;
     }

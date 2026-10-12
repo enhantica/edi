@@ -1,0 +1,79 @@
+# ADR-0031 — Application settings and per-page settings
+
+- **Status:** Accepted
+- **Date:** 2026-10-11
+- **Implementation:** ⬜ Not implemented — decided now, built in a later release. Today the settings are in
+  `settings.ini` in the platform's application configuration folder (local storage in the browser), and "Pattern
+  updates during a scan" is under Analysis, Extras
+- **Priority:** Medium
+- **Forward constraint (binding on new features):** a setting about how the app looks or behaves on this machine goes
+  in the app-settings store, never in a project's `.edi` files; a setting that changes what a project calculates or
+  fits goes in the project.
+
+## Context
+
+edi keeps two kinds of state. A project's data (its structures, experiments and analysis, with their options under
+each page's Main and Extras tabs) is written to the project's `.edi` files and travels with the project. Other state
+belongs to the person and the machine: the preferences in the app bar's dialog (ADR-0017 §12), the window's size and
+place, the projects opened lately, the y-axis scale chosen on a chart, how often a followed scan redraws its pattern
+(ADR-0029).
+
+Today the second kind sits in one file the base's `Settings` objects write (`settings.ini` in the platform's
+application configuration folder; in the browser its text is kept in local storage, ADR-0023 §5). Nothing says which
+side of the line a new setting falls on. A choice that belongs to one page, such as the pattern updates, has no home of
+its own: it sits among the Analysis page's Extras, next to project options it has nothing to do with. The settings
+file's place differs per platform and is not shown anywhere, so a user who wants to see it, copy it or start afresh has
+to know where Qt puts it.
+
+## Decision
+
+1. **The split.** A project's data, Main and Extras on every page, lives in the project's `.edi` files. Everything else
+   lives in one app-settings store and never in `.edi`:
+   - the app bar's settings (the Preferences dialog);
+   - each page's Settings tab (2);
+   - the window's size and position;
+   - the last open project and the recent projects;
+   - for each project, the structure and the experiment last selected in it, keyed by the project's path.
+
+   A project opened on another machine, or by someone else, opens with that machine's settings, and changing a
+   setting never marks a project modified.
+2. **A Settings tab on each page.** Each workflow page's sidebar gains a Settings tab beside Main, Extras and Text. It
+   holds that page's options that only change what the app shows or how it behaves, in groups, as Main and Extras hold
+   project data. They are kept in the app-settings store under the page's name and apply to that page, unlike the app
+   bar's settings, which apply to the whole app. The Analysis page's Settings tab is the first: "Pattern updates during
+   a scan" moves there from Analysis, Extras, and the pattern chart's y-axis type (linear, square root or log) joins
+   it, so the chosen scale is kept.
+3. **One ini file on the desktop.** The store is `QSettings` in `IniFormat` on every desktop platform, one file named
+   after the organisation and the application: `~/.config/EasyScience/EasyDiffraction.ini` on Linux and macOS,
+   `%APPDATA%\EasyScience\EasyDiffraction.ini` on Windows. Not the native formats (a property list on macOS, the
+   registry on Windows): the file is the same text on every platform, a user can read, copy or remove it, and a bug
+   report can include it.
+4. **The browser.** The web app keeps the `.ini` file only where the page's files persist across reloads (WasmFS on the
+   browser's private file system or on IndexedDB). Otherwise the settings stay in the browser's own storage, as now.
+   Which of the two the web app uses is decided by measurement: in each browser edi supports, the time to read the
+   settings at start and to save a change, and whether a reload keeps them.
+5. **The file is shown.** The app bar's settings show the settings file's full path, with "Open folder", which opens
+   the folder in the system's file manager, and "Reset to defaults", which returns every setting to its default after
+   a confirmation. In the web app the path reads "stored in this browser" and there is no "Open folder".
+6. A demo capture or a test run keeps its own fresh settings folder (as now), so it never reads or writes the user's
+   settings.
+
+## Consequences
+
+- Projects carry no machine state: two users' copies of a project stay identical whatever each of them chose to see.
+- A new option that only changes the view goes in a page's Settings tab and the store, never into the `.edi` schema.
+- Settings saved before this change are in today's file. The release that builds this decision carries over, once, the
+  keys it keeps, so nobody loses their preferences.
+- On macOS and Windows the settings are not where many applications keep theirs (a property list, the registry).
+  Shown in the app bar's settings with "Open folder", the file is easy to find.
+- The browser's choice of store waits for its measurement; until then the web app keeps its settings in local
+  storage.
+
+## Alternatives considered
+
+| Alternative | Verdict (why rejected / deferred) |
+|---|---|
+| Native `QSettings` formats (a property list on macOS, the registry on Windows) | Rejected: a different store per platform, not one text file a user can read, copy, remove or attach to a report. |
+| A user selector between the ini file and the native store | Not taken: the choice would itself have to be read from a fixed file before the settings are, switching would need the settings moved from one store to the other, and the web app has no choice to offer. |
+| Page settings among each page's Extras | Rejected: Extras holds project data written to `.edi`, so options there look like part of the project. |
+| View settings in the project's `.edi` files | Rejected: they would travel with a project to another machine and person, and a change of view would mark the project modified. |

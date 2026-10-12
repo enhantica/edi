@@ -10,15 +10,16 @@ import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import { inflateSync } from 'node:zlib';
 import { inspectDevelopDiagnostics } from './web_develop_diagnostics.mjs';
-import { beginFitProgress, endFitProgress, isLiveFitProgress } from './web_fit_progress.mjs';
+import { beginFitProgress, endFitProgress, advancesLiveFitProgress } from './web_fit_progress.mjs';
 import { controlPointer, restoreCanvasViewport } from './web_control_geometry.mjs';
 import { assertSavedProject, assertNativeChi } from './web_saved_fit.mjs';
 import { fittingObservationKind, hasRunningProgress } from '../../fixtures/e04_t11_wasm/browser_observations.mjs';
 
 const [siteArg, mode, outputArg, chromeArg] = process.argv.slice(2);
-const fitCase = process.argv.find(arg => arg.startsWith('--fit-case='))?.split('=')[1] || 'lbco';
-assert(['lbco', 'ncaf'].includes(fitCase), 'browser fit case must name a committed native reference');
 const fileRequestsOnly = process.argv.includes('--file-requests-only');
+const fitCase = process.argv.find(arg => arg.startsWith('--fit-case='))?.split('=')[1] ||
+  (mode === 'singlethread' || fileRequestsOnly ? 'lbco' : 'ncaf');
+assert(['lbco', 'ncaf'].includes(fitCase), 'browser fit case must name a committed native reference');
 const fileRequestCase = process.argv.find(arg => arg.startsWith('--file-request-case='))?.split('=')[1] || 'all';
 assert(['all','none','overlap','replacement','cancel-structure','cancel-experiment','load-data'].includes(fileRequestCase),
   'each scoped request case must be declared explicitly');
@@ -415,24 +416,26 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   const progress = await evaluate('window.__e04Progress');
   const nativeProgress = await endFitProgress(evaluate);
   const progressAfter = await evaluate('window.ediFitProgress()');
+  const finalIteration = Number(progressAfter.text.match(/\bit\s+(\d+)$/i)?.[1]);
   await writeFile(join(output, `${mode}-progress.json`), JSON.stringify({accessibility:progress,
-    native:nativeProgress,before:progressBefore,after:progressAfter},null,2));
+    native:nativeProgress,before:progressBefore,after:progressAfter,fitCase,finalIteration,fitElapsedMs},null,2));
   // The live status-bar stripe shows the running fit's current iteration: "fitting · it N".
-  const runningProgress = (values,states) => values.some(value => fittingObservationKind(value) === 'control') &&
-    states.some(isLiveFitProgress);
+  const runningProgress = (values,states,final) => values.some(value => fittingObservationKind(value) === 'control') &&
+    advancesLiveFitProgress(states,final);
   assert(hasRunningProgress(['stop-circle Stop fitting', 'fitting · it 2']),
     'the current named Stop control and live iteration grammar must satisfy the progress oracle');
   assert(!hasRunningProgress(['Maximum iterations 400','Success','Iterations', 'it 20 · 2 s']) &&
     !hasRunningProgress(['Stop fitting', 'Success', 'Iterations 20']) &&
     !hasRunningProgress(['Start fitting', 'fitting · it 2']),
     'settings, completed results and either running observation alone cannot impersonate live fitting progress');
-  assert(runningProgress(['stop-circle Stop fitting'],[{running:true,visible:true,text:'fitting · it 3'}]),
+  assert(runningProgress(['stop-circle Stop fitting'],[1,3].map(iteration =>
+    ({running:true,visible:true,text:`fitting · it ${iteration}`})),5),
     'The shipped running control and live status-bar iteration label must satisfy the progress witness');
-  assert(!runningProgress(['Stop fitting'],[{running:false,visible:true,text:'fitting · it 3'}]) &&
-    !runningProgress(['Stop fitting'],[{running:true,visible:true,text:'Success · it 3'}]),
+  assert(!runningProgress(['Stop fitting'],[{running:false,visible:true,text:'fitting · it 3'}],5) &&
+    !runningProgress(['Stop fitting'],[{running:true,visible:true,text:'Success · it 3'}],5),
     'completed report text and minimizer settings cannot impersonate live fitting progress');
-  if (mode !== 'singlethread') assert(runningProgress(progress,nativeProgress),
-    'multithread fitting must publish both a running control and a live iteration indicator');
+  if (mode !== 'singlethread') assert(runningProgress(progress,nativeProgress,finalIteration),
+    'multithread fitting must publish a running control and advance live through intermediate iterations');
   assert.equal(progressAfter.running,false,
     'The native fit must stop running when the actual successful results popup is displayed');
   await evaluate('window.__e04ProgressObserver.disconnect()');
@@ -459,6 +462,8 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   }, null, 2));
 
   const iterations = Number(before.analysis.match(/^_fit_result.iterations\s+(\S+)/m)?.[1]);
+  assert.equal(iterations,finalIteration,
+    'The successful saved fit must confirm the progress hook\'s actual final iteration');
   const rwp = Number(before.analysis.match(/^_fit_result.prof_wr_factor\s+(\S+)/m)?.[1]);
   if (fitCase === 'ncaf') {
     assert(iterations === 5 && Number.isFinite(rwp) && Math.abs(100*rwp-7.69) <= 0.005,
