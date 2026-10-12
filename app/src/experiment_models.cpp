@@ -86,6 +86,39 @@ void BackgroundListModel::remove(int row) {
     editor_.apply(edi::Edit::erase(experiment.background, static_cast<std::size_t>(row)), true);
 }
 
+BackgroundTermListModel::BackgroundTermListModel(edi::ExperimentBase& experiment, ProjectEditor& editor,
+                                                 ParameterRegistry& registry, QObject* parent)
+    : RowTableModel({"order", "coef"}, parent), experiment_(experiment), editor_(editor), registry_(registry) {
+    sync();
+}
+
+void BackgroundTermListModel::sync() {
+    QList<Row> rows;
+    for (const auto& term : experiment_.background_terms) {
+        rows.append({term.get(), {term->order.get(), parameter_role(registry_, &term->coef)}});
+    }
+    setTableRows(rows);
+}
+
+bool BackgroundTermListModel::setOrder(int row, int order) {
+    auto* term = const_cast<edi::PolynomialTerm*>(static_cast<const edi::PolynomialTerm*>(keyAt(row)));
+    edi::ExperimentBase& experiment = experiment_;
+    return term != nullptr && editor_.apply(edi::Edit::background_term_order(experiment, *term, order), false).isEmpty();
+}
+
+void BackgroundTermListModel::append() {
+    edi::ExperimentBase& experiment = experiment_;
+    editor_.apply(edi::Edit::append_background_term(experiment), true);
+}
+
+void BackgroundTermListModel::remove(int row) {
+    if (keyAt(row) == nullptr) {
+        return;
+    }
+    edi::ExperimentBase& experiment = experiment_;
+    editor_.apply(edi::Edit::erase(experiment.background_terms, static_cast<std::size_t>(row)), true);
+}
+
 // ---- ExcludedRegionListModel --------------------------------------------------------------------
 
 ExcludedRegionListModel::ExcludedRegionListModel(edi::ExperimentBase& experiment, ProjectEditor& editor,

@@ -68,6 +68,7 @@ qt_add_qml_module(edi_app_module
         src/chart_models.hpp src/chart_models.cpp
         src/measured_layer.hpp src/measured_layer.cpp
         src/evolution_view_model.hpp src/evolution_view_model.cpp
+        src/correlation_view_model.hpp src/correlation_view_model.cpp
         src/scan_session.hpp src/scan_session.cpp
         src/experiment_view_model.hpp src/experiment_view_model.cpp
         src/analysis_view_model.hpp src/analysis_view_model.cpp
@@ -84,6 +85,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/BlockSelector.qml
         qml/Components/CategoryGroup.qml
         qml/Components/DiagnosticsDialog.qml
+        qml/Components/EmptyStateLabel.qml
         qml/Components/DataTable.qml
         qml/Components/FitOutcomeLabel.qml
         qml/Components/FitProgressBar.qml
@@ -101,6 +103,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/PatternChart.qml
         qml/Components/ProjectPatternChart.qml
         qml/Components/EvolutionChart.qml
+        qml/Components/CorrelationChart.qml
         qml/Components/SearchableComboBox.qml
         qml/Components/SelectorField.qml
         qml/Components/StatusBar.qml
@@ -132,6 +135,7 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Analysis/FitStartGroup.qml
         qml/Pages/Analysis/FittingGroup.qml
         qml/Pages/Analysis/FittingModeGroup.qml
+        qml/Pages/Analysis/FreeHeaderMenu.qml
         qml/Pages/Analysis/JointFitGroup.qml
         qml/Pages/Analysis/MinimizerGroup.qml
         qml/Pages/Analysis/ParametersGroup.qml

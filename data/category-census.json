@@ -366,6 +366,16 @@
       "form": "loop",
       "columns": [
         {
+          "member": "PolynomialTerm::id",
+          "type": "ItemKey",
+          "items": [
+            "id"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
+        },
+        {
           "member": "PolynomialTerm::order",
           "type": "detail::Written<int>",
           "items": [
@@ -585,6 +595,73 @@
         }
       ],
       "row": "SequentialExtractRule"
+    },
+    {
+      "name": "_fit_parameter_correlation",
+      "form": "loop",
+      "columns": [
+        {
+          "member": "FitParameterCorrelation::id",
+          "type": "ItemKey",
+          "items": [
+            "id"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
+        },
+        {
+          "member": "FitParameterCorrelation::source_kind",
+          "type": "detail::WrittenText",
+          "items": [
+            "source_kind"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
+        },
+        {
+          "member": "FitParameterCorrelation::parameter_unique_name_i",
+          "type": "detail::WrittenText",
+          "items": [
+            "parameter_unique_name_i"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
+        },
+        {
+          "member": "FitParameterCorrelation::parameter_unique_name_j",
+          "type": "detail::WrittenText",
+          "items": [
+            "parameter_unique_name_j"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
+        },
+        {
+          "member": "FitParameterCorrelation::correlation",
+          "type": "detail::WrittenText",
+          "items": [
+            "correlation"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
+        },
+        {
+          "member": "FitParameterCorrelation::file_path",
+          "type": "detail::WrittenText",
+          "items": [
+            "file_path"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
+        }
+      ],
+      "row": "FitParameterCorrelation"
     },
     {
       "name": "_alias",
@@ -1952,6 +2029,41 @@
   ],
   "members": [
     {
+      "member": "ParameterRenames::unique",
+      "type": "std::map<std::string, std::string>",
+      "not_storage": "a block rename's old and new parameter names, made for the rename"
+    },
+    {
+      "member": "ParameterRenames::compact",
+      "type": "std::map<std::string, std::string>",
+      "not_storage": "a block rename's old and new parameter names, made for the rename"
+    },
+    {
+      "member": "ParameterRenames::current_unique",
+      "type": "std::set<std::string>",
+      "not_storage": "a block rename's old and new parameter names, made for the rename"
+    },
+    {
+      "member": "ParameterRenames::current_compact",
+      "type": "std::set<std::string>",
+      "not_storage": "a block rename's old and new parameter names, made for the rename"
+    },
+    {
+      "member": "ParameterRenames::structure",
+      "type": "bool",
+      "not_storage": "a block rename's old and new parameter names, made for the rename"
+    },
+    {
+      "member": "ParameterRenames::from",
+      "type": "std::string",
+      "not_storage": "a block rename's old and new parameter names, made for the rename"
+    },
+    {
+      "member": "ParameterRenames::to",
+      "type": "std::string",
+      "not_storage": "a block rename's old and new parameter names, made for the rename"
+    },
+    {
       "member": "Membership::owner",
       "type": "const KeyedBase*",
       "not_storage": "a collection membership record (ADR-0016)"
@@ -2750,6 +2862,11 @@
       "member": "ExcludedRegion::epoch",
       "type": "detail::Epoch",
       "part": "the row's identity as a calculation input"
+    },
+    {
+      "member": "PolynomialTerm::id",
+      "type": "ItemKey",
+      "category": "_background"
     },
     {
       "member": "PolynomialTerm::order",
@@ -3586,6 +3703,36 @@
       "not_storage": "a fit report"
     },
     {
+      "member": "FitParameterCorrelation::id",
+      "type": "ItemKey",
+      "category": "_fit_parameter_correlation"
+    },
+    {
+      "member": "FitParameterCorrelation::source_kind",
+      "type": "detail::WrittenText",
+      "category": "_fit_parameter_correlation"
+    },
+    {
+      "member": "FitParameterCorrelation::parameter_unique_name_i",
+      "type": "detail::WrittenText",
+      "category": "_fit_parameter_correlation"
+    },
+    {
+      "member": "FitParameterCorrelation::parameter_unique_name_j",
+      "type": "detail::WrittenText",
+      "category": "_fit_parameter_correlation"
+    },
+    {
+      "member": "FitParameterCorrelation::correlation",
+      "type": "detail::WrittenText",
+      "category": "_fit_parameter_correlation"
+    },
+    {
+      "member": "FitParameterCorrelation::file_path",
+      "type": "detail::WrittenText",
+      "category": "_fit_parameter_correlation"
+    },
+    {
       "member": "ScanFileRecord::file_name",
       "type": "std::string",
       "not_storage": "a fit report"
@@ -3613,6 +3760,11 @@
     {
       "member": "ScanFileRecord::termination",
       "type": "std::string",
+      "not_storage": "a fit report"
+    },
+    {
+      "member": "ScanFileRecord::correlations",
+      "type": "std::vector<FitParameterCorrelation>",
       "not_storage": "a fit report"
     },
     {
@@ -3663,6 +3815,11 @@
     {
       "member": "FitResultBase::banks",
       "type": "std::vector<BankMetric>",
+      "not_storage": "a fit report"
+    },
+    {
+      "member": "FitResultBase::correlations",
+      "type": "std::vector<FitParameterCorrelation>",
       "not_storage": "a fit report"
     },
     {
@@ -3958,6 +4115,13 @@
       "category": "_fit_result"
     },
     {
+      "member": "FitResultRecord::correlations",
+      "type": "ItemVec<FitParameterCorrelation>",
+      "holds": [
+        "_fit_parameter_correlation"
+      ]
+    },
+    {
       "member": "FitResultRecord::table_row",
       "type": "detail::CategoryRow",
       "part": "the row token of the object's non-loop categories"
@@ -4044,7 +4208,8 @@
       "member": "Project::fit_result",
       "type": "FitResultRecord",
       "holds": [
-        "_fit_result"
+        "_fit_result",
+        "_fit_parameter_correlation"
       ]
     },
     {
@@ -4150,6 +4315,9 @@
     ],
     "_fit_parameter": [
       "_fit_parameter"
+    ],
+    "_fit_parameter_correlation": [
+      "_fit_parameter_correlation"
     ],
     "_fit_result": [
       "_fit_result"

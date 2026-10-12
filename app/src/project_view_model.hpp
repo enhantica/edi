@@ -29,6 +29,7 @@
 #include "edi/model.hpp"
 #include "edi/scan.hpp"
 #include "edi/worker.hpp"
+#include "correlation_view_model.hpp"
 #include "evolution_view_model.hpp"
 #include "scan_session.hpp"
 #include "experiment_view_model.hpp"
@@ -148,6 +149,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_PROPERTY(int templateIndex READ templateIndex NOTIFY templateIndexChanged)
     // The Evolution tab: a fitted parameter across the scan's datasets (scan projects).
     Q_PROPERTY(edi_app::EvolutionViewModel* evolution READ evolution CONSTANT)
+    // The Correlations tab: the last fit's parameter correlations for the shown experiment.
+    Q_PROPERTY(edi_app::CorrelationViewModel* correlations READ correlations CONSTANT)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
     // The app bar's Undo (edi ADR-0024): the newest recorded change — an edit of the aliases or
     // constraints, or a fit — is undone, so they undo in the order they were made.
@@ -195,6 +198,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool scan() const { return scan_; }
     QStringList scanColumns() const { return scan_columns_; }
     EvolutionViewModel* evolution() const { return evolution_; }
+    CorrelationViewModel* correlations() const { return correlations_; }
     int templateIndex() const;
     QString lastError() const { return last_error_; }
     bool calculating() const { return calculating_; }
@@ -221,10 +225,22 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // (P b n m, a = 10, b = 6, c = 5 Å, one O site at the origin), selected and linked to no experiment. One
     // undoable step.
     Q_INVOKABLE bool createStructure();
+    // Duplicate structure: a copy of the current structure (edi::structure_copy) named `<name>_copy`, selected and
+    // linked to no experiment. One undoable step.
+    Q_INVOKABLE bool duplicateStructure();
+    // The parameter table's "free" header: free or fix every one of `parameters` (the rows the filters show) that can
+    // be fitted, as one edit with one Undo step (the owner, 2026-10-11).
+    Q_INVOKABLE bool setParametersFree(const QList<ParameterItem*>& parameters, bool free);
+    // Name points by position: the current experiment's line-segment points take ids from their positions
+    // (edi::position_point_ids), every reference following, as one edit with one Undo step (the owner, 2026-10-11).
+    Q_INVOKABLE bool namePointsByPosition();
     Q_INVOKABLE void removeExperiment(int index);
     // A new experiment without data (edi::simulation_experiment), selected: powder, constant wavelength,
     // neutron, Bragg, linked to every structure. One undoable step, as a load of experiments is.
     Q_INVOKABLE bool createExperiment();
+    // Duplicate experiment: a copy of the current experiment with its data (edi::experiment_copy) named
+    // `<name>_copy`, selected. Refused in a scan project, as Create experiment is. One undoable step.
+    Q_INVOKABLE bool duplicateExperiment();
     // Load data…: the plain-data file's rows (crysta's reader) become the measured data of experiment `index`, one
     // made with Create experiment; its type then locks and its range shows the data's. An experiment still named
     // experiment1, experiment2, … takes the file's name. A second load replaces the data. One undoable step, and
@@ -242,6 +258,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
 
     QString apply(const edi::Edit& change, bool structural) override;
     QString apply_relation_edit(const edi::Edit& change) override;
+    QString rename_structure(edi::Structure& structure, const std::string& name) override;
+    QString rename_experiment(edi::Project& project, edi::ExperimentBase& experiment, const std::string& name) override;
     bool canUndo() const { return can_undo_; }
     Q_INVOKABLE void undo();
 
@@ -370,13 +388,26 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         const edi::ExperimentBase* experiment = nullptr;
         std::shared_ptr<const edi::BraggPdExperiment> before;
     };
-    using UndoRecord =
-        std::variant<std::monostate, edi::RelationsUndo, AddedExperiments, ScanRun, LoadedData, edi::StructuresUndo>;
-    // The experiments made with Create experiment (they take Load data…), kept by identity: a replaced experiment
-    // (Load data, a type change, their undo) passes its entry on.
-    std::set<const edi::ExperimentBase*> created_;
-    void experimentReplaced(const edi::ExperimentBase* before, const edi::ExperimentBase* after, bool created);
-    // Each experiment view's Load data… state, from the set above.
+    // The table header's free or fixed: each parameter's flag as it was, by unique name.
+    struct FreeFlags {
+        std::vector<std::pair<std::string, bool>> before;
+    };
+    // Name points by position: the experiment's background point ids as they were, in order.
+    struct PointIds {
+        const edi::ExperimentBase* experiment = nullptr;
+        std::vector<std::string> before;
+    };
+    // A structure's or an experiment's rename: the block by its new name, and the name it had.
+    struct BlockName {
+        bool structure = true;
+        std::string name;
+        std::string before;
+    };
+    using UndoRecord = std::variant<std::monostate, edi::RelationsUndo, AddedExperiments, ScanRun, LoadedData,
+                                    edi::StructuresUndo, FreeFlags, PointIds, BlockName>;
+    // An experiment replaced by Load data, a type change or their undo: the undo records follow it.
+    void experimentReplaced(const edi::ExperimentBase* before, const edi::ExperimentBase* after);
+    // Each experiment view's Load data… state: every experiment but a scan's.
     void syncLoadState();
     // Applies an experiment's replacement by Load data or its undo; the refusal, if any.
     QString replaceData(int index, edi::BraggPdExperiment replacement);
@@ -395,6 +426,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         std::optional<edi::Project> stash;
         std::optional<std::string> run_file;  // the scan's provenance file as it was (which fit came last)
         bool run_file_known = false;          // false: it could not be read, so its Undo leaves it alone
+        // The fitted dataset's file and its correlations as they were, if it had any.
+        std::string pairs_file;
+        std::optional<std::vector<edi::FitParameterCorrelation>> pairs;
     };
     std::optional<TemplateState> fit_template_before_, fit_template_undo_;
     std::vector<UndoRecord> undo_history_;
@@ -415,6 +449,17 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool scan_ = false;
     QString scan_refusal_;
     EvolutionViewModel* evolution_ = nullptr;
+    CorrelationViewModel* correlations_ = nullptr;
+    // A scan's correlations by dataset file, from each file's fit as the run reports it (owner, 2026-10-11): the
+    // Correlations tab shows the shown dataset's. Read from the saved record (`_fit_parameter_correlation` rows naming
+    // their file) when the project opens; written back into the record a save writes, and before a run replaces
+    // them, so its Undo puts them back.
+    std::map<std::string, std::vector<edi::FitParameterCorrelation>> scan_correlations_;
+    void readScanCorrelations();
+    void writeScanCorrelations();
+    void writeScanCorrelations(edi::Project& record);
+    // The Correlations tab follows the last fit and the shown experiment.
+    void syncCorrelations();
     QStringList scan_columns_;
     ScanSession* scan_session_ = nullptr;
     int current_dataset_ = -1;

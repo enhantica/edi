@@ -210,6 +210,10 @@ def observed_object(sdk, build, fixture):
     ]
     if len(optimizer) != 1 or len(driver) != 1:
         raise RuntimeError('Scan execution: compiled native boundaries must resolve uniquely')
+    if optimizer[0] not in wrapper_names:
+        raise RuntimeError(
+            'Scan optimizer observer must match the actual compiled callback signature'
+        )
     real = next(name for name in wrapper_names if 'scan_contract_real_sequential' in name)
     reader = [name for name in wrapper_names if 'read_sequential_scan_data' in name]
     if len(reader) != 1:
@@ -224,16 +228,24 @@ def observed_object(sdk, build, fixture):
         '--redefine-sym=' + optimizer[0] + '=' + entry,
         str(native_object),
     ])
+    fit_object = observe_entry(
+        library,
+        build,
+        optimizer[0],
+        next(name for name in wrapper_names if 'scan_contract_real_fit' in name),
+        'observed_fit.o',
+        objcopy,
+    )
+    if not any(
+        ' U ' in line and line.split()[-1] == driver[0]
+        for line in subprocess.check_output(
+            ['llvm-nm', '-g', str(fit_object)], text=True
+        ).splitlines()
+    ):
+        raise RuntimeError('Scan completion observer must reach the actual compiled fit dispatch')
     return (
         native_object,
-        observe_entry(
-            library,
-            build,
-            optimizer[0],
-            next(name for name in wrapper_names if 'scan_contract_real_fit' in name),
-            'observed_fit.o',
-            objcopy,
-        ),
+        fit_object,
         observe_entry(
             library,
             build,

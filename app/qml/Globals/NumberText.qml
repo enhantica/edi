@@ -112,6 +112,49 @@ QtObject {
         return rounded(value, 0, width);
     }
 
+    // How a chart's value axis writes its ticks (the owner, 2026-10-11): by the rule above, an axis whose largest
+    // tick is at or above a million, or below 1e-4, writes every tick with that tick's exponent (`2.5e8`, `5.0e8`,
+    // `7.5e8`), one exponent for the axis, and any other axis writes them plainly. Either way the ticks share the
+    // fewest decimals that write each of them exactly, or else that tell them apart. On a logarithmic axis
+    // (`shared` false) the ticks are decades apart and each is written on its own, as a parameter's value.
+    function axisFormat(ticks, shared) {
+        let largest = 0;
+        for (const tick of ticks) {
+            if (isFinite(tick))
+                largest = Math.max(largest, Math.abs(tick));
+        }
+        const power = shared && scientific(largest) ? scientificExponent(largest) : 0;
+        const format = {
+            "shared": shared,
+            "power": power,
+            "decimals": 0
+        };
+        if (!shared)
+            return format;
+        const most = power !== 0 ? 3 : 6;
+        const exact = decimals => ticks.every(tick => {
+                const mantissa = tick / Math.pow(10, power);
+                return !isFinite(mantissa) || Math.abs(mantissa - Number(mantissa.toFixed(decimals))) <= 1e-9 * Math.max(1, Math.abs(mantissa));
+            });
+        const distinct = decimals => new Set(ticks.map(tick => (tick / Math.pow(10, power)).toFixed(decimals))).size === ticks.length;
+        for (format.decimals = 0; format.decimals < most && !exact(format.decimals); ++format.decimals) {}
+        while (format.decimals < 12 && !distinct(format.decimals))
+            ++format.decimals;
+        return format;
+    }
+
+    // One tick of an axis written by `format` (axisFormat).
+    function axisTick(value, format) {
+        if (typeof value !== "number" || !isFinite(value))
+            return String(value);
+        if (!format.shared)
+            return scientific(value) ? exponent(value, 4).replace("e+", "e") : String(Number(value.toPrecision(6)));
+        const text = (value / Math.pow(10, format.power)).toFixed(format.decimals);
+        if (Number(text) === 0)
+            return format.power !== 0 ? "0" : (0).toFixed(format.decimals);
+        return format.power !== 0 ? text + "e" + format.power : text;
+    }
+
     // `value` in exponent form with `digits` significant digits, without trailing zeros in its mantissa.
     function exponent(value, digits) {
         const text = value.toExponential(Math.max(0, digits - 1));

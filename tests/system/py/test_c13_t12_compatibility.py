@@ -14,6 +14,11 @@ import pytest
 from tests.fixtures.c34_t28_baseline.generate_bytes import observe
 from tests.fixtures.constraint_expressions.ncaf_follower_bytes import historical_followers
 from tests.fixtures.cwl_family.historical import current_tokens
+from tests.fixtures.loop_parameter_ids.historical_bytes import (
+    current_fit_state_bytes,
+    old_fit_state_bytes,
+    without_nonjoint_weights,
+)
 from tests.fixtures.table_display.stored_id_bytes import ordinal_copy
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -146,6 +151,52 @@ def require_profile_replacement_roundtrip(source, tmp_path):
     assert first == second, 'The Npr5 replacement preserves the complete second-save fixed point'
 
 
+def prepare_recorded_current_format(row, tmp_path, record_property):
+    if row['path'] != 'docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project':
+        return
+    source = tmp_path / 'input'
+    analysis = source / 'analysis/analysis.edi'
+    original = analysis.read_bytes()
+    with pytest.raises((RuntimeError, ValueError)) as caught:
+        engine.Project.load(source)
+    message = str(caught.value)
+    assert 'older version' in message.lower(), (
+        'The frozen pre-format project must be refused as an older version'
+    )
+    older = re.findall(
+        rb'(?m)^[^ \n]+\.(?:background\[\d+\]|scale|march_r|march_random_fract)(?=\s)',
+        original,
+    )
+    assert older, 'The immutable archive must contain the retired positional slot witness'
+    assert any(name.decode() in message for name in older), (
+        'An archived corpus spelling must be refused with the actual old name it found'
+    )
+    assert len(message) <= 240, 'The archived-project refusal must remain a short load message'
+    assert analysis.read_bytes() == original, (
+        'The older load refusal must preserve every archive byte'
+    )
+    current = current_fit_state_bytes(original, source)
+    assert old_fit_state_bytes(original, current, source) == original, (
+        'The one-time newest-format input conversion may change only declared fit-state key cells'
+    )
+    analysis.write_bytes(current)
+    record_property('format_before', 'position-named archived fit-state slots; load is refused')
+    record_property('format_after', 'declared-row fit-state slots; every other byte is retained')
+
+
+def comparison_records(name, previous, emitted, source):
+    a = normalized_record(name, previous)
+    if name == 'analysis/analysis.edi':
+        a = without_nonjoint_weights(a)
+    b = normalized_record(
+        name,
+        without_new_geom(name, source / name, without_calculator(name, emitted)),
+    )
+    if name == 'analysis/analysis.edi':
+        b = old_fit_state_bytes(a, b, source)
+    return a, b
+
+
 @pytest.mark.parametrize('row', BASELINE['accepted'], ids=operator.itemgetter('path'))
 def test_frozen_project_bytes_or_named_identity_only_difference(tmp_path, row, record_property):
     record_property('project', row['path'])
@@ -157,6 +208,7 @@ def test_frozen_project_bytes_or_named_identity_only_difference(tmp_path, row, r
     if row['path'] == 'docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project':
         require_profile_replacement_roundtrip(ROOT / row['path'], tmp_path)
         return
+    prepare_recorded_current_format(row, tmp_path, record_property)
     try:
         model = engine.Project.load(tmp_path / 'input')
     except (RuntimeError, ValueError) as error:
@@ -202,13 +254,7 @@ def test_frozen_project_bytes_or_named_identity_only_difference(tmp_path, row, r
     retain_follower_witness(row['path'], after)
     changed = []
     for name, previous in before.items():
-        a = normalized_record(name, previous)
-        b = normalized_record(
-            name,
-            without_new_geom(
-                name, tmp_path / 'input' / name, without_calculator(name, after[name])
-            ),
-        )
+        a, b = comparison_records(name, previous, after[name], tmp_path / 'input')
         if a != b:
             changed.append(name)
             try:

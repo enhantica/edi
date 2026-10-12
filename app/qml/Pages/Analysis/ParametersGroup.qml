@@ -24,6 +24,27 @@ EaElements.GroupBox {
     property ProjectViewModel project: null
     property ParameterItem selected: null
     property real tableViewportHeight: 0
+    // The free column fits its title and the arrow after it, with a table column's padding (the owner, 2026-10-11).
+    readonly property real freeGap: 0.25 * EaStyle.Sizes.fontPixelSize
+    // The free title's word and arrow share one colour, each with the labels' own colour transition.
+    property bool freeTitleHovered: false
+    readonly property color freeTitleColor: freeTitleHovered ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
+    readonly property real freeColumnWidth: Math.ceil(freeTitleText.advanceWidth + freeGap + freeArrowText.advanceWidth) + AppSizes.fieldSpacing * 2
+
+    TextMetrics {
+        id: freeTitleText
+        font.family: EaStyle.Fonts.fontFamily
+        font.pixelSize: EaStyle.Sizes.fontPixelSize
+        text: qsTr("free")
+    }
+    // The arrow is measured in the font it is drawn in: the hidden label's in the column below (the group box sizes
+    // itself by one content item), which the arrow takes too. A metrics font built from the family alone can
+    // resolve a face without the glyph and send Qt to the platform's fonts (FreeType warnings on macOS).
+    TextMetrics {
+        id: freeArrowText
+        font: freeArrowProbe.font
+        text: freeArrowProbe.text
+    }
 
     objectName: "group.parameters"
     collapsible: false
@@ -73,6 +94,13 @@ EaElements.GroupBox {
     Column {
         spacing: AppSizes.groupContentSpacing
 
+        EaElements.Label {
+            id: freeArrowProbe
+            visible: false
+            font.family: EaStyle.Fonts.iconsFamily
+            font.pixelSize: EaStyle.Sizes.fontPixelSize
+            text: "\uf0d7"
+        }
         EaElements.GroupRow {
             id: filters
             spacing: AppSizes.inputSpacing
@@ -145,7 +173,7 @@ EaElements.GroupBox {
                 sourceModel: group.project ? group.project.parameters : null
             }
 
-            columnWidths: [numberColumnWidth, -1, EaStyle.Sizes.fontPixelSize * 5, textColumnWidth("units", ""), EaStyle.Sizes.fontPixelSize * 3.5, EaStyle.Sizes.fontPixelSize * 3, EaStyle.Sizes.fontPixelSize * 3, EaStyle.Sizes.tableColumnAuto]
+            columnWidths: [numberColumnWidth, -1, EaStyle.Sizes.fontPixelSize * 5, textColumnWidth("units", ""), EaStyle.Sizes.fontPixelSize * 3.5, EaStyle.Sizes.fontPixelSize * 3, EaStyle.Sizes.fontPixelSize * 3, group.freeColumnWidth]
 
             header: EaComponents.ListViewHeader {
                 EaComponents.TableViewLabel {
@@ -175,9 +203,45 @@ EaElements.GroupBox {
                     horizontalAlignment: Text.AlignRight
                     text: qsTr("max")
                 }
+                // The title is a button, marked by the combo boxes' arrow: a click frees or fixes every row the
+                // filters show, as one Undo step (the owner, 2026-10-11). The word and the arrow are centred together
+                // over the checkboxes.
                 EaComponents.TableViewLabel {
+                    id: freeTitle
+                    objectName: "parameters.freeHeader"
                     horizontalAlignment: Text.AlignHCenter
+                    rightPadding: freeArrow.width + group.freeGap
+                    color: group.freeTitleColor
                     text: qsTr("free")
+
+                    EaElements.Label {
+                        id: freeArrow
+                        x: (freeTitle.width - freeTitle.rightPadding + freeTitle.contentWidth) / 2 + group.freeGap
+                        anchors.verticalCenter: parent.verticalCenter
+                        font: freeArrowProbe.font
+                        color: group.freeTitleColor
+                        text: freeArrowProbe.text
+                    }
+
+                    // On the header itself, over this cell: the header's own click area covers its cells.
+                    MouseArea {
+                        id: freeArea
+                        parent: freeTitle.parent ? freeTitle.parent.parent : freeTitle
+                        z: 1
+                        x: freeTitle.parent ? freeTitle.parent.x + freeTitle.x : 0
+                        y: freeTitle.y
+                        width: freeTitle.width
+                        height: freeTitle.height
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onContainsMouseChanged: group.freeTitleHovered = containsMouse
+                        onClicked: freeMenu.popup()
+                    }
+                    FreeHeaderMenu {
+                        id: freeMenu
+                        project: group.project
+                        filter: filter
+                    }
                 }
             }
 

@@ -11,9 +11,8 @@ import edi.app
 // The structure view's toolbar (edi ADR-0017 §16): diffraction-lib's modebar (`templates/structure.html.j2`),
 // its buttons and behaviour, drawn as ChartToolButton with the chart toolbar's spacing and spacer. The features
 // first, one button per feature the structure has, in diffraction-lib's order: atoms (all, asymmetric unit, none),
-// labels, bonds, cell, axes. Then the camera group, ending at the right in Home: projection, view along a, b and c,
-// reset view (owner, 2026-10-05). The colour scheme drop-down sits at the view's left, after the legend
-// (StructureView).
+// labels, bonds, cell, axes. Then the camera group, ending in Home: projection, view along a, b and c, reset view
+// (owner, 2026-10-05). The colour scheme drop-down precedes it in the view's centred toolbar line (StructureView).
 Row {
     id: toolbar
 

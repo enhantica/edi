@@ -23,7 +23,7 @@ DataTable {
     maximumTextColumnShare: 0.4
     sourceModel: analysis ? analysis.sequentialExtract : null
 
-    columnWidths: [numberColumnWidth, Math.min(textColumnWidth("id", qsTr("id")), width * 0.3), Math.min(textColumnWidth("target", qsTr("target")), width * 0.4), -1, textColumnWidth("required", qsTr("required"))]
+    columnWidths: [numberColumnWidth, Math.min(textColumnWidth("id", qsTr("id")), width * 0.3), Math.min(textColumnWidth("target", qsTr("target")), width * 0.4), -1, AppSizes.iconOnlyColumnWidth]
 
     header: EaComponents.ListViewHeader {
         EaComponents.TableViewLabel {
@@ -43,7 +43,6 @@ DataTable {
         }
         EaComponents.TableViewLabel {
             horizontalAlignment: Text.AlignHCenter
-            text: qsTr("required")
         }
     }
 
@@ -77,9 +76,14 @@ DataTable {
             text: row.model.pattern
             ToolTip.text: row.model.pattern
         }
-        EaComponents.TableViewLabel {
+        // Whether the rule is required, as the Linked structures table's enable toggle shows its state (the owner,
+        // 2026-10-11); read-only, as the rule is.
+        IconCell {
             horizontalAlignment: Text.AlignHCenter
-            text: row.model.required ? qsTr("yes") : qsTr("no")
+            objectName: `sequentialExtract.required.${row.index}`
+            icon: row.model.required ? "toggle-on" : "toggle-off"
+            iconColor: String(EaStyle.Colors.themeForeground)
+            toolTip: row.model.required ? qsTr("Required: a dataset whose file has no match for this pattern fails") : qsTr("Not required: a dataset whose file has no match leaves this column empty")
         }
     }
 }

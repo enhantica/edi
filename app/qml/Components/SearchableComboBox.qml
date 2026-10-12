@@ -48,8 +48,12 @@ EaElements.ComboBox {
     }
     FontMetrics {
         id: optionMetrics
-        font: control.font
+        font.family: control.listFontFamily
+        font.pixelSize: control.font.pixelSize
     }
+    // The family the list's entries are drawn in: the box's own, unless its entries need characters only another
+    // bundled font has (the Wyckoff positions' fractions; never a platform fallback).
+    property string listFontFamily: font.family
     popup.width: inTable ? Math.min(Math.max(width, optionWidth), Math.max(width, control.Window.width - popup.leftMargin - popup.rightMargin)) : width
     readonly property bool searchable: count > searchThreshold
     property string searchText: ""
@@ -71,12 +75,15 @@ EaElements.ComboBox {
     }
     // The list opens below the box, or above it where there is more room, never over it, so the box keeps
     // showing its value while one searches; it is as tall as its entries or the room allows, and keeps that
-    // height while a search shortens it.
+    // height while a search shortens it. A list wider than the box is moved left where it would pass the
+    // window's right edge.
     function placePopup() {
         const popup = control.popup;
         const window = control.Window.window;
         if (!window)
             return;
+        const left = control.mapToItem(null, 0, 0).x;
+        popup.x = Math.min(0, window.width - Math.max(0, popup.rightMargin) - popup.width - left);
         const top = control.mapToItem(null, 0, 0).y;
         const below = window.height - top - control.height - popup.bottomMargin;
         const above = top - popup.topMargin;
@@ -138,7 +145,7 @@ EaElements.ComboBox {
         width: entry.parent !== null ? entry.parent.width : 0
         height: matching ? EaStyle.Sizes.comboBoxHeight : 0
         opacity: matching ? 1 : 0
-        font.family: control.font.family
+        font.family: control.listFontFamily
         textFormat: control.textFormat
         elide: control.elide
         text: control.textRole ? (Array.isArray(control.model) ? entry.model.modelData[control.textRole] : entry.model[control.textRole]) : entry.model.modelData

@@ -180,7 +180,7 @@ def test_scan_explorer_header_has_declared_columns_in_order():
     qml = source('qml/Pages/Experiment/ExperimentsGroup.qml')
     header = block(qml, 'header:')
     labels = re.findall(r'text:\s*qsTr\("([^\"]+)"\)', header)
-    assert labels[:3] == ['Fit', 'Datablock', 'File'], (
+    assert labels[:3] == ['Fit', 'Datablock', 'Data file'], (
         'Dataset list labels: the unlabelled number column precedes fit, datablock and file'
     )
     number_column = block(header, 'EaComponents.TableViewLabel {')
@@ -258,11 +258,11 @@ def evolution_component():
     items = re.search(r'mainItems:\s*\[([\s\S]*?)\n\s*\]', page)
     assert items, 'Evolution wiring: the analysis main view declares its tab content'
     components = re.findall(r'(?m)^\s*(\w+)\s*\{', items.group(1))
-    assert len(components) >= 2, (
-        'Evolution wiring: the second main-view tab has its own actual content'
+    assert components.count('EvolutionChart') == 1, (
+        'Evolution wiring: the main view mounts exactly one evolution chart beside correlations'
     )
-    paths = list((APP / 'qml').rglob(components[1] + '.qml'))
-    assert len(paths) == 1, 'Evolution wiring: the second content component resolves uniquely'
+    paths = list((APP / 'qml').rglob('EvolutionChart.qml'))
+    assert len(paths) == 1, 'Evolution wiring: the mounted evolution chart resolves uniquely'
     return source(paths[0].relative_to(APP))
 
 
@@ -463,6 +463,8 @@ def test_parameter_evolution_connects_rendered_errors_axis_and_point_selection()
 
 
 def assert_stale_marker(consumer, results=None):
+    # Comments may contain apostrophes; they cannot open string literals.
+    consumer = re.sub(r'//[^\n]*|/\*.*?\*/', '', consumer, flags=re.DOTALL)
     if results is None:
         model = re.search(r'(?m)^\s*model:\s*(\w+\.\w+)\.(?:points|series|rows)\s*$', consumer)
         results = (
@@ -517,7 +519,13 @@ def test_old_scan_results_are_retained_with_out_of_date_state():
 
 def test_bundled_project_load_and_save_as_use_the_writable_copy_routes():
     session = source('src/session.cpp')
-    loader = block(session, 'bool Session::openExample(')
+    wrapper = block(session, 'bool Session::openExample(')
+    require(
+        wrapper,
+        r'openExampleNamed\(exampleId\)',
+        'Working-copy wiring: the public example loader reaches its actual copy worker',
+    )
+    loader = block(session, 'bool Session::openExampleNamed(')
     require(
         loader,
         r'extracted_ = std::make_unique<QTemporaryDir>\(\)',
@@ -1050,62 +1058,35 @@ e){std::cout<<"REFUSED\\n";}}}""".replace('BODY', dispatch)
     return cpp_probe(program, tmp_path)
 
 
-def joint_options(text, tmp_path):
+def joint_options(text, tmp_path, *, selector_text=None):
     producer = block(text, 'void AnalysisViewModel::sync(')
+    require(
+        producer,
+        r'const std::vector<std::string> modes = edi::applicable_fitting_modes\(project_\)',
+        'Scan mode wiring: the consumed options producer reads the project applicability rule',
+    )
+    require(
+        producer,
+        r'fitting_mode_options_->setOptions\(modes,',
+        'Scan mode wiring: the selector receives those exact applicable modes',
+    )
+    rule = block(
+        selector_text
+        if selector_text is not None
+        else (ROOT / 'core/src/selectors.cpp').read_text(),
+        'std::vector<std::string> applicable_fitting_modes(',
+    )
     program = """#include <algorithm>
 #include <cstdio>
 #include <string>
 #include <vector>
-#define emit
-struct QString:std::string {using std::string::string;QString(std::string
-x):std::string(x){}static QString fromStdString(std::string x){return QString(x);
-
-}};
 struct Scan{bool value=false;bool declared()const{return value;}};
-struct Project{Scan sequential_fit;std::string descent;int minimizer_max_iterations=1;
-
-double minimizer_chi_square_tolerance=0;};
-namespace edi {std::string effective_fitting_mode(Project&){return "single";
-
-}std::string default_descent(){return "lm";}int analysis_categories(Project&){
-
-return 0;}std::vector<std::string> supported_fitting_modes(){return {
-
-"single","joint","sequential","independent"};}}
-struct Options{std::vector<std::string> tokens=edi::supported_fitting_modes();
-
-void setOptions(std::vector<std::string> x,std::string ={}){tokens=x;
-
-}void sync(){}void setCategories(int){}int count(){return tokens.size();
-}bool joint(){return std::find(tokens.begin(),
-
-tokens.end(),"joint")!=tokens.end();}};
-struct AnalysisViewModel {Project project_;QString fitting_mode_,descent_;
-
-int max_iterations_=0;double chi_square_tolerance_=0;bool scan_declared_=false;
-Options options,other;Options* fitting_mode_options_=&options;Options*
-joint_weights_=&other;Options* sequential_fit_=&other;Options* sequential_extract_=&other;
-
-Options* fit_start_=&other;Options* aliases_=&other;Options* constraints_=&other;
-
-Options* categories_=&other;
-bool hasMaxIterations(){return max_iterations_!=0;}bool hasChiSquareTolerance(){
-
-return chi_square_tolerance_!=0;}
-void fittingModeChanged(){}void descentChanged(){}void maxIterationsChanged(){
-
-}void hasMaxIterationsChanged(){}void chiSquareToleranceChanged(){}
-
-void hasChiSquareToleranceChanged(){}
-void sync();};
+struct Project{Scan sequential_fit;std::vector<int> experiments{1,2};};
 BODY
-int main(){AnalysisViewModel model;for(bool declared:{false,true,false}){
-model.project_.sequential_fit.value=declared;
-model.sync();
-std::printf("%d\\n",model.options.joint());
-
-
-}}""".replace('BODY', producer)
+int main(){Project project;for(bool declared:{false,true,false}){
+project.sequential_fit.value=declared;const auto modes=applicable_fitting_modes(project);
+std::printf("%d\\n",std::find(modes.begin(),modes.end(),"joint")!=modes.end());}}
+""".replace('BODY', rule)
     return cpp_probe(program, tmp_path)
 
 

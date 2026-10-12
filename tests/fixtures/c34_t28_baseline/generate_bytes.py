@@ -22,6 +22,7 @@ from pathlib import Path
 from tests.conftest import crysta_reference_source
 from tests.fixtures.c34_t28_baseline.closure import require_baseline_closure
 from tests.fixtures.cwl_family.historical import current_tokens, original_tokens
+from tests.fixtures.fitting_modes.historical_bytes import historical_analysis
 
 ROOT = Path(__file__).resolve().parents[3]
 BASE = 'f3ea7afea400639f2a66d6acb8d922163f1ef128'
@@ -144,7 +145,7 @@ def saved_hashes(directory):
     }
 
 
-def observe(source, destination, *, calculator=False):
+def observe(source, destination, *, calculator=False, historical_weights=False):
     package = importlib.import_module(PACKAGE)
     # Drive the real loader with prescribed metadata, not a masked save output.
     # last_modified advances from this future input by exactly one second.
@@ -166,6 +167,21 @@ def observe(source, destination, *, calculator=False):
         project_file.write_text(text)
         project = package.Project.load(controlled)
     project.save_as(destination)
+    if historical_weights:
+        return {
+            p.relative_to(destination).as_posix(): hashlib.sha256(
+                without_saved_calculator(p.relative_to(destination).as_posix(), data)
+                if calculator
+                else original_tokens(data)
+            ).hexdigest()
+            for p in sorted(destination.rglob('*'))
+            if p.is_file()
+            for data in [
+                historical_analysis(source, p.read_bytes())
+                if p.relative_to(destination).as_posix() == 'analysis/analysis.edi'
+                else p.read_bytes()
+            ]
+        }
     return saved_hashes(destination) if calculator else hashes(destination)
 
 

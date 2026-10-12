@@ -6,6 +6,7 @@ import QtQuick.Controls
 import QtQuick.Dialogs
 
 import EasyApplication.Gui.Style as EaStyle
+import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Elements as EaElements
 import EasyApplication.Gui.Components as EaComponents
 
@@ -15,9 +16,9 @@ import edi.app
 // experiments, one current, each with how the last fit ended on it (Fit) and the file its data is in; under
 // the table the selected experiment's type (ExperimentTypeGroup), then Load experiment (`.edi` block files,
 // several at once, each with its type, data and parameters) and Create experiment (a new experiment without
-// data, a simulation). A row made with Create experiment has a Load data… button in its File cell until data is
-// loaded into it: a plain two- or three-column file whose rows become its measured data. Create, Load and Load
-// data are each one undoable step.
+// data, a simulation). A row made with Create experiment reads Load data… in its Data file cell until data is loaded
+// into it: a plain two- or three-column file whose rows become its measured data. Clicking a file name loads another
+// file in its place. Create, Load and Load data are each one undoable step.
 EaElements.GroupBox {
     id: group
 
@@ -28,6 +29,9 @@ EaElements.GroupBox {
     // One column per extract rule, with its unit, from the table's own model. The table lays a row's cells out
     // by their place among the header's, so the header and each row repeat over the same list.
     readonly property var scanColumns: project ? project.experiments.columns : []
+    // The Fit column is as wide as its title or its icon, so the Fit icon sits as close to the colour icon as the
+    // Structures table's icon to its name: one margin between them, not each column's own (the owner, 2026-10-11).
+    readonly property real fitColumnWidth: Math.ceil(Math.max(fitTitle.advanceWidth, EaStyle.Sizes.fontPixelSize * 1.15))
 
     objectName: "group.experiments"
     title: qsTr("Experiments (%1)").arg(project ? project.experiments.count : 0)
@@ -35,6 +39,13 @@ EaElements.GroupBox {
     last: SideBarGroups.isLast(group)
     // Open at the start, unlike the category groups (owner, 2026-10-05; edi ADR-0017 §3).
     collapsed: false
+
+    TextMetrics {
+        id: fitTitle
+        font.family: EaStyle.Fonts.fontFamily
+        font.pixelSize: EaStyle.Sizes.fontPixelSize
+        text: qsTr("Fit")
+    }
 
     Column {
         spacing: AppSizes.groupContentSpacing
@@ -45,7 +56,7 @@ EaElements.GroupBox {
             defaultInfoText: qsTr("No experiments defined")
             sourceModel: group.project ? group.project.experiments : null
 
-            columnWidths: [numberColumnWidth, group.scan ? 0.001 : AppSizes.iconColumnWidth, AppSizes.iconColumnWidth, textColumnWidth("name", qsTr("Datablock")), -1, group.scanColumns.length ? group.scanColumns.length * AppSizes.dataColumnWidth * 1.4 : 0.001, group.scan ? 0.001 : AppSizes.iconColumnWidth]
+            columnWidths: [numberColumnWidth, group.scan ? 0.001 : AppSizes.iconOnlyColumnWidth, group.scan ? AppSizes.iconOnlyColumnWidth : group.fitColumnWidth, textColumnWidth("name", qsTr("Datablock")), -1, group.scanColumns.length ? group.scanColumns.length * AppSizes.dataColumnWidth * 1.4 : 0.001, group.scan ? 0.001 : AppSizes.iconColumnWidth]
 
             header: EaComponents.ListViewHeader {
                 EaComponents.TableViewLabel {
@@ -64,7 +75,7 @@ EaElements.GroupBox {
                 }
                 EaComponents.TableViewLabel {
                     horizontalAlignment: Text.AlignLeft
-                    text: qsTr("File")
+                    text: qsTr("Data file")
                 }
                 // Keep the scan's repeated cells in one width-controlled column (ADR-0029).
                 Item {
@@ -179,20 +190,37 @@ EaElements.GroupBox {
                             text: qsTr("template")
                         }
                     }
-                    EaElements.Button {
+                    // The file name as left-aligned text that loads another file in its place: the accent blue and a
+                    // pointing hand on hover, and "Load data…" in the accent blue before any data (the owner,
+                    // 2026-10-11). Every experiment but a scan's dataset can load data.
+                    EaComponents.TableViewLabel {
                         id: loadData
+
+                        readonly property bool empty: row.experiment !== null && row.experiment.calculationOnly
+
+                        signal clicked
+
                         objectName: `experiments.loadData.${row.index}`
-                        // An experiment made with Create experiment: Load data…, then the loaded file's name, which
-                        // loads another file in its place. A simulation loaded from `.edi` shows it disabled; a scan's
-                        // datasets and experiments loaded with their data show their file.
-                        visible: !group.scan && row.experiment !== null && (row.experiment.canLoadData || row.experiment.calculationOnly)
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: parent.width
-                        enabled: row.experiment !== null && row.experiment.canLoadData
-                        text: row.experiment !== null && !row.experiment.calculationOnly ? row.file : qsTr("Load data…")
-                        ToolTip.visible: hovered && row.experiment !== null && !row.experiment.calculationOnly
-                        ToolTip.text: qsTr("Load another data file in place of this one")
+                        visible: !group.scan && row.experiment !== null && row.experiment.canLoadData
+                        width: Math.min(implicitWidth, fileCell.width)
+                        height: parent.height
+                        horizontalAlignment: Text.AlignLeft
+                        elide: Text.ElideMiddle
+                        color: empty || loadDataHover.hovered ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
+                        text: empty ? qsTr("Load data…") : row.file
                         onClicked: group.chooseData(row.experiment)
+
+                        HoverHandler {
+                            id: loadDataHover
+                            cursorShape: Qt.PointingHandCursor
+                        }
+                        TapHandler {
+                            onTapped: loadData.clicked()
+                        }
+                        EaElements.ToolTip {
+                            text: qsTr("Load another data file in place of this one")
+                            visible: loadDataHover.hovered && EaGlobals.Vars.showToolTips
+                        }
                     }
                 }
                 // What the scan's extract rules take from the dataset, with their units.
@@ -238,11 +266,17 @@ EaElements.GroupBox {
             experimentIndex: group.project ? group.project.currentExperimentIndex : -1
         }
 
+        // Load, Create and Duplicate side by side at equal widths (the owner, 2026-10-11).
         Row {
+            id: buttons
+
+            readonly property real buttonWidth: (EaStyle.Sizes.sideBarContentWidth - 2 * spacing) / 3
+
             spacing: EaStyle.Sizes.fontPixelSize
 
             EaElements.SideBarButton {
                 objectName: "experiments.load"
+                width: buttons.buttonWidth
                 enabled: group.project !== null
                 fontIcon: "upload"
                 text: qsTr("Load experiment")
@@ -260,11 +294,23 @@ EaElements.GroupBox {
             }
             EaElements.SideBarButton {
                 objectName: "experiments.create"
+                width: buttons.buttonWidth
                 enabled: group.project !== null && group.project.canCreateExperiment
                 fontIcon: "plus-circle"
                 text: qsTr("Create experiment")
                 ToolTip.text: enabled ? qsTr("Add an experiment without data, to calculate its pattern or load data into") : qsTr("A scan project fits its one template experiment")
                 onClicked: group.project.createExperiment()
+            }
+            // A copy of the selected experiment with its data, named <name>_copy; its Data file cell then loads
+            // another file in place of the copied one.
+            EaElements.SideBarButton {
+                objectName: "experiments.duplicate"
+                width: buttons.buttonWidth
+                enabled: group.project !== null && group.project.canCreateExperiment && group.project.currentExperiment !== null
+                fontIcon: "clone"
+                text: qsTr("Duplicate experiment")
+                ToolTip.text: group.scan ? qsTr("A scan project fits its one template experiment") : qsTr("Add a copy of the selected experiment, with its data")
+                onClicked: group.project.duplicateExperiment()
             }
         }
     }

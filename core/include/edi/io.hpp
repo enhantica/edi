@@ -71,6 +71,12 @@ void add_loaded_experiment(Project& project, BraggPdExperiment experiment);
 // Rename an experiment of the project, the adder's rule: refused when the new name is already in the
 // project, so a rename never makes two experiments share one name.
 void rename_experiment(Project& project, ExperimentBase& experiment, const std::string& name);
+// A copy of one of the project's experiments, for Duplicate experiment: everything it holds, its data included,
+// but no fit result, under the first name of `<name>_copy`, `<name>_copy2`, … that no experiment of the project has
+// (compared as a save compares names, without letter case). The caller adds it (Edit::create_experiment).
+BraggPdExperiment experiment_copy(const Project& project, const BraggPdExperiment& experiment);
+// The same for a structure, Duplicate structure: no experiment links to the copy (Edit::add_structure).
+Structure structure_copy(const Project& project, const Structure& structure);
 // A new project holding no structure and no experiment (`Project()` carries a default of each).
 Project empty_project(const std::string& name, const std::string& description);
 
@@ -216,6 +222,14 @@ UndoFitOutcome restore_fit_start(Project& project);
 // `clear_fit_result` leaves none. An undo clears it (restore_fit_start), as diffraction-lib's undo does.
 void copy_fit_result(Project& to, const Project& from);
 void clear_fit_result(Project& project);
+// A correlation row's coefficient as a number (its text, read in the C locale); NaN when it is not one.
+double correlation_value(const FitParameterCorrelation& row);
+// Correlation pairs as a record holds them (FitResultRecord::correlations), each keeping its id; a pair with no id, or
+// with one an earlier pair took, gets the first free number of 1, 2, … (diffraction-lib numbers its
+// `_fit_parameter_correlation` rows so). A scan's template file's pairs come first, as a save keeps only those (the
+// owner, 2026-10-12): their ids are never the ones replaced, so an unchanged save after a reload writes the same loop.
+std::vector<ItemVec<FitParameterCorrelation>::Ptr> numbered_correlations(
+    const std::vector<FitParameterCorrelation>& pairs, const std::string& template_file = {});
 
 // Build one entity from text (diffraction-lib `StructureFactory.from_cif_str` /
 // `ExperimentFactory.from_cif_str` — ruling absorb-ten-26). BOTH entries accept the dot-form

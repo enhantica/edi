@@ -140,7 +140,7 @@ edi_gui_base_module(edi_gui_components EasyApplication.Gui.Components Gui/Compon
           TableView TableViewHeader TableViewDelegate TableViewLabel
           TableViewAdvancedLabel TableViewTwoRowsAdvancedLabel TableViewParameter TableViewCheckBox
           TableViewComboBox TableViewButton TableViewLabelControl TableViewTextInput
-    REPLACED ListView TableViewParameter)
+    REPLACED ListView TableViewParameter ProjectDescriptionDialog)
 
 # The fonts edi's Style/Fonts.qml (app/qml/Base/Gui/Style) loads, placed where its
 # `Qt.resolvedUrl("../Resources/Fonts")` looks: the base's own faces edi keeps, and edi's (ADR-0015 §10).

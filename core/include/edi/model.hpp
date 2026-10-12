@@ -41,10 +41,12 @@
 namespace edi {
 
 struct ExperimentBase;
+struct BraggPdExperiment;
 struct Structure;
 struct AtomSite;
 struct AtomSiteAniso;
 class Project;
+class ItemKey;
 struct Parameter;
 // ADR-0020: the publication transaction, declared in edi/calculation.hpp.
 struct WorkSnapshot;
@@ -58,6 +60,23 @@ class KeyedBase;
 // Renames every link and texture row of `project` that names the structure `from` to `to`, all or
 // none (defined after Project).
 inline void rename_structure_links(Project& project, const std::string& from, const std::string& to);
+// The parameter names a structure's or an experiment's rename changes (io.cpp's slot walk), old to new: the block's
+// own parameters and, for a structure, its links' and texture rows', by their unique names and, apart, by their
+// `_fit_parameter.id` spellings. A name no current parameter has (a correlation's history) is renamed by its place
+// in the address: `<block>.<category>.…` for a category of the renamed kind, and for a structure also
+// `<experiment>.linked_structure.<structure>.<field>` and `.preferred_orientation.…`.
+struct ParameterRenames {
+    std::map<std::string, std::string> unique;
+    std::map<std::string, std::string> compact;
+    std::set<std::string> current_unique;
+    std::set<std::string> current_compact;
+    bool structure = false;
+    std::string from;
+    std::string to;
+    std::optional<std::string> operator()(const std::string& name) const;
+};
+ParameterRenames parameter_renames(const Project& project, const char* kind, const ItemKey& key, const std::string& to);
+inline void follow_parameter_renames(Project& project, const ParameterRenames& names);
 
 // The membership record an ItemVec owns and its attached items share. Items hold it STRONGLY —
 // ADR-0013 prohibits production weak references — and the collection revokes it (owner =
@@ -1339,6 +1358,7 @@ inline std::string datablock_key(const std::string& name, const std::string& def
 
 class ItemKey;
 struct LineSegment;
+struct PolynomialTerm;
 
 namespace detail {
 
@@ -2156,9 +2176,16 @@ class ItemVec final : public detail::KeyedBase {
     void rename_references(const ItemKey& key, const std::string& next) const override {
         if constexpr (std::is_same_v<T, Structure>) {
             if (Project* project = host()) {
+                // Named while the links still name the structure as it was.
+                const auto names = detail::parameter_renames(*project, "structure", key, next);
                 detail::rename_structure_links(*project, key.value(), next);
+                detail::follow_parameter_renames(*project, names);
             }
-        } else if constexpr (std::is_same_v<T, LineSegment>) {
+        } else if constexpr (std::is_same_v<T, BraggPdExperiment>) {
+            if (Project* project = host()) {
+                detail::follow_parameter_renames(*project, detail::parameter_renames(*project, "experiment", key, next));
+            }
+        } else if constexpr (std::is_same_v<T, LineSegment> || std::is_same_v<T, PolynomialTerm>) {
             if (Project* project = host()) detail::follow_background_aliases(*project, key, next);
         } else if constexpr (std::is_same_v<T, AtomSite>) {
             detail::follow_site_references(host(), holder(), key.value(), next);
@@ -3050,8 +3077,10 @@ inline ItemVec<ExcludedRegion> excluded_region_rows(const std::vector<std::pair<
 
 
 // One term of a polynomial or Chebyshev background (diffraction-lib
-// `PolynomialTerm`): its fixed order m and its refinable coefficient B_m.
+// `PolynomialTerm`): its id, which names its coefficient (`background.<id>.coef`, as every loop row is named;
+// a term read without one takes its ordinal), its fixed order m and its refinable coefficient B_m.
 struct PolynomialTerm : std::enable_shared_from_this<PolynomialTerm> {
+    ItemKey id;
     detail::Written<int> order{0};
     Parameter coef{0.0};
 
@@ -3063,6 +3092,18 @@ struct PolynomialTerm : std::enable_shared_from_this<PolynomialTerm> {
     detail::RowLink row;
     // This row's identity as a calculation input.
     detail::Epoch epoch;
+};
+
+template <>
+struct KeyTraits<PolynomialTerm> {
+    static constexpr bool ordinal_defaults = true;
+    static ItemKey& key(PolynomialTerm& term) { return term.id; }
+    static const ItemKey& key(const PolynomialTerm& term) { return term.id; }
+    static std::string canonical(const std::string& id) {
+        if (id.empty()) throw std::invalid_argument("background term id must not be empty");
+        return id;
+    }
+    static const char* category() { return "background term"; }
 };
 
 // A background term is a row of its experiment's `background_terms`.
@@ -3085,8 +3126,9 @@ namespace crysta {
 template <>
 struct RowSchema<edi::PolynomialTerm> {
     static constexpr const char* name = "_background";
-    static constexpr auto fields = std::tuple{&edi::PolynomialTerm::order, &edi::PolynomialTerm::coef};
-    static constexpr std::array items{"order", "coef"};
+    static constexpr auto fields =
+        std::tuple{&edi::PolynomialTerm::id, &edi::PolynomialTerm::order, &edi::PolynomialTerm::coef};
+    static constexpr std::array items{"id", "order", "coef"};
     static constexpr std::array variants{"chebyshev", "polynomial"};
 };
 }  // namespace crysta
@@ -3908,6 +3950,29 @@ using PreambleCallback = std::function<void(const FitPreamble&)>;
 // `file_name` is the scan file's own name, no directory. `converged` mirrors the row's success
 // cell — the field a progress line's ok/fail split and a summary's NAMED failures both come
 // from.
+// One pair of the fit's free parameters and their correlation coefficient, diffraction-lib's
+// `_fit_parameter_correlation` row: its id, how it was computed (`deterministic`: from the covariance), the
+// two unique names (`<datablock>.<category>[.<entry>].<name>`) in the fit's column order (i before j) and the
+// coefficient, in [-1, 1], as the text it was read with, so a loaded loop saves back byte for byte (a computed
+// one is crysta's shortest form; correlation_value reads it). A scan's row also names the file whose fit it came
+// from (`file_path`, the results.csv key); a single or joint fit's leaves it empty.
+struct FitParameterCorrelation {
+    ItemKey id;
+    detail::WrittenText source_kind;
+    detail::WrittenText parameter_unique_name_i;
+    detail::WrittenText parameter_unique_name_j;
+    detail::WrittenText correlation;
+    detail::WrittenText file_path;
+};
+
+template <>
+struct KeyTraits<FitParameterCorrelation> {
+    static ItemKey& key(FitParameterCorrelation& row) { return row.id; }
+    static const ItemKey& key(const FitParameterCorrelation& row) { return row.id; }
+    static std::string canonical(const std::string& id) { return id; }
+    static const char* category() { return "fit parameter correlation"; }
+};
+
 struct ScanFileRecord {
     std::string file_name;
     bool converged = false;
@@ -3918,6 +3983,9 @@ struct ScanFileRecord {
     // Why the file's fit stopped, as crysta's ledger (results-provenance.csv) records it beside the row; empty when
     // it was not recorded.
     std::string termination;
+    // The file's own parameter correlations, from its fit's covariance as a single fit's are (the live event; empty
+    // for a resumed row read back or a fit with no usable covariance).
+    std::vector<FitParameterCorrelation> correlations;
 };
 
 // Optional per-file completion subscriber. Passing none costs nothing: with no
@@ -3989,6 +4057,9 @@ struct FitResultBase {
     // refinement only — empty for a single-bank fit**, mirroring crysta exactly: its
     // single-file result carries no per-bank block, and its `full` per-bank line is joint-only.
     std::vector<BankMetric> banks;
+    // The free parameters' correlations, as the project's record keeps them (FitResultRecord::correlations); empty
+    // for a scan, whose files each keep their own.
+    std::vector<FitParameterCorrelation> correlations;
     double rwp = 0.0;                 // weighted-profile R-factor (global)
     double reduced_chi_square = 0.0;  // reduced chi-square (goodness-of-fit)
     int iterations = 0;
@@ -4067,6 +4138,9 @@ std::string default_descent();
 std::vector<std::string> absorption_file_tokens(BeamModeEnum mode);
 std::string absorption_file_token(BeamModeEnum mode, const std::string& token);
 std::string absorption_registry_token(BeamModeEnum mode, const std::string& file_token);
+// The highest term order a background type admits, from crysta's table: 5 for `polynomial`, 23 for `chebyshev`,
+// -1 for `line-segment`, which has no terms.
+int background_max_order(const std::string& type);
 // A peak type registered at run time (edi::register_peak_type, the Python registration seam) is
 // registered with crysta's peak registry too, which is the vocabulary the crossing reads: a type
 // edi alone knew would be refused there. It computes with its family's base profile, as before.
@@ -4181,6 +4255,17 @@ struct KeyTraits<ParameterConstraint> {
 
 namespace crysta {
 template <>
+struct RowSchema<edi::FitParameterCorrelation> {
+    static constexpr const char* name = "_fit_parameter_correlation";
+    static constexpr auto fields =
+        std::tuple{&edi::FitParameterCorrelation::id, &edi::FitParameterCorrelation::source_kind,
+                   &edi::FitParameterCorrelation::parameter_unique_name_i,
+                   &edi::FitParameterCorrelation::parameter_unique_name_j,
+                   &edi::FitParameterCorrelation::correlation, &edi::FitParameterCorrelation::file_path};
+    static constexpr std::array items{"id",          "source_kind", "parameter_unique_name_i", "parameter_unique_name_j",
+                                      "correlation", "file_path"};
+};
+template <>
 struct RowSchema<edi::ParameterAlias> {
     static constexpr const char* name = "_alias";
     static constexpr auto fields = std::tuple{&edi::ParameterAlias::id, &edi::ParameterAlias::parameter_unique_name};
@@ -4216,8 +4301,8 @@ struct SequentialFitConfig {
 // The last fit's result, as analysis.edi persists it in diffraction-lib's `_fit_result` category
 // (crysta's FitResultRecord, which a save hands it to). A fit records it (Project::fit,
 // Project::fit_joint), an undo clears it, a load restores it; held while `result_kind` is set. Fields
-// crysta does not compute yet (the profile R factor, the expected R, shift/s.u., correlations, the
-// single-crystal R factors) are not carried; each bank's share of a joint fit is on its experiment.
+// crysta does not compute yet (the profile R factor, the expected R, shift/s.u., the single-crystal R
+// factors) are not carried; each bank's share of a joint fit is on its experiment.
 struct FitResultRecord {
     std::string result_kind;  // `deterministic`; empty: no fit result is held
     bool success = false;
@@ -4239,6 +4324,11 @@ struct FitResultRecord {
     // The descent that produced the result, so a reopened result names its own minimizer rather than the
     // one selected since; empty in a record written before it.
     std::string descent;
+    // The free parameters' correlations from the fit's covariance, every pair of the upper triangle in the
+    // fit's column order (diffraction-lib's `_store_correlation_projection`); empty when the fit had fewer
+    // than two free parameters or no usable covariance. A scan holds no result but keeps each file's pairs,
+    // each naming its file.
+    ItemVec<FitParameterCorrelation> correlations;
     bool held() const { return !result_kind.empty(); }
     // ADR-0018: the row of this object's non-loop categories.
     detail::CategoryRow table_row;
@@ -4626,43 +4716,120 @@ inline void link_nested(ExperimentBase& experiment, const std::shared_ptr<const 
     }
 }
 
+// A background row's parameter is named by the row's id (`<experiment>.background.<id>.intensity`, or `.coef` for
+// a polynomial or Chebyshev term), so a rename carries every alias, and the fit's correlations, to the new id.
 inline void follow_background_aliases(Project& project, const ItemKey& key, const std::string& next) {
     for (const auto& experiment : project.experiments) {
+        const char* field = nullptr;
         for (const auto& point : experiment->background) {
-            if (&point->id != &key) continue;
-            const auto root = datablock_key(experiment->name.value(), "experiment") + ".background.";
-            const auto from = root + key.value() + ".intensity";
-            const auto to = root + next + ".intensity";
-            std::vector<std::pair<ParameterAlias*, std::string>> changes;
-            for (const auto& alias : project.aliases) {
-                if (alias->parameter_unique_name.value() == from) changes.emplace_back(alias.get(), to);
-            }
-            for (auto& [alias, value] : changes) alias->parameter_unique_name = std::move(value);
-            return;
+            if (&point->id == &key) field = ".intensity";
         }
+        for (const auto& term : experiment->background_terms) {
+            if (&term->id == &key) field = ".coef";
+        }
+        if (field == nullptr) continue;
+        const auto root = datablock_key(experiment->name.value(), "experiment") + ".background.";
+        const auto from = root + key.value() + field;
+        const auto to = root + next + field;
+        std::vector<std::pair<ParameterAlias*, std::string>> changes;
+        for (const auto& alias : project.aliases) {
+            if (alias->parameter_unique_name.value() == from) changes.emplace_back(alias.get(), to);
+        }
+        for (const auto& pair : project.fit_result.correlations) {
+            if (pair->parameter_unique_name_i.value() == from) pair->parameter_unique_name_i = to;
+            if (pair->parameter_unique_name_j.value() == from) pair->parameter_unique_name_j = to;
+        }
+        for (auto& [alias, value] : changes) alias->parameter_unique_name = std::move(value);
+        return;
     }
 }
 
 inline void follow_site_references(Project* project, Structure* structure, const std::string& from, const std::string& to) {
-    std::vector<std::pair<ParameterAlias*, std::string>> changes;
+    // The site's parameter names, wherever the project holds one: the aliases and both ends of each fit correlation.
+    std::vector<std::pair<detail::WrittenText*, std::string>> changes;
     if (project != nullptr && structure != nullptr) {
         const auto block = datablock_key(structure->name.value(), "structure") + ".";
-        for (const auto& alias : project->aliases) {
-            const auto& name = alias->parameter_unique_name.value();
-            const auto note = [&](const char* category, const char* field) {
+        const auto note = [&](detail::WrittenText& text) {
+            const auto& name = text.value();
+            const auto follow = [&](const char* category, const char* field) {
                 const auto root = block + category + ".";
-                if (name == root + from + "." + field)
-                    changes.emplace_back(alias.get(), root + to + "." + field);
+                if (name == root + from + "." + field) changes.emplace_back(&text, root + to + "." + field);
             };
-            for (const char* field : {"fract_x", "fract_y", "fract_z", "occupancy", "adp_iso"})
-                note("atom_site", field);
+            for (const char* field : {"fract_x", "fract_y", "fract_z", "occupancy", "adp_iso"}) follow("atom_site", field);
             for (const char* field : {"adp_11", "adp_22", "adp_33", "adp_12", "adp_13", "adp_23"})
-                note("atom_site_aniso", field);
+                follow("atom_site_aniso", field);
+        };
+        for (const auto& alias : project->aliases) note(alias->parameter_unique_name);
+        for (const auto& pair : project->fit_result.correlations) {
+            note(pair->parameter_unique_name_i);
+            note(pair->parameter_unique_name_j);
         }
     }
-    // A refused tensor rename must leave aliases unchanged too.
+    // A refused tensor rename must leave every reference unchanged too.
     follow_site_rename(structure, from, to);
-    for (auto& [alias, value] : changes) alias->parameter_unique_name = std::move(value);
+    for (auto& [text, value] : changes) *text = std::move(value);
+}
+
+// A structure's or an experiment's parameters are named `<datablock>.<category>...` wherever the project names
+// one: the analysis aliases, the fit's parameter correlations and the scan's extract rules. A rename of the
+// datablock rewrites each name of one of its parameters, whole, so the project saves and reopens under the new
+// name. A structure and an experiment may share a name, and a structure may be named as a category is: a prefix
+// would take the other's parameters too. A correlation may name a parameter the project no longer has; it
+// follows by its place in the address (ParameterRenames).
+inline std::optional<std::string> ParameterRenames::operator()(const std::string& name) const {
+    // A public name first: a single structure named `structure` spells a cell field's public name and its
+    // `_fit_parameter.id` alike, and only the public one follows the rename.
+    if (const auto found = unique.find(name); found != unique.end()) {
+        return found->second;
+    }
+    if (current_unique.contains(name)) {
+        return std::nullopt;
+    }
+    if (const auto found = compact.find(name); found != compact.end()) {
+        return found->second;
+    }
+    if (current_compact.contains(name)) {
+        return std::nullopt;
+    }
+    const auto dot = name.find('.');
+    if (dot == std::string::npos || from.empty()) {
+        return std::nullopt;
+    }
+    const std::string block = name.substr(0, dot);
+    const std::string rest = name.substr(dot + 1);
+    const auto end = rest.find('.');
+    if (end == std::string::npos) {
+        return std::nullopt;
+    }
+    const std::string category = rest.substr(0, end);
+    static const std::set<std::string> structure_categories{"cell", "atom_site", "atom_site_aniso"};
+    static const std::set<std::string> experiment_categories{
+        "peak", "instrument", "absorption", "background", "linked_structure", "preferred_orientation"};
+    if (block == from && (structure ? structure_categories : experiment_categories).contains(category)) {
+        return to + "." + rest;
+    }
+    if (structure && (category == "linked_structure" || category == "preferred_orientation")) {
+        const std::string named = rest.substr(end + 1);  // <structure>.<field>
+        const auto field = named.find('.');
+        if (field != std::string::npos && named.substr(0, field) == from &&
+            named.find('.', field + 1) == std::string::npos) {
+            return block + "." + category + "." + to + named.substr(field);
+        }
+    }
+    return std::nullopt;
+}
+
+inline void follow_parameter_renames(Project& project, const ParameterRenames& renamed) {
+    for (const auto& alias : project.aliases) {
+        if (auto next = renamed(alias->parameter_unique_name.value())) alias->parameter_unique_name = std::move(*next);
+    }
+    for (const auto& pair : project.fit_result.correlations) {
+        if (auto next = renamed(pair->parameter_unique_name_i.value())) pair->parameter_unique_name_i = std::move(*next);
+        if (auto next = renamed(pair->parameter_unique_name_j.value())) pair->parameter_unique_name_j = std::move(*next);
+    }
+    for (const auto& rule : project.sequential_fit.extract) {
+        if (auto next = renamed(rule->target.value())) rule->target = std::move(*next);
+    }
 }
 
 inline void rename_structure_links(Project& project, const std::string& from, const std::string& to) {

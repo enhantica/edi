@@ -1,13 +1,16 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "structure_view_model.hpp"
 
+#include <QRegularExpression>
 #include <QSet>
 #include <algorithm>
 #include <filesystem>
+#include <map>
 
 #include "edi/categories.hpp"
 #include "edi/edits.hpp"
 #include "edi/io.hpp"
+#include "edi/symmetry.hpp"
 #include "parameter_registry.hpp"
 #include "project_editor.hpp"
 
@@ -180,6 +183,39 @@ AtomSiteListModel::AtomSiteListModel(edi::Structure& structure, ProjectEditor& e
     sync();
 }
 
+namespace {
+
+// A Wyckoff representative as crysta's table spells it ("1/2*x+1/2*y,1/2*x+1/2*y,z") as the WP list shows it
+// ("½x+½y, ½x+½y, z"): the common fractions as one glyph, no multiplication sign, a minus sign and a space after
+// each comma. Display only.
+QString wyckoff_coordinates_display(const std::string& representative) {
+    static const std::map<QString, QString> glyphs{
+        {QStringLiteral("1/2"), QStringLiteral("\u00BD")}, {QStringLiteral("1/3"), QStringLiteral("\u2153")},
+        {QStringLiteral("2/3"), QStringLiteral("\u2154")}, {QStringLiteral("1/4"), QStringLiteral("\u00BC")},
+        {QStringLiteral("3/4"), QStringLiteral("\u00BE")}, {QStringLiteral("1/6"), QStringLiteral("\u2159")},
+        {QStringLiteral("5/6"), QStringLiteral("\u215A")}, {QStringLiteral("1/8"), QStringLiteral("\u215B")},
+        {QStringLiteral("3/8"), QStringLiteral("\u215C")}, {QStringLiteral("5/8"), QStringLiteral("\u215D")},
+        {QStringLiteral("7/8"), QStringLiteral("\u215E")}};
+    QString text = QString::fromStdString(representative);
+    static const QRegularExpression fraction(QStringLiteral("(\\d+)/(\\d+)"));
+    QString out;
+    qsizetype last = 0;
+    for (QRegularExpressionMatchIterator match = fraction.globalMatch(text); match.hasNext();) {
+        const QRegularExpressionMatch found = match.next();
+        out += text.mid(last, found.capturedStart() - last);
+        const auto glyph = glyphs.find(found.captured(0));
+        out += glyph != glyphs.end() ? glyph->second : found.captured(0);
+        last = found.capturedEnd();
+    }
+    out += text.mid(last);
+    out.remove(QLatin1Char('*'));
+    out.replace(QLatin1Char('-'), QChar(0x2212));
+    out.replace(QLatin1Char(','), QStringLiteral(", "));
+    return out;
+}
+
+}  // namespace
+
 void AtomSiteListModel::sync() {
     QList<Row> rows;
     for (const auto& site : structure_.atom_sites) {
@@ -191,6 +227,27 @@ void AtomSiteListModel::sync() {
                       parameter_role(registry_, &site->adp_iso)}});
     }
     setTableRows(rows);
+    QStringList letters;
+    QStringList names;
+    QStringList labels;
+    for (const edi::WyckoffOption& option : edi::wyckoff_positions(structure_)) {
+        const QString name = QStringLiteral("%1%2").arg(option.multiplicity).arg(QString::fromStdString(option.letter));
+        letters.append(QString::fromStdString(option.letter));
+        names.append(name);
+        labels.append(name + QStringLiteral(": ") + wyckoff_coordinates_display(option.coordinates));
+    }
+    if (letters != wyckoff_letters_) {
+        wyckoff_letters_ = letters;
+        emit wyckoffLettersChanged();
+    }
+    if (names != wyckoff_names_) {
+        wyckoff_names_ = names;
+        emit wyckoffNamesChanged();
+    }
+    if (labels != wyckoff_labels_) {
+        wyckoff_labels_ = labels;
+        emit wyckoffLabelsChanged();
+    }
 }
 
 bool AtomSiteListModel::setText(int row, const QString& role, const QString& value) {
@@ -218,18 +275,21 @@ bool AtomSiteListModel::setText(int row, const QString& role, const QString& val
     return editor_.apply(edit, label || role == QLatin1String("adpType")).isEmpty();
 }
 
+std::optional<std::uint64_t>& AtomSiteListModel::fixedSeed() {
+    static std::optional<std::uint64_t> seed;
+    return seed;
+}
+
+void AtomSiteListModel::fixRandomSeed(std::uint64_t seed) { fixedSeed() = seed; }
+
 void AtomSiteListModel::append() {
     edi::Structure& structure = structure_;
-    edi::AtomSite site;
-    site.id = unused_name("X", [&structure](const std::string& name) {
-        for (const auto& existing : structure.atom_sites) {
-            if (existing->id == name) {
-                return true;
-            }
-        }
-        return false;
-    });
-    site.type_symbol = "H";
+    // A random element on the general position at random coordinates (the owner, 2026-10-11, edi::new_atom_site).
+    if (!random_.has_value()) {
+        random_.emplace(fixedSeed().value_or(std::random_device{}()));
+    }
+    std::uniform_real_distribution<double> unit(0.0, 1.0);
+    edi::AtomSite site = edi::new_atom_site(structure, [this, &unit] { return unit(*random_); });
     editor_.apply(edi::Edit::append(structure.atom_sites, std::move(site)), true);
 }
 
@@ -389,7 +449,7 @@ void StructureViewModel::markSceneStale() {
 
 void StructureViewModel::setName(const QString& name) {
     edi::Structure& structure = structure_;
-    editor_.apply(edi::Edit::structure_name(structure, name.toStdString()), true);
+    editor_.rename_structure(structure, name.toStdString());
 }
 
 void StructureViewModel::sync() {

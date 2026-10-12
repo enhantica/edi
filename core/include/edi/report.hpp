@@ -16,7 +16,8 @@
 //     `crysta::format_fit_report`, called through machine_report() below. edi does not re-implement
 //     the record and does not re-emit crysta's bytes verbatim either; it fills a crysta::FitReport
 //     from its own FitResultBase, which is what lets it omit an engine-only row it has no capability
-//     for (see machine_report) and append `x-edi.*` keys it owns (none today).
+//     for (see machine_report) and append `x-edi.*` keys it owns (`x-edi.correlations`, the count of the fit's
+//     parameter correlation pairs).
 //
 //   * HUMAN — the user channel, owned by edi outright and free to evolve. It lives HERE, in the
 //     product core rather than in a CLI or an example, so every edi surface (the `python -m edi`

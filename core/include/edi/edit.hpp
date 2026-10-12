@@ -139,6 +139,28 @@ class Edit {
     static Edit assign(detail::Written<bool>& field, bool value) {
         return Edit([&field, value] { field = value; });
     }
+    // Free or fix several parameters, by unique name, all or none (the parameter table's "free" header; the owner,
+    // 2026-10-11): every name is resolved before any flag is written. Its undo is the same edit with the flags as
+    // they were.
+    static Edit set_free(Project& project, std::vector<std::pair<std::string, bool>> flags) {
+        return Edit([&project, flags = std::move(flags)] {
+            std::map<std::string, Parameter*> by_name;
+            for (const NamedSlot& slot : named_slots(project)) {
+                by_name.emplace(slot.unique_name, slot.parameter);
+            }
+            std::vector<std::pair<Parameter*, bool>> resolved;
+            for (const auto& [name, free] : flags) {
+                const auto found = by_name.find(name);
+                if (found == by_name.end()) {
+                    throw std::invalid_argument("'" + name + "' is not a refinable parameter of this project");
+                }
+                resolved.emplace_back(found->second, free);
+            }
+            for (const auto& [parameter, free] : resolved) {
+                parameter->free = free;
+            }
+        });
+    }
     static Edit assign(double& field, double value) {
         return Edit([&field, value] { field = value; });
     }
@@ -196,6 +218,27 @@ class Edit {
     }
     static Edit absorption(ExperimentBase& experiment, std::string token) {
         return Edit([&experiment, token = std::move(token)] { select_absorption(experiment, token); });
+    }
+    // The background model, the old type's rows and constants removed (select_background_type).
+    static Edit background_type(ExperimentBase& experiment, std::string token) {
+        return Edit([&experiment, token = std::move(token)] { select_background_type(experiment, token); });
+    }
+    // A polynomial or Chebyshev background's terms: one appended at the lowest free order, a term's order, the
+    // polynomial's origin and an end of the Chebyshev domain, each under its rule.
+    static Edit background_point_ids(ExperimentBase& experiment, std::vector<std::string> ids) {
+        return Edit([&experiment, ids = std::move(ids)] { set_background_point_ids(experiment, ids); });
+    }
+    static Edit append_background_term(ExperimentBase& experiment) {
+        return Edit([&experiment] { experiment.background_terms.push_back(next_background_term(experiment)); });
+    }
+    static Edit background_term_order(ExperimentBase& experiment, PolynomialTerm& term, int order) {
+        return Edit([&experiment, &term, order] { set_background_term_order(experiment, term, order); });
+    }
+    static Edit background_origin(ExperimentBase& experiment, double origin) {
+        return Edit([&experiment, origin] { set_background_origin(experiment, origin); });
+    }
+    static Edit background_domain(ExperimentBase& experiment, bool end, double value) {
+        return Edit([&experiment, end, value] { set_background_domain(experiment, end, value); });
     }
     static Edit scattering_source(ExperimentBase& experiment, ScatteringSourceItem item, std::string token) {
         return Edit(
@@ -328,6 +371,7 @@ class Edit {
         });
     }
     static Edit erase(ItemVec<LineSegment>& rows, std::size_t index) { return erasing(rows, index); }
+    static Edit erase(ItemVec<PolynomialTerm>& rows, std::size_t index) { return erasing(rows, index); }
     static Edit erase(ItemVec<PrefOrient>& rows, std::size_t index) { return erasing(rows, index); }
     static Edit erase(ItemVec<LinkedStructure>& rows, std::size_t index) { return erasing(rows, index); }
     static Edit erase(ItemVec<ParameterAlias>& rows, std::size_t index) { return erasing(rows, index); }

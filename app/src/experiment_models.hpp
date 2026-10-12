@@ -69,6 +69,32 @@ class BackgroundListModel : public RowTableModel {
     ParameterRegistry& registry_;
 };
 
+// The polynomial or Chebyshev background terms: `order` (text-editable, unique within the type's range) and `coef`
+// (ParameterItem), with append (the lowest free order) and remove.
+class BackgroundTermListModel : public RowTableModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to an experiment")
+
+   public:
+    BackgroundTermListModel(edi::ExperimentBase& experiment, ProjectEditor& editor, ParameterRegistry& registry,
+                            QObject* parent);
+    void sync();
+    Q_INVOKABLE bool setOrder(int row, int order);
+    Q_INVOKABLE void append();
+    Q_INVOKABLE void remove(int row);
+
+   protected:
+    bool setRole(int row, const QString& role, const QVariant& value) override {
+        return role == QLatin1String("order") && setOrder(row, value.toInt());
+    }
+
+   private:
+    edi::ExperimentBase& experiment_;
+    ProjectEditor& editor_;
+    ParameterRegistry& registry_;
+};
+
 // The reflections the loaded file carried (`_refln`), read-only: `hkl` ("h k l"),
 // `dSpacing`, `position` (2θ or TOF) and `fSquaredCalc`, numbers as read; NaN where a cell is not one.
 class ReflectionListModel : public RowTableModel {

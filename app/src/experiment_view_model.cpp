@@ -47,6 +47,7 @@ ExperimentViewModel::ExperimentViewModel(SavedFile saved, edi::Project& project,
       peak_asymmetry_(new ParameterListModel([this] { return category("peak").asymmetry; }, registry, this)),
       absorption_(new ParameterListModel([this] { return category("absorption").fields; }, registry, this)),
       background_(new BackgroundListModel(experiment, editor, registry, this)),
+      background_terms_(new BackgroundTermListModel(experiment, editor, registry, this)),
       excluded_regions_(new ExcludedRegionListModel(experiment, editor, this)),
       reflections_(new ReflectionListModel(experiment, this)),
       preferred_orientation_(new PrefOrientListModel(experiment, editor, registry, this)),
@@ -118,15 +119,34 @@ QString ExperimentViewModel::scatteringTypeToken() const {
     return QString::fromUtf8(edi::token(experiment_.experiment_type.effective_scattering_type()));
 }
 // The declared model, now that edi computes more than one.
-QString ExperimentViewModel::backgroundType() const {
-    return QString::fromStdString(experiment_.background_type);
+void ExperimentViewModel::setBackgroundType(const QString& token) {
+    if (token == background_type_) {
+        return;
+    }
+    edi::ExperimentBase& experiment = experiment_;
+    setLastError(editor_.apply(edi::Edit::background_type(experiment, token.toStdString()), true));
+}
+
+void ExperimentViewModel::setBackgroundOrigin(double origin) {
+    edi::ExperimentBase& experiment = experiment_;
+    setLastError(editor_.apply(edi::Edit::background_origin(experiment, origin), false));
+}
+
+void ExperimentViewModel::setBackgroundXMin(double value) {
+    edi::ExperimentBase& experiment = experiment_;
+    setLastError(editor_.apply(edi::Edit::background_domain(experiment, false, value), false));
+}
+
+void ExperimentViewModel::setBackgroundXMax(double value) {
+    edi::ExperimentBase& experiment = experiment_;
+    setLastError(editor_.apply(edi::Edit::background_domain(experiment, true, value), false));
 }
 
 void ExperimentViewModel::setName(const QString& name) {
     edi::Project& project = project_;
     edi::ExperimentBase& experiment = experiment_;
     // A name another experiment of the project carries is refused (the adder's rule).
-    setLastError(editor_.apply(edi::Edit::rename_experiment(project, experiment, name.toStdString()), true));
+    setLastError(editor_.rename_experiment(project, experiment, name.toStdString()));
 }
 
 void ExperimentViewModel::setFitOutcome(const QString& outcome) {
@@ -198,6 +218,19 @@ void ExperimentViewModel::sync() {
            &ExperimentViewModel::peakTypeChanged);
     update(absorption_type_, QString::fromStdString(experiment_.absorption.type.value_or("none")),
            &ExperimentViewModel::absorptionTypeChanged);
+    update(background_type_, QString::fromStdString(experiment_.background_type),
+           &ExperimentViewModel::backgroundTypeChanged);
+    // NaN never equals itself: a constant the type lacks is compared as absent.
+    const auto update_constant = [this](double& member, const std::optional<double>& value,
+                                        void (ExperimentViewModel::*signal)()) {
+        if (value.has_value() ? qIsNaN(member) || member != *value : !qIsNaN(member)) {
+            member = value.value_or(qQNaN());
+            emit(this->*signal)();
+        }
+    };
+    update_constant(background_origin_, experiment_.background_origin, &ExperimentViewModel::backgroundOriginChanged);
+    update_constant(background_x_min_, experiment_.background_x_min, &ExperimentViewModel::backgroundXMinChanged);
+    update_constant(background_x_max_, experiment_.background_x_max, &ExperimentViewModel::backgroundXMaxChanged);
     update(cutoff_fwhm_, experiment_.peak.cutoff_fwhm, &ExperimentViewModel::cutoffFwhmChanged);
     // The one link's id and scale; empty for a bank of several phases, whose rows the Linked structures
     // table shows.
@@ -227,6 +260,7 @@ void ExperimentViewModel::sync() {
     }
     absorption_->sync();
     background_->sync();
+    background_terms_->sync();
     excluded_regions_->sync();
     reflections_->sync();
     preferred_orientation_->sync();

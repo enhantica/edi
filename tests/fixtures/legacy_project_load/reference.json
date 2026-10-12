@@ -1,0 +1,81 @@
+{
+  "producer": "generate.py; ids from loop_parameter_ids, assigned closed-form starts",
+  "inputs_are_regression_witnesses": true,
+  "projects": {
+    "line-segment": {
+      "starts": [
+        [
+          1.25,
+          0.03125
+        ],
+        [
+          1.625,
+          0.0625
+        ],
+        [
+          2.0,
+          0.09375
+        ],
+        [
+          2.375,
+          0.125
+        ],
+        [
+          2.75,
+          0.15625
+        ],
+        [
+          3.125,
+          0.1875
+        ]
+      ]
+    },
+    "polynomial": {
+      "starts": [
+        [
+          1.25,
+          0.03125
+        ],
+        [
+          1.625,
+          0.0625
+        ],
+        [
+          2.0,
+          0.09375
+        ]
+      ]
+    },
+    "chebyshev": {
+      "starts": [
+        [
+          1.25,
+          0.03125
+        ],
+        [
+          1.625,
+          0.0625
+        ],
+        [
+          2.0,
+          0.09375
+        ]
+      ]
+    }
+  },
+  "files": {
+    "line-segment/project.edi": "13f9e09d2515c4b80d08df7d4d11587672401973f91332e914b217d871421658",
+    "line-segment/analysis/analysis.edi": "e86010b4a338df72d9d01dcd6a83d2c3578fbdb0a9aca9e8ee64a3ff1808c108",
+    "line-segment/structures/phase.edi": "9d14a713bb34dbb02f1876d33eade4b2a825ec5c51bd87e6a1f6b714ae6a45a4",
+    "line-segment/experiments/bank.edi": "ed5cc42ba427053a482ef02ab1498aa34103906a4f2e12be40a57f1140ef85d2",
+    "polynomial/project.edi": "13f9e09d2515c4b80d08df7d4d11587672401973f91332e914b217d871421658",
+    "polynomial/analysis/analysis.edi": "8bdff74d76ef550269ef6cd152c4f4d275efcd7ca0ae623e6b2f51beb1afaaea",
+    "polynomial/structures/phase.edi": "9d14a713bb34dbb02f1876d33eade4b2a825ec5c51bd87e6a1f6b714ae6a45a4",
+    "polynomial/experiments/bank.edi": "43fc26c640586faff66df69d4eefa56e71e707e562a0d3137290462d19467647",
+    "chebyshev/project.edi": "13f9e09d2515c4b80d08df7d4d11587672401973f91332e914b217d871421658",
+    "chebyshev/analysis/analysis.edi": "8bdff74d76ef550269ef6cd152c4f4d275efcd7ca0ae623e6b2f51beb1afaaea",
+    "chebyshev/structures/phase.edi": "9d14a713bb34dbb02f1876d33eade4b2a825ec5c51bd87e6a1f6b714ae6a45a4",
+    "chebyshev/experiments/bank.edi": "c774f4fc2e87d3e98479fc93b8112b548ae74255cfb33d36861f2d4549e599a8",
+    "invalid/project.edi": "e2edccbd98cbb037bf904fc47794580ab9881998619a5b2d6af09a4ab8e78bdc"
+  }
+}

@@ -24,6 +24,7 @@ from conftest import (
     project_record_without_fields,
     project_tree_parts,
 )
+from tests.fixtures.correlations.machine_record import without_pair_count
 from tests.fixtures.ncaf_free_flags import canonicalize
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -386,7 +387,7 @@ def test_edi_undo_restores_every_follower_and_second_undo_is_noop(tmp_path: Path
 def _record_without_informational_fields(text: str) -> str:
     return '\n'.join(
         line
-        for line in text.splitlines()
+        for line in without_pair_count(text).splitlines()
         if line != 'cutoff_policy=off'
         and not line.startswith('elapsed_ms=')
         and not (line.startswith('iter.') and '.elapsed_ms=' in line)

@@ -52,6 +52,7 @@
 #include "edi/categories.hpp"
 #include "edi/io.hpp"
 #include "edi/model.hpp"
+#include "edi/structure_scene.hpp"
 #include "edi/symmetry.hpp"
 #include "edi/threading.hpp"
 #include "edi/validation.hpp"
@@ -295,6 +296,173 @@ crysta::Cell completed_cell(const Structure& s) {
     }
 }
 }  // namespace
+
+namespace {
+
+// One coordinate of a Wyckoff representative ("1/2*x+1/2*y", "-x+1/4", "1/8") with x, y and z at 0: the sum of its
+// terms without a variable.
+double coordinate_at_origin(const std::string& expression) {
+    double sum = 0.0;
+    std::size_t start = 0;
+    while (start < expression.size()) {
+        std::size_t end = start + 1;
+        while (end < expression.size() && expression[end] != '+' && expression[end] != '-') {
+            ++end;
+        }
+        std::string term = expression.substr(start, end - start);
+        start = end;
+        const double sign = !term.empty() && term.front() == '-' ? -1.0 : 1.0;
+        if (!term.empty() && (term.front() == '+' || term.front() == '-')) {
+            term.erase(0, 1);
+        }
+        if (term.empty() || term.find_first_of("xyz") != std::string::npos) {
+            continue;
+        }
+        const std::size_t slash = term.find('/');
+        const double value = slash == std::string::npos
+                                 ? std::stod(term)
+                                 : std::stod(term.substr(0, slash)) / std::stod(term.substr(slash + 1));
+        sum += sign * value;
+    }
+    return sum;
+}
+
+}  // namespace
+
+std::vector<WyckoffOption> wyckoff_positions(const Structure& structure) {
+    crysta::SpaceGroup group;
+    try {
+        group = resolve_group(structure);
+    } catch (const std::exception&) {
+        return {};
+    }
+    std::vector<WyckoffOption> options;
+    for (const auto& [letter, position] : group.wyckoff) {
+        WyckoffOption option{letter, position.multiplicity, position.representative, {}};
+        std::size_t start = 0;
+        for (std::size_t axis = 0; axis < 3; ++axis) {
+            const std::size_t comma = position.representative.find(',', start);
+            option.origin[axis] = coordinate_at_origin(position.representative.substr(start, comma - start));
+            start = comma == std::string::npos ? position.representative.size() : comma + 1;
+        }
+        options.push_back(std::move(option));
+    }
+    // The table's order: a to z, then the capital letters (`A`, alpha, after `z`).
+    std::stable_sort(options.begin(), options.end(), [](const WyckoffOption& one, const WyckoffOption& other) {
+        const bool one_capital = !one.letter.empty() && std::isupper(static_cast<unsigned char>(one.letter.front()));
+        const bool other_capital =
+            !other.letter.empty() && std::isupper(static_cast<unsigned char>(other.letter.front()));
+        return one_capital != other_capital ? !one_capital : one.letter < other.letter;
+    });
+    return options;
+}
+
+namespace {
+
+// The elements a new atom may take: those the app styles that crysta's default neutron table and its default X-ray
+// form factors both hold, so the atom computes whatever the probe.
+const std::vector<std::string>& new_site_elements() {
+    static const std::vector<std::string> elements = [] {
+        std::vector<std::string> out;
+        const crysta::NeutronScattering neutron = crysta::load_neutron_scattering();
+        for (const ElementStyle& style : element_style_table()) {
+            if (!neutron.b_c.contains(style.symbol)) {
+                continue;
+            }
+            try {
+                crysta::xray_scattering({"", "none", 0.0}, {style.symbol});
+            } catch (const std::exception&) {
+                continue;
+            }
+            out.push_back(style.symbol);
+        }
+        return out;
+    }();
+    return elements;
+}
+
+}  // namespace
+
+AtomSite new_atom_site(const Structure& structure, const std::function<double()>& random) {
+    const auto draw_index = [&random](std::size_t count) {
+        return std::min(count - 1, static_cast<std::size_t>(random() * static_cast<double>(count)));
+    };
+    AtomSite site;
+    // The element: one the structure does not hold yet when there is one.
+    std::vector<std::string> unused;
+    for (const std::string& element : new_site_elements()) {
+        const bool held = std::any_of(structure.atom_sites.begin(), structure.atom_sites.end(),
+                                      [&element](const auto& existing) { return existing->type_symbol.value() == element; });
+        if (!held) {
+            unused.push_back(element);
+        }
+    }
+    const std::vector<std::string>& candidates = unused.empty() ? new_site_elements() : unused;
+    site.type_symbol = candidates.empty() ? std::string("H") : candidates[draw_index(candidates.size())];
+    // The label: the element and the next free number.
+    for (int number = 1;; ++number) {
+        const std::string label = site.type_symbol.value() + std::to_string(number);
+        const bool taken = std::any_of(structure.atom_sites.begin(), structure.atom_sites.end(),
+                                       [&label](const auto& existing) { return existing->id.value() == label; });
+        if (!taken) {
+            site.id = label;
+            break;
+        }
+    }
+    // The coordinates: three decimals, drawn again on a special position.
+    std::vector<crysta::SymmetryOperation> operations;
+    try {
+        const crysta::SpaceGroup group = resolve_group(structure);
+        operations = crysta::symmetry_operations(group);
+        int highest = 0;
+        for (const auto& [letter, position] : group.wyckoff) {
+            if (position.multiplicity > highest) {
+                highest = position.multiplicity;
+                site.wyckoff_letter = letter;
+            }
+        }
+    } catch (const std::exception&) {
+        operations.clear();
+    }
+    const auto special = [&operations](const std::array<double, 3>& x) {
+        for (const crysta::SymmetryOperation& operation : operations) {
+            const bool identity = operation.rotation == std::array<int, 9>{1, 0, 0, 0, 1, 0, 0, 0, 1} &&
+                                  operation.translation == std::array<double, 3>{0.0, 0.0, 0.0};
+            if (identity) {
+                continue;
+            }
+            bool fixed = true;
+            for (std::size_t row = 0; row < 3 && fixed; ++row) {
+                double image = operation.translation[row];
+                for (std::size_t column = 0; column < 3; ++column) {
+                    image += operation.rotation[row * 3 + column] * x[column];
+                }
+                const double shift = image - x[row];
+                fixed = std::abs(shift - std::round(shift)) < 1e-6;
+            }
+            if (fixed) {
+                return true;
+            }
+        }
+        return false;
+    };
+    std::array<double, 3> x{};
+    for (int attempt = 0; attempt < 1000; ++attempt) {
+        for (double& coordinate : x) {
+            coordinate = std::round(random() * 1000.0) / 1000.0;
+            if (coordinate >= 1.0) {
+                coordinate = 0.0;
+            }
+        }
+        if (!special(x)) {
+            break;
+        }
+    }
+    site.fract_x.value = x[0];
+    site.fract_y.value = x[1];
+    site.fract_z.value = x[2];
+    return site;
+}
 
 std::optional<std::array<double, 6>> site_u_star(const Structure& s, const AtomSite& site) {
     try {
@@ -887,15 +1055,16 @@ Index build_index(Project& model, crysta::Project& cproject) {
                   Slot{&cexperiment.instrument[2], &experiment.instrument.calib_d_to_tof_quadratic});
     index.emplace("experiment.instrument.calib_d_to_tof_reciprocal",
                   Slot{&cexperiment.instrument[3], &experiment.instrument.calib_d_to_tof_reciprocal});
-    index.emplace("experiment.linked_structure.scale",
+    // A loop row by its id, never its position (the owner, 2026-10-11), as parameter_paths names it.
+    index.emplace("experiment.linked_structures[" + experiment.linked_structure().structure_id.value() + "].scale",
                   Slot{&cexperiment.scale(), &experiment.linked_structure().scale});
     for (std::size_t i = 0; i < experiment.background.size(); ++i) {
         index.emplace(
-            "experiment.background[" + std::to_string(i) + "].intensity",
+            "experiment.background[" + experiment.background[i]->id.value() + "].intensity",
             Slot{&cexperiment.background[i].intensity, &experiment.background[i]->intensity});
     }
     for (std::size_t i = 0; i < experiment.background_terms.size(); ++i) {
-        index.emplace("experiment.background[" + std::to_string(i) + "].coef",
+        index.emplace("experiment.background[" + experiment.background_terms[i]->id.value() + "].coef",
                       Slot{&cexperiment.background_terms[i].coef, &experiment.background_terms[i]->coef});
     }
     // Presence-tracked: a model that never declared abscor1 has no such path, so a set() on it is an
@@ -916,9 +1085,9 @@ Index build_index(Project& model, crysta::Project& cproject) {
     // The one preferred-orientation row, crysta's [march_r, march_random_fract] layout.
     if (experiment.preferred_orientation.size() != 0 && cexperiment.texture() != nullptr) {
         PrefOrient& row = *experiment.preferred_orientation[0];
-        index.emplace("experiment.preferred_orientation[0].march_r",
-                      Slot{cexperiment.texture()->march.data(), &row.march_r});
-        index.emplace("experiment.preferred_orientation[0].march_random_fract",
+        const std::string texture = "experiment.preferred_orientation[" + row.structure_id.value() + "].";
+        index.emplace(texture + "march_r", Slot{cexperiment.texture()->march.data(), &row.march_r});
+        index.emplace(texture + "march_random_fract",
                       Slot{cexperiment.texture()->march.data() + 1, &row.march_random_fract});
     }
     return index;
@@ -1823,6 +1992,19 @@ void save_project_via_crysta(const Project& model, const std::string& directory)
         to.profile_function = from.profile_function;
         to.background_function = from.background_function;
         to.descent = from.descent;
+        // A scan's per-file pairs are held with no result, so they cross whether or not one is held.
+        std::vector<crysta::FitParameterCorrelation> rows;
+        rows.reserve(from.correlations.size());
+        for (const auto& row : from.correlations) {
+            crysta::FitParameterCorrelation& copy = rows.emplace_back();
+            copy.id = row->id.value();
+            copy.source_kind = row->source_kind.value();
+            copy.parameter_unique_name_i = row->parameter_unique_name_i.value();
+            copy.parameter_unique_name_j = row->parameter_unique_name_j.value();
+            copy.correlation = row->correlation.value();
+            copy.file_path = row->file_path.value();
+        }
+        to.correlations.assign(rows);
     }
     // The declared scan block round-trips through the delegated save exactly as the fitting
     // mode does — a save that dropped it would turn a sequential project into a single one on
@@ -2124,8 +2306,9 @@ void apply_post_build_fields(const ExperimentBase& e, crysta::ExperimentBase& bu
         terms.reserve(e.background_terms.size());
         for (const auto& term : e.background_terms) {
             terms.emplace_back(term->order.get(), param(term->coef, crysta::BACKGROUND, "coef"));
+            terms.back().id = term->id.value();
         }
-        built.background_terms = std::move(terms);
+        built.background_terms.assign(terms);
     }
     // The declared family token crosses on the CALCULATE path too — crysta's CW kernel
     // resolves it (cwl_absorption_form on `absorption_type`), while its TOF derivation stays
@@ -2931,6 +3114,10 @@ void restore_dependents(Project& project) {
     }
 }
 
+int background_max_order(const std::string& type) {
+    return crysta::background_max_order(crysta::background_form_of(type));
+}
+
 std::vector<std::string> absorption_file_tokens(BeamModeEnum mode) {
     return crysta::file_tokens(crysta::TokenField::AbsorptionType, crysta_kind(mode));
 }
@@ -3401,11 +3588,27 @@ void publish_fit_state(Project& project, crysta::Project& converted) {
     project.refresh_calculated_pattern();  // The pattern follows the model it describes
 }
 
+// The fit's parameter correlations as crysta computes them over the project it fitted (crysta::fit_correlations:
+// diffraction-lib's pairs from the covariance, by unique name, in crysta's shortest form), as edi's rows. One
+// computation serves the app, Python and both CLIs.
+std::vector<FitParameterCorrelation> crysta_correlations(crysta::Project& fitted, const crysta::FitResultBase& result) {
+    std::vector<FitParameterCorrelation> rows;
+    for (const crysta::FitParameterCorrelation& pair : crysta::fit_correlations(fitted, result)) {
+        FitParameterCorrelation& row = rows.emplace_back();
+        row.source_kind = pair.source_kind.get();
+        row.parameter_unique_name_i = pair.parameter_unique_name_i.get();
+        row.parameter_unique_name_j = pair.parameter_unique_name_j.get();
+        row.correlation = pair.correlation.get();
+    }
+    return rows;
+}
+
 // The fit's result as the project records it (`_fit_result`, diffraction-lib's names, and each bank's share
 // for a joint fit), from what the fit returned — the same numbers the reports print. The status label is
 // crysta's machine-record spelling; the profile function is the peak type the experiments share (left out
 // when they differ), the background edi's only one.
-void record_fit_result(Project& project, const FitResultBase& outcome, std::size_t considered) {
+void record_fit_result(Project& project, FitResultBase& outcome, std::size_t considered,
+                       std::vector<FitParameterCorrelation> correlations) {
     FitResultRecord record;
     record.result_kind = "deterministic";
     record.success = outcome.status == FitStatus::DONE;
@@ -3459,6 +3662,12 @@ void record_fit_result(Project& project, const FitResultBase& outcome, std::size
         record.background_function = *background;
     }
     record.descent = outcome.descent;  // review-1 F3: the descent that produced it
+    const std::vector<ItemVec<FitParameterCorrelation>::Ptr> rows = numbered_correlations(correlations);
+    outcome.correlations.clear();
+    for (const auto& row : rows) {
+        outcome.correlations.push_back(*row);
+    }
+    record.correlations.assign(rows);
     project.fit_result = std::move(record);
     for (const auto& experiment_item : project.experiments) {
         ExperimentBase& experiment = *experiment_item;
@@ -3709,7 +3918,8 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
             detail::write_back(refined);
             crysta::write_fit_result_into(project, result);  // crysta completes the dependents
             publish_fit_state(*this, project);
-            record_fit_result(*this, outcome, considered);
+            record_fit_result(*this, outcome, considered,
+                              crysta_correlations(project, result));
             return outcome;
         };
         if (phases) {
@@ -4122,20 +4332,39 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
             };
         const std::filesystem::path ledger_path = project_root / "analysis" / "results-provenance.csv";
         auto completed_files = std::make_shared<std::size_t>(0);
-        const crysta::FileCompleteCallback engine_file_complete =
-            [file_history, last_file_history, ledger_path, completed_files,
-             &on_file_complete](const std::vector<std::string>& row) {
+        // Every file's pairs, in the order the files were fitted: those an earlier run recorded (a resume fits only
+        // the rest), then this run's. They become the scan's record, whoever runs it.
+        auto scan_pairs = std::make_shared<std::vector<FitParameterCorrelation>>();
+        for (const auto& pair : fit_result.correlations) {
+            if (!pair->file_path.empty()) {
+                scan_pairs->push_back(*pair);
+            }
+        }
+        // Each file's event carries its own fit result, so its correlations are crysta's from its covariance, as a
+        // single fit's are, over the template project its labels name.
+        const crysta::FileResultCallback engine_file_result =
+            [this, file_history, last_file_history, ledger_path, completed_files, scan_pairs, &on_file_complete,
+             &cproject](const std::vector<std::string>& row, const crysta::FitResultBase& file_result) {
                 ++*completed_files;
                 std::swap(*last_file_history, *file_history);
                 file_history->clear();
+                std::optional<ScanFileRecord> record = scan_record_from_cells(row);
+                if (!record.has_value()) {
+                    return;
+                }
+                record->correlations = crysta_correlations(cproject, file_result);
+                std::erase_if(*scan_pairs, [&](const FitParameterCorrelation& pair) {
+                    return pair.file_path.value() == record->file_name;
+                });
+                for (FitParameterCorrelation pair : record->correlations) {
+                    pair.file_path = record->file_name;
+                    scan_pairs->push_back(std::move(pair));
+                }
                 if (on_file_complete) {
-                    std::optional<ScanFileRecord> record = scan_record_from_cells(row);
-                    if (record.has_value()) {
-                        // The driver wrote this file's ledger row just before its results row and waits
-                        // here, so the ledger's last line is this file's.
-                        record->termination = ledger_termination(ledger_path, row.empty() ? std::string() : row[0]);
-                        on_file_complete(*record);
-                    }
+                    // The driver wrote this file's ledger row just before its results row and waits
+                    // here, so the ledger's last line is this file's.
+                    record->termination = ledger_termination(ledger_path, row.empty() ? std::string() : row[0]);
+                    on_file_complete(*record);
                 }
             };
         crysta::FileFittedCallback engine_file_fitted;
@@ -4151,8 +4380,9 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
                                [this, &fitted] { return fitted_scan_pattern(*this, fitted); });
             };
         }
-        const crysta::FitResultBase result = crysta::fit_project(cproject, engine_callback, should_cancel,
-                                                                 engine_file_complete, engine_file_fitted);
+        const crysta::FitResultBase result = crysta::fit_project(
+            cproject, engine_callback, should_cancel, crysta::FileCompleteCallback{}, engine_file_fitted,
+            engine_file_result);
         const double elapsed_ms = std::chrono::duration<double, std::milli>(
                                       std::chrono::steady_clock::now() - fit_start)
                                       .count();
@@ -4221,6 +4451,12 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
             detail::write_back(refined);
             publish_fit_state(*this, cproject);
             clear_fit_result(*this);  // A scan records no `_fit_result`; an earlier fit's would be stale
+            fit_result.correlations.assign(numbered_correlations(*scan_pairs, sequential_fit.template_file));
+        } else if (*completed_files > 0) {
+            // Each file this run completed has its row in results.csv, so its pairs are kept as well; a resume
+            // skips that file and could not make them again. The unfinished file has none, and the rest of the
+            // record stays as it was.
+            fit_result.correlations.assign(numbered_correlations(*scan_pairs, sequential_fit.template_file));
         }
         return outcome;
     } catch (const std::invalid_argument&) {
@@ -4421,7 +4657,8 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
             detail::write_back(refined);
             crysta::write_fit_result_into(project, result);  // crysta completes the dependents
             publish_fit_state(*this, project);
-            record_fit_result(*this, outcome, considered);
+            record_fit_result(*this, outcome, considered,
+                              crysta_correlations(project, result));
             // Before shared items this copied bank 0 into the single-bank mirror (the loader set it
             // up that way), so `experiment` never reports stale values after a joint refinement.
             // `experiment()` IS the first bank now, so nothing is copied back: that

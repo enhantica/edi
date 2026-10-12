@@ -20,24 +20,33 @@ def source(path):
 
 
 def spans(text):
+    # Mask complete lexical tokens before balancing: quoted braces and comment
+    # apostrophes are not QML delimiters. Preserve offsets for caller slices.
+    masked = re.sub(
+        r'//[^\n]*|/\*.*?\*/|"(?:\\.|[^"\\])*"|'
+        r"'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`",
+        lambda match: ' ' * len(match.group()),
+        text,
+        flags=re.DOTALL,
+    )
     stack, found = [], []
-    quote = ''
-    escaped = False
-    for position, character in enumerate(text):
-        if quote:
-            if character == quote and not escaped:
-                quote = ''
-            escaped = character == '\\' and not escaped
-        elif character in '"\'`':
-            quote = character
-            escaped = False
-        elif character == '{':
+    for position, character in enumerate(masked):
+        if character == '{':
             stack.append(position)
         elif character == '}':
             assert stack, 'Scan wiring: source blocks must balance before inspection'
             found.append((stack.pop(), position + 1))
     assert not stack, 'Scan wiring: source blocks must close before inspection'
     return found
+
+
+def test_qml_spans_ignore_comment_apostrophes_and_quoted_braces():
+    text = 'Item { // owner\'s } comment\n text: "{fake}"; Child { value: 3 } /* } */ }'
+    blocks = [text[a:b] for a, b in spans(text)]
+    assert blocks == ['{ value: 3 }', text[text.index('{') :]], (
+        'QML observers must ignore comment and string delimiters '
+        'while retaining real nested objects'
+    )
 
 
 def block(text, marker):
@@ -147,7 +156,9 @@ def evaluate(expression, context=''):
 def require_availability(text):
     control = item(text, 'experiments.loadData.${row.index}')
     visible = property_value(control, 'visible')
-    enabled = property_value(control, 'enabled')
+    enabled = (
+        property_value(control, 'enabled') if re.search(r'(?m)^\s*enabled:', control) else 'true'
+    )
     contexts = [
         (False, {'canLoadData': True, 'calculationOnly': True}, True),
         (False, {'canLoadData': True, 'calculationOnly': False}, True),
@@ -654,8 +665,10 @@ def test_type_selectors_live_in_explorer_and_follow_selected_row():
 def test_data_free_experiment_type_has_a_write_boundary(axis):
     text = source('qml/Pages/Experiment/ExperimentTypeGroup.qml')
     control = item(text, 'experimentType.' + axis)
-    assert property_value(control, 'enabled') == 'row.editable', (
-        'Type wiring: each actual selector follows the data-free guard'
+    expected_guard = 'false' if axis in {'sampleForm', 'scatteringType'} else 'row.editable'
+    assert property_value(control, 'enabled') == expected_guard, (
+        'Type wiring: unsupported sample/scattering choices stay disabled; '
+        'supported axes follow the data-free guard'
     )
     require(
         text,

@@ -59,7 +59,7 @@ AppDialog {
             defaultInfoText: ""
             sourceModel: dialog.results
 
-            columnWidths: [numberColumnWidth, EaStyle.Sizes.tableRowHeight, -1, EaStyle.Sizes.fontPixelSize * 10]
+            columnWidths: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, -1, EaStyle.Sizes.fontPixelSize * 10]
 
             header: EaComponents.ListViewHeader {
                 EaComponents.TableViewLabel {

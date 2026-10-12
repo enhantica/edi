@@ -6,6 +6,7 @@ import re
 from pathlib import Path
 
 from tests.fixtures.cwl_family.historical import original_tokens
+from tests.fixtures.loop_parameter_ids.historical_fit_ids import historical_fit_ids
 from tests.fixtures.table_display.metadata_bytes import pre_catalogue_bytes
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -41,10 +42,13 @@ def test_cli_scan_contains_the_original_inputs():
                 'the scan metadata adaptation must retain the original owner input identity'
             )
             expected_digest = adaptation['after_sha256']
-        assert (
-            hashlib.sha256(original_tokens(pre_catalogue_bytes(path))).hexdigest()
-            == expected_digest
-        ), f' scope 1: original owner scan bytes must be preserved: {relative}'
+        contents = pre_catalogue_bytes(path)
+        if relative == 'analysis/analysis.edi':
+            # Before: positional archived slots. After: declared IDs, with every other byte kept.
+            contents = historical_fit_ids(project, contents)
+        assert hashlib.sha256(original_tokens(contents)).hexdigest() == expected_digest, (
+            f' scope 1: original owner scan bytes must be preserved: {relative}'
+        )
 
 
 def test_cli_full_scan_has_every_reversed_temperature_pair():

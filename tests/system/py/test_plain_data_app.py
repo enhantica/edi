@@ -137,9 +137,15 @@ def require_lifecycle(record, beam):
         'undoSecond',
         'undoFirst',
     ]:
-        assert configuration(record[step]) == configuration(original), (
+        expected_configuration = configuration(original)
+        if step in {'reopened', 'afterReopenedTypeAttempt', 'afterReopenedRangeAttempt'}:
+            expected_configuration['weight'] = 1
+        assert record[step]['fittingMode'] == original['fittingMode'] == 'single', (
+            'Load data lifecycle: this one-experiment witness retains Single mode'
+        )
+        assert configuration(record[step]) == expected_configuration, (
             'Load data lifecycle: non-default instrument, peak, background, exclusions, '
-            'weight, links and parameter state survive every load, Undo and reopen: ' + step
+            'links and parameter state survive; inactive joint weights reset on reopen: ' + step
         )
     assert (
         original['experiments'][0]['excluded'] == ([[9000, 9100]] if beam == 'tof' else [[60, 61]])
@@ -175,10 +181,9 @@ def require_lifecycle(record, beam):
             'Load data lifecycle: each measured state retains its beam mode and measured lock: '
             + step
         )
-        if step != 'reopened':
-            assert measured['canLoadData'], (
-                'Load data lifecycle: every created measured state admits another load: ' + step
-            )
+        assert measured['canLoadData'], (
+            'Load data lifecycle: every non-scan measured state admits another load: ' + step
+        )
     after = record['after']['experiments'][0]
     assert record['loaded'] and rows(record['after']) == expected, (
         'Load data: the created experiment receives the hand-constructed measured triples'
@@ -199,9 +204,7 @@ def require_lifecycle(record, beam):
         'Load data: visible range reports measured start, end and nontrivial step'
     )
     assert content(record['reopened']) == content(record['after']) | {
-        'experiments': [
-            dict(after, canLoadData=record['reopened']['experiments'][0]['canLoadData'])
-        ]
+        'experiments': [dict(after, weight=1)]
     }, 'Save plain data: reopen preserves all measured state and original file/name metadata'
     assert (
         record['reopenedTypeRefused']
@@ -249,16 +252,19 @@ def test_load_lock_replace_and_single_step_undo(native_probe, tmp_path, beam):
 
 
 @pytest.mark.parametrize('beam', ['cwl', 'tof'])
-def test_saved_data_is_self_contained_and_edi_load_cannot_replace_it(native_probe, tmp_path, beam):
+def test_saved_data_is_self_contained_and_imported_data_can_be_replaced(
+    native_probe, tmp_path, beam
+):
     record = run(native_probe, tmp_path, beam=beam)
     expected = CASES[beam + '/two_columns']['rows']
     require_reopened(record, expected)
     assert rows(record['ediImported']) == expected, (
         'Load experiment: the explicitly imported .edi supplies the saved measured rows'
     )
-    assert record['ediLoadRefused'] and rows(record['afterEdiLoadAttempt']) == expected, (
-        'Load data admission: an experiment imported through Load experiment cannot use the action'
-    )
+    assert (
+        record['ediLoadSucceeded']
+        and rows(record['afterEdiLoadAttempt']) == CASES[beam + '/three_columns']['rows']
+    ), 'Load data admission: an imported non-scan experiment receives the complete replacement'
     assert not record['reopened']['experiments'][0]['simulation'], (
         'Save plain data: the reopened experiment retains its measured-data type lock'
     )
@@ -485,6 +491,7 @@ def lifecycle_control():
         'sigma': [],
     }
     before = {
+        'fittingMode': 'single',
         'experiments': [experiment],
         'structures': ['unchanged structure'],
         'parameters': [[0.125, False], [0.0625, False], [4.25, False]],
@@ -544,6 +551,8 @@ def lifecycle_control():
         'afterUndoTypeEdit': type_edited,
         'afterUndoRangeEdit': range_edited,
     }
+    for step in ('reopened', 'afterReopenedTypeAttempt', 'afterReopenedRangeAttempt'):
+        record[step]['experiments'][0]['weight'] = 1
     require_lifecycle(record, 'cwl')
     return record
 
@@ -556,6 +565,7 @@ def lifecycle_control():
         ('undoSecond', 'peak'),
         ('undoFirst', 'background'),
         ('reopened', 'weight'),
+        ('after', 'fittingMode'),
         ('undoSecond', 'file'),
         ('undoSecond', 'name'),
         ('undoFirst', 'file'),
@@ -574,7 +584,9 @@ def test_lifecycle_observer_consumes_configuration_metadata_and_actual_edits(
     lifecycle_control, step, field
 ):
     changed = copy.deepcopy(lifecycle_control)
-    if field == 'action':
+    if field == 'fittingMode':
+        changed[step]['fittingMode'] = 'joint'
+    elif field == 'action':
         changed[step] = False
     else:
         experiment = changed[step]['experiments'][0]
@@ -591,7 +603,7 @@ def test_lifecycle_observer_consumes_configuration_metadata_and_actual_edits(
         elif field in {'instrument', 'peak'}:
             experiment[field][0][0] += 1
         elif field == 'weight':
-            experiment[field] = 1
+            experiment[field] = 2.5
         else:
             experiment[field] = 'wrong-restored-metadata'
     assert changed != lifecycle_control, (
@@ -816,3 +828,285 @@ def test_automatic_creation_uses_the_persisted_casefold_identity_domain(
     assert [row['name'] for row in record['reopened'][category]] == expected, (
         'Creation identity: save and reopen retain the complete ordered identity set'
     )
+
+
+SCAN_REFERENCE = json.loads((ROOT / 'tests/fixtures/correlations/scan-reference.json').read_text())
+
+
+def observe_correlations(native_probe, tmp_path, action, mode, history):
+    work = tmp_path / 'work'
+    work.mkdir()
+    result = subprocess.run(
+        [
+            str(native_probe),
+            action,
+            str(ROOT / f'tests/fixtures/correlations/scan-{mode}'),
+            str(work),
+            mode,
+            'history' if history else 'fresh',
+            'unused',
+        ],
+        env=dict(os.environ, QT_QPA_PLATFORM='offscreen', QSG_RHI_BACKEND='software'),
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=30,
+    )
+    assert result.returncode == 0, (
+        'Correlation lifecycle: the actual native app/core actor must complete: ' + result.stderr
+    )
+    record = json.loads(result.stdout.splitlines()[-1])
+    assert 'error' not in record, (
+        'Correlation lifecycle: all real load, fit, save and resume actions must succeed: '
+        + record.get('error', '')
+    )
+    return record
+
+
+def require_dataset_matrix(matrix, case):
+    names = matrix['labels']
+    assert matrix['available'] == 3, (
+        "A Single fit inside a scan must expose that dataset's three actual free parameters"
+    )
+    assert sorted(names) == sorted(case['names']), (
+        'The selected dataset matrix must name the independent covariance reference parameters'
+    )
+    for row in range(3):
+        for column in range(row):
+            expected = case['matrix'][case['names'].index(names[row])][
+                case['names'].index(names[column])
+            ]
+            assert matrix['values'][row * 3 + column] == pytest.approx(expected, abs=2e-4), (
+                'A selected dataset must show its own normalized covariance, including signs'
+            )
+
+
+def require_core_file_pairs(pairs, case):
+    actual = [pair for pair in pairs if Path(pair['file']).name == case['file']]
+    assert len(actual) == 3, 'A completed file must retain every core pair after scan cancellation'
+    observed = {
+        tuple(sorted((pair['i'], pair['j']))): float(pair['coefficient']) for pair in actual
+    }
+    expected = {
+        tuple(sorted((pair['parameter_unique_name_i'], pair['parameter_unique_name_j']))): pair[
+            'correlation'
+        ]
+        for pair in case['rows']
+    }
+    assert observed == pytest.approx(expected, abs=2e-4), (
+        'Completed-file covariance must match the external normal-equations reference'
+    )
+
+
+@pytest.mark.parametrize('mode', ['sequential', 'independent'])
+@pytest.mark.parametrize('history', [False, True], ids=['fresh', 'after-scan'])
+def test_single_fit_in_scan_shows_saves_and_undoes_its_own_matrix(
+    native_probe, tmp_path, mode, history
+):
+    record = observe_correlations(native_probe, tmp_path, 'correlation-single', mode, history)
+    case = SCAN_REFERENCE['cases'][1]
+    for step in ('fitted', 'selectedAgain', 'reopened'):
+        require_dataset_matrix(record[step], case)
+    require_core_file_pairs(record['reopened']['pairs'], case)
+    assert {key: record['otherAfter'][key] for key in ('labels', 'values', 'available')} == {
+        key: record['otherBefore'][key] for key in ('labels', 'values', 'available')
+    }, "A Single fit must leave the other scan dataset's matrix and associations unchanged"
+    assert record['undone'] == record['before'], (
+        'Undo of a Single dataset fit must restore its previous matrix and core pairs exactly'
+    )
+    if history:
+        assert record['reset']['available'] == 0, (
+            'Reset fits must remove the selected dataset matrix'
+        )
+        assert record['undoReset'] == record['reopened'], (
+            'Undo of Reset fits must restore the saved per-dataset matrix and core pairs'
+        )
+
+
+@pytest.mark.parametrize('mode', ['sequential', 'independent'])
+@pytest.mark.parametrize('history', [False, True], ids=['fresh', 'replace-old-pair'])
+def test_cancelled_scan_retains_completed_core_pairs_and_resumes(
+    native_probe, tmp_path, mode, history
+):
+    record = observe_correlations(native_probe, tmp_path, 'correlation-cancel', mode, history)
+    assert record['cancelBeforeAny'] == record['before'], (
+        'Cancellation before any file completes must preserve all previously held pairs'
+    )
+    assert record['completed'] == 1, (
+        'The cancellation witness must complete exactly its first file'
+    )
+    assert len(record['cancelled']) == 3, (
+        "Cancellation must retain only the completed file's pairs, replacing a stale pair"
+    )
+    require_core_file_pairs(record['cancelled'], SCAN_REFERENCE['cases'][0])
+    assert record['reopened'] == record['cancelled'], (
+        "Save and reload must retain a cancelled scan's completed core correlations exactly"
+    )
+    assert record['resumedFiles'] == ['02.xy'], (
+        "Resume must fit only the unfinished dataset, without replacing the first dataset's pairs"
+    )
+    assert len(record['resumed']) == 6, "Resume must retain both files' complete covariance pairs"
+    for case in SCAN_REFERENCE['cases']:
+        require_core_file_pairs(record['resumed'], case)
+    assert not record['noopFiles'], 'A completed scan resume must execute no file fits'
+    assert record['noop'] == record['resumed'], (
+        'A no-op resume must preserve every completed correlation and its dataset association'
+    )
+    assert record['memoryAfterSave'] == record['resumed'], (
+        'Saving a scan must preserve all completed datasets correlations in memory'
+    )
+    require_core_file_pairs(record['completedReopened'], SCAN_REFERENCE['cases'][0])
+    assert len(record['completedReopened']) == 3, (
+        'A scan saves only its explicitly declared template dataset correlations'
+    )
+
+
+@pytest.mark.parametrize('kind', ['structure', 'experiment', 'site', 'point'])
+def test_app_rename_follows_all_saved_references_and_undo(native_probe, tmp_path, kind):
+    work = tmp_path / 'work'
+    work.mkdir()
+    completed = subprocess.run(
+        [
+            str(native_probe),
+            'correlation-rename',
+            str(ROOT / 'tests/fixtures/loop_parameter_ids/line-segment'),
+            str(work),
+            'unused',
+            kind,
+            'unused',
+        ],
+        env=dict(os.environ, QT_QPA_PLATFORM='offscreen', QSG_RHI_BACKEND='software'),
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=30,
+    )
+    assert completed.returncode == 0, 'Reference renames must execute the actual native app actor'
+    record = json.loads(completed.stdout.splitlines()[-1])
+    assert 'error' not in record, (
+        'All admitted app rename, save, reopen and Undo actions must succeed: '
+        + record.get('error', '')
+    )
+    before = record['before']
+    expected = copy.deepcopy(before)
+    replacements = {
+        'structure': [('phase.', 'new_phase.'), ('.phase.', '.new_phase.')],
+        'experiment': [('bank.', 'new_bank.')],
+        'site': [('.atom_site.A.', '.atom_site.new_site.')],
+        'point': [('.background.pA.', '.background.new_point.')],
+    }[kind]
+
+    def follow(name):
+        for old, new in replacements:
+            name = name.replace(old, new)
+        return name
+
+    expected['aliases'] = [follow(name) for name in expected['aliases']]
+    for pair in expected['pairs']:
+        pair['i'] = follow(pair['i'])
+        pair['j'] = follow(pair['j'])
+    if kind == 'structure':
+        expected['links'] = [
+            'new_phase' if value == 'phase' else value for value in expected['links']
+        ]
+        expected['textures'] = [
+            'new_phase' if value == 'phase' else value for value in expected['textures']
+        ]
+    assert record['renamed'] == expected, (
+        'App renames must follow aliases, both correlation endpoints and link/texture rows'
+    )
+    assert record['reopened'] == expected, (
+        'Save and reload must retain every app-rewritten reference'
+    )
+    assert record['undone'] == expected, (
+        'Undo of removal after renaming must retain every rewritten reference'
+    )
+
+
+@pytest.mark.parametrize('kind', ['structure', 'experiment'])
+@pytest.mark.parametrize('scenario', ['plain', 'scan', 'refusal'])
+def test_literal_datablock_rename_undo_restores_references_template_and_saved_state(
+    native_probe, tmp_path, kind, scenario
+):
+    work = tmp_path / 'rename-undo'
+    work.mkdir()
+    completed = subprocess.run(
+        [
+            str(native_probe),
+            'correlation-rename-undo',
+            str(ROOT / 'tests/fixtures/loop_parameter_ids/line-segment'),
+            str(work),
+            'scan' if scenario == 'scan' else 'plain',
+            kind,
+            'refusal' if scenario == 'refusal' else 'accepted',
+        ],
+        env=dict(os.environ, QT_QPA_PLATFORM='offscreen', QSG_RHI_BACKEND='software'),
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=30,
+    )
+    assert completed.returncode == 0, (
+        'Literal rename Undo must execute the actual application actor'
+    )
+    record = json.loads(completed.stdout.splitlines()[-1])
+    assert 'error' not in record, (
+        'The rename Undo lifecycle must reach save and reload: ' + record.get('error', '')
+    )
+    assert not record['beforeCanUndo'], (
+        'A newly loaded rename witness must begin without earlier Undo history'
+    )
+    if scenario == 'refusal':
+        assert not record['renameCanUndo'], 'A refused collision must add no Undo step'
+        assert record['nameRenamed'] == record['nameBefore'], (
+            'A refused rename must retain its original datablock key'
+        )
+        assert record['renamed'] == record['before'], (
+            'A refused rename must retain every reference'
+        )
+    else:
+        assert record['renameCanUndo'], 'A successful datablock rename is one actual undoable edit'
+        assert record['nameRenamed'] != record['nameBefore'], (
+            'The literal rename actor must reach a different datablock key'
+        )
+        assert record['nameUndone'] == record['nameBefore'], 'Undo must reverse the rename itself'
+        assert not record['undoCanUndo'], 'One rename Undo must exhaust its sole history step'
+        assert record['afterReloadUndo'] == record['afterReloadBefore'], (
+            'A rename after reload must have its own working inverse'
+        )
+    assert record['undone'] == record['before'], (
+        'Literal rename Undo restores all aliases, both correlation endpoints and links/textures'
+    )
+    assert record['undoneTemplate'] == record['beforeTemplate'], (
+        'Rename Undo restores the entire scan template reference state'
+    )
+    assert record['templateUndone'] == record['templateBefore'], (
+        'Rename Undo restores the original template dataset designation'
+    )
+    assert record['undoReopened'] == record['before'], (
+        'Saving and reopening the undone state must retain all original references'
+    )
+    assert record['undoReopenedTemplate'] == record['beforeTemplate'], (
+        'Save/reload preserves the restored scan template references'
+    )
+
+
+@pytest.mark.parametrize('mode', ['sequential', 'independent'])
+def test_scan_keeps_all_live_matrices_but_persists_only_template_with_reload_explanation(
+    native_probe, tmp_path, mode
+):
+    record = observe_correlations(native_probe, tmp_path, 'correlation-template', mode, False)
+    for step in ('templateLive', 'templateReopened'):
+        require_dataset_matrix(record[step], SCAN_REFERENCE['cases'][0])
+    for step in ('otherLive', 'otherAfterSave'):
+        require_dataset_matrix(record[step], SCAN_REFERENCE['cases'][1])
+    require_core_file_pairs(record['savedPairs'], SCAN_REFERENCE['cases'][0])
+    assert len(record['savedPairs']) == 3, 'A scan persists exactly its template dataset matrix'
+    assert record['otherReopened']['available'] == 0, (
+        'A reloaded non-template dataset must not display a persisted matrix'
+    )
+    reason = record['otherReopened']['emptyText'].lower()
+    assert 'template' in reason, (
+        'The reloaded non-template tab must explain the template-only persistence rule'
+    )
+    assert 'only' in reason, 'The empty-state explanation must identify the persistence limit'

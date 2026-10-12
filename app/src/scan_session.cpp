@@ -375,9 +375,14 @@ QString ScanSession::writeRun(const edi::Project& project, const Run& run) {
 
 std::string ScanSession::templateIdentity(const edi::Project& project) {
     // The name, title and description (project.edi) and the fitting mode are not the template: changing them leaves
-    // the results current. The minimizer's settings are part of it: rows fitted under another bound or descent are
-    // another generation.
+    // the results current. Neither are the fits' parameter correlations, a scan's own included (the
+    // `_fit_parameter_correlation` loop, its last category). The minimizer's settings are part of it: rows fitted under
+    // another bound or descent are another generation.
     QCryptographicHash hash(QCryptographicHash::Sha256);
+    const auto add = [&hash](std::string_view line) {
+        hash.addData(QByteArrayView(line.data(), static_cast<qsizetype>(line.size())));
+        hash.addData(QByteArrayView("\n", 1));
+    };
     for (const auto& [path, body] : edi::project_edi_files(project)) {
         if (path == "project.edi") {
             continue;
@@ -385,14 +390,36 @@ std::string ScanSession::templateIdentity(const edi::Project& project) {
         hash.addData(QByteArrayView(path.data(), static_cast<qsizetype>(path.size())));
         hash.addData(QByteArrayView("\0", 1));
         std::size_t start = 0;
+        bool correlations = false;
+        // Blank lines and a `loop_` line wait for the next line: the correlation loop takes them with it.
+        std::vector<std::string_view> pending;
         while (start < body.size()) {
             const std::size_t end = std::min(body.find('\n', start), body.size());
             const std::string_view line(body.data() + start, end - start);
-            if (!line.starts_with("_fitting_mode.")) {
-                hash.addData(QByteArrayView(line.data(), static_cast<qsizetype>(line.size())));
-                hash.addData(QByteArrayView("\n", 1));
-            }
             start = end + 1;
+            if (line.starts_with("_fit_parameter_correlation.")) {
+                correlations = true;
+                pending.clear();
+                continue;
+            }
+            if (correlations && !line.empty()) {
+                continue;
+            }
+            correlations = false;
+            if (line.empty() || line == "loop_") {
+                pending.push_back(line);
+                continue;
+            }
+            for (const std::string_view held : pending) {
+                add(held);
+            }
+            pending.clear();
+            if (!line.starts_with("_fitting_mode.")) {
+                add(line);
+            }
+        }
+        for (const std::string_view held : pending) {
+            add(held);
         }
     }
     return hash.result().toHex().toStdString();

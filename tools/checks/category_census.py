@@ -97,6 +97,7 @@ NOT_MODEL = {
     'ProjectTail': "a project's last member, linking its collections after a build or assignment",
     'ComputedSource': "what an experiment's computed categories were computed from",
     'ViewWindow': 'view state passed to a geometry read, never stored in the model',
+    'ParameterRenames': "a block rename's old and new parameter names, made for the rename",
     'CwlProfileSlots': 'the peak slots a CW profile token carries, read from the token',
     'OptionalParameter': 'one optional parameter, kept detached once removed (ADR-0012)',
     'ParameterCell': 'an optional parameter and the link it reports once removed',

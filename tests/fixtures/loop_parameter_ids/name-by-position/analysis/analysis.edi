@@ -1,0 +1,30 @@
+_edi.schema_version 3
+_fitting_mode.type single
+_minimizer.max_iterations 80
+
+loop_
+_alias.id
+_alias.parameter_unique_name
+left bank.background.pA.intensity
+right bank.background.pB.intensity
+
+loop_
+_constraint.id
+_constraint.expression
+bind "right = 2*left"
+
+loop_
+_fit_parameter.id
+_fit_parameter.start_value
+_fit_parameter.start_uncertainty
+bank.background[pA] 1.25 0.375
+bank.background[pB] 2.5 0.75
+
+loop_
+_fit_parameter_correlation.id
+_fit_parameter_correlation.source_kind
+_fit_parameter_correlation.parameter_unique_name_i
+_fit_parameter_correlation.parameter_unique_name_j
+_fit_parameter_correlation.correlation
+_fit_parameter_correlation.file_path
+pair deterministic bank.background.pA.intensity bank.background.pB.intensity -0.625 pA.xy

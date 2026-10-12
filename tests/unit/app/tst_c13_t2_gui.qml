@@ -99,7 +99,7 @@ TestCase {
     }
     function test_separate_adp_table_and_isotropic_controls() {
         const atoms = reveal("structure", "basic", "atom_site", "atomSites.list");
-        compare(JSON.stringify(headers(atoms)), JSON.stringify(["", "id", "type", "x", "y", "z", "WL", "occ", ""]), "owner 2026-10-06: Atom sites has an unlabelled index, WL, and no ADP columns");
+        compare(JSON.stringify(headers(atoms)), JSON.stringify(["", "id", "type", "x", "y", "z", "WP", "occ", ""]), "owner 2026-10-08: Atom sites has an unlabelled index, WP, and no ADP columns");
         const picker = control("atomSite.typeSymbol.0");
         const icon = control("atomSite.icon.0");
         verify(picker !== null && icon !== null && icon.parent === picker.contentItem, "owner 2026-10-06: atom icon sits inside the type picker without a separate column");
