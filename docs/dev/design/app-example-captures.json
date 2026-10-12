@@ -104,7 +104,7 @@
     "image": "12-experiment-background.png",
     "sha256": "8d2310480c9b47b02a6116ef7429d06ae30dff83572c6e5d97139c6c619f4622",
     "checks": {
-      "17": "\"Autodetect\" is shown, disabled, with the magic wand icon, beside \"Add point\"",
+      "17": "\"Reset to autodetected background\" is shown, disabled, beside \"Append new point\"",
       "19": "the title is \"Background (14)\", the plural rule's exception"
     }
   },
