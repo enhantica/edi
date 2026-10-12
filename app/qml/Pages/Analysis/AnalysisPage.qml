@@ -82,6 +82,7 @@ WorkflowPage {
                     contents: page.contents
                 }
             }
+            PatternUpdatesGroup {}
         }
     }
     textItem: Component {

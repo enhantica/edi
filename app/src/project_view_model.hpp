@@ -264,8 +264,23 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     const edi::Project* scanTemplate() const { return scan_template_ ? &*scan_template_ : nullptr; }
     // The place of the file's dataset in the scan, or -1 when its row could not be indexed.
     int scanFileFitted(const edi::ScanFileRecord& record);
-    void showScanFrame(const std::string& file, const edi::FitFrame& frame);
-    void followScanFile(const std::string& file);
+    // A followed file handed over with its receipt token: FitViewModel accepts the receipt only for the token it
+    // handed over last.
+    void followScanFile(const std::string& file, std::uint64_t token);
+    // A followed file with its pattern as the fit left it: shown like followScanFile, its pattern not calculated
+    // again (edi ADR-0029).
+    void followScanFrame(const std::string& file, const edi::FitFrame& frame, std::uint64_t token);
+    // Drops a followed file's pending receipt without counting it (Follow off, a new scan).
+    void releaseFollow() { followRendered(false); }
+    // A followed scan's newest finished file becomes the current dataset at once (the evolution's line, the list,
+    // the selectors), with no read; its pattern follows when the view is ready (edi ADR-0029).
+    void markScanFile(const std::string& file);
+    // No dataset read is in flight: the last one asked for has been shown (or refused).
+    // A followed scan asks for its next pattern once the last view asked for is applied and a pattern chart of the
+    // current experiment is shown: a file put on a chart no one sees would be drawn first when it is shown again,
+    // older than the files finished meanwhile (edi ADR-0029).
+    bool followReady() const { return !view_reading_ && view_applied_ == view_request_ && patternShown(); }
+    bool patternShown() const;
     // The run's driver returned: the rows and notes on disk are indexed again, the files skipped after the last
     // row included (a skipped file sends no event). Comes before scanEnded.
     void settleScan();
@@ -411,6 +426,27 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     int view_wanted_ = -1;       // the dataset of the newest request
     int projected_dataset_ = -1;  // the dataset the model holds now (a failed read leaves the one before)
     bool view_reading_ = false;  // a read is in flight
+    // A followed file's pattern from the scan's fit (its dataset and the frame), until its dataset is shown.
+    std::optional<std::pair<int, edi::FitFrame>> follow_frame_;
+    // A followed file handed over while a scan runs, its dataset and name, until the chart is drawn with it: once
+    // its dataset is applied, the main window's second frame swap after that (the first may already have been
+    // under way); or never, when the read or the application fails, or the read or the drawing takes longer than
+    // kRenderWaitMs (edi ADR-0029).
+    // The receipt is bound to what was drawn: the followed dataset still in the model, and a shown chart that has
+    // presented the pattern generation its application set (or a later one). Any other view request releases it.
+    int follow_index_ = -1;
+    std::string follow_file_;
+    std::uint64_t follow_token_ = 0;
+    std::uint64_t follow_before_ = 0;  // the pattern generation when it was handed over
+    std::uint64_t follow_generation_ = 0;
+    bool follow_issuing_ = false;  // the followed file's own view request is being made
+    int render_swaps_ = -1;  // frame swaps still to see, -1 while nothing waits for one
+    QTimer render_wait_;
+    QMetaObject::Connection render_connection_;
+    void handFollowed(int index, const std::string& file, std::uint64_t token);
+    void awaitRender();
+    bool presentedFollowed() const;
+    void followRendered(bool drawn);
     // Reads the newest requested dataset off the GUI thread; its delivery applies it, or reads a newer one.
     void startViewRead();
     // Shows a dataset at once: the one a project opens on (`reread`: its file is read), or the shown one again from

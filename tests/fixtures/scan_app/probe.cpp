@@ -210,6 +210,7 @@ QJsonObject run(edi_app::ProjectViewModel& view, const std::string& label, int l
             {"ended", ended},
             {"projected", projected},
             {"refusal", refusal},
+            {"afterPattern", pattern(view)},
             {"completed", completed.load()},
             {"workerOffOwner", worker_off_owner.load()}};
 }
@@ -726,13 +727,12 @@ void scan_contract_file_completed(const std::string& file) {
         qApp,
         [file, count] {
             if (!active) return;
-            // F3 publishes measured data asynchronously. A calculated frame may
-            // require the worker's next iteration, so this functional actor waits
-            // only for the measured columns its Follow assertions actually judge.
+            // ADR-0029 delays followed patterns until the worker can publish a frame.
+            // Holding that worker while waiting for the same frame would obstruct it.
             const bool projection_ready = until(
                 [&] {
                     if (active->fit()->scanFitted() < count) return false;
-                    if (!exercise_follow) return true;
+                    if (!exercise_follow || active->fit()->following()) return true;
                     const QString selected = active->experiments()
                                                  ->get(active->currentExperimentIndex(), "file")
                                                  .toString();
@@ -740,11 +740,26 @@ void scan_contract_file_completed(const std::string& file) {
                     return !expected.isEmpty() && measured_pattern_hash(*active) == expected;
                 },
                 5000);
+            QString pattern_file;
+            if (exercise_follow) {
+                const QString hash = measured_pattern_hash(*active);
+                if (expected_measurements.value("_template").toString() == hash) {
+                    pattern_file = QStringLiteral("_template");
+                } else {
+                    for (auto it = expected_measurements.begin();
+                         it != expected_measurements.end(); ++it)
+                        if (it.value().toString() == hash) {
+                            pattern_file = it.key();
+                            break;
+                        }
+                }
+            }
             if (completed <= 162)
                 events.append(QJsonObject{{"file", QString::fromStdString(file)},
                                           {"stage", QString::fromStdString(stage)},
                                           {"state", state(*active)},
                                           {"projectionReady", projection_ready},
+                                          {"patternFile", pattern_file},
                                           {"pattern", pattern(*active)}});
             if (completion_action) completion_action(count);
             if (exercise_follow && count == 13) active->setCurrentExperimentIndex(17);

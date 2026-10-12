@@ -2,6 +2,7 @@
 #include "app_info.hpp"
 
 #include "app_build_info.hpp"
+#include "engine_setup.hpp"
 #include "edi/structure_scene.hpp"
 #include "edi/threading.hpp"
 
@@ -17,6 +18,8 @@
 #include <QThread>
 #include <QUrl>
 #include <QtGlobal>
+#include <algorithm>
+#include <string_view>
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -193,6 +196,8 @@ QString ApplicationInfo::diagnostics() const {
     // The engine's own report: which backend its parallel fill runs on, with how many threads, and SIMD.
     const edi::EngineThreading engine = edi::engine_threading();
     add(QStringLiteral("Engine backend"), QString::fromLatin1(engine.backend));
+    const int threads = edi::engine_threads_setting();
+    add(QStringLiteral("Engine threads (preference)"), threads > 0 ? QString::number(threads) : QStringLiteral("Auto"));
     add(QStringLiteral("Engine workers"), QString::number(engine.workers));
     add(QStringLiteral("WebAssembly SIMD"), engine.wasm_simd ? QStringLiteral("on") : QStringLiteral("off"));
 #ifdef Q_OS_WASM
@@ -231,3 +236,13 @@ QString ApplicationInfo::diagnostics() const {
 }
 
 void ApplicationInfo::copyText(const QString& text) const { QGuiApplication::clipboard()->setText(text); }
+
+bool ApplicationInfo::engineThreadsSelectable() const {
+    return std::string_view(edi::engine_threading().backend) != "serial";
+}
+
+int ApplicationInfo::engineThreadsMaximum() const { return std::clamp(2 * QThread::idealThreadCount(), 16, 64); }
+
+void ApplicationInfo::setEngineThreads(int count) const { edi::set_engine_threads(count); }
+
+void ApplicationInfo::storeSettings() const { edi_app::store_settings_now(); }

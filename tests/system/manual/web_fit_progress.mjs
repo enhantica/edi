@@ -5,6 +5,20 @@ export function isLiveFitProgress(state) {
     /^fitting\s*·\s*it\s+[1-9]\d*$/i.test(state.text);
 }
 
+export function advancesLiveFitProgress(states, finalIteration) {
+  if (!Array.isArray(states) || !Number.isSafeInteger(finalIteration) || finalIteration < 3) return false;
+  let previous = 0;
+  let advances = 0;
+  for (const state of states) {
+    if (!isLiveFitProgress(state)) continue;
+    const iteration = Number(state.text.match(/it\s+(\d+)$/i)[1]);
+    if (iteration > finalIteration || iteration < previous) return false;
+    if (iteration < finalIteration && iteration > previous) ++advances;
+    previous = iteration;
+  }
+  return advances >= 2;
+}
+
 function validate(state) {
   assert(state && typeof state.running === 'boolean' && typeof state.visible === 'boolean' &&
     typeof state.text === 'string',

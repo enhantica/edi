@@ -311,16 +311,34 @@ PatternSource capture_pattern(const Project& project, std::size_t experiment_ind
     source.bkg = shared(data.intensity_bkg);
     source.resid = shared(data.residual);
 
-    // One phase per structure id, in the order the ids first appear in `_refln`.
     const PowderReflnDataBase& refln = experiment.refln;
+    std::vector<std::string> names;
+    names.reserve(project.structures.size());
+    for (const auto& structure : project.structures) {
+        names.push_back(structure->name);
+    }
+    source.phases = group_reflections(refln.structure_id.values(), refln.position.values(),
+                                      refln.index_h.values(), refln.index_k.values(),
+                                      refln.index_l.values(), names);
+    return source;
+}
+
+std::vector<PatternSource::Phase> group_reflections(std::span<const std::string> structure_id,
+                                                    std::span<const double> position,
+                                                    std::span<const std::int32_t> index_h,
+                                                    std::span<const std::int32_t> index_k,
+                                                    std::span<const std::int32_t> index_l,
+                                                    std::span<const std::string> structure_names) {
     struct Building {
         PatternSource::Phase phase;
         std::vector<double> position;
         std::vector<std::array<std::int32_t, 3>> hkl;
     };
     std::vector<Building> building;
-    for (std::size_t row = 0; row < refln.size(); ++row) {
-        const std::string& id = refln.structure_id[row];
+    const std::size_t rows = std::min({structure_id.size(), position.size(), index_h.size(),
+                                       index_k.size(), index_l.size()});
+    for (std::size_t row = 0; row < rows; ++row) {
+        const std::string& id = structure_id[row];
         auto found = std::find_if(building.begin(), building.end(),
                                   [&](const Building& b) { return b.phase.structure_id == id; });
         if (found == building.end()) {
@@ -328,18 +346,20 @@ PatternSource capture_pattern(const Project& project, std::size_t experiment_ind
             next.phase.structure_id = id;
             next.phase.label = id;
             next.phase.place = building.size();
-            for (std::size_t place = 0; place < project.structures.size(); ++place) {
-                if (project.structures[place]->name == id) {
+            for (std::size_t place = 0; place < structure_names.size(); ++place) {
+                if (structure_names[place] == id) {
                     next.phase.place = place;
                 }
             }
             building.push_back(std::move(next));
             found = building.end() - 1;
         }
-        found->position.push_back(refln.position[row]);
-        found->hkl.push_back({refln.index_h[row], refln.index_k[row], refln.index_l[row]});
+        found->position.push_back(position[row]);
+        found->hkl.push_back({index_h[row], index_k[row], index_l[row]});
         found->phase.rows.push_back(row);
     }
+    std::vector<PatternSource::Phase> phases;
+    phases.reserve(building.size());
     for (Building& b : building) {
         b.phase.position = std::make_shared<const std::vector<double>>(std::move(b.position));
         b.phase.hkl =
@@ -347,9 +367,9 @@ PatternSource capture_pattern(const Project& project, std::size_t experiment_ind
         if (building.size() == 1) {
             b.phase.rows.clear();  // rows 0, 1, 2, …
         }
-        source.phases.push_back(std::move(b.phase));
+        phases.push_back(std::move(b.phase));
     }
-    return source;
+    return phases;
 }
 
 PatternPresentation present_pattern(const PatternSource& source, const PatternView& view) {

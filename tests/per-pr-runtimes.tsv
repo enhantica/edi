@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-11T06:58:43Z
+# measured_utc = 2026-10-12T12:46:35Z
 #
-# Recorded from: protocol-measure.log (2 node(s) measured once, 9591 banked, 0 stale row(s) dropped)
-# Collected tests: 10316; with a reported duration: 5312
-# Module-scoped fixture costs recorded: 32
+# Recorded from: measured test run (16 node(s) measured once, 9880 banked, 0 stale row(s) dropped)
+# Collected tests: 10639; with a reported duration: 5545
+# Module-scoped fixture costs recorded: 35
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 10316
+# inventory_python = 10639
 # inventory_cpp = 302
-# inventory_measured = 9593
-# inventory_unmeasured = 1025
+# inventory_measured = 9895
+# inventory_unmeasured = 1046
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -245,6 +245,206 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_phase_scan_state.py::te
 0.030	tests/integration/py/test_anisotropic_adps.py::test_y2o3_all_three_types_match_the_same_fullprof_profile[beta]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_shipment.py::test_y2o3_page_and_cli_project_are_registered
 UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_shipment.py::test_y2o3_reference_is_vendored_byte_identically_and_named
+0.090	tests/integration/py/test_app_build_cache.py::test_cached_app_build_rebuilds_on_each_exact_input_seam[backend]
+0.090	tests/integration/py/test_app_build_cache.py::test_cached_app_build_rebuilds_on_each_exact_input_seam[engine-source]
+0.090	tests/integration/py/test_app_build_cache.py::test_cached_app_build_rebuilds_on_each_exact_input_seam[observer]
+0.090	tests/integration/py/test_app_build_cache.py::test_cached_app_build_rebuilds_on_each_exact_input_seam[options]
+0.070	tests/integration/py/test_app_build_cache.py::test_cached_app_build_rebuilds_on_each_exact_input_seam[owner]
+0.100	tests/integration/py/test_app_build_cache.py::test_cached_app_build_rebuilds_on_each_exact_input_seam[production]
+0.100	tests/integration/py/test_app_build_cache.py::test_cached_app_build_rebuilds_on_each_exact_input_seam[sdk-header]
+0.060	tests/integration/py/test_app_build_cache.py::test_cached_app_build_rebuilds_on_each_exact_input_seam[sdk-library]
+0.090	tests/integration/py/test_app_build_cache.py::test_cached_app_build_rebuilds_on_each_exact_input_seam[sdk-manifest]
+0.100	tests/integration/py/test_app_build_cache.py::test_cached_app_build_rebuilds_on_each_exact_input_seam[source-identity]
+0.040	tests/integration/py/test_app_build_cache.py::test_captured_app_observations_reuse_only_the_same_qualified_binary
+0.070	tests/integration/py/test_app_build_cache.py::test_failed_or_mutating_app_build_cannot_cache_success
+0.300	tests/integration/py/test_app_build_cache.py::test_real_app_fixtures_build_once_per_owner_and_backend
+0.080	tests/integration/py/test_app_cache_closure.py::test_browser_reuse_cannot_serve_an_unsealed_linked_directory[cache-screen]
+0.060	tests/integration/py/test_app_cache_closure.py::test_browser_reuse_cannot_serve_an_unsealed_linked_directory[cache-selector]
+0.080	tests/integration/py/test_app_cache_closure.py::test_browser_reuse_cannot_serve_an_unsealed_linked_directory[prepared-screen]
+0.080	tests/integration/py/test_app_cache_closure.py::test_browser_reuse_cannot_serve_an_unsealed_linked_directory[prepared-selector]
+0.090	tests/integration/py/test_app_cache_closure.py::test_changing_browser_assets_during_screen_capture_cannot_cache_success
+0.110	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[change-edi_app.html-cache-screen]
+0.100	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[change-edi_app.html-cache-selector]
+0.100	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[change-edi_app.html-prepared-screen]
+0.100	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[change-edi_app.html-prepared-selector]
+0.110	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[change-edi_app.js-cache-screen]
+0.090	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[change-edi_app.js-cache-selector]
+0.130	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[change-edi_app.js-prepared-screen]
+0.080	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[change-edi_app.js-prepared-selector]
+0.130	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[change-edi_app.wasm-cache-screen]
+0.090	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[change-edi_app.wasm-cache-selector]
+0.100	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[change-edi_app.wasm-prepared-screen]
+0.240	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[change-edi_app.wasm-prepared-selector]
+0.120	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[change-extra.dat-cache-screen]
+0.100	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[change-extra.dat-cache-selector]
+0.090	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[change-extra.dat-prepared-screen]
+0.070	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[change-extra.dat-prepared-selector]
+0.120	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[change-fonts/font.dat-cache-screen]
+0.100	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[change-fonts/font.dat-cache-selector]
+0.120	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[change-fonts/font.dat-prepared-screen]
+0.090	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[change-fonts/font.dat-prepared-selector]
+0.120	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[change-qtloader.js-cache-screen]
+0.100	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[change-qtloader.js-cache-selector]
+0.130	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[change-qtloader.js-prepared-screen]
+0.080	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[change-qtloader.js-prepared-selector]
+0.140	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[change-worker.js-cache-screen]
+0.090	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[change-worker.js-cache-selector]
+0.110	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[change-worker.js-prepared-screen]
+0.180	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[change-worker.js-prepared-selector]
+0.110	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[remove-edi_app.html-cache-screen]
+0.100	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[remove-edi_app.html-cache-selector]
+0.100	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[remove-edi_app.html-prepared-screen]
+0.070	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[remove-edi_app.html-prepared-selector]
+0.110	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[remove-edi_app.js-cache-screen]
+0.110	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[remove-edi_app.js-cache-selector]
+0.120	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[remove-edi_app.js-prepared-screen]
+0.100	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[remove-edi_app.js-prepared-selector]
+0.120	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[remove-edi_app.wasm-cache-screen]
+0.110	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[remove-edi_app.wasm-cache-selector]
+0.110	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[remove-edi_app.wasm-prepared-screen]
+0.110	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[remove-edi_app.wasm-prepared-selector]
+0.130	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[remove-extra.dat-cache-screen]
+0.090	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[remove-extra.dat-cache-selector]
+0.100	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[remove-extra.dat-prepared-screen]
+0.070	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[remove-extra.dat-prepared-selector]
+0.140	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[remove-fonts/font.dat-cache-screen]
+0.120	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[remove-fonts/font.dat-cache-selector]
+0.090	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[remove-fonts/font.dat-prepared-screen]
+0.080	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[remove-fonts/font.dat-prepared-selector]
+0.120	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[remove-qtloader.js-cache-screen]
+0.100	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[remove-qtloader.js-cache-selector]
+0.120	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[remove-qtloader.js-prepared-screen]
+0.090	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[remove-qtloader.js-prepared-selector]
+0.100	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[remove-worker.js-cache-screen]
+0.120	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[remove-worker.js-cache-selector]
+0.410	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[remove-worker.js-prepared-screen]
+0.090	tests/integration/py/test_app_cache_closure.py::test_harness_browser_reuse_refuses_changed_served_files[remove-worker.js-prepared-selector]
+0.140	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[browser-configuration-cache-browser-screen]
+0.110	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[browser-configuration-cache-browser-selector]
+0.150	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[browser-configuration-cache-desktop-screen]
+0.120	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[browser-configuration-cache-desktop-selector]
+0.110	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[browser-configuration-prepared-browser-screen]
+0.090	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[browser-configuration-prepared-browser-selector]
+0.120	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[browser-configuration-prepared-desktop-screen]
+0.180	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[browser-configuration-prepared-desktop-selector]
+0.130	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[browser-helpers-cache-browser-screen]
+0.120	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[browser-helpers-cache-browser-selector]
+0.150	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[browser-helpers-cache-desktop-screen]
+0.110	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[browser-helpers-cache-desktop-selector]
+0.100	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[browser-helpers-prepared-browser-screen]
+0.080	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[browser-helpers-prepared-browser-selector]
+0.130	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[browser-helpers-prepared-desktop-screen]
+0.080	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[browser-helpers-prepared-desktop-selector]
+0.140	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[build-probe-cache-browser-screen]
+0.130	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[build-probe-cache-browser-selector]
+0.150	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[build-probe-cache-desktop-screen]
+0.090	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[build-probe-cache-desktop-selector]
+0.100	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[build-probe-prepared-browser-screen]
+0.120	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[build-probe-prepared-browser-selector]
+0.110	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[build-probe-prepared-desktop-screen]
+0.090	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[build-probe-prepared-desktop-selector]
+0.150	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[closure-helper-cache-browser-screen]
+0.110	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[closure-helper-cache-browser-selector]
+0.140	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[closure-helper-cache-desktop-screen]
+0.120	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[closure-helper-cache-desktop-selector]
+0.110	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[closure-helper-prepared-browser-screen]
+0.090	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[closure-helper-prepared-browser-selector]
+0.100	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[closure-helper-prepared-desktop-screen]
+0.090	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[closure-helper-prepared-desktop-selector]
+0.130	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-appearance-cache-browser-screen]
+0.110	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-appearance-cache-browser-selector]
+0.130	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-appearance-cache-desktop-screen]
+0.110	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-appearance-cache-desktop-selector]
+0.100	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-appearance-prepared-browser-screen]
+0.090	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-appearance-prepared-browser-selector]
+0.090	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-appearance-prepared-desktop-screen]
+0.080	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-appearance-prepared-desktop-selector]
+0.130	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-content-cache-browser-screen]
+0.130	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-content-cache-browser-selector]
+0.140	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-content-cache-desktop-screen]
+0.140	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-content-cache-desktop-selector]
+0.100	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-content-prepared-browser-screen]
+0.070	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-content-prepared-browser-selector]
+0.090	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-content-prepared-desktop-screen]
+0.080	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-content-prepared-desktop-selector]
+0.080	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-linked-directory-cache-browser-screen]
+0.080	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-linked-directory-cache-browser-selector]
+0.100	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-linked-directory-cache-desktop-screen]
+0.080	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-linked-directory-cache-desktop-selector]
+0.110	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-linked-directory-prepared-browser-screen]
+0.080	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-linked-directory-prepared-browser-selector]
+0.080	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-linked-directory-prepared-desktop-screen]
+0.060	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-linked-directory-prepared-desktop-selector]
+0.440	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-revision-cache-browser-screen]
+0.350	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-revision-cache-browser-selector]
+0.420	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-revision-cache-desktop-screen]
+0.310	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-revision-cache-desktop-selector]
+0.330	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-revision-prepared-browser-screen]
+0.260	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-revision-prepared-browser-selector]
+0.300	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-revision-prepared-desktop-screen]
+0.740	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-revision-prepared-desktop-selector]
+0.130	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-selection-cache-browser-screen]
+0.110	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-selection-cache-browser-selector]
+0.140	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-selection-cache-desktop-screen]
+0.090	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-selection-cache-desktop-selector]
+0.100	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-selection-prepared-browser-screen]
+0.080	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-selection-prepared-browser-selector]
+0.120	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-selection-prepared-desktop-screen]
+0.380	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-selection-prepared-desktop-selector]
+0.430	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-status-cache-browser-screen]
+0.300	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-status-cache-browser-selector]
+0.720	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-status-cache-desktop-screen]
+0.340	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-status-cache-desktop-selector]
+0.310	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-status-prepared-browser-screen]
+0.200	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-status-prepared-browser-selector]
+0.310	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-status-prepared-desktop-screen]
+0.240	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[gui-status-prepared-desktop-selector]
+0.160	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[platform-helper-cache-browser-screen]
+0.100	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[platform-helper-cache-browser-selector]
+0.140	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[platform-helper-cache-desktop-screen]
+0.130	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[platform-helper-cache-desktop-selector]
+0.110	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[platform-helper-prepared-browser-screen]
+0.090	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[platform-helper-prepared-browser-selector]
+0.110	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[platform-helper-prepared-desktop-screen]
+0.090	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[platform-helper-prepared-desktop-selector]
+0.170	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[reference-selection-cache-browser-screen]
+0.130	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[reference-selection-cache-browser-selector]
+0.140	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[reference-selection-cache-desktop-screen]
+0.110	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[reference-selection-cache-desktop-selector]
+0.100	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[reference-selection-prepared-browser-screen]
+0.120	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[reference-selection-prepared-browser-selector]
+0.110	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[reference-selection-prepared-desktop-screen]
+0.090	tests/integration/py/test_app_cache_closure.py::test_harness_reuse_closes_effective_dependency_channels[reference-selection-prepared-desktop-selector]
+0.070	tests/integration/py/test_app_cache_closure.py::test_new_browser_host_requires_sealed_served_assets[change-edi_app.html-screen]
+0.080	tests/integration/py/test_app_cache_closure.py::test_new_browser_host_requires_sealed_served_assets[change-edi_app.html-selector]
+0.060	tests/integration/py/test_app_cache_closure.py::test_new_browser_host_requires_sealed_served_assets[change-edi_app.js-screen]
+0.080	tests/integration/py/test_app_cache_closure.py::test_new_browser_host_requires_sealed_served_assets[change-edi_app.js-selector]
+0.070	tests/integration/py/test_app_cache_closure.py::test_new_browser_host_requires_sealed_served_assets[remove-edi_app.html-screen]
+0.080	tests/integration/py/test_app_cache_closure.py::test_new_browser_host_requires_sealed_served_assets[remove-edi_app.html-selector]
+0.070	tests/integration/py/test_app_cache_closure.py::test_new_browser_host_requires_sealed_served_assets[remove-edi_app.js-screen]
+0.070	tests/integration/py/test_app_cache_closure.py::test_new_browser_host_requires_sealed_served_assets[remove-edi_app.js-selector]
+0.090	tests/integration/py/test_app_cache_closure.py::test_prepared_receipt_requires_effective_input_and_bundle_seals[browser_bundle-screen]
+0.090	tests/integration/py/test_app_cache_closure.py::test_prepared_receipt_requires_effective_input_and_bundle_seals[browser_bundle-selector]
+0.080	tests/integration/py/test_app_cache_closure.py::test_prepared_receipt_requires_effective_input_and_bundle_seals[dependencies-screen]
+0.060	tests/integration/py/test_app_cache_closure.py::test_prepared_receipt_requires_effective_input_and_bundle_seals[dependencies-selector]
+0.000	tests/integration/py/test_app_fixture_host_isolation.py::test_app_fixture_prepares_only_the_requested_host[browser-receipt-screen]
+0.000	tests/integration/py/test_app_fixture_host_isolation.py::test_app_fixture_prepares_only_the_requested_host[browser-receipt-selector]
+0.000	tests/integration/py/test_app_fixture_host_isolation.py::test_app_fixture_prepares_only_the_requested_host[browser-screen]
+0.000	tests/integration/py/test_app_fixture_host_isolation.py::test_app_fixture_prepares_only_the_requested_host[browser-selector]
+0.000	tests/integration/py/test_app_fixture_host_isolation.py::test_app_fixture_prepares_only_the_requested_host[desktop-receipt-screen]
+0.000	tests/integration/py/test_app_fixture_host_isolation.py::test_app_fixture_prepares_only_the_requested_host[desktop-receipt-selector]
+0.000	tests/integration/py/test_app_fixture_host_isolation.py::test_app_fixture_prepares_only_the_requested_host[desktop-screen]
+0.000	tests/integration/py/test_app_fixture_host_isolation.py::test_app_fixture_prepares_only_the_requested_host[desktop-selector]
+0.000	tests/integration/py/test_app_fixture_host_isolation.py::test_app_fixture_prepares_only_the_requested_host[failed-browser-then-desktop-receipt-screen]
+0.000	tests/integration/py/test_app_fixture_host_isolation.py::test_app_fixture_prepares_only_the_requested_host[failed-browser-then-desktop-receipt-selector]
+0.000	tests/integration/py/test_app_fixture_host_isolation.py::test_app_fixture_prepares_only_the_requested_host[failed-browser-then-desktop-screen]
+0.000	tests/integration/py/test_app_fixture_host_isolation.py::test_app_fixture_prepares_only_the_requested_host[failed-browser-then-desktop-selector]
+0.000	tests/integration/py/test_app_fixture_host_isolation.py::test_configure_fixture_passes_the_provisioned_sdk[app-system-absent]
+0.000	tests/integration/py/test_app_fixture_host_isolation.py::test_configure_fixture_passes_the_provisioned_sdk[app-system-present]
+0.000	tests/integration/py/test_app_fixture_host_isolation.py::test_configure_fixture_passes_the_provisioned_sdk[core-system-absent]
+0.000	tests/integration/py/test_app_fixture_host_isolation.py::test_configure_fixture_passes_the_provisioned_sdk[core-system-present]
+0.000	tests/integration/py/test_app_fixture_host_isolation.py::test_configure_fixture_passes_the_provisioned_sdk[explicit-app-system-absent]
+0.000	tests/integration/py/test_app_fixture_host_isolation.py::test_configure_fixture_passes_the_provisioned_sdk[explicit-app-system-present]
 0.000	tests/integration/py/test_c09_t12_general_jacobian_pin.py::test_c09_t12_round_trip_fixture_is_locked_to_independent_biso_reference
 0.100	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_decimal_brackets_are_absolute_on_edi
 0.030	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_decimal_su_save_load_preserves_reference_value_exactly[.5(1.5)]
@@ -1606,6 +1806,11 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t28_paired_cache.py:
 0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[science-loops]
 0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[science-native]
 0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[science-scan]
+0.190	tests/integration/py/test_compiled_app_environment.py::test_browser_live_progress_refuses_terminal_only_and_idle_reports
+0.050	tests/integration/py/test_compiled_app_environment.py::test_compiled_app_launch_provisions_an_absent_app_prefix[browser-toolchain]
+0.050	tests/integration/py/test_compiled_app_environment.py::test_compiled_app_launch_provisions_an_absent_app_prefix[scan-host]
+0.040	tests/integration/py/test_compiled_app_environment.py::test_compiled_app_launch_provisions_an_absent_app_prefix[screen]
+0.060	tests/integration/py/test_compiled_app_environment.py::test_compiled_app_launch_provisions_an_absent_app_prefix[selector]
 0.350	tests/integration/py/test_constraint_alias_lifetime.py::test_alias_first_handle_owns_storage_and_obeys_detachment[destroy-background]
 0.180	tests/integration/py/test_constraint_alias_lifetime.py::test_alias_first_handle_owns_storage_and_obeys_detachment[destroy-cell]
 0.160	tests/integration/py/test_constraint_alias_lifetime.py::test_alias_first_handle_owns_storage_and_obeys_detachment[destroy-instrument]
@@ -3686,6 +3891,17 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_npr_
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_retired_tokens_are_named_unknown_profile_errors[retired-beba]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_retired_tokens_are_named_unknown_profile_errors[retired-fcj]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_supported_cw_inventory_contains_exactly_the_six_profiles
+0.000	tests/integration/py/test_cwl_rename_bytes.py::test_c22_t26_dispatch_pin_adaptation_retains_native_identity_and_value_bound[bound]
+0.000	tests/integration/py/test_cwl_rename_bytes.py::test_c22_t26_dispatch_pin_adaptation_retains_native_identity_and_value_bound[bytes]
+0.000	tests/integration/py/test_cwl_rename_bytes.py::test_c22_t26_dispatch_pin_adaptation_retains_native_identity_and_value_bound[historical]
+0.000	tests/integration/py/test_cwl_rename_bytes.py::test_c22_t26_dispatch_pin_adaptation_retains_native_identity_and_value_bound[input]
+0.000	tests/integration/py/test_cwl_rename_bytes.py::test_c22_t26_dispatch_pin_adaptation_retains_native_identity_and_value_bound[move]
+0.000	tests/integration/py/test_cwl_rename_bytes.py::test_c22_t26_dispatch_pin_adaptation_retains_native_identity_and_value_bound[nonfinite]
+0.000	tests/integration/py/test_cwl_rename_bytes.py::test_c22_t26_dispatch_pin_adaptation_retains_native_identity_and_value_bound[platform]
+0.000	tests/integration/py/test_cwl_rename_bytes.py::test_c22_t26_dispatch_pin_adaptation_retains_native_identity_and_value_bound[population]
+0.000	tests/integration/py/test_cwl_rename_bytes.py::test_c22_t26_dispatch_pin_adaptation_retains_native_identity_and_value_bound[production-object]
+0.000	tests/integration/py/test_cwl_rename_bytes.py::test_c22_t26_dispatch_pin_adaptation_retains_native_identity_and_value_bound[sdk]
+0.000	tests/integration/py/test_cwl_rename_bytes.py::test_c22_t26_dispatch_pin_adaptation_retains_native_identity_and_value_bound[source]
 0.000	tests/integration/py/test_cwl_rename_bytes.py::test_cross_platform_comparison_admits_only_the_declared_rounding_bound[Darwin]
 0.000	tests/integration/py/test_cwl_rename_bytes.py::test_cross_platform_comparison_admits_only_the_declared_rounding_bound[Windows]
 0.000	tests/integration/py/test_cwl_rename_bytes.py::test_darwin_branch_uses_the_retained_pre_change_capture[fcj]
@@ -3695,8 +3911,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_supp
 0.000	tests/integration/py/test_cwl_rename_bytes.py::test_native_reference_and_sample_population_cannot_be_weakened[low-bit]
 0.000	tests/integration/py/test_cwl_rename_bytes.py::test_native_reference_and_sample_population_cannot_be_weakened[missing-sample]
 0.000	tests/integration/py/test_cwl_rename_bytes.py::test_native_reference_and_sample_population_cannot_be_weakened[nonfinite]
-0.010	tests/integration/py/test_cwl_rename_bytes.py::test_tch_rename_preserves_pre_change_regression_bytes[fcj-cwl-tch-pseudo-voigt-fcj]
-0.010	tests/integration/py/test_cwl_rename_bytes.py::test_tch_rename_preserves_pre_change_regression_bytes[tch-cwl-tch-pseudo-voigt]
+0.030	tests/integration/py/test_cwl_rename_bytes.py::test_tch_rename_preserves_pre_change_regression_bytes[fcj-cwl-tch-pseudo-voigt-fcj]
+0.020	tests/integration/py/test_cwl_rename_bytes.py::test_tch_rename_preserves_pre_change_regression_bytes[tch-cwl-tch-pseudo-voigt]
 0.000	tests/integration/py/test_descriptive_oracle_adaptation.py::test_descriptive_adaptation_refuses_nonpresentation_and_wrong_old_witnesses[duplicate]
 0.000	tests/integration/py/test_descriptive_oracle_adaptation.py::test_descriptive_adaptation_refuses_nonpresentation_and_wrong_old_witnesses[old-extra]
 0.000	tests/integration/py/test_descriptive_oracle_adaptation.py::test_descriptive_adaptation_refuses_nonpresentation_and_wrong_old_witnesses[old-hash]
@@ -4848,7 +5064,21 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e05_t1_physical_domain.p
 0.160	tests/integration/py/test_e09_t75_sdk_consumer.py::test_sdk_download_http_method_remains_bound_to_the_addressed_read[-dBODY-linux-64]
 0.160	tests/integration/py/test_e09_t75_sdk_consumer.py::test_sdk_download_http_method_remains_bound_to_the_addressed_read[-dBODY-osx-arm64]
 0.000	tests/integration/py/test_latp_reference.py::test_latp_reference_quantities_are_fullprof_values_not_scan_regression_pins
+0.000	tests/integration/py/test_locked_gui_fixture.py::test_locked_consumer_stages_only_a_missing_app_gui_prerequisite[cold-app]
+0.000	tests/integration/py/test_locked_gui_fixture.py::test_locked_consumer_stages_only_a_missing_app_gui_prerequisite[core]
+0.000	tests/integration/py/test_locked_gui_fixture.py::test_locked_consumer_stages_only_a_missing_app_gui_prerequisite[explicit-app]
+0.020	tests/integration/py/test_locked_gui_fixture.py::test_locked_gui_acquisition_keeps_selected_source_or_uses_the_actual_pin[changed-recipe]
+0.000	tests/integration/py/test_locked_gui_fixture.py::test_locked_gui_acquisition_keeps_selected_source_or_uses_the_actual_pin[cold]
+0.000	tests/integration/py/test_locked_gui_fixture.py::test_locked_gui_acquisition_keeps_selected_source_or_uses_the_actual_pin[existing]
+0.000	tests/integration/py/test_locked_gui_fixture.py::test_locked_gui_acquisition_refuses_unqualified_source_results[failed]
+0.000	tests/integration/py/test_locked_gui_fixture.py::test_locked_gui_acquisition_refuses_unqualified_source_results[missing]
+0.000	tests/integration/py/test_locked_gui_fixture.py::test_locked_gui_acquisition_refuses_unqualified_source_results[outside]
+0.000	tests/integration/py/test_locked_gui_fixture.py::test_locked_gui_acquisition_refuses_unqualified_source_results[relative]
 0.000	tests/integration/py/test_multiphase_app_contract.py::test_linked_structure_rows_use_available_names_and_add_remove_disable_actions
+0.000	tests/integration/py/test_multiphase_app_contract.py::test_phase_capture_requires_real_shared_grouping[comment]
+0.000	tests/integration/py/test_multiphase_app_contract.py::test_phase_capture_requires_real_shared_grouping[quoted]
+0.000	tests/integration/py/test_multiphase_app_contract.py::test_phase_capture_requires_real_shared_grouping[raw]
+0.000	tests/integration/py/test_multiphase_app_contract.py::test_phase_capture_requires_real_shared_grouping[unused]
 0.000	tests/integration/py/test_multiphase_app_contract.py::test_shared_block_selector_has_bounded_square_icon_steps_and_file_labels
 0.000	tests/integration/py/test_multiphase_app_contract.py::test_structure_loading_is_not_capped_at_one_and_chart_retains_phase_identity
 0.010	tests/integration/py/test_multiphase_constraints.py::test_added_cubic_structure_keeps_symmetry_dependence
@@ -4981,7 +5211,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_phase_scan_class_boundar
 0.150	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[superseded]
 0.000	tests/integration/py/test_scan_extended_contract.py::test_bundled_project_load_and_save_as_use_the_writable_copy_routes
 0.460	tests/integration/py/test_scan_extended_contract.py::test_effective_bundle_contains_selected_scan_payloads[desktop]
-0.280	tests/integration/py/test_scan_extended_contract.py::test_effective_bundle_contains_selected_scan_payloads[web]
+0.290	tests/integration/py/test_scan_extended_contract.py::test_effective_bundle_contains_selected_scan_payloads[web]
 0.000	tests/integration/py/test_scan_extended_contract.py::test_empty_selectors_are_hidden_on_experiment_and_structure_pages
 0.010	tests/integration/py/test_scan_extended_contract.py::test_example_gate_rejects_swapped_names_with_matching_local_provenance[162]
 0.010	tests/integration/py/test_scan_extended_contract.py::test_example_gate_rejects_swapped_names_with_matching_local_provenance[324]
@@ -4993,13 +5223,16 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_phase_scan_class_boundar
 0.440	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_distinguishes_executable_and_library_interfaces[PRIVATE]
 0.490	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_distinguishes_executable_and_library_interfaces[PUBLIC]
 0.450	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_distinguishes_executable_and_library_interfaces[library-interface]
+0.660	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_refuses_non_compilation_target_sources["$<IF:$<BOOL:1>,resource.dat,source.cpp>"]
+0.500	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_refuses_non_compilation_target_sources[resource.dat]
+0.460	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_refuses_non_compilation_target_sources[resource.qrc]
 0.740	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_a_second_payload_at_the_index_address
 0.690	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_comment_only_and_inactive_bundle_calls
-0.550	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_excluded_payload_in_the_live_qml_module[alias]
-0.560	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_excluded_payload_in_the_live_qml_module[default]
-0.620	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_excluded_payload_in_the_live_qml_module[prefix]
+0.570	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_excluded_payload_in_the_live_qml_module[alias]
+0.540	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_excluded_payload_in_the_live_qml_module[default]
+0.570	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_excluded_payload_in_the_live_qml_module[prefix]
 0.410	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[alias]
-0.410	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[hidden]
+0.388	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[hidden]
 0.460	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[index]
 0.390	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[metadata]
 0.436	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[prefix]
@@ -5009,7 +5242,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_phase_scan_class_boundar
 0.080	tests/integration/py/test_scan_extended_contract.py::test_scan_examples_have_exact_source_file_inventory_and_checksums[324]
 0.150	tests/integration/py/test_scan_extended_contract.py::test_scan_explorer_header_has_declared_columns_in_order
 0.710	tests/integration/py/test_scan_extended_contract.py::test_scan_stop_continue_and_follow_have_model_state
-0.660	tests/integration/py/test_scan_extended_contract.py::test_scan_worker_routes_both_modes_to_existing_driver
+0.670	tests/integration/py/test_scan_extended_contract.py::test_scan_worker_routes_both_modes_to_existing_driver
 0.170	tests/integration/py/test_scan_extended_contract.py::test_selector_moves_to_main_tab_bar_once
 0.010	tests/integration/py/test_scan_extended_contract.py::test_user_page_and_scale_adr_document_approved_limits
 0.000	tests/integration/py/test_scan_extended_contract.py::test_working_copy_observer_rejects_copy_to_an_unrelated_destination
@@ -5210,6 +5443,20 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.p
 0.170	tests/integration/py/test_scan_notes_resume.py::test_native_resume_refuses_nonregular_notes_without_blocking[fifo-False-sequential]
 0.330	tests/integration/py/test_scan_notes_resume.py::test_native_resume_refuses_nonregular_notes_without_blocking[fifo-True-independent]
 0.300	tests/integration/py/test_scan_notes_resume.py::test_native_resume_refuses_nonregular_notes_without_blocking[fifo-True-sequential]
+0.060	tests/integration/py/test_scan_release_observer.py::test_scan_release_observer_refuses_a_newly_applied_stale_file_even_when_redrawn[changed-series]
+0.070	tests/integration/py/test_scan_release_observer.py::test_scan_release_observer_refuses_a_newly_applied_stale_file_even_when_redrawn[unchanged-series]
+0.030	tests/integration/py/test_scan_release_observer.py::test_scan_release_observer_refuses_missing_or_incoherent_generation_evidence[ahead-presented]
+0.040	tests/integration/py/test_scan_release_observer.py::test_scan_release_observer_refuses_missing_or_incoherent_generation_evidence[bool-frame]
+0.030	tests/integration/py/test_scan_release_observer.py::test_scan_release_observer_refuses_missing_or_incoherent_generation_evidence[bool-release]
+0.030	tests/integration/py/test_scan_release_observer.py::test_scan_release_observer_refuses_missing_or_incoherent_generation_evidence[float-release]
+0.030	tests/integration/py/test_scan_release_observer.py::test_scan_release_observer_refuses_missing_or_incoherent_generation_evidence[missing-frame]
+0.040	tests/integration/py/test_scan_release_observer.py::test_scan_release_observer_refuses_missing_or_incoherent_generation_evidence[missing-release]
+0.030	tests/integration/py/test_scan_release_observer.py::test_scan_release_observer_refuses_missing_or_incoherent_generation_evidence[negative-frame]
+0.030	tests/integration/py/test_scan_release_observer.py::test_scan_release_observer_refuses_missing_or_incoherent_generation_evidence[zero-release]
+0.070	tests/integration/py/test_scan_release_observer.py::test_scan_release_observer_requires_a_live_post_release_handover[before-release]
+0.060	tests/integration/py/test_scan_release_observer.py::test_scan_release_observer_requires_a_live_post_release_handover[only-held]
+0.060	tests/integration/py/test_scan_release_observer.py::test_scan_release_observer_requires_a_live_post_release_handover[stopped]
+0.070	tests/integration/py/test_scan_release_observer.py::test_scan_release_selection_keeps_held_redraw_diagnostic_and_checks_the_new_handover
 0.120	tests/integration/py/test_scan_template.py::test_legacy_scan_without_template_field_preserves_model
 0.010	tests/integration/py/test_scan_template.py::test_loader_refuses_outside_template_file[../other/all594687.dat]
 0.010	tests/integration/py/test_scan_template.py::test_loader_refuses_outside_template_file[../outside.dat]
@@ -5276,6 +5523,22 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.p
 0.280	tests/integration/py/test_table_display.py::test_scan_consumer_gate_rejects_disconnected_or_coloured_zero_display[unused-formatter]
 0.150	tests/integration/py/test_table_display.py::test_scientific_thresholds_and_signed_four_digit_values
 0.600	tests/integration/py/test_table_display.py::test_sequential_count_colours_follow_zero_and_nonzero_state
+0.570	tests/system/py/test_app_receipt_current_inputs.py::test_real_host_receipt_refuses_stale_compiled_inputs[entry-browser-screen]
+0.600	tests/system/py/test_app_receipt_current_inputs.py::test_real_host_receipt_refuses_stale_compiled_inputs[entry-browser-selector]
+0.540	tests/system/py/test_app_receipt_current_inputs.py::test_real_host_receipt_refuses_stale_compiled_inputs[entry-desktop-screen]
+0.541	tests/system/py/test_app_receipt_current_inputs.py::test_real_host_receipt_refuses_stale_compiled_inputs[entry-desktop-selector]
+0.510	tests/system/py/test_app_receipt_current_inputs.py::test_real_host_receipt_refuses_stale_compiled_inputs[sdk-header-browser-screen]
+0.530	tests/system/py/test_app_receipt_current_inputs.py::test_real_host_receipt_refuses_stale_compiled_inputs[sdk-header-browser-selector]
+0.540	tests/system/py/test_app_receipt_current_inputs.py::test_real_host_receipt_refuses_stale_compiled_inputs[sdk-header-desktop-screen]
+0.520	tests/system/py/test_app_receipt_current_inputs.py::test_real_host_receipt_refuses_stale_compiled_inputs[sdk-header-desktop-selector]
+0.700	tests/system/py/test_app_receipt_current_inputs.py::test_real_host_receipt_refuses_stale_compiled_inputs[sdk-library-browser-screen]
+0.720	tests/system/py/test_app_receipt_current_inputs.py::test_real_host_receipt_refuses_stale_compiled_inputs[sdk-library-browser-selector]
+0.740	tests/system/py/test_app_receipt_current_inputs.py::test_real_host_receipt_refuses_stale_compiled_inputs[sdk-library-desktop-screen]
+0.690	tests/system/py/test_app_receipt_current_inputs.py::test_real_host_receipt_refuses_stale_compiled_inputs[sdk-library-desktop-selector]
+0.520	tests/system/py/test_app_receipt_current_inputs.py::test_real_host_receipt_refuses_stale_compiled_inputs[sdk-source-browser-screen]
+0.540	tests/system/py/test_app_receipt_current_inputs.py::test_real_host_receipt_refuses_stale_compiled_inputs[sdk-source-browser-selector]
+0.520	tests/system/py/test_app_receipt_current_inputs.py::test_real_host_receipt_refuses_stale_compiled_inputs[sdk-source-desktop-screen]
+0.520	tests/system/py/test_app_receipt_current_inputs.py::test_real_host_receipt_refuses_stale_compiled_inputs[sdk-source-desktop-selector]
 0.000	tests/system/py/test_beer_fullprof_agreement.py::test_beer_fit_agrees_with_every_fullprof_parameter
 0.000	tests/system/py/test_beer_fullprof_agreement.py::test_delivered_beer_project_preserves_shared_biso_and_free_set
 0.000	tests/system/py/test_beer_fullprof_agreement.py::test_fullprof_beer_reference_preserves_all_independent_variables
@@ -7031,7 +7294,10 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::te
 2.190	tests/system/py/test_c34_t28_native_retyping.py::test_retyped_member_keeps_declared_reads_and_writes[SequentialExtractRule-required]
 1.860	tests/system/py/test_c34_t28_native_retyping.py::test_retyped_member_keeps_declared_reads_and_writes[SequentialExtractRule-target]
 1.590	tests/system/py/test_c34_t28_native_retyping.py::test_retyped_member_keeps_declared_reads_and_writes[Structure-scattering_lengths_fm]
-4.880	tests/system/py/test_c34_t28_native_surface.py::test_every_preserved_public_declaration_keeps_its_compiler_type
+2.638	tests/system/py/test_c34_t28_native_surface.py::test_every_preserved_public_declaration_keeps_its_compiler_type
+3.240	tests/system/py/test_c34_t28_native_surface.py::test_fitted_file_transition_refuses_other_callback_changes[fit_independent]
+3.220	tests/system/py/test_c34_t28_native_surface.py::test_fitted_file_transition_refuses_other_callback_changes[fit_scan]
+3.120	tests/system/py/test_c34_t28_native_surface.py::test_fitted_file_transition_refuses_other_callback_changes[fit_sequential]
 0.000	tests/system/py/test_c34_t28_native_surface.py::test_multiphase_transition_never_exempts_its_replacement_contract[const-value]
 0.000	tests/system/py/test_c34_t28_native_surface.py::test_multiphase_transition_never_exempts_its_replacement_contract[key-type]
 0.000	tests/system/py/test_c34_t28_native_surface.py::test_multiphase_transition_never_exempts_its_replacement_contract[missing-row]
@@ -7108,33 +7374,34 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::te
 0.230	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project]
 0.660	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project]
 0.400	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-xray-cwl_latp_scan-4f/project]
+0.480	tests/system/py/test_c34_t28_saved_bytes.py::test_c34_t28_live_main_provenance_cannot_hide_changed_scientific_input
 0.180	tests/system/py/test_c34_t28_saved_bytes.py::test_new_lif_project_matches_labelled_post_feature_byte_pin[corpus:lif-xray-s1/project]
 0.300	tests/system/py/test_c34_t28_saved_bytes.py::test_new_lif_project_matches_labelled_post_feature_byte_pin[repo:docs/user/cli/pd-xray-cwl_lif_single/project]
-0.000	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[corpus:cosio-d20-s1/project]
-0.000	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[corpus:cosio-d20-s4/project]
-0.000	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[corpus:cosio-d20-scan-3f/project]
-0.170	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[corpus:lbco-hrpt-s2/project]
-0.170	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[corpus:lbco-hrpt-s4/project]
-0.370	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[corpus:ncaf-wish-2bank-s3/project]
-0.410	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[corpus:ncaf-wish-3bank-s5/project]
-0.240	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[corpus:si-sepd-s2/project]
-0.470	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[corpus:si-sepd-s5/project]
-1.650	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project]
-0.230	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project]
-0.310	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project]
-0.240	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project]
-1.900	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project]
-0.270	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project]
-0.310	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project]
-0.990	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project]
+0.160	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[corpus:cosio-d20-s1/project]
+0.140	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[corpus:cosio-d20-s4/project]
+0.160	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[corpus:cosio-d20-scan-3f/project]
+0.160	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[corpus:lbco-hrpt-s2/project]
+0.160	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[corpus:lbco-hrpt-s4/project]
+0.360	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[corpus:ncaf-wish-2bank-s3/project]
+0.430	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[corpus:ncaf-wish-3bank-s5/project]
+0.220	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[corpus:si-sepd-s2/project]
+0.210	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[corpus:si-sepd-s5/project]
+1.250	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project]
+0.220	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project]
+0.350	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project]
+0.330	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project]
+1.950	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project]
+0.380	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project]
+0.490	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project]
+0.920	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project]
 0.640	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-tof_diamond-dream_basic/project]
-1.630	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project]
-0.810	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project]
+1.700	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project]
+0.900	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project]
 0.910	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project]
-2.130	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project]
-1.530	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project]
-0.410	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-tof_si-sepd_start-2/project]
-0.380	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-tof_si-sepd_start-5/project]
+1.410	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project]
+1.410	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project]
+0.510	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-tof_si-sepd_start-2/project]
+0.520	tests/system/py/test_c34_t28_saved_bytes.py::test_save_matches_the_labelled_pre_move_regression_pin[repo:docs/user/cli/pd-neut-tof_si-sepd_start-5/project]
 0.000	tests/system/py/test_c34_t28_saved_bytes.py::test_saved_byte_inventory_covers_every_current_cli_and_corpus_project
 0.000	tests/system/py/test_c34_t28_storage_decisions.py::test_each_prior_decision_links_its_storage_amendment[0012]
 0.000	tests/system/py/test_c34_t28_storage_decisions.py::test_each_prior_decision_links_its_storage_amendment[0016]
@@ -8848,8 +9115,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_
 0.020	tests/system/py/test_scan_app_execution.py::test_fitted_selection_projects_csv_values_errors_and_calculated_pattern[98]
 0.020	tests/system/py/test_scan_app_execution.py::test_fitted_selection_projects_csv_values_errors_and_calculated_pattern[99]
 0.020	tests/system/py/test_scan_app_execution.py::test_fitted_selection_projects_csv_values_errors_and_calculated_pattern[9]
-0.070	tests/system/py/test_scan_app_execution.py::test_follow_tracks_worker_and_manual_selection_until_reenabled[independent]
-0.080	tests/system/py/test_scan_app_execution.py::test_follow_tracks_worker_and_manual_selection_until_reenabled[sequential]
+2.890	tests/system/py/test_scan_app_execution.py::test_follow_tracks_worker_and_manual_selection_until_reenabled[independent]
+2.780	tests/system/py/test_scan_app_execution.py::test_follow_tracks_worker_and_manual_selection_until_reenabled[sequential]
 0.010	tests/system/py/test_scan_app_execution.py::test_initial_dataset_and_labels_follow_template_and_independent_extract
 0.000	tests/system/py/test_scan_app_execution.py::test_joint_mode_cannot_be_selected_in_a_scan_project
 0.070	tests/system/py/test_scan_app_execution.py::test_large_evolution_thins_points_and_regression_bucket_partition_preserves_extrema
@@ -9069,12 +9336,68 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_
 1.450	tests/system/py/test_scan_projection_wiring_escapes.py::test_scene_graph_observer_rejects_disconnected_layer_hit_and_uncertainty[low]
 0.790	tests/system/py/test_scan_projection_wiring_escapes.py::test_scene_graph_observer_rejects_disconnected_layer_hit_and_uncertainty[selection]
 0.830	tests/system/py/test_scan_projection_wiring_escapes.py::test_scene_graph_observer_rejects_disconnected_layer_hit_and_uncertainty[target]
-1.830	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[dispatch]
+UNMEASURED:failed-in-this-run	tests/system/py/test_scan_screen.py::test_adaptive_draws_changed_pattern_while_scan_running[browser]
+UNMEASURED:failed-in-this-run	tests/system/py/test_scan_screen.py::test_adaptive_draws_changed_pattern_while_scan_running[desktop]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_scan_screen.py::test_adaptive_takes_newest_finished_file_when_chart_becomes_free[browser]
+1.150	tests/system/py/test_scan_screen.py::test_adaptive_takes_newest_finished_file_when_chart_becomes_free[desktop]
+UNMEASURED:failed-in-this-run	tests/system/py/test_scan_screen.py::test_extras_choice_defaults_adaptive_and_survives_host_restart[adaptive-browser]
+UNMEASURED:failed-in-this-run	tests/system/py/test_scan_screen.py::test_extras_choice_defaults_adaptive_and_survives_host_restart[adaptive-desktop]
+UNMEASURED:failed-in-this-run	tests/system/py/test_scan_screen.py::test_extras_choice_defaults_adaptive_and_survives_host_restart[end-browser]
+UNMEASURED:failed-in-this-run	tests/system/py/test_scan_screen.py::test_extras_choice_defaults_adaptive_and_survives_host_restart[end-desktop]
+UNMEASURED:failed-in-this-run	tests/system/py/test_scan_screen.py::test_extras_choice_defaults_adaptive_and_survives_host_restart[every-browser]
+UNMEASURED:failed-in-this-run	tests/system/py/test_scan_screen.py::test_extras_choice_defaults_adaptive_and_survives_host_restart[every-desktop]
+UNMEASURED:failed-in-this-run	tests/system/py/test_scan_screen.py::test_extras_choice_defaults_adaptive_and_survives_host_restart[second-browser]
+UNMEASURED:failed-in-this-run	tests/system/py/test_scan_screen.py::test_extras_choice_defaults_adaptive_and_survives_host_restart[second-desktop]
+0.660	tests/system/py/test_scan_screen.py::test_scan_pattern_mode_draws_its_promised_files[adaptive-browser]
+0.670	tests/system/py/test_scan_screen.py::test_scan_pattern_mode_draws_its_promised_files[adaptive-desktop]
+UNMEASURED:failed-in-this-run	tests/system/py/test_scan_screen.py::test_scan_pattern_mode_draws_its_promised_files[end-browser]
+UNMEASURED:failed-in-this-run	tests/system/py/test_scan_screen.py::test_scan_pattern_mode_draws_its_promised_files[end-desktop]
+UNMEASURED:failed-in-this-run	tests/system/py/test_scan_screen.py::test_scan_pattern_mode_draws_its_promised_files[every-browser]
+UNMEASURED:failed-in-this-run	tests/system/py/test_scan_screen.py::test_scan_pattern_mode_draws_its_promised_files[every-desktop]
+UNMEASURED:failed-in-this-run	tests/system/py/test_scan_screen.py::test_scan_pattern_mode_draws_its_promised_files[second-browser]
+UNMEASURED:failed-in-this-run	tests/system/py/test_scan_screen.py::test_scan_pattern_mode_draws_its_promised_files[second-desktop]
+1.010	tests/system/py/test_scan_screen.py::test_stale_drawn_points_cannot_claim_a_new_model_file[browser]
+1.010	tests/system/py/test_scan_screen.py::test_stale_drawn_points_cannot_claim_a_new_model_file[desktop]
+3.170	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[dispatch]
 1.190	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[follow]
 1.400	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[joint]
 1.000	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[state]
+0.000	tests/system/py/test_thread_selector.py::test_auto_contract_refuses_wrong_admission_without_requiring_full_participation[environment-browser]
+0.000	tests/system/py/test_thread_selector.py::test_auto_contract_refuses_wrong_admission_without_requiring_full_participation[environment-desktop]
+0.000	tests/system/py/test_thread_selector.py::test_auto_contract_refuses_wrong_admission_without_requiring_full_participation[overfull-fill-browser]
+0.000	tests/system/py/test_thread_selector.py::test_auto_contract_refuses_wrong_admission_without_requiring_full_participation[overfull-fill-desktop]
+0.000	tests/system/py/test_thread_selector.py::test_auto_contract_refuses_wrong_admission_without_requiring_full_participation[reportedWorkers-browser]
+0.000	tests/system/py/test_thread_selector.py::test_auto_contract_refuses_wrong_admission_without_requiring_full_participation[reportedWorkers-desktop]
+0.000	tests/system/py/test_thread_selector.py::test_auto_restores_caller_policy_after_an_explicit_choice[browser]
+0.000	tests/system/py/test_thread_selector.py::test_auto_restores_caller_policy_after_an_explicit_choice[desktop]
+0.000	tests/system/py/test_thread_selector.py::test_calculation_and_complete_fit_are_byte_identical_across_choices[browser]
+0.000	tests/system/py/test_thread_selector.py::test_calculation_and_complete_fit_are_byte_identical_across_choices[desktop]
+0.000	tests/system/py/test_thread_selector.py::test_real_selector_controls_worker_identities_after_restart[reopened-0-browser]
+0.000	tests/system/py/test_thread_selector.py::test_real_selector_controls_worker_identities_after_restart[reopened-0-desktop]
+UNMEASURED:failed-in-this-run	tests/system/py/test_thread_selector.py::test_real_selector_controls_worker_identities_after_restart[reopened-1-browser]
+0.000	tests/system/py/test_thread_selector.py::test_real_selector_controls_worker_identities_after_restart[reopened-1-desktop]
+UNMEASURED:failed-in-this-run	tests/system/py/test_thread_selector.py::test_real_selector_controls_worker_identities_after_restart[reopened-3-browser]
+0.000	tests/system/py/test_thread_selector.py::test_real_selector_controls_worker_identities_after_restart[reopened-3-desktop]
+0.000	tests/system/py/test_thread_selector.py::test_real_selector_controls_worker_identities_after_restart[reopened-9-browser]
+0.000	tests/system/py/test_thread_selector.py::test_real_selector_controls_worker_identities_after_restart[reopened-9-desktop]
+0.000	tests/system/py/test_thread_selector.py::test_real_selector_controls_worker_identities_after_restart[selected-0-browser]
+0.001	tests/system/py/test_thread_selector.py::test_real_selector_controls_worker_identities_after_restart[selected-0-desktop]
+0.000	tests/system/py/test_thread_selector.py::test_real_selector_controls_worker_identities_after_restart[selected-1-browser]
+0.000	tests/system/py/test_thread_selector.py::test_real_selector_controls_worker_identities_after_restart[selected-1-desktop]
+0.000	tests/system/py/test_thread_selector.py::test_real_selector_controls_worker_identities_after_restart[selected-3-browser]
+0.000	tests/system/py/test_thread_selector.py::test_real_selector_controls_worker_identities_after_restart[selected-3-desktop]
+0.000	tests/system/py/test_thread_selector.py::test_real_selector_controls_worker_identities_after_restart[selected-9-browser]
+0.000	tests/system/py/test_thread_selector.py::test_real_selector_controls_worker_identities_after_restart[selected-9-desktop]
+UNMEASURED:failed-in-this-run	tests/system/py/test_thread_selector.py::test_selector_contract_refuses_actual_engine_and_persistence_escapes[ignored-persistence-browser]
+0.000	tests/system/py/test_thread_selector.py::test_selector_contract_refuses_actual_engine_and_persistence_escapes[ignored-persistence-desktop]
+0.000	tests/system/py/test_thread_selector.py::test_selector_contract_refuses_actual_engine_and_persistence_escapes[ignored-setter-browser]
+0.000	tests/system/py/test_thread_selector.py::test_selector_contract_refuses_actual_engine_and_persistence_escapes[ignored-setter-desktop]
+0.000	tests/system/py/test_thread_selector.py::test_selector_contract_refuses_actual_engine_and_persistence_escapes[serial-fill-browser]
+0.000	tests/system/py/test_thread_selector.py::test_selector_contract_refuses_actual_engine_and_persistence_escapes[serial-fill-desktop]
+0.000	tests/system/py/test_thread_selector.py::test_selector_contract_refuses_actual_engine_and_persistence_escapes[thread-local-browser]
+0.000	tests/system/py/test_thread_selector.py::test_selector_contract_refuses_actual_engine_and_persistence_escapes[thread-local-desktop]
 UNMEASURED:failed-in-this-run	tests/system/py/test_web_parallel_build.py::test_app_pthread_pool_is_preallocated_and_sized_for_the_engine
-0.610	tests/system/py/test_web_parallel_build.py::test_each_kit_selects_its_own_engine_backend_and_simd
+UNMEASURED:failed-in-this-run	tests/system/py/test_web_parallel_build.py::test_each_kit_selects_its_own_engine_backend_and_simd
 0.180	tests/system/py/test_web_parallel_oracles.py::test_native_fit_retains_the_owner_five_iteration_final_values
 0.000	tests/system/py/test_web_parallel_oracles.py::test_owner_five_bank_reference_is_not_a_generated_web_pin
 0.290	tests/system/py/test_web_parallel_oracles.py::test_web_fit_native_reference_covers_parameters_and_calculated_pattern[lbco]
@@ -10666,15 +10989,16 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 1.914	tests/integration/py/test_e04_t12_name_allowance.py
 # module-cost: 0.192	tests/integration/py/test_e09_t75_sdk_consumer.py
 # module-cost: 1.527	tests/integration/py/test_scan_app_contract.py
-# module-cost: 0.384	tests/integration/py/test_scan_extended_contract.py
+# module-cost: 0.352	tests/integration/py/test_scan_extended_contract.py
 # module-cost: 0.257	tests/integration/py/test_scan_notes_diagnostics.py
 # module-cost: 0.352	tests/integration/py/test_scan_notes_resume.py
+# module-cost: 1.849	tests/system/py/test_app_receipt_current_inputs.py
 # module-cost: 2.511	tests/system/py/test_c09_t9_output_contract_and_cli.py
 # module-cost: 0.228	tests/system/py/test_c11_t62_native_scan_io.py
 # module-cost: 4.399	tests/system/py/test_c15_t2_native_family.py
 # module-cost: 3.252	tests/system/py/test_c34_t28_census_binding.py
 # module-cost: 0.011	tests/system/py/test_c34_t28_census_escapes.py
-# module-cost: 1.059	tests/system/py/test_c34_t28_native_surface.py
+# module-cost: 4.442	tests/system/py/test_c34_t28_native_surface.py
 # module-cost: 1.269	tests/system/py/test_cwl_live_parameter_count.py
 # module-cost: 22.953	tests/system/py/test_e04_t10_latency.py
 # module-cost: 0.044	tests/system/py/test_e04_t12_public_release.py
@@ -10685,9 +11009,11 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 3.929	tests/system/py/test_fit_participants_native.py
 # module-cost: 190.683	tests/system/py/test_plain_data_app.py
 # module-cost: 21.241	tests/system/py/test_pytest_child_environment.py
-# module-cost: 349.085	tests/system/py/test_scan_accident_paths.py
-# module-cost: 557.564	tests/system/py/test_scan_app_execution.py
+# module-cost: 0.483	tests/system/py/test_scan_accident_paths.py
+# module-cost: 139.444	tests/system/py/test_scan_app_execution.py
 # module-cost: 17.635	tests/system/py/test_scan_driver_resume.py
 # module-cost: 1.016	tests/system/py/test_scan_lazy_input.py
+# module-cost: 0.058	tests/system/py/test_scan_screen.py
+# module-cost: 6.259	tests/system/py/test_thread_selector.py
 # module-cost: 2.483	tests/unit/py/test_e04_t9_latency_ratchet.py
 # module-cost: 0.250	tests/unit/py/test_e09_t55_unit_coverage_contract.py
