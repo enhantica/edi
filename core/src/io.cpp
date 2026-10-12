@@ -2201,12 +2201,19 @@ auto fit_state_slots(ProjectT& project) {
     return slots;
 }
 
+void refuse_older(const std::string& name, const std::regex& older) {
+    if (std::regex_match(name, older)) {
+        throw IoError("the project was saved by an older version: '" + name +
+                      "' is an older parameter name, which this version no longer reads");
+    }
+}
+
 // Only the newest format is read (the owner, 2026-10-12). A name that does not resolve and names a loop row by its
 // position (`<experiment>.background[<index>]` and its fields, `<experiment>.background.<ordinal>.coef` or `.intensity`,
 // `<experiment>.linked_structure.<index>.<field>` or `.preferred_orientation.<index>.<field>`, a one-link
 // experiment's `<experiment>.scale`, `.march_r`, `.march_random_fract`) is refused, naming it: the project was saved
 // by an older version. Any other name is left to the caller's own resolution. The loader checks every alias and
-// `_fit_parameter.id`.
+// `_fit_parameter.id`, and each correlation endpoint with refuse_older_correlation_name.
 void refuse_older_parameter_name(Project& project, const std::string& name) {
     for (auto& slot : parameter_slots(project)) {
         if (slot.id == name || slot.unique_name == name) {
@@ -2216,10 +2223,14 @@ void refuse_older_parameter_name(Project& project, const std::string& name) {
     static const std::regex older(
         R"(^[^.]+\.(background\[[0-9]+\](\.[a-z_]+)?|background\.[0-9]+\.(coef|intensity))"
         R"(|(linked_structure|preferred_orientation)\.[0-9]+\.[a-z_]+|scale|march_r|march_random_fract)$)");
-    if (std::regex_match(name, older)) {
-        throw IoError("the project was saved by an older version: '" + name +
-                      "' is an older parameter name, which this version no longer reads");
-    }
+    refuse_older(name, older);
+}
+
+// A fit correlation's endpoint may name a parameter the project no longer has: the coefficient is history. Only the
+// spellings no current version writes are refused, as a numeric row or structure id is current.
+void refuse_older_correlation_name(const std::string& name) {
+    static const std::regex older(R"(^[^.]+\.(background\[[0-9]+\](\.[a-z_]+)?|scale|march_r|march_random_fract)$)");
+    refuse_older(name, older);
 }
 
 }  // namespace
@@ -3444,6 +3455,8 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
                     loop_cell(*correlations, row, "_fit_parameter_correlation.parameter_unique_name_i", where);
                 pair->parameter_unique_name_j =
                     loop_cell(*correlations, row, "_fit_parameter_correlation.parameter_unique_name_j", where);
+                refuse_older_correlation_name(pair->parameter_unique_name_i.value());
+                refuse_older_correlation_name(pair->parameter_unique_name_j.value());
                 const std::string& text = loop_cell(*correlations, row, "_fit_parameter_correlation.correlation", where);
                 const double value = to_double(text, where);
                 if (std::isnan(value) || value < -1.0 || value > 1.0) {
