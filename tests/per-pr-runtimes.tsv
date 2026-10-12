@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-11T22:48:15Z
+# measured_utc = 2026-10-12T03:11:22Z
 #
-# Recorded from: final-actors.log (changed modules actually collected; untouched committed inventory retained)
-# Collected tests: 10422; with a reported duration: 5334
+# Recorded from: current.log (15 node(s) measured once, 9643 banked, 0 stale row(s) dropped)
+# Collected tests: 10428; with a reported duration: 5340
 # Module-scoped fixture costs recorded: 35
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 10422
+# inventory_python = 10428
 # inventory_cpp = 306
-# inventory_measured = 9649
-# inventory_unmeasured = 1079
+# inventory_measured = 9658
+# inventory_unmeasured = 1076
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -5378,15 +5378,15 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.p
 0.190	tests/system/py/test_browser_saved_project.py::test_saved_browser_reference_and_real_row_refuse_wrong_operands[web_control_geometry_controls.mjs]
 0.220	tests/system/py/test_browser_saved_project.py::test_saved_browser_reference_and_real_row_refuse_wrong_operands[web_saved_fit_controls.mjs]
 0.000	tests/system/py/test_c06_t6_fitting_corpus.py::test_corpus_absent_at_pin_is_a_named_transition_state[corpus-present]
-0.060	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[background-cecoal]
-0.050	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[background-lab6]
-0.120	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[background-pearl]
-UNMEASURED:failed-in-this-run	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[beer-ferrite-austenite]
-UNMEASURED:failed-in-this-run	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[constraint-covariance]
-1.840	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[cosio-d20-scan-3f]
-0.070	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[multiphase-scales]
-1.530	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[ncaf-wish-3bank-s5::ladder]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[yap-spodi-3k]
+0.100	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[background-cecoal]
+0.080	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[background-lab6]
+0.150	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[background-pearl]
+1.480	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[beer-ferrite-austenite]
+0.090	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[constraint-covariance]
+0.910	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[cosio-d20-scan-3f]
+0.140	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[multiphase-scales]
+1.230	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[ncaf-wish-3bank-s5::ladder]
+1.520	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[yap-spodi-3k]
 0.000	tests/system/py/test_c06_t6_fitting_corpus_consumer.py::test_c06_t6_case_resolver_fails_closed_for_an_invalid_override
 0.000	tests/system/py/test_c06_t6_fitting_corpus_consumer.py::test_c06_t6_case_resolver_uses_override_and_requires_the_requested_case
 0.720	tests/system/py/test_c06_t6_fitting_corpus_consumer.py::test_c06_t6_edi_runner_collection_is_the_manifest_projection
@@ -9793,6 +9793,12 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_c34_t1c_construction_population
 0.000	tests/unit/py/test_constraint_app_structure.py::test_preview_projects_cannot_be_bundled_as_application_resources
 0.000	tests/unit/py/test_constraint_app_structure.py::test_relation_tables_expose_live_append_duplicate_and_remove_actions[AliasesGroup]
 0.000	tests/unit/py/test_constraint_app_structure.py::test_relation_tables_expose_live_append_duplicate_and_remove_actions[ConstraintsGroup]
+0.000	tests/unit/py/test_corpus_parameter_paths.py::test_corpus_identity_mapping_refuses_incomplete_input_rows
+0.010	tests/unit/py/test_corpus_parameter_paths.py::test_corpus_old_terms_without_ids_use_one_based_input_ordinals
+0.010	tests/unit/py/test_corpus_parameter_paths.py::test_corpus_positions_follow_input_ids_and_row_order[coef]
+0.010	tests/unit/py/test_corpus_parameter_paths.py::test_corpus_positions_follow_input_ids_and_row_order[intensity]
+0.000	tests/unit/py/test_corpus_parameter_paths.py::test_corpus_scale_shortcut_requires_one_declared_link[phase 12\n]
+0.000	tests/unit/py/test_corpus_parameter_paths.py::test_corpus_scale_shortcut_requires_one_declared_link[phase 12\nother 31\n]
 0.050	tests/unit/py/test_e02_t2_io_parity.py::test_e02_t2_cif_and_edi_structures_are_model_equivalent[from_cif_path]
 0.040	tests/unit/py/test_e02_t2_io_parity.py::test_e02_t2_cif_and_edi_structures_are_model_equivalent[from_cif_str]
 0.000	tests/unit/py/test_e02_t2_io_parity.py::test_e02_t2_format_discriminator_rejects_unsupported_selector_bodies[background-body-without-selector]
