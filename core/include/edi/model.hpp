@@ -20,6 +20,8 @@
 #include <filesystem>
 #include <string>
 #include <tuple>
+#include <unordered_map>
+#include <unordered_set>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -2245,17 +2247,23 @@ class ItemVec final : public detail::KeyedBase {
     };
     void require_admissible(const std::vector<Ptr>& candidate, const std::string& where) const {
         if constexpr (KeyedItem<T>) {
-            for (std::size_t index = 0; index < candidate.size(); ++index) {
-                if (!candidate[index]) {
+            // The first empty item, or the first item that appears again, is refused, in the order of the candidate.
+            // Counted once, so a large table is checked in linear time.
+            std::unordered_map<const T*, std::size_t> times;
+            times.reserve(candidate.size());
+            for (const Ptr& item : candidate) {
+                if (item) {
+                    ++times[item.get()];
+                }
+            }
+            for (const Ptr& item : candidate) {
+                if (!item) {
                     throw std::invalid_argument(where + " refuses an empty item");
                 }
-                for (std::size_t other = index + 1; other < candidate.size(); ++other) {
-                    if (candidate[index] == candidate[other]) {
-                        throw std::invalid_argument(
-                            where + " refuses " + KeyTraits<T>::category() + " '" +
-                            detail::printable_id(KeyTraits<T>::key(*candidate[index]).value()) +
-                            "' twice: one item is stored once, and ids are unique");
-                    }
+                if (times[item.get()] > 1) {
+                    throw std::invalid_argument(where + " refuses " + KeyTraits<T>::category() + " '" +
+                                                detail::printable_id(KeyTraits<T>::key(*item).value()) +
+                                                "' twice: one item is stored once, and ids are unique");
                 }
             }
             std::vector<std::string> keys;
@@ -2478,22 +2486,32 @@ class ItemVec final : public detail::KeyedBase {
         typename Table::Columns columns = detail::CellHold::columns_of<T>(candidate);
         std::vector<std::shared_ptr<detail::RowHold>> records;
         records.reserve(candidate.size());
+        std::unordered_map<const T*, std::size_t> times;
+        std::unordered_map<const T*, std::size_t> first;
+        times.reserve(candidate.size());
+        first.reserve(candidate.size());
+        for (const Ptr& item : candidate) {
+            ++times[item.get()];
+        }
         for (std::size_t index = 0; index < candidate.size(); ++index) {
-            const auto first = std::find(candidate.begin(), candidate.begin() + static_cast<std::ptrdiff_t>(index), candidate[index]);
-            const std::size_t at = static_cast<std::size_t>(first - candidate.begin());
-            if (at < index) {
-                records.push_back(records[at]);  // the same item again: its one record
+            const auto [at, added] = first.emplace(candidate[index].get(), index);
+            if (!added) {
+                records.push_back(records[at->second]);  // the same item again: its one record
                 continue;
             }
-            const std::size_t times = static_cast<std::size_t>(
-                std::count(candidate.begin(), candidate.end(), candidate[index]));
-            records.push_back(Table::record_of(*candidate[index], times));
+            records.push_back(Table::record_of(*candidate[index], times[candidate[index].get()]));
         }
         std::vector<std::shared_ptr<detail::RowHold>> next_holds;
         next_holds.reserve(candidate.size());
         crysta::detail::AnchorList next =
             crysta::detail::AnchorList::fresh(&table, &Table::anchors, candidate.size());
         std::vector<std::shared_ptr<const void>> kept(table.anchors.size());
+        // The items the result keeps, so the ones it drops are found in linear time.
+        std::unordered_set<const T*> kept_items;
+        kept_items.reserve(candidate.size());
+        for (const Ptr& item : candidate) {
+            kept_items.insert(item.get());
+        }
         // The commit: nothing below can throw.
         install(record, made);
         std::vector<Ptr>& stored = store_.edit();
@@ -2511,7 +2529,7 @@ class ItemVec final : public detail::KeyedBase {
         next.revoke_and_erase(0, next.size(), std::move(kept));
         table_->anchors.repoint(table_.get());
         for (const Ptr& item : old) {
-            if (std::find(stored.begin(), stored.end(), item) == stored.end()) {
+            if (!kept_items.contains(item.get())) {
                 detach_one(item);
             }
         }
