@@ -38,9 +38,10 @@ and save, and copies all the rows on Reset fits. The fits themselves did not get
    coefficients as doubles in pair order (i before j, row by row). Pairs are given by position, with no strings per
    pair. A scan resolves names once: when a file's covariance labels equal the previous file's, its table shares the
    same names object, so a 162-file scan with one set of free parameters holds one names vector.
-3. **Appended, never rebuilt.** The fit record gains `scan_correlations`, a map from file to
-   `std::shared_ptr<const CorrelationTable>`. The scan's per-file event inserts that file's table, replacing the
-   file's earlier one if it had one. Nothing assigns, renumbers or copies the whole scan's pairs, at the end of a run or
+3. **Appended, never rebuilt.** The fit record gains `scan_results`, a map from file to
+   `std::shared_ptr<const ScanFileResult>`, the file's immutable result bundle (decision 9), whose correlation table is
+   its first member. The scan's per-file event inserts that file's bundle, replacing the file's earlier one if it had
+   one. Nothing assigns, renumbers or copies the whole scan's pairs, at the end of a run or
    at any other time. The map is live state, not a category of the file.
 4. **The saved loop holds only what a save writes.** The record's `correlations` table stays the persisted loop. For a
    single or joint fit it holds that fit's rows, as now. For a scan it holds the template file's rows, made from the
@@ -59,15 +60,35 @@ and save, and copies all the rows on Reset fits. The fits themselves did not get
 8. **One general fix to `ItemVec`.** Admission and row replacement check duplicates and ownership with a hash of item
    pointers and keys, in linear time, for every loop. The scan exposed the quadratic check, and any large loop would
    hit it.
-9. **The same storage for later per-file results.** The map's value is a per-file result bundle, `ScanFileResult`,
-   whose first member is the correlation table. Per-phase R-factor rows join it as another immutable member, made in
+9. **The same storage for later per-file results.** The map's value is the per-file result bundle `ScanFileResult`
+   (decision 3), whose first member is the correlation table. Per-phase R-factor rows join it as another immutable member, made in
    the same per-file event and shared the same way, so a later per-file result adds no second map and no copies.
 10. **The saved format does not change.** The `_fit_parameter_correlation` loop keeps its columns, and a scan saves the
     template's pairs only.
 
+The invariants below make these decisions exact; tests are written from them.
+
 The Python surface keeps its shape. `FitResultBase.correlations` and a file record's correlations stay lists of
 `FitParameterCorrelationItem`, made from the table when they are read. The machine report's `x-edi.correlations` keeps
 its meaning.
+
+## Invariants
+
+| No. | Invariant |
+| --- | --------- |
+| I1 | A table's `names[k]` is the unique name of covariance column `k`, in the fit's free-column order (`covariance_labels`), with n columns. |
+| I2 | `values` holds the n(n-1)/2 pairs i < j in row-major order: pair (i, j) is at position i·n − i(i+1)/2 + (j − i − 1). |
+| I3 | Each value is `clamp(cov[i][j] / (sqrt(cov[i][i]) · sqrt(cov[j][j])), −1, 1)`, the same expression crysta evaluates today, so the double is the same. |
+| I4 | No table is made, and the fit's correlations are empty as today, when the covariance is unavailable or not n × n, n < 2, a variance is not positive and finite, a label names no parameter, or a value is not finite. |
+| I5 | A table shares the previous table's names object only when its covariance labels equal the previous labels in the same order. A changed or reordered column set resolves its own names. |
+| I6 | Rows made from a table are numbered 1, 2, … in I2's order, with `source_kind` `deterministic`, the pair's two names, and the coefficient in crysta's shortest round-trip text. They match the rows edi makes before this change, byte for byte. |
+| I7 | Rows read from a file keep their ids, `source_kind`, names, text and file exactly. They are never renumbered or reformatted. A fit that replaces them writes I6 rows. |
+| I8 | The numeric view of read rows is made once, when first shown: each row's value is its text parsed as `correlation_value` parses it today, in the rows' order. |
+| I9 | Python lists and the report are made when read: I6 rows from a table, I7 rows as read. |
+| I10 | The Correlations matrix for a file is made from that file's table or read rows only, with today's level and count filter. |
+| I11 | A rename replaces each names object holding a renamed parameter with one renamed copy, which every table that held the old object then holds. Values and pair order do not change. |
+| I12 | A published table or bundle is never changed. Copying the fit record copies pointers only. |
+| I13 | `ItemVec`'s linear checks keep its contracts: ownership by one collection, the refusal of a foreign item and unkeyed collections' reference semantics (ADR-0012); canonical-key identity and default ids (ADR-0016); held-row and column snapshots (ADR-0018); the same refusals with the same messages in the same order; and a refusal leaving the collection unchanged. |
 
 ## Consequences
 
