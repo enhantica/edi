@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-12T23:05:56Z
+# measured_utc = 2026-10-12T23:26:21Z
 #
-# Recorded from: measured test run (13 node(s) measured once, 10306 banked, 0 stale row(s) dropped)
+# Recorded from: retained canonical bank; three native cases await Release measurement during the build hold
 # Collected tests: 11144; with a reported duration: 6100
 # Module-scoped fixture costs recorded: 42
 #
@@ -30,9 +30,9 @@
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 11144
-# inventory_cpp = 309
+# inventory_cpp = 312
 # inventory_measured = 10318
-# inventory_unmeasured = 1135
+# inventory_unmeasured = 1138
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -10206,6 +10206,9 @@ UNMEASURED:failed-in-native-replay-fe3d181	tests/unit/cpp/test_loop_parameter_pa
 0.006	tests/unit/cpp/test_report_format.cpp::format_change brackets the non-trivial blanking threshold
 0.007	tests/unit/cpp/test_report_format.cpp::format_change refuses undefined percentages
 0.009	tests/unit/cpp/test_report_format.cpp::format_change uses the starting value as its denominator
+UNMEASURED:native-Release-measurement-held	tests/unit/cpp/test_shared_correlation_storage.cpp::An unrelated scan event preserves literal loaded pair identity and spelling
+UNMEASURED:native-Release-measurement-held	tests/unit/cpp/test_shared_correlation_storage.cpp::Fit record copies retain immutable result pointers and only template rows
+UNMEASURED:native-Release-measurement-held	tests/unit/cpp/test_shared_correlation_storage.cpp::Shared numeric tables preserve upper-triangle ids and shortest text
 0.002	tests/unit/cpp/test_simulation_edits.cpp::creating and undoing a simulation preserves prior experiments
 0.001	tests/unit/cpp/test_simulation_edits.cpp::measured experiments refuse type range and simulation creation atomically
 0.001	tests/unit/cpp/test_simulation_edits.cpp::simulation type and range edits target only the selected experiment
