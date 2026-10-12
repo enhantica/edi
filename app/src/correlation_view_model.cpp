@@ -79,6 +79,32 @@ void CorrelationViewModel::show(const std::vector<edi::FitParameterCorrelation>&
             matrix_[j->second * n + i->second] = value;
         }
     }
+    settle(reason);
+}
+
+void CorrelationViewModel::setTable(const edi::CorrelationTable& table) {
+    // ADR-0034: the matrix straight from the table's numbers, its pairs i < j row by row (I2, I10).
+    names_.clear();
+    matrix_.clear();
+    reason_.clear();
+    if (table.names && table.values) {
+        names_ = *table.names;
+        const std::size_t n = names_.size();
+        matrix_.assign(n * n, std::numeric_limits<double>::quiet_NaN());
+        std::size_t at = 0;
+        for (std::size_t i = 0; i < n; ++i) {
+            matrix_[i * n + i] = 1.0;
+            for (std::size_t j = i + 1; j < n && at < table.values->size(); ++j, ++at) {
+                matrix_[i * n + j] = (*table.values)[at];
+                matrix_[j * n + i] = (*table.values)[at];
+            }
+        }
+    }
+    settle(tr("No correlations for this experiment"));
+}
+
+void CorrelationViewModel::settle(const QString& reason) {
+    std::size_t n = names_.size();
     if (n < 2) {
         names_.clear();
         matrix_.clear();

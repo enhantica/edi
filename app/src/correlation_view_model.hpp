@@ -51,6 +51,8 @@ class CorrelationViewModel : public QObject {
     // A scan dataset's own correlations, from its file's fit (all its parameters are the template experiment's), and
     // why there are none when `absent` says so.
     void setPairs(const std::vector<edi::FitParameterCorrelation>& pairs, const QString& absent = {});
+    // A scan dataset's correlations as its fit made them (ADR-0034): the matrix comes from the numbers.
+    void setTable(const edi::CorrelationTable& table);
 
     QStringList labels() const { return labels_; }
     QList<qreal> values() const { return values_; }
@@ -75,6 +77,8 @@ class CorrelationViewModel : public QObject {
     // The matrix of `pairs` without the parameters named under `hidden` prefixes; `reason` when fewer than two remain.
     void show(const std::vector<edi::FitParameterCorrelation>& pairs, const std::vector<std::string>& hidden,
               const QString& reason);
+    // The strengths, the level and the count over the matrix just made; `reason` when it has fewer than two rows.
+    void settle(const QString& reason);
     void rebuild();
 
     // The shown experiment's correlations: the parameters in the fit's order and the full matrix over them
