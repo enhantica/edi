@@ -449,7 +449,7 @@ void StructureViewModel::markSceneStale() {
 
 void StructureViewModel::setName(const QString& name) {
     edi::Structure& structure = structure_;
-    editor_.apply(edi::Edit::structure_name(structure, name.toStdString()), true);
+    editor_.rename_structure(structure, name.toStdString());
 }
 
 void StructureViewModel::sync() {

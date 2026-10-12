@@ -28,6 +28,14 @@ class ProjectEditor {
     // An edit of a setting of the whole project (its fitting mode, its minimizer settings, its name), applied as
     // `apply` does. In a scan project it changes the template as it is: it never makes a shown dataset the template.
     virtual QString apply_setting(const edi::Edit& change) { return apply(change, false); }
+    // A structure's or an experiment's name, which every name of its parameters follows: applied as `apply` does, and
+    // recorded, so Undo names it back the same way.
+    virtual QString rename_structure(edi::Structure& structure, const std::string& name) {
+        return apply(edi::Edit::structure_name(structure, name), true);
+    }
+    virtual QString rename_experiment(edi::Project& project, edi::ExperimentBase& experiment, const std::string& name) {
+        return apply(edi::Edit::rename_experiment(project, experiment, name), true);
+    }
 };
 
 // A file of the project's current save, by its path relative to the project directory (D7); throws

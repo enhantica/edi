@@ -146,7 +146,7 @@ void ExperimentViewModel::setName(const QString& name) {
     edi::Project& project = project_;
     edi::ExperimentBase& experiment = experiment_;
     // A name another experiment of the project carries is refused (the adder's rule).
-    setLastError(editor_.apply(edi::Edit::rename_experiment(project, experiment, name.toStdString()), true));
+    setLastError(editor_.rename_experiment(project, experiment, name.toStdString()));
 }
 
 void ExperimentViewModel::setFitOutcome(const QString& outcome) {

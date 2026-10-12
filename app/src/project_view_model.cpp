@@ -1581,6 +1581,29 @@ QString ProjectViewModel::apply_relation_edit(const edi::Edit& change) {
     return refusal;
 }
 
+QString ProjectViewModel::rename_structure(edi::Structure& structure, const std::string& name) {
+    BlockName record{true, {}, structure.name.value()};
+    const QString refusal = apply(edi::Edit::structure_name(structure, name), true);
+    if (refusal.isEmpty() && structure.name.value() != record.before) {
+        record.name = structure.name.value();
+        undo_history_.emplace_back(std::move(record));
+        syncUndo();
+    }
+    return refusal;
+}
+
+QString ProjectViewModel::rename_experiment(edi::Project& project, edi::ExperimentBase& experiment,
+                                            const std::string& name) {
+    BlockName record{false, {}, experiment.name.value()};
+    const QString refusal = apply(edi::Edit::rename_experiment(project, experiment, name), true);
+    if (refusal.isEmpty() && experiment.name.value() != record.before) {
+        record.name = experiment.name.value();
+        undo_history_.emplace_back(std::move(record));
+        syncUndo();
+    }
+    return refusal;
+}
+
 void ProjectViewModel::undo() {
     syncUndo();
     if (!can_undo_) {
@@ -1613,6 +1636,25 @@ void ProjectViewModel::undo() {
         undone = apply(edi::Edit::restore_structures(*project_, *structures), true).isEmpty();
     } else if (const auto* flags = std::get_if<FreeFlags>(&undo_history_.back())) {
         undone = apply(edi::Edit::set_free(*project_, flags->before), false).isEmpty();
+    } else if (const auto* block = std::get_if<BlockName>(&undo_history_.back())) {
+        // The block by the name the rename gave it, named back through the same edit, so its references follow.
+        const BlockName record = *block;
+        const auto named = [&record](const auto& held) { return held->name.value() == record.name; };
+        if (record.structure) {
+            const auto found = std::find_if(project_->structures.begin(), project_->structures.end(), named);
+            if (found == project_->structures.end()) {
+                setLastError(tr("undo: the structure is no longer in the project"));
+            } else {
+                undone = apply(edi::Edit::structure_name(**found, record.before), true).isEmpty();
+            }
+        } else {
+            const auto found = std::find_if(project_->experiments.begin(), project_->experiments.end(), named);
+            if (found == project_->experiments.end()) {
+                setLastError(tr("undo: the experiment is no longer in the project"));
+            } else {
+                undone = apply(edi::Edit::rename_experiment(*project_, **found, record.before), true).isEmpty();
+            }
+        }
     } else if (const auto* ids = std::get_if<PointIds>(&undo_history_.back())) {
         const auto found = std::find_if(project_->experiments.begin(), project_->experiments.end(),
                                         [ids](const auto& held) { return held.get() == ids->experiment; });

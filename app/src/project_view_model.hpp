@@ -258,6 +258,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
 
     QString apply(const edi::Edit& change, bool structural) override;
     QString apply_relation_edit(const edi::Edit& change) override;
+    QString rename_structure(edi::Structure& structure, const std::string& name) override;
+    QString rename_experiment(edi::Project& project, edi::ExperimentBase& experiment, const std::string& name) override;
     bool canUndo() const { return can_undo_; }
     Q_INVOKABLE void undo();
 
@@ -380,8 +382,14 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         const edi::ExperimentBase* experiment = nullptr;
         std::vector<std::string> before;
     };
+    // A structure's or an experiment's rename: the block by its new name, and the name it had.
+    struct BlockName {
+        bool structure = true;
+        std::string name;
+        std::string before;
+    };
     using UndoRecord = std::variant<std::monostate, edi::RelationsUndo, AddedExperiments, ScanRun, LoadedData,
-                                    edi::StructuresUndo, FreeFlags, PointIds>;
+                                    edi::StructuresUndo, FreeFlags, PointIds, BlockName>;
     // An experiment replaced by Load data, a type change or their undo: the undo records follow it.
     void experimentReplaced(const edi::ExperimentBase* before, const edi::ExperimentBase* after);
     // Each experiment view's Load data… state: every experiment but a scan's.
