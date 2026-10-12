@@ -4287,23 +4287,39 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
             };
         const std::filesystem::path ledger_path = project_root / "analysis" / "results-provenance.csv";
         auto completed_files = std::make_shared<std::size_t>(0);
+        // Every file's pairs, in the order the files were fitted: those an earlier run recorded (a resume fits only
+        // the rest), then this run's. They become the scan's record, whoever runs it.
+        auto scan_pairs = std::make_shared<std::vector<FitParameterCorrelation>>();
+        for (const auto& pair : fit_result.correlations) {
+            if (!pair->file_path.empty()) {
+                scan_pairs->push_back(*pair);
+            }
+        }
         // Each file's event carries its own fit result, so its correlations are crysta's from its covariance, as a
         // single fit's are, over the template project its labels name.
         const crysta::FileResultCallback engine_file_result =
-            [this, file_history, last_file_history, ledger_path, completed_files, &on_file_complete, &cproject](
-                const std::vector<std::string>& row, const crysta::FitResultBase& file_result) {
+            [this, file_history, last_file_history, ledger_path, completed_files, scan_pairs, &on_file_complete,
+             &cproject](const std::vector<std::string>& row, const crysta::FitResultBase& file_result) {
                 ++*completed_files;
                 std::swap(*last_file_history, *file_history);
                 file_history->clear();
+                std::optional<ScanFileRecord> record = scan_record_from_cells(row);
+                if (!record.has_value()) {
+                    return;
+                }
+                record->correlations = crysta_correlations(cproject, file_result);
+                std::erase_if(*scan_pairs, [&](const FitParameterCorrelation& pair) {
+                    return pair.file_path.value() == record->file_name;
+                });
+                for (FitParameterCorrelation pair : record->correlations) {
+                    pair.file_path = record->file_name;
+                    scan_pairs->push_back(std::move(pair));
+                }
                 if (on_file_complete) {
-                    std::optional<ScanFileRecord> record = scan_record_from_cells(row);
-                    if (record.has_value()) {
-                        // The driver wrote this file's ledger row just before its results row and waits
-                        // here, so the ledger's last line is this file's.
-                        record->termination = ledger_termination(ledger_path, row.empty() ? std::string() : row[0]);
-                        record->correlations = crysta_correlations(cproject, file_result);
-                        on_file_complete(*record);
-                    }
+                    // The driver wrote this file's ledger row just before its results row and waits
+                    // here, so the ledger's last line is this file's.
+                    record->termination = ledger_termination(ledger_path, row.empty() ? std::string() : row[0]);
+                    on_file_complete(*record);
                 }
             };
         const crysta::FitResultBase result =
@@ -4376,6 +4392,7 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
             detail::write_back(refined);
             publish_fit_state(*this, cproject);
             clear_fit_result(*this);  // A scan records no `_fit_result`; an earlier fit's would be stale
+            fit_result.correlations.assign(numbered_correlations(*scan_pairs));
         }
         return outcome;
     } catch (const std::invalid_argument&) {
