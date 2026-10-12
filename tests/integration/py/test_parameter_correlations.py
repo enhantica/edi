@@ -226,10 +226,13 @@ def test_empty_free_set_never_invents_pairs(tmp_path):
 
 
 @pytest.mark.parametrize('mode', ['sequential', 'independent'])
-def test_scan_retains_each_experiments_external_pairs_on_save_and_reload(tmp_path, mode):
+def test_scan_persists_only_declared_templates_external_pairs_on_save_and_reload(tmp_path, mode):
     reference = json.loads((FIXTURE / 'scan-reference.json').read_text())
     source = tmp_path / 'input'
     shutil.copytree(FIXTURE / f'scan-{mode}', source)
+    # Before: every dataset matrix was saved. After: the owner keeps only the template.
+    analysis = source / 'analysis/analysis.edi'
+    analysis.write_text(analysis.read_text() + '\n_sequential_fit.template_file 01.xy\n')
     project = edi.Project.load(source)
     project.analysis.fit()
     assert (source / 'analysis/results.csv').is_file(), (
@@ -244,14 +247,13 @@ def test_scan_retains_each_experiments_external_pairs_on_save_and_reload(tmp_pat
         'Both experiment fits must succeed before claiming their covariance reference'
     )
     once = saved_analysis(project, tmp_path / 'once')
-    # The owner did not prescribe how a dataset is identified in analysis.edi. Audit
-    # every correlation loop here; the app actor below checks association by selection.
+    # Audit the complete saved loop; the app actor separately checks live dataset selection.
     lines = once.splitlines(keepends=True)
     starts = [i for i, line in enumerate(lines) if line.startswith(PREFIX + 'id')]
     rows = [row for i in starts for row in correlations(''.join(lines[i:]))]
-    expected = [row for case in reference['cases'] for row in case['rows']]
+    expected = reference['cases'][0]['rows']
     assert len(rows) == len(expected), (
-        'Sequential and independent fits must retain all experiment pairs, not just the last fit'
+        'Sequential and independent saves retain exactly the explicitly declared template pairs'
     )
     for pair in (('base', 'ramp'), ('base', 'curve'), ('ramp', 'curve')):
 
@@ -267,11 +269,11 @@ def test_scan_retains_each_experiments_external_pairs_on_save_and_reload(tmp_pat
         actual = sorted(float(row['correlation']) for row in rows if identity(row) == target)
         truth = sorted(row['correlation'] for row in expected if identity(row) == target)
         assert actual == pytest.approx(truth, abs=2e-4), (
-            'Each experiment must retain its own independently normalized covariance, '
+            'The saved template must retain its independently normalized covariance, '
             'including signs'
         )
     twice = saved_analysis(edi.Project.load(tmp_path / 'once'), tmp_path / 'twice')
     assert once == twice, (
-        'Save and load must preserve every per-experiment correlation and its '
+        'Save and load must preserve the template correlation and its '
         'association byte-for-byte'
     )

@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-12T10:23:17Z
+# measured_utc = 2026-10-12T10:53:16Z
 #
-# Recorded from: rename-namespace.log (80 node(s) measured once, 9747 banked, 0 stale row(s) dropped)
-# Collected tests: 10627; with a reported duration: 5417
+# Recorded from: app-class-final.log (22 node(s) measured once, 9767 banked, 2 stale row(s) dropped)
+# Collected tests: 10635; with a reported duration: 5415
 # Module-scoped fixture costs recorded: 35
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 10627
+# inventory_python = 10635
 # inventory_cpp = 309
-# inventory_measured = 9779
-# inventory_unmeasured = 1157
+# inventory_measured = 9777
+# inventory_unmeasured = 1167
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -5026,8 +5026,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.p
 UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_python_fit_result_exposes_external_correlations[1]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_python_fit_result_exposes_external_correlations[2]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_python_fit_result_exposes_external_correlations[3]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_scan_retains_each_experiments_external_pairs_on_save_and_reload[independent]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_scan_retains_each_experiments_external_pairs_on_save_and_reload[sequential]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_scan_persists_only_declared_templates_external_pairs_on_save_and_reload[independent]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_scan_persists_only_declared_templates_external_pairs_on_save_and_reload[sequential]
 0.010	tests/integration/py/test_parameter_correlations.py::test_unfitted_analysis_stays_byte_identical
 0.220	tests/integration/py/test_phase_scan.py::test_failure_after_solver_step_is_recorded_and_scan_continues[independent]
 0.230	tests/integration/py/test_phase_scan.py::test_failure_after_solver_step_is_recorded_and_scan_continues[sequential]
@@ -8440,10 +8440,10 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_texture_i
 UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_two_free_scales_recover_unequal_independent_contributions
 UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_two_named_phases_load_and_roundtrip
 UNMEASURED:failed-in-this-run	tests/system/py/test_newest_project_census.py::test_every_committed_project_file_has_no_retired_positional_reference
-0.070	tests/system/py/test_plain_data_app.py::test_app_rename_follows_all_saved_references_and_undo[experiment]
-0.080	tests/system/py/test_plain_data_app.py::test_app_rename_follows_all_saved_references_and_undo[point]
-0.080	tests/system/py/test_plain_data_app.py::test_app_rename_follows_all_saved_references_and_undo[site]
-0.080	tests/system/py/test_plain_data_app.py::test_app_rename_follows_all_saved_references_and_undo[structure]
+0.090	tests/system/py/test_plain_data_app.py::test_app_rename_follows_all_saved_references_and_undo[experiment]
+0.110	tests/system/py/test_plain_data_app.py::test_app_rename_follows_all_saved_references_and_undo[point]
+0.100	tests/system/py/test_plain_data_app.py::test_app_rename_follows_all_saved_references_and_undo[site]
+0.120	tests/system/py/test_plain_data_app.py::test_app_rename_follows_all_saved_references_and_undo[structure]
 0.120	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[one-held-name-mixed-experiment]
 0.120	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[one-held-name-mixed-structure]
 0.120	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[one-held-name-title-experiment]
@@ -8456,10 +8456,10 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_newest_project_census.py::tes
 0.120	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[two-held-names-title-structure]
 0.170	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[two-held-names-upper-experiment]
 0.120	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[two-held-names-upper-structure]
-0.080	tests/system/py/test_plain_data_app.py::test_cancelled_scan_retains_completed_core_pairs_and_resumes[fresh-independent]
-0.080	tests/system/py/test_plain_data_app.py::test_cancelled_scan_retains_completed_core_pairs_and_resumes[fresh-sequential]
-0.100	tests/system/py/test_plain_data_app.py::test_cancelled_scan_retains_completed_core_pairs_and_resumes[replace-old-pair-independent]
-0.080	tests/system/py/test_plain_data_app.py::test_cancelled_scan_retains_completed_core_pairs_and_resumes[replace-old-pair-sequential]
+UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_cancelled_scan_retains_completed_core_pairs_and_resumes[fresh-independent]
+UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_cancelled_scan_retains_completed_core_pairs_and_resumes[fresh-sequential]
+UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_cancelled_scan_retains_completed_core_pairs_and_resumes[replace-old-pair-independent]
+UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_cancelled_scan_retains_completed_core_pairs_and_resumes[replace-old-pair-sequential]
 0.080	tests/system/py/test_plain_data_app.py::test_default_structure_matches_frozen_beta_cif
 0.470	tests/system/py/test_plain_data_app.py::test_desktop_browser_picker_and_editability_bindings_share_load_path
 0.370	tests/system/py/test_plain_data_app.py::test_filename_and_user_name[default-name]
@@ -8483,6 +8483,12 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_newest_project_census.py::tes
 0.000	tests/system/py/test_plain_data_app.py::test_lifecycle_observer_consumes_configuration_metadata_and_actual_edits[undoSecond-simulation]
 0.000	tests/system/py/test_plain_data_app.py::test_lifecycle_observer_consumes_configuration_metadata_and_actual_edits[undoTypeEditable-action]
 0.090	tests/system/py/test_plain_data_app.py::test_link_all_unlinked_new_structure_and_atomic_remove_undo
+UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_literal_datablock_rename_undo_restores_references_template_and_saved_state[plain-experiment]
+UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_literal_datablock_rename_undo_restores_references_template_and_saved_state[plain-structure]
+0.130	tests/system/py/test_plain_data_app.py::test_literal_datablock_rename_undo_restores_references_template_and_saved_state[refusal-experiment]
+0.110	tests/system/py/test_plain_data_app.py::test_literal_datablock_rename_undo_restores_references_template_and_saved_state[refusal-structure]
+UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_literal_datablock_rename_undo_restores_references_template_and_saved_state[scan-experiment]
+UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_literal_datablock_rename_undo_restores_references_template_and_saved_state[scan-structure]
 0.209	tests/system/py/test_plain_data_app.py::test_load_lock_replace_and_single_step_undo[cwl]
 0.110	tests/system/py/test_plain_data_app.py::test_load_lock_replace_and_single_step_undo[tof]
 0.000	tests/system/py/test_plain_data_app.py::test_message_counts_reject_invalid_numbers_in_every_field[fractional-derived-number-first]
@@ -8555,10 +8561,12 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_newest_project_census.py::tes
 0.220	tests/system/py/test_plain_data_app.py::test_packet_escapes_reach_the_native_actions[load-source-reopen]
 0.100	tests/system/py/test_plain_data_app.py::test_saved_data_is_self_contained_and_imported_data_can_be_replaced[cwl]
 0.110	tests/system/py/test_plain_data_app.py::test_saved_data_is_self_contained_and_imported_data_can_be_replaced[tof]
+UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_scan_keeps_all_live_matrices_but_persists_only_template_with_reload_explanation[independent]
+UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_scan_keeps_all_live_matrices_but_persists_only_template_with_reload_explanation[sequential]
 0.140	tests/system/py/test_plain_data_app.py::test_single_fit_in_scan_shows_saves_and_undoes_its_own_matrix[after-scan-independent]
-0.150	tests/system/py/test_plain_data_app.py::test_single_fit_in_scan_shows_saves_and_undoes_its_own_matrix[after-scan-sequential]
-0.100	tests/system/py/test_plain_data_app.py::test_single_fit_in_scan_shows_saves_and_undoes_its_own_matrix[fresh-independent]
-0.100	tests/system/py/test_plain_data_app.py::test_single_fit_in_scan_shows_saves_and_undoes_its_own_matrix[fresh-sequential]
+0.400	tests/system/py/test_plain_data_app.py::test_single_fit_in_scan_shows_saves_and_undoes_its_own_matrix[after-scan-sequential]
+0.140	tests/system/py/test_plain_data_app.py::test_single_fit_in_scan_shows_saves_and_undoes_its_own_matrix[fresh-independent]
+1.103	tests/system/py/test_plain_data_app.py::test_single_fit_in_scan_shows_saves_and_undoes_its_own_matrix[fresh-sequential]
 0.000	tests/system/py/test_pytest_child_environment.py::test_parent_options_do_not_reach_nested_pytest[basetemp]
 0.000	tests/system/py/test_pytest_child_environment.py::test_parent_options_do_not_reach_nested_pytest[keyword]
 0.000	tests/system/py/test_pytest_child_environment.py::test_parent_options_do_not_reach_nested_pytest[marker]
@@ -11004,7 +11012,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 1.762	tests/system/py/test_e09_t58_start_tied_numeric.py
 # module-cost: 0.346	tests/system/py/test_e09_t75_native_execution.py
 # module-cost: 3.929	tests/system/py/test_fit_participants_native.py
-# module-cost: 160.285	tests/system/py/test_plain_data_app.py
+# module-cost: 178.437	tests/system/py/test_plain_data_app.py
 # module-cost: 21.241	tests/system/py/test_pytest_child_environment.py
 # module-cost: 349.085	tests/system/py/test_scan_accident_paths.py
 # module-cost: 557.564	tests/system/py/test_scan_app_execution.py

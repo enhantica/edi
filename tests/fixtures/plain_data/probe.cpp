@@ -48,15 +48,55 @@ QJsonObject reference_state(const edi::Project& project) {
             {"links", links},
             {"textures", textures}};
 }
-QJsonObject rename_lifecycle(const QString& fixture, const QString& work,
-                             const std::string& kind) {
+void settle_projection(edi_app::ProjectViewModel& view);
+QJsonObject template_reference(edi_app::ProjectViewModel& view) {
+    return reference_state(view.scanTemplate() ? *view.scanTemplate() : view.project());
+}
+void rename_action(edi_app::ProjectViewModel& view, const std::string& kind, const QString& name) {
+    if (kind == "structure")
+        view.structureModels()[0]->setName(name);
+    else if (kind == "experiment")
+        view.experimentModels()[0]->setName(name);
+    else if (kind == "site") {
+        if (!view.structureModels()[0]->atomSites()->setText(0, "label", name))
+            throw std::runtime_error("the actual app site rename was refused");
+    } else if (!view.experimentModels()[0]->background()->setId(0, name))
+        throw std::runtime_error("the actual app point rename was refused");
+}
+QString block_name(edi_app::ProjectViewModel& view, const std::string& kind) {
+    return kind == "structure" ? view.structureModels()[0]->name()
+                               : view.experimentModels()[0]->name();
+}
+QJsonObject rename_lifecycle(const QString& fixture, const QString& work, const std::string& kind,
+                             bool undo_rename = false, bool scan = false, bool refused = false) {
     const auto input = std::filesystem::path(work.toStdString()) / "input";
     std::filesystem::copy(fixture.toStdString(), input, std::filesystem::copy_options::recursive);
     auto core = edi::load_project(input.string());
+    if (scan) {
+        std::filesystem::create_directories(input / "experiments/scan");
+        for (const char* file : {"01.xy", "02.xy"})
+            std::ofstream(input / "experiments/scan" / file) << "40 5.125 1\n44 6.375 1\n";
+        core.fitting_mode = "sequential";
+        core.sequential_fit.data_dir = "experiments/scan";
+        core.sequential_fit.file_pattern = "*.xy";
+        core.sequential_fit.template_file = "02.xy";
+    }
+    if (refused) {
+        if (kind == "structure") {
+            edi::Structure occupied = core.structure();
+            occupied.name = "taken";
+            core.structures.push_back(occupied);
+        } else {
+            edi::BraggPdExperiment occupied = core.experiment();
+            occupied.name = "taken";
+            core.experiments.push_back(occupied);
+            core.fitting_mode = "joint";
+        }
+    }
     std::vector<std::string> names;
     if (kind == "structure" || kind == "experiment")
-        names = {"phase.cell.length_a", "bank.linked_structure.phase.scale",
-                 "bank.preferred_orientation.phase.march_r",
+        names = {"phase.cell.length_a", "bank.instrument.setup_wavelength",
+                 "bank.linked_structure.phase.scale", "bank.preferred_orientation.phase.march_r",
                  "bank.preferred_orientation.phase.march_random_fract"};
     else if (kind == "site")
         for (const std::string field : {"fract_x", "fract_y", "fract_z", "occupancy", "adp_iso"})
@@ -76,7 +116,7 @@ QJsonObject rename_lifecycle(const QString& fixture, const QString& work,
             pair.parameter_unique_name_i = first ? name : "phase.cell.length_b";
             pair.parameter_unique_name_j = first ? "phase.cell.length_b" : name;
             pair.correlation = "-0.625";
-            pair.file_path = "pA.xy";
+            if (scan) pair.file_path = "02.xy";
             core.fit_result.correlations.push_back(pair);
         }
         ++ordinal;
@@ -86,27 +126,78 @@ QJsonObject rename_lifecycle(const QString& fixture, const QString& work,
     if (!session.openProject(QUrl::fromLocalFile(QString::fromStdString(input.string()))))
         throw std::runtime_error(session.lastError().toStdString());
     auto& view = *session.project();
-    QJsonObject result{{"before", reference_state(view.project())}};
-    if (kind == "structure")
-        view.structureModels()[0]->setName("new_phase");
-    else if (kind == "experiment")
-        view.experimentModels()[0]->setName("new_bank");
-    else if (kind == "site") {
-        if (!view.structureModels()[0]->atomSites()->setText(0, "label", "new_site"))
-            throw std::runtime_error("the actual app site rename was refused");
-    } else if (!view.experimentModels()[0]->background()->setId(0, "new_point"))
-        throw std::runtime_error("the actual app point rename was refused");
+    settle_projection(view);
+    if (scan) {
+        view.setCurrentExperimentIndex(0);
+        settle_projection(view);
+    }
+    QJsonObject result{{"before", reference_state(view.project())},
+                       {"beforeTemplate", template_reference(view)},
+                       {"beforeCanUndo", view.canUndo()}};
+    if (undo_rename) {
+        result["nameBefore"] = block_name(view, kind);
+        result["templateBefore"] =
+            QString::fromStdString((view.scanTemplate() ? *view.scanTemplate() : view.project())
+                                       .sequential_fit.template_file);
+    }
+    const QString wanted = refused                ? "taken"
+                           : kind == "structure"  ? "new_phase"
+                           : kind == "experiment" ? "new_bank"
+                           : kind == "site"       ? "new_site"
+                                                  : "new_point";
+    rename_action(view, kind, wanted);
+    settle_projection(view);
     result["renamed"] = reference_state(view.project());
+    result["renamedTemplate"] = template_reference(view);
+    result["renameCanUndo"] = view.canUndo();
+    if (undo_rename) result["nameRenamed"] = block_name(view, kind);
     const QString saved = work + "/saved";
     if (!session.saveAs(QUrl::fromLocalFile(saved)))
         throw std::runtime_error(session.lastError().toStdString());
-    view.removeStructure(0);
-    view.undo();
+    if (undo_rename)
+        view.undo();
+    else {
+        view.removeStructure(0);
+        view.undo();
+    }
+    settle_projection(view);
     result["undone"] = reference_state(view.project());
+    result["undoneTemplate"] = template_reference(view);
+    if (undo_rename) {
+        result["nameUndone"] = block_name(view, kind);
+        result["undoCanUndo"] = view.canUndo();
+        result["templateUndone"] =
+            QString::fromStdString((view.scanTemplate() ? *view.scanTemplate() : view.project())
+                                       .sequential_fit.template_file);
+        if (!session.saveAs(QUrl::fromLocalFile(work + "/undone-saved")))
+            throw std::runtime_error(session.lastError().toStdString());
+    }
     session.closeProject();
     if (!session.openProject(QUrl::fromLocalFile(saved)))
         throw std::runtime_error(session.lastError().toStdString());
+    settle_projection(*session.project());
     result["reopened"] = reference_state(session.project()->project());
+    if (undo_rename) {
+        result["nameReopened"] = block_name(*session.project(), kind);
+        if (!refused) {
+            const auto before_second = reference_state(session.project()->project());
+            rename_action(*session.project(), kind, "another_name");
+            session.project()->undo();
+            settle_projection(*session.project());
+            result["afterReloadBefore"] = before_second;
+            result["afterReloadUndo"] = reference_state(session.project()->project());
+        }
+        session.closeProject();
+        if (!session.openProject(QUrl::fromLocalFile(work + "/undone-saved")))
+            throw std::runtime_error(session.lastError().toStdString());
+        settle_projection(*session.project());
+        if (scan) {
+            session.project()->setCurrentExperimentIndex(0);
+            settle_projection(*session.project());
+        }
+        result["undoReopened"] = reference_state(session.project()->project());
+        result["undoReopenedTemplate"] = template_reference(*session.project());
+    }
     return result;
 }
 QJsonObject matrix(edi_app::ProjectViewModel& view) {
@@ -119,6 +210,7 @@ QJsonObject matrix(edi_app::ProjectViewModel& view) {
         {"labels", labels},
         {"values", values},
         {"available", view.correlations()->available()},
+        {"emptyText", view.correlations()->emptyText()},
         {"pairs", correlation_pairs(view.scanTemplate() ? *view.scanTemplate() : view.project())}};
 }
 void settle_projection(edi_app::ProjectViewModel& view) {
@@ -155,6 +247,7 @@ QJsonObject correlation_lifecycle(const std::string& action, const QString& fixt
     };
     QJsonObject result;
     if (action == "correlation-cancel") {
+        core.sequential_fit.template_file = "01.xy";
         if (history) {
             edi::FitParameterCorrelation stale;
             stale.id = "previous";
@@ -191,9 +284,16 @@ QJsonObject correlation_lifecycle(const std::string& action, const QString& fixt
             {});
         result["noopFiles"] = noop;
         result["noop"] = correlation_pairs(core);
+        edi::save_project_as(
+            core, (std::filesystem::path(work.toStdString()) / "completed-saved").string());
+        result["memoryAfterSave"] = correlation_pairs(core);
+        const auto saved_core = edi::load_project(
+            (std::filesystem::path(work.toStdString()) / "completed-saved").string());
+        result["completedReopened"] = correlation_pairs(saved_core);
         return result;
     }
     if (history) {
+        core.sequential_fit.template_file = "02.xy";
         fit({}, {});
         // An independently assigned stale matrix makes replacement observable even
         // when Single and the preceding scan fit the same design matrix.
@@ -242,6 +342,49 @@ QJsonObject correlation_lifecycle(const std::string& action, const QString& fixt
         result["reset"] = matrix(*session.project());
         session.project()->undo();
         result["undoReset"] = matrix(*session.project());
+    }
+    return result;
+}
+QJsonObject template_persistence(const QString& fixture, const QString& work) {
+    const auto input = std::filesystem::path(work.toStdString()) / "input";
+    std::filesystem::copy(fixture.toStdString(), input, std::filesystem::copy_options::recursive);
+    auto core = edi::load_project(input.string());
+    core.sequential_fit.template_file = "01.xy";
+    edi::save_project(core, input.string());
+    edi_app::Session session;
+    if (!session.openProject(QUrl::fromLocalFile(QString::fromStdString(input.string()))))
+        throw std::runtime_error(session.lastError().toStdString());
+    auto& view = *session.project();
+    settle_projection(view);
+    bool entered = false;
+    const auto connection = QObject::connect(view.fit(), &edi_app::FitViewModel::runningChanged,
+                                             [&] { entered = entered || view.fit()->running(); });
+    view.fit()->start();
+    QElapsedTimer timer;
+    timer.start();
+    while (view.fit()->running() && timer.elapsed() < 20000)
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 10);
+    QObject::disconnect(connection);
+    if (!entered || view.fit()->running())
+        throw std::runtime_error("the actual scan did not enter and complete on its worker");
+    QJsonObject result;
+    for (int index : {0, 1}) {
+        view.setCurrentExperimentIndex(index);
+        settle_projection(view);
+        result[index == 0 ? "templateLive" : "otherLive"] = matrix(view);
+    }
+    const QString saved = work + "/saved";
+    if (!session.saveAs(QUrl::fromLocalFile(saved)))
+        throw std::runtime_error(session.lastError().toStdString());
+    result["savedPairs"] = correlation_pairs(edi::load_project(saved.toStdString()));
+    result["otherAfterSave"] = matrix(view);
+    session.closeProject();
+    if (!session.openProject(QUrl::fromLocalFile(saved)))
+        throw std::runtime_error(session.lastError().toStdString());
+    for (int index : {0, 1}) {
+        session.project()->setCurrentExperimentIndex(index);
+        settle_projection(*session.project());
+        result[index == 0 ? "templateReopened" : "otherReopened"] = matrix(*session.project());
     }
     return result;
 }
@@ -393,6 +536,17 @@ int main(int argc, char** argv) {
     const QString beam = QString::fromLocal8Bit(argv[4]);
     QJsonObject result;
     try {
+        if (mode == "correlation-rename-undo") {
+            result = rename_lifecycle(fixture, work, escape, true, beam == "scan",
+                                      std::string(argv[6]) == "refusal");
+            std::cout << QJsonDocument(result).toJson(QJsonDocument::Compact).constData() << '\n';
+            return 0;
+        }
+        if (mode == "correlation-template") {
+            result = template_persistence(fixture, work);
+            std::cout << QJsonDocument(result).toJson(QJsonDocument::Compact).constData() << '\n';
+            return 0;
+        }
         if (mode == "correlation-rename") {
             result = rename_lifecycle(fixture, work, escape);
             std::cout << QJsonDocument(result).toJson(QJsonDocument::Compact).constData() << '\n';

@@ -952,6 +952,13 @@ def test_cancelled_scan_retains_completed_core_pairs_and_resumes(
     assert record['noop'] == record['resumed'], (
         'A no-op resume must preserve every completed correlation and its dataset association'
     )
+    assert record['memoryAfterSave'] == record['resumed'], (
+        'Saving a scan must preserve all completed datasets correlations in memory'
+    )
+    require_core_file_pairs(record['completedReopened'], SCAN_REFERENCE['cases'][0])
+    assert len(record['completedReopened']) == 3, (
+        'A scan saves only its explicitly declared template dataset correlations'
+    )
 
 
 @pytest.mark.parametrize('kind', ['structure', 'experiment', 'site', 'point'])
@@ -1014,3 +1021,92 @@ def test_app_rename_follows_all_saved_references_and_undo(native_probe, tmp_path
     assert record['undone'] == expected, (
         'Undo of removal after renaming must retain every rewritten reference'
     )
+
+
+@pytest.mark.parametrize('kind', ['structure', 'experiment'])
+@pytest.mark.parametrize('scenario', ['plain', 'scan', 'refusal'])
+def test_literal_datablock_rename_undo_restores_references_template_and_saved_state(
+    native_probe, tmp_path, kind, scenario
+):
+    work = tmp_path / 'rename-undo'
+    work.mkdir()
+    completed = subprocess.run(
+        [
+            str(native_probe),
+            'correlation-rename-undo',
+            str(ROOT / 'tests/fixtures/loop_parameter_ids/line-segment'),
+            str(work),
+            'scan' if scenario == 'scan' else 'plain',
+            kind,
+            'refusal' if scenario == 'refusal' else 'accepted',
+        ],
+        env=dict(os.environ, QT_QPA_PLATFORM='offscreen', QSG_RHI_BACKEND='software'),
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=30,
+    )
+    assert completed.returncode == 0, (
+        'Literal rename Undo must execute the actual application actor'
+    )
+    record = json.loads(completed.stdout.splitlines()[-1])
+    assert 'error' not in record, (
+        'The rename Undo lifecycle must reach save and reload: ' + record.get('error', '')
+    )
+    assert not record['beforeCanUndo'], (
+        'A newly loaded rename witness must begin without earlier Undo history'
+    )
+    if scenario == 'refusal':
+        assert not record['renameCanUndo'], 'A refused collision must add no Undo step'
+        assert record['nameRenamed'] == record['nameBefore'], (
+            'A refused rename must retain its original datablock key'
+        )
+        assert record['renamed'] == record['before'], (
+            'A refused rename must retain every reference'
+        )
+    else:
+        assert record['renameCanUndo'], 'A successful datablock rename is one actual undoable edit'
+        assert record['nameRenamed'] != record['nameBefore'], (
+            'The literal rename actor must reach a different datablock key'
+        )
+        assert record['nameUndone'] == record['nameBefore'], 'Undo must reverse the rename itself'
+        assert not record['undoCanUndo'], 'One rename Undo must exhaust its sole history step'
+        assert record['afterReloadUndo'] == record['afterReloadBefore'], (
+            'A rename after reload must have its own working inverse'
+        )
+    assert record['undone'] == record['before'], (
+        'Literal rename Undo restores all aliases, both correlation endpoints and links/textures'
+    )
+    assert record['undoneTemplate'] == record['beforeTemplate'], (
+        'Rename Undo restores the entire scan template reference state'
+    )
+    assert record['templateUndone'] == record['templateBefore'], (
+        'Rename Undo restores the original template dataset designation'
+    )
+    assert record['undoReopened'] == record['before'], (
+        'Saving and reopening the undone state must retain all original references'
+    )
+    assert record['undoReopenedTemplate'] == record['beforeTemplate'], (
+        'Save/reload preserves the restored scan template references'
+    )
+
+
+@pytest.mark.parametrize('mode', ['sequential', 'independent'])
+def test_scan_keeps_all_live_matrices_but_persists_only_template_with_reload_explanation(
+    native_probe, tmp_path, mode
+):
+    record = observe_correlations(native_probe, tmp_path, 'correlation-template', mode, False)
+    for step in ('templateLive', 'templateReopened'):
+        require_dataset_matrix(record[step], SCAN_REFERENCE['cases'][0])
+    for step in ('otherLive', 'otherAfterSave'):
+        require_dataset_matrix(record[step], SCAN_REFERENCE['cases'][1])
+    require_core_file_pairs(record['savedPairs'], SCAN_REFERENCE['cases'][0])
+    assert len(record['savedPairs']) == 3, 'A scan persists exactly its template dataset matrix'
+    assert record['otherReopened']['available'] == 0, (
+        'A reloaded non-template dataset must not display a persisted matrix'
+    )
+    reason = record['otherReopened']['emptyText'].lower()
+    assert 'template' in reason, (
+        'The reloaded non-template tab must explain the template-only persistence rule'
+    )
+    assert 'only' in reason, 'The empty-state explanation must identify the persistence limit'
