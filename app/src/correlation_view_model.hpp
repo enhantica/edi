@@ -48,8 +48,9 @@ class CorrelationViewModel : public QObject {
     // The project's last fit and the shown experiment (its index, and whether the last fit included it), after
     // every publication and every change of the shown experiment.
     void setRecord(const edi::Project& project, int experiment, bool fitted);
-    // A scan dataset's own correlations, from its file's fit (all its parameters are the template experiment's).
-    void setPairs(const std::vector<edi::FitParameterCorrelation>& pairs);
+    // A scan dataset's own correlations, from its file's fit (all its parameters are the template experiment's), and
+    // why there are none when `absent` says so.
+    void setPairs(const std::vector<edi::FitParameterCorrelation>& pairs, const QString& absent = {});
 
     QStringList labels() const { return labels_; }
     QList<qreal> values() const { return values_; }

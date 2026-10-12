@@ -42,8 +42,9 @@ void CorrelationViewModel::setRecord(const edi::Project& project, int experiment
     }
 }
 
-void CorrelationViewModel::setPairs(const std::vector<edi::FitParameterCorrelation>& pairs) {
-    show(pairs, {}, pairs.empty() ? tr("No correlations yet") : tr("No correlations for this experiment"));
+void CorrelationViewModel::setPairs(const std::vector<edi::FitParameterCorrelation>& pairs, const QString& absent) {
+    const QString none = absent.isEmpty() ? tr("No correlations yet") : absent;
+    show(pairs, {}, pairs.empty() ? none : tr("No correlations for this experiment"));
 }
 
 void CorrelationViewModel::show(const std::vector<edi::FitParameterCorrelation>& pairs,

@@ -1875,11 +1875,23 @@ void ProjectViewModel::syncCorrelations() {
     }
     if (scan_) {
         const std::vector<std::string>& files = scan_session_->datasets().files;
-        const auto found = current_dataset_ >= 0 && current_dataset_ < static_cast<int>(files.size())
-                               ? scan_correlations_.find(files[static_cast<std::size_t>(current_dataset_)])
-                               : scan_correlations_.end();
-        correlations_->setPairs(found != scan_correlations_.end() ? found->second
-                                                                  : std::vector<edi::FitParameterCorrelation>{});
+        const bool shown = current_dataset_ >= 0 && current_dataset_ < static_cast<int>(files.size());
+        const auto found = shown ? scan_correlations_.find(files[static_cast<std::size_t>(current_dataset_)])
+                                 : scan_correlations_.end();
+        if (found != scan_correlations_.end()) {
+            correlations_->setPairs(found->second);
+            return;
+        }
+        // A save keeps only the template dataset's correlations (the owner, 2026-10-12): a dataset fitted before the
+        // project was opened has none here.
+        QString absent;
+        if (shown && files[static_cast<std::size_t>(current_dataset_)] != scanTemplateOrModel().sequential_fit.template_file) {
+            const QString outcome = scan_session_->outcome(current_dataset_);
+            if (!outcome.isEmpty() && outcome != QStringLiteral("skipped")) {
+                absent = tr("Correlations are kept only for the template dataset");
+            }
+        }
+        correlations_->setPairs({}, absent);
         return;
     }
     const ExperimentViewModel* experiment = currentExperiment();
