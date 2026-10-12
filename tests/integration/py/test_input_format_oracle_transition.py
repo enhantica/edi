@@ -2,7 +2,7 @@
 
 import hashlib
 import json
-import subprocess
+import shutil
 from pathlib import Path
 
 import pytest
@@ -18,9 +18,7 @@ RECORDS = json.loads(
 
 
 def previous(row):
-    return subprocess.check_output(
-        ['git', 'show', row['before_commit'] + ':' + row['file']], cwd=ROOT
-    )
+    return generator.retained_source(row)
 
 
 def current(key, row):
@@ -59,3 +57,16 @@ def test_input_name_conversion_refuses_unrelated_retained_byte_changes(damage):
     }[damage]
     with pytest.raises(AssertionError, match='retains every byte'):
         generator.require_transition(row['file'], before, after + extra)
+
+
+def test_before_oracles_are_available_without_repository_history(tmp_path, monkeypatch):
+    fixture = tmp_path / 'retained'
+    fixture.mkdir()
+    for name in ['input-format-before.zip', 'input-format-transitions.json']:
+        shutil.copyfile(generator.HERE / name, fixture / name)
+    monkeypatch.setattr(generator, 'HERE', fixture)
+    monkeypatch.setattr(generator, 'ROOT', tmp_path / 'no-repository')
+    for row in RECORDS.values():
+        assert hashlib.sha256(previous(row)).hexdigest() == row['before_sha256'], (
+            'Every before oracle is readable from delivered fixtures with no git history or sibling'
+        )

@@ -1,14 +1,16 @@
 """Record the owner's newest-name input changes without regenerating scientific oracles.
 
-The generator locates each original complete source by its frozen hash in git.
+Original complete sources are retained in the committed digest-bound archive.
 Only adding a declared row-ID column or changing archived fit-state key cells is
 admitted. Every other byte, numerical cell, row order and expectation is retained.
 """
 
+import argparse
 import hashlib
 import json
 import re
 import subprocess
+import zipfile
 from pathlib import Path
 
 from tests.fixtures.cwl_family.historical import original_tokens
@@ -70,9 +72,44 @@ def require_transition(name, before, after):
     )
 
 
+def retained_source(row):
+    name = row['before_sha256'] + '.edi'
+    with zipfile.ZipFile(HERE / 'input-format-before.zip') as archive:
+        data = archive.read(name)
+    assert digest(data) == row['before_sha256'], (
+        'The retained input oracle must match its original complete-source digest'
+    )
+    return data
+
+
+def retain_original_sources():
+    records = json.loads((HERE / 'input-format-transitions.json').read_text())['files']
+    held = {}
+    for row in records.values():
+        result = subprocess.check_output(
+            ['git', 'show', row['before_commit'] + ':' + row['file']], cwd=ROOT
+        )
+        assert digest(result) == row['before_sha256'], (
+            'Archive authoring must retain the exact independently committed before source'
+        )
+        held[row['before_sha256'] + '.edi'] = result
+    with zipfile.ZipFile(HERE / 'input-format-before.zip', 'w', zipfile.ZIP_DEFLATED) as archive:
+        for name, data in sorted(held.items()):
+            member = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
+            member.compress_type = zipfile.ZIP_DEFLATED
+            member.external_attr = 0o644 << 16
+            archive.writestr(member, data)
+
+
 def archived_source(name, expected):
+    record_path = HERE / 'input-format-transitions.json'
+    if record_path.exists() and (HERE / 'input-format-before.zip').exists():
+        records = json.loads(record_path.read_text())['files']
+        for row in records.values():
+            if row['file'] == name and row['before_sha256'] == expected:
+                return row['before_commit'], retained_source(row)
     commits = subprocess.check_output(
-        ['git', 'log', '--format=%H', '--all', '--', name], cwd=ROOT, text=True
+        ['git', 'log', '--format=%H', 'HEAD', '--', name], cwd=ROOT, text=True
     ).splitlines()
     for revision in commits:
         result = subprocess.run(
@@ -155,4 +192,10 @@ def generate():
 
 
 if __name__ == '__main__':
-    generate()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--retain-original-sources', action='store_true')
+    arguments = parser.parse_args()
+    if arguments.retain_original_sources:
+        retain_original_sources()
+    else:
+        generate()

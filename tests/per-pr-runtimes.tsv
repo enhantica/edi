@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-12T11:11:08Z
+# measured_utc = 2026-10-12T12:22:02Z
 #
-# Recorded from: gui-wp.log (10 node(s) measured once, 9787 banked, 0 stale row(s) dropped)
-# Collected tests: 10655; with a reported duration: 5445
+# Recorded from: oracle-after.log (21 node(s) measured once, 9777 banked, 0 stale row(s) dropped)
+# Collected tests: 10656; with a reported duration: 5433
 # Module-scoped fixture costs recorded: 35
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 10655
+# inventory_python = 10656
 # inventory_cpp = 309
-# inventory_measured = 9797
+# inventory_measured = 9798
 # inventory_unmeasured = 1167
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
@@ -4963,26 +4963,27 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_fitting_mode_weights.py:
 0.010	tests/integration/py/test_free_header_declaration.py::test_analysis_free_header_declares_the_owner_radio_popup
 0.290	tests/integration/py/test_frozen_writer_bytes.py::test_c11_t4_existing_tof_writer_goldens_remain_byte_exact
 0.240	tests/integration/py/test_frozen_writer_bytes.py::test_c11_t56_datablock_bytes_match_pre_fix_regression_pins
-0.010	tests/integration/py/test_input_format_oracle_transition.py::test_input_name_conversion_refuses_unrelated_retained_byte_changes[data]
-0.020	tests/integration/py/test_input_format_oracle_transition.py::test_input_name_conversion_refuses_unrelated_retained_byte_changes[descriptor]
+0.010	tests/integration/py/test_input_format_oracle_transition.py::test_before_oracles_are_available_without_repository_history
+0.000	tests/integration/py/test_input_format_oracle_transition.py::test_input_name_conversion_refuses_unrelated_retained_byte_changes[data]
+0.010	tests/integration/py/test_input_format_oracle_transition.py::test_input_name_conversion_refuses_unrelated_retained_byte_changes[descriptor]
 0.010	tests/integration/py/test_input_format_oracle_transition.py::test_input_name_conversion_refuses_unrelated_retained_byte_changes[inventory]
-0.020	tests/integration/py/test_input_format_oracle_transition.py::test_input_name_conversion_refuses_unrelated_retained_byte_changes[science]
-0.030	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project/analysis/analysis.edi]
+0.000	tests/integration/py/test_input_format_oracle_transition.py::test_input_name_conversion_refuses_unrelated_retained_byte_changes[science]
+0.040	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project/analysis/analysis.edi]
 0.030	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/analysis/analysis.edi#pre-catalogue]
 0.030	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/analysis/analysis.edi]
-0.010	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project/experiments/echidna.edi#pre-catalogue]
-0.010	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project/experiments/echidna.edi]
-0.020	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project/experiments/polaris.edi#pre-catalogue]
+0.000	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project/experiments/echidna.edi#pre-catalogue]
+0.000	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project/experiments/echidna.edi]
+0.010	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project/experiments/polaris.edi#pre-catalogue]
 0.010	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project/experiments/polaris.edi]
-0.010	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project/experiments/pearl.edi#pre-catalogue]
-0.010	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project/experiments/pearl.edi]
-0.010	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[tests/fixtures/e04_t1/eta-project/experiments/experiment.edi]
-0.010	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[tests/fixtures/e04_t1/gaussian-project/experiments/experiment.edi]
-0.010	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[tests/fixtures/e04_t1/lorentzian-project/experiments/experiment.edi]
-0.010	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[tests/fixtures/e04_t1/warning-project/experiments/experiment.edi#pre-catalogue]
-0.010	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[tests/fixtures/e04_t1/warning-project/experiments/experiment.edi]
-0.010	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[tests/fixtures/e04_t1/xray-project/experiments/experiment.edi#pre-catalogue]
-0.010	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[tests/fixtures/e04_t1/xray-project/experiments/experiment.edi]
+0.000	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project/experiments/pearl.edi#pre-catalogue]
+0.000	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project/experiments/pearl.edi]
+0.000	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[tests/fixtures/e04_t1/eta-project/experiments/experiment.edi]
+0.000	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[tests/fixtures/e04_t1/gaussian-project/experiments/experiment.edi]
+0.000	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[tests/fixtures/e04_t1/lorentzian-project/experiments/experiment.edi]
+0.000	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[tests/fixtures/e04_t1/warning-project/experiments/experiment.edi#pre-catalogue]
+0.000	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[tests/fixtures/e04_t1/warning-project/experiments/experiment.edi]
+0.000	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[tests/fixtures/e04_t1/xray-project/experiments/experiment.edi#pre-catalogue]
+0.000	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[tests/fixtures/e04_t1/xray-project/experiments/experiment.edi]
 0.000	tests/integration/py/test_latp_reference.py::test_latp_reference_quantities_are_fullprof_values_not_scan_regression_pins
 0.000	tests/integration/py/test_legacy_project_load.py::test_old_engine_start_state_is_refused_with_its_name[chebyshev]
 0.000	tests/integration/py/test_legacy_project_load.py::test_old_engine_start_state_is_refused_with_its_name[line-segment]
