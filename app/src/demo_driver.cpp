@@ -404,7 +404,10 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // Timing: the 162-file scan fitted and reset, each interval on a monotonic clock with its work checked. Run only
     // when asked (`--demo-only perf-`); the two controls must fail.
     if (only.startsWith(QLatin1String("perf-"))) {
-        const QString scan = QStringLiteral("open-cli-project:pd-neut-cwl_cosio-d20_scan-162f");
+        // EDI_DEMO_PERF_PROJECT names a prepared copy to open in place, so two builds time the same input.
+        const QString prepared = qEnvironmentVariable("EDI_DEMO_PERF_PROJECT");
+        const QString scan = prepared.isEmpty() ? QStringLiteral("open-cli-project:pd-neut-cwl_cosio-d20_scan-162f")
+                                                : QStringLiteral("open-project:") + prepared;
         steps_.push_back({"perf-162f", {scan, "timed-fit:162", "timed-reset"}});
         steps_.push_back({"perf-control-partial", {scan, "timed-fit:162:40"}});
         steps_.push_back({"perf-control-refused", {scan, "remove-scan-data", "timed-fit:162"}});
@@ -659,6 +662,9 @@ bool DemoDriver::perform(const QString& action) {
         const bool save = action.startsWith(QLatin1String("save-as:"));
         const QString name = action.section(QLatin1Char(':'), 1);
         const QUrl directory = QUrl::fromLocalFile(QDir::isAbsolutePath(name) ? name : loaded_files_.filePath(name));
+        if (!save) {
+            loaded_cli_project_ = directory.toLocalFile();
+        }
         if (session == nullptr || !(save ? session->saveAs(directory) : session->openProject(directory))) {
             fail(QStringLiteral("step %1: %2 refused: %3")
                      .arg(steps_[current_].image, action, session ? session->lastError() : QStringLiteral("no session")));

@@ -63,6 +63,7 @@ class DemoDriver : public QObject {
     //   remove-scan-data            delete the open scan copy's data directory (a control whose start must fail)
     // Each timed interval is a line of timings.tsv in the output directory. EDI_DEMO_DELAY_MS, when set, adds that
     // delay at the scan's end and inside the reset, so a control can show both intervals contain it.
+    // EDI_DEMO_PERF_PROJECT, when set, is the prepared scan copy the timing steps open in place.
     struct Step {
         QString image;
         QStringList actions;
