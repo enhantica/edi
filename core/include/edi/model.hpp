@@ -4713,25 +4713,29 @@ inline void follow_background_aliases(Project& project, const ItemKey& key, cons
 }
 
 inline void follow_site_references(Project* project, Structure* structure, const std::string& from, const std::string& to) {
-    std::vector<std::pair<ParameterAlias*, std::string>> changes;
+    // The site's parameter names, wherever the project holds one: the aliases and both ends of each fit correlation.
+    std::vector<std::pair<detail::WrittenText*, std::string>> changes;
     if (project != nullptr && structure != nullptr) {
         const auto block = datablock_key(structure->name.value(), "structure") + ".";
-        for (const auto& alias : project->aliases) {
-            const auto& name = alias->parameter_unique_name.value();
-            const auto note = [&](const char* category, const char* field) {
+        const auto note = [&](detail::WrittenText& text) {
+            const auto& name = text.value();
+            const auto follow = [&](const char* category, const char* field) {
                 const auto root = block + category + ".";
-                if (name == root + from + "." + field)
-                    changes.emplace_back(alias.get(), root + to + "." + field);
+                if (name == root + from + "." + field) changes.emplace_back(&text, root + to + "." + field);
             };
-            for (const char* field : {"fract_x", "fract_y", "fract_z", "occupancy", "adp_iso"})
-                note("atom_site", field);
+            for (const char* field : {"fract_x", "fract_y", "fract_z", "occupancy", "adp_iso"}) follow("atom_site", field);
             for (const char* field : {"adp_11", "adp_22", "adp_33", "adp_12", "adp_13", "adp_23"})
-                note("atom_site_aniso", field);
+                follow("atom_site_aniso", field);
+        };
+        for (const auto& alias : project->aliases) note(alias->parameter_unique_name);
+        for (const auto& pair : project->fit_result.correlations) {
+            note(pair->parameter_unique_name_i);
+            note(pair->parameter_unique_name_j);
         }
     }
-    // A refused tensor rename must leave aliases unchanged too.
+    // A refused tensor rename must leave every reference unchanged too.
     follow_site_rename(structure, from, to);
-    for (auto& [alias, value] : changes) alias->parameter_unique_name = std::move(value);
+    for (auto& [text, value] : changes) *text = std::move(value);
 }
 
 // A structure's or an experiment's parameters are named `<datablock>.<category>...` wherever the project names
@@ -4743,11 +4747,28 @@ inline void follow_datablock_rename(Project& project, const char* kind, const st
     if (old_prefix == new_prefix) {
         return;
     }
+    // An experiment's own parameters also name a structure: a link's scale and a texture row's fields, by the
+    // structure's key (`<exp>.linked_structure.<structure>.scale`, or the compact fit-state `<exp>.<structure>.scale`).
+    const bool structure = std::string(kind) == "structure";
+    const std::string old_key = datablock_key(from, kind);
+    const std::string new_key = datablock_key(to, kind);
     const auto renamed = [&](const std::string& name) -> std::optional<std::string> {
-        if (!name.starts_with(old_prefix)) {
+        if (name.starts_with(old_prefix)) {
+            return new_prefix + name.substr(old_prefix.size());
+        }
+        if (!structure) {
             return std::nullopt;
         }
-        return new_prefix + name.substr(old_prefix.size());
+        for (const auto& experiment : project.experiments) {
+            const std::string at = datablock_key(experiment->name.value(), "experiment") + ".";
+            for (const char* category : {"linked_structure.", "preferred_orientation.", ""}) {
+                const std::string head = at + category + old_key + ".";
+                if (name.starts_with(head)) {
+                    return at + category + new_key + "." + name.substr(head.size());
+                }
+            }
+        }
+        return std::nullopt;
     };
     for (const auto& alias : project.aliases) {
         if (auto next = renamed(alias->parameter_unique_name.value())) alias->parameter_unique_name = std::move(*next);
