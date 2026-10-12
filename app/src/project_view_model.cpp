@@ -225,6 +225,13 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
         if (scan_ && fit_->running() && !fit_->scanning()) {
             fit_template_before_ = TemplateState{scanTemplateOrModel().sequential_fit.template_file, scan_template_};
             fit_template_before_->run_file_known = scan_session_->runFile(*project_, fit_template_before_->run_file);
+            if (projected_dataset_ >= 0) {
+                const std::string& file = scan_session_->datasets().files[static_cast<std::size_t>(projected_dataset_)];
+                fit_template_before_->pairs_file = file;
+                if (const auto found = scan_correlations_.find(file); found != scan_correlations_.end()) {
+                    fit_template_before_->pairs = found->second;
+                }
+            }
         }
     });
     connect(fit_, &FitViewModel::finished, this, [this] {
@@ -236,6 +243,16 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
         scan_template_.reset();
         project_->sequential_fit.template_file =
             scan_session_->datasets().files[static_cast<std::size_t>(projected_dataset_)];
+        // The fit's correlations are this dataset's now, shown and saved as its own; the other datasets keep theirs.
+        std::vector<edi::FitParameterCorrelation>& pairs = scan_correlations_[project_->sequential_fit.template_file];
+        pairs.clear();
+        for (const auto& row : project_->fit_result.correlations) {
+            if (row->file_path.empty()) {
+                pairs.push_back(*row);
+                pairs.back().file_path = project_->sequential_fit.template_file;
+            }
+        }
+        syncCorrelations();
         // The last run is this fit now: a reopened project shows its record, not the scan's summary.
         if (scanProcessed()) {
             ScanSession::Run run = scan_session_->run();
@@ -1646,6 +1663,12 @@ void ProjectViewModel::undo() {
         }
         if (undone && fit_template_undo_) {
             project_->sequential_fit.template_file = fit_template_undo_->template_file;
+            if (fit_template_undo_->pairs) {
+                scan_correlations_[fit_template_undo_->pairs_file] = std::move(*fit_template_undo_->pairs);
+            } else {
+                scan_correlations_.erase(fit_template_undo_->pairs_file);
+            }
+            syncCorrelations();
             scan_template_ = std::move(fit_template_undo_->stash);
             fit_template_undo_.reset();
             publishTemplate();
@@ -1792,13 +1815,9 @@ void ProjectViewModel::writeScanCorrelations(edi::Project& saved) {
     if (!scan_ || scan_session_ == nullptr) {
         return;
     }
-    // The record keeps a fit's own pairs and takes the scan's, in the datasets' order.
+    // A scan project's pairs are each dataset's own, a single fit's under the dataset it fitted, in the
+    // datasets' order.
     std::vector<edi::FitParameterCorrelation> pairs;
-    for (const auto& row : saved.fit_result.correlations) {
-        if (row->file_path.empty()) {
-            pairs.push_back(*row);
-        }
-    }
     for (const std::string& file : scan_session_->datasets().files) {
         const auto found = scan_correlations_.find(file);
         if (found != scan_correlations_.end()) {

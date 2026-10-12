@@ -403,6 +403,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         std::optional<edi::Project> stash;
         std::optional<std::string> run_file;  // the scan's provenance file as it was (which fit came last)
         bool run_file_known = false;          // false: it could not be read, so its Undo leaves it alone
+        // The fitted dataset's file and its correlations as they were, if it had any.
+        std::string pairs_file;
+        std::optional<std::vector<edi::FitParameterCorrelation>> pairs;
     };
     std::optional<TemplateState> fit_template_before_, fit_template_undo_;
     std::vector<UndoRecord> undo_history_;
