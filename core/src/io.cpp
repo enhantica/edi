@@ -2258,7 +2258,6 @@ detail::ParameterRenames detail::parameter_renames(const Project& project, const
     rename.to = to;
     ParameterRenames names;
     names.structure = std::string(kind) == "structure";
-    names.several = project.structures.size() > 1;
     names.from = datablock_key(key.value(), kind);
     names.to = datablock_key(to, kind);
     if (names.structure) {

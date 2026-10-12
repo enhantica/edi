@@ -63,14 +63,14 @@ inline void rename_structure_links(Project& project, const std::string& from, co
 // The parameter names a structure's or an experiment's rename changes (io.cpp's slot walk), old to new: the block's
 // own parameters and, for a structure, its links' and texture rows', by their unique names and, apart, by their
 // `_fit_parameter.id` spellings. A name no current parameter has (a correlation's history) is renamed by its place
-// in the address, in either spelling (operator()).
+// in the address: `<block>.<category>.…` for a category of the renamed kind, and for a structure also
+// `<experiment>.linked_structure.<structure>.<field>` and `.preferred_orientation.…`.
 struct ParameterRenames {
     std::map<std::string, std::string> unique;
     std::map<std::string, std::string> compact;
     std::set<std::string> current_unique;
     std::set<std::string> current_compact;
     bool structure = false;
-    bool several = false;  // several structures: their `_fit_parameter.id` spellings carry the structure's key
     std::string from;
     std::string to;
     std::optional<std::string> operator()(const std::string& name) const;
@@ -4780,59 +4780,30 @@ inline std::optional<std::string> ParameterRenames::operator()(const std::string
     if (current_compact.contains(name)) {
         return std::nullopt;
     }
-    if (from.empty()) {
+    const auto dot = name.find('.');
+    if (dot == std::string::npos || from.empty()) {
         return std::nullopt;
     }
-    // A name no current parameter has (a correlation's history) follows by its role in the address. Public names
-    // are `<block>.<category>.…`; `_fit_parameter.id` spellings are `<experiment>.<field>`,
-    // `<experiment>.<structure>.<link or texture field>`, `<experiment>.background.<id>` and, with several
-    // structures, `structure.<structure>.…`. The kinds' categories and fields do not overlap, so neither kind takes the
-    // other's names.
-    std::vector<std::string> parts;
-    for (std::size_t at = 0;;) {
-        const auto next = name.find('.', at);
-        parts.push_back(name.substr(at, next == std::string::npos ? std::string::npos : next - at));
-        if (next == std::string::npos) {
-            break;
-        }
-        at = next + 1;
-    }
-    if (parts.size() < 2) {
+    const std::string block = name.substr(0, dot);
+    const std::string rest = name.substr(dot + 1);
+    const auto end = rest.find('.');
+    if (end == std::string::npos) {
         return std::nullopt;
     }
-    const auto after = [&parts](std::size_t first) {
-        std::string text;
-        for (std::size_t index = first; index < parts.size(); ++index) {
-            text += "." + parts[index];
-        }
-        return text;
-    };
+    const std::string category = rest.substr(0, end);
     static const std::set<std::string> structure_categories{"cell", "atom_site", "atom_site_aniso"};
     static const std::set<std::string> experiment_categories{
         "peak", "instrument", "absorption", "background", "linked_structure", "preferred_orientation"};
-    static const std::set<std::string> link_fields{"scale", "march_r", "march_random_fract"};
-    if (structure) {
-        if (parts[0] == from && parts.size() >= 3 && structure_categories.contains(parts[1])) {
-            return to + after(1);
-        }
-        if (several && parts.size() >= 4 && parts[0] == "structure" && parts[1] == from) {
-            return "structure." + to + after(2);
-        }
-        if (parts.size() == 4 && (parts[1] == "linked_structure" || parts[1] == "preferred_orientation") &&
-            parts[2] == from && link_fields.contains(parts[3])) {
-            return parts[0] + "." + parts[1] + "." + to + "." + parts[3];
-        }
-        if (parts.size() == 3 && parts[1] == from && link_fields.contains(parts[2])) {
-            return parts[0] + "." + to + "." + parts[2];
-        }
-        return std::nullopt;
+    if (block == from && (structure ? structure_categories : experiment_categories).contains(category)) {
+        return to + "." + rest;
     }
-    if (parts[0] != from) {
-        return std::nullopt;
-    }
-    if ((parts.size() >= 3 && experiment_categories.contains(parts[1])) || parts.size() == 2 ||
-        (parts.size() == 3 && link_fields.contains(parts[2]))) {
-        return to + after(1);
+    if (structure && (category == "linked_structure" || category == "preferred_orientation")) {
+        const std::string named = rest.substr(end + 1);  // <structure>.<field>
+        const auto field = named.find('.');
+        if (field != std::string::npos && named.substr(0, field) == from &&
+            named.find('.', field + 1) == std::string::npos) {
+            return block + "." + category + "." + to + named.substr(field);
+        }
     }
     return std::nullopt;
 }
