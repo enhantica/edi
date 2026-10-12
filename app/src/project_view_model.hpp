@@ -397,11 +397,14 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         const edi::ExperimentBase* experiment = nullptr;
         std::vector<std::string> before;
     };
-    // A structure's or an experiment's rename: the block by its new name, and the name it had.
+    // A structure's or an experiment's rename: the block by its new name, and the name it had. The scan's results
+    // before and after it, so its Undo puts back the same shared results rather than renamed copies.
     struct BlockName {
         bool structure = true;
         std::string name;
         std::string before;
+        decltype(edi::FitResultRecord::scan_results) results_before;
+        decltype(edi::FitResultRecord::scan_results) results_after;
     };
     using UndoRecord = std::variant<std::monostate, edi::RelationsUndo, AddedExperiments, ScanRun, LoadedData,
                                     edi::StructuresUndo, FreeFlags, PointIds, BlockName>;

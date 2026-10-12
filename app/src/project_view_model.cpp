@@ -1743,10 +1743,11 @@ QString ProjectViewModel::apply_relation_edit(const edi::Edit& change) {
 }
 
 QString ProjectViewModel::rename_structure(edi::Structure& structure, const std::string& name) {
-    BlockName record{true, {}, structure.name.value()};
+    BlockName record{true, {}, structure.name.value(), project_->fit_result.scan_results, {}};
     const QString refusal = apply(edi::Edit::structure_name(structure, name), true);
     if (refusal.isEmpty() && structure.name.value() != record.before) {
         record.name = structure.name.value();
+        record.results_after = project_->fit_result.scan_results;
         undo_history_.emplace_back(std::move(record));
         syncUndo();
     }
@@ -1755,10 +1756,11 @@ QString ProjectViewModel::rename_structure(edi::Structure& structure, const std:
 
 QString ProjectViewModel::rename_experiment(edi::Project& project, edi::ExperimentBase& experiment,
                                             const std::string& name) {
-    BlockName record{false, {}, experiment.name.value()};
+    BlockName record{false, {}, experiment.name.value(), project_->fit_result.scan_results, {}};
     const QString refusal = apply(edi::Edit::rename_experiment(project, experiment, name), true);
     if (refusal.isEmpty() && experiment.name.value() != record.before) {
         record.name = experiment.name.value();
+        record.results_after = project_->fit_result.scan_results;
         undo_history_.emplace_back(std::move(record));
         syncUndo();
     }
@@ -1800,6 +1802,7 @@ void ProjectViewModel::undo() {
     } else if (const auto* block = std::get_if<BlockName>(&undo_history_.back())) {
         // The block by the name the rename gave it, named back through the same edit, so its references follow.
         const BlockName record = *block;
+        const bool results_unchanged = project_->fit_result.scan_results == record.results_after;
         const auto named = [&record](const auto& held) { return held->name.value() == record.name; };
         if (record.structure) {
             const auto found = std::find_if(project_->structures.begin(), project_->structures.end(), named);
@@ -1815,6 +1818,14 @@ void ProjectViewModel::undo() {
             } else {
                 undone = apply(edi::Edit::rename_experiment(*project_, **found, record.before), true).isEmpty();
             }
+        }
+        // The results the rename replaced come back as they were, unless something changed them since.
+        if (undone && results_unchanged) {
+            project_->fit_result.scan_results = record.results_before;
+            if (scan_template_) {
+                scan_template_->fit_result.scan_results = record.results_before;
+            }
+            syncCorrelations();
         }
     } else if (const auto* ids = std::get_if<PointIds>(&undo_history_.back())) {
         const auto found = std::find_if(project_->experiments.begin(), project_->experiments.end(),
