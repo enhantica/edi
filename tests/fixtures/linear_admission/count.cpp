@@ -4,6 +4,22 @@
 #include <vector>
 
 #include "edi/model.hpp"
+// A schema-backed caller without a key exercises legal repeated references.
+struct AdmissionForeignRow {
+    edi::detail::Written<double> position{1.25};
+    edi::Parameter intensity{31.25};
+};
+template <>
+struct crysta::RowSchema<AdmissionForeignRow> {
+    static constexpr const char* name = "_admission_foreign_row";
+    static constexpr auto fields =
+        std::tuple{&AdmissionForeignRow::position, &AdmissionForeignRow::intensity};
+    static constexpr std::array items{"position", "intensity"};
+};
+template <>
+struct crysta::detail::ForeignTable<AdmissionForeignRow> {
+    using type = edi::ItemVec<AdmissionForeignRow>;
+};
 #if defined(__clang__)
 #define NO_COUNT __attribute__((no_sanitize("coverage")))
 #else
@@ -50,6 +66,12 @@ void exercise(std::size_t n, const std::string& mode) {
     using Table = edi::ItemVec<Row>;
     std::vector<typename Table::Ptr> rows;
     for (std::size_t i = 0; i < n; ++i) {
+        if constexpr (std::is_same_v<Row, AdmissionForeignRow>) {
+            if (i % 2 == 1) {
+                rows.push_back(rows.back());
+                continue;
+            }
+        }
         auto row = std::make_shared<Row>();
         if constexpr (std::is_same_v<Row, edi::FitParameterCorrelation>) {
             row->id = "row-" + std::to_string(10000000 + i);
@@ -90,7 +112,7 @@ int main(int argc, char** argv) {
     if (mode == "default-ids")
         exercise<edi::LineSegment>(n, mode);
     else if (mode == "unkeyed")
-        exercise<edi::ExcludedRegion>(n, mode);
+        exercise<AdmissionForeignRow>(n, mode);
     else
         exercise<edi::FitParameterCorrelation>(n, mode);
 }

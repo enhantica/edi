@@ -55,7 +55,8 @@ def test_fitted_correlation_loop_matches_pre_change_regression_pin(tmp_path, cas
     )
 
 
-def test_loaded_nonordinal_id_and_decimal_spelling_survive_views_and_save(tmp_path):
+@pytest.mark.parametrize('coefficient', ['0.50', '-0.84016805041680576'])
+def test_loaded_nonordinal_id_and_decimal_spelling_survive_views_and_save(tmp_path, coefficient):
     source = tmp_path / 'source'
     shutil.copytree(HERE / 'single-input', source)
     loop = (
@@ -63,7 +64,9 @@ def test_loaded_nonordinal_id_and_decimal_spelling_survive_views_and_save(tmp_pa
         b'_fit_parameter_correlation.parameter_unique_name_i\n'
         b'_fit_parameter_correlation.parameter_unique_name_j\n'
         b'_fit_parameter_correlation.correlation\n'
-        b'pair17 deterministic bank.background.base.coef bank.background.ramp.coef 0.50\n'
+        b'pair17 deterministic bank.background.base.coef bank.background.ramp.coef '
+        + coefficient.encode()
+        + b'\n'
     )
     path = source / 'analysis/analysis.edi'
     path.write_bytes(path.read_bytes().rstrip() + b'\n\n' + loop)
@@ -72,6 +75,6 @@ def test_loaded_nonordinal_id_and_decimal_spelling_survive_views_and_save(tmp_pa
         destination = tmp_path / name
         project.save_as(destination)
         assert loop_bytes((destination / 'analysis/analysis.edi').read_bytes()) == loop, (
-            'Reading saved rows must preserve pair17 and the literal decimal spelling 0.50'
+            'Reading saved rows must preserve pair17 and the literal decimal coefficient spelling'
         )
         project = edi.Project.load(destination)

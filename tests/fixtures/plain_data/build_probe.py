@@ -16,6 +16,7 @@ def main():
     parser.add_argument('--build', type=Path, required=True)
     parser.add_argument('--sdk', type=Path, required=True)
     parser.add_argument('--gui-source', type=Path)
+    parser.add_argument('--timing-observer', action='store_true')
     args = parser.parse_args()
     build = args.build.resolve()
     build.mkdir(parents=True, exist_ok=True)
@@ -30,6 +31,13 @@ def main():
     shutil.copytree(fixture, source / 'tests/fixtures/plain_data', dirs_exist_ok=True)
     cmake = source / 'CMakeLists.txt'
     cmake.write_text(cmake.read_text() + '\nadd_subdirectory(tests/fixtures/plain_data)\n')
+    if args.timing_observer:
+        shutil.copytree(
+            fixture.parent / 'scan_timing',
+            source / 'tests/fixtures/scan_timing',
+            dirs_exist_ok=True,
+        )
+        cmake.write_text(cmake.read_text() + '\nadd_subdirectory(tests/fixtures/scan_timing)\n')
     command = [
         'cmake',
         '-S',
@@ -49,10 +57,22 @@ def main():
         command += ['-DFETCHCONTENT_SOURCE_DIR_GUI_COMPONENTS=' + str(args.gui_source)]
     subprocess.run(command, check=True)
     subprocess.run(
-        ['cmake', '--build', str(build / 'cmake'), '--target', 'plain_data_probe', '-j'],
+        [
+            'cmake',
+            '--build',
+            str(build / 'cmake'),
+            '--target',
+            'scan_timing_observer' if args.timing_observer else 'plain_data_probe',
+            '-j',
+        ],
         check=True,
     )
-    print(build / 'cmake/tests/fixtures/plain_data/plain_data_probe')
+    target = (
+        'scan_timing/scan_timing_observer'
+        if args.timing_observer
+        else 'plain_data/plain_data_probe'
+    )
+    print(build / 'cmake/tests/fixtures' / target)
 
 
 if __name__ == '__main__':

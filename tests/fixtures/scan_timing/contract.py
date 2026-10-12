@@ -1,0 +1,250 @@
+"""Validate complete work before granting timing credit; the bound is owner-specified."""
+
+import csv
+import hashlib
+import io
+import json
+import math
+import shlex
+import statistics
+from pathlib import Path
+
+BOUND = 1.05
+RESUME_FILES = ('results.csv', 'results-provenance.csv', 'scan-notes.csv')
+
+
+def source_hashes(root):
+    """A portable source witness survives a squash or a clone without old commit objects."""
+    selected = ['core', 'app', 'lib', 'data', 'tools/ci', 'tests/fixtures/scan_timing']
+    paths = [
+        path
+        for relative in selected
+        for path in (root / relative).rglob('*')
+        if path.is_file() and '__pycache__' not in path.parts and path.name != 'measurement.json'
+    ]
+    paths += [
+        root / name for name in ['CMakeLists.txt', 'pixi.toml', 'pixi.lock', 'pyproject.toml']
+    ]
+    return {
+        path.relative_to(root).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in sorted(paths)
+    }
+
+
+def subject(project):
+    """Derive the declared inventory and literal conditions from the committed input."""
+    text = (project / 'analysis/analysis.edi').read_text()
+    declared = {}
+    for line in text.splitlines():
+        if line.startswith(('_fitting_mode.', '_minimizer.', '_sequential_fit.')):
+            key, value = shlex.split(line)
+            if key in declared:
+                raise ValueError('duplicate declared setting: ' + key)
+            declared[key] = value
+    if declared.get('_fitting_mode.type') != 'sequential':
+        raise ValueError('the performance subject must declare sequential fitting')
+    folder = project / declared['_sequential_fit.data_dir']
+    files = sorted(path.name for path in folder.glob(declared['_sequential_fit.file_pattern']))
+    if len(files) != 162 or len(set(files)) != 162:
+        raise ValueError('the committed subject must declare precisely 162 distinct files')
+    return {
+        'files': files,
+        'settings': {
+            key: value for key, value in declared.items() if key.startswith('_minimizer.')
+        },
+        'input_sha256': {
+            path.relative_to(project).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+            for path in sorted(project.rglob('*'))
+            if path.is_file() and path.name not in RESUME_FILES
+        },
+    }
+
+
+def csv_files(text, expected):
+    reader = csv.DictReader(io.StringIO(text))
+    fields = reader.fieldnames or []
+    if len(fields) != len(set(fields)) or not {'file_path', 'fit_result.success'} <= set(fields):
+        raise ValueError('results.csv must carry unique file and success columns')
+    files = []
+    for row in reader:
+        if None in row or row['fit_result.success'] != 'True':
+            raise ValueError('every results row must be complete and successful')
+        files.append(Path(row['file_path']).name)
+    if len(files) != len(expected) or sorted(files) != sorted(expected):
+        raise ValueError('results.csv must name every expected dataset exactly once')
+    return files
+
+
+def validate_work(row, spec):
+    """Receipt fields are observations of the real runner, never estimated work."""
+    if row['returncode'] != 0:
+        raise ValueError('a failed command has no timing credit')
+    work = row['work']
+    if work['input_sha256'] != spec['input_sha256'] or work['preexisting_results']:
+        raise ValueError('every run must start from fresh identical input bytes')
+    if work['mode'] != 'sequential' or work['settings'] != spec['settings']:
+        raise ValueError('the run must use its declared mode and minimizer settings')
+    csv_files(work['results_csv'], spec['files'])
+    if work['skipped'] or work['refused'] or work['unfinished']:
+        raise ValueError('skipped, refused or unfinished work has no timing credit')
+    if row['path'] == 'cli':
+        validate_machine(work)
+    elif row['path'] == 'app':
+        if (
+            work['follow'] != 'adaptive'
+            or not work['terminal_published']
+            or work['outcome'] != 'success'
+            or work['calculation_pending']
+            or work['calculation_stale']
+        ):
+            raise ValueError(
+                'the adaptive app must publish a successful fully settled terminal summary'
+            )
+        reset = work['reset']
+        if (
+            any(
+                reset[key]
+                for key in [
+                    'remaining_files',
+                    'result_rows',
+                    'dataset_fit_outcomes',
+                    'dataset_correlations',
+                ]
+            )
+            or not reset['prefit_values_restored']
+            or not reset['undo_available']
+            or reset['calculation_pending']
+        ):
+            raise ValueError(
+                'Reset fits must reach all of its actual empty-state and model conditions'
+            )
+    else:
+        raise ValueError('unknown measured entry point')
+
+
+def validate_machine(work):
+    fields = {}
+    for line in work['machine'].splitlines():
+        if '=' in line:
+            key, value = line.split('=', 1)
+            if key in fields:
+                raise ValueError('duplicate terminal machine field: ' + key)
+            fields[key] = value
+    if fields.get('record') != 'fit' or fields.get('status') != 'done':
+        raise ValueError('the command must publish a terminal status=done machine record')
+
+
+def validate_controls(controls):
+    required = {'refused-start', 'cancel-after-40', 'delay-fit', 'delay-reset', 'slow-fit'}
+    if {row['name'] for row in controls} != required or len(controls) != len(required):
+        raise ValueError('every real timing-path negative control must run exactly once')
+    for row in controls:
+        if not row['real_timing_path'] or not row['command_sha256']:
+            raise ValueError(
+                'a constructed receipt is no substitute for a real timing-path control'
+            )
+        name = row['name']
+        if name in {'refused-start', 'cancel-after-40'}:
+            count = 0 if name == 'refused-start' else 40
+            if row['returncode'] == 0 or row['timing_credit'] or row['completed_files'] != count:
+                raise ValueError('refused and partial scenarios must fail without timing credit')
+        elif name in {'delay-fit', 'delay-reset'}:
+            if row['returncode'] != 0 or row['delayed_ms'] - row['normal_ms'] < 2000:
+                raise ValueError(
+                    'each measured endpoint must include its real two-second signal slot'
+                )
+        elif (
+            row['fixed_source'] != 'bd72193898d2dc6fefb1d692703d1f7a4137c731'
+            or row['comparator_returncode'] == 0
+            or row['fixed_fit_ms'] <= BOUND * row['baseline_fit_ms']
+        ):
+            raise ValueError('the pre-change slow build must fail the real fit-time comparator')
+
+
+def validate_builds(builds):
+    baseline = builds['baseline']
+    if not baseline['edi_source'].startswith('2e04556') or not baseline[
+        'crysta_source'
+    ].startswith('fb153aeb'):
+        raise ValueError('the baseline must name the authorized command and engine source')
+    for build in builds.values():
+        if build['configuration']['CMAKE_BUILD_TYPE'] != 'Release':
+            raise ValueError('every compared build must use Release configuration')
+        if build['configuration'] != baseline['configuration']:
+            raise ValueError('both builds must use the same compiler and build configuration')
+        if build['compiled_edi_source'] != build['edi_source'] or not build['command_sha256']:
+            raise ValueError('timings must identify the actual compiled command source and bytes')
+
+
+def compare(receipt, spec):
+    """Keep every run, with five alternating pairs on each measured entry point."""
+    if receipt['schema'] != 1:
+        raise ValueError('unknown timing receipt schema')
+    validate_controls(receipt['controls'])
+    validate_builds(receipt['builds'])
+    rows = receipt['runs']
+    expected = [
+        (rep, build, path)
+        for rep in range(1, 6)
+        for build in ['baseline', 'fixed']
+        for path in ['cli', 'app']
+    ]
+    if [(row['repetition'], row['build'], row['path']) for row in rows] != expected:
+        raise ValueError(
+            'exactly five alternating baseline/fixed runs per path must all be retained'
+        )
+    if any(control['sequence'] >= rows[0]['sequence'] for control in receipt['controls']):
+        raise ValueError('all negative controls must finish before any credited measurement')
+    if [row['sequence'] for row in rows] != sorted({row['sequence'] for row in rows}):
+        raise ValueError('run ordering must have unique increasing sequence numbers')
+    if not receipt['host'] or any(row['host'] != receipt['host'] for row in rows):
+        raise ValueError('all compared runs must execute on the same identified host')
+    for row in rows:
+        validate_work(row, spec)
+        required = {'process_ms'} if row['path'] == 'cli' else {'fit_ms', 'reset_ms'}
+        if set(row['intervals']) != required:
+            raise ValueError('each path must record exactly its declared end-to-end intervals')
+        for value in row['intervals'].values():
+            if not math.isfinite(value) or value <= 0:
+                raise ValueError('measured intervals must be finite positive values')
+    medians = {}
+    for path, key in [
+        ('cli', 'process_ms'),
+        ('app', 'fit_ms'),
+        ('app', 'reset_ms'),
+        ('app', 'sum_ms'),
+    ]:
+        values = {}
+        for build in ['baseline', 'fixed']:
+            runs = [
+                row['intervals'] for row in rows if row['path'] == path and row['build'] == build
+            ]
+            values[build] = statistics.median(
+                interval['fit_ms'] + interval['reset_ms'] if key == 'sum_ms' else interval[key]
+                for interval in runs
+            )
+        medians[path + '.' + key] = values
+    failed = [
+        name for name, values in medians.items() if values['fixed'] > BOUND * values['baseline']
+    ]
+    return {'bound': BOUND, 'medians_ms': medians, 'failed': failed, 'within_bound': not failed}
+
+
+def main():
+    import argparse  # noqa: PLC0415 - CLI only
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('receipt', type=Path)
+    parser.add_argument('project', type=Path)
+    args = parser.parse_args()
+    try:
+        result = compare(json.loads(args.receipt.read_text()), subject(args.project))
+    except (ValueError, KeyError, TypeError, OSError) as error:
+        print('Timing gate refused: ' + str(error))
+        return 1
+    print(json.dumps(result, indent=2))
+    return 0 if result['within_bound'] else 1
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

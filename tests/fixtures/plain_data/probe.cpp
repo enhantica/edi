@@ -23,6 +23,50 @@
 Q_IMPORT_QML_PLUGIN(edi_appPlugin)
 
 namespace {
+template <typename Record>
+QJsonObject shared_record_state(const Record& record) {
+    if constexpr (requires { record.scan_results; }) {
+        QJsonObject files;
+        for (const auto& [file, bundle] : record.scan_results) {
+            if (!bundle || !bundle->correlations)
+                throw std::runtime_error("completed covariance missing");
+            const auto table = bundle->correlations;
+            QJsonArray labels, coefficients;
+            for (const auto& name : *table->names) labels.append(QString::fromStdString(name));
+            for (const auto value : *table->values) coefficients.append(value);
+            const auto address = [](const auto& pointer) {
+                return QString::number(reinterpret_cast<std::uintptr_t>(pointer.get()));
+            };
+            files[QString::fromStdString(file)] = QJsonObject{{"bundle", address(bundle)},
+                                                              {"table", address(table)},
+                                                              {"names", address(table->names)},
+                                                              {"values", address(table->values)},
+                                                              {"labels", labels},
+                                                              {"coefficients", coefficients}};
+        }
+        return {{"compact", true}, {"files", files}};
+    } else {
+        return {{"compact", false}};
+    }
+}
+QJsonObject shared_order_lifecycle(const QString& fixture, const QString& work) {
+    const auto input = std::filesystem::path(work.toStdString()) / "input";
+    std::filesystem::copy(fixture.toStdString(), input, std::filesystem::copy_options::recursive);
+    auto core = edi::load_project(input.string());
+    core.fit_sequential();
+    const auto retained = core.fit_result;
+    QJsonObject result{{"first", shared_record_state(retained)}};
+    auto& terms = core.experiment().background_terms;
+    using Rows = std::remove_reference_t<decltype(terms)>;
+    std::vector<typename Rows::Ptr> reordered{terms[1], terms[0], terms[2]};
+    terms.assign(std::move(reordered));
+    for (const auto* file : {"results.csv", "results-provenance.csv", "scan-notes.csv"})
+        std::filesystem::remove(input / "analysis" / file);
+    core.fit_sequential();
+    result["second"] = shared_record_state(core.fit_result);
+    result["retained"] = shared_record_state(retained);
+    return result;
+}
 QJsonArray correlation_pairs(const edi::Project& project) {
     QJsonArray result;
     for (const auto& pair : project.fit_result.correlations)
@@ -494,6 +538,31 @@ QJsonObject correlation_save_stability(const QString& fixture, const QString& wo
         view.undo();
         settle_projection(view);
     }
+    if (scenario == "shared-undo") {
+        const auto snapshot = view.project().fit_result;
+        result["original"] = shared_record_state(snapshot);
+        view.setCurrentExperimentIndex(0);
+        settle_projection(view);
+        view.setCurrentExperimentIndex(2);
+        settle_projection(view);
+        result["refreshed"] = shared_record_state(view.project().fit_result);
+        view.experimentModels()[0]->setName("renamed_bank");
+        settle_projection(view);
+        result["renamed"] = shared_record_state(view.project().fit_result);
+        result["originalAfterRename"] = shared_record_state(snapshot);
+        view.undo();
+        settle_projection(view);
+        result["renameUndo"] = shared_record_state(view.project().fit_result);
+        view.fit()->reset();
+        settle_projection(view);
+        result["reset"] = shared_record_state(view.project().fit_result);
+        result["resetMatrix"] = matrix(view);
+        result["resetUndoAvailable"] = view.canUndo();
+        view.undo();
+        settle_projection(view);
+        result["resetUndo"] = shared_record_state(view.project().fit_result);
+        result["originalAfterReset"] = shared_record_state(snapshot);
+    }
     const QString saved = work + "/saved";
     if (!session.saveAs(QUrl::fromLocalFile(saved)))
         throw std::runtime_error(session.lastError().toStdString());
@@ -723,6 +792,11 @@ int main(int argc, char** argv) {
         if (mode == "correlation-rename-undo") {
             result = rename_lifecycle(fixture, work, escape, true, beam == "scan",
                                       std::string(argv[6]) == "refusal");
+            std::cout << QJsonDocument(result).toJson(QJsonDocument::Compact).constData() << '\n';
+            return 0;
+        }
+        if (mode == "shared-order") {
+            result = shared_order_lifecycle(fixture, work);
             std::cout << QJsonDocument(result).toJson(QJsonDocument::Compact).constData() << '\n';
             return 0;
         }
