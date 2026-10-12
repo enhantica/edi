@@ -883,9 +883,7 @@ def require_dataset_matrix(matrix, case):
 
 def require_core_file_pairs(pairs, case):
     actual = [pair for pair in pairs if Path(pair['file']).name == case['file']]
-    assert len(actual) == 3, (
-        'A completed file must retain every core pair after scan cancellation'
-    )
+    assert len(actual) == 3, 'A completed file must retain every core pair after scan cancellation'
     observed = {
         tuple(sorted((pair['i'], pair['j']))): float(pair['coefficient']) for pair in actual
     }
