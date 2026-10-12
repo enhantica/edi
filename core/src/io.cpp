@@ -2005,19 +2005,35 @@ struct ParameterSlot {
     ParameterPtr parameter;
 };
 
+// A structure or an experiment the walk spells by a new name, as it will be once the rename is written: the
+// structure by its canonical key (its links and texture rows follow it), the experiment by its own name.
+struct KeyRename {
+    std::string structure;
+    const ExperimentBase* experiment = nullptr;
+    std::string to;
+};
+
 template <typename ProjectT>
-auto parameter_slots(ProjectT& project) {
+auto parameter_slots(ProjectT& project, const KeyRename* rename = nullptr) {
     using ParameterPtr = decltype(&project.structures.front()->cell.length_a);
     std::vector<ParameterSlot<ParameterPtr>> slots;
     const auto add = [&slots](std::string id, std::string unique_name, ParameterPtr parameter) {
         slots.push_back({std::move(id), std::move(unique_name), parameter});
+    };
+    const auto structure_name = [rename](const std::string& name) -> const std::string& {
+        const bool renamed =
+            rename != nullptr && !rename->structure.empty() && datablock_key(name, "structure") == rename->structure;
+        return renamed ? rename->to : name;
+    };
+    const auto experiment_name = [rename](const ExperimentBase& experiment) -> const std::string& {
+        return rename != nullptr && rename->experiment == &experiment ? rename->to : experiment.name.value();
     };
     // Several structures name each one's slots by its datablock key, as crysta's fit_state.hpp; one
     // structure keeps `structure.`.
     const bool several_structures = project.structures.size() > 1;
     for (auto& structure_item : project.structures) {
         auto& structure = *structure_item;
-        const std::string block = datablock_key(structure.name.value(), "structure");
+        const std::string block = datablock_key(structure_name(structure.name.value()), "structure");
         const std::string base = several_structures ? "structure." + block + "." : std::string("structure.");
         const auto cell = [&](const char* name, ParameterPtr parameter) {
             add(base + "cell." + name, block + ".cell." + name, parameter);
@@ -2054,13 +2070,14 @@ auto parameter_slots(ProjectT& project) {
     for (auto& experiment_item : project.experiments) {
         auto& experiment = *experiment_item;
         // ADR-0016: the canonical datablock key, as crysta's writer composes it.
-        const std::string prefix = datablock_key(experiment.name, "experiment") + ".";
+        const std::string prefix = datablock_key(experiment_name(experiment), "experiment") + ".";
         // A link with no structure id names its scale by the project's structure, as crysta's walk
         // does (structure_link_id). Every link prefixes its own slots by its structure, whatever their
         // number, as every loop row is named by its id (the owner, 2026-10-11).
         const auto entry_of = [&](const std::string& linked) {
             return datablock_key(
-                linked.empty() && !project.structures.empty() ? project.structures.front()->name.value() : linked,
+                structure_name(linked.empty() && !project.structures.empty() ? project.structures.front()->name.value()
+                                                                             : linked),
                 "structure");
         };
         const auto phase_prefix = [&](const std::string& structure_id) { return prefix + entry_of(structure_id) + "."; };
@@ -2166,7 +2183,7 @@ auto parameter_slots(ProjectT& project) {
         }
         // The preferred-orientation pair, crysta fit_state.hpp's order (after absorption).
         for (auto& row : experiment.preferred_orientation) {
-            const std::string texture = prefix + "preferred_orientation." + row->structure_id.value() + ".";
+            const std::string texture = prefix + "preferred_orientation." + structure_name(row->structure_id.value()) + ".";
             add(phase_prefix(row->structure_id) + "march_r", texture + "march_r", &row->march_r);
             add(phase_prefix(row->structure_id) + "march_random_fract", texture + "march_random_fract",
                 &row->march_random_fract);
@@ -2234,6 +2251,45 @@ void refuse_older_correlation_name(const std::string& name) {
 }
 
 }  // namespace
+
+std::map<std::string, std::string> detail::parameter_renames(const Project& project, const char* kind,
+                                                             const ItemKey& key, const std::string& to) {
+    KeyRename rename;
+    rename.to = to;
+    if (std::string(kind) == "structure") {
+        rename.structure = datablock_key(key.value(), "structure");
+    } else {
+        for (const auto& experiment : project.experiments) {
+            if (&experiment->name == &key) {
+                rename.experiment = experiment.get();
+            }
+        }
+        if (rename.experiment == nullptr) {
+            return {};
+        }
+    }
+    // The walk names the same parameters in the same order either way.
+    const auto before = parameter_slots(project);
+    const auto after = parameter_slots(project, &rename);
+    std::map<std::string, std::string> names;
+    std::set<std::string> shared;
+    const auto note = [&](const std::string& from, const std::string& next) {
+        if (shared.contains(from)) {
+            return;
+        }
+        const auto [at, added] = names.emplace(from, next);
+        if (!added && at->second != next) {
+            names.erase(at);
+            shared.insert(from);
+        }
+    };
+    for (std::size_t index = 0; index < before.size() && index < after.size(); ++index) {
+        note(before[index].id, after[index].id);
+        note(before[index].unique_name, after[index].unique_name);
+    }
+    std::erase_if(names, [](const auto& entry) { return entry.first == entry.second; });
+    return names;
+}
 
 // ---- public entry points --------------------------------------------------------------------------
 

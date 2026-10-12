@@ -46,6 +46,7 @@ struct Structure;
 struct AtomSite;
 struct AtomSiteAniso;
 class Project;
+class ItemKey;
 struct Parameter;
 // ADR-0020: the publication transaction, declared in edi/calculation.hpp.
 struct WorkSnapshot;
@@ -59,7 +60,12 @@ class KeyedBase;
 // Renames every link and texture row of `project` that names the structure `from` to `to`, all or
 // none (defined after Project).
 inline void rename_structure_links(Project& project, const std::string& from, const std::string& to);
-inline void follow_datablock_rename(Project& project, const char* kind, const std::string& from, const std::string& to);
+// The parameter names a structure's or an experiment's rename changes, old to new, in both the unique and the
+// `_fit_parameter.id` spelling: the block's own parameters and, for a structure, its links' and texture rows'
+// (io.cpp's slot walk). A spelling two parameters share is left out.
+std::map<std::string, std::string> parameter_renames(const Project& project, const char* kind, const ItemKey& key,
+                                                     const std::string& to);
+inline void follow_parameter_renames(Project& project, const std::map<std::string, std::string>& names);
 
 // The membership record an ItemVec owns and its attached items share. Items hold it STRONGLY —
 // ADR-0013 prohibits production weak references — and the collection revokes it (owner =
@@ -2159,11 +2165,15 @@ class ItemVec final : public detail::KeyedBase {
     void rename_references(const ItemKey& key, const std::string& next) const override {
         if constexpr (std::is_same_v<T, Structure>) {
             if (Project* project = host()) {
+                // Named while the links still name the structure as it was.
+                const auto names = detail::parameter_renames(*project, "structure", key, next);
                 detail::rename_structure_links(*project, key.value(), next);
-                detail::follow_datablock_rename(*project, "structure", key.value(), next);
+                detail::follow_parameter_renames(*project, names);
             }
         } else if constexpr (std::is_same_v<T, BraggPdExperiment>) {
-            if (Project* project = host()) detail::follow_datablock_rename(*project, "experiment", key.value(), next);
+            if (Project* project = host()) {
+                detail::follow_parameter_renames(*project, detail::parameter_renames(*project, "experiment", key, next));
+            }
         } else if constexpr (std::is_same_v<T, LineSegment> || std::is_same_v<T, PolynomialTerm>) {
             if (Project* project = host()) detail::follow_background_aliases(*project, key, next);
         } else if constexpr (std::is_same_v<T, AtomSite>) {
@@ -4740,35 +4750,13 @@ inline void follow_site_references(Project* project, Structure* structure, const
 
 // A structure's or an experiment's parameters are named `<datablock>.<category>...` wherever the project names
 // one: the analysis aliases, the fit's parameter correlations and the scan's extract rules. A rename of the
-// datablock rewrites each, so the project saves and reopens under the new name.
-inline void follow_datablock_rename(Project& project, const char* kind, const std::string& from, const std::string& to) {
-    const std::string old_prefix = datablock_key(from, kind) + ".";
-    const std::string new_prefix = datablock_key(to, kind) + ".";
-    if (old_prefix == new_prefix) {
-        return;
-    }
-    // An experiment's own parameters also name a structure: a link's scale and a texture row's fields, by the
-    // structure's key (`<exp>.linked_structure.<structure>.scale`, or the compact fit-state `<exp>.<structure>.scale`).
-    const bool structure = std::string(kind) == "structure";
-    const std::string old_key = datablock_key(from, kind);
-    const std::string new_key = datablock_key(to, kind);
-    const auto renamed = [&](const std::string& name) -> std::optional<std::string> {
-        if (name.starts_with(old_prefix)) {
-            return new_prefix + name.substr(old_prefix.size());
-        }
-        if (!structure) {
-            return std::nullopt;
-        }
-        for (const auto& experiment : project.experiments) {
-            const std::string at = datablock_key(experiment->name.value(), "experiment") + ".";
-            for (const char* category : {"linked_structure.", "preferred_orientation.", ""}) {
-                const std::string head = at + category + old_key + ".";
-                if (name.starts_with(head)) {
-                    return at + category + new_key + "." + name.substr(head.size());
-                }
-            }
-        }
-        return std::nullopt;
+// datablock rewrites each name of one of its parameters, whole, so the project saves and reopens under the new
+// name. A structure and an experiment may share a name, and a structure may be named as a category is: a prefix
+// would take the other's parameters too.
+inline void follow_parameter_renames(Project& project, const std::map<std::string, std::string>& names) {
+    const auto renamed = [&names](const std::string& name) -> std::optional<std::string> {
+        const auto found = names.find(name);
+        return found == names.end() ? std::nullopt : std::optional<std::string>(found->second);
     };
     for (const auto& alias : project.aliases) {
         if (auto next = renamed(alias->parameter_unique_name.value())) alias->parameter_unique_name = std::move(*next);
