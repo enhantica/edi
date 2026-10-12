@@ -62,6 +62,7 @@ std::string stage;
 edi_app::ProjectViewModel* active = nullptr;
 std::atomic<int> completed{0};
 std::atomic<int> file_results{0};
+std::atomic<int> file_fitted{0};
 int stop_after = 0;
 bool exercise_follow = false;
 QJsonArray events;
@@ -185,6 +186,7 @@ QJsonObject run(edi_app::ProjectViewModel& view, const std::string& label, int l
     stage = label;
     completed = 0;
     file_results = 0;
+    file_fitted = 0;
     worker_off_owner = true;
     stop_after = limit;
     exercise_follow = follow;
@@ -214,6 +216,7 @@ QJsonObject run(edi_app::ProjectViewModel& view, const std::string& label, int l
             {"refusal", refusal},
             {"completed", completed.load()},
             {"fileResults", file_results.load()},
+            {"fileFitted", file_fitted.load()},
             {"workerOffOwner", worker_off_owner.load()}};
 }
 
@@ -704,6 +707,8 @@ void scan_contract_work_receipt(const std::string& file) {
     if (work_stream.is_open())
         work_stream << "receipt\t" << stage << '\t' << work_index << '\t' << file << std::endl;
 }
+
+void scan_contract_file_fitted_observed(const std::string&) { ++file_fitted; }
 
 void scan_contract_file_result_observed(const std::string&) { ++file_results; }
 

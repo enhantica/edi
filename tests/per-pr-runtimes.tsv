@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-12T14:16:54Z
+# measured_utc = 2026-10-12T14:45:00Z
 #
-# Recorded from: stability-current-sdk.log (22 node(s) measured once, 9883 banked, 0 stale row(s) dropped)
-# Collected tests: 10736; with a reported duration: 5805
+# Recorded from: boundary.log (2 node(s) measured once, 9891 banked, 0 stale row(s) dropped)
+# Collected tests: 10736; with a reported duration: 5804
 # Module-scoped fixture costs recorded: 37
 #
 # Breaches are decided PER TIER against the table
@@ -9437,8 +9437,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_scan_correlation_save_stabili
 0.000	tests/system/py/test_scan_lazy_input.py::test_gate_rejects_an_exercised_read_all_files_before_fitting_escape[eager-load-openat]
 0.000	tests/system/py/test_scan_lazy_input.py::test_gate_rejects_an_exercised_read_all_files_before_fitting_escape[eager-load-relative]
 0.000	tests/system/py/test_scan_lazy_input.py::test_gate_rejects_an_exercised_read_all_files_before_fitting_escape[eager-load]
-0.090	tests/system/py/test_scan_native_boundary.py::test_actual_scan_dispatch_reaches_each_native_callback[independent]
-0.734	tests/system/py/test_scan_native_boundary.py::test_actual_scan_dispatch_reaches_each_native_callback[sequential]
+0.000	tests/system/py/test_scan_native_boundary.py::test_actual_scan_dispatch_reaches_each_native_callback[independent]
+0.002	tests/system/py/test_scan_native_boundary.py::test_actual_scan_dispatch_reaches_each_native_callback[sequential]
 0.740	tests/system/py/test_scan_owner_adjustments.py::test_evolution_gestures_change_the_displayed_axes_and_reset
 0.140	tests/system/py/test_scan_owner_adjustments.py::test_evolution_marker_survives_point_rebuild_and_pending_projection
 0.560	tests/system/py/test_scan_owner_adjustments.py::test_fit_and_reset_buttons_follow_effective_fit_state
@@ -11120,6 +11120,6 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 16.352	tests/system/py/test_scan_correlation_save_stability.py
 # module-cost: 17.635	tests/system/py/test_scan_driver_resume.py
 # module-cost: 1.016	tests/system/py/test_scan_lazy_input.py
-# module-cost: 220.846	tests/system/py/test_scan_native_boundary.py
+# module-cost: 1.968	tests/system/py/test_scan_native_boundary.py
 # module-cost: 2.483	tests/unit/py/test_e04_t9_latency_ratchet.py
 # module-cost: 0.250	tests/unit/py/test_e09_t55_unit_coverage_contract.py

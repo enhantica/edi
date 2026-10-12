@@ -11,7 +11,9 @@ from tests.fixtures.scan_app.harness import SMALL, Harness, copy_project, files
 @pytest.fixture(scope='module')
 def boundary_observations(tmp_path_factory):
     root = tmp_path_factory.mktemp('scan-boundary')
-    harness = Harness(root / 'host')
+    host = root / 'host'
+    host.mkdir()
+    harness = Harness(host)
     result = {}
     for mode in ['sequential', 'independent']:
         project = copy_project(SMALL, root / mode, mode=mode, iterations=1)
@@ -37,6 +39,9 @@ def test_actual_scan_dispatch_reaches_each_native_callback(boundary_observations
     )
     assert observed['fileResults'] == len(rows), (
         'Every dataset result reaches FileResult observation on the called production overload'
+    )
+    assert observed['fileFitted'] == len(rows), (
+        'Every real dataset reaches the merged FileFitted callback without losing its payload'
     )
     assert len(observed['work']) == len(rows), (
         'Optimizer entry observations remain reached after repairing the completion boundary'

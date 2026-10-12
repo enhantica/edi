@@ -164,6 +164,8 @@ def observed_object(sdk, build, fixture):
     ]
     if len(optimizer) != 1 or len(driver) != 1:
         raise RuntimeError('Scan execution: compiled native boundaries must resolve uniquely')
+    if optimizer[0] not in wrapper_names:
+        raise RuntimeError('Scan optimizer observer must match the actual compiled callback signature')
     real = next(name for name in wrapper_names if 'scan_contract_real_sequential' in name)
     reader = [name for name in wrapper_names if 'read_sequential_scan_data' in name]
     if len(reader) != 1:
