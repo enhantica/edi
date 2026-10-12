@@ -17,7 +17,7 @@ CASES = [
     (mode, later, scenario)
     for mode in ['sequential', 'independent']
     for later in ['first', 'later']
-    for scenario in ['complete', 'partial', 'single-undo', 'reset-undo']
+    for scenario in ['complete', 'partial', 'single-undo', 'reset-undo', 'loaded-id']
 ]
 
 
@@ -75,7 +75,7 @@ def save_observations(tmp_path_factory):
         if completed.returncode:
             raise RuntimeError('The real app save lifecycle failed: ' + completed.stderr)
         record = json.loads(completed.stdout.splitlines()[-1])
-        paths = ['saved', 'core-copy', 'saved-again', 'saved-third']
+        paths = ['input', 'saved', 'core-copy', 'saved-again', 'saved-third']
         texts = {
             name: (work / name / 'analysis/analysis.edi').read_text()
             for name in paths
@@ -86,7 +86,7 @@ def save_observations(tmp_path_factory):
     return result
 
 
-@pytest.mark.parametrize(('mode', 'later', 'scenario'), CASES)
+@pytest.mark.parametrize(('mode', 'later', 'scenario'), [c for c in CASES if c[2] != 'loaded-id'])
 def test_template_correlation_ids_survive_unchanged_app_reload_and_save(
     save_observations, mode, later, scenario
 ):
@@ -120,6 +120,28 @@ def test_template_correlation_ids_survive_unchanged_app_reload_and_save(
         assert correlations(texts[step]) == first, (
             'An unchanged app reload and save retains every correlation '
             'ID, name and coefficient text'
+        )
+
+
+@pytest.mark.parametrize(
+    ('mode', 'later'),
+    [(mode, later) for mode in ['sequential', 'independent'] for later in ['first', 'later']],
+)
+def test_native_loaded_nonordinal_pair_ids_survive_unchanged_app_saves(
+    save_observations, mode, later
+):
+    record, texts = save_observations[mode, later, 'loaded-id']
+    assert 'error' not in record, 'Loaded template rows must reach actual unchanged app saves'
+    assert record['loaded']['available'] == 3, (
+        'The app must load the authored three-parameter matrix'
+    )
+    expected = correlations(texts['input'])
+    assert [row['id'] for row in expected] == ['pair17', 'pair18', 'pair19'], (
+        'The native-created witness reaches nonordinal current-format row identities'
+    )
+    for destination in ['core-copy', 'saved', 'saved-again', 'saved-third']:
+        assert correlations(texts[destination]) == expected, (
+            'An unchanged native or app save preserves each loaded pair id and its scientific text'
         )
 
 

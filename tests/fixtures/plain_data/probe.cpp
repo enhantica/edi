@@ -394,9 +394,50 @@ QJsonObject correlation_lifecycle(const std::string& action, const QString& fixt
     }
     return result;
 }
+QJsonObject loaded_correlation_save(const QString& fixture, const QString& work,
+                                    const QString& mode, bool later) {
+    const auto input = std::filesystem::path(work.toStdString()) / "input";
+    std::filesystem::copy(fixture.toStdString(), input, std::filesystem::copy_options::recursive);
+    auto core = edi::load_project(input.string());
+    const std::string dataset = later ? "02.xy" : "01.xy";
+    core.sequential_fit.template_file = dataset;
+    const std::vector<std::string> terms{"base", "ramp", "curve"};
+    // Independently authored storage identities and coefficient text, not fitted physics.
+    for (std::size_t index = 0; index < terms.size(); ++index) {
+        edi::FitParameterCorrelation pair;
+        pair.id = "pair" + std::to_string(17 + index);
+        pair.source_kind = "deterministic";
+        pair.parameter_unique_name_i = "bank.background." + terms[index] + ".coef";
+        pair.parameter_unique_name_j =
+            "bank.background." + terms[(index + 1) % terms.size()] + ".coef";
+        pair.correlation = "-0.250000";
+        pair.file_path = dataset;
+        core.fit_result.correlations.push_back(pair);
+    }
+    edi::save_project(core, input.string());
+    auto native = edi::load_project(input.string());
+    edi::save_project_as(native, (work + "/core-copy").toStdString());
+    edi_app::Session session;
+    if (!session.openProject(QUrl::fromLocalFile(QString::fromStdString(input.string()))))
+        throw std::runtime_error(session.lastError().toStdString());
+    session.project()->analysis()->setFittingMode(mode);
+    QJsonObject result;
+    session.project()->setCurrentExperimentIndex(later ? 1 : 0);
+    settle_projection(*session.project());
+    result["loaded"] = matrix(*session.project());
+    for (const QString destination : {"saved", "saved-again", "saved-third"}) {
+        if (!session.saveAs(QUrl::fromLocalFile(work + "/" + destination)))
+            throw std::runtime_error(session.lastError().toStdString());
+        session.closeProject();
+        if (!session.openProject(QUrl::fromLocalFile(work + "/" + destination)))
+            throw std::runtime_error(session.lastError().toStdString());
+    }
+    return result;
+}
 QJsonObject correlation_save_stability(const QString& fixture, const QString& work,
                                        const QString& mode, const std::string& scenario,
                                        bool later) {
+    if (scenario == "loaded-id") return loaded_correlation_save(fixture, work, mode, later);
     const auto input = std::filesystem::path(work.toStdString()) / "input";
     std::filesystem::copy(fixture.toStdString(), input, std::filesystem::copy_options::recursive);
     std::filesystem::copy_file(input / "experiments/scan/02.xy", input / "experiments/scan/03.xy");
