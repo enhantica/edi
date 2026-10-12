@@ -87,6 +87,7 @@ class DemoDriver : public QObject {
     void idle_then(std::function<void()> next, int waited_ms = 0);
     QString scan_work(int files) const;
     void record_time(const QString& label, qint64 ms);
+    void delay_then_record();
 
     QQuickWindow& window_;
     QDir output_dir_;

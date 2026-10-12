@@ -920,11 +920,12 @@ bool correlations_left(const Record& record) {
     }
 }
 
-void delay_from_environment() {
+bool delay_from_environment() {
     const int ms = qEnvironmentVariableIntValue("EDI_DEMO_DELAY_MS");
     if (ms > 0) {
         QThread::msleep(static_cast<unsigned long>(ms));
     }
+    return ms > 0;
 }
 
 }  // namespace
@@ -933,6 +934,14 @@ void DemoDriver::record_time(const QString& label, qint64 ms) {
     QFile file(output_dir_.filePath(QStringLiteral("timings.tsv")));
     if (file.open(QIODevice::Append | QIODevice::Text)) {
         file.write(QStringLiteral("%1\t%2\t%3\n").arg(steps_[current_].image, label).arg(ms).toUtf8());
+    }
+}
+
+void DemoDriver::delay_then_record() {
+    // The delay's start and end on the interval's clock, so a control can show the interval ends after it.
+    const qint64 from = timer_.elapsed();
+    if (delay_from_environment()) {
+        record_time(QStringLiteral("delay from %1 to").arg(from), timer_.elapsed());
     }
 }
 
@@ -1003,7 +1012,7 @@ void DemoDriver::timed_fit_then(std::function<void()> next, int files, int stop_
             next();
         });
     };
-    connections->push_back(connect(fit, &FitViewModel::scanFinished, this, [] { delay_from_environment(); }));
+    connections->push_back(connect(fit, &FitViewModel::scanFinished, this, [this] { delay_then_record(); }));
     connections->push_back(connect(fit, &FitViewModel::scanFinished, this, finish));
     connections->push_back(connect(fit, &FitViewModel::refused, this, [refusal, finish](const QString& reason) {
         *refusal = reason.isEmpty() ? QStringLiteral("the fit was refused") : reason;
@@ -1031,7 +1040,7 @@ bool DemoDriver::timed_reset() {
         return false;
     }
     const QMetaObject::Connection delay =
-        connect(project, &ProjectViewModel::canUndoChanged, this, [] { delay_from_environment(); });
+        connect(project->fit(), &FitViewModel::scanSummaryChanged, this, [this] { delay_then_record(); });
     timer_.start();
     const QString refusal = project->resetScan();
     QObject::disconnect(delay);
