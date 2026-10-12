@@ -2029,6 +2029,41 @@
   ],
   "members": [
     {
+      "member": "ParameterRenames::unique",
+      "type": "std::map<std::string, std::string>",
+      "not_storage": "a block rename's old and new parameter names, made for the rename"
+    },
+    {
+      "member": "ParameterRenames::compact",
+      "type": "std::map<std::string, std::string>",
+      "not_storage": "a block rename's old and new parameter names, made for the rename"
+    },
+    {
+      "member": "ParameterRenames::current_unique",
+      "type": "std::set<std::string>",
+      "not_storage": "a block rename's old and new parameter names, made for the rename"
+    },
+    {
+      "member": "ParameterRenames::current_compact",
+      "type": "std::set<std::string>",
+      "not_storage": "a block rename's old and new parameter names, made for the rename"
+    },
+    {
+      "member": "ParameterRenames::structure",
+      "type": "bool",
+      "not_storage": "a block rename's old and new parameter names, made for the rename"
+    },
+    {
+      "member": "ParameterRenames::from",
+      "type": "std::string",
+      "not_storage": "a block rename's old and new parameter names, made for the rename"
+    },
+    {
+      "member": "ParameterRenames::to",
+      "type": "std::string",
+      "not_storage": "a block rename's old and new parameter names, made for the rename"
+    },
+    {
       "member": "Membership::owner",
       "type": "const KeyedBase*",
       "not_storage": "a collection membership record (ADR-0016)"
