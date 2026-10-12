@@ -137,9 +137,15 @@ def require_lifecycle(record, beam):
         'undoSecond',
         'undoFirst',
     ]:
-        assert configuration(record[step]) == configuration(original), (
+        expected_configuration = configuration(original)
+        if step in {'reopened', 'afterReopenedTypeAttempt', 'afterReopenedRangeAttempt'}:
+            expected_configuration['weight'] = 1
+        assert record[step]['fittingMode'] == original['fittingMode'] == 'single', (
+            'Load data lifecycle: this one-experiment witness retains Single mode'
+        )
+        assert configuration(record[step]) == expected_configuration, (
             'Load data lifecycle: non-default instrument, peak, background, exclusions, '
-            'weight, links and parameter state survive every load, Undo and reopen: ' + step
+            'links and parameter state survive; inactive joint weights reset on reopen: ' + step
         )
     assert (
         original['experiments'][0]['excluded'] == ([[9000, 9100]] if beam == 'tof' else [[60, 61]])
@@ -175,10 +181,9 @@ def require_lifecycle(record, beam):
             'Load data lifecycle: each measured state retains its beam mode and measured lock: '
             + step
         )
-        if step != 'reopened':
-            assert measured['canLoadData'], (
-                'Load data lifecycle: every created measured state admits another load: ' + step
-            )
+        assert measured['canLoadData'], (
+            'Load data lifecycle: every non-scan measured state admits another load: ' + step
+        )
     after = record['after']['experiments'][0]
     assert record['loaded'] and rows(record['after']) == expected, (
         'Load data: the created experiment receives the hand-constructed measured triples'
@@ -199,9 +204,7 @@ def require_lifecycle(record, beam):
         'Load data: visible range reports measured start, end and nontrivial step'
     )
     assert content(record['reopened']) == content(record['after']) | {
-        'experiments': [
-            dict(after, canLoadData=record['reopened']['experiments'][0]['canLoadData'])
-        ]
+        'experiments': [dict(after, weight=1)]
     }, 'Save plain data: reopen preserves all measured state and original file/name metadata'
     assert (
         record['reopenedTypeRefused']
@@ -249,16 +252,19 @@ def test_load_lock_replace_and_single_step_undo(native_probe, tmp_path, beam):
 
 
 @pytest.mark.parametrize('beam', ['cwl', 'tof'])
-def test_saved_data_is_self_contained_and_edi_load_cannot_replace_it(native_probe, tmp_path, beam):
+def test_saved_data_is_self_contained_and_imported_data_can_be_replaced(
+    native_probe, tmp_path, beam
+):
     record = run(native_probe, tmp_path, beam=beam)
     expected = CASES[beam + '/two_columns']['rows']
     require_reopened(record, expected)
     assert rows(record['ediImported']) == expected, (
         'Load experiment: the explicitly imported .edi supplies the saved measured rows'
     )
-    assert record['ediLoadRefused'] and rows(record['afterEdiLoadAttempt']) == expected, (
-        'Load data admission: an experiment imported through Load experiment cannot use the action'
-    )
+    assert (
+        record['ediLoadSucceeded']
+        and rows(record['afterEdiLoadAttempt']) == CASES[beam + '/three_columns']['rows']
+    ), 'Load data admission: an imported non-scan experiment receives the complete replacement'
     assert not record['reopened']['experiments'][0]['simulation'], (
         'Save plain data: the reopened experiment retains its measured-data type lock'
     )
@@ -485,6 +491,7 @@ def lifecycle_control():
         'sigma': [],
     }
     before = {
+        'fittingMode': 'single',
         'experiments': [experiment],
         'structures': ['unchanged structure'],
         'parameters': [[0.125, False], [0.0625, False], [4.25, False]],
@@ -544,6 +551,8 @@ def lifecycle_control():
         'afterUndoTypeEdit': type_edited,
         'afterUndoRangeEdit': range_edited,
     }
+    for step in ('reopened', 'afterReopenedTypeAttempt', 'afterReopenedRangeAttempt'):
+        record[step]['experiments'][0]['weight'] = 1
     require_lifecycle(record, 'cwl')
     return record
 
@@ -556,6 +565,7 @@ def lifecycle_control():
         ('undoSecond', 'peak'),
         ('undoFirst', 'background'),
         ('reopened', 'weight'),
+        ('after', 'fittingMode'),
         ('undoSecond', 'file'),
         ('undoSecond', 'name'),
         ('undoFirst', 'file'),
@@ -574,7 +584,9 @@ def test_lifecycle_observer_consumes_configuration_metadata_and_actual_edits(
     lifecycle_control, step, field
 ):
     changed = copy.deepcopy(lifecycle_control)
-    if field == 'action':
+    if field == 'fittingMode':
+        changed[step]['fittingMode'] = 'joint'
+    elif field == 'action':
         changed[step] = False
     else:
         experiment = changed[step]['experiments'][0]
@@ -591,7 +603,7 @@ def test_lifecycle_observer_consumes_configuration_metadata_and_actual_edits(
         elif field in {'instrument', 'peak'}:
             experiment[field][0][0] += 1
         elif field == 'weight':
-            experiment[field] = 1
+            experiment[field] = 2.5
         else:
             experiment[field] = 'wrong-restored-metadata'
     assert changed != lifecycle_control, (

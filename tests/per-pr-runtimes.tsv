@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-12T03:11:22Z
+# measured_utc = 2026-10-12T05:53:05Z
 #
-# Recorded from: current.log (15 node(s) measured once, 9643 banked, 0 stale row(s) dropped)
-# Collected tests: 10428; with a reported duration: 5340
+# Recorded from: bank-measure.log (22 node(s) measured once, 9637 banked, 2 stale row(s) dropped)
+# Collected tests: 10429; with a reported duration: 5340
 # Module-scoped fixture costs recorded: 35
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 10428
+# inventory_python = 10429
 # inventory_cpp = 306
-# inventory_measured = 9658
+# inventory_measured = 9659
 # inventory_unmeasured = 1076
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
@@ -8280,6 +8280,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_two_named
 0.370	tests/system/py/test_plain_data_app.py::test_filename_and_user_name[default-name]
 0.170	tests/system/py/test_plain_data_app.py::test_filename_and_user_name[user-name]
 0.000	tests/system/py/test_plain_data_app.py::test_lifecycle_observer_consumes_configuration_metadata_and_actual_edits[after-excluded]
+0.000	tests/system/py/test_plain_data_app.py::test_lifecycle_observer_consumes_configuration_metadata_and_actual_edits[after-fittingMode]
 0.000	tests/system/py/test_plain_data_app.py::test_lifecycle_observer_consumes_configuration_metadata_and_actual_edits[firstData-x]
 0.000	tests/system/py/test_plain_data_app.py::test_lifecycle_observer_consumes_configuration_metadata_and_actual_edits[reopened-beam]
 0.000	tests/system/py/test_plain_data_app.py::test_lifecycle_observer_consumes_configuration_metadata_and_actual_edits[reopened-weight]
@@ -8297,8 +8298,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_two_named
 0.000	tests/system/py/test_plain_data_app.py::test_lifecycle_observer_consumes_configuration_metadata_and_actual_edits[undoSecond-simulation]
 0.000	tests/system/py/test_plain_data_app.py::test_lifecycle_observer_consumes_configuration_metadata_and_actual_edits[undoTypeEditable-action]
 0.090	tests/system/py/test_plain_data_app.py::test_link_all_unlinked_new_structure_and_atomic_remove_undo
-1.537	tests/system/py/test_plain_data_app.py::test_load_lock_replace_and_single_step_undo[cwl]
-0.210	tests/system/py/test_plain_data_app.py::test_load_lock_replace_and_single_step_undo[tof]
+0.209	tests/system/py/test_plain_data_app.py::test_load_lock_replace_and_single_step_undo[cwl]
+0.110	tests/system/py/test_plain_data_app.py::test_load_lock_replace_and_single_step_undo[tof]
 0.000	tests/system/py/test_plain_data_app.py::test_message_counts_reject_invalid_numbers_in_every_field[fractional-derived-number-first]
 0.000	tests/system/py/test_plain_data_app.py::test_message_counts_reject_invalid_numbers_in_every_field[fractional-duplicates-category-first]
 0.000	tests/system/py/test_plain_data_app.py::test_message_counts_reject_invalid_numbers_in_every_field[fractional-duplicates-number-first]
@@ -8367,8 +8368,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_two_named
 0.000	tests/system/py/test_plain_data_app.py::test_packet_escape_controls_reject_bad_observations
 0.180	tests/system/py/test_plain_data_app.py::test_packet_escapes_reach_the_native_actions[links-link-new]
 0.220	tests/system/py/test_plain_data_app.py::test_packet_escapes_reach_the_native_actions[load-source-reopen]
-0.160	tests/system/py/test_plain_data_app.py::test_saved_data_is_self_contained_and_edi_load_cannot_replace_it[cwl]
-0.130	tests/system/py/test_plain_data_app.py::test_saved_data_is_self_contained_and_edi_load_cannot_replace_it[tof]
+0.100	tests/system/py/test_plain_data_app.py::test_saved_data_is_self_contained_and_imported_data_can_be_replaced[cwl]
+0.110	tests/system/py/test_plain_data_app.py::test_saved_data_is_self_contained_and_imported_data_can_be_replaced[tof]
 0.000	tests/system/py/test_pytest_child_environment.py::test_parent_options_do_not_reach_nested_pytest[basetemp]
 0.000	tests/system/py/test_pytest_child_environment.py::test_parent_options_do_not_reach_nested_pytest[keyword]
 0.000	tests/system/py/test_pytest_child_environment.py::test_parent_options_do_not_reach_nested_pytest[marker]
@@ -10802,7 +10803,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 1.762	tests/system/py/test_e09_t58_start_tied_numeric.py
 # module-cost: 0.346	tests/system/py/test_e09_t75_native_execution.py
 # module-cost: 3.929	tests/system/py/test_fit_participants_native.py
-# module-cost: 190.683	tests/system/py/test_plain_data_app.py
+# module-cost: 158.231	tests/system/py/test_plain_data_app.py
 # module-cost: 21.241	tests/system/py/test_pytest_child_environment.py
 # module-cost: 349.085	tests/system/py/test_scan_accident_paths.py
 # module-cost: 557.564	tests/system/py/test_scan_app_execution.py

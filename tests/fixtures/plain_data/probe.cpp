@@ -96,6 +96,8 @@ QJsonObject state(edi_app::ProjectViewModel& view) {
             {"sites", sites}});
     }
     return {{"experiments", experiments},
+            {"fittingMode",
+             QString::fromStdString(p.fitting_mode.empty() ? "single" : p.fitting_mode)},
             {"structures", structures},
             {"parameters", parameters},
             {"canCreate", view.canCreateExperiment()},
@@ -149,8 +151,8 @@ void configure(edi_app::ProjectViewModel& view, const QString& beam, bool rename
     } else {
         experiment.background[0]->intensity.value = 4.25;
     }
-    experiment.excluded_regions = edi::excluded_region_rows({
-        {beam == "tof" ? 9000 : 60, beam == "tof" ? 9100 : 61}});
+    experiment.excluded_regions =
+        edi::excluded_region_rows({{beam == "tof" ? 9000 : 60, beam == "tof" ? 9100 : 61}});
 }
 }  // namespace
 int main(int argc, char** argv) {
@@ -322,8 +324,8 @@ int main(int argc, char** argv) {
                 if (!opened.loadExperiments(experimentFiles))
                     throw std::runtime_error("saved experiment import refused");
                 result["ediImported"] = state(opened);
-                result["ediLoadRefused"] =
-                    !load(opened, 0, fixture + "/" + beam + "/three_columns/pattern.xye");
+                result["ediLoadSucceeded"] =
+                    load(opened, 0, fixture + "/" + beam + "/three_columns/pattern.xye");
                 result["afterEdiLoadAttempt"] = state(opened);
                 edi_app::Session live;
                 live.createProject("Live", "");
