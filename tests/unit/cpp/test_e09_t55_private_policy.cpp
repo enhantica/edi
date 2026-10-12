@@ -76,8 +76,10 @@ TEST_CASE("E09-T55 parameter paths resolve the documented engine label grammar")
     edi::ExperimentBase experiment;
     experiment.background.push_back(edi::LineSegment{});
     experiment.background.push_back(edi::LineSegment{});
+    experiment.background[0]->id = "left_point";
     experiment.background[0]->position = 10.0;
     experiment.background[0]->intensity = edi::Parameter{4.0};
+    experiment.background[1]->id = "right_point";
     experiment.background[1]->position = 20.0;
     experiment.background[1]->intensity = edi::Parameter{5.0};
 
@@ -113,8 +115,9 @@ TEST_CASE("E09-T55 parameter paths resolve the documented engine label grammar")
     REQUIRE_MESSAGE(background.has_value(), "an in-range background label must resolve");
     CHECK_MESSAGE(background->target == &experiment.background[1]->intensity,
                   "a background label must target the indexed intensity");
-    CHECK_MESSAGE(background->path == "experiment.background[1].intensity",
-                  "a background label must use the documented indexed identity path");
+    // The engine label selects an index; the resolved public path names that row by id.
+    CHECK_MESSAGE(background->path == "experiment.background[right_point].intensity",
+                  "a background label must resolve to the declared row-id identity path");
     CHECK_MESSAGE(!edi::detail::resolve_label(structure, experiment, "background[2]"),
                   "an out-of-range background label must fail closed");
 

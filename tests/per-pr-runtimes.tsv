@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-12T08:11:39Z
+# measured_utc = 2026-10-12T09:32:44Z
 #
-# Recorded from: edi-pin-after.log (1 node(s) measured once, 9729 banked, 0 stale row(s) dropped)
-# Collected tests: 10483; with a reported duration: 5373
+# Recorded from: seq46/native.log; current pinned SDK; measured row-id path case; unchanged inventory and all other rows retained
+# Collected tests: 10483; with a reported duration: 5374
 # Module-scoped fixture costs recorded: 35
 #
 # Breaches are decided PER TIER against the table
