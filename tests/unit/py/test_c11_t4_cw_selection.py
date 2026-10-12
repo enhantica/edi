@@ -11,9 +11,10 @@ from pathlib import Path
 from typing import Any
 
 import edi
-from e04_t5_calculator_bytes import without_calculator
 
 from conftest import project_record_datetime, tree_bytes_with_normalized_project_metadata
+from tests.fixtures.fitting_modes.historical_bytes import historical_analysis
+from tests.unit.py.e04_t5_calculator_bytes import without_calculator
 
 ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / 'tests/fixtures/c11_t4_cw_selection'
@@ -212,7 +213,7 @@ def test_c11_t4_two_theta_and_measured_values_round_trip_non_trivially(tmp_path:
     assert list(restored.experiment.data.intensity_meas_su) == expected_sigma
 
 
-def test_c11_t4_existing_tof_writer_goldens_remain_byte_exact(tmp_path: Path) -> None:
+def require_existing_tof_writer_goldens(tmp_path: Path) -> None:
     """Regression pins only: two surviving presence shapes have canonical schema-3 bytes.
 
     Their ADP-type columns are transcribed from the source projects, not regenerated from the
@@ -241,6 +242,10 @@ def test_c11_t4_existing_tof_writer_goldens_remain_byte_exact(tmp_path: Path) ->
         record = actual.pop('project.edi', None)
         assert record is not None, (
             'the canonical TOF writer tree must add the required project.edi identity record'
+        )
+        # Before: unused non-Joint weights were saved. After: only active Joint weights persist.
+        actual['analysis/analysis.edi'] = historical_analysis(
+            source, actual['analysis/analysis.edi']
         )
         actual = {name: without_calculator(name, data) for name, data in actual.items()}
         assert actual == _tree_bytes(golden), (

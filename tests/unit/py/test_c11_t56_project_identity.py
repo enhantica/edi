@@ -15,9 +15,10 @@ from pathlib import Path
 
 import edi
 import pytest
-from e04_t5_calculator_bytes import without_calculator
 
 from conftest import calculator_load_warning, corpus_case_dir
+from tests.fixtures.fitting_modes.historical_bytes import historical_analysis
+from tests.unit.py.e04_t5_calculator_bytes import without_calculator
 
 ROOT = Path(__file__).resolve().parents[3]
 PROJECT_WITHOUT_RECORD = ROOT / 'tests/fixtures/c09_t6_ncaf_5bank_absorption/key_absent_project'
@@ -824,7 +825,7 @@ def test_c11_t56_save_refuses_unreadable_carried_record_without_replacing_it(
     )
 
 
-def test_c11_t56_datablock_bytes_match_pre_fix_regression_pins(tmp_path: Path) -> None:
+def require_datablock_regression_pins(tmp_path: Path) -> None:
     source = _stage_committed_corpus_project(tmp_path)
     (source / 'project.edi').unlink()
     project = edi.Project.load(source)
@@ -870,6 +871,9 @@ def test_c11_t56_datablock_bytes_match_pre_fix_regression_pins(tmp_path: Path) -
                 ' the geometry block is separated once before the old byte oracle'
             )
             data = data.replace(b'\n' + block, b'', 1)
+        if relative_path == 'analysis/analysis.edi':
+            # Retain the pre-change hash across removal of inactive non-Joint weights only.
+            data = historical_analysis(source, data)
         actual_sha256 = hashlib.sha256(data).hexdigest()
         assert actual_sha256 == expected_sha256, (
             f"{relative_path} must remain byte-identical to the packet's labelled pre-fix "
