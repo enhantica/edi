@@ -18,6 +18,7 @@
     "app/qml/Pages/Experiment/MeasuredRangeGroup.qml",
     "app/qml/Pages/Experiment/ReflectionsGroup.qml",
     "app/src/report_view_model.cpp",
+    "core/src/adapter.cpp",
     "core/src/presentation.cpp"
    ],
    "drawn_by": "PT Sans",
@@ -55,6 +56,7 @@
    "sites": [
     "app/qml/Pages/Experiment/MeasuredRangeGroup.qml",
     "app/qml/Pages/Experiment/ReflectionsGroup.qml",
+    "core/src/adapter.cpp",
     "core/src/presentation.cpp"
    ],
    "drawn_by": "PT Sans",
@@ -202,6 +204,7 @@
     "app/qml/Pages/Experiment/ReflectionsGroup.qml",
     "app/src/parameter_item.cpp",
     "app/src/report_view_model.cpp",
+    "core/src/adapter.cpp",
     "core/src/presentation.cpp",
     "core/include/edi/parameter_spec.hpp"
    ],
