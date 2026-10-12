@@ -6,13 +6,43 @@
 #include "edi/edit.hpp"
 
 namespace {
-void relations(edi::Project& project, const std::string& name) {
+void relations(edi::Project& project, const std::string& name, bool structural = true) {
+    if (structural) {
+        project.structures[0]->atom_sites.clear();
+        edi::AtomSite site;
+        site.id = "La";
+        site.type_symbol = "La";
+        project.structures[0]->atom_sites.push_back(site);
+    } else {
+        project.experiments[0]->background_type = "line-segment";
+        project.experiments[0]->background.clear();
+        for (const std::string id : {"pA", "pB"}) {
+            edi::LineSegment point;
+            point.id = id;
+            point.position = id == "pA" ? 20 : 100;
+            point.intensity.value = id == "pA" ? 3 : 9;
+            project.experiments[0]->background.push_back(point);
+        }
+    }
+    if (structural) {
+        edi::Structure sibling = *project.structures[0];
+        sibling.name = name + "0";
+        project.structures.push_back(sibling);
+    } else {
+        edi::BraggPdExperiment sibling = *project.experiments[0];
+        sibling.name = name + "0";
+        project.experiments.push_back(sibling);
+        project.fitting_mode = "joint";
+    }
+    const std::string target = structural ? ".atom_site.La.adp_iso" : ".background.pA.intensity";
+    const std::string peer = structural ? ".cell.length_a" : ".background.pB.intensity";
+    const std::string extract = structural ? ".cell.length_b" : ".background.pA.position";
     edi::ParameterAlias alias;
     alias.id = "a";
-    alias.parameter_unique_name = name + ".atom_site.La.adp_iso";
+    alias.parameter_unique_name = name + target;
     project.aliases.push_back(alias);
     alias.id = "unchanged";
-    alias.parameter_unique_name = name + "0.atom_site.La.adp_iso";
+    alias.parameter_unique_name = name + "0" + target;
     project.aliases.push_back(alias);
     edi::ParameterConstraint constraint;
     constraint.id = "c";
@@ -21,14 +51,14 @@ void relations(edi::Project& project, const std::string& name) {
     edi::FitParameterCorrelation pair;
     pair.id = "pair";
     pair.source_kind = "deterministic";
-    pair.parameter_unique_name_i = name + ".atom_site.La.adp_iso";
-    pair.parameter_unique_name_j = name + ".cell.length_a";
+    pair.parameter_unique_name_i = name + target;
+    pair.parameter_unique_name_j = name + peer;
     pair.correlation = "-0.625";
     pair.file_path = "structure1.xy";
     project.fit_result.correlations.push_back(pair);
     edi::SequentialExtractRule rule;
     rule.id = "temperature";
-    rule.target = name + ".diffrn.ambient_temperature";
+    rule.target = name + extract;
     rule.pattern = "structure1=(.*)";
     project.sequential_fit.extract.push_back(rule);
 }
@@ -52,28 +82,28 @@ std::vector<std::string> names(const edi::Project& project) {
 }
 
 void check_relations(const edi::Project& project, const std::string& old_name,
-                     const std::string& next) {
-    CHECK_MESSAGE(
-        project.aliases[0]->parameter_unique_name.value() == next + ".atom_site.La.adp_iso",
-        "A datablock rename must follow the owner's La ADP alias");
-    CHECK_MESSAGE(
-        project.aliases[1]->parameter_unique_name.value() == old_name + "0.atom_site.La.adp_iso",
-        "A rename must preserve a different datablock sharing the old name prefix");
+                     const std::string& next, bool structural = true) {
+    const std::string target = structural ? ".atom_site.La.adp_iso" : ".background.pA.intensity";
+    const std::string peer = structural ? ".cell.length_a" : ".background.pB.intensity";
+    const std::string extract = structural ? ".cell.length_b" : ".background.pA.position";
+    CHECK_MESSAGE(project.aliases[0]->parameter_unique_name.value() == next + target,
+                  "A datablock rename must follow its own genuine parameter alias");
+    CHECK_MESSAGE(project.aliases[1]->parameter_unique_name.value() == old_name + "0" + target,
+                  "A rename must preserve a different datablock sharing the old name prefix");
     CHECK_MESSAGE(project.constraints[0]->expression.value() == "a = 0.125",
                   "A constraint continues using its alias and keeps its numerical expression");
-    CHECK_MESSAGE(project.fit_result.correlations[0]->parameter_unique_name_i.value() ==
-                      next + ".atom_site.La.adp_iso",
-                  "The first correlation endpoint must follow its renamed datablock");
-    CHECK_MESSAGE(project.fit_result.correlations[0]->parameter_unique_name_j.value() ==
-                      next + ".cell.length_a",
-                  "The second correlation endpoint must follow its renamed datablock");
+    CHECK_MESSAGE(
+        project.fit_result.correlations[0]->parameter_unique_name_i.value() == next + target,
+        "The first correlation endpoint must follow its renamed datablock");
+    CHECK_MESSAGE(
+        project.fit_result.correlations[0]->parameter_unique_name_j.value() == next + peer,
+        "The second correlation endpoint must follow its renamed datablock");
     CHECK_MESSAGE(project.fit_result.correlations[0]->correlation.value() == "-0.625",
-                  "Renaming preserves the measured correlation coefficient text");
+                  "Renaming preserves the authored correlation coefficient text");
     CHECK_MESSAGE(project.fit_result.correlations[0]->file_path.value() == "structure1.xy",
                   "A scan data filename is not a datablock reference");
-    CHECK_MESSAGE(
-        project.sequential_fit.extract[0]->target.value() == next + ".diffrn.ambient_temperature",
-        "A scan extraction target must follow its renamed datablock");
+    CHECK_MESSAGE(project.sequential_fit.extract[0]->target.value() == next + extract,
+                  "A scan extraction target must follow its renamed datablock");
     CHECK_MESSAGE(project.sequential_fit.extract[0]->pattern.value() == "structure1=(.*)",
                   "Renaming a datablock must preserve the scan's input matching expression");
     for (const auto& field : names(project)) {
@@ -92,8 +122,8 @@ TEST_CASE("Structure rename follows all relation categories and exact name bound
     texture.march_r.value = .8125;
     project.experiment().preferred_orientation.push_back(texture);
     relations(project, "structure1");
-    edi::Edit::structure_name(project.structure(), "lbco")();
-    CHECK_MESSAGE(project.experiment().linked_structures[0]->structure_id.value() == "lbco",
+    edi::Edit::structure_name(*project.structures[0], "lbco")();
+    CHECK_MESSAGE(project.experiments[0]->linked_structures[0]->structure_id.value() == "lbco",
                   "Every linked structure must follow the rename");
     CHECK_MESSAGE(project.experiment().preferred_orientation[0]->structure_id.value() == "lbco",
                   "Every preferred-orientation structure reference must follow the rename");
@@ -105,9 +135,9 @@ TEST_CASE("Structure rename follows all relation categories and exact name bound
 TEST_CASE("Experiment rename follows all relation categories and exact name boundaries") {
     edi::Project project;
     project.experiment().name = "experiment1";
-    relations(project, "experiment1");
-    edi::Edit::rename_experiment(project, project.experiment(), "hrpt")();
-    check_relations(project, "experiment1", "hrpt");
+    relations(project, "experiment1", false);
+    edi::Edit::rename_experiment(project, *project.experiments[0], "hrpt")();
+    check_relations(project, "experiment1", "hrpt", false);
 }
 
 TEST_CASE("Refused datablock rename preserves every reference") {
@@ -124,7 +154,7 @@ TEST_CASE("Refused datablock rename preserves every reference") {
             taken.name = "taken";
             project.experiments.push_back(taken);
         }
-        relations(project, "old");
+        relations(project, "old", structure);
         const auto before = names(project);
         if (structure) {
             CHECK_THROWS_AS_MESSAGE(edi::Edit::structure_name(*project.structures[0], "taken")(),
