@@ -254,10 +254,12 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // After the scan: the single mode (a setting: the results stay current); a single fit on the shown dataset makes
     // it the template dataset, tagged in the lists, and marks the results out of date on the status bar.
     steps_.push_back({"t16-67-single-mode", {analysis, extras, "expand:group.fitting_mode", "fittingMode.type",
-                                              "choose:single", basic, "mainArea.analysis.tab.evolution"}});
+                                              "choose:Single experiment", basic, "mainArea.analysis.tab.evolution"}});
     steps_.push_back({"t16-68-single-fit-on-dataset",
                       {"mainArea.analysis.tab.fitting", "reveal:fitting.start", "fitting.start", "wait-fit"}});
-    steps_.push_back({"t16-69-template-dataset", {"choose:OK", experiment, basic, "show:experiments.list:161"}});
+    // The single fit's correlations are the fitted dataset's, shown on its Correlations tab.
+    steps_.push_back({"t16-68b-single-fit-correlations", {"choose:OK", "mainArea.analysis.tab.correlations"}});
+    steps_.push_back({"t16-69-template-dataset", {experiment, basic, "show:experiments.list:161"}});
     // The scan's buttons follow its fits (owner, 2026-10-06): all fitted, Start fitting is disabled and Reset fits
     // enabled; Reset clears them (Start again); a stop leaves Continue. The Evolution chart zooms to a dragged box
     // and resets with a right click; the Project page shortens a long dataset list.
