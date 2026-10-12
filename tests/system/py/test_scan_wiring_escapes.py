@@ -46,11 +46,14 @@ def test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_w
         assert joint_options(good, tmp_path) == ['1', '0', '1'], (
             'Scan mode wiring: the guard control updates the consumed options table'
         )
-        wrong = good.replace('if (scan)', 'if (!scan)')
-        assert wrong != good, (
+        selector = (Path(__file__).resolve().parents[3] / 'core/src/selectors.cpp').read_text()
+        wrong = selector.replace(
+            'if (project.sequential_fit.declared())', 'if (!project.sequential_fit.declared())'
+        )
+        assert wrong != selector, (
             'Scan mode wiring: the mutation reaches the actual availability branch'
         )
-        assert joint_options(wrong, tmp_path) != ['1', '0', '1'], (
+        assert joint_options(good, tmp_path, selector_text=wrong) != ['1', '0', '1'], (
             'Scan mode wiring: a scan mention on the wrong joint branch is rejected'
         )
     if channel == 'follow':

@@ -519,7 +519,13 @@ def test_old_scan_results_are_retained_with_out_of_date_state():
 
 def test_bundled_project_load_and_save_as_use_the_writable_copy_routes():
     session = source('src/session.cpp')
-    loader = block(session, 'bool Session::openExample(')
+    wrapper = block(session, 'bool Session::openExample(')
+    require(
+        wrapper,
+        r'openExampleNamed\(exampleId\)',
+        'Working-copy wiring: the public example loader reaches its actual copy worker',
+    )
+    loader = block(session, 'bool Session::openExampleNamed(')
     require(
         loader,
         r'extracted_ = std::make_unique<QTemporaryDir>\(\)',
@@ -1026,7 +1032,7 @@ e){std::cout<<"REFUSED\\n";}}}""".replace('BODY', dispatch)
     return cpp_probe(program, tmp_path)
 
 
-def joint_options(text, tmp_path):
+def joint_options(text, tmp_path, *, selector_text=None):
     producer = block(text, 'void AnalysisViewModel::sync(')
     require(
         producer,
@@ -1039,7 +1045,9 @@ def joint_options(text, tmp_path):
         'Scan mode wiring: the selector receives those exact applicable modes',
     )
     rule = block(
-        (ROOT / 'core/src/selectors.cpp').read_text(),
+        selector_text
+        if selector_text is not None
+        else (ROOT / 'core/src/selectors.cpp').read_text(),
         'std::vector<std::string> applicable_fitting_modes(',
     )
     program = """#include <algorithm>

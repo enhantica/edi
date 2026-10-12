@@ -73,10 +73,12 @@ def _calculation_project(tmp_path: Path) -> Path:
     structure_file.write_text(quoted, encoding='utf-8')
     experiment_file = project / 'experiments/pbso4_experiment.edi'
     experiment = experiment_file.read_text(encoding='utf-8')
-    typed_background = experiment.replace(
-        'loop_\n_background.position',
-        '_background.type line-segment\n\nloop_\n_background.position',
+    header = (
+        'loop_\n_background.id\n_background.position'
+        if 'loop_\n_background.id\n_background.position' in experiment
+        else 'loop_\n_background.position'
     )
+    typed_background = experiment.replace(header, '_background.type line-segment\n\n' + header)
     assert typed_background != experiment, (
         'the fixture must contain the background loop receiving its explicit model type'
     )

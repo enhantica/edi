@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-12T10:09:23Z
+# measured_utc = 2026-10-12T10:21:29Z
 #
-# Recorded from: endpoints-edi.log (64 node(s) measured once, 9730 banked, 0 stale row(s) dropped)
-# Collected tests: 10547; with a reported duration: 5377
+# Recorded from: current-inputs.log (25 node(s) measured once, 9722 banked, 0 stale row(s) dropped)
+# Collected tests: 10547; with a reported duration: 5385
 # Module-scoped fixture costs recorded: 35
 #
 # Breaches are decided PER TIER against the table
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 10547
 # inventory_cpp = 309
-# inventory_measured = 9734
-# inventory_unmeasured = 1122
+# inventory_measured = 9747
+# inventory_unmeasured = 1109
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -1802,7 +1802,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_geometry_rene
 0.070	tests/integration/py/test_constraint_owner_transitions.py::test_retained_child_free_setter_agrees_with_dependence_after_owner_exit[read-first-destroy-profile]
 0.060	tests/integration/py/test_constraint_owner_transitions.py::test_retained_child_free_setter_agrees_with_dependence_after_owner_exit[read-first-destroy-scale]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transitions.py::test_retained_child_free_setter_agrees_with_dependence_after_owner_exit[read-first-destroy-site]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transitions.py::test_retained_child_free_setter_agrees_with_dependence_after_owner_exit[read-first-destroy-term]
+0.070	tests/integration/py/test_constraint_owner_transitions.py::test_retained_child_free_setter_agrees_with_dependence_after_owner_exit[read-first-destroy-term]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transitions.py::test_retained_child_free_setter_agrees_with_dependence_after_owner_exit[read-first-destroy-texture]
 0.110	tests/integration/py/test_constraint_owner_transitions.py::test_retained_child_free_setter_agrees_with_dependence_after_owner_exit[read-first-remove-absorption]
 0.060	tests/integration/py/test_constraint_owner_transitions.py::test_retained_child_free_setter_agrees_with_dependence_after_owner_exit[read-first-remove-cell]
@@ -1811,7 +1811,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transit
 0.080	tests/integration/py/test_constraint_owner_transitions.py::test_retained_child_free_setter_agrees_with_dependence_after_owner_exit[read-first-remove-profile]
 0.070	tests/integration/py/test_constraint_owner_transitions.py::test_retained_child_free_setter_agrees_with_dependence_after_owner_exit[read-first-remove-scale]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transitions.py::test_retained_child_free_setter_agrees_with_dependence_after_owner_exit[read-first-remove-site]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transitions.py::test_retained_child_free_setter_agrees_with_dependence_after_owner_exit[read-first-remove-term]
+0.080	tests/integration/py/test_constraint_owner_transitions.py::test_retained_child_free_setter_agrees_with_dependence_after_owner_exit[read-first-remove-term]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transitions.py::test_retained_child_free_setter_agrees_with_dependence_after_owner_exit[read-first-remove-texture]
 0.130	tests/integration/py/test_constraint_owner_transitions.py::test_retained_child_free_setter_agrees_with_dependence_after_owner_exit[write-first-destroy-absorption]
 0.090	tests/integration/py/test_constraint_owner_transitions.py::test_retained_child_free_setter_agrees_with_dependence_after_owner_exit[write-first-destroy-cell]
@@ -1820,7 +1820,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transit
 0.080	tests/integration/py/test_constraint_owner_transitions.py::test_retained_child_free_setter_agrees_with_dependence_after_owner_exit[write-first-destroy-profile]
 0.080	tests/integration/py/test_constraint_owner_transitions.py::test_retained_child_free_setter_agrees_with_dependence_after_owner_exit[write-first-destroy-scale]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transitions.py::test_retained_child_free_setter_agrees_with_dependence_after_owner_exit[write-first-destroy-site]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transitions.py::test_retained_child_free_setter_agrees_with_dependence_after_owner_exit[write-first-destroy-term]
+0.090	tests/integration/py/test_constraint_owner_transitions.py::test_retained_child_free_setter_agrees_with_dependence_after_owner_exit[write-first-destroy-term]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transitions.py::test_retained_child_free_setter_agrees_with_dependence_after_owner_exit[write-first-destroy-texture]
 0.080	tests/integration/py/test_constraint_owner_transitions.py::test_retained_child_free_setter_agrees_with_dependence_after_owner_exit[write-first-remove-absorption]
 0.100	tests/integration/py/test_constraint_owner_transitions.py::test_retained_child_free_setter_agrees_with_dependence_after_owner_exit[write-first-remove-cell]
@@ -1829,7 +1829,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transit
 0.080	tests/integration/py/test_constraint_owner_transitions.py::test_retained_child_free_setter_agrees_with_dependence_after_owner_exit[write-first-remove-profile]
 0.080	tests/integration/py/test_constraint_owner_transitions.py::test_retained_child_free_setter_agrees_with_dependence_after_owner_exit[write-first-remove-scale]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transitions.py::test_retained_child_free_setter_agrees_with_dependence_after_owner_exit[write-first-remove-site]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transitions.py::test_retained_child_free_setter_agrees_with_dependence_after_owner_exit[write-first-remove-term]
+0.080	tests/integration/py/test_constraint_owner_transitions.py::test_retained_child_free_setter_agrees_with_dependence_after_owner_exit[write-first-remove-term]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transitions.py::test_retained_child_free_setter_agrees_with_dependence_after_owner_exit[write-first-remove-texture]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_geometry_without_accessor[stored-assign-cell]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_geometry_without_accessor[stored-assign-site]
@@ -1854,7 +1854,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transit
 0.000	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[dependence-assign-profile]
 0.000	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[dependence-assign-scale]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[dependence-assign-site]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[dependence-assign-term]
+0.000	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[dependence-assign-term]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[dependence-assign-texture]
 0.000	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[dependence-insert-absorption]
 0.000	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[dependence-insert-cell]
@@ -1863,7 +1863,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transit
 0.000	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[dependence-insert-profile]
 0.000	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[dependence-insert-scale]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[dependence-insert-site]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[dependence-insert-term]
+0.000	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[dependence-insert-term]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[dependence-insert-texture]
 0.000	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[dependence-replace-absorption]
 0.000	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[dependence-replace-cell]
@@ -1872,7 +1872,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transit
 0.000	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[dependence-replace-profile]
 0.000	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[dependence-replace-scale]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[dependence-replace-site]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[dependence-replace-term]
+0.000	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[dependence-replace-term]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[dependence-replace-texture]
 0.100	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[dependence-transfer-absorption]
 0.090	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[dependence-transfer-cell]
@@ -1881,7 +1881,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transit
 0.080	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[dependence-transfer-profile]
 0.090	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[dependence-transfer-scale]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[dependence-transfer-site]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[dependence-transfer-term]
+0.090	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[dependence-transfer-term]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[dependence-transfer-texture]
 0.000	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[free-assign-absorption]
 0.000	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[free-assign-cell]
@@ -1890,7 +1890,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transit
 0.000	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[free-assign-profile]
 0.000	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[free-assign-scale]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[free-assign-site]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[free-assign-term]
+0.000	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[free-assign-term]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[free-assign-texture]
 0.000	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[free-insert-absorption]
 0.000	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[free-insert-cell]
@@ -1899,7 +1899,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transit
 0.000	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[free-insert-profile]
 0.000	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[free-insert-scale]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[free-insert-site]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[free-insert-term]
+0.000	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[free-insert-term]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[free-insert-texture]
 0.000	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[free-replace-absorption]
 0.000	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[free-replace-cell]
@@ -1908,7 +1908,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transit
 0.000	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[free-replace-profile]
 0.000	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[free-replace-scale]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[free-replace-site]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[free-replace-term]
+0.000	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[free-replace-term]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[free-replace-texture]
 0.090	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[free-transfer-absorption]
 0.100	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[free-transfer-cell]
@@ -1917,7 +1917,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transit
 0.090	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[free-transfer-profile]
 0.090	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[free-transfer-scale]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[free-transfer-site]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[free-transfer-term]
+0.090	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[free-transfer-term]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_owner_transitions.py::test_saved_collection_rebinds_retained_parameters_without_accessor[free-transfer-texture]
 0.010	tests/integration/py/test_constraint_source_closure.py::test_equal_source_write_still_revokes_held_geometry[cell-background.left.intensity]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_source_closure.py::test_equal_source_write_still_revokes_held_geometry[cell-instrument.setup_wavelength]
@@ -4955,7 +4955,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e05_t1_physical_domain.p
 0.160	tests/integration/py/test_e09_t75_sdk_consumer.py::test_sdk_download_http_method_remains_bound_to_the_addressed_read[-XPUT-osx-arm64]
 0.160	tests/integration/py/test_e09_t75_sdk_consumer.py::test_sdk_download_http_method_remains_bound_to_the_addressed_read[-dBODY-linux-64]
 0.160	tests/integration/py/test_e09_t75_sdk_consumer.py::test_sdk_download_http_method_remains_bound_to_the_addressed_read[-dBODY-osx-arm64]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_fitting_mode_weights.py::test_gui_fitting_modes_use_the_owner_descriptions
+0.020	tests/integration/py/test_fitting_mode_weights.py::test_gui_fitting_modes_use_the_owner_descriptions
 UNMEASURED:failed-in-this-run	tests/integration/py/test_fitting_mode_weights.py::test_joint_weights_load_in_every_mode_and_save_only_in_joint[independent]
 0.030	tests/integration/py/test_fitting_mode_weights.py::test_joint_weights_load_in_every_mode_and_save_only_in_joint[joint]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_fitting_mode_weights.py::test_joint_weights_load_in_every_mode_and_save_only_in_joint[sequential]
@@ -5031,9 +5031,9 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.p
 0.010	tests/integration/py/test_parameter_correlations.py::test_unfitted_analysis_stays_byte_identical
 0.220	tests/integration/py/test_phase_scan.py::test_failure_after_solver_step_is_recorded_and_scan_continues[independent]
 0.230	tests/integration/py/test_phase_scan.py::test_failure_after_solver_step_is_recorded_and_scan_continues[sequential]
-0.150	tests/integration/py/test_phase_scan.py::test_fit_from_fitted_start_keeps_dependent_in_range[phase_sum]
+0.160	tests/integration/py/test_phase_scan.py::test_fit_from_fitted_start_keeps_dependent_in_range[phase_sum]
 0.170	tests/integration/py/test_phase_scan.py::test_fit_from_fitted_start_keeps_dependent_in_range[scan]
-0.140	tests/integration/py/test_phase_scan.py::test_fit_from_fitted_start_keeps_dependent_in_range[single]
+0.160	tests/integration/py/test_phase_scan.py::test_fit_from_fitted_start_keeps_dependent_in_range[single]
 0.070	tests/integration/py/test_phase_scan.py::test_joint_mode_over_declared_scan_refuses_before_outputs
 0.240	tests/integration/py/test_phase_scan.py::test_negative_points_and_zero_files_preserve_successful_scan[independent]
 0.240	tests/integration/py/test_phase_scan.py::test_negative_points_and_zero_files_preserve_successful_scan[sequential]
@@ -5074,9 +5074,9 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_phase_scan_class_boundar
 0.000	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[tof/tiny_sigma]
 0.000	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[tof/two_columns]
 0.000	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[tof/unsorted_duplicates]
-0.260	tests/integration/py/test_plain_data_picker.py::test_availability_observer_rejects_retired_or_overbroad_rules[always-disabled]
-0.300	tests/integration/py/test_plain_data_picker.py::test_availability_observer_rejects_retired_or_overbroad_rules[always-enabled]
-0.300	tests/integration/py/test_plain_data_picker.py::test_availability_observer_rejects_retired_or_overbroad_rules[simulation-only]
+0.740	tests/integration/py/test_plain_data_picker.py::test_availability_observer_rejects_retired_or_overbroad_rules[always-disabled]
+0.360	tests/integration/py/test_plain_data_picker.py::test_availability_observer_rejects_retired_or_overbroad_rules[always-enabled]
+0.550	tests/integration/py/test_plain_data_picker.py::test_availability_observer_rejects_retired_or_overbroad_rules[simulation-only]
 0.150	tests/integration/py/test_plain_data_picker.py::test_load_data_availability_uses_ownership_after_first_load
 0.140	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[False-accepted]
 0.140	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[False-closed-project]
@@ -5159,7 +5159,7 @@ UNMEASURED:not-completed-in-this-run	tests/integration/py/test_scan_app_contract
 0.130	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[stopped]
 0.130	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[success]
 0.170	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[superseded]
-0.000	tests/integration/py/test_scan_extended_contract.py::test_bundled_project_load_and_save_as_use_the_writable_copy_routes
+0.010	tests/integration/py/test_scan_extended_contract.py::test_bundled_project_load_and_save_as_use_the_writable_copy_routes
 0.520	tests/integration/py/test_scan_extended_contract.py::test_effective_bundle_contains_selected_scan_payloads[desktop]
 0.370	tests/integration/py/test_scan_extended_contract.py::test_effective_bundle_contains_selected_scan_payloads[web]
 0.000	tests/integration/py/test_scan_extended_contract.py::test_empty_selectors_are_hidden_on_experiment_and_structure_pages
@@ -9281,7 +9281,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_scan_accident_paths.py::test_
 0.830	tests/system/py/test_scan_projection_wiring_escapes.py::test_scene_graph_observer_rejects_disconnected_layer_hit_and_uncertainty[target]
 1.830	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[dispatch]
 1.190	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[follow]
-1.400	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[joint]
+3.870	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[joint]
 1.000	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[state]
 UNMEASURED:failed-in-this-run	tests/system/py/test_web_parallel_build.py::test_app_pthread_pool_is_preallocated_and_sized_for_the_engine
 0.610	tests/system/py/test_web_parallel_build.py::test_each_kit_selects_its_own_engine_backend_and_simd
@@ -10778,9 +10778,9 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e04_t9_sanitizer.py::test_sanit
 0.000	tests/unit/py/test_e09_t58_float_identity_and_cli.py::test_float_label_reads_recorded_source_and_preserves_the_note
 0.000	tests/unit/py/test_e09_t58_float_identity_and_cli.py::test_float_label_rejects_malformed_source_identity
 0.020	tests/unit/py/test_e09_t58_project_only_inputs.py::test_declared_cutoff_changes_the_computed_result
-0.020	tests/unit/py/test_e09_t58_project_only_inputs.py::test_declared_grid_is_the_grid_that_is_calculated
+0.030	tests/unit/py/test_e09_t58_project_only_inputs.py::test_declared_grid_is_the_grid_that_is_calculated
 0.030	tests/unit/py/test_e09_t58_project_only_inputs.py::test_declared_scattering_map_and_default_lookup_both_reach_calculation
-0.020	tests/unit/py/test_e09_t58_project_only_inputs.py::test_project_calculation_accepts_no_second_source_of_truth
+0.010	tests/unit/py/test_e09_t58_project_only_inputs.py::test_project_calculation_accepts_no_second_source_of_truth
 UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t58_project_only_inputs.py::test_survey_is_complete_and_model_state_cannot_reenter_signatures
 0.020	tests/unit/py/test_e09_t58_start_state_roundtrip.py::test_start_value_and_uncertainty_round_trip_through_the_single_loader
 0.010	tests/unit/py/test_e09_t58_writer_delegation.py::test_e09_t58_edi_project_save_has_one_delegating_writer_and_no_local_serializer

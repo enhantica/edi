@@ -60,6 +60,7 @@ def test_joint_weights_load_in_every_mode_and_save_only_in_joint(tmp_path, mode)
 def test_gui_fitting_modes_use_the_owner_descriptions():
     files = [
         ROOT / 'app/src/analysis_view_model.cpp',
+        ROOT / 'core/src/selectors.cpp',
         ROOT / 'app/qml/Pages/Analysis/FittingModeGroup.qml',
     ]
     source = '\n'.join(path.read_text() for path in files)
