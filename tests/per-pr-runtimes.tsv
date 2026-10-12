@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-12T16:20:58Z
+# measured_utc = 2026-10-12T22:29:24Z
 #
-# Recorded from: seq57/runtime-carry.json; canonical three-way retention from committed parent banks, successful complete merged collection; task-head costs retained where both parents changed; no invented measurements
-# Collected tests: 11075; with a reported duration: 6081
-# Module-scoped fixture costs recorded: 40
+# Recorded from: measured test run (6 node(s) measured once, 10262 banked, 0 stale row(s) dropped)
+# Collected tests: 11086; with a reported duration: 6086
+# Module-scoped fixture costs recorded: 41
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 11075
+# inventory_python = 11086
 # inventory_cpp = 309
-# inventory_measured = 10257
-# inventory_unmeasured = 1127
+# inventory_measured = 10262
+# inventory_unmeasured = 1133
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -5825,6 +5825,11 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.p
 0.250	tests/integration/py/test_scan_template.py::test_template_setter_selects_scan_data_without_changing_parameters[all594687.dat]
 0.240	tests/integration/py/test_scan_template.py::test_template_setter_selects_scan_data_without_changing_parameters[all594791.dat]
 0.250	tests/integration/py/test_scan_template.py::test_template_setter_selects_scan_data_without_changing_parameters[all594842.dat]
+0.480	tests/integration/py/test_shared_correlation_saved_bytes.py::test_fitted_correlation_loop_matches_pre_change_regression_pin[scan]
+0.360	tests/integration/py/test_shared_correlation_saved_bytes.py::test_fitted_correlation_loop_matches_pre_change_regression_pin[single]
+0.070	tests/integration/py/test_shared_correlation_saved_bytes.py::test_loaded_nonordinal_id_and_decimal_spelling_survive_views_and_save
+0.070	tests/integration/py/test_shared_correlation_saved_bytes.py::test_pre_change_correlation_bytes_survive_unchanged_reload[scan]
+0.070	tests/integration/py/test_shared_correlation_saved_bytes.py::test_pre_change_correlation_bytes_survive_unchanged_reload[single]
 0.000	tests/integration/py/test_space_group_edits.py::test_changing_only_the_setting_keeps_the_space_group_identity
 0.010	tests/integration/py/test_space_group_edits.py::test_changing_space_group_replaces_old_setting_and_resolves_identity[name]
 0.000	tests/integration/py/test_space_group_edits.py::test_changing_space_group_replaces_old_setting_and_resolves_identity[number]
@@ -8780,6 +8785,12 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_executi
 0.030	tests/system/py/test_fit_participants_native.py::test_native_explicit_pattern_atom_check_matches_its_selected_banks[reverse-selected-empty-explicit-single]
 0.050	tests/system/py/test_fit_participants_native.py::test_native_explicit_pattern_atom_check_matches_its_selected_banks[reverse-unused-empty-first-explicit-joint]
 0.040	tests/system/py/test_fit_participants_native.py::test_native_explicit_pattern_atom_check_matches_its_selected_banks[reverse-unused-empty-first-explicit-single]
+UNMEASURED:failed-in-this-run	tests/system/py/test_linear_row_admission.py::test_admission_comparison_budget_is_proportional_to_rows[copy]
+UNMEASURED:failed-in-this-run	tests/system/py/test_linear_row_admission.py::test_admission_comparison_budget_is_proportional_to_rows[default-ids]
+UNMEASURED:failed-in-this-run	tests/system/py/test_linear_row_admission.py::test_admission_comparison_budget_is_proportional_to_rows[keyed]
+UNMEASURED:failed-in-this-run	tests/system/py/test_linear_row_admission.py::test_admission_comparison_budget_is_proportional_to_rows[reorder]
+UNMEASURED:failed-in-this-run	tests/system/py/test_linear_row_admission.py::test_admission_comparison_budget_is_proportional_to_rows[replace]
+UNMEASURED:failed-in-this-run	tests/system/py/test_linear_row_admission.py::test_admission_comparison_budget_is_proportional_to_rows[unkeyed]
 UNMEASURED:failed-in-this-run	tests/system/py/test_locked_dependencies.py::test_app_configure_uses_locked_packages_and_truthful_sdk[system-absent]
 UNMEASURED:failed-in-this-run	tests/system/py/test_locked_dependencies.py::test_app_configure_uses_locked_packages_and_truthful_sdk[system-present]
 0.000	tests/system/py/test_locked_dependencies.py::test_dependency_escape_observer_closes_paths_and_symlink_redirects
@@ -11453,6 +11464,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 1.762	tests/system/py/test_e09_t58_start_tied_numeric.py
 # module-cost: 0.346	tests/system/py/test_e09_t75_native_execution.py
 # module-cost: 3.929	tests/system/py/test_fit_participants_native.py
+# module-cost: 11.686	tests/system/py/test_linear_row_admission.py
 # module-cost: 178.437	tests/system/py/test_plain_data_app.py
 # module-cost: 21.241	tests/system/py/test_pytest_child_environment.py
 # module-cost: 2.368	tests/system/py/test_scan_accident_paths.py

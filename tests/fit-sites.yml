@@ -122,3 +122,7 @@ sites:
   - file: tests/integration/app/test_phase_scan_progress.py
     case: multiphase-scales
     why: Authored two-phase inputs isolate retained-state admission and the fitted-plus-skipped population, never new diffraction accuracy.
+
+  - file: tests/integration/py/test_shared_correlation_saved_bytes.py
+    case: cosio-d20-scan-3f
+    why: Frozen pre-change single and scan inputs isolate serialization compatibility.
