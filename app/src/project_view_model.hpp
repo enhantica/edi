@@ -11,7 +11,6 @@
 #include <QTimer>
 #include <QString>
 #include <QUrl>
-#include <QVariantList>
 #include <QtQml/qqmlregistration.h>
 #include <functional>
 #include <map>
@@ -231,7 +230,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_INVOKABLE bool duplicateStructure();
     // The parameter table's "free" header: free or fix every one of `parameters` (the rows the filters show) that can
     // be fitted, as one edit with one Undo step (the owner, 2026-10-11).
-    Q_INVOKABLE bool setParametersFree(const QVariantList& parameters, bool free);
+    Q_INVOKABLE bool setParametersFree(const QList<ParameterItem*>& parameters, bool free);
     // Name points by position: the current experiment's line-segment points take ids from their positions
     // (edi::position_point_ids), every reference following, as one edit with one Undo step (the owner, 2026-10-11).
     Q_INVOKABLE bool namePointsByPosition();

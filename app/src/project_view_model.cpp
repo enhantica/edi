@@ -704,15 +704,14 @@ bool ProjectViewModel::namePointsByPosition() {
     return true;
 }
 
-bool ProjectViewModel::setParametersFree(const QVariantList& parameters, bool free) {
+bool ProjectViewModel::setParametersFree(const QList<ParameterItem*>& parameters, bool free) {
     std::map<const edi::Parameter*, std::string> names;
     for (const edi::NamedSlot& slot : edi::named_slots(*project_)) {
         names.emplace(slot.parameter, slot.unique_name);
     }
     FreeFlags record;
     std::vector<std::pair<std::string, bool>> flags;
-    for (const QVariant& entry : parameters) {
-        const auto* item = qobject_cast<const ParameterItem*>(entry.value<QObject*>());
+    for (const ParameterItem* item : parameters) {
         if (item == nullptr || !item->isFittable() || !item->isRefinable()) {
             continue;
         }
