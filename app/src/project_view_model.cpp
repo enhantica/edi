@@ -1858,7 +1858,7 @@ void ProjectViewModel::writeScanCorrelations(edi::Project& saved) {
         return;
     }
     // A scan project's pairs are each dataset's own, a single fit's under the dataset it fitted, in the
-    // datasets' order.
+    // datasets' order, the template dataset's first (numbered_correlations).
     std::vector<edi::FitParameterCorrelation> pairs;
     for (const std::string& file : scan_session_->datasets().files) {
         const auto found = scan_correlations_.find(file);
@@ -1866,7 +1866,7 @@ void ProjectViewModel::writeScanCorrelations(edi::Project& saved) {
             pairs.insert(pairs.end(), found->second.begin(), found->second.end());
         }
     }
-    saved.fit_result.correlations.assign(edi::numbered_correlations(pairs));
+    saved.fit_result.correlations.assign(edi::numbered_correlations(pairs, saved.sequential_fit.template_file));
 }
 
 void ProjectViewModel::syncCorrelations() {

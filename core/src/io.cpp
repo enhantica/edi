@@ -4026,13 +4026,26 @@ double correlation_value(const FitParameterCorrelation& row) {
 }
 
 std::vector<ItemVec<FitParameterCorrelation>::Ptr> numbered_correlations(
-    const std::vector<FitParameterCorrelation>& pairs) {
+    const std::vector<FitParameterCorrelation>& pairs, const std::string& template_file) {
     std::vector<ItemVec<FitParameterCorrelation>::Ptr> rows;
     rows.reserve(pairs.size());
-    for (const FitParameterCorrelation& pair : pairs) {
+    const auto add = [&rows](const FitParameterCorrelation& pair) {
         auto row = std::make_shared<FitParameterCorrelation>(pair);
         row->id = std::to_string(rows.size() + 1);
         rows.push_back(std::move(row));
+    };
+    const auto first = [&template_file](const FitParameterCorrelation& pair) {
+        return !template_file.empty() && pair.file_path.value() == template_file;
+    };
+    for (const FitParameterCorrelation& pair : pairs) {
+        if (first(pair)) {
+            add(pair);
+        }
+    }
+    for (const FitParameterCorrelation& pair : pairs) {
+        if (!first(pair)) {
+            add(pair);
+        }
     }
     return rows;
 }

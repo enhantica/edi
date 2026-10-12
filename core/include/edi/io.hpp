@@ -225,9 +225,11 @@ void clear_fit_result(Project& project);
 // A correlation row's coefficient as a number (its text, read in the C locale); NaN when it is not one.
 double correlation_value(const FitParameterCorrelation& row);
 // Correlation pairs as a record holds them (FitResultRecord::correlations): ids 1, 2, … in their order, as
-// diffraction-lib numbers its `_fit_parameter_correlation` rows.
+// diffraction-lib numbers its `_fit_parameter_correlation` rows. A scan's template file's pairs come first, as
+// a save keeps only those (the owner, 2026-10-12): they are numbered alike however many other files have pairs, so an
+// unchanged save after a reload writes the same ids.
 std::vector<ItemVec<FitParameterCorrelation>::Ptr> numbered_correlations(
-    const std::vector<FitParameterCorrelation>& pairs);
+    const std::vector<FitParameterCorrelation>& pairs, const std::string& template_file = {});
 
 // Build one entity from text (diffraction-lib `StructureFactory.from_cif_str` /
 // `ExperimentFactory.from_cif_str` — ruling absorb-ten-26). BOTH entries accept the dot-form
