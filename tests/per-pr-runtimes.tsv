@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-12T11:05:18Z
+# measured_utc = 2026-10-12T11:09:13Z
 #
-# Recorded from: machine.log (6 node(s) measured once, 9771 banked, 0 stale row(s) dropped)
-# Collected tests: 10635; with a reported duration: 5417
+# Recorded from: input-records-final.log (34 node(s) measured once, 9763 banked, 0 stale row(s) dropped)
+# Collected tests: 10655; with a reported duration: 5445
 # Module-scoped fixture costs recorded: 35
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 10635
+# inventory_python = 10655
 # inventory_cpp = 309
-# inventory_measured = 9777
+# inventory_measured = 9797
 # inventory_unmeasured = 1167
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
@@ -401,7 +401,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_shipment.py:
 0.080	tests/integration/py/test_c11_t57_profile_surfaces.py::test_selected_profile_loads_calculates_and_survives_save[fcj]
 0.030	tests/integration/py/test_c11_t57_profile_surfaces.py::test_selected_profile_loads_calculates_and_survives_save[tof]
 0.090	tests/integration/py/test_c11_t62_vendored_scan.py::test_cli_full_scan_has_every_reversed_temperature_pair
-0.000	tests/integration/py/test_c11_t62_vendored_scan.py::test_cli_scan_contains_the_original_inputs
+0.350	tests/integration/py/test_c11_t62_vendored_scan.py::test_cli_scan_contains_the_original_inputs
 0.010	tests/integration/py/test_c13_t12_encoder_routing.py::test_writer_delegates_actual_project_to_shared_engine_encoder
 0.000	tests/integration/py/test_c13_t12_loop_identity.py::test_attached_experiment_name_mutation_refuses_atomically
 0.000	tests/integration/py/test_c13_t12_loop_identity.py::test_attached_site_id_mutation_refuses_atomically[cif]
@@ -1613,19 +1613,19 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t28_paired_cache.py:
 0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[data-agreement]
 0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[data-loops]
 0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[data-native]
-0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[data-scan]
+0.630	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[data-scan]
 0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[descriptor-agreement]
 0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[descriptor-loops]
 0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[descriptor-native]
-0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[descriptor-scan]
+0.810	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[descriptor-scan]
 0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[inventory-agreement]
 0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[inventory-loops]
 0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[inventory-native]
-0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[inventory-scan]
+0.930	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[inventory-scan]
 0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[science-agreement]
 0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[science-loops]
 0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[science-native]
-0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[science-scan]
+0.490	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[science-scan]
 0.350	tests/integration/py/test_constraint_alias_lifetime.py::test_alias_first_handle_owns_storage_and_obeys_detachment[destroy-background]
 0.180	tests/integration/py/test_constraint_alias_lifetime.py::test_alias_first_handle_owns_storage_and_obeys_detachment[destroy-cell]
 0.160	tests/integration/py/test_constraint_alias_lifetime.py::test_alias_first_handle_owns_storage_and_obeys_detachment[destroy-instrument]
@@ -4106,8 +4106,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_datablock_rename.py::tes
 0.000	tests/integration/py/test_e04_t1_app_contract.py::test_adr_records_the_decision_and_comparison_plan
 0.010	tests/integration/py/test_e04_t1_app_contract.py::test_app_reachability_observer_rejects_missing_group_or_checker[empty-checker]
 0.010	tests/integration/py/test_e04_t1_app_contract.py::test_app_reachability_observer_rejects_missing_group_or_checker[missing-edge]
-0.120	tests/integration/py/test_e04_t1_app_contract.py::test_existing_projects_oracle_covers_the_registry_without_filters
-0.050	tests/integration/py/test_e04_t1_app_contract.py::test_frozen_oracle_inputs_are_the_committed_fixture_bytes
+0.140	tests/integration/py/test_e04_t1_app_contract.py::test_existing_projects_oracle_covers_the_registry_without_filters
+0.040	tests/integration/py/test_e04_t1_app_contract.py::test_frozen_oracle_inputs_are_the_committed_fixture_bytes
 0.000	tests/integration/py/test_e04_t1_app_contract.py::test_gui_pin_rejects_identity_digest_and_declaration_escapes[archive]
 0.000	tests/integration/py/test_e04_t1_app_contract.py::test_gui_pin_rejects_identity_digest_and_declaration_escapes[comment]
 0.000	tests/integration/py/test_e04_t1_app_contract.py::test_gui_pin_rejects_identity_digest_and_declaration_escapes[commit]
@@ -4157,7 +4157,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e04_t1_app_contract.py::
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project/structures/cosio.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project/experiments/d20.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project/structures/cosio.edi]
-0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project/experiments/echidna.edi]
+0.050	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project/experiments/echidna.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project/structures/lab6.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project/analysis/analysis.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project/experiments/echidna.edi]
@@ -4169,9 +4169,9 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e04_t1_app_contract.py::
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project/analysis/analysis.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project/experiments/d1a.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project/structures/pbso4.edi]
-0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project/experiments/polaris.edi]
+0.060	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project/experiments/polaris.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project/structures/cecoal.edi]
-0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project/experiments/pearl.edi]
+0.040	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project/experiments/pearl.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project/structures/ceo2.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_diamond-dream_basic/project/analysis/analysis.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_diamond-dream_basic/project/experiments/dream.edi]
@@ -4963,6 +4963,26 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_fitting_mode_weights.py:
 0.010	tests/integration/py/test_free_header_declaration.py::test_analysis_free_header_declares_the_owner_radio_popup
 0.290	tests/integration/py/test_frozen_writer_bytes.py::test_c11_t4_existing_tof_writer_goldens_remain_byte_exact
 0.240	tests/integration/py/test_frozen_writer_bytes.py::test_c11_t56_datablock_bytes_match_pre_fix_regression_pins
+0.010	tests/integration/py/test_input_format_oracle_transition.py::test_input_name_conversion_refuses_unrelated_retained_byte_changes[data]
+0.020	tests/integration/py/test_input_format_oracle_transition.py::test_input_name_conversion_refuses_unrelated_retained_byte_changes[descriptor]
+0.010	tests/integration/py/test_input_format_oracle_transition.py::test_input_name_conversion_refuses_unrelated_retained_byte_changes[inventory]
+0.020	tests/integration/py/test_input_format_oracle_transition.py::test_input_name_conversion_refuses_unrelated_retained_byte_changes[science]
+0.030	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project/analysis/analysis.edi]
+0.030	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/analysis/analysis.edi#pre-catalogue]
+0.030	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/analysis/analysis.edi]
+0.010	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project/experiments/echidna.edi#pre-catalogue]
+0.010	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project/experiments/echidna.edi]
+0.020	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project/experiments/polaris.edi#pre-catalogue]
+0.010	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project/experiments/polaris.edi]
+0.010	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project/experiments/pearl.edi#pre-catalogue]
+0.010	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project/experiments/pearl.edi]
+0.010	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[tests/fixtures/e04_t1/eta-project/experiments/experiment.edi]
+0.010	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[tests/fixtures/e04_t1/gaussian-project/experiments/experiment.edi]
+0.010	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[tests/fixtures/e04_t1/lorentzian-project/experiments/experiment.edi]
+0.010	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[tests/fixtures/e04_t1/warning-project/experiments/experiment.edi#pre-catalogue]
+0.010	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[tests/fixtures/e04_t1/warning-project/experiments/experiment.edi]
+0.010	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[tests/fixtures/e04_t1/xray-project/experiments/experiment.edi#pre-catalogue]
+0.010	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[tests/fixtures/e04_t1/xray-project/experiments/experiment.edi]
 0.000	tests/integration/py/test_latp_reference.py::test_latp_reference_quantities_are_fullprof_values_not_scan_regression_pins
 0.000	tests/integration/py/test_legacy_project_load.py::test_old_engine_start_state_is_refused_with_its_name[chebyshev]
 0.000	tests/integration/py/test_legacy_project_load.py::test_old_engine_start_state_is_refused_with_its_name[line-segment]
@@ -7475,7 +7495,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_cwl_cli.py::test_each_cw_prof
 0.000	tests/system/py/test_cwl_live_parameter_count.py::test_live_value_publication_preserves_parameter_population[experiment-asymmetry]
 0.000	tests/system/py/test_cwl_live_parameter_count.py::test_live_value_publication_preserves_parameter_population[experiment-fields]
 0.001	tests/system/py/test_cwl_live_parameter_count.py::test_live_value_publication_preserves_parameter_population[second-structure]
-0.740	tests/system/py/test_cwl_token_migration.py::test_no_tracked_file_keeps_a_retired_cw_token
+0.870	tests/system/py/test_cwl_token_migration.py::test_no_tracked_file_keeps_a_retired_cw_token
 0.000	tests/system/py/test_cwl_token_migration.py::test_retained_capture_exception_requires_exact_bytes_and_location[changed-input]
 0.000	tests/system/py/test_cwl_token_migration.py::test_retained_capture_exception_requires_exact_bytes_and_location[copied-path]
 0.000	tests/system/py/test_cwl_token_migration.py::test_retained_capture_exception_requires_exact_bytes_and_location[extra-token]

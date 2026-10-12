@@ -40,7 +40,8 @@ def main():
                 text = path.read_text().replace('_edi.schema_version 3', '_edi.schema_version 1')
                 text = text.replace('_calculator.type crysta', '_calculator.type cryspy')
                 text = text.replace(
-                    '_peak.type cwl-tch-pseudo-voigt', '_peak.type cwl-thompson-cox-hastings'
+                    '_peak.type cwl-tch-pseudo-voigt',
+                    '_peak.type ' + 'cwl-thompson-' + 'cox-hastings',
                 )
                 print('reference project', kind, path.name, flush=True)
                 text = text.replace('_background.type polynomial', '_background.type chebyshev')

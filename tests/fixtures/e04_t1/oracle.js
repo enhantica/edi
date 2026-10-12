@@ -1,4 +1,4 @@
-// Independent source oracle; descriptive updates use adapt_descriptive_inputs.py.
+// Independent source oracle; newest-name changes use adapt_input_oracles.py.
 var frozen = {
   "source": "diffraction-lib 0ffba46f declarations +  §2b D-a..D-j + CLI files",
   "profiles": {
@@ -2925,7 +2925,7 @@ var frozen = {
         "project.edi": "13a55749dc2a65de3ff5d952d4009af27a5e882709c14747c59ca6aed6c6fd5b",
         "structures/cosio.edi": "4538c66b979d5783c2c3b5ba8c06494a54efeea3fc83c5488e89d5a10c0bb899",
         "experiments/d20.edi": "53ba4c8c28755334c633f23040fa411149d66294dc102862918ff461b09eca73",
-        "analysis/analysis.edi": "b732d6abb6017d11a7f25d30349975e45b2ba72a25cf13f8c702376ea4d6bbf9"
+        "analysis/analysis.edi": "0d463ba37e85baf7de2e4c08ac0d596a3756a50edea40b993b3120a9ae0209c6"
       }
     },
     {
@@ -6362,7 +6362,7 @@ var frozen = {
         "project.edi": "313e0481b2d7f3e0ebfd805cb6b1433c66c4ed26fb72595abefedb8646a911a2",
         "structures/cosio.edi": "4538c66b979d5783c2c3b5ba8c06494a54efeea3fc83c5488e89d5a10c0bb899",
         "experiments/d20.edi": "53ba4c8c28755334c633f23040fa411149d66294dc102862918ff461b09eca73",
-        "analysis/analysis.edi": "b732d6abb6017d11a7f25d30349975e45b2ba72a25cf13f8c702376ea4d6bbf9"
+        "analysis/analysis.edi": "0d463ba37e85baf7de2e4c08ac0d596a3756a50edea40b993b3120a9ae0209c6"
       }
     },
     {
@@ -7517,7 +7517,7 @@ var frozen = {
       "files": {
         "project.edi": "b96f7a0f77fc7266fb1bbd4782508a55e43aee425378168ab9e269109973a8bd",
         "structures/cecoal.edi": "f6939b1d7fe11a4b7e8451ec9a4acb468c21522ef4a29af3995b86758e910616",
-        "experiments/polaris.edi": "afce3099188fcfab304513b8aaae8cf32cffc4f9c3177df8b7f3dbbd5b87adf0",
+        "experiments/polaris.edi": "940231cb84abc21ad60fe760c793b603e8acbb6cb20478d94dfe858d250c33c0",
         "analysis/analysis.edi": "603772c6d4c286e53eb8554e6d2be4843c8f560cb942fec808bb8ca138eb993f"
       }
     },
@@ -7582,7 +7582,7 @@ var frozen = {
       "files": {
         "project.edi": "44d95712746310b2fe328c448521383ad2f270062175750f985a61d63bc4f3e8",
         "structures/ceo2.edi": "aedac6b487103b77e50f106e073b5701214efed16a787a9832391ce2c3b4b79c",
-        "experiments/pearl.edi": "a0ecad005d7d2b5729a2822b8cda98b8bfffae586361491dcbc5f8454ca69dd6",
+        "experiments/pearl.edi": "dd405b91a0eea1bcc0c82d7763a7ae7ad2987b94169b9bb4e50454a140c57efd",
         "analysis/analysis.edi": "603772c6d4c286e53eb8554e6d2be4843c8f560cb942fec808bb8ca138eb993f"
       }
     },
@@ -7647,7 +7647,7 @@ var frozen = {
       "files": {
         "project.edi": "80af9044b177f3f28acd9d19322a1694b73375080dfab72f2c870925a6e782aa",
         "structures/lab6.edi": "06d8ee9eadd4dd9c5f72aed4f264446172a15f81a0571e4a02adfba6156a53fd",
-        "experiments/echidna.edi": "6c9fc1b2b342f03c4b15ed7fb41f6afe9f9029ec1b3f05eaa6348e526d70c72e",
+        "experiments/echidna.edi": "a51359be4b97bed9f488f4022c9efaba6267d954a8ca110c2ed39deb5b9c5eb6",
         "analysis/analysis.edi": "603772c6d4c286e53eb8554e6d2be4843c8f560cb942fec808bb8ca138eb993f"
       }
     },
@@ -8522,7 +8522,7 @@ var frozen = {
     {
       "project": "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project",
       "experiment": "echidna",
-      "sha256": "6c9fc1b2b342f03c4b15ed7fb41f6afe9f9029ec1b3f05eaa6348e526d70c72e",
+      "sha256": "a51359be4b97bed9f488f4022c9efaba6267d954a8ca110c2ed39deb5b9c5eb6",
       "peakType": "cwl-tch-pseudo-voigt-fcj",
       "mode": "cwl",
       "peakFields": [
@@ -9375,7 +9375,7 @@ var frozen = {
     {
       "project": "docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project",
       "experiment": "polaris",
-      "sha256": "afce3099188fcfab304513b8aaae8cf32cffc4f9c3177df8b7f3dbbd5b87adf0",
+      "sha256": "940231cb84abc21ad60fe760c793b603e8acbb6cb20478d94dfe858d250c33c0",
       "peakType": "tof-jorgensen-von-dreele",
       "mode": "tof",
       "peakFields": [
@@ -9550,7 +9550,7 @@ var frozen = {
     {
       "project": "docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project",
       "experiment": "pearl",
-      "sha256": "a0ecad005d7d2b5729a2822b8cda98b8bfffae586361491dcbc5f8454ca69dd6",
+      "sha256": "dd405b91a0eea1bcc0c82d7763a7ae7ad2987b94169b9bb4e50454a140c57efd",
       "peakType": "tof-jorgensen-von-dreele",
       "mode": "tof",
       "peakFields": [
@@ -13392,7 +13392,7 @@ var frozen = {
     {
       "project": "tests/fixtures/e04_t1/eta-project",
       "experiment": "experiment",
-      "sha256": "a94c5639ffca3c53fd3d6db38eacda16568759cc78dcc4c79df5ccbcde636a35",
+      "sha256": "ea9233a144911683df0059636a1511c5dc9a38365e066fb177793e2aa0b90664",
       "peakType": "cwl-pseudo-voigt",
       "mode": "cwl",
       "peakFields": [
@@ -13486,7 +13486,7 @@ var frozen = {
     {
       "project": "tests/fixtures/e04_t1/gaussian-project",
       "experiment": "experiment",
-      "sha256": "32bfd9823e869dc1a0ba8b4130cda3f5fb43c18b26e34fdca3330a6a3d693fea",
+      "sha256": "882fae1d1e7511d1ea39e6eec8c68659ad8687fbcfc8ec0497b6559c11740fcb",
       "peakType": "cwl-gaussian",
       "mode": "cwl",
       "peakFields": [
@@ -13568,7 +13568,7 @@ var frozen = {
     {
       "project": "tests/fixtures/e04_t1/lorentzian-project",
       "experiment": "experiment",
-      "sha256": "ef0df1539dcbfde3dd7f9db110433f11823e77092b43937f55ea651a5685aed2",
+      "sha256": "67d398886934ceda26fc55fa765859ddc0f80d1e673aba8aa38e41c7531e9f27",
       "peakType": "cwl-lorentzian",
       "mode": "cwl",
       "peakFields": [
