@@ -68,5 +68,6 @@ def test_before_oracles_are_available_without_repository_history(tmp_path, monke
     monkeypatch.setattr(generator, 'ROOT', tmp_path / 'no-repository')
     for row in RECORDS.values():
         assert hashlib.sha256(previous(row)).hexdigest() == row['before_sha256'], (
-            'Every before oracle is readable from delivered fixtures with no git history or sibling'
+            'Every before oracle is readable from delivered fixtures '
+            'with no git history or sibling'
         )
