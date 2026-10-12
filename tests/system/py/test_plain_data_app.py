@@ -828,3 +828,191 @@ def test_automatic_creation_uses_the_persisted_casefold_identity_domain(
     assert [row['name'] for row in record['reopened'][category]] == expected, (
         'Creation identity: save and reopen retain the complete ordered identity set'
     )
+
+
+SCAN_REFERENCE = json.loads((ROOT / 'tests/fixtures/correlations/scan-reference.json').read_text())
+
+
+def observe_correlations(native_probe, tmp_path, action, mode, history):
+    work = tmp_path / 'work'
+    work.mkdir()
+    result = subprocess.run(
+        [
+            str(native_probe),
+            action,
+            str(ROOT / f'tests/fixtures/correlations/scan-{mode}'),
+            str(work),
+            mode,
+            'history' if history else 'fresh',
+            'unused',
+        ],
+        env=dict(os.environ, QT_QPA_PLATFORM='offscreen', QSG_RHI_BACKEND='software'),
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=30,
+    )
+    assert result.returncode == 0, (
+        'Correlation lifecycle: the actual native app/core actor must complete: ' + result.stderr
+    )
+    record = json.loads(result.stdout.splitlines()[-1])
+    assert 'error' not in record, (
+        'Correlation lifecycle: all real load, fit, save and resume actions must succeed: '
+        + record.get('error', '')
+    )
+    return record
+
+
+def require_dataset_matrix(matrix, case):
+    names = matrix['labels']
+    assert matrix['available'] == 3, (
+        "A Single fit inside a scan must expose that dataset's three actual free parameters"
+    )
+    assert sorted(names) == sorted(case['names']), (
+        'The selected dataset matrix must name the independent covariance reference parameters'
+    )
+    for row in range(3):
+        for column in range(row):
+            expected = case['matrix'][case['names'].index(names[row])][
+                case['names'].index(names[column])
+            ]
+            assert matrix['values'][row * 3 + column] == pytest.approx(expected, abs=2e-4), (
+                'A selected dataset must show its own normalized covariance, including signs'
+            )
+
+
+def require_core_file_pairs(pairs, case):
+    actual = [pair for pair in pairs if Path(pair['file']).name == case['file']]
+    assert len(actual) == 3, (
+        'A completed file must retain every core pair after scan cancellation'
+    )
+    observed = {
+        tuple(sorted((pair['i'], pair['j']))): float(pair['coefficient']) for pair in actual
+    }
+    expected = {
+        tuple(sorted((pair['parameter_unique_name_i'], pair['parameter_unique_name_j']))): pair[
+            'correlation'
+        ]
+        for pair in case['rows']
+    }
+    assert observed == pytest.approx(expected, abs=2e-4), (
+        'Completed-file covariance must match the external normal-equations reference'
+    )
+
+
+@pytest.mark.parametrize('mode', ['sequential', 'independent'])
+@pytest.mark.parametrize('history', [False, True], ids=['fresh', 'after-scan'])
+def test_single_fit_in_scan_shows_saves_and_undoes_its_own_matrix(
+    native_probe, tmp_path, mode, history
+):
+    record = observe_correlations(native_probe, tmp_path, 'correlation-single', mode, history)
+    case = SCAN_REFERENCE['cases'][1]
+    for step in ('fitted', 'selectedAgain', 'reopened'):
+        require_dataset_matrix(record[step], case)
+    require_core_file_pairs(record['reopened']['pairs'], case)
+    assert {key: record['otherAfter'][key] for key in ('labels', 'values', 'available')} == {
+        key: record['otherBefore'][key] for key in ('labels', 'values', 'available')
+    }, "A Single fit must leave the other scan dataset's matrix and associations unchanged"
+    assert record['undone'] == record['before'], (
+        'Undo of a Single dataset fit must restore its previous matrix and core pairs exactly'
+    )
+    if history:
+        assert record['reset']['available'] == 0, (
+            'Reset fits must remove the selected dataset matrix'
+        )
+        assert record['undoReset'] == record['reopened'], (
+            'Undo of Reset fits must restore the saved per-dataset matrix and core pairs'
+        )
+
+
+@pytest.mark.parametrize('mode', ['sequential', 'independent'])
+@pytest.mark.parametrize('history', [False, True], ids=['fresh', 'replace-old-pair'])
+def test_cancelled_scan_retains_completed_core_pairs_and_resumes(
+    native_probe, tmp_path, mode, history
+):
+    record = observe_correlations(native_probe, tmp_path, 'correlation-cancel', mode, history)
+    assert record['cancelBeforeAny'] == record['before'], (
+        'Cancellation before any file completes must preserve all previously held pairs'
+    )
+    assert record['completed'] == 1, (
+        'The cancellation witness must complete exactly its first file'
+    )
+    assert len(record['cancelled']) == 3, (
+        "Cancellation must retain only the completed file's pairs, replacing a stale pair"
+    )
+    require_core_file_pairs(record['cancelled'], SCAN_REFERENCE['cases'][0])
+    assert record['reopened'] == record['cancelled'], (
+        "Save and reload must retain a cancelled scan's completed core correlations exactly"
+    )
+    assert record['resumedFiles'] == ['02.xy'], (
+        "Resume must fit only the unfinished dataset, without replacing the first dataset's pairs"
+    )
+    assert len(record['resumed']) == 6, "Resume must retain both files' complete covariance pairs"
+    for case in SCAN_REFERENCE['cases']:
+        require_core_file_pairs(record['resumed'], case)
+    assert not record['noopFiles'], 'A completed scan resume must execute no file fits'
+    assert record['noop'] == record['resumed'], (
+        'A no-op resume must preserve every completed correlation and its dataset association'
+    )
+
+
+@pytest.mark.parametrize('kind', ['structure', 'experiment', 'site', 'point'])
+def test_app_rename_follows_all_saved_references_and_undo(native_probe, tmp_path, kind):
+    work = tmp_path / 'work'
+    work.mkdir()
+    completed = subprocess.run(
+        [
+            str(native_probe),
+            'correlation-rename',
+            str(ROOT / 'tests/fixtures/loop_parameter_ids/line-segment'),
+            str(work),
+            'unused',
+            kind,
+            'unused',
+        ],
+        env=dict(os.environ, QT_QPA_PLATFORM='offscreen', QSG_RHI_BACKEND='software'),
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=30,
+    )
+    assert completed.returncode == 0, 'Reference renames must execute the actual native app actor'
+    record = json.loads(completed.stdout.splitlines()[-1])
+    assert 'error' not in record, (
+        'All admitted app rename, save, reopen and Undo actions must succeed: '
+        + record.get('error', '')
+    )
+    before = record['before']
+    expected = copy.deepcopy(before)
+    replacements = {
+        'structure': [('phase.', 'new_phase.'), ('.phase.', '.new_phase.')],
+        'experiment': [('bank.', 'new_bank.')],
+        'site': [('.atom_site.A.', '.atom_site.new_site.')],
+        'point': [('.background.pA.', '.background.new_point.')],
+    }[kind]
+
+    def follow(name):
+        for old, new in replacements:
+            name = name.replace(old, new)
+        return name
+
+    expected['aliases'] = [follow(name) for name in expected['aliases']]
+    for pair in expected['pairs']:
+        pair['i'] = follow(pair['i'])
+        pair['j'] = follow(pair['j'])
+    if kind == 'structure':
+        expected['links'] = [
+            'new_phase' if value == 'phase' else value for value in expected['links']
+        ]
+        expected['textures'] = [
+            'new_phase' if value == 'phase' else value for value in expected['textures']
+        ]
+    assert record['renamed'] == expected, (
+        'App renames must follow aliases, both correlation endpoints and link/texture rows'
+    )
+    assert record['reopened'] == expected, (
+        'Save and reload must retain every app-rewritten reference'
+    )
+    assert record['undone'] == expected, (
+        'Undo of removal after renaming must retain every rewritten reference'
+    )
