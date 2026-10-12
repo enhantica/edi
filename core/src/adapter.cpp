@@ -4393,6 +4393,11 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
             publish_fit_state(*this, cproject);
             clear_fit_result(*this);  // A scan records no `_fit_result`; an earlier fit's would be stale
             fit_result.correlations.assign(numbered_correlations(*scan_pairs));
+        } else if (*completed_files > 0) {
+            // Each file this run completed has its row in results.csv, so its pairs are kept as well; a resume
+            // skips that file and could not make them again. The unfinished file has none, and the rest of the
+            // record stays as it was.
+            fit_result.correlations.assign(numbered_correlations(*scan_pairs));
         }
         return outcome;
     } catch (const std::invalid_argument&) {
