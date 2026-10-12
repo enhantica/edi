@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-12T10:56:30Z
+# measured_utc = 2026-10-12T11:05:18Z
 #
-# Recorded from: frozen.log (34 node(s) measured once, 9743 banked, 2 stale row(s) dropped)
-# Collected tests: 10635; with a reported duration: 5416
+# Recorded from: machine.log (6 node(s) measured once, 9771 banked, 0 stale row(s) dropped)
+# Collected tests: 10635; with a reported duration: 5417
 # Module-scoped fixture costs recorded: 35
 #
 # Breaches are decided PER TIER against the table
@@ -5579,13 +5579,13 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.p
 0.030	tests/system/py/test_c09_t1_whole_fit_delegation.py::test_c09_t1_fit_fails_closed_on_empty_measured_data
 0.090	tests/system/py/test_c09_t1_whole_fit_delegation.py::test_c09_t1_fit_fails_closed_on_malformed_models
 0.000	tests/system/py/test_c09_t6_joint_multibank_absorption.py::test_c09_t6_cli_oracle_has_exact_joint_layout_and_metrics
-2.440	tests/system/py/test_c09_t6_joint_multibank_absorption.py::test_c09_t6_joint_refit_matches_the_full_value_set_from_the_shared_producer
+2.250	tests/system/py/test_c09_t6_joint_multibank_absorption.py::test_c09_t6_joint_refit_matches_the_full_value_set_from_the_shared_producer
 0.400	tests/system/py/test_c09_t6_joint_multibank_absorption.py::test_c09_t6_joint_refit_performs_no_native_file_io_or_subprocess
 0.840	tests/system/py/test_c09_t7_cached_fit.py::test_c09_t7_stateless_api_remains_the_default
 0.050	tests/system/py/test_c09_t7_cached_fit.py::test_c09_t7_v1_rejects_a_deliberately_transposed_index
 0.960	tests/system/py/test_c09_t8_complete_project_loading.py::test_c09_t8_classic_numeric_corpus_and_comma_counterfactual_are_deterministic
 0.780	tests/system/py/test_c09_t8_complete_project_loading.py::test_c09_t8_existing_constructors_and_model_only_fit_signatures_remain_available
-0.000	tests/system/py/test_c09_t8_complete_project_loading.py::test_c09_t8_joint_one_call_fit_reuses_the_full_value_set
+0.230	tests/system/py/test_c09_t8_complete_project_loading.py::test_c09_t8_joint_one_call_fit_reuses_the_full_value_set
 0.010	tests/system/py/test_c09_t8_complete_project_loading.py::test_c09_t8_missing_tof_column_fails_during_the_one_load_mode[misspelled]
 0.010	tests/system/py/test_c09_t8_complete_project_loading.py::test_c09_t8_missing_tof_column_fails_during_the_one_load_mode[omitted]
 0.000	tests/system/py/test_c09_t8_complete_project_loading.py::test_c09_t8_one_loader_rejects_every_data_less_bank[joint]
@@ -5599,7 +5599,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.p
 0.000	tests/system/py/test_c09_t9_output_contract_and_cli.py::test_c09_t9_cli_router_splits_the_machine_record_from_the_diagnostics
 2.260	tests/system/py/test_c09_t9_output_contract_and_cli.py::test_c09_t9_cli_verbosity_off_is_silent_for_both_reports
 0.000	tests/system/py/test_c09_t9_output_contract_and_cli.py::test_c09_t9_conformance_differ_discriminates_field_classes
-4.000	tests/system/py/test_c09_t9_output_contract_and_cli.py::test_c09_t9_crysta_and_edi_machine_records_conform_like_for_like[compact]
+0.035	tests/system/py/test_c09_t9_output_contract_and_cli.py::test_c09_t9_crysta_and_edi_machine_records_conform_like_for_like[compact]
 0.030	tests/system/py/test_c09_t9_output_contract_and_cli.py::test_c09_t9_crysta_and_edi_machine_records_conform_like_for_like[full]
 1.240	tests/system/py/test_c09_t9_output_contract_and_cli.py::test_c09_t9_library_fit_is_silent_without_callback
 3.490	tests/system/py/test_c09_t9_output_contract_and_cli.py::test_c09_t9_python_fit_overloads_restore_callback_ownership[joint-analysis]
@@ -5611,7 +5611,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.p
 2.000	tests/system/py/test_c11_t35_descent_end_to_end.py::test_each_registered_id_routes_through_cli_and_project_analysis[fast_descent_linear_snap]
 1.700	tests/system/py/test_c11_t35_descent_end_to_end.py::test_each_registered_id_routes_through_cli_and_project_analysis[ladder]
 3.400	tests/system/py/test_c11_t35_descent_end_to_end.py::test_each_registered_id_routes_through_cli_and_project_analysis[multistart_prune]
-0.980	tests/system/py/test_c11_t35_descent_end_to_end.py::test_omitted_descent_preserves_the_default_record_bytes_regression_pin
+0.510	tests/system/py/test_c11_t35_descent_end_to_end.py::test_omitted_descent_preserves_the_default_record_bytes_regression_pin
 1.600	tests/system/py/test_c11_t43_rejection_classes.py::test_cli_persistence_never_follows_a_retained_touched_document_symlink
 0.870	tests/system/py/test_c11_t43_rejection_classes.py::test_completed_resume_cli_recovers_recorded_cause_or_legacy_unknown[max-iter-legacy]
 0.890	tests/system/py/test_c11_t43_rejection_classes.py::test_completed_resume_cli_recovers_recorded_cause_or_legacy_unknown[max-iter-recorded]
@@ -7683,7 +7683,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t12_public_release.py::te
 0.080	tests/system/py/test_e09_t58_absorption_family_contract.py::test_absorption_family_acceptance_and_contents_match_crysta[unknown]
 2.750	tests/system/py/test_e09_t58_absorption_family_contract.py::test_switching_a_loaded_cylinder_to_none_clears_calculation_state[factory]
 2.530	tests/system/py/test_e09_t58_absorption_family_contract.py::test_switching_a_loaded_cylinder_to_none_clears_calculation_state[type-setter]
-0.540	tests/system/py/test_e09_t58_cli_persistence.py::test_both_cli_surfaces_save_byte_equal_trees_and_conforming_records
+0.750	tests/system/py/test_e09_t58_cli_persistence.py::test_both_cli_surfaces_save_byte_equal_trees_and_conforming_records
 2.480	tests/system/py/test_e09_t58_cli_persistence.py::test_edi_all_accepted_axis_prior_arrangements_survive_saved_undo[absent-absent-absent]
 2.680	tests/system/py/test_e09_t58_cli_persistence.py::test_edi_all_accepted_axis_prior_arrangements_survive_saved_undo[absent-absent-fixed]
 1.910	tests/system/py/test_e09_t58_cli_persistence.py::test_edi_all_accepted_axis_prior_arrangements_survive_saved_undo[absent-absent-zero]
@@ -10997,7 +10997,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 0.257	tests/integration/py/test_scan_notes_diagnostics.py
 # module-cost: 0.352	tests/integration/py/test_scan_notes_resume.py
 # module-cost: 2.937	tests/system/py/test_atom_position_contract.py
-# module-cost: 2.511	tests/system/py/test_c09_t9_output_contract_and_cli.py
+# module-cost: 3.785	tests/system/py/test_c09_t9_output_contract_and_cli.py
 # module-cost: 0.228	tests/system/py/test_c11_t62_native_scan_io.py
 # module-cost: 4.399	tests/system/py/test_c15_t2_native_family.py
 # module-cost: 3.252	tests/system/py/test_c34_t28_census_binding.py
