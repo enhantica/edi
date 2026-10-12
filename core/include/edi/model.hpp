@@ -60,12 +60,23 @@ class KeyedBase;
 // Renames every link and texture row of `project` that names the structure `from` to `to`, all or
 // none (defined after Project).
 inline void rename_structure_links(Project& project, const std::string& from, const std::string& to);
-// The parameter names a structure's or an experiment's rename changes, old to new, in both the unique and the
-// `_fit_parameter.id` spelling: the block's own parameters and, for a structure, its links' and texture rows'
-// (io.cpp's slot walk). A spelling two parameters share is left out.
-std::map<std::string, std::string> parameter_renames(const Project& project, const char* kind, const ItemKey& key,
-                                                     const std::string& to);
-inline void follow_parameter_renames(Project& project, const std::map<std::string, std::string>& names);
+// The parameter names a structure's or an experiment's rename changes (io.cpp's slot walk), old to new: the block's
+// own parameters and, for a structure, its links' and texture rows', by their unique names and, apart, by their
+// `_fit_parameter.id` spellings. A name no current parameter has (a correlation's history) is renamed by its place
+// in the address: `<block>.<category>.…` for a category of the renamed kind, and for a structure also
+// `<experiment>.linked_structure.<structure>.<field>` and `.preferred_orientation.…`.
+struct ParameterRenames {
+    std::map<std::string, std::string> unique;
+    std::map<std::string, std::string> compact;
+    std::set<std::string> current_unique;
+    std::set<std::string> current_compact;
+    bool structure = false;
+    std::string from;
+    std::string to;
+    std::optional<std::string> operator()(const std::string& name) const;
+};
+ParameterRenames parameter_renames(const Project& project, const char* kind, const ItemKey& key, const std::string& to);
+inline void follow_parameter_renames(Project& project, const ParameterRenames& names);
 
 // The membership record an ItemVec owns and its attached items share. Items hold it STRONGLY —
 // ADR-0013 prohibits production weak references — and the collection revokes it (owner =
@@ -4752,12 +4763,52 @@ inline void follow_site_references(Project* project, Structure* structure, const
 // one: the analysis aliases, the fit's parameter correlations and the scan's extract rules. A rename of the
 // datablock rewrites each name of one of its parameters, whole, so the project saves and reopens under the new
 // name. A structure and an experiment may share a name, and a structure may be named as a category is: a prefix
-// would take the other's parameters too.
-inline void follow_parameter_renames(Project& project, const std::map<std::string, std::string>& names) {
-    const auto renamed = [&names](const std::string& name) -> std::optional<std::string> {
-        const auto found = names.find(name);
-        return found == names.end() ? std::nullopt : std::optional<std::string>(found->second);
-    };
+// would take the other's parameters too. A correlation may name a parameter the project no longer has; it
+// follows by its place in the address (ParameterRenames).
+inline std::optional<std::string> ParameterRenames::operator()(const std::string& name) const {
+    // A public name first: a single structure named `structure` spells a cell field's public name and its
+    // `_fit_parameter.id` alike, and only the public one follows the rename.
+    if (const auto found = unique.find(name); found != unique.end()) {
+        return found->second;
+    }
+    if (current_unique.contains(name)) {
+        return std::nullopt;
+    }
+    if (const auto found = compact.find(name); found != compact.end()) {
+        return found->second;
+    }
+    if (current_compact.contains(name)) {
+        return std::nullopt;
+    }
+    const auto dot = name.find('.');
+    if (dot == std::string::npos || from.empty()) {
+        return std::nullopt;
+    }
+    const std::string block = name.substr(0, dot);
+    const std::string rest = name.substr(dot + 1);
+    const auto end = rest.find('.');
+    if (end == std::string::npos) {
+        return std::nullopt;
+    }
+    const std::string category = rest.substr(0, end);
+    static const std::set<std::string> structure_categories{"cell", "atom_site", "atom_site_aniso"};
+    static const std::set<std::string> experiment_categories{
+        "peak", "instrument", "absorption", "background", "linked_structure", "preferred_orientation"};
+    if (block == from && (structure ? structure_categories : experiment_categories).contains(category)) {
+        return to + "." + rest;
+    }
+    if (structure && (category == "linked_structure" || category == "preferred_orientation")) {
+        const std::string named = rest.substr(end + 1);  // <structure>.<field>
+        const auto field = named.find('.');
+        if (field != std::string::npos && named.substr(0, field) == from &&
+            named.find('.', field + 1) == std::string::npos) {
+            return block + "." + category + "." + to + named.substr(field);
+        }
+    }
+    return std::nullopt;
+}
+
+inline void follow_parameter_renames(Project& project, const ParameterRenames& renamed) {
     for (const auto& alias : project.aliases) {
         if (auto next = renamed(alias->parameter_unique_name.value())) alias->parameter_unique_name = std::move(*next);
     }

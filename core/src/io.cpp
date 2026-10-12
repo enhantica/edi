@@ -2252,12 +2252,16 @@ void refuse_older_correlation_name(const std::string& name) {
 
 }  // namespace
 
-std::map<std::string, std::string> detail::parameter_renames(const Project& project, const char* kind,
-                                                             const ItemKey& key, const std::string& to) {
+detail::ParameterRenames detail::parameter_renames(const Project& project, const char* kind, const ItemKey& key,
+                                                   const std::string& to) {
     KeyRename rename;
     rename.to = to;
-    if (std::string(kind) == "structure") {
-        rename.structure = datablock_key(key.value(), "structure");
+    ParameterRenames names;
+    names.structure = std::string(kind) == "structure";
+    names.from = datablock_key(key.value(), kind);
+    names.to = datablock_key(to, kind);
+    if (names.structure) {
+        rename.structure = names.from;
     } else {
         for (const auto& experiment : project.experiments) {
             if (&experiment->name == &key) {
@@ -2268,26 +2272,35 @@ std::map<std::string, std::string> detail::parameter_renames(const Project& proj
             return {};
         }
     }
-    // The walk names the same parameters in the same order either way.
+    if (names.from == names.to) {
+        return {};
+    }
+    // The walk names the same parameters in the same order either way. Each role has its own map, so a
+    // public name and a `_fit_parameter.id` spelled alike never cancel each other.
     const auto before = parameter_slots(project);
     const auto after = parameter_slots(project, &rename);
-    std::map<std::string, std::string> names;
-    std::set<std::string> shared;
-    const auto note = [&](const std::string& from, const std::string& next) {
+    const auto note = [](std::map<std::string, std::string>& map, std::set<std::string>& shared,
+                         const std::string& from, const std::string& next) {
         if (shared.contains(from)) {
             return;
         }
-        const auto [at, added] = names.emplace(from, next);
+        const auto [at, added] = map.emplace(from, next);
         if (!added && at->second != next) {
-            names.erase(at);
+            map.erase(at);
             shared.insert(from);
         }
     };
+    std::set<std::string> shared_unique;
+    std::set<std::string> shared_compact;
     for (std::size_t index = 0; index < before.size() && index < after.size(); ++index) {
-        note(before[index].id, after[index].id);
-        note(before[index].unique_name, after[index].unique_name);
+        note(names.compact, shared_compact, before[index].id, after[index].id);
+        note(names.unique, shared_unique, before[index].unique_name, after[index].unique_name);
+        names.current_unique.insert(before[index].unique_name);
+        names.current_compact.insert(before[index].id);
     }
-    std::erase_if(names, [](const auto& entry) { return entry.first == entry.second; });
+    const auto unchanged = [](const auto& entry) { return entry.first == entry.second; };
+    std::erase_if(names.unique, unchanged);
+    std::erase_if(names.compact, unchanged);
     return names;
 }
 
