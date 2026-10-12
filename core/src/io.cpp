@@ -2202,7 +2202,8 @@ auto fit_state_slots(ProjectT& project) {
 }
 
 // Only the newest format is read (the owner, 2026-10-12). A name that does not resolve and names a loop row by its
-// position (`<experiment>.background[<index>]`, `<experiment>.background.<ordinal>.coef` or `.intensity`, a one-link
+// position (`<experiment>.background[<index>]` and its fields, `<experiment>.background.<ordinal>.coef` or `.intensity`,
+// `<experiment>.linked_structure.<index>.<field>` or `.preferred_orientation.<index>.<field>`, a one-link
 // experiment's `<experiment>.scale`, `.march_r`, `.march_random_fract`) is refused, naming it: the project was saved
 // by an older version. Any other name is left to the caller's own resolution. The loader checks every alias and
 // `_fit_parameter.id`.
@@ -2213,7 +2214,8 @@ void refuse_older_parameter_name(Project& project, const std::string& name) {
         }
     }
     static const std::regex older(
-        R"(^[^.]+\.(background\[[0-9]+\]|background\.[0-9]+\.(coef|intensity)|scale|march_r|march_random_fract)$)");
+        R"(^[^.]+\.(background\[[0-9]+\](\.[a-z_]+)?|background\.[0-9]+\.(coef|intensity))"
+        R"(|(linked_structure|preferred_orientation)\.[0-9]+\.[a-z_]+|scale|march_r|march_random_fract)$)");
     if (std::regex_match(name, older)) {
         throw IoError("the project was saved by an older version: '" + name +
                       "' is an older parameter name, which this version no longer reads");
