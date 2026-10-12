@@ -7,6 +7,7 @@
 #include <QString>
 #include <QTimer>
 #include <QtQml/qqmlregistration.h>
+#include <cstdint>
 #include <memory>
 #include <optional>
 
@@ -75,6 +76,13 @@ class FitViewModel : public QObject {
     // A scan is running: Follow is enabled. `following`: the pattern tab shows the file being fitted.
     Q_PROPERTY(bool scanning READ scanning NOTIFY scanningChanged)
     Q_PROPERTY(bool following READ following WRITE setFollowing NOTIFY followingChanged)
+    // How often a followed scan redraws the pattern (edi ADR-0029), saved per machine: 0 every pattern (the scan
+    // waits for each), 1 about once a second, 2 adaptive (the default: the newest finished file whenever the screen
+    // is free, every half second at most), 3 only at the end.
+    Q_PROPERTY(int patternUpdates READ patternUpdates WRITE setPatternUpdates NOTIFY patternUpdatesChanged)
+    // The patterns a scan has drawn since it started, and the file drawn last.
+    Q_PROPERTY(int scanPatternUpdates READ scanPatternUpdates NOTIFY scanPatternUpdatesChanged)
+    Q_PROPERTY(QString scanShownFile READ scanShownFile NOTIFY scanShownFileChanged)
     // The project's fitting mode is one Start fitting runs (single, joint); otherwise `unavailableReason`.
     Q_PROPERTY(bool available READ available NOTIFY availableChanged)
     Q_PROPERTY(QString unavailableReason READ unavailableReason NOTIFY unavailableReasonChanged)
@@ -130,6 +138,18 @@ class FitViewModel : public QObject {
     // Follow is on only while a scan runs: off before one, after one and in the single and joint modes.
     bool following() const { return scanning_ && following_; }
     void setFollowing(bool following);
+    int patternUpdates() const { return pattern_updates_; }
+    void setPatternUpdates(int mode);
+    int scanPatternUpdates() const { return scan_pattern_updates_; }
+    QString scanShownFile() const { return QString::fromStdString(followed_file_); }
+    // The owner has shown the dataset it was asked for: a newer finished file may be followed now (edi ADR-0029).
+    void followShown();
+    // A pattern chart of the current experiment was shown or hidden (ProjectViewModel::patternShown).
+    void patternShownChanged();
+    // The followed file handed to the owner was drawn on screen (`drawn`), or will not be (its read or application
+    // failed, or the window drew nothing in time): only now is it counted, and the next pattern asked for.
+    // `token` is the one handed over with the file (handOver); a receipt with any other is ignored.
+    void followRendered(std::uint64_t token, const std::string& file, bool drawn);
     bool available() const { return available_; }
     QString unavailableReason() const { return unavailable_reason_; }
     bool canUndo() const { return can_undo_; }
@@ -172,6 +192,9 @@ class FitViewModel : public QObject {
     void canResetChanged();
     void scanningChanged();
     void followingChanged();
+    void patternUpdatesChanged();
+    void scanPatternUpdatesChanged();
+    void scanShownFileChanged();
     void availableChanged();
     void unavailableReasonChanged();
     void canUndoChanged();
@@ -207,6 +230,11 @@ class FitViewModel : public QObject {
     void ended(const edi::FitReport& report);
     void scanStarted(const edi::ScanPreamble& preamble);
     void fileCompleted(const edi::ScanFileRecord& record);
+    // A followed file's pattern, as its fit left it.
+    void scanFrame(const std::string& file, const edi::FitFrame& frame);
+    // Follow asks for the next finished file's pattern once the one before is shown and kFollowIntervalMs has
+    // passed.
+    void followLatest();
     // The counts from the files on disk once the driver returned, before the running presentation ends.
     void settleScanCounts();
     void scanEnded(const edi::FitReport& report);
@@ -233,6 +261,24 @@ class FitViewModel : public QObject {
     // once this one is shown).
     std::optional<edi::FitFrame> pending_frame_;
     QTimer frame_timer_;
+    // A followed scan: the newest finished file, the one last shown, when, the wait for the interval, and whether
+    // the job is to send the next file's pattern.
+    std::string latest_file_, followed_file_;
+    QElapsedTimer follow_clock_;
+    QTimer follow_timer_;
+    bool frame_requested_ = false;
+    int pattern_updates_ = 2;       // Adaptive
+    // The pattern last handed to the view has been drawn (or will not be): only then is the next one asked for,
+    // however often followLatest runs in between. `handed_file_` is that file until its receipt arrives.
+    bool frame_shown_ = true;
+    std::string handed_file_;
+    std::uint64_t handed_token_ = 0;  // the receipt token of handed_file_, 0 when none is awaited
+    std::uint64_t last_token_ = 0;
+    std::uint64_t handOver(const std::string& file);
+    void dropHandedFile();
+    int scan_pattern_updates_ = 0;  // patterns drawn since the scan started
+    // A followed file is drawn: the shown file and the count move on.
+    void patternDrawn(const std::string& file);
     // The running fit's clock, shown once a second.
     QElapsedTimer clock_;
     QTimer clock_timer_;

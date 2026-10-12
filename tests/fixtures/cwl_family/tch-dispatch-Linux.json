@@ -1,0 +1,145 @@
+{
+  "capture_sha256": "569bbefc4d3ca56355455902fbfb1f40c1ac9330825befc0cceeab7b2a8a0e1e",
+  "engine_source": "c2353f8f6414e4346c0701ca7018c7e615de9495",
+  "historical_sha256": "f938410b6bd08f2740a02bdf9f7d9d780c08e6e412e70c82210778c160ecc87e",
+  "host": "visa-prod-2224",
+  "input_sha256": {
+    "fcj/experiments/bank.edi": "279184aaf4c6d81e5d32eee50cf63b1e973c59503be7e1cf2288d8857ab33571",
+    "fcj/structures/phase.edi": "be439161f0bd6b5b6109d820c41e4bbe2630bfb1e3111dd2b1da69b1d633a76c",
+    "tch/experiments/bank.edi": "bc45af518136558f0dc853cdb89b5a84dc1ae0821c21513ced4ca9cc8533b29d",
+    "tch/structures/phase.edi": "be439161f0bd6b5b6109d820c41e4bbe2630bfb1e3111dd2b1da69b1d633a76c"
+  },
+  "kind": "regression-pin",
+  "machine": "x86_64",
+  "module_sha256": "805dc5ea24bd129776ccad554421e398c08745b77be4edce0fceb48c8af49529",
+  "moves": {
+    "fcj": {
+      "after_sha256": "c062010e061a1c696f02a96bce14ae42f35e2f46787ed01f8aeb4eb481443795",
+      "before_sha256": "c062010e061a1c696f02a96bce14ae42f35e2f46787ed01f8aeb4eb481443795",
+      "changed_samples": 0,
+      "max_absolute": 0.0,
+      "normwise": 0.0
+    },
+    "tch": {
+      "after_sha256": "1ecba8fffceb558c92c338f9a477f4f054cf342deee45f94992674b02866353a",
+      "before_sha256": "bdd7e3a4913ed36c3a30ab68e926848b8ac6fb2a624b095acca72e5969cf4ca6",
+      "changed_samples": 1,
+      "max_absolute": 1.7763568394002505e-15,
+      "normwise": 5.881606514943569e-17
+    }
+  },
+  "pins": {
+    "fcj": "PrLOUHqBHkA+xAm8QYgpQGhDFy6qbDBAUQ0yWQGTLEAADFPMRlgjQNchTM0ynwVAYFrPRMg83z8=",
+    "tch": "YdEUYCg27T+CIg3yMX4dQPHOHEb/AzhA6rt6oa8zPkBpQqRdBls5QNkvN/oFTSFAT4cn/svb8z8="
+  },
+  "platform": "Linux",
+  "reviewed_engine_source": "c2353f8f6414e4346c0701ca7018c7e615de9495",
+  "run_attempt": null,
+  "run_id": null,
+  "sdk_manifest": {
+    "cmake_options": [
+      "-G",
+      "Ninja",
+      "-DCMAKE_BUILD_TYPE=Release",
+      "-DCRYSTA_CXX_PACKAGE=ON",
+      "-DCRYSTA_LTO=OFF",
+      "-DCRYSTA_SANITIZE=OFF",
+      "-DCRYSTA_COVERAGE=OFF",
+      "-DCRYSTA_LLVM_COVERAGE=OFF"
+    ],
+    "crysta_version": "0.1.0",
+    "fingerprint": {
+      "macos_deployment_target": null,
+      "packages": [
+        {
+          "build": "h235f0fe_19",
+          "name": "gcc_impl_linux-64",
+          "version": "14.3.0"
+        },
+        {
+          "build": "h2185e75_19",
+          "name": "gxx_impl_linux-64",
+          "version": "14.3.0"
+        },
+        {
+          "build": "he0feb66_19",
+          "name": "libgcc",
+          "version": "15.2.0"
+        },
+        {
+          "build": "hf649bbc_119",
+          "name": "libgcc-devel_linux-64",
+          "version": "14.3.0"
+        },
+        {
+          "build": "h934c35e_19",
+          "name": "libstdcxx",
+          "version": "15.2.0"
+        },
+        {
+          "build": "h9f08a49_119",
+          "name": "libstdcxx-devel_linux-64",
+          "version": "14.3.0"
+        },
+        {
+          "build": "he0feb66_19",
+          "name": "libgomp",
+          "version": "15.2.0"
+        },
+        {
+          "build": "h4ee821c_9",
+          "name": "sysroot_linux-64",
+          "version": "2.28"
+        },
+        {
+          "build": "h54a6638_2",
+          "name": "eigen",
+          "version": "3.4.0"
+        },
+        {
+          "build": "ha0421bc_0",
+          "name": "sleef",
+          "version": "3.9.0"
+        }
+      ]
+    },
+    "identity": "git:c2353f8f6414e4346c0701ca7018c7e615de9495",
+    "platform": "linux-64",
+    "schema": 1,
+    "source_sha": "c2353f8f6414e4346c0701ca7018c7e615de9495",
+    "source_tree": "7f18ab6e996cbc8113882feb21aa3eef1146f072",
+    "tested": {
+      "configuration": "Release, non-LTO",
+      "corpus": {
+        "passed": 31,
+        "total": 31
+      },
+      "cpp_tier": {
+        "passed": 582,
+        "total": 582
+      },
+      "job": "checks",
+      "job_name": "checks (Linux)",
+      "run_attempt": "1",
+      "run_id": "38186891686",
+      "sha256": {
+        "bin/crysta": "6dde82073ef83efb23d862e51490125686fc65f35e3ab38c62de3d25ffd5628e",
+        "lib/crysta-runtime/libgcc_s.so.1": "e1e904051f77f9569c2ea53c83bb4083c26575e0fbd4010e46f1cb8b21037ad1",
+        "lib/crysta-runtime/libgomp.so.1": "23edb748d6c9584e337fc00cb22eba3bf535478204d6e5eddbb637b7f417fd25",
+        "lib/crysta-runtime/libsleef.so.3": "aa23952c9f163ba7bb89c8f7bdaf9350f7cf3c4dafdd86ca96d6646fffbb6a7a",
+        "lib/crysta-runtime/libstdc++.so.6": "9581ad615b7c073423f57b69a3b148a89f8ea76fc909124211f9007909b807a6",
+        "lib/libcrysta_core.a": "cf41035087202bd1655df8074644a784e326455d50f4f5a053dfaac3ac30db1b"
+      }
+    }
+  },
+  "source": "a71b1e6b9ecdd9d31fb6335f6afb87e04bf52049",
+  "source_objects": {
+    "CMakeLists.txt": "6671771daf67ceba3ee5d3be06e5feb56f29f301",
+    "cmake": "ac12bd000e51742ef00f8be01cab35839f81dafa",
+    "data": "c439f774d0ddf6d848f268b3aab6fc994e3e3481",
+    "include": "ec93638aadf6b3659754b47c409d8db2a6567bf5",
+    "lib": "db261becb2c2dfa6a32cbe8159e377ea10ce5236",
+    "pyproject.toml": "e641f08f52a4e830304734be5d3f62ef4a3dc9c8",
+    "src": "19211cee65ebdce24101bdcbf9a62e7db4fb7cf5"
+  }
+}

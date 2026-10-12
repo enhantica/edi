@@ -97,6 +97,7 @@ class PatternChartController : public QObject {
     Q_ENUM(YScale)
 
     explicit PatternChartController(QObject* parent = nullptr);
+    ~PatternChartController() override;
 
     ExperimentViewModel* experiment() const { return experiment_; }
     void setExperiment(ExperimentViewModel* experiment);

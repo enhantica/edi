@@ -174,6 +174,28 @@ attachment the model has or will have. No caller in the product needs it: each a
 
 The app does not edit the project while a fit runs: the door refuses an edit then.
 
+### 10. The engine's thread count
+
+The Develop preference "Engine threads" (ADR-0017 §12) sets how many threads crysta uses for every fit and
+calculation in the process.
+
+- **Auto** (0, the default) keeps the engine's own thread policy, which honours `OMP_NUM_THREADS` when it is set.
+  **A count N** replaces that policy and the environment: the user chose it, so the environment does not override it.
+- **Saved per machine**, under `develop/engineThreads` in the app's settings file, never in a project.
+  `Globals/Preferences.qml` applies it once the window is complete and again on every change.
+- **Process-wide.** `edi::set_engine_threads` hands the count to crysta, and each parallel fill reads it when it
+  starts, on whichever thread runs it (the worker, a fit job). Nothing is set per thread, because OpenMP's own setting
+  would reach only the thread that made it.
+- **The whole team takes part.** With a count N, a fill split into at least N chunks runs on N threads. On the
+  desktop the count is the OpenMP region's team. In the multithread web build crysta's own pool starts threads when
+  first asked for them and keeps them; a fill waits a tenth of a second at most for the N − 1 threads it admits to
+  join, and each then takes its own share of the chunks, so the calling thread cannot finish the work before the
+  others start. A browser that cannot start a worker in time gets a fill on the threads that did start, never a stalled
+  one.
+- **No result depends on it**: a fit or a calculation gives the same numbers for every choice.
+- The single-thread web build has one thread and shows the preference disabled. The diagnostics show the preference
+  and the engine's resulting worker count.
+
 ## Consequences
 
 - The window stays responsive while a calculation runs; the chart, the tables and the saved text change together,

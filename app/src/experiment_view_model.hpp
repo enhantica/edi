@@ -3,9 +3,11 @@
 #define EDI_APP_EXPERIMENT_VIEW_MODEL_HPP
 
 #include <QObject>
+#include <QSet>
 #include <QtNumeric>
 #include <QString>
 #include <QtQml/qqmlregistration.h>
+#include <cstdint>
 
 #include "block_text.hpp"
 #include "category_list_model.hpp"
@@ -169,6 +171,15 @@ class ExperimentViewModel : public QObject {
     // reports stale and the chart's source reports that it no longer describes the model, until the newest
     // request's publication captures the pattern again.
     void markPatternStale();
+    // Pattern charts showing this experiment's pattern register here while they are shown (on the page and the tab
+    // the window shows): a followed scan file counts as drawn only while one is (edi ADR-0029).
+    bool patternShown() const { return !shown_charts_.isEmpty(); }
+    void setChartShown(const QObject* chart, bool shown);
+    // Each new pattern source has the next generation; a shown chart notes the one it drew, so a followed file's
+    // receipt can tell that its own pattern reached the screen.
+    std::uint64_t patternGeneration() const { return pattern_generation_; }
+    std::uint64_t presentedGeneration() const { return presented_generation_; }
+    void notePresented() { presented_generation_ = pattern_generation_; }
     BlockText* text() const { return text_; }
     QString lastError() const { return last_error_; }
 
@@ -192,6 +203,7 @@ class ExperimentViewModel : public QObject {
     void lastErrorChanged();
     void patternSourceChanged();
     void patternWentStale();
+    void patternShownChanged();
 
    private:
     edi::Category category(const char* id) const;
@@ -199,6 +211,9 @@ class ExperimentViewModel : public QObject {
 
     edi::Project& project_;
     edi::ExperimentBase& experiment_;
+    QSet<const QObject*> shown_charts_;
+    std::uint64_t pattern_generation_ = 0;
+    std::uint64_t presented_generation_ = 0;
     ProjectEditor& editor_;
     bool can_load_data_ = false;
     ParameterRegistry& registry_;

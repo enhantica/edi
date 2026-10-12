@@ -99,6 +99,12 @@ PatternChartController::PatternChartController(QObject* parent)
     connect(&animation_, &QAbstractAnimation::finished, this, &PatternChartController::finishAnimation);
 }
 
+PatternChartController::~PatternChartController() {
+    if (experiment_) {
+        experiment_->setChartShown(this, false);
+    }
+}
+
 void PatternChartController::setAnimationDuration(int milliseconds) {
     milliseconds = std::max(0, milliseconds);
     if (milliseconds != animation_duration_) {
@@ -183,9 +189,11 @@ void PatternChartController::setExperiment(ExperimentViewModel* experiment) {
     }
     if (experiment_) {
         disconnect(experiment_, nullptr, this, nullptr);
+        experiment_->setChartShown(this, false);
     }
     experiment_ = experiment;
     if (experiment_) {
+        experiment_->setChartShown(this, active_);
         connect(experiment_, &ExperimentViewModel::patternSourceChanged, this, &PatternChartController::invalidate);
         // An admitted edit: the frame stays, and it no longer describes the model.
         connect(experiment_, &ExperimentViewModel::patternWentStale, this, [this] {
@@ -210,6 +218,9 @@ void PatternChartController::setActive(bool active) {
         // the chart is shown again.
         if (!active_) {
             finishAnimation();
+        }
+        if (experiment_) {
+            experiment_->setChartShown(this, active_);
         }
         emit activeChanged();
         if (active_ && dirty_) {
@@ -324,6 +335,9 @@ void PatternChartController::refresh() {
     static const edi::PatternSource kNothing;
     const edi::PatternSource& source = experiment_ ? experiment_->patternSource() : kNothing;
     shown_ = edi::present_pattern(source, view());
+    if (experiment_ && active_) {
+        experiment_->notePresented();
+    }
 
     const edi::PatternSeries* measured = nullptr;
     const edi::PatternSeries* calculated = nullptr;

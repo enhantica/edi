@@ -9,6 +9,7 @@ and compare every other byte and the full file inventory to the same pins.
 import hashlib
 import importlib.util
 import json
+import shutil
 import zipfile
 from pathlib import Path
 
@@ -267,13 +268,16 @@ def test_save_matches_the_labelled_pre_move_regression_pin(tmp_path, case):
                 assert hashlib.sha256(archive.read(relative + name)).hexdigest() == digest, (
                     'Reviewed input bytes and the full inventory must retain the committed pin'
                 )
+        live_source = REFERENCE.inputs()[case]
         live_raw = {
-            path.relative_to(source).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
-            for path in source.rglob('*')
+            path.relative_to(live_source).as_posix(): hashlib.sha256(
+                metadata_bytes.pre_catalogue_bytes(path)
+            ).hexdigest()
+            for path in live_source.rglob('*')
             if path.is_file()
         }
         assert live_raw == expected_live, (
-            'Changed live example bytes must equal the complete reviewed pre-catalogue input, '
+            'changed live example bytes must equal the complete reviewed pre-catalogue input, '
             'independently of the position of main'
         )
         source = REFERENCE.committed_input(
@@ -348,3 +352,22 @@ def test_c13_t6_new_projects_have_a_second_save_fixed_point(tmp_path, case):
     assert REFERENCE.hashes(inputs[case]) == before, (
         ' saving the new projects must preserve every source model and measured-data byte'
     )
+
+
+def test_c34_t28_live_main_provenance_cannot_hide_changed_scientific_input(tmp_path, monkeypatch):
+    case = 'repo:docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project'
+    source = REFERENCE.inputs()[case]
+    # The main boundary must reach the live tree before any historical metadata projection.
+    test_save_matches_the_labelled_pre_move_regression_pin(tmp_path / 'ordinary', case)
+    changed = tmp_path / 'changed-input'
+    shutil.copytree(source, changed)
+    structure = changed / 'structures/cosio.edi'
+    text = structure.read_text()
+    line = next(line for line in text.splitlines() if line.startswith('_cell.length_a'))
+    structure.write_text(text.replace(line, '_cell.length_a 12.375', 1))
+    assert structure.read_text() != text, (
+        'I22 the provenance escape must really alter a scientific input before saving'
+    )
+    monkeypatch.setattr(REFERENCE, 'inputs', lambda: {case: changed})
+    with pytest.raises(AssertionError, match='changed live example bytes'):
+        test_save_matches_the_labelled_pre_move_regression_pin(tmp_path / 'damaged', case)

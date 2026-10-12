@@ -5,6 +5,9 @@
 #include <QHash>
 #include <QMetaObject>
 #include <QPointer>
+#include <QGuiApplication>
+#include <QQuickWindow>
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QFile>
 #include <algorithm>
@@ -162,6 +165,8 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
             return text;
         },
         this);
+    render_wait_.setSingleShot(true);
+    connect(&render_wait_, &QTimer::timeout, this, [this] { followRendered(false); });
     loadScan();
     correlations_ = new CorrelationViewModel(this);
     connect(this, &ProjectViewModel::currentExperimentIndexChanged, this, &ProjectViewModel::syncCorrelations);
@@ -958,6 +963,11 @@ std::vector<edi::Edit::ScanValue> ProjectViewModel::datasetValues(const std::vec
 }
 
 void ProjectViewModel::viewDataset(int index, bool refresh) {
+    // A view of another dataset replaces what a followed file waits to have drawn: its receipt is released
+    // uncounted. The same dataset shown again (its row changed, the run settled) leaves it waiting.
+    if (!follow_issuing_ && index != follow_index_) {
+        followRendered(false);
+    }
     // A scan writes nothing to the model, so its datasets can be shown while it runs; a single or joint fit's
     // model is not touched.
     if (!scan_ || index < 0 || index >= static_cast<int>(scan_session_->datasets().files.size()) ||
@@ -1007,6 +1017,9 @@ QString ProjectViewModel::pendingRefusal() const {
 }
 
 void ProjectViewModel::viewDatasetNow(int index, bool reread) {
+    if (!follow_issuing_ && index != follow_index_) {
+        followRendered(false);
+    }
     // Read here, on the GUI thread, one dataset: the one a project opens on (`reread`), or the one already shown
     // when only its results row changed (its data are in the model, so no file is read). Nothing is left pending.
     const std::uint64_t request = ++view_request_;
@@ -1052,10 +1065,11 @@ void ProjectViewModel::startViewRead() {
         publishCalculating();
         return;
     }
-    // While a scan runs the worker is its own: a dataset chosen by hand gets its pattern calculated beside it, on
-    // a copy of the template with the same values and data as the shown model. A followed one gets the job's.
+    // While a scan runs the worker is its own: a dataset shown gets its pattern calculated beside it, on a copy of
+    // the template with the same values and data as the shown model, unless the scan's fit sent the followed file's
+    // pattern with it (edi ADR-0029).
     std::optional<edi::Project> shown;
-    if (fit_ != nullptr && fit_->scanning() && !fit_->following()) {
+    if (fit_ != nullptr && fit_->scanning() && !(follow_frame_ && follow_frame_->first == index)) {
         shown = *scan_template_;
     }
     const std::string directory = scan_session_->datasets().directory;
@@ -1106,6 +1120,31 @@ void ProjectViewModel::applyDatasetView(std::uint64_t request, int index, Datase
         return;
     }
     view_applied_ = request;
+    // The fit's pattern of a followed file goes with that file's view, and only while the scan runs.
+    if (follow_frame_ && follow_frame_->first == index && fit_ != nullptr && fit_->scanning() && !view.frame) {
+        view.frame = std::move(follow_frame_->second);
+    }
+    follow_frame_.reset();
+    // A followed file is counted and the next one asked for once the chart is drawn with it, or released undrawn
+    // when this read ends without it; any other view lets a followed scan move to its newest finished file.
+    const bool followed = index == follow_index_ && !follow_file_.empty();
+    if (followed && fit_ != nullptr && fit_->running() && fit_->scanning() && !patternShown()) {
+        // No pattern chart is shown: the file is not applied, and the next one is asked for when a chart is.
+        followRendered(false);
+        return;
+    }
+    bool applied = false;
+    const auto shown = qScopeGuard([this, followed, &applied] {
+        if (followed) {
+            if (applied) {
+                awaitRender();
+            } else {
+                followRendered(false);
+            }
+        } else if (fit_ != nullptr) {
+            fit_->followShown();
+        }
+    });
     if (!scan_ || (fit_ != nullptr && fit_->running() && !fit_->scanning())) {
         publishCalculating();
         return;
@@ -1129,7 +1168,11 @@ void ProjectViewModel::applyDatasetView(std::uint64_t request, int index, Datase
         publishCalculating();
         return;
     }
-    current_dataset_ = index;
+    // A followed scan may have marked newer files while this one was read: the current dataset stays the newest
+    // finished one, and only the pattern shown is this file's (edi ADR-0029).
+    if (fit_ == nullptr || !fit_->following()) {
+        current_dataset_ = index;
+    }
     projected_dataset_ = index;
     syncDataset(index);
     publishCurrent();
@@ -1138,6 +1181,7 @@ void ProjectViewModel::applyDatasetView(std::uint64_t request, int index, Datase
     } else if (!view.error.isEmpty()) {
         setLastError(view.error);
     }
+    applied = true;
 }
 
 void ProjectViewModel::syncOutOfDate() {
@@ -1378,17 +1422,138 @@ int ProjectViewModel::scanFileFitted(const edi::ScanFileRecord& record) {
     return index;
 }
 
-void ProjectViewModel::followScanFile(const std::string& file) {
+void ProjectViewModel::markScanFile(const std::string& file) {
+    const int index = scan_ && scan_session_ != nullptr ? scan_session_->place(file) : -1;
+    if (index < 0 || index == current_dataset_) {
+        return;
+    }
+    current_dataset_ = index;
+    syncDataset(index);
+    emit currentExperimentIndexChanged();
+}
+
+void ProjectViewModel::followScanFile(const std::string& file, std::uint64_t token) {
     // Each file as it is fitted: a lookup by name and one read, off the GUI thread.
     if (const int index = scan_session_ != nullptr ? scan_session_->place(file) : -1; index >= 0) {
+        handFollowed(index, file, token);
+        follow_issuing_ = true;
         viewDataset(index, true);
+        follow_issuing_ = false;
+    } else if (fit_ != nullptr) {
+        fit_->followRendered(token, file, false);
     }
 }
 
-void ProjectViewModel::showScanFrame(const std::string& file, const edi::FitFrame& frame) {
-    // The fitted file's pattern, calculated by the job from the same row, for the chart.
-    if (scan_session_ != nullptr && scan_session_->place(file) == current_dataset_ && current_dataset_ >= 0) {
-        showFitFrame(frame);
+void ProjectViewModel::followScanFrame(const std::string& file, const edi::FitFrame& frame, std::uint64_t token) {
+    // The file's data are still read off the GUI thread for the model; its pattern is the one given.
+    if (const int index = scan_session_ != nullptr ? scan_session_->place(file) : -1; index >= 0) {
+        handFollowed(index, file, token);
+        follow_frame_.emplace(index, frame);
+        follow_issuing_ = true;
+        viewDataset(index, true);
+        follow_issuing_ = false;
+    } else if (fit_ != nullptr) {
+        fit_->followRendered(token, file, false);
+    }
+}
+
+namespace {
+
+constexpr int kRenderWaitMs = 2000;
+
+// The window the chart is drawn in: the app's application window, or a test's only Qt Quick window.
+QQuickWindow* chart_window() {
+    QQuickWindow* shown = nullptr;
+    for (QWindow* window : QGuiApplication::topLevelWindows()) {
+        auto* quick = qobject_cast<QQuickWindow*>(window);
+        if (quick == nullptr) {
+            continue;
+        }
+        if (quick->inherits("QQuickApplicationWindow")) {
+            return quick;
+        }
+        if (shown == nullptr && quick->isVisible()) {
+            shown = quick;
+        }
+    }
+    return shown;
+}
+
+}  // namespace
+
+void ProjectViewModel::handFollowed(int index, const std::string& file, std::uint64_t token) {
+    followRendered(false);  // an earlier file still waiting is not counted
+    follow_index_ = index;
+    follow_file_ = file;
+    follow_token_ = token;
+    follow_generation_ = 0;
+    const ExperimentViewModel* experiment = currentExperiment();
+    follow_before_ = experiment != nullptr ? experiment->patternGeneration() : 0;
+    render_swaps_ = -1;
+    render_wait_.start(kRenderWaitMs);
+}
+
+bool ProjectViewModel::presentedFollowed() const {
+    // The model still holds the followed dataset, and a shown chart has drawn its pattern (the one its application
+    // set, or a later calculation of the same dataset).
+    const ExperimentViewModel* experiment = currentExperiment();
+    return experiment != nullptr && experiment->patternShown() && follow_generation_ != 0 &&
+           projected_dataset_ == follow_index_ && experiment->presentedGeneration() >= follow_generation_;
+}
+
+bool ProjectViewModel::patternShown() const {
+    const ExperimentViewModel* experiment = currentExperiment();
+    return experiment != nullptr && experiment->patternShown();
+}
+
+void ProjectViewModel::awaitRender() {
+    // The application must have set a new pattern: one that failed leaves the previous file's on the chart.
+    const ExperimentViewModel* experiment = currentExperiment();
+    const std::uint64_t generation = experiment != nullptr ? experiment->patternGeneration() : 0;
+    follow_generation_ = generation != follow_before_ ? generation : 0;
+    QQuickWindow* window = chart_window();
+    if (window == nullptr || !presentedFollowed()) {
+        followRendered(false);
+        return;
+    }
+    if (!render_connection_) {
+        // Swaps can be reported on the render thread; the count is kept on this one. The first swap may be a frame
+        // already under way when the dataset was applied, so one more is asked for and the second one counts.
+        render_connection_ = connect(
+            window, &QQuickWindow::frameSwapped, this,
+            [this, window] {
+                if (render_swaps_ <= 0) {
+                    return;
+                }
+                if (!presentedFollowed()) {
+                    followRendered(false);  // hidden, or another pattern replaced it, before it was drawn
+                } else if (--render_swaps_ == 0) {
+                    followRendered(true);
+                } else {
+                    window->update();
+                }
+            },
+            Qt::QueuedConnection);
+    }
+    render_swaps_ = 2;
+    render_wait_.start(kRenderWaitMs);
+    window->update();
+}
+
+void ProjectViewModel::followRendered(bool drawn) {
+    if (follow_file_.empty()) {
+        return;
+    }
+    const std::string file = std::move(follow_file_);
+    const std::uint64_t token = follow_token_;
+    follow_file_.clear();
+    follow_index_ = -1;
+    follow_token_ = 0;
+    follow_generation_ = 0;
+    render_swaps_ = -1;
+    render_wait_.stop();
+    if (fit_ != nullptr) {
+        fit_->followRendered(token, file, drawn);
     }
 }
 
@@ -1989,8 +2154,16 @@ void ProjectViewModel::syncBlocks() {
             for (ExperimentViewModel* model : experiment_models_) {
                 found = model->experiment() == &block ? model : found;
             }
-            next.append(found != nullptr ? found
-                                         : new ExperimentViewModel(savedFileFunction(), *project_, block, *this, *registry_, this));
+            if (found == nullptr) {
+                found = new ExperimentViewModel(savedFileFunction(), *project_, block, *this, *registry_, this);
+                // A followed scan waits for a shown pattern chart; one shown again asks for the next pattern.
+                connect(found, &ExperimentViewModel::patternShownChanged, this, [this, found] {
+                    if (fit_ != nullptr && found == currentExperiment()) {
+                        fit_->patternShownChanged();
+                    }
+                });
+            }
+            next.append(found);
         }
         for (ExperimentViewModel* model : experiment_models_) {
             if (!next.contains(model)) {

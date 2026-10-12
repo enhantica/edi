@@ -276,12 +276,26 @@ void ExperimentViewModel::capturePattern() {
         }
     }
     pattern_source_ = edi::capture_pattern(project_, place);
+    ++pattern_generation_;
     emit patternSourceChanged();
 }
 
 void ExperimentViewModel::showPattern(edi::PatternSource source) {
     pattern_source_ = std::move(source);
+    ++pattern_generation_;
     emit patternSourceChanged();
+}
+
+void ExperimentViewModel::setChartShown(const QObject* chart, bool shown) {
+    const bool was = patternShown();
+    if (shown) {
+        shown_charts_.insert(chart);
+    } else {
+        shown_charts_.remove(chart);
+    }
+    if (patternShown() != was) {
+        emit patternShownChanged();
+    }
 }
 
 void ExperimentViewModel::markPatternStale() {

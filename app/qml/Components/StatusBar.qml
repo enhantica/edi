@@ -140,6 +140,11 @@ EaElements.StatusBar {
 
         readonly property bool running: bar.fit !== null && bar.fit.running
         readonly property bool scanning: bar.fit !== null && bar.fit.scanning
+        // The pattern-update mode, the patterns a scan has drawn and the file drawn last (the browser checks read
+        // them).
+        readonly property int patternUpdates: bar.fit !== null ? bar.fit.patternUpdates : -1
+        readonly property int scanPatternUpdates: bar.fit !== null ? bar.fit.scanPatternUpdates : 0
+        readonly property string scanShownFile: bar.fit !== null ? bar.fit.scanShownFile : ""
         // The ok and fail counts: an ok count above zero in green, a fail count above zero in red.
         function counts() {
             const ok = qsTr("%1 ok").arg(bar.fit.scanOk);

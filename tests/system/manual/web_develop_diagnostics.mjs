@@ -33,8 +33,8 @@ export async function inspectDevelopDiagnostics(evaluate, frame, mode, record, c
     assert(backend && Number.isInteger(workerCount) && simd,
       'Develop must show engine backend, actual worker count and SIMD state');
     if (mode === 'singlethread') {
-      assert(/serial/i.test(backend) && workerCount === 1 && /^(no|off|disabled)$/i.test(simd),
-        'The serial browser route must report its serial scalar engine');
+      assert(/serial/i.test(backend) && workerCount === 1 && /^(yes|on|enabled)$/i.test(simd),
+        'The serial browser route must report one serial engine worker with SIMD');
     } else {
       assert(/std.?thread|thread.?pool/i.test(backend) && workerCount > 1 && /^(yes|on|enabled)$/i.test(simd),
         'Both isolated browser routes must report the active thread backend and SIMD');
