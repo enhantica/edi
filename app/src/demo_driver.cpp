@@ -910,6 +910,16 @@ std::vector<double> parameter_values(const edi::Project& project) {
     return values;
 }
 
+// Whether a fit record still holds correlations; a build whose record has none has none left.
+template <typename Record>
+bool correlations_left(const Record& record) {
+    if constexpr (requires { record.correlations.empty(); }) {
+        return !record.correlations.empty();
+    } else {
+        return false;
+    }
+}
+
 void delay_from_environment() {
     const int ms = qEnvironmentVariableIntValue("EDI_DEMO_DELAY_MS");
     if (ms > 0) {
@@ -1039,10 +1049,8 @@ bool DemoDriver::timed_reset() {
         if (problem.isEmpty() && project->project().fit_result.held()) {
             problem = QStringLiteral("a fit result is left");
         }
-        if constexpr (requires { project->project().fit_result.correlations; }) {
-            if (problem.isEmpty() && !project->project().fit_result.correlations.empty()) {
-                problem = QStringLiteral("correlations are left");
-            }
+        if (problem.isEmpty() && correlations_left(project->project().fit_result)) {
+            problem = QStringLiteral("correlations are left");
         }
         if (problem.isEmpty() && parameter_values(project->project()) != pre_fit_values_) {
             problem = QStringLiteral("the model does not hold its pre-fit values");
