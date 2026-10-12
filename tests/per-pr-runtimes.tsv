@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-12T07:39:56Z
+# measured_utc = 2026-10-12T08:11:39Z
 #
-# Recorded from: edi-final-format.log (48 node(s) measured once, 9691 banked, 7 stale row(s) dropped)
+# Recorded from: edi-pin-after.log (1 node(s) measured once, 9729 banked, 0 stale row(s) dropped)
 # Collected tests: 10483; with a reported duration: 5373
 # Module-scoped fixture costs recorded: 35
 #
@@ -1774,7 +1774,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_nonfinite_value_or_slope_refuses_the_strict_load[log_0_]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_nonfinite_value_or_slope_refuses_the_strict_load[sqrt_-a_]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_nonfinite_value_or_slope_refuses_the_strict_load[sqrt_0_]
-0.030	tests/integration/py/test_constraint_contract.py::test_projects_without_constraints_keep_the_pre_feature_writer_regression_pin
+0.020	tests/integration/py/test_constraint_contract.py::test_projects_without_constraints_keep_the_pre_feature_writer_regression_pin
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_python_free_flag_warns_without_redirecting_to_a_leader[cell]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_python_free_flag_warns_without_redirecting_to_a_leader[position]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_python_free_flag_warns_without_redirecting_to_a_leader[user]

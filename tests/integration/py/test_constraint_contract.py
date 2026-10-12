@@ -375,15 +375,18 @@ def test_projects_without_constraints_keep_the_pre_feature_writer_regression_pin
     fixture = ROOT / 'tests/fixtures/constraint_expressions'
     snapshot = runpy.run_path(str(fixture / 'freeze_unconstrained.py'))['snapshot']
     expected = json.loads((fixture / 'unconstrained_regression.json').read_text())
+    from tests.fixtures.fitting_modes.historical_bytes import historical_analysis  # noqa: PLC0415
     from tests.fixtures.table_display.stored_id_bytes import ordinal_copy  # noqa: PLC0415
 
     source = MATERIALIZE(tmp_path / 'input')
     project = engine.Project.load(source)
     project.save_as(tmp_path / 'saved')
     legacy = ordinal_copy(source, tmp_path / 'saved', tmp_path / 'ordinal-pin')
+    analysis = legacy / 'analysis/analysis.edi'
+    analysis.write_bytes(historical_analysis(source, analysis.read_bytes()))
     assert snapshot(legacy) == expected, (
         'without relation loops saved files must retain their pre-feature regression bytes, '
-        'normalizing only the two metadata clock fields'
+        'normalizing the metadata clocks, stored keys and declared inactive Joint weights'
     )
 
 
