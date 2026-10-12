@@ -2173,9 +2173,8 @@ auto parameter_slots(ProjectT& project) {
         }
         // The declared model's parameters by row (crysta fit_state.hpp) — the line-segment
         // intensities, or a polynomial or Chebyshev model's coefficients.
-        // Each row by its id, never its position (the owner, 2026-10-11), as `<experiment>.background.<id>`; the
-        // bracket spelling `background[<index>]` stays the older files' position name, which current_parameter_name
-        // reads.
+        // Each row by its id, never its position (the owner, 2026-10-11), as `<experiment>.background.<id>`. An older
+        // file's position name is refused on load (refuse_older_parameter_name).
         if (experiment.background_type == "line-segment") {
             for (const auto& point : experiment.background) {
                 add(prefix + "background." + point->id.value(),
@@ -2202,68 +2201,23 @@ auto fit_state_slots(ProjectT& project) {
     return slots;
 }
 
-// A parameter name an older file wrote while loop rows were named by position, as the project names it now, by
-// the row's id (crysta's current_parameter_name, the same rule): `<experiment>.background[<index>]` (a position from
-// 0) becomes `<experiment>.background.<id>`, `<experiment>.background.<ordinal>.coef` takes the row's id, and a one-link experiment's `<experiment>.scale`,
-// `.march_r` and `.march_random_fract` its structure. A name that resolves already, or matches none of these, is
-// returned as it is. The loader passes every alias and `_fit_parameter.id` through it.
-std::string current_parameter_name(Project& project, const std::string& name) {
-    std::set<std::string> known;
+// Only the newest format is read (the owner, 2026-10-12). A name that does not resolve and names a loop row by its
+// position (`<experiment>.background[<index>]`, `<experiment>.background.<ordinal>.coef` or `.intensity`, a one-link
+// experiment's `<experiment>.scale`, `.march_r`, `.march_random_fract`) is refused, naming it: the project was saved
+// by an older version. Any other name is left to the caller's own resolution. The loader checks every alias and
+// `_fit_parameter.id`.
+void refuse_older_parameter_name(Project& project, const std::string& name) {
     for (auto& slot : parameter_slots(project)) {
-        known.insert(slot.id);
-        known.insert(slot.unique_name);
-    }
-    if (known.contains(name)) {
-        return name;
-    }
-    const auto ordinal = [](const std::string& text) -> std::optional<std::size_t> {
-        if (text.empty() || text.size() > 9 ||
-            !std::all_of(text.begin(), text.end(), [](unsigned char c) { return std::isdigit(c) != 0; })) {
-            return std::nullopt;
-        }
-        return static_cast<std::size_t>(std::stoul(text));
-    };
-    for (const auto& experiment : project.experiments) {
-        const std::string prefix = datablock_key(experiment->name, "experiment") + ".";
-        if (!name.starts_with(prefix)) {
-            continue;
-        }
-        const std::string rest = name.substr(prefix.size());
-        const bool line_segment = experiment->background_type == "line-segment";
-        const auto row_id = [&](std::size_t index) -> std::optional<std::string> {
-            if (line_segment) {
-                return index < experiment->background.size()
-                           ? std::optional<std::string>(experiment->background[index]->id.value())
-                           : std::nullopt;
-            }
-            return index < experiment->background_terms.size()
-                       ? std::optional<std::string>(experiment->background_terms[index]->id.value())
-                       : std::nullopt;
-        };
-        std::optional<std::string> candidate;
-        if (rest.starts_with("background[") && rest.ends_with("]")) {
-            if (const auto index = ordinal(rest.substr(11, rest.size() - 12))) {
-                if (const auto id = row_id(*index)) {
-                    candidate = prefix + "background." + *id;
-                }
-            }
-        } else if (!line_segment && rest.starts_with("background.") && rest.ends_with(".coef")) {
-            if (const auto number = ordinal(rest.substr(11, rest.size() - 16)); number && *number > 0) {
-                if (const auto id = row_id(*number - 1)) {
-                    candidate = prefix + "background." + *id + ".coef";
-                }
-            }
-        } else if ((rest == "scale" || rest == "march_r" || rest == "march_random_fract") &&
-                   experiment->linked_structures.size() == 1 && !project.structures.empty()) {
-            const std::string& linked = experiment->linked_structures[0]->structure_id.value();
-            const std::string structure = linked.empty() ? project.structures.front()->name.value() : linked;
-            candidate = prefix + datablock_key(structure, "structure") + "." + rest;
-        }
-        if (candidate && known.contains(*candidate)) {
-            return *candidate;
+        if (slot.id == name || slot.unique_name == name) {
+            return;
         }
     }
-    return name;
+    static const std::regex older(
+        R"(^[^.]+\.(background\[[0-9]+\]|background\.[0-9]+\.(coef|intensity)|scale|march_r|march_random_fract)$)");
+    if (std::regex_match(name, older)) {
+        throw IoError("the project was saved by an older version: '" + name +
+                      "' is an older parameter name, which this version no longer reads");
+    }
 }
 
 }  // namespace
@@ -3323,9 +3277,10 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
             for (const auto& row : aliases->rows) {
                 ParameterAlias alias;
                 alias.id = loop_cell(*aliases, row, "_alias.id", analysis_file.string());
-                // An older file's position name is read by the row's id.
-                alias.parameter_unique_name = current_parameter_name(
-                    project, loop_cell(*aliases, row, "_alias.parameter_unique_name", analysis_file.string()));
+                // An older file's position name is refused, never guessed.
+                const std::string name = loop_cell(*aliases, row, "_alias.parameter_unique_name", analysis_file.string());
+                refuse_older_parameter_name(project, name);
+                alias.parameter_unique_name = name;
                 project.aliases.push_back(std::move(alias));
             }
         }
@@ -3528,9 +3483,9 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
             const bool has_tied = fit_rows->column("_fit_parameter.start_tied") >= 0;
             std::vector<std::pair<Parameter*, std::optional<std::string>>> tied_rows;
             for (const auto& row : fit_rows->rows) {
-                // An older file's position name is read by the row's id.
-                const std::string id = current_parameter_name(
-                    project, loop_cell(*fit_rows, row, "_fit_parameter.id", analysis_file.string()));
+                // An older file's position name is refused, never guessed.
+                const std::string id = loop_cell(*fit_rows, row, "_fit_parameter.id", analysis_file.string());
+                refuse_older_parameter_name(project, id);
                 const auto slot = slot_map.find(id);
                 if (slot == slot_map.end()) {
                     throw IoError("analysis.edi: _fit_parameter row '" + id +
