@@ -4042,9 +4042,18 @@ std::vector<ItemVec<FitParameterCorrelation>::Ptr> numbered_correlations(
     const std::vector<FitParameterCorrelation>& pairs, const std::string& template_file) {
     std::vector<ItemVec<FitParameterCorrelation>::Ptr> rows;
     rows.reserve(pairs.size());
-    const auto add = [&rows](const FitParameterCorrelation& pair) {
+    std::set<std::string> taken;
+    std::size_t next = 0;
+    const auto add = [&](const FitParameterCorrelation& pair) {
         auto row = std::make_shared<FitParameterCorrelation>(pair);
-        row->id = std::to_string(rows.size() + 1);
+        if (row->id.value().empty() || taken.contains(row->id.value())) {
+            std::string fresh;
+            do {
+                fresh = std::to_string(++next);
+            } while (taken.contains(fresh));
+            row->id = fresh;
+        }
+        taken.insert(row->id.value());
         rows.push_back(std::move(row));
     };
     const auto first = [&template_file](const FitParameterCorrelation& pair) {

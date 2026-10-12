@@ -224,10 +224,10 @@ void copy_fit_result(Project& to, const Project& from);
 void clear_fit_result(Project& project);
 // A correlation row's coefficient as a number (its text, read in the C locale); NaN when it is not one.
 double correlation_value(const FitParameterCorrelation& row);
-// Correlation pairs as a record holds them (FitResultRecord::correlations): ids 1, 2, … in their order, as
-// diffraction-lib numbers its `_fit_parameter_correlation` rows. A scan's template file's pairs come first, as
-// a save keeps only those (the owner, 2026-10-12): they are numbered alike however many other files have pairs, so an
-// unchanged save after a reload writes the same ids.
+// Correlation pairs as a record holds them (FitResultRecord::correlations), each keeping its id; a pair with no id, or
+// with one an earlier pair took, gets the first free number of 1, 2, … (diffraction-lib numbers its
+// `_fit_parameter_correlation` rows so). A scan's template file's pairs come first, as a save keeps only those (the
+// owner, 2026-10-12): their ids are never the ones replaced, so an unchanged save after a reload writes the same loop.
 std::vector<ItemVec<FitParameterCorrelation>::Ptr> numbered_correlations(
     const std::vector<FitParameterCorrelation>& pairs, const std::string& template_file = {});
 
