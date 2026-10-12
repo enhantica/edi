@@ -7,7 +7,8 @@
 extern crysta::FitResultBase scan_contract_real_sequential(crysta::Project&,
                                                            const crysta::IterationCallback&,
                                                            const crysta::CancelCallback&,
-                                                           const crysta::FileCompleteCallback&);
+                                                           const crysta::FileCompleteCallback&,
+                                                           const crysta::FileResultCallback&);
 
 crysta::FitResultBase scan_contract_optimizer(crysta::Project& project,
                                               const crysta::IterationCallback& iteration,
@@ -22,6 +23,7 @@ extern crysta::FitResultBase scan_contract_real_fit(crysta::Project&,
                                                     const crysta::CancelCallback&,
                                                     const crysta::FileCompleteCallback&);
 void scan_contract_before_dataset_read(const std::string&);
+void scan_contract_file_result_observed(const std::string&);
 
 namespace crysta {
 PdDataBase read_sequential_scan_data(const std::string& path) {
@@ -36,12 +38,18 @@ FitResultBase fit_project(Project& project, const IterationCallback& iteration,
 
 FitResultBase sequential_fit_project(Project& project, const IterationCallback& iteration,
                                      const CancelCallback& cancel,
-                                     const FileCompleteCallback& complete) {
+                                     const FileCompleteCallback& complete,
+                                     const FileResultCallback& file_result) {
     const FileCompleteCallback observed = [&](const std::vector<std::string>& row) {
         if (complete) complete(row);
         scan_contract_work_receipt(std::filesystem::path(row.at(0)).filename().string());
+    };
+    const FileResultCallback observed_result = [&](const std::vector<std::string>& row,
+                                                   const FitResultBase& result) {
+        if (file_result) file_result(row, result);
+        scan_contract_file_result_observed(std::filesystem::path(row.at(0)).filename().string());
         scan_contract_file_completed(std::filesystem::path(row.at(0)).filename().string());
     };
-    return scan_contract_real_sequential(project, iteration, cancel, observed);
+    return scan_contract_real_sequential(project, iteration, cancel, observed, observed_result);
 }
 }  // namespace crysta
