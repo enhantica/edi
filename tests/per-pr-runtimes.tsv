@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-12T07:18:18Z
+# measured_utc = 2026-10-12T07:36:35Z
 #
-# Recorded from: saved-bytes-fixed.log (34 node(s) measured once, 9652 banked, 0 stale row(s) dropped)
-# Collected tests: 10438; with a reported duration: 5358
+# Recorded from: seq43/plain-final.log and seq38/native-edi-final.log; isolated complete collection; native six-case measurements
+# Collected tests: 10450; with a reported duration: 5374
 # Module-scoped fixture costs recorded: 35
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 10438
-# inventory_cpp = 306
-# inventory_measured = 9686
+# inventory_python = 10450
+# inventory_cpp = 309
+# inventory_measured = 9701
 # inventory_unmeasured = 1058
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
@@ -8263,6 +8263,10 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_phase_sum
 UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_texture_is_local_to_phase_and_invariant_under_axis_sign
 UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_two_free_scales_recover_unequal_independent_contributions
 UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_two_named_phases_load_and_roundtrip
+0.070	tests/system/py/test_plain_data_app.py::test_app_rename_follows_all_saved_references_and_undo[experiment]
+0.080	tests/system/py/test_plain_data_app.py::test_app_rename_follows_all_saved_references_and_undo[point]
+0.080	tests/system/py/test_plain_data_app.py::test_app_rename_follows_all_saved_references_and_undo[site]
+0.080	tests/system/py/test_plain_data_app.py::test_app_rename_follows_all_saved_references_and_undo[structure]
 0.120	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[one-held-name-mixed-experiment]
 0.120	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[one-held-name-mixed-structure]
 0.120	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[one-held-name-title-experiment]
@@ -8275,6 +8279,10 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_two_named
 0.120	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[two-held-names-title-structure]
 0.170	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[two-held-names-upper-experiment]
 0.120	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[two-held-names-upper-structure]
+0.080	tests/system/py/test_plain_data_app.py::test_cancelled_scan_retains_completed_core_pairs_and_resumes[fresh-independent]
+0.080	tests/system/py/test_plain_data_app.py::test_cancelled_scan_retains_completed_core_pairs_and_resumes[fresh-sequential]
+0.100	tests/system/py/test_plain_data_app.py::test_cancelled_scan_retains_completed_core_pairs_and_resumes[replace-old-pair-independent]
+0.080	tests/system/py/test_plain_data_app.py::test_cancelled_scan_retains_completed_core_pairs_and_resumes[replace-old-pair-sequential]
 0.080	tests/system/py/test_plain_data_app.py::test_default_structure_matches_frozen_beta_cif
 0.470	tests/system/py/test_plain_data_app.py::test_desktop_browser_picker_and_editability_bindings_share_load_path
 0.370	tests/system/py/test_plain_data_app.py::test_filename_and_user_name[default-name]
@@ -8370,6 +8378,10 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_multiphase.py::test_two_named
 0.220	tests/system/py/test_plain_data_app.py::test_packet_escapes_reach_the_native_actions[load-source-reopen]
 0.100	tests/system/py/test_plain_data_app.py::test_saved_data_is_self_contained_and_imported_data_can_be_replaced[cwl]
 0.110	tests/system/py/test_plain_data_app.py::test_saved_data_is_self_contained_and_imported_data_can_be_replaced[tof]
+0.140	tests/system/py/test_plain_data_app.py::test_single_fit_in_scan_shows_saves_and_undoes_its_own_matrix[after-scan-independent]
+0.150	tests/system/py/test_plain_data_app.py::test_single_fit_in_scan_shows_saves_and_undoes_its_own_matrix[after-scan-sequential]
+0.100	tests/system/py/test_plain_data_app.py::test_single_fit_in_scan_shows_saves_and_undoes_its_own_matrix[fresh-independent]
+0.100	tests/system/py/test_plain_data_app.py::test_single_fit_in_scan_shows_saves_and_undoes_its_own_matrix[fresh-sequential]
 0.000	tests/system/py/test_pytest_child_environment.py::test_parent_options_do_not_reach_nested_pytest[basetemp]
 0.000	tests/system/py/test_pytest_child_environment.py::test_parent_options_do_not_reach_nested_pytest[keyword]
 0.000	tests/system/py/test_pytest_child_environment.py::test_parent_options_do_not_reach_nested_pytest[marker]
@@ -9355,8 +9367,11 @@ UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_transitions.cpp::Na
 0.067	tests/unit/cpp/test_cwl_admission.cpp::CW native optional profile slots use declared defaults
 0.026	tests/unit/cpp/test_cwl_admission.cpp::CW native save admits only a matching token and slot block
 0.005	tests/unit/cpp/test_cwl_admission.cpp::CW real coefficient remains selectable with the fixed limit descriptor
-0.000	tests/unit/cpp/test_datablock_rename.cpp::Experiment rename follows all relation categories and exact name boundaries
-0.001	tests/unit/cpp/test_datablock_rename.cpp::Refused datablock rename preserves every reference
+0.001	tests/unit/cpp/test_datablock_rename.cpp::Experiment rename follows all relation categories and exact name boundaries
+0.001	tests/unit/cpp/test_datablock_rename.cpp::Phase rename follows experiment-owned link and texture parameter references
+0.001	tests/unit/cpp/test_datablock_rename.cpp::Point and coefficient key edits follow aliases and both endpoints
+0.002	tests/unit/cpp/test_datablock_rename.cpp::Refused datablock rename preserves every reference
+0.009	tests/unit/cpp/test_datablock_rename.cpp::Site and tensor key edits follow every coordinate and ADP reference
 0.001	tests/unit/cpp/test_datablock_rename.cpp::Structure rename follows all relation categories and exact name boundaries
 UNMEASURED:not-produced-by-this-run	tests/unit/cpp/test_e04_t10_scene.cpp::E04-T10 gate 1 every CLI scene equals independently loaded crysta geometry
 0.030	tests/unit/cpp/test_e05_t1_fit_job.cpp::E05-T1 gate 3 engine checkpoint cancel retains partial values and undo
@@ -10812,7 +10827,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 1.762	tests/system/py/test_e09_t58_start_tied_numeric.py
 # module-cost: 0.346	tests/system/py/test_e09_t75_native_execution.py
 # module-cost: 3.929	tests/system/py/test_fit_participants_native.py
-# module-cost: 158.231	tests/system/py/test_plain_data_app.py
+# module-cost: 160.285	tests/system/py/test_plain_data_app.py
 # module-cost: 21.241	tests/system/py/test_pytest_child_environment.py
 # module-cost: 349.085	tests/system/py/test_scan_accident_paths.py
 # module-cost: 557.564	tests/system/py/test_scan_app_execution.py
