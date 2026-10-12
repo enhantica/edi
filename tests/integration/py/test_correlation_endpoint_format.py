@@ -10,8 +10,11 @@ from tests.integration.py.test_newest_project_format import OLDER
 
 ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / 'tests/fixtures/loop_parameter_ids'
+HISTORY = [(kind, name) for kind, name in OLDER if '[' not in name and name.count('.') > 1]
+RETIRED = [item for item in OLDER if item not in HISTORY]
+
 COEFFICIENT = '-.6257812345678901'
-FILE = 'experiments/scan/bank.background[0].xye'
+FILE = 'bank.background[0].xye'
 
 
 def correlation_loop(endpoint, identity, per_file, kind):
@@ -45,14 +48,15 @@ def stage(kind, endpoint, identity, per_file, destination):
         text = text.replace('_fitting_mode.type single', '_fitting_mode.type sequential')
         text += '\n_sequential_fit.data_dir experiments/scan\n'
         text += '_sequential_fit.file_pattern *.xye\n'
+        text += '_sequential_fit.template_file ' + FILE + '\n'
         scan = destination / 'experiments/scan'
         scan.mkdir()
-        (destination / FILE).write_text('40 5.125 1\n44 6.375 1\n')
+        (scan / FILE).write_text('40 5.125 1\n44 6.375 1\n')
     analysis.write_text(text + '\n' + correlation_loop(endpoint, identity, per_file, kind))
     return destination
 
 
-@pytest.mark.parametrize(('kind', 'older'), OLDER)
+@pytest.mark.parametrize(('kind', 'older'), RETIRED)
 @pytest.mark.parametrize('endpoint', [0, 1], ids=['i', 'j'])
 @pytest.mark.parametrize('per_file', [False, True], ids=['global', 'scan-file'])
 def test_old_correlation_endpoint_is_a_short_named_refusal(
@@ -85,7 +89,12 @@ def test_current_numeric_row_endpoint_and_coefficient_text_roundtrip(endpoint, p
     bank = source / 'experiments/bank.edi'
     bank.write_text(bank.read_text().replace('pA 10.011 4()', '1 10.011 4()'))
     analysis = source / 'analysis/analysis.edi'
-    analysis.write_text(analysis.read_text().replace('bank.background.pA.intensity', current))
+    prefix, pairs = analysis.read_text().split('loop_\n_fit_parameter_correlation.id', 1)
+    analysis.write_text(
+        prefix.replace('bank.background.pA.intensity', current)
+        + 'loop_\n_fit_parameter_correlation.id'
+        + pairs.replace('bank.background.pA.intensity', 'bank.background.pB.intensity')
+    )
     model = engine.Project.load(source)
     model.save_as(tmp_path / 'first')
     saved = (tmp_path / 'first/analysis/analysis.edi').read_text()
@@ -100,4 +109,26 @@ def test_current_numeric_row_endpoint_and_coefficient_text_roundtrip(endpoint, p
     engine.Project.load(tmp_path / 'first').save_as(tmp_path / 'second')
     assert (tmp_path / 'second/analysis/analysis.edi').read_bytes() == saved.encode(), (
         'Current endpoint names, coefficient text and optional file association roundtrip exactly'
+    )
+
+
+@pytest.mark.parametrize(('kind', 'identity'), HISTORY)
+@pytest.mark.parametrize('endpoint', [0, 1], ids=['i', 'j'])
+@pytest.mark.parametrize('per_file', [False, True], ids=['global', 'scan-file'])
+def test_current_historical_numeric_endpoint_survives_without_its_live_row(
+    kind, identity, endpoint, per_file, tmp_path
+):
+    source = stage(kind, endpoint, identity, per_file, tmp_path / 'input')
+    model = engine.Project.load(source)
+    model.save_as(tmp_path / 'first')
+    saved = (tmp_path / 'first/analysis/analysis.edi').read_text()
+    assert identity in saved.split(), (
+        'A current numeric historical endpoint remains valid after its live row is absent'
+    )
+    assert COEFFICIENT in saved.split(), (
+        'Historical identity retention preserves the original correlation coefficient text'
+    )
+    engine.Project.load(tmp_path / 'first').save_as(tmp_path / 'second')
+    assert (tmp_path / 'second/analysis/analysis.edi').read_bytes() == saved.encode(), (
+        'Current historical endpoints retain their bytes through unchanged reload and save'
     )
