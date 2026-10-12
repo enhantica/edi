@@ -99,7 +99,7 @@ def _joint_path(label: str, reference) -> str:
             'calib_d_to_tof_offset': 'instrument.calib_d_to_tof_offset',
             'calib_d_to_tof_linear': 'instrument.calib_d_to_tof_linear',
             'calib_d_to_tof_quadratic': 'instrument.calib_d_to_tof_quadratic',
-            'scale': f'linked_structures[{reference[bank]['structure']}].scale',
+            'scale': f'linked_structures[{reference[bank]["structure"]}].scale',
             'abscor1': 'absorption.abscor1',
         }
         background = re.fullmatch(r'background\[(\d+)\]', field)

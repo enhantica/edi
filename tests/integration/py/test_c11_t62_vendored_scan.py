@@ -46,9 +46,9 @@ def test_cli_scan_contains_the_original_inputs():
         if relative == 'analysis/analysis.edi':
             # Before: positional archived slots. After: declared IDs, with every other byte kept.
             contents = historical_fit_ids(project, contents)
-        assert (
-            hashlib.sha256(original_tokens(contents)).hexdigest() == expected_digest
-        ), f' scope 1: original owner scan bytes must be preserved: {relative}'
+        assert hashlib.sha256(original_tokens(contents)).hexdigest() == expected_digest, (
+            f' scope 1: original owner scan bytes must be preserved: {relative}'
+        )
 
 
 def test_cli_full_scan_has_every_reversed_temperature_pair():

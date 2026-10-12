@@ -274,6 +274,5 @@ def test_scan_persists_only_declared_templates_external_pairs_on_save_and_reload
         )
     twice = saved_analysis(edi.Project.load(tmp_path / 'once'), tmp_path / 'twice')
     assert once == twice, (
-        'Save and load must preserve the template correlation and its '
-        'association byte-for-byte'
+        'Save and load must preserve the template correlation and its association byte-for-byte'
     )
