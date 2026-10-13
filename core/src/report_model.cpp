@@ -599,18 +599,11 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
     const std::string& rule = project.su_rule;
     ReportModel model;
     model.generated = options.generated.empty() ? utc_now() : options.generated;
-    // Every item goes into the contents; one the options leave out, or one under it, is marked and not built.
-    const auto add = [&model, &options](const std::string& key, const std::string& title, int depth, bool above) {
-        const bool included =
-            above && std::find(options.hidden.begin(), options.hidden.end(), key) == options.hidden.end();
-        model.contents.push_back({key, title, depth, included});
-        return included;
-    };
-    const auto section = [&model, &add](ReportSection which, const std::string& title) {
-        const bool included = add(report_section_name(which), title, 0, true);
-        if (included) {
-            model.sections.push_back(which);
-        }
+    // The optional groups (the owner, 2026-10-13): each in the contents, marked whether the options leave it out.
+    // Everything else is always in the report.
+    const auto group = [&model, &options](const std::string& key, const std::string& title) {
+        const bool included = std::find(options.hidden.begin(), options.hidden.end(), key) == options.hidden.end();
+        model.contents.push_back({key, title, included});
         return included;
     };
     model.name = project.metadata.name;
@@ -624,54 +617,34 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
         model.experiment_ids.push_back(experiment->name.value());
     }
     model.fitted = scan_mode ? scan && scan->row.has_value() : project.fit_result.held();
-    section(ReportSection::Summary, "Project summary");
-    const bool analysis = section(ReportSection::Analysis, "Analysis");
-    for (ReportCategory& part : analysis_of(project, scan, model.fitted)) {
-        if (add("analysis/" + part.id, part.title, 1, analysis)) {
-            model.analysis.push_back(std::move(part));
-        }
-    }
-    const bool structures = section(ReportSection::Structures, "Structures");
+    group("charts", "Charts");
+    const bool correlations = group("correlations", "Correlations");
+    const bool reflections = group("reflections", "Reflections");
+    const bool measured = group("measured_data", "Measured data");
+    const bool evolution = scan_mode && group("evolution", "Evolution");
+    model.sections = {ReportSection::Summary, ReportSection::Analysis, ReportSection::Structures,
+                      ReportSection::Experiments};
+    model.analysis = analysis_of(project, scan, model.fitted);
     for (const auto& structure : project.structures) {
-        ReportStructure built = structure_of(*structure, rule);
-        const std::string key = "structures/" + built.id;
-        const bool shown = add(key, built.id, 1, structures);
-        std::vector<ReportCategory> kept;
-        for (ReportCategory& part : built.categories) {
-            if (add(key + "/" + part.id, part.title, 2, shown)) {
-                kept.push_back(std::move(part));
-            }
-        }
-        if (shown) {
-            built.categories = std::move(kept);
-            model.structures.push_back(std::move(built));
-        }
+        model.structures.push_back(structure_of(*structure, rule));
     }
-    const bool experiments = section(ReportSection::Experiments, "Experiments");
     for (const auto& experiment : project.experiments) {
         ReportExperiment built = experiment_of(*experiment, rule);
-        const std::string key = "experiments/" + built.id;
-        const bool shown = add(key, built.id, 1, experiments);
-        std::vector<ReportCategory> kept;
-        for (ReportCategory& part : built.categories) {
-            if (add(key + "/" + part.id, part.title, 2, shown)) {
-                kept.push_back(std::move(part));
-            }
-        }
-        if (shown) {
-            built.categories = std::move(kept);
-            model.experiments.push_back(std::move(built));
-        }
+        std::erase_if(built.categories, [reflections, measured](const ReportCategory& part) {
+            return (part.id == "refln" && !reflections) || (part.id == "data" && !measured);
+        });
+        model.experiments.push_back(std::move(built));
     }
-    if (section(ReportSection::Correlations, "Correlations")) {
+    if (correlations) {
+        model.sections.push_back(ReportSection::Correlations);
         model.correlations =
             correlations_of(project, options.correlation_level,
                             scan ? &scan->file : scan_mode ? &project.sequential_fit.template_file : nullptr,
                             model.fitted);
     }
     // A scan's parameters across its datasets.
-    if (scan_mode) {
-        section(ReportSection::Evolution, "Evolution");
+    if (evolution) {
+        model.sections.push_back(ReportSection::Evolution);
     }
     return model;
 }
