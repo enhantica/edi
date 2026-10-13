@@ -24,10 +24,12 @@ def main():
     gui = source / 'EasyApplication/Gui'
     tab = (gui / 'Elements/TabBar.qml').read_text()
     colours = (gui / 'Style/Colors.qml').read_text()
+    sizes = (gui / 'Style/Sizes.qml').read_text()
     reference = {
         'gui_pin': PIN,
         'source_tree_sha256': SOURCE_SHA256,
-        'sources': ['Elements/TabBar.qml', 'Style/Colors.qml'],
+        'sources': ['Elements/TabBar.qml', 'Style/Colors.qml', 'Style/Sizes.qml'],
+        'border': int(re.search(r'property int borderThickness:\s*(\d+)', sizes)[1]),
         'width': int(re.search(r'height:\s*(\d+)', tab)[1]),
         'move_duration': int(re.search(r'highlightMoveDuration:\s*(\d+)', tab)[1]),
     }

@@ -108,15 +108,16 @@ Item {
                 group.selected = table.itemAtIndex(index).parameter;
         }
         function bars() {
-            return Render.descendants(table).filter(item => item.visible && item.opacity > 0 && item.color && String(item.color) === String(Style.Colors.themeAccent) && item.width === styleReference.width && item.height >= table.tableRowHeight - 0.5);
+            return Render.descendants(table).filter(item => item.visible && item.opacity > 0 && item.color && String(item.color) === String(Style.Colors.themeAccent) && item.width > 0 && item.width <= 3 && item.height >= table.tableRowHeight - 0.5);
         }
         function settled(index) {
             const row = table.itemAtIndex(index);
             verify(row !== null, "The selected row exists in the actual table viewport");
             tryVerify(() => bars().length === 1 && Math.abs(bars()[0].mapToItem(table, 0, 0).y - row.mapToItem(table, 0, 0).y) < 0.5, 1500, "Exactly one accent bar follows the current row inside the drawn table");
             const bar = bars()[0];
+            compare(bar.width, styleReference.width, "The current-row accent has the pinned tab underline width");
             const at = bar.mapToItem(row, 0, 0);
-            verify(Math.abs(at.x) < 0.5 && Math.abs(at.y) < 0.5, "The accent starts at the selected row's left edge");
+            verify(Math.abs(at.x - styleReference.border) < 0.5 && Math.abs(at.y) < 0.5, "The accent starts at the selected row's left edge");
             compare(bar.height, row.height, "The accent covers the full logical row height");
             const inTable = bar.mapToItem(table, 0, 0);
             verify(inTable.x >= 0 && inTable.x + bar.width <= table.width, "The accent remains inside the table frame");
@@ -142,7 +143,15 @@ Item {
             tryVerify(() => Render.descendants(row).some(item => item.color && String(item.color).toLowerCase() === styleReference.hover[themeKey] && item.width === row.width && item.height === row.height && item.opacity > 0.99), 1500, "The actual non-current row retains the pinned base hover background");
             settled(0);
             compare(data.kind === "parameters" ? group.selected : data.kind === "structures" ? Session.project.currentStructureIndex : Session.project.currentExperimentIndex, data.kind === "parameters" ? table.itemAtIndex(0).parameter : 0, "Hover alone does not change the current row");
-            mouseClick(row, 8, row.height / 2, Qt.LeftButton, Qt.NoModifier, table.pressDelay + 1);
+            const number = Render.cells(row)[0];
+            verify(number !== undefined, "The row click reaches its actual number cell");
+            mouseMove(number, number.width / 2, number.height / 2);
+            renderFrame();
+            mousePress(number, number.width / 2, number.height / 2, Qt.LeftButton, Qt.NoModifier);
+            wait(table.pressDelay + 20);
+            renderFrame();
+            mouseRelease(number, number.width / 2, number.height / 2, Qt.LeftButton, Qt.NoModifier);
+            verify(bars().length === 1, "Clicking a row never draws a second immediate accent beside the moving bar");
             settled(1);
         }
         function test_move_matches_tab_animation_data() {
@@ -167,6 +176,7 @@ Item {
             let intermediate = 0;
             const begun = Date.now();
             while (Date.now() - begun < 450) {
+                wait(5);
                 renderFrame();
                 verify(bars().length === 1, "The moving accent remains a single visible bar");
                 const x = (reference.highlightItem.x - startX) / 120;
