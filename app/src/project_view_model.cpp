@@ -184,6 +184,8 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     published_name_ = name();
     published_title_ = title();
     published_description_ = description();
+    published_authors_ = authors();
+    published_su_rule_ = suRule();
     published_last_modified_ = lastModified();
     published_structure_index_ = current_structure_;
     published_experiment_index_ = current_experiment_;
