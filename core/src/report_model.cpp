@@ -371,13 +371,14 @@ ReportStructure structure_of(const Structure& structure, const std::string& rule
                 }
             } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — no positions: the column stays empty
             }
-            next.table.columns = {"Label", "Type", "x", "y", "z", "Wyckoff", "Mult.", "Occ.", "ADP (Å²)", "ADP type"};
+            // The Wyckoff position as the International Tables write it, the multiplicity then the letter (`1a`).
+            next.table.columns = {"Label", "Type", "x", "y", "z", "Wyckoff", "Occ.", "ADP (Å²)", "ADP type"};
             for (const auto& site : structure.atom_sites) {
-                const auto found = multiplicity.find(site->wyckoff_letter.value());
+                const std::string& letter = site->wyckoff_letter.value();
+                const auto found = multiplicity.find(letter);
                 next.table.rows.push_back({site->id.value(), site->type_symbol.value(), value_of(site->fract_x, rule).text,
                                            value_of(site->fract_y, rule).text, value_of(site->fract_z, rule).text,
-                                           site->wyckoff_letter.value(),
-                                           found != multiplicity.end() ? std::to_string(found->second) : "",
+                                           found != multiplicity.end() ? std::to_string(found->second) + letter : letter,
                                            value_of(site->occupancy, rule).text, value_of(site->adp_iso, rule).text,
                                            site->adp_type.value()});
             }
