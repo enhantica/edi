@@ -40,3 +40,21 @@ pseudo-Voigt + BeBa. The executable page fits widths, mixing and the four
 coefficients from the issue-166 start and labels its bounds as regression
 pins. Its file is added, but it does not count toward diffraction-lib parity.
 Only the two LiF additions move that counter.
+
+Fit anchoring uses Bragg's law, `2 theta = 2 asin(lambda / (2 d))`.
+Jointly dilating a cell and its free wavelength leaves that line's positions
+unchanged. A participating fixed positive second wavelength instead has
+`d(2 theta)/d d = -lambda / (d^2 sqrt(1 - (lambda/(2 d))^2))`, which is nonzero.
+The authored graph table therefore admits exactly components connected to an
+active fixed second line; unrelated components, disabled bridges and inactive
+banks carry no anchor. Both free wavelengths retain the dilation null direction.
+The two wavelengths and nonzero ratio are authored inputs, never fit output.
+
+The correlated Hill-Howard witness uses the same independently specified masses,
+volumes and free scales, with stored coefficients `rho = 0.625` and `rho = -0.375`.
+For `q_i = Z_i M_i V_i` and `D = S_0 q_0 + S_1 q_1`, the first fraction has
+`g_0 = q_0 q_1 S_1 / D^2`, `g_1 = -q_0 q_1 S_0 / D^2` and
+`variance = g_0^2 sigma_0^2 + g_1^2 sigma_1^2 + 2 g_0 g_1 rho sigma_0 sigma_1`.
+The second fraction has the negative gradient and the same variance. The signed
+cross term is checked in memory and after saving and reopening the stored loop;
+no engine covariance or fit output supplies the expected value.
