@@ -85,6 +85,18 @@ TEST_CASE("Report JSON retains hostile UTF8 text and encodes nonfinite values as
 
 #ifdef HAS_REPORT_MODEL
 namespace {
+template <class Viewport>
+void check_report_viewport(Viewport viewport) {
+    CHECK_MESSAGE((viewport.width == 800 && viewport.height == 600 && viewport.top_band == 0),
+                  "The shared report viewport retains its declared dimensions and no top band");
+    if constexpr (requires { viewport.side_band; }) {
+        // Before: {800, 600, 0}. After: reserve 120 px at both sides for the legend.
+        CHECK_MESSAGE(viewport.side_band == 120,
+                      "Every report renderer starts from the shared viewport with its legend clearance");
+    } else {
+        FAIL_CHECK("The shared report viewport must reserve the owner's legend bands");
+    }
+}
 template <class Options>
 void check_optional_group_order(Options options) {
     const auto project = edi::empty_project("empty_report", "independent option input");
@@ -109,6 +121,7 @@ void check_optional_group_order(Options options) {
 TEST_CASE("Report options retain section order and an explicitly fixed UTC timestamp") {
 #ifdef HAS_REPORT_MODEL
     check_optional_group_order(edi::ReportOptions{});
+    check_report_viewport(edi::kReportViewport);
 #else
     FAIL_CHECK("The planned versioned core report builder must exist");
 #endif

@@ -54,7 +54,12 @@ def children(source, start, end):
 
 def table_cells(source):
     masked = mask(source)
-    match = re.search(r'delegate\s*:\s*EaComponents\.ListViewDelegate\s*\{', masked)
+    if re.search(r'delegate\s*:\s*TableRow\s*\{', masked):
+        shared = (ROOT / 'app/qml/Components/TableRow.qml').read_text()
+        assert re.search(r'^EaComponents\.ListViewDelegate\s*\{', shared, re.MULTILINE), (
+            'The shared TableRow remains the canonical production list-view delegate'
+        )
+    match = re.search(r'delegate\s*:\s*(?:EaComponents\.ListViewDelegate|TableRow)\s*\{', masked)
     assert match, 'The table status census locates the actual production row delegate'
     depth = 1
     end = match.end()
@@ -69,9 +74,10 @@ def test_every_status_column_is_in_the_convention_census():
     actual = {}
     for path in PAGES.rglob('*.qml'):
         contents = path.read_text()
-        if 'header:' not in contents:
+        declaration = re.search(r'\bheader\s*:', mask(contents))
+        if declaration is None:
             continue
-        header = block(contents, 'header:')
+        header = block(contents[declaration.start() :], 'header:')
         headings = re.findall(r'text\s*:\s*qsTr\("(Status|status|Fit)"\)', header)
         if headings:
             actual[path.relative_to(PAGES).as_posix()] = headings

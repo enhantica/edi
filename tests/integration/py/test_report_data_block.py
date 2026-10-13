@@ -16,7 +16,8 @@ def input_project(tmp_path, include_all):
     shutil.copytree(ROOT / 'tests/fixtures/loop_parameter_ids/line-segment', path)
     file = path / 'project.edi'
     if include_all:
-        file.write_text(file.read_text() + "\n_report.excluded ''\n")
+        # The accepted record spelling writes an explicit empty list in double quotes.
+        file.write_text(file.read_text() + '\n_report.excluded ""\n')
     return path
 
 
