@@ -51,6 +51,9 @@ bool ReportViewModel::build() const {
     if (correlations != nullptr && correlations->available() >= 2) {
         options.correlation_level = correlations->level();
     }
+    // And of a fit of several experiments, the one the tab shows.
+    const int shown = project_.currentExperimentIndex();
+    options.correlation_experiment = !project_.scan() && shown > 0 ? static_cast<std::size_t>(shown) : 0;
     edi::ReportModel next;
     try {
         // A scan's report is its template dataset's (edi ADR-0035 §3).

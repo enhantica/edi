@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "edi/correlation_matrix.hpp"
 
+#include "edi/model.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <functional>
@@ -64,6 +66,16 @@ CorrelationSelection correlation_matrix(const CorrelationMatrix& matrix, double 
             const double value = matrix.values[row * n + column];
             out.values.push_back(column < row && std::isfinite(value) ? value
                                                                        : std::numeric_limits<double>::quiet_NaN());
+        }
+    }
+    return out;
+}
+
+std::vector<std::string> other_experiment_prefixes(const std::vector<std::string>& experiment_names, std::size_t shown) {
+    std::vector<std::string> out;
+    for (std::size_t i = 0; i < experiment_names.size(); ++i) {
+        if (i != shown) {
+            out.push_back(datablock_key(experiment_names[i], "experiment") + ".");
         }
     }
     return out;

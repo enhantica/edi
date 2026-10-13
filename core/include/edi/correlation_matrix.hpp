@@ -36,4 +36,8 @@ std::size_t correlation_count_for_level(const std::vector<double>& strengths, do
 /// order. Fewer than two give an empty selection.
 CorrelationSelection correlation_matrix(const CorrelationMatrix& matrix, double level, std::size_t count);
 
+/// One experiment's chart of a fit of several leaves out the others' parameters, as the Correlations tab shows it: the
+/// name prefixes to leave out, each other experiment's datablock key and a dot. One experiment leaves out nothing.
+std::vector<std::string> other_experiment_prefixes(const std::vector<std::string>& experiment_names, std::size_t shown);
+
 }  // namespace edi
