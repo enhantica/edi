@@ -29,7 +29,7 @@ std::optional<ReportSection> report_section_from_name(std::string_view name);
 /// What a report holds. The app takes the correlation level and the x axis from the Analysis page; the CLI and Python
 /// take them as options.
 struct ReportOptions {
-    /// The contents left out, each by its key (ReportContentsItem::key), with everything under it.
+    /// The optional groups left out, by key: "charts", "correlations", "reflections", "measured_data", "evolution".
     std::vector<std::string> hidden;
     std::optional<double> correlation_level;  ///< absent: the five most correlated parameters
     bool d_spacing = false;                   ///< charts on d instead of 2θ or TOF
@@ -67,12 +67,11 @@ struct ReportCategory {
     ReportTable table;
 };
 
-/// One entry of the report's contents: every section, analysis category, structure, experiment and their categories,
-/// whether or not it is included, in the report's order.
+/// One of the report's optional groups (the owner, 2026-10-13): the charts, the correlations, the reflections, the
+/// measured data and, for a scan, the evolution; whether the report includes it. Everything else is always included.
 struct ReportContentsItem {
-    std::string key;  ///< "analysis", "analysis/fit_result", "structures/<id>", "experiments/<id>/peak", ...
+    std::string key;  ///< "charts", "correlations", "reflections", "measured_data" or "evolution"
     std::string title;
-    int depth = 0;  ///< 0 a section, 1 an analysis category, a structure or an experiment, 2 their categories
     bool included = true;
 };
 

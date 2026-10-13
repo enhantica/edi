@@ -112,8 +112,7 @@ std::string report_to_json(const ReportModel& model) {
     }
     Array contents;
     for (const ReportContentsItem& item : model.contents) {
-        contents.emplace_back(Object{
-            {"key", item.key}, {"title", item.title}, {"depth", item.depth}, {"included", item.included}});
+        contents.emplace_back(Object{{"key", item.key}, {"title", item.title}, {"included", item.included}});
     }
     Value correlations;
     if (model.correlations.has_value()) {
@@ -167,9 +166,8 @@ ReportModel report_from_json(const std::string& text) {
         model.sections.push_back(*section);
     }
     for (const Value& item : document.at("contents").array("contents")) {
-        model.contents.push_back({item.at("key").string("key"), item.at("title").string("title"),
-                                  static_cast<int>(item.at("depth").number("depth")),
-                                  item.at("included").boolean("included")});
+        model.contents.push_back(
+            {item.at("key").string("key"), item.at("title").string("title"), item.at("included").boolean("included")});
     }
     model.name = document.at("name").string("name");
     model.title = document.at("title").string("title");
