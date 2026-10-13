@@ -143,6 +143,10 @@ void save_project_as(Project& project, const std::string& directory);
 // the adapter (the one crysta-touching TU); edi-only signature (ADR-0003).
 void save_project_via_crysta(const Project& project, const std::string& directory);
 
+// Save report's write (ADR-0035 §7): `reports/report.edi` of `directory` alone, from the project's report settings and
+// saved-report rows, when its text changes, through crysta's writer; whether it wrote.
+bool save_report_settings(const Project& project, const std::string& directory);
+
 // The project's relations checked by crysta (a refusal is a DomainValidationError carrying crysta's
 // `crysta.domain.constraint_*` codes), every parameter marked with its dependence, and a dependent's
 // free flag cleared with crysta's `crysta.domain.dependent_free_ignored` warning to `warn`. The loader

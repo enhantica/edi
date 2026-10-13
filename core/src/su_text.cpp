@@ -6,7 +6,7 @@
 #include <optional>
 #include <stdexcept>
 
-// The IUCr rule is crysta's (ADR-0089). Until edi's crysta pin carries it, a build against the older SDK keeps
+// The IUCr rule is crysta's. Until edi's crysta pin carries it, a build against the older SDK keeps
 // today's display spelling: the s.u. to one significant digit and the value to the same place. Remove this branch
 // when the pin moves.
 #if __has_include("crysta/su_format.hpp")
