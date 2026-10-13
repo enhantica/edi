@@ -10,8 +10,10 @@
 #include <memory>
 #include <optional>
 #include <stdexcept>
+#include <utility>
 
 #include "edi/categories.hpp"
+#include "edi/correlation_matrix.hpp"
 #include "edi/duration_text.hpp"
 #include "edi/edit.hpp"
 #include "edi/io.hpp"
@@ -228,46 +230,23 @@ std::optional<ReportCorrelations> correlations_of(const Project& project, const 
         out.empty_text = "No correlations yet";
         return out;
     }
-    std::vector<double> strength(n, 0.0);
-    for (std::size_t i = 0; i < n; ++i) {
-        for (std::size_t j = 0; j < n; ++j) {
-            if (i != j && std::isfinite(matrix[i * n + j])) {
-                strength[i] = std::max(strength[i], std::abs(matrix[i * n + j]));
-            }
-        }
-    }
-    std::vector<double> ranked = strength;
-    std::sort(ranked.begin(), ranked.end(), std::greater<>());
+    const CorrelationMatrix full{names, matrix};
+    const std::vector<double> strengths = correlation_strengths(full);
     std::size_t count = 0;
     if (level.has_value()) {
         out.level = *level;
-        count = static_cast<std::size_t>(std::count_if(strength.begin(), strength.end(),
-                                                        [&level](double value) { return value >= *level; }));
+        count = correlation_count_for_level(strengths, *level);
     } else {
         count = std::min<std::size_t>(n, kDefaultCorrelatedParameters);
-        out.level = ranked[count - 1];
+        out.level = correlation_level_for_count(strengths, count);
     }
-    std::vector<std::size_t> kept;
-    for (std::size_t i = 0; i < n; ++i) {
-        if (strength[i] >= out.level) {
-            kept.push_back(i);
-        }
-    }
-    std::stable_sort(kept.begin(), kept.end(), [&strength](std::size_t a, std::size_t b) { return strength[a] > strength[b]; });
-    kept.resize(std::min(kept.size(), count));
-    std::sort(kept.begin(), kept.end());
-    if (kept.size() < 2) {
+    CorrelationSelection shown = correlation_matrix(full, out.level, count);
+    if (shown.labels.empty()) {
         out.empty_text = "No pairs at this level";
         return out;
     }
-    for (std::size_t row : kept) {
-        out.labels.push_back(names[row]);
-        for (std::size_t column : kept) {
-            const double value = matrix[row * n + column];
-            out.values.push_back(column < row && std::isfinite(value) ? value
-                                                                       : std::numeric_limits<double>::quiet_NaN());
-        }
-    }
+    out.labels = std::move(shown.labels);
+    out.values = std::move(shown.values);
     return out;
 }
 
