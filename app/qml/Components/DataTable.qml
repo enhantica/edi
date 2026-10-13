@@ -54,6 +54,10 @@ EaComponents.ListView {
     // The current row, -1 for none: an accent bar at its left edge marks it, and moves to a new current row as the
     // tab bar's underline moves (edi ADR-0017 §11). Its rows are TableRows, which keep their alternating background.
     property int currentRow: -1
+    // Set by a table with a current row: it then selects no row, since the base draws its own bar on a selected
+    // (clicked) row, which would show at once beside this one sliding in (the owner, 2026-10-13).
+    property bool marksCurrentRow: false
+    selectable: !marksCurrentRow
     // The row the bar is on. It moves between two shown rows, and appears on or leaves a row in place.
     property int markedRow: -1
     function markCurrentRow() {
