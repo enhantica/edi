@@ -10,7 +10,10 @@ import EasyApplication.Gui.Elements as EaElements
 import edi.app
 
 // The Report page's live preview (edi ADR-0035): the report model's sections, in its order, drawn from the model's
-// JSON values only. Charts and the structure view join as the model carries them.
+// JSON values only. It is set as the HTML report is, after the owner's reference report (diffraction-lib's style,
+// 2026-10-13): PT Sans headings at its sizes and margins, numbered sections and records, each category of a structure
+// or an experiment in its own subsection under its figure (the structure view, the pattern chart), bordered tables one
+// line per row, in the app's theme colours.
 Flickable {
     id: preview
 
@@ -18,9 +21,21 @@ Flickable {
     readonly property var model: report ? report.model : ({})
     readonly property var sections: model.sections ?? []
     readonly property real em: EaStyle.Sizes.fontPixelSize
+    // The reference's sizes and margins are in points over its 10.04 pt body.
+    readonly property real pt: em / 10.04
+    // The figures (the structure views and the pattern charts), unless Contents leaves the charts out.
+    readonly property bool charts: (model.contents ?? []).some(item => item.key === "charts" && item.included)
 
     function shown(name) {
         return sections.indexOf(name) >= 0;
+    }
+    function number(section) {
+        return sections.indexOf(section) + 1;
+    }
+    // A key-value table's rows from the model's rows, each value followed by its units: a degree sign right after the
+    // number (90°, 0.24°²), other units after a space (3.88 Å).
+    function keyValues(rows) {
+        return (rows ?? []).map(row => [row.label, !row.units ? row.text : row.units.startsWith("°") ? row.text + row.units : row.text + " " + row.units]);
     }
 
     contentHeight: column.implicitHeight + 2 * AppSizes.reportPadding
@@ -29,11 +44,129 @@ Flickable {
         policy: ScrollBar.AsNeeded
     }
 
+    // A heading: PT Sans in its regular weight at the reference's size, with its margins. A heading right under another
+    // starts after the larger of the two margins between them, as the reference's margins collapse.
     component Heading: EaElements.Label {
-        property int level: 1
-        topPadding: level === 1 ? preview.em : preview.em * 0.5
-        font.pixelSize: level === 1 ? preview.em * 1.5 : preview.em * 1.15
-        font.bold: true
+        property int level: 2
+        property int under: 0  // the level of a heading right above this one; 0 for none
+        readonly property var sizes: ({
+                "2": 14.35,
+                "3": 11.96,
+                "4": 10.91
+            })
+        readonly property var tops: ({
+                "2": 16.8,
+                "3": 17.5,
+                "4": 13.2
+            })
+        readonly property var bottoms: ({
+                "2": 7,
+                "3": 10.8,
+                "4": 6.2
+            })
+
+        width: parent ? parent.width : implicitWidth
+        wrapMode: Text.Wrap
+        topPadding: Math.max(0, tops[level] - (under > 0 ? bottoms[under] : 0)) * preview.pt
+        bottomPadding: bottoms[level] * preview.pt
+        font.family: EaStyle.Fonts.fontFamily
+        font.pixelSize: Math.round(sizes[level] * preview.pt)
+        color: EaStyle.Colors.themeForeground
+    }
+
+    // One category: its heading, its labelled values, then its table.
+    component CategoryBlock: Column {
+        id: block
+
+        required property var category
+        property int level: 4
+        property int under: 0
+
+        width: parent ? parent.width : 0
+        Heading {
+            level: block.level
+            under: block.under
+            text: block.category.title
+        }
+        ReportTable {
+            visible: rows.length > 0
+            rows: preview.keyValues(block.category.rows)
+        }
+        Item {
+            visible: block.category.rows.length > 0 && block.category.table.rows.length > 0
+            width: 1
+            height: 6.2 * preview.pt
+        }
+        ReportTable {
+            columns: block.category.table.columns
+            rows: block.category.table.rows
+        }
+    }
+
+    // A structure or an experiment: its numbered heading, then its categories. The records are counted, not listed, so a
+    // rebuilt model updates each record and its figure in place rather than making them again.
+    component Record: Column {
+        id: record
+
+        required property int index
+        property string section: ""
+        readonly property var modelData: (preview.model[section] ?? [])[index] ?? ({
+                "id": "",
+                "categories": []
+            })
+
+        width: parent ? parent.width : 0
+        Heading {
+            level: 3
+            under: record.index === 0 ? 2 : 0
+            text: `${preview.number(record.section)}.${record.index + 1}.  ${record.modelData.id}`
+        }
+        // Its figure first, as the reference report places it: the structure view, or the pattern chart, framed by a
+        // border in the tables' colour and spaced as a table is (the owner, 2026-10-13).
+        Item {
+            visible: preview.charts
+            width: parent.width
+            height: visible ? figure.height : 0
+
+            Loader {
+                id: figure
+                active: preview.charts
+                width: parent.width
+                height: active ? Math.round(width * 0.7) : 0
+                sourceComponent: record.section === "structures" ? structureFigure : patternFigure
+            }
+            Rectangle {
+                width: figure.width
+                height: figure.height
+                color: "transparent"
+                border.width: EaStyle.Sizes.borderThickness
+                border.color: EaStyle.Colors.appBorder
+            }
+        }
+        Component {
+            id: structureFigure
+            StructureView {
+                report: preview.report
+                reportStructure: record.modelData.id
+            }
+        }
+        Component {
+            id: patternFigure
+            PatternChart {
+                report: preview.report
+                reportExperiment: record.modelData.id
+            }
+        }
+        Repeater {
+            model: record.modelData.categories
+            delegate: CategoryBlock {
+                required property var modelData
+                required property int index
+                category: modelData
+                // A heading after the figure is spaced as one after a table.
+                under: index === 0 && !preview.charts ? 3 : 0
+            }
+        }
     }
 
     Column {
@@ -42,185 +175,128 @@ Flickable {
         x: AppSizes.reportPadding
         y: AppSizes.reportPadding
         width: preview.width - 2 * AppSizes.reportPadding
-        spacing: preview.em * 0.6
 
+        // The title block: what it is, then the project's title (its short name without one) and its authors.
+        EaElements.Label {
+            bottomPadding: 14 * preview.pt
+            font.pixelSize: Math.round(14.35 * preview.pt)
+            color: EaStyle.Colors.themeForeground
+            text: qsTr("%1 Report").arg(Qt.application.name)
+        }
         EaElements.Label {
             objectName: "report.preview.title"
             width: parent.width
             wrapMode: Text.Wrap
-            font.pixelSize: preview.em * 2
-            text: preview.model.title ?? ""
+            font.pixelSize: Math.round(17.22 * preview.pt)
+            color: EaStyle.Colors.themeForeground
+            text: preview.model.title || preview.model.name || ""
         }
         EaElements.Label {
             visible: text !== ""
+            topPadding: 7 * preview.pt
             color: EaStyle.Colors.themeForegroundMinor
             text: preview.model.authors ?? ""
         }
+        // The title block's margin, less the first heading's own.
+        Item {
+            width: 1
+            height: (22.8 - 16.8) * preview.pt
+        }
 
         // Project summary
-        Heading {
-            visible: preview.shown("summary")
-            text: qsTr("Project summary")
-        }
-        EaElements.Label {
-            visible: preview.shown("summary") && text !== ""
+        Column {
             width: parent.width
-            wrapMode: Text.Wrap
-            text: preview.model.description ?? ""
-        }
-        ReportRows {
             visible: preview.shown("summary")
-            entries: [
-                {
-                    "label": qsTr("Short name"),
-                    "text": preview.model.name ?? "",
-                    "units": ""
-                },
-                {
-                    "label": qsTr("Structures"),
-                    "text": (preview.model.structure_ids ?? []).join(", "),
-                    "units": ""
-                },
-                {
-                    "label": qsTr("Experiments"),
-                    "text": (preview.model.experiment_ids ?? []).join(", "),
-                    "units": ""
-                },
-                {
-                    "label": qsTr("Generated"),
-                    "text": preview.model.generated ?? "",
-                    "units": ""
-                }
-            ]
+            Heading {
+                text: `${preview.number("summary")}.  ` + qsTr("Project summary")
+            }
+            EaElements.Label {
+                visible: text !== ""
+                width: parent.width
+                topPadding: (11.9 - 7) * preview.pt
+                bottomPadding: 20.4 * preview.pt
+                wrapMode: Text.Wrap
+                lineHeightMode: Text.FixedHeight
+                lineHeight: Math.round(20.4 * preview.pt)
+                color: EaStyle.Colors.themeForeground
+                text: preview.model.description ?? ""
+            }
+            ReportTable {
+                rows: [[qsTr("Short name"), preview.model.name ?? ""], [qsTr("Structures"), (preview.model.structure_ids ?? []).join(", ")], [qsTr("Experiments"), (preview.model.experiment_ids ?? []).join(", ")], [qsTr("Generated"), preview.model.generated ?? ""]]
+            }
         }
 
-        // Analysis
-        Heading {
+        // Analysis: the software, the minimizer, the fitting mode and the fit result
+        Column {
+            width: parent.width
             visible: preview.shown("analysis")
-            text: qsTr("Analysis")
-        }
-        ReportRows {
-            visible: preview.shown("analysis")
-            entries: (preview.model.software ?? []).concat([
-                {
-                    "label": qsTr("Fitting mode"),
-                    "text": preview.model.fitting_mode ?? "",
-                    "units": ""
-                }
-            ])
-        }
-        Heading {
-            visible: preview.shown("analysis")
-            level: 2
-            text: qsTr("Fit result")
-        }
-        EaElements.Label {
-            visible: preview.shown("analysis") && !preview.model.fitted
-            color: EaStyle.Colors.themeForegroundMinor
-            text: qsTr("Not fitted yet")
-        }
-        ReportRows {
-            visible: preview.shown("analysis") && preview.model.fitted === true
-            entries: preview.model.fit_result ?? []
-        }
-
-        // Parameters
-        Heading {
-            visible: preview.shown("parameters")
-            level: 2
-            text: qsTr("Parameters")
-        }
-        ReportTable {
-            visible: preview.shown("parameters") && rows.length > 0
-            content: ({
-                    "columns": [qsTr("Parameter"), qsTr("Name"), qsTr("Value"), qsTr("Units"), qsTr("Free")],
-                    "rows": (preview.model.parameters ?? []).map(p => [p.name, p.label, p.value.text, p.units, p.free ? "✓" : ""])
-                })
-        }
-
-        // Correlations
-        Heading {
-            visible: preview.shown("correlations")
-            level: 2
-            text: qsTr("Correlations")
-        }
-        ReportCorrelations {
-            visible: preview.shown("correlations")
-            correlations: preview.model.correlations ?? null
-        }
-
-        // Structures
-        Heading {
-            visible: preview.shown("structures")
-            text: qsTr("Structures")
-        }
-        Repeater {
-            model: preview.shown("structures") ? (preview.model.structures ?? []) : []
-            delegate: Column {
-                id: structure
-                required property var modelData
-                spacing: preview.em * 0.6
-                Heading {
-                    level: 2
-                    text: structure.modelData.id
-                }
-                ReportRows {
-                    entries: structure.modelData.space_group.concat(structure.modelData.cell)
-                }
-                ReportTable {
-                    content: structure.modelData.atom_sites
-                }
-                ReportTable {
-                    content: structure.modelData.aniso
+            Heading {
+                text: `${preview.number("analysis")}.  ` + qsTr("Analysis")
+            }
+            Repeater {
+                model: preview.shown("analysis") ? (preview.model.analysis ?? []) : []
+                delegate: CategoryBlock {
+                    required property var modelData
+                    required property int index
+                    category: modelData
+                    level: 3
+                    under: index === 0 ? 2 : 0
                 }
             }
         }
 
-        // Experiments
-        Heading {
-            visible: preview.shown("experiments")
-            text: qsTr("Experiments")
+        // Structures, one record each
+        Column {
+            width: parent.width
+            visible: preview.shown("structures")
+            Heading {
+                text: `${preview.number("structures")}.  ` + qsTr("Structures")
+            }
+            Repeater {
+                model: preview.shown("structures") ? (preview.model.structures ?? []).length : 0
+                delegate: Record {
+                    section: "structures"
+                }
+            }
         }
-        Repeater {
-            model: preview.shown("experiments") ? (preview.model.experiments ?? []) : []
-            delegate: Column {
-                id: experiment
-                required property var modelData
-                spacing: preview.em * 0.6
-                Heading {
-                    level: 2
-                    text: experiment.modelData.id
+
+        // Experiments, one record each
+        Column {
+            width: parent.width
+            visible: preview.shown("experiments")
+            Heading {
+                text: `${preview.number("experiments")}.  ` + qsTr("Experiments")
+            }
+            Repeater {
+                model: preview.shown("experiments") ? (preview.model.experiments ?? []).length : 0
+                delegate: Record {
+                    section: "experiments"
                 }
-                ReportRows {
-                    entries: experiment.modelData.type
-                }
-                Heading {
-                    level: 2
-                    text: qsTr("Instrument")
-                }
-                ReportRows {
-                    entries: experiment.modelData.instrument
-                }
-                Heading {
-                    level: 2
-                    text: qsTr("Peak profile")
-                }
-                ReportRows {
-                    entries: experiment.modelData.peak
-                }
-                Heading {
-                    level: 2
-                    text: qsTr("Background")
-                }
-                ReportTable {
-                    content: experiment.modelData.background
-                }
-                ReportTable {
-                    content: experiment.modelData.excluded_regions
-                }
-                ReportTable {
-                    content: experiment.modelData.linked_structures
-                }
+            }
+        }
+
+        // Correlations
+        Column {
+            width: parent.width
+            visible: preview.shown("correlations")
+            Heading {
+                text: `${preview.number("correlations")}.  ` + qsTr("Correlations")
+            }
+            ReportCorrelations {
+                correlations: preview.model.correlations ?? null
+            }
+        }
+
+        // Evolution, for a scan
+        Column {
+            width: parent.width
+            visible: preview.shown("evolution")
+            Heading {
+                text: `${preview.number("evolution")}.  ` + qsTr("Evolution")
+            }
+            EaElements.Label {
+                color: EaStyle.Colors.themeForegroundMinor
+                text: qsTr("The fitted parameters across the scan's datasets")
             }
         }
     }

@@ -276,10 +276,14 @@ bool Session::openExampleNamed(const QString& exampleId) {
 }
 
 bool Session::createProject(const QString& name, const QString& description, const QString& location,
-                            const QString& suRule) {
+                            const QString& suRule, const QString& title, const QString& authors) {
     ProjectViewModel* created = nullptr;
     try {
         edi::Project project = edi::empty_project(name.toStdString(), description.toStdString());
+        if (!title.isEmpty()) {
+            project.metadata.title = title.toStdString();
+        }
+        project.metadata.authors = authors.toStdString();
         if (suRule == QStringLiteral("iucr_19") || suRule == QStringLiteral("iucr_99")) {
             project.su_rule = suRule.toStdString();
         }

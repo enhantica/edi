@@ -4,10 +4,11 @@
 #include <QByteArray>
 #include <QJsonDocument>
 #include <algorithm>
-#include <cmath>
 #include <exception>
 #include <string>
+#include <utility>
 
+#include "correlation_view_model.hpp"
 #include "project_view_model.hpp"
 
 namespace edi_app {
@@ -17,117 +18,121 @@ ReportViewModel::ReportViewModel(const ProjectViewModel& project, QObject* paren
     refresh();
 }
 
-void ReportViewModel::refresh() {
-    QVariantMap next;
-    try {
-        // A scan's report is its template dataset's (edi ADR-0035 §3).
-        const edi::Project* scan_template = project_.scanTemplate();
-        const edi::ReportModel model =
-            edi::build_report(scan_template != nullptr ? *scan_template : project_.project(), options_);
-        const std::string json = edi::report_to_json(model);
-        next = QJsonDocument::fromJson(QByteArray::fromStdString(json)).toVariant().toMap();
-    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — a project the builder refuses shows no report
+void ReportViewModel::setActive(bool active) {
+    if (active != active_) {
+        active_ = active;
+        emit activeChanged();
+        if (active_ && dirty_) {
+            refresh();
+        }
     }
-    if (next != model_) {
-        model_ = next;
+}
+
+void ReportViewModel::refresh() {
+    dirty_ = true;
+    if (active_ && build()) {
         emit modelChanged();
     }
 }
 
-void ReportViewModel::changed(void (ReportViewModel::*signal)()) {
-    emit(this->*signal)();
-    refresh();
-}
-
-QStringList ReportViewModel::sections() const {
-    QStringList names;
-    for (edi::ReportSection section : options_.sections) {
-        names.append(QString::fromLatin1(edi::report_section_name(section)));
+void ReportViewModel::ensureBuilt() const {
+    if (dirty_ && build()) {
+        auto* self = const_cast<ReportViewModel*>(this);  // NOLINT(cppcoreguidelines-pro-type-const-cast)
+        QMetaObject::invokeMethod(self, [self] { emit self->modelChanged(); }, Qt::QueuedConnection);
     }
-    return names;
 }
 
-void ReportViewModel::setSections(const QStringList& names) {
-    std::vector<edi::ReportSection> chosen;
-    for (const QString& name : names) {
-        if (const auto section = edi::report_section_from_name(name.toStdString())) {
-            chosen.push_back(*section);
+bool ReportViewModel::build() const {
+    dirty_ = false;
+    // The Analysis page's correlation level, while its tab has a matrix to filter; else the five most correlated.
+    edi::ReportOptions options = options_;
+    const CorrelationViewModel* correlations = project_.correlations();
+    options.correlation_level.reset();
+    if (correlations != nullptr && correlations->available() >= 2) {
+        options.correlation_level = correlations->level();
+    }
+    // And of a fit of several experiments, the one the tab shows.
+    const int shown = project_.currentExperimentIndex();
+    options.correlation_experiment = !project_.scan() && shown > 0 ? static_cast<std::size_t>(shown) : 0;
+    edi::ReportModel next;
+    try {
+        // A scan's report is its template dataset's (edi ADR-0035 §3).
+        const edi::Project* scan_template = project_.scanTemplate();
+        next = edi::build_report(scan_template != nullptr ? *scan_template : project_.project(), options);
+    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — a project the builder refuses shows no report
+        next = {};
+    }
+    std::string json = edi::report_to_json(next);
+    if (json == json_) {
+        return false;
+    }
+    json_ = std::move(json);
+    report_ = std::move(next);
+    // The text sections' values for QML; the charts read report_ through their controllers.
+    edi::ReportModel text = report_;
+    for (edi::ReportStructure& structure : text.structures) {
+        structure.scene = {};
+        structure.view = {};
+        structure.drawing = {};
+    }
+    for (edi::ReportExperiment& experiment : text.experiments) {
+        experiment.pattern = {};
+    }
+    model_ = QJsonDocument::fromJson(QByteArray::fromStdString(edi::report_to_json(text))).toVariant().toMap();
+    return true;
+}
+
+const edi::ReportPattern* ReportViewModel::pattern(const QString& experiment) const {
+    ensureBuilt();
+    const std::string id = experiment.toStdString();
+    for (const edi::ReportExperiment& item : report_.experiments) {
+        if (item.id == id) {
+            return &item.pattern;
         }
     }
-    if (chosen != options_.sections) {
-        options_.sections = chosen;
-        changed(&ReportViewModel::sectionsChanged);
+    return nullptr;
+}
+
+const edi::ReportStructure* ReportViewModel::structure(const QString& id) const {
+    ensureBuilt();
+    const std::string wanted = id.toStdString();
+    for (const edi::ReportStructure& item : report_.structures) {
+        if (item.id == wanted) {
+            return &item;
+        }
+    }
+    return nullptr;
+}
+
+QStringList ReportViewModel::hidden() const {
+    QStringList keys;
+    for (const std::string& key : options_.hidden) {
+        keys.append(QString::fromStdString(key));
+    }
+    return keys;
+}
+
+void ReportViewModel::setHidden(const QStringList& keys) {
+    std::vector<std::string> next;
+    for (const QString& key : keys) {
+        if (std::find(next.begin(), next.end(), key.toStdString()) == next.end()) {
+            next.push_back(key.toStdString());
+        }
+    }
+    if (next != options_.hidden) {
+        options_.hidden = std::move(next);
+        emit hiddenChanged();
+        refresh();
     }
 }
 
-void ReportViewModel::setFreeParametersOnly(bool only) {
-    if (only != options_.free_parameters_only) {
-        options_.free_parameters_only = only;
-        changed(&ReportViewModel::freeParametersOnlyChanged);
+void ReportViewModel::setIncluded(const QString& key, bool included) {
+    QStringList keys = hidden();
+    keys.removeAll(key);
+    if (!included) {
+        keys.append(key);
     }
-}
-
-void ReportViewModel::setAutomaticLevel(bool automatic) {
-    if (automatic == automaticLevel()) {
-        return;
-    }
-    options_.correlation_level = automatic ? std::nullopt : std::optional<double>(level_);
-    emit automaticLevelChanged();
-    changed(&ReportViewModel::correlationLevelChanged);
-}
-
-void ReportViewModel::setCorrelationLevel(double level) {
-    if (!std::isfinite(level)) {
-        return;
-    }
-    level = std::clamp(level, 0.0, 1.0);
-    if (level == level_ && options_.correlation_level == std::optional<double>(level)) {
-        return;
-    }
-    level_ = level;
-    options_.correlation_level = level;
-    emit automaticLevelChanged();
-    changed(&ReportViewModel::correlationLevelChanged);
-}
-
-QStringList ReportViewModel::experiments() const {
-    QStringList ids;
-    for (const std::string& id : options_.experiments) {
-        ids.append(QString::fromStdString(id));
-    }
-    return ids;
-}
-
-void ReportViewModel::setExperiments(const QStringList& ids) {
-    std::vector<std::string> chosen;
-    for (const QString& id : ids) {
-        chosen.push_back(id.toStdString());
-    }
-    if (chosen != options_.experiments) {
-        options_.experiments = chosen;
-        changed(&ReportViewModel::experimentsChanged);
-    }
-}
-
-void ReportViewModel::setDSpacing(bool on) {
-    if (on != options_.d_spacing) {
-        options_.d_spacing = on;
-        changed(&ReportViewModel::dSpacingChanged);
-    }
-}
-
-void ReportViewModel::setResidual(bool on) {
-    if (on != options_.residual) {
-        options_.residual = on;
-        changed(&ReportViewModel::residualChanged);
-    }
-}
-
-void ReportViewModel::setBraggTicks(bool on) {
-    if (on != options_.bragg_ticks) {
-        options_.bragg_ticks = on;
-        changed(&ReportViewModel::braggTicksChanged);
-    }
+    setHidden(keys);
 }
 
 void ReportViewModel::setEmbedLibraries(bool on) {

@@ -7,8 +7,8 @@ import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
 
-// The Report page (edi ADR-0035; the owner's notes 30 and 31): the report's live preview in the main area, drawn from
-// the report model; the sidebar's Project details, Contents, Charts and Export; every project file in Text.
+// The Report page (edi ADR-0035; the owner's notes 30 and 31, and the sidebar of 2026-10-13): the report's live preview
+// in the main area, drawn from the report model; the sidebar's Export and Contents; every project file in Text.
 WorkflowPage {
     id: page
 
@@ -33,16 +33,10 @@ WorkflowPage {
     textEnabled: project !== null
     basicItem: Component {
         EaComponents.SideBarColumn {
-            ProjectDetailsGroup {
-                project: page.project
+            ExportGroup {
+                report: page.report
             }
             ContentsGroup {
-                report: page.report
-            }
-            ChartsGroup {
-                report: page.report
-            }
-            ExportGroup {
                 report: page.report
             }
         }
@@ -54,4 +48,12 @@ WorkflowPage {
         }
     }
     continueVisible: false
+
+    // The report rebuilds at once only while this page is shown.
+    Binding {
+        target: page.report
+        property: "active"
+        value: page.current
+        when: page.report !== null
+    }
 }

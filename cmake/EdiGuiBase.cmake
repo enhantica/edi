@@ -75,7 +75,8 @@ set(EDI_GUI_BASE_DIR ${gui_components_SOURCE_DIR}/src/EasyApplication)
 
 # One base module: its QML types, singletons and JavaScript files, all read from the pinned tree, except
 # the names in REPLACED, which edi builds from app/qml/Base/<subdir>/ in their place (Style/Fonts for edi's font set,
-# Components/ListView for Qt selection-model initialization; ADR-0015 §10, ADR-0029).
+# Components/ListView for Qt selection-model initialization, Elements/TextInput for its focused colour; ADR-0015 §10,
+# ADR-0029).
 function(edi_gui_base_module target uri subdir)
     cmake_parse_arguments(ARG "" "" "TYPES;SINGLETONS;SCRIPTS;REPLACED" ${ARGN})
     set(files)
@@ -130,7 +131,7 @@ edi_gui_base_module(edi_gui_elements EasyApplication.Gui.Elements Gui/Elements
           MenuItem ParamComboBox Parameter ParamTextField RadioButton RemotePointer RunningLabel
           ScrollBar ScrollIndicator SideBarButton Slider SliderHandle SpinBox StatusBar
           StatusBarItem TabBar TabButton TextArea TextField TextInput ToolButton ToolTip ToolTipShadow
-    REPLACED ParamTextField)
+    REPLACED ParamTextField TextInput)
 # Left out of Components: BasicReport (QtWebEngine), GuideWindow and GuideWindowContainer (they need a
 # host `Gui.Globals` module), JsonListModel (the dict/JSON model edi does not use).
 edi_gui_base_module(edi_gui_components EasyApplication.Gui.Components Gui/Components
