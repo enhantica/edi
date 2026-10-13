@@ -8,11 +8,14 @@
 #include <limits>
 #include <map>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 
 #include "edi/categories.hpp"
+#include "edi/edit.hpp"
 #include "edi/io.hpp"
 #include "edi/model.hpp"
+#include "edi/scan.hpp"
 #include "edi/su_text.hpp"
 #include "edi/symmetry.hpp"
 #include "edi/version.hpp"
@@ -141,22 +144,10 @@ std::string fitting_mode_name(const std::string& mode) {
     return "Single experiment";
 }
 
-// The correlation chart as the Correlations tab draws it: the fit's pairs (the template file's in a scan), the
-// parameters whose strongest correlation reaches the level, at most as many as asked, in the fit's order.
-std::optional<ReportCorrelations> correlations_of(const Project& project, const std::optional<double>& level) {
-    const bool scan = is_scan_fitting_mode(project.fitting_mode);
-    const std::string& template_file = project.sequential_fit.template_file;
-    std::vector<const FitParameterCorrelation*> rows;
-    for (const auto& row : project.fit_result.correlations) {
-        if (scan ? row->file_path.value() == template_file : row->file_path.empty()) {
-            rows.push_back(row.get());
-        }
-    }
-    if (!project.fit_result.held() && rows.empty()) {
-        return std::nullopt;
-    }
-    ReportCorrelations out;
-    std::vector<std::string> names;
+// The pairs of correlation rows over their parameters, in the order the rows first name them: the names and the full
+// matrix, NaN for a pair no row gives.
+void matrix_of_rows(const std::vector<const FitParameterCorrelation*>& rows, std::vector<std::string>& names,
+                    std::vector<double>& matrix) {
     std::map<std::string, std::size_t> index;
     for (const FitParameterCorrelation* row : rows) {
         for (const std::string* name : {&row->parameter_unique_name_i.value(), &row->parameter_unique_name_j.value()}) {
@@ -167,7 +158,7 @@ std::optional<ReportCorrelations> correlations_of(const Project& project, const 
         }
     }
     const std::size_t n = names.size();
-    std::vector<double> matrix(n * n, std::numeric_limits<double>::quiet_NaN());
+    matrix.assign(n * n, std::numeric_limits<double>::quiet_NaN());
     for (const FitParameterCorrelation* row : rows) {
         const std::size_t i = index.at(row->parameter_unique_name_i.value());
         const std::size_t j = index.at(row->parameter_unique_name_j.value());
@@ -175,6 +166,52 @@ std::optional<ReportCorrelations> correlations_of(const Project& project, const 
         matrix[i * n + j] = value;
         matrix[j * n + i] = value;
     }
+}
+
+// The correlation chart as the Correlations tab draws it: the fit's pairs, the parameters whose strongest correlation
+// reaches the level, at most as many as asked, in the fit's order. A scan's are its template file's (`scan_file`), as
+// the tab shows a dataset's: the table its fit made (edi ADR-0034), else the rows read with it, else the saved rows
+// that name it. Without a fit and without pairs there is no chart.
+std::optional<ReportCorrelations> correlations_of(const Project& project, const std::optional<double>& level,
+                                                  const std::string* scan_file, bool fitted) {
+    std::vector<std::string> names;
+    std::vector<double> matrix;
+    std::vector<const FitParameterCorrelation*> rows;
+    const auto& results = project.fit_result.scan_results;
+    const auto found = scan_file != nullptr ? results.find(*scan_file) : results.end();
+    if (found != results.end() && found->second && found->second->correlations &&
+        found->second->correlations->names && found->second->correlations->values) {
+        // The table's pairs i < j, row by row.
+        names = *found->second->correlations->names;
+        const std::vector<double>& pairs = *found->second->correlations->values;
+        const std::size_t n = names.size();
+        matrix.assign(n * n, std::numeric_limits<double>::quiet_NaN());
+        std::size_t at = 0;
+        for (std::size_t i = 0; i < n; ++i) {
+            for (std::size_t j = i + 1; j < n && at < pairs.size(); ++j, ++at) {
+                matrix[i * n + j] = pairs[at];
+                matrix[j * n + i] = pairs[at];
+            }
+        }
+    } else {
+        if (found != results.end() && found->second) {
+            for (const auto& row : found->second->read_rows) {
+                rows.push_back(row.get());
+            }
+        } else {
+            for (const auto& row : project.fit_result.correlations) {
+                if (scan_file != nullptr ? row->file_path.value() == *scan_file : row->file_path.empty()) {
+                    rows.push_back(row.get());
+                }
+            }
+        }
+        matrix_of_rows(rows, names, matrix);
+    }
+    if (!fitted && names.empty()) {
+        return std::nullopt;
+    }
+    ReportCorrelations out;
+    const std::size_t n = names.size();
     out.available = static_cast<int>(n);
     if (n < 2) {
         out.empty_text = "No correlations yet";
@@ -308,6 +345,73 @@ ReportExperiment experiment_of(const BraggPdExperiment& experiment, const std::s
     return out;
 }
 
+// A scan's template dataset as the app shows it once fitted (edi ADR-0035 §3): the declared template file, else the
+// first file, as the app opens a scan; the template with that file's results row (its values and uncertainties over
+// the template's; a parameter the results do not record keeps the template's), the file's data, its relations
+// completed and its pattern calculated; and the scan's counts. Without a row for the file, the template as it is.
+struct ScanTemplate {
+    Project project;
+    std::string file;
+    std::optional<ScanResultIndex::Row> row;
+    std::size_t files = 0, fitted = 0, converged = 0;
+};
+
+ScanTemplate scan_template_of(const Project& scan) {
+    ScanTemplate out{scan, scan.sequential_fit.template_file, std::nullopt};
+    const ScanDatasets datasets = scan_datasets(scan);
+    if (out.file.empty() && !datasets.files.empty()) {
+        out.file = datasets.files.front();
+    }
+    const std::string& file = out.file;
+    const ScanPlaces places = scan_places(datasets);
+    const ScanResultIndex index = index_scan_results(scan, datasets, places);
+    out.files = datasets.files.size();
+    if (!index.error.empty()) {
+        return out;
+    }
+    for (const ScanResultIndex::Row& row : index.rows) {
+        if (row.offset >= 0) {
+            ++out.fitted;
+            out.converged += row.converged ? 1 : 0;
+        }
+    }
+    const auto place = places.find(file);
+    if (place == places.end() || index.rows[place->second].offset < 0) {
+        return out;
+    }
+    const std::vector<std::string> cells = read_scan_row(scan, index.rows[place->second].offset);
+    std::map<std::string, const ScanParameterColumns*> columns;
+    for (const ScanParameterColumns& parameter : index.parameters) {
+        columns.emplace(parameter.name, &parameter);
+    }
+    std::vector<Edit::ScanValue> values;
+    for (const NamedSlot& slot : named_slots(out.project)) {
+        Edit::ScanValue value{slot.unique_name, slot.parameter->value.get(), slot.parameter->uncertainty.get()};
+        if (const auto column = columns.find(scan_results_column(slot.unique_name)); column != columns.end()) {
+            double number = 0.0, uncertainty = 0.0;
+            const std::string& uncertainty_cell = cells.at(column->second->uncertainty);
+            if (!parse_scan_number(cells.at(column->second->value), number) ||
+                (uncertainty_cell != "nan" && !parse_scan_number(uncertainty_cell, uncertainty))) {
+                throw std::invalid_argument("analysis/results.csv: the row's '" + column->second->name +
+                                            "' cells are not numbers");
+            }
+            value.value = number;
+            value.uncertainty = uncertainty;
+        }
+        values.push_back(std::move(value));
+    }
+    ExperimentBase& experiment = out.project.experiment();
+    Edit::scan_view(out.project, experiment, std::move(values),
+                    read_scan_dataset(datasets.directory, file, experiment.effective_beam_mode()))();
+    apply_relations(out.project);
+    try {
+        out.project.calculate();
+    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — a refused calculation leaves the pattern not current
+    }
+    out.row = index.rows[place->second];
+    return out;
+}
+
 }  // namespace
 
 const std::vector<ReportSection>& report_sections() {
@@ -347,7 +451,18 @@ std::optional<ReportSection> report_section_from_name(std::string_view name) {
     return std::nullopt;
 }
 
-ReportModel build_report(const Project& project, const ReportOptions& options) {
+ReportModel build_report(const Project& input, const ReportOptions& options) {
+    // A scan's report is its template dataset's, fitted (ADR-0035 §3); one whose datasets or results cannot be read
+    // reports the template as it is.
+    const bool scan_mode = is_scan_fitting_mode(input.fitting_mode);
+    std::optional<ScanTemplate> scan;
+    if (scan_mode) {
+        try {
+            scan = scan_template_of(input);
+        } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — the template as it is, below
+        }
+    }
+    const Project& project = scan ? scan->project : input;
     const std::string& rule = project.su_rule;
     ReportModel model;
     model.generated = options.generated.empty() ? utc_now() : options.generated;
@@ -370,8 +485,18 @@ ReportModel build_report(const Project& project, const ReportOptions& options) {
     const std::string minimizer = result.descent.empty() ? "crysta" : "crysta (" + result.descent + ")";
     model.software = {{"Framework", "edi " + core_version(), ""}, {"Calculator", "crysta", ""}, {"Minimizer", minimizer, ""}};
     model.fitting_mode = fitting_mode_name(project.fitting_mode);
-    model.fitted = result.held();
-    if (model.fitted) {
+    model.fitted = scan_mode ? scan && scan->row.has_value() : result.held();
+    if (scan && scan->row) {
+        // The template dataset's fit, from its results row, and the scan's counts.
+        const ScanResultIndex::Row& row = *scan->row;
+        model.fit_result = {{"Dataset", scan->file, ""},
+                            {"Overall status", row.converged ? "Success" : "Failed", ""},
+                            {"Iterations", std::to_string(row.iterations), ""},
+                            {"Goodness-of-fit (reduced χ²)", fixed(row.reduced_chi_square, 2), ""},
+                            {"Files fitted", std::to_string(scan->fitted) + "/" + std::to_string(scan->files), ""},
+                            {"Converged", std::to_string(scan->converged), ""},
+                            {"Failed", std::to_string(scan->fitted - scan->converged), ""}};
+    } else if (model.fitted) {
         model.fit_result = {{"Overall status", status_word(result), ""},
                             {"Fitting time", fixed(result.fitting_time, 2), "s"},
                             {"Iterations", std::to_string(result.iterations), ""},
@@ -398,7 +523,9 @@ ReportModel build_report(const Project& project, const ReportOptions& options) {
         row.free = parameter.free.get();
         model.parameters.push_back(std::move(row));
     }
-    model.correlations = correlations_of(project, options.correlation_level);
+    model.correlations = correlations_of(project, options.correlation_level,
+                                         scan ? &scan->file : scan_mode ? &project.sequential_fit.template_file : nullptr,
+                                         model.fitted);
     for (const auto& structure : project.structures) {
         model.structures.push_back(structure_of(*structure, rule));
     }
