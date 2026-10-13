@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-13T02:44:08Z
+# measured_utc = 2026-10-13T05:20:29Z
 #
-# Recorded from: measured test run (58 node(s) measured once, 10269 banked, 0 stale row(s) dropped)
-# Collected tests: 11153; with a reported duration: 6100
+# Recorded from: measured test run (12 node(s) measured once, 10321 banked, 0 stale row(s) dropped)
+# Collected tests: 11159; with a reported duration: 6100
 # Module-scoped fixture costs recorded: 42
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 11153
+# inventory_python = 11159
 # inventory_cpp = 312
-# inventory_measured = 10327
+# inventory_measured = 10333
 # inventory_unmeasured = 1138
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
@@ -11361,9 +11361,15 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e04_t9_sanitizer.py::test_sanit
 0.000	tests/unit/py/test_e09_t55_python_api_coverage.py::test_cli_scan_branch_routes_events_and_each_emission_policy
 0.000	tests/unit/py/test_e09_t55_python_api_coverage.py::test_python_analysis_facade_round_trips_mode_and_calculation
 0.000	tests/unit/py/test_e09_t55_python_api_coverage.py::test_structure_factory_round_trips_full_public_dict_and_rejects_retired_shape
+0.000	tests/unit/py/test_e09_t55_unit_coverage_contract.py::test_cpp_assertion_census_follows_explicit_template_calls[direct]
+0.000	tests/unit/py/test_e09_t55_unit_coverage_contract.py::test_cpp_assertion_census_follows_explicit_template_calls[empty]
+0.000	tests/unit/py/test_e09_t55_unit_coverage_contract.py::test_cpp_assertion_census_follows_explicit_template_calls[nested-template]
+0.000	tests/unit/py/test_e09_t55_unit_coverage_contract.py::test_cpp_assertion_census_follows_explicit_template_calls[template]
+0.000	tests/unit/py/test_e09_t55_unit_coverage_contract.py::test_cpp_assertion_census_follows_explicit_template_calls[transitive-template]
+0.000	tests/unit/py/test_e09_t55_unit_coverage_contract.py::test_cpp_assertion_census_follows_explicit_template_calls[unreached]
 0.000	tests/unit/py/test_e09_t55_unit_coverage_contract.py::test_e09_t55_declares_edi_denominators_and_thresholds
 0.030	tests/unit/py/test_e09_t55_unit_coverage_contract.py::test_e09_t55_edi_cpp_threshold_control[79.99-1]
-0.030	tests/unit/py/test_e09_t55_unit_coverage_contract.py::test_e09_t55_edi_cpp_threshold_control[80.00-0]
+0.020	tests/unit/py/test_e09_t55_unit_coverage_contract.py::test_e09_t55_edi_cpp_threshold_control[80.00-0]
 0.000	tests/unit/py/test_e09_t55_unit_coverage_contract.py::test_e09_t55_edi_exclusions_are_exact_reasoned_live_lines
 0.000	tests/unit/py/test_e09_t55_unit_coverage_contract.py::test_e09_t55_every_counted_edi_unit_test_reaches_an_assertion
 0.000	tests/unit/py/test_e09_t55_unit_coverage_contract.py::test_e09_t55_only_unit_tiers_feed_edi_metrics
@@ -11547,4 +11553,4 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 77.477	tests/system/py/test_shared_correlation_app_state.py
 # module-cost: 6.259	tests/system/py/test_thread_selector.py
 # module-cost: 2.483	tests/unit/py/test_e04_t9_latency_ratchet.py
-# module-cost: 0.250	tests/unit/py/test_e09_t55_unit_coverage_contract.py
+# module-cost: 0.262	tests/unit/py/test_e09_t55_unit_coverage_contract.py
