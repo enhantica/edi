@@ -268,6 +268,15 @@ foreach(file IN LISTS EDI_APP_LICENCE_FILES)
     configure_file(${file} ${CMAKE_CURRENT_BINARY_DIR}/${name} COPYONLY)
 endforeach()
 
+# The HTML report's chart libraries (ADR-0035), which a saved report carries when asked: in the desktop app's resources
+# at qrc:/edi/report/vendor/; the browser build fetches them from its site instead (wasm-pack.sh), so its download
+# does not grow.
+if(NOT EMSCRIPTEN)
+    file(GLOB EDI_REPORT_VENDOR CONFIGURE_DEPENDS ${PROJECT_SOURCE_DIR}/data/report/vendor/*.js)
+    qt_add_resources(edi_app_module "edi_report_vendor" PREFIX "/edi" BASE ${PROJECT_SOURCE_DIR}/data
+                     FILES ${EDI_REPORT_VENDOR})
+endif()
+
 qt_add_executable(edi_app main.cpp)
 target_link_libraries(edi_app PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS})
 set_target_properties(edi_app PROPERTIES MACOSX_BUNDLE FALSE WIN32_EXECUTABLE TRUE)
