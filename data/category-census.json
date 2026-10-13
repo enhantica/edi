@@ -3733,6 +3733,26 @@
       "category": "_fit_parameter_correlation"
     },
     {
+      "member": "CorrelationTable::names",
+      "type": "std::shared_ptr<const std::vector<std::string>>",
+      "not_storage": "one fit's correlations as numbers, made once and shared (ADR-0034)"
+    },
+    {
+      "member": "CorrelationTable::values",
+      "type": "std::shared_ptr<const std::vector<double>>",
+      "not_storage": "one fit's correlations as numbers, made once and shared (ADR-0034)"
+    },
+    {
+      "member": "ScanFileResult::correlations",
+      "type": "std::shared_ptr<const CorrelationTable>",
+      "not_storage": "one scan file's results, from its fit or as read, shared (ADR-0034)"
+    },
+    {
+      "member": "ScanFileResult::read_rows",
+      "type": "std::vector<std::shared_ptr<const FitParameterCorrelation>>",
+      "not_storage": "one scan file's results, from its fit or as read, shared (ADR-0034)"
+    },
+    {
       "member": "ScanFileRecord::file_name",
       "type": "std::string",
       "not_storage": "a fit report"
@@ -3763,8 +3783,8 @@
       "not_storage": "a fit report"
     },
     {
-      "member": "ScanFileRecord::correlations",
-      "type": "std::vector<FitParameterCorrelation>",
+      "member": "ScanFileRecord::result",
+      "type": "std::shared_ptr<const ScanFileResult>",
       "not_storage": "a fit report"
     },
     {
@@ -4120,6 +4140,11 @@
       "holds": [
         "_fit_parameter_correlation"
       ]
+    },
+    {
+      "member": "FitResultRecord::scan_results",
+      "type": "std::map<std::string, std::shared_ptr<const ScanFileResult>>",
+      "not_storage": "a scan's results by file, shared, not saved (ADR-0034)"
     },
     {
       "member": "FitResultRecord::table_row",

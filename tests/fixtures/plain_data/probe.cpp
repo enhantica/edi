@@ -9,8 +9,10 @@
 #include <QUrl>
 #include <QtQml>
 #include <filesystem>
+#include <array>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 
 #include "analysis_view_model.hpp"
 #include "correlation_view_model.hpp"
@@ -23,6 +25,94 @@
 Q_IMPORT_QML_PLUGIN(edi_appPlugin)
 
 namespace {
+QJsonObject frozen_generated_output(const QString& fixture, const QString& work,
+                                    const std::string& kind) {
+    const std::filesystem::path source(fixture.toStdString());
+    std::ifstream input(source / (kind + "-numeric.table"));
+    std::size_t count = 0;
+    input >> count;
+    if (!input.good() || count < 2 || count > 512)
+        throw std::runtime_error("frozen numeric input must name its bounded fitted column count");
+    std::vector<std::string> names(count);
+    for (auto& name : names) input >> name;
+    input >> count;
+    if (count != names.size() * (names.size() - 1) / 2)
+        throw std::runtime_error("frozen numeric input must retain its complete packed triangle");
+    std::vector<double> values;
+    for (std::size_t k = 0; k < count; ++k) {
+        std::string bits;
+        input >> bits;
+        values.push_back(std::stod(bits));
+    }
+    if (!input.good()) throw std::runtime_error("frozen numeric input must supply every fitted double");
+    auto table = std::make_shared<edi::CorrelationTable>();
+    table->names = std::make_shared<const std::vector<std::string>>(std::move(names));
+    table->values = std::make_shared<const std::vector<double>>(std::move(values));
+    auto project = edi::load_project((source / (kind + "-input")).string());
+    QJsonObject result{{"loadedPairs", static_cast<int>(project.fit_result.correlations.size())}};
+    if (kind == "single") {
+        for (const auto& row : edi::correlation_rows(*table, ""))
+            project.fit_result.correlations.push_back(row);
+    } else {
+        auto bundle = std::make_shared<edi::ScanFileResult>();
+        bundle->correlations = table;
+        edi::adopt_scan_file_result(project.fit_result, "all594687.dat", bundle,
+                                    project.sequential_fit.template_file);
+        result["otherPairs"] = static_cast<int>(project.fit_result.correlations.size());
+        edi::adopt_scan_file_result(project.fit_result, project.sequential_fit.template_file,
+                                    bundle, project.sequential_fit.template_file);
+    }
+    result["generatedPairs"] = static_cast<int>(project.fit_result.correlations.size());
+    result["numericPairs"] = static_cast<int>(table->values->size());
+    edi::save_project_as(project, work.toStdString());
+    result["analysis"] = work + "/analysis/analysis.edi";
+    return result;
+}
+
+template <typename Record>
+QJsonObject shared_record_state(const Record& record) {
+    if constexpr (requires { record.scan_results; }) {
+        QJsonObject files;
+        for (const auto& [file, bundle] : record.scan_results) {
+            if (!bundle || !bundle->correlations)
+                throw std::runtime_error("completed covariance missing");
+            const auto table = bundle->correlations;
+            QJsonArray labels, coefficients;
+            for (const auto& name : *table->names) labels.append(QString::fromStdString(name));
+            for (const auto value : *table->values) coefficients.append(value);
+            const auto address = [](const auto& pointer) {
+                return QString::number(reinterpret_cast<std::uintptr_t>(pointer.get()));
+            };
+            files[QString::fromStdString(file)] = QJsonObject{{"bundle", address(bundle)},
+                                                              {"table", address(table)},
+                                                              {"names", address(table->names)},
+                                                              {"values", address(table->values)},
+                                                              {"labels", labels},
+                                                              {"coefficients", coefficients}};
+        }
+        return {{"compact", true}, {"files", files}};
+    } else {
+        return {{"compact", false}};
+    }
+}
+QJsonObject shared_order_lifecycle(const QString& fixture, const QString& work) {
+    const auto input = std::filesystem::path(work.toStdString()) / "input";
+    std::filesystem::copy(fixture.toStdString(), input, std::filesystem::copy_options::recursive);
+    auto core = edi::load_project(input.string());
+    core.fit_sequential();
+    const auto retained = core.fit_result;
+    QJsonObject result{{"first", shared_record_state(retained)}};
+    auto& terms = core.experiment().background_terms;
+    using Rows = std::remove_reference_t<decltype(terms)>;
+    std::vector<typename Rows::Ptr> reordered{terms[1], terms[0], terms[2]};
+    terms.assign(std::move(reordered));
+    for (const auto* file : {"results.csv", "results-provenance.csv", "scan-notes.csv"})
+        std::filesystem::remove(input / "analysis" / file);
+    core.fit_sequential();
+    result["second"] = shared_record_state(core.fit_result);
+    result["retained"] = shared_record_state(retained);
+    return result;
+}
 QJsonArray correlation_pairs(const edi::Project& project) {
     QJsonArray result;
     for (const auto& pair : project.fit_result.correlations)
@@ -73,6 +163,7 @@ QJsonObject rename_lifecycle(const QString& fixture, const QString& work, const 
     const auto input = std::filesystem::path(work.toStdString()) / "input";
     std::filesystem::copy(fixture.toStdString(), input, std::filesystem::copy_options::recursive);
     auto core = edi::load_project(input.string());
+    auto& target_structure = *core.structures[0];
     if (scan) {
         std::filesystem::create_directories(input / "experiments/scan");
         for (const char* file : {"01.xy", "02.xy"})
@@ -85,7 +176,7 @@ QJsonObject rename_lifecycle(const QString& fixture, const QString& work, const 
     }
     if (refused) {
         if (kind == "structure") {
-            edi::Structure occupied = core.structure();
+            edi::Structure occupied = target_structure;
             occupied.name = "taken";
             core.structures.push_back(occupied);
         } else {
@@ -117,8 +208,8 @@ QJsonObject rename_lifecycle(const QString& fixture, const QString& work, const 
             if (term->id.value() != "curve") kept.push_back(term);
         core.experiment().background_terms.assign(std::move(kept));
     }
-    if (core.structure().name.value() == "structure") {
-        auto& cell = core.structure().cell;
+    if (target_structure.name.value() == "structure") {
+        auto& cell = target_structure.cell;
         for (auto* parameter : {&cell.length_a, &cell.length_b, &cell.length_c, &cell.angle_alpha,
                                 &cell.angle_beta, &cell.angle_gamma}) {
             parameter->start_value = parameter->value.get() + .125;
@@ -127,7 +218,7 @@ QJsonObject rename_lifecycle(const QString& fixture, const QString& work, const 
     }
     std::vector<std::string> names;
     if (kind == "structure" || kind == "experiment") {
-        const std::string structure_name = core.structure().name.value();
+        const std::string structure_name = target_structure.name.value();
         const std::string experiment_name = core.experiment().name.value();
         for (const std::string field :
              {"length_a", "length_b", "length_c", "angle_alpha", "angle_beta", "angle_gamma"})
@@ -161,9 +252,9 @@ QJsonObject rename_lifecycle(const QString& fixture, const QString& work, const 
             pair.id = "pair" + std::to_string(ordinal) + (first ? "i" : "j");
             pair.source_kind = "deterministic";
             pair.parameter_unique_name_i =
-                first ? name : core.structure().name.value() + ".cell.length_b";
+                first ? name : target_structure.name.value() + ".cell.length_b";
             pair.parameter_unique_name_j =
-                first ? core.structure().name.value() + ".cell.length_b" : name;
+                first ? target_structure.name.value() + ".cell.length_b" : name;
             pair.correlation = "-0.625";
             if (scan) pair.file_path = "02.xy";
             core.fit_result.correlations.push_back(pair);
@@ -271,6 +362,60 @@ void settle_projection(edi_app::ProjectViewModel& view) {
     if (!view.pendingRefusal().isEmpty())
         throw std::runtime_error(view.pendingRefusal().toStdString());
 }
+QJsonObject loaded_cache_lifecycle(const QString& fixture, const QString& work) {
+    const auto input = std::filesystem::path(work.toStdString()) / "input";
+    std::filesystem::create_directories(input.parent_path());
+    std::filesystem::copy(fixture.toStdString(), input, std::filesystem::copy_options::recursive);
+    auto project = edi::load_project(input.string());
+    project.sequential_fit.template_file = "02.xy";
+    project.fit_result.result_kind = "deterministic";
+    project.fit_result.success = true;
+    auto owner = std::make_shared<std::array<edi::FitParameterCorrelation, 2>>();
+    const char* right[] = {"bank.background.ramp.coef", "bank.background.curve.coef"};
+    const char* coefficients[] = {"0.50", "-0.25"};
+    for (std::size_t i = 0; i < owner->size(); ++i) {
+        auto& row = owner->at(i);
+        row.id = i == 0 ? "keptA" : "keptB";
+        row.source_kind = "deterministic";
+        row.parameter_unique_name_i = "bank.background.base.coef";
+        row.parameter_unique_name_j = right[i];
+        row.correlation = coefficients[i];
+        row.file_path = "02.xy";
+        project.fit_result.correlations.push_back(
+            std::shared_ptr<edi::FitParameterCorrelation>(owner, &row));
+    }
+    edi_app::ProjectViewModel view(std::move(project), nullptr);
+    view.setCurrentExperimentIndex(1);
+    settle_projection(view);
+    QJsonObject result{{"original", matrix(view)},
+                       {"movedHandle", view.project().fit_result.correlations[0].get() == &owner->at(0)}};
+    if (view.scanTemplate() == nullptr || view.scanTemplate()->fit_result.correlations.empty())
+        throw std::runtime_error("the loaded dataset must expose its actual persisted row handle");
+    // ItemVec's const read gives a shared handle to a mutable native row; no const-cast.
+    const auto shown = view.scanTemplate()->fit_result.correlations[0];
+    owner->at(0).correlation = "-0.875";
+    shown->correlation = "-0.875";
+    view.setCurrentExperimentIndex(0);
+    view.setCurrentExperimentIndex(1);
+    settle_projection(view);
+    result["afterWrite"] = matrix(view);
+    view.experimentModels()[0]->setName("renamed_bank");
+    view.setCurrentExperimentIndex(0);
+    view.setCurrentExperimentIndex(1);
+    settle_projection(view);
+    result["renamed"] = matrix(view);
+    view.undo();
+    settle_projection(view);
+    result["renameUndo"] = matrix(view);
+    if (const QString error = view.resetScan(); !error.isEmpty())
+        throw std::runtime_error(error.toStdString());
+    result["reset"] = matrix(view);
+    result["resetUndoAvailable"] = view.canUndo();
+    view.undo();
+    settle_projection(view);
+    result["resetUndo"] = matrix(view);
+    return result;
+}
 void fit_and_wait(edi_app::ProjectViewModel& view) {
     bool finished = false;
     const auto connection =
@@ -309,14 +454,21 @@ QJsonObject correlation_lifecycle(const std::string& action, const QString& fixt
         }
         int completed = 0;
         result["before"] = correlation_pairs(core);
+        result["beforeCompact"] = shared_record_state(core.fit_result);
         fit({}, [] { return true; });
         result["cancelBeforeAny"] = correlation_pairs(core);
+        result["cancelBeforeAnyCompact"] = shared_record_state(core.fit_result);
         fit([&](const edi::ScanFileRecord&) { ++completed; }, [&] { return completed == 1; });
         result["completed"] = completed;
         result["cancelled"] = correlation_pairs(core);
+        result["cancelledCompact"] = shared_record_state(core.fit_result);
         edi::save_project_as(core, (std::filesystem::path(work.toStdString()) / "saved").string());
-        core = edi::load_project((std::filesystem::path(work.toStdString()) / "saved").string());
-        result["reopened"] = correlation_pairs(core);
+        const auto reloaded_input = std::filesystem::path(work.toStdString()) / "reload-resume";
+        std::filesystem::copy(std::filesystem::path(work.toStdString()) / "saved", reloaded_input,
+                              std::filesystem::copy_options::recursive);
+        auto reopened = edi::load_project(reloaded_input.string());
+        result["reopened"] = correlation_pairs(reopened);
+        result["reopenedCompact"] = shared_record_state(reopened.fit_result);
         QJsonArray resumed;
         fit(
             [&](const edi::ScanFileRecord& row) {
@@ -325,6 +477,7 @@ QJsonObject correlation_lifecycle(const std::string& action, const QString& fixt
             {});
         result["resumedFiles"] = resumed;
         result["resumed"] = correlation_pairs(core);
+        result["resumedCompact"] = shared_record_state(core.fit_result);
         QJsonArray noop;
         fit(
             [&](const edi::ScanFileRecord& row) {
@@ -333,12 +486,24 @@ QJsonObject correlation_lifecycle(const std::string& action, const QString& fixt
             {});
         result["noopFiles"] = noop;
         result["noop"] = correlation_pairs(core);
+        result["noopCompact"] = shared_record_state(core.fit_result);
         edi::save_project_as(
             core, (std::filesystem::path(work.toStdString()) / "completed-saved").string());
         result["memoryAfterSave"] = correlation_pairs(core);
+        result["memoryAfterSaveCompact"] = shared_record_state(core.fit_result);
         const auto saved_core = edi::load_project(
             (std::filesystem::path(work.toStdString()) / "completed-saved").string());
         result["completedReopened"] = correlation_pairs(saved_core);
+        result["completedReopenedCompact"] = shared_record_state(saved_core.fit_result);
+        // Replay resume after reload too: only the template's literal rows cross a save.
+        core = std::move(reopened);
+        QJsonArray reloaded_files;
+        fit([&](const edi::ScanFileRecord& row) {
+                reloaded_files.append(QString::fromStdString(row.file_name));
+            }, {});
+        result["reloadedResumeFiles"] = reloaded_files;
+        result["reloadedResumed"] = correlation_pairs(core);
+        result["reloadedResumedCompact"] = shared_record_state(core.fit_result);
         return result;
     }
     if (history) {
@@ -493,6 +658,32 @@ QJsonObject correlation_save_stability(const QString& fixture, const QString& wo
         view.fit()->reset();
         view.undo();
         settle_projection(view);
+    }
+    if (scenario == "shared-undo") {
+        const auto snapshot = view.project().fit_result;
+        result["original"] = shared_record_state(snapshot);
+        view.setCurrentExperimentIndex(0);
+        settle_projection(view);
+        view.setCurrentExperimentIndex(2);
+        settle_projection(view);
+        result["refreshed"] = shared_record_state(view.project().fit_result);
+        view.experimentModels()[0]->setName("renamed_bank");
+        settle_projection(view);
+        result["renamed"] = shared_record_state(view.project().fit_result);
+        result["originalAfterRename"] = shared_record_state(snapshot);
+        view.undo();
+        settle_projection(view);
+        result["renameUndo"] = shared_record_state(view.project().fit_result);
+        view.fit()->reset();
+        settle_projection(view);
+        result["reset"] = shared_record_state(view.project().fit_result);
+        result["originalAfterReset"] = shared_record_state(snapshot);
+        result["resetMatrix"] = matrix(view);
+        result["resetUndoAvailable"] = view.canUndo();
+        view.undo();
+        settle_projection(view);
+        result["resetUndo"] = shared_record_state(view.project().fit_result);
+        result["originalAfterResetUndo"] = shared_record_state(snapshot);
     }
     const QString saved = work + "/saved";
     if (!session.saveAs(QUrl::fromLocalFile(saved)))
@@ -710,6 +901,16 @@ int main(int argc, char** argv) {
     const QString beam = QString::fromLocal8Bit(argv[4]);
     QJsonObject result;
     try {
+        if (mode == "loaded-cache-lifecycle") {
+            result = loaded_cache_lifecycle(fixture, work);
+            std::cout << QJsonDocument(result).toJson(QJsonDocument::Compact).constData() << '\n';
+            return 0;
+        }
+        if (mode == "frozen-generated") {
+            result = frozen_generated_output(fixture, work, beam.toStdString());
+            std::cout << QJsonDocument(result).toJson(QJsonDocument::Compact).constData() << '\n';
+            return 0;
+        }
         if (mode == "correlation-historical-rename") {
             result = rename_lifecycle(fixture, work, escape, true, beam == "scan", false, true);
             std::cout << QJsonDocument(result).toJson(QJsonDocument::Compact).constData() << '\n';
@@ -723,6 +924,11 @@ int main(int argc, char** argv) {
         if (mode == "correlation-rename-undo") {
             result = rename_lifecycle(fixture, work, escape, true, beam == "scan",
                                       std::string(argv[6]) == "refusal");
+            std::cout << QJsonDocument(result).toJson(QJsonDocument::Compact).constData() << '\n';
+            return 0;
+        }
+        if (mode == "shared-order") {
+            result = shared_order_lifecycle(fixture, work);
             std::cout << QJsonDocument(result).toJson(QJsonDocument::Compact).constData() << '\n';
             return 0;
         }

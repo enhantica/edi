@@ -65,6 +65,7 @@ nav:
           - dev/adrs/0031-example-metadata-and-filters.md
           - dev/adrs/0031-application-settings-and-per-page-settings.md
           - dev/adrs/0033-display-glyphs-from-bundled-fonts.md
+          - dev/adrs/0034-fit-correlations-computed-once-and-shared.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md

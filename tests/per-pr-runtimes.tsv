@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-12T16:20:58Z
+# measured_utc = 2026-10-13T12:33:15Z
 #
-# Recorded from: seq57/runtime-carry.json; canonical three-way retention from committed parent banks, successful complete merged collection; task-head costs retained where both parents changed; no invented measurements
-# Collected tests: 11075; with a reported duration: 6081
-# Module-scoped fixture costs recorded: 40
+# Recorded from: measured test run (1 node(s) measured once, 10422 banked, 0 stale row(s) dropped)
+# Collected tests: 11239; with a reported duration: 6140
+# Module-scoped fixture costs recorded: 43
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 11874
-# inventory_cpp = 309
-# inventory_measured = 11010
-# inventory_unmeasured = 1173
+# inventory_python = 12038
+# inventory_cpp = 312
+# inventory_measured = 11176
+# inventory_unmeasured = 1174
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_atom_filter_recovers_from_red_and_commits_element]
@@ -5271,6 +5271,32 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_fitting_mode_weights.py:
 0.000	tests/integration/py/test_legacy_project_load.py::test_old_engine_start_state_is_refused_with_its_name[chebyshev]
 0.000	tests/integration/py/test_legacy_project_load.py::test_old_engine_start_state_is_refused_with_its_name[line-segment]
 0.000	tests/integration/py/test_legacy_project_load.py::test_old_engine_start_state_is_refused_with_its_name[polynomial]
+0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[alias-reorder-record]
+0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[alias-reorder-rows]
+0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[alias-replace-record]
+0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[alias-replace-rows]
+0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[clear-undo-record]
+0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[clear-undo-rows]
+0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[clear-write-undo-record]
+0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[clear-write-undo-rows]
+0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[coefficient-write-record]
+0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[coefficient-write-rows]
+0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[file-switch-record]
+0.030	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[file-switch-rows]
+0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[name-rename-record]
+0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[name-rename-rows]
+0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[owner-replace-record]
+0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[owner-replace-rows]
+0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[repeat-record]
+0.024	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[repeat-rows]
+0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[replace-undo-record]
+0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[replace-undo-rows]
+0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[same-value-write-record]
+0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[same-value-write-rows]
+0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[second-coefficient-write-record]
+0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[second-coefficient-write-rows]
+0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[tail-alias-replace-record]
+0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[tail-alias-replace-rows]
 0.000	tests/integration/py/test_locked_gui_fixture.py::test_locked_consumer_stages_only_a_missing_app_gui_prerequisite[cold-app]
 0.000	tests/integration/py/test_locked_gui_fixture.py::test_locked_consumer_stages_only_a_missing_app_gui_prerequisite[core]
 0.000	tests/integration/py/test_locked_gui_fixture.py::test_locked_consumer_stages_only_a_missing_app_gui_prerequisite[explicit-app]
@@ -5824,6 +5850,116 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.p
 0.250	tests/integration/py/test_scan_template.py::test_template_setter_selects_scan_data_without_changing_parameters[all594687.dat]
 0.240	tests/integration/py/test_scan_template.py::test_template_setter_selects_scan_data_without_changing_parameters[all594791.dat]
 0.250	tests/integration/py/test_scan_template.py::test_template_setter_selects_scan_data_without_changing_parameters[all594842.dat]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_actual_native_builds_require_matching_release_configuration[CMAKE_BUILD_TYPE-Debug]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_actual_native_builds_require_matching_release_configuration[compiler-different]
+0.100	tests/integration/py/test_scan_timing_contract.py::test_actual_scratch_copies_hash_identically_without_fit_starts_or_resume_files
+0.160	tests/integration/py/test_scan_timing_contract.py::test_comparison_process_exits_nonzero_for_a_slow_fixed_build
+0.010	tests/integration/py/test_scan_timing_contract.py::test_contained_delay_accepts_worker_overlap_on_its_own_clock[at-endpoint]
+0.010	tests/integration/py/test_scan_timing_contract.py::test_contained_delay_accepts_worker_overlap_on_its_own_clock[inside]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[early-endpoint-fit]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[early-endpoint-reset]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[failed-fit]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[failed-reset]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[inf-end-fit]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[inf-end-reset]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[missing-start-fit]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[missing-start-reset]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[nan-endpoint-fit]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[nan-endpoint-reset]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[nan-start-fit]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[nan-start-reset]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[negative-fit]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[negative-reset]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[reversed-fit]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[reversed-reset]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[short-fit]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[short-reset]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[unassociated-fit]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[unassociated-reset]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_each_actual_reset_condition_is_required_before_timing_credit[calculation_pending]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_each_actual_reset_condition_is_required_before_timing_credit[dataset_correlations]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_each_actual_reset_condition_is_required_before_timing_credit[dataset_fit_outcomes]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_each_actual_reset_condition_is_required_before_timing_credit[prefit_values_restored]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_each_actual_reset_condition_is_required_before_timing_credit[remaining_files]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_each_actual_reset_condition_is_required_before_timing_credit[result_rows]
+0.010	tests/integration/py/test_scan_timing_contract.py::test_each_actual_reset_condition_is_required_before_timing_credit[undo_available]
+0.020	tests/integration/py/test_scan_timing_contract.py::test_fit_and_reset_sum_is_compared_per_run_not_as_a_sum_of_medians
+0.000	tests/integration/py/test_scan_timing_contract.py::test_historical_sdk_locator_requires_its_retained_binary_bond[compiled_cli_sha256]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_historical_sdk_locator_requires_its_retained_binary_bond[compiled_edi_source]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_historical_sdk_locator_requires_its_retained_binary_bond[edi_source]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_historical_sdk_locator_requires_its_retained_binary_bond[missing-field]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_historical_sdk_locator_requires_its_retained_binary_bond[not-a-record]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_historical_sdk_locator_requires_its_retained_binary_bond[sdk_manifest_sha256]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_incomplete_work_never_gets_a_fast_time[app-calculation_pending-True]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_incomplete_work_never_gets_a_fast_time[app-calculation_stale-True]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_incomplete_work_never_gets_a_fast_time[app-follow-locked]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_incomplete_work_never_gets_a_fast_time[app-outcome-Failed]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_incomplete_work_never_gets_a_fast_time[app-outcome-Stopped]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_incomplete_work_never_gets_a_fast_time[app-terminal_published-False]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_incomplete_work_never_gets_a_fast_time[cli-input_sha256-value3]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_incomplete_work_never_gets_a_fast_time[cli-machine-record=fit\nstatus=cancelled\n]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_incomplete_work_never_gets_a_fast_time[cli-machine-record=fit\nstatus=done\nstatus=done\n]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_incomplete_work_never_gets_a_fast_time[cli-mode-single]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_incomplete_work_never_gets_a_fast_time[cli-preexisting_results-value0]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_incomplete_work_never_gets_a_fast_time[cli-refused-value5]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_incomplete_work_never_gets_a_fast_time[cli-settings-value2]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_incomplete_work_never_gets_a_fast_time[cli-skipped-value4]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_incomplete_work_never_gets_a_fast_time[cli-unfinished-value6]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_native_clock_parser_keeps_each_slot_with_its_interval
+0.000	tests/integration/py/test_scan_timing_contract.py::test_native_clock_parser_refuses_malformed_or_unassociated_records[duplicate-delay]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_native_clock_parser_refuses_malformed_or_unassociated_records[duplicate-endpoint]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_native_clock_parser_refuses_malformed_or_unassociated_records[early-endpoint]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_native_clock_parser_refuses_malformed_or_unassociated_records[inf-end]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_native_clock_parser_refuses_malformed_or_unassociated_records[missing]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_native_clock_parser_refuses_malformed_or_unassociated_records[nan-endpoint]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_native_clock_parser_refuses_malformed_or_unassociated_records[nan-start]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_native_clock_parser_refuses_malformed_or_unassociated_records[negative]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_native_clock_parser_refuses_malformed_or_unassociated_records[out-of-order]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_native_clock_parser_refuses_malformed_or_unassociated_records[reversed]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_native_clock_parser_refuses_malformed_or_unassociated_records[short]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_native_clock_parser_refuses_malformed_or_unassociated_records[unassociated]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_native_clock_parser_refuses_malformed_or_unassociated_records[unexpected-delay]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_native_clock_parser_refuses_malformed_or_unassociated_records[unknown]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_native_clock_parser_refuses_malformed_or_unassociated_records[wrong-scenario]
+0.010	tests/integration/py/test_scan_timing_contract.py::test_owner_bound_rejects_each_slow_interval_and_keeps_boundary[1.05-True-fit_ms]
+0.010	tests/integration/py/test_scan_timing_contract.py::test_owner_bound_rejects_each_slow_interval_and_keeps_boundary[1.05-True-process_ms]
+0.010	tests/integration/py/test_scan_timing_contract.py::test_owner_bound_rejects_each_slow_interval_and_keeps_boundary[1.05-True-reset_ms]
+0.010	tests/integration/py/test_scan_timing_contract.py::test_owner_bound_rejects_each_slow_interval_and_keeps_boundary[1.050001-False-fit_ms]
+0.010	tests/integration/py/test_scan_timing_contract.py::test_owner_bound_rejects_each_slow_interval_and_keeps_boundary[1.050001-False-process_ms]
+0.010	tests/integration/py/test_scan_timing_contract.py::test_owner_bound_rejects_each_slow_interval_and_keeps_boundary[1.050001-False-reset_ms]
+0.010	tests/integration/py/test_scan_timing_contract.py::test_owner_bound_rejects_each_slow_interval_and_keeps_boundary[1.07-False-fit_ms]
+0.010	tests/integration/py/test_scan_timing_contract.py::test_owner_bound_rejects_each_slow_interval_and_keeps_boundary[1.07-False-process_ms]
+0.010	tests/integration/py/test_scan_timing_contract.py::test_owner_bound_rejects_each_slow_interval_and_keeps_boundary[1.07-False-reset_ms]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_physical_results_inventory_rejects_each_population_escape[bad-success]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_physical_results_inventory_rejects_each_population_escape[duplicate]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_physical_results_inventory_rejects_each_population_escape[extra-column]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_physical_results_inventory_rejects_each_population_escape[missing]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_prepared_analysis_omits_only_saved_fit_starts[\n-d20.cosio.scale]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_prepared_analysis_omits_only_saved_fit_starts[\n-d20.scale]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_prepared_analysis_omits_only_saved_fit_starts[_another.scalar 2.75\n-d20.cosio.scale]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_prepared_analysis_omits_only_saved_fit_starts[_another.scalar 2.75\n-d20.scale]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_prepared_analysis_omits_only_saved_fit_starts[loop_\n-d20.cosio.scale]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_prepared_analysis_omits_only_saved_fit_starts[loop_\n-d20.scale]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_provenance_ordering_and_negative_controls_fail_closed[control-credit]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_provenance_ordering_and_negative_controls_fail_closed[debug]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_provenance_ordering_and_negative_controls_fail_closed[drop-run]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_provenance_ordering_and_negative_controls_fail_closed[host]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_provenance_ordering_and_negative_controls_fail_closed[late-control]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_provenance_ordering_and_negative_controls_fail_closed[missing-control]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_provenance_ordering_and_negative_controls_fail_closed[nan-time]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_provenance_ordering_and_negative_controls_fail_closed[passing-slow-control]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_provenance_ordering_and_negative_controls_fail_closed[reorder]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_provenance_ordering_and_negative_controls_fail_closed[short-delay]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_provenance_ordering_and_negative_controls_fail_closed[wrong-baseline]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_provenance_ordering_and_negative_controls_fail_closed[wrong-compiled-source]
+0.070	tests/integration/py/test_shared_correlation_saved_bytes.py::test_fitted_correlation_loop_matches_pre_change_regression_pin[scan]
+0.070	tests/integration/py/test_shared_correlation_saved_bytes.py::test_fitted_correlation_loop_matches_pre_change_regression_pin[single]
+0.000	tests/integration/py/test_shared_correlation_saved_bytes.py::test_frozen_numeric_table_keeps_the_declared_pre_change_fitted_state[scan]
+0.000	tests/integration/py/test_shared_correlation_saved_bytes.py::test_frozen_numeric_table_keeps_the_declared_pre_change_fitted_state[single]
+0.070	tests/integration/py/test_shared_correlation_saved_bytes.py::test_loaded_nonordinal_id_and_decimal_spelling_survive_views_and_save[-0.84016805041680576]
+0.070	tests/integration/py/test_shared_correlation_saved_bytes.py::test_loaded_nonordinal_id_and_decimal_spelling_survive_views_and_save[0.50]
+0.100	tests/integration/py/test_shared_correlation_saved_bytes.py::test_pre_change_correlation_bytes_survive_unchanged_reload[scan]
+0.110	tests/integration/py/test_shared_correlation_saved_bytes.py::test_pre_change_correlation_bytes_survive_unchanged_reload[single]
 0.000	tests/integration/py/test_space_group_edits.py::test_changing_only_the_setting_keeps_the_space_group_identity
 0.010	tests/integration/py/test_space_group_edits.py::test_changing_space_group_replaces_old_setting_and_resolves_identity[name]
 0.000	tests/integration/py/test_space_group_edits.py::test_changing_space_group_replaces_old_setting_and_resolves_identity[number]
@@ -9578,6 +9714,14 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_executi
 0.030	tests/system/py/test_fit_participants_native.py::test_native_explicit_pattern_atom_check_matches_its_selected_banks[reverse-selected-empty-explicit-single]
 0.050	tests/system/py/test_fit_participants_native.py::test_native_explicit_pattern_atom_check_matches_its_selected_banks[reverse-unused-empty-first-explicit-joint]
 0.040	tests/system/py/test_fit_participants_native.py::test_native_explicit_pattern_atom_check_matches_its_selected_banks[reverse-unused-empty-first-explicit-single]
+0.710	tests/system/py/test_generated_correlation_saved_output.py::test_real_fit_emits_every_pinned_single_or_template_correlation_row[scan]
+0.430	tests/system/py/test_generated_correlation_saved_output.py::test_real_fit_emits_every_pinned_single_or_template_correlation_row[single]
+UNMEASURED:failed-in-this-run	tests/system/py/test_linear_row_admission.py::test_admission_comparison_budget_is_proportional_to_rows[copy]
+UNMEASURED:failed-in-this-run	tests/system/py/test_linear_row_admission.py::test_admission_comparison_budget_is_proportional_to_rows[default-ids]
+UNMEASURED:failed-in-this-run	tests/system/py/test_linear_row_admission.py::test_admission_comparison_budget_is_proportional_to_rows[keyed]
+UNMEASURED:failed-in-this-run	tests/system/py/test_linear_row_admission.py::test_admission_comparison_budget_is_proportional_to_rows[reorder]
+UNMEASURED:failed-in-this-run	tests/system/py/test_linear_row_admission.py::test_admission_comparison_budget_is_proportional_to_rows[replace]
+UNMEASURED:failed-in-this-run	tests/system/py/test_linear_row_admission.py::test_admission_comparison_budget_is_proportional_to_rows[unkeyed]
 UNMEASURED:failed-in-this-run	tests/system/py/test_locked_dependencies.py::test_app_configure_uses_locked_packages_and_truthful_sdk[system-absent]
 UNMEASURED:failed-in-this-run	tests/system/py/test_locked_dependencies.py::test_app_configure_uses_locked_packages_and_truthful_sdk[system-present]
 0.000	tests/system/py/test_locked_dependencies.py::test_dependency_escape_observer_closes_paths_and_symlink_redirects
@@ -9612,10 +9756,10 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_newest_project_census.py::tes
 0.120	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[two-held-names-title-structure]
 0.170	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[two-held-names-upper-experiment]
 0.120	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[two-held-names-upper-structure]
-UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_cancelled_scan_retains_completed_core_pairs_and_resumes[fresh-independent]
-UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_cancelled_scan_retains_completed_core_pairs_and_resumes[fresh-sequential]
-UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_cancelled_scan_retains_completed_core_pairs_and_resumes[replace-old-pair-independent]
-UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_cancelled_scan_retains_completed_core_pairs_and_resumes[replace-old-pair-sequential]
+0.170	tests/system/py/test_plain_data_app.py::test_cancelled_scan_retains_completed_core_pairs_and_resumes[fresh-independent]
+0.258	tests/system/py/test_plain_data_app.py::test_cancelled_scan_retains_completed_core_pairs_and_resumes[fresh-sequential]
+0.220	tests/system/py/test_plain_data_app.py::test_cancelled_scan_retains_completed_core_pairs_and_resumes[replace-old-pair-independent]
+0.150	tests/system/py/test_plain_data_app.py::test_cancelled_scan_retains_completed_core_pairs_and_resumes[replace-old-pair-sequential]
 0.080	tests/system/py/test_plain_data_app.py::test_default_structure_matches_frozen_beta_cif
 0.470	tests/system/py/test_plain_data_app.py::test_desktop_browser_picker_and_editability_bindings_share_load_path
 0.370	tests/system/py/test_plain_data_app.py::test_filename_and_user_name[default-name]
@@ -9639,12 +9783,12 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_cance
 0.000	tests/system/py/test_plain_data_app.py::test_lifecycle_observer_consumes_configuration_metadata_and_actual_edits[undoSecond-simulation]
 0.000	tests/system/py/test_plain_data_app.py::test_lifecycle_observer_consumes_configuration_metadata_and_actual_edits[undoTypeEditable-action]
 0.090	tests/system/py/test_plain_data_app.py::test_link_all_unlinked_new_structure_and_atomic_remove_undo
-UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_literal_datablock_rename_undo_restores_references_template_and_saved_state[plain-experiment]
-UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_literal_datablock_rename_undo_restores_references_template_and_saved_state[plain-structure]
-0.130	tests/system/py/test_plain_data_app.py::test_literal_datablock_rename_undo_restores_references_template_and_saved_state[refusal-experiment]
-0.110	tests/system/py/test_plain_data_app.py::test_literal_datablock_rename_undo_restores_references_template_and_saved_state[refusal-structure]
-UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_literal_datablock_rename_undo_restores_references_template_and_saved_state[scan-experiment]
-UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_literal_datablock_rename_undo_restores_references_template_and_saved_state[scan-structure]
+0.160	tests/system/py/test_plain_data_app.py::test_literal_datablock_rename_undo_restores_references_template_and_saved_state[plain-experiment]
+0.595	tests/system/py/test_plain_data_app.py::test_literal_datablock_rename_undo_restores_references_template_and_saved_state[plain-structure]
+0.210	tests/system/py/test_plain_data_app.py::test_literal_datablock_rename_undo_restores_references_template_and_saved_state[refusal-experiment]
+0.170	tests/system/py/test_plain_data_app.py::test_literal_datablock_rename_undo_restores_references_template_and_saved_state[refusal-structure]
+0.200	tests/system/py/test_plain_data_app.py::test_literal_datablock_rename_undo_restores_references_template_and_saved_state[scan-experiment]
+0.150	tests/system/py/test_plain_data_app.py::test_literal_datablock_rename_undo_restores_references_template_and_saved_state[scan-structure]
 0.209	tests/system/py/test_plain_data_app.py::test_load_lock_replace_and_single_step_undo[cwl]
 0.110	tests/system/py/test_plain_data_app.py::test_load_lock_replace_and_single_step_undo[tof]
 0.000	tests/system/py/test_plain_data_app.py::test_message_counts_reject_invalid_numbers_in_every_field[fractional-derived-number-first]
@@ -10535,6 +10679,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_scan_
 0.300	tests/system/py/test_scan_owner_adjustments.py::test_previous_and_next_repeat_the_effective_selection_step
 0.010	tests/system/py/test_scan_owner_adjustments.py::test_progress_remains_at_the_status_bar_far_right
 0.380	tests/system/py/test_scan_owner_adjustments.py::test_project_page_displays_bounded_names_and_the_middle_ellipsis
+0.180	tests/system/py/test_scan_performance_work.py::test_scan_performance_proves_complete_work_controls_and_the_owner_bound
 0.630	tests/system/py/test_scan_projection_wiring_escapes.py::test_actual_stale_markers_reject_constant_or_other_result_state[chart]
 0.610	tests/system/py/test_scan_projection_wiring_escapes.py::test_actual_stale_markers_reject_constant_or_other_result_state[status]
 0.270	tests/system/py/test_scan_projection_wiring_escapes.py::test_header_observer_rejects_disconnected_model_and_displayed_labels[labels]
@@ -10577,6 +10722,19 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_scan_screen.py::test_scan_pat
 1.190	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[follow]
 3.870	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[joint]
 1.000	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[state]
+0.000	tests/system/py/test_shared_correlation_app_state.py::test_actual_block_rename_replaces_shared_names_once_and_keeps_coefficient_pointers
+0.000	tests/system/py/test_shared_correlation_app_state.py::test_actual_reset_clears_current_map_and_keeps_retained_tables_unchanged
+0.000	tests/system/py/test_shared_correlation_app_state.py::test_frozen_numeric_state_generates_the_complete_pre_change_saved_loop[scan]
+0.001	tests/system/py/test_shared_correlation_app_state.py::test_frozen_numeric_state_generates_the_complete_pre_change_saved_loop[single]
+0.000	tests/system/py/test_shared_correlation_app_state.py::test_loaded_cache_follows_actual_publication_rename_reset_and_undo
+0.000	tests/system/py/test_shared_correlation_app_state.py::test_real_reordered_free_columns_get_new_names_and_new_pair_order
+0.000	tests/system/py/test_shared_correlation_app_state.py::test_real_scan_columns_share_one_names_vector
+0.000	tests/system/py/test_shared_correlation_app_state.py::test_refresh_and_actual_undo_restore_identical_bundle_pointers[refreshed]
+0.000	tests/system/py/test_shared_correlation_app_state.py::test_refresh_and_actual_undo_restore_identical_bundle_pointers[renameUndo]
+0.000	tests/system/py/test_shared_correlation_app_state.py::test_refresh_and_actual_undo_restore_identical_bundle_pointers[resetUndo]
+0.000	tests/system/py/test_shared_correlation_app_state.py::test_retained_boundary_gate_refuses_each_changed_snapshot[originalAfterRename]
+0.000	tests/system/py/test_shared_correlation_app_state.py::test_retained_boundary_gate_refuses_each_changed_snapshot[originalAfterResetUndo]
+0.000	tests/system/py/test_shared_correlation_app_state.py::test_retained_boundary_gate_refuses_each_changed_snapshot[originalAfterReset]
 0.000	tests/system/py/test_thread_selector.py::test_auto_contract_refuses_wrong_admission_without_requiring_full_participation[environment-browser]
 0.000	tests/system/py/test_thread_selector.py::test_auto_contract_refuses_wrong_admission_without_requiring_full_participation[environment-desktop]
 0.000	tests/system/py/test_thread_selector.py::test_auto_contract_refuses_wrong_admission_without_requiring_full_participation[overfull-fill-browser]
@@ -10935,6 +11093,9 @@ UNMEASURED:failed-in-native-replay-fe3d181	tests/unit/cpp/test_loop_parameter_pa
 0.006	tests/unit/cpp/test_report_format.cpp::format_change brackets the non-trivial blanking threshold
 0.007	tests/unit/cpp/test_report_format.cpp::format_change refuses undefined percentages
 0.009	tests/unit/cpp/test_report_format.cpp::format_change uses the starting value as its denominator
+UNMEASURED:native-Release-measurement-held	tests/unit/cpp/test_shared_correlation_storage.cpp::An unrelated scan event preserves literal loaded pair identity and spelling
+UNMEASURED:native-Release-measurement-held	tests/unit/cpp/test_shared_correlation_storage.cpp::Fit record copies retain immutable result pointers and only template rows
+UNMEASURED:native-Release-measurement-held	tests/unit/cpp/test_shared_correlation_storage.cpp::Shared numeric tables preserve upper-triangle ids and shortest text
 0.002	tests/unit/cpp/test_simulation_edits.cpp::creating and undoing a simulation preserves prior experiments
 0.001	tests/unit/cpp/test_simulation_edits.cpp::measured experiments refuse type range and simulation creation atomically
 0.001	tests/unit/cpp/test_simulation_edits.cpp::simulation type and range edits target only the selected experiment
@@ -12078,9 +12239,15 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e04_t9_sanitizer.py::test_sanit
 0.000	tests/unit/py/test_e09_t55_python_api_coverage.py::test_cli_scan_branch_routes_events_and_each_emission_policy
 0.000	tests/unit/py/test_e09_t55_python_api_coverage.py::test_python_analysis_facade_round_trips_mode_and_calculation
 0.000	tests/unit/py/test_e09_t55_python_api_coverage.py::test_structure_factory_round_trips_full_public_dict_and_rejects_retired_shape
+0.000	tests/unit/py/test_e09_t55_unit_coverage_contract.py::test_cpp_assertion_census_follows_explicit_template_calls[direct]
+0.000	tests/unit/py/test_e09_t55_unit_coverage_contract.py::test_cpp_assertion_census_follows_explicit_template_calls[empty]
+0.000	tests/unit/py/test_e09_t55_unit_coverage_contract.py::test_cpp_assertion_census_follows_explicit_template_calls[nested-template]
+0.000	tests/unit/py/test_e09_t55_unit_coverage_contract.py::test_cpp_assertion_census_follows_explicit_template_calls[template]
+0.000	tests/unit/py/test_e09_t55_unit_coverage_contract.py::test_cpp_assertion_census_follows_explicit_template_calls[transitive-template]
+0.000	tests/unit/py/test_e09_t55_unit_coverage_contract.py::test_cpp_assertion_census_follows_explicit_template_calls[unreached]
 0.000	tests/unit/py/test_e09_t55_unit_coverage_contract.py::test_e09_t55_declares_edi_denominators_and_thresholds
 0.030	tests/unit/py/test_e09_t55_unit_coverage_contract.py::test_e09_t55_edi_cpp_threshold_control[79.99-1]
-0.030	tests/unit/py/test_e09_t55_unit_coverage_contract.py::test_e09_t55_edi_cpp_threshold_control[80.00-0]
+0.020	tests/unit/py/test_e09_t55_unit_coverage_contract.py::test_e09_t55_edi_cpp_threshold_control[80.00-0]
 0.000	tests/unit/py/test_e09_t55_unit_coverage_contract.py::test_e09_t55_edi_exclusions_are_exact_reasoned_live_lines
 0.000	tests/unit/py/test_e09_t55_unit_coverage_contract.py::test_e09_t55_every_counted_edi_unit_test_reaches_an_assertion
 0.000	tests/unit/py/test_e09_t55_unit_coverage_contract.py::test_e09_t55_only_unit_tiers_feed_edi_metrics
@@ -12230,6 +12397,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 0.258	tests/integration/app/test_phase_scan_state.py
 # module-cost: 1.914	tests/integration/py/test_e04_t12_name_allowance.py
 # module-cost: 0.192	tests/integration/py/test_e09_t75_sdk_consumer.py
+# module-cost: 23.486	tests/integration/py/test_loaded_correlation_cache.py
 # module-cost: 1.780	tests/integration/py/test_scan_app_contract.py
 # module-cost: 0.361	tests/integration/py/test_scan_extended_contract.py
 # module-cost: 0.257	tests/integration/py/test_scan_notes_diagnostics.py
@@ -12252,7 +12420,8 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 1.762	tests/system/py/test_e09_t58_start_tied_numeric.py
 # module-cost: 0.346	tests/system/py/test_e09_t75_native_execution.py
 # module-cost: 3.929	tests/system/py/test_fit_participants_native.py
-# module-cost: 178.437	tests/system/py/test_plain_data_app.py
+# module-cost: 11.686	tests/system/py/test_linear_row_admission.py
+# module-cost: 179.025	tests/system/py/test_plain_data_app.py
 # module-cost: 21.241	tests/system/py/test_pytest_child_environment.py
 # module-cost: 2.368	tests/system/py/test_scan_accident_paths.py
 # module-cost: 717.517	tests/system/py/test_scan_app_execution.py
@@ -12261,6 +12430,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 1.016	tests/system/py/test_scan_lazy_input.py
 # module-cost: 1.968	tests/system/py/test_scan_native_boundary.py
 # module-cost: 0.058	tests/system/py/test_scan_screen.py
+# module-cost: 0.729	tests/system/py/test_shared_correlation_app_state.py
 # module-cost: 6.259	tests/system/py/test_thread_selector.py
 # module-cost: 2.483	tests/unit/py/test_e04_t9_latency_ratchet.py
-# module-cost: 0.250	tests/unit/py/test_e09_t55_unit_coverage_contract.py
+# module-cost: 0.262	tests/unit/py/test_e09_t55_unit_coverage_contract.py

@@ -224,12 +224,26 @@ void copy_fit_result(Project& to, const Project& from);
 void clear_fit_result(Project& project);
 // A correlation row's coefficient as a number (its text, read in the C locale); NaN when it is not one.
 double correlation_value(const FitParameterCorrelation& row);
+// ADR-0034 I6: a table's rows as a save writes them: numbered 1, 2, … in pair order, `deterministic`, the pair's two
+// names and the coefficient in crysta's shortest round-trip text, `file` naming the scan file (empty for a single fit).
+std::vector<FitParameterCorrelation> correlation_rows(const CorrelationTable& table, const std::string& file);
+// ADR-0034: a scan file's new results into a fit record: its bundle by file, with the rows read for the file dropped
+// (I7) and, for the template file, the saved rows made from its table (I6), the other files' read rows moving to their
+// bundles (hold_template_rows). The cost is the record's own rows, not the scan's pairs.
+void adopt_scan_file_result(FitResultRecord& record, const std::string& file,
+                            std::shared_ptr<const ScanFileResult> result, const std::string& template_file);
+// ADR-0034: a scan record once its template's fit changed. The saved loop holds `template_rows`, the template's rows,
+// and each other file's rows in `rows`, as read, move into that file's bundle, unless a fit gave the file one. A read
+// row so keeps its id however the template's rows are numbered (I6, I7). Rows of the template file and rows naming no
+// file are dropped.
+void hold_template_rows(FitResultRecord& record, std::vector<FitParameterCorrelation> template_rows,
+                        const std::vector<FitParameterCorrelation>& rows, const std::string& template_file);
+
 // Correlation pairs as a record holds them (FitResultRecord::correlations), each keeping its id; a pair with no id, or
 // with one an earlier pair took, gets the first free number of 1, 2, … (diffraction-lib numbers its
-// `_fit_parameter_correlation` rows so). A scan's template file's pairs come first, as a save keeps only those (the
-// owner, 2026-10-12): their ids are never the ones replaced, so an unchanged save after a reload writes the same loop.
+// `_fit_parameter_correlation` rows so).
 std::vector<ItemVec<FitParameterCorrelation>::Ptr> numbered_correlations(
-    const std::vector<FitParameterCorrelation>& pairs, const std::string& template_file = {});
+    const std::vector<FitParameterCorrelation>& pairs);
 
 // Build one entity from text (diffraction-lib `StructureFactory.from_cif_str` /
 // `ExperimentFactory.from_cif_str` — ruling absorb-ten-26). BOTH entries accept the dot-form
