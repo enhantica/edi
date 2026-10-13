@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 
 #include "analysis_view_model.hpp"
 #include "correlation_view_model.hpp"
@@ -23,6 +24,50 @@
 Q_IMPORT_QML_PLUGIN(edi_appPlugin)
 
 namespace {
+QJsonObject frozen_generated_output(const QString& fixture, const QString& work,
+                                    const std::string& kind) {
+    const std::filesystem::path source(fixture.toStdString());
+    std::ifstream input(source / (kind + "-numeric.table"));
+    std::size_t count = 0;
+    input >> count;
+    if (!input.good() || count < 2 || count > 512)
+        throw std::runtime_error("frozen numeric input must name its bounded fitted column count");
+    std::vector<std::string> names(count);
+    for (auto& name : names) input >> name;
+    input >> count;
+    if (count != names.size() * (names.size() - 1) / 2)
+        throw std::runtime_error("frozen numeric input must retain its complete packed triangle");
+    std::vector<double> values;
+    for (std::size_t k = 0; k < count; ++k) {
+        std::string bits;
+        input >> bits;
+        values.push_back(std::stod(bits));
+    }
+    if (!input.good()) throw std::runtime_error("frozen numeric input must supply every fitted double");
+    auto table = std::make_shared<edi::CorrelationTable>();
+    table->names = std::make_shared<const std::vector<std::string>>(std::move(names));
+    table->values = std::make_shared<const std::vector<double>>(std::move(values));
+    auto project = edi::load_project((source / (kind + "-input")).string());
+    QJsonObject result{{"loadedPairs", static_cast<int>(project.fit_result.correlations.size())}};
+    if (kind == "single") {
+        for (const auto& row : edi::correlation_rows(*table, ""))
+            project.fit_result.correlations.push_back(row);
+    } else {
+        auto bundle = std::make_shared<edi::ScanFileResult>();
+        bundle->correlations = table;
+        edi::adopt_scan_file_result(project.fit_result, "all594687.dat", bundle,
+                                    project.sequential_fit.template_file);
+        result["otherPairs"] = static_cast<int>(project.fit_result.correlations.size());
+        edi::adopt_scan_file_result(project.fit_result, project.sequential_fit.template_file,
+                                    bundle, project.sequential_fit.template_file);
+    }
+    result["generatedPairs"] = static_cast<int>(project.fit_result.correlations.size());
+    result["numericPairs"] = static_cast<int>(table->values->size());
+    edi::save_project_as(project, work.toStdString());
+    result["analysis"] = work + "/analysis/analysis.edi";
+    return result;
+}
+
 template <typename Record>
 QJsonObject shared_record_state(const Record& record) {
     if constexpr (requires { record.scan_results; }) {
@@ -577,12 +622,13 @@ QJsonObject correlation_save_stability(const QString& fixture, const QString& wo
         view.fit()->reset();
         settle_projection(view);
         result["reset"] = shared_record_state(view.project().fit_result);
+        result["originalAfterReset"] = shared_record_state(snapshot);
         result["resetMatrix"] = matrix(view);
         result["resetUndoAvailable"] = view.canUndo();
         view.undo();
         settle_projection(view);
         result["resetUndo"] = shared_record_state(view.project().fit_result);
-        result["originalAfterReset"] = shared_record_state(snapshot);
+        result["originalAfterResetUndo"] = shared_record_state(snapshot);
     }
     const QString saved = work + "/saved";
     if (!session.saveAs(QUrl::fromLocalFile(saved)))
@@ -800,6 +846,11 @@ int main(int argc, char** argv) {
     const QString beam = QString::fromLocal8Bit(argv[4]);
     QJsonObject result;
     try {
+        if (mode == "frozen-generated") {
+            result = frozen_generated_output(fixture, work, beam.toStdString());
+            std::cout << QJsonDocument(result).toJson(QJsonDocument::Compact).constData() << '\n';
+            return 0;
+        }
         if (mode == "correlation-historical-rename") {
             result = rename_lifecycle(fixture, work, escape, true, beam == "scan", false, true);
             std::cout << QJsonDocument(result).toJson(QJsonDocument::Compact).constData() << '\n';

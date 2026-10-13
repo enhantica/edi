@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-13T07:40:59Z
+# measured_utc = 2026-10-13T08:09:26Z
 #
-# Recorded from: measured test run (1 node(s) measured once, 10385 banked, 0 stale row(s) dropped)
-# Collected tests: 11203; with a reported duration: 6112
+# Recorded from: measured test run (22 node(s) measured once, 10374 banked, 0 stale row(s) dropped)
+# Collected tests: 11212; with a reported duration: 6114
 # Module-scoped fixture costs recorded: 42
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 11203
+# inventory_python = 11212
 # inventory_cpp = 312
-# inventory_measured = 10386
-# inventory_unmeasured = 1129
+# inventory_measured = 10396
+# inventory_unmeasured = 1128
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -5929,10 +5929,12 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.p
 0.000	tests/integration/py/test_scan_timing_contract.py::test_provenance_ordering_and_negative_controls_fail_closed[wrong-compiled-source]
 0.070	tests/integration/py/test_shared_correlation_saved_bytes.py::test_fitted_correlation_loop_matches_pre_change_regression_pin[scan]
 0.070	tests/integration/py/test_shared_correlation_saved_bytes.py::test_fitted_correlation_loop_matches_pre_change_regression_pin[single]
-0.100	tests/integration/py/test_shared_correlation_saved_bytes.py::test_loaded_nonordinal_id_and_decimal_spelling_survive_views_and_save[-0.84016805041680576]
-0.090	tests/integration/py/test_shared_correlation_saved_bytes.py::test_loaded_nonordinal_id_and_decimal_spelling_survive_views_and_save[0.50]
-0.080	tests/integration/py/test_shared_correlation_saved_bytes.py::test_pre_change_correlation_bytes_survive_unchanged_reload[scan]
-0.090	tests/integration/py/test_shared_correlation_saved_bytes.py::test_pre_change_correlation_bytes_survive_unchanged_reload[single]
+0.000	tests/integration/py/test_shared_correlation_saved_bytes.py::test_frozen_numeric_table_keeps_the_declared_pre_change_fitted_state[scan]
+0.000	tests/integration/py/test_shared_correlation_saved_bytes.py::test_frozen_numeric_table_keeps_the_declared_pre_change_fitted_state[single]
+0.070	tests/integration/py/test_shared_correlation_saved_bytes.py::test_loaded_nonordinal_id_and_decimal_spelling_survive_views_and_save[-0.84016805041680576]
+0.070	tests/integration/py/test_shared_correlation_saved_bytes.py::test_loaded_nonordinal_id_and_decimal_spelling_survive_views_and_save[0.50]
+0.100	tests/integration/py/test_shared_correlation_saved_bytes.py::test_pre_change_correlation_bytes_survive_unchanged_reload[scan]
+0.110	tests/integration/py/test_shared_correlation_saved_bytes.py::test_pre_change_correlation_bytes_survive_unchanged_reload[single]
 0.000	tests/integration/py/test_space_group_edits.py::test_changing_only_the_setting_keeps_the_space_group_identity
 0.010	tests/integration/py/test_space_group_edits.py::test_changing_space_group_replaces_old_setting_and_resolves_identity[name]
 0.000	tests/integration/py/test_space_group_edits.py::test_changing_space_group_replaces_old_setting_and_resolves_identity[number]
@@ -8888,6 +8890,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_executi
 0.030	tests/system/py/test_fit_participants_native.py::test_native_explicit_pattern_atom_check_matches_its_selected_banks[reverse-selected-empty-explicit-single]
 0.050	tests/system/py/test_fit_participants_native.py::test_native_explicit_pattern_atom_check_matches_its_selected_banks[reverse-unused-empty-first-explicit-joint]
 0.040	tests/system/py/test_fit_participants_native.py::test_native_explicit_pattern_atom_check_matches_its_selected_banks[reverse-unused-empty-first-explicit-single]
+0.380	tests/system/py/test_generated_correlation_saved_output.py::test_real_fit_emits_every_pinned_single_or_template_correlation_row[scan]
+0.290	tests/system/py/test_generated_correlation_saved_output.py::test_real_fit_emits_every_pinned_single_or_template_correlation_row[single]
 UNMEASURED:failed-in-this-run	tests/system/py/test_linear_row_admission.py::test_admission_comparison_budget_is_proportional_to_rows[copy]
 UNMEASURED:failed-in-this-run	tests/system/py/test_linear_row_admission.py::test_admission_comparison_budget_is_proportional_to_rows[default-ids]
 UNMEASURED:failed-in-this-run	tests/system/py/test_linear_row_admission.py::test_admission_comparison_budget_is_proportional_to_rows[keyed]
@@ -9896,11 +9900,16 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_scan_screen.py::test_scan_pat
 1.000	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[state]
 0.000	tests/system/py/test_shared_correlation_app_state.py::test_actual_block_rename_replaces_shared_names_once_and_keeps_coefficient_pointers
 0.000	tests/system/py/test_shared_correlation_app_state.py::test_actual_reset_clears_current_map_and_keeps_retained_tables_unchanged
+0.000	tests/system/py/test_shared_correlation_app_state.py::test_frozen_numeric_state_generates_the_complete_pre_change_saved_loop[scan]
+0.002	tests/system/py/test_shared_correlation_app_state.py::test_frozen_numeric_state_generates_the_complete_pre_change_saved_loop[single]
 0.000	tests/system/py/test_shared_correlation_app_state.py::test_real_reordered_free_columns_get_new_names_and_new_pair_order
-0.003	tests/system/py/test_shared_correlation_app_state.py::test_real_scan_columns_share_one_names_vector
+0.000	tests/system/py/test_shared_correlation_app_state.py::test_real_scan_columns_share_one_names_vector
 0.000	tests/system/py/test_shared_correlation_app_state.py::test_refresh_and_actual_undo_restore_identical_bundle_pointers[refreshed]
-UNMEASURED:failed-in-this-run	tests/system/py/test_shared_correlation_app_state.py::test_refresh_and_actual_undo_restore_identical_bundle_pointers[renameUndo]
+0.000	tests/system/py/test_shared_correlation_app_state.py::test_refresh_and_actual_undo_restore_identical_bundle_pointers[renameUndo]
 0.000	tests/system/py/test_shared_correlation_app_state.py::test_refresh_and_actual_undo_restore_identical_bundle_pointers[resetUndo]
+0.000	tests/system/py/test_shared_correlation_app_state.py::test_retained_boundary_gate_refuses_each_changed_snapshot[originalAfterRename]
+0.000	tests/system/py/test_shared_correlation_app_state.py::test_retained_boundary_gate_refuses_each_changed_snapshot[originalAfterResetUndo]
+0.000	tests/system/py/test_shared_correlation_app_state.py::test_retained_boundary_gate_refuses_each_changed_snapshot[originalAfterReset]
 0.000	tests/system/py/test_thread_selector.py::test_auto_contract_refuses_wrong_admission_without_requiring_full_participation[environment-browser]
 0.000	tests/system/py/test_thread_selector.py::test_auto_contract_refuses_wrong_admission_without_requiring_full_participation[environment-desktop]
 0.000	tests/system/py/test_thread_selector.py::test_auto_contract_refuses_wrong_admission_without_requiring_full_participation[overfull-fill-browser]
@@ -11594,7 +11603,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 1.016	tests/system/py/test_scan_lazy_input.py
 # module-cost: 1.968	tests/system/py/test_scan_native_boundary.py
 # module-cost: 0.058	tests/system/py/test_scan_screen.py
-# module-cost: 77.477	tests/system/py/test_shared_correlation_app_state.py
+# module-cost: 1.258	tests/system/py/test_shared_correlation_app_state.py
 # module-cost: 6.259	tests/system/py/test_thread_selector.py
 # module-cost: 2.483	tests/unit/py/test_e04_t9_latency_ratchet.py
 # module-cost: 0.262	tests/unit/py/test_e09_t55_unit_coverage_contract.py

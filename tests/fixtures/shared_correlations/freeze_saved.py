@@ -37,6 +37,37 @@ def loop_bytes(contents):
     return contents[match.start() : match.end() + end.start() if end else len(contents)]
 
 
+def freeze_numeric_tables(output):
+    """Project the retained producer's fitted coefficients into row-free numeric inputs."""
+    provenance = json.loads((output / 'saved-provenance.json').read_text())
+    tables = {'claim': 'REGRESSION INPUT: frozen pre-change fitted numeric tables', 'cases': {}}
+    for case, receipt in provenance['cases'].items():
+        frozen = (output / (case + '-correlations.edi')).read_bytes()
+        if hashlib.sha256(frozen).hexdigest() != receipt['loop_sha256']:
+            raise ValueError(
+                'The numeric input must come from the unchanged frozen producer bytes'
+            )
+        rows = [line.split() for line in frozen.decode().splitlines() if ' deterministic ' in line]
+        names = list(dict.fromkeys(name for row in rows for name in row[2:4]))
+        pairs = [(names[i], names[j]) for i in range(len(names)) for j in range(i + 1, len(names))]
+        if [(row[2], row[3]) for row in rows] != pairs:
+            raise ValueError('The retained fit must declare the complete packed column order')
+        data = '\n'.join([
+            str(len(names)),
+            *names,
+            str(len(rows)),
+            *[float(row[4]).hex() for row in rows],
+            '',
+        ])
+        destination = output / (case + '-numeric.table')
+        destination.write_text(data)
+        tables['cases'][case] = {
+            'producer_loop_sha256': receipt['loop_sha256'],
+            'numeric_sha256': hashlib.sha256(destination.read_bytes()).hexdigest(),
+        }
+    (output / 'numeric-provenance.json').write_text(json.dumps(tables, indent=2) + '\n')
+
+
 def capture(reference, output):
     import edi  # noqa: PLC0415 - selected source and compiled module belong to the old build
 
@@ -89,6 +120,7 @@ def capture(reference, output):
                 'loop_sha256': hashlib.sha256(loop).hexdigest(),
             }
     (output / 'saved-provenance.json').write_text(json.dumps(manifest, indent=2) + '\n')
+    freeze_numeric_tables(output)
 
 
 def main():

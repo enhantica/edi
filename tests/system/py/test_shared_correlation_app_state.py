@@ -1,5 +1,6 @@
 """Observe immutable live bundle pointers across actual app actions on real scan fits."""
 
+import copy
 import json
 import os
 import subprocess
@@ -8,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from tests.conftest import crysta_reference_prefix
+from tests.fixtures.shared_correlations.freeze_saved import HERE, loop_bytes
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -70,6 +72,24 @@ def shared_app_state(tmp_path_factory):
         check=True,
     )
     record['order'] = json.loads(completed.stdout.splitlines()[-1])
+    record['generated'] = {}
+    for case in ['single', 'scan']:
+        completed = subprocess.run(
+            [
+                str(binary),
+                'frozen-generated',
+                str(HERE),
+                str(work / case),
+                case,
+                'unused',
+                'later',
+            ],
+            env={**os.environ, 'QT_QPA_PLATFORM': 'offscreen', 'QSG_RHI_BACKEND': 'software'},
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        record['generated'][case] = json.loads(completed.stdout.splitlines()[-1])
     return record
 
 
@@ -78,6 +98,25 @@ def original_files(state):
     assert original['compact'], 'Real scan fits must publish shared immutable result bundles'
     assert len(original['files']) == 3, 'Every completed dataset must retain its own live bundle'
     return original['files']
+
+
+@pytest.mark.parametrize('case', ['single', 'scan'])
+def test_frozen_numeric_state_generates_the_complete_pre_change_saved_loop(shared_app_state, case):
+    observed = shared_app_state['generated'][case]
+    assert observed['loadedPairs'] == 0, (
+        'Generated-output witnesses must load original input with no expected correlation rows'
+    )
+    if case == 'scan':
+        assert observed['otherPairs'] == 0, (
+            'A generated non-template table must contribute no persisted rows'
+        )
+    assert observed['generatedPairs'] == observed['numericPairs'] > 0, (
+        'Fresh production table conversion must emit the complete single or template fitted state'
+    )
+    actual = loop_bytes(Path(observed['analysis']).read_bytes())
+    assert actual == (HERE / (case + '-correlations.edi')).read_bytes(), (
+        'Fresh numeric fitted-state conversion and saving must retain every pre-change loop byte'
+    )
 
 
 def test_real_scan_columns_share_one_names_vector(shared_app_state):
@@ -126,11 +165,30 @@ def test_actual_reset_clears_current_map_and_keeps_retained_tables_unchanged(sha
     assert shared_app_state['resetUndoAvailable'], (
         'Reset fits must leave its real Undo action available'
     )
-    for step in ['originalAfterRename', 'originalAfterReset']:
-        before = 'renameUndo' if step == 'resetUndo' else 'original'
-    assert shared_app_state[step] == shared_app_state[before], (
-        'Published tables retained by an earlier record must never change in place'
-    )
+    for step in ['originalAfterRename', 'originalAfterReset', 'originalAfterResetUndo']:
+        assert shared_app_state[step] == shared_app_state['original'], (
+            'Published tables retained by an earlier record must never change at ' + step
+        )
+
+
+@pytest.mark.parametrize(
+    'step', ['originalAfterRename', 'originalAfterReset', 'originalAfterResetUndo']
+)
+def test_retained_boundary_gate_refuses_each_changed_snapshot(step):
+    original = {'compact': True, 'files': {str(i): {'coefficients': [0.5]} for i in range(3)}}
+    state = {
+        'original': original,
+        'reset': {'compact': True, 'files': {}},
+        'resetMatrix': {'available': 0},
+        'resetUndoAvailable': True,
+        **{
+            boundary: copy.deepcopy(original)
+            for boundary in ['originalAfterRename', 'originalAfterReset', 'originalAfterResetUndo']
+        },
+    }
+    state[step]['files']['0']['coefficients'][0] = -0.25
+    with pytest.raises(AssertionError, match='must never change'):
+        test_actual_reset_clears_current_map_and_keeps_retained_tables_unchanged(state)
 
 
 def test_actual_block_rename_replaces_shared_names_once_and_keeps_coefficient_pointers(

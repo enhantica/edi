@@ -13,6 +13,36 @@ PROVENANCE = json.loads((HERE / 'saved-provenance.json').read_text())
 
 
 @pytest.mark.parametrize('case', ['single', 'scan'])
+def test_frozen_numeric_table_keeps_the_declared_pre_change_fitted_state(case):
+    provenance = json.loads((HERE / 'numeric-provenance.json').read_text())['cases'][case]
+    data = (HERE / (case + '-numeric.table')).read_bytes()
+    assert hashlib.sha256(data).hexdigest() == provenance['numeric_sha256'], (
+        'The generated-row input must retain its frozen fitted numeric-state digest'
+    )
+    loop = (HERE / (case + '-correlations.edi')).read_bytes()
+    assert (
+        hashlib.sha256(loop).hexdigest()
+        == provenance['producer_loop_sha256']
+        == PROVENANCE['cases'][case]['loop_sha256']
+    ), 'The numeric regression input must remain tied to the original pre-change producer bytes'
+    fields = data.decode().splitlines()
+    size = int(fields[0])
+    names = fields[1 : size + 1]
+    values = [float.fromhex(value) for value in fields[size + 2 :]]
+    rows = [line.split() for line in loop.decode().splitlines() if ' deterministic ' in line]
+    assert len(values) == int(fields[size + 1]) == len(rows) == size * (size - 1) // 2, (
+        'The row-free numeric input must retain every off-diagonal fitted coefficient'
+    )
+    pairs = [(names[i], names[j]) for i in range(size) for j in range(i + 1, size)]
+    assert pairs == [(row[2], row[3]) for row in rows], (
+        'Frozen numeric names must preserve the complete original covariance column order'
+    )
+    assert values == [float(row[4]) for row in rows], (
+        'Every frozen binary coefficient must equal the original fitted double exactly'
+    )
+
+
+@pytest.mark.parametrize('case', ['single', 'scan'])
 def test_pre_change_correlation_bytes_survive_unchanged_reload(tmp_path, case):
     source = tmp_path / 'source'
     shutil.copytree(HERE / (case + '-input'), source)
