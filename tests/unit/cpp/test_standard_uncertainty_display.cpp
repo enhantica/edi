@@ -25,18 +25,21 @@ TEST_CASE("Standard uncertainty display follows both IUCr decimal rules") {
         {10.30925, .00157, "iucr_19", "10.3093(16)"},
     }};
     for (const auto& [value, su, rule, expected] : cases) {
-        CAPTURE(value, su, rule);
-        CHECK_MESSAGE(edi::value_su_text(value, su, rule) == expected,
+        CAPTURE(value);
+        CAPTURE(su);
+        CAPTURE(rule);
+        CHECK_MESSAGE((edi::value_su_text(value, su, rule) == expected),
                       "The core display must carry the independent IUCr decimal spelling");
     }
-    CHECK_MESSAGE(edi::value_su_text(0, 2e-310, "iucr_19") == "0." + std::string(310, '0') + "(2)",
-                  "A subnormal uncertainty must keep its nonzero fixed-point bracket");
+    CHECK_MESSAGE(
+        (edi::value_su_text(0, 2e-310, "iucr_19") == "0." + std::string(310, '0') + "(2)"),
+        "A subnormal uncertainty must keep its nonzero fixed-point bracket");
     const auto standard = edi::su_text(2.16352, .00481, "iucr_19");
     const auto two_digit = edi::su_text(2.16352, .00481, "iucr_99");
-    CHECK_MESSAGE(standard.value == "2.164" && standard.su == "0.005" && standard.bracket == "5",
+    CHECK_MESSAGE((standard.value == "2.164" && standard.su == "0.005" && standard.bracket == "5"),
                   "The default GUI cells share the file's rounded value and standard uncertainty");
     CHECK_MESSAGE(
-        two_digit.value == "2.1635" && two_digit.su == "0.0049" && two_digit.bracket == "49",
+        (two_digit.value == "2.1635" && two_digit.su == "0.0049" && two_digit.bracket == "49"),
         "The two-digit GUI cells share the file's selected alternative rule");
 #else
     FAIL_CHECK("The planned core standard-uncertainty display formatter must exist");
@@ -52,7 +55,7 @@ TEST_CASE("Written correlation text follows magnitude-dependent significant figu
                                                         {1.0, "1.00"},
                                                         {-.99987, "-1.00"}}}) {
         CHECK_MESSAGE(
-            edi::correlation_text(value) == expected,
+            (edi::correlation_text(value) == expected),
             "Report correlation text must follow the independent IUCr significant figures");
     }
 #else

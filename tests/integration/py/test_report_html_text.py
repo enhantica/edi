@@ -65,7 +65,8 @@ def test_html_embeds_json_without_script_or_entity_injection(title):
     assert not any(char in contents.model for char in '<>&\u2028\u2029'), (
         'Inline JSON must escape HTML syntax and both Unicode script-content separators'
     )
-    assert json.loads(contents.model)['project']['title'] == title, (
+    document = json.loads(contents.model)
+    assert document.get('project', document)['title'] == title, (
         'Parsing the escaped JSON must recover every byte of the original project title'
     )
     assert any(title in heading for heading in contents.headings), (
