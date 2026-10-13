@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-13T21:24:04Z
+# measured_utc = 2026-10-13T21:43:10Z
 #
-# Recorded from: canonical native XML completion: tests-seq16-report-json.xml and tests-seq16-scene.xml on immutable 06639e1; six native passes; Python bank retained
+# Recorded from: canonical native XML completion: tests-seq17-current.xml on isolated 47f9b87 with final owned assertions; twelve native passes; Python bank retained
 # Collected tests: 11350; with a reported duration: 6148
 # Module-scoped fixture costs recorded: 43
 #
@@ -30,8 +30,8 @@
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 11350
-# inventory_cpp = 320
-# inventory_measured = 10443
+# inventory_cpp = 326
+# inventory_measured = 10449
 # inventory_unmeasured = 1227
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
@@ -10255,6 +10255,7 @@ UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_transitions.cpp::Na
 0.009	tests/unit/cpp/test_datablock_rename.cpp::Site and tensor key edits follow every coordinate and ADP reference
 0.009	tests/unit/cpp/test_datablock_rename.cpp::Structure rename follows all relation categories and exact name boundaries
 0.000	tests/unit/cpp/test_e04_t10_scene.cpp::E04-T10 I13 I14 both projections and pointer transformations
+0.000	tests/unit/cpp/test_e04_t10_scene.cpp::E04-T10 I15 I16 drawing hit maps half bonds and viewport dimensions
 0.001	tests/unit/cpp/test_e04_t10_scene.cpp::E04-T10 I9 published home orientation fits the whole drawing
 UNMEASURED:not-produced-by-this-run	tests/unit/cpp/test_e04_t10_scene.cpp::E04-T10 gate 1 every CLI scene equals independently loaded crysta geometry
 0.030	tests/unit/cpp/test_e05_t1_fit_job.cpp::E05-T1 gate 3 engine checkpoint cancel retains partial values and undo
@@ -10390,6 +10391,11 @@ UNMEASURED:expected-red-on-d775b5fd	tests/unit/cpp/test_e05_t1_fit_job.cpp::E05-
 0.000	tests/unit/cpp/test_e09_t55_report_model_adapter.cpp::E09-T55 model collections expose all parameters and only the free subset
 0.000	tests/unit/cpp/test_e09_t55_report_model_adapter.cpp::E09-T55 report tables retain identity paths, starts, uncertainties, and bank metrics
 UNMEASURED:failed-in-native-replay-fe3d181	tests/unit/cpp/test_loop_parameter_paths.cpp::Every experiment loop path names the declared row id
+0.000	tests/unit/cpp/test_report_correlation_count.cpp::Report automatic correlation level preserves complete threshold ties
+0.000	tests/unit/cpp/test_report_correlation_count.cpp::Report correlation context leaves global and shown-experiment identities
+0.000	tests/unit/cpp/test_report_correlation_count.cpp::Report count chooses the lowest threshold within the requested count
+0.000	tests/unit/cpp/test_report_correlation_count.cpp::Report count keeps an unavoidable clique tie whole
+0.000	tests/unit/cpp/test_report_correlation_count.cpp::Report threshold selects five of fifty-three independent identities
 0.006	tests/unit/cpp/test_report_format.cpp::format_change brackets the non-trivial blanking threshold
 0.007	tests/unit/cpp/test_report_format.cpp::format_change refuses undefined percentages
 0.009	tests/unit/cpp/test_report_format.cpp::format_change uses the starting value as its denominator
