@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-13T18:12:34Z
+# measured_utc = 2026-10-13T18:18:39Z
 #
-# Recorded from: canonical native XML completion: tests-seq3-cpp-baseline.xml; all native reds declared holes; Python bank retained
-# Collected tests: 11313; with a reported duration: 6144
+# Recorded from: canonical native XML completion: tests-seq3-cpp-current.xml; actual native results; red cases declared holes; Python bank retained
+# Collected tests: 11313; with a reported duration: 6147
 # Module-scoped fixture costs recorded: 43
 #
 # Breaches are decided PER TIER against the table
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 11313
 # inventory_cpp = 318
-# inventory_measured = 10437
-# inventory_unmeasured = 1194
+# inventory_measured = 10440
+# inventory_unmeasured = 1191
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -10354,10 +10354,10 @@ UNMEASURED:failed-in-native-replay-fe3d181	tests/unit/cpp/test_loop_parameter_pa
 0.006	tests/unit/cpp/test_report_format.cpp::format_change brackets the non-trivial blanking threshold
 0.007	tests/unit/cpp/test_report_format.cpp::format_change refuses undefined percentages
 0.009	tests/unit/cpp/test_report_format.cpp::format_change uses the starting value as its denominator
-UNMEASURED:failed-in-this-run	tests/unit/cpp/test_report_model_json.cpp::Report JSON carries shortest-roundtrip doubles without dropping fields
+0.001	tests/unit/cpp/test_report_model_json.cpp::Report JSON carries shortest-roundtrip doubles without dropping fields
 UNMEASURED:failed-in-this-run	tests/unit/cpp/test_report_model_json.cpp::Report JSON retains existing presentation and drawing outputs at nontrivial seams
-UNMEASURED:failed-in-this-run	tests/unit/cpp/test_report_model_json.cpp::Report JSON retains hostile UTF8 text and encodes nonfinite su as null
-UNMEASURED:failed-in-this-run	tests/unit/cpp/test_report_model_json.cpp::Report options retain section order and an explicitly fixed UTC timestamp
+0.000	tests/unit/cpp/test_report_model_json.cpp::Report JSON retains hostile UTF8 text and encodes nonfinite su as null
+0.000	tests/unit/cpp/test_report_model_json.cpp::Report options retain section order and an explicitly fixed UTC timestamp
 UNMEASURED:native-Release-measurement-held	tests/unit/cpp/test_shared_correlation_storage.cpp::An unrelated scan event preserves literal loaded pair identity and spelling
 UNMEASURED:native-Release-measurement-held	tests/unit/cpp/test_shared_correlation_storage.cpp::Fit record copies retain immutable result pointers and only template rows
 UNMEASURED:native-Release-measurement-held	tests/unit/cpp/test_shared_correlation_storage.cpp::Shared numeric tables preserve upper-triangle ids and shortest text
