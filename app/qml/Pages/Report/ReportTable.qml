@@ -67,10 +67,11 @@ Flickable {
     }
     readonly property real tableWidth: layout.reduce((sum, column) => sum + column.width, 0) + 2 * border
 
-    // A number's parts: before its decimal point, and after it (an s.u. bracket, an exponent and units with them).
+    // A number's parts: before its decimal point, and after it (an s.u. bracket, an exponent and units with them; a
+    // degree sign follows the digits directly).
     // Null for a text that is not a number.
     function split(text: string): var {
-        const match = /^([-−+]?[0-9]*)(\.?)([0-9]*(?:\([0-9]+\))?(?:[eE][-+]?[0-9]+)?(?: [^ 0-9].*)?)$/.exec(text);
+        const match = /^([-−+]?[0-9]*)(\.?)([0-9]*(?:\([0-9]+\))?(?:[eE][-+]?[0-9]+)?(?:°| [^ 0-9].*)?)$/.exec(text);
         if (!match || !/[0-9]/.test(match[1] + match[3]))
             return null;
         return {
@@ -177,7 +178,8 @@ Flickable {
                             x: table.layout[heading.index] && table.layout[heading.index].numeric ? Math.round((heading.width - width) / 2) : table.padding
                             anchors.verticalCenter: parent.verticalCenter
                             font: metrics.font
-                            color: EaStyle.Colors.themeForegroundMinor
+                            // The text colour, as the app tables' headers have it.
+                            color: EaStyle.Colors.themeForeground
                             textFormat: Text.PlainText
                             text: table.columns[heading.index] ?? ""
                         }
