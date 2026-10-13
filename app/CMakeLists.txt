@@ -174,7 +174,6 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Report/ReportCorrelations.qml
         qml/Pages/Report/ReportPage.qml
         qml/Pages/Report/ReportPreview.qml
-        qml/Pages/Report/ReportRows.qml
         qml/Pages/Report/ReportTable.qml
         qml/Pages/Structure/AppearanceGroup.qml
         qml/Pages/Structure/AtomSiteAdpGroup.qml
