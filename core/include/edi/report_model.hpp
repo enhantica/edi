@@ -92,8 +92,9 @@ struct ReportCorrelations {
     std::string empty_text; ///< why nothing is shown; empty when the matrix is
 };
 
-/// The viewport a report's structure drawing is prepared for (ADR-0035 §1), in logical pixels.
-inline constexpr Viewport kReportViewport{800.0, 600.0, 0.0};
+/// The viewport a report's structure drawing is prepared for (ADR-0035 §1), in logical pixels, with room at the sides
+/// for the element legend.
+inline constexpr Viewport kReportViewport{800.0, 600.0, 0.0, 120.0};
 
 struct ReportStructure {
     std::string id;
