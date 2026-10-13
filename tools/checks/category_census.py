@@ -99,7 +99,7 @@ NOT_MODEL = {
     'ViewWindow': 'view state passed to a geometry read, never stored in the model',
     'ParameterRenames': "a block rename's old and new parameter names, made for the rename",
     'CorrelationTable': "one fit's correlations as numbers, made once and shared (ADR-0034)",
-    'ScanFileResult': "one scan file's results, made once by its fit or kept as read, and shared (ADR-0034)",
+    'ScanFileResult': "one scan file's results, from its fit or as read, shared (ADR-0034)",
     'CwlProfileSlots': 'the peak slots a CW profile token carries, read from the token',
     'OptionalParameter': 'one optional parameter, kept detached once removed (ADR-0012)',
     'ParameterCell': 'an optional parameter and the link it reports once removed',

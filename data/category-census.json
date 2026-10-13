@@ -3745,12 +3745,12 @@
     {
       "member": "ScanFileResult::correlations",
       "type": "std::shared_ptr<const CorrelationTable>",
-      "not_storage": "one scan file's results, made once by its fit or kept as read, and shared (ADR-0034)"
+      "not_storage": "one scan file's results, from its fit or as read, shared (ADR-0034)"
     },
     {
       "member": "ScanFileResult::read_rows",
       "type": "std::vector<std::shared_ptr<const FitParameterCorrelation>>",
-      "not_storage": "one scan file's results, made once by its fit or kept as read, and shared (ADR-0034)"
+      "not_storage": "one scan file's results, from its fit or as read, shared (ADR-0034)"
     },
     {
       "member": "ScanFileRecord::file_name",
