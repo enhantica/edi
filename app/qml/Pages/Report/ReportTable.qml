@@ -76,7 +76,7 @@ Flickable {
     // degree sign follows the digits directly).
     // Null for a text that is not a number.
     function split(text: string): var {
-        const match = /^([-−+]?[0-9]*)(\.?)([0-9]*(?:\([0-9]+\))?(?:[eE][-+]?[0-9]+)?(?:°| [^ 0-9].*)?)$/.exec(text);
+        const match = /^([-−+]?[0-9]*)(\.?)([0-9]*(?:\([0-9]+\))?(?:[eE][-+]?[0-9]+)?(?:°²?| [^ 0-9].*)?)$/.exec(text);
         if (!match || !/[0-9]/.test(match[1] + match[3]))
             return null;
         return {
