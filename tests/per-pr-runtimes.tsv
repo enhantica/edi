@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-13T06:45:30Z
+# measured_utc = 2026-10-13T07:40:59Z
 #
-# Recorded from: measured test run (102 node(s) measured once, 10283 banked, 0 stale row(s) dropped)
-# Collected tests: 11203; with a reported duration: 6111
+# Recorded from: measured test run (1 node(s) measured once, 10385 banked, 0 stale row(s) dropped)
+# Collected tests: 11203; with a reported duration: 6112
 # Module-scoped fixture costs recorded: 42
 #
 # Breaches are decided PER TIER against the table
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 11203
 # inventory_cpp = 312
-# inventory_measured = 10385
-# inventory_unmeasured = 1130
+# inventory_measured = 10386
+# inventory_unmeasured = 1129
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -9851,7 +9851,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_scan_
 0.300	tests/system/py/test_scan_owner_adjustments.py::test_previous_and_next_repeat_the_effective_selection_step
 0.010	tests/system/py/test_scan_owner_adjustments.py::test_progress_remains_at_the_status_bar_far_right
 0.380	tests/system/py/test_scan_owner_adjustments.py::test_project_page_displays_bounded_names_and_the_middle_ellipsis
-UNMEASURED:failed-in-this-run	tests/system/py/test_scan_performance_work.py::test_scan_performance_proves_complete_work_controls_and_the_owner_bound
+0.550	tests/system/py/test_scan_performance_work.py::test_scan_performance_proves_complete_work_controls_and_the_owner_bound
 0.630	tests/system/py/test_scan_projection_wiring_escapes.py::test_actual_stale_markers_reject_constant_or_other_result_state[chart]
 0.610	tests/system/py/test_scan_projection_wiring_escapes.py::test_actual_stale_markers_reject_constant_or_other_result_state[status]
 0.270	tests/system/py/test_scan_projection_wiring_escapes.py::test_header_observer_rejects_disconnected_model_and_displayed_labels[labels]
