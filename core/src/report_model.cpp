@@ -647,7 +647,7 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
     const bool charts = group("charts", "Charts");
     const bool correlations = group("correlations", "Correlations");
     const bool reflections = group("reflections", "Reflections");
-    const bool measured = group("measured_data", "Measured data");
+    const bool data = group("data", "Data");
     const bool evolution = scan_mode && group("evolution", "Evolution");
     model.sections = {ReportSection::Summary, ReportSection::Analysis, ReportSection::Structures,
                       ReportSection::Experiments};
@@ -661,8 +661,8 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
     }
     for (std::size_t index = 0; index < project.experiments.size(); ++index) {
         ReportExperiment built = experiment_of(*project.experiments[index], rule);
-        std::erase_if(built.categories, [reflections, measured](const ReportCategory& part) {
-            return (part.id == "refln" && !reflections) || (part.id == "data" && !measured);
+        std::erase_if(built.categories, [reflections, data](const ReportCategory& part) {
+            return (part.id == "refln" && !reflections) || (part.id == "data" && !data);
         });
         if (charts) {
             built.pattern = pattern_of(project, index, options);

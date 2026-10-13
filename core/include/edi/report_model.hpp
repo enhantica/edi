@@ -32,8 +32,9 @@ std::optional<ReportSection> report_section_from_name(std::string_view name);
 /// What a report holds. The app takes the correlation level and the x axis from the Analysis page; the CLI and Python
 /// take them as options.
 struct ReportOptions {
-    /// The optional groups left out, by key: "charts", "correlations", "reflections", "measured_data", "evolution".
-    std::vector<std::string> hidden;
+    /// The optional groups left out, by key: "charts", "correlations", "reflections", "data", "evolution". The data
+    /// are left out unless asked for, as they are usually long (the owner, 2026-10-13); an empty list includes all.
+    std::vector<std::string> hidden{"data"};
     std::optional<double> correlation_level;  ///< absent: the five most correlated parameters
     bool d_spacing = false;                   ///< charts on d instead of 2θ or TOF
     bool residual = true;                     ///< the residual pane
@@ -71,9 +72,9 @@ struct ReportCategory {
 };
 
 /// One of the report's optional groups (the owner, 2026-10-13): the charts, the correlations, the reflections, the
-/// measured data and, for a scan, the evolution; whether the report includes it. Everything else is always included.
+/// data and, for a scan, the evolution; whether the report includes it. Everything else is always included.
 struct ReportContentsItem {
-    std::string key;  ///< "charts", "correlations", "reflections", "measured_data" or "evolution"
+    std::string key;  ///< "charts", "correlations", "reflections", "data" or "evolution"
     std::string title;
     bool included = true;
 };
