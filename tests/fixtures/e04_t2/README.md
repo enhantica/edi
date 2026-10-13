@@ -1,7 +1,7 @@
-#  independent acceptance inputs
+# independent acceptance inputs
 
 `generate.py` parses every `loop_` in the committed CLI project directories and
- witness projects. `loops.json` records source paths, SHA-256, columns and
+witness projects. `loops.json` records source paths, SHA-256, columns and
 row counts. No app category API or Python edi package supplies that inventory.
 Regenerate with `python tests/fixtures/e04_t2/generate.py` at authoring time only.
 
@@ -14,7 +14,7 @@ The theme tokens come from gui-components' `Gui/Style/Colors.qml`, and bundled
 font families from the owner's committed 2026-09-28 font records.
 The absent-value tolerance is 1e-6, from the producer's
 `include/crysta/fit.hpp::kDefaultChiSquareTolerance`, forwarded by
-`core/src/adapter.cpp::default_chi_square_tolerance`. The  editable
+`core/src/adapter.cpp::default_chi_square_tolerance`. The editable
 project omits the tolerance and witnesses that fallback. Separately,
 `docs/user/cli/pd-neut-tof_si-sepd_start-2/project/analysis/analysis.edi`
 declares 1e-4; its loaded value and a subsequent 0.0025 edit witness explicit
@@ -56,10 +56,9 @@ uncertainty supplies the precision. The nontrivial witnesses are
 1.2866603586797143 → 1.29 and 0.0025646436261 → 0.00256. Both retain their
 original stored double, including on focus loss without an edit.
 
-
 ## Corrected note 20 (owner, 2026-09-29)
 
-Authority: development hub `knowledge/decision-records.md`, "OWNER CORRECTION: 
+Authority: development hub `knowledge/decision-records.md`, "OWNER CORRECTION:
 note 20 means build once per full run", committed with the amended packet.
 A full sequence builds once before checks; each standalone step builds first
 on every invocation. Freshness detection is no longer an acceptance property.
@@ -101,7 +100,7 @@ build dependency and retains the checker and selected environment. Controls
 include the recovery invocation; the normal CI witness still excludes its
 intentional change-scoped rebuild. `merge-tasks` joins the verify aliases.
 
-The retained  gate previously searched all dependency command text for
+The retained gate previously searched all dependency command text for
 task names, losing group-app when it became a direct pytest command. It now
 requires each task to be reachable and to carry its actual checker command,
 including the Python app suite; missing-edge and empty-checker controls fail.
@@ -109,7 +108,7 @@ Both desktop platforms, native app checks and failure-image uploads remain
 required. These changes adapt representation without relaxing build counts,
 ordering, repeated standalone builds or failure propagation.
 
-The retained  CLI wiring gate previously walked only string task dependencies
+The retained CLI wiring gate previously walked only string task dependencies
 and accepted any one matching CI step. The corrected note-20 graph introduced an
 environment-qualified dependency mapping, which raised TypeError during that walk.
 It now resolves task definitions and dependency identity in the declared environment,
@@ -121,7 +120,7 @@ steps, shell guards and project-subset invocations cannot supply that evidence.
 The other retained workflow gates already support the matrices or inspect unaffected
 jobs, so their assertions remain unchanged. No native build is part of this check.
 
-The retained  parameter-column observer previously positioned the ListView,
+The retained parameter-column observer previously positioned the ListView,
 scrolled its row once, then read after one polish/render wait. macOS CI exposed a
 row still outside its enclosing sidebar viewport. It now scrolls and polishes the
 table before positioning the row, then retries row exposure within a bounded wait
@@ -130,8 +129,7 @@ inside its clipped viewports. It retries geometry only: the same native name,
 units, uncertainty and admissible-bound assertions still run once against the
 independent inputs. Hidden, clipped, blank and incorrect text remain failures.
 
-C15-T4's `generate.py --project pd-xray-cwl_lif_single --project
-pd-xray-cwl_pbso4-lab_round-robin` updates only those declared loop inputs and
+C15-T4's `generate.py --project pd-xray-cwl_lif_single --project pd-xray-cwl_pbso4-lab_round-robin` updates only those declared loop inputs and
 adds the new project's loops, retaining every unrelated original row. These
 selected rows explicitly authenticate current complete bytes; historical rows
 still authenticate their complete archived/profile-token view. All loops in one
