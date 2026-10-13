@@ -140,7 +140,7 @@ class ExcludedRegionListModel : public RowTableModel {
 
 // The experiment's linked structures (phases): roles `structureId`, `scale` (ParameterItem), `enabled`,
 // `colorIndex` (the structure's place in the project, its colour) and `weightFraction`, the read-only
-// Hill-Howard weight fraction as `value(su)` text (empty when there is none). `structureNames` lists the project's
+// Hill-Howard weight fraction as a map of `value` and `uncertainty` (empty when there is none). `structureNames` lists the project's
 // structures, the choices of a row's name. A row is added naming a structure not yet linked, removed while
 // another remains, and disabled — kept and saved, but neither calculated nor fitted.
 class LinkedStructureListModel : public RowTableModel {

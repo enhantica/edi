@@ -67,7 +67,8 @@ Column {
             required property int index
             required property string structureId
             required property int colorIndex
-            required property string weightFraction
+            // The Hill-Howard weight fraction: `value` and `uncertainty` (0 without one), empty when there is none.
+            required property var weightFraction
             // `scale` and `enabled` are Item properties, so these two roles are read through the model.
             required property var model
 
@@ -111,12 +112,33 @@ Column {
                 enabled: row.model.enabled
                 item: row.model.scale
             }
-            // Read-only: derived from the scales, never edited.
-            EaComponents.TableViewLabel {
+            // Read-only, as a parameter the scales imply: written by the app's number rule like the scale, its s.u. in
+            // the value's menu, never edited or fitted.
+            EaComponents.TableViewParameter {
+                id: fraction
+
+                readonly property bool known: row.weightFraction !== undefined && row.weightFraction.value !== undefined
+                readonly property real fractionValue: known ? row.weightFraction.value : 0
+                readonly property real fractionError: known ? row.weightFraction.uncertainty : 0
+
                 horizontalAlignment: Text.AlignHCenter
                 objectName: `linkedStructure.weightFraction.${row.index}`
                 enabled: row.model.enabled
-                text: row.weightFraction
+                readOnly: true
+                parameter: known ? {
+                    "value": NumberText.parameter(fractionValue, fractionError),
+                    "error": NumberText.error(fractionError, 0, fractionValue),
+                    "enabled": true,
+                    "fittable": false,
+                    "fit": false,
+                    "category": "linked_structure",
+                    "name": "weight_fraction",
+                    "units": ""
+                } : {
+                    "value": "",
+                    "error": ""
+                }
+                color: EaStyle.Colors.themeForegroundMinor
                 ToolTip.text: qsTr("Hill-Howard weight fraction, from the scales")
             }
             // Disabled as a constraint is: kept and saved, but neither calculated nor fitted.
