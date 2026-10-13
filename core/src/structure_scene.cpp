@@ -33,8 +33,13 @@ namespace {
 
 constexpr Rgb kUnknownColor{255, 192, 203};  // diffraction-lib's fallback pink
 constexpr double kUnknownRadius = 1.0;       // Angstrom, diffraction-lib's and crysta's bond rule's
-constexpr double kHomeMargin = 1.24;         // diffraction-lib's margin for a scene with its triad
-constexpr double kMinHalfExtent = 0.5;       // Angstrom
+// The home view shows the fitted drawing at 0.9 of the view, so an even margin surrounds it (the owner, 2026-10-02 and
+// 2026-10-13).
+constexpr double kHomeZoom = 0.9;
+// The fit holds the axis arrows, which grow with the view's half height, for a 4:3 view (the report's figure); a wider
+// view draws them no larger.
+constexpr double kFitAspect = 0.75;
+constexpr double kMinHalfExtent = 0.5;  // Angstrom
 constexpr double kPerspectiveHalfFovDeg = 15.0;
 constexpr double kPerspectiveDistance = 1.05;  // the camera stands back 1.05 times the fitted extent
 constexpr double kZoomPerNotch = 1.25;
@@ -206,7 +211,17 @@ Vec3 row_centre(const SceneSource& source, std::size_t row) {
     return {(*source.cartn_x)[row], (*source.cartn_y)[row], (*source.cartn_z)[row]};
 }
 
-// I9: diffraction-lib's home view.
+double style_value(std::string_view key);
+
+// How far an axis arrow reaches past its cell edge for a view of half height h: its head, clear of the largest atom
+// (ADR-0017 §16). The drawing and the fit both use it.
+double arrow_overhang(double h, double pad) {
+    return std::max(style_value("axis.overhang") * h,
+                    pad + (style_value("axis.head.length") + style_value("axis.clearance")) * h);
+}
+
+// I9: diffraction-lib's home view, fitted on everything the view draws (the owner, 2026-10-13): the atoms, the cell,
+// and the axis arrows with their letters, each letter taken as reaching its offset around its anchor.
 SceneFrame home_frame(const StructureScene& scene, bool has_cell) {
     SceneFrame frame;
     Vec3 middle{0.0, 1.0, 0.0};
@@ -225,11 +240,19 @@ SceneFrame home_frame(const StructureScene& scene, bool has_cell) {
     const Vec3 up = cross(direction, right);
     const Vec3 centre = mul(add(add(basis[0], basis[1]), basis[2]), 0.5);
 
-    std::vector<Vec3> points;
+    // The atoms and the cell's corners, each a point with the radius it is drawn with.
+    struct Reach {
+        Vec3 point;
+        double radius = 0.0;
+    };
+    std::vector<Reach> fixed;
     double pad = 0.0;
     for (const SceneAtom& atom : scene.atoms) {
-        points.push_back(atom.centre);
         pad = std::max(pad, atom.radius);
+        if (atom.drawn) {
+            const Vec3& s = atom.semi_axes;
+            fixed.push_back({atom.centre, atom.ellipsoid ? std::max({s.x, s.y, s.z}) : atom.radius});
+        }
     }
     if (has_cell) {
         for (int i = 0; i != 2; ++i) {
@@ -239,30 +262,63 @@ SceneFrame home_frame(const StructureScene& scene, bool has_cell) {
                     if (i != 0) corner = add(corner, basis[0]);
                     if (j != 0) corner = add(corner, basis[1]);
                     if (k != 0) corner = add(corner, basis[2]);
-                    points.push_back(corner);
+                    fixed.push_back({corner, 0.0});
                 }
             }
         }
     }
+    // The extent on the screen for a view of half height h, whose arrows are drawn for that h.
     double u_min = 0.0, u_max = 0.0, v_min = 0.0, v_max = 0.0;
-    if (!points.empty()) {
+    const auto measure = [&](double h) {
+        std::vector<Reach> reach = fixed;
+        if (has_cell) {
+            const double letter = style_value("axis.letter.offset") * h;
+            for (const SceneAxis& axis : scene.axes) {
+                const double length = norm(axis.vector);
+                if (!(length > 0.0)) {
+                    continue;
+                }
+                const Vec3 along = unit(axis.vector);
+                const double tip = length + arrow_overhang(h, pad);
+                reach.push_back({mul(along, tip), style_value("axis.head.radius") * h});
+                reach.push_back({mul(along, tip + letter), letter});
+            }
+        }
+        u_min = v_min = 0.0;
+        u_max = v_max = 0.0;
+        if (reach.empty()) {
+            return;
+        }
         u_min = v_min = std::numeric_limits<double>::infinity();
         u_max = v_max = -std::numeric_limits<double>::infinity();
-        for (const Vec3& p : points) {
-            const Vec3 d = sub(p, centre);
+        for (const Reach& item : reach) {
+            const Vec3 d = sub(item.point, centre);
             const double u = dot(d, right), v = dot(d, up);
-            u_min = std::min(u_min, u);
-            u_max = std::max(u_max, u);
-            v_min = std::min(v_min, v);
-            v_max = std::max(v_max, v);
+            u_min = std::min(u_min, u - item.radius);
+            u_max = std::max(u_max, u + item.radius);
+            v_min = std::min(v_min, v - item.radius);
+            v_max = std::max(v_max, v + item.radius);
+        }
+    };
+    // The arrows grow by less than a quarter of any change in h, so a few steps settle the fit.
+    double h = 0.0;
+    for (int step = 0; step != 32; ++step) {
+        measure(h);
+        const double next = std::max(std::max((v_max - v_min) / 2.0, kMinHalfExtent),
+                                     std::max((u_max - u_min) / 2.0, kMinHalfExtent) * kFitAspect);
+        const bool settled = std::abs(next - h) <= 1e-12 * next;
+        h = next;
+        if (settled) {
+            break;
         }
     }
+    measure(h);
     frame.target = add(add(centre, mul(right, (u_min + u_max) / 2.0)), mul(up, (v_min + v_max) / 2.0));
     frame.view_direction = direction;
     frame.view_up = up;
     frame.pad = pad;
-    frame.half_width = std::max((u_max - u_min) / 2.0 + pad, kMinHalfExtent) * kHomeMargin;
-    frame.half_height = std::max((v_max - v_min) / 2.0 + pad, kMinHalfExtent) * kHomeMargin;
+    frame.half_width = std::max((u_max - u_min) / 2.0, kMinHalfExtent);
+    frame.half_height = std::max((v_max - v_min) / 2.0, kMinHalfExtent);
     return frame;
 }
 
@@ -766,6 +822,7 @@ SceneView default_view(const StructureScene& scene) {
     SceneView view;
     view.direction = scene.frame.view_direction;
     view.up = scene.frame.view_up;
+    view.magnification = kHomeZoom;
     return view;
 }
 
@@ -899,8 +956,7 @@ SceneDrawing scene_drawing(const StructureScene& scene, const Viewport& viewport
         drawing.cylinders.push_back(segment_instance(edge.start, edge.end, edge_radius, edge_color));
     }
     const double head_length = style_value("axis.head.length") * h;
-    const double overhang = std::max(style_value("axis.overhang") * h,
-                                     scene.frame.pad + head_length + style_value("axis.clearance") * h);
+    const double overhang = arrow_overhang(h, scene.frame.pad);
     for (const SceneAxis& axis : scene.axes) {
         SceneArrow arrow;
         arrow.letter = axis.letter;

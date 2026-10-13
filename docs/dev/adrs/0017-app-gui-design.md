@@ -658,7 +658,9 @@ computes no geometry: it draws what `edi::present_structure` and `edi::scene_dra
   clear for the toolbar and the legend (the toolbar's height with its margins). So a label and its atom agree in
   both projections. The home view — the initial one, the reset and the views along a, b and c — shows the
   structure at **`kHomeZoom` = 0.9** of that fitted size, a bit smaller with more margin (the owner, 2026-10-02);
-  the orientation rule and the fit are diffraction-lib's, unchanged. The lights are diffraction-lib's (the owner, 2026-10-02): an ambient term and two headlights
+  the zoom is the core's `default_view` magnification, so the report draws the same view, and the fit holds the axis
+  arrows and their letters too, leaving an even margin on every side (the owner, 2026-10-13); the orientation rule is
+  diffraction-lib's, unchanged. The lights are diffraction-lib's (the owner, 2026-10-02): an ambient term and two headlights
   that follow the camera, a key shining from the camera-local direction (right, up, towards the camera) (0.3, 0.45,
   0.85) and a fill from (−0.4, −0.2, −0.45); the material is Phong-like, specular 0.2 with shininess 90, the same in
   both themes. The scene is lit in linear light and written out as sRGB (linear tone mapping), as three.js renders
