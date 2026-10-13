@@ -4,13 +4,14 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 
+import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
 
-// The report's export (the owner's note 31): Save HTML report and Open in browser (the HTML report, next), Save CIF
-// report (waits for the CIF report), and whether a saved report embeds plotly.js and three.js (online by default; the
-// owner, 2026-10-12).
+// Saving the report, the sidebar's top group (the owner, 2026-10-13): the interactive HTML with, beside it, whether it
+// embeds plotly.js and three.js (online by default); below it the static PDF and the CIF report (waits for the CIF
+// report task). Each is disabled until its writer exists.
 EaElements.GroupBox {
     id: group
 
@@ -22,41 +23,45 @@ EaElements.GroupBox {
     collapsed: false
     last: SideBarGroups.isLast(group)
 
+    // One column of buttons at the sidebar buttons' own size and spacing, as the Project page's Get started has them
+    // (the owner, 2026-10-13), the Embed checkbox beside the first.
     Column {
-        spacing: AppSizes.groupContentSpacing
+        spacing: EaStyle.Sizes.fontPixelSize
 
-        Grid {
-            columns: 2
-            spacing: AppSizes.inputSpacing
+        Row {
+            spacing: EaStyle.Sizes.fontPixelSize
 
             EaElements.SideBarButton {
+                id: saveHtml
                 objectName: "report.saveHtml"
                 enabled: false
                 fontIcon: "file-code"
-                text: qsTr("Save HTML report")
+                text: qsTr("Save interactive HTML")
                 ToolTip.text: qsTr("Not available yet")
             }
-            EaElements.SideBarButton {
-                objectName: "report.openInBrowser"
-                enabled: false
-                fontIcon: "external-link-alt"
-                text: qsTr("Open in browser")
-                ToolTip.text: qsTr("Not available yet")
-            }
-            EaElements.SideBarButton {
-                objectName: "report.saveCif"
-                enabled: false
-                fontIcon: "file-alt"
-                text: qsTr("Save CIF report")
-                ToolTip.text: qsTr("The CIF report is not available yet")
+            EaElements.CheckBox {
+                objectName: "report.embedLibraries"
+                anchors.verticalCenter: saveHtml.verticalCenter
+                enabled: group.report !== null
+                text: qsTr("Embed the chart libraries")
+                checked: group.report ? group.report.embedLibraries : false
+                onToggled: group.report.embedLibraries = checked
+                ToolTip.text: qsTr("Include plotly.js and three.js in the file, so the report opens offline")
             }
         }
-        EaElements.CheckBox {
-            objectName: "report.embedLibraries"
-            enabled: group.report !== null
-            text: qsTr("Embed the chart libraries, to open the report offline")
-            checked: group.report ? group.report.embedLibraries : false
-            onToggled: group.report.embedLibraries = checked
+        EaElements.SideBarButton {
+            objectName: "report.savePdf"
+            enabled: false
+            fontIcon: "file-pdf"
+            text: qsTr("Save static PDF")
+            ToolTip.text: qsTr("Not available yet")
+        }
+        EaElements.SideBarButton {
+            objectName: "report.saveCif"
+            enabled: false
+            fontIcon: "file-alt"
+            text: qsTr("Save static CIF")
+            ToolTip.text: qsTr("The CIF report is not available yet")
         }
     }
 }

@@ -6,6 +6,7 @@
 #include <cmath>
 
 #include "analysis_view_model.hpp"
+#include "edi/duration_text.hpp"
 #include "edi/edit.hpp"
 #include "edi/selectors.hpp"
 #include "project_view_model.hpp"
@@ -54,18 +55,9 @@ QString status_text(edi::FitStatus status) {
     return FitViewModel::tr("Failed");
 }
 
-// A fit's time as the status bar shows it: tenths under a second, whole seconds under a minute, then
-// minutes and seconds.
-QString duration(double seconds) {
-    if (seconds < 1.0) {
-        return QStringLiteral("%1s").arg(seconds, 0, 'f', 1);
-    }
-    const auto whole = static_cast<qint64>(seconds + 0.5);
-    if (whole < 60) {
-        return QStringLiteral("%1s").arg(whole);
-    }
-    return QStringLiteral("%1m %2s").arg(whole / 60).arg(whole % 60, 2, 10, QLatin1Char('0'));
-}
+// A fit's time as the status bar shows it: two significant digits, never fewer than the whole seconds (0.41s, 3.2s,
+// 127s; edi::duration_text).
+QString duration(double seconds) { return QString::fromStdString(edi::duration_text(seconds)) + QStringLiteral("s"); }
 
 }  // namespace
 
@@ -99,7 +91,7 @@ void FitResultListModel::setRecord(const edi::Project& project) {
         descent.isEmpty() ? QStringLiteral("crysta") : QStringLiteral("crysta (%1)").arg(descent));
     const edi::FitStatus status = status_of(result);
     row(QString(), tr("Overall status"), status_text(status), outcome_key(status));
-    row(QStringLiteral("stopwatch"), tr("Fitting time (seconds)"), QString::number(result.fitting_time, 'f', 2));
+    row(QStringLiteral("stopwatch"), tr("Fitting time (seconds)"), QString::fromStdString(edi::duration_text(result.fitting_time)));
     row(QStringLiteral("redo"), tr("Iterations"), QString::number(result.iterations));
     row(QStringLiteral("ruler"), tr("Goodness-of-fit (reduced χ²)"), chi(result.reduced_chi_square));
     // crysta's Rwp is a fraction; diffraction-lib's table shows its R-factors in per cent.
@@ -150,7 +142,7 @@ void FitResultListModel::setScan(const ScanSummary& summary) {
     row(QString(), tr("Overall status"), outcome_word(summary.outcome), summary.outcome);
     // The run's time when this app ran it; the driver's results record none.
     if (summary.seconds >= 0.0) {
-        row(QStringLiteral("stopwatch"), tr("Fitting time (seconds)"), QString::number(summary.seconds, 'f', 2));
+        row(QStringLiteral("stopwatch"), tr("Fitting time (seconds)"), QString::fromStdString(edi::duration_text(summary.seconds)));
     }
     row(QStringLiteral("copy"), tr("Files fitted"), QStringLiteral("%1/%2").arg(summary.fitted).arg(summary.files));
     row(QStringLiteral("check-circle"), tr("Converged"), QString::number(summary.ok));

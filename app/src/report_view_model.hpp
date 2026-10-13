@@ -6,6 +6,7 @@
 #include <QString>
 #include <QStringList>
 #include <QVariantMap>
+#include <string>
 #include <QtQml/qqmlregistration.h>
 
 #include "edi/report_model.hpp"
@@ -14,75 +15,73 @@ namespace edi_app {
 
 class ProjectViewModel;
 
-// The Report page (edi ADR-0035): the report options its sidebar sets, and the report model built from them, given to
-// QML as the model's JSON values, rebuilt once per coalesced change of the project or the options. The page reads the
-// model only, never the project.
+// The Report page (edi ADR-0035): the report model built from the project and the page's Contents and Export, given to
+// QML as the model's JSON values, rebuilt once per coalesced change. The correlation level is the Analysis page's
+// (its Correlations tab); the page reads the model only, never the project.
 class ReportViewModel : public QObject {
     Q_OBJECT
     QML_ELEMENT
     QML_UNCREATABLE("Belongs to a project")
-    // The report model as its JSON values (report_to_json).
+    // The report model as its JSON values (report_to_json), without the charts' data: the pattern presentations and
+    // the structure scenes and drawings, which the chart controllers read from reportModel().
     Q_PROPERTY(QVariantMap model READ model NOTIFY modelChanged)
-    // Contents: the sections shown (report_section_name), the parameters (all, or the free ones only) and the
-    // correlation level (`automaticLevel`: the five most correlated parameters, as the Correlations tab).
-    Q_PROPERTY(QStringList sections READ sections WRITE setSections NOTIFY sectionsChanged)
-    Q_PROPERTY(bool freeParametersOnly READ freeParametersOnly WRITE setFreeParametersOnly NOTIFY freeParametersOnlyChanged)
-    Q_PROPERTY(bool automaticLevel READ automaticLevel WRITE setAutomaticLevel NOTIFY automaticLevelChanged)
-    Q_PROPERTY(double correlationLevel READ correlationLevel WRITE setCorrelationLevel NOTIFY correlationLevelChanged)
-    // Charts: the experiments drawn (empty: all), the x axis on d, the residual and the Bragg ticks.
-    Q_PROPERTY(QStringList experiments READ experiments WRITE setExperiments NOTIFY experimentsChanged)
-    Q_PROPERTY(bool dSpacing READ dSpacing WRITE setDSpacing NOTIFY dSpacingChanged)
-    Q_PROPERTY(bool residual READ residual WRITE setResidual NOTIFY residualChanged)
-    Q_PROPERTY(bool braggTicks READ braggTicks WRITE setBraggTicks NOTIFY braggTicksChanged)
+    // The Contents keys left out (the model's `contents`), each with everything under it.
+    Q_PROPERTY(QStringList hidden READ hidden WRITE setHidden NOTIFY hiddenChanged)
     // Export: whether a saved report embeds its libraries (online by default; the owner, 2026-10-12).
     Q_PROPERTY(bool embedLibraries READ embedLibraries WRITE setEmbedLibraries NOTIFY embedLibrariesChanged)
+    // The Report page is shown. Only then does a change rebuild the model at once; otherwise the next read of the
+    // model rebuilds it, so a reader never sees a stale one and a hidden page costs nothing per change.
+    Q_PROPERTY(bool active READ active WRITE setActive NOTIFY activeChanged)
 
    public:
     ReportViewModel(const ProjectViewModel& project, QObject* parent);
 
-    QVariantMap model() const { return model_; }
-    QStringList sections() const;
-    void setSections(const QStringList& names);
-    bool freeParametersOnly() const { return options_.free_parameters_only; }
-    void setFreeParametersOnly(bool only);
-    bool automaticLevel() const { return !options_.correlation_level.has_value(); }
-    void setAutomaticLevel(bool automatic);
-    double correlationLevel() const { return level_; }
-    void setCorrelationLevel(double level);
-    QStringList experiments() const;
-    void setExperiments(const QStringList& ids);
-    bool dSpacing() const { return options_.d_spacing; }
-    void setDSpacing(bool on);
-    bool residual() const { return options_.residual; }
-    void setResidual(bool on);
-    bool braggTicks() const { return options_.bragg_ticks; }
-    void setBraggTicks(bool on);
+    QVariantMap model() const {
+        ensureBuilt();
+        return model_;
+    }
+    const edi::ReportModel& reportModel() const {
+        ensureBuilt();
+        return report_;
+    }
+    bool active() const { return active_; }
+    void setActive(bool active);
+    // The model's pattern of an experiment and its structure of a structure id; null when it has none.
+    const edi::ReportPattern* pattern(const QString& experiment) const;
+    const edi::ReportStructure* structure(const QString& id) const;
+    QStringList hidden() const;
+    void setHidden(const QStringList& keys);
     bool embedLibraries() const { return embed_libraries_; }
     void setEmbedLibraries(bool on);
 
-    // Builds the model again from the project; the project calls it once per coalesced change.
+    // A Contents box: includes or leaves out the item of `key`.
+    Q_INVOKABLE void setIncluded(const QString& key, bool included);
+    // Builds the model again from the project; the project calls it once per coalesced change, and when the Analysis
+    // page's correlation level changes.
     void refresh();
 
    signals:
     void modelChanged();
-    void sectionsChanged();
-    void freeParametersOnlyChanged();
-    void automaticLevelChanged();
-    void correlationLevelChanged();
-    void experimentsChanged();
-    void dSpacingChanged();
-    void residualChanged();
-    void braggTicksChanged();
+    void hiddenChanged();
     void embedLibrariesChanged();
+    void activeChanged();
 
    private:
-    void changed(void (ReportViewModel::*signal)());
+    // Builds the model from the project; whether it changed.
+    bool build() const;
+    // A read while a change is pending builds the model first. A model the read changed is announced afterwards, so
+    // the readers that read it before (the chart controllers) read it again.
+    void ensureBuilt() const;
 
     const ProjectViewModel& project_;
     edi::ReportOptions options_;
-    double level_ = 0.5;  // the level the Contents box holds, used when the level is not automatic
     bool embed_libraries_ = false;
-    QVariantMap model_;
+    bool active_ = false;
+    // The model, rebuilt on a read when a change arrived while the page was hidden (`dirty_`).
+    mutable bool dirty_ = true;
+    mutable edi::ReportModel report_;
+    mutable std::string json_;  // report_'s JSON: a rebuild that writes the same announces nothing
+    mutable QVariantMap model_;
 };
 
 }  // namespace edi_app

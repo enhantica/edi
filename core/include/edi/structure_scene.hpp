@@ -12,14 +12,14 @@
 #include <utility>
 #include <vector>
 
-#include "edi/model.hpp"
-
 // ADR-0022: the structure scene — the one description every structure renderer draws (the app's Qt
 // Quick 3D view now). crysta computes every position, bond and distance; this file groups the rows
 // into atoms, looks up colours and radii, and describes the view, and computes no geometry.
 // `present_structure` is a pure function of its two arguments. Qt-free, and no crysta type.
 
 namespace edi {
+
+struct Structure;
 
 struct Rgb {
     std::uint8_t r = 0, g = 0, b = 0;
@@ -176,11 +176,15 @@ struct SceneView {
 };
 struct Viewport {
     double width = 0.0, height = 0.0, top_band = 0.0;  // logical pixels; the band kept clear at the top
+    double side_band = 0.0;  // logical pixels kept clear at either side, for the legend (the owner, 2026-10-13)
 };
 struct Projected {
     double x = 0.0, y = 0.0, depth = 0.0;  // pixels, y down; depth towards the viewer, Angstrom
 };
 SceneView default_view(const StructureScene& scene);
+// The fitted half height H of the home view in a viewport (I13): max(half height, half width × height / width), the
+// width taken between the side bands.
+double fitted_half_height(const SceneFrame& frame, const Viewport& viewport);
 SceneView view_along(const StructureScene& scene, int axis);  // 0, 1, 2: a, b, c
 // Pixels per Angstrom of the home view. Zero for a viewport with no area.
 double fitted_scale(const StructureScene& scene, const Viewport& viewport, Projection projection);

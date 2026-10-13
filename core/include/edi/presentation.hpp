@@ -51,9 +51,17 @@ struct PatternSource {
     bool current = false;              // the computed columns describe the model now
 };
 
+// The x axis a pattern is captured on: the experiment's own (2θ or TOF), or d-spacing.
+enum class PatternAxis : std::uint8_t { Native, DSpacing };
+
 // Owner thread. The computed columns and the reflections are taken only when the experiment's
 // computed categories are current; otherwise they are absent and `current` is false.
-PatternSource capture_pattern(const Project& project, std::size_t experiment_index);
+// On the d axis x is `_pd_data.d_spacing` and the ticks are at `_refln.d_spacing`, titled `d (Å)`; every column is
+// reversed when d descends (constant wavelength), so x ascends (a presented point's row then counts from the last
+// `_data` row), and each excluded band's ends are mapped to d along the data. Without a current d column the pattern
+// stays on its own axis.
+PatternSource capture_pattern(const Project& project, std::size_t experiment_index,
+                              PatternAxis axis = PatternAxis::Native);
 
 // One experiment's `_refln` rows grouped into phases, one per structure id in the order the ids first
 // appear. A phase's place is its structure's place in `structure_names` (its first place when there
