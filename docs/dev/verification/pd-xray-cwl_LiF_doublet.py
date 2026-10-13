@@ -11,7 +11,7 @@
 # component of one calculation: the reflections and their structure factors are shared, and each
 # component has its own Bragg angles, Lorentz factor and peak widths. diffraction-lib instead
 # calculates a whole second pattern at the second wavelength, and holds both doublet values
-# fixed where edi can fit them; crysta's ADR-0086 states the differences.
+# fixed where edi can fit them.
 #
 # **Scattering sources** are declared as on the single-wavelength page: `it1992` f0 and
 # `sasaki1989` dispersion, evaluated at the first wavelength for both components.

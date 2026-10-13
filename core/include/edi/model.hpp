@@ -4156,11 +4156,11 @@ void register_engine_peak_type(const std::string& token, BeamModeEnum mode);
 std::string engine_model_dump(const Project& project);
 bool engine_folds_reflections(const Project& project);
 
-/// A linked structure's Hill-Howard weight fraction and its standard uncertainty (crysta ADR-0087),
-/// derived from the current model and never an input.
+/// A linked structure's Hill-Howard weight fraction (J. Appl. Cryst. 20, 467 (1987)) and its
+/// standard uncertainty, derived from the current model and never an input.
 struct WeightFraction {
     double value = 0.0;
-    /// Absent when no scale of the experiment carries an uncertainty.
+    /// Absent when no free scale of the experiment carries an uncertainty.
     std::optional<double> uncertainty;
 };
 /// The weight fraction of `link` in the experiment that holds it, computed by crysta from the
