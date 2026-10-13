@@ -8,22 +8,27 @@ import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
 
-// What the report holds (the owner's note 31): its sections, all or only the free parameters, and the correlation
-// level (automatic: the five most correlated parameters, as the Correlations tab).
+// What the report holds, as its tree (the owner, 2026-10-13): the sections; under Analysis its categories; under
+// Structures and Experiments each block and its categories; then Correlations and, for a scan, Evolution. Each box
+// leaves its item out of the report with everything under it; a box under one left out is disabled. The correlation
+// level and the x axis come from the Analysis page.
 EaElements.GroupBox {
     id: group
 
     // Only the top group opens on first view, as on the other pages; each remembers its state.
     readonly property string openKey: "Main:reportContents"
     property ReportViewModel report: null
-    readonly property var sectionNames: ["summary", "analysis", "parameters", "correlations", "evolution", "structures", "experiments"]
-    readonly property var sectionTitles: [qsTr("Project summary"), qsTr("Analysis"), qsTr("Parameters"), qsTr("Correlations"), qsTr("Evolution"), qsTr("Structures"), qsTr("Experiments")]
+    readonly property var items: report && report.model.contents ? report.model.contents : []
+    readonly property var hidden: report ? report.hidden : []
 
-    function toggle(name, on) {
-        const chosen = group.report.sections.filter(section => section !== name);
-        if (on)
-            chosen.push(name);
-        group.report.sections = chosen;
+    // Whether the item above `index` (the last one before it a level up) is in the report.
+    function parentIncluded(index: int): bool {
+        const depth = items[index].depth;
+        for (let i = index - 1; i >= 0; --i) {
+            if (items[i].depth < depth)
+                return items[i].included;
+        }
+        return true;
     }
 
     objectName: "group.reportContents"
@@ -37,45 +42,19 @@ EaElements.GroupBox {
     Column {
         spacing: AppSizes.groupContentSpacing
 
-        Grid {
-            columns: 2
-            columnSpacing: EaStyle.Sizes.fontPixelSize
-            rowSpacing: AppSizes.groupContentSpacing
-            Repeater {
-                model: group.sectionNames.length
-                delegate: EaElements.CheckBox {
-                    required property int index
-                    objectName: "report.section." + group.sectionNames[index]
-                    width: (EaStyle.Sizes.sideBarContentWidth - EaStyle.Sizes.fontPixelSize) / 2
-                    text: group.sectionTitles[index]
-                    checked: group.report ? group.report.sections.indexOf(group.sectionNames[index]) >= 0 : true
-                    onToggled: group.toggle(group.sectionNames[index], checked)
-                }
-            }
-        }
-        EaElements.GroupRow {
-            spacing: AppSizes.inputSpacing
-            EaElements.ComboBox {
-                objectName: "report.parameters"
-                width: (EaStyle.Sizes.sideBarContentWidth - AppSizes.inputSpacing) / 2
-                model: [qsTr("All parameters"), qsTr("Free parameters")]
-                currentIndex: group.report && group.report.freeParametersOnly ? 1 : 0
-                onActivated: index => group.report.freeParametersOnly = index === 1
-            }
-            EaElements.ComboBox {
-                objectName: "report.correlationLevel"
-                width: (EaStyle.Sizes.sideBarContentWidth - AppSizes.inputSpacing) / 2
-                // The level, from automatic up to the strongest correlations only.
-                readonly property var levels: [-1, 0.5, 0.7, 0.8, 0.9, 0.95]
-                model: [qsTr("Correlations: 5 strongest"), qsTr("Correlations ≥ 0.5"), qsTr("Correlations ≥ 0.7"), qsTr("Correlations ≥ 0.8"), qsTr("Correlations ≥ 0.9"), qsTr("Correlations ≥ 0.95")]
-                currentIndex: !group.report || group.report.automaticLevel ? 0 : Math.max(0, levels.indexOf(group.report.correlationLevel))
-                onActivated: index => {
-                    if (index === 0) {
-                        group.report.automaticLevel = true;
-                    } else {
-                        group.report.correlationLevel = levels[index];
-                    }
-                }
+        Repeater {
+            model: group.items.length
+            delegate: EaElements.CheckBox {
+                required property int index
+                readonly property var item: group.items[index]
+
+                objectName: "report.contents." + item.key
+                leftPadding: padding + item.depth * EaStyle.Sizes.fontPixelSize * 1.5
+                width: EaStyle.Sizes.sideBarContentWidth
+                enabled: group.parentIncluded(index)
+                text: item.title
+                checked: group.hidden.indexOf(item.key) < 0
+                onToggled: group.report.setIncluded(item.key, checked)
             }
         }
     }

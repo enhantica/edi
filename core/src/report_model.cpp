@@ -260,91 +260,6 @@ std::optional<ReportCorrelations> correlations_of(const Project& project, const 
     return out;
 }
 
-ReportStructure structure_of(const Structure& structure, const std::string& rule) {
-    ReportStructure out;
-    out.id = structure.name.value();
-    out.space_group.push_back({"H-M symbol", structure.space_group.name_h_m.value(), ""});
-    try {
-        out.space_group.push_back({"IT number", std::to_string(space_group_it_number(structure.space_group)), ""});
-        out.space_group.push_back({"Crystal system", crystal_system_name(structure.space_group), ""});
-    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — an unknown setting names no number or system
-    }
-    const Cell& cell = structure.cell;
-    const std::pair<const char*, const Parameter*> lengths[] = {
-        {"a", &cell.length_a}, {"b", &cell.length_b}, {"c", &cell.length_c}};
-    for (const auto& [name, parameter] : lengths) {
-        out.cell.push_back({name, value_of(*parameter, rule).text, "Å"});
-    }
-    const std::pair<const char*, const Parameter*> angles[] = {
-        {"α", &cell.angle_alpha}, {"β", &cell.angle_beta}, {"γ", &cell.angle_gamma}};
-    for (const auto& [name, parameter] : angles) {
-        out.cell.push_back({name, value_of(*parameter, rule).text, "°"});
-    }
-    std::map<std::string, int> multiplicity;
-    try {
-        for (const WyckoffOption& option : wyckoff_positions(structure)) {
-            multiplicity.emplace(option.letter, option.multiplicity);
-        }
-    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — no positions: the column stays empty
-    }
-    out.atom_sites.columns = {"Label", "Type", "x", "y", "z", "Wyckoff", "Mult.", "Occ.", "ADP (Å²)", "ADP type"};
-    for (const auto& site : structure.atom_sites) {
-        const auto found = multiplicity.find(site->wyckoff_letter.value());
-        out.atom_sites.rows.push_back({site->id.value(), site->type_symbol.value(), value_of(site->fract_x, rule).text,
-                                       value_of(site->fract_y, rule).text, value_of(site->fract_z, rule).text,
-                                       site->wyckoff_letter.value(),
-                                       found != multiplicity.end() ? std::to_string(found->second) : "",
-                                       value_of(site->occupancy, rule).text, value_of(site->adp_iso, rule).text,
-                                       site->adp_type.value()});
-    }
-    if (!structure.atom_site_aniso.empty()) {
-        out.aniso.columns = {"Label", "11", "22", "33", "12", "13", "23"};
-        for (const auto& row : structure.atom_site_aniso) {
-            out.aniso.rows.push_back({row->id.value(), value_of(row->adp_11, rule).text, value_of(row->adp_22, rule).text,
-                                      value_of(row->adp_33, rule).text, value_of(row->adp_12, rule).text,
-                                      value_of(row->adp_13, rule).text, value_of(row->adp_23, rule).text});
-        }
-    }
-    return out;
-}
-
-// The category walks take an experiment that can be edited; the builder only reads through them.
-ReportExperiment experiment_of(const BraggPdExperiment& experiment, const std::string& rule) {
-    auto& walked = const_cast<BraggPdExperiment&>(experiment);  // NOLINT(cppcoreguidelines-pro-type-const-cast)
-    ReportExperiment out;
-    out.id = experiment.name.value();
-    const ExperimentType& type = experiment.experiment_type;
-    out.type = {{"Sample form", token(type.effective_sample_form()), ""},
-                {"Beam mode", token(experiment.effective_beam_mode()), ""},
-                {"Radiation probe", token(type.effective_radiation_probe()), ""},
-                {"Scattering type", token(type.effective_scattering_type()), ""},
-                {"Peak profile", effective_peak_type(experiment), ""}};
-    add_fields(out.instrument, instrument_category(walked).fields, rule);
-    const Category peak = peak_category(walked);
-    add_fields(out.peak, peak.fields, rule);
-    add_fields(out.peak, peak.asymmetry, rule);
-    if (experiment.background_type == "line-segment") {
-        out.background.columns = {"x", "Intensity"};
-        for (const auto& point : experiment.background) {
-            out.background.rows.push_back({shortest(point->position.get()), value_of(point->intensity, rule).text});
-        }
-    } else {
-        out.background.columns = {"Order", "Coefficient"};
-        for (const auto& term : experiment.background_terms) {
-            out.background.rows.push_back({std::to_string(term->order.get()), value_of(term->coef, rule).text});
-        }
-    }
-    out.excluded_regions.columns = {"Start", "End"};
-    for (const auto& region : experiment.excluded_regions) {
-        out.excluded_regions.rows.push_back({shortest(region->first.get()), shortest(region->second.get())});
-    }
-    out.linked_structures.columns = {"Structure", "Scale"};
-    for (const auto& link : experiment.linked_structures) {
-        out.linked_structures.rows.push_back({link->structure_id.value(), value_of(link->scale, rule).text});
-    }
-    return out;
-}
-
 // A scan's template dataset as the app shows it once fitted (edi ADR-0035 §3): the declared template file, else the
 // first file, as the app opens a scan; the template with that file's results row (its values and uncertainties over
 // the template's; a parameter the results do not record keeps the template's), the file's data, its relations
@@ -412,13 +327,231 @@ ScanTemplate scan_template_of(const Project& scan) {
     return out;
 }
 
+// A subsection of the report: a category and the title its page shows.
+ReportCategory category(const std::string& id) { return {id, category_title(id), {}, {}}; }
+
+// Where an experiment's data lie on its own axis, as a row label and units: 2θ in degrees or TOF in µs.
+std::pair<std::string, std::string> axis_of(const PdDataBase& data) {
+    return data.two_theta.has_value() ? std::pair<std::string, std::string>{"2θ", "°"}
+                                      : std::pair<std::string, std::string>{"TOF", "µs"};
+}
+
+// A structure's categories in its page's order, filled as the page shows them; a loop without rows is left out. The
+// category walk takes a structure that can be edited; the builder only reads through it.
+ReportStructure structure_of(const Structure& structure, const std::string& rule) {
+    auto& walked = const_cast<Structure&>(structure);  // NOLINT(cppcoreguidelines-pro-type-const-cast)
+    ReportStructure out;
+    out.id = structure.name.value();
+    for (const Category& listed : structure_categories(walked)) {
+        ReportCategory next = category(listed.id);
+        if (listed.id == "space_group") {
+            next.rows.push_back({"H-M symbol", structure.space_group.name_h_m.value(), ""});
+            try {
+                next.rows.push_back({"IT number", std::to_string(space_group_it_number(structure.space_group)), ""});
+                next.rows.push_back({"Crystal system", crystal_system_name(structure.space_group), ""});
+            } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — an unknown setting names no number or system
+            }
+        } else if (listed.id == "cell") {
+            const Cell& cell = structure.cell;
+            const std::pair<const char*, const Parameter*> lengths[] = {
+                {"a", &cell.length_a}, {"b", &cell.length_b}, {"c", &cell.length_c}};
+            for (const auto& [name, parameter] : lengths) {
+                next.rows.push_back({name, value_of(*parameter, rule).text, "Å"});
+            }
+            const std::pair<const char*, const Parameter*> angles[] = {
+                {"α", &cell.angle_alpha}, {"β", &cell.angle_beta}, {"γ", &cell.angle_gamma}};
+            for (const auto& [name, parameter] : angles) {
+                next.rows.push_back({name, value_of(*parameter, rule).text, "°"});
+            }
+        } else if (listed.id == "atom_site") {
+            std::map<std::string, int> multiplicity;
+            try {
+                for (const WyckoffOption& option : wyckoff_positions(structure)) {
+                    multiplicity.emplace(option.letter, option.multiplicity);
+                }
+            } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — no positions: the column stays empty
+            }
+            next.table.columns = {"Label", "Type", "x", "y", "z", "Wyckoff", "Mult.", "Occ.", "ADP (Å²)", "ADP type"};
+            for (const auto& site : structure.atom_sites) {
+                const auto found = multiplicity.find(site->wyckoff_letter.value());
+                next.table.rows.push_back({site->id.value(), site->type_symbol.value(), value_of(site->fract_x, rule).text,
+                                           value_of(site->fract_y, rule).text, value_of(site->fract_z, rule).text,
+                                           site->wyckoff_letter.value(),
+                                           found != multiplicity.end() ? std::to_string(found->second) : "",
+                                           value_of(site->occupancy, rule).text, value_of(site->adp_iso, rule).text,
+                                           site->adp_type.value()});
+            }
+        } else if (listed.id == "atom_site_aniso") {
+            next.table.columns = {"Label", "11", "22", "33", "12", "13", "23"};
+            for (const auto& row : structure.atom_site_aniso) {
+                next.table.rows.push_back({row->id.value(), value_of(row->adp_11, rule).text,
+                                           value_of(row->adp_22, rule).text, value_of(row->adp_33, rule).text,
+                                           value_of(row->adp_12, rule).text, value_of(row->adp_13, rule).text,
+                                           value_of(row->adp_23, rule).text});
+            }
+        } else if (listed.id == "scattering_length") {
+            next.table.columns = {"Type", "b (fm)"};
+            for (const auto& [type, length] : structure.scattering_lengths_fm.get()) {
+                next.table.rows.push_back({type, shortest(length)});
+            }
+        }
+        if (!next.rows.empty() || !next.table.rows.empty()) {
+            out.categories.push_back(std::move(next));
+        }
+    }
+    return out;
+}
+
+// An experiment's categories in its page's order, filled as the page shows them, and its calculated reflections when
+// they describe the model; a loop without rows is left out.
+ReportExperiment experiment_of(const BraggPdExperiment& experiment, const std::string& rule) {
+    auto& walked = const_cast<BraggPdExperiment&>(experiment);  // NOLINT(cppcoreguidelines-pro-type-const-cast)
+    ReportExperiment out;
+    out.id = experiment.name.value();
+    for (const Category& listed : experiment_categories(walked)) {
+        ReportCategory next = category(listed.id);
+        if (listed.id == "experiment_type") {
+            const ExperimentType& type = experiment.experiment_type;
+            next.rows = {{"Sample form", token(type.effective_sample_form()), ""},
+                         {"Beam mode", token(experiment.effective_beam_mode()), ""},
+                         {"Radiation probe", token(type.effective_radiation_probe()), ""},
+                         {"Scattering type", token(type.effective_scattering_type()), ""}};
+        } else if ((listed.id == "data" || listed.id == "data_range") && experiment.data.has_value()) {
+            const PdDataBase& data = *experiment.data;
+            const std::vector<double>& axis = data.axis();
+            const auto [name, units] = axis_of(data);
+            if (listed.id == "data" && !experiment.data_file.empty()) {
+                next.rows.push_back({"File", experiment.data_file, ""});
+            }
+            next.rows.push_back({"Points", std::to_string(axis.size()), ""});
+            if (!axis.empty()) {
+                const auto [low, high] = std::minmax_element(axis.begin(), axis.end());
+                next.rows.push_back({name + " min", shortest(*low), units});
+                next.rows.push_back({name + " max", shortest(*high), units});
+                if (listed.id == "data_range" && axis.size() > 1) {
+                    next.rows.push_back({name + " step", display_text(std::abs(axis[1] - axis[0])), units});
+                }
+            }
+        } else if (listed.id == "instrument" || listed.id == "absorption") {
+            add_fields(next.rows, listed.fields, rule);
+        } else if (listed.id == "peak") {
+            next.rows.push_back({"Type", effective_peak_type(experiment), ""});
+            add_fields(next.rows, listed.fields, rule);
+            add_fields(next.rows, listed.asymmetry, rule);
+        } else if (listed.id == "background") {
+            next.rows.push_back({"Type", experiment.background_type, ""});
+            if (experiment.background_type == "line-segment") {
+                next.table.columns = {"x", "Intensity"};
+                for (const auto& point : experiment.background) {
+                    next.table.rows.push_back({shortest(point->position.get()), value_of(point->intensity, rule).text});
+                }
+            } else {
+                next.table.columns = {"Order", "Coefficient"};
+                for (const auto& term : experiment.background_terms) {
+                    next.table.rows.push_back({std::to_string(term->order.get()), value_of(term->coef, rule).text});
+                }
+            }
+        } else if (listed.id == "linked_structure") {
+            next.table.columns = {"Structure", "Scale"};
+            for (const auto& link : experiment.linked_structures) {
+                next.table.rows.push_back({link->structure_id.value(), value_of(link->scale, rule).text});
+            }
+        } else if (listed.id == "excluded_region") {
+            next.table.columns = {"Start", "End"};
+            for (const auto& region : experiment.excluded_regions) {
+                next.table.rows.push_back({shortest(region->first.get()), shortest(region->second.get())});
+            }
+        } else if (listed.id == "preferred_orientation") {
+            next.table.columns = {"Structure", "r", "f rand"};
+            for (const auto& row : experiment.preferred_orientation) {
+                next.table.rows.push_back({row->structure_id.value(), value_of(row->march_r, rule).text,
+                                           value_of(row->march_random_fract, rule).text});
+            }
+        } else if (listed.id == "scattering_source") {
+            const std::pair<const char*, const std::optional<std::string>*> sources[] = {
+                {"X-ray form factor", &experiment.xray_form_factor},
+                {"X-ray dispersion", &experiment.xray_dispersion},
+                {"Neutron scattering length", &experiment.neutron_scattering_length}};
+            for (const auto& [name, value] : sources) {
+                if (value->has_value() && !value->value().empty()) {
+                    next.rows.push_back({name, value->value(), ""});
+                }
+            }
+        }
+        if (!next.rows.empty() || !next.table.rows.empty()) {
+            out.categories.push_back(std::move(next));
+        }
+    }
+    // The reflections the calculation made, as the reference report lists them, six significant digits each.
+    const PowderReflnDataBase& refln = experiment.refln;
+    if (experiment.computed_current() && refln.size() > 0 && experiment.data.has_value()) {
+        ReportCategory next = category("refln");
+        const auto [name, units] = axis_of(*experiment.data);
+        next.table.columns = {"Structure", "d (Å)", "sinθ/λ (Å⁻¹)", "h", "k", "l", "F calc", "F² calc",
+                              name + " (" + units + ")"};
+        for (std::size_t row = 0; row < refln.size(); ++row) {
+            next.table.rows.push_back(
+                {refln.structure_id[row], display_text(refln.d_spacing[row]),
+                 display_text(refln.sin_theta_over_lambda[row]), std::to_string(refln.index_h[row]),
+                 std::to_string(refln.index_k[row]), std::to_string(refln.index_l[row]), display_text(refln.f_calc[row]),
+                 display_text(refln.f_squared_calc[row]), display_text(refln.position[row])});
+        }
+        out.categories.push_back(std::move(next));
+    }
+    return out;
+}
+
+// The analysis categories: the software, the minimizer, the fitting mode and the fit result (the reference report's
+// subsections). A scan's fit result is its dataset's, with the scan's counts.
+std::vector<ReportCategory> analysis_of(const Project& project, const std::optional<ScanTemplate>& scan, bool fitted) {
+    ReportCategory software{"software", "Software", {}, {}};
+    software.rows = {{"Framework", "edi " + core_version(), ""}, {"Calculator", "crysta", ""}};
+    ReportCategory minimizer = category("minimizer");
+    const std::string& descent = project.descent;
+    minimizer.rows = {{"Type", descent.empty() ? "crysta" : "crysta (" + descent + ")", ""},
+                      {"Maximum iterations",
+                       std::to_string(project.minimizer_max_iterations > 0 ? project.minimizer_max_iterations : 50), ""},
+                      {"χ² change tolerance",
+                       project.minimizer_chi_square_tolerance > 0.0 ? shortest(project.minimizer_chi_square_tolerance)
+                                                                    : "crysta's default",
+                       ""}};
+    ReportCategory mode = category("fitting_mode");
+    mode.rows = {{"Type", fitting_mode_name(project.fitting_mode), ""}};
+    ReportCategory result{"fit_result", "Fit result", {}, {}};
+    const FitResultRecord& record = project.fit_result;
+    if (scan && scan->row) {
+        const ScanResultIndex::Row& row = *scan->row;
+        result.rows = {{"Dataset", scan->file, ""},
+                       {"Overall status", row.converged ? "Success" : "Failed", ""},
+                       {"Iterations", std::to_string(row.iterations), ""},
+                       {"Goodness-of-fit (reduced χ²)", fixed(row.reduced_chi_square, 2), ""},
+                       {"Files fitted", std::to_string(scan->fitted) + "/" + std::to_string(scan->files), ""},
+                       {"Converged", std::to_string(scan->converged), ""},
+                       {"Failed", std::to_string(scan->fitted - scan->converged), ""}};
+    } else if (fitted) {
+        result.rows = {{"Overall status", status_word(record), ""},
+                       {"Fitting time", fixed(record.fitting_time, 2), "s"},
+                       {"Iterations", std::to_string(record.iterations), ""},
+                       {"Goodness-of-fit (reduced χ²)", fixed(record.reduced_chi_square, 2), ""},
+                       {"Weighted profile R-factor (Rwp)", fixed(record.prof_wr_factor * 100.0, 2), "%"}};
+        for (const auto& experiment : project.experiments) {
+            if (experiment->fit_prof_wr_factor.has_value()) {
+                result.rows.push_back(
+                    {"Rwp, " + experiment->name.value(), fixed(*experiment->fit_prof_wr_factor * 100.0, 2), "%"});
+            }
+        }
+    } else {
+        result.rows = {{"Overall status", "Not fitted yet", ""}};
+    }
+    return {software, minimizer, mode, result};
+}
+
 }  // namespace
 
 const std::vector<ReportSection>& report_sections() {
-    static const std::vector<ReportSection> all = {ReportSection::Summary,    ReportSection::Analysis,
-                                                   ReportSection::Parameters, ReportSection::Correlations,
-                                                   ReportSection::Evolution,  ReportSection::Structures,
-                                                   ReportSection::Experiments};
+    static const std::vector<ReportSection> all = {ReportSection::Summary,     ReportSection::Analysis,
+                                                   ReportSection::Structures,  ReportSection::Experiments,
+                                                   ReportSection::Correlations, ReportSection::Evolution};
     return all;
 }
 
@@ -428,16 +561,14 @@ const char* report_section_name(ReportSection section) {
             return "summary";
         case ReportSection::Analysis:
             return "analysis";
-        case ReportSection::Parameters:
-            return "parameters";
-        case ReportSection::Correlations:
-            return "correlations";
-        case ReportSection::Evolution:
-            return "evolution";
         case ReportSection::Structures:
             return "structures";
         case ReportSection::Experiments:
             return "experiments";
+        case ReportSection::Correlations:
+            return "correlations";
+        case ReportSection::Evolution:
+            return "evolution";
     }
     return "summary";
 }
@@ -466,11 +597,20 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
     const std::string& rule = project.su_rule;
     ReportModel model;
     model.generated = options.generated.empty() ? utc_now() : options.generated;
-    for (ReportSection section : report_sections()) {
-        if (std::find(options.sections.begin(), options.sections.end(), section) != options.sections.end()) {
-            model.sections.push_back(section);
+    // Every item goes into the contents; one the options leave out, or one under it, is marked and not built.
+    const auto add = [&model, &options](const std::string& key, const std::string& title, int depth, bool above) {
+        const bool included =
+            above && std::find(options.hidden.begin(), options.hidden.end(), key) == options.hidden.end();
+        model.contents.push_back({key, title, depth, included});
+        return included;
+    };
+    const auto section = [&model, &add](ReportSection which, const std::string& title) {
+        const bool included = add(report_section_name(which), title, 0, true);
+        if (included) {
+            model.sections.push_back(which);
         }
-    }
+        return included;
+    };
     model.name = project.metadata.name;
     model.title = project.metadata.title;
     model.authors = project.metadata.authors;
@@ -481,60 +621,55 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
     for (const auto& experiment : project.experiments) {
         model.experiment_ids.push_back(experiment->name.value());
     }
-    const FitResultRecord& result = project.fit_result;
-    const std::string minimizer = result.descent.empty() ? "crysta" : "crysta (" + result.descent + ")";
-    model.software = {{"Framework", "edi " + core_version(), ""}, {"Calculator", "crysta", ""}, {"Minimizer", minimizer, ""}};
-    model.fitting_mode = fitting_mode_name(project.fitting_mode);
-    model.fitted = scan_mode ? scan && scan->row.has_value() : result.held();
-    if (scan && scan->row) {
-        // The template dataset's fit, from its results row, and the scan's counts.
-        const ScanResultIndex::Row& row = *scan->row;
-        model.fit_result = {{"Dataset", scan->file, ""},
-                            {"Overall status", row.converged ? "Success" : "Failed", ""},
-                            {"Iterations", std::to_string(row.iterations), ""},
-                            {"Goodness-of-fit (reduced χ²)", fixed(row.reduced_chi_square, 2), ""},
-                            {"Files fitted", std::to_string(scan->fitted) + "/" + std::to_string(scan->files), ""},
-                            {"Converged", std::to_string(scan->converged), ""},
-                            {"Failed", std::to_string(scan->fitted - scan->converged), ""}};
-    } else if (model.fitted) {
-        model.fit_result = {{"Overall status", status_word(result), ""},
-                            {"Fitting time", fixed(result.fitting_time, 2), "s"},
-                            {"Iterations", std::to_string(result.iterations), ""},
-                            {"Goodness-of-fit (reduced χ²)", fixed(result.reduced_chi_square, 2), ""},
-                            {"Weighted profile R-factor (Rwp)", fixed(result.prof_wr_factor * 100.0, 2), "%"}};
-        for (const auto& experiment : project.experiments) {
-            if (experiment->fit_prof_wr_factor.has_value()) {
-                model.fit_result.push_back(
-                    {"Rwp, " + experiment->name.value(), fixed(*experiment->fit_prof_wr_factor * 100.0, 2), "%"});
+    model.fitted = scan_mode ? scan && scan->row.has_value() : project.fit_result.held();
+    section(ReportSection::Summary, "Project summary");
+    const bool analysis = section(ReportSection::Analysis, "Analysis");
+    for (ReportCategory& part : analysis_of(project, scan, model.fitted)) {
+        if (add("analysis/" + part.id, part.title, 1, analysis)) {
+            model.analysis.push_back(std::move(part));
+        }
+    }
+    const bool structures = section(ReportSection::Structures, "Structures");
+    for (const auto& structure : project.structures) {
+        ReportStructure built = structure_of(*structure, rule);
+        const std::string key = "structures/" + built.id;
+        const bool shown = add(key, built.id, 1, structures);
+        std::vector<ReportCategory> kept;
+        for (ReportCategory& part : built.categories) {
+            if (add(key + "/" + part.id, part.title, 2, shown)) {
+                kept.push_back(std::move(part));
             }
         }
-    }
-    for (const NamedParameter& named : named_parameters(project)) {
-        const Parameter& parameter = *named.parameter;
-        if (options.free_parameters_only && !parameter.free.get()) {
-            continue;
+        if (shown) {
+            built.categories = std::move(kept);
+            model.structures.push_back(std::move(built));
         }
-        ReportParameter row;
-        row.name = named.unique_name;
-        row.label = label_of(parameter, named.unique_name);
-        row.units = units_of(parameter);
-        row.value = value_of(parameter, rule);
-        row.start = parameter.start_value.get();
-        row.free = parameter.free.get();
-        model.parameters.push_back(std::move(row));
     }
-    model.correlations = correlations_of(project, options.correlation_level,
-                                         scan ? &scan->file : scan_mode ? &project.sequential_fit.template_file : nullptr,
-                                         model.fitted);
-    for (const auto& structure : project.structures) {
-        model.structures.push_back(structure_of(*structure, rule));
-    }
+    const bool experiments = section(ReportSection::Experiments, "Experiments");
     for (const auto& experiment : project.experiments) {
-        const std::string& id = experiment->name.value();
-        if (options.experiments.empty() ||
-            std::find(options.experiments.begin(), options.experiments.end(), id) != options.experiments.end()) {
-            model.experiments.push_back(experiment_of(*experiment, rule));
+        ReportExperiment built = experiment_of(*experiment, rule);
+        const std::string key = "experiments/" + built.id;
+        const bool shown = add(key, built.id, 1, experiments);
+        std::vector<ReportCategory> kept;
+        for (ReportCategory& part : built.categories) {
+            if (add(key + "/" + part.id, part.title, 2, shown)) {
+                kept.push_back(std::move(part));
+            }
         }
+        if (shown) {
+            built.categories = std::move(kept);
+            model.experiments.push_back(std::move(built));
+        }
+    }
+    if (section(ReportSection::Correlations, "Correlations")) {
+        model.correlations =
+            correlations_of(project, options.correlation_level,
+                            scan ? &scan->file : scan_mode ? &project.sequential_fit.template_file : nullptr,
+                            model.fitted);
+    }
+    // A scan's parameters across its datasets.
+    if (scan_mode) {
+        section(ReportSection::Evolution, "Evolution");
     }
     return model;
 }

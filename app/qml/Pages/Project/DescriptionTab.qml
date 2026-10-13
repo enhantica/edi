@@ -119,6 +119,24 @@ Rectangle {
                     }
                 }
             }
+            // The report's authors (`_metadata.authors`), separated by "; ".
+            DescriptionRow {
+                label: qsTr("Authors")
+                EaElements.TextInput {
+                    objectName: "project.authors"
+                    width: column.width - AppSizes.descriptionNameColumnWidth
+                    placeholderText: qsTr("Enter authors here, separated by ;")
+                    text: tab.project ? tab.project.authors : ""
+                    onAccepted: commit()
+                    onEditingFinished: commit()
+
+                    // Return and leaving the field both commit; the second of the two finds nothing new.
+                    function commit() {
+                        if (tab.project && text !== tab.project.authors)
+                            tab.project.authors = text;
+                    }
+                }
+            }
             DescriptionRow {
                 label: qsTr("Description")
                 EaElements.TextInput {

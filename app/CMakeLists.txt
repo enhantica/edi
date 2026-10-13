@@ -168,10 +168,8 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Project/ProjectPage.qml
         qml/Pages/Project/RecentProjectsGroup.qml
         qml/Pages/Project/StandardUncertaintiesGroup.qml
-        qml/Pages/Report/ChartsGroup.qml
         qml/Pages/Report/ContentsGroup.qml
         qml/Pages/Report/ExportGroup.qml
-        qml/Pages/Report/ProjectDetailsGroup.qml
         qml/Pages/Report/ReportCorrelations.qml
         qml/Pages/Report/ReportPage.qml
         qml/Pages/Report/ReportPreview.qml
