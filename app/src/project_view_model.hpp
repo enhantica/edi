@@ -188,6 +188,12 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // `analysis/analysis.edi` the correlation threshold the Analysis page's level sets and the x axis.
     void setReportExcluded(const QString& keys);
     void setReportHtmlOffline(bool embedded);
+    // Whether Save report writes `format` ("html", "pdf" or "cif"): `reports/report.edi`'s `_report.<format>`.
+    void setReportFormat(const QString& format, bool on);
+    // Save report's record (ADR-0035 §7): the rows of the reports it wrote, each replacing the row of the same name,
+    // then `reports/report.edi` written alone. Not an edit: no model value changes and nothing is marked modified.
+    // Throws when the file cannot be written.
+    void recordReportFiles(std::vector<edi::ReportFile> rows);
     void setReportCorrelationThreshold(double threshold);
     bool patternDSpacing() const;
     void setPatternDSpacing(bool on);

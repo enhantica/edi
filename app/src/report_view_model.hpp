@@ -6,10 +6,13 @@
 #include <QString>
 #include <QStringList>
 #include <QUrl>
+#include <QVariantList>
 #include <QVariantMap>
+#include <optional>
 #include <string>
 #include <QtQml/qqmlregistration.h>
 
+#include "edi/report_html.hpp"
 #include "edi/report_model.hpp"
 
 namespace edi_app {
@@ -33,6 +36,14 @@ class ReportViewModel : public QObject {
     // Export: whether a saved report embeds its libraries, the project's `_report.html_offline` (online by default; the
     // owner, 2026-10-12).
     Q_PROPERTY(bool embedLibraries READ embedLibraries WRITE setEmbedLibraries NOTIFY embedLibrariesChanged)
+    // Export: whether Save report writes the HTML (by default), the PDF and the CIF report, the project's
+    // `_report.html`, `pdf` and `cif` (ADR-0035 §7).
+    Q_PROPERTY(bool writesHtml READ writesHtml WRITE setWritesHtml NOTIFY writesHtmlChanged)
+    Q_PROPERTY(bool writesPdf READ writesPdf WRITE setWritesPdf NOTIFY writesPdfChanged)
+    Q_PROPERTY(bool writesCif READ writesCif WRITE setWritesCif NOTIFY writesCifChanged)
+    // The reports Save report wrote, one map per `_report_file` row: `name`, `format`, `saved` (when, UTC) and `state`,
+    // "current", "out of date" (the report the project would make now differs from the one written) or "missing".
+    Q_PROPERTY(QVariantList savedReports READ savedReports NOTIFY savedReportsChanged)
     // The Report page is shown. Only then does a change rebuild the model at once; otherwise the next read of the
     // model rebuilds it, so a reader never sees a stale one and a hidden page costs nothing per change.
     Q_PROPERTY(bool active READ active WRITE setActive NOTIFY activeChanged)
@@ -57,21 +68,22 @@ class ReportViewModel : public QObject {
     void setHidden(const QStringList& keys);
     bool embedLibraries() const;
     void setEmbedLibraries(bool on);
+    bool writesHtml() const { return writes("html"); }
+    void setWritesHtml(bool on) { setWrites("html", on); }
+    bool writesPdf() const { return writes("pdf"); }
+    void setWritesPdf(bool on) { setWrites("pdf", on); }
+    bool writesCif() const { return writes("cif"); }
+    void setWritesCif(bool on) { setWrites("cif", on); }
+    QVariantList savedReports() const;
 
     // A Contents box: includes or leaves out the item of `key`.
     Q_INVOKABLE void setIncluded(const QString& key, bool included);
-    // Export (edi ADR-0035): the report as one HTML file, the chart libraries in it when embedLibraries is set. The
-    // desktop writes it to `file`; the browser downloads it under htmlFileName() and fetches the libraries from the
-    // site. Answers with saved or saveFailed.
-    Q_INVOKABLE void saveHtml(const QUrl& file);
-    // The name a saved report is offered under: the project's short name and .html.
-    Q_INVOKABLE QString htmlFileName() const;
-    // Export: the report as a static PDF (reportPdf), its figures the preview's images by their names in the static
-    // text (structure-0, pattern-1, ...), its text in `fontFamily`. The desktop writes it to `file`; the browser
-    // downloads it under pdfFileName(). Answers with saved or saveFailed.
-    Q_INVOKABLE void savePdf(const QUrl& file, const QVariantMap& figures, const QString& fontFamily);
-    // The project's short name and .pdf.
-    Q_INVOKABLE QString pdfFileName() const;
+    // Save report (ADR-0035 §7): each ticked format written into the project's `reports/` as `<short name>.html` or
+    // `.pdf` (the browser also downloads it), then its `_report_file` row, through crysta's writer of
+    // `reports/report.edi` alone. The HTML carries the chart libraries when embedLibraries is set; the PDF's figures
+    // are the preview's images by their names in its static text (structure-0, pattern-1, ...) and its text is in
+    // `fontFamily`. Unticked formats' files and rows are left as they are. Answers with saved or saveFailed.
+    Q_INVOKABLE void saveReport(const QVariantMap& figures, const QString& fontFamily);
     // Builds the model again from the project; the project calls it once per coalesced change, and when the Analysis
     // page's correlation level changes.
     void refresh();
@@ -80,6 +92,10 @@ class ReportViewModel : public QObject {
     void modelChanged();
     void hiddenChanged();
     void embedLibrariesChanged();
+    void writesHtmlChanged();
+    void writesPdfChanged();
+    void writesCifChanged();
+    void savedReportsChanged();
     void activeChanged();
     void saved(const QString& location);
     void saveFailed(const QString& message);
@@ -90,11 +106,20 @@ class ReportViewModel : public QObject {
     // A read while a change is pending builds the model first. A model the read changed is announced afterwards, so
     // the readers that read it before (the chart controllers) read it again.
     void ensureBuilt() const;
+    // Whether Save report writes `format`, and the edit that sets it.
+    bool writes(const char* format) const;
+    void setWrites(const char* format, bool on);
+    // The vendored chart libraries, read once; null when one cannot be read.
+    const edi::ReportLibraries* libraries() const;
+    // The project's `reports/` folder.
+    QString reportsDirectory() const;
 
     ProjectViewModel& project_;
     // What the hidden and embedLibraries properties last announced.
     QStringList published_hidden_;
     bool published_embed_ = false;
+    bool published_writes_html_ = true, published_writes_pdf_ = false, published_writes_cif_ = false;
+    mutable std::optional<edi::ReportLibraries> libraries_;
     bool active_ = false;
     // The model, rebuilt on a read when a change arrived while the page was hidden (`dirty_`).
     mutable bool dirty_ = true;
