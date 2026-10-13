@@ -3,6 +3,8 @@
 
 #include <QByteArray>
 #include <QFile>
+#include <QHash>
+#include <QImage>
 #include <QJsonDocument>
 #include <QSaveFile>
 #include <algorithm>
@@ -13,6 +15,7 @@
 #include "correlation_view_model.hpp"
 #include "edi/report_html.hpp"
 #include "project_view_model.hpp"
+#include "report_pdf.hpp"
 #include "web_files.hpp"
 
 namespace edi_app {
@@ -150,6 +153,39 @@ QString ReportViewModel::htmlFileName() const {
     ensureBuilt();
     const QString name = QString::fromStdString(report_.name);
     return (name.isEmpty() ? QStringLiteral("report") : name) + QStringLiteral(".html");
+}
+
+QString ReportViewModel::pdfFileName() const {
+    ensureBuilt();
+    const QString name = QString::fromStdString(report_.name);
+    return (name.isEmpty() ? QStringLiteral("report") : name) + QStringLiteral(".pdf");
+}
+
+void ReportViewModel::savePdf(const QUrl& file, const QVariantMap& figures, const QString& fontFamily) {
+    ensureBuilt();
+    QHash<QString, QImage> images;
+    for (auto it = figures.cbegin(); it != figures.cend(); ++it) {
+        const QImage image = it.value().value<QImage>();
+        if (!image.isNull()) {
+            images.insert(it.key(), image);
+        }
+    }
+    const QByteArray pdf = reportPdf(report_, images, fontFamily);
+    if (pdf.isEmpty()) {
+        emit saveFailed(tr("The PDF report could not be made"));
+        return;
+    }
+    if (WebFiles::available()) {
+        WebFiles::download(pdf, pdfFileName());
+        emit saved(pdfFileName());
+        return;
+    }
+    QSaveFile out(file.toLocalFile());
+    if (!out.open(QIODevice::WriteOnly) || out.write(pdf) != pdf.size() || !out.commit()) {
+        emit saveFailed(tr("The report could not be written to %1").arg(file.toLocalFile()));
+        return;
+    }
+    emit saved(file.toLocalFile());
 }
 
 void ReportViewModel::saveHtml(const QUrl& file) {

@@ -63,6 +63,12 @@ class ReportViewModel : public QObject {
     Q_INVOKABLE void saveHtml(const QUrl& file);
     // The name a saved report is offered under: the project's short name and .html.
     Q_INVOKABLE QString htmlFileName() const;
+    // Export: the report as a static PDF (reportPdf), its figures the preview's images by their names in the static
+    // text (structure-0, pattern-1, ...), its text in `fontFamily`. The desktop writes it to `file`; the browser
+    // downloads it under pdfFileName(). Answers with saved or saveFailed.
+    Q_INVOKABLE void savePdf(const QUrl& file, const QVariantMap& figures, const QString& fontFamily);
+    // The project's short name and .pdf.
+    Q_INVOKABLE QString pdfFileName() const;
     // Builds the model again from the project; the project calls it once per coalesced change, and when the Analysis
     // page's correlation level changes.
     void refresh();
