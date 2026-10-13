@@ -9,6 +9,7 @@
 #include <QUrl>
 #include <QtQml>
 #include <filesystem>
+#include <array>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -360,6 +361,60 @@ void settle_projection(edi_app::ProjectViewModel& view) {
     } while (!view.pendingRefusal().isEmpty() && timer.elapsed() < 10000);
     if (!view.pendingRefusal().isEmpty())
         throw std::runtime_error(view.pendingRefusal().toStdString());
+}
+QJsonObject loaded_cache_lifecycle(const QString& fixture, const QString& work) {
+    const auto input = std::filesystem::path(work.toStdString()) / "input";
+    std::filesystem::create_directories(input.parent_path());
+    std::filesystem::copy(fixture.toStdString(), input, std::filesystem::copy_options::recursive);
+    auto project = edi::load_project(input.string());
+    project.sequential_fit.template_file = "02.xy";
+    project.fit_result.result_kind = "deterministic";
+    project.fit_result.success = true;
+    auto owner = std::make_shared<std::array<edi::FitParameterCorrelation, 2>>();
+    const char* right[] = {"bank.background.ramp.coef", "bank.background.curve.coef"};
+    const char* coefficients[] = {"0.50", "-0.25"};
+    for (std::size_t i = 0; i < owner->size(); ++i) {
+        auto& row = owner->at(i);
+        row.id = i == 0 ? "keptA" : "keptB";
+        row.source_kind = "deterministic";
+        row.parameter_unique_name_i = "bank.background.base.coef";
+        row.parameter_unique_name_j = right[i];
+        row.correlation = coefficients[i];
+        row.file_path = "02.xy";
+        project.fit_result.correlations.push_back(
+            std::shared_ptr<edi::FitParameterCorrelation>(owner, &row));
+    }
+    edi_app::ProjectViewModel view(std::move(project), nullptr);
+    view.setCurrentExperimentIndex(1);
+    settle_projection(view);
+    QJsonObject result{{"original", matrix(view)},
+                       {"movedHandle", view.project().fit_result.correlations[0].get() == &owner->at(0)}};
+    if (view.scanTemplate() == nullptr || view.scanTemplate()->fit_result.correlations.empty())
+        throw std::runtime_error("the loaded dataset must expose its actual persisted row handle");
+    // ItemVec's const read gives a shared handle to a mutable native row; no const-cast.
+    const auto shown = view.scanTemplate()->fit_result.correlations[0];
+    owner->at(0).correlation = "-0.875";
+    shown->correlation = "-0.875";
+    view.setCurrentExperimentIndex(0);
+    view.setCurrentExperimentIndex(1);
+    settle_projection(view);
+    result["afterWrite"] = matrix(view);
+    view.experimentModels()[0]->setName("renamed_bank");
+    view.setCurrentExperimentIndex(0);
+    view.setCurrentExperimentIndex(1);
+    settle_projection(view);
+    result["renamed"] = matrix(view);
+    view.undo();
+    settle_projection(view);
+    result["renameUndo"] = matrix(view);
+    if (const QString error = view.resetScan(); !error.isEmpty())
+        throw std::runtime_error(error.toStdString());
+    result["reset"] = matrix(view);
+    result["resetUndoAvailable"] = view.canUndo();
+    view.undo();
+    settle_projection(view);
+    result["resetUndo"] = matrix(view);
+    return result;
 }
 void fit_and_wait(edi_app::ProjectViewModel& view) {
     bool finished = false;
@@ -846,6 +901,11 @@ int main(int argc, char** argv) {
     const QString beam = QString::fromLocal8Bit(argv[4]);
     QJsonObject result;
     try {
+        if (mode == "loaded-cache-lifecycle") {
+            result = loaded_cache_lifecycle(fixture, work);
+            std::cout << QJsonDocument(result).toJson(QJsonDocument::Compact).constData() << '\n';
+            return 0;
+        }
         if (mode == "frozen-generated") {
             result = frozen_generated_output(fixture, work, beam.toStdString());
             std::cout << QJsonDocument(result).toJson(QJsonDocument::Compact).constData() << '\n';

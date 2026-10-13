@@ -90,6 +90,22 @@ def shared_app_state(tmp_path_factory):
             check=True,
         )
         record['generated'][case] = json.loads(completed.stdout.splitlines()[-1])
+    completed = subprocess.run(
+        [
+            str(binary),
+            'loaded-cache-lifecycle',
+            str(ROOT / 'tests/fixtures/correlations/scan-sequential'),
+            str(work / 'loaded-cache'),
+            'sequential',
+            'unused',
+            'later',
+        ],
+        env={**os.environ, 'QT_QPA_PLATFORM': 'offscreen', 'QSG_RHI_BACKEND': 'software'},
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    record['loadedCache'] = json.loads(completed.stdout.splitlines()[-1])
     return record
 
 
@@ -117,6 +133,37 @@ def test_frozen_numeric_state_generates_the_complete_pre_change_saved_loop(share
     assert actual == (HERE / (case + '-correlations.edi')).read_bytes(), (
         'Fresh numeric fitted-state conversion and saving must retain every pre-change loop byte'
     )
+
+
+def test_loaded_cache_follows_actual_publication_rename_reset_and_undo(shared_app_state):
+    states = shared_app_state['loadedCache']
+    assert states['movedHandle'], (
+        'Moving native loaded rows into the actual project view must retain their admitted handles'
+    )
+    for step in ['original', 'afterWrite', 'renamed', 'renameUndo', 'resetUndo']:
+        state = states[step]
+        prefix = 'renamed_bank' if step == 'renamed' else 'bank'
+        values = state['values']
+        size = len(state['labels'])
+        indices = {name: index for index, name in enumerate(state['labels'])}
+        assert state['available'] == size == 3, (
+            'Each loaded publication must show all of its real current endpoints at ' + step
+        )
+        base = indices[prefix + '.background.base.coef']
+        for term, expected in [
+            ('ramp', 0.5 if step == 'original' else -0.875),
+            ('curve', -0.25),
+        ]:
+            other = indices[prefix + '.background.' + term + '.coef']
+            i, j = max(base, other), min(base, other)
+            assert values[i * size + j] == expected, (
+                'The real loaded cache must match each declared current native coefficient at '
+                + step
+            )
+    assert states['reset']['available'] == 0 and states['reset']['values'] == [], (
+        'The actual Reset callback must clear every loaded numeric display cell'
+    )
+    assert states['resetUndoAvailable'], 'The actual loaded Reset must leave a real Undo action'
 
 
 def test_real_scan_columns_share_one_names_vector(shared_app_state):
