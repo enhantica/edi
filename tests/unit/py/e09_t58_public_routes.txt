@@ -690,3 +690,9 @@ FitParameterCorrelationItem.parameter_unique_name_i	other-public
 FitParameterCorrelationItem.parameter_unique_name_j	other-public
 FitParameterCorrelationItem.source_kind	other-public
 FitResultBase.correlations	other-public
+CwlPdXrayInstrument.setup_wavelength_2	other-public
+CwlPdXrayInstrument.setup_wavelength_2_to_1_ratio	other-public
+LinkedStructure.weight_fraction	other-public
+WeightFraction	other-public
+WeightFraction.uncertainty	other-public
+WeightFraction.value	other-public
