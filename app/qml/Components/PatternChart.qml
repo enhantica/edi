@@ -58,8 +58,9 @@ Item {
     readonly property real tickRoom: 15
     readonly property real labelLift: tickRoom - Math.round(em * 0.4)
     readonly property real titleGutter: Math.round(em * 1.6)
-    // The toolbar ends at the plot areas' right border, one em above the main one.
-    readonly property real topHeight: chart.report ? topMargin : topMargin + toolbar.height + belowToolbar
+    // The toolbar ends at the plot areas' right border, one em above the main one. A report figure has no toolbar; its
+    // plot starts no closer to the frame's top than to its sides (the owner, 2026-10-13).
+    readonly property real topHeight: chart.report ? Math.max(sideMargin, rightMargin) : topMargin + toolbar.height + belowToolbar
     // The panes' heights, as easydiffractionbeta divides them: of what the toolbar and the x axis leave, the
     // main pane takes 0.7 and the residual 0.3, each less half of what the tick rows take between them. A
     // structure's row is 1.5 em high, in a pane half an em higher.
