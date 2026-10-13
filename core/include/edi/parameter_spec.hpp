@@ -149,6 +149,10 @@ inline constexpr const char* kPolarizationCoefficient[] = {"_instrument.setup_po
 inline constexpr const char* kPolarizationCoefficientCif[] = {"_instr.polarization_coefficient"};
 inline constexpr const char* kMonochromatorTwotheta[] = {"_instrument.setup_monochromator_twotheta"};
 inline constexpr const char* kMonochromatorTwothetaCif[] = {"_instr.monochromator_twotheta"};
+inline constexpr const char* kWavelength2[] = {"_instrument.setup_wavelength_2"};
+inline constexpr const char* kWavelength2Cif[] = {"_instr.wavelength_2"};
+inline constexpr const char* kWavelengthRatio[] = {"_instrument.setup_wavelength_2_to_1_ratio"};
+inline constexpr const char* kWavelengthRatioCif[] = {"_instr.wavelength_2_to_1_ratio"};
 inline constexpr const char* kScale[] = {"_linked_structure.scale"};
 inline constexpr const char* kScaleCif[] = {"_easydiffraction_sc_crystal_block.scale", "_sc_crystal_block.scale"};
 inline constexpr const char* kBackgroundIntensity[] = {"_background.intensity"};
@@ -416,6 +420,19 @@ inline const ParameterSpec instrument_monochromator_twotheta{
     "Pre-specimen monochromator 2theta angle (0 means no monochromator)",
     ParameterRange{0.0, 180.0}, "Monochromator 2θ", "deg", "Monochromator $2\\theta$", "\\mathrm{deg}",
     detail::kMonochromatorTwotheta, detail::kMonochromatorTwothetaCif};
+// The X-ray CW K-alpha doublet: the pattern is the first wavelength's plus the ratio times the second's.
+// Upstream CwlInstrumentBase.setup_wavelength_2 / .setup_wavelength_2_to_1_ratio (tags, units, display names
+// and the ratio's [0, 1] range mirrored), X-ray only here. Fit parameters here; upstream holds them fixed.
+inline const ParameterSpec instrument_wavelength_2{
+    "instrument", "setup_wavelength_2", "angstroms",
+    "Second incident wavelength (e.g. X-ray K-alpha2)",
+    {0.0, detail::kInf}, "Wavelength 2", "Å", "Wavelength 2", "\\AA",
+    detail::kWavelength2, detail::kWavelength2Cif};
+inline const ParameterSpec instrument_wavelength_2_to_1_ratio{
+    "instrument", "setup_wavelength_2_to_1_ratio", "dimensionless",
+    "Relative intensity of wavelength_2 to wavelength (I2/I1); 0 means a single wavelength",
+    ParameterRange{0.0, 1.0}, "Wavelength 2/1 ratio", "", "Wavelength 2/1 ratio", "",
+    detail::kWavelengthRatio, detail::kWavelengthRatioCif};
 
 inline const ParameterSpec linked_structure_scale{
     "linked_structure", "scale", "dimensionless", "Scale factor of the linked structure",

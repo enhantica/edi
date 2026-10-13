@@ -3379,6 +3379,9 @@ struct InstrumentBase {
     // load engages both at upstream's default 0 (K = 0 is no correction); a neutron or TOF experiment
     // never carries them.
     OptionalParameter setup_polarization_coefficient, setup_monochromator_twotheta;
+    // The X-ray CW K-alpha doublet: the second wavelength and its intensity relative to the first,
+    // presence-tracked like the polarization pair (a ratio of 0 is a single wavelength).
+    OptionalParameter setup_wavelength_2, setup_wavelength_2_to_1_ratio;
 
     InstrumentBase();  // attaches the parameter specs (inline below)
 
@@ -4926,8 +4929,8 @@ static_assert(detail::one_entry_per_column(PeakCategory::columns, PeakCategory::
 struct InstrumentCategory {
     using Owner = InstrumentBase;
     static constexpr const char* name = "_instrument";
-    static constexpr auto columns = std::tuple{&InstrumentBase::calib_d_to_tof_offset, &InstrumentBase::calib_d_to_tof_linear, &InstrumentBase::calib_d_to_tof_quadratic, &InstrumentBase::calib_d_to_tof_reciprocal, &InstrumentBase::setup_twotheta_bank, &InstrumentBase::setup_wavelength, &InstrumentBase::calib_twotheta_offset, &InstrumentBase::calib_sample_displacement, &InstrumentBase::calib_sample_transparency, &InstrumentBase::setup_polarization_coefficient, &InstrumentBase::setup_monochromator_twotheta};
-    static constexpr std::array items{"calib_d_to_tof_offset", "calib_d_to_tof_linear", "calib_d_to_tof_quadratic", "calib_d_to_tof_reciprocal", "setup_twotheta_bank", "setup_wavelength", "calib_twotheta_offset", "calib_sample_displacement", "calib_sample_transparency", "setup_polarization_coefficient", "setup_monochromator_twotheta"};
+    static constexpr auto columns = std::tuple{&InstrumentBase::calib_d_to_tof_offset, &InstrumentBase::calib_d_to_tof_linear, &InstrumentBase::calib_d_to_tof_quadratic, &InstrumentBase::calib_d_to_tof_reciprocal, &InstrumentBase::setup_twotheta_bank, &InstrumentBase::setup_wavelength, &InstrumentBase::calib_twotheta_offset, &InstrumentBase::calib_sample_displacement, &InstrumentBase::calib_sample_transparency, &InstrumentBase::setup_polarization_coefficient, &InstrumentBase::setup_monochromator_twotheta, &InstrumentBase::setup_wavelength_2, &InstrumentBase::setup_wavelength_2_to_1_ratio};
+    static constexpr std::array items{"calib_d_to_tof_offset", "calib_d_to_tof_linear", "calib_d_to_tof_quadratic", "calib_d_to_tof_reciprocal", "setup_twotheta_bank", "setup_wavelength", "calib_twotheta_offset", "calib_sample_displacement", "calib_sample_transparency", "setup_polarization_coefficient", "setup_monochromator_twotheta", "setup_wavelength_2", "setup_wavelength_2_to_1_ratio"};
     static constexpr std::array legacy{"_instr", "_diffrn_radiation_wavelength", "_pd_calib"};
 };
 static_assert(detail::one_entry_per_column(InstrumentCategory::columns, InstrumentCategory::items));
@@ -5280,6 +5283,8 @@ inline std::vector<Parameter*> AbsorptionBase::parameters() {
 // The blocks in category order (peak, instrument, linked_structure, absorption), then the
 // background points — the same elements in the same order as before the blocks carried their own.
 inline std::vector<Parameter*> ExperimentBase::parameters() {
+    detail::push_optional(out, setup_wavelength_2);  // , X-ray only
+    detail::push_optional(out, setup_wavelength_2_to_1_ratio);
     std::vector<Parameter*> out = peak.parameters();
     for (Parameter* parameter : instrument.parameters()) {
         out.push_back(parameter);
