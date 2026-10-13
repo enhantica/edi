@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-13T10:41:37Z
+# measured_utc = 2026-10-13T11:50:49Z
 #
-# Recorded from: measured test run (22 node(s) measured once, 10250 banked, 1 stale row(s) dropped)
-# Collected tests: 11108; with a reported duration: 6092
+# Recorded from: measured test run (4 node(s) measured once, 10269 banked, 0 stale row(s) dropped)
+# Collected tests: 11109; with a reported duration: 6093
 # Module-scoped fixture costs recorded: 40
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 11108
+# inventory_python = 11109
 # inventory_cpp = 309
-# inventory_measured = 10270
-# inventory_unmeasured = 1147
+# inventory_measured = 10273
+# inventory_unmeasured = 1145
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -5888,9 +5888,10 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.p
 0.150	tests/integration/py/test_table_display.py::test_scientific_thresholds_and_signed_four_digit_values
 0.600	tests/integration/py/test_table_display.py::test_sequential_count_colours_follow_zero_and_nonzero_state
 0.160	tests/integration/py/test_ui_input_settling.py::test_real_input_waits_for_motion_and_rendering_but_refuses_a_stuck_viewport
-UNMEASURED:failed-in-this-run	tests/integration/py/test_weight_fraction_app.py::test_linked_structure_table_displays_weight_fraction_without_an_editor
+0.000	tests/integration/py/test_weight_fraction_app.py::test_linked_structure_table_displays_weight_fraction_without_an_editor
+0.000	tests/integration/py/test_weight_fraction_app.py::test_weight_fraction_role_and_menu_preserve_live_uncertainty_and_single_phase_empty
 0.070	tests/integration/py/test_weight_fractions.py::test_derived_weight_fraction_and_su_are_written_to_edi[False]
-0.060	tests/integration/py/test_weight_fractions.py::test_derived_weight_fraction_and_su_are_written_to_edi[True]
+0.050	tests/integration/py/test_weight_fractions.py::test_derived_weight_fraction_and_su_are_written_to_edi[True]
 0.080	tests/integration/py/test_weight_fractions.py::test_hill_howard_values_uncertainties_and_warm_scale_changes
 UNMEASURED:failed-in-this-run	tests/integration/py/test_xray_doublet.py::test_doublet_roundtrip_and_reached_serialization_escape[False]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_xray_doublet.py::test_doublet_roundtrip_and_reached_serialization_escape[True]
@@ -9851,7 +9852,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_xray_doublet_pages.py::test_p
 UNMEASURED:failed-in-this-run	tests/system/py/test_xray_doublet_pages.py::test_page_compares_live_calculation_and_rejects_disabled_correction[False-doublet]
 UNMEASURED:failed-in-this-run	tests/system/py/test_xray_doublet_pages.py::test_page_compares_live_calculation_and_rejects_disabled_correction[True-absorption]
 UNMEASURED:failed-in-this-run	tests/system/py/test_xray_doublet_pages.py::test_page_compares_live_calculation_and_rejects_disabled_correction[True-doublet]
-UNMEASURED:failed-in-this-run	tests/system/py/test_xray_round_robin_page.py::test_round_robin_page_executes_fitted_shape_and_its_regression_pins
+4.190	tests/system/py/test_xray_round_robin_page.py::test_round_robin_page_executes_fitted_shape_and_its_regression_pins
 0.010	tests/system/py/test_yap_agreement.py::test_delivered_yap_project_has_both_phases_and_physical_occupancies
 0.000	tests/system/py/test_yap_agreement.py::test_verification_page_executes_the_owner_reference_comparison
 2.930	tests/system/py/test_yap_agreement.py::test_yap_fit_agrees_with_every_other_fullprof_parameter_and_rwp
