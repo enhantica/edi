@@ -41,7 +41,7 @@ EaElements.GroupBox {
         Grid {
             columns: 2
             columnSpacing: EaStyle.Sizes.fontPixelSize
-            rowSpacing: 0
+            rowSpacing: AppSizes.groupContentSpacing
             Repeater {
                 model: group.ids.length
                 delegate: EaElements.CheckBox {
