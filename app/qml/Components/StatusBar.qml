@@ -205,8 +205,8 @@ EaElements.StatusBar {
                 font.family: EaStyle.Fonts.fontFamily
                 font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.9
             }
-            // The widest digit of the app's font, which has no tabular digits: every number sits in a slot as wide as
-            // its digits at that width, so the live counters keep a steady width (the owner, 2026-10-13).
+            // The widest digit of the app's font, which has no tabular digits: every digit is drawn centred in a cell
+            // that wide, as tabular figures are, so the live counters keep a steady width (the owner, 2026-10-13).
             readonly property real digitWidth: {
                 let widest = 0;
                 for (let digit = 0; digit <= 9; ++digit)
@@ -237,12 +237,6 @@ EaElements.StatusBar {
                 split(text.slice(at), "");
                 return out;
             }
-            function slotWidth(number: string): real {
-                let width = 0;
-                for (const character of number)
-                    width += /[0-9]/.test(character) ? digitWidth : fitValueMetrics.advanceWidth(character);
-                return Math.ceil(width);
-            }
             Row {
                 id: valuePieces
                 Repeater {
@@ -264,15 +258,23 @@ EaElements.StatusBar {
                             readonly property string text: valuePart.modelData.replace(/<[^>]*>/g, "")
                             Repeater {
                                 model: fitValues.runs(valuePart.modelData)
-                                delegate: Text {
+                                delegate: Row {
+                                    id: run
                                     required property var modelData
-                                    width: modelData.number ? fitValues.slotWidth(modelData.text) : implicitWidth
-                                    y: fitValueMetrics.ascent - baselineOffset
-                                    horizontalAlignment: Text.AlignRight
-                                    font: numberText.font
-                                    textFormat: Text.PlainText
-                                    color: modelData.color !== "" ? modelData.color : numberText.color
-                                    text: modelData.text
+                                    Repeater {
+                                        // A number one character at a time, so each digit takes its own cell.
+                                        model: run.modelData.number ? run.modelData.text.split("") : [run.modelData.text]
+                                        delegate: Text {
+                                            required property string modelData
+                                            width: /^[0-9]$/.test(modelData) ? fitValues.digitWidth : implicitWidth
+                                            y: fitValueMetrics.ascent - baselineOffset
+                                            horizontalAlignment: Text.AlignHCenter
+                                            font: numberText.font
+                                            textFormat: Text.PlainText
+                                            color: run.modelData.color !== "" ? run.modelData.color : numberText.color
+                                            text: modelData
+                                        }
+                                    }
                                 }
                             }
                         }
