@@ -58,3 +58,21 @@ For `q_i = Z_i M_i V_i` and `D = S_0 q_0 + S_1 q_1`, the first fraction has
 The second fraction has the negative gradient and the same variance. The signed
 cross term is checked in memory and after saving and reopening the stored loop;
 no engine covariance or fit output supplies the expected value.
+
+Relation-aware admission uses the same Bragg law and independently authored
+relation derivatives. For `a(t)=a*t`, the angular response is
+`d(2 theta)/dt = (d lambda/dt - lambda)/(a*sqrt(1-(lambda/(2*a))^2))` at `t=1`.
+`line2=1.05*line1` has derivative 1.05; its reciprocal has derivative 1/1.05.
+Both participating wavelengths therefore co-dilate with the free master and
+have zero Bragg response, even though a dependent target has a nonfree flag.
+Constant wavelengths and wavelengths following the fixed atom ADP have zero
+wavelength response and a nonzero Bragg response; they remain genuine anchors.
+The fixed ADP is independently declared zero and fixed in the existing input.
+
+The ratio references use enabled constant values 0.375 and 0, and a disabled
+constant relation. Effective participation comes from that declaration, not
+from a prior stored ratio. Cold admission is checked before calculation,
+then again after calculation and after save/reopen. The complete original
+ordinary fixed/free/inactive/foreign-component matrix remains unchanged.
+The symbolic cases include single, shared-structure and connected multiphase
+models, with the anchor in the other bank and reversed bank ordering.

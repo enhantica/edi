@@ -52,3 +52,89 @@ def write(root, key, state, *, reverse=False):
             )
         path.write_text(text)
     return mode, admitted and state == 'fixed-second'
+
+
+RELATION_GRAPHS = ('single', 'shared-second', 'remote-connected')
+RELATIONS = (
+    'moving-second',
+    'moving-first',
+    'constant-ratio',
+    'disabled-ratio',
+    'zero-ratio',
+    'constant-second',
+    'fixed-input-second',
+    'constant-first',
+    'fixed-input-first',
+)
+
+
+def write_relation(root, key, relation, *, reverse=False):
+    first_target = relation in {'moving-first', 'constant-first', 'fixed-input-first'}
+    state = (
+        'free-second'
+        if first_target
+        else 'inactive'
+        if relation in {'constant-ratio', 'disabled-ratio'}
+        else 'fixed-second'
+    )
+    write(root, key, state, reverse=reverse)
+    if first_target:
+        for path in (root / 'experiments').glob('*.edi'):
+            text = path.read_text()
+            if text.splitlines()[0].removeprefix('data_') in GRAPHS[key][2]:
+                path.write_text(
+                    text.replace(
+                        '_instrument.setup_wavelength 1.54()', '_instrument.setup_wavelength 1.54'
+                    )
+                )
+    aliases, constraints = [], []
+    if relation.startswith('fixed-input'):
+        aliases.append('fixed_adp alpha.atom_site.X.adp_iso')
+    for bank in GRAPHS[key][2]:
+        aliases.extend([
+            f'{bank}_line1 {bank}.instrument.setup_wavelength',
+            f'{bank}_line2 {bank}.instrument.setup_wavelength_2',
+            f'{bank}_ratio {bank}.instrument.setup_wavelength_2_to_1_ratio',
+        ])
+        expressions = {
+            'moving-second': f'{bank}_line2 = 1.05 * {bank}_line1',
+            'moving-first': f'{bank}_line1 = {bank}_line2 / 1.05',
+            'constant-ratio': f'{bank}_ratio = 0.375',
+            'disabled-ratio': f'{bank}_ratio = 0.375',
+            'zero-ratio': f'{bank}_ratio = 0',
+            'constant-second': f'{bank}_line2 = 1.6732',
+            'fixed-input-second': f'{bank}_line2 = 1.6732 + 0.01 * fixed_adp',
+            'constant-first': f'{bank}_line1 = 1.54',
+            'fixed-input-first': f'{bank}_line1 = 1.54 + 0.01 * fixed_adp',
+        }
+        constraints.append(
+            f'{bank}_relation "{expressions[relation]}" '
+            + ('false' if relation == 'disabled-ratio' else 'true')
+        )
+    analysis = root / 'analysis/analysis.edi'
+    analysis.write_text(
+        analysis.read_text() + '\nloop_\n_alias.id\n'
+        '_alias.parameter_unique_name\n'
+        + '\n'.join(aliases)
+        + '\n\nloop_\n_constraint.id\n_constraint.expression\n'
+        '_constraint.enabled\n' + '\n'.join(constraints) + '\n'
+    )
+    return GRAPHS[key][0]
+
+
+def relation_geometry(relation):
+    line1, line2 = 1.54, 1.6732
+    if relation == 'moving-second':
+        line2 = 1.05 * line1
+    if relation == 'moving-first':
+        line1 = line2 / 1.05
+    # d lambda / d t along the homogeneous free-master dilation; fixed inputs have zero slope.
+    slopes = (
+        (0.0, line2)
+        if relation in {'constant-first', 'fixed-input-first'}
+        else (line1, line2)
+        if relation.startswith('moving')
+        else (line1, 0.0)
+    )
+    ratio = 0.0 if relation in {'disabled-ratio', 'zero-ratio'} else 0.375
+    return (line1, line2), slopes, ratio
