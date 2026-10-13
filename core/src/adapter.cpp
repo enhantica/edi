@@ -47,6 +47,7 @@
 #include "crysta/scattering.hpp"
 #include "crysta/structure_geometry.hpp"
 #include "crysta/symmetry.hpp"
+#include "crysta/weight_fraction.hpp"
 #include "crysta/threading.hpp"
 #include "crysta/tokens.hpp"
 #include "edi/categories.hpp"
@@ -2491,11 +2492,11 @@ crysta::BraggPdExperiment to_crysta_cwl_experiment(const ExperimentBase& e, bool
                                    crysta::CALIBRATION, "setup_polarization_coefficient"));
         instrument.push_back(param(e.instrument.setup_monochromator_twotheta.value_or(undeclared_shift),
                                    crysta::CALIBRATION, "setup_monochromator_twotheta"));
-    }
         instrument.push_back(param(e.instrument.setup_wavelength_2.value_or(undeclared_shift),
                                    crysta::CALIBRATION, "setup_wavelength_2"));
         instrument.push_back(param(e.instrument.setup_wavelength_2_to_1_ratio.value_or(undeclared_shift),
                                    crysta::CALIBRATION, "setup_wavelength_2_to_1_ratio"));
+    }
     std::vector<crysta::LineSegment> background;
     background.reserve(e.background.size());
     for (const auto& point : e.background) {
@@ -2988,6 +2989,49 @@ RelationProject relation_project(const Project& model) {
     fill_crysta_relations(model, *converted.project);
     return converted;
 }
+
+}  // namespace
+
+std::optional<WeightFraction> weight_fraction(const LinkedStructure& link) {
+    const detail::Membership* membership = link.row.record();
+    const detail::KeyedBase* owner = membership != nullptr ? membership->owner : nullptr;
+    const Project* model = owner != nullptr ? owner->host() : nullptr;
+    if (model == nullptr) {
+        return std::nullopt;
+    }
+    std::size_t index = 0;
+    bool found = false;
+    for (const auto& item : model->experiments) {
+        if (static_cast<const detail::KeyedBase*>(&item->linked_structures) == owner) {
+            found = true;
+            break;
+        }
+        ++index;
+    }
+    if (!found) {
+        return std::nullopt;
+    }
+    RelationProject converted = relation_project(*model);
+    // The correlations between scales the last fit stored, by the unique names crysta resolves.
+    std::vector<crysta::FitParameterCorrelation> rows;
+    for (const auto& row : model->fit_result.correlations) {
+        crysta::FitParameterCorrelation& copy = rows.emplace_back();
+        copy.id = row->id.value();
+        copy.parameter_unique_name_i = row->parameter_unique_name_i.value();
+        copy.parameter_unique_name_j = row->parameter_unique_name_j.value();
+        copy.correlation = row->correlation.value();
+        copy.file_path = row->file_path.value();
+    }
+    converted.project->fit_result.correlations.assign(rows);
+    const std::optional<crysta::WeightFraction> fraction = crysta::weight_fraction(
+        *converted.project, converted.project->experiments[index], link.structure_id.value());
+    if (!fraction) {
+        return std::nullopt;
+    }
+    return WeightFraction{fraction->value, fraction->uncertainty};
+}
+
+namespace {
 
 enum class Completion : std::uint8_t { Values, ValuesAndUncertainties };
 

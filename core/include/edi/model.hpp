@@ -4155,6 +4155,18 @@ void register_engine_peak_type(const std::string& token, BeamModeEnum mode);
 // structure-factor work counter.
 std::string engine_model_dump(const Project& project);
 bool engine_folds_reflections(const Project& project);
+
+/// A linked structure's Hill-Howard weight fraction and its standard uncertainty (crysta ADR-0087),
+/// derived from the current model and never an input.
+struct WeightFraction {
+    double value = 0.0;
+    /// Absent when no scale of the experiment carries an uncertainty.
+    std::optional<double> uncertainty;
+};
+/// The weight fraction of `link` in the experiment that holds it, computed by crysta from the
+/// project's structures, scales and last fit's stored correlations. Absent when the link belongs to
+/// no project, takes no part, or a structure's cell mass is unknown.
+std::optional<WeightFraction> weight_fraction(const LinkedStructure& link);
 std::uint64_t engine_structure_factor_evaluations() noexcept;
 // The chi-square tolerance a fit uses when `_minimizer.chi_square_tolerance` is not declared: the
 // LINKED crysta's default, forwarded like default_descent() (the app shows the value the minimizer
@@ -5271,6 +5283,8 @@ inline std::vector<Parameter*> InstrumentBase::parameters() {
     detail::push_optional(out, calib_sample_transparency);
     detail::push_optional(out, setup_polarization_coefficient);  // , X-ray only
     detail::push_optional(out, setup_monochromator_twotheta);
+    detail::push_optional(out, setup_wavelength_2);  // , X-ray only
+    detail::push_optional(out, setup_wavelength_2_to_1_ratio);
     return out;
 }
 inline std::vector<Parameter*> AbsorptionBase::parameters() {
@@ -5283,8 +5297,6 @@ inline std::vector<Parameter*> AbsorptionBase::parameters() {
 // The blocks in category order (peak, instrument, linked_structure, absorption), then the
 // background points — the same elements in the same order as before the blocks carried their own.
 inline std::vector<Parameter*> ExperimentBase::parameters() {
-    detail::push_optional(out, setup_wavelength_2);  // , X-ray only
-    detail::push_optional(out, setup_wavelength_2_to_1_ratio);
     std::vector<Parameter*> out = peak.parameters();
     for (Parameter* parameter : instrument.parameters()) {
         out.push_back(parameter);
