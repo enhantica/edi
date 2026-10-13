@@ -61,8 +61,8 @@ Flickable {
     }
     readonly property real tableWidth: layout.reduce((sum, column) => sum + column.width, 0) + 2 * border
 
-    // A number's parts: before its decimal point, and after it (an s.u. bracket, an exponent and units with them); a
-    // number without a point keeps the point's place, unseen. Null for a text that is not a number.
+    // A number's parts: before its decimal point, and after it (an s.u. bracket, an exponent and units with them).
+    // Null for a text that is not a number.
     function split(text: string): var {
         const match = /^([-−+]?[0-9]*)(\.?)([0-9]*(?:\([0-9]+\))?(?:[eE][-+]?[0-9]+)?(?: [^ 0-9].*)?)$/.exec(text);
         if (!match || !/[0-9]/.test(match[1] + match[3]))
@@ -126,15 +126,17 @@ Flickable {
                 textFormat: Text.PlainText
                 text: cell.parts ? cell.parts.left : ""
             }
+            // A number without a point gives the point's place to what follows its digits (an s.u. or units), so
+            // `611(16)` stays together and its digits still end where the column's points are.
             Text {
+                visible: cell.parts !== null && cell.parts.dot
                 width: table.dotWidth
                 font: metrics.font
                 color: EaStyle.Colors.themeForeground
-                opacity: cell.parts && cell.parts.dot ? 1 : 0
                 text: "."
             }
             Text {
-                width: table.layout[cell.column] ? table.layout[cell.column].right : 0
+                width: (table.layout[cell.column] ? table.layout[cell.column].right : 0) + (cell.parts && cell.parts.dot ? 0 : table.dotWidth)
                 font: metrics.font
                 color: EaStyle.Colors.themeForeground
                 textFormat: Text.PlainText
