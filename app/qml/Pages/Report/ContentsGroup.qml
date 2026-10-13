@@ -31,17 +31,17 @@ EaElements.GroupBox {
     Column {
         spacing: AppSizes.groupContentSpacing
 
+        // The list itself is the model, so a delegate holds its own item while a shorter list replaces it.
         Repeater {
-            model: group.items.length
+            model: group.items
             delegate: EaElements.CheckBox {
-                required property int index
-                readonly property var item: group.items[index]
+                required property var modelData
 
-                objectName: "report.contents." + item.key
+                objectName: "report.contents." + modelData.key
                 width: EaStyle.Sizes.sideBarContentWidth
-                text: item.title
-                checked: group.hidden.indexOf(item.key) < 0
-                onToggled: group.report.setIncluded(item.key, checked)
+                text: modelData.title
+                checked: group.hidden.indexOf(modelData.key) < 0
+                onToggled: group.report.setIncluded(modelData.key, checked)
             }
         }
     }

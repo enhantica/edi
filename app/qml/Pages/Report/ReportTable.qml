@@ -167,10 +167,13 @@ Flickable {
             color: EaStyle.Colors.contentBackground
 
             Row {
+                // The lists themselves are the models, so a delegate holds its own text while a shorter list
+                // replaces it.
                 Repeater {
-                    model: table.keyValue ? 0 : table.columnCount
+                    model: table.keyValue ? [] : table.columns
                     delegate: Item {
                         id: heading
+                        required property string modelData
                         required property int index
                         width: table.layout[index] ? table.layout[index].width : 0
                         height: table.rowHeight
@@ -181,7 +184,7 @@ Flickable {
                             // The text colour, as the app tables' headers have it.
                             color: EaStyle.Colors.themeForeground
                             textFormat: Text.PlainText
-                            text: table.columns[heading.index] ?? ""
+                            text: heading.modelData
                         }
                     }
                 }
@@ -194,9 +197,10 @@ Flickable {
             }
         }
         Repeater {
-            model: table.rows.length
+            model: table.rows
             delegate: Rectangle {
                 id: line
+                required property var modelData
                 required property int index
                 width: body.width
                 height: table.rowHeight
@@ -204,11 +208,12 @@ Flickable {
 
                 Row {
                     Repeater {
-                        model: table.columnCount
+                        model: line.modelData
                         delegate: Cell {
+                            required property string modelData
                             required property int index
                             column: index
-                            text: table.rows[line.index][index] ?? ""
+                            text: modelData
                         }
                     }
                 }
