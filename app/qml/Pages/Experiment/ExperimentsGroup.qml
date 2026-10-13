@@ -55,6 +55,7 @@ EaElements.GroupBox {
             objectName: "experiments.list"
             defaultInfoText: qsTr("No experiments defined")
             sourceModel: group.project ? group.project.experiments : null
+            currentRow: group.project ? group.project.currentExperimentIndex : -1
 
             columnWidths: [numberColumnWidth, group.scan ? 0.001 : AppSizes.iconOnlyColumnWidth, group.scan ? AppSizes.iconOnlyColumnWidth : group.fitColumnWidth, textColumnWidth("name", qsTr("Datablock")), -1, group.scanColumns.length ? group.scanColumns.length * AppSizes.dataColumnWidth * 1.4 : 0.001, group.scan ? 0.001 : AppSizes.iconColumnWidth]
 
@@ -108,10 +109,9 @@ EaElements.GroupBox {
                 }
             }
 
-            delegate: EaComponents.ListViewDelegate {
+            delegate: TableRow {
                 id: row
 
-                required property int index
                 required property string name
                 required property ExperimentViewModel experiment
                 required property string fitOutcome
@@ -120,7 +120,6 @@ EaElements.GroupBox {
                 required property bool isTemplate
 
                 objectName: `experiments.row.${index}`
-                color: group.project && group.project.currentExperimentIndex === index ? EaStyle.Colors.tableHighlight : (index % 2 ? EaStyle.Colors.themeBackgroundHovered2 : EaStyle.Colors.themeBackgroundHovered1)
                 TapHandler {
                     onTapped: group.project.currentExperimentIndex = row.index
                 }

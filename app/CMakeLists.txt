@@ -111,6 +111,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/StructureScene.qml
         qml/Components/StructureToolbar.qml
         qml/Components/StructureView.qml
+        qml/Components/TableRow.qml
         qml/Components/TextCell.qml
         qml/Components/TextTab.qml
         qml/Components/ToolbarComboBox.qml

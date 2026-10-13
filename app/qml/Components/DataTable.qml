@@ -2,6 +2,7 @@
 import QtQuick
 
 import EasyApplication.Gui.Style as EaStyle
+import EasyApplication.Gui.Animations as EaAnimations
 import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
@@ -50,7 +51,45 @@ EaComponents.ListView {
         modelRevision++;
     }
 
+    // The current row, -1 for none: an accent bar at its left edge marks it, and moves to a new current row as the
+    // tab bar's underline moves (edi ADR-0017 §11). Its rows are TableRows, which keep their alternating background.
+    property int currentRow: -1
+    // The row the bar is on. It moves between two shown rows, and appears on or leaves a row in place.
+    property int markedRow: -1
+    function markCurrentRow() {
+        barMove.enabled = markedRow >= 0 && currentRow >= 0;
+        markedRow = currentRow;
+    }
+    onCurrentRowChanged: markCurrentRow()
+    Component.onCompleted: markCurrentRow()
+
     onModelChanged: forgetWidths()
+
+    Rectangle {
+        objectName: "currentRowBar"
+        parent: table.contentItem
+        // Over the rows' hover tint, under the header.
+        z: 2
+        x: EaStyle.Sizes.borderThickness
+        y: Math.max(0, table.markedRow) * table.tableRowHeight
+        // The tab bar underline's thickness.
+        width: 2
+        height: table.tableRowHeight
+        visible: table.markedRow >= 0
+        color: EaStyle.Colors.themeAccent
+        Behavior on y {
+            id: barMove
+            // The tab bar's underline motion (a ListView highlight with highlightMoveDuration 250). A row is
+            // shorter than a tab, so the speed limit is off and every move takes the underline's 250 ms.
+            SmoothedAnimation {
+                duration: 250
+                velocity: -1
+            }
+        }
+        Behavior on color {
+            EaAnimations.ThemeChange {}
+        }
+    }
 
     FontMetrics {
         id: metrics

@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-13T12:33:15Z
+# measured_utc = 2026-10-13T16:23:32Z
 #
-# Recorded from: measured test run (1 node(s) measured once, 10422 banked, 0 stale row(s) dropped)
-# Collected tests: 11239; with a reported duration: 6140
+# Recorded from: measured test run (5 node(s) measured once, 10423 banked, 0 stale row(s) dropped)
+# Collected tests: 11244; with a reported duration: 6143
 # Module-scoped fixture costs recorded: 43
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 11239
+# inventory_python = 11244
 # inventory_cpp = 312
-# inventory_measured = 10423
+# inventory_measured = 10428
 # inventory_unmeasured = 1128
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
@@ -2370,6 +2370,11 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.
 0.000	tests/integration/py/test_correlation_endpoint_format.py::test_old_correlation_endpoint_is_a_short_named_refusal[scan-file-j-line-segment-bank.march_random_fract]
 0.000	tests/integration/py/test_correlation_endpoint_format.py::test_old_correlation_endpoint_is_a_short_named_refusal[scan-file-j-line-segment-bank.scale]
 0.000	tests/integration/py/test_correlation_endpoint_format.py::test_old_correlation_endpoint_is_a_short_named_refusal[scan-file-j-polynomial-bank.background[0]]
+0.060	tests/integration/py/test_correlation_option_bindings.py::test_label_toggle_controls_each_actual_axis_delegate[column]
+0.310	tests/integration/py/test_correlation_option_bindings.py::test_label_toggle_controls_each_actual_axis_delegate[row]
+0.050	tests/integration/py/test_correlation_option_bindings.py::test_matrix_toggle_mirrors_nontrivial_signed_coefficients_and_is_reversible
+0.000	tests/integration/py/test_current_row_component.py::test_current_row_tables_do_not_override_the_ordinary_background
+0.000	tests/integration/py/test_current_row_component.py::test_current_row_tables_use_one_shared_local_delegate
 0.000	tests/integration/py/test_cwl_admission.py::test_cif_nonzero_mixing_survives_import_without_default_substitution[collection-classic-cwl-pseudo-voigt-berar-baldinozzi]
 0.000	tests/integration/py/test_cwl_admission.py::test_cif_nonzero_mixing_survives_import_without_default_substitution[collection-classic-cwl-pseudo-voigt]
 0.000	tests/integration/py/test_cwl_admission.py::test_cif_nonzero_mixing_survives_import_without_default_substitution[collection-dot-cwl-pseudo-voigt-berar-baldinozzi]

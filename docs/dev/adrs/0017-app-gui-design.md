@@ -352,12 +352,20 @@ icons: its inline glyphs sit on the font baseline and could not follow this rule
 so the slider and its two limit boxes always show a parameter: the first shown row when a project opens, when
 the current experiment changes, and when the name filter or the variability filter hides the selected row; a
 row the user selected stays selected while it is shown (`ParametersGroup.ensureSelection`, over
-`ParameterFilterModel.parameterAt` / `shows`). The selected row is highlighted (`tableHighlight`), as the block
-tables' current row. This replaces empty start: the demo's `13-analysis-basic` now shows the first row selected
-with the slider filled; `t2-04-analysis-slider` still clicks that row, and `t2-07-dark-analysis` keeps it.
+`ParameterFilterModel.parameterAt` / `shows`). The selected row is the table's current row, marked as the block
+tables' current row is (below). This replaces empty start: the demo's `13-analysis-basic` now shows the first row
+selected with the slider filled; `t2-04-analysis-slider` still clicks that row, and `t2-07-dark-analysis` keeps it.
 The slider spans the selected value ± a half width, set when a row is selected or its value is committed (not while
 dragging; `ParameterItem::sliderHalfWidth`): 0.05 Å for a lattice constant (`length_a`, `length_b`, `length_c`; the
 owner, 2026-10-04), half the value's magnitude (at least 0.001) otherwise.
+
+**A table's current row is marked by an accent bar at its left edge** (the owner, 2026-10-12), not by a background
+tint: the Experiments and Structures tables' current block and the parameter table's selected row. Every row keeps
+its alternating background, the current one too, and hover is unchanged. The bar is the tab bar underline's: 2
+logical px of `themeAccent`, here the full row height, inside the table frame. When another row becomes current
+the bar moves to it as the underline moves between tabs: the same smoothed motion over 250 ms, with its speed
+limit off, since a row is shorter than a tab. It appears on, and leaves, a row in place. The tables share the row
+(`Components/TableRow.qml`) and `DataTable.currentRow`, which draws the bar; `tableHighlight` is no longer used.
 
 ### 12. Preferences, and the sidebar's side
 

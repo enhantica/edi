@@ -23,6 +23,8 @@ EaElements.GroupBox {
 
     property ProjectViewModel project: null
     property ParameterItem selected: null
+    // The selected parameter's row, kept as the filters and the rows change; -1 when it is not shown.
+    property int selectedRow: -1
     property real tableViewportHeight: 0
     // The free column fits its title and the arrow after it, with a table column's padding (the owner, 2026-10-11).
     readonly property real freeGap: 0.25 * EaStyle.Sizes.fontPixelSize
@@ -54,10 +56,11 @@ EaElements.GroupBox {
     // shown row, when a project opens, when the experiment changes or when the filters hide the selected row;
     // a row the user selected stays selected while it is shown.
     function ensureSelection() {
-        if (group.selected !== null && filter.shows(group.selected))
-            return;
-        group.selected = filter.parameterAt(0);
+        if (group.selected === null || !filter.shows(group.selected))
+            group.selected = filter.parameterAt(0);
+        group.selectedRow = filter.rowOf(group.selected);
     }
+    onSelectedChanged: selectedRow = filter.rowOf(selected)
 
     onProjectChanged: {
         group.selected = null;
@@ -172,6 +175,7 @@ EaElements.GroupBox {
                 id: filter
                 sourceModel: group.project ? group.project.parameters : null
             }
+            currentRow: group.selectedRow
 
             columnWidths: [numberColumnWidth, -1, EaStyle.Sizes.fontPixelSize * 5, textColumnWidth("units", ""), EaStyle.Sizes.fontPixelSize * 3.5, EaStyle.Sizes.fontPixelSize * 3, EaStyle.Sizes.fontPixelSize * 3, group.freeColumnWidth]
 
@@ -245,10 +249,9 @@ EaElements.GroupBox {
                 }
             }
 
-            delegate: EaComponents.ListViewDelegate {
+            delegate: TableRow {
                 id: row
 
-                required property int index
                 required property ParameterItem parameter
                 required property string path
                 required property string units
@@ -256,8 +259,6 @@ EaElements.GroupBox {
                 required property real maximum
 
                 objectName: `parameters.row.${index}`
-                // The selected row is highlighted, as the block tables' current row.
-                color: group.selected === row.parameter ? EaStyle.Colors.tableHighlight : (index % 2 ? EaStyle.Colors.themeBackgroundHovered2 : EaStyle.Colors.themeBackgroundHovered1)
                 TapHandler {
                     onTapped: group.selected = row.parameter
                 }
