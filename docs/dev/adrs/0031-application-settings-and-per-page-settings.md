@@ -36,7 +36,9 @@ to know where Qt puts it.
    - for each project, the structure and the experiment last selected in it, keyed by the project's path.
 
    A project opened on another machine, or by someone else, opens with that machine's settings, and changing a
-   setting never marks a project modified.
+   setting never marks a project modified. The report's settings are project data, not app settings (ADR-0035 §7):
+   the Analysis page's correlation level and its chart's x axis are `analysis/analysis.edi` items, the Report page's
+   Contents and Embed choices `reports/report.edi` items; only the Embed default for new projects is a preference.
 2. **A Settings tab on each page.** Each workflow page's sidebar gains a Settings tab beside Main, Extras and Text. It
    holds that page's options that only change what the app shows or how it behaves, in groups, as Main and Extras hold
    project data. They are kept in the app-settings store under the page's name and apply to that page, unlike the app

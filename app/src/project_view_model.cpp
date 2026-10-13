@@ -176,6 +176,8 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     // The report filters its correlations by the Analysis page's level, and in a fit of several experiments shows the
     // one the page shows.
     connect(correlations_, &CorrelationViewModel::levelChanged, report_, &ReportViewModel::refresh);
+    // A level or count the tab is given becomes the project's threshold (ADR-0035 §7).
+    connect(correlations_, &CorrelationViewModel::levelAsked, this, &ProjectViewModel::setReportCorrelationThreshold);
     connect(this, &ProjectViewModel::currentExperimentIndexChanged, report_, &ReportViewModel::refresh);
     current_structure_ = structure_models_.isEmpty() ? -1 : 0;
     current_experiment_ = experiment_models_.isEmpty() ? -1 : 0;
@@ -186,6 +188,7 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     published_description_ = description();
     published_authors_ = authors();
     published_su_rule_ = suRule();
+    published_pattern_d_spacing_ = patternDSpacing();
     published_last_modified_ = lastModified();
     published_structure_index_ = current_structure_;
     published_experiment_index_ = current_experiment_;
@@ -361,6 +364,39 @@ void ProjectViewModel::setSuRule(const QString& rule) {
     apply_setting(edi::Edit::assign(project.su_rule, rule.toStdString()));
 }
 
+void ProjectViewModel::setReportExcluded(const QString& keys) {
+    edi::Project& project = *project_;
+    const std::optional<std::string> value = keys.simplified().toStdString();
+    if (value != project.report_excluded) {
+        apply_setting(edi::Edit::assign(project.report_excluded, value));
+    }
+}
+
+void ProjectViewModel::setReportHtmlOffline(bool embedded) {
+    edi::Project& project = *project_;
+    if (std::optional<bool>(embedded) != project.report_html_offline) {
+        apply_setting(edi::Edit::assign(project.report_html_offline, std::optional<bool>(embedded)));
+    }
+}
+
+void ProjectViewModel::setReportCorrelationThreshold(double threshold) {
+    edi::Project& project = *project_;
+    const std::optional<double> value = std::clamp(threshold, 0.0, 1.0);
+    if (value != project.correlation_threshold) {
+        apply_setting(edi::Edit::assign(project.correlation_threshold, value));
+    }
+}
+
+void ProjectViewModel::setPatternDSpacing(bool on) {
+    edi::Project& project = *project_;
+    if (on != patternDSpacing()) {
+        apply_setting(edi::Edit::assign(project.pattern_x_axis,
+                                        std::optional<std::string>(on ? "d_spacing" : "native")));
+    }
+}
+
+bool ProjectViewModel::patternDSpacing() const { return project_->pattern_x_axis.value_or("native") == "d_spacing"; }
+
 void ProjectViewModel::setCurrentStructureIndex(int index) {
     if (index != current_structure_ && index >= -1 && index < structure_models_.size()) {
         current_structure_ = index;
@@ -418,6 +454,10 @@ void ProjectViewModel::publishMetadata() {
     update(published_authors_, authors(), &ProjectViewModel::authorsChanged);
     update(published_su_rule_, suRule(), &ProjectViewModel::suRuleChanged);
     update(published_last_modified_, lastModified(), &ProjectViewModel::lastModifiedChanged);
+    if (patternDSpacing() != published_pattern_d_spacing_) {
+        published_pattern_d_spacing_ = patternDSpacing();
+        emit patternDSpacingChanged();
+    }
 }
 
 bool ProjectViewModel::loadStructure(const QUrl& file) {
@@ -1742,6 +1782,14 @@ QString ProjectViewModel::apply(const edi::Edit& change, bool structural) {
             scan_template_->descent = project_->descent;
             scan_template_->minimizer_max_iterations = project_->minimizer_max_iterations;
             scan_template_->minimizer_chi_square_tolerance = project_->minimizer_chi_square_tolerance;
+            scan_template_->su_rule = project_->su_rule;
+            scan_template_->report_html = project_->report_html;
+            scan_template_->report_pdf = project_->report_pdf;
+            scan_template_->report_cif = project_->report_cif;
+            scan_template_->report_html_offline = project_->report_html_offline;
+            scan_template_->report_excluded = project_->report_excluded;
+            scan_template_->correlation_threshold = project_->correlation_threshold;
+            scan_template_->pattern_x_axis = project_->pattern_x_axis;
         } else if (scan_template_) {
             edi::Project promoted = *project_;
             promoted.experiment().data = scan_template_->experiment().data;
@@ -2061,6 +2109,8 @@ void ProjectViewModel::syncCorrelations() {
     if (correlations_ == nullptr) {
         return;
     }
+    // The level is the project's `_correlation_chart.threshold`, so it is saved, undone and reported as one.
+    correlations_->setThreshold(project_->correlation_threshold);
     if (scan_) {
         const std::vector<std::string>& files = scan_session_->datasets().files;
         const bool shown = current_dataset_ >= 0 && current_dataset_ < static_cast<int>(files.size());

@@ -17,8 +17,9 @@ namespace edi_app {
 class ProjectViewModel;
 
 // The Report page (edi ADR-0035): the report model built from the project and the page's Contents and Export, given to
-// QML as the model's JSON values, rebuilt once per coalesced change. The correlation level is the Analysis page's
-// (its Correlations tab); the page reads the model only, never the project.
+// QML as the model's JSON values, rebuilt once per coalesced change. Its options are the project's report settings
+// (ADR-0035 §7), which the Contents boxes, the Embed checkbox and the Analysis page's correlation level and x axis
+// edit; the page reads the model only, never the project.
 class ReportViewModel : public QObject {
     Q_OBJECT
     QML_ELEMENT
@@ -26,16 +27,18 @@ class ReportViewModel : public QObject {
     // The report model as its JSON values (report_to_json), without the charts' data: the pattern presentations and
     // the structure scenes and drawings, which the chart controllers read from reportModel().
     Q_PROPERTY(QVariantMap model READ model NOTIFY modelChanged)
-    // The Contents keys left out (the model's `contents`), each with everything under it.
+    // The Contents keys left out (the model's `contents`), each with everything under it: the project's
+    // `_report.excluded`, or the data when it states none.
     Q_PROPERTY(QStringList hidden READ hidden WRITE setHidden NOTIFY hiddenChanged)
-    // Export: whether a saved report embeds its libraries (online by default; the owner, 2026-10-12).
+    // Export: whether a saved report embeds its libraries, the project's `_report.html_offline` (online by default; the
+    // owner, 2026-10-12).
     Q_PROPERTY(bool embedLibraries READ embedLibraries WRITE setEmbedLibraries NOTIFY embedLibrariesChanged)
     // The Report page is shown. Only then does a change rebuild the model at once; otherwise the next read of the
     // model rebuilds it, so a reader never sees a stale one and a hidden page costs nothing per change.
     Q_PROPERTY(bool active READ active WRITE setActive NOTIFY activeChanged)
 
    public:
-    ReportViewModel(const ProjectViewModel& project, QObject* parent);
+    ReportViewModel(ProjectViewModel& project, QObject* parent);
 
     QVariantMap model() const {
         ensureBuilt();
@@ -52,7 +55,7 @@ class ReportViewModel : public QObject {
     const edi::ReportStructure* structure(const QString& id) const;
     QStringList hidden() const;
     void setHidden(const QStringList& keys);
-    bool embedLibraries() const { return embed_libraries_; }
+    bool embedLibraries() const;
     void setEmbedLibraries(bool on);
 
     // A Contents box: includes or leaves out the item of `key`.
@@ -88,9 +91,10 @@ class ReportViewModel : public QObject {
     // the readers that read it before (the chart controllers) read it again.
     void ensureBuilt() const;
 
-    const ProjectViewModel& project_;
-    edi::ReportOptions options_;
-    bool embed_libraries_ = false;
+    ProjectViewModel& project_;
+    // What the hidden and embedLibraries properties last announced.
+    QStringList published_hidden_;
+    bool published_embed_ = false;
     bool active_ = false;
     // The model, rebuilt on a read when a change arrived while the page was hidden (`dirty_`).
     mutable bool dirty_ = true;

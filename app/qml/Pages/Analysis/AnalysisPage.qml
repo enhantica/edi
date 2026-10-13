@@ -55,6 +55,7 @@ WorkflowPage {
         ProjectPatternChart {
             id: chartView
             experiment: page.experiment
+            axisProject: page.project
             shown: page.current && SwipeView.isCurrentItem
         },
         CorrelationChart {

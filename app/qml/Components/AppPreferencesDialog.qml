@@ -210,6 +210,21 @@ AppDialog {
                 onActivated: index => Preferences.newProjectSuRule = index === 1 ? "iucr_99" : "iucr_19"
                 ToolTip.text: qsTr("How a new project writes values with a standard uncertainty: 1 digit, or 2 from 10 to 19, or always 2")
             }
+
+            EaElements.Label {
+                topPadding: reportLibrariesCheckBox.topPadding
+                text: qsTr("New projects' HTML reports") + ":"
+            }
+            EaElements.CheckBox {
+                id: reportLibrariesCheckBox
+                objectName: "preferences.newReportLibraries"
+                topPadding: 0.5 * EaStyle.Sizes.fontPixelSize
+                leftPadding: -3
+                text: qsTr("Embed the chart libraries")
+                checked: Preferences.newReportLibraries
+                onToggled: Preferences.newReportLibraries = checked
+                ToolTip.text: qsTr("Whether a new project's saved HTML reports carry plotly.js and three.js, so they open offline")
+            }
         }
 
         // Experimental: zoom and language are not available yet — the default zoom, English.

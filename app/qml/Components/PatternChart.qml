@@ -27,6 +27,9 @@ Item {
     // The theme colours the chart draws with; a PDF's figure takes the light ones.
     property FigureColors colors: FigureColors {}
     property string reportExperiment: ""
+    // Set: the x axis is this project's `_pattern_chart.x_axis` (the Analysis page's chart, which the report follows),
+    // an undoable edit saved with the project; else the chart's own choice.
+    property ProjectViewModel axisProject: null
     // The chart is on the page and the tab the window shows: its page binds it (the owner's one-redraw
     // rule). A chart not shown keeps its last drawing and refreshes once, with the latest result, when it
     // is shown again; a chart no page hides is shown.
@@ -306,6 +309,8 @@ Item {
         active: chart.shown && chart.visible && chart.Window.window !== null
         experiment: chart.experiment
         report: chart.report
+        // The Analysis chart follows the project's x axis.
+        dSpacing: chart.axisProject ? chart.axisProject.patternDSpacing : false
         reportExperiment: chart.reportExperiment
         dark: chart.colors.isDarkPalette
         plotWidth: mainView.plotArea.width
@@ -430,7 +435,12 @@ Item {
                 model: [chart.nativeAxis === "timeOfFlight" ? qsTr("time-of-flight") : qsTr("2θ"), qsTr("d-spacing")]
                 closedTexts: [chart.nativeAxis === "timeOfFlight" ? qsTr("x: TOF") : qsTr("x: 2θ"), qsTr("x: d")]
                 currentIndex: controller.dSpacing ? 1 : 0
-                onActivated: index => controller.dSpacing = index === 1
+                onActivated: index => {
+                    if (chart.axisProject)
+                        chart.axisProject.patternDSpacing = index === 1;
+                    else
+                        controller.dSpacing = index === 1;
+                }
             }
         }
         ChartToolbar {
