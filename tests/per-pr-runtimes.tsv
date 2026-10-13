@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-13T17:43:39Z
+# measured_utc = 2026-10-13T18:12:34Z
 #
-# Recorded from: measured test run (63 node(s) measured once, 10428 banked, 0 stale row(s) dropped)
-# Collected tests: 11307; with a reported duration: 6144
+# Recorded from: canonical native XML completion: tests-seq3-cpp-baseline.xml; all native reds declared holes; Python bank retained
+# Collected tests: 11313; with a reported duration: 6144
 # Module-scoped fixture costs recorded: 43
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 11307
-# inventory_cpp = 312
+# inventory_python = 11313
+# inventory_cpp = 318
 # inventory_measured = 10437
-# inventory_unmeasured = 1182
+# inventory_unmeasured = 1194
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -5541,6 +5541,12 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_rename_namespace.py::tes
 0.010	tests/integration/py/test_rename_namespace.py::test_datablock_rename_preserves_namespace_and_category_tokens[unequal-structure-True-aliases-single]
 0.010	tests/integration/py/test_rename_namespace.py::test_datablock_rename_preserves_namespace_and_category_tokens[unequal-structure-True-correlations-sequential]
 0.010	tests/integration/py/test_rename_namespace.py::test_datablock_rename_preserves_namespace_and_category_tokens[unequal-structure-True-correlations-single]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_builder_seams.py::test_core_correlation_filter_keeps_top_five_and_threshold_pairs[0.9-3]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_builder_seams.py::test_core_correlation_filter_keeps_top_five_and_threshold_pairs[1.0-0]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_builder_seams.py::test_core_correlation_filter_keeps_top_five_and_threshold_pairs[None-5]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_builder_seams.py::test_cw_d_axis_uses_bragg_law_and_ascending_points
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_builder_seams.py::test_scan_evolution_keeps_extracted_x_numeric_su_and_core_text
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_builder_seams.py::test_tof_d_axis_uses_linear_calibration_with_nonzero_offset
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_core_reuse.py::test_live_tab_and_builder_both_reach_the_same_core_filter_or_series[correlation_matrix-correlation_view_model.cpp]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_core_reuse.py::test_live_tab_and_builder_both_reach_the_same_core_filter_or_series[evolution_series-evolution_view_model.cpp]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_core_reuse.py::test_report_builder_reaches_the_existing_presentation_and_drawing_functions[default_view]
@@ -10348,12 +10354,18 @@ UNMEASURED:failed-in-native-replay-fe3d181	tests/unit/cpp/test_loop_parameter_pa
 0.006	tests/unit/cpp/test_report_format.cpp::format_change brackets the non-trivial blanking threshold
 0.007	tests/unit/cpp/test_report_format.cpp::format_change refuses undefined percentages
 0.009	tests/unit/cpp/test_report_format.cpp::format_change uses the starting value as its denominator
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_report_model_json.cpp::Report JSON carries shortest-roundtrip doubles without dropping fields
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_report_model_json.cpp::Report JSON retains existing presentation and drawing outputs at nontrivial seams
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_report_model_json.cpp::Report JSON retains hostile UTF8 text and encodes nonfinite su as null
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_report_model_json.cpp::Report options retain section order and an explicitly fixed UTC timestamp
 UNMEASURED:native-Release-measurement-held	tests/unit/cpp/test_shared_correlation_storage.cpp::An unrelated scan event preserves literal loaded pair identity and spelling
 UNMEASURED:native-Release-measurement-held	tests/unit/cpp/test_shared_correlation_storage.cpp::Fit record copies retain immutable result pointers and only template rows
 UNMEASURED:native-Release-measurement-held	tests/unit/cpp/test_shared_correlation_storage.cpp::Shared numeric tables preserve upper-triangle ids and shortest text
 0.002	tests/unit/cpp/test_simulation_edits.cpp::creating and undoing a simulation preserves prior experiments
 0.001	tests/unit/cpp/test_simulation_edits.cpp::measured experiments refuse type range and simulation creation atomically
 0.001	tests/unit/cpp/test_simulation_edits.cpp::simulation type and range edits target only the selected experiment
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_standard_uncertainty_display.cpp::Standard uncertainty display follows both IUCr decimal rules
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_standard_uncertainty_display.cpp::Written correlation text follows magnitude-dependent significant figures
 0.000	tests/unit/py/test_c06_t2_reconciliation_boundary.py::test_c06_t2_cost_beyond_display_resolution_refuses
 0.000	tests/unit/py/test_c06_t2_reconciliation_boundary.py::test_c06_t2_cost_within_display_resolution_reconciles
 0.000	tests/unit/py/test_c06_t2_reconciliation_boundary.py::test_c06_t2_reviewers_five_percent_window_is_closed
