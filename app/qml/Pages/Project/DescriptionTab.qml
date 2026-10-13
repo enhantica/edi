@@ -30,6 +30,17 @@ Rectangle {
             interactive: false
         }
 
+        // A click on the page outside a field ends the edit in progress, so it commits as Tab and Return do and Save
+        // is offered (the owner, 2026-10-13): the page takes the focus. The fields above take their own clicks.
+        MouseArea {
+            width: tab.width
+            height: Math.max(tab.height, column.height + 2 * column.y)
+            onPressed: mouse => {
+                tab.forceActiveFocus();
+                mouse.accepted = false;
+            }
+        }
+
         Column {
             id: column
 
