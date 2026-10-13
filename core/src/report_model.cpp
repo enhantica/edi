@@ -29,7 +29,6 @@ namespace edi {
 
 namespace {
 
-constexpr int kDefaultCorrelatedParameters = 5;  // diffraction-lib's DEFAULT_CORRELATION_MAX_PARAMETERS
 
 std::string shortest(double value) {
     char buffer[64];
@@ -254,12 +253,15 @@ std::optional<ReportCorrelations> correlations_of(const Project& project, const 
     }
     const CorrelationMatrix full{names, matrix};
     const std::vector<double> strengths = correlation_strengths(full);
-    std::size_t count = 0;
+    // A level keeps every parameter reaching it, as the Correlations tab does; with none, diffraction-lib's automatic
+    // rule, and the five strongest when a tie keeps more at every level.
+    std::size_t count = n;
     if (level.has_value()) {
         out.level = *level;
-        count = correlation_count_for_level(strengths, *level);
+    } else if (const std::optional<double> automatic = correlation_default_level(strengths)) {
+        out.level = *automatic;
     } else {
-        count = std::min<std::size_t>(n, kDefaultCorrelatedParameters);
+        count = kDefaultCorrelatedParameters;
         out.level = correlation_level_for_count(strengths, count);
     }
     CorrelationSelection shown = correlation_matrix(full, out.level, count);

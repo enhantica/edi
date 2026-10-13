@@ -2,6 +2,7 @@
 #pragma once
 
 #include <cstddef>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -27,9 +28,17 @@ struct CorrelationSelection {
 
 /// Each parameter's strongest absolute correlation with another; 0 when it has none.
 std::vector<double> correlation_strengths(const CorrelationMatrix& matrix);
-/// The level a count sets: the count-th greatest strength, so that `count` parameters reach it. `count` is at least 1;
-/// with fewer strengths, the least of them (0 with none).
+/// diffraction-lib's DEFAULT_CORRELATION_MAX_PARAMETERS: the chart's size with no level set.
+inline constexpr std::size_t kDefaultCorrelatedParameters = 5;
+
+/// The level a count sets (plan amendment 4, after diffraction-lib's _resolve_correlation_filter): the lowest strength
+/// that keeps at most `count` parameters, a tie kept whole; when a tie keeps more at every strength, the count-th
+/// strength, which keeps that tie whole. `count` is at least 1; with fewer strengths, the least of them (0 with none).
 double correlation_level_for_count(const std::vector<double>& strengths, std::size_t count);
+/// The level with none set, diffraction-lib's automatic rule (_auto_filtered_correlation_dataframe): 0, every
+/// parameter, with at most five; else the lowest strength keeping one to five; absent when even the strongest keeps
+/// more, and then the chart shows the five strongest (correlation_matrix's count).
+std::optional<double> correlation_default_level(const std::vector<double>& strengths);
 /// The count a level sets: the parameters whose strength reaches it.
 std::size_t correlation_count_for_level(const std::vector<double>& strengths, double level);
 /// The parameters whose strength reaches `level`, the `count` strongest of them (the earlier on a tie), in the fit's
