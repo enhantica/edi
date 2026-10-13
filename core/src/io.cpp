@@ -4039,12 +4039,12 @@ double correlation_value(const FitParameterCorrelation& row) {
 }
 
 std::vector<ItemVec<FitParameterCorrelation>::Ptr> numbered_correlations(
-    const std::vector<FitParameterCorrelation>& pairs, const std::string& template_file) {
+    const std::vector<FitParameterCorrelation>& pairs) {
     std::vector<ItemVec<FitParameterCorrelation>::Ptr> rows;
     rows.reserve(pairs.size());
     std::set<std::string> taken;
     std::size_t next = 0;
-    const auto add = [&](const FitParameterCorrelation& pair) {
+    for (const FitParameterCorrelation& pair : pairs) {
         auto row = std::make_shared<FitParameterCorrelation>(pair);
         if (row->id.value().empty() || taken.contains(row->id.value())) {
             std::string fresh;
@@ -4055,21 +4055,30 @@ std::vector<ItemVec<FitParameterCorrelation>::Ptr> numbered_correlations(
         }
         taken.insert(row->id.value());
         rows.push_back(std::move(row));
-    };
-    const auto first = [&template_file](const FitParameterCorrelation& pair) {
-        return !template_file.empty() && pair.file_path.value() == template_file;
-    };
-    for (const FitParameterCorrelation& pair : pairs) {
-        if (first(pair)) {
-            add(pair);
-        }
-    }
-    for (const FitParameterCorrelation& pair : pairs) {
-        if (!first(pair)) {
-            add(pair);
-        }
     }
     return rows;
+}
+
+void hold_template_rows(FitResultRecord& record, std::vector<FitParameterCorrelation> template_rows,
+                        const std::vector<FitParameterCorrelation>& rows, const std::string& template_file) {
+    std::map<std::string, std::vector<std::shared_ptr<const FitParameterCorrelation>>> read;
+    for (const FitParameterCorrelation& row : rows) {
+        const std::string& file = row.file_path.value();
+        if (!file.empty() && file != template_file && !record.scan_results.contains(file)) {
+            read[file].push_back(std::make_shared<const FitParameterCorrelation>(row));
+        }
+    }
+    for (auto& [file, kept] : read) {
+        auto bundle = std::make_shared<ScanFileResult>();
+        bundle->read_rows = std::move(kept);
+        record.scan_results.emplace(file, std::move(bundle));
+    }
+    std::vector<ItemVec<FitParameterCorrelation>::Ptr> loop;
+    loop.reserve(template_rows.size());
+    for (FitParameterCorrelation& row : template_rows) {
+        loop.push_back(std::make_shared<FitParameterCorrelation>(std::move(row)));
+    }
+    record.correlations.assign(std::move(loop));
 }
 
 void clear_fit_result(Project& project) {

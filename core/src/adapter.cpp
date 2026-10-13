@@ -3625,25 +3625,33 @@ std::shared_ptr<const ScanFileResult> scan_file_result(crysta::Project& project,
     return bundle;
 }
 
-// ADR-0034: the record after a scan run. Its results by file are the run's; the saved loop holds the template's rows,
-// made from the template's table when this run fitted it (I6), and the rows read with the other files as they were
-// read (I7).
+// ADR-0034: the record after a scan run. Its results by file are the run's. When this run fitted the template, the
+// saved loop holds the template's rows made from its table (I6), and the other files' read rows move into their bundles
+// as read (I7); otherwise the loop keeps the rows read with the files this run did not fit.
 void settle_scan_results(FitResultRecord& record, ScanRunResults& scan, const std::string& template_file) {
-    std::vector<FitParameterCorrelation> rows;
+    record.scan_results = std::move(scan.results);
+    if (!template_file.empty() && scan.fitted.contains(template_file)) {
+        std::vector<FitParameterCorrelation> template_rows;
+        const auto found = record.scan_results.find(template_file);
+        if (found != record.scan_results.end() && found->second && found->second->correlations) {
+            template_rows = correlation_rows(*found->second->correlations, template_file);
+        }
+        std::vector<FitParameterCorrelation> others;
+        for (const FitParameterCorrelation& row : scan.read_rows) {
+            if (!scan.fitted.contains(row.file_path.value())) {
+                others.push_back(row);
+            }
+        }
+        hold_template_rows(record, std::move(template_rows), others, template_file);
+        return;
+    }
+    std::vector<ItemVec<FitParameterCorrelation>::Ptr> rows;
     for (const FitParameterCorrelation& row : scan.read_rows) {
         if (!scan.fitted.contains(row.file_path.value())) {
-            rows.push_back(row);
+            rows.push_back(std::make_shared<FitParameterCorrelation>(row));
         }
     }
-    const auto found = scan.results.find(template_file);
-    if (!template_file.empty() && scan.fitted.contains(template_file) && found != scan.results.end() &&
-        found->second && found->second->correlations) {
-        for (FitParameterCorrelation& row : correlation_rows(*found->second->correlations, template_file)) {
-            rows.push_back(std::move(row));
-        }
-    }
-    record.correlations.assign(numbered_correlations(rows, template_file));
-    record.scan_results = std::move(scan.results);
+    record.correlations.assign(std::move(rows));
 }
 
 std::vector<FitParameterCorrelation> crysta_correlations(crysta::Project& fitted, const crysta::FitResultBase& result) {
@@ -3743,27 +3751,33 @@ void record_fit_result(Project& project, FitResultBase& outcome, std::size_t con
 
 void adopt_scan_file_result(FitResultRecord& record, const std::string& file,
                             std::shared_ptr<const ScanFileResult> result, const std::string& template_file) {
-    const bool template_rows = !template_file.empty() && file == template_file && result && result->correlations;
-    bool read_rows = false;
-    for (const auto& row : record.correlations) {
-        read_rows = read_rows || row->file_path.value() == file;
-    }
     record.scan_results[file] = std::move(result);
-    if (!read_rows && !template_rows) {
+    if (!template_file.empty() && file == template_file) {
+        const std::shared_ptr<const ScanFileResult>& adopted = record.scan_results[file];
+        std::vector<FitParameterCorrelation> template_rows;
+        if (adopted && adopted->correlations) {
+            template_rows = correlation_rows(*adopted->correlations, file);
+        }
+        std::vector<FitParameterCorrelation> others;
+        others.reserve(record.correlations.size());
+        for (const auto& row : record.correlations) {
+            others.push_back(*row);
+        }
+        hold_template_rows(record, std::move(template_rows), others, template_file);
         return;
     }
-    std::vector<FitParameterCorrelation> rows;
+    // Another file's fit replaces the rows read with it; the rest stay as they are.
+    const auto named = [&file](const auto& row) { return row->file_path.value() == file; };
+    if (std::none_of(record.correlations.begin(), record.correlations.end(), named)) {
+        return;
+    }
+    std::vector<ItemVec<FitParameterCorrelation>::Ptr> kept;
     for (const auto& row : record.correlations) {
-        if (row->file_path.value() != file) {
-            rows.push_back(*row);
+        if (!named(row)) {
+            kept.push_back(row);
         }
     }
-    if (template_rows) {
-        for (FitParameterCorrelation& row : correlation_rows(*record.scan_results[file]->correlations, file)) {
-            rows.push_back(std::move(row));
-        }
-    }
-    record.correlations.assign(numbered_correlations(rows, template_file));
+    record.correlations.assign(std::move(kept));
 }
 
 std::vector<FitParameterCorrelation> correlation_rows(const CorrelationTable& table, const std::string& file) {

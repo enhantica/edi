@@ -47,7 +47,10 @@ and save, and copies all the rows on Reset fits. The fits themselves did not get
    single or joint fit it holds that fit's rows, as now. For a scan it holds the template file's rows, made from the
    template's table when the template's fit changes: the end of a run, a Single fit on a dataset, or their Undo. Ids
    run 1, 2, … in pair order, and coefficients are crysta's shortest form, so the bytes match today's. Rows read from a
-   file keep their ids and text until a fit replaces them. A save therefore aggregates nothing, and an unchanged save
+   file keep their ids and text until a fit replaces them. When the template's fit changes, rows read with another
+   file move, unchanged, into that file's bundle unless a fit gave it one: the loop then holds the template's rows
+   only, so the new rows' ids never collide with a read row's, and the moved rows are not saved, as the template-only
+   rule wants. Undoing that fit puts the loop back as it was. A save therefore aggregates nothing, and an unchanged save
    writes the same loop.
 5. **Shown lazily.** The Correlations tab takes the shown file's table, or the single fit's rows, and builds the matrix
    for that file only, from the doubles. A loop read from a file becomes a table once, when it is first shown.
@@ -56,7 +59,8 @@ and save, and copies all the rows on Reset fits. The fits themselves did not get
    reads the record's map. Reset fits clears the map, and its Undo puts the same map back.
 7. **Renames rewrite names, not pairs.** A rename that changes parameter unique names gives each names vector holding
    one of them a renamed copy, shared by every table that held the old vector. It also rewrites the persisted rows, as
-   now. The same rename rules apply (the block's own parameters by exact name).
+   now, and gives a bundle's read rows renamed copies. The same rename rules apply (the block's own parameters by exact
+   name).
 8. **One general fix to `ItemVec`.** Admission and row replacement check duplicates and ownership with a hash of item
    pointers and keys, in linear time, for every loop. The scan exposed the quadratic check, and any large loop would
    hit it.
@@ -82,7 +86,7 @@ its meaning.
 | I4 | No table is made, and the fit's correlations are empty as today, when the covariance is unavailable or not n × n, n < 2, a variance is not positive and finite, a label names no parameter, or a value is not finite. |
 | I5 | A table shares the previous table's names object only when its covariance labels equal the previous labels in the same order. A changed or reordered column set resolves its own names. |
 | I6 | Rows made from a table are numbered 1, 2, … in I2's order, with `source_kind` `deterministic`, the pair's two names, and the coefficient in crysta's shortest round-trip text. They match the rows edi makes before this change, byte for byte. |
-| I7 | Rows read from a file keep their ids, `source_kind`, names, text and file exactly. They are never renumbered or reformatted. A fit that replaces them writes I6 rows. |
+| I7 | Rows read from a file keep their ids, `source_kind`, names, text and file exactly, in the loop or, once the template's fit changes, in their file's bundle. They are never renumbered or reformatted. A fit that replaces them writes I6 rows. |
 | I8 | The numeric view of read rows is made once, when first shown: each row's value is its text parsed as `correlation_value` parses it today, in the rows' order. |
 | I9 | Python lists and the report are made when read: I6 rows from a table, I7 rows as read. |
 | I10 | The Correlations matrix for a file is made from that file's table or read rows only, with today's level and count filter. |

@@ -253,23 +253,18 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
         project_->sequential_fit.template_file =
             scan_session_->datasets().files[static_cast<std::size_t>(projected_dataset_)];
         // The fit's correlations are this dataset's now, shown and saved as its own; the other datasets keep theirs,
-        // shared from the record as it was.
+        // shared from the record as it was, and rows read with one keep their ids (ADR-0034 I7).
         const std::string& file = project_->sequential_fit.template_file;
         std::vector<edi::FitParameterCorrelation> rows;
-        for (const edi::FitParameterCorrelation& row : fit_template_undo_->rows) {
-            if (row.file_path.value() != file) {
-                rows.push_back(row);
-            }
-        }
         for (const auto& row : project_->fit_result.correlations) {
             if (row->file_path.empty()) {
                 rows.push_back(*row);
                 rows.back().file_path = file;
             }
         }
-        project_->fit_result.correlations.assign(edi::numbered_correlations(rows, file));
         project_->fit_result.scan_results = fit_template_undo_->results;
         project_->fit_result.scan_results.erase(file);
+        edi::hold_template_rows(project_->fit_result, std::move(rows), fit_template_undo_->rows, file);
         syncCorrelations();
         // The last run is this fit now: a reopened project shows its record, not the scan's summary.
         if (scanProcessed()) {
@@ -1877,10 +1872,14 @@ void ProjectViewModel::undo() {
         }
         if (undone && fit_template_undo_) {
             project_->sequential_fit.template_file = fit_template_undo_->template_file;
-            // The scan's results and rows as they were before the fit (shared pointers and the template's rows).
+            // The scan's results and rows as they were before the fit (shared pointers and the rows as recorded).
             project_->fit_result.scan_results = std::move(fit_template_undo_->results);
-            project_->fit_result.correlations.assign(
-                edi::numbered_correlations(fit_template_undo_->rows, fit_template_undo_->template_file));
+            std::vector<edi::ItemVec<edi::FitParameterCorrelation>::Ptr> rows;
+            rows.reserve(fit_template_undo_->rows.size());
+            for (const edi::FitParameterCorrelation& row : fit_template_undo_->rows) {
+                rows.push_back(std::make_shared<edi::FitParameterCorrelation>(row));
+            }
+            project_->fit_result.correlations.assign(std::move(rows));
             scan_template_ = std::move(fit_template_undo_->stash);
             syncCorrelations();
             fit_template_undo_.reset();
@@ -2032,6 +2031,12 @@ void ProjectViewModel::syncCorrelations() {
             found != record.scan_results.end()) {
             if (found->second && found->second->correlations) {
                 correlations_->setTable(*found->second->correlations);
+            } else if (found->second && !found->second->read_rows.empty()) {
+                std::vector<edi::FitParameterCorrelation> rows;
+                for (const auto& row : found->second->read_rows) {
+                    rows.push_back(*row);
+                }
+                correlations_->setPairs(rows);
             } else {
                 correlations_->setPairs({});
             }
