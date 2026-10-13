@@ -9,38 +9,43 @@ namespace edi_app {
 
 CategoryPresentation category_presentation(const QString& id) {
     using T = CategoryListModel::Tier;
-    // Titles follow the original's group names where a category matches one; a loop's title is plural,
-    // as it names its rows (edi ADR-0017 §3); icons are Font Awesome 5 names, as the base's GroupBox
-    // takes them.
-    static const QHash<QString, CategoryPresentation> table{
-        {QStringLiteral("metadata"), {T::Basic, "Project", "archive"}},
-        {QStringLiteral("space_group"), {T::Basic, "Space group", "satellite"}},
-        {QStringLiteral("cell"), {T::Basic, "Cell", "cube"}},
-        {QStringLiteral("atom_site"), {T::Basic, "Atom sites", "atom"}},
-        {QStringLiteral("atom_site_aniso"), {T::Basic, "Atomic displacement", "arrows-alt"}},  // owner, 2026-10-06
-        {QStringLiteral("scattering_length"), {T::Extras, "Scattering lengths", "ruler"}},
-        {QStringLiteral("experiment_type"), {T::Basic, "Experiment type", "radiation"}},
-        {QStringLiteral("data"), {T::Extras, "Measured data", "arrows-alt-h"}},  // owner, 2026-09-29
-        {QStringLiteral("data_range"), {T::Basic, "Calculation range", "arrows-alt-h"}},
-        {QStringLiteral("instrument"), {T::Basic, "Instrument", "microscope"}},
-        {QStringLiteral("peak"), {T::Basic, "Peak profile", "shapes", true}},
-        {QStringLiteral("background"), {T::Basic, "Background", "wave-square"}},
-        {QStringLiteral("linked_structure"), {T::Basic, "Linked structures", "layer-group"}},
-        {QStringLiteral("excluded_region"), {T::Basic, "Excluded regions", "eraser"}},  // owner, 2026-10-04
-        {QStringLiteral("absorption"), {T::Extras, "Absorption", "tint"}},
-        {QStringLiteral("preferred_orientation"), {T::Extras, "Preferred orientations", "compass"}},
-        {QStringLiteral("scattering_source"), {T::Extras, "Scattering source", "atom"}},
-        {QStringLiteral("refln"), {T::Extras, "Reflections", "list"}},
-        {QStringLiteral("minimizer"), {T::Extras, "Minimizer", "level-down-alt"}},
-        {QStringLiteral("fitting_mode"), {T::Extras, "Fitting mode", "sliders-h"}},
-        {QStringLiteral("alias"), {T::Extras, "Aliases", "tag"}},
-        {QStringLiteral("constraint"), {T::Extras, "Constraints", "equals"}},
-        {QStringLiteral("joint_fit"), {T::Extras, "Joint-fit weights", "link"}},
-        {QStringLiteral("sequential_fit"), {T::Extras, "Sequential fit", "list-ol"}},
-        {QStringLiteral("sequential_fit_extract"), {T::Extras, "Scan extraction rules", "filter"}},
-        {QStringLiteral("fit_parameter"), {T::Extras, "Fit start values", "history"}},
+    // The titles are the core's (edi::category_title), which the report shows too; icons are Font Awesome 5 names, as
+    // the base's GroupBox takes them.
+    struct Look {
+        T tier;
+        const char* icon;
+        bool extras_part = false;
     };
-    return table.value(id, {T::Extras, "", "question"});
+    static const QHash<QString, Look> table{
+        {QStringLiteral("metadata"), {T::Basic, "archive"}},
+        {QStringLiteral("space_group"), {T::Basic, "satellite"}},
+        {QStringLiteral("cell"), {T::Basic, "cube"}},
+        {QStringLiteral("atom_site"), {T::Basic, "atom"}},
+        {QStringLiteral("atom_site_aniso"), {T::Basic, "arrows-alt"}},
+        {QStringLiteral("scattering_length"), {T::Extras, "ruler"}},
+        {QStringLiteral("experiment_type"), {T::Basic, "radiation"}},
+        {QStringLiteral("data"), {T::Extras, "arrows-alt-h"}},
+        {QStringLiteral("data_range"), {T::Basic, "arrows-alt-h"}},
+        {QStringLiteral("instrument"), {T::Basic, "microscope"}},
+        {QStringLiteral("peak"), {T::Basic, "shapes", true}},
+        {QStringLiteral("background"), {T::Basic, "wave-square"}},
+        {QStringLiteral("linked_structure"), {T::Basic, "layer-group"}},
+        {QStringLiteral("excluded_region"), {T::Basic, "eraser"}},
+        {QStringLiteral("absorption"), {T::Extras, "tint"}},
+        {QStringLiteral("preferred_orientation"), {T::Extras, "compass"}},
+        {QStringLiteral("scattering_source"), {T::Extras, "atom"}},
+        {QStringLiteral("refln"), {T::Extras, "list"}},
+        {QStringLiteral("minimizer"), {T::Extras, "level-down-alt"}},
+        {QStringLiteral("fitting_mode"), {T::Extras, "sliders-h"}},
+        {QStringLiteral("alias"), {T::Extras, "tag"}},
+        {QStringLiteral("constraint"), {T::Extras, "equals"}},
+        {QStringLiteral("joint_fit"), {T::Extras, "link"}},
+        {QStringLiteral("sequential_fit"), {T::Extras, "list-ol"}},
+        {QStringLiteral("sequential_fit_extract"), {T::Extras, "filter"}},
+        {QStringLiteral("fit_parameter"), {T::Extras, "history"}},
+    };
+    const Look look = table.value(id, {T::Extras, "question"});
+    return {look.tier, edi::category_title(id.toStdString()), look.icon, look.extras_part};
 }
 
 namespace {
