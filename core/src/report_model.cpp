@@ -428,6 +428,67 @@ ReportStructure structure_of(const Structure& structure, const std::string& rule
     return out;
 }
 
+// The measured points, as the Experiment page's points table lists them: the axis value, the measured intensity and
+// its s.u., and the calculated intensity and the background when they describe the model, each column to fixed decimals
+// (the axis as the reflections' positions, the intensities enough to give the largest measured one four digits, at
+// least one). An excluded point is marked, not dropped: by crysta's status when the calculation is current, else by the
+// excluded regions.
+ReportTable data_table(const BraggPdExperiment& experiment) {
+    const PdDataBase& data = *experiment.data;
+    const std::vector<double>& axis = data.axis();
+    const std::vector<double>& measured = data.intensity_meas;
+    const auto [name, units] = axis_of(data);
+    const int axis_decimals = data.two_theta.has_value() ? 3 : 1;
+    double largest = 0.0;
+    for (const double value : measured) {
+        if (std::isfinite(value)) {
+            largest = std::max(largest, std::abs(value));
+        }
+    }
+    const int decimals = largest > 0.0 ? std::clamp(3 - static_cast<int>(std::floor(std::log10(largest))), 1, 6) : 1;
+    const bool computed = experiment.computed_current() && data.intensity_calc.size() == axis.size() &&
+                          data.intensity_bkg.size() == axis.size();
+    const bool status = computed && data.calc_status.size() == axis.size();
+    std::vector<bool> excluded(axis.size(), false);
+    for (std::size_t row = 0; row < axis.size(); ++row) {
+        const double x = axis[row];
+        excluded[row] = status ? data.calc_status[row] == "excl"
+                               : std::any_of(experiment.excluded_regions.begin(), experiment.excluded_regions.end(),
+                                             [x](const auto& region) {
+                                                 const double start = region->first.get();
+                                                 const double end = region->second.get();
+                                                 return x >= std::min(start, end) && x <= std::max(start, end);
+                                             });
+    }
+    const bool any_excluded = std::find(excluded.begin(), excluded.end(), true) != excluded.end();
+    // An excluded row's computed values are NaN; its cell stays empty.
+    const auto cell = [decimals](const std::vector<double>& column, std::size_t row) {
+        return row < column.size() && std::isfinite(column[row]) ? column_text(column[row], decimals) : std::string();
+    };
+    ReportTable table;
+    table.columns = {name + " (" + units + ")", "Imeas", "s.u."};
+    if (computed) {
+        table.columns.insert(table.columns.end(), {"Icalc", "Ibkg"});
+    }
+    if (any_excluded) {
+        table.columns.emplace_back("Status");
+    }
+    table.rows.reserve(axis.size());
+    for (std::size_t row = 0; row < axis.size(); ++row) {
+        std::vector<std::string> cells{column_text(axis[row], axis_decimals), cell(measured, row),
+                                       cell(data.intensity_meas_su, row)};
+        if (computed) {
+            cells.push_back(cell(data.intensity_calc.values(), row));
+            cells.push_back(cell(data.intensity_bkg.values(), row));
+        }
+        if (any_excluded) {
+            cells.emplace_back(excluded[row] ? "excluded" : "");
+        }
+        table.rows.push_back(std::move(cells));
+    }
+    return table;
+}
+
 // An experiment's categories in its page's order, filled as the page shows them, and its calculated reflections when
 // they describe the model; a loop without rows is left out.
 ReportExperiment experiment_of(const BraggPdExperiment& experiment, const std::string& rule) {
@@ -457,6 +518,12 @@ ReportExperiment experiment_of(const BraggPdExperiment& experiment, const std::s
                 if (listed.id == "data_range" && axis.size() > 1) {
                     next.rows.push_back({name + " step", display_text(std::abs(axis[1] - axis[0])), units});
                 }
+            }
+            if (listed.id == "data") {
+                // The report's block holds the calculated columns too, so it is the Data block, not the page's
+                // Measured data (the owner, 2026-10-13).
+                next.title = "Data";
+                next.table = data_table(experiment);
             }
         } else if (listed.id == "instrument" || listed.id == "absorption") {
             add_fields(next.rows, listed.fields, rule);
