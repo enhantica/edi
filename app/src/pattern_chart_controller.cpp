@@ -265,7 +265,14 @@ void PatternChartController::setPlotWidth(qreal width) {
     if (width != plot_width_) {
         plot_width_ = width;
         emit plotWidthChanged();
-        invalidate();
+        // Drawn after the binding that set the width has returned: a drawing relabels the axes, which moves the plot
+        // area that binding reads, and doing it inside the binding made a binding loop.
+        dirty_ = true;
+        QMetaObject::invokeMethod(this, [this] {
+            if (dirty_ && active_) {
+                refresh();
+            }
+        }, Qt::QueuedConnection);
     }
 }
 
