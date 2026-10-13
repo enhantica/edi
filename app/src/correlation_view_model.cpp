@@ -139,19 +139,39 @@ void CorrelationViewModel::settle(const QString& reason) {
     }
     // Each parameter's strongest correlation with another (the core filter, which the report shares).
     strength_ = edi::correlation_strengths(edi::CorrelationMatrix{names_, matrix_});
-    // A new matrix keeps the count asked for and sets the level from it.
     if (n >= 2) {
-        setMaxParameters(wanted_);
+        show();
     } else {
         rebuild();
     }
 }
 
+// The project's threshold (ADR-0035 §7): with one, the level is it; without, the count asked for sets it.
+void CorrelationViewModel::show() {
+    if (threshold_) {
+        apply(*threshold_, static_cast<int>(edi::correlation_count_for_level(strength_, *threshold_)));
+        return;
+    }
+    // The level follows the count by ADR-0035 §7's rule: the lowest that keeps at most that many, a tie kept
+    // whole; the count then shows how many it keeps.
+    const double level = edi::correlation_level_for_count(strength_, static_cast<std::size_t>(wanted_));
+    apply(level, static_cast<int>(edi::correlation_count_for_level(strength_, level)));
+}
+
+void CorrelationViewModel::setThreshold(std::optional<double> threshold) {
+    if (threshold == threshold_) {
+        return;
+    }
+    threshold_ = threshold;
+    if (strength_.size() >= 2) {
+        show();
+    }
+}
+
 void CorrelationViewModel::setLevel(double level) {
     level = std::isfinite(level) ? std::clamp(level, 0.0, 1.0) : 0.0;
-    // The count follows: the parameters whose strongest correlation reaches the level (owner, 2026-10-11).
-    const auto count = static_cast<int>(edi::correlation_count_for_level(strength_, level));
-    apply(level, strength_.size() >= 2 ? count : max_parameters_);
+    // The project keeps the level as its threshold; the count follows, the parameters reaching it (owner, 2026-10-11).
+    ask(level);
 }
 
 void CorrelationViewModel::setMaxParameters(int count) {
@@ -162,10 +182,18 @@ void CorrelationViewModel::setMaxParameters(int count) {
         apply(level_, count);
         return;
     }
-    // The level follows, by plan amendment 4's rule: the lowest that keeps at most that many, a tie kept whole; the
-    // count then shows how many it keeps.
-    const double level = edi::correlation_level_for_count(strength_, static_cast<std::size_t>(count));
-    apply(level, static_cast<int>(edi::correlation_count_for_level(strength_, level)));
+    // The count sets the level by ADR-0035 §7's rule, and the project keeps that level.
+    ask(edi::correlation_level_for_count(strength_, static_cast<std::size_t>(count)));
+}
+
+void CorrelationViewModel::ask(double level) {
+    // The project applies it as an undoable edit and shows it back (setThreshold); a tab without one applies it here.
+    if (receivers(SIGNAL(levelAsked(double))) > 0) {
+        emit levelAsked(level);
+    } else {
+        threshold_ = level;
+        show();
+    }
 }
 
 void CorrelationViewModel::apply(double level, int count) {

@@ -123,6 +123,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_PROPERTY(QString authors READ authors WRITE setAuthors NOTIFY authorsChanged)
     // How values with a standard uncertainty are written and shown: "iucr_19" or "iucr_99".
     Q_PROPERTY(QString suRule READ suRule WRITE setSuRule NOTIFY suRuleChanged)
+    // The Analysis pattern chart's x axis, the project's `_pattern_chart.x_axis`: d-spacing, or the experiment's own.
+    // The report's charts follow it. An undoable edit.
+    Q_PROPERTY(bool patternDSpacing READ patternDSpacing WRITE setPatternDSpacing NOTIFY patternDSpacingChanged)
     Q_PROPERTY(QString path READ path NOTIFY pathChanged)
     // True after any edit since the project was opened or last saved (edi ADR-0017 §13).
     Q_PROPERTY(bool modified READ modified NOTIFY modifiedChanged)
@@ -180,6 +183,14 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void setAuthors(const QString& authors);
     QString suRule() const;
     void setSuRule(const QString& rule);
+    // The report's settings (ADR-0035 §7), each an undoable edit: in `reports/report.edi` the groups the report
+    // leaves out (their keys separated by spaces) and whether a saved report embeds its libraries; in
+    // `analysis/analysis.edi` the correlation threshold the Analysis page's level sets and the x axis.
+    void setReportExcluded(const QString& keys);
+    void setReportHtmlOffline(bool embedded);
+    void setReportCorrelationThreshold(double threshold);
+    bool patternDSpacing() const;
+    void setPatternDSpacing(bool on);
     // A value and its standard uncertainty as the project's rule writes them: `value`, `su` and `bracket`
     // texts; empty for a non-finite value or a zero or non-finite s.u.
     Q_INVOKABLE QVariantMap suText(double value, double su) const;
@@ -330,6 +341,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void descriptionChanged();
     void authorsChanged();
     void suRuleChanged();
+    void patternDSpacingChanged();
     void lastModifiedChanged();
     void currentStructureIndexChanged();
     void currentStructureChanged();
@@ -560,6 +572,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     QString last_error_;
     QString published_name_, published_title_, published_description_, published_last_modified_;
     QString published_authors_, published_su_rule_;
+    bool published_pattern_d_spacing_ = false;
     StructureViewModel* published_structure_ = nullptr;
     ExperimentViewModel* published_experiment_ = nullptr;
     int published_structure_index_ = -1;

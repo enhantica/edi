@@ -13,6 +13,8 @@ Item {
     id: holder
 
     property ExperimentViewModel experiment: null
+    // Set: the chart's x axis is this project's (the Analysis page's, which the report follows).
+    property ProjectViewModel axisProject: null
     property bool shown: true
     property PatternChart chart: null
     readonly property real toolbarRightInset: holder.chart ? holder.chart.toolbarRightInset : AppSizes.mainAreaMargin
@@ -34,6 +36,7 @@ Item {
         PatternChart {
             anchors.fill: parent
             experiment: holder.experiment
+            axisProject: holder.axisProject
             shown: holder.shown && visible
         }
     }

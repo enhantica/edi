@@ -108,9 +108,11 @@ class Session : public QObject {
     // and Save writes in place (the owner, 2026-10-08). A refused save keeps the project, unsaved, and says why.
     // `suRule` is the preference's rule for standard uncertainties, "iucr_19" or "iucr_99". A title
     // and authors go into `_metadata` as the Project page writes them; an empty title keeps the default one.
+    // `reportLibraries` is the preference for whether its saved HTML reports embed their chart libraries, written into
+    // the new project's `_report.html_offline` (ADR-0035 §7); no other project takes the preference.
     Q_INVOKABLE bool createProject(const QString& name, const QString& description, const QString& location = QString(),
                                    const QString& suRule = QStringLiteral("iucr_19"), const QString& title = QString(),
-                                   const QString& authors = QString());
+                                   const QString& authors = QString(), bool reportLibraries = false);
     Q_INVOKABLE void closeProject();
     // The open project's calculation refusals into the message list, after each recalculation (§14).
     void syncCalculationMessages();

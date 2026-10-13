@@ -20,8 +20,7 @@
 
 namespace edi_app {
 
-ReportViewModel::ReportViewModel(const ProjectViewModel& project, QObject* parent)
-    : QObject(parent), project_(project) {
+ReportViewModel::ReportViewModel(ProjectViewModel& project, QObject* parent) : QObject(parent), project_(project) {
     refresh();
 }
 
@@ -36,6 +35,15 @@ void ReportViewModel::setActive(bool active) {
 }
 
 void ReportViewModel::refresh() {
+    // The settings the project now states, announced when they changed (an edit, or its undo).
+    if (const QStringList keys = hidden(); keys != published_hidden_) {
+        published_hidden_ = keys;
+        emit hiddenChanged();
+    }
+    if (const bool embedded = embedLibraries(); embedded != published_embed_) {
+        published_embed_ = embedded;
+        emit embedLibrariesChanged();
+    }
     dirty_ = true;
     if (active_ && build()) {
         emit modelChanged();
@@ -51,14 +59,8 @@ void ReportViewModel::ensureBuilt() const {
 
 bool ReportViewModel::build() const {
     dirty_ = false;
-    // The Analysis page's correlation level, while its tab has a matrix to filter; else the five most correlated.
-    edi::ReportOptions options = options_;
-    const CorrelationViewModel* correlations = project_.correlations();
-    options.correlation_level.reset();
-    if (correlations != nullptr && correlations->available() >= 2) {
-        options.correlation_level = correlations->level();
-    }
-    // And of a fit of several experiments, the one the tab shows.
+    // The project's report settings (ADR-0035 §7); of a fit of several experiments, the one the tab shows.
+    edi::ReportOptions options = edi::effective_report_options(project_.project());
     const int shown = project_.currentExperimentIndex();
     options.correlation_experiment = !project_.scan() && shown > 0 ? static_cast<std::size_t>(shown) : 0;
     edi::ReportModel next;
@@ -113,23 +115,21 @@ const edi::ReportStructure* ReportViewModel::structure(const QString& id) const 
 
 QStringList ReportViewModel::hidden() const {
     QStringList keys;
-    for (const std::string& key : options_.hidden) {
+    for (const std::string& key : edi::effective_report_options(project_.project()).hidden) {
         keys.append(QString::fromStdString(key));
     }
     return keys;
 }
 
 void ReportViewModel::setHidden(const QStringList& keys) {
-    std::vector<std::string> next;
+    QStringList next;
     for (const QString& key : keys) {
-        if (std::find(next.begin(), next.end(), key.toStdString()) == next.end()) {
-            next.push_back(key.toStdString());
+        if (!next.contains(key)) {
+            next.append(key);
         }
     }
-    if (next != options_.hidden) {
-        options_.hidden = std::move(next);
-        emit hiddenChanged();
-        refresh();
+    if (next != hidden()) {
+        project_.setReportExcluded(next.join(QLatin1Char(' ')));
     }
 }
 
@@ -142,10 +142,13 @@ void ReportViewModel::setIncluded(const QString& key, bool included) {
     setHidden(keys);
 }
 
+bool ReportViewModel::embedLibraries() const {
+    return edi::effective_report_options(project_.project()).embed_libraries;
+}
+
 void ReportViewModel::setEmbedLibraries(bool on) {
-    if (on != embed_libraries_) {
-        embed_libraries_ = on;
-        emit embedLibrariesChanged();
+    if (on != embedLibraries()) {
+        project_.setReportHtmlOffline(on);
     }
 }
 
@@ -194,7 +197,7 @@ void ReportViewModel::saveHtml(const QUrl& file) {
     // The vendored libraries: the app's own copies on the desktop, the site's in the browser, so the web app's
     // download stays small.
     edi::ReportLibraries libraries;
-    if (embed_libraries_) {
+    if (embedLibraries()) {
         std::string* texts[] = {&libraries.plotly, &libraries.three, &libraries.orbit_controls};
         const auto& files = edi::report_library_files();
         for (std::size_t i = 0; i < files.size(); ++i) {

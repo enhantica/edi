@@ -34,6 +34,9 @@ QtObject {
     // How a new project writes values with a standard uncertainty: "iucr_19" or "iucr_99". A project keeps its
     // own; this only starts a new one.
     property string newProjectSuRule: "iucr_19"
+    // Whether a new project's saved HTML reports embed their chart libraries (its `_report.html_offline`; edi
+    // ADR-0035 §7). A project keeps its own; this only starts a new one.
+    property bool newReportLibraries: false
 
     property Settings settings: Settings {
         location: EaGlobals.Vars.settingsFile
@@ -42,6 +45,7 @@ QtObject {
         property alias autoCollapse: preferences.autoCollapse
         property alias sideBarSide: preferences.sideBarSide
         property alias newProjectSuRule: preferences.newProjectSuRule
+        property alias newReportLibraries: preferences.newReportLibraries
     }
 
     property Settings developSettings: Settings {
