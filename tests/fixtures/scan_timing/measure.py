@@ -18,6 +18,7 @@ from contract import (
     compare,
     source_hashes,
     subject,
+    validate_builds,
     validate_controls,
     validate_work,
 )
@@ -303,6 +304,7 @@ def measure(config, output):
     slow_identity = identity.pop('slow')
     if slow_identity['edi_source'] != 'bd72193898d2dc6fefb1d692703d1f7a4137c731':
         raise ValueError('the slow negative control must identify the actual pre-change build')
+    validate_builds(identity)
     host = '|'.join(platform.uname())
     controls = run_controls(builds, project, output, spec)
     rows = []

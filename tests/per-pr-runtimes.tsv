@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-12T23:26:21Z
+# measured_utc = 2026-10-13T02:44:08Z
 #
-# Recorded from: retained canonical bank; three native cases await Release measurement during the build hold
-# Collected tests: 11144; with a reported duration: 6100
+# Recorded from: measured test run (58 node(s) measured once, 10269 banked, 0 stale row(s) dropped)
+# Collected tests: 11153; with a reported duration: 6100
 # Module-scoped fixture costs recorded: 42
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 11144
+# inventory_python = 11153
 # inventory_cpp = 312
-# inventory_measured = 10318
+# inventory_measured = 10327
 # inventory_unmeasured = 1138
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
@@ -5825,15 +5825,18 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.p
 0.250	tests/integration/py/test_scan_template.py::test_template_setter_selects_scan_data_without_changing_parameters[all594687.dat]
 0.240	tests/integration/py/test_scan_template.py::test_template_setter_selects_scan_data_without_changing_parameters[all594791.dat]
 0.250	tests/integration/py/test_scan_template.py::test_template_setter_selects_scan_data_without_changing_parameters[all594842.dat]
-0.340	tests/integration/py/test_scan_timing_contract.py::test_comparison_process_exits_nonzero_for_a_slow_fixed_build
-0.010	tests/integration/py/test_scan_timing_contract.py::test_each_actual_reset_condition_is_required_before_timing_credit[calculation_pending]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_actual_native_builds_require_matching_release_configuration[CMAKE_BUILD_TYPE-Debug]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_actual_native_builds_require_matching_release_configuration[compiler-different]
+0.070	tests/integration/py/test_scan_timing_contract.py::test_actual_scratch_copies_hash_identically_without_fit_starts_or_resume_files
+0.160	tests/integration/py/test_scan_timing_contract.py::test_comparison_process_exits_nonzero_for_a_slow_fixed_build
+0.000	tests/integration/py/test_scan_timing_contract.py::test_each_actual_reset_condition_is_required_before_timing_credit[calculation_pending]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_each_actual_reset_condition_is_required_before_timing_credit[dataset_correlations]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_each_actual_reset_condition_is_required_before_timing_credit[dataset_fit_outcomes]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_each_actual_reset_condition_is_required_before_timing_credit[prefit_values_restored]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_each_actual_reset_condition_is_required_before_timing_credit[remaining_files]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_each_actual_reset_condition_is_required_before_timing_credit[result_rows]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_each_actual_reset_condition_is_required_before_timing_credit[undo_available]
-0.010	tests/integration/py/test_scan_timing_contract.py::test_fit_and_reset_sum_is_compared_per_run_not_as_a_sum_of_medians
+0.020	tests/integration/py/test_scan_timing_contract.py::test_fit_and_reset_sum_is_compared_per_run_not_as_a_sum_of_medians
 0.000	tests/integration/py/test_scan_timing_contract.py::test_incomplete_work_never_gets_a_fast_time[app-calculation_pending-True]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_incomplete_work_never_gets_a_fast_time[app-calculation_stale-True]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_incomplete_work_never_gets_a_fast_time[app-follow-locked]
@@ -5850,7 +5853,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.p
 0.000	tests/integration/py/test_scan_timing_contract.py::test_incomplete_work_never_gets_a_fast_time[cli-skipped-value4]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_incomplete_work_never_gets_a_fast_time[cli-unfinished-value6]
 0.010	tests/integration/py/test_scan_timing_contract.py::test_owner_bound_rejects_each_slow_interval_and_keeps_boundary[1.05-True-fit_ms]
-0.020	tests/integration/py/test_scan_timing_contract.py::test_owner_bound_rejects_each_slow_interval_and_keeps_boundary[1.05-True-process_ms]
+0.010	tests/integration/py/test_scan_timing_contract.py::test_owner_bound_rejects_each_slow_interval_and_keeps_boundary[1.05-True-process_ms]
 0.010	tests/integration/py/test_scan_timing_contract.py::test_owner_bound_rejects_each_slow_interval_and_keeps_boundary[1.05-True-reset_ms]
 0.010	tests/integration/py/test_scan_timing_contract.py::test_owner_bound_rejects_each_slow_interval_and_keeps_boundary[1.050001-False-fit_ms]
 0.010	tests/integration/py/test_scan_timing_contract.py::test_owner_bound_rejects_each_slow_interval_and_keeps_boundary[1.050001-False-process_ms]
@@ -5862,6 +5865,12 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.p
 0.000	tests/integration/py/test_scan_timing_contract.py::test_physical_results_inventory_rejects_each_population_escape[duplicate]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_physical_results_inventory_rejects_each_population_escape[extra-column]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_physical_results_inventory_rejects_each_population_escape[missing]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_prepared_analysis_omits_only_saved_fit_starts[\n-d20.cosio.scale]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_prepared_analysis_omits_only_saved_fit_starts[\n-d20.scale]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_prepared_analysis_omits_only_saved_fit_starts[_another.scalar 2.75\n-d20.cosio.scale]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_prepared_analysis_omits_only_saved_fit_starts[_another.scalar 2.75\n-d20.scale]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_prepared_analysis_omits_only_saved_fit_starts[loop_\n-d20.cosio.scale]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_prepared_analysis_omits_only_saved_fit_starts[loop_\n-d20.scale]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_provenance_ordering_and_negative_controls_fail_closed[control-credit]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_provenance_ordering_and_negative_controls_fail_closed[debug]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_provenance_ordering_and_negative_controls_fail_closed[drop-run]
