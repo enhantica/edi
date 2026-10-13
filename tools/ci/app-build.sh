@@ -13,7 +13,8 @@
 # installed package, the sysroot among them) and the build options. Any change removes build/app and
 # configures it fresh, so a CMake cache written under another environment's compilers is never reused (a
 # build/app configured before the app had its own environment named a `c++` the macOS app environment
-# does not provide, and every configure failed). The key is written only after a successful configure.
+# does not provide, and every configure failed). The key of a configure that did not finish is kept apart,
+# so a rerun with the same identity does not start from nothing again.
 # app-build-recovery.sh exercises the recovery.
 #
 # Offline or with a local gui-components clone: EDI_GUI_COMPONENTS_SRC=<clone at the pinned commit>.
@@ -66,13 +67,20 @@ BUILD_KEY="$(
         printf 'args=%s\n' "${args[*]}"
     } | _sha256 | cut -d' ' -f1
 )"
+# The key is also written before configuring, as the attempt's: a configure that fails or is interrupted
+# leaves it, so the rerun continues in build/app rather than wiping it again, unless the identity changed.
 MARKER=build/app/.edi-app-build-key
-if [ -d build/app ] && [ "$(cat "$MARKER" 2>/dev/null)" != "$BUILD_KEY" ]; then
+PENDING=build/app/.edi-app-build-key.pending
+LAST="$(cat "$PENDING" 2>/dev/null || cat "$MARKER" 2>/dev/null || true)"
+if [ -d build/app ] && [ "$LAST" != "$BUILD_KEY" ]; then
     echo "app-build: build identity changed (compiler / flags / environment / options); configuring build/app fresh"
     rm -rf build/app
 fi
+mkdir -p build/app
+printf '%s\n' "$BUILD_KEY" > "$PENDING"
 cmake "${args[@]}"
 printf '%s\n' "$BUILD_KEY" > "$MARKER"
+rm -f "$PENDING"
 # The host, the test runner and the image comparator by default; `app` builds the host alone.
 read -r -a targets <<< "${EDI_APP_TARGETS:-edi_app edi_app_tests edi_app_ui_compare}"
 cmake --build build/app --target "${targets[@]}"

@@ -48,6 +48,9 @@ projects:
     executing: false
   - id: pd-neut-cwl_yap-spodi_3k
     executing: true
+  - id: pd-xray-cwl_latp_scan-4f
+    # Three phases in a synchrotron X-ray sequential scan, against the owner's FullProf fit.
+    executing: true
   - id: pd-neut-tof_fe_pseudo-voigt
     # A scale-only fit of a verification parameter set; executing once every feature its full .pcr fit needs exists (the C33 milestone
     # page's list).

@@ -99,6 +99,12 @@ PatternChartController::PatternChartController(QObject* parent)
     connect(&animation_, &QAbstractAnimation::finished, this, &PatternChartController::finishAnimation);
 }
 
+PatternChartController::~PatternChartController() {
+    if (experiment_) {
+        experiment_->setChartShown(this, false);
+    }
+}
+
 void PatternChartController::setAnimationDuration(int milliseconds) {
     milliseconds = std::max(0, milliseconds);
     if (milliseconds != animation_duration_) {
@@ -183,9 +189,11 @@ void PatternChartController::setExperiment(ExperimentViewModel* experiment) {
     }
     if (experiment_) {
         disconnect(experiment_, nullptr, this, nullptr);
+        experiment_->setChartShown(this, false);
     }
     experiment_ = experiment;
     if (experiment_) {
+        experiment_->setChartShown(this, active_);
         connect(experiment_, &ExperimentViewModel::patternSourceChanged, this, &PatternChartController::invalidate);
         // An admitted edit: the frame stays, and it no longer describes the model.
         connect(experiment_, &ExperimentViewModel::patternWentStale, this, [this] {
@@ -210,6 +218,9 @@ void PatternChartController::setActive(bool active) {
         // the chart is shown again.
         if (!active_) {
             finishAnimation();
+        }
+        if (experiment_) {
+            experiment_->setChartShown(this, active_);
         }
         emit activeChanged();
         if (active_ && dirty_) {
@@ -324,6 +335,9 @@ void PatternChartController::refresh() {
     static const edi::PatternSource kNothing;
     const edi::PatternSource& source = experiment_ ? experiment_->patternSource() : kNothing;
     shown_ = edi::present_pattern(source, view());
+    if (experiment_ && active_) {
+        experiment_->notePresented();
+    }
 
     const edi::PatternSeries* measured = nullptr;
     const edi::PatternSeries* calculated = nullptr;
@@ -333,9 +347,14 @@ void PatternChartController::refresh() {
     QList<ChartLegendModel::Entry> legend;
     const auto entry = [&](const edi::PatternSeries& series) {
         const bool bragg = series.kind == edi::SeriesKind::BraggTicks;
-        const bool thin = series.kind == edi::SeriesKind::Background;
+        double width = 1.0;
+        for (const edi::SeriesStyle& style : edi::pattern_style_table()) {
+            if (style.key == series.style) {
+                width = style.width_px;
+            }
+        }
         legend.append({QString::fromStdString(series.label), color(QString::fromStdString(series.style)),
-                       bragg ? QStringLiteral("│") : thin ? QStringLiteral("─") : QStringLiteral("━"), bragg});
+                       bragg ? QStringLiteral("tick") : QStringLiteral("line"), bragg, width});
     };
     int rows = 0;
     for (const edi::PatternSeries& series : shown_.series) {
@@ -582,6 +601,10 @@ QString PatternChartController::axisLabel(const QString& text, YScale scale) con
     bool ok = false;
     const double display = text.toDouble(&ok);
     return ok ? QString::fromStdString(edi::axis_label(display, core_scale(scale))) : text;
+}
+
+double PatternChartController::originalValue(double display, YScale scale) const {
+    return edi::from_display(display, core_scale(scale));
 }
 
 }  // namespace edi_app

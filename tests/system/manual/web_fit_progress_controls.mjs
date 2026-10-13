@@ -1,11 +1,25 @@
 // Protocol controls only; synthetic states are never application evidence.
 import assert from 'node:assert/strict';
 import {runInNewContext} from 'node:vm';
-import {beginFitProgress,endFitProgress,isLiveFitProgress} from './web_fit_progress.mjs';
+import {beginFitProgress,endFitProgress,isLiveFitProgress,advancesLiveFitProgress} from './web_fit_progress.mjs';
 
 const idle={running:false,visible:false,text:''};
 const live={running:true,visible:true,text:'fitting · it 3'};
 let count=0;
+const iterations = values => values.map(value => ({...live,text:`fitting · it ${value}`}));
+for (const values of [[0,1,1,2,5],[1,3,4,5]]) {
+  assert(advancesLiveFitProgress(iterations(values),5),
+    'The indicator must advance through distinct intermediate values while actually running');count++;
+}
+for (const [states,final] of [[iterations([0,5]),5],[iterations([1,1,5]),5],
+  [iterations([1,5,2]),5],[iterations([1,2,6]),5],
+  [iterations([3,2,5]),5],[iterations([1,2]),2],[iterations([1,2]),NaN],
+  [iterations([1,2]).map(state=>({...state,running:false})),5],
+  [iterations([1,2]).map(state=>({...state,visible:false})),5],
+  [iterations([1,2]).map(state=>({...state,text:'Success · it 3'})),5]]) {
+  assert(!advancesLiveFitProgress(states,final),
+    'Only zero/final, repeated or reversed counts, malformed completion and idle/hidden reports cannot impersonate live advancement');count++;
+}
 for(const text of ['fitting · it 1','fitting · it 12']) {
   assert(isLiveFitProgress({...live,text}),
     'Actual running and visible iteration text must satisfy the live progress contract');

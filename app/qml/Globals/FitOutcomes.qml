@@ -25,8 +25,10 @@ QtObject {
         case "stopped":
             return "stop-circle";
         case "superseded":
+        case "skipped":
             return "minus-circle";
         case "failed":
+        case "refused":
             return "times-circle";
         }
         return "";
@@ -53,6 +55,10 @@ QtObject {
             return qsTr("Stopped");
         case "superseded":
             return qsTr("Superseded");
+        case "skipped":
+            return qsTr("Skipped");
+        case "refused":
+            return qsTr("Refused");
         case "failed":
             return qsTr("Failed");
         }
@@ -76,6 +82,10 @@ QtObject {
             return qsTr("Stop fitting was pressed; the result is kept");
         case "superseded":
             return qsTr("An input changed during the fit; nothing was written");
+        case "skipped":
+            return qsTr("The file has no intensity above zero, so it was not fitted");
+        case "refused":
+            return qsTr("The fit refused this file (analysis/scan-notes.csv says why); the scan went on");
         case "failed":
             return qsTr("The fit was refused or failed; nothing was written");
         }
@@ -91,6 +101,7 @@ QtObject {
         case "notConverged":
             return EaStyle.Colors.orange;
         case "failed":
+        case "refused":
             return EaStyle.Colors.red;
         }
         return EaStyle.Colors.themeForegroundMinor;

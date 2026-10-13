@@ -1251,7 +1251,7 @@ def _update(log_path: Path, fixture_costs: Path | None, remeasure: Iterable[str]
         return _write_banked(kept, holes, module_costs, source, collected)
     rows, new_holes, new_costs = _focused_rows(log_path, fixture_costs, targets)
     source = (
-        f'{log_path.name} ({len(targets)} node(s) measured once, {len(kept)} banked, '
+        f'measured test run ({len(targets)} node(s) measured once, {len(kept)} banked, '
         f'{removed} stale row(s) dropped)'
     )
     kept.update(rows)

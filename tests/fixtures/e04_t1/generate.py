@@ -11,9 +11,11 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import re
 import shlex
 import shutil
+import subprocess
 from pathlib import Path
 
 import yaml
@@ -109,7 +111,9 @@ def tables(path, extra=()):
         '_linked_structure',
     }
     wanted.update(extra)
-    lines = path.read_text().splitlines()
+    # The owner's ASCII records contain CR as an in-row field separator.
+    # LF ends a record; universal-newline decoding would invent another row.
+    lines = path.read_bytes().decode().split('\n')
     result = {}
     index = 0
     while index < len(lines):
@@ -163,14 +167,22 @@ def scan_inputs(project, analysis):
     selected = {0, len(files) // 2, len(files) - 1}
     for file_index, file in enumerate(files):
         rows = []
-        for line in file.read_text().splitlines():
+        for line in file.read_bytes().decode().split('\n'):
             fields = line.split()
-            if len(fields) != 3:
+            if len(fields) not in {2, 3}:
                 continue
             try:
-                rows.append([float(field) for field in fields])
+                row = [float(field) for field in fields]
             except ValueError:
                 continue
+            # The owner rule skips negative scan points. The scan reference
+            # in scan_template/REFERENCE.md uses Poisson sqrt(y), with tiny
+            # sigma replaced below; the single-pattern importer differs.
+            if row[1] < 0:
+                continue
+            if len(row) == 2:
+                row.append(math.sqrt(row[1]))
+            rows.append(row)
         if len(rows) < 2:
             raise ValueError('Scan range witness requires independent measured ASCII rows')
         axis = [row[0] for row in rows]
@@ -232,9 +244,15 @@ def profile_fixtures():
     return projects
 
 
-def generate(warning_project=None):
+def generate(warning_project=None, added_project=None):  # noqa: PLR0914 - one capture retains old witnesses
     projects = []
-    for entry in yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text())['projects']:
+    registry = yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text())['projects']
+    selected = [
+        entry for entry in registry if added_project is None or entry['id'] == added_project
+    ]
+    if added_project is not None and len(selected) != 1:
+        raise ValueError('Project addition requires exactly one registered project')
+    for entry in selected:
         project = ROOT / 'docs/user/cli' / entry['id'] / 'project'
         structures = [
             {
@@ -281,7 +299,12 @@ def generate(warning_project=None):
             },
         })
     corpus = []
-    for project in [*sorted((ROOT / 'docs/user/cli').glob('*/project')), *profile_fixtures()]:
+    corpus_projects = (
+        [ROOT / 'docs/user/cli' / added_project / 'project']
+        if added_project is not None
+        else [*sorted((ROOT / 'docs/user/cli').glob('*/project')), *profile_fixtures()]
+    )
+    for project in corpus_projects:
         for file in sorted((project / 'experiments').glob('*.edi')):
             fields = scalars(file)
             profile = fields['_peak.type']
@@ -419,6 +442,24 @@ def generate(warning_project=None):
     output = Path(__file__).parent / 'oracle.js'
     if warning_project is not None:
         data = warning_only_oracle(output, projects, warning_project)
+    if added_project is not None:
+        retained = json.loads(output.read_text().split('var frozen = ', 1)[1].rsplit(';', 1)[0])
+        if any(row['id'] == added_project for row in retained['projects']):
+            # Re-run an uncommitted addition from its committed prior fixture;
+            # never refresh a previously committed project's expectations.
+            prior = subprocess.check_output(
+                ['git', '-C', str(ROOT), 'show', 'HEAD:' + output.relative_to(ROOT).as_posix()],
+                text=True,
+            )
+            retained = json.loads(prior.split('var frozen = ', 1)[1].rsplit(';', 1)[0])
+            if any(row['id'] == added_project for row in retained['projects']):
+                raise ValueError('Project addition cannot replace a committed oracle row')
+        by_id = {row['id']: row for row in [*retained['projects'], *projects]}
+        if set(by_id) != {entry['id'] for entry in registry}:
+            raise ValueError('Project addition cannot omit or introduce another registry identity')
+        retained['projects'] = [by_id[entry['id']] for entry in registry]
+        retained['corpus'].extend(corpus)
+        data = retained
     output.write_text(
         '// Independent category oracle. Regenerate only with generate.py.\nvar frozen = '
         + json.dumps(data, indent=2, ensure_ascii=False)
@@ -473,4 +514,8 @@ def loader_warning(analysis, experiments, metadata, project_id=None):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--loader-warning-only', metavar='PROJECT_ID')
-    generate(parser.parse_args().loader_warning_only)
+    parser.add_argument('--add-project', metavar='PROJECT_ID')
+    args = parser.parse_args()
+    if args.loader_warning_only and args.add_project:
+        parser.error('warning adaptation and project addition are separate operations')
+    generate(args.loader_warning_only, args.add_project)

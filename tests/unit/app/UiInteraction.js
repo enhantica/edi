@@ -73,15 +73,15 @@ function rendered(item) {
     return true;
 }
 
-function find(root, name) {
+function find(root, name, forScrolling = false) {
     if (!root || !root.visible)
         return null;
-    if (root.objectName === name && rendered(target(root)))
+    if (root.objectName === name && (forScrolling ? inPane(target(root)) : rendered(target(root))))
         return root;
     // Repeater/ListView delegates are visual children, not necessarily QObject children.
     const children = root.children || [];
     for (let i = 0; i < children.length; ++i) {
-        const found = find(children[i], name);
+        const found = find(children[i], name, forScrolling);
         if (found !== null) return found;
     }
     return null;
@@ -131,8 +131,12 @@ function text(root) {
 }
 
 function click(testCase, probe, window, name) {
+    testCase.tryVerify(() => !moving(window.contentItem), 2000,
+                       "I10/I19: viewports finish moving before locating the next real input");
     testCase.verify(testCase.waitForPolish(window, 2000),
                     "I10/I19: layout updates finish before locating real input");
+    testCase.verify(testCase.waitForRendering(window.contentItem),
+                    "I10/I19: the settled layout renders before locating real input");
     testCase.tryVerify(() => {
         const found = control(probe, window, name);
         return found !== null && found.enabled && exposed(target(found));
@@ -158,7 +162,9 @@ function click(testCase, probe, window, name) {
 function expandGroup(testCase, probe, window, name) {
     let group = null;
     testCase.tryVerify(() => {
-        group = control(probe, window, name);
+        // Discover a vertical scroll target only in the active horizontal pane.
+        // Input still uses the fully clipped control() lookup after scrolling.
+        group = find(page(window), name, true);
         return group !== null;
     }, 2000, "I10/I19: the group exposure target belongs to the active visible pane: " + name);
     testCase.verify(group !== null, "I10/I19: the selected page owns the requested group: " + name);
@@ -167,4 +173,13 @@ function expandGroup(testCase, probe, window, name) {
     testCase.tryVerify(() => !group.collapsed && Math.abs(group.height -
         (group.titleArea.height + group.spacing + group.contentHeight + group.bottomPadding)) < 0.01,
         2000, "I10/I19: group expansion finishes before its content is positioned or used: " + name);
+}
+
+// Delegates follow the visual parent graph used by find(), rather than QObject ownership.
+function itemsWithProperty(root, property) {
+    if (!root) return [];
+    let items = root[property] !== undefined ? [root] : [];
+    const children = root.children || [];
+    children.forEach(child => items = items.concat(itemsWithProperty(child, property)));
+    return items;
 }

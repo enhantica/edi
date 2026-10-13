@@ -4,9 +4,9 @@ pragma Singleton
 import QtQuick
 
 // edi's font set, built in place of the pinned base's Style/Fonts.qml (cmake/EdiGuiBase.cmake; ADR-0015 §10).
-// The base's file loads Encode Sans and Nunito, which edi no longer bundles, and a loader without its file
+// The base's file loads additional Encode Sans and Nunito faces that edi does not bundle, and a loader without its file
 // warns. This one keeps every name the base's components read (fontFamily, monoFontFamily, secondFontFamily,
-// thirdFontFamily, iconsFamily) and loads only what edi bundles: PT Sans, PT Mono and Font Awesome from the
+// thirdFontFamily, iconsFamily) and loads only what edi bundles: PT Sans, PT Mono, Encode Sans Regular and Font Awesome from the
 // base, Noto Sans and Baloo 2 from edi's resources.
 QtObject {
     id: fonts
@@ -20,6 +20,9 @@ QtObject {
     }
     property FontLoader ptMono: FontLoader {
         source: fonts.fontPath("PT_Mono", "PTMono-Regular.ttf")
+    }
+    property FontLoader encodeSansRegular: FontLoader {
+        source: fonts.fontPath("Encode_Sans", "EncodeSans-Regular.ttf")
     }
     property FontLoader fontAwesomeSolid: FontLoader {
         source: fonts.fontPath("FontAwesome", "Font Awesome 5 Free-Solid-900.otf")

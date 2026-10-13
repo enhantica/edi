@@ -19,6 +19,7 @@ import pytest
 import yaml
 
 from tests.fixtures.cwl_family.historical import original_tokens
+from tests.fixtures.table_display.metadata_bytes import pre_catalogue_bytes
 
 ROOT = Path(__file__).resolve().parents[3]
 MANIFEST = tomllib.loads((ROOT / 'pixi.toml').read_text())
@@ -171,9 +172,9 @@ def expanded_jobs():
         for variant in variants:
             name = job.get('name', key)
             for field, value in variant.items():
-                if isinstance(value, str):
+                if isinstance(value, (str, int)):
                     name = re.sub(
-                        r'\$\{\{\s*matrix\.' + re.escape(field) + r'\s*\}\}', value, name
+                        r'\$\{\{\s*matrix\.' + re.escape(field) + r'\s*\}\}', str(value), name
                     )
             rows.append((key, name, job))
     return rows
@@ -208,6 +209,13 @@ def test_ci_job_names_state_area_and_platform_and_share_matrices():
         'changes',
     }
     if public:
+        # Parallel system parts and their push-only duration collector identify
+        # the same area/platform, with a concrete part suffix on every test job.
+        required |= {
+            f'system · {platform} · {part}/3'
+            for platform in ('Linux', 'macOS')
+            for part in (1, 2, 3)
+        } | {f'system durations · {platform}' for platform in ('Linux', 'macOS')}
         pages = yaml.safe_load((ROOT / '.github/workflows/pages.yml').read_text())
         assert {job.get('name') for job in pages['jobs'].values()} == {
             'build the site',
@@ -259,7 +267,7 @@ def test_loop_expectations_cover_fixture_bytes(source):
     )
     for case in cases:
         digest = case['sha256']
-        contents = original_tokens(path.read_bytes())
+        contents = original_tokens(pre_catalogue_bytes(path))
         replacement = json.loads(
             (ROOT / 'tests/fixtures/e04_t2/replacement-input.json').read_text()
         )
@@ -388,6 +396,17 @@ def sequence_sandbox(tmp_path):
         if key.startswith('EDI_APP_'):
             env.pop(key)
     shutil.copyfile(ROOT / 'pixi.toml', tmp_path / 'pixi.toml')
+    for name in ('docs/user/cli/projects.yml', 'app/examples/metadata.json'):
+        target = tmp_path / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / name, target)
+    for source in (ROOT / 'docs/user/cli', ROOT / 'app/examples'):
+        for project in source.glob('*/project'):
+            for child in ('', 'experiments', 'structures', 'analysis'):
+                for path in (project / child).glob('*.edi'):
+                    target = tmp_path / path.relative_to(ROOT)
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copyfile(path, target)
     dispatcher = ROOT / 'tests/fixtures/e04_t2/task_spy.py'
     shutil.copyfile(dispatcher, tmp_path / 'task_spy.py')
     env['CONDA_PREFIX'] = str(tmp_path / 'prefix')
@@ -411,6 +430,8 @@ def sequence_sandbox(tmp_path):
         'bin/python',
         'if [ "${1:-}" = -m ] && [ "${2:-}" = pytest ]; then\n'
         'echo check:group-app >> "$E04_CALLS"\nexit 0\nfi\n'
+        'if [ "${1:-}" = tests/integration/cmake/check_gui_base.py ]; then\n'
+        'echo check:gui-base >> "$E04_CALLS"\nexit "${BASE_CHECK_RC:-0}"\nfi\n'
         f'exec {shlex.quote(sys.executable)} "$@"',
     )
     shutil.copyfile(tmp_path / 'bin/python', tmp_path / 'bin/python3')
@@ -643,3 +664,13 @@ def test_dispatcher_skip_deps_keeps_checker_and_environment(tmp_path, options, s
         assert result.returncode == 0 and calls(tmp_path) == [f'check:{task}:{expected_env}'], (
             'note 20: skip-deps omits even a failing dependency but retains the selected checker'
         )
+
+
+def test_sequence_retains_the_source_checker_failure_barrier(tmp_path):
+    env = sequence_sandbox(tmp_path)
+    result = run_task(tmp_path, {**env, 'BASE_CHECK_RC': '23'}, 'app-lint')
+    observed = calls(tmp_path)
+    assert result.returncode != 0 and observed == ['build:app-build', 'check:gui-base'], (
+        'The real lint sequence must build first, execute the source checker and '
+        'refuse Qt lint after that checker fails'
+    )

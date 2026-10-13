@@ -22,7 +22,7 @@
       "page": "analysis",
       "block": "analysis",
       "file": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/analysis/analysis.edi",
-      "sha256": "b732d6abb6017d11a7f25d30349975e45b2ba72a25cf13f8c702376ea4d6bbf9",
+      "sha256": "0d463ba37e85baf7de2e4c08ac0d596a3756a50edea40b993b3120a9ae0209c6",
       "category": "alias",
       "columns": [
         "id",
@@ -36,7 +36,7 @@
       "page": "analysis",
       "block": "analysis",
       "file": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/analysis/analysis.edi",
-      "sha256": "b732d6abb6017d11a7f25d30349975e45b2ba72a25cf13f8c702376ea4d6bbf9",
+      "sha256": "0d463ba37e85baf7de2e4c08ac0d596a3756a50edea40b993b3120a9ae0209c6",
       "category": "constraint",
       "columns": [
         "id",
@@ -50,7 +50,7 @@
       "page": "analysis",
       "block": "analysis",
       "file": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/analysis/analysis.edi",
-      "sha256": "b732d6abb6017d11a7f25d30349975e45b2ba72a25cf13f8c702376ea4d6bbf9",
+      "sha256": "0d463ba37e85baf7de2e4c08ac0d596a3756a50edea40b993b3120a9ae0209c6",
       "category": "sequential_fit_extract",
       "columns": [
         "id",
@@ -66,7 +66,7 @@
       "page": "analysis",
       "block": "analysis",
       "file": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/analysis/analysis.edi",
-      "sha256": "b732d6abb6017d11a7f25d30349975e45b2ba72a25cf13f8c702376ea4d6bbf9",
+      "sha256": "0d463ba37e85baf7de2e4c08ac0d596a3756a50edea40b993b3120a9ae0209c6",
       "category": "joint_fit",
       "columns": [
         "experiment_id",
@@ -80,7 +80,7 @@
       "page": "analysis",
       "block": "analysis",
       "file": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/analysis/analysis.edi",
-      "sha256": "b732d6abb6017d11a7f25d30349975e45b2ba72a25cf13f8c702376ea4d6bbf9",
+      "sha256": "0d463ba37e85baf7de2e4c08ac0d596a3756a50edea40b993b3120a9ae0209c6",
       "category": "fit_parameter",
       "columns": [
         "id",
@@ -516,7 +516,7 @@
       "page": "experiment",
       "block": "echidna",
       "file": "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project/experiments/echidna.edi",
-      "sha256": "5976f0e0678ca16bb7bc1e52c9a2a1ea9a4043d9c3afead6a996b6e1b38b0159",
+      "sha256": "0dcbf61f0569cf94d306635dc2c644ad5af8b8042638b2a110523407093a2d20",
       "category": "excluded_region",
       "columns": [
         "id",
@@ -531,7 +531,7 @@
       "page": "experiment",
       "block": "echidna",
       "file": "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project/experiments/echidna.edi",
-      "sha256": "5976f0e0678ca16bb7bc1e52c9a2a1ea9a4043d9c3afead6a996b6e1b38b0159",
+      "sha256": "0dcbf61f0569cf94d306635dc2c644ad5af8b8042638b2a110523407093a2d20",
       "category": "linked_structure",
       "columns": [
         "structure_id",
@@ -545,9 +545,10 @@
       "page": "experiment",
       "block": "echidna",
       "file": "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project/experiments/echidna.edi",
-      "sha256": "5976f0e0678ca16bb7bc1e52c9a2a1ea9a4043d9c3afead6a996b6e1b38b0159",
+      "sha256": "0dcbf61f0569cf94d306635dc2c644ad5af8b8042638b2a110523407093a2d20",
       "category": "background",
       "columns": [
+        "id",
         "order",
         "coef"
       ],
@@ -559,7 +560,7 @@
       "page": "experiment",
       "block": "echidna",
       "file": "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project/experiments/echidna.edi",
-      "sha256": "5976f0e0678ca16bb7bc1e52c9a2a1ea9a4043d9c3afead6a996b6e1b38b0159",
+      "sha256": "0dcbf61f0569cf94d306635dc2c644ad5af8b8042638b2a110523407093a2d20",
       "category": "data",
       "columns": [
         "two_theta",
@@ -985,7 +986,7 @@
       "page": "experiment",
       "block": "polaris",
       "file": "docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project/experiments/polaris.edi",
-      "sha256": "afce3099188fcfab304513b8aaae8cf32cffc4f9c3177df8b7f3dbbd5b87adf0",
+      "sha256": "940231cb84abc21ad60fe760c793b603e8acbb6cb20478d94dfe858d250c33c0",
       "category": "excluded_region",
       "columns": [
         "id",
@@ -1000,7 +1001,7 @@
       "page": "experiment",
       "block": "polaris",
       "file": "docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project/experiments/polaris.edi",
-      "sha256": "afce3099188fcfab304513b8aaae8cf32cffc4f9c3177df8b7f3dbbd5b87adf0",
+      "sha256": "940231cb84abc21ad60fe760c793b603e8acbb6cb20478d94dfe858d250c33c0",
       "category": "linked_structure",
       "columns": [
         "structure_id",
@@ -1014,9 +1015,10 @@
       "page": "experiment",
       "block": "polaris",
       "file": "docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project/experiments/polaris.edi",
-      "sha256": "afce3099188fcfab304513b8aaae8cf32cffc4f9c3177df8b7f3dbbd5b87adf0",
+      "sha256": "940231cb84abc21ad60fe760c793b603e8acbb6cb20478d94dfe858d250c33c0",
       "category": "background",
       "columns": [
+        "id",
         "order",
         "coef"
       ],
@@ -1028,7 +1030,7 @@
       "page": "experiment",
       "block": "polaris",
       "file": "docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project/experiments/polaris.edi",
-      "sha256": "afce3099188fcfab304513b8aaae8cf32cffc4f9c3177df8b7f3dbbd5b87adf0",
+      "sha256": "940231cb84abc21ad60fe760c793b603e8acbb6cb20478d94dfe858d250c33c0",
       "category": "data",
       "columns": [
         "time_of_flight",
@@ -1066,7 +1068,7 @@
       "page": "experiment",
       "block": "pearl",
       "file": "docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project/experiments/pearl.edi",
-      "sha256": "a0ecad005d7d2b5729a2822b8cda98b8bfffae586361491dcbc5f8454ca69dd6",
+      "sha256": "dd405b91a0eea1bcc0c82d7763a7ae7ad2987b94169b9bb4e50454a140c57efd",
       "category": "excluded_region",
       "columns": [
         "id",
@@ -1081,7 +1083,7 @@
       "page": "experiment",
       "block": "pearl",
       "file": "docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project/experiments/pearl.edi",
-      "sha256": "a0ecad005d7d2b5729a2822b8cda98b8bfffae586361491dcbc5f8454ca69dd6",
+      "sha256": "dd405b91a0eea1bcc0c82d7763a7ae7ad2987b94169b9bb4e50454a140c57efd",
       "category": "linked_structure",
       "columns": [
         "structure_id",
@@ -1095,9 +1097,10 @@
       "page": "experiment",
       "block": "pearl",
       "file": "docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project/experiments/pearl.edi",
-      "sha256": "a0ecad005d7d2b5729a2822b8cda98b8bfffae586361491dcbc5f8454ca69dd6",
+      "sha256": "dd405b91a0eea1bcc0c82d7763a7ae7ad2987b94169b9bb4e50454a140c57efd",
       "category": "background",
       "columns": [
+        "id",
         "order",
         "coef"
       ],
@@ -1109,7 +1112,7 @@
       "page": "experiment",
       "block": "pearl",
       "file": "docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project/experiments/pearl.edi",
-      "sha256": "a0ecad005d7d2b5729a2822b8cda98b8bfffae586361491dcbc5f8454ca69dd6",
+      "sha256": "dd405b91a0eea1bcc0c82d7763a7ae7ad2987b94169b9bb4e50454a140c57efd",
       "category": "data",
       "columns": [
         "time_of_flight",
@@ -2816,7 +2819,7 @@
       "page": "experiment",
       "block": "experiment",
       "file": "tests/fixtures/e04_t1/warning-project/experiments/experiment.edi",
-      "sha256": "7267387c514b8c53e7087f69b9b3d206742146e35e1ec459efdcd2aa98024c1c",
+      "sha256": "a5ef0a715347c0d43cedb9a83b6a29c2cb00eecc5084478177b6944c7d3bab45",
       "category": "linked_structure",
       "columns": [
         "structure_id",
@@ -2830,7 +2833,7 @@
       "page": "experiment",
       "block": "experiment",
       "file": "tests/fixtures/e04_t1/warning-project/experiments/experiment.edi",
-      "sha256": "7267387c514b8c53e7087f69b9b3d206742146e35e1ec459efdcd2aa98024c1c",
+      "sha256": "a5ef0a715347c0d43cedb9a83b6a29c2cb00eecc5084478177b6944c7d3bab45",
       "category": "data",
       "columns": [
         "two_theta",
@@ -2845,9 +2848,10 @@
       "page": "experiment",
       "block": "experiment",
       "file": "tests/fixtures/e04_t1/warning-project/experiments/experiment.edi",
-      "sha256": "7267387c514b8c53e7087f69b9b3d206742146e35e1ec459efdcd2aa98024c1c",
+      "sha256": "a5ef0a715347c0d43cedb9a83b6a29c2cb00eecc5084478177b6944c7d3bab45",
       "category": "background",
       "columns": [
+        "id",
         "position",
         "intensity"
       ],
@@ -2880,7 +2884,7 @@
       "page": "experiment",
       "block": "experiment",
       "file": "tests/fixtures/e04_t1/xray-project/experiments/experiment.edi",
-      "sha256": "7267387c514b8c53e7087f69b9b3d206742146e35e1ec459efdcd2aa98024c1c",
+      "sha256": "a5ef0a715347c0d43cedb9a83b6a29c2cb00eecc5084478177b6944c7d3bab45",
       "category": "linked_structure",
       "columns": [
         "structure_id",
@@ -2894,7 +2898,7 @@
       "page": "experiment",
       "block": "experiment",
       "file": "tests/fixtures/e04_t1/xray-project/experiments/experiment.edi",
-      "sha256": "7267387c514b8c53e7087f69b9b3d206742146e35e1ec459efdcd2aa98024c1c",
+      "sha256": "a5ef0a715347c0d43cedb9a83b6a29c2cb00eecc5084478177b6944c7d3bab45",
       "category": "data",
       "columns": [
         "two_theta",
@@ -2909,9 +2913,10 @@
       "page": "experiment",
       "block": "experiment",
       "file": "tests/fixtures/e04_t1/xray-project/experiments/experiment.edi",
-      "sha256": "7267387c514b8c53e7087f69b9b3d206742146e35e1ec459efdcd2aa98024c1c",
+      "sha256": "a5ef0a715347c0d43cedb9a83b6a29c2cb00eecc5084478177b6944c7d3bab45",
       "category": "background",
       "columns": [
+        "id",
         "position",
         "intensity"
       ],

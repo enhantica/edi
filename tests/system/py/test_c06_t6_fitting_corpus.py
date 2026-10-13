@@ -35,6 +35,7 @@ import csv
 import json
 import os
 import re
+import shlex
 import shutil
 from pathlib import Path
 
@@ -208,6 +209,74 @@ def _assert_pin_declares_no_edi_side_case() -> None:
     )
 
 
+def _input_loops(experiment: Path):
+    tokens = shlex.split(experiment.read_text(encoding='utf-8'), comments=True)
+    index = 0
+    while index < len(tokens):
+        if tokens[index] != 'loop_':
+            index += 1
+            continue
+        index += 1
+        columns = []
+        while index < len(tokens) and tokens[index].startswith('_'):
+            columns.append(tokens[index])
+            index += 1
+        cells = []
+        while index < len(tokens) and not tokens[index].startswith(('_', 'data_')):
+            if tokens[index] == 'loop_':
+                break
+            cells.append(tokens[index])
+            index += 1
+        assert columns and len(cells) % len(columns) == 0, (
+            'Corpus parameter identities require complete declared loop rows'
+        )
+        yield [
+            dict(zip(columns, cells[i : i + len(columns)], strict=True))
+            for i in range(0, len(cells), len(columns))
+        ]
+
+
+def _loop_parameter_paths(rows, roots):
+    paths = {}
+    for position, row in enumerate(rows):
+        for field in ('intensity', 'coef'):
+            if f'_background.{field}' in row:
+                assert '_background.id' in row, (
+                    'saved by an older version: missing _background.id in corpus input'
+                )
+                row_id = row['_background.id']
+                paths.update({
+                    f'{root}background[{position}].{field}': f'{root}background[{row_id}].{field}'
+                    for root in roots
+                })
+    for category, fields in (
+        ('linked_structure', ('scale',)),
+        ('preferred_orientation', ('march_r', 'march_random_fract')),
+    ):
+        if len(rows) != 1 or f'_{category}.structure_id' not in rows[0]:
+            continue
+        row_id = rows[0][f'_{category}.structure_id']
+        output = 'linked_structures' if category == 'linked_structure' else category
+        paths.update({
+            f'{root}{category}.{field}': f'{root}{output}[{row_id}].{field}'
+            for root in roots
+            for field in fields
+        })
+    return paths
+
+
+def _corpus_parameter_paths(project_dir: Path) -> dict[str, str]:
+    paths = {}
+    experiments = sorted((project_dir / 'experiments').glob('*.edi'))
+    for experiment in experiments:
+        roots = [f'experiments[{experiment.stem}].']
+        if len(experiments) == 1:
+            roots.append('experiment.')
+        for rows in _input_loops(experiment):
+            paths.update(_loop_parameter_paths(rows, roots))
+    return paths
+
+
 # An EMPTY edi-side subject is a legal state and must be a DECLARED one. Owner ruling 65
 # replaced crysta's corpus wholesale, and every case the pin now carries declares
 # `sides: crysta-only`, so `UNITS` is empty here. Handing pytest an empty parameter set turns
@@ -239,6 +308,9 @@ def test_fitting_case_matches_expected_through_edi(
     # The copy also keeps a re-run of a completed sequential case a FIT rather than a resume.
     project_dir = tmp_path / 'project'
     shutil.copytree(_resolve_project_dir(case_dir, case['id']), project_dir)
+    # The archived oracle labels are reference selectors. Project addresses themselves
+    # must pass the newest-format load boundary; this projection never migrates a project.
+    parameter_paths = _corpus_parameter_paths(project_dir)
     #  (the sides flips): realize through the analysis facade, which dispatches by the
     # project's declared fitting mode — a joint case realized down the single path would
     # silently fit one bank (measured: chi2r 3.92 vs the joint 14.12 on ncaf-wish-3bank-s5).
@@ -296,7 +368,8 @@ def test_fitting_case_matches_expected_through_edi(
                 )
             else:
                 candidates.append(f'structure.atom_sites[{head}].{field}')
-        hits = sorted({c for c in candidates if c in table})
+        candidates = {parameter_paths.get(c, c) for c in candidates}
+        hits = sorted(c for c in candidates if c in table)
         assert len(hits) == 1, (
             f"{case['id']}: refined parameter '{label}' resolves to {hits!r} — "
             f'need exactly one match'

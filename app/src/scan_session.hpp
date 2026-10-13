@@ -39,7 +39,7 @@ class ScanSession : public QObject {
     };
     // The three result files a fresh run replaces, as they were (absent: none).
     struct Files {
-        std::optional<std::string> results, provenance, run;
+        std::optional<std::string> results, provenance, run, skipped;
         std::string kept;  // where the taken files wait on disk until they are put back
     };
 
@@ -54,7 +54,8 @@ class ScanSession : public QObject {
     const edi::ScanResultIndex& index() const { return index_; }
     int place(const std::string& file) const;
     // A row a run just appended (the event's own cells): checked against the header, indexed at the file's end.
-    // The dataset's place, or -1 with the refusal in `error`.
+    // The dataset's place, or -1 with the refusal in `error`; a refusal leaves the index refused (`index().error`),
+    // never holding part of what was read.
     int addRow(const edi::Project& project, const std::vector<std::string>& cells, const std::string& termination,
                QString& error);
     // The cells of a dataset's row, read at its offset and checked to name that dataset; empty without a row.
@@ -63,6 +64,7 @@ class ScanSession : public QObject {
     // without a row.
     QString outcome(int dataset) const;
     // Calls `visit(dataset, value, uncertainty)` for every row's cells of one parameter column, reading the file once.
+    // Throws std::invalid_argument when the results path is there but no longer a regular file.
     void column(const edi::Project& project, const std::string& name,
                 const std::function<void(int, double, double)>& visit) const;
 
@@ -107,6 +109,9 @@ class ScanSession : public QObject {
     void metadataLoaded(int first, int last);
 
    private:
+    // Replaces the index with a refused one saying why: no row, no count.
+    void refuseIndex(const std::string& why);
+
     edi::ScanDatasets datasets_;
     edi::ScanPlaces places_;
     edi::ScanResultIndex index_;

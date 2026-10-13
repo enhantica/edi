@@ -192,6 +192,7 @@ def _run_cli(project_dir: Path, *options: str) -> subprocess.CompletedProcess[st
 
 
 _RESULT_SOURCE_BY_FIELD = {
+    'correlations': 'analysis.edi _fit_parameter_correlation rows, computed by crysta',
     'banks': 'not applicable to a sequential terminal result',
     'converged': 'fit_result.success',
     'fitting_time': 'unavailable: no solve ran',

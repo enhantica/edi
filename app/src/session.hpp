@@ -10,24 +10,11 @@
 #include <memory>
 #include <vector>
 
+#include "example_list_model.hpp"
 #include "project_view_model.hpp"
 #include "row_table_model.hpp"
 
 namespace edi_app {
-
-// The Examples list: every project of edi's CLI registry, in registry order, then the app's X-ray
-// example — bundled in the app's resources. Roles `exampleId`, `name` (sample, instrument and
-// variant from the id) and `description` (the technique the id encodes).
-class ExampleListModel : public RowTableModel {
-    Q_OBJECT
-    QML_ELEMENT
-    QML_UNCREATABLE("Belongs to the session")
-
-   public:
-    explicit ExampleListModel(QObject* parent);
-    // The ids in list order, from the bundle's index.
-    static QStringList bundledIds();
-};
 
 // The app's one list of messages (edi ADR-0017 §14): the warnings the last open reported and the errors the
 // views used to show in red — a calculation refusal, one row per distinct refusal. Roles `message` and
@@ -117,7 +104,9 @@ class Session : public QObject {
     Q_INVOKABLE bool openProject(const QUrl& directory);
     // Open a bundled example: extracted to this session's temporary directory, then opened whole.
     Q_INVOKABLE bool openExample(const QString& exampleId);
-    Q_INVOKABLE bool createProject(const QString& name, const QString& description);
+    // A new empty project; with a `location` it is saved there at once, so it is that folder's project from the start
+    // and Save writes in place (the owner, 2026-10-08). A refused save keeps the project, unsaved, and says why.
+    Q_INVOKABLE bool createProject(const QString& name, const QString& description, const QString& location = QString());
     Q_INVOKABLE void closeProject();
     // The open project's calculation refusals into the message list, after each recalculation (§14).
     void syncCalculationMessages();
@@ -127,16 +116,26 @@ class Session : public QObject {
     Q_INVOKABLE bool save();
     Q_INVOKABLE bool saveAs(const QUrl& directory);
     Q_INVOKABLE void clearError();
+    /// Whether a saved project directory is present on disk.
+    Q_INVOKABLE bool projectDirectoryExists(const QString& path) const;
+    /// Turn a native directory path into the file URL accepted by openProject.
+    Q_INVOKABLE QUrl projectDirectoryUrl(const QString& path) const;
 
    signals:
     void projectChanged();
+    void projectDirectoryUsed(const QString& path);
     void hasProjectChanged();
     void openedExampleChanged();
     void projectLocationChanged();
     void needsSaveAsChanged();
     void lastErrorChanged();
+    // A project or an example could not be opened: every refused open says why (the window shows it), never a silent
+    // no-op.
+    void loadFailed(const QString& message);
 
    private:
+    bool openProjectAt(const QUrl& directory);
+    bool openExampleNamed(const QString& exampleId);
     bool open(const QString& directory, const QString& example);
     // Opens `source` (a read-only folder) from a writable copy at `target`: the project and its results are copied, and
     // a scan's data files linked, not duplicated.

@@ -162,6 +162,23 @@ def _gh_json(*path: str, missing_ok: bool = False) -> object:
     return None if out is None else json.loads(out or 'null')
 
 
+def _runner_groups(org: str) -> list:
+    """The organisation's runner groups, all of them or a refusal."""
+    listing = _gh_json(f'orgs/{org}/actions/runner-groups?per_page=100')
+    groups = listing.get('runner_groups') if isinstance(listing, dict) else None
+    if not isinstance(groups, list) or listing.get('total_count') != len(groups):
+        raise CutRefusedError(f'orgs/{org}/actions/runner-groups: not one complete page')
+    return groups
+
+
+def _gh_list(path: str) -> list:
+    """Every item of a listing, across all its pages; a page that is not a list refuses."""
+    pages = _gh_json('--paginate', '--slurp', path)
+    if not isinstance(pages, list) or not all(isinstance(page, list) for page in pages):
+        raise CutRefusedError(f'gh api {path}: not a paginated list')
+    return [item for page in pages for item in page]
+
+
 def _check_snapshot(snapshot: Path) -> str:
     """The snapshot's one commit, once it proves publishable; refuses otherwise."""
     git = ('git', '-C', str(snapshot))
@@ -242,7 +259,7 @@ def _preflight(args: argparse.Namespace) -> Cut:
         raise CutRefusedError(f'{org}/{repo} is public: the cut is into a private repository')
     if _gh_json(f'repos/{org}/{archive}', missing_ok=True) is not None:
         raise CutRefusedError(f'{org}/{archive} exists already')
-    open_prs = _gh_json(f'repos/{org}/{repo}/pulls?state=open&per_page=100')
+    open_prs = _gh_list(f'repos/{org}/{repo}/pulls?state=open&per_page=100')
     if open_prs:
         raise CutRefusedError(f'{org}/{repo} has {len(open_prs)} open pull request(s): freeze it')
     found = Cut(
@@ -251,12 +268,12 @@ def _preflight(args: argparse.Namespace) -> Cut:
         archive=archive,
         snapshot=args.snapshot,
         old=old,
-        labels=_gh_json(f'repos/{org}/{repo}/labels?per_page=100'),
+        labels=_gh_list(f'repos/{org}/{repo}/labels?per_page=100'),
         rulesets=[
             _gh_json(f'repos/{org}/{repo}/rulesets/{r["id"]}')
-            for r in _gh_json(f'repos/{org}/{repo}/rulesets')
+            for r in _gh_list(f'repos/{org}/{repo}/rulesets?per_page=100')
         ],
-        groups=_gh_json(f'orgs/{org}/actions/runner-groups')['runner_groups'],
+        groups=_runner_groups(org),
         shared={
             kind: _gh_json(f'orgs/{org}/actions/{kind}/{name}')
             for kind, name in APP_CREDENTIALS.items()
@@ -288,7 +305,7 @@ def _labels(plan: Plan, labels_path: str, wanted: list[dict]) -> None:
 
     GitHub gives a new repository default labels, and names match ignoring case.
     """
-    present = _gh_json(f'{labels_path}?per_page=100') if plan.apply else None
+    present = _gh_list(f'{labels_path}?per_page=100') if plan.apply else None
     existing = {label['name'].lower(): label['name'] for label in present or []}
     names = {label['name'].lower() for label in wanted}
     for key, name in sorted(existing.items()):

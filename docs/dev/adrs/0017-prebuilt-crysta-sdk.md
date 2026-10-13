@@ -104,6 +104,9 @@ The owner adopted the speed-up plan's stage 4 on 2026-09-30.
   expired artifact refuses and names the repair: re-run the producing job in that run, then re-pin. edi `main` never
   depends on an artifact, because the ship order publishes the release before edi merges.
 - edi's CI mints its crysta token with `actions: read` beside `contents: read`. Both are read-only.
+- On a desk, a fetch with neither `GITHUB_TOKEN` nor `GH_TOKEN` set asks the GitHub CLI (`gh auth token`) when it
+  is installed, and never prints the token; with no token at all it refuses as before. CI has no `gh` and reads its
+  environment only.
 - The pin lives in `pixi.toml`, not `pixi.lock`: the lock carries no activation environment, so a pin move leaves it
   untouched.
 - A conda-channel transport would need a later ADR.

@@ -6,11 +6,18 @@ check/remove exactly one canonical calculator block per saved experiment,
 and compare every other byte and the full file inventory to the same pins.
 """
 
+import hashlib
 import importlib.util
 import json
+import shutil
+import zipfile
 from pathlib import Path
 
 import pytest
+
+from tests.fixtures.fitting_modes.historical_bytes import historical_analysis
+from tests.fixtures.loop_parameter_ids.historical_fit_ids import historical_fit_ids
+from tests.fixtures.table_display import metadata_bytes, stored_id_bytes
 
 ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / 'tests/fixtures/c34_t28_baseline'
@@ -23,6 +30,43 @@ EXTENSION = json.loads(
 )
 
 RELATIONS = json.loads((ROOT / 'tests/fixtures/constraint_expressions/byte-pins.json').read_text())
+NEW_FIXED_POINTS = BASELINE.get('post_feature_fixed_points', {})
+
+
+def restored_source(source, tmp_path):
+    restored = metadata_bytes.restore(source, tmp_path / 'descriptive-input')
+    if REFERENCE.hashes(restored) != REFERENCE.hashes(source):
+        old_saved, new_saved = tmp_path / 'descriptive-old', tmp_path / 'descriptive-new'
+        REFERENCE.observe(restored, old_saved)
+        REFERENCE.observe(source, new_saved)
+        metadata_bytes.check_saved(source, old_saved, new_saved)
+    else:
+        return source
+    return restored
+
+
+def historical_input_hashes(source):
+    result = REFERENCE.hashes(source)
+    analysis = source / 'analysis/analysis.edi'
+    if analysis.is_file():
+        result['analysis/analysis.edi'] = hashlib.sha256(
+            historical_fit_ids(source, analysis.read_bytes())
+        ).hexdigest()
+    return result
+
+
+def observe_legacy_pin(source, destination, *, calculator=False):
+    REFERENCE.observe(source, destination, calculator=calculator)
+    legacy = stored_id_bytes.ordinal_copy(
+        source, destination, destination.with_name('ordinal-pin')
+    )
+    analysis = legacy / 'analysis/analysis.edi'
+    if analysis.is_file():
+        analysis.write_bytes(
+            historical_analysis(source, historical_fit_ids(source, analysis.read_bytes()))
+        )
+    return REFERENCE.saved_hashes(legacy) if calculator else REFERENCE.hashes(legacy)
+
 
 #  projects postdate the immutable  pre-move source closure.
 # Their serialization is checked by a second-save fixed point, never a rewritten old pin.
@@ -62,11 +106,18 @@ def test_saved_byte_inventory_covers_every_current_cli_and_corpus_project(tmp_pa
     assert additions.isdisjoint(BASELINE['cases']), (
         '/ no old byte witness is replaced by a post-feature pin'
     )
+    assert set(NEW_FIXED_POINTS) == {'repo:docs/user/cli/pd-xray-cwl_latp_scan-4f/project'}, (
+        'the new LATP input has its own witness without changing historical byte pins'
+    )
+    assert set(NEW_FIXED_POINTS).isdisjoint(BASELINE['cases']), (
+        'a new project invariant cannot replace any old serialization oracle'
+    )
     assert set(REFERENCE.inputs()) == (
         set(BASELINE['cases'])
         | additions
         | set(POLYNOMIAL_CASES)
         | set(ADP_AND_SCAN_CASES)
+        | set(NEW_FIXED_POINTS)
         | (set(RELATION_CASES) & set(REFERENCE.inputs()))
     ), (
         ' I22 every project must retain its pre-move byte witness, labelled '
@@ -139,7 +190,7 @@ def test_saved_byte_inventory_covers_every_current_cli_and_corpus_project(tmp_pa
 
 @pytest.mark.parametrize('case', sorted(BASELINE['cases']))
 def test_save_matches_the_labelled_pre_move_regression_pin(tmp_path, case):
-    source = REFERENCE.inputs()[case]
+    source = restored_source(REFERENCE.inputs()[case], tmp_path)
     expected = BASELINE['cases'][case]
     public_rows = json.loads(
         (ROOT / 'tests/fixtures/e04_t12_public_release/saved-metadata.json').read_text()
@@ -181,11 +232,11 @@ def test_save_matches_the_labelled_pre_move_regression_pin(tmp_path, case):
             'input_sha256': extension['after_input_sha256'],
             'saved_sha256': extension['after_saved_sha256'],
         }
-        assert REFERENCE.hashes(source) == expected['input_sha256'], (
+        assert historical_input_hashes(source) == expected['input_sha256'], (
             'the current model must match the explicitly labelled post-change regression pin'
         )
         assert (
-            REFERENCE.observe(source, tmp_path / 'saved', calculator=True)
+            observe_legacy_pin(source, tmp_path / 'saved', calculator=True)
             == expected['saved_sha256']
         ), 'the complete saved project must match the labelled model-change regression pin'
         return
@@ -200,44 +251,54 @@ def test_save_matches_the_labelled_pre_move_regression_pin(tmp_path, case):
         ), 'The retired TCH plus asymmetry byte subject is replaced by the declared Npr5 model'
         return
     if case.startswith('repo:') and REFERENCE.hashes(source) != expected['input_sha256']:
-        # Main's independently merged example edits cannot rewrite a storage
-        # regression pin. Check their provenance and still save the old input.
-        main = REFERENCE.committed_input(source, tmp_path / 'main', 'origin/main')
-        live_hashes, main_hashes = REFERENCE.hashes(source), REFERENCE.hashes(main)
-        metadata = json.loads(
-            (ROOT / 'tests/fixtures/e04_t12_public_release/project-metadata.json').read_text()
+        reviewed = json.loads(
+            (ROOT / 'tests/fixtures/table_display/regression-inputs.json').read_text()
         )
-        assert live_hashes.keys() == main_hashes.keys(), (
-            'public metadata adaptation must retain the entire main project inventory'
+        relative = case.removeprefix('repo:') + '/'
+        expected_live = {
+            name.removeprefix(relative): digest
+            for name, digest in reviewed['files'].items()
+            if name.startswith(relative)
+        }
+        assert expected_live, 'Every adapted input must have a committed reviewed byte witness'
+        with zipfile.ZipFile(
+            ROOT / 'tests/fixtures/table_display/regression-inputs.zip'
+        ) as archive:
+            for name, digest in expected_live.items():
+                assert hashlib.sha256(archive.read(relative + name)).hexdigest() == digest, (
+                    'Reviewed input bytes and the full inventory must retain the committed pin'
+                )
+        live_source = REFERENCE.inputs()[case]
+        live_raw = {
+            path.relative_to(live_source).as_posix(): hashlib.sha256(
+                metadata_bytes.pre_catalogue_bytes(path)
+            ).hexdigest()
+            for path in live_source.rglob('*')
+            if path.is_file()
+        }
+        assert live_raw == expected_live, (
+            'changed live example bytes must equal the complete reviewed pre-catalogue input, '
+            'independently of the position of main'
         )
-        for name, digest in live_hashes.items():
-            if digest == main_hashes[name]:
-                continue
-            adaptation = metadata.get((source / name).relative_to(ROOT).as_posix(), {})
-            assert (
-                adaptation.get('after_sha256') == digest
-                and adaptation.get('before_sha256') == main_hashes[name]
-            ), (
-                'changed live example bytes must equal the exact reviewed descriptive '
-                'adaptation of independently merged main'
-            )
-        source = REFERENCE.committed_input(source, tmp_path / 'pre-move')
+        source = REFERENCE.committed_input(
+            ROOT / case.removeprefix('repo:'), tmp_path / 'pre-move'
+        )
     assert REFERENCE.legacy_input_hashes(source, case) == expected['input_sha256'], (
         ' I22 the storage move cannot alter inputs to hide a serialization regression'
     )
     assert (
-        REFERENCE.observe(source, tmp_path / 'saved', calculator=True) == expected['saved_sha256']
+        observe_legacy_pin(source, tmp_path / 'saved', calculator=True) == expected['saved_sha256']
     ), ' I22 save must retain the pre-move bytes of every file in this project'
 
 
 @pytest.mark.parametrize('case', sorted(EXTENSION['cases']))
 def test_new_lif_project_matches_labelled_post_feature_byte_pin(tmp_path, case):
-    source = REFERENCE.inputs()[case]
+    source = restored_source(REFERENCE.inputs()[case], tmp_path)
     expected = EXTENSION['cases'][case]
     assert REFERENCE.hashes(source) == expected['input_sha256'], (
         ' post-feature regression pin retains all input bytes and measured files'
     )
-    assert REFERENCE.observe(source, tmp_path / 'saved') == expected['saved_sha256'], (
+    assert observe_legacy_pin(source, tmp_path / 'saved') == expected['saved_sha256'], (
         ' post-feature serialization regression pin retains the full saved inventory and bytes'
     )
 
@@ -269,11 +330,18 @@ def test_byte_witness_observes_value_order_inventory_and_measured_files(tmp_path
     )
 
 
-@pytest.mark.parametrize('case', POLYNOMIAL_CASES + RELATION_CASES + ADP_AND_SCAN_CASES)
+@pytest.mark.parametrize(
+    'case', POLYNOMIAL_CASES + RELATION_CASES + ADP_AND_SCAN_CASES + sorted(NEW_FIXED_POINTS)
+)
 def test_c13_t6_new_projects_have_a_second_save_fixed_point(tmp_path, case):
     inputs = REFERENCE.inputs()
     assert case in inputs, ' every new declared project needs its serialization witness'
     before = REFERENCE.hashes(inputs[case])
+    if case in NEW_FIXED_POINTS:
+        retained = restored_source(inputs[case], tmp_path)
+        assert REFERENCE.hashes(retained) == NEW_FIXED_POINTS[case]['input_sha256'], (
+            'the new fixed-point witness retains every independently recorded input byte'
+        )
     first = tmp_path / 'first'
     second = tmp_path / 'second'
     once = REFERENCE.observe(inputs[case], first)
@@ -284,3 +352,22 @@ def test_c13_t6_new_projects_have_a_second_save_fixed_point(tmp_path, case):
     assert REFERENCE.hashes(inputs[case]) == before, (
         ' saving the new projects must preserve every source model and measured-data byte'
     )
+
+
+def test_c34_t28_live_main_provenance_cannot_hide_changed_scientific_input(tmp_path, monkeypatch):
+    case = 'repo:docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project'
+    source = REFERENCE.inputs()[case]
+    # The main boundary must reach the live tree before any historical metadata projection.
+    test_save_matches_the_labelled_pre_move_regression_pin(tmp_path / 'ordinary', case)
+    changed = tmp_path / 'changed-input'
+    shutil.copytree(source, changed)
+    structure = changed / 'structures/cosio.edi'
+    text = structure.read_text()
+    line = next(line for line in text.splitlines() if line.startswith('_cell.length_a'))
+    structure.write_text(text.replace(line, '_cell.length_a 12.375', 1))
+    assert structure.read_text() != text, (
+        'I22 the provenance escape must really alter a scientific input before saving'
+    )
+    monkeypatch.setattr(REFERENCE, 'inputs', lambda: {case: changed})
+    with pytest.raises(AssertionError, match='changed live example bytes'):
+        test_save_matches_the_labelled_pre_move_regression_pin(tmp_path / 'damaged', case)

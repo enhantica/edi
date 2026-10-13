@@ -3,12 +3,79 @@
 import re
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[3]
 
 
 def code(path):
     text = (ROOT / path).read_text()
     return re.sub(r'/\*.*?\*/|//[^\n]*', '', text, flags=re.DOTALL)
+
+
+def phase_capture_columns(text):
+    # Keep the shared C++ raw/quoted-string masking convention used by the
+    # numerical observer: a documented call cannot stand in for real code.
+    masked = re.sub(
+        r'R"(?P<raw>[^ ()\\\t\r\n]{0,16})\(.*?\)(?P=raw)"|'
+        r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|/\*.*?\*/|//[^\n]*',
+        lambda match: ' ' * len(match[0]),
+        text,
+        flags=re.DOTALL,
+    )
+    definitions = list(
+        re.finditer(r'\bPatternSource\s+capture_pattern\s*\([^;{}]*\)\s*\{', masked)
+    )
+    if len(definitions) != 1:
+        return False
+    start = definitions[0].end()
+    depth, end = 1, start
+    while end < len(masked) and depth:
+        depth += (masked[end] == '{') - (masked[end] == '}')
+        end += 1
+    if depth:
+        return False
+    body = masked[start : end - 1]
+    calls = list(
+        re.finditer(
+            r'source\.phases\s*=\s*group_reflections\s*\(\s*refln\.structure_id\.values\(\)',
+            body,
+        )
+    )
+    if len(calls) != 1:
+        return False
+    prefix = body[: calls[0].start()]
+    if prefix.count('{') != prefix.count('}'):
+        return False
+    return all(
+        token in masked
+        for token in (
+            'refln.position.values()',
+            'refln.index_h.values()',
+            'refln.index_k.values()',
+            'refln.index_l.values()',
+            'b.phase.structure_id == id',
+            'next.phase.structure_id = id',
+            'phases.push_back(std::move(b.phase))',
+        )
+    )
+
+
+@pytest.mark.parametrize('decoy', ['comment', 'quoted', 'raw', 'unused'])
+def test_phase_capture_requires_real_shared_grouping(decoy):
+    text = (ROOT / 'core/src/presentation.cpp').read_text()
+    call = re.search(r'source\.phases\s*=\s*group_reflections\([^;]*;', text)
+    assert call is not None, 'The phase grouping escape must reach the actual shared capture call'
+    fake = {
+        'comment': '/* ' + call[0] + ' */',
+        'quoted': '"' + call[0].replace('\n', ' ') + '";',
+        'raw': 'R"phase(' + call[0] + ')phase";',
+        'unused': 'auto unused = [&] { ' + call[0] + ' };',
+    }[decoy]
+    mutated = text[: call.start()] + fake + text[call.end() :]
+    assert not phase_capture_columns(mutated), (
+        'Phase capture must refuse inactive code and literals replacing its real grouping call'
+    )
 
 
 def test_shared_block_selector_has_bounded_square_icon_steps_and_file_labels():
@@ -129,7 +196,9 @@ def test_structure_loading_is_not_capped_at_one_and_chart_retains_phase_identity
         'The Structure page must show all structures and select the viewed one'
     )
     source = code('core/src/presentation.cpp')
-    assert 'refln.structure_id' in source and 'source.phases.push_back' in source, (
+    # Before: capture grouped rows inline. After: the same columns reach the
+    # shared group_reflections helper, which retains the phase ID and placement.
+    assert phase_capture_columns((ROOT / 'core/src/presentation.cpp').read_text()), (
         'Bragg capture must retain each calculated phase identity'
     )
     assert 'for (const PatternSource::Phase& phase : source.phases)' in source, (

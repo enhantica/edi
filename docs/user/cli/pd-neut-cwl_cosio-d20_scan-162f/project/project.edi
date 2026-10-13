@@ -1,8 +1,8 @@
 _edi.schema_version 3
 
 _metadata.name             cosio_d20_scan_162f
-_metadata.title            "Co2SiO4 D20 cooling scan, 162 files"
-_metadata.description      "The cooling run of the D20 scan, 497.4 K down to 50.4 K"
+_metadata.title "Co₂SiO₄ [Pnma] · D20 @ ILL"
+_metadata.description "Cooling scan · 162 patterns from 497.4 to 50.4 K"
 _metadata.created          "09 Sep 2026 07:33:40"
 _metadata.last_modified    "23 Sep 2026 14:06:27"
 _metadata.timestamp        2026-09-09T07:34:35+00:00
@@ -34,3 +34,8 @@ _structure_style.adp_probability 0.99
 _structure_style.atom_scale 0.3
 
 _verbosity.fit short
+_metadata.purpose "refinement"
+_metadata.dimensionality "1D"
+_metadata.instrument "D20"
+_metadata.facility "ILL"
+_metadata.polarisation "none"

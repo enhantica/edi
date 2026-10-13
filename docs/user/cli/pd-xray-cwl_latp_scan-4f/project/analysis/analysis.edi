@@ -1,0 +1,48 @@
+_edi.schema_version 3
+
+_fitting_mode.type sequential
+
+_minimizer.type crysta
+_minimizer.max_iterations 1000
+_minimizer.descent fast_descent
+_minimizer.chi_square_tolerance 1e-4
+
+loop_
+_alias.id
+_alias.parameter_unique_name
+z_Ti1 latp.atom_site.Ti1.fract_z
+z_Al1 latp.atom_site.Al1.fract_z
+biso_Li1 latp.atom_site.Li1.adp_iso
+biso_Ti1 latp.atom_site.Ti1.adp_iso
+biso_Al1 latp.atom_site.Al1.adp_iso
+biso_P1 latp.atom_site.P1.adp_iso
+biso_O1 latp.atom_site.O1.adp_iso
+biso_O2 latp.atom_site.O2.adp_iso
+b2_Al1 alpo4_c2221.atom_site.Al1.adp_iso
+b2_P1 alpo4_c2221.atom_site.P1.adp_iso
+b2_O1 alpo4_c2221.atom_site.O1.adp_iso
+b2_O2 alpo4_c2221.atom_site.O2.adp_iso
+b3_Al1 alpo4_p63mc.atom_site.Al1.adp_iso
+b3_P1 alpo4_p63mc.atom_site.P1.adp_iso
+b3_O1 alpo4_p63mc.atom_site.O1.adp_iso
+b3_O2 alpo4_p63mc.atom_site.O2.adp_iso
+
+loop_
+_constraint.id
+_constraint.expression
+z_Al1 "z_Al1 = z_Ti1"
+biso_Ti1 "biso_Ti1 = biso_Li1 - 0.10677"
+biso_Al1 "biso_Al1 = biso_Li1 - 0.10677"
+biso_P1 "biso_P1 = biso_Li1 + 0.08231"
+biso_O1 "biso_O1 = biso_Li1 + 0.40189"
+biso_O2 "biso_O2 = biso_Li1 - 0.02618"
+b2_P1 "b2_P1 = b2_Al1"
+b2_O1 "b2_O1 = b2_Al1"
+b2_O2 "b2_O2 = b2_Al1"
+b3_P1 "b3_P1 = b3_Al1"
+b3_O1 "b3_O1 = b3_Al1"
+b3_O2 "b3_O2 = b3_Al1"
+
+_sequential_fit.data_dir experiments/latp_scan
+_sequential_fit.file_pattern *.txt
+_sequential_fit.reverse false

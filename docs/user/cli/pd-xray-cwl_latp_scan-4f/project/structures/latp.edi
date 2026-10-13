@@ -1,0 +1,34 @@
+data_latp
+
+_edi.schema_version 3
+
+_cell.length_a 8.378689()
+_cell.length_b 8.378689
+_cell.length_c 20.743496()
+_cell.angle_alpha 90.
+_cell.angle_beta 90.
+_cell.angle_gamma 120.
+
+_space_group.name_h_m "R -3 c"
+_space_group.coord_system_code h
+
+_geom.min_bond_distance_cutoff 0.
+_geom.bond_distance_inc 0.25
+
+loop_
+_atom_site.id
+_atom_site.type_symbol
+_atom_site.fract_x
+_atom_site.fract_y
+_atom_site.fract_z
+_atom_site.wyckoff_letter
+_atom_site.multiplicity
+_atom_site.occupancy
+_atom_site.adp_iso
+_atom_site.adp_type
+Li1 Li 0. 0. 0. b 6 1. 0.21537() Biso
+Ti1 Ti 0. 0. 0.14041() c 12 0.85 0.10860 Biso
+Al1 Al 0. 0. 0.14041 c 12 0.15 0.10860 Biso
+P1 P 0.28467() 0. 0.25 e 18 1. 0.29768 Biso
+O1 O 0.16867() 0.98724() 0.18578() f 36 1. 0.61726 Biso
+O2 O 0.17844() 0.14967() 0.08134() f 36 1. 0.18919 Biso

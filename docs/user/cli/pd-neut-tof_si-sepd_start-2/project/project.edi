@@ -1,5 +1,10 @@
 _edi.schema_version 2
 
 _metadata.name             si_sepd_s2
-_metadata.title            " graded start s2 of refine-si-sepd"
-_metadata.description      ?
+_metadata.title "Silicon [Fd-3m] · SEPD @ Argonne"
+_metadata.description "Silicon standard · Jorgensen–Von Dreele profile · Starting model 2"
+_metadata.purpose "refinement"
+_metadata.dimensionality "1D"
+_metadata.instrument "SEPD"
+_metadata.facility "Argonne"
+_metadata.polarisation "none"

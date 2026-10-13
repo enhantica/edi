@@ -76,25 +76,31 @@ def test_owner_cadence_has_only_quick_and_full_entry_points() -> None:
     )
 
     groups = json.loads((ROOT / 'tests/test-groups.json').read_text(encoding='utf-8'))['groups']
-    regular = {
-        name: group
-        for name, group in groups.items()
-        if name not in {'macos-smoke', 'nightly-full'}
-    }
     quick = {
         name
-        for name, group in regular.items()
+        for name, group in groups.items()
         if re.search(r'quick|ci-on-pr', f'{name} {group.get("task", "")}', re.IGNORECASE)
     }
     full = {
         name
-        for name, group in regular.items()
+        for name, group in groups.items()
         if re.search(r'full|merge', f'{name} {group.get("task", "")}', re.IGNORECASE)
     }
     assert len(quick) == 1, 'the cadence needs exactly one quick/CI-PR group'
     assert len(full) == 1, 'the cadence needs exactly one full/merge group'
-    assert set(regular) == quick | full | {'app'}, (
-        'regular cadence keeps quick/full and app; macOS policy adds only its two named groups'
+    assert set(groups) == quick | full | {'app', 'nightly'}, (
+        'quick/full retain cadence; app and the exact nightly cohort name execution groups'
+    )
+    assert groups['nightly']['tiers'] == ['system'], (
+        'the nightly supplement retains the system tier without inventing another cadence'
+    )
+    assert groups['nightly']['paths'] == [
+        'tests/system/py/test_scan_app_execution.py',
+        'tests/system/py/test_scan_accident_paths.py',
+        'tests/system/py/test_plain_data_app.py',
+    ], 'the nightly supplement names exactly the authorized macOS PR omissions'
+    assert groups['nightly']['task'] == 'group-nightly', (
+        'the nightly supplement retains its declared executable entry point'
     )
     assert groups['app']['tiers'] == ['integration/app'], (
         ': only app-dependent Python integration tests belong to the app group'

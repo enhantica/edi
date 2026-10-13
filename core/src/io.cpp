@@ -1794,15 +1794,18 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
 
     const Loop* excluded = block.loop_with("_excluded_region.start");
     if (excluded != nullptr) {
-        std::vector<std::pair<double, double>> regions;
+        std::vector<std::shared_ptr<ExcludedRegion>> regions;
         for (const auto& row : excluded->rows) {
             const double start = to_double(loop_cell(*excluded, row, "_excluded_region.start", where),
                                            where);
             const double end =
                 to_double(loop_cell(*excluded, row, "_excluded_region.end", where), where);
-            regions.emplace_back(start, end);
+            ExcludedRegion region(start, end);
+            if (excluded->column("_excluded_region.id") >= 0)
+                region.id = loop_cell(*excluded, row, "_excluded_region.id", where);
+            regions.push_back(std::make_shared<ExcludedRegion>(region));
         }
-        experiment.excluded_regions = std::move(regions);
+        experiment.excluded_regions.assign(std::move(regions));
     }
 
     // The file's reflections, kept as read (model.hpp ExperimentBase::carried_reflections).
@@ -1860,22 +1863,29 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
             read_into(term.coef,
                       parse_parameter(loop_cell(*terms, row, spec::background_coef.edi_names[0], where), where),
                       where);
+            // The term's id names its coefficient; a file without ids gives each its ordinal, as crysta's reader does.
+            term.id = terms->column("_background.id") >= 0 ? loop_cell(*terms, row, "_background.id", where)
+                                                            : std::to_string(experiment.background_terms.size() + 1);
             experiment.background_terms.push_back(std::move(term));
         }
     }
 
     const Loop* background = block.loop_with("_background.position");
     if (background != nullptr) {
+        std::vector<std::shared_ptr<LineSegment>> points;
         for (const auto& row : background->rows) {
             LineSegment point;
+            if (background->column("_background.id") >= 0)
+                point.id = loop_cell(*background, row, "_background.id", where);
             point.position = to_double(loop_cell(*background, row, "_background.position", where), where);
             read_into(point.intensity,
                       parse_parameter(loop_cell(*background, row,
                                                 spec::background_intensity.edi_names[0], where),
                                       where),
                       where);
-            experiment.background.push_back(std::move(point));
+            points.push_back(std::make_shared<LineSegment>(std::move(point)));
         }
+        experiment.background.assign(std::move(points));
     }
     experiment.data = parse_measured_data(block, resolved.mode, where);
 
@@ -1995,19 +2005,35 @@ struct ParameterSlot {
     ParameterPtr parameter;
 };
 
+// A structure or an experiment the walk spells by a new name, as it will be once the rename is written: the
+// structure by its canonical key (its links and texture rows follow it), the experiment by its own name.
+struct KeyRename {
+    std::string structure;
+    const ExperimentBase* experiment = nullptr;
+    std::string to;
+};
+
 template <typename ProjectT>
-auto parameter_slots(ProjectT& project) {
+auto parameter_slots(ProjectT& project, const KeyRename* rename = nullptr) {
     using ParameterPtr = decltype(&project.structures.front()->cell.length_a);
     std::vector<ParameterSlot<ParameterPtr>> slots;
     const auto add = [&slots](std::string id, std::string unique_name, ParameterPtr parameter) {
         slots.push_back({std::move(id), std::move(unique_name), parameter});
+    };
+    const auto structure_name = [rename](const std::string& name) -> const std::string& {
+        const bool renamed =
+            rename != nullptr && !rename->structure.empty() && datablock_key(name, "structure") == rename->structure;
+        return renamed ? rename->to : name;
+    };
+    const auto experiment_name = [rename](const ExperimentBase& experiment) -> const std::string& {
+        return rename != nullptr && rename->experiment == &experiment ? rename->to : experiment.name.value();
     };
     // Several structures name each one's slots by its datablock key, as crysta's fit_state.hpp; one
     // structure keeps `structure.`.
     const bool several_structures = project.structures.size() > 1;
     for (auto& structure_item : project.structures) {
         auto& structure = *structure_item;
-        const std::string block = datablock_key(structure.name.value(), "structure");
+        const std::string block = datablock_key(structure_name(structure.name.value()), "structure");
         const std::string base = several_structures ? "structure." + block + "." : std::string("structure.");
         const auto cell = [&](const char* name, ParameterPtr parameter) {
             add(base + "cell." + name, block + ".cell." + name, parameter);
@@ -2044,18 +2070,17 @@ auto parameter_slots(ProjectT& project) {
     for (auto& experiment_item : project.experiments) {
         auto& experiment = *experiment_item;
         // ADR-0016: the canonical datablock key, as crysta's writer composes it.
-        const std::string prefix = datablock_key(experiment.name, "experiment") + ".";
+        const std::string prefix = datablock_key(experiment_name(experiment), "experiment") + ".";
         // A link with no structure id names its scale by the project's structure, as crysta's walk
-        // does (structure_link_id); several links prefix their own slots by structure.
+        // does (structure_link_id). Every link prefixes its own slots by its structure, whatever their
+        // number, as every loop row is named by its id (the owner, 2026-10-11).
         const auto entry_of = [&](const std::string& linked) {
             return datablock_key(
-                linked.empty() && !project.structures.empty() ? project.structures.front()->name.value() : linked,
+                structure_name(linked.empty() && !project.structures.empty() ? project.structures.front()->name.value()
+                                                                             : linked),
                 "structure");
         };
-        const bool several_links = experiment.linked_structures.size() > 1;
-        const auto phase_prefix = [&](const std::string& structure_id) {
-            return several_links ? prefix + datablock_key(structure_id, "structure") + "." : prefix;
-        };
+        const auto phase_prefix = [&](const std::string& structure_id) { return prefix + entry_of(structure_id) + "."; };
         const auto peak = [&](const std::string& name, ParameterPtr parameter) {
             add(prefix + name, prefix + "peak." + name, parameter);
         };
@@ -2158,25 +2183,24 @@ auto parameter_slots(ProjectT& project) {
         }
         // The preferred-orientation pair, crysta fit_state.hpp's order (after absorption).
         for (auto& row : experiment.preferred_orientation) {
-            const std::string texture = prefix + "preferred_orientation." + row->structure_id.value() + ".";
+            const std::string texture = prefix + "preferred_orientation." + structure_name(row->structure_id.value()) + ".";
             add(phase_prefix(row->structure_id) + "march_r", texture + "march_r", &row->march_r);
             add(phase_prefix(row->structure_id) + "march_random_fract", texture + "march_random_fract",
                 &row->march_random_fract);
         }
         // The declared model's parameters by row (crysta fit_state.hpp) — the line-segment
         // intensities, or a polynomial or Chebyshev model's coefficients.
+        // Each row by its id, never its position (the owner, 2026-10-11), as `<experiment>.background.<id>`. An older
+        // file's position name is refused on load (refuse_older_parameter_name).
         if (experiment.background_type == "line-segment") {
-            for (std::size_t index = 0; index < experiment.background.size(); ++index) {
-                // The written `_background.id` is the row ordinal, from 1.
-                add(prefix + "background[" + std::to_string(index) + "]",
-                    prefix + "background." + std::to_string(index + 1) + ".intensity",
-                    &experiment.background[index]->intensity);
+            for (const auto& point : experiment.background) {
+                add(prefix + "background." + point->id.value(),
+                    prefix + "background." + point->id.value() + ".intensity", &point->intensity);
             }
         } else {
-            for (std::size_t index = 0; index < experiment.background_terms.size(); ++index) {
-                add(prefix + "background[" + std::to_string(index) + "]",
-                    prefix + "background." + std::to_string(index + 1) + ".coef",
-                    &experiment.background_terms[index]->coef);
+            for (const auto& term : experiment.background_terms) {
+                add(prefix + "background." + term->id.value(),
+                    prefix + "background." + term->id.value() + ".coef", &term->coef);
             }
         }
     }
@@ -2194,7 +2218,91 @@ auto fit_state_slots(ProjectT& project) {
     return slots;
 }
 
+void refuse_older(const std::string& name, const std::regex& older) {
+    if (std::regex_match(name, older)) {
+        throw IoError("the project was saved by an older version: '" + name +
+                      "' is an older parameter name, which this version no longer reads");
+    }
+}
+
+// Only the newest format is read (the owner, 2026-10-12). A name that does not resolve and names a loop row by its
+// position (`<experiment>.background[<index>]` and its fields, `<experiment>.background.<ordinal>.coef` or `.intensity`,
+// `<experiment>.linked_structure.<index>.<field>` or `.preferred_orientation.<index>.<field>`, a one-link
+// experiment's `<experiment>.scale`, `.march_r`, `.march_random_fract`) is refused, naming it: the project was saved
+// by an older version. Any other name is left to the caller's own resolution. The loader checks every alias and
+// `_fit_parameter.id`, and each correlation endpoint with refuse_older_correlation_name.
+void refuse_older_parameter_name(Project& project, const std::string& name) {
+    for (auto& slot : parameter_slots(project)) {
+        if (slot.id == name || slot.unique_name == name) {
+            return;
+        }
+    }
+    static const std::regex older(
+        R"(^[^.]+\.(background\[[0-9]+\](\.[a-z_]+)?|background\.[0-9]+\.(coef|intensity))"
+        R"(|(linked_structure|preferred_orientation)\.[0-9]+\.[a-z_]+|scale|march_r|march_random_fract)$)");
+    refuse_older(name, older);
+}
+
+// A fit correlation's endpoint may name a parameter the project no longer has: the coefficient is history. Only the
+// spellings no current version writes are refused, as a numeric row or structure id is current.
+void refuse_older_correlation_name(const std::string& name) {
+    static const std::regex older(R"(^[^.]+\.(background\[[0-9]+\](\.[a-z_]+)?|scale|march_r|march_random_fract)$)");
+    refuse_older(name, older);
+}
+
 }  // namespace
+
+detail::ParameterRenames detail::parameter_renames(const Project& project, const char* kind, const ItemKey& key,
+                                                   const std::string& to) {
+    KeyRename rename;
+    rename.to = to;
+    ParameterRenames names;
+    names.structure = std::string(kind) == "structure";
+    names.from = datablock_key(key.value(), kind);
+    names.to = datablock_key(to, kind);
+    if (names.structure) {
+        rename.structure = names.from;
+    } else {
+        for (const auto& experiment : project.experiments) {
+            if (&experiment->name == &key) {
+                rename.experiment = experiment.get();
+            }
+        }
+        if (rename.experiment == nullptr) {
+            return {};
+        }
+    }
+    if (names.from == names.to) {
+        return {};
+    }
+    // The walk names the same parameters in the same order either way. Each role has its own map, so a
+    // public name and a `_fit_parameter.id` spelled alike never cancel each other.
+    const auto before = parameter_slots(project);
+    const auto after = parameter_slots(project, &rename);
+    const auto note = [](std::map<std::string, std::string>& map, std::set<std::string>& shared,
+                         const std::string& from, const std::string& next) {
+        if (shared.contains(from)) {
+            return;
+        }
+        const auto [at, added] = map.emplace(from, next);
+        if (!added && at->second != next) {
+            map.erase(at);
+            shared.insert(from);
+        }
+    };
+    std::set<std::string> shared_unique;
+    std::set<std::string> shared_compact;
+    for (std::size_t index = 0; index < before.size() && index < after.size(); ++index) {
+        note(names.compact, shared_compact, before[index].id, after[index].id);
+        note(names.unique, shared_unique, before[index].unique_name, after[index].unique_name);
+        names.current_unique.insert(before[index].unique_name);
+        names.current_compact.insert(before[index].id);
+    }
+    const auto unchanged = [](const auto& entry) { return entry.first == entry.second; };
+    std::erase_if(names.unique, unchanged);
+    std::erase_if(names.compact, unchanged);
+    return names;
+}
 
 // ---- public entry points --------------------------------------------------------------------------
 
@@ -2957,6 +3065,58 @@ void rename_experiment(Project& project, ExperimentBase& experiment, const std::
     experiment.name = name;
 }
 
+namespace {
+
+// The first `<name>_copy`, `<name>_copy2`, … that `held` (lower case) does not contain.
+std::string copy_name(const std::string& name, const std::set<std::string>& held) {
+    const auto lower = [](std::string text) {
+        std::transform(text.begin(), text.end(), text.begin(),
+                       [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        return text;
+    };
+    for (int n = 1;; ++n) {
+        std::string candidate = name + '_' + "copy" + (n == 1 ? std::string() : std::to_string(n));
+        if (!held.contains(lower(candidate))) {
+            return candidate;
+        }
+    }
+}
+
+std::set<std::string> lower_names(const std::vector<std::string>& names) {
+    std::set<std::string> out;
+    for (std::string name : names) {
+        std::transform(name.begin(), name.end(), name.begin(),
+                       [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        out.insert(std::move(name));
+    }
+    return out;
+}
+
+}  // namespace
+
+BraggPdExperiment experiment_copy(const Project& project, const BraggPdExperiment& experiment) {
+    std::vector<std::string> names;
+    for (const auto& held : project.experiments) {
+        names.push_back(KeyTraits<BraggPdExperiment>::canonical(held->name));
+    }
+    BraggPdExperiment copy(experiment);
+    copy.name = copy_name(KeyTraits<BraggPdExperiment>::canonical(experiment.name), lower_names(names));
+    copy.fit_n_data_points.reset();
+    copy.fit_prof_wr_factor.reset();
+    copy.fit_chi_square.reset();
+    return copy;
+}
+
+Structure structure_copy(const Project& project, const Structure& structure) {
+    std::vector<std::string> names;
+    for (const auto& held : project.structures) {
+        names.push_back(KeyTraits<Structure>::canonical(held->name));
+    }
+    Structure copy(structure);
+    copy.name = copy_name(KeyTraits<Structure>::canonical(structure.name), lower_names(names));
+    return copy;
+}
+
 Project empty_project(const std::string& name, const std::string& description) {
     Project project;
     project.structures.clear();
@@ -3199,8 +3359,10 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
             for (const auto& row : aliases->rows) {
                 ParameterAlias alias;
                 alias.id = loop_cell(*aliases, row, "_alias.id", analysis_file.string());
-                alias.parameter_unique_name = loop_cell(*aliases, row, "_alias.parameter_unique_name",
-                                                        analysis_file.string());
+                // An older file's position name is refused, never guessed.
+                const std::string name = loop_cell(*aliases, row, "_alias.parameter_unique_name", analysis_file.string());
+                refuse_older_parameter_name(project, name);
+                alias.parameter_unique_name = name;
                 project.aliases.push_back(std::move(alias));
             }
         }
@@ -3346,6 +3508,38 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
                 }
             }
         }
+        // The fit's parameter correlations (diffraction-lib's `_fit_parameter_correlation`), crysta's read mirrored:
+        // read whether or not a result is held, as a scan keeps each file's pairs with none. `file_path` is optional;
+        // a coefficient outside [-1, 1] fails closed.
+        if (const Loop* correlations = block.loop_with("_fit_parameter_correlation.id")) {
+            const std::string where = analysis_file.string();
+            const bool per_file = correlations->column("_fit_parameter_correlation.file_path") >= 0;
+            std::vector<ItemVec<FitParameterCorrelation>::Ptr> rows;
+            rows.reserve(correlations->rows.size());
+            for (const auto& row : correlations->rows) {
+                auto pair = std::make_shared<FitParameterCorrelation>();
+                pair->id = loop_cell(*correlations, row, "_fit_parameter_correlation.id", where);
+                pair->source_kind = loop_cell(*correlations, row, "_fit_parameter_correlation.source_kind", where);
+                pair->parameter_unique_name_i =
+                    loop_cell(*correlations, row, "_fit_parameter_correlation.parameter_unique_name_i", where);
+                pair->parameter_unique_name_j =
+                    loop_cell(*correlations, row, "_fit_parameter_correlation.parameter_unique_name_j", where);
+                refuse_older_correlation_name(pair->parameter_unique_name_i.value());
+                refuse_older_correlation_name(pair->parameter_unique_name_j.value());
+                const std::string& text = loop_cell(*correlations, row, "_fit_parameter_correlation.correlation", where);
+                const double value = to_double(text, where);
+                if (std::isnan(value) || value < -1.0 || value > 1.0) {
+                    throw IoError("_fit_parameter_correlation row '" + pair->id.value() + "' has correlation '" + text +
+                                  "' outside [-1, 1]: " + where);
+                }
+                pair->correlation = text;
+                if (per_file) {
+                    pair->file_path = loop_cell(*correlations, row, "_fit_parameter_correlation.file_path", where);
+                }
+                rows.push_back(std::move(pair));
+            }
+            project.fit_result.correlations.assign(std::move(rows));
+        }
         // Read the persisted pre-fit snapshot back onto the model. Each row's id resolves
         // through the SAME slot walk the writer emits from, so the two cannot drift; an
         // unresolvable or duplicate id fails closed — a start state silently dropped would make
@@ -3373,8 +3567,9 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
             const bool has_tied = fit_rows->column("_fit_parameter.start_tied") >= 0;
             std::vector<std::pair<Parameter*, std::optional<std::string>>> tied_rows;
             for (const auto& row : fit_rows->rows) {
-                const std::string& id =
-                    loop_cell(*fit_rows, row, "_fit_parameter.id", analysis_file.string());
+                // An older file's position name is refused, never guessed.
+                const std::string id = loop_cell(*fit_rows, row, "_fit_parameter.id", analysis_file.string());
+                refuse_older_parameter_name(project, id);
                 const auto slot = slot_map.find(id);
                 if (slot == slot_map.end()) {
                     throw IoError("analysis.edi: _fit_parameter row '" + id +
@@ -3833,6 +4028,48 @@ void copy_fit_result(Project& to, const Project& from) {
         target.fit_prof_wr_factor = source.fit_prof_wr_factor;
         target.fit_chi_square = source.fit_chi_square;
     }
+}
+
+double correlation_value(const FitParameterCorrelation& row) {
+    double value = 0.0;
+    std::istringstream stream(row.correlation.value());
+    stream.imbue(std::locale::classic());
+    stream >> value;
+    return stream.fail() || !stream.eof() ? std::numeric_limits<double>::quiet_NaN() : value;
+}
+
+std::vector<ItemVec<FitParameterCorrelation>::Ptr> numbered_correlations(
+    const std::vector<FitParameterCorrelation>& pairs, const std::string& template_file) {
+    std::vector<ItemVec<FitParameterCorrelation>::Ptr> rows;
+    rows.reserve(pairs.size());
+    std::set<std::string> taken;
+    std::size_t next = 0;
+    const auto add = [&](const FitParameterCorrelation& pair) {
+        auto row = std::make_shared<FitParameterCorrelation>(pair);
+        if (row->id.value().empty() || taken.contains(row->id.value())) {
+            std::string fresh;
+            do {
+                fresh = std::to_string(++next);
+            } while (taken.contains(fresh));
+            row->id = fresh;
+        }
+        taken.insert(row->id.value());
+        rows.push_back(std::move(row));
+    };
+    const auto first = [&template_file](const FitParameterCorrelation& pair) {
+        return !template_file.empty() && pair.file_path.value() == template_file;
+    };
+    for (const FitParameterCorrelation& pair : pairs) {
+        if (first(pair)) {
+            add(pair);
+        }
+    }
+    for (const FitParameterCorrelation& pair : pairs) {
+        if (!first(pair)) {
+            add(pair);
+        }
+    }
+    return rows;
 }
 
 void clear_fit_result(Project& project) {

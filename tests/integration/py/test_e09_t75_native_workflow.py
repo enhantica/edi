@@ -11,7 +11,7 @@ from tests.fixtures.e09_t75_workflow import active, reached
 from tests.integration.py.ci_runner_contract import platform_job, self_hosted_runners
 
 ROOT = Path(__file__).resolve().parents[3]
-CONSUMERS = ['audit', 'core', 'notebooks', 'cli-python', 'docs', 'app']
+CONSUMERS = ['audit', 'core', 'system', 'notebooks', 'cli-python', 'docs', 'app']
 
 
 def jobs():
@@ -39,9 +39,21 @@ def public_build_boundary(data, name, platform=None):
     )
     if platform is not None:
         expected_os = {'linux-64': 'Linux', 'osx-arm64': 'macOS'}[platform]
-        assert sum(runner[1] == expected_os for runner in runners) == 1, (
-            'each public native boundary must execute on its exact prescribed SDK platform'
-        )
+        if name == 'system':
+            legs = job['strategy']['matrix']['include']
+            expected = {
+                (os, sdk, part)
+                for os, sdk in (('Linux', 'linux-64'), ('macOS', 'osx-arm64'))
+                for part in (1, 2, 3)
+            }
+            assert (
+                len(legs) == 6
+                and {(leg.get('platform'), leg.get('sdk'), leg.get('part')) for leg in legs}
+                == expected
+            ), 'each system part binds exactly its prescribed SDK, OS and part once'
+        assert sum(runner[1] == expected_os for runner in runners) == (
+            3 if name == 'system' else 1
+        ), 'each public native boundary must execute on its exact prescribed SDK platform'
     if name != 'notebooks':
         terms = str(job.get('if', '')).removeprefix('${{').removesuffix('}}').split('&&')
         assert any(
@@ -67,7 +79,7 @@ def public_build_boundary(data, name, platform=None):
             event,
             core_only=True,
             states={'changes': 'success', 'native': 'success', 'core': 'success'},
-        ) == (name in {'native', 'core'}), (
+        ) == (name in {'native', 'core', 'system'}), (
             'core-only repairs retain native/core and skip every downstream public SDK job'
         )
     assert job.get('environment') == 'crysta-sdk', (
@@ -78,7 +90,7 @@ def public_build_boundary(data, name, platform=None):
     expected_needs = {'changes'}
     if name == 'notebooks':
         expected_needs |= {'native', 'core'}
-    elif name not in {'native', 'core'}:
+    elif name not in {'native', 'core', 'system'}:
         expected_needs.add('core')
     assert set(needs or []) == expected_needs, (
         'public native jobs resolve the source once and build locally rather than download objects'
@@ -146,6 +158,23 @@ def test_public_sdk_boundary_rejects_guard_and_core_only_escapes(condition):
     damaged['audit']['if'] = condition
     with pytest.raises(AssertionError):
         public_build_boundary(damaged, 'audit')
+
+
+@pytest.mark.parametrize('damage', ['missing-part', 'duplicate-part', 'wrong-sdk'])
+def test_public_system_boundary_proves_every_part_and_sdk(damage):
+    data = jobs()
+    for platform in ('linux-64', 'osx-arm64'):
+        public_build_boundary(data, 'system', platform)
+    damaged = copy.deepcopy(data)
+    legs = damaged['system']['strategy']['matrix']['include']
+    if damage == 'missing-part':
+        legs.pop()
+    elif damage == 'duplicate-part':
+        legs[-1] = copy.deepcopy(legs[-2])
+    else:
+        legs[-1]['sdk'] = 'linux-64'
+    with pytest.raises(AssertionError, match='each system part'):
+        public_build_boundary(damaged, 'system', 'osx-arm64')
 
 
 def test_d6_one_unfiltered_native_matrix_uploads_the_prescribed_artifacts():
@@ -252,12 +281,15 @@ ROSTER = [
     (job, platform)
     for job in CONSUMERS
     for platform in (
-        ('linux-64', 'osx-arm64') if job in {'core', 'cli-python', 'app'} else ('linux-64',)
+        ('linux-64', 'osx-arm64')
+        if job in {'core', 'system', 'cli-python', 'app'}
+        else ('linux-64',)
     )
 ]
 FIRST_USE = {
     'audit': 'per-pr-audit',
     'core': 'crysta-consumer',
+    'system': 'system-tests-part',
     'notebooks': 'notebook-tests',
     'cli-python': 'cli-projects',
     'docs': 'notebook-exec-ci',

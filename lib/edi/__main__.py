@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import math
 import signal
 import sys
 import tempfile
@@ -397,10 +398,43 @@ def _run_human(project: edi.Project, verbosity, project_name: str, *, clock=time
                 measured_completed=tally.completed - prior[0],
             )
         )
+        skipped = _skipped_line(project)
+        if skipped:
+            sys.stdout.write(skipped + '\n')
         sys.stdout.flush()
         return _exit_code(outcome)
 
     return _stream_single_fit(project, verbosity, project_name)
+
+
+def _skipped_line(project: edi.Project) -> str:
+    """What the scan's results index says about its skipped and refused files.
+
+    The index reads analysis/scan-notes.csv by the rule the app and crysta's resume apply, so a
+    file that breaks it is reported as a diagnostic, never as some other state.
+    """
+    notes = getattr(project, '_scan_notes', None)
+    if notes is None or getattr(getattr(project, 'metadata', None), 'path', None) is None:
+        return ''
+    try:
+        report = notes()
+    except ValueError as error:
+        return f'Scan notes: {error}'
+    files, points, refused = report['skipped'], report['negative_points'], report['refused']
+    out = []
+    if files or points:
+        out.append(
+            f'Skipped: {files} file(s) with no intensity above zero, '
+            f'{points} point(s) with a negative intensity'
+        )
+    if refused:
+        out.append(f'Refused: {len(refused)} file(s), recorded as failed')
+        out.extend(f'  {name}: {why}' for name, why in refused[:10])
+        if len(refused) > 10:
+            out.append(f'  ... and {len(refused) - 10} more')
+    if out:
+        out.append('(analysis/scan-notes.csv)')
+    return '\n'.join(out)
 
 
 class _ScanTally:
@@ -421,8 +455,9 @@ class _ScanTally:
 
     def add(self, record: object) -> None:
         chi = record.reduced_chi_square
-        self.chi2_min = chi if self.completed == 0 else min(self.chi2_min, chi)
-        self.chi2_max = chi if self.completed == 0 else max(self.chi2_max, chi)
+        if not math.isnan(chi):  # a refused file has none
+            self.chi2_min = chi if math.isnan(self.chi2_min) else min(self.chi2_min, chi)
+            self.chi2_max = chi if math.isnan(self.chi2_max) else max(self.chi2_max, chi)
         self.completed += 1
         self.ok += 1 if record.converged else 0
 

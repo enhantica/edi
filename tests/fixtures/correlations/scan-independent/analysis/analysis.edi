@@ -1,0 +1,5 @@
+_edi.schema_version 3
+_minimizer.max_iterations 80
+_fitting_mode.type independent
+_sequential_fit.data_dir experiments/scan
+_sequential_fit.file_pattern *.xy

@@ -33,7 +33,7 @@ EaElements.GroupBox {
             readonly property real fieldWidth: (EaStyle.Sizes.sideBarContentWidth - grid.columnSpacing) / 2
 
             columns: 2
-            columnSpacing: AppSizes.fieldSpacing
+            columnSpacing: AppSizes.inputSpacing
 
             SelectorField {
                 objectName: "structure.appearance.atomView"

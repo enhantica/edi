@@ -1,0 +1,76 @@
+{
+  "schema": 1,
+  "source": {
+    "engine": "crysta via python -m edi (sequential, fast_descent, chi_square_tolerance 1e-4, OMP_NUM_THREADS=1)",
+    "artifact": "machine record (--report machine): the last fitted file's state; per-file rows in project/analysis/results.csv",
+    "provenance": "PROVENANCE.md"
+  },
+  "quantities": {
+    "n_free": {
+      "value": 54.0,
+      "kind": "reference",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    },
+    "reduced_chi_square": {
+      "value": 6.971255464,
+      "kind": "regression-pin",
+      "tol_abs": 1e-06,
+      "tol_rel": null
+    },
+    "iterations": {
+      "value": 3.0,
+      "kind": "regression-pin",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    },
+    "param.latp.cell_length_a.value": {
+      "value": 8.378689,
+      "kind": "reference",
+      "tol_abs": 0.0005,
+      "tol_rel": null
+    },
+    "param.latp.cell_length_c.value": {
+      "value": 20.743496,
+      "kind": "reference",
+      "tol_abs": 0.0025,
+      "tol_rel": null
+    },
+    "param.latp.Ti1.fract_z.value": {
+      "value": 0.14041,
+      "kind": "reference",
+      "tol_abs": 0.0003,
+      "tol_rel": null
+    },
+    "param.latp.P1.fract_x.value": {
+      "value": 0.28467,
+      "kind": "reference",
+      "tol_abs": 0.001,
+      "tol_rel": null
+    },
+    "param.broad_gauss_u.value": {
+      "value": 0.378068,
+      "kind": "reference",
+      "tol_abs": 0.03,
+      "tol_rel": null
+    },
+    "param.broad_gauss_w.value": {
+      "value": 0.000659,
+      "kind": "reference",
+      "tol_abs": 6e-05,
+      "tol_rel": null
+    },
+    "param.mixing_eta_0.value": {
+      "value": 0.53317,
+      "kind": "reference",
+      "tol_abs": 0.035,
+      "tol_rel": null
+    },
+    "param.latp.Li1.adp_iso.value": {
+      "value": 0.1898,
+      "kind": "reference",
+      "tol_abs": 0.11,
+      "tol_rel": null
+    }
+  }
+}

@@ -7,6 +7,9 @@
 #include <QStringList>
 #include <QtQml/qqmlregistration.h>
 
+#include <string>
+#include <vector>
+
 #include "block_text.hpp"
 #include "category_list_model.hpp"
 #include "edi/model.hpp"
@@ -222,7 +225,7 @@ class AnalysisViewModel : public QObject {
     void lastErrorChanged();
 
    private:
-    bool scan_declared_ = false;
+    std::vector<std::string> fitting_modes_;  // the modes that apply, as the selector offers them
     void setLastError(const QString& error);
 
     edi::Project& project_;

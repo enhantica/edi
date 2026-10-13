@@ -6438,3 +6438,6 @@ _data.intensity_meas_su
 163.65642 3198 972.91 61.70115
 163.70648 3199 1058.06 64.3423
 163.75638 3200 1061.08 64.75653
+_experiment_type.sample_form "powder"
+_experiment_type.radiation_probe "neutron"
+_experiment_type.scattering_type "bragg"

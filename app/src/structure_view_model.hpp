@@ -7,7 +7,10 @@
 #include <QStringList>
 #include <QtQml/qqmlregistration.h>
 
+#include <cstdint>
 #include <map>
+#include <optional>
+#include <random>
 
 #include "block_text.hpp"
 #include "category_list_model.hpp"
@@ -114,14 +117,31 @@ class AtomSiteListModel : public RowTableModel {
     Q_OBJECT
     QML_ELEMENT
     QML_UNCREATABLE("Belongs to a structure")
+    // The space group's Wyckoff positions (edi::wyckoff_positions): the letters; each position's name, its
+    // multiplicity and letter ("4a"), which the closed WP box shows; and its list entry, the name and its coordinates
+    // with fraction glyphs ("8c: x, ¼, −x+½"; the owner, 2026-10-08 and 2026-10-11). Display only.
+    Q_PROPERTY(QStringList wyckoffLetters READ wyckoffLetters NOTIFY wyckoffLettersChanged)
+    Q_PROPERTY(QStringList wyckoffNames READ wyckoffNames NOTIFY wyckoffNamesChanged)
+    Q_PROPERTY(QStringList wyckoffLabels READ wyckoffLabels NOTIFY wyckoffLabelsChanged)
 
    public:
     AtomSiteListModel(edi::Structure& structure, ProjectEditor& editor, ParameterRegistry& registry, QObject* parent);
     void sync();
+    QStringList wyckoffLetters() const { return wyckoff_letters_; }
+    QStringList wyckoffNames() const { return wyckoff_names_; }
+    QStringList wyckoffLabels() const { return wyckoff_labels_; }
     Q_INVOKABLE bool setText(int row, const QString& role, const QString& value);
+    // A random atom (edi::new_atom_site), from this model's random source.
     Q_INVOKABLE void append();
     Q_INVOKABLE void duplicate(int row);
+    // The demo driver's and the tests' seam: every model made after it draws from this seed; the app never sets it.
+    static void fixRandomSeed(std::uint64_t seed);
     Q_INVOKABLE void remove(int row);
+
+   signals:
+    void wyckoffLettersChanged();
+    void wyckoffNamesChanged();
+    void wyckoffLabelsChanged();
 
    protected:
     bool setRole(int row, const QString& role, const QVariant& value) override { return setText(row, role, value.toString()); }
@@ -130,6 +150,11 @@ class AtomSiteListModel : public RowTableModel {
     edi::Structure& structure_;
     ProjectEditor& editor_;
     ParameterRegistry& registry_;
+    QStringList wyckoff_letters_;
+    QStringList wyckoff_names_;
+    QStringList wyckoff_labels_;
+    static std::optional<std::uint64_t>& fixedSeed();
+    std::optional<std::mt19937_64> random_;
 };
 
 // The Atomic displacement group (the owner, 2026-10-06): one row per atom site, in the sites' order — its label,
