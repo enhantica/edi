@@ -202,8 +202,9 @@ EaElements.StatusBar {
             }
             FontMetrics {
                 id: fitValueMetrics
+                // The left items' font and size (the owner, 2026-10-13).
                 font.family: EaStyle.Fonts.fontFamily
-                font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.9
+                font.pixelSize: EaStyle.Sizes.fontPixelSize
             }
             // The widest digit of the app's font, which has no tabular digits: every digit is drawn centred in a cell
             // that wide, as tabular figures are, so the live counters keep a steady width (the owner, 2026-10-13).
@@ -317,7 +318,7 @@ EaElements.StatusBar {
             anchors.verticalCenter: parent.verticalCenter
             visible: !fitArea.running && bar.fit !== null && bar.fit.outOfDate
             font.family: EaStyle.Fonts.fontFamily
-            font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.9
+            font.pixelSize: EaStyle.Sizes.fontPixelSize
             color: EaStyle.Colors.orange
             text: qsTr("out of date")
         }
