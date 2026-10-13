@@ -479,6 +479,11 @@ inline void check_admissible(const ParameterSpec* spec, double value, const char
     }
 }
 
+/// A parameter's short symbol as the app's tables and the report show it: its LaTeX name in plain text
+/// (`$\sigma_1$` is "σ₁", `$B_{\mathrm{iso}}$` is "B iso"), the FCJ asymmetry under FullProf's names "S/L" and "D/L",
+/// or the display name where the LaTeX name uses anything this does not spell.
+std::string parameter_symbol(const ParameterSpec* parameter_spec);
+
 }  // namespace edi
 
 #endif  // EDI_PARAMETER_SPEC_HPP
