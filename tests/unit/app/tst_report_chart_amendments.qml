@@ -113,8 +113,10 @@ Item {
             verify(SettingsProof.publishScanSummary(Session.project), "Hand-declared scan counts reach the actual FitViewModel summary consumer");
             const bar = createTemporaryObject(statusFactory, surface);
             verify(bar !== null && waitForPolish(bar), "The real status bar lays out the completed scan summary");
-            const text = findChild(bar, "statusBar.fit.valuePart.0");
-            verify(text !== null && text.visible, "The font gate reaches the drawn scan summary");
+            // Before: a combined valuePart. After the owner's icon/key/value items,
+            // observe the actual counter's DigitText and each of its rendered cells.
+            const text = Render.descendants(bar).find(item => item.objectName === "statusBar.fit.value" && item.text === "160");
+            verify(text !== undefined && text.visible, "The font gate reaches the drawn scan counter in its actual status item");
             compare(text.font.family, Style.Fonts.fontFamily, "The scan summary uses the application's regular UI font");
             compare(text.font.pixelSize, Style.Sizes.fontPixelSize, "The scan summary has the same font size as the status bar's left items");
             const digits = Render.texts(text).filter(item => /^[0-9]$/.test(item.text));

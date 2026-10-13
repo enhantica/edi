@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-13T21:43:10Z
+# measured_utc = 2026-10-13T22:34:06Z
 #
-# Recorded from: canonical native XML completion: tests-seq17-current.xml on isolated 47f9b87 with final owned assertions; twelve native passes; Python bank retained
-# Collected tests: 11350; with a reported duration: 6148
+# Recorded from: measured test run (39 node(s) measured once, 10410 banked, 0 stale row(s) dropped)
+# Collected tests: 11350; with a reported duration: 6145
 # Module-scoped fixture costs recorded: 43
 #
 # Breaches are decided PER TIER against the table
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 11350
 # inventory_cpp = 326
-# inventory_measured = 10449
-# inventory_unmeasured = 1227
+# inventory_measured = 10448
+# inventory_unmeasured = 1228
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -452,7 +452,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_shipment.py:
 0.000	tests/integration/py/test_app_fixture_host_isolation.py::test_configure_fixture_passes_the_provisioned_sdk[explicit-app-system-present]
 0.010	tests/integration/py/test_background_position_button.py::test_line_segment_background_exposes_the_position_naming_action
 0.050	tests/integration/py/test_bundled_display_fonts.py::test_default_label_formatter_alphabet_has_no_missing_glyphs
-0.050	tests/integration/py/test_bundled_display_fonts.py::test_display_census_includes_literals_escapes_and_formatter_domain
+UNMEASURED:failed-in-this-run	tests/integration/py/test_bundled_display_fonts.py::test_display_census_includes_literals_escapes_and_formatter_domain
 0.000	tests/integration/py/test_bundled_display_fonts.py::test_each_recorded_display_site_has_a_real_glyph_in_its_rendering_face[Baloo 2]
 0.000	tests/integration/py/test_bundled_display_fonts.py::test_each_recorded_display_site_has_a_real_glyph_in_its_rendering_face[Encode Sans]
 0.000	tests/integration/py/test_bundled_display_fonts.py::test_each_recorded_display_site_has_a_real_glyph_in_its_rendering_face[Font Awesome]
@@ -5641,15 +5641,15 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_report_table_precision.p
 0.130	tests/integration/py/test_scan_app_contract.py::test_data_free_experiment_type_has_a_write_boundary[sampleForm]
 0.150	tests/integration/py/test_scan_app_contract.py::test_data_free_experiment_type_has_a_write_boundary[scatteringType]
 0.160	tests/integration/py/test_scan_app_contract.py::test_disabled_placeholders_and_load_data_are_present
-0.160	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[block-delegate]
-0.330	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[outcome-color]
-0.330	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[outcome-icon]
-0.340	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[outcome-word]
-0.150	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[search-header]
+0.140	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[block-delegate]
+0.270	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[outcome-color]
+0.280	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[outcome-icon]
+0.270	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[outcome-word]
+0.140	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[search-header]
 0.150	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[search-height]
-0.300	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[search-index]
-0.140	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[search-input]
-0.170	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[search-opacity]
+0.290	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[search-index]
+0.130	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[search-input]
+0.140	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[search-opacity]
 0.130	tests/integration/py/test_scan_app_contract.py::test_explorer_fit_column_has_outcome_model_roles
 0.360	tests/integration/py/test_scan_app_contract.py::test_explorer_observer_rejects_untaken_mapping_branches[icon-"times-circle"]
 0.340	tests/integration/py/test_scan_app_contract.py::test_explorer_observer_rejects_untaken_mapping_branches[iconColor-"red"]
@@ -5662,19 +5662,19 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_report_table_precision.p
 0.000	tests/integration/py/test_scan_app_contract.py::test_messages_is_first_in_both_layout_and_width_inventory
 0.150	tests/integration/py/test_scan_app_contract.py::test_outcome_gate_rejects_a_different_results_word
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_scan_app_contract.py::test_qml_spans_ignore_comment_apostrophes_and_quoted_braces
-0.170	tests/integration/py/test_scan_app_contract.py::test_result_row_and_status_summary_share_outcome_presentation
+0.140	tests/integration/py/test_scan_app_contract.py::test_result_row_and_status_summary_share_outcome_presentation
 0.630	tests/integration/py/test_scan_app_contract.py::test_search_accepts_direct_field_and_state_compositions
 0.010	tests/integration/py/test_scan_app_contract.py::test_sidebar_tabs_have_requested_names
 0.150	tests/integration/py/test_scan_app_contract.py::test_simulation_range_fields_have_live_write_bindings[maximum]
 0.130	tests/integration/py/test_scan_app_contract.py::test_simulation_range_fields_have_live_write_bindings[minimum]
 0.140	tests/integration/py/test_scan_app_contract.py::test_simulation_range_fields_have_live_write_bindings[step]
 0.390	tests/integration/py/test_scan_app_contract.py::test_status_fit_area_binds_live_progress_and_terminal_summary
-0.370	tests/integration/py/test_scan_app_contract.py::test_status_observer_rejects_wrong_progress_polarity_fill_producer_and_unused_facts[facts]
-0.350	tests/integration/py/test_scan_app_contract.py::test_status_observer_rejects_wrong_progress_polarity_fill_producer_and_unused_facts[fill]
-0.150	tests/integration/py/test_scan_app_contract.py::test_status_observer_rejects_wrong_progress_polarity_fill_producer_and_unused_facts[polarity]
-0.200	tests/integration/py/test_scan_app_contract.py::test_status_observer_rejects_wrong_progress_polarity_fill_producer_and_unused_facts[producer]
+0.320	tests/integration/py/test_scan_app_contract.py::test_status_observer_rejects_wrong_progress_polarity_fill_producer_and_unused_facts[facts]
+0.300	tests/integration/py/test_scan_app_contract.py::test_status_observer_rejects_wrong_progress_polarity_fill_producer_and_unused_facts[fill]
+0.140	tests/integration/py/test_scan_app_contract.py::test_status_observer_rejects_wrong_progress_polarity_fill_producer_and_unused_facts[polarity]
+0.150	tests/integration/py/test_scan_app_contract.py::test_status_observer_rejects_wrong_progress_polarity_fill_producer_and_unused_facts[producer]
 0.000	tests/integration/py/test_scan_app_contract.py::test_type_selectors_live_in_explorer_and_follow_selected_row
-0.000	tests/integration/py/test_scan_app_contract.py::test_typed_status_producer_matches_the_shared_outcome_keys[actual]
+0.002	tests/integration/py/test_scan_app_contract.py::test_typed_status_producer_matches_the_shared_outcome_keys[actual]
 0.000	tests/integration/py/test_scan_app_contract.py::test_typed_status_producer_matches_the_shared_outcome_keys[wrongMAX]
 0.160	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[failed]
 0.160	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[maxIterations]
@@ -6060,7 +6060,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.p
 0.000	tests/integration/py/test_space_group_edits.py::test_changing_only_the_setting_keeps_the_space_group_identity
 0.010	tests/integration/py/test_space_group_edits.py::test_changing_space_group_replaces_old_setting_and_resolves_identity[name]
 0.000	tests/integration/py/test_space_group_edits.py::test_changing_space_group_replaces_old_setting_and_resolves_identity[number]
-0.010	tests/integration/py/test_status_columns.py::test_every_status_column_is_in_the_convention_census
+0.020	tests/integration/py/test_status_columns.py::test_every_status_column_is_in_the_convention_census
 0.000	tests/integration/py/test_status_columns.py::test_nested_declarations_and_comment_icons_cannot_fake_a_status_cell
 0.000	tests/integration/py/test_status_columns.py::test_status_columns_use_shared_icons_with_word_tooltips[Experiment/ExperimentsGroup.qml]
 0.000	tests/integration/py/test_status_columns.py::test_status_columns_use_shared_icons_with_word_tooltips[Experiment/MeasuredRangeGroup.qml]
@@ -6093,24 +6093,24 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.p
 0.000	tests/integration/py/test_table_byte_adaptations.py::test_stored_key_projection_retains_identity_values_order_and_inventory[missing]
 0.000	tests/integration/py/test_table_byte_adaptations.py::test_stored_key_projection_retains_identity_values_order_and_inventory[order]
 0.000	tests/integration/py/test_table_byte_adaptations.py::test_stored_key_projection_retains_identity_values_order_and_inventory[value]
-0.150	tests/integration/py/test_table_display.py::test_display_precision_is_independent_of_cell_clip_width
-0.140	tests/integration/py/test_table_display.py::test_displayed_sequential_counts_consume_state_colours[0-0-completed-summary]
+0.140	tests/integration/py/test_table_display.py::test_display_precision_is_independent_of_cell_clip_width
+0.160	tests/integration/py/test_table_display.py::test_displayed_sequential_counts_consume_state_colours[0-0-completed-summary]
 0.160	tests/integration/py/test_table_display.py::test_displayed_sequential_counts_consume_state_colours[0-0-running]
-0.140	tests/integration/py/test_table_display.py::test_displayed_sequential_counts_consume_state_colours[0-3-completed-summary]
-0.140	tests/integration/py/test_table_display.py::test_displayed_sequential_counts_consume_state_colours[0-3-running]
-0.150	tests/integration/py/test_table_display.py::test_displayed_sequential_counts_consume_state_colours[7-0-completed-summary]
-0.130	tests/integration/py/test_table_display.py::test_displayed_sequential_counts_consume_state_colours[7-0-running]
+0.160	tests/integration/py/test_table_display.py::test_displayed_sequential_counts_consume_state_colours[0-3-completed-summary]
+0.160	tests/integration/py/test_table_display.py::test_displayed_sequential_counts_consume_state_colours[0-3-running]
+0.200	tests/integration/py/test_table_display.py::test_displayed_sequential_counts_consume_state_colours[7-0-completed-summary]
+0.160	tests/integration/py/test_table_display.py::test_displayed_sequential_counts_consume_state_colours[7-0-running]
 0.140	tests/integration/py/test_table_display.py::test_displayed_sequential_counts_consume_state_colours[7-3-completed-summary]
-0.160	tests/integration/py/test_table_display.py::test_displayed_sequential_counts_consume_state_colours[7-3-running]
+0.170	tests/integration/py/test_table_display.py::test_displayed_sequential_counts_consume_state_colours[7-3-running]
 0.000	tests/integration/py/test_table_display.py::test_fullprof_comparison_projects_retain_verification_purpose[pd-neut-cwl_lab6-echidna_fcj-asymmetry]
 0.000	tests/integration/py/test_table_display.py::test_fullprof_comparison_projects_retain_verification_purpose[pd-neut-cwl_y2o3_beta-adp]
 0.000	tests/integration/py/test_table_display.py::test_fullprof_comparison_projects_retain_verification_purpose[pd-neut-tof_diamond-dream_basic]
 0.000	tests/integration/py/test_table_display.py::test_fullprof_comparison_projects_retain_verification_purpose[pd-neut-tof_fe_pseudo-voigt]
 0.000	tests/integration/py/test_table_display.py::test_fullprof_comparison_projects_retain_verification_purpose[pd-xray-cwl_lif_single]
-0.290	tests/integration/py/test_table_display.py::test_scan_consumer_gate_rejects_disconnected_or_coloured_zero_display[coloured-zero]
-0.280	tests/integration/py/test_table_display.py::test_scan_consumer_gate_rejects_disconnected_or_coloured_zero_display[unused-formatter]
-0.150	tests/integration/py/test_table_display.py::test_scientific_thresholds_and_signed_four_digit_values
-0.600	tests/integration/py/test_table_display.py::test_sequential_count_colours_follow_zero_and_nonzero_state
+0.310	tests/integration/py/test_table_display.py::test_scan_consumer_gate_rejects_disconnected_or_coloured_zero_display[coloured-zero]
+0.300	tests/integration/py/test_table_display.py::test_scan_consumer_gate_rejects_disconnected_or_coloured_zero_display[unused-formatter]
+0.140	tests/integration/py/test_table_display.py::test_scientific_thresholds_and_signed_four_digit_values
+0.650	tests/integration/py/test_table_display.py::test_sequential_count_colours_follow_zero_and_nonzero_state
 0.160	tests/integration/py/test_ui_input_settling.py::test_real_input_waits_for_motion_and_rendering_but_refuses_a_stuck_viewport
 0.570	tests/system/py/test_app_receipt_current_inputs.py::test_real_host_receipt_refuses_stale_compiled_inputs[entry-browser-screen]
 0.600	tests/system/py/test_app_receipt_current_inputs.py::test_real_host_receipt_refuses_stale_compiled_inputs[entry-browser-selector]
@@ -9969,14 +9969,14 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_scan_
 0.590	tests/system/py/test_scan_owner_adjustments.py::test_owner_observers_reject_live_disconnected_or_constant_consumers[button]
 0.910	tests/system/py/test_scan_owner_adjustments.py::test_owner_observers_reject_live_disconnected_or_constant_consumers[drag]
 0.310	tests/system/py/test_scan_owner_adjustments.py::test_owner_observers_reject_live_disconnected_or_constant_consumers[marker]
-0.450	tests/system/py/test_scan_owner_adjustments.py::test_owner_observers_reject_live_disconnected_or_constant_consumers[names]
+0.470	tests/system/py/test_scan_owner_adjustments.py::test_owner_observers_reject_live_disconnected_or_constant_consumers[names]
 0.000	tests/system/py/test_scan_owner_adjustments.py::test_owner_observers_reject_live_disconnected_or_constant_consumers[progress]
 0.410	tests/system/py/test_scan_owner_adjustments.py::test_owner_observers_reject_live_disconnected_or_constant_consumers[repeat]
 0.860	tests/system/py/test_scan_owner_adjustments.py::test_owner_observers_reject_live_disconnected_or_constant_consumers[reset]
 0.910	tests/system/py/test_scan_owner_adjustments.py::test_owner_observers_reject_live_disconnected_or_constant_consumers[wheel]
 0.300	tests/system/py/test_scan_owner_adjustments.py::test_previous_and_next_repeat_the_effective_selection_step
 0.010	tests/system/py/test_scan_owner_adjustments.py::test_progress_remains_at_the_status_bar_far_right
-0.380	tests/system/py/test_scan_owner_adjustments.py::test_project_page_displays_bounded_names_and_the_middle_ellipsis
+0.340	tests/system/py/test_scan_owner_adjustments.py::test_project_page_displays_bounded_names_and_the_middle_ellipsis
 0.180	tests/system/py/test_scan_performance_work.py::test_scan_performance_proves_complete_work_controls_and_the_owner_bound
 0.630	tests/system/py/test_scan_projection_wiring_escapes.py::test_actual_stale_markers_reject_constant_or_other_result_state[chart]
 0.610	tests/system/py/test_scan_projection_wiring_escapes.py::test_actual_stale_markers_reject_constant_or_other_result_state[status]
@@ -11725,7 +11725,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 1.914	tests/integration/py/test_e04_t12_name_allowance.py
 # module-cost: 0.192	tests/integration/py/test_e09_t75_sdk_consumer.py
 # module-cost: 23.486	tests/integration/py/test_loaded_correlation_cache.py
-# module-cost: 1.780	tests/integration/py/test_scan_app_contract.py
+# module-cost: 1.888	tests/integration/py/test_scan_app_contract.py
 # module-cost: 0.361	tests/integration/py/test_scan_extended_contract.py
 # module-cost: 0.257	tests/integration/py/test_scan_notes_diagnostics.py
 # module-cost: 0.352	tests/integration/py/test_scan_notes_resume.py
