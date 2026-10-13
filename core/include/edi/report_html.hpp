@@ -4,6 +4,7 @@
 #include <array>
 #include <filesystem>
 #include <string>
+#include <string_view>
 
 #include "edi/report_model.hpp"
 
@@ -40,5 +41,15 @@ std::string report_html(const ReportModel& model, const ReportLibraries& librari
 /// an image named `structure-<i>` or `pattern-<i>` (the record's index in its section), `figure_width` px wide, which
 /// the reader supplies.
 std::string report_static_html(const ReportModel& model, double figure_width);
+
+/// FNV-1a 64-bit of `bytes`, as 16 lower-case hex digits (the algorithm the FNV authors publish).
+std::string fnv1a64(std::string_view bytes);
+
+/// The digest a saved report's `_report_file` row records (ADR-0035 §7): FNV-1a 64 over what the format's writer writes
+/// for `model` with its time left out, so it is equal exactly when that writer would write the same now, the time
+/// aside. For "html" the file's text, with `libraries` in it (all empty: loaded online); for "pdf" the model's JSON
+/// and the static text the PDF lays out, as its figures are drawn from the model. Empty for a format with no writer
+/// here ("cif").
+std::string report_digest(ReportModel model, std::string_view format, const ReportLibraries& libraries = {});
 
 }  // namespace edi

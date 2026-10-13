@@ -876,6 +876,32 @@ std::string report_html(const ReportModel& model, const ReportLibraries& librari
     return out;
 }
 
+std::string fnv1a64(std::string_view bytes) {
+    std::uint64_t hash = 0xcbf29ce484222325ULL;
+    for (const char c : bytes) {
+        hash ^= static_cast<unsigned char>(c);
+        hash *= 0x100000001b3ULL;
+    }
+    static const char* const kDigits = "0123456789abcdef";
+    std::string out(16, '0');
+    for (int i = 15; i >= 0; --i) {
+        out[static_cast<std::size_t>(i)] = kDigits[hash & 0xFU];
+        hash >>= 4U;
+    }
+    return out;
+}
+
+std::string report_digest(ReportModel model, std::string_view format, const ReportLibraries& libraries) {
+    model.generated.clear();
+    if (format == "html") {
+        return fnv1a64(report_html(model, libraries));
+    }
+    if (format == "pdf") {
+        return fnv1a64(report_to_json(model) + report_static_html(model, 0.0));
+    }
+    return {};
+}
+
 std::string report_static_html(const ReportModel& model, double figure_width) {
     std::string out = "<html>\n<head>\n<meta charset=\"utf-8\">\n";
     out += "<title>" + escaped(model.title.empty() ? model.name : model.title) + "</title>\n";
