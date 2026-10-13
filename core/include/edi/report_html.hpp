@@ -35,4 +35,10 @@ ReportLibraries read_report_libraries(const std::filesystem::path& data_dir);
 /// The report as one HTML file. Throws std::invalid_argument when only some of the libraries are given.
 std::string report_html(const ReportModel& model, const ReportLibraries& libraries = {});
 
+/// The report as static HTML in the subset a rich-text layout engine reads (Qt's QTextDocument), for the PDF: the same
+/// sections and tables, with attributes and a small style sheet in px at 96 to the inch, and no scripts. Each figure is
+/// an image named `structure-<i>` or `pattern-<i>` (the record's index in its section), `figure_width` px wide, which
+/// the reader supplies.
+std::string report_static_html(const ReportModel& model, double figure_width);
+
 }  // namespace edi
