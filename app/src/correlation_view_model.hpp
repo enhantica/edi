@@ -7,6 +7,7 @@
 #include <QString>
 #include <QStringList>
 #include <QtQml/qqmlregistration.h>
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <string>
@@ -82,8 +83,9 @@ class CorrelationViewModel : public QObject {
     void show(const std::string& file, const std::vector<std::shared_ptr<const edi::FitParameterCorrelation>>& rows,
               const std::vector<std::string>& hidden, const QString& reason);
     // ADR-0034 I8: the rows' coefficients as numbers, in the rows' order, parsed when these rows are first shown and
-    // kept while the same rows are shown again. Rows are replaced, never edited in place, when their text changes; a
-    // rename changes only their names, which are read when shown.
+    // kept while the same rows are shown again: each the same row object, its coefficient unwritten since. A write
+    // gives the coefficient a new write identity, never reused, so a changed coefficient is parsed again. A rename
+    // changes only names, which are read when shown.
     const std::vector<double>& numbers(const std::string& file,
                                        const std::vector<std::shared_ptr<const edi::FitParameterCorrelation>>& rows);
     // The strengths, the level and the count over the matrix just made; `reason` when it has fewer than two rows.
@@ -105,7 +107,8 @@ class CorrelationViewModel : public QObject {
     double level_ = 0.0;
     int max_parameters_ = kDefaultMaxParameters;
     struct Numbers {
-        std::vector<std::weak_ptr<const edi::FitParameterCorrelation>> rows;
+        std::vector<const edi::FitParameterCorrelation*> rows;
+        std::vector<std::uint64_t> written;  // each row's coefficient write identity when parsed
         std::vector<double> values;
     };
     std::map<std::string, Numbers> numbers_;

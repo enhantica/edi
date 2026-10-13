@@ -52,17 +52,20 @@ void CorrelationViewModel::setRows(const std::string& file,
 const std::vector<double>& CorrelationViewModel::numbers(
     const std::string& file, const std::vector<std::shared_ptr<const edi::FitParameterCorrelation>>& rows) {
     Numbers& kept = numbers_[file];
-    // The same rows are the same objects: a kept weak pointer keeps its object's control block, so no later row can
-    // share it.
     bool same = kept.rows.size() == rows.size();
     for (std::size_t i = 0; same && i < rows.size(); ++i) {
-        same = !kept.rows[i].owner_before(rows[i]) && !rows[i].owner_before(kept.rows[i]);
+        same = kept.rows[i] == rows[i].get() && kept.written[i] == rows[i]->correlation.written();
     }
     if (!same) {
-        kept.rows.assign(rows.begin(), rows.end());
+        kept.rows.clear();
+        kept.written.clear();
         kept.values.clear();
+        kept.rows.reserve(rows.size());
+        kept.written.reserve(rows.size());
         kept.values.reserve(rows.size());
         for (const auto& row : rows) {
+            kept.rows.push_back(row.get());
+            kept.written.push_back(row->correlation.written());
             kept.values.push_back(edi::correlation_value(*row));
         }
     }
