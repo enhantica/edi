@@ -45,14 +45,14 @@ are notebook calls, not report sections; the owner asked for all three in edi's 
    stores `present_structure`'s scene (default options), its `default_view` and `scene_drawing` for a report viewport
    of 800 × 600. Correlations and evolution come from the functions the Correlations and Evolution tabs then share.
 5. **Numbers.** Every value with a standard uncertainty carries the number, its s.u. and the text spelled by the
-   project's rule (crysta ADR-0089), so no renderer writes a bracket itself.
+   project's rule, so no renderer writes a bracket itself.
 
 ## Consequences
 
 - The HTML report, the Report page and a notebook show the same numbers, charts and order, and the CLI, Python and
   the app write the same bytes for the same project, options and time.
-- E04-T20's restyled charts and edi's Python plotting take these specs as they are; a renderer that needs another
-  viewport reruns the same core function on the model's data.
+- Restyled charts and edi's Python plotting take these specs as they are; a renderer that needs another viewport
+  reruns the same core function on the model's data.
 - The model holds full-resolution patterns, so a report of a long scan is as large as its template's data.
 
 ## Alternatives considered

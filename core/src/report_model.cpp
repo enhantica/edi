@@ -115,8 +115,7 @@ std::string label_of(const Parameter& parameter, const std::string& fallback) {
     return symbol.empty() ? fallback : symbol;
 }
 
-// A parameter's units as the report writes them: an angle in degrees as ° and °², as the Cell table writes it (the
-// conductor, 2026-10-13).
+// A parameter's units as the report writes them: an angle in degrees as ° and °², as the Cell table writes it.
 std::string units_of(const Parameter& parameter) {
     if (parameter.spec == nullptr || parameter.spec->display_units == nullptr) {
         return "";

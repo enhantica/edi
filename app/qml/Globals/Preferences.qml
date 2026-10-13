@@ -31,8 +31,8 @@ QtObject {
     // How a followed scan redraws the pattern (Analysis, Extras; edi ADR-0029): FitViewModel.patternUpdates, 2 is
     // adaptive. The open project's fit takes it, whichever project is open.
     property int scanPatternUpdates: 2
-    // How a new project writes values with a standard uncertainty (crysta ADR-0089): "iucr_19" or "iucr_99". A
-    // project keeps its own; this only starts a new one.
+    // How a new project writes values with a standard uncertainty: "iucr_19" or "iucr_99". A project keeps its
+    // own; this only starts a new one.
     property string newProjectSuRule: "iucr_19"
 
     property Settings settings: Settings {

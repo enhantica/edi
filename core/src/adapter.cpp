@@ -2029,7 +2029,7 @@ void save_project_via_crysta(const Project& model, const std::string& directory)
     cproject.metadata.name = model.metadata.name;
     cproject.metadata.title = model.metadata.title;
     cproject.metadata.description = model.metadata.description;
-#if __has_include("crysta/su_format.hpp")  // crysta ADR-0089's SDK; drop the guard when the pin moves
+#if __has_include("crysta/su_format.hpp")  // crysta's SDK; drop the guard when the pin moves
     cproject.metadata.authors = model.metadata.authors;
 #endif
     cproject.metadata.created = model.metadata.created;
@@ -2037,7 +2037,7 @@ void save_project_via_crysta(const Project& model, const std::string& directory)
     cproject.metadata.timestamp = model.metadata.timestamp;
     cproject.persist_metadata = true;
 #if __has_include("crysta/su_format.hpp")  // drop the guard when the pin moves
-    // crysta ADR-0089: the delegated writer spells every value with an s.u. by the project's rule.
+    // The delegated writer spells every value with an s.u. by the project's rule.
     cproject.su_rule = model.su_rule;
 #endif
     // Review-9 F1: ONE persisted snapshot row per basic. In memory every free tied axis may

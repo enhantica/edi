@@ -157,7 +157,7 @@ AppDialog {
         }
 
         // Appearance: the theme, the sidebar's side, auto collapse, the rule a new project writes standard uncertainties
-        // by (crysta ADR-0089; a project keeps its own, on the Project page's Extra tab); no 1D plotting row.
+        // by (a project keeps its own, on the Project page's Extra tab); no 1D plotting row.
         Grid {
             columns: 2
             columnSpacing: EaStyle.Sizes.fontPixelSize

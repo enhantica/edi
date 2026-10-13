@@ -106,7 +106,7 @@ class Session : public QObject {
     Q_INVOKABLE bool openExample(const QString& exampleId);
     // A new empty project; with a `location` it is saved there at once, so it is that folder's project from the start
     // and Save writes in place (the owner, 2026-10-08). A refused save keeps the project, unsaved, and says why.
-    // `suRule` is the preference's rule for standard uncertainties, "iucr_19" or "iucr_99" (crysta ADR-0089). A title
+    // `suRule` is the preference's rule for standard uncertainties, "iucr_19" or "iucr_99". A title
     // and authors go into `_metadata` as the Project page writes them; an empty title keeps the default one.
     Q_INVOKABLE bool createProject(const QString& name, const QString& description, const QString& location = QString(),
                                    const QString& suRule = QStringLiteral("iucr_19"), const QString& title = QString(),

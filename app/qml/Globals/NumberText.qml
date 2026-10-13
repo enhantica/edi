@@ -11,11 +11,11 @@ import edi.app
 // exponent instead, keeping the digits its uncertainty allows. The base library's own rounding padded a value
 // smaller than its uncertainty with zeros (`000`) and broke on an exponent (`-4.2e-170000000000000`).
 //
-// A parameter with an uncertainty is rounded as the project writes it, by its rule for standard uncertainties
-// (crysta ADR-0089): the uncertainty rounded up to one or two digits and the value to the same digit. A parameter
-// is written whatever the width of its cell, which clips a long one at its edge, and edited in full (`full`). One at or above a million, or below 1e-4 and not zero, is written in scientific notation with four
-// significant digits and its uncertainty in the same exponent (`2.290e7`, `0.010e7`), so a column of large
-// intensities reads at a glance (the owner, 2026-10-10).
+// A parameter with an uncertainty is rounded as the project writes it, by its rule for standard uncertainties: the
+// uncertainty rounded up to one or two digits and the value to the same digit. A parameter is written whatever the
+// width of its cell, which clips a long one at its edge, and edited in full (`full`). One at or above a million, or
+// below 1e-4 and not zero, is written in scientific notation with four significant digits and its uncertainty in the
+// same exponent (`2.290e7`, `0.010e7`), so a column of large intensities reads at a glance (the owner, 2026-10-10).
 QtObject {
     // Whether `value` is written in scientific notation.
     function scientific(value) {

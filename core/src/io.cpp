@@ -460,7 +460,7 @@ double to_double(const std::string& text, const std::string& where) {
 // A bare token (no bracket) is fixed: present esd 0.0, not free — preserving the public esd==0.0
 // save->load fixed point. `to_double` rejects non-finite at the boundary.
 // An integer s.u. in units of the mantissa's last decimal place, read as the decimal number
-// `<digits>e-<decimals>` (crysta ADR-0089). strtod rounds it correctly on every platform, subnormals
+// `<digits>e-<decimals>`. strtod rounds it correctly on every platform, subnormals
 // included, and the text has no radix character for a locale to change. Dividing by pow(10, decimals)
 // gave zero past 308 decimals; digits that underflow even a subnormal are refused naming the token.
 double scaled_uncertainty(const std::string& digits, int decimals, const std::string& token,
@@ -3726,7 +3726,7 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
         // ADR-0017 §14: the plot renderer diffraction-lib declares in the record - an engine
         // choice, beside the calculator and the minimizer, that edi does not make.
         std::optional<std::string> declared_plot_renderer;
-        // crysta ADR-0089: how the project writes values with a standard uncertainty.
+        // How the project writes values with a standard uncertainty.
         std::optional<std::string> declared_su_rule;
         std::map<std::string, std::string> restored;
         {

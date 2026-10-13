@@ -8,9 +8,9 @@ import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
 
-// How the project writes and shows every value with a standard uncertainty (`_su_format.rule`, crysta
-// ADR-0089): the IUCr recommendation, or always two digits. A setting of the project, saved with it, so whoever
-// opens the project calculates from the same numbers; the application preference only sets it for new projects.
+// How the project writes and shows every value with a standard uncertainty: the IUCr recommendation, or always
+// two digits. A setting of the project, saved with it, so whoever opens the project calculates from the same
+// numbers; the application preference only sets it for new projects.
 EaElements.GroupBox {
     id: group
 

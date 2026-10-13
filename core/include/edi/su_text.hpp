@@ -3,8 +3,8 @@
 
 #include <string>
 
-// Values with a standard uncertainty as a project writes them: the IUCr rule of crysta's ADR-0089,
-// one implementation for the files, the screen and the report. Engine-free like the rest of edi's
+// Values with a standard uncertainty as a project writes them: crysta's IUCr rule, one
+// implementation for the files, the screen and the report. Engine-free like the rest of edi's
 // public surface (ADR-0003); su_text.cpp calls crysta.
 
 namespace edi {

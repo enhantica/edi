@@ -121,7 +121,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_PROPERTY(QString description READ description WRITE setDescription NOTIFY descriptionChanged)
     // The project's authors, one text separated by "; " (project.edi `_metadata.authors`).
     Q_PROPERTY(QString authors READ authors WRITE setAuthors NOTIFY authorsChanged)
-    // How values with a standard uncertainty are written and shown: "iucr_19" or "iucr_99" (crysta ADR-0089).
+    // How values with a standard uncertainty are written and shown: "iucr_19" or "iucr_99".
     Q_PROPERTY(QString suRule READ suRule WRITE setSuRule NOTIFY suRuleChanged)
     Q_PROPERTY(QString path READ path NOTIFY pathChanged)
     // True after any edit since the project was opened or last saved (edi ADR-0017 §13).
