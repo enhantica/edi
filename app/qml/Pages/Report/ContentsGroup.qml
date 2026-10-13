@@ -13,6 +13,8 @@ import edi.app
 EaElements.GroupBox {
     id: group
 
+    // Only the top group opens on first view, as on the other pages; each remembers its state.
+    readonly property string openKey: "Main:reportContents"
     property ReportViewModel report: null
     readonly property var sectionNames: ["summary", "analysis", "parameters", "correlations", "evolution", "structures", "experiments"]
     readonly property var sectionTitles: [qsTr("Project summary"), qsTr("Analysis"), qsTr("Parameters"), qsTr("Correlations"), qsTr("Evolution"), qsTr("Structures"), qsTr("Experiments")]
@@ -27,7 +29,8 @@ EaElements.GroupBox {
     objectName: "group.reportContents"
     title: qsTr("Contents")
     icon: "list"
-    collapsed: false
+    collapsed: !SideBarGroups.isOpen(openKey)
+    onCollapsedChanged: SideBarGroups.setOpen(openKey, !collapsed)
     last: SideBarGroups.isLast(group)
     enabled: report !== null
 
