@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
+import QtQuick.Window
 import QtTest
 import edi.app
 import EasyApplication.Gui.Style as Style
@@ -23,6 +24,8 @@ Item {
         property var chart
         property int savedTheme
         function initTestCase() {
+            surface.Window.window.width = surface.width;
+            surface.Window.window.height = surface.height;
             savedTheme = Style.Colors.theme;
         }
         function cleanup() {
@@ -44,6 +47,10 @@ Item {
                 }
             ];
         }
+        function renderFrame() {
+            surface.Window.window.update();
+            verify(waitForRendering(surface), "The actual chart window completes a requested rendered frame");
+        }
         function buttons() {
             const box = findChild(chart, "correlations.toolbar.parameters");
             verify(box !== null, "The Parameters box supplies the real toolbar position reference");
@@ -56,6 +63,7 @@ Item {
                 y: 0
             });
             verify(reference !== null, "The existing pattern toolbar button supplies its production style");
+            renderFrame();
             for (const button of result) {
                 verify(button.visible && button.opacity === 1, "Both correlation toggles are visibly drawn");
                 compare(button.width, reference.width, "Correlation toggles share the pattern toolbar button width");
@@ -63,8 +71,10 @@ Item {
                 compare(button.color, reference.color, "Correlation toggles share the pattern toolbar button background");
                 compare(button.border.color, reference.border.color, "Correlation toggles share the pattern toolbar button border");
                 compare(button.border.width, reference.border.width, "Correlation toggles share the pattern toolbar border thickness");
-                verify(waitForRendering(button), "The actual toggle renders before its background is compared");
-                compare(grabImage(button).pixel(1, 1), grabImage(reference).pixel(1, 1), "The drawn toggle background matches the existing pattern toolbar button");
+                const frame = grabImage(surface);
+                const at = button.mapToItem(surface, 3, 3);
+                const referenceAt = reference.mapToItem(surface, 3, 3);
+                compare(frame.pixel(Math.floor(at.x), Math.floor(at.y)), frame.pixel(Math.floor(referenceAt.x), Math.floor(referenceAt.y)), "The drawn toggle background matches the existing pattern toolbar button");
             }
             return result;
         }
@@ -84,7 +94,8 @@ Item {
                 x: 20,
                 y: 20
             });
-            verify(chart !== null && waitForRendering(chart), "Options are inspected in the real drawn correlation chart");
+            verify(chart !== null, "Options are inspected in the real drawn correlation chart");
+            renderFrame();
             compare(chart.count, 3, "The input exercises three parameters and both matrix triangles");
             const toggles = buttons();
             compare(toggles[0].checked, false, "Axis tick labels are hidden by default");
@@ -105,11 +116,11 @@ Item {
             tryVerify(() => tip.visible && tip.text.includes(chart.labels[0]) && tip.text.includes(chart.labels[1]), 1500, "The cell popup names both parameters while axis labels are hidden");
             mouseClick(toggles[0], toggles[0].width / 2, toggles[0].height / 2);
             compare(toggles[0].checked, true, "A real click enables the axis-label toggle");
-            verify(waitForRendering(chart), "Axis-label changes reach the drawn chart");
+            renderFrame();
             compare(axisLabels().length, 6, "Enabling labels draws all three names on both axes when space allows");
             mouseClick(toggles[1], toggles[1].width / 2, toggles[1].height / 2);
             compare(toggles[1].checked, true, "A real click enables the full-matrix toggle");
-            verify(waitForRendering(chart), "The full-matrix change reaches the drawn delegates");
+            renderFrame();
             verify(coloured(upper), "Full-matrix mode displays the upper triangle");
             compare(upper.color, lower.color, "Symmetric correlation pairs have equal colours in full-matrix mode");
             mouseMove(pointer, upper.x + upper.width / 2, upper.y + upper.height / 2);

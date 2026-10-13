@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
+import QtQuick.Window
 import QtQuick.Controls as Controls
 import QtTest
 import edi.app
@@ -50,6 +51,8 @@ Item {
         property var group
         property var table
         function initTestCase() {
+            surface.Window.window.width = surface.width;
+            surface.Window.window.height = surface.height;
             savedTheme = Style.Colors.theme;
         }
         function cleanup() {
@@ -59,6 +62,10 @@ Item {
             table = null;
             Session.closeProject();
             Style.Colors.theme = savedTheme;
+        }
+        function renderFrame() {
+            surface.Window.window.update();
+            verify(waitForRendering(surface), "The actual row window completes a requested rendered frame");
         }
         function cases() {
             const rows = [];
@@ -90,7 +97,7 @@ Item {
             table.forceLayout();
             select(data.kind, 0);
             mouseMove(surface, surface.width - 5, surface.height - 5);
-            verify(waitForRendering(table), "Selection is observed only after a drawn frame");
+            renderFrame();
         }
         function select(kind, index) {
             if (kind === "experiments")
@@ -113,9 +120,10 @@ Item {
             compare(bar.height, row.height, "The accent covers the full logical row height");
             const inTable = bar.mapToItem(table, 0, 0);
             verify(inTable.x >= 0 && inTable.x + bar.width <= table.width, "The accent remains inside the table frame");
-            verify(waitForRendering(table), "The settled accent is drawn before its pixels are sampled");
-            const image = grabImage(table);
-            compare(String(image.pixel(Math.floor(inTable.x + 1), Math.floor(inTable.y + row.height / 2))).toLowerCase(), styleReference.accent[themeKey], "The drawn bar has the theme accent colour, without an obscuring row layer");
+            renderFrame();
+            const image = grabImage(surface);
+            const onSurface = bar.mapToItem(surface, 0, 0);
+            compare(String(image.pixel(Math.floor(onSurface.x + 1), Math.floor(onSurface.y + row.height / 2))).toLowerCase(), styleReference.accent[themeKey], "The drawn bar has the theme accent colour, without an obscuring row layer");
         }
         function test_selection_background_and_hover_data() {
             return cases();
@@ -130,7 +138,7 @@ Item {
             }
             const row = table.itemAtIndex(1);
             mouseMove(row, row.width / 2, row.height / 2);
-            verify(waitForRendering(table), "The non-current row receives real hover input");
+            renderFrame();
             tryVerify(() => Render.descendants(row).some(item => item.color && String(item.color).toLowerCase() === styleReference.hover[themeKey] && item.width === row.width && item.height === row.height && item.opacity > 0.99), 1500, "The actual non-current row retains the pinned base hover background");
             settled(0);
             compare(data.kind === "parameters" ? group.selected : data.kind === "structures" ? Session.project.currentStructureIndex : Session.project.currentExperimentIndex, data.kind === "parameters" ? table.itemAtIndex(0).parameter : 0, "Hover alone does not change the current row");
@@ -147,7 +155,8 @@ Item {
                 x: 650,
                 y: 10
             });
-            verify(tabs !== null && waitForRendering(tabs), "The pinned tab bar supplies the independent animation reference");
+            verify(tabs !== null, "The pinned tab bar supplies the independent animation reference");
+            renderFrame();
             const reference = tabs.contentItem;
             compare(reference.highlightMoveDuration, styleReference.move_duration, "The tab reference uses its declared 250 ms move duration");
             const startY = bars()[0].mapToItem(table, 0, 0).y;
@@ -158,7 +167,7 @@ Item {
             let intermediate = 0;
             const begun = Date.now();
             while (Date.now() - begun < 450) {
-                verify(waitForRendering(table), "Animation comparisons use actual rendered frames");
+                renderFrame();
                 verify(bars().length === 1, "The moving accent remains a single visible bar");
                 const x = (reference.highlightItem.x - startX) / 120;
                 const y = (bars()[0].mapToItem(table, 0, 0).y - startY) / distance;
