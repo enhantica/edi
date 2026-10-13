@@ -65,6 +65,8 @@ Item {
             verify(reference !== null, "The existing pattern toolbar button supplies its production style");
             renderFrame();
             for (const button of result) {
+                reference.enabled = button.enabled;
+                renderFrame();
                 verify(button.visible && button.opacity === 1, "Both correlation toggles are visibly drawn");
                 compare(button.width, reference.width, "Correlation toggles share the pattern toolbar button width");
                 compare(button.height, reference.height, "Correlation toggles share the pattern toolbar button height");
@@ -80,6 +82,40 @@ Item {
         }
         function axisLabels() {
             return Render.descendants(chart).filter(item => typeof item.text === "string" && chart.labels.includes(item.text) && item.visible && item.width > 0 && item.height > 0);
+        }
+        function scaleVisible() {
+            const gradients = Render.descendants(chart).filter(item => item.gradient && item.gradient.stops && item.gradient.stops.length === 3);
+            compare(gradients.length, 1, "The actual diverging colour-scale indicator is uniquely observable");
+            return gradients[0].visible && gradients[0].parent.visible;
+        }
+        function equalMargins() {
+            const grid = findChild(chart, "correlations.grid");
+            const box = findChild(chart, "correlations.toolbar.parameters");
+            const above = grid.mapToItem(chart, 0, 0).y - box.mapToItem(chart, 0, box.height).y;
+            const below = chart.height - grid.mapToItem(chart, 0, grid.height).y;
+            verify(Math.abs(above - below) <= 2, "The space below the default matrix equals the space above it within cell pixel rounding");
+        }
+        function test_unfitted_data() {
+            return test_options_data();
+        }
+        function test_unfitted(data) {
+            Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
+            verify(Session.openProject(Qt.resolvedUrl("../../fixtures/correlations/polynomial-3")), "An unfitted independent project supplies the no-correlation condition");
+            chart = chartFactory.createObject(surface, {
+                project: Session.project,
+                width: 1000,
+                height: 800,
+                x: 20,
+                y: 20
+            });
+            renderFrame();
+            const toggles = buttons();
+            for (const button of toggles) {
+                verify(!button.enabled, "Both new correlation buttons are disabled before any fit supplies correlations");
+                mouseClick(button, button.width / 2, button.height / 2);
+                compare(button.checked, false, "A click on a disabled correlation toggle cannot change its default state");
+            }
+            verify(!scaleVisible(), "The colour-scale indicator stays hidden in the unfitted default view");
         }
         function test_options(data) {
             Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
@@ -98,6 +134,9 @@ Item {
             renderFrame();
             compare(chart.count, 3, "The input exercises three parameters and both matrix triangles");
             const toggles = buttons();
+            verify(toggles.every(button => button.enabled), "Both correlation toggles are enabled when the displayed matrix has pairs");
+            verify(!scaleVisible(), "The colour-scale indicator is hidden in the default matrix view");
+            equalMargins();
             compare(toggles[0].checked, false, "Axis tick labels are hidden by default");
             compare(toggles[1].checked, false, "Only the lower triangle is shown by default");
             compare(axisLabels().length, 0, "Hidden tick labels produce no visible parameter labels along either axis");
@@ -117,6 +156,7 @@ Item {
             mouseClick(toggles[0], toggles[0].width / 2, toggles[0].height / 2);
             compare(toggles[0].checked, true, "A real click enables the axis-label toggle");
             renderFrame();
+            verify(scaleVisible(), "The colour-scale indicator is drawn together with tick labels");
             compare(axisLabels().length, 6, "Enabling labels draws all three names on both axes when space allows");
             mouseClick(toggles[1], toggles[1].width / 2, toggles[1].height / 2);
             compare(toggles[1].checked, true, "A real click enables the full-matrix toggle");
@@ -127,9 +167,16 @@ Item {
             tryVerify(() => tip.visible && tip.text.includes(chart.labels[0]) && tip.text.includes(chart.labels[1]), 1500, "The full-matrix upper cell popup also names both parameters");
             mouseClick(toggles[0], toggles[0].width / 2, toggles[0].height / 2);
             compare(axisLabels().length, 0, "The labels toggle is reversible independently of the matrix toggle");
+            verify(!scaleVisible(), "Hiding tick labels hides the colour-scale indicator again");
             verify(coloured(upper), "Hiding labels preserves full-matrix mode");
             mouseClick(toggles[1], toggles[1].width / 2, toggles[1].height / 2);
             verify(!coloured(upper) && !coloured(diagonal) && coloured(lower), "The matrix toggle returns to the lower triangle without changing its coefficient");
+            chart.correlations.level = 1;
+            tryCompare(chart, "count", 0, 1500, "A threshold above every independent coefficient hides all displayed pairs");
+            for (const button of toggles)
+                verify(!button.enabled, "Both correlation toggles are disabled whenever the current filter shows no correlations");
+            chart.correlations.level = 0;
+            tryVerify(() => chart.count >= 2 && toggles.every(button => button.enabled), 1500, "Lowering the level re-enables both buttons once correlations are displayed again");
         }
     }
 }

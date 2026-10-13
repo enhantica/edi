@@ -1,0 +1,75 @@
+"""Freeze hand-derived decimal and renderer seam values; no product imports."""
+
+import json
+from pathlib import Path
+
+REFERENCE = {
+    'provenance': {
+        'uncertainty': 'https://www.iucr.org/resources/commissions/crystallographic-nomenclature/statdes/recomm.html',
+        'reader': 'Correctly rounded decimal conversion: float(digits + '
+        'e-minus-decimals); zero and absent are distinct',
+        'json': 'https://www.rfc-editor.org/rfc/rfc8259',
+        'plotly': 'https://plotly.com/javascript/reference/',
+        'quaternion': 'https://threejs.org/docs/pages/Quaternion.html',
+        'drawing': 'Existing core presentation and drawing contracts; '
+        'closed-form deltas, height shares and quaternion rotation',
+    },
+    'formats': [
+        ('1.54249', '0.01532', 'iucr_19', '1.542(16)'),
+        ('2.16352', '0.00481', 'iucr_19', '2.164(5)'),
+        ('2.16352', '0.00481', 'iucr_99', '2.1635(49)'),
+        ('0.4637', '0.0196', 'iucr_19', '0.46(2)'),
+        ('0.4637', '0.0196', 'iucr_99', '0.464(20)'),
+        ('54912', '1234', 'iucr_19', '54900(1300)'),
+        ('0', '0.0123', 'iucr_19', '0.000(13)'),
+        ('-0.02134', '0.00151', 'iucr_19', '-0.0213(16)'),
+        (
+            '0',
+            '2e-310',
+            'iucr_19',
+            '0.0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000(2)',
+        ),
+        ('1.2345', '0.015', 'iucr_19', '1.235(15)'),
+        ('-1.2345', '0.015', 'iucr_19', '-1.235(15)'),
+        ('10.30925', '0.00157', 'iucr_19', '10.3093(16)'),
+    ],
+    'readers': [
+        (300, '3', '3e-300'),
+        (309, '3', '3e-309'),
+        (324, '5', '5e-324'),
+        (330, '1', None),
+        (330, '0', '0'),
+        (330, '', None),
+    ],
+    'correlations': [
+        [0.9449, '0.94'],
+        [0.9512, '0.951'],
+        [-0.0234, '-0.023'],
+        [1, '1.00'],
+        [-0.99987, '-1.00'],
+    ],
+    'hostile_title': 'Co"Si" <b>&amp;</b></script><script>alert(1)</script>\u2028\u2029',
+    'authors': "Ada Lovelace; Émile O'Brien",
+    'pattern_seam': {
+        'height': 600,
+        'measured': {'y': 100, 'bar_low': 90, 'bar_high': 112},
+        'error_minus': 10,
+        'error_plus': 12,
+        'domains': {'main': 0.658, 'bragg': 0.06, 'residual': 0.282},
+        'gap': [None, None],
+        'second_phase_style': 'bragg.1',
+    },
+    'drawing_seam': {
+        'quaternion_wxyz': [0.7071067811865476, 0, 0, -0.7071067811865476],
+        'quaternion_xyzw': [0, 0, -0.7071067811865476, 0.7071067811865476],
+        'direction': [0, 0, 1],
+        'up': [0, 1, 0],
+        'bond_axis': [1, 0, 0],
+    },
+    'd_axis': {'wavelength': 1.87, 'two_theta': 30},
+}
+
+if __name__ == '__main__':
+    Path(__file__).with_name('reference.json').write_text(
+        json.dumps(REFERENCE, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
+    )

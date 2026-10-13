@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-13T16:23:32Z
+# measured_utc = 2026-10-13T17:43:39Z
 #
-# Recorded from: measured test run (5 node(s) measured once, 10423 banked, 0 stale row(s) dropped)
-# Collected tests: 11244; with a reported duration: 6143
+# Recorded from: measured test run (63 node(s) measured once, 10428 banked, 0 stale row(s) dropped)
+# Collected tests: 11307; with a reported duration: 6144
 # Module-scoped fixture costs recorded: 43
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 11244
+# inventory_python = 11307
 # inventory_cpp = 312
-# inventory_measured = 10428
-# inventory_unmeasured = 1128
+# inventory_measured = 10437
+# inventory_unmeasured = 1182
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -2370,9 +2370,11 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.
 0.000	tests/integration/py/test_correlation_endpoint_format.py::test_old_correlation_endpoint_is_a_short_named_refusal[scan-file-j-line-segment-bank.march_random_fract]
 0.000	tests/integration/py/test_correlation_endpoint_format.py::test_old_correlation_endpoint_is_a_short_named_refusal[scan-file-j-line-segment-bank.scale]
 0.000	tests/integration/py/test_correlation_endpoint_format.py::test_old_correlation_endpoint_is_a_short_named_refusal[scan-file-j-polynomial-bank.background[0]]
+0.040	tests/integration/py/test_correlation_option_bindings.py::test_colour_scale_visibility_follows_the_actual_names_toggle
 0.060	tests/integration/py/test_correlation_option_bindings.py::test_label_toggle_controls_each_actual_axis_delegate[column]
 0.310	tests/integration/py/test_correlation_option_bindings.py::test_label_toggle_controls_each_actual_axis_delegate[row]
 0.050	tests/integration/py/test_correlation_option_bindings.py::test_matrix_toggle_mirrors_nontrivial_signed_coefficients_and_is_reversible
+UNMEASURED:failed-in-this-run	tests/integration/py/test_correlation_option_bindings.py::test_toggles_disable_for_unfitted_and_filtered_empty_matrices
 0.000	tests/integration/py/test_current_row_component.py::test_current_row_tables_do_not_override_the_ordinary_background
 0.000	tests/integration/py/test_current_row_component.py::test_current_row_tables_use_one_shared_local_delegate
 0.000	tests/integration/py/test_cwl_admission.py::test_cif_nonzero_mixing_survives_import_without_default_substitution[collection-classic-cwl-pseudo-voigt-berar-baldinozzi]
@@ -5539,6 +5541,52 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_rename_namespace.py::tes
 0.010	tests/integration/py/test_rename_namespace.py::test_datablock_rename_preserves_namespace_and_category_tokens[unequal-structure-True-aliases-single]
 0.010	tests/integration/py/test_rename_namespace.py::test_datablock_rename_preserves_namespace_and_category_tokens[unequal-structure-True-correlations-sequential]
 0.010	tests/integration/py/test_rename_namespace.py::test_datablock_rename_preserves_namespace_and_category_tokens[unequal-structure-True-correlations-single]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_core_reuse.py::test_live_tab_and_builder_both_reach_the_same_core_filter_or_series[correlation_matrix-correlation_view_model.cpp]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_core_reuse.py::test_live_tab_and_builder_both_reach_the_same_core_filter_or_series[evolution_series-evolution_view_model.cpp]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_core_reuse.py::test_report_builder_reaches_the_existing_presentation_and_drawing_functions[default_view]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_core_reuse.py::test_report_builder_reaches_the_existing_presentation_and_drawing_functions[present_pattern]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_core_reuse.py::test_report_builder_reaches_the_existing_presentation_and_drawing_functions[present_structure]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_core_reuse.py::test_report_builder_reaches_the_existing_presentation_and_drawing_functions[scene_drawing]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_core_reuse.py::test_report_model_header_remains_free_of_qt_and_html_rendering
+0.000	tests/integration/py/test_report_html_text.py::test_html_embeds_json_without_script_or_entity_injection[Co"Si" <b>&amp;</b></script><script>alert(1)</script>\u2028\u2029]
+0.000	tests/integration/py/test_report_html_text.py::test_html_embeds_json_without_script_or_entity_injection[\U0001d6c2 & "quotes" and 'apostrophe']
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_absent_rule_defaults_and_unknown_rule_refuses
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_authors_roundtrip_keeps_utf8_and_semicolon_separator
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_both_rules_read_and_resave_integer_su_without_underflow[300-3-3e-300-iucr_19]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_both_rules_read_and_resave_integer_su_without_underflow[300-3-3e-300-iucr_99]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_both_rules_read_and_resave_integer_su_without_underflow[309-3-3e-309-iucr_19]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_both_rules_read_and_resave_integer_su_without_underflow[309-3-3e-309-iucr_99]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_both_rules_read_and_resave_integer_su_without_underflow[324-5-5e-324-iucr_19]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_both_rules_read_and_resave_integer_su_without_underflow[324-5-5e-324-iucr_99]
+0.000	tests/integration/py/test_report_iucr_persistence.py::test_both_rules_read_and_resave_integer_su_without_underflow[330--None-iucr_19]
+0.000	tests/integration/py/test_report_iucr_persistence.py::test_both_rules_read_and_resave_integer_su_without_underflow[330--None-iucr_99]
+0.000	tests/integration/py/test_report_iucr_persistence.py::test_both_rules_read_and_resave_integer_su_without_underflow[330-0-0-iucr_19]
+0.000	tests/integration/py/test_report_iucr_persistence.py::test_both_rules_read_and_resave_integer_su_without_underflow[330-0-0-iucr_99]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_both_rules_read_and_resave_integer_su_without_underflow[330-1-None-iucr_19]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_both_rules_read_and_resave_integer_su_without_underflow[330-1-None-iucr_99]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[-0.02134-0.00151-iucr_19--0.0213(16)]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[-1.2345-0.015-iucr_19--1.235(15)]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[0-0.0123-iucr_19-0.000(13)]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[0-2e-310-iucr_19-0.0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000(2)]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[0.4637-0.0196-iucr_19-0.46(2)]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[0.4637-0.0196-iucr_99-0.464(20)]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[1.2345-0.015-iucr_19-1.235(15)]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[1.54249-0.01532-iucr_19-1.542(16)]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[10.30925-0.00157-iucr_19-10.3093(16)]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[2.16352-0.00481-iucr_19-2.164(5)]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[2.16352-0.00481-iucr_99-2.1635(49)]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[54912-1234-iucr_19-54900(1300)]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_fixed_absent_zero_and_nonfinite_uncertainty_keep_their_distinctions[False-0.001]
+0.000	tests/integration/py/test_report_iucr_persistence.py::test_fixed_absent_zero_and_nonfinite_uncertainty_keep_their_distinctions[True-0.0]
+0.000	tests/integration/py/test_report_iucr_persistence.py::test_fixed_absent_zero_and_nonfinite_uncertainty_keep_their_distinctions[True-None]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_fixed_absent_zero_and_nonfinite_uncertainty_keep_their_distinctions[True-nan]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_written_correlations_follow_significant_digits[-0.0234--0.023]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_written_correlations_follow_significant_digits[-0.99987--1.00]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_written_correlations_follow_significant_digits[0.9449-0.94]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_written_correlations_follow_significant_digits[0.9512-0.951]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_written_correlations_follow_significant_digits[1-1.00]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_renderer_seams.py::test_drawing_quaternion_order_unit_geometry_and_camera_frame
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_renderer_seams.py::test_pattern_traces_preserve_gaps_asymmetric_errors_and_pane_shares
 0.160	tests/integration/py/test_reset_and_required.py::test_reset_closes_the_project_and_lands_on_project
 0.250	tests/integration/py/test_reset_and_required.py::test_reset_observer_detects_wrong_destination_and_unclosed_project[home]
 0.310	tests/integration/py/test_reset_and_required.py::test_reset_observer_detects_wrong_destination_and_unclosed_project[open-project]
@@ -11507,6 +11555,21 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 0.000	tests/unit/py/test_inactive_weight_bytes.py::test_inactive_weight_projection_refuses_undeclared_input_rows[duplicate]
 0.000	tests/unit/py/test_inactive_weight_bytes.py::test_inactive_weight_projection_refuses_undeclared_input_rows[extra-column]
 0.000	tests/unit/py/test_inactive_weight_bytes.py::test_inactive_weight_projection_refuses_undeclared_input_rows[unknown]
+UNMEASURED:failed-in-this-run	tests/unit/py/test_report_decimal_reader.py::test_absolute_and_empty_brackets_keep_their_grammar[383.2(1.2)-1.2]
+UNMEASURED:failed-in-this-run	tests/unit/py/test_report_decimal_reader.py::test_absolute_and_empty_brackets_keep_their_grammar[5()-None]
+UNMEASURED:failed-in-this-run	tests/unit/py/test_report_decimal_reader.py::test_absolute_and_empty_brackets_keep_their_grammar[5(0)-0.0]
+UNMEASURED:failed-in-this-run	tests/unit/py/test_report_decimal_reader.py::test_integer_su_decimal_scaling_keeps_representable_subnormals[300-3-3e-300]
+UNMEASURED:failed-in-this-run	tests/unit/py/test_report_decimal_reader.py::test_integer_su_decimal_scaling_keeps_representable_subnormals[309-3-3e-309]
+UNMEASURED:failed-in-this-run	tests/unit/py/test_report_decimal_reader.py::test_integer_su_decimal_scaling_keeps_representable_subnormals[324-5-5e-324]
+UNMEASURED:failed-in-this-run	tests/unit/py/test_report_decimal_reader.py::test_integer_su_decimal_scaling_keeps_representable_subnormals[330--None]
+UNMEASURED:failed-in-this-run	tests/unit/py/test_report_decimal_reader.py::test_integer_su_decimal_scaling_keeps_representable_subnormals[330-0-0]
+UNMEASURED:failed-in-this-run	tests/unit/py/test_report_decimal_reader.py::test_integer_su_decimal_scaling_keeps_representable_subnormals[330-1-None]
+UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_report_builder_serializes_nonfinite_uncertainty_as_null
+UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_report_json_numbers_have_shortest_roundtrip_bits[decimal]
+UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_report_json_numbers_have_shortest_roundtrip_bits[max-double]
+UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_report_json_numbers_have_shortest_roundtrip_bits[negative-zero]
+UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_report_json_numbers_have_shortest_roundtrip_bits[subnormal]
+UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_report_json_utf8_nulls_and_fixed_generated_roundtrip
 0.000	tests/unit/py/test_verification_helpers.py::test_agreeing_pair_passes_the_default_gate
 0.000	tests/unit/py/test_verification_helpers.py::test_array_layout_bac_reconstructs_grid_from_header
 0.000	tests/unit/py/test_verification_helpers.py::test_bac_zero_shift_realigns_axis_before_subtraction
