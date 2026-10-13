@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-13T05:30:15Z
+# measured_utc = 2026-10-13T05:34:03Z
 #
-# Recorded from: measured test run (4 node(s) measured once, 10333 banked, 0 stale row(s) dropped)
-# Collected tests: 11159; with a reported duration: 6104
+# Recorded from: measured test run (6 node(s) measured once, 10335 banked, 0 stale row(s) dropped)
+# Collected tests: 11159; with a reported duration: 6108
 # Module-scoped fixture costs recorded: 42
 #
 # Breaches are decided PER TIER against the table
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 11159
 # inventory_cpp = 312
-# inventory_measured = 10337
-# inventory_unmeasured = 1134
+# inventory_measured = 10341
+# inventory_unmeasured = 1130
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -8911,12 +8911,12 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_newest_project_census.py::tes
 0.000	tests/system/py/test_plain_data_app.py::test_lifecycle_observer_consumes_configuration_metadata_and_actual_edits[undoSecond-simulation]
 0.000	tests/system/py/test_plain_data_app.py::test_lifecycle_observer_consumes_configuration_metadata_and_actual_edits[undoTypeEditable-action]
 0.090	tests/system/py/test_plain_data_app.py::test_link_all_unlinked_new_structure_and_atomic_remove_undo
-UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_literal_datablock_rename_undo_restores_references_template_and_saved_state[plain-experiment]
-UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_literal_datablock_rename_undo_restores_references_template_and_saved_state[plain-structure]
-0.130	tests/system/py/test_plain_data_app.py::test_literal_datablock_rename_undo_restores_references_template_and_saved_state[refusal-experiment]
-0.110	tests/system/py/test_plain_data_app.py::test_literal_datablock_rename_undo_restores_references_template_and_saved_state[refusal-structure]
-UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_literal_datablock_rename_undo_restores_references_template_and_saved_state[scan-experiment]
-UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_literal_datablock_rename_undo_restores_references_template_and_saved_state[scan-structure]
+0.160	tests/system/py/test_plain_data_app.py::test_literal_datablock_rename_undo_restores_references_template_and_saved_state[plain-experiment]
+0.595	tests/system/py/test_plain_data_app.py::test_literal_datablock_rename_undo_restores_references_template_and_saved_state[plain-structure]
+0.210	tests/system/py/test_plain_data_app.py::test_literal_datablock_rename_undo_restores_references_template_and_saved_state[refusal-experiment]
+0.170	tests/system/py/test_plain_data_app.py::test_literal_datablock_rename_undo_restores_references_template_and_saved_state[refusal-structure]
+0.200	tests/system/py/test_plain_data_app.py::test_literal_datablock_rename_undo_restores_references_template_and_saved_state[scan-experiment]
+0.150	tests/system/py/test_plain_data_app.py::test_literal_datablock_rename_undo_restores_references_template_and_saved_state[scan-structure]
 0.209	tests/system/py/test_plain_data_app.py::test_load_lock_replace_and_single_step_undo[cwl]
 0.110	tests/system/py/test_plain_data_app.py::test_load_lock_replace_and_single_step_undo[tof]
 0.000	tests/system/py/test_plain_data_app.py::test_message_counts_reject_invalid_numbers_in_every_field[fractional-derived-number-first]
@@ -11541,7 +11541,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 0.346	tests/system/py/test_e09_t75_native_execution.py
 # module-cost: 3.929	tests/system/py/test_fit_participants_native.py
 # module-cost: 11.686	tests/system/py/test_linear_row_admission.py
-# module-cost: 182.962	tests/system/py/test_plain_data_app.py
+# module-cost: 179.025	tests/system/py/test_plain_data_app.py
 # module-cost: 21.241	tests/system/py/test_pytest_child_environment.py
 # module-cost: 2.368	tests/system/py/test_scan_accident_paths.py
 # module-cost: 717.517	tests/system/py/test_scan_app_execution.py

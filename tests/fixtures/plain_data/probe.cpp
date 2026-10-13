@@ -117,6 +117,7 @@ QJsonObject rename_lifecycle(const QString& fixture, const QString& work, const 
     const auto input = std::filesystem::path(work.toStdString()) / "input";
     std::filesystem::copy(fixture.toStdString(), input, std::filesystem::copy_options::recursive);
     auto core = edi::load_project(input.string());
+    auto& target_structure = *core.structures[0];
     if (scan) {
         std::filesystem::create_directories(input / "experiments/scan");
         for (const char* file : {"01.xy", "02.xy"})
@@ -129,7 +130,7 @@ QJsonObject rename_lifecycle(const QString& fixture, const QString& work, const 
     }
     if (refused) {
         if (kind == "structure") {
-            edi::Structure occupied = core.structure();
+            edi::Structure occupied = target_structure;
             occupied.name = "taken";
             core.structures.push_back(occupied);
         } else {
@@ -161,8 +162,8 @@ QJsonObject rename_lifecycle(const QString& fixture, const QString& work, const 
             if (term->id.value() != "curve") kept.push_back(term);
         core.experiment().background_terms.assign(std::move(kept));
     }
-    if (core.structure().name.value() == "structure") {
-        auto& cell = core.structure().cell;
+    if (target_structure.name.value() == "structure") {
+        auto& cell = target_structure.cell;
         for (auto* parameter : {&cell.length_a, &cell.length_b, &cell.length_c, &cell.angle_alpha,
                                 &cell.angle_beta, &cell.angle_gamma}) {
             parameter->start_value = parameter->value.get() + .125;
@@ -171,7 +172,7 @@ QJsonObject rename_lifecycle(const QString& fixture, const QString& work, const 
     }
     std::vector<std::string> names;
     if (kind == "structure" || kind == "experiment") {
-        const std::string structure_name = core.structure().name.value();
+        const std::string structure_name = target_structure.name.value();
         const std::string experiment_name = core.experiment().name.value();
         for (const std::string field :
              {"length_a", "length_b", "length_c", "angle_alpha", "angle_beta", "angle_gamma"})
@@ -205,9 +206,9 @@ QJsonObject rename_lifecycle(const QString& fixture, const QString& work, const 
             pair.id = "pair" + std::to_string(ordinal) + (first ? "i" : "j");
             pair.source_kind = "deterministic";
             pair.parameter_unique_name_i =
-                first ? name : core.structure().name.value() + ".cell.length_b";
+                first ? name : target_structure.name.value() + ".cell.length_b";
             pair.parameter_unique_name_j =
-                first ? core.structure().name.value() + ".cell.length_b" : name;
+                first ? target_structure.name.value() + ".cell.length_b" : name;
             pair.correlation = "-0.625";
             if (scan) pair.file_path = "02.xy";
             core.fit_result.correlations.push_back(pair);
