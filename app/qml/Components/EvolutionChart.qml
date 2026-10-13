@@ -15,7 +15,8 @@ import edi.app
 // the selector beside that box; the page's selector row above lists the datasets, as on the Pattern tab. A click on
 // a point shows that dataset, here and on the Pattern tab; a line marks the shown one. The pointer zooms as on the
 // pattern chart, without its toolbar: a drag zooms to the box, the wheel or touchpad about the pointer, a right click
-// resets.
+// resets. Before any dataset is fitted the selector already lists every free parameter, and the chart has no axes,
+// only its empty state.
 Item {
     id: chart
 
@@ -34,6 +35,8 @@ Item {
     readonly property real xTitleHeight: Math.round(em * 1.7)
     // The zoomed ranges, [xMin, xMax, yMin, yMax]; empty: the whole data.
     property list<real> zoom: []
+    // Some dataset has its results: the axes, the titles and the points are drawn.
+    readonly property bool fitted: evolution !== null && evolution.fitted
 
     // A round step giving about `count` ticks over a span: 1, 2 or 5 times a power of ten.
     function niceStep(span, count) {
@@ -83,6 +86,7 @@ Item {
         id: view
 
         objectName: "evolution.view"
+        visible: chart.fitted
         y: xBox.y + xBox.height + chart.sideMargin
         width: parent.width
         height: parent.height - y - chart.xTitleHeight - chart.em
@@ -134,6 +138,7 @@ Item {
     Item {
         id: plot
 
+        visible: chart.fitted
         x: view.x + view.plotArea.x
         y: view.y + view.plotArea.y
         width: view.plotArea.width
@@ -348,6 +353,7 @@ Item {
 
     EaElements.Label {
         objectName: "evolution.title.y"
+        visible: chart.fitted
         rotation: -90
         color: EaStyle.Colors.chartLabels
         // Centred in the margin, clear of the tick labels, which Qt Graphs lets reach into the plot's left margin.
@@ -357,6 +363,7 @@ Item {
     }
     EaElements.Label {
         objectName: "evolution.title.x"
+        visible: chart.fitted
         x: plot.x + (plot.width - width) / 2
         y: chart.height - chart.em - chart.xTitleHeight + (chart.xTitleHeight - height) / 2
         color: EaStyle.Colors.chartLabels
@@ -374,8 +381,15 @@ Item {
     }
     EaElements.Label {
         anchors.centerIn: plot
-        visible: chart.evolution !== null && chart.evolution.count === 0
+        visible: chart.fitted && chart.evolution.count === 0
         color: EaStyle.Colors.themeForegroundMinor
         text: qsTr("No fitted values yet: the scan's results appear here as the datasets are fitted")
+    }
+    EmptyStateLabel {
+        objectName: "evolution.empty"
+        anchors.centerIn: parent
+        visible: chart.evolution !== null && !chart.fitted
+        width: Math.min(implicitWidth, parent.width - 2 * chart.sideMargin)
+        text: qsTr("No fitted results yet")
     }
 }

@@ -2028,6 +2028,7 @@ void ProjectViewModel::publish(bool structural) {
         syncDatasets();
     }
     analysis_->sync();
+    evolution_->syncParameters();
     syncCorrelations();
     syncParameterTable(false);  // the report is refreshed below, once everything it reads is published
     publishMetadata();
