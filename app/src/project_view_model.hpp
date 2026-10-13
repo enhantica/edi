@@ -278,7 +278,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // publishes it, the pattern included, in one step; a frame of a running fit is drawn; the patterns go back
     // to what the project holds (a fit that wrote nothing).
     void publishFit();
-    void showFitFrame(const edi::FitFrame& frame);
+    // A fit's or a shown dataset's patterns; a dataset's may bring the first experiment's d-spacing capture.
+    void showFitFrame(const edi::FitFrame& frame, std::optional<edi::PatternSource> d_frame = std::nullopt);
     void restorePatterns();
     // A scan run's owner-thread steps (FitViewModel): before a fresh run, the previous results set aside, which
     // Undo restores; each file it fits; the file it shows while followed; its end, after which the shown dataset is
@@ -526,6 +527,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         std::optional<edi::PdDataBase> data;
         std::vector<edi::Edit::ScanValue> values;
         std::optional<edi::FitFrame> frame;
+        std::optional<edi::PatternSource> d_frame;  // the frame on d, when a chart is on d
         QString error;
     };
     // Applies a projection read for request `request`, unless a newer one was asked for since.

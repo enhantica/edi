@@ -102,6 +102,7 @@ PatternChartController::PatternChartController(QObject* parent)
 PatternChartController::~PatternChartController() {
     if (experiment_) {
         experiment_->setChartShown(this, false);
+        experiment_->setChartAxis(this, edi::PatternAxis::Native);
     }
 }
 
@@ -190,10 +191,12 @@ void PatternChartController::setExperiment(ExperimentViewModel* experiment) {
     if (experiment_) {
         disconnect(experiment_, nullptr, this, nullptr);
         experiment_->setChartShown(this, false);
+        experiment_->setChartAxis(this, edi::PatternAxis::Native);
     }
     experiment_ = experiment;
     if (experiment_) {
         experiment_->setChartShown(this, active_);
+        experiment_->setChartAxis(this, axis());
         connect(experiment_, &ExperimentViewModel::patternSourceChanged, this, &PatternChartController::invalidate);
         // An admitted edit: the frame stays, and it no longer describes the model.
         connect(experiment_, &ExperimentViewModel::patternWentStale, this, [this] {
@@ -328,6 +331,22 @@ void PatternChartController::setYScale(YScale scale) {
     }
 }
 
+void PatternChartController::setDSpacing(bool on) {
+    if (on != d_spacing_) {
+        finishAnimation();
+        d_spacing_ = on;
+        x_min_.reset();  // another axis: the view starts over
+        x_max_.reset();
+        y_min_.reset();
+        y_max_.reset();
+        if (experiment_) {
+            experiment_->setChartAxis(this, axis());
+        }
+        emit dSpacingChanged();
+        invalidate();
+    }
+}
+
 void PatternChartController::cycleYScale() {
     setYScale(y_scale_ == Linear ? Sqrt : y_scale_ == Sqrt ? Log10 : Linear);
 }
@@ -368,7 +387,7 @@ void PatternChartController::refresh() {
         shown_ = pattern != nullptr ? pattern->presentation : edi::PatternPresentation{};
     } else {
         static const edi::PatternSource kNothing;
-        const edi::PatternSource& source = experiment_ ? experiment_->patternSource() : kNothing;
+        const edi::PatternSource& source = experiment_ ? experiment_->patternSource(axis()) : kNothing;
         shown_ = edi::present_pattern(source, view());
         if (experiment_ && active_) {
             experiment_->notePresented();
@@ -566,7 +585,7 @@ void PatternChartController::reset() { animateTo(std::nullopt, std::nullopt, std
 
 QString PatternChartController::hoverAt(double x, double y, int pane, double height) const {
     const auto found = nearest(x, y, pane, height, std::numeric_limits<double>::infinity());
-    return found ? QString::fromStdString(edi::hover_text(experiment_->patternSource(), *found->series, found->point))
+    return found ? QString::fromStdString(edi::hover_text(experiment_->patternSource(axis()), *found->series, found->point))
                  : QString();
 }
 
@@ -577,7 +596,7 @@ QString PatternChartController::hoverReadout(double x, double y, int pane, doubl
     }
     QStringList lines;
     for (const edi::HoverLine& line :
-         edi::hover_readout(experiment_->patternSource(), *found->series, found->point)) {
+         edi::hover_readout(experiment_->patternSource(axis()), *found->series, found->point)) {
         const QString text = QString::fromStdString(line.text).toHtmlEscaped();
         lines.append(line.style.empty() ? text
                                         : QStringLiteral("<span style=\"color:%1\">%2</span>")

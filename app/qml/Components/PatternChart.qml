@@ -403,8 +403,8 @@ Item {
     readonly property real toolbarRightInset: width - (mainView.x + mainView.plotArea.x + mainView.plotArea.width)
 
     // The toolbar line, centred under the block selector row (the owner, 2026-10-11): the y scale, linear, square
-    // root or log, and the x axis, 2θ, time-of-flight or d-spacing (owner, 2026-10-05; the x axis shows the
-    // experiment's own and is disabled until switching exists), then the buttons, a toolbar group's spacing apart.
+    // root or log, and the x axis, the experiment's own (2θ or time-of-flight) or d-spacing (owner, 2026-10-05), then
+    // the buttons, a toolbar group's spacing apart.
     Row {
         x: Math.round(chart.toolbarLeft + (chart.width - chart.toolbarRightInset - chart.toolbarLeft - width) / 2)
         y: chart.topMargin
@@ -425,11 +425,12 @@ Item {
             }
             ToolbarComboBox {
                 objectName: "chart.toolbar.xaxis"
-                enabled: false
+                enabled: chart.experiment !== null
                 toolTip: qsTr("X axis")
-                model: [qsTr("2θ"), qsTr("time-of-flight"), qsTr("d-spacing")]
-                closedTexts: [qsTr("x: 2θ"), qsTr("x: TOF"), qsTr("x: d")]
-                currentIndex: ["twoTheta", "timeOfFlight", "dSpacing"].indexOf(chart.xAxis)
+                model: [chart.nativeAxis === "timeOfFlight" ? qsTr("time-of-flight") : qsTr("2θ"), qsTr("d-spacing")]
+                closedTexts: [chart.nativeAxis === "timeOfFlight" ? qsTr("x: TOF") : qsTr("x: 2θ"), qsTr("x: d")]
+                currentIndex: controller.dSpacing ? 1 : 0
+                onActivated: index => controller.dSpacing = index === 1
             }
         }
         ChartToolbar {
@@ -631,9 +632,10 @@ Item {
     }
 
     // The legend, inside the main plot's top right corner.
-    // The x axis the pattern is drawn on: "twoTheta", "timeOfFlight" or "dSpacing". Only the experiment's own
-    // axis is drawn for now (no switching yet).
-    readonly property string xAxis: chart.experiment && chart.experiment.beamMode === ExperimentViewModel.TimeOfFlight ? "timeOfFlight" : "twoTheta"
+    // The experiment's own x axis, "twoTheta" or "timeOfFlight", and the one the pattern is drawn on, that or
+    // "dSpacing" (the toolbar's x box).
+    readonly property string nativeAxis: chart.experiment && chart.experiment.beamMode === ExperimentViewModel.TimeOfFlight ? "timeOfFlight" : "twoTheta"
+    readonly property string xAxis: controller.dSpacing ? "dSpacing" : nativeAxis
 
     // The legend starts at the top right on a 2θ axis and at the top left on a time-of-flight or d-spacing one,
     // where the strong peaks are at the other end (owner, 2026-10-05).
