@@ -86,14 +86,16 @@ function drawPattern(figure, pattern) {
     return;
   }
   const font = page.getPropertyValue('--head-font');
-  const grid = page.getPropertyValue('--tableborder').trim();
+  // diffraction-lib's report's lines: a light grid, the frame in the tables' border colour, no zero lines.
+  const grid = page.getPropertyValue('--rowshade').trim();
+  const frame = page.getPropertyValue('--tableborder').trim();
   // The plot starts no closer to the frame's top than to its sides, and plotly's toolbar sits above it, clear of the
   // legend.
   const margin = { l: 16, r: 16, t: 36, b: 16 };
   const domains = paneDomains(pattern.layout, figure.clientHeight - margin.t - margin.b);
   const bottom = 'residual' in domains ? 'y3' : 'bragg' in domains ? 'y2' : 'y';
   const excluded = patternStyle('excluded');
-  const axis = { automargin: true, showline: true, mirror: true, linecolor: grid, gridcolor: grid, zeroline: false };
+  const axis = { automargin: true, showline: true, mirror: true, linecolor: frame, gridcolor: grid, zeroline: false };
   const layout = {
     height: figure.clientHeight,
     margin,
