@@ -19,6 +19,7 @@
 #include <stdexcept>
 #include <filesystem>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <unordered_map>
 #include <unordered_set>
@@ -1342,13 +1343,25 @@ std::string printable_id(const std::string& id);
 // Inline (like the rest of this header) so every consumer TU list links unchanged.
 inline void require_unique_ids(const std::vector<std::string>& ids, const std::string& category,
                                const std::string& where) {
-    std::set<std::string> seen;
-    for (const std::string& id : ids) {
-        if (!seen.insert(id).second) {
-            throw std::invalid_argument(where + " refuses two " + category + "s named '" +
-                                        detail::printable_id(id) +
-                                        "': ids are unique within a loop category");
+    const auto refuse = [&](const std::string& id) {
+        throw std::invalid_argument(where + " refuses two " + category + "s named '" + detail::printable_id(id) +
+                                    "': ids are unique within a loop category");
+    };
+    // The first id that appeared before is refused. A short loop is compared pair by pair and allocates nothing; a
+    // long one is hashed, so its check stays linear.
+    constexpr std::size_t pairwise = 32;
+    if (ids.size() <= pairwise) {
+        for (std::size_t index = 1; index < ids.size(); ++index) {
+            for (std::size_t earlier = 0; earlier < index; ++earlier) {
+                if (ids[earlier] == ids[index]) refuse(ids[index]);
+            }
         }
+        return;
+    }
+    std::unordered_set<std::string_view> seen;
+    seen.reserve(ids.size());
+    for (const std::string& id : ids) {
+        if (!seen.insert(id).second) refuse(id);
     }
 }
 
@@ -2206,8 +2219,10 @@ class ItemVec final : public detail::KeyedBase {
        public:
         explicit DefaultIds(const std::vector<Ptr>& candidate) {
             if constexpr (requires { KeyTraits<T>::ordinal_defaults; }) {
-                std::set<std::string> used;
-                std::set<const T*> seen;
+                std::unordered_set<std::string> used;
+                std::unordered_set<const T*> seen;
+                used.reserve(candidate.size());
+                seen.reserve(candidate.size());
                 std::vector<std::pair<ItemKey*, std::string>> planned;
                 planned.reserve(candidate.size());
                 changed_.reserve(candidate.size());
@@ -2219,11 +2234,12 @@ class ItemVec final : public detail::KeyedBase {
                     if (!key.empty() && !used.insert(KeyTraits<T>::canonical(key.value())).second)
                         throw std::invalid_argument(std::string("admission refuses duplicate ") + KeyTraits<T>::category() + " id '" + detail::printable_id(key.value()) + "'");
                 }
+                // `used` only grows, so the smallest free ordinal never moves back: one pass for all items.
+                std::size_t ordinal = 1;
                 for (const Ptr& item : candidate) {
                     auto& key = KeyTraits<T>::key(*item);
                     if (!key.empty()) continue;
                     if (key.attached()) throw std::invalid_argument("an attached id must not be empty");
-                    std::size_t ordinal = 1;
                     while (used.contains(std::to_string(ordinal))) ++ordinal;
                     auto id = std::to_string(ordinal);
                     used.insert(id);
