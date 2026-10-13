@@ -904,8 +904,10 @@ refuses to write its bank rows into it.
 - **The Evolution tab** (Analysis, after Correlations; text only like every tab, §2) draws one fitted parameter across
   the datasets (`Components/EvolutionChart.qml`, `EvolutionViewModel`): a point per fitted dataset with its
   uncertainty as an error bar, drawn as the pattern chart draws measured points. The page's selector row keeps listing the
-  datasets, as on the Pattern tab; a selector in the chart's own toolbar, beside the x box, chooses among the
-  parameters `analysis/results.csv` records. x is the first extract rule's
+  datasets, as on the Pattern tab; a selector in the chart's own toolbar, beside the x box, lists every free
+  parameter, then any other one `analysis/results.csv` records, already before a dataset is fitted. Until one is, the
+  chart has no axes and shows "No fitted results yet" as the other empty views show theirs; the points appear as the
+  datasets are fitted. x is the first extract rule's
   value with its unit, or the file's place in the scan (the box at the chart's top left, *x: …* closed as the
   pattern chart's). A click on a point shows that dataset, on every page; a line marks the shown one, placed from the
   dataset's own x so it moves only when the shown dataset does (owner, 2026-10-06). The pointer zooms as on the

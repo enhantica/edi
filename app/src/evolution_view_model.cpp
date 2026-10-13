@@ -8,6 +8,8 @@
 #include <limits>
 #include <map>
 
+#include "edi/categories.hpp"
+
 namespace edi_app {
 
 namespace {
@@ -57,15 +59,45 @@ void EvolutionViewModel::setScan(const ScanSession* session, const edi::Project*
         emit xTitleChanged();
     }
     syncNames();
+    syncFitted();
     rebuild();
 }
 
+void EvolutionViewModel::syncParameters() {
+    if (syncNames()) {
+        rebuild();
+    }
+}
+
+void EvolutionViewModel::syncFitted() {
+    bool fitted = false;
+    if (session_ != nullptr && session_->index().error.empty()) {
+        const auto& rows = session_->index().rows;
+        fitted = std::any_of(rows.begin(), rows.end(), [](const auto& row) { return row.offset >= 0; });
+    }
+    if (fitted != fitted_) {
+        fitted_ = fitted;
+        emit fittedChanged();
+    }
+}
+
 bool EvolutionViewModel::syncNames() {
-    // The parameters results.csv records, the shown one kept, else the first (every recorded parameter is free).
+    // Every free parameter, listed before any dataset is fitted, then the ones results.csv records that are no
+    // longer free; the shown one kept, else the first.
     QStringList names;
+    if (project_ != nullptr) {
+        for (const edi::NamedParameter& parameter : edi::named_parameters(*project_)) {
+            if (parameter.parameter->free) {
+                names.append(QString::fromStdString(parameter.unique_name));
+            }
+        }
+    }
     if (session_ != nullptr) {
         for (const edi::ScanParameterColumns& parameter : session_->index().parameters) {
-            names.append(QString::fromStdString(parameter.name));
+            const QString name = QString::fromStdString(parameter.name);
+            if (!names.contains(name)) {
+                names.append(name);
+            }
         }
     }
     const QString shown = current_ >= 0 && current_ < names_.size() ? names_[current_] : QString();
@@ -99,10 +131,11 @@ void EvolutionViewModel::addRow(int dataset, const std::vector<std::string>& cel
     if (session_ == nullptr) {
         return;
     }
-    // A fresh run's first row brings the header, and with it the parameters: they are listed then, and the points
-    // read once; every later row adds its own point.
-    if (current_ < 0 || names_.size() != static_cast<qsizetype>(session_->index().parameters.size())) {
+    // A fresh run's first row brings the header, and with it the axes and any recorded parameter not listed yet: the
+    // points are read once then; every later row adds its own point.
+    if (!fitted_ || current_ < 0) {
         syncNames();
+        syncFitted();
         rebuild();
         return;
     }
