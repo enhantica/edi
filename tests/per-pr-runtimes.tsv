@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-13T20:09:29Z
+# measured_utc = 2026-10-13T22:02:46Z
 #
-# Recorded from: measured test run (504 node(s) measured once, 10296 banked, 0 stale row(s) dropped)
-# Collected tests: 11636; with a reported duration: 6554
+# Recorded from: measured test run (54 node(s) measured once, 10710 banked, 0 stale row(s) dropped)
+# Collected tests: 11690; with a reported duration: 6596
 # Module-scoped fixture costs recorded: 40
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 11636
+# inventory_python = 11690
 # inventory_cpp = 309
-# inventory_measured = 10710
-# inventory_unmeasured = 1235
+# inventory_measured = 10752
+# inventory_unmeasured = 1247
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -9479,6 +9479,60 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_scan_
 0.400	tests/system/py/test_plain_data_app.py::test_single_fit_in_scan_shows_saves_and_undoes_its_own_matrix[after-scan-sequential]
 0.140	tests/system/py/test_plain_data_app.py::test_single_fit_in_scan_shows_saves_and_undoes_its_own_matrix[fresh-independent]
 1.103	tests/system/py/test_plain_data_app.py::test_single_fit_in_scan_shows_saves_and_undoes_its_own_matrix[fresh-sequential]
+0.120	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[cold-analysis-displacement]
+0.130	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[cold-analysis-march-fraction]
+UNMEASURED:failed-in-this-run	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[cold-analysis-march-r]
+0.120	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[cold-analysis-monochromator]
+0.120	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[cold-analysis-polarization]
+0.140	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[cold-analysis-ratio]
+0.130	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[cold-analysis-second-line]
+UNMEASURED:failed-in-this-run	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[cold-analysis-tof-calibration]
+0.150	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[cold-analysis-transparency]
+0.110	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[cold-direct-displacement]
+0.110	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[cold-direct-march-fraction]
+UNMEASURED:failed-in-this-run	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[cold-direct-march-r]
+0.100	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[cold-direct-monochromator]
+0.100	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[cold-direct-polarization]
+0.220	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[cold-direct-ratio]
+0.150	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[cold-direct-second-line]
+UNMEASURED:failed-in-this-run	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[cold-direct-tof-calibration]
+0.110	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[cold-direct-transparency]
+0.140	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[cold-joint-displacement]
+0.120	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[cold-joint-march-fraction]
+UNMEASURED:failed-in-this-run	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[cold-joint-march-r]
+0.180	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[cold-joint-monochromator]
+0.130	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[cold-joint-polarization]
+0.130	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[cold-joint-ratio]
+0.140	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[cold-joint-second-line]
+UNMEASURED:failed-in-this-run	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[cold-joint-tof-calibration]
+0.130	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[cold-joint-transparency]
+0.150	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[reopened-analysis-displacement]
+0.200	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[reopened-analysis-march-fraction]
+UNMEASURED:failed-in-this-run	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[reopened-analysis-march-r]
+0.120	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[reopened-analysis-monochromator]
+0.150	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[reopened-analysis-polarization]
+0.150	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[reopened-analysis-ratio]
+0.130	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[reopened-analysis-second-line]
+UNMEASURED:failed-in-this-run	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[reopened-analysis-tof-calibration]
+0.140	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[reopened-analysis-transparency]
+0.080	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[reopened-direct-displacement]
+0.090	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[reopened-direct-march-fraction]
+UNMEASURED:failed-in-this-run	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[reopened-direct-march-r]
+0.090	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[reopened-direct-monochromator]
+0.090	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[reopened-direct-polarization]
+0.730	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[reopened-direct-ratio]
+0.110	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[reopened-direct-second-line]
+UNMEASURED:failed-in-this-run	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[reopened-direct-tof-calibration]
+0.110	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[reopened-direct-transparency]
+0.150	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[reopened-joint-displacement]
+0.240	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[reopened-joint-march-fraction]
+UNMEASURED:failed-in-this-run	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[reopened-joint-march-r]
+0.150	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[reopened-joint-monochromator]
+0.140	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[reopened-joint-polarization]
+0.140	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[reopened-joint-ratio]
+0.130	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[reopened-joint-second-line]
+UNMEASURED:failed-in-this-run	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[reopened-joint-tof-calibration]
+0.160	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[reopened-joint-transparency]
 0.000	tests/system/py/test_pytest_child_environment.py::test_parent_options_do_not_reach_nested_pytest[basetemp]
 0.000	tests/system/py/test_pytest_child_environment.py::test_parent_options_do_not_reach_nested_pytest[keyword]
 0.000	tests/system/py/test_pytest_child_environment.py::test_parent_options_do_not_reach_nested_pytest[marker]

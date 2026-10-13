@@ -96,3 +96,23 @@ tested active in the same bank, active in another unanchored component, and
 active in another bank with a fixed first wavelength. Active cells can co-dilate;
 the fixed bank forbids that move and transmits the anchor through the relation.
 All cases cover cold, calculated and reopened models and both public fit routes.
+
+Trial-domain cases use independently authored relations and physical domains.
+For a solved coordinate `x=0.4`, `ratio=4*x` is 1.6 and outside [0,1];
+`x=0.1` instead gives 0.4 and must recover after a rejected trial.
+The same projection witness drives the polarization fraction, monochromator
+angle, March ratio/fraction, both finite line shifts and TOF calibration.
+For TOF, `Dtt1=10000*(0.5-x)`, grid [5000,8000] and
+`alpha(d)=-0.4+1/d`: the bad coordinate gives d in [5,8] and a negative
+endpoint rate, while the valid coordinate gives [1.25,2] and positive rates.
+The shift expressions overflow at the bad point but remain finite at the
+initial and valid coordinates. Domains are analytic expectations, not snapshots.
+
+Symmetry followers use independently transcribed cctbx affine projector rows
+for Hall settings `P 2 2 3` (195:e, x=y=z) and `-P 3 2"` (164:i, x=-y).
+A relation reading y must see the image of the proposed positional basic,
+including its negative sign, rather than the stored coordinate. Scalar-source,
+fixed-coordinate and chained-source controls distinguish the representation seam.
+Profiles and Jacobians used to construct moving-fit observations are drive-only
+regression inputs. Their role is to request a step across the declared domain;
+no profile, derivative or fitted numerical value is an accuracy expectation.
