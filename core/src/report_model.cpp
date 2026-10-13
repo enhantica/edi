@@ -258,10 +258,11 @@ std::optional<ReportCorrelations> correlations_of(const Project& project, const 
     return out;
 }
 
-// A scan's template dataset as the app shows it once fitted (edi ADR-0035 §3): the declared template file, else the
-// first file, as the app opens a scan; the template with that file's results row (its values and uncertainties over
-// the template's; a parameter the results do not record keeps the template's), the file's data, its relations
-// completed and its pattern calculated; and the scan's counts. Without a row for the file, the template as it is.
+// A scan's template dataset as the app shows it (edi ADR-0035 §3): the declared template file, else the first file,
+// as the app opens a scan; with that file's results row, the template takes the row's values and uncertainties (a
+// parameter the results do not record keeps the template's); without one, the template's own. Either way the file's
+// data are loaded, the relations completed and the pattern calculated, so the report draws the structure and the
+// calculated pattern of the dataset it reports. Also the scan's counts.
 struct ScanTemplate {
     Project project;
     std::string file;
@@ -276,52 +277,48 @@ ScanTemplate scan_template_of(const Project& scan) {
         out.file = datasets.files.front();
     }
     const std::string& file = out.file;
+    if (file.empty()) {
+        return out;
+    }
     const ScanPlaces places = scan_places(datasets);
     const ScanResultIndex index = index_scan_results(scan, datasets, places);
     out.files = datasets.files.size();
-    if (!index.error.empty()) {
-        return out;
-    }
-    for (const ScanResultIndex::Row& row : index.rows) {
-        if (row.offset >= 0) {
-            ++out.fitted;
-            out.converged += row.converged ? 1 : 0;
-        }
-    }
-    const auto place = places.find(file);
-    if (place == places.end() || index.rows[place->second].offset < 0) {
-        return out;
-    }
-    const std::vector<std::string> cells = read_scan_row(scan, index.rows[place->second].offset);
-    std::map<std::string, const ScanParameterColumns*> columns;
-    for (const ScanParameterColumns& parameter : index.parameters) {
-        columns.emplace(parameter.name, &parameter);
-    }
     std::vector<Edit::ScanValue> values;
-    for (const NamedSlot& slot : named_slots(out.project)) {
-        Edit::ScanValue value{slot.unique_name, slot.parameter->value.get(), slot.parameter->uncertainty.get()};
-        if (const auto column = columns.find(scan_results_column(slot.unique_name)); column != columns.end()) {
-            double number = 0.0, uncertainty = 0.0;
-            const std::string& uncertainty_cell = cells.at(column->second->uncertainty);
-            if (!parse_scan_number(cells.at(column->second->value), number) ||
-                (uncertainty_cell != "nan" && !parse_scan_number(uncertainty_cell, uncertainty))) {
-                throw std::invalid_argument("analysis/results.csv: the row's '" + column->second->name +
-                                            "' cells are not numbers");
+    if (index.error.empty()) {
+        for (const ScanResultIndex::Row& row : index.rows) {
+            if (row.offset >= 0) {
+                ++out.fitted;
+                out.converged += row.converged ? 1 : 0;
             }
-            value.value = number;
-            value.uncertainty = uncertainty;
         }
-        values.push_back(std::move(value));
+        const auto place = places.find(file);
+        if (place != places.end() && index.rows[place->second].offset >= 0) {
+            out.row = index.rows[place->second];
+            const std::vector<std::string> cells = read_scan_row(scan, out.row->offset);
+            std::map<std::string, const ScanParameterColumns*> columns;
+            for (const ScanParameterColumns& parameter : index.parameters) {
+                columns.emplace(parameter.name, &parameter);
+            }
+            for (const NamedSlot& slot : named_slots(out.project)) {
+                Edit::ScanValue value{slot.unique_name, slot.parameter->value.get(), slot.parameter->uncertainty.get()};
+                if (const auto column = columns.find(scan_results_column(slot.unique_name)); column != columns.end()) {
+                    double number = 0.0, uncertainty = 0.0;
+                    const std::string& uncertainty_cell = cells.at(column->second->uncertainty);
+                    if (!parse_scan_number(cells.at(column->second->value), number) ||
+                        (uncertainty_cell != "nan" && !parse_scan_number(uncertainty_cell, uncertainty))) {
+                        throw std::invalid_argument("analysis/results.csv: the row's '" + column->second->name +
+                                                    "' cells are not numbers");
+                    }
+                    value.value = number;
+                    value.uncertainty = uncertainty;
+                }
+                values.push_back(std::move(value));
+            }
+        }
     }
     ExperimentBase& experiment = out.project.experiment();
     Edit::scan_view(out.project, experiment, std::move(values),
                     read_scan_dataset(datasets.directory, file, experiment.effective_beam_mode()))();
-    apply_relations(out.project);
-    try {
-        out.project.calculate();
-    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — a refused calculation leaves the pattern not current
-    }
-    out.row = index.rows[place->second];
     return out;
 }
 
@@ -693,6 +690,14 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
         try {
             scan = scan_template_of(input);
         } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — the template as it is, below
+        }
+    }
+    // Calculated where it stays: a project's computed state does not survive a copy or a move.
+    if (scan) {
+        apply_relations(scan->project);
+        try {
+            scan->project.calculate();
+        } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — a refused calculation leaves the pattern not current
         }
     }
     const Project& project = scan ? scan->project : input;
