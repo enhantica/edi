@@ -2,6 +2,7 @@
 
 import math
 import re
+from decimal import Decimal
 
 import edi as engine
 import numpy as np
@@ -72,6 +73,23 @@ def test_hill_howard_values_uncertainties_and_warm_scale_changes(tmp_path):
         )
 
 
+def check_saved_fraction(token, wanted):
+    match = re.fullmatch(r'([-+\d.eE]+)\(([-+\d.eE]+)\)', token)
+    assert match, 'Each free-scale fraction must save its numeric value and standard uncertainty'
+    value, uncertainty = match.groups()
+    sigma = Decimal(uncertainty)
+    if re.fullmatch(r'\d+', uncertainty):
+        sigma *= Decimal(10) ** Decimal(value).as_tuple().exponent
+    decoded = float(value), float(sigma)
+    assert all(math.isfinite(number) for number in decoded), (
+        'A saved derived value and its propagated uncertainty must be finite'
+    )
+    assert decoded[1] > 0, 'A saved nonzero propagated uncertainty must be positive'
+    assert decoded == wanted, (
+        'The saved fraction and standard uncertainty must each round-trip exactly'
+    )
+
+
 @pytest.mark.parametrize('free_scales', [False, True])
 def test_derived_weight_fraction_and_su_are_written_to_edi(tmp_path, free_scales):
     project = weighted_project(tmp_path / 'input', free_scales=free_scales)
@@ -95,9 +113,15 @@ def test_derived_weight_fraction_and_su_are_written_to_edi(tmp_path, free_scales
     rows = [line.split() for line in lines[start:] if line.strip()][:2]
     assert len(rows) == 2, 'Saved weight fractions must cover both linked structures'
     if free_scales:
-        assert all(re.fullmatch(r'[-+\d.eE]+\(\d+\)', row[column]) for row in rows), (
-            'Each fraction built from free scales must save a numeric standard uncertainty'
-        )
+        for row, wanted in zip(rows, before, strict=True):
+            token = row[column]
+            check_saved_fraction(token, wanted)
+            # Exercise missing, zero, truncated and wrong-convention s.u. channels on
+            # the actual writer's token; reopening recomputes this dependent quantity.
+            value, _sigma = token.split('(', 1)
+            for changed in (value, value + '(0)', value + '(nan)', value + '(99)'):
+                with pytest.raises(AssertionError):
+                    check_saved_fraction(changed, wanted)
     else:
         assert all(re.fullmatch(r'[-+\d.eE]+', row[column]) for row in rows), (
             'Fractions built only from fixed scales must save bare derived values'
