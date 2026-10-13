@@ -2441,6 +2441,14 @@ NB_MODULE(_edi, m) {
             "Whether the phase takes part: a disabled link is kept and saved, but neither calculated "
             "nor fitted.");
     def_parameter_field(linked_structure, "scale", &edi::LinkedStructure::scale);
+    linked_structure.def_prop_ro(
+        "weight_fraction", [](const edi::LinkedStructure& self) { return edi::weight_fraction(self); },
+        "The phase's Hill-Howard weight fraction in its experiment and its uncertainty, derived from the "
+        "current model; None when it takes no part or belongs to no project.");
+    nb::class_<edi::WeightFraction>(m, "WeightFraction", "A derived weight fraction, read-only.")
+        .def_ro("value", &edi::WeightFraction::value, "The weight fraction, 0 to 1.")
+        .def_ro("uncertainty", &edi::WeightFraction::uncertainty,
+                "Its standard uncertainty, or None when no scale carries one.");
 
     // The experiment's linked structures (phases), keyed by structure_id (R15).
     nb::class_<edi::views::LinkedStructuresView> linked_structures_view(

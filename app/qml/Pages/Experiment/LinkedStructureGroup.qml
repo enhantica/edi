@@ -15,6 +15,7 @@ import edi.app
 // each row shows the structure's icon in that structure's colour before its name (edi ADR-0017 §8). The name
 // is picked from the project's structures; a row can be added for a structure not yet linked, removed while
 // another remains, and switched off: a disabled row is kept and saved but neither calculated nor fitted.
+// The weight fraction beside the scale is derived from the scales (Hill-Howard) and cannot be edited.
 Column {
     id: group
 
@@ -31,7 +32,7 @@ Column {
         defaultInfoText: qsTr("No linked structure")
         sourceModel: group.rows
 
-        columnWidths: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, -1, EaStyle.Sizes.fontPixelSize * 8, AppSizes.iconColumnWidth, AppSizes.iconColumnWidth]
+        columnWidths: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, -1, EaStyle.Sizes.fontPixelSize * 8, EaStyle.Sizes.fontPixelSize * 8, AppSizes.iconColumnWidth, AppSizes.iconColumnWidth]
 
         header: EaComponents.ListViewHeader {
             EaComponents.TableViewLabel {
@@ -50,6 +51,10 @@ Column {
             }
             EaComponents.TableViewLabel {
                 horizontalAlignment: Text.AlignHCenter
+                text: qsTr("weight fraction")
+            }
+            EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
             }
             EaComponents.TableViewLabel {
                 horizontalAlignment: Text.AlignHCenter
@@ -62,6 +67,7 @@ Column {
             required property int index
             required property string structureId
             required property int colorIndex
+            required property string weightFraction
             // `scale` and `enabled` are Item properties, so these two roles are read through the model.
             required property var model
 
@@ -104,6 +110,14 @@ Column {
                 objectName: `linkedStructure.scale.${row.index}`
                 enabled: row.model.enabled
                 item: row.model.scale
+            }
+            // Read-only: derived from the scales, never edited.
+            EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
+                objectName: `linkedStructure.weightFraction.${row.index}`
+                enabled: row.model.enabled
+                text: row.weightFraction
+                ToolTip.text: qsTr("Hill-Howard weight fraction, from the scales")
             }
             // Disabled as a constraint is: kept and saved, but neither calculated nor fitted.
             EaComponents.TableViewButton {

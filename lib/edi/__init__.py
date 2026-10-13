@@ -231,6 +231,7 @@ from edi._edi import (  # noqa: E402 - the __path__ resolution above must run fi
     TofPseudoVoigt,
     ValidationError,
     VerbosityEnum,
+    WeightFraction,
     error_report,
     iteration_line,
     machine_report,
@@ -362,6 +363,7 @@ __all__ = [
     'TofPseudoVoigt',
     'ValidationError',
     'VerbosityEnum',
+    'WeightFraction',
     'error_report',
     'iteration_line',
     'machine_report',
@@ -669,10 +671,10 @@ _CW_LINE_SHIFT_KEYS = frozenset({'calib_sample_displacement', 'calib_sample_tran
 _XRAY_POLARIZATION_KEYS = frozenset({
     'setup_polarization_coefficient',
     'setup_monochromator_twotheta',
-})
-
     'setup_wavelength_2',
     'setup_wavelength_2_to_1_ratio',
+})
+
 _PEAK_PROFILE_BY_TOKEN = {
     'tof-jorgensen': PeakProfileTypeEnum.TOF_JORGENSEN,
     'tof-jorgensen-von-dreele': PeakProfileTypeEnum.TOF_JORGENSEN_VON_DREELE,
