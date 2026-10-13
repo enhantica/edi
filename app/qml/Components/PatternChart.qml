@@ -21,6 +21,10 @@ Item {
     objectName: "chart"
 
     property ExperimentViewModel experiment: null
+    // The report's input (edi ADR-0035): set, the chart draws the report model's presentation of `reportExperiment`
+    // as it is, with no toolbar and no pointer, so the wheel scrolls what holds it.
+    property ReportViewModel report: null
+    property string reportExperiment: ""
     // The chart is on the page and the tab the window shows: its page binds it (the owner's one-redraw
     // rule). A chart not shown keeps its last drawing and refreshes once, with the latest result, when it
     // is shown again; a chart no page hides is shown.
@@ -55,7 +59,7 @@ Item {
     readonly property real labelLift: tickRoom - Math.round(em * 0.4)
     readonly property real titleGutter: Math.round(em * 1.6)
     // The toolbar ends at the plot areas' right border, one em above the main one.
-    readonly property real topHeight: topMargin + toolbar.height + belowToolbar
+    readonly property real topHeight: chart.report ? topMargin : topMargin + toolbar.height + belowToolbar
     // The panes' heights, as easydiffractionbeta divides them: of what the toolbar and the x axis leave, the
     // main pane takes 0.7 and the residual 0.3, each less half of what the tick rows take between them. A
     // structure's row is 1.5 em high, in a pane half an em higher.
@@ -297,6 +301,8 @@ Item {
         // First, so a chart made where it is not shown draws nothing until it is.
         active: chart.shown && chart.visible
         experiment: chart.experiment
+        report: chart.report
+        reportExperiment: chart.reportExperiment
         dark: EaStyle.Colors.isDarkPalette
         plotWidth: mainView.plotArea.width
         plotHeight: mainView.plotArea.height
@@ -398,6 +404,7 @@ Item {
     Row {
         x: Math.round(chart.toolbarLeft + (chart.width - chart.toolbarRightInset - chart.toolbarLeft - width) / 2)
         y: chart.topMargin
+        visible: !chart.report
         spacing: EaStyle.Sizes.fontPixelSize * 0.5 + 2 * AppSizes.toolbarSpacing
 
         Row {
@@ -644,6 +651,7 @@ Item {
         property real lastX: 0
 
         objectName: "chart.pointer"
+        enabled: !chart.report
         x: mainView.x + mainView.plotArea.x
         y: mainView.y + mainView.plotArea.y
         width: mainView.plotArea.width
@@ -706,7 +714,7 @@ Item {
         y: braggView.y + braggView.plotArea.y
         width: braggView.plotArea.width
         height: braggView.plotArea.height
-        visible: braggView.visible && toolbar.hoverShown
+        visible: braggView.visible && toolbar.hoverShown && !chart.report
         acceptedButtons: Qt.NoButton
         hoverEnabled: true
         onPositionChanged: mouse => hoverLabel.read(1, braggPointer, mouse)
@@ -722,7 +730,7 @@ Item {
         y: residualView.y + residualView.plotArea.y
         width: residualView.plotArea.width
         height: residualView.plotArea.height
-        visible: residualView.visible && toolbar.hoverShown
+        visible: residualView.visible && toolbar.hoverShown && !chart.report
         acceptedButtons: Qt.NoButton
         hoverEnabled: true
         onPositionChanged: mouse => hoverLabel.read(2, residualPointer, mouse)

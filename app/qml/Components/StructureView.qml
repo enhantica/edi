@@ -20,6 +20,10 @@ Rectangle {
 
     property StructureViewModel structure: null
     property StructureViewOptions options: null
+    // The report's input (edi ADR-0035): set, the view draws the report model's scene of `reportStructure` with no
+    // toolbar. A drag still turns it, and the wheel scrolls what holds it.
+    property ReportViewModel report: null
+    property string reportStructure: ""
     // The view is on the page and the tab the window shows: its page binds it, as the pattern chart's (a loaded
     // page that is not shown stays visible, clipped out of the window). A view not shown prepares nothing and
     // presents once, with the latest source, when it is shown again; a view no page hides is shown.
@@ -58,6 +62,8 @@ Rectangle {
         active: view.shown && view.visible
         structure: view.structure
         options: view.options
+        report: view.report
+        reportStructure: view.reportStructure
         dark: EaStyle.Colors.isDarkPalette
         // Every style colour from EasyApp's EaStyle.Colors, as easydiffractionbeta's structure view uses them (the
         // owner, 2026-10-02): the cell edges grey, the axes red, green and blue, the labels in the foreground
@@ -71,7 +77,7 @@ Rectangle {
         viewportWidth: view.width
         viewportHeight: view.height
         // The band kept clear at the top for the toolbar: its height with its margins.
-        topBand: toolbar.height + 2 * view.margin
+        topBand: view.report ? 0 : toolbar.height + 2 * view.margin
         spheres: structureScene.spheres
         cylinders: structureScene.cylinders
         triadShafts: structureScene.triadShafts
@@ -159,6 +165,7 @@ Rectangle {
         anchors.fill: parent
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         hoverEnabled: true
+        preventStealing: view.report !== null
         onPressed: mouse => {
             pointer.last = Qt.point(mouse.x, mouse.y);
             hover.text = "";
@@ -175,7 +182,12 @@ Rectangle {
                 hover.show(mouse.x, mouse.y);
         }
         onExited: hover.text = ""
-        onWheel: wheel => controller.zoomAt(wheel.x, wheel.y, wheel.angleDelta.y)
+        onWheel: wheel => {
+            if (view.report)
+                wheel.accepted = false;
+            else
+                controller.zoomAt(wheel.x, wheel.y, wheel.angleDelta.y);
+        }
     }
 
     // The colour scheme and the toolbar, a toolbar group's spacing apart, in one line centred under the block
@@ -183,6 +195,7 @@ Rectangle {
     Row {
         x: Math.round(view.sideMargin + (view.width - view.toolbarRightInset - view.sideMargin - width) / 2)
         y: view.margin
+        visible: !view.report
         spacing: EaStyle.Sizes.fontPixelSize * 0.5 + 2 * AppSizes.toolbarSpacing
 
         ToolbarComboBox {

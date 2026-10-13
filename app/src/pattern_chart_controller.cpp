@@ -211,6 +211,29 @@ void PatternChartController::setExperiment(ExperimentViewModel* experiment) {
     invalidate();
 }
 
+void PatternChartController::setReport(ReportViewModel* report) {
+    if (report == report_) {
+        return;
+    }
+    if (report_) {
+        disconnect(report_, nullptr, this, nullptr);
+    }
+    report_ = report;
+    if (report_) {
+        connect(report_, &ReportViewModel::modelChanged, this, &PatternChartController::invalidate);
+    }
+    emit reportChanged();
+    invalidate();
+}
+
+void PatternChartController::setReportExperiment(const QString& experiment) {
+    if (experiment != report_experiment_) {
+        report_experiment_ = experiment;
+        emit reportExperimentChanged();
+        invalidate();
+    }
+}
+
 void PatternChartController::setActive(bool active) {
     if (active != active_) {
         active_ = active;
@@ -332,11 +355,17 @@ edi::PatternView PatternChartController::view() const {
 
 void PatternChartController::refresh() {
     dirty_ = false;
-    static const edi::PatternSource kNothing;
-    const edi::PatternSource& source = experiment_ ? experiment_->patternSource() : kNothing;
-    shown_ = edi::present_pattern(source, view());
-    if (experiment_ && active_) {
-        experiment_->notePresented();
+    if (report_) {
+        // The report's presentation as the model holds it; none for an experiment the model does not hold.
+        const edi::ReportPattern* pattern = report_->pattern(report_experiment_);
+        shown_ = pattern != nullptr ? pattern->presentation : edi::PatternPresentation{};
+    } else {
+        static const edi::PatternSource kNothing;
+        const edi::PatternSource& source = experiment_ ? experiment_->patternSource() : kNothing;
+        shown_ = edi::present_pattern(source, view());
+        if (experiment_ && active_) {
+            experiment_->notePresented();
+        }
     }
 
     const edi::PatternSeries* measured = nullptr;
@@ -492,7 +521,7 @@ double PatternChartController::xOf(double pixel) const {
 }
 
 void PatternChartController::zoomTo(double x0, double x1, double y0, double y1) {
-    if (plot_width_ <= 0.0 || plot_height_ <= 0.0 || x0 == x1 || y0 == y1) {
+    if (report_ || plot_width_ <= 0.0 || plot_height_ <= 0.0 || x0 == x1 || y0 == y1) {
         return;
     }
     const double left = xOf(std::min(x0, x1)), right = xOf(std::max(x0, x1));
@@ -505,7 +534,7 @@ void PatternChartController::zoomTo(double x0, double x1, double y0, double y1) 
 }
 
 void PatternChartController::wheelAt(double x, int angleDelta) {
-    if (plot_width_ <= 0.0 || angleDelta == 0) {
+    if (report_ || plot_width_ <= 0.0 || angleDelta == 0) {
         return;
     }
     // From where a running animation is going, so notches in quick succession add up.
@@ -516,7 +545,7 @@ void PatternChartController::wheelAt(double x, int angleDelta) {
 }
 
 void PatternChartController::panBy(double dx) {
-    if (plot_width_ <= 0.0 || dx == 0.0) {
+    if (report_ || plot_width_ <= 0.0 || dx == 0.0) {
         return;
     }
     finishAnimation();

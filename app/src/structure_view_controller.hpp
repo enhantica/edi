@@ -15,6 +15,7 @@
 
 #include "chart_models.hpp"
 #include "edi/structure_scene.hpp"
+#include "report_view_model.hpp"
 #include "shared_site_geometry.hpp"
 #include "structure_instances.hpp"
 #include "structure_label_layer.hpp"
@@ -35,6 +36,11 @@ class StructureViewController : public QObject {
     QML_ELEMENT
     Q_PROPERTY(edi_app::StructureViewModel* structure READ structure WRITE setStructure NOTIFY structureChanged)
     Q_PROPERTY(edi_app::StructureViewOptions* options READ options WRITE setOptions NOTIFY optionsChanged)
+    // The report's input (edi ADR-0035): with `report` set the view draws the report model's scene of
+    // `reportStructure`, from the model's view, and scene_drawing prepares it for this view's own viewport. The
+    // options do not apply: the model's scene is presented once, with the default options.
+    Q_PROPERTY(edi_app::ReportViewModel* report READ report WRITE setReport NOTIFY reportChanged)
+    Q_PROPERTY(QString reportStructure READ reportStructure WRITE setReportStructure NOTIFY reportStructureChanged)
     // The view is shown: a hidden view prepares nothing and is only marked dirty; it is presented once, with the
     // latest source, when it is shown again. Its `current` still turns false at once when its geometry goes stale.
     Q_PROPERTY(bool active READ active WRITE setActive NOTIFY activeChanged)
@@ -104,6 +110,10 @@ class StructureViewController : public QObject {
     void setStructure(StructureViewModel* structure);
     StructureViewOptions* options() const { return options_; }
     void setOptions(StructureViewOptions* options);
+    ReportViewModel* report() const { return report_; }
+    void setReport(ReportViewModel* report);
+    QString reportStructure() const { return report_structure_; }
+    void setReportStructure(const QString& id);
     bool active() const { return active_; }
     void setActive(bool active);
     bool dark() const { return dark_; }
@@ -120,9 +130,11 @@ class StructureViewController : public QObject {
     int atomCount() const { return static_cast<int>(scene_.atoms.size()); }
     int bondCount() const { return static_cast<int>(scene_.bonds.size()); }
     int cellEdgeCount() const { return static_cast<int>(scene_.cell_edges.size()); }
-    bool hasSites() const { return !source_.site_types.empty(); }
+    bool hasSites() const { return report_ ? !scene_.atoms.empty() : !source_.site_types.empty(); }
     bool hasCopies() const { return scene_.has_copies; }
-    bool hasBonds() const { return source_.bond_distance && !source_.bond_distance->empty(); }
+    bool hasBonds() const {
+        return report_ ? !scene_.bonds.empty() : source_.bond_distance && !source_.bond_distance->empty();
+    }
     QString substitutedElements() const;
     QString detail() const;
     int sphereSegments() const { return sphere_segments_; }
@@ -182,6 +194,8 @@ class StructureViewController : public QObject {
    signals:
     void structureChanged();
     void optionsChanged();
+    void reportChanged();
+    void reportStructureChanged();
     void activeChanged();
     void darkChanged();
     void currentChanged();
@@ -240,6 +254,9 @@ class StructureViewController : public QObject {
 
     QPointer<StructureViewModel> structure_;
     QPointer<StructureViewOptions> options_;
+    QPointer<ReportViewModel> report_;
+    QString report_structure_;
+    QMetaObject::Connection report_connection_;
     StructureInstances* spheres_ = nullptr;
     StructureInstances* cylinders_ = nullptr;
     StructureInstances* triad_shafts_ = nullptr;

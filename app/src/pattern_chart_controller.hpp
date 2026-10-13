@@ -17,6 +17,7 @@
 #include "edi/presentation.hpp"
 #include "experiment_view_model.hpp"
 #include "measured_layer.hpp"
+#include "report_view_model.hpp"
 
 namespace edi_app {
 
@@ -29,6 +30,11 @@ class PatternChartController : public QObject {
     Q_OBJECT
     QML_ELEMENT
     Q_PROPERTY(edi_app::ExperimentViewModel* experiment READ experiment WRITE setExperiment NOTIFY experimentChanged)
+    // The report's input (edi ADR-0035): with `report` set the chart draws the report model's presentation of
+    // `reportExperiment` as it is, instead of presenting an experiment. It has no view to change, so the zoom, the
+    // pan and the hover read-out do nothing.
+    Q_PROPERTY(edi_app::ReportViewModel* report READ report WRITE setReport NOTIFY reportChanged)
+    Q_PROPERTY(QString reportExperiment READ reportExperiment WRITE setReportExperiment NOTIFY reportExperimentChanged)
     // The chart is shown: a hidden chart is only marked dirty, and refreshed when it is shown again.
     Q_PROPERTY(bool active READ active WRITE setActive NOTIFY activeChanged)
     Q_PROPERTY(bool dark READ dark WRITE setDark NOTIFY darkChanged)
@@ -101,6 +107,10 @@ class PatternChartController : public QObject {
 
     ExperimentViewModel* experiment() const { return experiment_; }
     void setExperiment(ExperimentViewModel* experiment);
+    ReportViewModel* report() const { return report_; }
+    void setReport(ReportViewModel* report);
+    QString reportExperiment() const { return report_experiment_; }
+    void setReportExperiment(const QString& experiment);
     bool active() const { return active_; }
     void setActive(bool active);
     bool dark() const { return dark_; }
@@ -176,6 +186,8 @@ class PatternChartController : public QObject {
 
    signals:
     void experimentChanged();
+    void reportChanged();
+    void reportExperimentChanged();
     void activeChanged();
     void darkChanged();
     void plotWidthChanged();
@@ -255,6 +267,8 @@ class PatternChartController : public QObject {
     double xOf(double pixel) const;
 
     QPointer<ExperimentViewModel> experiment_;
+    QPointer<ReportViewModel> report_;
+    QString report_experiment_;
     bool active_ = true, dark_ = false, dirty_ = true;
     qreal plot_width_ = 0.0, plot_height_ = 0.0, residual_plot_height_ = 0.0, device_pixel_ratio_ = 1.0;
     YScale y_scale_ = Linear;
