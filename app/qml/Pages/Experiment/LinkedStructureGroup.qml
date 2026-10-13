@@ -15,7 +15,8 @@ import edi.app
 // each row shows the structure's icon in that structure's colour before its name (edi ADR-0017 §8). The name
 // is picked from the project's structures; a row can be added for a structure not yet linked, removed while
 // another remains, and switched off: a disabled row is kept and saved but neither calculated nor fitted.
-// The weight fraction beside the scale is derived from the scales (Hill-Howard) and cannot be edited.
+// The weight fraction beside the scale is derived from the scales (Hill-Howard) and cannot be edited; with a single
+// structure it is always 1 and its cell stays empty.
 Column {
     id: group
 
