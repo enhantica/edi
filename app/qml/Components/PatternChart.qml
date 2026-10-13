@@ -299,8 +299,9 @@ Item {
     PatternChartController {
         id: controller
 
-        // First, so a chart made where it is not shown draws nothing until it is.
-        active: chart.shown && chart.visible
+        // First, so a chart made where it is not shown draws nothing until it is. Qt Graphs cannot lay a view out
+        // outside a window, so a chart leaving one (a report figure being replaced) draws nothing either.
+        active: chart.shown && chart.visible && chart.Window.window !== null
         experiment: chart.experiment
         report: chart.report
         reportExperiment: chart.reportExperiment

@@ -103,13 +103,17 @@ Flickable {
         }
     }
 
-    // A structure or an experiment: its numbered heading, then its categories.
+    // A structure or an experiment: its numbered heading, then its categories. The records are counted, not listed, so a
+    // rebuilt model updates each record and its figure in place rather than making them again.
     component Record: Column {
         id: record
 
-        required property var modelData
         required property int index
         property string section: ""
+        readonly property var modelData: (preview.model[section] ?? [])[index] ?? ({
+                "id": "",
+                "categories": []
+            })
 
         width: parent ? parent.width : 0
         Heading {
@@ -249,7 +253,7 @@ Flickable {
                 text: `${preview.number("structures")}.  ` + qsTr("Structures")
             }
             Repeater {
-                model: preview.shown("structures") ? (preview.model.structures ?? []) : []
+                model: preview.shown("structures") ? (preview.model.structures ?? []).length : 0
                 delegate: Record {
                     section: "structures"
                 }
@@ -264,7 +268,7 @@ Flickable {
                 text: `${preview.number("experiments")}.  ` + qsTr("Experiments")
             }
             Repeater {
-                model: preview.shown("experiments") ? (preview.model.experiments ?? []) : []
+                model: preview.shown("experiments") ? (preview.model.experiments ?? []).length : 0
                 delegate: Record {
                     section: "experiments"
                 }
