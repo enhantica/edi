@@ -393,16 +393,51 @@ std::string fixed2(double value) {
     return {buffer.data(), result.ptr};
 }
 
+// The static report's style sheet, in the subset a rich-text engine reads: lengths in px at 96 to the inch, the HTML
+// report's points times 4/3.
+constexpr const char* kDocumentStyle = R"css(
+h2, h3, h4 { font-weight: normal; }
+h2 { font-size: 14.35pt; margin-top: 22.4px; margin-bottom: 9.3px; }
+h3 { font-size: 11.96pt; margin-top: 23.3px; margin-bottom: 14.4px; }
+h4 { font-size: 10.91pt; margin-top: 17.6px; margin-bottom: 8.3px; }
+p { margin-top: 0px; margin-bottom: 0px; }
+p.description { margin-top: 15.9px; margin-bottom: 27.2px; }
+p.note { margin-top: 2.1px; margin-bottom: 12.7px; color: #5f6368; }
+p.t1 { font-size: 14.35pt; margin-bottom: 18.7px; }
+p.t2 { font-size: 17.22pt; }
+p.authors { margin-top: 9.3px; color: #5f6368; }
+p.after-title { margin-bottom: 30.4px; }
+table { margin-top: 2.1px; margin-bottom: 12.7px; }
+)css";
+
+constexpr const char* kRowShade = "#ebf0f8";
+constexpr const char* kPaper = "#ffffff";
+constexpr const char* kTableBorder = "#bec7d0";
+
+// A cell of a static table: its HTML, its alignment, the columns it spans and its padding at each side, in px.
+struct DocumentCell {
+    std::string html;
+    const char* align = "left";
+    std::size_t span = 1;
+    double left = 4.0, right = 4.0;
+};
+
 class Writer {
 public:
-    explicit Writer(const ReportModel& model) : model_(model) {}
+    // The HTML report's text sections; with `figure_width`, the static report's, its figures that wide.
+    explicit Writer(const ReportModel& model, std::optional<double> figure_width = std::nullopt)
+        : model_(model), figure_width_(figure_width) {}
 
     std::string body() {
-        out_ += "<main class=\"report-shell\">\n";
+        if (!document()) {
+            out_ += "<main class=\"report-shell\">\n";
+        }
         title_block();
         for (const ReportSection section : model_.sections) {
             ++section_;
-            out_ += "<section id=\"" + std::string(report_section_name(section)) + "\">\n";
+            if (!document()) {
+                out_ += "<section id=\"" + std::string(report_section_name(section)) + "\">\n";
+            }
             switch (section) {
                 case ReportSection::Summary:
                     summary();
@@ -434,13 +469,19 @@ public:
                     note("The fitted parameters across the scan\xE2\x80\x99s datasets");
                     break;
             }
-            out_ += "</section>\n";
+            if (!document()) {
+                out_ += "</section>\n";
+            }
         }
-        out_ += "</main>\n";
+        if (!document()) {
+            out_ += "</main>\n";
+        }
         return std::move(out_);
     }
 
 private:
+    bool document() const { return figure_width_.has_value(); }
+
     std::string number() const { return whole(section_) + "."; }
 
     bool charts() const {
@@ -452,7 +493,8 @@ private:
         const std::string tag = "h" + std::to_string(level);
         out_ += "<" + tag + ">";
         if (!number.empty()) {
-            out_ += "<span class=\"section-number\">" + number + "</span>";
+            // The static report spaces the number with two no-break spaces, as its engine has no inline margins.
+            out_ += document() ? number + "\xC2\xA0\xC2\xA0" : "<span class=\"section-number\">" + number + "</span>";
         }
         out_ += escaped(text) + "</" + tag + ">\n";
     }
@@ -461,6 +503,15 @@ private:
 
     // The title block: what it is, then the project's title (its short name without one) and its authors.
     void title_block() {
+        if (document()) {
+            out_ += "<p class=\"t1\">EasyDiffraction Report</p>\n";
+            out_ += "<p class=\"t2\">" + escaped(model_.title.empty() ? model_.name : model_.title) + "</p>\n";
+            if (!model_.authors.empty()) {
+                out_ += "<p class=\"authors\">" + escaped(model_.authors) + "</p>\n";
+            }
+            out_ += "<p class=\"after-title\"></p>\n";
+            return;
+        }
         out_ += "<header class=\"report-title\">\n<div class=\"t1\">EasyDiffraction Report</div>\n";
         out_ += "<div class=\"t2\">" + escaped(model_.title.empty() ? model_.name : model_.title) + "</div>\n";
         if (!model_.authors.empty()) {
@@ -472,7 +523,7 @@ private:
     void summary() {
         heading(2, number(), "Project summary");
         if (!model_.description.empty()) {
-            out_ += "<p>" + escaped(model_.description) + "</p>\n";
+            out_ += (document() ? "<p class=\"description\">" : "<p>") + escaped(model_.description) + "</p>\n";
         }
         const auto joined = [](const std::vector<std::string>& ids) {
             std::string text;
@@ -490,16 +541,91 @@ private:
     // A structure or an experiment: its numbered heading, its figure when the report has charts, then its categories.
     void record(const std::string& id, const std::vector<ReportCategory>& categories, std::size_t index,
                 const char* figure) {
-        out_ += "<article class=\"record\">\n";
+        if (!document()) {
+            out_ += "<article class=\"record\">\n";
+        }
         heading(3, number() + whole(index + 1) + ".", id);
-        if (charts()) {
+        if (charts() && document()) {
+            // The figure's image, by its kind and index, framed as a table is.
+            DocumentCell cell{"<img src=\"" + std::string(figure) + "-" + whole(index) + "\" width=\"" +
+                                  fixed2(*figure_width_) + "\">",
+                              "left", 1, 0.0, 0.0};
+            document_table(nullptr, {{cell}}, false);
+        } else if (charts()) {
             out_ += "<div class=\"figure " + std::string(figure) + "-figure\" data-index=\"" + whole(index) +
                     "\"></div>\n";
         }
         for (const ReportCategory& part : categories) {
             category(part, 4);
         }
-        out_ += "</article>\n";
+        if (!document()) {
+            out_ += "</article>\n";
+        }
+    }
+
+    // A numeric cell of the static report as two cells, so the column's points line up: the sign and whole digits
+    // to the right, then the point and the rest to the left. A header wider than the numbers widens them outwards,
+    // never between the digits and the point. A number without a point gives the point's place to what follows its
+    // digits, as the HTML report does; a cell that is not a number spans both.
+    static std::vector<DocumentCell> number_cells(const std::string& text, double pad) {
+        const std::optional<NumberParts> parts = number_parts(text);
+        if (!parts) {
+            return {{escaped(text), "right", 2, pad, pad}};
+        }
+        return {{escaped(parts->left), "right", 1, pad, 0.0},
+                {(parts->dot ? "." : "") + escaped(parts->right), "left", 1, 0.0, pad}};
+    }
+
+    // A static table: the frame on its outer cells' edges, the header shaded with a line under it, the body's even rows
+    // shaded, as the HTML report's tables are; `header` may be null. Cells never wrap.
+    void document_table(const std::vector<DocumentCell>* header, const std::vector<std::vector<DocumentCell>>& rows,
+                        bool shaded = true) {
+        out_ += "<table cellspacing=\"0\" cellpadding=\"0\" style=\"border-collapse: collapse\">\n";
+        const std::size_t total = rows.size() + (header != nullptr ? 1 : 0);
+        std::size_t at = 0;
+        const auto edge = [](const char* side) {
+            return std::string("border-") + side + "-width: 0.5px; border-" + side + "-style: solid; border-" + side +
+                   "-color: " + kTableBorder + "; ";
+        };
+        const auto row_html = [&](const std::vector<DocumentCell>& row, bool head, std::size_t body_index) {
+            const char* shade = !shaded ? kPaper : head || body_index % 2 == 1 ? kRowShade : kPaper;
+            out_ += "<tr>";
+            for (std::size_t k = 0; k < row.size(); ++k) {
+                const DocumentCell& cell = row[k];
+                std::string style = "padding-left: " + fixed2(cell.left) + "px; padding-right: " + fixed2(cell.right) +
+                                    "px; padding-top: 3px; padding-bottom: 3px; white-space: nowrap; font-weight: normal; ";
+                if (at == 0) {
+                    style += edge("top");
+                }
+                if (at + 1 == total || head) {
+                    style += edge("bottom");
+                }
+                if (k == 0) {
+                    style += edge("left");
+                }
+                if (k + 1 == row.size()) {
+                    style += edge("right");
+                }
+                const char* tag = head ? "th" : "td";
+                out_ += std::string("<") + tag + " bgcolor=\"" + shade + "\" align=\"" + cell.align + "\"";
+                if (cell.span > 1) {
+                    out_ += " colspan=\"" + whole(cell.span) + "\"";
+                }
+                out_ += " style=\"" + style + "\">" + cell.html + "</" + tag + ">";
+            }
+            out_ += "</tr>\n";
+            ++at;
+        };
+        if (header != nullptr) {
+            out_ += "<thead>\n";
+            row_html(*header, true, 0);
+            out_ += "</thead>\n";
+        }
+        out_ += "<tbody>\n";
+        for (std::size_t i = 0; i < rows.size(); ++i) {
+            row_html(rows[i], false, i);
+        }
+        out_ += "</tbody>\n</table>\n";
     }
 
     // One category: its heading, its labelled values, then its table.
@@ -548,6 +674,21 @@ private:
             values.push_back({row.second});
         }
         const ColumnLayout column = layout_of(values, 1).front();
+        if (document()) {
+            std::vector<std::vector<DocumentCell>> cells;
+            for (const auto& [label, value] : rows) {
+                std::vector<DocumentCell> row{{escaped(label), "left", 1, 8.0, 37.3}};
+                if (column.numeric) {
+                    const std::vector<DocumentCell> number = number_cells(value, 8.0);
+                    row.insert(row.end(), number.begin(), number.end());
+                } else {
+                    row.push_back({escaped(value), "left", 1, 8.0, 8.0});
+                }
+                cells.push_back(std::move(row));
+            }
+            document_table(nullptr, cells);
+            return;
+        }
         out_ += "<table class=\"key-value\">\n<tbody>\n";
         for (const auto& [label, value] : rows) {
             out_ += "<tr>";
@@ -563,6 +704,29 @@ private:
             return;
         }
         const std::vector<ColumnLayout> columns = layout_of(data.rows, data.columns.size());
+        if (document()) {
+            std::vector<DocumentCell> header;
+            for (std::size_t i = 0; i < data.columns.size(); ++i) {
+                header.push_back({escaped(data.columns[i]), columns[i].numeric ? "center" : "left",
+                                  columns[i].numeric ? 2U : 1U});
+            }
+            std::vector<std::vector<DocumentCell>> cells;
+            for (const std::vector<std::string>& row : data.rows) {
+                std::vector<DocumentCell> line;
+                for (std::size_t i = 0; i < columns.size(); ++i) {
+                    const std::string text = i < row.size() ? row[i] : std::string();
+                    if (columns[i].numeric) {
+                        const std::vector<DocumentCell> number = number_cells(text, 4.0);
+                        line.insert(line.end(), number.begin(), number.end());
+                    } else {
+                        line.push_back({escaped(text)});
+                    }
+                }
+                cells.push_back(std::move(line));
+            }
+            document_table(&header, cells);
+            return;
+        }
         // A table longer than the preview shows at once scrolls in a window of rows, as the preview's does.
         out_ += data.rows.size() > 100 ? "<div class=\"table-scroll long\">" : "<div class=\"table-scroll\">";
         out_ += "<table class=\"wide-table\">\n<thead>\n<tr>";
@@ -591,6 +755,10 @@ private:
             note(matrix && !matrix->empty_text.empty() ? matrix->empty_text : "No correlations yet");
             return;
         }
+        if (document()) {
+            document_correlations(*matrix);
+            return;
+        }
         out_ += "<div class=\"table-scroll\"><table class=\"correlations\">\n<thead>\n<tr><th></th>";
         for (std::size_t column = 0; column < count; ++column) {
             out_ += "<th>" + whole(column + 1) + "</th>";
@@ -613,7 +781,44 @@ private:
         out_ += "</tbody>\n</table></div>\n";
     }
 
+    // The correlation chart of the static report: the same cells, each bordered and 3.2 em wide.
+    void document_correlations(const ReportCorrelations& matrix) {
+        const std::size_t count = matrix.labels.size();
+        std::string border;
+        for (const char* side : {"top", "right", "bottom", "left"}) {
+            border += std::string("border-") + side + "-width: 0.5px; border-" + side + "-style: solid; border-" +
+                      side + "-color: " + kTableBorder + "; ";
+        }
+        out_ += "<table cellspacing=\"0\" cellpadding=\"0\" style=\"border-collapse: collapse\">\n<thead>\n<tr><th></th>";
+        for (std::size_t column = 0; column < count; ++column) {
+            out_ += "<th align=\"center\" style=\"font-weight: normal\">" + whole(column + 1) + "</th>";
+        }
+        out_ += "</tr>\n</thead>\n<tbody>\n";
+        for (std::size_t row = 0; row < count; ++row) {
+            out_ += "<tr><th align=\"left\" valign=\"middle\" style=\"font-weight: normal; white-space: nowrap; "
+                    "padding-right: 8px\">" +
+                    whole(row + 1) + "\xC2\xA0\xC2\xA0" + escaped(matrix.labels[row]) + "</th>";
+            for (std::size_t column = 0; column < count; ++column) {
+                const double value = matrix.values[row * count + column];
+                const std::string size = "width=\"43\" style=\"padding-top: 13px; padding-bottom: 13px; ";
+                if (!std::isfinite(value)) {
+                    out_ += "<td " + size + "\"></td>";
+                    continue;
+                }
+                const std::string text = std::fabs(value) >= 0.5 ? "<span style=\"color: #f5f5f5\">" + fixed2(value) +
+                                                                       "</span>"
+                                                                 : fixed2(value);
+                out_ += "<td align=\"center\" valign=\"middle\" bgcolor=\"" + correlation_colour(value) + "\" " + size +
+                        border + "\">" +
+                        text + "</td>";
+            }
+            out_ += "</tr>\n";
+        }
+        out_ += "</tbody>\n</table>\n";
+    }
+
     const ReportModel& model_;
+    std::optional<double> figure_width_;
     std::string out_;
     std::size_t section_ = 0;
 };
@@ -667,6 +872,15 @@ std::string report_html(const ReportModel& model, const ReportLibraries& librari
                "\" crossorigin=\"anonymous\"></script>\n";
     }
     out += "<script type=\"module\">\n" + script_text(detail::kReportJs) + "</script>\n";
+    out += "</body>\n</html>\n";
+    return out;
+}
+
+std::string report_static_html(const ReportModel& model, double figure_width) {
+    std::string out = "<html>\n<head>\n<meta charset=\"utf-8\">\n";
+    out += "<title>" + escaped(model.title.empty() ? model.name : model.title) + "</title>\n";
+    out += "<style>" + std::string(kDocumentStyle) + "</style>\n</head>\n<body>\n";
+    out += Writer(model, figure_width).body();
     out += "</body>\n</html>\n";
     return out;
 }
