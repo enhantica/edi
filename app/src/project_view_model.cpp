@@ -173,8 +173,10 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     connect(this, &ProjectViewModel::currentExperimentIndexChanged, this, &ProjectViewModel::syncCorrelations);
     syncBlocks();
     report_ = new ReportViewModel(*this, this);
-    // The report filters its correlations by the Analysis page's level.
+    // The report filters its correlations by the Analysis page's level, and in a fit of several experiments shows the
+    // one the page shows.
     connect(correlations_, &CorrelationViewModel::levelChanged, report_, &ReportViewModel::refresh);
+    connect(this, &ProjectViewModel::currentExperimentIndexChanged, report_, &ReportViewModel::refresh);
     current_structure_ = structure_models_.isEmpty() ? -1 : 0;
     current_experiment_ = experiment_models_.isEmpty() ? -1 : 0;
     syncParameterTable();

@@ -9,6 +9,7 @@
 #include <limits>
 #include <map>
 
+#include "edi/correlation_matrix.hpp"
 #include "edi/io.hpp"
 
 namespace edi_app {
@@ -29,16 +30,13 @@ void CorrelationViewModel::setRecord(const edi::Project& project, int experiment
     } else if (experiment < 0 || experiment >= experiments || !fitted) {
         show({}, {}, {}, tr("Not in the last fit"));
     } else {
-        // Another experiment's parameters are named by its datablock key (io.cpp's parameter slot walk).
-        std::vector<std::string> others;
-        for (int i = 0; i < experiments; ++i) {
-            if (i != experiment) {
-                others.push_back(edi::datablock_key(project.experiments[static_cast<std::size_t>(i)]->name,
-                                                    "experiment") +
-                                 ".");
-            }
+        // The shown experiment's parameters only, as the report shows them (one core rule).
+        std::vector<std::string> names;
+        for (const auto& item : project.experiments) {
+            names.push_back(item->name.value());
         }
-        show({}, rows, others, tr("No correlations for this experiment"));
+        show({}, rows, edi::other_experiment_prefixes(names, static_cast<std::size_t>(experiment)),
+             tr("No correlations for this experiment"));
     }
 }
 

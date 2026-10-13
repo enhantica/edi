@@ -36,6 +36,9 @@ struct ReportOptions {
     /// are left out unless asked for, as they are usually long (the owner, 2026-10-13); an empty list includes all.
     std::vector<std::string> hidden{"data"};
     std::optional<double> correlation_level;  ///< absent: the five most correlated parameters
+    /// In a fit of several experiments, the one whose parameters the correlation chart shows, as the Correlations tab
+    /// shows the experiment it is on: the app's shown experiment, else the first.
+    std::size_t correlation_experiment = 0;
     bool d_spacing = false;                   ///< charts on d instead of 2θ or TOF
     bool residual = true;                     ///< the residual pane
     bool bragg_ticks = true;                  ///< the Bragg tick rows

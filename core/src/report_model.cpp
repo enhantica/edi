@@ -167,12 +167,17 @@ std::string fitting_mode_name(const std::string& mode) {
 
 // The pairs of correlation rows over their parameters, in the order the rows first name them: the names and the full
 // matrix, NaN for a pair no row gives.
-void matrix_of_rows(const std::vector<const FitParameterCorrelation*>& rows, std::vector<std::string>& names,
-                    std::vector<double>& matrix) {
+// The rows' parameters in the fit's order and their matrix, leaving out the parameters named with any of `hidden`.
+void matrix_of_rows(const std::vector<const FitParameterCorrelation*>& rows, const std::vector<std::string>& hidden,
+                    std::vector<std::string>& names, std::vector<double>& matrix) {
+    const auto shown = [&hidden](const std::string& name) {
+        return std::none_of(hidden.begin(), hidden.end(),
+                            [&name](const std::string& prefix) { return name.starts_with(prefix); });
+    };
     std::map<std::string, std::size_t> index;
     for (const FitParameterCorrelation* row : rows) {
         for (const std::string* name : {&row->parameter_unique_name_i.value(), &row->parameter_unique_name_j.value()}) {
-            if (!index.contains(*name)) {
+            if (shown(*name) && !index.contains(*name)) {
                 index.emplace(*name, names.size());
                 names.push_back(*name);
             }
@@ -181,11 +186,13 @@ void matrix_of_rows(const std::vector<const FitParameterCorrelation*>& rows, std
     const std::size_t n = names.size();
     matrix.assign(n * n, std::numeric_limits<double>::quiet_NaN());
     for (const FitParameterCorrelation* row : rows) {
-        const std::size_t i = index.at(row->parameter_unique_name_i.value());
-        const std::size_t j = index.at(row->parameter_unique_name_j.value());
-        const double value = correlation_value(*row);
-        matrix[i * n + j] = value;
-        matrix[j * n + i] = value;
+        const auto i = index.find(row->parameter_unique_name_i.value());
+        const auto j = index.find(row->parameter_unique_name_j.value());
+        if (i != index.end() && j != index.end()) {
+            const double value = correlation_value(*row);
+            matrix[i->second * n + j->second] = value;
+            matrix[j->second * n + i->second] = value;
+        }
     }
 }
 
@@ -193,8 +200,9 @@ void matrix_of_rows(const std::vector<const FitParameterCorrelation*>& rows, std
 // reaches the level, at most as many as asked, in the fit's order. A scan's are its template file's (`scan_file`), as
 // the tab shows a dataset's: the table its fit made (edi ADR-0034), else the rows read with it, else the saved rows
 // that name it. Without a fit and without pairs there is no chart.
-std::optional<ReportCorrelations> correlations_of(const Project& project, const std::optional<double>& level,
+std::optional<ReportCorrelations> correlations_of(const Project& project, const ReportOptions& options,
                                                   const std::string* scan_file, bool fitted) {
+    const std::optional<double>& level = options.correlation_level;
     std::vector<std::string> names;
     std::vector<double> matrix;
     std::vector<const FitParameterCorrelation*> rows;
@@ -226,7 +234,13 @@ std::optional<ReportCorrelations> correlations_of(const Project& project, const 
                 }
             }
         }
-        matrix_of_rows(rows, names, matrix);
+        // In a fit of several experiments, the chart of one, as the Correlations tab shows it.
+        std::vector<std::string> experiments;
+        for (const auto& experiment : project.experiments) {
+            experiments.push_back(experiment->name.value());
+        }
+        const std::size_t shown = options.correlation_experiment < experiments.size() ? options.correlation_experiment : 0;
+        matrix_of_rows(rows, other_experiment_prefixes(experiments, shown), names, matrix);
     }
     if (!fitted && names.empty()) {
         return std::nullopt;
@@ -750,7 +764,7 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
     if (correlations) {
         model.sections.push_back(ReportSection::Correlations);
         model.correlations =
-            correlations_of(project, options.correlation_level,
+            correlations_of(project, options,
                             scan ? &scan->file : scan_mode ? &project.sequential_fit.template_file : nullptr,
                             model.fitted);
     }
