@@ -202,8 +202,46 @@ EaElements.StatusBar {
             }
             FontMetrics {
                 id: fitValueMetrics
-                font.family: EaStyle.Fonts.ptMono.name
+                font.family: EaStyle.Fonts.fontFamily
                 font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.9
+            }
+            // The widest digit of the app's font, which has no tabular digits: every number sits in a slot as wide as
+            // its digits at that width, so the live counters keep a steady width (the owner, 2026-10-13).
+            readonly property real digitWidth: {
+                let widest = 0;
+                for (let digit = 0; digit <= 9; ++digit)
+                    widest = Math.max(widest, fitValueMetrics.advanceWidth(String(digit)));
+                return Math.ceil(widest);
+            }
+            // A piece of the values as runs of text, each with its colour (the counts' <font color> markup) and whether it
+            // is a number.
+            function runs(text: string): var {
+                const out = [];
+                const coloured = /<font color="([^"]+)">(.*?)<\/font>/g;
+                let at = 0;
+                const split = (part, color) => {
+                    for (const token of part.split(/([0-9][0-9.:,]*)/)) {
+                        if (token !== "")
+                            out.push({
+                                "text": token,
+                                "color": color,
+                                "number": /^[0-9]/.test(token)
+                            });
+                    }
+                };
+                for (let match = coloured.exec(text); match !== null; match = coloured.exec(text)) {
+                    split(text.slice(at, match.index), "");
+                    split(match[2], match[1]);
+                    at = coloured.lastIndex;
+                }
+                split(text.slice(at), "");
+                return out;
+            }
+            function slotWidth(number: string): real {
+                let width = 0;
+                for (const character of number)
+                    width += /[0-9]/.test(character) ? digitWidth : fitValueMetrics.advanceWidth(character);
+                return Math.ceil(width);
             }
             Row {
                 id: valuePieces
@@ -217,15 +255,26 @@ EaElements.StatusBar {
                         readonly property real gap: EaStyle.Sizes.fontPixelSize * 0.5
                         implicitWidth: numberText.implicitWidth + (hasArrow ? changeArrow.width + 2 * gap : 0)
                         implicitHeight: fitValueMetrics.height
-                        Text {
+                        Row {
                             id: numberText
                             objectName: `statusBar.fit.valuePart.${valuePart.index}`
-                            y: fitValueMetrics.ascent - baselineOffset
-                            font.family: EaStyle.Fonts.ptMono.name
-                            font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.9
-                            textFormat: Text.StyledText
-                            color: EaStyle.Colors.themeForeground
-                            text: valuePart.modelData
+                            readonly property font font: fitValueMetrics.font
+                            readonly property color color: EaStyle.Colors.themeForeground
+                            // The piece's plain text, for what reads it.
+                            readonly property string text: valuePart.modelData.replace(/<[^>]*>/g, "")
+                            Repeater {
+                                model: fitValues.runs(valuePart.modelData)
+                                delegate: Text {
+                                    required property var modelData
+                                    width: modelData.number ? fitValues.slotWidth(modelData.text) : implicitWidth
+                                    y: fitValueMetrics.ascent - baselineOffset
+                                    horizontalAlignment: Text.AlignRight
+                                    font: numberText.font
+                                    textFormat: Text.PlainText
+                                    color: modelData.color !== "" ? modelData.color : numberText.color
+                                    text: modelData.text
+                                }
+                            }
                         }
                         TextMetrics {
                             id: digitInk
@@ -238,7 +287,7 @@ EaElements.StatusBar {
                             x: numberText.implicitWidth + valuePart.gap
                             y: fitValueMetrics.ascent + digitInk.tightBoundingRect.y + digitInk.tightBoundingRect.height / 2 - (baselineOffset + arrowInk.tightBoundingRect.y + arrowInk.tightBoundingRect.height / 2)
                             font.family: EaStyle.Fonts.encodeSansRegular.name
-                            font.pixelSize: numberText.font.pixelSize
+                            font.pixelSize: fitValueMetrics.font.pixelSize
                             color: numberText.color
                             text: "→"
                             visible: valuePart.hasArrow
@@ -265,7 +314,7 @@ EaElements.StatusBar {
             objectName: "statusBar.fit.outOfDate"
             anchors.verticalCenter: parent.verticalCenter
             visible: !fitArea.running && bar.fit !== null && bar.fit.outOfDate
-            font.family: EaStyle.Fonts.ptMono.name
+            font.family: EaStyle.Fonts.fontFamily
             font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.9
             color: EaStyle.Colors.orange
             text: qsTr("out of date")
