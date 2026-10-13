@@ -44,6 +44,15 @@ void ParameterListModel::sync() {
     }
 }
 
+ParameterItem* ParameterListModel::parameterNamed(const QString& name) const {
+    for (int row = 0; row < count(); ++row) {
+        if (get(row, QStringLiteral("name")).toString() == name) {
+            return qobject_cast<ParameterItem*>(get(row, QStringLiteral("parameter")).value<QObject*>());
+        }
+    }
+    return nullptr;
+}
+
 // ---- BackgroundListModel ------------------------------------------------------------------------
 
 BackgroundListModel::BackgroundListModel(edi::ExperimentBase& experiment, ProjectEditor& editor,

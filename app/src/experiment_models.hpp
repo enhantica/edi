@@ -9,6 +9,7 @@
 #include "edi/categories.hpp"
 #include "edi/model.hpp"
 #include "option_list_model.hpp"
+#include "parameter_item.hpp"
 #include "row_table_model.hpp"
 
 namespace edi_app {
@@ -32,6 +33,8 @@ class ParameterListModel : public RowTableModel {
     ParameterListModel(Fields fields, ParameterRegistry& registry, QObject* parent);
     void sync();
     int usedCount() const { return used_count_; }
+    // The shown field named `name` (its `.edi` item name), or null: for a label that depends on another field.
+    Q_INVOKABLE edi_app::ParameterItem* parameterNamed(const QString& name) const;
 
    signals:
     void usedCountChanged();
