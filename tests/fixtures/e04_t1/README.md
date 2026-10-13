@@ -93,16 +93,16 @@ workflow page with Qt warnings fatal. Text panes and the report must render the
 loaded data. Whole-directory opening retains inferred types; the separate
 add-experiment tests continue to require every declared type axis.
 
-The later owner records extend this contract. Generate their small inputs with
-`generate_amendments.py`: LiF structure/experiment values come from the committed
-fixture, with synthetic observations; the editable project copies LBCO with a
-declared custom neutron length. These inputs are selector/editing witnesses, not
-physics goldens. The additional legacy minimizer spelling exercises the same
-library warning path as scan-3f. The probe observes `std::cerr` in an independent
-`edi::load_project` call; the app must show the diagnostic, display the effective
-`crysta` minimizer, and preserve the stored legacy token in Text. Qt warnings are
-still fatal. If the visible warning is modal, its close control is
-`warning.dismiss`.
+The later owner records (conductor drives 10–11) extend this contract. Generate
+their small inputs with `generate_amendments.py`: LiF structure/experiment values
+come from the committed fixture, with synthetic observations; the
+editable project copies LBCO with a declared custom neutron length. These inputs
+are selector/editing witnesses, not physics goldens. The additional legacy
+minimizer spelling exercises the same library warning path as scan-3f. The probe
+observes `std::cerr` in an independent `edi::load_project` call; the app must show
+the diagnostic, display the effective `crysta` minimizer, and preserve the stored
+legacy token in Text. Qt warnings are still fatal.
+If the visible warning is modal, its close control is `warning.dismiss`.
 
 The YAP example's warning expectation changes from empty to exactly:
 `Warning: structures[Al2O3].atom_sites[Al1].adp_iso = -0.13591 is outside its admissible range [0, 10]; loaded as saved (a fit may leave a value there)`.
@@ -159,7 +159,7 @@ Hermann–Mauguin name; an explicit `_space_group.it_number` must agree. In
 particular, the frozen `cosio-d20_start-1` input names `P n m a` without storing
 the number, whereas `cosio-d20_scan-324f` explicitly stores `62`. Both display
 `62`; no value is harvested from the app or its writer. Legacy experiment
-declarations follow the accepted directory-loader defaults.
+declarations follow the accepted directory-loader defaults (packet P1).
 
 The gate observes ComboBox's native content-item text and the native TextInput
 text of fields, including visibility, opacity and glyph colour. Model/options,
@@ -232,7 +232,10 @@ and [CCP4 symmetry table](https://www.ccp4.ac.uk/html/symmetry.html)).
 The expected `ex-pd-xray-cwl_latp_scan-4f.png` remains an explicitly labelled
 regression image; the unchanged inventory gate requires its real capture.
 
-Updates only the registered LiF project with `generate.py --update-project pd-xray-cwl_lif_single` and adds the round-robin project with `--add-project` (the
-display generator accepts the same selection). All other project and display witnesses remain unchanged. Every X-ray category gains the two declared doublet
-slots; absent declarations have exact fixed-zero defaults (ADR-0086). Input hashes, original profile witnesses and all other saved values remain intact. The
-scoped update refuses a changed experiment/display-witness population. No app output supplies a number.
+The doublet and absorption extension updates only the registered LiF project with `generate.py --update-project pd-xray-cwl_lif_single` and adds the round-robin project with `--add-project`
+(the display generator accepts the same selection). All other project and display
+witnesses remain unchanged. Every X-ray category gains the two declared doublet
+slots; absent declarations have exact fixed-zero defaults. Input hashes,
+original profile witnesses and all other saved values remain intact. The scoped
+update refuses a changed experiment/display-witness population. No app output
+supplies a number.

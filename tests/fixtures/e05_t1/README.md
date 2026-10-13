@@ -101,8 +101,8 @@ raw selected names alongside the existing model projection. The inventory gate
 requires the registered single/joint set in all three inventories, and refuses
 omissions and duplicate CLI rows. No numerical tolerance changes.
 
-Updates the LiF capture with `generate.py --update pd-xray-cwl_lif_single` and
-adds `pd-xray-cwl_pbso4-lab_round-robin` with `--only`. These are explicitly
+The doublet and absorption extension updates the LiF capture with `generate.py --update pd-xray-cwl_lif_single`
+and adds `pd-xray-cwl_pbso4-lab_round-robin` with `--only`. These are explicitly
 labelled CLI wiring regression pins from an actual private-copy CLI fit, not
 physics oracles. The update requires changed complete input hashes and retains
 every other case and full record. The authoring artifact is a DEV-only diagnostic
