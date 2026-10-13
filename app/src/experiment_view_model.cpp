@@ -268,22 +268,47 @@ void ExperimentViewModel::sync() {
     scattering_source_->sync();
 }
 
-void ExperimentViewModel::capturePattern() {
+std::size_t ExperimentViewModel::place() const {
     std::size_t place = 0;
     for (std::size_t i = 0; i < project_.experiments.size(); ++i) {
         if (project_.experiments[i].get() == &experiment_) {
             place = i;
         }
     }
-    pattern_source_ = edi::capture_pattern(project_, place);
+    return place;
+}
+
+void ExperimentViewModel::capturePattern() {
+    pattern_source_ = edi::capture_pattern(project_, place());
+    if (!d_charts_.isEmpty()) {
+        d_source_ = edi::capture_pattern(project_, place(), edi::PatternAxis::DSpacing);
+    }
     ++pattern_generation_;
     emit patternSourceChanged();
 }
 
-void ExperimentViewModel::showPattern(edi::PatternSource source) {
+void ExperimentViewModel::showPattern(edi::PatternSource source, std::optional<edi::PatternSource> d_source) {
     pattern_source_ = std::move(source);
+    if (d_source) {
+        d_source_ = std::move(d_source);
+    }
     ++pattern_generation_;
     emit patternSourceChanged();
+}
+
+void ExperimentViewModel::setChartAxis(const QObject* chart, edi::PatternAxis axis) {
+    const bool wanted = !d_charts_.isEmpty();
+    if (axis == edi::PatternAxis::DSpacing) {
+        d_charts_.insert(chart);
+    } else {
+        d_charts_.remove(chart);
+    }
+    if (d_charts_.isEmpty()) {
+        d_source_.reset();
+    } else if (!wanted) {
+        d_source_ = edi::capture_pattern(project_, place(), edi::PatternAxis::DSpacing);
+        emit patternSourceChanged();
+    }
 }
 
 void ExperimentViewModel::setChartShown(const QObject* chart, bool shown) {

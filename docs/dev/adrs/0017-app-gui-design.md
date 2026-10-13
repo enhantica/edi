@@ -540,8 +540,9 @@ code (`QtCharts1dTab.qml` and the base's `QtCharts1dBase.qml`; the owner, 2026-1
   toolbar group's spacing apart, a row of square buttons (2.5 em, with a fill and a border in the axis colour):
   legend, hover coordinates, a spacer, pan, box zoom, reset (the Home icon, as the structure view's), Home last. The
   y scale is a drop-down of linear, square root and log in the toolbar drop-down style (`ToolbarComboBox.qml`, §16)
-  (the owner, 2026-10-02), and right of it the x axis, 2θ, time-of-flight or d-spacing, showing the experiment's own axis; it is disabled until the
-  axis can be switched (owner, 2026-10-05). Closed, each box names its axis, *y: linear* and *x: 2θ*, *x: TOF* or
+  (the owner, 2026-10-02), and right of it the x axis, the experiment's own (2θ or time-of-flight) or d-spacing
+  (owner, 2026-10-05). On d the chart draws the core's d-spacing capture of the pattern, which needs a calculated
+  one; each chart keeps its own choice, and switching starts the view over. Closed, each box names its axis, *y: linear* and *x: 2θ*, *x: TOF* or
   *x: d*; its list keeps the plain choices (`ToolbarComboBox.closedTexts`). The controls are `AppSizes.toolbarControlSize` tall and
   `AppSizes.toolbarSpacing` apart within a group.
 - **The legend's side** follows the x axis (owner, 2026-10-05): the top right of the main pane on a 2θ axis, the top

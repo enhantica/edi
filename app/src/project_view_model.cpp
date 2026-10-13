@@ -1114,9 +1114,11 @@ void ProjectViewModel::startViewRead() {
     const std::string directory = scan_session_->datasets().directory;
     const std::string file = scan_session_->datasets().files[static_cast<std::size_t>(index)];
     const edi::BeamModeEnum mode = project_->experiment().effective_beam_mode();
+    // A chart on d draws the shown dataset's d-spacing capture too.
+    const bool d_spacing = !experiment_models_.isEmpty() && experiment_models_.front()->dSpacingWanted();
     view_reading_ = true;
     const QPointer<ProjectViewModel> self(this);
-    run_in_background([self, request, index, directory, file, mode, values = std::move(values),
+    run_in_background([self, request, index, directory, file, mode, d_spacing, values = std::move(values),
                        shown = std::move(shown)]() mutable {
         DatasetView view;
         view.values = std::move(values);
@@ -1127,6 +1129,9 @@ void ProjectViewModel::startViewRead() {
                 edi::apply_relations(*shown);
                 shown->calculate();
                 view.frame = edi::FitFrame{edi::capture_pattern(*shown, 0)};
+                if (d_spacing) {
+                    view.d_frame = edi::capture_pattern(*shown, 0, edi::PatternAxis::DSpacing);
+                }
             }
         } catch (const std::exception& refusal) {
             view.error = QString::fromUtf8(refusal.what());
@@ -1216,7 +1221,7 @@ void ProjectViewModel::applyDatasetView(std::uint64_t request, int index, Datase
     syncDataset(index);
     publishCurrent();
     if (view.frame) {
-        showFitFrame(*view.frame);
+        showFitFrame(*view.frame, std::move(view.d_frame));
     } else if (!view.error.isEmpty()) {
         setLastError(view.error);
     }
@@ -2112,9 +2117,10 @@ void ProjectViewModel::publishFit() {
     setModified(true);
 }
 
-void ProjectViewModel::showFitFrame(const edi::FitFrame& frame) {
+void ProjectViewModel::showFitFrame(const edi::FitFrame& frame, std::optional<edi::PatternSource> d_frame) {
     for (int i = 0; i < experiment_models_.size() && i < static_cast<int>(frame.size()); ++i) {
-        experiment_models_[i]->showPattern(frame[static_cast<std::size_t>(i)]);
+        experiment_models_[i]->showPattern(frame[static_cast<std::size_t>(i)],
+                                           i == 0 ? std::move(d_frame) : std::nullopt);
     }
 }
 
