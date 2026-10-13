@@ -75,6 +75,7 @@ qt_add_qml_module(edi_app_module
         src/fit_view_model.hpp src/fit_view_model.cpp
         src/parameter_table_model.hpp src/parameter_table_model.cpp
         src/report_view_model.hpp src/report_view_model.cpp
+        src/report_pdf.hpp src/report_pdf.cpp
         src/project_view_model.hpp src/project_view_model.cpp
         src/session.hpp src/session.cpp
         src/web_files.hpp src/web_files.cpp

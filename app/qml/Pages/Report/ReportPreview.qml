@@ -29,6 +29,37 @@ Flickable {
     function shown(name) {
         return sections.indexOf(name) >= 0;
     }
+    // The figures as images for the PDF, each at twice its size and named as the static report names it
+    // (structure-0, pattern-1, ...); `done` gets them once every grab has answered. A figure that cannot be grabbed is
+    // left out.
+    function grabFigures(done) {
+        const figures = {};
+        const jobs = [];
+        for (const [records, kind] of [[structureRecords, "structure"], [experimentRecords, "pattern"]]) {
+            for (let i = 0; i < records.count; ++i) {
+                const item = records.itemAt(i) ? records.itemAt(i).figureItem : null;
+                if (item && item.width > 0 && item.height > 0)
+                    jobs.push({
+                        "item": item,
+                        "name": `${kind}-${i}`
+                    });
+            }
+        }
+        let left = jobs.length;
+        if (left === 0) {
+            done(figures);
+            return;
+        }
+        for (const job of jobs) {
+            const asked = job.item.grabToImage(result => {
+                figures[job.name] = result.image;
+                if (--left === 0)
+                    done(figures);
+            }, Qt.size(job.item.width * 2, job.item.height * 2));
+            if (!asked && --left === 0)
+                done(figures);
+        }
+    }
     function number(section) {
         return sections.indexOf(section) + 1;
     }
@@ -116,6 +147,8 @@ Flickable {
             })
 
         width: parent ? parent.width : 0
+        // The figure, for the PDF's grab; null while the charts are left out.
+        readonly property Item figureItem: figure.item as Item
         Heading {
             level: 3
             under: record.index === 0 ? 2 : 0
@@ -253,6 +286,7 @@ Flickable {
                 text: `${preview.number("structures")}.  ` + qsTr("Structures")
             }
             Repeater {
+                id: structureRecords
                 model: preview.shown("structures") ? (preview.model.structures ?? []).length : 0
                 delegate: Record {
                     section: "structures"
@@ -268,6 +302,7 @@ Flickable {
                 text: `${preview.number("experiments")}.  ` + qsTr("Experiments")
             }
             Repeater {
+                id: experimentRecords
                 model: preview.shown("experiments") ? (preview.model.experiments ?? []).length : 0
                 delegate: Record {
                     section: "experiments"

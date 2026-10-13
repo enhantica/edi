@@ -11,12 +11,20 @@ import EasyApplication.Gui.Elements as EaElements
 import edi.app
 
 // Saving the report, the sidebar's top group (the owner, 2026-10-13): the interactive HTML with, beside it, whether it
-// embeds plotly.js and three.js (online by default); below it the static PDF and the CIF report (waits for the CIF
-// report task). Each is disabled until its writer exists.
+// embeds plotly.js and three.js (online by default); below it the static PDF, on A4 with the preview's figures as
+// images, and the CIF report (disabled until its writer exists).
 EaElements.GroupBox {
     id: group
 
     property ReportViewModel report: null
+    // The preview, whose figures the PDF shows.
+    property ReportPreview preview: null
+
+    // Grabs the preview's figures, then writes the PDF to `file` (the browser downloads it).
+    function savePdf(file) {
+        const report = group.report;
+        group.preview.grabFigures(figures => report.savePdf(file, figures, EaStyle.Fonts.fontFamily));
+    }
 
     objectName: "group.reportExport"
     title: qsTr("Export")
@@ -64,10 +72,20 @@ EaElements.GroupBox {
         }
         EaElements.SideBarButton {
             objectName: "report.savePdf"
-            enabled: false
+            enabled: group.report !== null && group.preview !== null
             fontIcon: "file-pdf"
             text: qsTr("Save static PDF")
-            ToolTip.text: qsTr("Not available yet")
+            ToolTip.text: qsTr("Save the report as a PDF on A4 pages, its charts as images")
+            onClicked: {
+                if (WebFiles.available) {
+                    group.savePdf("");
+                    return;
+                }
+                if (Session.projectLocation !== "")
+                    pdfDialog.currentFolder = Session.projectDirectoryUrl(Session.projectLocation);
+                pdfDialog.selectedFile = pdfDialog.currentFolder + "/" + group.report.pdfFileName();
+                pdfDialog.open();
+            }
         }
         EaElements.SideBarButton {
             objectName: "report.saveCif"
@@ -78,6 +96,14 @@ EaElements.GroupBox {
         }
     }
 
+    FileDialog {
+        id: pdfDialog
+        title: qsTr("Save the report as PDF")
+        fileMode: FileDialog.SaveFile
+        defaultSuffix: "pdf"
+        nameFilters: [qsTr("PDF files (*.pdf)")]
+        onAccepted: group.savePdf(selectedFile)
+    }
     FileDialog {
         id: htmlDialog
         title: qsTr("Save the report as HTML")

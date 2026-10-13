@@ -26,6 +26,7 @@ WorkflowPage {
     ]
     mainItems: [
         ReportPreview {
+            id: reportPreview
             objectName: "report.preview"
             report: page.report
         }
@@ -35,6 +36,7 @@ WorkflowPage {
         EaComponents.SideBarColumn {
             ExportGroup {
                 report: page.report
+                preview: reportPreview
             }
             ContentsGroup {
                 report: page.report
