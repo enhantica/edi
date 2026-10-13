@@ -12,6 +12,7 @@
 #include <stdexcept>
 
 #include "edi/categories.hpp"
+#include "edi/duration_text.hpp"
 #include "edi/edit.hpp"
 #include "edi/io.hpp"
 #include "edi/model.hpp"
@@ -531,7 +532,7 @@ std::vector<ReportCategory> analysis_of(const Project& project, const std::optio
                        {"Failed", std::to_string(scan->fitted - scan->converged), ""}};
     } else if (fitted) {
         result.rows = {{"Overall status", status_word(record), ""},
-                       {"Fitting time", fixed(record.fitting_time, 2), "s"},
+                       {"Fitting time", duration_text(record.fitting_time), "s"},
                        {"Iterations", std::to_string(record.iterations), ""},
                        {"Goodness-of-fit (reduced χ²)", fixed(record.reduced_chi_square, 2), ""},
                        {"Weighted profile R-factor (Rwp)", fixed(record.prof_wr_factor * 100.0, 2), "%"}};
