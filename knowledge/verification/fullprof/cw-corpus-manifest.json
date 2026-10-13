@@ -81,6 +81,13 @@
       "y2o3_isotropic_adp.prf": "sha256:7b70793eb5b3556de446371b98876c62dfff5775dc5d8e41ef80ac5eca82b2f5",
       "y2o3_isotropic_adp.sum": "sha256:721fea6c55fd689ffb0fddfdc489bc5f122305a8db701b2ea9904e2ead91f582"
     },
+    "pd-xray-cwl_lif_doublet": {
+      "lif_doublet_unpolarized.bac": "sha256:8cb78794ae7705e8212fe3dfb4cada8b85181431bfe8e6fa7a6080f7c195561e",
+      "lif_doublet_unpolarized.dat": "sha256:06ba190e26656de021c199beef857cdf61acf5e05ca62564cb325d40d9628cae",
+      "lif_doublet_unpolarized.pcr": "sha256:3606d681cce449694c0964282286eb35c049228bd855496c24ea76a9729e0f04",
+      "lif_doublet_unpolarized.prf": "sha256:730a1b1f159bc351dcb48c7ed3aff13b809971e409cd1267b4f622a579d63a5c",
+      "lif_doublet_unpolarized.sum": "sha256:6c1782aa6a32034b483bed195876e607589d49772a34e1f63a9029708b375006"
+    },
     "pd-xray-cwl_lif_single": {
       "lif_single_unpolarized.bac": "sha256:a4d4499e76435e7c57d1b868374809bba5492d5b522e3e982572560104c1c10d",
       "lif_single_unpolarized.dat": "sha256:06ba190e26656de021c199beef857cdf61acf5e05ca62564cb325d40d9628cae",
