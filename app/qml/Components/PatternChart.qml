@@ -24,6 +24,8 @@ Item {
     // The report's input (edi ADR-0035): set, the chart draws the report model's presentation of `reportExperiment`
     // as it is, with no toolbar and no pointer, so the wheel scrolls what holds it.
     property ReportViewModel report: null
+    // The theme colours the chart draws with; a PDF's figure takes the light ones.
+    property FigureColors colors: FigureColors {}
     property string reportExperiment: ""
     // The chart is on the page and the tab the window shows: its page binds it (the owner's one-redraw
     // rule). A chart not shown keeps its last drawing and refreshes once, with the latest result, when it
@@ -163,7 +165,7 @@ Item {
         colorScheme: GraphsTheme.ColorScheme.Light
         backgroundVisible: false
         plotAreaBackgroundVisible: false
-        labelTextColor: EaStyle.Colors.chartLabels
+        labelTextColor: chart.colors.chartLabels
         labelFont.family: EaStyle.Fonts.fontFamily
         labelFont.pixelSize: EaStyle.Sizes.fontPixelSize
         axisX.mainColor: "transparent"
@@ -203,7 +205,7 @@ Item {
             height: axisLabel.height
             horizontalAlignment: axisLabel.horizontalAlignment
             verticalAlignment: axisLabel.verticalAlignment
-            color: EaStyle.Colors.chartLabels
+            color: chart.colors.chartLabels
             text: axisLabel.axis !== null && axisLabel.format !== null ? chart.yLabelText(axisLabel.text, axisLabel.axis, axisLabel.valueScale, axisLabel.format) : axisLabel.text
         }
     }
@@ -262,7 +264,7 @@ Item {
                 visible: x > 0 && x < grid.width - width
                 width: EaStyle.Sizes.borderThickness
                 height: grid.height
-                color: EaStyle.Colors.chartGridLine
+                color: chart.colors.chartGridLine
             }
         }
         Repeater {
@@ -274,14 +276,14 @@ Item {
                 visible: y > 0 && y < grid.height - height
                 width: grid.width
                 height: EaStyle.Sizes.borderThickness
-                color: EaStyle.Colors.chartGridLine
+                color: chart.colors.chartGridLine
             }
         }
         // The border, over the grid: the four sides in the axis colour.
         Rectangle {
             anchors.fill: parent
             color: "transparent"
-            border.color: EaStyle.Colors.chartAxis
+            border.color: chart.colors.chartAxis
             border.width: EaStyle.Sizes.borderThickness
         }
     }
@@ -291,7 +293,7 @@ Item {
         required property GraphsView pane
 
         rotation: -90
-        color: EaStyle.Colors.chartLabels
+        color: chart.colors.chartLabels
         x: chart.sideMargin + (chart.titleGutter - width) / 2
         y: pane.y + pane.plotArea.y + (pane.plotArea.height - height) / 2
     }
@@ -305,7 +307,7 @@ Item {
         experiment: chart.experiment
         report: chart.report
         reportExperiment: chart.reportExperiment
-        dark: EaStyle.Colors.isDarkPalette
+        dark: chart.colors.isDarkPalette
         plotWidth: mainView.plotArea.width
         plotHeight: mainView.plotArea.height
         residualPlotHeight: residualView.visible ? residualView.plotArea.height : 0
@@ -356,7 +358,7 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        color: EaStyle.Colors.chartBackground
+        color: chart.colors.chartBackground
     }
 
     PaneGrid {
@@ -623,7 +625,7 @@ Item {
         objectName: "chart.title.x"
         x: mainView.x + mainView.plotArea.x + (mainView.plotArea.width - width) / 2
         y: chart.height - chart.bottomMargin - chart.xTitleHeight + (chart.xTitleHeight - height) / 2
-        color: EaStyle.Colors.chartLabels
+        color: chart.colors.chartLabels
         text: controller.xTitle
         visible: controller.hasData
     }
@@ -637,6 +639,7 @@ Item {
     // where the strong peaks are at the other end (owner, 2026-10-05).
     ChartLegend {
         objectName: "chart.legend"
+        colors: chart.colors
         x: chart.xAxis === "twoTheta" ? mainView.x + mainView.plotArea.x + mainView.plotArea.width - width - chart.em : mainView.x + mainView.plotArea.x + chart.em
         y: mainView.y + mainView.plotArea.y + chart.em
         visible: toolbar.legendShown && controller.hasData
@@ -695,14 +698,14 @@ Item {
             width: Math.abs(pointer.mouseX - pointer.pressX)
             height: Math.abs(pointer.mouseY - pointer.pressY)
             color: "transparent"
-            border.color: EaStyle.Colors.appBorder
+            border.color: chart.colors.appBorder
             border.width: EaStyle.Sizes.borderThickness
             opacity: 0.9
 
             Rectangle {
                 anchors.fill: parent
                 opacity: 0.5
-                color: EaStyle.Colors.appBorder
+                color: chart.colors.appBorder
             }
         }
     }
@@ -760,8 +763,8 @@ Item {
         visible: hoverText.text !== ""
         width: hoverText.implicitWidth + chart.em
         height: hoverText.implicitHeight + chart.em * 0.5
-        color: EaStyle.Colors.mainContentBackgroundHalfTransparent
-        border.color: EaStyle.Colors.chartGridLine
+        color: chart.colors.mainContentBackgroundHalfTransparent
+        border.color: chart.colors.chartGridLine
         border.width: EaStyle.Sizes.borderThickness
 
         EaElements.Label {
@@ -769,7 +772,7 @@ Item {
             objectName: "chart.hover.text"
             anchors.centerIn: parent
             textFormat: Text.RichText
-            color: EaStyle.Colors.themeForeground
+            color: chart.colors.themeForeground
         }
     }
 }

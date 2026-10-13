@@ -23,6 +23,8 @@ Rectangle {
     // The report's input (edi ADR-0035): set, the view draws the report model's scene of `reportStructure` with no
     // toolbar. A drag still turns it, and the wheel scrolls what holds it.
     property ReportViewModel report: null
+    // The theme colours the view draws with; a PDF's figure takes the light ones.
+    property FigureColors colors: FigureColors {}
     property string reportStructure: ""
     // The view is on the page and the tab the window shows: its page binds it, as the pattern chart's (a loaded
     // page that is not shown stays visible, clipped out of the window). A view not shown prepares nothing and
@@ -52,7 +54,7 @@ Rectangle {
     objectName: "structure.view"
     // EasyApp's chart background, as easydiffractionbeta's structure view (the owner, 2026-10-02), opaque behind
     // the 3D item, which clears to it too.
-    color: EaStyle.Colors.chartBackground
+    color: view.colors.chartBackground
     clip: true
 
     StructureViewController {
@@ -64,16 +66,16 @@ Rectangle {
         options: view.options
         report: view.report
         reportStructure: view.reportStructure
-        dark: EaStyle.Colors.isDarkPalette
+        dark: view.colors.isDarkPalette
         // Every style colour from EasyApp's EaStyle.Colors, as easydiffractionbeta's structure view uses them (the
         // owner, 2026-10-02): the cell edges grey, the axes red, green and blue, the labels in the foreground
         // colour over a halo of the background. Lighting and atom colours are diffraction-lib's.
-        edgeColor: EaStyle.Colors.grey
-        axisColorA: EaStyle.Colors.red
-        axisColorB: EaStyle.Colors.green
-        axisColorC: EaStyle.Colors.blue
-        labelColor: EaStyle.Colors.themeForeground
-        haloColor: EaStyle.Colors.chartBackground
+        edgeColor: view.colors.grey
+        axisColorA: view.colors.red
+        axisColorB: view.colors.green
+        axisColorC: view.colors.blue
+        labelColor: view.colors.themeForeground
+        haloColor: view.colors.chartBackground
         viewportWidth: view.width
         viewportHeight: view.height
         // The band kept clear at the top for the toolbar: its height with its margins.
@@ -138,6 +140,7 @@ Rectangle {
         ChartLegend {
             id: legend
             objectName: "structure.view.legend"
+            colors: view.colors
             minimumHeight: AppSizes.toolbarControlSize
             rowHeight: AppSizes.structureLegendRowHeight
             anchors.left: parent.left
@@ -152,7 +155,7 @@ Rectangle {
             objectName: "structure.view.unavailable"
             anchors.centerIn: parent
             visible: view.apiKnown && !view.has3D
-            color: EaStyle.Colors.themeForegroundMinor
+            color: view.colors.themeForegroundMinor
             text: qsTr("The structure view needs a 3D graphics API, which this display does not provide")
         }
     }
@@ -232,8 +235,8 @@ Rectangle {
         visible: text !== ""
         width: hoverLabel.width
         height: hoverLabel.height
-        color: EaStyle.Colors.mainContentBackgroundHalfTransparent
-        border.color: EaStyle.Colors.chartGridLine
+        color: view.colors.mainContentBackgroundHalfTransparent
+        border.color: view.colors.chartGridLine
         border.width: EaStyle.Sizes.borderThickness
 
         EaElements.Label {

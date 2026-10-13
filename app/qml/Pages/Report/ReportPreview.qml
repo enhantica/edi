@@ -29,36 +29,33 @@ Flickable {
     function shown(name) {
         return sections.indexOf(name) >= 0;
     }
-    // The figures as images for the PDF, each at twice its size and named as the static report names it
-    // (structure-0, pattern-1, ...); `done` gets them once every grab has answered. A figure that cannot be grabbed is
-    // left out.
+    // The figures for the PDF as images, each at twice its size and named as the static report names it
+    // (structure-0, pattern-1, ...). They are copies of the preview's figures in the light colours, as a PDF is for
+    // print, made outside the view, given a few frames to draw, then grabbed and removed. `done` gets the images once
+    // every grab has answered; a figure that cannot be grabbed is left out.
     function grabFigures(done) {
-        const figures = {};
         const jobs = [];
-        for (const [records, kind] of [[structureRecords, "structure"], [experimentRecords, "pattern"]]) {
+        for (const [records, kind, component] of [[structureRecords, "structure", printStructure], [experimentRecords, "pattern", printPattern]]) {
             for (let i = 0; i < records.count; ++i) {
-                const item = records.itemAt(i) ? records.itemAt(i).figureItem : null;
-                if (item && item.width > 0 && item.height > 0)
+                const record = records.itemAt(i);
+                const shown = record ? record.figureItem : null;
+                if (!shown || shown.width <= 0 || shown.height <= 0)
+                    continue;
+                const properties = {
+                    "width": shown.width,
+                    "height": shown.height,
+                    "report": preview.report
+                };
+                properties[kind === "structure" ? "reportStructure" : "reportExperiment"] = record.modelData.id;
+                const copy = component.createObject(printFigures, properties);
+                if (copy)
                     jobs.push({
-                        "item": item,
+                        "item": copy,
                         "name": `${kind}-${i}`
                     });
             }
         }
-        let left = jobs.length;
-        if (left === 0) {
-            done(figures);
-            return;
-        }
-        for (const job of jobs) {
-            const asked = job.item.grabToImage(result => {
-                figures[job.name] = result.image;
-                if (--left === 0)
-                    done(figures);
-            }, Qt.size(job.item.width * 2, job.item.height * 2));
-            if (!asked && --left === 0)
-                done(figures);
-        }
+        printFigures.start(jobs, done);
     }
     function number(section) {
         return sections.indexOf(section) + 1;
@@ -198,6 +195,81 @@ Flickable {
                 category: modelData
                 // A heading after the figure is spaced as one after a table.
                 under: index === 0 && !preview.charts ? 3 : 0
+            }
+        }
+    }
+
+    Component {
+        id: printStructure
+        StructureView {
+            colors: FigureColors {
+                light: true
+            }
+        }
+    }
+    Component {
+        id: printPattern
+        PatternChart {
+            colors: FigureColors {
+                light: true
+            }
+        }
+    }
+
+    // The PDF's figure copies, left of the preview's content and so out of view, kept until they are grabbed.
+    Item {
+        id: printFigures
+
+        property var jobs: []
+        property var done: null
+        property int frames: 0
+
+        function start(jobs, done) {
+            if (jobs.length === 0) {
+                done({});
+                return;
+            }
+            printFigures.jobs = jobs;
+            printFigures.done = done;
+            printFigures.frames = 0;
+            Window.window.update();
+        }
+        // Grabs every copy, removes them all once the last grab has answered and hands the images on.
+        function grabAll() {
+            const jobs = printFigures.jobs;
+            const done = printFigures.done;
+            printFigures.jobs = [];
+            const figures = {};
+            let left = jobs.length;
+            const finish = () => {
+                if (--left > 0)
+                    return;
+                for (const job of jobs)
+                    job.item.destroy();
+                done(figures);
+            };
+            for (const job of jobs) {
+                const asked = job.item.grabToImage(result => {
+                    figures[job.name] = result.image;
+                    finish();
+                }, Qt.size(job.item.width * 2, job.item.height * 2));
+                if (!asked)
+                    finish();
+            }
+        }
+
+        x: -width - AppSizes.reportPadding
+        width: column.width
+        height: childrenRect.height
+
+        // Three drawn frames after the copies are made, so the charts and the 3D views have drawn.
+        Connections {
+            target: printFigures.jobs.length > 0 ? printFigures.Window.window : null
+            function onFrameSwapped() {
+                if (++printFigures.frames < 3)
+                    printFigures.Window.window.update();
+                else
+                    printFigures.grabAll();
             }
         }
     }
