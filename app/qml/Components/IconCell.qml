@@ -7,7 +7,7 @@ import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
 
-// A table's colour column cell (easydiffractionbeta's): one icon in its colour, one table row wide, on the
+// A table's colour column cell (easydiffractionbeta's): one icon in its colour, the icon-only column's width, on the
 // centre line of the row's text (IconLine; edi ADR-0017 §8, §10), with a tooltip naming what the colour is.
 Item {
     id: cell
@@ -17,12 +17,14 @@ Item {
     property string toolTip: ""
     // Drawn as a hollow circle instead of the icon (IconLine's `ring`).
     property bool ring: false
+    property int horizontalAlignment: Text.AlignHCenter
 
-    width: EaStyle.Sizes.tableRowHeight
+    width: AppSizes.iconOnlyColumnWidth
     height: parent ? parent.height : EaStyle.Sizes.tableRowHeight
 
     IconLine {
-        anchors.centerIn: parent
+        anchors.verticalCenter: parent.verticalCenter
+        x: cell.horizontalAlignment === Text.AlignRight ? cell.width - width : cell.horizontalAlignment === Text.AlignLeft ? 0 : (cell.width - width) / 2
         segments: [
             {
                 "icon": cell.icon,

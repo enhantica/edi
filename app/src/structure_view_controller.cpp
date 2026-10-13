@@ -452,7 +452,7 @@ void StructureViewController::present() {
     QList<ChartLegendModel::Entry> entries;
     for (const edi::SceneLegendEntry& entry : scene_.legend) {
         entries.append({QString::fromStdString(entry.element), QColor(entry.color.r, entry.color.g, entry.color.b),
-                        QStringLiteral("●"), false});
+                        QStringLiteral("atom"), false});
     }
     legend_->setEntries(entries);
     emit atomCountChanged();

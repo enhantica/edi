@@ -20,6 +20,7 @@ from typing import Any
 import pytest
 
 from conftest import calculator_load_warning, crysta_reference_prefix
+from tests.fixtures.correlations.machine_record import without_pair_count
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -242,7 +243,11 @@ def _assert_fit_record(
     if crysta_surface:
         assert values['cutoff_policy'] in {'off', 'on', 'ramp-fixed'}
 
-    trailing = keys[len(base) :]
+    # Before: compact had no edi extension. After: the declared pair-count key is checked.
+    if not crysta_surface:
+        assert 'x-edi.correlations' in values, 'Edi reports its declared correlation count'
+        without_pair_count(text)
+    trailing = [key for key in keys[len(base) :] if key != 'x-edi.correlations']
     if verbosity == 'compact':
         assert not trailing
         return keys, values
@@ -554,9 +559,12 @@ def test_c09_t9_crysta_and_edi_machine_records_conform_like_for_like(
         assert int(record['n_points_loaded']) == loaded
         assert int(record['n_points_fitted']) == fitted
 
-    # Key-set relation, never absolute pins: crysta carries exactly the extra cutoff_policy key.
-    assert len(crysta_keys) == len(edi_keys) + 1
+    # Each surface carries its declared extension; common schema/order remain compared.
+    assert len(crysta_keys) == len(edi_keys), 'Each surface has exactly one declared extra key'
     assert set(crysta_keys) - set(edi_keys) == {'cutoff_policy'}
+    assert set(edi_keys) - set(crysta_keys) == {'x-edi.correlations'}, (
+        'Edi adds only the declared pair-count extension to the common record'
+    )
 
     if verbosity == 'full':
         # The full parameter-label set is identical across surfaces.

@@ -1,0 +1,251 @@
+// SPDX-License-Identifier: BSD-3-Clause
+#include "correlation_view_model.hpp"
+
+#include <algorithm>
+#include <bit>
+#include <cmath>
+#include <cstdint>
+#include <functional>
+#include <limits>
+#include <map>
+
+#include "edi/io.hpp"
+
+namespace edi_app {
+
+CorrelationViewModel::CorrelationViewModel(QObject* parent) : QObject(parent) {}
+
+void CorrelationViewModel::setRecord(const edi::Project& project, int experiment, bool fitted) {
+    // The fit's own pairs; a scan file's (named by `file_path`) are the scan's, shown per dataset (setRows).
+    std::vector<std::shared_ptr<const edi::FitParameterCorrelation>> rows;
+    for (const auto& row : project.fit_result.correlations) {
+        if (row->file_path.empty()) {
+            rows.push_back(row);
+        }
+    }
+    const int experiments = static_cast<int>(project.experiments.size());
+    if (!project.fit_result.held() || rows.empty()) {
+        show({}, {}, {}, tr("No correlations yet"));
+    } else if (experiment < 0 || experiment >= experiments || !fitted) {
+        show({}, {}, {}, tr("Not in the last fit"));
+    } else {
+        // Another experiment's parameters are named by its datablock key (io.cpp's parameter slot walk).
+        std::vector<std::string> others;
+        for (int i = 0; i < experiments; ++i) {
+            if (i != experiment) {
+                others.push_back(edi::datablock_key(project.experiments[static_cast<std::size_t>(i)]->name,
+                                                    "experiment") +
+                                 ".");
+            }
+        }
+        show({}, rows, others, tr("No correlations for this experiment"));
+    }
+}
+
+void CorrelationViewModel::setRows(const std::string& file,
+                                   const std::vector<std::shared_ptr<const edi::FitParameterCorrelation>>& rows,
+                                   const QString& absent) {
+    const QString none = absent.isEmpty() ? tr("No correlations yet") : absent;
+    show(file, rows, {}, rows.empty() ? none : tr("No correlations for this experiment"));
+}
+
+const std::vector<double>& CorrelationViewModel::numbers(
+    const std::string& file, const std::vector<std::shared_ptr<const edi::FitParameterCorrelation>>& rows) {
+    Numbers& kept = numbers_[file];
+    bool same = kept.rows.size() == rows.size();
+    for (std::size_t i = 0; same && i < rows.size(); ++i) {
+        same = kept.rows[i] == rows[i].get() && kept.written[i] == rows[i]->correlation.written();
+    }
+    if (!same) {
+        kept.rows.clear();
+        kept.written.clear();
+        kept.values.clear();
+        kept.rows.reserve(rows.size());
+        kept.written.reserve(rows.size());
+        kept.values.reserve(rows.size());
+        for (const auto& row : rows) {
+            kept.rows.push_back(row.get());
+            kept.written.push_back(row->correlation.written());
+            kept.values.push_back(edi::correlation_value(*row));
+        }
+    }
+    return kept.values;
+}
+
+void CorrelationViewModel::show(const std::string& file,
+                                const std::vector<std::shared_ptr<const edi::FitParameterCorrelation>>& rows,
+                                const std::vector<std::string>& hidden, const QString& reason) {
+    names_.clear();
+    matrix_.clear();
+    reason_.clear();
+    const auto shown = [&hidden](const std::string& name) {
+        return std::none_of(hidden.begin(), hidden.end(),
+                            [&name](const std::string& prefix) { return name.starts_with(prefix); });
+    };
+    std::map<std::string, std::size_t> index;
+    for (const auto& row : rows) {
+        for (const std::string* name : {&row->parameter_unique_name_i.value(), &row->parameter_unique_name_j.value()}) {
+            if (shown(*name) && !index.contains(*name)) {
+                index.emplace(*name, names_.size());
+                names_.push_back(*name);
+            }
+        }
+    }
+    std::size_t n = names_.size();
+    matrix_.assign(n * n, std::numeric_limits<double>::quiet_NaN());
+    for (std::size_t i = 0; i < n; ++i) {
+        matrix_[i * n + i] = 1.0;
+    }
+    if (n > 0) {
+        const std::vector<double>& values = numbers(file, rows);
+        for (std::size_t at = 0; at < rows.size(); ++at) {
+            const auto i = index.find(rows[at]->parameter_unique_name_i.value());
+            const auto j = index.find(rows[at]->parameter_unique_name_j.value());
+            if (i != index.end() && j != index.end()) {
+                matrix_[i->second * n + j->second] = values[at];
+                matrix_[j->second * n + i->second] = values[at];
+            }
+        }
+    }
+    settle(reason);
+}
+
+void CorrelationViewModel::setTable(const edi::CorrelationTable& table) {
+    // ADR-0034: the matrix straight from the table's numbers, its pairs i < j row by row (I2, I10).
+    names_.clear();
+    matrix_.clear();
+    reason_.clear();
+    if (table.names && table.values) {
+        names_ = *table.names;
+        const std::size_t n = names_.size();
+        matrix_.assign(n * n, std::numeric_limits<double>::quiet_NaN());
+        std::size_t at = 0;
+        for (std::size_t i = 0; i < n; ++i) {
+            matrix_[i * n + i] = 1.0;
+            for (std::size_t j = i + 1; j < n && at < table.values->size(); ++j, ++at) {
+                matrix_[i * n + j] = (*table.values)[at];
+                matrix_[j * n + i] = (*table.values)[at];
+            }
+        }
+    }
+    settle(tr("No correlations for this experiment"));
+}
+
+void CorrelationViewModel::settle(const QString& reason) {
+    std::size_t n = names_.size();
+    if (n < 2) {
+        names_.clear();
+        matrix_.clear();
+        reason_ = reason;
+        n = 0;
+    }
+    // Each parameter's strongest correlation with another, and those strengths from the strongest down.
+    strength_.assign(n, 0.0);
+    for (std::size_t i = 0; i < n; ++i) {
+        for (std::size_t j = 0; j < n; ++j) {
+            const double value = matrix_[i * n + j];
+            if (i != j && std::isfinite(value)) {
+                strength_[i] = std::max(strength_[i], std::abs(value));
+            }
+        }
+    }
+    ranked_ = strength_;
+    std::sort(ranked_.begin(), ranked_.end(), std::greater<>());
+    // A new matrix keeps the parameter count and sets the level from it.
+    if (n >= 2) {
+        setMaxParameters(max_parameters_);
+    } else {
+        rebuild();
+    }
+}
+
+void CorrelationViewModel::setLevel(double level) {
+    level = std::isfinite(level) ? std::clamp(level, 0.0, 1.0) : 0.0;
+    // The count follows: the parameters whose strongest correlation reaches the level (owner, 2026-10-11).
+    const int count = static_cast<int>(std::count_if(strength_.begin(), strength_.end(),
+                                                     [level](double strength) { return strength >= level; }));
+    apply(level, strength_.size() >= 2 ? count : max_parameters_);
+}
+
+void CorrelationViewModel::setMaxParameters(int count) {
+    const int available = static_cast<int>(strength_.size());
+    count = std::clamp(count, 2, std::max(2, available));
+    // The level follows: the strongest correlation of the count-th most correlated parameter, so that many remain.
+    apply(available >= count ? ranked_[static_cast<std::size_t>(count - 1)] : level_, count);
+}
+
+void CorrelationViewModel::apply(double level, int count) {
+    const bool level_changed = level != level_;
+    const bool count_changed = count != max_parameters_;
+    level_ = level;
+    max_parameters_ = count;
+    if (level_changed) {
+        emit levelChanged();
+    }
+    if (count_changed) {
+        emit maxParametersChanged();
+    }
+    rebuild();
+}
+
+void CorrelationViewModel::rebuild() {
+    QStringList labels;
+    QList<qreal> values;
+    QString empty_text = reason_;
+    const std::size_t n = names_.size();
+    if (n >= 2) {
+        // The parameters whose strongest correlation reaches the level, as diffraction-lib's
+        // _filter_correlation_dataframe keeps them, and the most correlated of these.
+        const std::vector<double>& strength = strength_;
+        std::vector<std::size_t> kept;
+        for (std::size_t i = 0; i < n; ++i) {
+            if (strength[i] >= level_) {
+                kept.push_back(i);
+            }
+        }
+        std::stable_sort(kept.begin(), kept.end(),
+                         [&strength](std::size_t a, std::size_t b) { return strength[a] > strength[b]; });
+        kept.resize(std::min(kept.size(), static_cast<std::size_t>(max_parameters_)));
+        std::sort(kept.begin(), kept.end());
+        if (kept.size() < 2) {
+            empty_text = tr("No pairs at this level");
+        } else {
+            for (std::size_t row : kept) {
+                labels.append(QString::fromStdString(names_[row]));
+                for (std::size_t column : kept) {
+                    const double value = matrix_[row * n + column];
+                    // Every pair among the shown parameters, whatever its size; the level chose the parameters
+                    // (owner, 2026-10-11).
+                    values.append(column < row && std::isfinite(value) ? value
+                                                                       : std::numeric_limits<double>::quiet_NaN());
+                }
+            }
+        }
+    }
+    // NaN never equals itself, so the values are compared bit for bit.
+    const bool same_values =
+        values.size() == values_.size() &&
+        std::equal(values.begin(), values.end(), values_.begin(), [](qreal a, qreal b) {
+            return std::bit_cast<std::uint64_t>(static_cast<double>(a)) ==
+                   std::bit_cast<std::uint64_t>(static_cast<double>(b));
+        });
+    // The values first: the chart's cells are counted from the labels and read the values.
+    if (!same_values) {
+        values_ = values;
+        emit valuesChanged();
+    }
+    if (labels != labels_) {
+        labels_ = labels;
+        emit labelsChanged();
+    }
+    if (static_cast<int>(n) != available_) {
+        available_ = static_cast<int>(n);
+        emit availableChanged();
+    }
+    if (empty_text != empty_text_) {
+        empty_text_ = empty_text;
+        emit emptyTextChanged();
+    }
+}
+
+}  // namespace edi_app

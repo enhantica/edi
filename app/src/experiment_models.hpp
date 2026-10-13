@@ -52,13 +52,41 @@ class BackgroundListModel : public RowTableModel {
     BackgroundListModel(edi::ExperimentBase& experiment, ProjectEditor& editor, ParameterRegistry& registry,
                         QObject* parent);
     void sync();
+    Q_INVOKABLE bool setId(int row, const QString& id);
     Q_INVOKABLE bool setPosition(int row, double position);
     Q_INVOKABLE void append();
     Q_INVOKABLE void remove(int row);
 
    protected:
     bool setRole(int row, const QString& role, const QVariant& value) override {
-        return role == QLatin1String("position") && setPosition(row, value.toDouble());
+        return role == QLatin1String("id") ? setId(row, value.toString())
+               : role == QLatin1String("position") && setPosition(row, value.toDouble());
+    }
+
+   private:
+    edi::ExperimentBase& experiment_;
+    ProjectEditor& editor_;
+    ParameterRegistry& registry_;
+};
+
+// The polynomial or Chebyshev background terms: `order` (text-editable, unique within the type's range) and `coef`
+// (ParameterItem), with append (the lowest free order) and remove.
+class BackgroundTermListModel : public RowTableModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to an experiment")
+
+   public:
+    BackgroundTermListModel(edi::ExperimentBase& experiment, ProjectEditor& editor, ParameterRegistry& registry,
+                            QObject* parent);
+    void sync();
+    Q_INVOKABLE bool setOrder(int row, int order);
+    Q_INVOKABLE void append();
+    Q_INVOKABLE void remove(int row);
+
+   protected:
+    bool setRole(int row, const QString& role, const QVariant& value) override {
+        return role == QLatin1String("order") && setOrder(row, value.toInt());
     }
 
    private:
@@ -91,6 +119,7 @@ class ExcludedRegionListModel : public RowTableModel {
    public:
     ExcludedRegionListModel(edi::ExperimentBase& experiment, ProjectEditor& editor, QObject* parent);
     void sync();
+    Q_INVOKABLE bool setId(int row, const QString& id);
     Q_INVOKABLE bool setStart(int row, double start);
     Q_INVOKABLE bool setEnd(int row, double end);
     Q_INVOKABLE void append();
@@ -98,7 +127,8 @@ class ExcludedRegionListModel : public RowTableModel {
 
    protected:
     bool setRole(int row, const QString& role, const QVariant& value) override {
-        return role == QLatin1String("start") ? setStart(row, value.toDouble())
+        return role == QLatin1String("id") ? setId(row, value.toString())
+               : role == QLatin1String("start") ? setStart(row, value.toDouble())
                : role == QLatin1String("end") ? setEnd(row, value.toDouble())
                                               : false;
     }

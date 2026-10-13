@@ -469,6 +469,7 @@ def control_job(consumer, platform):
                 + {
                     'audit': 'per-pr-audit',
                     'core': 'crysta-consumer',
+                    'system': 'system-tests-part 1 3',
                     'notebooks': 'notebook-tests',
                     'cli-python': 'cli-projects',
                     'docs': 'notebook-exec-ci',

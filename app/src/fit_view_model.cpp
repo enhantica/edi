@@ -127,13 +127,15 @@ QString outcome_word(const QString& key) {
     if (key == QLatin1String("noStep")) return FitViewModel::tr("No step");
     if (key == QLatin1String("notConverged")) return FitViewModel::tr("Not converged");
     if (key == QLatin1String("stopped")) return FitViewModel::tr("Stopped");
+    if (key == QLatin1String("skipped")) return FitViewModel::tr("Skipped");
+    if (key == QLatin1String("refused")) return FitViewModel::tr("Refused");
     return FitViewModel::tr("Failed");
 }
 
 }  // namespace
 
 void FitResultListModel::setScan(const ScanSummary& summary) {
-    if (summary.fitted == 0 && summary.outcome.isEmpty()) {
+    if (summary.processed() == 0 && summary.outcome.isEmpty()) {
         clear();
         return;
     }
@@ -170,6 +172,18 @@ void FitResultListModel::clear() { setTableRows({}); }
 
 // ---- FitViewModel ---------------------------------------------------------------------------------
 
+namespace {
+// The shortest time between two files a followed scan shows (edi ADR-0029): fast fits show the latest file about
+// twice a second, slow ones every file. "About once a second" doubles it.
+constexpr int kFollowIntervalMs = 500;
+constexpr int kOncePerSecondMs = 1000;
+// The pattern-update modes (FitViewModel::patternUpdates).
+constexpr int kEveryPattern = 0;
+constexpr int kOncePerSecond = 1;
+constexpr int kAdaptive = 2;
+constexpr int kAtEnd = 3;
+}  // namespace
+
 FitViewModel::FitViewModel(edi::Project& project, edi::work::Worker& worker, ProjectViewModel& owner, QObject* parent)
     : QObject(parent), project_(project), owner_(owner), results_(new FitResultListModel(this)) {
     // One frame per display frame at most: a frame waits for the tick, and the next is calculated only
@@ -177,6 +191,8 @@ FitViewModel::FitViewModel(edi::Project& project, edi::work::Worker& worker, Pro
     frame_timer_.setSingleShot(true);
     frame_timer_.setInterval(16);
     connect(&frame_timer_, &QTimer::timeout, this, &FitViewModel::showFrame);
+    follow_timer_.setSingleShot(true);
+    connect(&follow_timer_, &QTimer::timeout, this, &FitViewModel::followLatest);
     clock_timer_.setInterval(1000);
     connect(&clock_timer_, &QTimer::timeout, this,
             [this] { setElapsed(duration(static_cast<double>(clock_.elapsed()) / 1000.0)); });
@@ -187,15 +203,9 @@ FitViewModel::FitViewModel(edi::Project& project, edi::work::Worker& worker, Pro
     hooks.finished = [this](const edi::FitReport& report) { ended(report); };
     hooks.scan_started = [this](const edi::ScanPreamble& preamble) { scanStarted(preamble); };
     hooks.file_completed = [this](const edi::ScanFileRecord& record) { fileCompleted(record); };
-    hooks.file_frame = [this](const std::string& file, const edi::FitFrame& shown) {
-        if (following_) {
-            owner_.showScanFrame(file, shown);
-        }
-        if (job_) {
-            job_->frame_shown();
-        }
-    };
+    hooks.file_frame = [this](const std::string& file, const edi::FitFrame& shown) { scanFrame(file, shown); };
     job_ = std::make_unique<edi::FitJob>(project_, worker, std::move(hooks));
+    job_->wait_for_patterns(pattern_updates_ == kEveryPattern && owner_.patternShown());
     showRecord();
     sync();
 }
@@ -215,12 +225,14 @@ void FitViewModel::showRecord() {
 void FitViewModel::showScan(const ScanSummary& summary, bool scan_last) {
     scan_ = summary;
     scan_last_ = scan_last;
+    setScanRefused(false);
     sync();
     emit scanSummaryChanged();
     emit scanFilesChanged();
     emit scanOkChanged();
     emit scanFailedChanged();
     emit scanProgressChanged();
+    emit scanProcessedChanged();
     emit scanFittedChanged();
     emit scanTotalChanged();
     // After a single fit on a dataset the status bar and the results window show that fit's own record (also when
@@ -230,7 +242,8 @@ void FitViewModel::showScan(const ScanSummary& summary, bool scan_last) {
         return;
     }
     if (scan_.fitted == 0) {
-        // A run that failed or was stopped before its first file still says so, here and in the results window.
+        // A run that failed or was stopped before its first file still says so, here and in the results window;
+        // so does one that skipped every file it reached (no χ² to show).
         setProgress(QString(), QString(), scan_.outcome.isEmpty() ? QString() : outcome_word(scan_.outcome),
                     scan_.outcome);
         setElapsed(scan_.seconds >= 0.0 ? duration(scan_.seconds) : QString());
@@ -242,10 +255,27 @@ void FitViewModel::showScan(const ScanSummary& summary, bool scan_last) {
     results_->setScan(scan_);
 }
 
+void FitViewModel::showScanRefused(const QString& error, const QString& run_outcome, double seconds) {
+    scan_.outcome = run_outcome.isEmpty() ? QStringLiteral("refused") : run_outcome;
+    scan_.seconds = seconds;
+    scan_last_ = true;
+    setScanRefused(true);
+    sync();
+    emit scanSummaryChanged();
+    setProgress(QString(), QString(), outcome_word(scan_.outcome), scan_.outcome);
+    setElapsed(seconds >= 0.0 ? duration(seconds) : QString());
+    results_->setScan(scan_);
+    if (!scan_index_refused_) {
+        scan_index_refused_ = true;
+        emit refused(error);
+    }
+}
+
 FitViewModel::~FitViewModel() { close(); }
 
 void FitViewModel::close() {
     frame_timer_.stop();
+    follow_timer_.stop();
     clock_timer_.stop();
     pending_frame_.reset();
     job_.reset();
@@ -266,7 +296,7 @@ void FitViewModel::start() {
     // to Undo); otherwise it continues from the first dataset without a row (edi ADR-0017 §17).
     const bool scan = edi::is_scan_fitting_mode(edi::effective_fitting_mode(project_));
     if (scan) {
-        const QString error = owner_.prepareScan(scan_.fitted == 0);
+        const QString error = owner_.prepareScan(scan_.processed() == 0);
         if (!error.isEmpty()) {
             emit refused(error);
             return;
@@ -281,6 +311,12 @@ void FitViewModel::start() {
         }
         if (scan) {
             scan_resumed_ = 0;
+            scan_index_refused_ = false;
+            // The job sends the first file's pattern unasked.
+            frame_requested_ = true;
+            frame_shown_ = true;
+            dropHandedFile();
+            setScanRefused(false);
             setScanning(true);
             setScanCounts(scan_, QString());
         }
@@ -325,8 +361,8 @@ void FitViewModel::sync() {
     QString reason;
     if (scan) {
         reason = owner_.scanRefusal();
-        if (reason.isEmpty() && !running_ && scan_.files > 0 && scan_.fitted >= scan_.files) {
-            reason = tr("Every dataset is fitted: Reset fits to fit them again");
+        if (reason.isEmpty() && !running_ && scan_.files > 0 && scan_.processed() >= scan_.files) {
+            reason = tr("Every dataset is fitted or skipped: Reset fits to fit them again");
         }
     } else if (mode == QLatin1String("joint") && declared) {
         reason = tr("This project declares a scan (_sequential_fit): its datasets are fitted in the sequential or "
@@ -388,7 +424,17 @@ void FitViewModel::scanStarted(const edi::ScanPreamble& preamble) {
     for (const edi::ScanFileRecord& row : preamble.completed_rows) {
         ++(row.converged ? counts.ok : counts.failed);
     }
-    scan_resumed_ = counts.fitted;
+    // Files an earlier run skipped are done too: the notes it kept say which.
+    if (const ScanSession* session = owner_.scanSession(); session != nullptr && session->index().error.empty()) {
+        counts.skipped = static_cast<int>(session->index().skipped);
+    }
+    scan_resumed_ = counts.processed();
+    latest_file_.clear();
+    followed_file_.clear();
+    follow_clock_.invalidate();
+    scan_pattern_updates_ = 0;
+    emit scanPatternUpdatesChanged();
+    emit scanShownFileChanged();
     setScanCounts(counts, preamble.completed_rows.empty()
                               ? QString()
                               : QString::fromStdString(preamble.completed_rows.back().file_name));
@@ -398,23 +444,123 @@ void FitViewModel::scanStarted(const edi::ScanPreamble& preamble) {
 }
 
 void FitViewModel::fileCompleted(const edi::ScanFileRecord& record) {
+    // The index holds this file's row and the notes of the files skipped before it (a skipped file sends no event
+    // of its own), retained rows of an earlier run included: fitted and skipped are its counts.
+    const int dataset = owner_.scanFileFitted(record);
+    const ScanSession* session = owner_.scanSession();
+    if (session != nullptr && (dataset < 0 || !session->index().error.empty())) {
+        // The index refused what the run wrote: nothing more is published until a full read succeeds (the settle
+        // when the run returns), and the refusal is shown once.
+        if (!scan_index_refused_) {
+            scan_index_refused_ = true;
+            emit refused(session->index().error.empty() ? tr("The row just written could not be indexed")
+                                                         : QString::fromStdString(session->index().error));
+        }
+        return;
+    }
     ScanSummary counts = scan_;
-    ++counts.fitted;
     ++(record.converged ? counts.ok : counts.failed);
-    // The files are taken in scan order, so every file before this one is done: fitted, or skipped for having
-    // nothing to fit, which sends no event of its own.
-    const int place = owner_.scanFileFitted(record);
-    counts.fitted = std::max(counts.fitted, place + 1);
+    if (session != nullptr) {
+        counts.fitted = static_cast<int>(session->index().fitted);
+        counts.skipped = static_cast<int>(session->index().skipped);
+    } else {
+        ++counts.fitted;
+    }
     setScanCounts(counts, QString::fromStdString(record.file_name));
     setProgress(QString(), chi(record.reduced_chi_square), tr("Running"));
+    latest_file_ = record.file_name;
     if (following()) {
-        owner_.followScanFile(record.file_name);
+        // The cheap indicators follow every finished file; only the pattern waits for the view (edi ADR-0029).
+        owner_.markScanFile(latest_file_);
     }
+    followLatest();
+}
+
+void FitViewModel::scanFrame(const std::string& file, const edi::FitFrame& frame) {
+    frame_requested_ = false;
+    // Only at the end: the first file's pattern, which the job sends unasked, is not drawn either.
+    if (!following() || pattern_updates_ == kAtEnd) {
+        return;
+    }
+    frame_shown_ = false;
+    follow_clock_.start();
+    owner_.followScanFrame(file, frame, handOver(file));
+}
+
+std::uint64_t FitViewModel::handOver(const std::string& file) {
+    handed_file_ = file;
+    handed_token_ = ++last_token_;
+    return handed_token_;
+}
+
+void FitViewModel::dropHandedFile() {
+    // A receipt still on its way for the file handed over last no longer counts.
+    if (handed_token_ != 0) {
+        handed_token_ = 0;
+        handed_file_.clear();
+        owner_.releaseFollow();
+    }
+}
+
+void FitViewModel::patternDrawn(const std::string& file) {
+    followed_file_ = file;
+    ++scan_pattern_updates_;
+    emit scanPatternUpdatesChanged();
+    emit scanShownFileChanged();
+}
+
+void FitViewModel::followLatest() {
+    if (!following() || frame_requested_ || !frame_shown_ || !job_ || !owner_.followReady() ||
+        pattern_updates_ == kAtEnd) {
+        return;
+    }
+    const int interval = pattern_updates_ == kEveryPattern    ? 0
+                         : pattern_updates_ == kOncePerSecond ? kOncePerSecondMs
+                                                              : kFollowIntervalMs;
+    if (follow_clock_.isValid() && follow_clock_.elapsed() < interval) {
+        if (!follow_timer_.isActive()) {
+            follow_timer_.start(static_cast<int>(interval - follow_clock_.elapsed()));
+        }
+        return;
+    }
+    // The job sends the pattern of the next file it fits; a file finished before that is not drawn.
+    frame_requested_ = true;
+    job_->frame_shown();
+}
+
+void FitViewModel::patternShownChanged() {
+    // Every pattern: the worker waits for a drawing only while a chart can draw one.
+    if (job_) {
+        job_->wait_for_patterns(pattern_updates_ == kEveryPattern && owner_.patternShown());
+    }
+    followShown();
+}
+
+void FitViewModel::followShown() {
+    if (following() && !follow_timer_.isActive()) {
+        followLatest();
+    }
+}
+
+void FitViewModel::followRendered(std::uint64_t token, const std::string& file, bool drawn) {
+    if (token == 0 || token != handed_token_) {
+        return;  // a receipt for a file handed over before the one awaited, or one already dropped
+    }
+    handed_token_ = 0;
+    handed_file_.clear();
+    if (drawn) {
+        // The interval runs from the drawing, so no two drawn patterns are closer than it.
+        follow_clock_.start();
+        patternDrawn(file);
+    }
+    frame_shown_ = true;
+    followShown();
 }
 
 void FitViewModel::setScanCounts(const ScanSummary& counts, const QString& file) {
     scan_.files = counts.files;
     scan_.fitted = counts.fitted;
+    scan_.skipped = counts.skipped;
     scan_.ok = counts.ok;
     scan_.failed = counts.failed;
     sync();
@@ -423,10 +569,12 @@ void FitViewModel::setScanCounts(const ScanSummary& counts, const QString& file)
     emit scanOkChanged();
     emit scanFailedChanged();
     emit scanProgressChanged();
+    emit scanProcessedChanged();
     emit scanFittedChanged();
     emit scanTotalChanged();
-    const int percent = scan_.files > 0 ? static_cast<int>(100.0 * scan_.fitted / scan_.files) : 0;
-    QStringList parts{QStringLiteral("%1/%2").arg(scan_.fitted).arg(scan_.files), QStringLiteral("%1%").arg(percent)};
+    const int percent = scan_.files > 0 ? static_cast<int>(100.0 * scan_.processed() / scan_.files) : 0;
+    QStringList parts{QStringLiteral("%1/%2").arg(scan_.processed()).arg(scan_.files),
+                      QStringLiteral("%1%").arg(percent)};
     if (!file.isEmpty()) {
         parts.append(QFileInfo(file).completeBaseName());
     }
@@ -436,15 +584,22 @@ void FitViewModel::setScanCounts(const ScanSummary& counts, const QString& file)
         emit scanTextChanged();
     }
     // The time left at this run's pace: the files it fitted so far over the time they took.
-    const int done = scan_.fitted - scan_resumed_;
+    const int done = scan_.processed() - scan_resumed_;
     QString eta;
-    if (scanning_ && done > 0 && scan_.files > scan_.fitted) {
+    if (scanning_ && done > 0 && scan_.files > scan_.processed()) {
         const double seconds = static_cast<double>(clock_.elapsed()) / 1000.0;
-        eta = duration(seconds / done * (scan_.files - scan_.fitted));
+        eta = duration(seconds / done * (scan_.files - scan_.processed()));
     }
     if (eta != eta_) {
         eta_ = eta;
         emit etaChanged();
+    }
+}
+
+void FitViewModel::setScanRefused(bool refused) {
+    if (refused != scan_refused_) {
+        scan_refused_ = refused;
+        emit scanRefusedChanged();
     }
 }
 
@@ -476,10 +631,10 @@ void FitViewModel::syncScanState() {
     // In a scan project the fit button follows the datasets' fits (owner, 2026-10-06): Start fitting while none is
     // fitted, Continue fitting while some are not, unavailable once all are; Reset fits clears them.
     const bool scan = edi::is_scan_fitting_mode(edi::effective_fitting_mode(project_)) && owner_.scan();
-    setContinuable(scan && scan_.fitted > 0 && scan_.fitted < scan_.files);
+    setContinuable(scan && scan_.processed() > 0 && scan_.processed() < scan_.files);
     const ScanSession* session = owner_.scanSession();
     const bool unreadable = session != nullptr && (!session->index().error.empty() || session->run().invalid);
-    const bool can_reset = scan && !running_ && (scan_.fitted > 0 || unreadable);
+    const bool can_reset = scan && !running_ && (scan_.processed() > 0 || unreadable);
     if (can_reset != can_reset_) {
         can_reset_ = can_reset;
         emit canResetChanged();
@@ -491,6 +646,27 @@ void FitViewModel::setOutOfDate(bool out_of_date) {
         out_of_date_ = out_of_date;
         emit outOfDateChanged();
     }
+}
+
+void FitViewModel::settleScanCounts() {
+    owner_.settleScan();
+    const ScanSession* session = owner_.scanSession();
+    if (session == nullptr || !session->index().error.empty()) {
+        return;
+    }
+    // Every count from the full read, converged and failed included: events the live index refused are counted
+    // here, once the files read whole.
+    ScanSummary counts = scan_;
+    counts.fitted = static_cast<int>(session->index().fitted);
+    counts.skipped = static_cast<int>(session->index().skipped);
+    counts.ok = 0;
+    counts.failed = 0;
+    for (const edi::ScanResultIndex::Row& row : session->index().rows) {
+        if (row.offset >= 0) {
+            ++(row.converged ? counts.ok : counts.failed);
+        }
+    }
+    setScanCounts(counts, QString());
 }
 
 void FitViewModel::scanEnded(const edi::FitReport& report) {
@@ -508,9 +684,19 @@ void FitViewModel::scanEnded(const edi::FitReport& report) {
 void FitViewModel::ended(const edi::FitReport& report) {
     // The last delivery: a frame still waiting is older than what follows, and is dropped.
     frame_timer_.stop();
+    follow_timer_.stop();
     clock_timer_.stop();
     pending_frame_.reset();
+    frame_requested_ = false;
+    frame_shown_ = true;
     if (scanning_) {
+        // A followed scan always ends on its last file, whatever the interval skipped.
+        if (following() && !latest_file_.empty() && latest_file_ != followed_file_ && latest_file_ != handed_file_) {
+            owner_.followScanFile(latest_file_, handOver(latest_file_));
+        }
+        // Files skipped after the last row have sent no event: the counts are settled first, so the running bar
+        // closes on every file the run processed, whatever it ended as.
+        settleScanCounts();
         setRunning(false);
         scanEnded(report);
         return;
@@ -556,6 +742,32 @@ void FitViewModel::setFollowing(bool following) {
     if (following != following_) {
         following_ = following;
         emit followingChanged();
+        // Follow turned on again: the newest finished file is shown now, calculated beside the scan, and the next
+        // ones as they come.
+        if (this->following() && !latest_file_.empty() && latest_file_ != followed_file_ &&
+            pattern_updates_ != kAtEnd) {
+            frame_shown_ = false;
+            follow_clock_.start();
+            owner_.followScanFile(latest_file_, handOver(latest_file_));
+        }
+        // Follow turned off: a file still waiting to be drawn is not counted.
+        if (!this->following()) {
+            dropHandedFile();
+            frame_shown_ = true;
+        }
+    }
+    followLatest();
+}
+
+void FitViewModel::setPatternUpdates(int mode) {
+    mode = mode >= kEveryPattern && mode <= kAtEnd ? mode : kAdaptive;
+    if (job_) {
+        job_->wait_for_patterns(mode == kEveryPattern && owner_.patternShown());
+    }
+    if (mode != pattern_updates_) {
+        pattern_updates_ = mode;
+        emit patternUpdatesChanged();
+        followLatest();
     }
 }
 

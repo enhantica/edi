@@ -158,7 +158,7 @@ EaComponents.ApplicationWindow {
         Loader {
             id: experimentLoader
 
-            active: AppState.experimentPageEnabled
+            active: AppState.experimentPageReached
             sourceComponent: Component {
                 ExperimentPage {
                     current: experimentLoader.SwipeView.isCurrentItem
@@ -168,7 +168,7 @@ EaComponents.ApplicationWindow {
         Loader {
             id: analysisLoader
 
-            active: AppState.analysisPageEnabled
+            active: AppState.analysisPageReached
             sourceComponent: Component {
                 AnalysisPage {
                     current: analysisLoader.SwipeView.isCurrentItem
@@ -178,7 +178,7 @@ EaComponents.ApplicationWindow {
         Loader {
             id: reportLoader
 
-            active: AppState.reportPageEnabled
+            active: AppState.reportPageReached
             sourceComponent: Component {
                 ReportPage {
                     current: reportLoader.SwipeView.isCurrentItem
@@ -308,6 +308,40 @@ EaComponents.ApplicationWindow {
             text: fitError.message
         }
     }
+    // A refused open (a project, an example) or a refused change of the project (a load of experiments, a structure
+    // or data, …) always says why: never a silent no-op (the owner, 2026-10-11).
+    AppDialog {
+        id: refusal
+        objectName: "refusal.dialog"
+        property string message: ""
+        parent: Overlay.overlay
+        standardButtons: Dialog.Ok
+        contentWidth: AppSizes.messagesDialogContentWidth
+        contentHeight: refusalText.implicitHeight
+
+        EaElements.Label {
+            id: refusalText
+            width: refusal.contentWidth
+            wrapMode: Text.Wrap
+            text: refusal.message
+        }
+    }
+    Connections {
+        target: Session
+        function onLoadFailed(message) {
+            refusal.title = qsTr("The project was not opened");
+            refusal.message = message;
+            refusal.open();
+        }
+    }
+    Connections {
+        target: Session.project
+        function onRefused(message) {
+            refusal.title = qsTr("The change was not made");
+            refusal.message = message;
+            refusal.open();
+        }
+    }
     Connections {
         target: Session.project ? Session.project.fit : null
         function onFinished() {
@@ -324,5 +358,8 @@ EaComponents.ApplicationWindow {
 
     // edi's preferences go to the base once everything, the base's hidden dialog and its settings
     // included, is complete (Preferences.apply).
-    Component.onCompleted: Qt.callLater(Preferences.apply)
+    Component.onCompleted: Qt.callLater(() => {
+        Preferences.apply();
+        RecentProjects.refresh();
+    })
 }

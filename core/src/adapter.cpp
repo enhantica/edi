@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "edi/calculation.hpp"
+#include "edi/presentation.hpp"
 #include "edi/scan.hpp"
 #include "adapter_test_access.hpp"  // edi::detail conversion seam (core/src only; test-only, not installed)
 #include "canonical_encoding.hpp"  // edi-only logic: core/src-private, never installed
@@ -51,6 +52,7 @@
 #include "edi/categories.hpp"
 #include "edi/io.hpp"
 #include "edi/model.hpp"
+#include "edi/structure_scene.hpp"
 #include "edi/symmetry.hpp"
 #include "edi/threading.hpp"
 #include "edi/validation.hpp"
@@ -294,6 +296,173 @@ crysta::Cell completed_cell(const Structure& s) {
     }
 }
 }  // namespace
+
+namespace {
+
+// One coordinate of a Wyckoff representative ("1/2*x+1/2*y", "-x+1/4", "1/8") with x, y and z at 0: the sum of its
+// terms without a variable.
+double coordinate_at_origin(const std::string& expression) {
+    double sum = 0.0;
+    std::size_t start = 0;
+    while (start < expression.size()) {
+        std::size_t end = start + 1;
+        while (end < expression.size() && expression[end] != '+' && expression[end] != '-') {
+            ++end;
+        }
+        std::string term = expression.substr(start, end - start);
+        start = end;
+        const double sign = !term.empty() && term.front() == '-' ? -1.0 : 1.0;
+        if (!term.empty() && (term.front() == '+' || term.front() == '-')) {
+            term.erase(0, 1);
+        }
+        if (term.empty() || term.find_first_of("xyz") != std::string::npos) {
+            continue;
+        }
+        const std::size_t slash = term.find('/');
+        const double value = slash == std::string::npos
+                                 ? std::stod(term)
+                                 : std::stod(term.substr(0, slash)) / std::stod(term.substr(slash + 1));
+        sum += sign * value;
+    }
+    return sum;
+}
+
+}  // namespace
+
+std::vector<WyckoffOption> wyckoff_positions(const Structure& structure) {
+    crysta::SpaceGroup group;
+    try {
+        group = resolve_group(structure);
+    } catch (const std::exception&) {
+        return {};
+    }
+    std::vector<WyckoffOption> options;
+    for (const auto& [letter, position] : group.wyckoff) {
+        WyckoffOption option{letter, position.multiplicity, position.representative, {}};
+        std::size_t start = 0;
+        for (std::size_t axis = 0; axis < 3; ++axis) {
+            const std::size_t comma = position.representative.find(',', start);
+            option.origin[axis] = coordinate_at_origin(position.representative.substr(start, comma - start));
+            start = comma == std::string::npos ? position.representative.size() : comma + 1;
+        }
+        options.push_back(std::move(option));
+    }
+    // The table's order: a to z, then the capital letters (`A`, alpha, after `z`).
+    std::stable_sort(options.begin(), options.end(), [](const WyckoffOption& one, const WyckoffOption& other) {
+        const bool one_capital = !one.letter.empty() && std::isupper(static_cast<unsigned char>(one.letter.front()));
+        const bool other_capital =
+            !other.letter.empty() && std::isupper(static_cast<unsigned char>(other.letter.front()));
+        return one_capital != other_capital ? !one_capital : one.letter < other.letter;
+    });
+    return options;
+}
+
+namespace {
+
+// The elements a new atom may take: those the app styles that crysta's default neutron table and its default X-ray
+// form factors both hold, so the atom computes whatever the probe.
+const std::vector<std::string>& new_site_elements() {
+    static const std::vector<std::string> elements = [] {
+        std::vector<std::string> out;
+        const crysta::NeutronScattering neutron = crysta::load_neutron_scattering();
+        for (const ElementStyle& style : element_style_table()) {
+            if (!neutron.b_c.contains(style.symbol)) {
+                continue;
+            }
+            try {
+                crysta::xray_scattering({"", "none", 0.0}, {style.symbol});
+            } catch (const std::exception&) {
+                continue;
+            }
+            out.push_back(style.symbol);
+        }
+        return out;
+    }();
+    return elements;
+}
+
+}  // namespace
+
+AtomSite new_atom_site(const Structure& structure, const std::function<double()>& random) {
+    const auto draw_index = [&random](std::size_t count) {
+        return std::min(count - 1, static_cast<std::size_t>(random() * static_cast<double>(count)));
+    };
+    AtomSite site;
+    // The element: one the structure does not hold yet when there is one.
+    std::vector<std::string> unused;
+    for (const std::string& element : new_site_elements()) {
+        const bool held = std::any_of(structure.atom_sites.begin(), structure.atom_sites.end(),
+                                      [&element](const auto& existing) { return existing->type_symbol.value() == element; });
+        if (!held) {
+            unused.push_back(element);
+        }
+    }
+    const std::vector<std::string>& candidates = unused.empty() ? new_site_elements() : unused;
+    site.type_symbol = candidates.empty() ? std::string("H") : candidates[draw_index(candidates.size())];
+    // The label: the element and the next free number.
+    for (int number = 1;; ++number) {
+        const std::string label = site.type_symbol.value() + std::to_string(number);
+        const bool taken = std::any_of(structure.atom_sites.begin(), structure.atom_sites.end(),
+                                       [&label](const auto& existing) { return existing->id.value() == label; });
+        if (!taken) {
+            site.id = label;
+            break;
+        }
+    }
+    // The coordinates: three decimals, drawn again on a special position.
+    std::vector<crysta::SymmetryOperation> operations;
+    try {
+        const crysta::SpaceGroup group = resolve_group(structure);
+        operations = crysta::symmetry_operations(group);
+        int highest = 0;
+        for (const auto& [letter, position] : group.wyckoff) {
+            if (position.multiplicity > highest) {
+                highest = position.multiplicity;
+                site.wyckoff_letter = letter;
+            }
+        }
+    } catch (const std::exception&) {
+        operations.clear();
+    }
+    const auto special = [&operations](const std::array<double, 3>& x) {
+        for (const crysta::SymmetryOperation& operation : operations) {
+            const bool identity = operation.rotation == std::array<int, 9>{1, 0, 0, 0, 1, 0, 0, 0, 1} &&
+                                  operation.translation == std::array<double, 3>{0.0, 0.0, 0.0};
+            if (identity) {
+                continue;
+            }
+            bool fixed = true;
+            for (std::size_t row = 0; row < 3 && fixed; ++row) {
+                double image = operation.translation[row];
+                for (std::size_t column = 0; column < 3; ++column) {
+                    image += operation.rotation[row * 3 + column] * x[column];
+                }
+                const double shift = image - x[row];
+                fixed = std::abs(shift - std::round(shift)) < 1e-6;
+            }
+            if (fixed) {
+                return true;
+            }
+        }
+        return false;
+    };
+    std::array<double, 3> x{};
+    for (int attempt = 0; attempt < 1000; ++attempt) {
+        for (double& coordinate : x) {
+            coordinate = std::round(random() * 1000.0) / 1000.0;
+            if (coordinate >= 1.0) {
+                coordinate = 0.0;
+            }
+        }
+        if (!special(x)) {
+            break;
+        }
+    }
+    site.fract_x.value = x[0];
+    site.fract_y.value = x[1];
+    site.fract_z.value = x[2];
+    return site;
+}
 
 std::optional<std::array<double, 6>> site_u_star(const Structure& s, const AtomSite& site) {
     try {
@@ -886,15 +1055,16 @@ Index build_index(Project& model, crysta::Project& cproject) {
                   Slot{&cexperiment.instrument[2], &experiment.instrument.calib_d_to_tof_quadratic});
     index.emplace("experiment.instrument.calib_d_to_tof_reciprocal",
                   Slot{&cexperiment.instrument[3], &experiment.instrument.calib_d_to_tof_reciprocal});
-    index.emplace("experiment.linked_structure.scale",
+    // A loop row by its id, never its position (the owner, 2026-10-11), as parameter_paths names it.
+    index.emplace("experiment.linked_structures[" + experiment.linked_structure().structure_id.value() + "].scale",
                   Slot{&cexperiment.scale(), &experiment.linked_structure().scale});
     for (std::size_t i = 0; i < experiment.background.size(); ++i) {
         index.emplace(
-            "experiment.background[" + std::to_string(i) + "].intensity",
+            "experiment.background[" + experiment.background[i]->id.value() + "].intensity",
             Slot{&cexperiment.background[i].intensity, &experiment.background[i]->intensity});
     }
     for (std::size_t i = 0; i < experiment.background_terms.size(); ++i) {
-        index.emplace("experiment.background[" + std::to_string(i) + "].coef",
+        index.emplace("experiment.background[" + experiment.background_terms[i]->id.value() + "].coef",
                       Slot{&cexperiment.background_terms[i].coef, &experiment.background_terms[i]->coef});
     }
     // Presence-tracked: a model that never declared abscor1 has no such path, so a set() on it is an
@@ -915,9 +1085,9 @@ Index build_index(Project& model, crysta::Project& cproject) {
     // The one preferred-orientation row, crysta's [march_r, march_random_fract] layout.
     if (experiment.preferred_orientation.size() != 0 && cexperiment.texture() != nullptr) {
         PrefOrient& row = *experiment.preferred_orientation[0];
-        index.emplace("experiment.preferred_orientation[0].march_r",
-                      Slot{cexperiment.texture()->march.data(), &row.march_r});
-        index.emplace("experiment.preferred_orientation[0].march_random_fract",
+        const std::string texture = "experiment.preferred_orientation[" + row.structure_id.value() + "].";
+        index.emplace(texture + "march_r", Slot{cexperiment.texture()->march.data(), &row.march_r});
+        index.emplace(texture + "march_random_fract",
                       Slot{cexperiment.texture()->march.data() + 1, &row.march_random_fract});
     }
     return index;
@@ -1232,10 +1402,15 @@ std::filesystem::path scan_results_path(const Project& project) {
 // Why each file's fit stopped, from crysta's ledger (`termination`, its fifth column), read in step with
 // results.csv: crysta writes a file's ledger row just before its results row, so the k-th of each name the same
 // file. Reading both together keeps one row in memory, not the whole scan's. A ledger written before it recorded
-// the reason, none, or one whose row names another file gives nothing from there on.
+// the reason, none, or one whose row names another file gives nothing from there on; a path there that is not a
+// regular file throws (scan_state_present).
 class LedgerReader {
    public:
-    explicit LedgerReader(const std::filesystem::path& path) : input_(path, std::ios::binary) {
+    explicit LedgerReader(const std::filesystem::path& path) {
+        if (!scan_state_present(path, "analysis/results-provenance.csv")) {
+            return;  // no ledger: no reasons
+        }
+        input_.open(path, std::ios::binary);
         std::string line;
         if (std::getline(input_, line)) {
             const std::vector<std::string> header = split_scan_row(line);
@@ -1264,6 +1439,9 @@ class LedgerReader {
 // The termination the ledger's last line records for `file_cell`; empty when that line is another file's, the
 // ledger does not record reasons, or there is none. Reads only the file's end.
 std::string ledger_termination(const std::filesystem::path& path, const std::string& file_cell) {
+    if (!scan_state_present(path, "analysis/results-provenance.csv")) {
+        return {};
+    }
     std::ifstream input(path, std::ios::binary | std::ios::ate);
     if (!input) {
         return {};
@@ -1429,44 +1607,112 @@ std::pair<std::size_t, ScanResultIndex::Row> scan_row_facts(const Project& /*pro
     return {found->second, std::move(row)};
 }
 
-namespace {
-
-// What crysta noted about the scan's files (`analysis/scan-notes.csv`: file_path, negative_points, skipped_dataset,
-// refusal), onto the datasets it names. A report, not a result: a file that is not there or not in this form adds
-// nothing, and a line still being written is left out.
-void mark_skipped(const Project& project, const ScanDatasets& datasets, ScanResultIndex& index) {
-    std::ifstream input(scan_results_path(project).parent_path() / "scan-notes.csv", std::ios::binary);
-    std::string line;
-    if (!std::getline(input, line) || input.eof() ||
-        split_scan_row(line) !=
-            std::vector<std::string>{"file_path", "negative_points", "skipped_dataset", "refusal"}) {
-        return;
+bool scan_state_present(const std::filesystem::path& path, const std::string& label) {
+    std::error_code error;
+    const std::filesystem::file_status link = std::filesystem::symlink_status(path, error);
+    if (link.type() == std::filesystem::file_type::not_found) {
+        return false;
     }
-    const ScanPlaces places = scan_places(datasets);
+    if (link.type() == std::filesystem::file_type::none) {
+        throw std::invalid_argument(label + ": cannot tell whether it exists: " + error.message());
+    }
+    if (!std::filesystem::is_regular_file(std::filesystem::status(path, error))) {
+        throw std::invalid_argument(label + ": it is there but is not a regular file");
+    }
+    return true;
+}
+
+std::int64_t read_scan_notes(const Project& project, const ScanPlaces& places, ScanResultIndex& index,
+                             std::int64_t from, bool writing) {
+    const std::filesystem::path path = scan_results_path(project).parent_path() / "scan-notes.csv";
+    if (!scan_state_present(path, "analysis/scan-notes.csv")) {
+        return from;
+    }
+    std::ifstream input(path, std::ios::binary);
+    if (!input) {
+        throw std::invalid_argument("analysis/scan-notes.csv cannot be read");
+    }
+    const auto refuse = [](const std::string& why) {
+        throw std::invalid_argument("analysis/scan-notes.csv: " + why +
+                                    "; the skipped and refused files cannot be known");
+    };
+    std::string line;
+    std::int64_t end = from;
+    if (from == 0) {
+        if (!std::getline(input, line)) {
+            if (writing && !input.bad()) {
+                return 0;  // created by the run, nothing written yet
+            }
+            refuse(input.bad() ? "it could not be read" : "it is empty");
+        }
+        if (input.eof()) {
+            if (writing) {
+                return 0;
+            }
+            refuse("its header is not complete");
+        }
+        if (split_scan_row(line) !=
+            std::vector<std::string>{"file_path", "negative_points", "skipped_dataset", "refusal"}) {
+            refuse("its header is not file_path,negative_points,skipped_dataset,refusal");
+        }
+        end = input.tellg();
+    } else {
+        input.seekg(from);
+        if (!input) {
+            refuse("it could not be read from where the last read stopped");
+        }
+    }
     const std::string directory = project.sequential_fit.data_dir + "/";
-    while (std::getline(input, line) && !input.eof()) {
+    while (std::getline(input, line)) {
+        if (input.eof()) {
+            if (writing) {
+                break;  // a line still being written
+            }
+            refuse("its last line is not complete");
+        }
         const std::vector<std::string> cells = split_scan_row(line);
         if (cells.size() != 4) {
-            continue;
+            refuse("a line has " + std::to_string(cells.size()) + " cells, not 4");
         }
         std::string_view name(cells[0]);
         if (name.starts_with(directory)) {
             name.remove_prefix(directory.size());
         }
         const auto found = places.find(std::string(name));
-        double negative = 0.0;
-        if (found == places.end() || !parse_scan_number(cells[1], negative) || negative < 0.0) {
-            continue;
+        if (found == places.end()) {
+            refuse("'" + cells[0] + "' is not one of the scan's files");
+        }
+        // A count of points: decimal digits only, proved in range before it is converted.
+        const std::string& count = cells[1];
+        if (count.empty() || count.size() > 12 ||
+            !std::all_of(count.begin(), count.end(), [](char c) { return c >= '0' && c <= '9'; })) {
+            refuse("the negative_points of '" + cells[0] + "' is '" + count +
+                   "', not a whole number of at most 12 digits");
+        }
+        if (cells[2] != "True" && cells[2] != "False") {
+            refuse("the skipped_dataset of '" + cells[0] + "' is '" + cells[2] + "', not True or False");
         }
         ScanResultIndex::Row& row = index.rows[found->second];
-        row.negative_points = static_cast<std::size_t>(negative);
+        if (row.noted) {
+            refuse("'" + cells[0] + "' is named twice");
+        }
+        row.noted = true;
+        row.negative_points = static_cast<std::size_t>(std::stoull(count));
         row.refusal = cells[3];
-        if (cells[2] == "True" && row.offset < 0 && !row.skipped) {
+        // A file with a results row was fitted, whatever an earlier run noted about it.
+        if (cells[2] == "True" && row.offset < 0) {
             row.skipped = true;
             ++index.skipped;
         }
+        end = input.tellg();
     }
+    if (input.bad()) {
+        refuse("it could not be read to its end");
+    }
+    return end;
 }
+
+namespace {
 
 ScanResultIndex index_scan_rows(const Project& project, const ScanDatasets& datasets, const ScanPlaces& places,
                                 bool writing);
@@ -1481,9 +1727,34 @@ ScanResultIndex index_scan_results(const Project& project, const ScanDatasets& d
                                    bool writing) {
     ScanResultIndex index = index_scan_rows(project, datasets, places, writing);
     if (index.error.empty()) {
-        mark_skipped(project, datasets, index);
+        try {
+            index.notes_end = read_scan_notes(project, places, index, 0, writing);
+        } catch (const std::exception& refusal) {
+            ScanResultIndex error;
+            error.error = refusal.what();
+            error.rows.resize(datasets.files.size());
+            return error;
+        }
     }
     return index;
+}
+
+ScanNotesReport scan_notes_report(const Project& project) {
+    const ScanDatasets datasets = scan_datasets(project);
+    const ScanResultIndex index = index_scan_results(project, datasets, false);
+    if (!index.error.empty()) {
+        throw std::invalid_argument(index.error);
+    }
+    ScanNotesReport report;
+    report.skipped = index.skipped;
+    for (std::size_t place = 0; place < index.rows.size(); ++place) {
+        const ScanResultIndex::Row& row = index.rows[place];
+        report.negative_points += row.negative_points;
+        if (!row.refusal.empty()) {
+            report.refused.emplace_back(datasets.files[place], row.refusal);
+        }
+    }
+    return report;
 }
 
 namespace {
@@ -1501,9 +1772,15 @@ ScanResultIndex index_scan_rows(const Project& project, const ScanDatasets& data
     // Only a file that is not there is no results; one that is there must read whole: a header, and complete
     // rows. A line still being written is expected only while a run writes (`writing`).
     const std::filesystem::path path = scan_results_path(project);
-    std::error_code status;
-    if (!std::filesystem::exists(path, status)) {
-        return status ? refused("cannot tell whether it exists: " + status.message()) : index;
+    try {
+        if (!scan_state_present(path, "analysis/results.csv")) {
+            return index;
+        }
+    } catch (const std::exception& refusal) {
+        ScanResultIndex error;
+        error.error = refusal.what();
+        error.rows.resize(datasets.files.size());
+        return error;
     }
     std::ifstream input(path, std::ios::binary);
     if (!input) {
@@ -1555,6 +1832,10 @@ ScanResultIndex index_scan_rows(const Project& project, const ScanDatasets& data
 }  // namespace
 
 std::vector<std::string> read_scan_row(const Project& project, std::int64_t offset) {
+    if (!scan_state_present(scan_results_path(project), "analysis/results.csv")) {
+        throw std::invalid_argument("analysis/results.csv is not there; it has no row at byte " +
+                                    std::to_string(offset));
+    }
     std::ifstream input(scan_results_path(project), std::ios::binary);
     std::string line;
     if (!input || offset < 0 || !input.seekg(offset) || !std::getline(input, line) || input.eof()) {
@@ -1711,6 +1992,19 @@ void save_project_via_crysta(const Project& model, const std::string& directory)
         to.profile_function = from.profile_function;
         to.background_function = from.background_function;
         to.descent = from.descent;
+        // A scan's per-file pairs are held with no result, so they cross whether or not one is held.
+        std::vector<crysta::FitParameterCorrelation> rows;
+        rows.reserve(from.correlations.size());
+        for (const auto& row : from.correlations) {
+            crysta::FitParameterCorrelation& copy = rows.emplace_back();
+            copy.id = row->id.value();
+            copy.source_kind = row->source_kind.value();
+            copy.parameter_unique_name_i = row->parameter_unique_name_i.value();
+            copy.parameter_unique_name_j = row->parameter_unique_name_j.value();
+            copy.correlation = row->correlation.value();
+            copy.file_path = row->file_path.value();
+        }
+        to.correlations.assign(rows);
     }
     // The declared scan block round-trips through the delegated save exactly as the fitting
     // mode does — a save that dropped it would turn a sequential project into a single one on
@@ -1994,7 +2288,13 @@ void apply_post_build_fields(const ExperimentBase& e, crysta::ExperimentBase& bu
                                               e.neutron_scattering_length.value_or(""));
     built.dataset_weight = e.dataset_weight;
     built.data_file = e.data_file;
-    built.excluded_regions = e.excluded_regions;
+    std::vector<crysta::ExcludedRegion> regions;
+    regions.reserve(e.excluded_regions.size());
+    for (const auto& region : e.excluded_regions) {
+        regions.emplace_back(region->first.get(), region->second.get());
+        regions.back().id = region->id.value();
+    }
+    built.excluded_regions = regions;
     // The declared background model, its constants and its terms, through crysta's converter like
     // every token; crysta refuses a model holding another type's rows or constants.
     built.background_type = crossed(crysta::TokenField::BackgroundType, built, e.background_type);
@@ -2006,8 +2306,9 @@ void apply_post_build_fields(const ExperimentBase& e, crysta::ExperimentBase& bu
         terms.reserve(e.background_terms.size());
         for (const auto& term : e.background_terms) {
             terms.emplace_back(term->order.get(), param(term->coef, crysta::BACKGROUND, "coef"));
+            terms.back().id = term->id.value();
         }
-        built.background_terms = std::move(terms);
+        built.background_terms.assign(terms);
     }
     // The declared family token crosses on the CALCULATE path too — crysta's CW kernel
     // resolves it (cwl_absorption_form on `absorption_type`), while its TOF derivation stays
@@ -2196,6 +2497,7 @@ crysta::BraggPdExperiment to_crysta_cwl_experiment(const ExperimentBase& e, bool
     for (const auto& point : e.background) {
         background.emplace_back(point->position,
                                 param(point->intensity, crysta::BACKGROUND, "intensity"));
+        background.back().id = point->id.value();
     }
     crysta::BraggPdExperiment built(std::move(peak), std::move(instrument),
                              param(seed_scale(e), crysta::SCALE, "scale"), std::move(background));
@@ -2276,6 +2578,7 @@ crysta::BraggPdExperiment to_crysta_experiment(const ExperimentBase& e, bool for
     for (const auto& point : e.background) {
         background.emplace_back(point->position,
                                 param(point->intensity, crysta::BACKGROUND, "intensity"));
+        background.back().id = point->id.value();
     }
     builder.background(std::move(background));
     crysta::BraggPdExperiment built = builder.build();
@@ -2811,6 +3114,10 @@ void restore_dependents(Project& project) {
     }
 }
 
+int background_max_order(const std::string& type) {
+    return crysta::background_max_order(crysta::background_form_of(type));
+}
+
 std::vector<std::string> absorption_file_tokens(BeamModeEnum mode) {
     return crysta::file_tokens(crysta::TokenField::AbsorptionType, crysta_kind(mode));
 }
@@ -3281,11 +3588,90 @@ void publish_fit_state(Project& project, crysta::Project& converted) {
     project.refresh_calculated_pattern();  // The pattern follows the model it describes
 }
 
+// The fit's parameter correlations as crysta computes them over the project it fitted (crysta::fit_correlations:
+// diffraction-lib's pairs from the covariance, by unique name, in crysta's shortest form), as edi's rows. One
+// computation serves the app, Python and both CLIs.
+// ADR-0034: what a scan run makes of its files' results: each file's bundle by file, the files this run fitted, the
+// rows read with a file, and the last file's columns with their resolved names.
+struct ScanRunResults {
+    std::map<std::string, std::shared_ptr<const ScanFileResult>> results;
+    std::set<std::string> fitted;
+    std::vector<FitParameterCorrelation> read_rows;
+    std::vector<std::string> labels;
+    std::shared_ptr<const std::vector<std::string>> names;
+};
+
+// ADR-0034: a scan file's results from its fit. The correlations are numbers (I1 to I4); the names are resolved only
+// when the file's columns differ from the previous file's, and are otherwise shared (I5).
+std::shared_ptr<const ScanFileResult> scan_file_result(crysta::Project& project, const crysta::FitResultBase& result,
+                                                       ScanRunResults& scan) {
+    auto bundle = std::make_shared<ScanFileResult>();
+    std::optional<std::vector<double>> values = crysta::correlation_values(result);
+    if (!values) {
+        return bundle;
+    }
+    if (!scan.names || scan.labels != result.covariance_labels) {
+        std::optional<std::vector<std::string>> names = crysta::covariance_unique_names(project, result.covariance_labels);
+        if (!names) {
+            return bundle;
+        }
+        scan.names = std::make_shared<const std::vector<std::string>>(std::move(*names));
+        scan.labels = result.covariance_labels;
+    }
+    auto table = std::make_shared<CorrelationTable>();
+    table->names = scan.names;
+    table->values = std::make_shared<const std::vector<double>>(std::move(*values));
+    bundle->correlations = std::move(table);
+    return bundle;
+}
+
+// ADR-0034: the record after a scan run. Its results by file are the run's. When this run fitted the template, the
+// saved loop holds the template's rows made from its table (I6), and the other files' read rows move into their bundles
+// as read (I7); otherwise the loop keeps the rows read with the files this run did not fit.
+void settle_scan_results(FitResultRecord& record, ScanRunResults& scan, const std::string& template_file) {
+    record.scan_results = std::move(scan.results);
+    if (!template_file.empty() && scan.fitted.contains(template_file)) {
+        std::vector<FitParameterCorrelation> template_rows;
+        const auto found = record.scan_results.find(template_file);
+        if (found != record.scan_results.end() && found->second && found->second->correlations) {
+            template_rows = correlation_rows(*found->second->correlations, template_file);
+        }
+        std::vector<FitParameterCorrelation> others;
+        for (const FitParameterCorrelation& row : scan.read_rows) {
+            if (!scan.fitted.contains(row.file_path.value())) {
+                others.push_back(row);
+            }
+        }
+        hold_template_rows(record, std::move(template_rows), others, template_file);
+        return;
+    }
+    std::vector<ItemVec<FitParameterCorrelation>::Ptr> rows;
+    for (const FitParameterCorrelation& row : scan.read_rows) {
+        if (!scan.fitted.contains(row.file_path.value())) {
+            rows.push_back(std::make_shared<FitParameterCorrelation>(row));
+        }
+    }
+    record.correlations.assign(std::move(rows));
+}
+
+std::vector<FitParameterCorrelation> crysta_correlations(crysta::Project& fitted, const crysta::FitResultBase& result) {
+    std::vector<FitParameterCorrelation> rows;
+    for (const crysta::FitParameterCorrelation& pair : crysta::fit_correlations(fitted, result)) {
+        FitParameterCorrelation& row = rows.emplace_back();
+        row.source_kind = pair.source_kind.get();
+        row.parameter_unique_name_i = pair.parameter_unique_name_i.get();
+        row.parameter_unique_name_j = pair.parameter_unique_name_j.get();
+        row.correlation = pair.correlation.get();
+    }
+    return rows;
+}
+
 // The fit's result as the project records it (`_fit_result`, diffraction-lib's names, and each bank's share
 // for a joint fit), from what the fit returned — the same numbers the reports print. The status label is
 // crysta's machine-record spelling; the profile function is the peak type the experiments share (left out
 // when they differ), the background edi's only one.
-void record_fit_result(Project& project, const FitResultBase& outcome, std::size_t considered) {
+void record_fit_result(Project& project, FitResultBase& outcome, std::size_t considered,
+                       std::vector<FitParameterCorrelation> correlations) {
     FitResultRecord record;
     record.result_kind = "deterministic";
     record.success = outcome.status == FitStatus::DONE;
@@ -3339,6 +3725,12 @@ void record_fit_result(Project& project, const FitResultBase& outcome, std::size
         record.background_function = *background;
     }
     record.descent = outcome.descent;  // review-1 F3: the descent that produced it
+    const std::vector<ItemVec<FitParameterCorrelation>::Ptr> rows = numbered_correlations(correlations);
+    outcome.correlations.clear();
+    for (const auto& row : rows) {
+        outcome.correlations.push_back(*row);
+    }
+    record.correlations.assign(rows);
     project.fit_result = std::move(record);
     for (const auto& experiment_item : project.experiments) {
         ExperimentBase& experiment = *experiment_item;
@@ -3356,6 +3748,59 @@ void record_fit_result(Project& project, const FitResultBase& outcome, std::size
 }
 
 }  // namespace
+
+void adopt_scan_file_result(FitResultRecord& record, const std::string& file,
+                            std::shared_ptr<const ScanFileResult> result, const std::string& template_file) {
+    record.scan_results[file] = std::move(result);
+    if (!template_file.empty() && file == template_file) {
+        const std::shared_ptr<const ScanFileResult>& adopted = record.scan_results[file];
+        std::vector<FitParameterCorrelation> template_rows;
+        if (adopted && adopted->correlations) {
+            template_rows = correlation_rows(*adopted->correlations, file);
+        }
+        std::vector<FitParameterCorrelation> others;
+        others.reserve(record.correlations.size());
+        for (const auto& row : record.correlations) {
+            others.push_back(*row);
+        }
+        hold_template_rows(record, std::move(template_rows), others, template_file);
+        return;
+    }
+    // Another file's fit replaces the rows read with it; the rest stay as they are.
+    const auto named = [&file](const auto& row) { return row->file_path.value() == file; };
+    if (std::none_of(record.correlations.begin(), record.correlations.end(), named)) {
+        return;
+    }
+    std::vector<ItemVec<FitParameterCorrelation>::Ptr> kept;
+    for (const auto& row : record.correlations) {
+        if (!named(row)) {
+            kept.push_back(row);
+        }
+    }
+    record.correlations.assign(std::move(kept));
+}
+
+std::vector<FitParameterCorrelation> correlation_rows(const CorrelationTable& table, const std::string& file) {
+    std::vector<FitParameterCorrelation> rows;
+    if (!table.names || !table.values) {
+        return rows;
+    }
+    const std::vector<std::string>& names = *table.names;
+    const std::vector<double>& values = *table.values;
+    rows.reserve(values.size());
+    for (std::size_t i = 0; i + 1 < names.size(); ++i) {
+        for (std::size_t j = i + 1; j < names.size() && rows.size() < values.size(); ++j) {
+            FitParameterCorrelation& row = rows.emplace_back();
+            row.id = std::to_string(rows.size());
+            row.source_kind = std::string("deterministic");
+            row.parameter_unique_name_i = names[i];
+            row.parameter_unique_name_j = names[j];
+            row.correlation = crysta::correlation_text(values[rows.size() - 1]);
+            row.file_path = file;
+        }
+    }
+    return rows;
+}
 
 std::vector<std::string> descent_ids() { return crysta::descent_ids(); }
 
@@ -3445,7 +3890,7 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
         // must be taken here: apply_exclusions replaces `measured`, and the provider only ever
         // sees the masked pattern.
         const std::size_t n_points_loaded = measured.grid.size();
-        measured = crysta::apply_exclusions(measured, experiment().excluded_regions);
+        measured = crysta::apply_exclusions(measured, excluded_region_ranges(experiment().excluded_regions));
         if (measured.grid.empty()) {
             throw std::invalid_argument(
                 "edi fit: no measured data remains after applying the excluded regions");
@@ -3589,7 +4034,8 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
             detail::write_back(refined);
             crysta::write_fit_result_into(project, result);  // crysta completes the dependents
             publish_fit_state(*this, project);
-            record_fit_result(*this, outcome, considered);
+            record_fit_result(*this, outcome, considered,
+                              crysta_correlations(project, result));
             return outcome;
         };
         if (phases) {
@@ -3619,7 +4065,8 @@ FitResultBase Project::fit_independent(const IterationCallback& on_iteration,
                                           const PreambleCallback& on_start,
                                           const ScanStartCallback& on_scan_start,
                                           const FileCompleteCallback& on_file_complete,
-                                          const CancelCallback& should_cancel) {
+                                          const CancelCallback& should_cancel,
+                                          const FileFittedCallback& on_file_fitted) {
     // Review-2 F2: this entry serves EXACTLY `independent`, and it reaches the shared scan body
     // DIRECTLY. It used to delegate to fit_sequential(), which accepted either scan mode — so
     // an `independent` project also succeeded through the explicitly sequential entry, whose
@@ -3630,21 +4077,22 @@ FitResultBase Project::fit_independent(const IterationCallback& on_iteration,
                                     fitting_mode +
                                     "' - this entry point serves exactly the 'independent' mode");
     }
-    return fit_scan(on_iteration, on_start, on_scan_start, on_file_complete, should_cancel);
+    return fit_scan(on_iteration, on_start, on_scan_start, on_file_complete, should_cancel, on_file_fitted);
 }
 
 FitResultBase Project::fit_sequential(const IterationCallback& on_iteration,
                                          const PreambleCallback& on_start,
                                          const ScanStartCallback& on_scan_start,
                                          const FileCompleteCallback& on_file_complete,
-                                         const CancelCallback& should_cancel) {
+                                         const CancelCallback& should_cancel,
+                                         const FileFittedCallback& on_file_fitted) {
     // Serves EXACTLY `sequential` — the scan family is no longer accepted here.
     if (fitting_mode != "sequential") {
         throw std::invalid_argument("edi fit_sequential: _fitting_mode.type is '" +
                                     fitting_mode +
                                     "' - this entry point serves exactly the 'sequential' mode");
     }
-    return fit_scan(on_iteration, on_start, on_scan_start, on_file_complete, should_cancel);
+    return fit_scan(on_iteration, on_start, on_scan_start, on_file_complete, should_cancel, on_file_fitted);
 }
 
 namespace {
@@ -3728,6 +4176,12 @@ bool parse_csv_cell(const std::string& cell, Value& out) {
     return !stream.fail() && stream.eof();
 }
 
+// A results row's file, as the scan's events name it: its file_path cell without the directory.
+std::string scan_file_name(const std::string& file_path) {
+    const std::size_t slash = file_path.rfind('/');
+    return slash == std::string::npos ? file_path : file_path.substr(slash + 1);
+}
+
 // One results.csv row's facts for the per-file event. The row shape is crysta's own contract
 // (cells file_path, reduced_chi_square, success, iterations...); a row that does not parse
 // yields nullopt and fires nothing — the driver's own resume validation is the authority on
@@ -3739,8 +4193,7 @@ std::optional<ScanFileRecord> scan_record_from_cells(const std::vector<std::stri
     }
     ScanFileRecord record;
     record.cells = cells;
-    const std::size_t slash = cells[0].rfind('/');
-    record.file_name = slash == std::string::npos ? cells[0] : cells[0].substr(slash + 1);
+    record.file_name = scan_file_name(cells[0]);
     record.converged = cells[2] == "True";
     if (!record.converged && cells[1] == "nan") {
         record.reduced_chi_square = std::numeric_limits<double>::quiet_NaN();  // a refused fit
@@ -3769,11 +4222,14 @@ std::optional<ScanFileRecord> scan_record_from_row(const std::string& line) {
     return scan_record_from_cells(cells);
 }
 
-// Every currently committed data row (header skipped). An unreadable or missing file reads as
-// zero rows — the same view crysta's driver takes of a fresh scan; a torn/foreign file is the
-// driver's own fail-closed refusal, which edi does not preempt here.
+// Every currently committed data row (header skipped). A missing or unreadable file reads as zero rows (the same
+// view crysta's driver takes of a fresh scan) and a path that is not a regular file throws; a torn or foreign file
+// is the driver's own fail-closed refusal, which edi does not preempt here.
 std::vector<ScanFileRecord> read_scan_rows(const std::filesystem::path& csv_path) {
     std::vector<ScanFileRecord> rows;
+    if (!scan_state_present(csv_path, "analysis/results.csv")) {
+        return rows;
+    }
     std::ifstream in(csv_path);
     if (!in) {
         return rows;
@@ -3796,6 +4252,42 @@ std::vector<ScanFileRecord> read_scan_rows(const std::filesystem::path& csv_path
     return rows;
 }
 
+// A scan file's pattern as crysta's fit left it on `fitted`: the measured and computed columns shared, not copied,
+// the reflections grouped as capture_pattern groups them, the excluded regions and phase places from the template
+// `model`. What a calculation of that file at its fitted values would show, without calculating it again.
+PatternSource fitted_scan_pattern(const Project& model, const crysta::Project& fitted) {
+    PatternSource source;
+    const ExperimentBase& experiment = model.experiment();
+    for (const auto& [start, end] : excluded_region_ranges(experiment.excluded_regions)) {
+        source.excluded.push_back({std::min(start, end), std::max(start, end)});
+    }
+    source.x_title = experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH ? "2θ (°)" : "TOF (µs)";
+    const crysta::ComputedView view = crysta::peek(fitted, fitted.experiment());
+    const auto shared = [](const crysta::ColumnSnapshot<double>& column) -> PatternSource::Column {
+        return column.empty() ? nullptr : column.buffer();
+    };
+    source.x = shared(view.data.axis);
+    source.meas = shared(view.data.intensity_meas);
+    source.su = shared(view.data.intensity_meas_su);
+    source.current = view.data_state == crysta::ComputedState::Current &&
+                     view.refln_state == crysta::ComputedState::Current;
+    if (!source.current) {
+        return source;
+    }
+    source.calc = shared(view.data.intensity_calc);
+    source.bkg = shared(view.data.intensity_bkg);
+    source.resid = shared(view.data.residual);
+    std::vector<std::string> names;
+    names.reserve(model.structures.size());
+    for (const auto& structure : model.structures) {
+        names.push_back(structure->name);
+    }
+    source.phases = group_reflections(view.refln.structure_id.values(), view.refln.position.values(),
+                                      view.refln.index_h.values(), view.refln.index_k.values(),
+                                      view.refln.index_l.values(), names);
+    return source;
+}
+
 }  // namespace
 
 // The ONE scan implementation. Both public scan entries reach it after proving their own exact
@@ -3804,7 +4296,8 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
                                    const PreambleCallback& on_start,
                                    const ScanStartCallback& on_scan_start,
                                    const FileCompleteCallback& on_file_complete,
-                                   const CancelCallback& should_cancel) {
+                                   const CancelCallback& should_cancel,
+                                   const FileFittedCallback& on_file_fitted) {
     // The ONE native entry point the `sequential` fitting mode delegates to. The whole loop, the
     // carry-forward/resume state (the CSV) and the results.csv writer are crysta's — one
     // crysta::fit_project call on the converted project (criterion 6's one writer, literal); edi
@@ -3894,6 +4387,14 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         const std::filesystem::path data_root(scan_data_root.empty() ? path : scan_data_root);
         cproject.scan_data_root = scan_data_root;
         const std::filesystem::path csv_path = project_root / "analysis" / "results.csv";
+        // The retained state is proven before anything is published: every state file the run reads, here and (for
+        // a dry run that starts from the loaded project's results) there, is absent or a regular file.
+        for (const char* name : {"results.csv", "results-provenance.csv", "scan-notes.csv"}) {
+            scan_state_present(project_root / "analysis" / name, std::string("analysis/") + name);
+            if (!scan_data_root.empty()) {
+                scan_state_present(data_root / "analysis" / name, std::string("analysis/") + name);
+            }
+        }
         bool preamble_delivered = false;
         if (on_scan_start) {
             const std::optional<int> total_files =
@@ -3907,7 +4408,7 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
                 // A dry run's results under `path` start as the loaded project's committed rows
                 // (crysta seeds them when absent), so its resume state is read from there.
                 const std::filesystem::path resume_csv =
-                    std::filesystem::exists(csv_path) || scan_data_root.empty()
+                    scan_state_present(csv_path, "analysis/results.csv") || scan_data_root.empty()
                         ? csv_path
                         : data_root / "analysis" / "results.csv";
                 scan_preamble.completed_rows = read_scan_rows(resume_csv);
@@ -3947,24 +4448,53 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
             };
         const std::filesystem::path ledger_path = project_root / "analysis" / "results-provenance.csv";
         auto completed_files = std::make_shared<std::size_t>(0);
-        const crysta::FileCompleteCallback engine_file_complete =
-            [file_history, last_file_history, ledger_path, completed_files,
-             &on_file_complete](const std::vector<std::string>& row) {
+        // ADR-0034: each file's results, by file: those an earlier run kept (a resume fits only the rest), then this
+        // run's, each made once by its file's fit and shared from then on. The rows read with a file stay as read.
+        auto scan = std::make_shared<ScanRunResults>();
+        scan->results = fit_result.scan_results;
+        for (const auto& pair : fit_result.correlations) {
+            if (!pair->file_path.empty()) {
+                scan->read_rows.push_back(*pair);
+            }
+        }
+        // Each file's event carries its own fit result, so its correlations are crysta's from its covariance, as a
+        // single fit's are, over the template project its labels name.
+        const crysta::FileResultCallback engine_file_result =
+            [this, file_history, last_file_history, ledger_path, completed_files, scan, &on_file_complete,
+             &cproject](const std::vector<std::string>& row, const crysta::FitResultBase& file_result) {
                 ++*completed_files;
                 std::swap(*last_file_history, *file_history);
                 file_history->clear();
+                std::optional<ScanFileRecord> record = scan_record_from_cells(row);
+                if (!record.has_value()) {
+                    return;
+                }
+                record->result = scan_file_result(cproject, file_result, *scan);
+                scan->results[record->file_name] = record->result;
+                scan->fitted.insert(record->file_name);
                 if (on_file_complete) {
-                    std::optional<ScanFileRecord> record = scan_record_from_cells(row);
-                    if (record.has_value()) {
-                        // The driver wrote this file's ledger row just before its results row and waits
-                        // here, so the ledger's last line is this file's.
-                        record->termination = ledger_termination(ledger_path, row.empty() ? std::string() : row[0]);
-                        on_file_complete(*record);
-                    }
+                    // The driver wrote this file's ledger row just before its results row and waits
+                    // here, so the ledger's last line is this file's.
+                    record->termination = ledger_termination(ledger_path, row.empty() ? std::string() : row[0]);
+                    on_file_complete(*record);
                 }
             };
-        const crysta::FitResultBase result =
-            crysta::fit_project(cproject, engine_callback, should_cancel, engine_file_complete);
+        crysta::FileFittedCallback engine_file_fitted;
+        if (on_file_fitted) {
+            engine_file_fitted = [this, &on_file_fitted](const std::vector<std::string>& row,
+                                                         const crysta::Project& fitted) {
+                if (row.empty()) {
+                    return;
+                }
+                // The name the file's completion event carries, which the followed pattern is
+                // matched to.
+                on_file_fitted(scan_file_name(row[0]),
+                               [this, &fitted] { return fitted_scan_pattern(*this, fitted); });
+            };
+        }
+        const crysta::FitResultBase result = crysta::fit_project(
+            cproject, engine_callback, should_cancel, crysta::FileCompleteCallback{}, engine_file_fitted,
+            engine_file_result);
         const double elapsed_ms = std::chrono::duration<double, std::milli>(
                                       std::chrono::steady_clock::now() - fit_start)
                                       .count();
@@ -4033,6 +4563,12 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
             detail::write_back(refined);
             publish_fit_state(*this, cproject);
             clear_fit_result(*this);  // A scan records no `_fit_result`; an earlier fit's would be stale
+            settle_scan_results(fit_result, *scan, sequential_fit.template_file);
+        } else if (*completed_files > 0) {
+            // Each file this run completed has its row in results.csv, so its results are kept as well; a resume
+            // skips that file and could not make them again. The unfinished file has none, and the rest of the
+            // record stays as it was.
+            settle_scan_results(fit_result, *scan, sequential_fit.template_file);
         }
         return outcome;
     } catch (const std::invalid_argument&) {
@@ -4104,7 +4640,7 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
             n_points_loaded += patterns[bank].axis().size();
             crysta::ResidualPattern pattern{patterns[bank].axis(), patterns[bank].intensity_meas,
                                             patterns[bank].intensity_meas_su};
-            pattern = crysta::apply_exclusions(pattern, experiments[bank]->excluded_regions);
+            pattern = crysta::apply_exclusions(pattern, excluded_region_ranges(experiments[bank]->excluded_regions));
             if (pattern.grid.empty()) {
                 throw std::invalid_argument(
                     "edi fit_joint: no measured data remains for bank '" +
@@ -4233,7 +4769,8 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
             detail::write_back(refined);
             crysta::write_fit_result_into(project, result);  // crysta completes the dependents
             publish_fit_state(*this, project);
-            record_fit_result(*this, outcome, considered);
+            record_fit_result(*this, outcome, considered,
+                              crysta_correlations(project, result));
             // Before shared items this copied bank 0 into the single-bank mirror (the loader set it
             // up that way), so `experiment` never reports stale values after a joint refinement.
             // `experiment()` IS the first bank now, so nothing is copied back: that
@@ -4354,5 +4891,9 @@ void apply_engine_thread_defaults() noexcept { crysta::threading::apply_process_
 EngineThreading engine_threading() noexcept {
     return {crysta::threading::parallel_backend(), crysta::threading::parallel_workers(), crysta::threading::wasm_simd()};
 }
+
+void set_engine_threads(int count) noexcept { crysta::threading::set_thread_count(count); }
+
+int engine_threads_setting() noexcept { return crysta::threading::thread_count_setting(); }
 
 }  // namespace edi

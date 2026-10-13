@@ -6,14 +6,14 @@ import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
 
-// One editable text cell (the base's TableViewTextInput): shows `value`; `committed` carries what the
+// One editable text cell (the base's ListViewTextInput): shows `value`; `committed` carries what the
 // user typed, which the owner writes through its model (the value then comes back from the model). A
 // number the cell accepts as a number is shown at the base's default three significant digits, as a
 // field is; the model keeps it whole and an unedited cell commits nothing. Names, tokens and whole
 // numbers are shown as they are. A refused commit (text that is not of the kind the cell `accepts`, or
 // a value the core refuses) returns the cell to the model's value and shows why, as ParameterField
 // does.
-EaComponents.TableViewTextInput {
+EaComponents.ListViewTextInput {
     id: cell
 
     property var value: ""
@@ -28,7 +28,10 @@ EaComponents.TableViewTextInput {
     text: shown
     warned: refusal !== ""
     ToolTip.text: refusal
-    ToolTip.visible: refusal !== "" && (hovered || activeFocus)
+    WarningToolTip {
+        text: cell.refusal
+        visible: text !== "" && (cell.hovered || cell.activeFocus)
+    }
     onValueChanged: refusal = ""
     onAccepted: commit()
     onEditingFinished: commit()

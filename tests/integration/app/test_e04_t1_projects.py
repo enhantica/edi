@@ -17,6 +17,10 @@ PROJECTS = json.loads(
     .split('var frozen = ', 1)[1]
     .rstrip(';\n')
 )['projects']
+APP_PROJECTS = [p for p in PROJECTS if p['metadata']['_metadata.purpose'] != 'verification']
+VERIFICATION_PROJECTS = [
+    p for p in PROJECTS if p['metadata']['_metadata.purpose'] == 'verification'
+]
 
 
 @pytest.fixture(scope='module')
@@ -72,7 +76,7 @@ def test_existing_projects_open_and_populate_pages(existing_projects_run):
     ), 'I19: the production runner must actually execute the existing-project cases'
 
 
-@pytest.mark.parametrize('example_id', [project['id'] for project in PROJECTS])
+@pytest.mark.parametrize('example_id', [project['id'] for project in APP_PROJECTS])
 def test_each_registered_example_executes_in_the_production_host(
     existing_projects_run, example_id
 ):
@@ -82,4 +86,16 @@ def test_each_registered_example_executes_in_the_production_host(
         f'test_every_example_opens_through_its_page_row({example_id})'
     ) in output, (
         'I19: each committed example must execute through its real page row: ' + example_id
+    )
+
+
+@pytest.mark.parametrize('example_id', [project['id'] for project in VERIFICATION_PROJECTS])
+def test_verification_directory_executes_in_the_production_host(existing_projects_run, example_id):
+    output = existing_projects_run.stdout + existing_projects_run.stderr
+    assert (
+        'PASS   : edi_app::E04T1ExistingProjects::'
+        f'test_verification_directories_keep_their_independent_project_population({example_id})'
+    ) in output, (
+        'verification directories retain their complete independent population checks: '
+        + example_id
     )

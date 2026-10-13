@@ -55,7 +55,7 @@ The decisions it rests on, unchanged here:
 
 - **Main-area tab names name the view** (owner, 2026-10-05; until then they were the current block's icon and name,
   ideas 6–8 and 23): **Project** on Project, **Structure** on Structure, **Pattern** on Experiment and Analysis (Analysis
-  had *Fitting*), **Summary** on Report; the Analysis tabs read Pattern, Evolution and, later, Correlations. The block
+  had *Fitting*), **Summary** on Report; the Analysis tabs read Pattern, Correlations and Evolution (owner, 2026-10-11). The block
   is named by the selector row above the view (§7). **Every tab is text only** (owner, 2026-10-05), in the main view
   and the sidebar alike. `Components/IconTabButton.qml` is the base's `TabButton` with its content drawn as one icon
   line (§10); without an icon it draws the name alone.
@@ -125,7 +125,8 @@ The decisions it rests on, unchanged here:
   groups puts it first). Sidebar only: the core's category order, the files and the Analysis table are
   unchanged. Calculation range (a calculation-only experiment's grid) stays on Basic.
 - **Background** shows at most four table rows (the owner, 2026-10-04; five before), then scrolls (`maxRowCountShow`, as the other tables);
-  Append new point and Reset to autodetected background stay below it.
+  Its buttons stay below it: Add point, Ids from positions and Autodetect for points (Add term for a polynomial
+  or Chebyshev background), each with its longer wording as a tooltip (the owner, 2026-10-11).
 - **The last group a tab shows draws no bottom border** (idea 11). The base's `GroupBox` takes `last` from its
   parent's last child, which in a column with a `Repeater` is the last delegate whether it is shown or not
   (gui-components#55), so edi sets `last` itself (`Globals/SideBarGroups.qml`). "Shown" is the group's tab
@@ -140,8 +141,8 @@ disabled** rather than left out, so the layout is final:
   structure from file** in Structures, two half-width buttons in a row, the second with the `plus-circle` icon, as
   easydiffractionbeta's (idea 13). Experiments has **Load experiment** and **Create experiment** in the same
   places (§18).
-- **Reset to autodetected background** beside **Append new point** in Background, `undo-alt` icon
-  (idea 17).
+- **Autodetect** (tooltip: reset to the autodetected background) beside **Add point** in Background, the
+  `magic` wand icon (idea 17; the owner, 2026-10-11, in place of `undo-alt`).
 - **Open project from URL…** in Project → Basic → Get started, `link` icon (the owner, 2026-09-29, idea
   27). Get started's four buttons sit two by two: *Create a new project*, *Open an existing project*; *Save
   project as…* (§13), *Open project from URL…*.
@@ -351,12 +352,20 @@ icons: its inline glyphs sit on the font baseline and could not follow this rule
 so the slider and its two limit boxes always show a parameter: the first shown row when a project opens, when
 the current experiment changes, and when the name filter or the variability filter hides the selected row; a
 row the user selected stays selected while it is shown (`ParametersGroup.ensureSelection`, over
-`ParameterFilterModel.parameterAt` / `shows`). The selected row is highlighted (`tableHighlight`), as the block
-tables' current row. This replaces empty start: the demo's `13-analysis-basic` now shows the first row selected
-with the slider filled; `t2-04-analysis-slider` still clicks that row, and `t2-07-dark-analysis` keeps it.
+`ParameterFilterModel.parameterAt` / `shows`). The selected row is the table's current row, marked as the block
+tables' current row is (below). This replaces empty start: the demo's `13-analysis-basic` now shows the first row
+selected with the slider filled; `t2-04-analysis-slider` still clicks that row, and `t2-07-dark-analysis` keeps it.
 The slider spans the selected value ± a half width, set when a row is selected or its value is committed (not while
 dragging; `ParameterItem::sliderHalfWidth`): 0.05 Å for a lattice constant (`length_a`, `length_b`, `length_c`; the
 owner, 2026-10-04), half the value's magnitude (at least 0.001) otherwise.
+
+**A table's current row is marked by an accent bar at its left edge** (the owner, 2026-10-12), not by a background
+tint: the Experiments and Structures tables' current block and the parameter table's selected row. Every row keeps
+its alternating background, the current one too, and hover is unchanged. The bar is the tab bar underline's: 2
+logical px of `themeAccent`, here the full row height, inside the table frame. When another row becomes current
+the bar moves to it as the underline moves between tabs: the same smoothed motion over 250 ms, with its speed
+limit off, since a row is shorter than a tab. It appears on, and leaves, a row in place. The tables share the row
+(`Components/TableRow.qml`) and `DataTable.currentRow`, which draws the bar; `tableHighlight` is no longer used.
 
 ### 12. Preferences, and the sidebar's side
 
@@ -368,6 +377,12 @@ owner, 2026-10-04), half the value's magnitude (at least 0.001) otherwise.
 - **Appearance**: Theme; **Sidebar — Left or Right** (the owner, 2026-09-29); Auto collapse. **The 1D plotting
   row is removed** (the owner, 2026-09-29): edi has no choice of chart library.
 - **Updates and Experimental**: shown disabled (§4).
+- **Develop — Engine threads** (the owner, 2026-10-10): "Auto", the engine's own thread policy,
+  or a count from 1 to twice the cores the platform reports (at least 16, at most 64; a browser can report fewer
+  cores than the machine has), for every fit and calculation. It replaces `OMP_NUM_THREADS` and never changes a
+  result. It is saved per machine under `develop/engineThreads` (0 is Auto) and applied when the window is
+  complete and on every change; the diagnostics show the preference and the resulting engine workers. The
+  single-thread web build shows "1 (single-thread build)", disabled. How the engine applies it: ADR-0020 §10.
 - **Persistence**: tool tips, auto collapse and the sidebar's side persist in the app's settings file (the
   base's `Settings` mechanism and file, `EaGlobals.Vars.settingsFile`) under edi's own category
   `Edi.Preferences` (`Globals/Preferences.qml`); the theme and the logging level keep the base's own
@@ -470,7 +485,9 @@ Saving is active:
   `unsupported _calculator.type "cryspy" - using crysta`,
   `unsupported _minimizer.type "bumps (lm)" - using crysta` and
   `unsupported _rendering_plot.type "plotly" - using auto` (the owner's widening of idea 26: *"and something
-  else for that project to see more warning messages"*). Its comments and `PROVENANCE.md` say so.
+  else for that project to see more warning messages"*). Its comments and `PROVENANCE.md` say so. It is a
+  verification project, so since 2026-10-10 the app no longer lists it among its examples (ADR-0031); the demo
+  opens a copy of it from the CLI projects instead.
 - **The UI test's images show it** (`t4-03` to `t4-06`): the count before the messages are viewed, the list,
   the count after, and a refused calculation's error row over the neutral chart placeholder. (`t4-01` and
   `t4-02` show the Experiment type grid, §2, and Measured data's single increment, §6.)
@@ -519,11 +536,11 @@ code (`QtCharts1dTab.qml` and the base's `QtCharts1dBase.qml`; the owner, 2026-1
   toolbar and below the x title. The main area's margin, `AppSizes.mainAreaMargin` (2 em), from the plot areas'
   right border to the chart's right edge, from the chart's left edge to the toolbar's drop-downs, and from the
   toolbar buttons' bottom to the main plot area's top border (the owner, 2026-10-05).
-- **Toolbar.** A row of square buttons (2.5 em, with a fill and a border in the axis colour) that ends at the plot
-  areas' right border: legend, hover coordinates, a spacer, pan, box zoom, reset (the Home icon, as the structure
-  view's), Home last. The y scale is a drop-down of linear, square root and log at the chart's left, a margin in, in
-  the toolbar drop-down style (`ToolbarComboBox.qml`, §16) (the owner, 2026-10-02; moved left 2026-10-05), and right
-  of it the x axis, 2θ, time-of-flight or d-spacing, showing the experiment's own axis; it is disabled until the
+- **Toolbar.** One line centred under the block selector row (the owner, 2026-10-11): the axis boxes, then, a
+  toolbar group's spacing apart, a row of square buttons (2.5 em, with a fill and a border in the axis colour):
+  legend, hover coordinates, a spacer, pan, box zoom, reset (the Home icon, as the structure view's), Home last. The
+  y scale is a drop-down of linear, square root and log in the toolbar drop-down style (`ToolbarComboBox.qml`, §16)
+  (the owner, 2026-10-02), and right of it the x axis, 2θ, time-of-flight or d-spacing, showing the experiment's own axis; it is disabled until the
   axis can be switched (owner, 2026-10-05). Closed, each box names its axis, *y: linear* and *x: 2θ*, *x: TOF* or
   *x: d*; its list keeps the plain choices (`ToolbarComboBox.closedTexts`). The controls are `AppSizes.toolbarControlSize` tall and
   `AppSizes.toolbarSpacing` apart within a group.
@@ -653,15 +670,15 @@ computes no geometry: it draws what `edi::present_structure` and `edi::scene_dra
   camera stands far back along the view direction: Qt's lighting takes each view ray from the camera's position,
   and from there the rays are parallel, as an orthographic camera's are in three.js, so every atom carries the
   same highlight.
-- **Placement.** Inside the view: the toolbar at the top right, one em from the top edge and the main area's
-  margin (§15) from the right; the element legend at the top left, the same margin from the left; the pointer hint at the bottom left (*drag = rotate*, *wheel = zoom*, *right-drag =
-  pan*, on three lines as diffraction-lib draws it); the download button at the bottom right; the hover label
-  beside the pointer.
+- **Placement.** Inside the view: the colour scheme and the toolbar in one line centred under the block selector
+  row, a toolbar group's spacing apart, one em from the top edge; the element legend at the bottom left, the main
+  area's margin (§15) from the left; the hover label beside the pointer. The pointer hint and the download button
+  are gone (the owner, 2026-10-11).
 - **Colours.** Every style colour is EasyApp's `EaStyle.Colors`, bound and never written as a literal, as
   easydiffractionbeta's structure view (`StructureViewTab.qml`) uses them (the owner, 2026-10-02), so all follow the
   theme switch: the scene's background `chartBackground`, painted opaque behind the 3D item and its clear colour;
   the cell edges `grey`; the a, b and c axes and their letters `red`, `green` and `blue`; the labels
-  `themeForeground` over a halo of the background; the legend and hint panels `mainContentBackgroundHalfTransparent`
+  `themeForeground` over a halo of the background; the legend panel `mainContentBackgroundHalfTransparent`
   with a `chartGridLine` border; the buttons' `chartAxis` border. A theme switch redraws once. The atom colours
   are diffraction-lib's palettes, the same in both themes.
 - **Toolbar.** diffraction-lib's modebar, as `ChartToolButton`s with the chart toolbar's spacing and spacer:
@@ -671,13 +688,10 @@ computes no geometry: it draws what `edi::present_structure` and `edi::scene_dra
   all, asymmetric unit, none — *Atoms: all / asymmetric unit / none*, or *Atoms: show / hide* with no atom outside
   the asymmetric unit), labels (`tag`), bonds (`link`, when crysta found a bond), cell (`vector-square`), axes
   (`location-arrow`); a structure with no site has only cell and axes. A feature that is on shows its icon in the
-  accent colour. The colour scheme is a drop-down (`jmol`, `vesta`) at the view's left, after the atoms legend
-  (whose box is at least a toolbar control tall), in the toolbar drop-down style
+  accent colour. The colour scheme is a drop-down (`jmol`, `vesta`) before the buttons, in the toolbar drop-down style
   (`ToolbarComboBox.qml`, shared with the pattern chart's y scale): the sidebar drop-downs' background, the base's
   translucent combo-box colour over the content background (the owner, 2026-10-02), at the buttons' height, as narrow as its
-  widest entry with the arrow and the padding. *Download PNG*
-  (`camera`) saves the view as drawn — the scene, its labels, legend and triad, without the buttons and the hint —
-  to a file the user names, proposed as the structure's name with `.png`.
+  widest entry with the arrow and the padding.
 - **Appearance.** The atom view (`covalent`, `vdw`, `ionic`) and the atom scale (above 0, at most 1), which
   diffraction-lib's modebar does not carry, are an Appearance group on the Structure page's Extras tab, as in
   easydiffractionbeta, laid out and styled as the Instrument group (the owner, 2026-10-02): a muted caption above
@@ -885,7 +899,7 @@ refuses to write its bank rows into it.
 - **A dataset's Fit outcome** comes from its results row: *Success* when it converged; otherwise *Max iterations* when
   its iteration count reached the bound, else *No step*; *Not fitted* without a row. Its extracted values come from
   its row, or from its file when a view shows its entry.
-- **The Evolution tab** (Analysis, after Pattern; text only like every tab, §2) draws one fitted parameter across
+- **The Evolution tab** (Analysis, after Correlations; text only like every tab, §2) draws one fitted parameter across
   the datasets (`Components/EvolutionChart.qml`, `EvolutionViewModel`): a point per fitted dataset with its
   uncertainty as an error bar, drawn as the pattern chart draws measured points. The page's selector row keeps listing the
   datasets, as on the Pattern tab; a selector in the chart's own toolbar, beside the x box, chooses among the
@@ -920,6 +934,14 @@ refuses to write its bank rows into it.
   failed, the fitting time and the χ² range, with *Show evolution*, which opens the Evolution tab. The outcome is the
   run's own when it failed or was stopped, else Stopped while files are left, else the worst file's (Max iterations,
   No step, Success). The time is recorded in `analysis/scan-run.json`; results no run of the app wrote show none.
+
+### 20. The Correlations tab's toolbar
+
+The Correlations tab (`Components/CorrelationChart.qml`, data in ADR-0034) draws diffraction-lib's lower triangle by
+default. Its toolbar holds the correlation level and the parameter count, then two toggle buttons drawn as the pattern
+chart's (the owner, 2026-10-12): **names** shows the parameter names along both axes, hidden at the start, since the
+cell's tool tip names both parameters and the matrix then takes the space; **full matrix** mirrors the lower triangle
+above the diagonal, off at the start. The diagonal stays blank in both.
 
 ## Consequences
 

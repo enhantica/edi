@@ -2611,12 +2611,12 @@ NB_MODULE(_edi, m) {
             [](const edi::ExperimentBase& self) {
                 nb::list out;
                 for (const auto& region : self.excluded_regions) {
-                    out.append(nb::make_tuple(region.first, region.second));
+                    out.append(nb::make_tuple(region->first.get(), region->second.get()));
                 }
                 return nb::tuple(out);
             },
             [](edi::ExperimentBase& self, std::vector<std::pair<double, double>> regions) {
-                self.excluded_regions = std::move(regions);
+                self.excluded_regions = edi::excluded_region_rows(regions);
             });
 
     nb::class_<edi::ScExperimentBase, edi::ExperimentBase>(m, "ScExperimentBase");
@@ -3135,6 +3135,18 @@ NB_MODULE(_edi, m) {
         .def_ro("rwp", &edi::BankMetric::rwp)
         .def_ro("chi_square", &edi::BankMetric::chi_square);
 
+    // One pair of a fit's free parameters and their correlation (diffraction-lib FitParameterCorrelationItem).
+    nb::class_<edi::FitParameterCorrelation>(m, "FitParameterCorrelationItem")
+        .def_prop_ro("id", [](const edi::FitParameterCorrelation& self) { return self.id.value(); })
+        .def_prop_ro("source_kind",
+                     [](const edi::FitParameterCorrelation& self) { return self.source_kind.value(); })
+        .def_prop_ro("parameter_unique_name_i",
+                     [](const edi::FitParameterCorrelation& self) { return self.parameter_unique_name_i.value(); })
+        .def_prop_ro("parameter_unique_name_j",
+                     [](const edi::FitParameterCorrelation& self) { return self.parameter_unique_name_j.value(); })
+        .def_prop_ro("correlation",
+                     [](const edi::FitParameterCorrelation& self) { return edi::correlation_value(self); });
+
     nb::class_<edi::FitResultBase>(m, "FitResultBase")
         .def_ro("values", &edi::FitResultBase::values)
         .def_ro("uncertainty", &edi::FitResultBase::uncertainty)
@@ -3143,6 +3155,17 @@ NB_MODULE(_edi, m) {
         // populated for a joint refinement, EMPTY for a single-bank one, mirroring crysta, whose
         // single-file result carries no per-bank block.
         .def_ro("banks", &edi::FitResultBase::banks)
+        .def_prop_ro(
+            "correlations",
+            [](const edi::FitResultBase& self) {
+                nb::list out;
+                for (const edi::FitParameterCorrelation& pair : self.correlations) {
+                    out.append(nb::cast(pair));
+                }
+                return out;
+            },
+            "The free parameters' correlations, every pair once in the fit's order, as analysis.edi's "
+            "_fit_parameter_correlation rows hold them (diffraction-lib analysis.fit_parameter_correlations).")
         .def_ro("rwp", &edi::FitResultBase::rwp)
         .def_ro("reduced_chi_square", &edi::FitResultBase::reduced_chi_square)
         .def_ro("iterations", &edi::FitResultBase::iterations)
@@ -3422,6 +3445,22 @@ NB_MODULE(_edi, m) {
                 return nb::make_tuple(outcome.restored_parameters, outcome.was_no_op);
             },
             "Internal: undo the last fit (restored slot ids, was_no_op).")
+        .def(
+            "_scan_notes",
+            [](edi::Project& self) {
+                const edi::ScanNotesReport report = edi::scan_notes_report(self);
+                nb::list refused;
+                for (const auto& [file, why] : report.refused) {
+                    refused.append(nb::make_tuple(file, why));
+                }
+                nb::dict out;
+                out["skipped"] = report.skipped;
+                out["negative_points"] = report.negative_points;
+                out["refused"] = refused;
+                return out;
+            },
+            "Internal: the scan's skipped and refused files as its results index reads them (edi fit's "
+            "summary). Raises ValueError when the results or analysis/scan-notes.csv break their rules.")
         .def(
             "_dry_run_into",
             [](edi::Project& self, const std::filesystem::path& directory) {

@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import shutil
 import subprocess
+import sys
+import tempfile
 from datetime import datetime
 from pathlib import Path
 
@@ -301,6 +304,90 @@ def test_c11_t41_two_pytest_workers_cannot_enter_the_shared_core_build(
         assert 'build' in output.lower() or 'artifact' in output.lower()
 
 
+def _partition_transport(groups, omitted):
+    with tempfile.TemporaryDirectory(prefix='system-part-contract-') as scratch:
+        replay = Path(scratch)
+        (replay / 'tests').mkdir()
+        (replay / 'tests/test-groups.json').write_text(json.dumps({'groups': groups}))
+        bindir = replay / 'bin'
+        bindir.mkdir()
+        shim = bindir / 'python'
+        shim.write_text(
+            '#!' + sys.executable + '\nimport json, subprocess, sys\n'
+            'if sys.argv[1] == "-c":\n'
+            '    sys.exit(subprocess.call([sys.executable, *sys.argv[1:]]))\n'
+            'print(json.dumps(sys.argv[1:]))\n'
+        )
+        shim.chmod(0o755)
+        env = {
+            **os.environ,
+            'PATH': str(bindir) + os.pathsep + os.defpath,
+            'EDI_SKIP_NIGHTLY_GROUP': 'true' if omitted else 'false',
+            'EDI_TEST_DURATIONS': str(replay / 'no-prior-durations.json'),
+        }
+        result = subprocess.run(
+            ['/bin/bash', str(ROOT / 'tools/ci/system-tests-part.sh'), '1', '3'],
+            cwd=replay,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=2,
+            check=False,
+        )
+    assert result.returncode == 0, (
+        'the actual system partition runner reaches its pytest transport'
+    )
+    return result
+
+
+def _assert_platform_nightly_partition(groups, tasks, jobs, active):
+    # Before: -q was followed directly by partition options. After the
+    # nightly split: forward only the independently fixed macOS PR omissions.
+    nightly_paths = [
+        'tests/system/py/test_scan_app_execution.py',
+        'tests/system/py/test_scan_accident_paths.py',
+        'tests/system/py/test_plain_data_app.py',
+    ]
+    assert groups['nightly']['paths'] == nightly_paths, (
+        'the macOS PR omission is exactly the authorized three files, never a broader filter'
+    )
+    assert tasks['nightly-tests']['cmd'] == ['python', '-m', 'pytest', *nightly_paths, '-q'], (
+        'the nightly entry point retains every omitted macOS PR file without extra exclusions'
+    )
+    parts = [
+        step
+        for step in jobs['system']['steps']
+        if 'pixi run system-tests-part' in step.get('run', '')
+    ]
+    assert len(parts) == 1, 'every system part invokes one required production partition runner'
+    switch = parts[0]['env']['EDI_SKIP_NIGHTLY_GROUP']
+    for platform in ('Linux', 'macOS'):
+        for event in ('pull_request', 'push', 'schedule', 'workflow_dispatch'):
+            expression = str(switch).replace('matrix.platform', repr(platform))
+            omitted = active({'if': expression}, event)
+            assert omitted is (event == 'pull_request' and platform == 'macOS'), (
+                'only macOS PR omits three files; Linux PR and full events retain every file'
+            )
+            result = _partition_transport(groups, omitted)
+            ignores = ['--ignore=' + path for path in nightly_paths] if omitted else []
+            assert json.loads(result.stdout) == [
+                '-m',
+                'pytest',
+                'tests/system',
+                '-q',
+                *ignores,
+                '--splits',
+                '3',
+                '--group',
+                '1',
+                '--splitting-algorithm',
+                'least_duration',
+                '--durations-path',
+                'build/test-durations-1.json',
+                '--store-durations',
+            ], 'production partitions keep complete Linux/full and exact macOS PR selections'
+
+
 def test_c11_t41_edi_ci_tiers_name_pr_merge_and_local_surfaces() -> None:
     workflow = (ROOT / '.github/workflows/ci.yml').read_text(encoding='utf-8')
     assert re.search(r'(?m)^\s*pull_request:\s*$', workflow)
@@ -313,6 +400,11 @@ def test_c11_t41_edi_ci_tiers_name_pr_merge_and_local_surfaces() -> None:
     )
 
     jobs = yaml.safe_load(workflow)['jobs']
+    declared = yaml.safe_load(workflow)
+    triggers = declared.get('on', declared.get(True))
+    assert {'pull_request', 'push', 'schedule', 'workflow_dispatch'} <= set(triggers), (
+        'complete system selections retain PR, main, nightly and on-demand workflow triggers'
+    )
     for name in ('native', 'core', 'cli-python', 'app'):
         runners = [
             runner
@@ -330,12 +422,81 @@ def test_c11_t41_edi_ci_tiers_name_pr_merge_and_local_surfaces() -> None:
     tasks = tomllib.loads((ROOT / 'pixi.toml').read_text())['tasks']
     for group in ('quick', 'full'):
         task = groups[group]['task']
-        assert 'pixi run ' + task in workflow and task in tasks, (
-            'Both PR and merge CI must invoke their declared executable test-group tasks'
-        )
+        assert task in tasks, 'both cadences retain a declared executable local test-group task'
         assert {'unit/py', 'unit/cpp', 'integration/py', 'system'} <= set(
             groups[group]['tiers']
         ), 'Both CI cadences must retain the complete unit, integration and system selections'
+        if 'system' not in jobs:
+            assert 'pixi run ' + task in workflow, (
+                'Both PR and merge CI must invoke their declared executable test-group tasks'
+            )
+    if 'system' in jobs:
+        # Before: one event-selected aggregator. After the parallel-jobs
+        # decision: the exact same tier selection across required core and parts.
+        from tests.fixtures.e09_t75_workflow import active  # noqa: PLC0415
+        from tests.integration.py.test_e04_t11_ci_order import (  # noqa: PLC0415
+            assert_core_failure_reporting,
+        )
+        from tests.integration.py.test_e09_t75_native_workflow import (  # noqa: PLC0415
+            public_build_boundary,
+        )
+
+        for group, python_task in (('quick', 'quick-tests'), ('full', 'test')):
+            assert tasks[groups[group]['task']]['depends-on'] == [python_task, 'cpp-test'], (
+                'both local declared groups retain their executable Python and C++ selections'
+            )
+        assert tasks['quick-tests']['cmd'] == [
+            'python',
+            '-m',
+            'pytest',
+            'tests/unit',
+            'tests/integration',
+            'tests/system',
+            '--ignore=tests/integration/app',
+            '-q',
+        ], 'the unsplit local group and split CI jobs must retain identical tier selections'
+        assert tasks['test']['cmd'] == [
+            'bash',
+            'tools/ci/pytest-lenient.sh',
+            '--ignore=tests/integration/app',
+        ], 'the local merge group retains its complete default collection outside the app tier'
+        assert tasks['core-tests']['cmd'] == [
+            'python',
+            '-m',
+            'pytest',
+            'tests/unit',
+            'tests/integration',
+            '--ignore=tests/integration/app',
+            '-q',
+        ], 'the split core task must retain all declared unit and integration selections'
+        assert tasks['system-tests-part']['cmd'] == ['bash', 'tools/ci/system-tests-part.sh'], (
+            'each system part invokes the actual declared partition executable'
+        )
+        partition = (ROOT / 'tools/ci/system-tests-part.sh').read_text()
+        assert re.search(r'exec python -m pytest tests/system -q "\$@"\s*\\', partition), (
+            'the actual partition runner must execute the complete system tier'
+        )
+        for option in (
+            '--splits "$parts"',
+            '--group "$part"',
+            '--splitting-algorithm least_duration',
+        ):
+            assert option in partition, (
+                'system partitioning retains the complete duration-based split'
+            )
+        _assert_platform_nightly_partition(groups, tasks, jobs, active)
+        for name in ('core', 'system'):
+            assert_core_failure_reporting(jobs[name])
+            for platform in ('linux-64', 'osx-arm64'):
+                public_build_boundary(jobs, name, platform)
+            for event in ('pull_request', 'push', 'schedule', 'workflow_dispatch'):
+                assert active(jobs[name], event, states={'changes': 'success'}), (
+                    'both CI cadences must execute every declared core and system part'
+                )
+        durations = jobs['system-durations']
+        assert (
+            durations.get('if') == "github.event_name == 'push'" and durations['needs'] == 'system'
+        ), 'duration refresh follows all system parts on main pushes only'
     assert 'edi verification' in workflow.lower() or 'crysta-consumer' in workflow
     local = ROOT / 'tools/ci/local-ci.sh'
     assert local.is_file()

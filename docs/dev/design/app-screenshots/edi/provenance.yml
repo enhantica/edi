@@ -238,3 +238,11 @@ reblessed:
     platform: Linux x86_64, QT_QPA_PLATFORM=xcb (Xwayland on headless Weston, Mesa llvmpipe OpenGL)
     images:
       - ex-pd-neut-cwl_y2o3_beta-adp.png
+  - produced_at: 04bbf85b1530f852e57c9f68d5ad62d830547f1c
+    reason: >-
+      The three-phase LATP scan joins the examples, so its page is captured (new). Captured with edi built against
+      crysta d94a1849. Only this image is added; the run's other SSIM failures are pages earlier GUI work changed,
+      left to the app UI test's return.
+    platform: Linux x86_64, QT_QPA_PLATFORM=xcb (Xwayland on headless Weston, Mesa llvmpipe OpenGL)
+    images:
+      - ex-pd-xray-cwl_latp_scan-4f.png

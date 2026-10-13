@@ -12,6 +12,7 @@ import edi.app
 // ADR-0017 §4). Field and button take half the row each, their bottoms aligned.
 EaElements.GroupRow {
     id: group
+    spacing: AppSizes.inputSpacing
 
     property ExperimentViewModel experiment: null
 

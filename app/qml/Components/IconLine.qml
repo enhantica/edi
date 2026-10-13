@@ -15,23 +15,32 @@ import EasyApplication.Gui.Elements as EaElements
 Item {
     id: line
 
-    // The pieces, in order: {icon: <Font Awesome name>, color, slot, ring} or {text, color, bold}; a piece without
-    // a colour takes `textColor`, an icon with `slot` is one icon wide, drawn or not (a fit-outcome column), and
-    // one with `ring` is drawn as a hollow circle of the icons' size (FitOutcomes' "Not fitted").
+    // The pieces, in order: {icon: <Font Awesome name>, color, slot, ring}, {text, color, bold, elides} or {mark,
+    // color, width}; a piece without a colour takes `textColor`, an icon with `slot` is one icon wide, drawn or not
+    // (a fit-outcome column), and one with `ring` is drawn as a hollow circle of the icons' size (FitOutcomes' "Not
+    // fitted"). A mark is a drawn shape, never a character, so it looks the same on every platform (edi ADR-0033):
+    // "line" a horizontal line `width` pixels thick, "tick" a vertical one.
     property var segments: []
     property real pixelSize: EaStyle.Sizes.fontPixelSize
     property color textColor: EaStyle.Colors.themeForeground
     property real spacing: pixelSize * 0.5
-    // A width the line must not exceed (0: none): its last text piece is then elided, by `elide`.
+    // A width the line must not exceed (0: none): the piece marked `elides`, else the last, is then elided, by
+    // `elide`.
     property real maximumWidth: 0
     property int elide: Text.ElideRight
 
-    // The width of every piece before the last, with their spacing: what the last piece leaves room for.
-    readonly property real leadingWidth: {
+    // The piece that gives way when the line is too long.
+    readonly property int elidedIndex: {
+        const marked = segments.findIndex(segment => segment.elides === true);
+        return marked >= 0 ? marked : segments.length - 1;
+    }
+    // The width of every other piece, with their spacing: what the elided piece leaves room for.
+    readonly property real otherWidth: {
         let width = 0;
-        for (let i = 0; i < pieces.count - 1; ++i) {
+        for (let i = 0; i < pieces.count; ++i) {
             const piece = pieces.itemAt(i);
-            width += piece ? piece.width + spacing : 0;
+            if (i !== elidedIndex)
+                width += piece ? piece.width + spacing : 0;
         }
         return width;
     }
@@ -56,6 +65,9 @@ Item {
 
     Row {
         id: row
+
+        // Centred in a line given more height than one text line (a legend's row).
+        y: Math.round((line.height - line.implicitHeight) / 2)
         spacing: line.spacing
 
         Repeater {
@@ -66,8 +78,9 @@ Item {
 
                 required property int index
                 required property var modelData
-                readonly property bool elided: line.maximumWidth > 0 && !isIcon && index === line.segments.length - 1
+                readonly property bool elided: line.maximumWidth > 0 && !isIcon && index === line.elidedIndex
                 readonly property bool isIcon: modelData.icon !== undefined
+                readonly property string mark: modelData.mark ?? ""
                 // The drawn glyph's middle, from the piece's top (none measured: its baseline).
                 readonly property real inkMiddle: ink.tightBoundingRect.height > 0 ? baselineOffset + ink.tightBoundingRect.y + ink.tightBoundingRect.height / 2 : baselineOffset
 
@@ -76,8 +89,8 @@ Item {
                 font.styleName: !isIcon && modelData.bold ? "Bold" : ""
                 font.pixelSize: line.pixelSize
                 color: modelData.color ?? line.textColor
-                text: isIcon ? modelData.icon : modelData.text
-                width: elided ? Math.max(0, Math.min(implicitWidth, line.maximumWidth - line.leadingWidth)) : modelData.slot ? line.pixelSize * 1.15 : implicitWidth
+                text: isIcon ? modelData.icon : mark !== "" ? "" : modelData.text
+                width: elided ? Math.max(0, Math.min(implicitWidth, line.maximumWidth - line.otherWidth)) : modelData.slot ? line.pixelSize * 1.15 : mark !== "" ? line.pixelSize * 0.6 : implicitWidth
                 elide: elided ? line.elide : Text.ElideNone
                 y: isIcon ? line.centreY - inkMiddle : textMetrics.ascent - baselineOffset
 
@@ -93,6 +106,17 @@ Item {
                     color: "transparent"
                     border.color: piece.color
                     border.width: Math.max(1, diameter / 8)
+                }
+
+                Rectangle {
+                    readonly property real thickness: piece.modelData.width ?? 1
+
+                    visible: piece.mark !== ""
+                    width: piece.mark === "tick" ? thickness : piece.width
+                    height: piece.mark === "line" ? thickness : line.pixelSize
+                    x: (piece.width - width) / 2
+                    y: line.centreY - piece.y - height / 2
+                    color: piece.color
                 }
 
                 TextMetrics {

@@ -13,10 +13,11 @@ The browser corpus is LBCO HRPT start 4 and NCAF WISH five-bank start 5. Capture
 include fitted parameters, fit scalars and every measured/calculated pattern
 operand. Parameter values and pattern operands retain the native captures'
 relative tolerance 1e-9 and absolute tolerance 1e-11. Fitted uncertainties use
-the native machine-report conformance bound
-`abs(actual - reference) <= max(5e-9 * abs(reference), 5e-10)`, including its
-absolute floor for uncertainty near zero. This bound predates the wasm build;
-it is not derived from an observed browser difference. Both components of a
+the independent native covariance conditioning derivation in
+[conditioning/README.md](conditioning/README.md), with the pre-existing
+machine-report relative 5e-9 and absolute 5e-10 bounds as minima. The fit's
+native final Jacobian, dimensions and covariance establish the new bound;
+no observed browser gap is an input. Both components of a
 saved `value(uncertainty)` token are compared numerically: decimal uncertainty
 is absolute, while integer uncertainty uses the mantissa's last decimal units.
 An empty uncertainty, zero uncertainty and an unbracketed fixed operand remain
@@ -138,21 +139,28 @@ At least one threaded-fit sample must have `running: true`, `visible: true` and
 running control. Samples are retained with the before/after states; a completed
 or hidden bar, or stale text with `running: false`, cannot satisfy the witness.
 
-The five-bank case also needs `window.ediOpenExample(exampleId)` in both kits.
-It returns (or resolves to) the boolean returned by the existing native
-`Session::openExample(exampleId)`, invoked on Qt's main thread against its
-bundled resource registry; unknown ids must fail through Session's existing
-validation. The check requests the bundled resource id `pd-neut-tof_ncaf-wish-5bank_start-5`
-from `docs/user/cli/projects.yml`, replacing the mistaken use of its project
-metadata name `ncaf_wish_5bank_s5` as a resource id. It must not make a new
-project, substitute a test fixture, or report success without calling Session.
-Qt's six-row Examples table includes clipped/recycled delegates whose AX
-names and rectangles can identify a different actual row. This bridge replaces
-that unreliable pointer selection, while the real Analysis controls, fit,
-project save, Reset and reopen still run. The saved archive must independently
-identify `ncaf_wish_5bank_s5` before the unchanged native/owner numbers can
-satisfy the check. The existing Develop bridge's main-thread installation is
-the prior implementation to extend with this separate Session action.
+Both numerical cases and the pending-upload replacement control open through
+their own catalogue row. The driver types the
+bundled resource id into the actual `examples.search` field using trusted CDP
+pointer and keyboard input (selecting the existing search text before replacing
+it), then clicks the named `examples.open.<id>` delegate.
+Qt's clipped/recycled AX proxies can retain a label whose rectangle belongs to
+a different row; the visible accessible name remains a witness, while fresh
+native geometry locates the real click. The whole row must fit inside the actual
+`examples.list` rectangle and the fixed browser viewport. No Session action or
+direct-open fallback substitutes for this row input. Editor focus can scroll
+Qt's accessibility host, so the prior Create-project viewport restoration now
+runs before pointer actions: it resets real ancestor scroll positions and
+requires the actual canvas at (0, 0), 1280 by 768. Main workflow tabs also use
+fresh geometry from their `appBar.tab.<page>` controls; the unchanged selected-tab
+witness must observe the requested navigation.
+
+Saved native metadata independently binds the result to `lbco_hrpt_s4` or
+`ncaf_wish_5bank_s5` before numerical comparison. A different or missing project
+name refuses even if the label, geometry or fit number looks right. The native
+LBCO oracle and both cases' tolerances remain unchanged; a numerical failure
+prints the browser value, native value and tolerance. Real Analysis controls,
+fit, project save, Reset and reopen remain required for both cases.
 
 The native file controls also need `window.ediControlGeometry(objectName)` in
 both kits, installed alongside the existing main-thread page bridges. Qt can
@@ -173,7 +181,8 @@ hardcode positions, read AX rectangles, force visibility, expand groups or
 activate the control inside this hook.
 
 Required names from the shipped QML are `structures.load`, `experiments.load`,
-`experiments.create` and `experiments.loadData.0`. The driver refuses wrong
+`experiments.create`, `experiments.loadData.0`, `examples.search`,
+`examples.list` and each chosen `examples.open.<id>` delegate. The driver refuses wrong
 names, hidden/disabled controls, nonfinite/nonpositive geometry and rectangles
 outside the viewport. It still proves that `Page.fileChooserOpened.backendNodeId`
 resolves to the actual `HTMLInputElement` captured from that request; single-file,

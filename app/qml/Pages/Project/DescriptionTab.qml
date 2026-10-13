@@ -56,7 +56,11 @@ Rectangle {
                 text: tab.project ? tab.project.name : ""
                 warned: refusal !== ""
                 ToolTip.text: refusal
-                ToolTip.visible: refusal !== "" && (hovered || activeFocus)
+                // In the warning's style, as every refused value's.
+                WarningToolTip {
+                    text: nameInput.refusal
+                    visible: nameInput.warned && (nameInput.hovered || nameInput.activeFocus)
+                }
                 onAccepted: commit()
                 onEditingFinished: commit()
 

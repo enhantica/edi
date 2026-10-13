@@ -33,7 +33,7 @@ configure_file(src/app_build_info.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/app_build_i
 
 # Singletons are marked before the module is declared: qt_add_qml_module reads the property then.
 set_source_files_properties(qml/Globals/AppState.qml qml/Globals/FieldTitles.qml qml/Globals/FitOutcomes.qml qml/Globals/NumberText.qml qml/Globals/ParameterNames.qml
-                            qml/Globals/Preferences.qml qml/Globals/SideBarGroups.qml qml/Globals/TypedInput.qml
+                            qml/Globals/Preferences.qml qml/Globals/RecentProjects.qml qml/Globals/SideBarGroups.qml qml/Globals/TypedInput.qml
                             qml/Style/AppColors.qml qml/Style/AppSizes.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 qt_add_library(edi_app_module STATIC)
 qt_add_qml_module(edi_app_module
@@ -45,6 +45,7 @@ qt_add_qml_module(edi_app_module
     DEPENDENCIES QtGraphs QtQuick3D
     SOURCES
         src/app_info.hpp src/app_info.cpp
+        src/example_list_model.hpp src/example_list_model.cpp
         src/engine_setup.hpp src/engine_setup.cpp
         src/demo_driver.hpp src/demo_driver.cpp
         src/web_page_hooks.hpp src/web_page_hooks.cpp
@@ -67,6 +68,7 @@ qt_add_qml_module(edi_app_module
         src/chart_models.hpp src/chart_models.cpp
         src/measured_layer.hpp src/measured_layer.cpp
         src/evolution_view_model.hpp src/evolution_view_model.cpp
+        src/correlation_view_model.hpp src/correlation_view_model.cpp
         src/scan_session.hpp src/scan_session.cpp
         src/experiment_view_model.hpp src/experiment_view_model.cpp
         src/analysis_view_model.hpp src/analysis_view_model.cpp
@@ -83,6 +85,8 @@ qt_add_qml_module(edi_app_module
         qml/Components/BlockSelector.qml
         qml/Components/CategoryGroup.qml
         qml/Components/DiagnosticsDialog.qml
+        qml/Components/EmptyStateLabel.qml
+        qml/Components/DataTable.qml
         qml/Components/FitOutcomeLabel.qml
         qml/Components/FitProgressBar.qml
         qml/Components/FitResultsDialog.qml
@@ -99,6 +103,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/PatternChart.qml
         qml/Components/ProjectPatternChart.qml
         qml/Components/EvolutionChart.qml
+        qml/Components/CorrelationChart.qml
         qml/Components/SearchableComboBox.qml
         qml/Components/SelectorField.qml
         qml/Components/StatusBar.qml
@@ -106,10 +111,12 @@ qt_add_qml_module(edi_app_module
         qml/Components/StructureScene.qml
         qml/Components/StructureToolbar.qml
         qml/Components/StructureView.qml
+        qml/Components/TableRow.qml
         qml/Components/TextCell.qml
         qml/Components/TextTab.qml
         qml/Components/ToolbarComboBox.qml
         qml/Components/ValueField.qml
+        qml/Components/WarningToolTip.qml
         qml/Components/WarningsDialog.qml
         qml/Components/Wordmark.qml
         qml/Components/WordmarkWithVersion.qml
@@ -120,6 +127,7 @@ qt_add_qml_module(edi_app_module
         qml/Globals/NumberText.qml
         qml/Globals/ParameterNames.qml
         qml/Globals/Preferences.qml
+        qml/Globals/RecentProjects.qml
         qml/Globals/SideBarGroups.qml
         qml/Globals/TypedInput.qml
         qml/Pages/Analysis/AliasesGroup.qml
@@ -128,9 +136,11 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Analysis/FitStartGroup.qml
         qml/Pages/Analysis/FittingGroup.qml
         qml/Pages/Analysis/FittingModeGroup.qml
+        qml/Pages/Analysis/FreeHeaderMenu.qml
         qml/Pages/Analysis/JointFitGroup.qml
         qml/Pages/Analysis/MinimizerGroup.qml
         qml/Pages/Analysis/ParametersGroup.qml
+        qml/Pages/Analysis/PatternUpdatesGroup.qml
         qml/Pages/Analysis/SequentialExtractGroup.qml
         qml/Pages/Analysis/SequentialFitGroup.qml
         qml/Pages/Experiment/AbsorptionGroup.qml
@@ -149,7 +159,6 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Experiment/ScatteringSourceGroup.qml
         qml/Pages/Home/AboutDialog.qml
         qml/Pages/Home/HomePage.qml
-        qml/Pages/Home/LicenceTextDialog.qml
         qml/Pages/Project/BlockNames.qml
         qml/Pages/Project/DescriptionRow.qml
         qml/Pages/Project/DescriptionTab.qml
@@ -180,10 +189,10 @@ if(EMSCRIPTEN)
     target_link_libraries(edi_app_module PRIVATE Qt6::GuiPrivate)
 endif()
 
-# The Examples: every project edi's CLI registry lists, in registry order, then the app's own X-ray
-# example, each with its scan data (a scan's datasets are browsed in the app). The web app leaves out the
-# 324-file scan (19 MB); the 162-file cooling run is its scan example. Configuration fails when the registry
-# and the project directories disagree.
+# The Examples: every refinement and simulation project edi's CLI registry lists, in registry order, then the
+# app's own X-ray example, each with its scan data (a scan's datasets are browsed in the app). Verification
+# projects stay CLI projects only (ADR-0031). The web app leaves out the 324-file scan (19 MB); the 162-file
+# cooling run is its scan example. Configuration fails when the registry and the project directories disagree.
 set(_cli ${PROJECT_SOURCE_DIR}/docs/user/cli)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${_cli}/projects.yml)
 file(STRINGS ${_cli}/projects.yml _id_lines REGEX "^  - id: ")
@@ -204,6 +213,24 @@ endforeach()
 if(EMSCRIPTEN)
     list(REMOVE_ITEM EDI_APP_EXAMPLE_IDS pd-neut-cwl_cosio-d20_scan-324f)
 endif()
+set(EDI_APP_OWN_EXAMPLES pd-xray-cwl_lif)
+# Metadata belongs to the app presentation; the CLI registry retains its execution contract.
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/examples/metadata.json" _example_metadata)
+string(JSON _metadata_schema GET "${_example_metadata}" schema)
+if(NOT _metadata_schema EQUAL 1)
+    message(FATAL_ERROR "Unsupported example metadata schema")
+endif()
+foreach(id IN LISTS EDI_APP_EXAMPLE_IDS EDI_APP_OWN_EXAMPLES)
+    string(JSON _purpose ERROR_VARIABLE _metadata_error GET "${_example_metadata}" examples "${id}" values purpose 0)
+    if(_metadata_error)
+        message(FATAL_ERROR "Example '${id}' has no app metadata")
+    endif()
+    if(_purpose STREQUAL "verification")
+        list(REMOVE_ITEM EDI_APP_EXAMPLE_IDS ${id})
+    elseif(NOT _purpose STREQUAL "refinement" AND NOT _purpose STREQUAL "simulation")
+        message(FATAL_ERROR "Example '${id}' has purpose '${_purpose}', not refinement, simulation or verification")
+    endif()
+endforeach()
 function(edi_app_bundle_examples root)
     foreach(id IN LISTS ARGN)
         file(GLOB_RECURSE files CONFIGURE_DEPENDS ${root}/${id}/project/*)
@@ -211,8 +238,9 @@ function(edi_app_bundle_examples root)
     endforeach()
 endfunction()
 edi_app_bundle_examples(${_cli} ${EDI_APP_EXAMPLE_IDS})
-set(EDI_APP_OWN_EXAMPLES pd-xray-cwl_lif)
 edi_app_bundle_examples(${CMAKE_CURRENT_SOURCE_DIR}/examples ${EDI_APP_OWN_EXAMPLES})
+qt_add_resources(edi_app_module "edi_example_metadata" PREFIX "/edi/examples"
+                 BASE ${CMAKE_CURRENT_SOURCE_DIR}/examples FILES ${CMAKE_CURRENT_SOURCE_DIR}/examples/metadata.json)
 list(JOIN EDI_APP_EXAMPLE_IDS "\n" _index)
 list(JOIN EDI_APP_OWN_EXAMPLES "\n" _own)
 file(CONFIGURE OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/examples/index.txt CONTENT "${_index}\n${_own}\n")
@@ -246,6 +274,11 @@ if(EMSCRIPTEN)
     if(QT_FEATURE_thread)
         target_link_options(edi_app PRIVATE -sDEFAULT_PTHREAD_STACK_SIZE=8MB)
     endif()
+    # ADR-0030: the page's files live in WasmFS, so a worker reads and writes them on its own thread instead of
+    # waiting for the page's. FORCE_FILESYSTEM keeps the JavaScript FS calls the folder upload uses (mkdirTree,
+    # writeFile); the stubs stand in for the socket library a WasmFS link leaves out.
+    target_sources(edi_app PRIVATE src/wasmfs_socket_stubs.cpp)
+    target_link_options(edi_app PRIVATE -sWASMFS -sFORCE_FILESYSTEM)
 endif()
 
 # The measured-layer benchmark (edi ADR-0017 §15): test tooling, never part of the host. It reads the
@@ -280,6 +313,9 @@ qt_add_executable(edi_app_tests ${CMAKE_CURRENT_SOURCE_DIR}/tests/app_tests_main
 add_dependencies(edi_app_tests edi_app_build_commit)
 target_link_libraries(edi_app_tests PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS}
                                             Qt6::QuickTest)
+# The demo opens a verification project the app does not bundle from the source tree (ADR-0031).
+set_source_files_properties(src/demo_driver.cpp PROPERTIES
+                            COMPILE_DEFINITIONS "EDI_CLI_PROJECTS_DIR=\"${PROJECT_SOURCE_DIR}/docs/user/cli\"")
 target_compile_definitions(edi_app_tests PRIVATE
     QUICK_TEST_SOURCE_DIR="${PROJECT_SOURCE_DIR}/tests/unit/app")
 set_target_properties(edi_app_tests PROPERTIES AUTOMOC ON WIN32_EXECUTABLE FALSE MACOSX_BUNDLE FALSE)

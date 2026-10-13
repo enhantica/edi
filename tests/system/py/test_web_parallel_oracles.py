@@ -19,6 +19,7 @@ def test_web_fit_native_reference_covers_parameters_and_calculated_pattern(case)
         'Web fit parity requires a committed independent native fit capture for each corpus case'
     )
     oracle = json.loads(path.read_text())
+    conditioning = json.loads((FIXTURE / (case + '-conditioning.json')).read_text())
     assert oracle['reference'] == 'unchanged native serial/OpenMP core, independent of wasm', (
         'Web correctness references must come from the unchanged native backend'
     )
@@ -29,7 +30,9 @@ def test_web_fit_native_reference_covers_parameters_and_calculated_pattern(case)
     assert any(any(token.startswith('_atom_site.') for token in row) for row in rows), (
         'Native fit parity must retain every fitted atomic parameter'
     )
-    compare_scientific(oracle['scientific'], oracle['scientific'])
+    assert compare_scientific(
+        oracle['scientific'], oracle['scientific'], conditioning=conditioning
+    ), 'Native conditioning must certify its unchanged scientific reference'
     changed = copy.deepcopy(oracle['scientific'])
     for document in changed.values():
         for row in document:
@@ -43,7 +46,7 @@ def test_web_fit_native_reference_covers_parameters_and_calculated_pattern(case)
                     continue
                 row[index] = 'nan'
                 with pytest.raises(ValueError, match='parameter or pattern'):
-                    compare_scientific(changed, oracle['scientific'])
+                    compare_scientific(changed, oracle['scientific'], conditioning=conditioning)
                 return
     pytest.fail('Native fit capture must expose a perturbable calculated pattern operand')
 

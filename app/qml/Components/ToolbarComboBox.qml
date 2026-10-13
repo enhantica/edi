@@ -34,6 +34,9 @@ EaElements.ComboBox {
     height: AppSizes.toolbarControlSize
     backgroundColor: Qt.tint(EaStyle.Colors.contentBackground, !box.hovered ? EaStyle.Colors.appBarComboBoxBackground : box.pressed ? EaStyle.Colors.appBarComboBoxBackgroundPressed : EaStyle.Colors.appBarComboBoxBackgroundHovered)
 
+    HoverHandler {
+        cursorShape: Qt.PointingHandCursor
+    }
     FontMetrics {
         id: metrics
 

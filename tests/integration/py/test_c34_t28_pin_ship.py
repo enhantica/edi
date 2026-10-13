@@ -13,6 +13,7 @@ import tarfile
 import tomllib
 import zipfile
 from unittest.mock import patch
+from urllib.parse import parse_qs, urlsplit
 
 import pytest
 import yaml
@@ -29,7 +30,8 @@ def paired(tmp_path):
     context = contexts['linux-64']
     api = context['api']
     other = contexts['osx-arm64']
-    api.jobs[75090] += other['api'].jobs[75090]
+    # Separate executions have distinct REST identities, including across platforms.
+    api.jobs[75090] += [{**job, 'id': job['id'] + 100} for job in other['api'].jobs[75090]]
     api.artifacts[75090] += other['api'].artifacts[75090]
     api.archives.update(other['api'].archives)
     root = context['root']
@@ -244,4 +246,57 @@ def test_unavailable_selected_artifact_never_borrows_an_available_decoy(  # noqa
     )
     assert not any('/74980/' in call or '/2798/' in call for call in api.calls), (
         ' F8 a different available build must never be selected for the requested pin'
+    )
+
+
+@pytest.mark.parametrize('resource', ['runs', 'jobs', 'artifacts'])
+@pytest.mark.parametrize(
+    'fault', [None, 'short', 'repeat', 'changing', 'untotalled', 'unreadable']
+)
+def test_pin_listings_require_every_distinct_record_on_every_page(tmp_path, resource, fault):
+    context = paired(tmp_path)
+    api, sdk = context['api'], context['module']
+    suffix, key, original = {
+        'runs': (
+            '/actions/runs?head_sha=' + SHA + '&event=pull_request',
+            'workflow_runs',
+            api.runs,
+        ),
+        'jobs': ('/actions/runs/75090/jobs?filter=all', 'jobs', api.jobs[75090]),
+        'artifacts': ('/actions/runs/75090/artifacts', 'artifacts', api.artifacts[75090]),
+    }[resource]
+    rows = [{**original[0], 'id': 8000000 + number} for number in range(101)]
+    original[:] = rows
+    url = 'https://api.github.com/repos/enhantica/crysta' + suffix
+    with patch.object(sdk, 'curl', api):
+        assert sdk.listing(url, key) == rows, (
+            'pin provenance must retain every distinct record beyond the first REST page'
+        )
+    assert any(parse_qs(urlsplit(call).query).get('page') == ['2'] for call in api.calls), (
+        'the complete-listing control must actually request the later page'
+    )
+    if fault is None:
+        return
+
+    def damaged(url, **kwargs):
+        data = json.loads(api(url, **kwargs))
+        if parse_qs(urlsplit(url).query).get('page') == ['2']:
+            if fault == 'short':
+                data[key] = []
+            elif fault == 'repeat':
+                data[key] = [rows[0]]
+            elif fault == 'changing':
+                data['total_count'] += 1
+            elif fault == 'untotalled':
+                data.pop('total_count')
+            else:
+                sdk.refuse('Later listing page cannot be read')
+        return json.dumps(data).encode()
+
+    before = (context['root'] / 'pixi.toml').read_bytes()
+    with patch.object(sdk, 'curl', damaged), pytest.raises(sdk.RefusedError):
+        sdk.listing(url, key)
+    assert not api.refusals, 'listing damage must exercise a supported addressed REST request'
+    assert (context['root'] / 'pixi.toml').read_bytes() == before, (
+        'an incomplete or unreadable provenance listing cannot rewrite the authorizing pin'
     )

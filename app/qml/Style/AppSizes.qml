@@ -22,10 +22,11 @@ QtObject {
     readonly property real homeBranchTopPadding: unit * 0.5
 
     // Workflow pages (easydiffractionbeta Pages/*)
-    readonly property real fieldSpacing: unit * 0.5           // between fields of one GroupRow
+    readonly property real fieldSpacing: unit * 0.5           // a table column's padding and a tag's
     readonly property real groupContentSpacing: unit          // between rows inside a group
     readonly property real indexColumnWidth: unit * 2.5       // a table's row-number column
-    readonly property real iconColumnWidth: unit * 2.5        // a table's action-button column
+    readonly property real iconColumnWidth: EaStyle.Sizes.tableRowHeight        // a table's action-button column
+    readonly property real iconOnlyColumnWidth: unit * 2      // an icon-only display column: the icon and a margin (note 19)
     readonly property real dataIndexColumnWidth: unit * 3.5   // a data table's row number (up to 5 digits)
     readonly property real dataColumnWidth: unit * 6          // a data table's value column
     readonly property real fileColumnWidth: unit * 7          // an explorer table's file column
@@ -49,13 +50,19 @@ QtObject {
     // inset on the right, and the pattern chart's gap from its toolbar down to the main plot area.
     readonly property real mainAreaMargin: unit * 2
     readonly property real toolbarSpacing: unit * 0.25
+    // One row of a legend (the pattern chart's, the structure view's): one text line's height, the pattern
+    // legend's spacing (the owner, 2026-10-11).
+    readonly property real legendRowHeight: Math.round(unit * 1.3)
+    // The structure view's legend rows: halfway between a legend row and a combo box list entry (the owner,
+    // 2026-10-11).
+    readonly property real structureLegendRowHeight: Math.round((legendRowHeight + EaStyle.Sizes.comboBoxHeight) / 2)
+    // A combo box list entry's side padding: the base MenuItem's (a literal 16 there).
+    readonly property real listItemPadding: 16
+    // Between the input boxes of one group, as between a chart toolbar's buttons (the owner's note 23).
+    readonly property real inputSpacing: toolbarSpacing
     // The messages dialog's fixed width (edi ADR-0017 §14): about the Preferences dialog's.
     readonly property real messagesDialogContentWidth: unit * 38
-    // The About dialog's component table, as wide as the messages dialog and about ten rows high, and the
-    // licence-text viewer it opens.
-    readonly property real aboutComponentsWidth: unit * 38
-    readonly property real aboutComponentsHeight: unit * 16
-    readonly property real aboutLicenceColumnWidth: unit * 16
-    readonly property real licenceTextWidth: unit * 52
-    readonly property real licenceTextHeight: unit * 32
+    // The About window's content: room for the third-party table's columns and a licence text below it.
+    readonly property real aboutWidth: unit * 52
+    readonly property real aboutHeight: unit * 32
 }

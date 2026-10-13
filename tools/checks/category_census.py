@@ -80,6 +80,7 @@ NOT_MODEL = {
     'DataSource': "a handed-out data object's link to its experiment",
     'CategoryRef': "a parameter's link to its category's row",
     'KeyedBase': 'the base of the table class',
+    'DefaultIds': 'the rollback guard for detached row IDs during table admission (ADR-0029)',
     'ItemVec': 'the table class of a loop category',
     'State': "a cell view's state: its value, its last write and the tables that hold its row",
     'TextState': "a text cell's state: its text, its last write and the tables that hold its row",
@@ -96,6 +97,9 @@ NOT_MODEL = {
     'ProjectTail': "a project's last member, linking its collections after a build or assignment",
     'ComputedSource': "what an experiment's computed categories were computed from",
     'ViewWindow': 'view state passed to a geometry read, never stored in the model',
+    'ParameterRenames': "a block rename's old and new parameter names, made for the rename",
+    'CorrelationTable': "one fit's correlations as numbers, made once and shared (ADR-0034)",
+    'ScanFileResult': "one scan file's results, from its fit or as read, shared (ADR-0034)",
     'CwlProfileSlots': 'the peak slots a CW profile token carries, read from the token',
     'OptionalParameter': 'one optional parameter, kept detached once removed (ADR-0012)',
     'ParameterCell': 'an optional parameter and the link it reports once removed',
@@ -116,6 +120,7 @@ NOT_STORAGE = {
     'ExperimentBase::computed_source': 'what the computed categories were computed from',
     'Project::edits_': "the project's editor record",
     'Project::tail_': "the project's last member, which links its collections to its record",
+    'FitResultRecord::scan_results': "a scan's results by file, shared, not saved (ADR-0034)",
 }
 # Member types that are a part of a table, not a cell of it.
 PARTS = {
