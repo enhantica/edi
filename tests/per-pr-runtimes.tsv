@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-13T22:34:06Z
+# measured_utc = 2026-10-13T22:47:15Z
 #
-# Recorded from: measured test run (39 node(s) measured once, 10410 banked, 0 stale row(s) dropped)
+# Recorded from: canonical native XML completion: tests-seq18-data-quotes.xml on isolated d02d3a5; canonical double-quoted input replay; two expected-red Data API nodes; Python bank retained
 # Collected tests: 11350; with a reported duration: 6145
 # Module-scoped fixture costs recorded: 43
 #
