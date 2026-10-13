@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-13T22:47:15Z
+# measured_utc = 2026-10-13T23:57:40Z
 #
-# Recorded from: canonical native XML completion: tests-seq18-data-quotes.xml on isolated d02d3a5; canonical double-quoted input replay; two expected-red Data API nodes; Python bank retained
-# Collected tests: 11350; with a reported duration: 6145
+# Recorded from: canonical native XML completion: tests-seq21-cpp.xml; actual native results; red cases declared holes; Python bank retained
+# Collected tests: 11369; with a reported duration: 6148
 # Module-scoped fixture costs recorded: 43
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 11350
-# inventory_cpp = 326
-# inventory_measured = 10448
-# inventory_unmeasured = 1228
+# inventory_python = 11369
+# inventory_cpp = 328
+# inventory_measured = 10451
+# inventory_unmeasured = 1246
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -5618,17 +5618,36 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_report_project_options.p
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_project_options.py::test_invalid_report_tokens_refuse_at_load_naming_the_item[correlation_threshold-inf]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_project_options.py::test_invalid_report_tokens_refuse_at_load_naming_the_item[correlation_threshold-nan]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_project_options.py::test_invalid_report_tokens_refuse_at_load_naming_the_item[html-0]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_project_options.py::test_invalid_report_tokens_refuse_at_load_naming_the_item[html-yes]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_project_options.py::test_invalid_report_tokens_refuse_at_load_naming_the_item[html_offline-1]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_project_options.py::test_invalid_report_tokens_refuse_at_load_naming_the_item[html_offline-False]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_project_options.py::test_invalid_report_tokens_refuse_at_load_naming_the_item[html_offline-yes]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_project_options.py::test_invalid_report_tokens_refuse_at_load_naming_the_item[pdf-no]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_project_options.py::test_invalid_report_tokens_refuse_at_load_naming_the_item[tex-TRUE]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_project_options.py::test_invalid_report_tokens_refuse_at_load_naming_the_item[tex-true]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_project_options.py::test_invalid_report_tokens_refuse_at_load_naming_the_item[x_axis-d]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_project_options.py::test_invalid_report_tokens_refuse_at_load_naming_the_item[x_axis-tof]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_project_options.py::test_report_threshold_accepts_both_closed_interval_endpoints[0.0]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_project_options.py::test_report_threshold_accepts_both_closed_interval_endpoints[1.0]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_renderer_seams.py::test_drawing_quaternion_order_unit_geometry_and_camera_frame
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_renderer_seams.py::test_pattern_traces_preserve_gaps_asymmetric_errors_and_pane_shares
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_save_workflow.py::test_check_uses_digest_and_file_existence_instead_of_save_timestamps[cell]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_save_workflow.py::test_check_uses_digest_and_file_existence_instead_of_save_timestamps[data]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_save_workflow.py::test_check_uses_digest_and_file_existence_instead_of_save_timestamps[embed]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_save_workflow.py::test_check_uses_digest_and_file_existence_instead_of_save_timestamps[missing]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_save_workflow.py::test_cli_check_ignores_legacy_options_and_has_no_rows_for_an_absent_report_file
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_save_workflow.py::test_failed_report_write_keeps_the_previous_row_and_every_unticked_file
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_save_workflow.py::test_save_as_copied_actual_html_stays_current_and_destination_edits_do_not_stale_source
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_save_workflow.py::test_save_report_writes_only_ticked_formats_and_replaces_rows_by_name[cli]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_save_workflow.py::test_save_report_writes_only_ticked_formats_and_replaces_rows_by_name[python]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_save_workflow.py::test_ticked_pdf_is_named_as_app_only_and_its_existing_file_and_row_are_untouched[cli]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_save_workflow.py::test_ticked_pdf_is_named_as_app_only_and_its_existing_file_and_row_are_untouched[python]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_storage.py::test_analysis_and_report_files_do_not_write_chart_items_into_project_record
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_storage.py::test_legacy_report_lines_are_ignored_preserved_and_never_migrated[defaults]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_storage.py::test_legacy_report_lines_are_ignored_preserved_and_never_migrated[new-files-win]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_storage.py::test_project_save_changes_only_settings_and_keeps_unchanged_file_bytes_and_time
+0.010	tests/integration/py/test_report_storage.py::test_save_as_copies_every_report_row_and_file_without_touching_the_source
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_storage.py::test_saved_file_rows_refuse_unknown_formats_and_incomplete_boundaries[incomplete-row]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_storage.py::test_saved_file_rows_refuse_unknown_formats_and_incomplete_boundaries[unknown-format]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_table_precision.py::test_reflection_columns_have_fixed_decimals_and_no_exponents_in_model_and_html
 0.160	tests/integration/py/test_reset_and_required.py::test_reset_closes_the_project_and_lands_on_project
 0.250	tests/integration/py/test_reset_and_required.py::test_reset_observer_detects_wrong_destination_and_unclosed_project[home]
@@ -10391,6 +10410,8 @@ UNMEASURED:expected-red-on-d775b5fd	tests/unit/cpp/test_e05_t1_fit_job.cpp::E05-
 0.000	tests/unit/cpp/test_e09_t55_report_model_adapter.cpp::E09-T55 model collections expose all parameters and only the free subset
 0.000	tests/unit/cpp/test_e09_t55_report_model_adapter.cpp::E09-T55 report tables retain identity paths, starts, uncertainties, and bank metrics
 UNMEASURED:failed-in-native-replay-fe3d181	tests/unit/cpp/test_loop_parameter_paths.cpp::Every experiment loop path names the declared row id
+0.001	tests/unit/cpp/test_report_coloured_table.cpp::Report I40 writes the signed coloured matrix as a text table
+0.001	tests/unit/cpp/test_report_coloured_table.cpp::Report I41 keeps the reference HTML page width while PDF uses A4
 0.000	tests/unit/cpp/test_report_correlation_count.cpp::Report automatic correlation level preserves complete threshold ties
 0.000	tests/unit/cpp/test_report_correlation_count.cpp::Report correlation context leaves global and shown-experiment identities
 0.000	tests/unit/cpp/test_report_correlation_count.cpp::Report count chooses the lowest threshold within the requested count

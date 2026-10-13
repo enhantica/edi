@@ -1,6 +1,14 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include <memory>
 #include <QAnimationDriver>
+#include <QPdfWriter>
+#include <QPainter>
+#include <QProcess>
+#include <QStandardPaths>
+#include <QJsonDocument>
+#include <QCryptographicHash>
+#include <QJSEngine>
+#include <QRegularExpression>
 #include <atomic>
 #include <vector>
 #include <QTemporaryDir>
@@ -68,6 +76,71 @@ class ReportSettingsProof : public QObject {
     Q_OBJECT
 public:
     using QObject::QObject;
+    Q_INVOKABLE QVariantMap htmlFigureFacts(const QString& html) const {
+        const QRegularExpression shared("const sharedSites = sites => \\{[\\s\\S]*?\n  \\};");
+        const QRegularExpression legend("const legend = document.createElement\\('div'\\);[\\s\\S]*?figure.appendChild\\(legend\\);");
+        const auto s = shared.match(html), l = legend.match(html);
+        if (!s.hasMatch() || !l.hasMatch()) return {{"error", "Actual HTML must reach its shared-site and legend producers"}};
+        auto code = repoText("tests/unit/app/ReportHtmlProof.js");
+        code.replace("/* ACTUAL_SHARED_SITE_FUNCTION */", s.captured());
+        code.replace("/* ACTUAL_LEGEND */", l.captured());
+        QJSEngine engine;
+        const auto result = engine.evaluate(code);
+        if (result.isError()) return {{"error", result.toString()}};
+        return QJsonDocument::fromJson(result.toString().toUtf8()).toVariant().toMap();
+    }
+    Q_INVOKABLE QString repoText(const QString& relative) const {
+        QDir root(QFileInfo(QString::fromUtf8(__FILE__)).absolutePath()); root.cd("../../..");
+        QFile file(root.filePath(relative));
+        return file.open(QIODevice::ReadOnly) ? QString::fromUtf8(file.readAll()) : QString{};
+    }
+    Q_INVOKABLE QVariantMap fileFacts(const QUrl& location, const QString& relative) const {
+        QFile file(QDir(location.toLocalFile()).filePath(relative));
+        if (!file.open(QIODevice::ReadOnly)) return {};
+        const auto bytes = file.readAll();
+        return {{"sha256", QString::fromLatin1(QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex())},
+                {"bytes", bytes.size()}, {"modified", QFileInfo(file).lastModified().toMSecsSinceEpoch()}};
+    }
+    Q_INVOKABLE QUrl childUrl(const QUrl& location, const QString& relative) const {
+        return QUrl::fromLocalFile(QDir(location.toLocalFile()).filePath(relative));
+    }
+    Q_INVOKABLE QVariantMap pdfFacts(const QUrl& location) const {
+        QDir root(QFileInfo(QString::fromUtf8(__FILE__)).absolutePath());
+        const auto python = QStandardPaths::findExecutable("python");
+        if (python.isEmpty()) return {{"error", "PDF observer requires the runner's Python"}};
+        QProcess process;
+        process.start(python, {root.filePath("ReportPdf.py"), location.toLocalFile()});
+        if (!process.waitForFinished(10000)) { process.kill(); return {{"error", "PDF observer did not finish"}}; }
+        const auto json = QJsonDocument::fromJson(process.readAllStandardOutput());
+        if (json.isNull()) return {{"error", QString::fromUtf8(process.readAllStandardError())}};
+        return json.toVariant().toMap();
+    }
+    Q_INVOKABLE QVariantMap pdfWitness() {
+        auto directory = std::make_unique<QTemporaryDir>(QDir::tempPath() + "/edi-pdf-proof-XXXXXX");
+        if (!directory->isValid()) return {{"error", "PDF witness has no temporary directory"}};
+        const auto file = QDir(directory->path()).filePath("independent.pdf");
+        {
+            QPdfWriter writer(file);
+            writer.setResolution(72);
+            writer.setPageSize(QPageSize(QPageSize::A4));
+            writer.setPageMargins(QMarginsF(25, 25, 25, 25), QPageLayout::Millimeter);
+            QPainter painter(&writer);
+            QFont font("PT Sans"); font.setPointSizeF(10.04); painter.setFont(font);
+            painter.drawText(QPointF(0, 20), "Short name lbco_hrpt_s2");
+            QImage image(8, 8, QImage::Format_RGB32); image.fill(Qt::blue);
+            painter.drawImage(QRectF(0, 40, 40, 40), image);
+            painter.fillRect(QRectF(0, 100, 20, 20), QColor("#4575b4"));
+            painter.fillRect(QRectF(20, 100, 20, 20), QColor("#d73027"));
+            painter.fillRect(QRectF(40, 100, 20, 20), QColor("#ffffff"));
+            painter.drawText(QPointF(220, 690), "1");
+            writer.newPage();
+            painter.drawText(QPointF(0, 20), "Second page");
+            painter.drawText(QPointF(220, 690), "2");
+        }
+        const auto result = pdfFacts(QUrl::fromLocalFile(file));
+        directories_.push_back(std::move(directory));
+        return result;
+    }
     Q_INVOKABLE bool beginAnimationClock() {
         if (animation_driver_) return false;
         animation_driver_ = std::make_unique<AcceptanceAnimationDriver>();
@@ -146,6 +219,13 @@ public:
         const auto bounds = screen->availableGeometry();
         return {{"x", bounds.x()}, {"y", bounds.y()}, {"width", bounds.width()}, {"height", bounds.height()}};
     }
+    Q_INVOKABLE QUrl emptyDirectory() {
+        auto directory = std::make_unique<QTemporaryDir>(QDir::tempPath() + "/edi-empty-XXXXXX");
+        if (!directory->isValid()) return {};
+        const auto result = QUrl::fromLocalFile(directory->path());
+        directories_.push_back(std::move(directory));
+        return result;
+    }
     Q_INVOKABLE QUrl copyProject(const QUrl& input) {
         auto directory = std::make_unique<QTemporaryDir>(QDir::tempPath() + "/edi-settings-XXXXXX");
         if (!directory->isValid()) return {};
@@ -168,6 +248,7 @@ public:
     }
     Q_INVOKABLE bool write(const QUrl& project, const QString& relative, const QString& text) const {
         QFile file(QDir(project.toLocalFile()).filePath(relative));
+        if (!QDir().mkpath(QFileInfo(file).absolutePath())) return false;
         return file.open(QIODevice::WriteOnly | QIODevice::Truncate) && file.write(text.toUtf8()) == text.toUtf8().size() && file.flush();
     }
     Q_INVOKABLE bool remove(const QUrl& project, const QString& relative) const {

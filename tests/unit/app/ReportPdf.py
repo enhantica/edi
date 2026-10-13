@@ -1,0 +1,193 @@
+"""Read Qt's PDF objects, fonts and text operators using only the Python standard library.
+
+This observer is qualified against a separate Qt-written multipage witness. It refuses
+unsupported text/font structures instead of silently accepting an unextractable report.
+"""
+
+import json
+import math
+import re
+import sys
+import zlib
+from operator import itemgetter
+from pathlib import Path
+
+
+def inspect(path):  # noqa: PLR0912, PLR0914, PLR0915 - explicit PDF grammar boundaries
+    data = Path(path).read_bytes()
+    if not data.startswith(b'%PDF-'):
+        raise ValueError('PDF output must have the actual PDF header')
+    objects = {
+        int(m[1]): m[2] for m in re.finditer(rb'(\d+)\s+0\s+obj\b(.*?)endobj', data, re.DOTALL)
+    }
+
+    def stream(number):
+        obj = objects[number]
+        match = re.search(rb'stream\r?\n(.*?)\r?\nendstream', obj, re.DOTALL)
+        if not match:
+            return b''
+        content = match[1]
+        return zlib.decompress(content) if b'/FlateDecode' in obj[: match.start()] else content
+
+    def glyph_map(font):
+        reference = re.search(rb'/ToUnicode\s+(\d+)\s+0\s+R', objects[font])
+        if not reference:
+            raise ValueError('PDF text font must expose an extractable ToUnicode map')
+        cmap = stream(int(reference[1]))
+        result = {}
+        for block in re.findall(rb'beginbfchar(.*?)endbfchar', cmap, re.DOTALL):
+            for src, dst in re.findall(rb'<([0-9a-fA-F]+)>\s*<([0-9a-fA-F]+)>', block):
+                result[int(src, 16)] = bytes.fromhex(dst.decode()).decode('utf-16-be')
+        for block in re.findall(rb'beginbfrange(.*?)endbfrange', cmap, re.DOTALL):
+            for lo, hi, dst in re.findall(
+                rb'<([0-9a-fA-F]+)>\s*<([0-9a-fA-F]+)>\s*<([0-9a-fA-F]+)>', block
+            ):
+                for code in range(int(lo, 16), int(hi, 16) + 1):
+                    result[code] = chr(int(dst, 16) + code - int(lo, 16))
+            for lo, hi, values in re.findall(
+                rb'<([0-9a-fA-F]+)>\s*<([0-9a-fA-F]+)>\s*\[(.*?)\]', block, re.DOTALL
+            ):
+                for code, dst in zip(
+                    range(int(lo, 16), int(hi, 16) + 1),
+                    re.findall(rb'<([0-9a-fA-F]+)>', values),
+                    strict=True,
+                ):
+                    result[code] = bytes.fromhex(dst.decode()).decode('utf-16-be')
+        if not result:
+            raise ValueError('PDF font map must contain actual glyph mappings')
+        return result
+
+    def multiply(a, b):
+        return (
+            a[0] * b[0] + a[2] * b[1],
+            a[1] * b[0] + a[3] * b[1],
+            a[0] * b[2] + a[2] * b[3],
+            a[1] * b[2] + a[3] * b[3],
+            a[0] * b[4] + a[2] * b[5] + a[4],
+            a[1] * b[4] + a[3] * b[5] + a[5],
+        )
+
+    pages = []
+    colours = set()
+    for obj in objects.values():  # noqa: PLR1702 - nested page/font/text grammar
+        if not re.search(rb'/Type\s*/Page\b', obj):
+            continue
+        box = re.search(rb'/MediaBox\s*\[([^]]+)\]', obj)
+        if not box:
+            raise ValueError('Every PDF page must expose its MediaBox')
+        resources = re.search(rb'/Resources\s+(\d+)\s+0\s+R', obj)
+        resource = objects[int(resources[1])] if resources else obj
+        fonts = {
+            name.decode(): glyph_map(int(font))
+            for name, font in re.findall(rb'/((?:F|f)\w*)\s+(\d+)\s+0\s+R', resource)
+        }
+        contents = re.search(rb'/Contents\s+(\d+)\s+0\s+R', obj)
+        if not contents:
+            raise ValueError('Every PDF page must expose an actual content stream')
+        content = stream(int(contents[1])).decode('latin1')
+        number_pattern = r'([-+]?\d+(?:\.\d+)?)'
+        for rgb in re.findall(
+            number_pattern
+            + r'\s+'
+            + number_pattern
+            + r'\s+'
+            + number_pattern
+            + r'\s+(?:rg|scn)\b',
+            content,
+        ):
+            channels = [round(float(value) * 255) for value in rgb]
+            if all(0 <= value <= 255 for value in channels):
+                colours.add('#' + ''.join(f'{value:02x}' for value in channels))
+        token = re.compile(r'<[0-9a-fA-F\s]*>|/\w+|[-+]?\d+(?:\.\d+)?|\b[A-Za-z]+\b|[\[\]]')
+        operands, stack, fragments = [], [], []
+        ctm = (1, 0, 0, 1, 0, 0)
+        tm = ctm
+        font, size = None, 0
+        array = False
+        for word in token.findall(content):
+            if word == '[':
+                array = True
+            elif word == ']':
+                array = False
+            elif word.startswith(('/', '<')) or re.fullmatch(r'[-+]?\d+(?:\.\d+)?', word):
+                operands.append(word)
+            elif array:
+                raise ValueError('Unsupported token inside a PDF text array')
+            else:
+                if word == 'q':
+                    stack.append((ctm, font, size))
+                elif word == 'Q':
+                    ctm, font, size = stack.pop()
+                elif word == 'cm':
+                    ctm = multiply(ctm, tuple(map(float, operands[-6:])))
+                elif word == 'Tm':
+                    tm = tuple(map(float, operands[-6:]))
+                elif word == 'Td':
+                    tm = multiply(tm, (1, 0, 0, 1, *map(float, operands[-2:])))
+                elif word == 'BT':
+                    tm = (1, 0, 0, 1, 0, 0)
+                elif word == 'Tf':
+                    font, size = operands[-2][1:], float(operands[-1])
+                elif word in {'Tj', 'TJ'}:
+                    if font not in fonts:
+                        raise ValueError('PDF text must use a mapped page font')
+                    text = ''
+                    for operand in operands:
+                        if not operand.startswith('<'):
+                            continue
+                        encoded = re.sub(r'\s+', '', operand[1:-1])
+                        if len(encoded) % 4:
+                            raise ValueError(
+                                'Qt PDF glyph strings must have complete two-byte codes'
+                            )
+                        for at in range(0, len(encoded), 4):
+                            code = int(encoded[at : at + 4], 16)
+                            if code not in fonts[font]:
+                                raise ValueError(
+                                    'Every visible PDF glyph must be extractable as Unicode'
+                                )
+                            text += fonts[font][code]
+                    transform = multiply(ctm, tm)
+                    fragments.append({
+                        'text': text,
+                        'x': transform[4],
+                        'y': float(box[1].split()[3]) - transform[5],
+                        'size': size * math.hypot(transform[0], transform[1]),
+                    })
+                operands = []
+        lines = {}
+        for f in fragments:
+            lines.setdefault(round(f['y'], 3), []).append(f)
+        line_facts = [
+            {
+                'text': ' '.join(
+                    ''.join(f['text'] for f in sorted(line, key=itemgetter('x'))).split()
+                ),
+                'x': min(f['x'] for f in line),
+                'y': line[0]['y'],
+                'size': line[0]['size'],
+            }
+            for line in lines.values()
+        ]
+        pages.append({
+            'lines': line_facts,
+            'box': list(map(float, box[1].split())),
+            'fragments': fragments,
+            'text': '\n'.join(line['text'] for line in line_facts),
+        })
+    if not pages:
+        raise ValueError('PDF output must contain a page')
+    return {
+        'colours': sorted(colours),
+        'pages': pages,
+        'text': '\n'.join(p['text'] for p in pages),
+        'images': sum(bool(re.search(rb'/Subtype\s*/Image\b', obj)) for obj in objects.values()),
+    }
+
+
+if __name__ == '__main__':
+    try:
+        print(json.dumps(inspect(sys.argv[1])))
+    except (ValueError, KeyError, IndexError, zlib.error) as error:
+        print(json.dumps({'error': str(error)}))
+        sys.exit(1)

@@ -14,17 +14,18 @@ ROOT = Path(__file__).resolve().parents[3]
 def input_project(tmp_path, include_all):
     path = tmp_path / 'data_block'
     shutil.copytree(ROOT / 'tests/fixtures/loop_parameter_ids/line-segment', path)
-    file = path / 'project.edi'
+    file = path / 'reports/report.edi'
     if include_all:
         # The accepted record spelling writes an explicit empty list in double quotes.
-        file.write_text(file.read_text() + '\n_report.excluded ""\n')
+        file.parent.mkdir(exist_ok=True)
+        file.write_text('_edi.schema_version 3\n_report.excluded ""\n')
     return path
 
 
 @pytest.mark.parametrize('include_all', [False, True], ids=['absent-default', 'explicit-empty'])
 def test_data_default_and_explicit_include_all_reach_report_and_html(tmp_path, include_all):
     path = input_project(tmp_path, include_all)
-    original = (path / 'project.edi').read_bytes()
+    original = {str(p.relative_to(path)): p.read_bytes() for p in path.rglob('*.edi')}
     loaded = edi.Project.load(path)
     loaded.calculate()
     assert hasattr(loaded, 'report'), 'The Data seam reaches the production project-owned report'
@@ -88,6 +89,6 @@ def test_data_default_and_explicit_include_all_reach_report_and_html(tmp_path, i
         assert all(row[0] in html for row in table['rows']), (
             'HTML contains the same Data axis cells as the shared preview model'
         )
-    assert (path / 'project.edi').read_bytes() == original, (
+    assert {str(p.relative_to(path)): p.read_bytes() for p in path.rglob('*.edi')} == original, (
         'Building Data with project options never rewrites those options into the input file'
     )

@@ -184,7 +184,7 @@ Item {
             compare(Session.project.report.embedLibraries, true, "Only a newly created project's Embed option starts from the Embedded preference");
             const url = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/loop_parameter_ids/line-segment"));
             verify(Session.saveAs(url), "The created project's seeded report option is saved for an independent reopen");
-            verify(/_report\.html_offline\s+true/.test(SettingsProof.text(url, "project.edi")), "Creation writes the embedded default into project.edi");
+            verify(/_report\.html_offline\s+true/.test(SettingsProof.text(url, "reports/report.edi")), "Creation writes the embedded default into reports/report.edi");
             Session.closeProject();
             Preferences.newReportLibraries = "online";
             verify(Session.openProject(url), "The newly created project reopens under a different preference");
@@ -195,7 +195,7 @@ Item {
             verify(Session.openProject(existing), "An existing project without html_offline opens under the Embedded preference");
             compare(Session.project.report.embedLibraries, false, "Opening a project with no html_offline reads false independently of Preferences");
             verify(Session.save(), "An unchanged existing project can be saved without adding a default");
-            verify(!/_report\.html_offline/.test(SettingsProof.text(existing, "project.edi")), "A save never introduces an absent html_offline item");
+            verify(!/_report\.html_offline/.test(SettingsProof.text(existing, "reports/report.edi")), "A save never introduces an absent html_offline item");
             Session.project.report.embedLibraries = true;
             compare(Session.project.modified, true, "Changing Embed is an undoable project edit rather than a transient report session option");
             compare(Preferences.newReportLibraries, "embedded", "A report edit leaves the new-project preference unchanged");

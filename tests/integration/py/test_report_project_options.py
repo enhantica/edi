@@ -1,4 +1,4 @@
-"""Project report options: declared defaults, strict tokens and presence retention."""
+"""Project report options: separate-file placement, strict tokens and presence retention."""
 
 import re
 import shlex
@@ -11,14 +11,30 @@ from tests.integration.py.test_report_iucr_persistence import project
 
 def source(tmp_path, items):
     path = project(tmp_path, '4()', None)
-    metadata = path / 'project.edi'
-    metadata.write_text(metadata.read_text() + '\n' + '\n'.join(items) + '\n')
+    report_items, analysis_items = [], []
+    for item in items:
+        if item.startswith('_report.correlation_threshold '):
+            analysis_items.append(
+                item.replace('_report.correlation_threshold', '_correlation_chart.threshold', 1)
+            )
+        elif item.startswith('_report.x_axis '):
+            analysis_items.append(item.replace('_report.x_axis', '_pattern_chart.x_axis', 1))
+        else:
+            report_items.append(item)
+    if report_items:
+        metadata = path / 'reports/report.edi'
+        metadata.parent.mkdir(exist_ok=True)
+        metadata.write_text('_edi.schema_version 3\n' + '\n'.join(report_items) + '\n')
+    if analysis_items:
+        analysis = path / 'analysis/analysis.edi'
+        analysis.write_text(analysis.read_text() + '\n' + '\n'.join(analysis_items) + '\n')
     return path
 
 
 def tags(path):
     result = {}
-    for line in (path / 'project.edi').read_text().splitlines():
+    file = path / 'reports/report.edi'
+    for line in file.read_text().splitlines() if file.exists() else []:
         if line.startswith('_report.'):
             words = shlex.split(line)
             result[words[0]] = words[1]
@@ -35,10 +51,9 @@ def report(loaded):
 def test_absent_report_items_resolve_defaults_without_inventing_an_offline_item(tmp_path):
     loaded = engine.Project.load(source(tmp_path, []))
     settings = report(loaded)
-    assert (settings.cif, settings.html, settings.tex, settings.pdf, settings.html_offline) == (
+    assert (settings.cif, settings.html, settings.pdf, settings.html_offline) == (
         False,
         True,
-        False,
         False,
         False,
     ), 'Absent report formats use diffraction-lib defaults, including online HTML'
@@ -59,7 +74,6 @@ def test_declared_report_options_survive_reload_and_canonical_resave(tmp_path, o
     lines = [
         '_report.cif false',
         '_report.html true',
-        '_report.tex false',
         '_report.pdf false',
         f'_report.html_offline {offline}',
         '_report.correlation_threshold 0.9',
@@ -69,7 +83,11 @@ def test_declared_report_options_survive_reload_and_canonical_resave(tmp_path, o
     loaded = engine.Project.load(source(tmp_path, lines))
     first = tmp_path / 'first'
     loaded.save_as(first)
-    expected = {shlex.split(line)[0]: shlex.split(line)[1] for line in lines}
+    expected = {
+        shlex.split(line)[0]: shlex.split(line)[1]
+        for line in lines
+        if not line.startswith(('_report.correlation_threshold ', '_report.x_axis '))
+    }
     assert tags(first) == expected, (
         'The project writer preserves every explicit format, threshold, axis and exclusion token'
     )
@@ -89,12 +107,12 @@ def test_declared_report_options_survive_reload_and_canonical_resave(tmp_path, o
     restored.save_as(second)
     first_bytes = [
         line
-        for line in (first / 'project.edi').read_bytes().splitlines()
+        for line in (first / 'reports/report.edi').read_bytes().splitlines()
         if line.startswith(b'_report.')
     ]
     second_bytes = [
         line
-        for line in (second / 'project.edi').read_bytes().splitlines()
+        for line in (second / 'reports/report.edi').read_bytes().splitlines()
         if line.startswith(b'_report.')
     ]
     assert second_bytes == first_bytes, (
@@ -125,14 +143,21 @@ def test_report_threshold_accepts_both_closed_interval_endpoints(tmp_path, thres
         ('html_offline', 'False'),
         ('cif', 'abc'),
         ('html', '0'),
-        ('tex', 'TRUE'),
+        ('html', 'yes'),
+        ('tex', 'true'),
         ('pdf', 'no'),
     ],
 )
 def test_invalid_report_tokens_refuse_at_load_naming_the_item(tmp_path, item, value):
-    name = '_report.' + item
+    name = (
+        '_correlation_chart.threshold'
+        if item == 'correlation_threshold'
+        else '_pattern_chart.x_axis'
+        if item == 'x_axis'
+        else '_report.' + item
+    )
     with pytest.raises(ValueError, match=re.escape(name)) as error:
-        engine.Project.load(source(tmp_path, [name + ' ' + value]))
+        engine.Project.load(source(tmp_path, ['_report.' + item + ' ' + value]))
     assert name in str(error.value), (
         'A rejected report setting names its complete project item for correction'
     )
@@ -141,12 +166,12 @@ def test_invalid_report_tokens_refuse_at_load_naming_the_item(tmp_path, item, va
 @pytest.mark.parametrize('empty', ["''", '""'], ids=['single-quotes', 'double-quotes'])
 def test_explicit_empty_exclusions_include_data_and_survive_save_and_reload(tmp_path, empty):
     path = source(tmp_path, ['_report.excluded ' + empty])
-    original = (path / 'project.edi').read_bytes()
+    original = (path / 'reports/report.edi').read_bytes()
     loaded = engine.Project.load(path)
     assert list(report(loaded).excluded) == [], (
         'An explicitly empty exclusion list includes every optional group, including Data'
     )
-    assert (path / 'project.edi').read_bytes() == original, (
+    assert (path / 'reports/report.edi').read_bytes() == original, (
         'Resolving an explicit empty report value never rewrites its source item'
     )
     first = tmp_path / 'first'
