@@ -2420,6 +2420,12 @@ NB_MODULE(_edi, m) {
     def_view_optional_parameter_field(cwl_pd_xray_instrument, "setup_monochromator_twotheta",
                                       &edi::InstrumentBase::setup_monochromator_twotheta,
                                       edi::spec::instrument_monochromator_twotheta);
+    def_view_optional_parameter_field(cwl_pd_xray_instrument, "setup_wavelength_2",
+                                      &edi::InstrumentBase::setup_wavelength_2,
+                                      edi::spec::instrument_wavelength_2);
+    def_view_optional_parameter_field(cwl_pd_xray_instrument, "setup_wavelength_2_to_1_ratio",
+                                      &edi::InstrumentBase::setup_wavelength_2_to_1_ratio,
+                                      edi::spec::instrument_wavelength_2_to_1_ratio);
 
     // One linked structure (phase): the structure it names, its scale and whether it takes part.
     nb::class_<edi::LinkedStructure> linked_structure(m, "LinkedStructure");
