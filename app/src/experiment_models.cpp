@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "experiment_models.hpp"
 
+#include <QVariantMap>
 #include <QtNumeric>
 #include <algorithm>
-#include <cmath>
 #include <exception>
 #include <optional>
 
@@ -207,10 +207,9 @@ void ExcludedRegionListModel::remove(int row) {
 
 namespace {
 
-// A weight fraction as `value(su)` with the uncertainty's two significant digits (the CIF
-// convention the saved file uses), the value alone without one, or nothing when there is none or
-// the model cannot be calculated mid-edit.
-QString weight_fraction_text(const edi::LinkedStructure& link) {
+// A weight fraction for its read-only cell: `value` and `uncertainty` (0 without one), written by the app's
+// number rule in QML, or an empty map when there is none or the model cannot be calculated mid-edit.
+QVariantMap weight_fraction_cell(const edi::LinkedStructure& link) {
     std::optional<edi::WeightFraction> fraction;
     try {
         fraction = edi::weight_fraction(link);
@@ -220,14 +219,8 @@ QString weight_fraction_text(const edi::LinkedStructure& link) {
     if (!fraction) {
         return {};
     }
-    if (!fraction->uncertainty || !(*fraction->uncertainty > 0.0)) {
-        return QString::number(fraction->value, 'f', 4);
-    }
-    const double su = *fraction->uncertainty;
-    const int decimals = std::max(0, 1 - static_cast<int>(std::floor(std::log10(su))));
-    return QStringLiteral("%1(%2)")
-        .arg(QString::number(fraction->value, 'f', decimals))
-        .arg(std::llround(su * std::pow(10.0, decimals)));
+    return {{QStringLiteral("value"), fraction->value},
+            {QStringLiteral("uncertainty"), fraction->uncertainty.value_or(0.0)}};
 }
 
 }  // namespace
@@ -257,7 +250,7 @@ void LinkedStructureListModel::sync() {
         const QString id = QString::fromStdString(link->structure_id.value());
         rows.append({link.get(),
                      {id, parameter_role(registry_, &link->scale), link->enabled.get(),
-                      static_cast<int>(names.indexOf(id)), weight_fraction_text(*link)}});
+                      static_cast<int>(names.indexOf(id)), weight_fraction_cell(*link)}});
     }
     setTableRows(rows);
     const auto linked = [this](const QString& name) {
