@@ -126,6 +126,32 @@ void StructureViewController::setOptions(StructureViewOptions* options) {
     refresh();
 }
 
+void StructureViewController::setReport(ReportViewModel* report) {
+    if (report == report_) {
+        return;
+    }
+    stopAnimation();
+    disconnect(report_connection_);
+    report_ = report;
+    viewed_ = false;
+    if (report_) {
+        // A new model keeps the view the user turned; another structure starts from the model's view.
+        report_connection_ = connect(report_, &ReportViewModel::modelChanged, this, [this] { refresh(); });
+    }
+    emit reportChanged();
+    refresh();
+}
+
+void StructureViewController::setReportStructure(const QString& id) {
+    if (id != report_structure_) {
+        stopAnimation();
+        report_structure_ = id;
+        viewed_ = false;
+        emit reportStructureChanged();
+        refresh();
+    }
+}
+
 void StructureViewController::setActive(bool active) {
     if (active != active_) {
         active_ = active;
@@ -337,14 +363,15 @@ void StructureViewController::panBy(double dx, double dy) {
 }
 
 QString StructureViewController::hoverAtSphere(int instanceIndex) const {
-    if (instanceIndex < 0 || static_cast<std::size_t>(instanceIndex) >= drawing_.spheres.size()) {
+    // The report's scene comes without the source its read-out names coordinates from: no read-out.
+    if (report_ || instanceIndex < 0 || static_cast<std::size_t>(instanceIndex) >= drawing_.spheres.size()) {
         return {};
     }
     return QString::fromStdString(edi::hover_text(source_, scene_, drawing_.spheres[instanceIndex].atom));
 }
 
 QString StructureViewController::hoverAtShared(double u) const {
-    if (!(u >= 0.0) || u >= static_cast<double>(drawing_.shared.size())) {
+    if (report_ || !(u >= 0.0) || u >= static_cast<double>(drawing_.shared.size())) {
         return {};
     }
     return QString::fromStdString(edi::hover_text(source_, scene_, drawing_.shared[static_cast<std::size_t>(u)]));
@@ -435,19 +462,26 @@ void StructureViewController::sourceWentStale() {
 
 void StructureViewController::present() {
     dirty_ = false;
-    const edi::SceneOptions options = options_ != nullptr ? options_->sceneOptions() : edi::SceneOptions{};
-    scene_ = edi::present_structure(source_, options);
-    if (!viewed_ && scene_.current) {
-        const edi::Projection projection = view_.projection;
-        view_ = edi::default_view(scene_);
-        view_.magnification = kHomeZoom;
-        view_.projection = projection;
-        viewed_ = true;
-    } else if (!viewed_) {
-        const edi::Projection projection = view_.projection;
-        view_ = edi::default_view(scene_);
-        view_.magnification = kHomeZoom;
-        view_.projection = projection;
+    if (report_) {
+        // The model's scene and, until the user turns it, the model's view, as the saved report opens.
+        const edi::ReportStructure* reported = report_->structure(report_structure_);
+        scene_ = reported != nullptr ? reported->scene : edi::StructureScene{};
+        if (!viewed_ && reported != nullptr) {
+            // Kept once the scene is current, as in a live view: a model built before the geometry was computed has
+            // an empty scene, whose view would be no view of the structure.
+            view_ = reported->view;
+            viewed_ = scene_.current;
+        }
+    } else {
+        const edi::SceneOptions options = options_ != nullptr ? options_->sceneOptions() : edi::SceneOptions{};
+        scene_ = edi::present_structure(source_, options);
+        if (!viewed_) {
+            const edi::Projection projection = view_.projection;
+            view_ = edi::default_view(scene_);
+            view_.magnification = kHomeZoom;
+            view_.projection = projection;
+            viewed_ = scene_.current;
+        }
     }
     QList<ChartLegendModel::Entry> entries;
     for (const edi::SceneLegendEntry& entry : scene_.legend) {
@@ -462,7 +496,7 @@ void StructureViewController::present() {
     emit hasCopiesChanged();
     emit hasBondsChanged();
     emit substitutedElementsChanged();
-    setCurrent(scene_.current && latestCurrent());
+    setCurrent(scene_.current && (report_ ? true : latestCurrent()));
     draw();
 }
 

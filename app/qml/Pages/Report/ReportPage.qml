@@ -48,4 +48,12 @@ WorkflowPage {
         }
     }
     continueVisible: false
+
+    // The report rebuilds at once only while this page is shown.
+    Binding {
+        target: page.report
+        property: "active"
+        value: page.current
+        when: page.report !== null
+    }
 }

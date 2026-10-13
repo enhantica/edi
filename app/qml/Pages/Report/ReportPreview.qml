@@ -12,8 +12,8 @@ import edi.app
 // The Report page's live preview (edi ADR-0035): the report model's sections, in its order, drawn from the model's
 // JSON values only. It is set as the HTML report is, after the owner's reference report (diffraction-lib's style,
 // 2026-10-13): PT Sans headings at its sizes and margins, numbered sections and records, each category of a structure
-// or an experiment in its own subsection, bordered tables one line per row, in the app's theme colours. Charts and the
-// structure view join as the model carries them.
+// or an experiment in its own subsection under its figure (the structure view, the pattern chart), bordered tables one
+// line per row, in the app's theme colours.
 Flickable {
     id: preview
 
@@ -23,6 +23,8 @@ Flickable {
     readonly property real em: EaStyle.Sizes.fontPixelSize
     // The reference's sizes and margins are in points over its 10.04 pt body.
     readonly property real pt: em / 10.04
+    // The figures (the structure views and the pattern charts), unless Contents leaves the charts out.
+    readonly property bool charts: (model.contents ?? []).some(item => item.key === "charts" && item.included)
 
     function shown(name) {
         return sections.indexOf(name) >= 0;
@@ -114,6 +116,28 @@ Flickable {
             level: 3
             under: record.index === 0 ? 2 : 0
             text: `${preview.number(record.section)}.${record.index + 1}.  ${record.modelData.id}`
+        }
+        // Its figure first, as the reference report places it: the structure view, or the pattern chart.
+        Loader {
+            active: preview.charts
+            visible: active
+            width: parent.width
+            height: active ? Math.round(width * 0.7) : 0
+            sourceComponent: record.section === "structures" ? structureFigure : patternFigure
+        }
+        Component {
+            id: structureFigure
+            StructureView {
+                report: preview.report
+                reportStructure: record.modelData.id
+            }
+        }
+        Component {
+            id: patternFigure
+            PatternChart {
+                report: preview.report
+                reportExperiment: record.modelData.id
+            }
         }
         Repeater {
             model: record.modelData.categories
