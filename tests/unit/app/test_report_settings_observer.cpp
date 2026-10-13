@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include <memory>
+#include <QAnimationDriver>
 #include <atomic>
 #include <vector>
 #include <QTemporaryDir>
@@ -51,10 +52,38 @@ void report_console_handler(QtMsgType type, const QMessageLogContext& context, c
 }
 }
 
+// Public Qt clock: rendering and machine load cannot skip an observed tween step.
+class AcceptanceAnimationDriver : public QAnimationDriver {
+public:
+    void advance() override {} // Only the gate advances the clock.
+    qint64 elapsed() const override { return milliseconds_; }
+    void step(int milliseconds) { milliseconds_ += milliseconds; advanceAnimation(); }
+protected:
+    void start() override { milliseconds_ = 0; QAnimationDriver::start(); }
+private:
+    qint64 milliseconds_ = 0;
+};
+
 class ReportSettingsProof : public QObject {
     Q_OBJECT
 public:
     using QObject::QObject;
+    Q_INVOKABLE bool beginAnimationClock() {
+        if (animation_driver_) return false;
+        animation_driver_ = std::make_unique<AcceptanceAnimationDriver>();
+        animation_driver_->install();
+        return true;
+    }
+    Q_INVOKABLE bool stepAnimationClock(int milliseconds) {
+        if (!animation_driver_ || milliseconds <= 0) return false;
+        animation_driver_->step(milliseconds);
+        return true;
+    }
+    Q_INVOKABLE void endAnimationClock() {
+        if (!animation_driver_) return;
+        animation_driver_->uninstall();
+        animation_driver_.reset();
+    }
     Q_INVOKABLE bool beginConsoleCapture() const {
         const auto previous = qInstallMessageHandler(report_console_handler);
         if (previous != report_console_handler) report_previous_handler.store(previous);
@@ -227,6 +256,7 @@ public:
         return result;
     }
 private:
+    std::unique_ptr<AcceptanceAnimationDriver> animation_driver_;
     std::vector<std::unique_ptr<QTemporaryDir>> directories_;
 };
 

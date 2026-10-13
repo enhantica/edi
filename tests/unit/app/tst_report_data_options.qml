@@ -45,7 +45,9 @@ Rectangle {
             verify(page !== null && waitForPolish(page), "The actual Report page lays out its optional groups");
             const group = findChild(page, "group.reportContents");
             verify(group !== null, "The actual Contents group exists in the Report sidebar");
-            group.collapsed = false;
+            if (group.collapsed)
+                mouseClick(group.titleArea, group.titleArea.width / 2, group.titleArea.height / 2);
+            tryCompare(group, "collapsed", false, 1000, "Pointer input opens the Contents header before accessing its boxes");
             verify(waitForPolish(group), "The Contents boxes are laid out before pointer input");
             const expected = ["Charts", "Correlations", "Reflections", "Data"];
             const boxes = Render.descendants(group).filter(item => typeof item.checked === "boolean" && expected.includes(item.text));
@@ -55,6 +57,10 @@ Rectangle {
             compare(box.checked, data.empty, "Data is omitted for an absent excluded item and included for an explicit empty item");
             for (const other of boxes.filter(item => item !== box))
                 compare(other.checked, true, "Every other optional group stays included by default");
+            // GroupBox animates its height and clips its content during expansion.
+            // Polish alone does not prove the checkbox has cleared that clip.
+            tryVerify(() => box.visible && box.enabled && box.mapToItem(group, 0, 0).y + box.height <= group.height, 2000, "The Data checkbox is fully inside the expanded Contents clip before actual pointer input");
+            verify(waitForRendering(group), "The expanded Contents clip is rendered before clicking Data");
             mouseClick(box, box.width / 2, box.height / 2);
             tryCompare(box, "checked", !data.empty, 1000, "The Data group accepts actual pointer input");
             compare(Session.project.modified, true, "Changing Data is an undoable project-owned report edit");

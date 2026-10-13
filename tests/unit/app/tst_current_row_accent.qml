@@ -4,6 +4,7 @@ import QtQuick.Window
 import QtQuick.Controls as Controls
 import QtTest
 import edi.app
+import ReportAcceptance 1.0
 import EasyApplication.Gui.Style as Style
 import EasyApplication.Gui.Elements as Elements
 import "RenderedTable.js" as Render
@@ -56,6 +57,7 @@ Item {
             savedTheme = Style.Colors.theme;
         }
         function cleanup() {
+            SettingsProof.endAnimationClock();
             if (group)
                 group.destroy();
             group = null;
@@ -171,12 +173,12 @@ Item {
             const startY = bars()[0].mapToItem(table, 0, 0).y;
             const distance = table.itemAtIndex(1).mapToItem(table, 0, 0).y - startY;
             const startX = reference.highlightItem.x;
+            verify(SettingsProof.beginAnimationClock(), "The animation gate owns a public Qt clock before either movement starts");
             tabs.currentIndex = 1;
             select(data.kind, 1);
             let intermediate = 0;
-            const begun = Date.now();
-            while (Date.now() - begun < 450) {
-                wait(5);
+            for (let elapsed = 0; elapsed < 450; elapsed += 16) {
+                verify(SettingsProof.stepAnimationClock(16), "Both production and reference animations advance by the same controlled Qt time");
                 renderFrame();
                 verify(bars().length === 1, "The moving accent remains a single visible bar");
                 const x = (reference.highlightItem.x - startX) / 120;
@@ -189,6 +191,7 @@ Item {
                     break;
             }
             verify(intermediate > 0, "The animation gate reaches movement between the endpoints");
+            SettingsProof.endAnimationClock();
             settled(1);
         }
     }
