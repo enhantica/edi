@@ -74,3 +74,5 @@ projects:
   - id: pd-neut-cwl_y2o3_beta-adp
     # Y2O3 with anisotropic beta ADPs tied by site symmetry; the scale alone against FullProf's fit.
     executing: true
+  - id: pd-xray-cwl_pbso4-lab_round-robin
+    executing: true
