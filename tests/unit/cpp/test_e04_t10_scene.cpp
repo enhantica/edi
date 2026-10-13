@@ -570,6 +570,40 @@ TEST_CASE("E04-T10 I9 published home orientation fits the whole drawing") {
     vec(empty.frame.view_direction, e04_t10::unit({1, .8, 1.5}));
 }
 
+namespace {
+template <class Viewport>
+void check_legend_band(Viewport viewport) {
+    if constexpr (requires { viewport.side_band; }) {
+        auto scene = cube();
+        scene.frame.half_width = 12;
+        scene.frame.half_height = 4;
+        viewport.width = 800;
+        viewport.height = 600;
+        viewport.top_band = 0;
+        viewport.side_band = 120;
+        // Before: H used the full 800 px. After: the two legend bands leave 560 px.
+        const double expected = 12. * 600 / 560;
+        CHECK_MESSAGE(fitted_half_height(scene.frame, viewport) == doctest::Approx(expected),
+                      "The public fitted half height reserves both nontrivial legend bands");
+        CHECK_MESSAGE(edi::fitted_scale(scene, viewport, edi::Projection::Orthographic) ==
+                          doctest::Approx(600 / (2 * expected)),
+                      "The projection uses the same band-aware fitted half height as its drawing");
+        const auto view = edi::view_along(scene, 2);
+        for (double offset : {-12., 12.}) {
+            const auto point = edi::project(scene, view, viewport,
+                {scene.frame.target.x + offset, scene.frame.target.y, scene.frame.target.z});
+            CHECK_MESSAGE((point.x > 120 && point.x < 680),
+                          "The 0.9 home zoom leaves the drawing clear of either reserved legend band");
+        }
+        viewport.side_band = 0;
+        CHECK_MESSAGE(fitted_half_height(scene.frame, viewport) == doctest::Approx(9),
+                      "A caller requesting no legend band retains the full-width projection formula");
+    } else {
+        FAIL_CHECK("The shared viewport must expose a side band for the owner's legend clearance");
+    }
+}
+}
+
 TEST_CASE("E04-T10 I13 I14 both projections and pointer transformations") {
     const auto scene = cube();
     const edi::Viewport viewport{400, 400, 84};
@@ -624,6 +658,7 @@ TEST_CASE("E04-T10 I13 I14 both projections and pointer transformations") {
     const auto perspective_zoom = edi::zoomed(scene, view, viewport, 300, 123, 120);
     CHECK_MESSAGE((perspective_zoom.pan_x == 0 && perspective_zoom.pan_y == 0),
                   " I14 perspective wheel zoom leaves pan unchanged");
+    check_legend_band(edi::Viewport{});
 }
 
 TEST_CASE("E04-T10 I15 I16 drawing hit maps half bonds and viewport dimensions") {
