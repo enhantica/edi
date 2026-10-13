@@ -131,6 +131,7 @@ nav:
           - user/cli/pd-neut-tof_ceo2-pearl_polynomial/index.md
           - user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/index.md
           - user/cli/pd-xray-cwl_lif_single/index.md
+          - user/cli/pd-xray-cwl_pbso4-lab_round-robin/index.md
           - user/cli/pd-neut-cwl_y2o3_beta-adp/index.md
           - user/cli/pd-xray-cwl_latp_scan-4f/index.md
       - Guides:
