@@ -164,7 +164,7 @@ def project_model_names(reference_names, experiments, path):
 
 
 def xray_model_names(names, original, prefix):
-    # ADR-0086: X-ray CW has the prior polarization pair and the two doublet
+    # X-ray CW has the prior polarization pair and the two doublet
     # slots beyond the external reader's four CW parameters. The fixed-zero
     # defaults are still part of the declared model; no native walk supplies them.
     if not re.search(

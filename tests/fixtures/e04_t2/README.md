@@ -129,7 +129,7 @@ inside its clipped viewports. It retries geometry only: the same native name,
 units, uncertainty and admissible-bound assertions still run once against the
 independent inputs. Hidden, clipped, blank and incorrect text remain failures.
 
-C15-T4's `generate.py --project pd-xray-cwl_lif_single --project pd-xray-cwl_pbso4-lab_round-robin` updates only those declared loop inputs and
+The doublet and absorption extension uses `generate.py --project pd-xray-cwl_lif_single --project pd-xray-cwl_pbso4-lab_round-robin` updates only those declared loop inputs and
 adds the new project's loops, retaining every unrelated original row. These
 selected rows explicitly authenticate current complete bytes; historical rows
 still authenticate their complete archived/profile-token view. All loops in one

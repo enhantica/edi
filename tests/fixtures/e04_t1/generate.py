@@ -491,7 +491,7 @@ def update_project_oracle(output, projects, corpus, project_id, data):
 
 
 def extend_xray_instrument_oracle(data):
-    # ADR-0086 adds two X-ray slots, with exact fixed-zero defaults when absent.
+    # The doublet adds two X-ray slots, with exact fixed-zero defaults when absent.
     # This declaration view changes no original input digest or numerical output.
     for row in data['corpus']:
         fields = row['scalars']
