@@ -33,14 +33,24 @@ def external_scripts(text):
 def input_project(tmp_path, graph='pairs', **items):
     path = tmp_path / graph
     shutil.copytree(FIXTURES / graph, path)
-    file = path / 'project.edi'
+    file = path / 'reports/report.edi'
+    file.parent.mkdir(exist_ok=True)
     for key, value in items.items():
         token = value
         if isinstance(value, bool):
             token = 'true' if value else 'false'
         if isinstance(value, list):
             token = '"' + ' '.join(value) + '"'
-        file.write_text(file.read_text() + f'\n_report.{key} {token}\n')
+        tag = '_report.' + key
+        target = file
+        if key == 'correlation_threshold':
+            target, tag = path / 'analysis/analysis.edi', '_correlation_chart.threshold'
+        elif key == 'x_axis':
+            target, tag = path / 'analysis/analysis.edi', '_pattern_chart.x_axis'
+        target.write_text(
+            (target.read_text() if target.exists() else '_edi.schema_version 3\n')
+            + f'\n{tag} {token}\n'
+        )
     return path
 
 
@@ -105,7 +115,7 @@ def test_explicit_false_native_zero_and_empty_overrides_replace_stored_options_w
     )
     loaded = reporter(path)
     loaded.calculate()
-    original = (path / 'project.edi').read_bytes()
+    original = {str(p.relative_to(path)): p.read_bytes() for p in path.rglob('*.edi')}
     stored = (
         loaded.report.html_offline,
         loaded.report.x_axis,
@@ -141,7 +151,7 @@ def test_explicit_false_native_zero_and_empty_overrides_replace_stored_options_w
         loaded.report.correlation_threshold,
         list(loaded.report.excluded),
     ) == stored, 'Effective per-run options leave every stored project report field unchanged'
-    assert (path / 'project.edi').read_bytes() == original, (
+    assert {str(p.relative_to(path)): p.read_bytes() for p in path.rglob('*.edi')} == original, (
         'Resolving and building one report never writes project.edi'
     )
     out = tmp_path / 'online.html'
@@ -156,7 +166,7 @@ def test_explicit_false_native_zero_and_empty_overrides_replace_stored_options_w
     assert 'Reflections' in text, (
         'An empty exclusion override restores the stored excluded Reflections subsection'
     )
-    assert (path / 'project.edi').read_bytes() == original, (
+    assert {str(p.relative_to(path)): p.read_bytes() for p in path.rglob('*.edi')} == original, (
         'Writing HTML with overrides never rewrites the model options'
     )
 
@@ -170,7 +180,7 @@ def test_cli_override_flags_leave_project_options_and_bytes_unchanged(tmp_path):
         correlation_threshold=0.9,
         excluded=['reflections'],
     )
-    original = (path / 'project.edi').read_bytes()
+    original = {str(p.relative_to(path)): p.read_bytes() for p in path.rglob('*.edi')}
     target = tmp_path / 'cli-online.html'
     result = subprocess.run(
         [
@@ -197,7 +207,7 @@ def test_cli_override_flags_leave_project_options_and_bytes_unchanged(tmp_path):
         'The CLI accepts explicit online/native/zero/include-all overrides '
         'and writes the requested report'
     )
-    assert (path / 'project.edi').read_bytes() == original, (
+    assert {str(p.relative_to(path)): p.read_bytes() for p in path.rglob('*.edi')} == original, (
         'The CLI report command never writes its per-run overrides into project.edi'
     )
     text = target.read_text()

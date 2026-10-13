@@ -66,11 +66,11 @@ TestCase {
         if (data.count >= 0) {
             compare(Session.project.modified, true, "A count edit writes its project-owned threshold through an undoable edit");
             verify(Session.save(), "The actual project writer saves the selected correlation threshold");
-            const text = SettingsProof.text(url, "project.edi");
-            const item = text.match(/^_report\.correlation_threshold\s+(\S+)/m);
-            verify(item !== null, "Only the correlation threshold is persisted in the report category");
+            const text = SettingsProof.text(url, "analysis/analysis.edi");
+            const item = text.match(/^_correlation_chart\.threshold\s+(\S+)/m);
+            verify(item !== null, "Only the correlation threshold is persisted in the Analysis correlation-chart category");
             fuzzyCompare(Number(item[1]), data.level, 1e-14, "The saved item holds the independently derived threshold");
-            verify(!/^_report\.(?:count|max_parameters)\s/m.test(text), "The derived count is never serialized as another project option");
+            verify(!/^_correlation_chart\.(?:count|max_parameters)\s/m.test(text), "The derived count is never serialized as another project option");
             Session.closeProject();
             verify(Session.openProject(url), "The threshold restores through the actual project reader");
             compare(JSON.stringify(names(Session.project.correlations)), JSON.stringify(data.names), "Reopening restores exactly the same parameters and complete ties in the live tab");
