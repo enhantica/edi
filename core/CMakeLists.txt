@@ -17,6 +17,9 @@ add_library(edi_core STATIC
     src/validation.cpp
     src/report.cpp
     src/json.cpp
+    src/report_model.cpp
+    src/report_json.cpp
+    src/parameter_symbol.cpp
     src/su_text.cpp
     src/selectors.cpp
     src/worker.cpp

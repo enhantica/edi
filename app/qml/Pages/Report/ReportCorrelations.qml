@@ -1,0 +1,97 @@
+// SPDX-License-Identifier: BSD-3-Clause
+pragma ComponentBehavior: Bound
+
+import QtQuick
+
+import EasyApplication.Gui.Style as EaStyle
+import EasyApplication.Gui.Elements as EaElements
+
+import edi.app
+
+// The report preview's correlation chart, from the model's `correlations`: the lower triangle the Correlations tab
+// draws, each cell coloured from red at -1 through the background to blue at 1 and labelled with its value, the
+// parameters numbered down the left and along the top.
+Item {
+    id: chart
+
+    property var correlations: null
+    readonly property var labels: correlations && correlations.labels ? correlations.labels : []
+    readonly property var values: correlations && correlations.values ? correlations.values : []
+    readonly property int count: labels.length
+    readonly property real cell: EaStyle.Sizes.fontPixelSize * 3.2
+    readonly property real labelWidth: {
+        let widest = 0;
+        for (const label of labels)
+            widest = Math.max(widest, metrics.advanceWidth((labels.indexOf(label) + 1) + "  " + label));
+        return Math.ceil(widest) + EaStyle.Sizes.fontPixelSize;
+    }
+    // diffraction-lib's colour scale, as the Correlations tab's (CorrelationChart).
+    readonly property color negativeColor: "#d73027"
+    readonly property color positiveColor: "#4575b4"
+
+    function cellColor(value) {
+        const background = EaStyle.Colors.chartBackground;
+        const end = value < 0 ? negativeColor : positiveColor;
+        const share = Math.min(1, Math.abs(value));
+        return Qt.rgba(background.r + (end.r - background.r) * share, background.g + (end.g - background.g) * share, background.b + (end.b - background.b) * share, 1);
+    }
+
+    width: labelWidth + count * cell
+    height: count > 0 ? (count + 1) * cell : empty.implicitHeight
+
+    FontMetrics {
+        id: metrics
+        font.family: EaStyle.Fonts.fontFamily
+        font.pixelSize: EaStyle.Sizes.fontPixelSize
+    }
+
+    EaElements.Label {
+        id: empty
+        visible: chart.count < 2
+        color: EaStyle.Colors.themeForegroundMinor
+        text: chart.correlations && chart.correlations.empty_text ? chart.correlations.empty_text : qsTr("No correlations yet")
+    }
+    Repeater {
+        model: chart.count
+        delegate: EaElements.Label {
+            required property int index
+            y: chart.cell * (index + 1) + (chart.cell - height) / 2
+            color: EaStyle.Colors.themeForegroundMinor
+            text: (index + 1) + "  " + chart.labels[index]
+        }
+    }
+    Repeater {
+        model: chart.count
+        delegate: EaElements.Label {
+            required property int index
+            x: chart.labelWidth + chart.cell * index + (chart.cell - width) / 2
+            y: (chart.cell - height) / 2
+            color: EaStyle.Colors.themeForegroundMinor
+            text: index + 1
+        }
+    }
+    Repeater {
+        model: chart.count * chart.count
+        delegate: Rectangle {
+            required property int index
+            readonly property int row: Math.floor(index / chart.count)
+            readonly property int column: index % chart.count
+            readonly property var value: chart.values[index]
+            readonly property bool shown: typeof value === "number" && isFinite(value)
+
+            x: chart.labelWidth + column * chart.cell
+            y: (row + 1) * chart.cell
+            width: chart.cell
+            height: chart.cell
+            visible: shown
+            color: shown ? chart.cellColor(value) : "transparent"
+            border.color: EaStyle.Colors.chartGridLine
+
+            EaElements.Label {
+                anchors.centerIn: parent
+                color: Math.abs(parent.value) >= 0.5 ? "#f5f5f5" : EaStyle.Colors.chartLabels
+                text: parent.shown ? parent.value.toFixed(2) : ""
+            }
+        }
+    }
+}
