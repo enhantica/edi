@@ -9,7 +9,8 @@ import edi.app
 
 // One square button of a chart's toolbar (easydiffractionbeta's QtCharts1dTab.qml; edi ADR-0017 §15): a Font
 // Awesome icon on the content background inside a border in the chart's axis colour, the icon in the accent
-// colour while hovered or checked. Shared by the pattern chart and, with, the structure view.
+// colour while hovered or checked; disabled, both in the theme's disabled colours, as the toolbar's boxes. Shared by
+// the pattern chart and, with, the structure view.
 Rectangle {
     id: button
 
@@ -21,14 +22,14 @@ Rectangle {
     width: AppSizes.toolbarControlSize
     height: width
     color: EaStyle.Colors.contentBackground
-    border.color: EaStyle.Colors.chartAxis
+    border.color: button.enabled ? EaStyle.Colors.chartAxis : EaStyle.Colors.themeBackgroundDisabled
     border.width: EaStyle.Sizes.borderThickness
 
     EaElements.Label {
         anchors.centerIn: parent
         font.family: EaStyle.Fonts.iconsFamily
         font.pixelSize: EaStyle.Sizes.fontPixelSize * 1.15
-        color: hover.hovered || button.checked ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
+        color: !button.enabled ? EaStyle.Colors.themeForegroundDisabled : hover.hovered || button.checked ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
         text: button.fontIcon
     }
     HoverHandler {

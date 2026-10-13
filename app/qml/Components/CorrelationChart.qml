@@ -15,8 +15,10 @@ import edi.app
 // background at 0 to blue at 1, with lines between the cells, a frame, the parameters' names along both edges and a
 // colour bar. A cell shows its value when there is room, and as a tool tip. The toolbar sets the smallest absolute
 // correlation shown and the most parameters shown (CorrelationViewModel); two toggles after them show the names along
-// the edges (hidden at the start; the tool tip still names both parameters) and the full matrix instead of the lower
-// triangle (the full matrix mirrors it, the diagonal still blank; owner, 2026-10-12).
+// the edges with the colour bar (both hidden at the start; the tool tip still names both parameters) and the full
+// matrix instead of the lower triangle (the full matrix mirrors it, the diagonal still blank). Every toolbar control is
+// disabled while there are no correlations, and the space below the matrix equals the space above it (owner,
+// 2026-10-12 and 2026-10-13).
 Item {
     id: chart
 
@@ -25,6 +27,9 @@ Item {
     property ProjectViewModel project: null
     readonly property CorrelationViewModel correlations: project ? project.correlations : null
     property bool shown: true
+    // Whether the shown experiment has correlations to show; the toolbar is disabled without them (owner, 2026-10-11). A
+    // level that hides every pair keeps it enabled, so the level can be lowered again.
+    readonly property bool available: correlations !== null && correlations.available >= 2
     // The toolbar's two toggles.
     property bool namesShown: false
     property bool fullMatrix: false
@@ -121,6 +126,7 @@ Item {
         }
         ChartToolButton {
             objectName: "correlations.toolbar.names"
+            enabled: chart.available
             fontIcon: "font"
             toolTip: chart.namesShown ? qsTr("Hide the parameter names along the axes") : qsTr("Show the parameter names along the axes")
             checked: chart.namesShown
@@ -128,6 +134,7 @@ Item {
         }
         ChartToolButton {
             objectName: "correlations.toolbar.fullMatrix"
+            enabled: chart.available
             fontIcon: "th"
             toolTip: chart.fullMatrix ? qsTr("Show the lower triangle only") : qsTr("Show the full matrix")
             checked: chart.fullMatrix
@@ -157,9 +164,7 @@ Item {
         width: content.implicitWidth + chart.em * 1.75
         height: AppSizes.toolbarControlSize
         radius: 2
-        // Disabled while the selected experiment has no correlations (owner, 2026-10-11); a level that hides every pair
-        // keeps them enabled, so it can be lowered again.
-        enabled: chart.correlations !== null && chart.correlations.available >= 2
+        enabled: chart.available
         color: Qt.tint(EaStyle.Colors.contentBackground, EaStyle.Colors.appBarComboBoxBackground)
         border.color: !enabled ? EaStyle.Colors.themeBackgroundDisabled : box.hovered || number.activeFocus ? EaStyle.Colors.themeForegroundHovered : EaStyle.Colors.appBarComboBoxBorder
 
@@ -250,7 +255,7 @@ Item {
             return Math.ceil(widest);
         }
         readonly property real rowLabelWidth: chart.namesShown ? Math.min(widestLabel, width * 0.4) + chart.em * 0.5 : 0
-        readonly property real colourBarWidth: chart.em * 4.5
+        readonly property real colourBarWidth: chart.namesShown ? chart.em * 4.5 : 0
         readonly property real flatLabelHeight: chart.em * 2
         readonly property real gridWidth: width - rowLabelWidth - colourBarWidth
         readonly property real flatCell: chart.count > 0 ? Math.floor(Math.min(gridWidth, height - flatLabelHeight) / chart.count) : 0
@@ -267,7 +272,7 @@ Item {
         x: chart.sideMargin
         y: Math.round(toolbar.y + toolbar.height + chart.sideMargin)
         width: parent.width - 2 * chart.sideMargin
-        height: parent.height - y - chart.em
+        height: parent.height - y - chart.sideMargin
         visible: chart.count >= 2 && cell > 0
 
         Item {
@@ -391,6 +396,7 @@ Item {
         Item {
             id: colourBar
 
+            visible: chart.namesShown
             x: grid.x + area.side + Math.round(chart.em * 1.5)
             y: grid.y
             width: Math.round(chart.em)

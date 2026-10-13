@@ -939,9 +939,11 @@ refuses to write its bank rows into it.
 
 The Correlations tab (`Components/CorrelationChart.qml`, data in ADR-0034) draws diffraction-lib's lower triangle by
 default. Its toolbar holds the correlation level and the parameter count, then two toggle buttons drawn as the pattern
-chart's (the owner, 2026-10-12): **names** shows the parameter names along both axes, hidden at the start, since the
-cell's tool tip names both parameters and the matrix then takes the space; **full matrix** mirrors the lower triangle
-above the diagonal, off at the start. The diagonal stays blank in both.
+chart's (the owner, 2026-10-12): **names** shows the parameter names along both axes and the colour bar, both hidden at
+the start, since the cell's tool tip names both parameters and the matrix then takes the space; **full matrix** mirrors
+the lower triangle above the diagonal, off at the start. The diagonal stays blank in both. Like the boxes, both buttons
+are disabled while the shown experiment has no correlations, and the space below the matrix equals the space between
+the toolbar and the matrix (the owner, 2026-10-13).
 
 ## Consequences
 
