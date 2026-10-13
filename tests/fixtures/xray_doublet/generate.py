@@ -24,18 +24,17 @@ def committed(repo, revision, path):
 
 
 manifest = {'upstream': 'https://github.com/easyscience/diffraction-lib', 'revision': REVISION}
-for case, stem in [
-    ('doublet', 'lif_doublet_unpolarized'),
-    ('absorption', 'lif_single_absorption'),
+for case, stem, folder in [
+    ('doublet', 'lif_doublet_unpolarized', 'pd-xray-cwl_lif'),
+    ('absorption', 'lif_single_absorption', 'pd-xray-cwl_lif'),
+    ('round-robin', 'pbsox', 'pd-xray-cwl_pbso4_round-robin'),
 ]:
     target = ROOT / case
     target.mkdir(exist_ok=True)
     files = {}
     for extension in ('pcr', 'prf', 'sum', 'bac', 'dat'):
         name = f'{stem}.{extension}'
-        raw = committed(
-            UPSTREAM, REVISION, f'docs/docs/verification/fullprof/pd-xray-cwl_lif/{name}'
-        )
+        raw = committed(UPSTREAM, REVISION, f'docs/docs/verification/fullprof/{folder}/{name}')
         (target / name).write_bytes(raw)
         files[name] = hashlib.sha256(raw).hexdigest()
     manifest[case] = {'stem': stem, 'files': files}

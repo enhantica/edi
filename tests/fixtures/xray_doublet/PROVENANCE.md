@@ -32,3 +32,11 @@ The derived phase result uses `_linked_structure.weight_fraction` and a
 `weight_fraction` member carrying `value` and `uncertainty`, beside `scale`.
 The application displays it read-only. These names make the cross-repo seam
 reviewable before implementation.
+
+The PbSO4 round-robin files come from the same diffraction-lib revision,
+`docs/docs/verification/fullprof/pd-xray-cwl_pbso4_round-robin/pbsox.*`.
+FullProf's Npr 7 + BeBa shape has no exact map to the supported Caglioti
+pseudo-Voigt + BeBa. The executable page fits widths, mixing and the four
+coefficients from the issue-166 start and labels its bounds as regression
+pins. Its file is added, but it does not count toward diffraction-lib parity.
+Only the two LiF additions move that counter.

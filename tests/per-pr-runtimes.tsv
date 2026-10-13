@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-12T16:20:58Z
+# measured_utc = 2026-10-13T08:05:04Z
 #
-# Recorded from: seq57/runtime-carry.json; canonical three-way retention from committed parent banks, successful complete merged collection; task-head costs retained where both parents changed; no invented measurements
-# Collected tests: 11075; with a reported duration: 6081
+# Recorded from: measured test run (30 node(s) measured once, 10254 banked, 0 stale row(s) dropped)
+# Collected tests: 11102; with a reported duration: 6084
 # Module-scoped fixture costs recorded: 40
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 11075
+# inventory_python = 11102
 # inventory_cpp = 309
-# inventory_measured = 10257
-# inventory_unmeasured = 1127
+# inventory_measured = 10263
+# inventory_unmeasured = 1148
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -5268,6 +5268,11 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_fitting_mode_weights.py:
 0.000	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[tests/fixtures/e04_t1/warning-project/experiments/experiment.edi]
 0.000	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[tests/fixtures/e04_t1/xray-project/experiments/experiment.edi#pre-catalogue]
 0.000	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[tests/fixtures/e04_t1/xray-project/experiments/experiment.edi]
+0.000	tests/integration/py/test_ionic_xray_factors.py::test_external_coefficient_snapshot_retains_its_digest
+UNMEASURED:failed-in-this-run	tests/integration/py/test_ionic_xray_factors.py::test_ionic_site_intensity_ratio_matches_published_factors[it1992-Fe3+]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_ionic_xray_factors.py::test_ionic_site_intensity_ratio_matches_published_factors[it1992-O2-]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_ionic_xray_factors.py::test_ionic_site_intensity_ratio_matches_published_factors[wk1995-Fe3+]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_ionic_xray_factors.py::test_ionic_site_intensity_ratio_matches_published_factors[wk1995-O2-]
 0.000	tests/integration/py/test_latp_reference.py::test_latp_reference_quantities_are_fullprof_values_not_scan_regression_pins
 0.000	tests/integration/py/test_legacy_project_load.py::test_old_engine_start_state_is_refused_with_its_name[chebyshev]
 0.000	tests/integration/py/test_legacy_project_load.py::test_old_engine_start_state_is_refused_with_its_name[line-segment]
@@ -5880,6 +5885,21 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.p
 0.150	tests/integration/py/test_table_display.py::test_scientific_thresholds_and_signed_four_digit_values
 0.600	tests/integration/py/test_table_display.py::test_sequential_count_colours_follow_zero_and_nonzero_state
 0.160	tests/integration/py/test_ui_input_settling.py::test_real_input_waits_for_motion_and_rendering_but_refuses_a_stuck_viewport
+UNMEASURED:failed-in-this-run	tests/integration/py/test_weight_fraction_app.py::test_linked_structure_table_displays_weight_fraction_without_an_editor
+UNMEASURED:failed-in-this-run	tests/integration/py/test_weight_fractions.py::test_derived_weight_fraction_and_su_are_written_to_edi
+UNMEASURED:failed-in-this-run	tests/integration/py/test_weight_fractions.py::test_hill_howard_values_uncertainties_and_warm_scale_changes
+UNMEASURED:failed-in-this-run	tests/integration/py/test_xray_doublet.py::test_doublet_roundtrip_and_reached_serialization_escape[False]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_xray_doublet.py::test_doublet_roundtrip_and_reached_serialization_escape[True]
+0.050	tests/integration/py/test_xray_doublet.py::test_fixed_fullprof_profile_and_reached_correction_escape[absorption]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_xray_doublet.py::test_fixed_fullprof_profile_and_reached_correction_escape[doublet]
+0.000	tests/integration/py/test_xray_doublet.py::test_fullprof_bytes_match_the_committed_external_source[absorption]
+0.000	tests/integration/py/test_xray_doublet.py::test_fullprof_bytes_match_the_committed_external_source[doublet]
+0.160	tests/integration/py/test_xray_doublet.py::test_independent_profile_rejects_the_uncorrected_single_component[absorption]
+0.050	tests/integration/py/test_xray_doublet.py::test_independent_profile_rejects_the_uncorrected_single_component[doublet]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_xray_doublet.py::test_nonidentity_ratio_is_linear_and_warm_changes_invalidate
+UNMEASURED:failed-in-this-run	tests/integration/py/test_xray_doublet.py::test_second_wavelength_has_its_own_bragg_position_and_lorentz_factor
+UNMEASURED:failed-in-this-run	tests/integration/py/test_xray_doublet.py::test_zero_ratio_is_bitwise_single_wavelength_boundary
+UNMEASURED:failed-in-this-run	tests/integration/py/test_xray_page_inventory.py::test_xray_page_filename_delta_preserves_prior_pages_and_adds_exactly_three
 0.570	tests/system/py/test_app_receipt_current_inputs.py::test_real_host_receipt_refuses_stale_compiled_inputs[entry-browser-screen]
 0.600	tests/system/py/test_app_receipt_current_inputs.py::test_real_host_receipt_refuses_stale_compiled_inputs[entry-browser-selector]
 0.540	tests/system/py/test_app_receipt_current_inputs.py::test_real_host_receipt_refuses_stale_compiled_inputs[entry-desktop-screen]
@@ -9819,6 +9839,13 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_web_parallel_build.py::test_e
 0.000	tests/system/py/test_web_parallel_oracles.py::test_owner_five_bank_reference_is_not_a_generated_web_pin
 0.290	tests/system/py/test_web_parallel_oracles.py::test_web_fit_native_reference_covers_parameters_and_calculated_pattern[lbco]
 3.630	tests/system/py/test_web_parallel_oracles.py::test_web_fit_native_reference_covers_parameters_and_calculated_pattern[ncaf]
+UNMEASURED:failed-in-this-run	tests/system/py/test_xray_doublet_cli.py::test_cli_executes_doublet_and_declared_corrections[pd-xray-cwl_lif_single]
+UNMEASURED:failed-in-this-run	tests/system/py/test_xray_doublet_cli.py::test_cli_executes_doublet_and_declared_corrections[pd-xray-cwl_pbso4-lab_round-robin]
+UNMEASURED:failed-in-this-run	tests/system/py/test_xray_doublet_pages.py::test_page_compares_live_calculation_and_rejects_disabled_correction[False-absorption]
+UNMEASURED:failed-in-this-run	tests/system/py/test_xray_doublet_pages.py::test_page_compares_live_calculation_and_rejects_disabled_correction[False-doublet]
+UNMEASURED:failed-in-this-run	tests/system/py/test_xray_doublet_pages.py::test_page_compares_live_calculation_and_rejects_disabled_correction[True-absorption]
+UNMEASURED:failed-in-this-run	tests/system/py/test_xray_doublet_pages.py::test_page_compares_live_calculation_and_rejects_disabled_correction[True-doublet]
+UNMEASURED:failed-in-this-run	tests/system/py/test_xray_round_robin_page.py::test_round_robin_page_executes_fitted_shape_and_its_regression_pins
 0.010	tests/system/py/test_yap_agreement.py::test_delivered_yap_project_has_both_phases_and_physical_occupancies
 0.000	tests/system/py/test_yap_agreement.py::test_verification_page_executes_the_owner_reference_comparison
 2.930	tests/system/py/test_yap_agreement.py::test_yap_fit_agrees_with_every_other_fullprof_parameter_and_rwp

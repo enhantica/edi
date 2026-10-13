@@ -26,6 +26,16 @@
   },
   "published-f0.json": "36a6002b64df417d4717ffddd02342bc23e301f6e372ce88e38188f9be4587b4",
   "revision": "0d9f10e412a0cd08d4dd0af95845dd9bb597dcdf",
+  "round-robin": {
+    "files": {
+      "pbsox.bac": "d3b8a079bdc75063650ee7365dbd6c47a6c5bda85e15a28125ebba9115ae138d",
+      "pbsox.dat": "ee2d5d38e9d44f68734605360b6fe1f40b3a5492cd839ad9db8617b9a30ae143",
+      "pbsox.pcr": "08036035bd6025c64db57d58ceccd95cbb85ad2cc9c69484ee8db2ec9e2f4c84",
+      "pbsox.prf": "8e46b904360a9d1bd61d39c093cf3a06ef53a37354e37b599289901950ffc0d5",
+      "pbsox.sum": "b904aa92dfd24f2474ccf3984885f404891285e102735c81b999aaa4ebc6660e"
+    },
+    "stem": "pbsox"
+  },
   "upstream": "https://github.com/easyscience/diffraction-lib",
   "wk1995": {
     "libraries_revision": "b37f9f3148d2771c6d84ee91f57331676d93746f",
