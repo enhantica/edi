@@ -12,11 +12,6 @@ namespace edi_app {
 
 namespace {
 
-// The home view's zoom (ADR-0017 §16; the owner, 2026-10-02): the initial view, the reset and the views along a, b
-// and c show the structure at 0.9 of the core's fitted size (edi::default_view, diffraction-lib's fit), with more
-// margin; the orientation rule is the core's, unchanged.
-constexpr double kHomeZoom = 0.9;
-
 QVector3D vec(const edi::Vec3& v) {
     return {static_cast<float>(v.x), static_cast<float>(v.y), static_cast<float>(v.z)};
 }
@@ -331,7 +326,6 @@ void StructureViewController::toggleProjection() {
 void StructureViewController::viewAlong(int axis) {
     const edi::Projection projection = view_.projection;
     edi::SceneView target = edi::view_along(scene_, axis);
-    target.magnification = kHomeZoom;
     target.projection = projection;
     animateTo(target);
 }
@@ -339,7 +333,6 @@ void StructureViewController::viewAlong(int axis) {
 void StructureViewController::resetView() {
     const edi::Projection projection = view_.projection;
     edi::SceneView target = edi::default_view(scene_);
-    target.magnification = kHomeZoom;
     target.projection = projection;
     animateTo(target);
 }
@@ -478,7 +471,6 @@ void StructureViewController::present() {
         if (!viewed_) {
             const edi::Projection projection = view_.projection;
             view_ = edi::default_view(scene_);
-            view_.magnification = kHomeZoom;
             view_.projection = projection;
             viewed_ = scene_.current;
         }
