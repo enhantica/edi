@@ -21,6 +21,7 @@ from contract import (
     subject,
     validate_builds,
     validate_controls,
+    validate_retained_sdk,
     validate_work,
 )
 from contract import (
@@ -175,7 +176,7 @@ def configuration(cache_file):
     return settings
 
 
-def sdk_identity(build):
+def sdk_identity(build, cli_sha256):
     cache = Path(build['cmake_cache']).read_text(encoding='utf-8')
     directories = [
         line.split('=', 1)[1] for line in cache.splitlines() if line.startswith('crysta_DIR:')
@@ -183,6 +184,12 @@ def sdk_identity(build):
     if len(directories) != 1:
         raise ValueError('The actual command must identify its installed engine package')
     manifest = Path(directories[0]).parents[2] / 'share/crysta-sdk/manifest.json'
+    if 'sdk_manifest' in build:
+        manifest = Path(build['sdk_manifest'])
+        retained = json.loads(Path(build['retained_identity']).read_text(encoding='utf-8'))
+        validate_retained_sdk(
+            retained, build['identity']['edi_source'], cli_sha256, digest(manifest)
+        )
     sdk = json.loads(manifest.read_text())
     reference = build['identity']['crysta_source']
     tree = subprocess.check_output(
@@ -229,7 +236,7 @@ def build_identity(build, *, cli_only=False):
         **build['identity'],
         'compiled_cli_sha256': digest(Path(extension)),
         'source_sha256': source_hashes(source),
-        **sdk_identity(build),
+        **sdk_identity(build, digest(Path(extension))),
     }
     if not cli_only:
         observed['native_configuration'] = configuration(build['native_cmake_cache'])

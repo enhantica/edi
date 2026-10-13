@@ -254,6 +254,17 @@ def validate_controls(controls):
             raise ValueError('the pre-change slow build must fail the real fit-time comparator')
 
 
+def validate_retained_sdk(retained, edi_source, cli_sha256, manifest_sha256):
+    if (
+        not isinstance(retained, dict)
+        or retained.get('edi_source') != edi_source
+        or retained.get('compiled_edi_source') != edi_source
+        or retained.get('compiled_cli_sha256') != cli_sha256
+        or retained.get('sdk_manifest_sha256') != manifest_sha256
+    ):
+        raise ValueError('The retained SDK observation must bind the unchanged compiled command')
+
+
 def validate_builds(builds):
     baseline = builds['baseline']
     if not baseline['edi_source'].startswith('2e04556') or not baseline[

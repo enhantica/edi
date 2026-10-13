@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-13T06:28:05Z
+# measured_utc = 2026-10-13T06:45:30Z
 #
-# Recorded from: measured test run (6 node(s) measured once, 10373 banked, 0 stale row(s) dropped)
-# Collected tests: 11197; with a reported duration: 6111
+# Recorded from: measured test run (102 node(s) measured once, 10283 banked, 0 stale row(s) dropped)
+# Collected tests: 11203; with a reported duration: 6111
 # Module-scoped fixture costs recorded: 42
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 11197
+# inventory_python = 11203
 # inventory_cpp = 312
-# inventory_measured = 10379
+# inventory_measured = 10385
 # inventory_unmeasured = 1130
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
@@ -5827,8 +5827,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.p
 0.250	tests/integration/py/test_scan_template.py::test_template_setter_selects_scan_data_without_changing_parameters[all594842.dat]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_actual_native_builds_require_matching_release_configuration[CMAKE_BUILD_TYPE-Debug]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_actual_native_builds_require_matching_release_configuration[compiler-different]
-0.080	tests/integration/py/test_scan_timing_contract.py::test_actual_scratch_copies_hash_identically_without_fit_starts_or_resume_files
-0.170	tests/integration/py/test_scan_timing_contract.py::test_comparison_process_exits_nonzero_for_a_slow_fixed_build
+0.100	tests/integration/py/test_scan_timing_contract.py::test_actual_scratch_copies_hash_identically_without_fit_starts_or_resume_files
+0.160	tests/integration/py/test_scan_timing_contract.py::test_comparison_process_exits_nonzero_for_a_slow_fixed_build
 0.010	tests/integration/py/test_scan_timing_contract.py::test_contained_delay_accepts_worker_overlap_on_its_own_clock[at-endpoint]
 0.010	tests/integration/py/test_scan_timing_contract.py::test_contained_delay_accepts_worker_overlap_on_its_own_clock[inside]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[early-endpoint-fit]
@@ -5857,8 +5857,14 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.p
 0.000	tests/integration/py/test_scan_timing_contract.py::test_each_actual_reset_condition_is_required_before_timing_credit[prefit_values_restored]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_each_actual_reset_condition_is_required_before_timing_credit[remaining_files]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_each_actual_reset_condition_is_required_before_timing_credit[result_rows]
-0.000	tests/integration/py/test_scan_timing_contract.py::test_each_actual_reset_condition_is_required_before_timing_credit[undo_available]
+0.010	tests/integration/py/test_scan_timing_contract.py::test_each_actual_reset_condition_is_required_before_timing_credit[undo_available]
 0.020	tests/integration/py/test_scan_timing_contract.py::test_fit_and_reset_sum_is_compared_per_run_not_as_a_sum_of_medians
+0.000	tests/integration/py/test_scan_timing_contract.py::test_historical_sdk_locator_requires_its_retained_binary_bond[compiled_cli_sha256]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_historical_sdk_locator_requires_its_retained_binary_bond[compiled_edi_source]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_historical_sdk_locator_requires_its_retained_binary_bond[edi_source]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_historical_sdk_locator_requires_its_retained_binary_bond[missing-field]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_historical_sdk_locator_requires_its_retained_binary_bond[not-a-record]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_historical_sdk_locator_requires_its_retained_binary_bond[sdk_manifest_sha256]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_incomplete_work_never_gets_a_fast_time[app-calculation_pending-True]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_incomplete_work_never_gets_a_fast_time[app-calculation_stale-True]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_incomplete_work_never_gets_a_fast_time[app-follow-locked]
@@ -5918,7 +5924,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.p
 0.000	tests/integration/py/test_scan_timing_contract.py::test_provenance_ordering_and_negative_controls_fail_closed[nan-time]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_provenance_ordering_and_negative_controls_fail_closed[passing-slow-control]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_provenance_ordering_and_negative_controls_fail_closed[reorder]
-0.010	tests/integration/py/test_scan_timing_contract.py::test_provenance_ordering_and_negative_controls_fail_closed[short-delay]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_provenance_ordering_and_negative_controls_fail_closed[short-delay]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_provenance_ordering_and_negative_controls_fail_closed[wrong-baseline]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_provenance_ordering_and_negative_controls_fail_closed[wrong-compiled-source]
 0.070	tests/integration/py/test_shared_correlation_saved_bytes.py::test_fitted_correlation_loop_matches_pre_change_regression_pin[scan]

@@ -18,6 +18,7 @@ from tests.fixtures.scan_timing.contract import (
     prepare_input,
     prepared_analysis,
     subject,
+    validate_retained_sdk,
 )
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -501,3 +502,32 @@ def test_native_clock_parser_keeps_each_slot_with_its_interval():
     assert ordinary == {'fit_ms': 6491, 'reset_ms': 108} and absent == {}, (
         'Ordinary timing must preserve endpoints without inventing delay records'
     )
+
+
+@pytest.mark.parametrize(
+    'field',
+    [
+        'edi_source',
+        'compiled_edi_source',
+        'compiled_cli_sha256',
+        'sdk_manifest_sha256',
+        'missing-field',
+        'not-a-record',
+    ],
+)
+def test_historical_sdk_locator_requires_its_retained_binary_bond(field):
+    retained = {
+        'edi_source': 'a' * 40,
+        'compiled_edi_source': 'a' * 40,
+        'compiled_cli_sha256': 'b' * 64,
+        'sdk_manifest_sha256': 'c' * 64,
+    }
+    validate_retained_sdk(retained, 'a' * 40, 'b' * 64, 'c' * 64)
+    if field == 'not-a-record':
+        retained = None
+    elif field == 'missing-field':
+        del retained['sdk_manifest_sha256']
+    else:
+        retained[field] = 'changed'
+    with pytest.raises(ValueError, match='unchanged compiled command'):
+        validate_retained_sdk(retained, 'a' * 40, 'b' * 64, 'c' * 64)
