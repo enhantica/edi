@@ -87,7 +87,8 @@ qt_add_qml_module(edi_app_module
         qml/Components/DiagnosticsDialog.qml
         qml/Components/EmptyStateLabel.qml
         qml/Components/DataTable.qml
-        qml/Components/FitOutcomeLabel.qml
+        qml/Components/DigitText.qml
+        qml/Components/FitStatusItem.qml
         qml/Components/FitProgressBar.qml
         qml/Components/FitResultsDialog.qml
         qml/Components/ChartLegend.qml
