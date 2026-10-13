@@ -19,7 +19,9 @@ Rectangle {
         }
         function init() {
             Session.closeProject();
-            failOnWarning(/.*/);
+            // The offscreen runner has no GLES context. Exempt only these exact Qt
+            // bootstrap diagnostics; every QML/product warning still fails.
+            failOnWarning(/^(?!QRhiGles2: Failed to create (temporary )?context$).*/);
             page = reportFactory.createObject(parent, {
                 width: 1200,
                 height: 800,
