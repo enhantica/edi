@@ -116,8 +116,14 @@ std::string label_of(const Parameter& parameter, const std::string& fallback) {
     return symbol.empty() ? fallback : symbol;
 }
 
+// A parameter's units as the report writes them: an angle in degrees as ° and °², as the Cell table writes it (the
+// conductor, 2026-10-13).
 std::string units_of(const Parameter& parameter) {
-    return parameter.spec != nullptr && parameter.spec->display_units != nullptr ? parameter.spec->display_units : "";
+    if (parameter.spec == nullptr || parameter.spec->display_units == nullptr) {
+        return "";
+    }
+    const std::string units = parameter.spec->display_units;
+    return units.starts_with("deg") ? "°" + units.substr(3) : units;
 }
 
 void add_fields(std::vector<ReportRow>& rows, const std::vector<CategoryField>& fields, const std::string& rule) {
