@@ -50,14 +50,13 @@ are notebook calls, not report sections; the owner asked for all three in edi's 
    (`report_static_html`): the same sections and tables, each number in two cells so a column's points line up under
    any header, and each figure an image by its name. The app lays it out with `QTextDocument` on A4 pages with 2.5 cm
    margins and the page number below, keeps a heading with what follows it and a short table whole, and draws the
-   figures as the preview's images, grabbed at twice their size. The CLI and Python do not write it, as edi's core
-   has no Qt.
+   figures as images of copies of the preview's figures in the light colours, whatever the app's theme, as a PDF is
+   for print, grabbed at twice their size. The CLI and Python do not write it, as edi's core has no Qt.
 
 ## Consequences
 
 - The HTML report, the Report page, the PDF and a notebook show the same numbers, charts and order, and the CLI,
-  Python and the app write the same HTML bytes for the same project, options and time. The PDF's figures follow the
-  app's theme, as the preview draws them.
+  Python and the app write the same HTML bytes for the same project, options and time.
 - Restyled charts and edi's Python plotting take these specs as they are; a renderer that needs another viewport
   reruns the same core function on the model's data.
 - The model holds full-resolution patterns, so a report of a long scan is as large as its template's data.
