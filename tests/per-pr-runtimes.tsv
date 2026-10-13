@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-13T05:20:29Z
+# measured_utc = 2026-10-13T05:30:15Z
 #
-# Recorded from: measured test run (12 node(s) measured once, 10321 banked, 0 stale row(s) dropped)
-# Collected tests: 11159; with a reported duration: 6100
+# Recorded from: measured test run (4 node(s) measured once, 10333 banked, 0 stale row(s) dropped)
+# Collected tests: 11159; with a reported duration: 6104
 # Module-scoped fixture costs recorded: 42
 #
 # Breaches are decided PER TIER against the table
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 11159
 # inventory_cpp = 312
-# inventory_measured = 10333
-# inventory_unmeasured = 1138
+# inventory_measured = 10337
+# inventory_unmeasured = 1134
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -8884,10 +8884,10 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_newest_project_census.py::tes
 0.120	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[two-held-names-title-structure]
 0.170	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[two-held-names-upper-experiment]
 0.120	tests/system/py/test_plain_data_app.py::test_automatic_creation_uses_the_persisted_casefold_identity_domain[two-held-names-upper-structure]
-UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_cancelled_scan_retains_completed_core_pairs_and_resumes[fresh-independent]
-UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_cancelled_scan_retains_completed_core_pairs_and_resumes[fresh-sequential]
-UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_cancelled_scan_retains_completed_core_pairs_and_resumes[replace-old-pair-independent]
-UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_cancelled_scan_retains_completed_core_pairs_and_resumes[replace-old-pair-sequential]
+0.170	tests/system/py/test_plain_data_app.py::test_cancelled_scan_retains_completed_core_pairs_and_resumes[fresh-independent]
+0.258	tests/system/py/test_plain_data_app.py::test_cancelled_scan_retains_completed_core_pairs_and_resumes[fresh-sequential]
+0.220	tests/system/py/test_plain_data_app.py::test_cancelled_scan_retains_completed_core_pairs_and_resumes[replace-old-pair-independent]
+0.150	tests/system/py/test_plain_data_app.py::test_cancelled_scan_retains_completed_core_pairs_and_resumes[replace-old-pair-sequential]
 0.080	tests/system/py/test_plain_data_app.py::test_default_structure_matches_frozen_beta_cif
 0.470	tests/system/py/test_plain_data_app.py::test_desktop_browser_picker_and_editability_bindings_share_load_path
 0.370	tests/system/py/test_plain_data_app.py::test_filename_and_user_name[default-name]
@@ -11541,7 +11541,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 0.346	tests/system/py/test_e09_t75_native_execution.py
 # module-cost: 3.929	tests/system/py/test_fit_participants_native.py
 # module-cost: 11.686	tests/system/py/test_linear_row_admission.py
-# module-cost: 178.437	tests/system/py/test_plain_data_app.py
+# module-cost: 182.962	tests/system/py/test_plain_data_app.py
 # module-cost: 21.241	tests/system/py/test_pytest_child_environment.py
 # module-cost: 2.368	tests/system/py/test_scan_accident_paths.py
 # module-cost: 717.517	tests/system/py/test_scan_app_execution.py

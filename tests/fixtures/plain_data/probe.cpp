@@ -353,14 +353,21 @@ QJsonObject correlation_lifecycle(const std::string& action, const QString& fixt
         }
         int completed = 0;
         result["before"] = correlation_pairs(core);
+        result["beforeCompact"] = shared_record_state(core.fit_result);
         fit({}, [] { return true; });
         result["cancelBeforeAny"] = correlation_pairs(core);
+        result["cancelBeforeAnyCompact"] = shared_record_state(core.fit_result);
         fit([&](const edi::ScanFileRecord&) { ++completed; }, [&] { return completed == 1; });
         result["completed"] = completed;
         result["cancelled"] = correlation_pairs(core);
+        result["cancelledCompact"] = shared_record_state(core.fit_result);
         edi::save_project_as(core, (std::filesystem::path(work.toStdString()) / "saved").string());
-        core = edi::load_project((std::filesystem::path(work.toStdString()) / "saved").string());
-        result["reopened"] = correlation_pairs(core);
+        const auto reloaded_input = std::filesystem::path(work.toStdString()) / "reload-resume";
+        std::filesystem::copy(std::filesystem::path(work.toStdString()) / "saved", reloaded_input,
+                              std::filesystem::copy_options::recursive);
+        auto reopened = edi::load_project(reloaded_input.string());
+        result["reopened"] = correlation_pairs(reopened);
+        result["reopenedCompact"] = shared_record_state(reopened.fit_result);
         QJsonArray resumed;
         fit(
             [&](const edi::ScanFileRecord& row) {
@@ -369,6 +376,7 @@ QJsonObject correlation_lifecycle(const std::string& action, const QString& fixt
             {});
         result["resumedFiles"] = resumed;
         result["resumed"] = correlation_pairs(core);
+        result["resumedCompact"] = shared_record_state(core.fit_result);
         QJsonArray noop;
         fit(
             [&](const edi::ScanFileRecord& row) {
@@ -377,12 +385,24 @@ QJsonObject correlation_lifecycle(const std::string& action, const QString& fixt
             {});
         result["noopFiles"] = noop;
         result["noop"] = correlation_pairs(core);
+        result["noopCompact"] = shared_record_state(core.fit_result);
         edi::save_project_as(
             core, (std::filesystem::path(work.toStdString()) / "completed-saved").string());
         result["memoryAfterSave"] = correlation_pairs(core);
+        result["memoryAfterSaveCompact"] = shared_record_state(core.fit_result);
         const auto saved_core = edi::load_project(
             (std::filesystem::path(work.toStdString()) / "completed-saved").string());
         result["completedReopened"] = correlation_pairs(saved_core);
+        result["completedReopenedCompact"] = shared_record_state(saved_core.fit_result);
+        // Replay resume after reload too: only the template's literal rows cross a save.
+        core = std::move(reopened);
+        QJsonArray reloaded_files;
+        fit([&](const edi::ScanFileRecord& row) {
+                reloaded_files.append(QString::fromStdString(row.file_name));
+            }, {});
+        result["reloadedResumeFiles"] = reloaded_files;
+        result["reloadedResumed"] = correlation_pairs(core);
+        result["reloadedResumedCompact"] = shared_record_state(core.fit_result);
         return result;
     }
     if (history) {
