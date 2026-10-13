@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import shlex
@@ -26,7 +27,13 @@ def loops(path):
             line = lines[index].strip()
             if line.startswith(('_', 'loop_', 'data_')):
                 break
-            values.extend(shlex.split(line, comments=True))
+            # Ordinary numeric rows need no shell lexer. Quoting, escaping and
+            # comments still take the full parser, preserving their exact arity.
+            values.extend(
+                shlex.split(line, comments=True)
+                if any(char in line for char in '"\\\'#')
+                else line.split()
+            )
             index += 1
         if not headers or len(values) % len(headers):
             raise ValueError(f'malformed fixture loop: {path}')
@@ -41,9 +48,13 @@ def loops(path):
     return result
 
 
-def generate():
+def generate(selected_projects=()):
     projects = sorted((ROOT / 'docs/user/cli').glob('*/project/project.edi'))
     projects += sorted((ROOT / 'tests/fixtures/e04_t1').glob('*-project/project.edi'))
+    if selected_projects:
+        projects = [path for path in projects if path.parent.parent.name in selected_projects]
+        if {path.parent.parent.name for path in projects} != set(selected_projects):
+            raise ValueError('Scoped loop generation requires each declared project')
     cases = []
     categories = set()
     for project in projects:
@@ -62,8 +73,18 @@ def generate():
                     'block': path.stem,
                     'file': str(path.relative_to(ROOT)),
                     'sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
+                    **({'source_bytes': 'current'} if selected_projects else {}),
                     **loop,
                 })
+    if selected_projects:
+        retained = json.loads(Path(__file__).with_name('loops.json').read_text())
+        targets = {str(path.parent.relative_to(ROOT)) for path in projects}
+        existing = {row['tag'] for row in retained['loops']}
+        fresh = {row['tag']: row for row in cases}
+        cases = [
+            fresh[row['tag']] if row['project'] in targets else row for row in retained['loops']
+        ] + [row for row in cases if row['tag'] not in existing]
+        categories = {row['category'] for row in cases}
     output = {
         'provenance': '.edi loop_ declarations, no app category lists',
         'categories': sorted(categories),
@@ -93,4 +114,6 @@ def generate_profile_adaptation():
 
 
 if __name__ == '__main__':
-    generate()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--project', action='append', default=[])
+    generate(parser.parse_args().project)
