@@ -935,6 +935,14 @@ refuses to write its bank rows into it.
   run's own when it failed or was stopped, else Stopped while files are left, else the worst file's (Max iterations,
   No step, Success). The time is recorded in `analysis/scan-run.json`; results no run of the app wrote show none.
 
+### 20. The Correlations tab's toolbar
+
+The Correlations tab (`Components/CorrelationChart.qml`, data in ADR-0034) draws diffraction-lib's lower triangle by
+default. Its toolbar holds the correlation level and the parameter count, then two toggle buttons drawn as the pattern
+chart's (the owner, 2026-10-12): **names** shows the parameter names along both axes, hidden at the start, since the
+cell's tool tip names both parameters and the matrix then takes the space; **full matrix** mirrors the lower triangle
+above the diagonal, off at the start. The diagonal stays blank in both.
+
 ## Consequences
 
 - The design choices the owner makes by eye are reviewable against a written rule; the phase-2 reviewer checks

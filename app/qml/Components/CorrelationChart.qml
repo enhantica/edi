@@ -14,7 +14,9 @@ import edi.app
 // square cells with the diagonal left blank, coloured on a diverging scale from red at -1 through the chart's
 // background at 0 to blue at 1, with lines between the cells, a frame, the parameters' names along both edges and a
 // colour bar. A cell shows its value when there is room, and as a tool tip. The toolbar sets the smallest absolute
-// correlation shown and the most parameters shown (CorrelationViewModel).
+// correlation shown and the most parameters shown (CorrelationViewModel); two toggles after them show the names along
+// the edges (hidden at the start; the tool tip still names both parameters) and the full matrix instead of the lower
+// triangle (the full matrix mirrors it, the diagonal still blank; owner, 2026-10-12).
 Item {
     id: chart
 
@@ -23,6 +25,9 @@ Item {
     property ProjectViewModel project: null
     readonly property CorrelationViewModel correlations: project ? project.correlations : null
     property bool shown: true
+    // The toolbar's two toggles.
+    property bool namesShown: false
+    property bool fullMatrix: false
 
     readonly property real em: EaStyle.Sizes.fontPixelSize
     readonly property real sideMargin: AppSizes.mainAreaMargin
@@ -36,9 +41,15 @@ Item {
     readonly property var values: correlations ? correlations.values : []
     readonly property int count: labels.length
 
-    // A cell's value; NaN outside the values, which can trail the labels by one change.
+    // A cell's value; NaN outside the values, which can trail the labels by one change. Above the diagonal, the full
+    // matrix shows the cell mirrored below it.
     function valueAt(index: int): real {
-        return index >= 0 && index < values.length ? values[index] : NaN;
+        if (count <= 0)
+            return NaN;
+        const row = Math.floor(index / count);
+        const column = index % count;
+        const source = fullMatrix && column > row ? column * count + row : index;
+        return source >= 0 && source < values.length ? values[source] : NaN;
     }
 
     // The colour of a coefficient: the background mixed towards red or blue by its size.
@@ -102,6 +113,25 @@ Item {
                 if (!isNaN(count))
                     chart.correlations.maxParameters = count;
             }
+        }
+        // Set apart from the boxes as the pattern chart's button groups are.
+        Item {
+            width: EaStyle.Sizes.fontPixelSize * 0.5
+            height: 1
+        }
+        ChartToolButton {
+            objectName: "correlations.toolbar.names"
+            fontIcon: "font"
+            toolTip: chart.namesShown ? qsTr("Hide the parameter names along the axes") : qsTr("Show the parameter names along the axes")
+            checked: chart.namesShown
+            onClicked: chart.namesShown = !chart.namesShown
+        }
+        ChartToolButton {
+            objectName: "correlations.toolbar.fullMatrix"
+            fontIcon: "th"
+            toolTip: chart.fullMatrix ? qsTr("Show the lower triangle only") : qsTr("Show the full matrix")
+            checked: chart.fullMatrix
+            onClicked: chart.fullMatrix = !chart.fullMatrix
         }
     }
 
@@ -219,14 +249,14 @@ Item {
                 widest = Math.max(widest, metrics.advanceWidth(chart.labels[i]));
             return Math.ceil(widest);
         }
-        readonly property real rowLabelWidth: Math.min(widestLabel, width * 0.4) + chart.em * 0.5
+        readonly property real rowLabelWidth: chart.namesShown ? Math.min(widestLabel, width * 0.4) + chart.em * 0.5 : 0
         readonly property real colourBarWidth: chart.em * 4.5
         readonly property real flatLabelHeight: chart.em * 2
         readonly property real gridWidth: width - rowLabelWidth - colourBarWidth
         readonly property real flatCell: chart.count > 0 ? Math.floor(Math.min(gridWidth, height - flatLabelHeight) / chart.count) : 0
         // The column names stand level when each fits its cell, else at 45 degrees, as long as the widest needs.
         readonly property bool slanted: widestLabel > flatCell * 0.95
-        readonly property real columnLabelHeight: slanted ? Math.min(widestLabel, width * 0.4) * Math.SQRT1_2 + chart.em * 1.5 : flatLabelHeight
+        readonly property real columnLabelHeight: !chart.namesShown ? 0 : slanted ? Math.min(widestLabel, width * 0.4) * Math.SQRT1_2 + chart.em * 1.5 : flatLabelHeight
         readonly property real cell: chart.count > 0 ? Math.max(0, Math.floor(Math.min(gridWidth, height - columnLabelHeight) / chart.count)) : 0
         readonly property real side: cell * chart.count
         // Every k-th name on each axis, k as small as keeps neighbours a line apart: a row's names stand a cell apart,
@@ -329,7 +359,7 @@ Item {
             model: chart.count
             delegate: EaElements.Label {
                 required property int index
-                visible: index % area.rowLabelStep === 0
+                visible: chart.namesShown && index % area.rowLabelStep === 0
                 x: grid.x - width - chart.em * 0.5
                 y: grid.y + (index + 0.5) * area.cell - height / 2
                 width: Math.min(implicitWidth, area.rowLabelWidth - chart.em * 0.5)
@@ -344,7 +374,7 @@ Item {
             model: chart.count
             delegate: EaElements.Label {
                 required property int index
-                visible: index % area.columnLabelStep === 0
+                visible: chart.namesShown && index % area.columnLabelStep === 0
                 width: Math.min(implicitWidth, area.width * 0.4)
                 elide: Text.ElideLeft
                 color: EaStyle.Colors.chartLabels
