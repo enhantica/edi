@@ -322,14 +322,6 @@ SceneFrame home_frame(const StructureScene& scene, bool has_cell) {
     return frame;
 }
 
-// I13's H: the fitted half height of the home view in this viewport.
-double fitted_half_height(const SceneFrame& frame, const Viewport& viewport) {
-    if (!(viewport.width > 0.0) || !(viewport.height > 0.0)) {
-        return std::max(frame.half_height, frame.half_width);
-    }
-    return std::max(frame.half_height, frame.half_width * viewport.height / viewport.width);
-}
-
 double perspective_distance(double h) {
     return kPerspectiveDistance * h / std::tan(kPerspectiveHalfFovDeg * kDegree);
 }
@@ -491,6 +483,16 @@ std::string format_number(double value) {
 }
 
 }  // namespace
+
+// I13's H: the fitted half height of the home view in this viewport.
+double fitted_half_height(const SceneFrame& frame, const Viewport& viewport) {
+    // The drawing fits between the side bands, so the legend at one side never covers it.
+    const double width = viewport.width - 2.0 * viewport.side_band;
+    if (!(width > 0.0) || !(viewport.height > 0.0)) {
+        return std::max(frame.half_height, frame.half_width);
+    }
+    return std::max(frame.half_height, frame.half_width * viewport.height / width);
+}
 
 const std::vector<ElementStyle>& element_style_table() {
     static const std::vector<ElementStyle> table = parse_element_styles(detail::kElementStylesTsv);

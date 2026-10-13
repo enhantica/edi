@@ -49,6 +49,8 @@ class StructureViewController : public QObject {
     Q_PROPERTY(qreal viewportWidth READ viewportWidth WRITE setViewportWidth NOTIFY viewportWidthChanged)
     Q_PROPERTY(qreal viewportHeight READ viewportHeight WRITE setViewportHeight NOTIFY viewportHeightChanged)
     Q_PROPERTY(qreal topBand READ topBand WRITE setTopBand NOTIFY topBandChanged)
+    // The band kept clear at either side, for the legend: the fitted drawing stays between them.
+    Q_PROPERTY(qreal sideBand READ sideBand WRITE setSideBand NOTIFY sideBandChanged)
     // The QML-declared tables and layers this controller fills.
     Q_PROPERTY(edi_app::StructureInstances* spheres MEMBER spheres_ NOTIFY spheresChanged)
     Q_PROPERTY(edi_app::StructureInstances* cylinders MEMBER cylinders_ NOTIFY cylindersChanged)
@@ -124,6 +126,8 @@ class StructureViewController : public QObject {
     void setViewportHeight(qreal height);
     qreal topBand() const { return viewport_.top_band; }
     void setTopBand(qreal band);
+    qreal sideBand() const { return viewport_.side_band; }
+    void setSideBand(qreal band);
 
     bool current() const { return current_; }
     int revision() const { return revision_; }
@@ -204,6 +208,7 @@ class StructureViewController : public QObject {
     void viewportWidthChanged();
     void viewportHeightChanged();
     void topBandChanged();
+    void sideBandChanged();
     void spheresChanged();
     void cylindersChanged();
     void triadShaftsChanged();

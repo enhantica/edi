@@ -78,6 +78,8 @@ Rectangle {
         viewportHeight: view.height
         // The band kept clear at the top for the toolbar: its height with its margins.
         topBand: view.report ? 0 : toolbar.height + 2 * view.margin
+        // And at either side for the legend: its width with its margin, and a gap before the drawing.
+        sideBand: legend.visible ? view.sideMargin + legend.width + view.margin : 0
         spheres: structureScene.spheres
         cylinders: structureScene.cylinders
         triadShafts: structureScene.triadShafts

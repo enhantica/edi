@@ -213,14 +213,9 @@ void StructureViewController::setViewportHeight(qreal height) {
 }
 
 void StructureViewController::resized() {
-    // ADR-0022 §7: the drawing is prepared again only when the size changes the fitted half height H (edi::
-    // scene_drawing's `fitted_half_height`, I13's max(half height, half width × height / width)); otherwise
-    // only the camera follows.
-    const edi::SceneFrame& frame = scene_.frame;
-    const double h = viewport_.width > 0.0 && viewport_.height > 0.0
-                         ? std::max(frame.half_height, frame.half_width * viewport_.height / viewport_.width)
-                         : std::max(frame.half_height, frame.half_width);
-    if (h != drawing_.fitted_half_height) {
+    // ADR-0022 §7: the drawing is prepared again only when the size changes the fitted half height H (the core's
+    // edi::fitted_half_height, which scene_drawing uses); otherwise only the camera follows.
+    if (edi::fitted_half_height(scene_.frame, viewport_) != drawing_.fitted_half_height) {
         draw();
     } else {
         placeCamera();
@@ -232,6 +227,14 @@ void StructureViewController::setTopBand(qreal band) {
         viewport_.top_band = band;
         emit topBandChanged();
         placeCamera();
+    }
+}
+
+void StructureViewController::setSideBand(qreal band) {
+    if (band != viewport_.side_band) {
+        viewport_.side_band = band;
+        emit sideBandChanged();
+        resized();
     }
 }
 
