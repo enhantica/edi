@@ -26,6 +26,10 @@ Flickable {
     readonly property real padding: Math.round(em * 6 / 10.04)
     readonly property real keyGap: Math.round(em * 2)
     readonly property real border: EaStyle.Sizes.borderThickness
+    // A long table (an experiment's thousands of data points) shows a window of rows that scrolls, each row built as
+    // it comes into view, so the preview stays responsive.
+    readonly property bool windowed: rows.length > 100
+    readonly property int windowRows: 20
     // Every width is measured with the cells' own font, and again when it changes: a font that loads after the table
     // is made (macOS) would otherwise leave the columns measured with the fallback one, and clip their text.
     readonly property real dotWidth: {
@@ -65,7 +69,8 @@ Flickable {
         }
         return out;
     }
-    readonly property real tableWidth: layout.reduce((sum, column) => sum + column.width, 0) + 2 * border
+    // A windowed table keeps its scroll bar clear of the last column.
+    readonly property real tableWidth: layout.reduce((sum, column) => sum + column.width, 0) + 2 * border + (windowed ? vertical.width : 0)
 
     // A number's parts: before its decimal point, and after it (an s.u. bracket, an exponent and units with them; a
     // degree sign follows the digits directly).
@@ -99,6 +104,28 @@ Flickable {
         id: metrics
         font.family: EaStyle.Fonts.fontFamily
         font.pixelSize: table.em
+    }
+
+    // One row, its background alternating.
+    component Line: Rectangle {
+        id: line
+        required property var modelData
+        required property int index
+        width: body.width
+        height: table.rowHeight
+        color: index % 2 ? EaStyle.Colors.themeBackgroundHovered2 : EaStyle.Colors.themeBackgroundHovered1
+
+        Row {
+            Repeater {
+                model: line.modelData
+                delegate: Cell {
+                    required property string modelData
+                    required property int index
+                    column: index
+                    text: modelData
+                }
+            }
+        }
     }
 
     // One cell: a number on its decimal point, any other text from the left.
@@ -197,26 +224,20 @@ Flickable {
             }
         }
         Repeater {
-            model: table.rows
-            delegate: Rectangle {
-                id: line
-                required property var modelData
-                required property int index
-                width: body.width
-                height: table.rowHeight
-                color: index % 2 ? EaStyle.Colors.themeBackgroundHovered2 : EaStyle.Colors.themeBackgroundHovered1
-
-                Row {
-                    Repeater {
-                        model: line.modelData
-                        delegate: Cell {
-                            required property string modelData
-                            required property int index
-                            column: index
-                            text: modelData
-                        }
-                    }
-                }
+            model: table.windowed ? [] : table.rows
+            delegate: Line {}
+        }
+        ListView {
+            visible: table.windowed
+            width: body.width
+            height: visible ? table.windowRows * table.rowHeight : 0
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
+            model: table.windowed ? table.rows : []
+            delegate: Line {}
+            ScrollBar.vertical: EaElements.ScrollBar {
+                id: vertical
+                policy: ScrollBar.AlwaysOn
             }
         }
     }
