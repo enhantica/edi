@@ -93,6 +93,13 @@ produced by edi or crysta.
   Cu **Kα doublet** (`setup_wavelength_2` 1.5444 Å, `setup_wavelength_2_to_1_ratio` 0.5;
   FullProf `Lambda2`, `Ratio`).
 
+### PbSO4 structure
+
+- [pd-xray-cwl PbSO4 round robin](pd-xray-cwl_PbSO4_round-robin.ipynb) – the X-ray round-robin
+  pattern with the Cu Kα doublet, monochromator polarization and **Bérar–Baldinozzi** asymmetry;
+  the pseudo-Voigt's widths, mixing and asymmetry are fitted to FullProf's TCH profile, so the
+  bounds are regression pins and the page does not count toward diffraction-lib parity.
+
 ## Powder, Neutron, Time-Of-Flight
 
 ### Diamond structure

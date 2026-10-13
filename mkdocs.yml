@@ -102,6 +102,7 @@ nav:
           - dev/verification/pd-xray-cwl_LiF_single.ipynb
           - dev/verification/pd-xray-cwl_LiF_single_absorption.ipynb
           - dev/verification/pd-xray-cwl_LiF_single_polarization.ipynb
+          - dev/verification/pd-xray-cwl_PbSO4_round-robin.ipynb
   - User:
       - user/index.md
       - user/features.md
