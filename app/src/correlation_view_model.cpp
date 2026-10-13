@@ -16,18 +16,18 @@ namespace edi_app {
 CorrelationViewModel::CorrelationViewModel(QObject* parent) : QObject(parent) {}
 
 void CorrelationViewModel::setRecord(const edi::Project& project, int experiment, bool fitted) {
-    // The fit's own pairs; a scan file's (named by `file_path`) are the scan's, shown per dataset (setPairs).
-    std::vector<edi::FitParameterCorrelation> pairs;
+    // The fit's own pairs; a scan file's (named by `file_path`) are the scan's, shown per dataset (setRows).
+    std::vector<std::shared_ptr<const edi::FitParameterCorrelation>> rows;
     for (const auto& row : project.fit_result.correlations) {
         if (row->file_path.empty()) {
-            pairs.push_back(*row);
+            rows.push_back(row);
         }
     }
     const int experiments = static_cast<int>(project.experiments.size());
-    if (!project.fit_result.held() || pairs.empty()) {
-        show({}, {}, tr("No correlations yet"));
+    if (!project.fit_result.held() || rows.empty()) {
+        show({}, {}, {}, tr("No correlations yet"));
     } else if (experiment < 0 || experiment >= experiments || !fitted) {
-        show({}, {}, tr("Not in the last fit"));
+        show({}, {}, {}, tr("Not in the last fit"));
     } else {
         // Another experiment's parameters are named by its datablock key (io.cpp's parameter slot walk).
         std::vector<std::string> others;
@@ -38,16 +38,39 @@ void CorrelationViewModel::setRecord(const edi::Project& project, int experiment
                                  ".");
             }
         }
-        show(pairs, others, tr("No correlations for this experiment"));
+        show({}, rows, others, tr("No correlations for this experiment"));
     }
 }
 
-void CorrelationViewModel::setPairs(const std::vector<edi::FitParameterCorrelation>& pairs, const QString& absent) {
+void CorrelationViewModel::setRows(const std::string& file,
+                                   const std::vector<std::shared_ptr<const edi::FitParameterCorrelation>>& rows,
+                                   const QString& absent) {
     const QString none = absent.isEmpty() ? tr("No correlations yet") : absent;
-    show(pairs, {}, pairs.empty() ? none : tr("No correlations for this experiment"));
+    show(file, rows, {}, rows.empty() ? none : tr("No correlations for this experiment"));
 }
 
-void CorrelationViewModel::show(const std::vector<edi::FitParameterCorrelation>& pairs,
+const std::vector<double>& CorrelationViewModel::numbers(
+    const std::string& file, const std::vector<std::shared_ptr<const edi::FitParameterCorrelation>>& rows) {
+    Numbers& kept = numbers_[file];
+    // The same rows are the same objects: a kept weak pointer keeps its object's control block, so no later row can
+    // share it.
+    bool same = kept.rows.size() == rows.size();
+    for (std::size_t i = 0; same && i < rows.size(); ++i) {
+        same = !kept.rows[i].owner_before(rows[i]) && !rows[i].owner_before(kept.rows[i]);
+    }
+    if (!same) {
+        kept.rows.assign(rows.begin(), rows.end());
+        kept.values.clear();
+        kept.values.reserve(rows.size());
+        for (const auto& row : rows) {
+            kept.values.push_back(edi::correlation_value(*row));
+        }
+    }
+    return kept.values;
+}
+
+void CorrelationViewModel::show(const std::string& file,
+                                const std::vector<std::shared_ptr<const edi::FitParameterCorrelation>>& rows,
                                 const std::vector<std::string>& hidden, const QString& reason) {
     names_.clear();
     matrix_.clear();
@@ -57,8 +80,8 @@ void CorrelationViewModel::show(const std::vector<edi::FitParameterCorrelation>&
                             [&name](const std::string& prefix) { return name.starts_with(prefix); });
     };
     std::map<std::string, std::size_t> index;
-    for (const edi::FitParameterCorrelation& pair : pairs) {
-        for (const std::string* name : {&pair.parameter_unique_name_i.value(), &pair.parameter_unique_name_j.value()}) {
+    for (const auto& row : rows) {
+        for (const std::string* name : {&row->parameter_unique_name_i.value(), &row->parameter_unique_name_j.value()}) {
             if (shown(*name) && !index.contains(*name)) {
                 index.emplace(*name, names_.size());
                 names_.push_back(*name);
@@ -70,13 +93,15 @@ void CorrelationViewModel::show(const std::vector<edi::FitParameterCorrelation>&
     for (std::size_t i = 0; i < n; ++i) {
         matrix_[i * n + i] = 1.0;
     }
-    for (const edi::FitParameterCorrelation& pair : pairs) {
-        const auto i = index.find(pair.parameter_unique_name_i.value());
-        const auto j = index.find(pair.parameter_unique_name_j.value());
-        if (i != index.end() && j != index.end()) {
-            const double value = edi::correlation_value(pair);
-            matrix_[i->second * n + j->second] = value;
-            matrix_[j->second * n + i->second] = value;
+    if (n > 0) {
+        const std::vector<double>& values = numbers(file, rows);
+        for (std::size_t at = 0; at < rows.size(); ++at) {
+            const auto i = index.find(rows[at]->parameter_unique_name_i.value());
+            const auto j = index.find(rows[at]->parameter_unique_name_j.value());
+            if (i != index.end() && j != index.end()) {
+                matrix_[i->second * n + j->second] = values[at];
+                matrix_[j->second * n + i->second] = values[at];
+            }
         }
     }
     settle(reason);

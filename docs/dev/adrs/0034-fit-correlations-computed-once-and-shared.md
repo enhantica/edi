@@ -53,7 +53,8 @@ and save, and copies all the rows on Reset fits. The fits themselves did not get
    rule wants. Undoing that fit puts the loop back as it was. A save therefore aggregates nothing, and an unchanged save
    writes the same loop.
 5. **Shown lazily.** The Correlations tab takes the shown file's table, or the single fit's rows, and builds the matrix
-   for that file only, from the doubles. A loop read from a file becomes a table once, when it is first shown.
+   for that file only, from the doubles. Rows read from a file become numbers once, when first shown, and the tab keeps
+   those numbers while it shows the same rows again.
 6. **Shared, not copied.** Undo records, the scan template's stash, Reset fits and the results refresh hold the map of
    shared pointers, so copying the fit record copies pointers. The app keeps no second cache: its per-dataset view
    reads the record's map. Reset fits clears the map, and its Undo puts the same map back.

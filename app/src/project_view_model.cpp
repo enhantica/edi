@@ -2032,24 +2032,20 @@ void ProjectViewModel::syncCorrelations() {
             if (found->second && found->second->correlations) {
                 correlations_->setTable(*found->second->correlations);
             } else if (found->second && !found->second->read_rows.empty()) {
-                std::vector<edi::FitParameterCorrelation> rows;
-                for (const auto& row : found->second->read_rows) {
-                    rows.push_back(*row);
-                }
-                correlations_->setPairs(rows);
+                correlations_->setRows(file, found->second->read_rows);
             } else {
-                correlations_->setPairs({});
+                correlations_->setRows(file, {});
             }
             return;
         }
-        std::vector<edi::FitParameterCorrelation> rows;
+        std::vector<std::shared_ptr<const edi::FitParameterCorrelation>> rows;
         for (const auto& row : record.correlations) {
             if (shown && row->file_path.value() == file) {
-                rows.push_back(*row);
+                rows.push_back(row);
             }
         }
         if (!rows.empty()) {
-            correlations_->setPairs(rows);
+            correlations_->setRows(file, rows);
             return;
         }
         // A save keeps only the template dataset's correlations (the owner, 2026-10-12): a dataset fitted before the
@@ -2061,7 +2057,7 @@ void ProjectViewModel::syncCorrelations() {
                 absent = tr("Correlations are kept only for the template dataset");
             }
         }
-        correlations_->setPairs({}, absent);
+        correlations_->setRows(file, {}, absent);
         return;
     }
     const ExperimentViewModel* experiment = currentExperiment();
