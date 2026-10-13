@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <functional>
 #include <iomanip>
 #include <locale>
 #include <sstream>
@@ -279,7 +280,64 @@ const std::vector<SeriesStyle>& pattern_style_table() {
     return table;
 }
 
-PatternSource capture_pattern(const Project& project, std::size_t experiment_index) {
+namespace {
+
+// `values` in reverse order, or null for a null column.
+PatternSource::Column reversed(const PatternSource::Column& values) {
+    if (!values) {
+        return nullptr;
+    }
+    return std::make_shared<const std::vector<double>>(values->rbegin(), values->rend());
+}
+
+// The d of a native x, linear between the data's rows (the end rows' d beyond the data).
+double d_at(const std::vector<double>& native, const std::vector<double>& d, double x) {
+    const bool ascending = native.front() <= native.back();
+    std::size_t upper = 0;
+    if (ascending) {
+        upper = static_cast<std::size_t>(std::lower_bound(native.begin(), native.end(), x) - native.begin());
+    } else {
+        upper = static_cast<std::size_t>(
+            std::lower_bound(native.begin(), native.end(), x, std::greater<>()) - native.begin());
+    }
+    if (upper == 0) {
+        return d.front();
+    }
+    if (upper >= native.size()) {
+        return d.back();
+    }
+    const double x0 = native[upper - 1], x1 = native[upper];
+    const double share = x1 != x0 ? (x - x0) / (x1 - x0) : 0.0;
+    return d[upper - 1] + share * (d[upper] - d[upper - 1]);
+}
+
+// The source on the d axis: x, the ticks and the excluded bands in d (capture_pattern's contract).
+void to_d_axis(PatternSource& source, const PdDataBase& data, const PowderReflnDataBase& refln,
+               const std::vector<std::string>& names) {
+    const std::vector<double>& d = data.d_spacing.values();
+    const std::vector<double> native = data.axis();
+    if (!source.current || d.size() != native.size() || d.size() < 2) {
+        return;
+    }
+    for (ExcludedBand& band : source.excluded) {
+        const double a = d_at(native, d, band.x_min), b = d_at(native, d, band.x_max);
+        band = {std::min(a, b), std::max(a, b)};
+    }
+    source.x_title = "d (Å)";
+    source.x = data.d_spacing.buffer();
+    if (d.front() > d.back()) {
+        for (PatternSource::Column* column : {&source.x, &source.meas, &source.su, &source.calc, &source.bkg,
+                                              &source.resid}) {
+            *column = reversed(*column);
+        }
+    }
+    source.phases = group_reflections(refln.structure_id.values(), refln.d_spacing.values(), refln.index_h.values(),
+                                      refln.index_k.values(), refln.index_l.values(), names);
+}
+
+}  // namespace
+
+PatternSource capture_pattern(const Project& project, std::size_t experiment_index, PatternAxis axis) {
     PatternSource source;
     const ExperimentBase& experiment = *project.experiments[experiment_index];
     source.experiment_place = experiment_index;
@@ -320,6 +378,9 @@ PatternSource capture_pattern(const Project& project, std::size_t experiment_ind
     source.phases = group_reflections(refln.structure_id.values(), refln.position.values(),
                                       refln.index_h.values(), refln.index_k.values(),
                                       refln.index_l.values(), names);
+    if (axis == PatternAxis::DSpacing) {
+        to_d_axis(source, data, refln, names);
+    }
     return source;
 }
 
