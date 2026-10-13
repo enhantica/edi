@@ -88,7 +88,7 @@ libraries. The vendored copies are in `data/report/vendor/`, unchanged from the 
 | Encode Sans |  | OFL-1.1 | fit summary arrow, bundled |
 | Noto Sans, Noto Sans Mono |  | OFL-1.1 | interface fonts, bundled |
 | Baloo 2 |  | OFL-1.1 | the wordmark font, bundled |
-| Font Awesome Free |  | OFL-1.1 AND CC-BY-4.0 | icons: the font under OFL-1.1, the icon designs under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/) |
+| Font Awesome Free |  | OFL-1.1 AND CC-BY-4.0 | icons: the font under OFL-1.1, the icon designs under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/); seven designs also draw the HTML report's structure view buttons |
 
 ## Acknowledgements
 

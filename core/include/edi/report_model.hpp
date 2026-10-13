@@ -104,6 +104,10 @@ struct ReportStructure {
     StructureScene scene;
     SceneView view;
     SceneDrawing drawing;
+    // For a renderer's buttons, as the Structure page has them: the views along a, b and c (view_along), and the atom
+    // labels the view shows when they are asked for (present_structure's, with labels on).
+    std::vector<SceneView> along;
+    std::vector<SceneLabel> labels;
 };
 
 /// An experiment's pattern chart (ADR-0021): present_pattern's output over the full range with no decimation and a
