@@ -117,13 +117,27 @@ Flickable {
             under: record.index === 0 ? 2 : 0
             text: `${preview.number(record.section)}.${record.index + 1}.  ${record.modelData.id}`
         }
-        // Its figure first, as the reference report places it: the structure view, or the pattern chart.
-        Loader {
-            active: preview.charts
-            visible: active
+        // Its figure first, as the reference report places it: the structure view, or the pattern chart, framed by a
+        // border in the tables' colour and spaced as a table is (the owner, 2026-10-13).
+        Item {
+            visible: preview.charts
             width: parent.width
-            height: active ? Math.round(width * 0.7) : 0
-            sourceComponent: record.section === "structures" ? structureFigure : patternFigure
+            height: visible ? figure.height : 0
+
+            Loader {
+                id: figure
+                active: preview.charts
+                width: parent.width
+                height: active ? Math.round(width * 0.7) : 0
+                sourceComponent: record.section === "structures" ? structureFigure : patternFigure
+            }
+            Rectangle {
+                width: figure.width
+                height: figure.height
+                color: "transparent"
+                border.width: EaStyle.Sizes.borderThickness
+                border.color: EaStyle.Colors.appBorder
+            }
         }
         Component {
             id: structureFigure
@@ -145,7 +159,8 @@ Flickable {
                 required property var modelData
                 required property int index
                 category: modelData
-                under: index === 0 ? 3 : 0
+                // A heading after the figure is spaced as one after a table.
+                under: index === 0 && !preview.charts ? 3 : 0
             }
         }
     }
