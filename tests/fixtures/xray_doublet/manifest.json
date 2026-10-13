@@ -1,0 +1,35 @@
+{
+  "absorption": {
+    "files": {
+      "lif_single_absorption.bac": "9de1c5f5c110ee85ddce094f66e657c2b352f3dd8742daa936ab1dfb5abde6f0",
+      "lif_single_absorption.dat": "06ba190e26656de021c199beef857cdf61acf5e05ca62564cb325d40d9628cae",
+      "lif_single_absorption.pcr": "b5b183b0fb8123453bbe13246ddbb22aad335361866cd0f57cf2c3099365e7c0",
+      "lif_single_absorption.prf": "3d5cea5e4e181e68481ffcdafae9191fa89e8bd5994a4e56470b02fb6492b7e4",
+      "lif_single_absorption.sum": "979cf26e51652b0b548109496de5901a10e2d293867b58f57d268e6196d993b8"
+    },
+    "stem": "lif_single_absorption"
+  },
+  "doublet": {
+    "files": {
+      "lif_doublet_unpolarized.bac": "8cb78794ae7705e8212fe3dfb4cada8b85181431bfe8e6fa7a6080f7c195561e",
+      "lif_doublet_unpolarized.dat": "06ba190e26656de021c199beef857cdf61acf5e05ca62564cb325d40d9628cae",
+      "lif_doublet_unpolarized.pcr": "3606d681cce449694c0964282286eb35c049228bd855496c24ea76a9729e0f04",
+      "lif_doublet_unpolarized.prf": "730a1b1f159bc351dcb48c7ed3aff13b809971e409cd1267b4f622a579d63a5c",
+      "lif_doublet_unpolarized.sum": "6c1782aa6a32034b483bed195876e607589d49772a34e1f63a9029708b375006"
+    },
+    "stem": "lif_doublet_unpolarized"
+  },
+  "it1992": {
+    "libraries_revision": "b37f9f3148d2771c6d84ee91f57331676d93746f",
+    "path": "cctbx/cctbx/eltbx/xray_scattering/it1992.cpp",
+    "sha256": "7ca28976ff501268a9ce74ef95f35482847d875d19dec1aaa129195b2ff08169"
+  },
+  "published-f0.json": "36a6002b64df417d4717ffddd02342bc23e301f6e372ce88e38188f9be4587b4",
+  "revision": "0d9f10e412a0cd08d4dd0af95845dd9bb597dcdf",
+  "upstream": "https://github.com/easyscience/diffraction-lib",
+  "wk1995": {
+    "libraries_revision": "b37f9f3148d2771c6d84ee91f57331676d93746f",
+    "path": "periodictable/periodictable/f0_WaasKirf.dat",
+    "sha256": "0813d65e2ed7e65baaff1b25d9de3158feb457e106d33aae86fe6dbdb59b3adc"
+  }
+}
