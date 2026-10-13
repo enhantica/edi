@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "analysis_view_model.hpp"
 
+#include <QMetaObject>
+
+#include <algorithm>
+#include <string>
+#include <vector>
+
 #include "edi/categories.hpp"
 #include "edi/edits.hpp"
 #include "edi/selectors.hpp"
@@ -313,15 +319,28 @@ void AnalysisViewModel::setLastError(const QString& error) {
 }
 
 void AnalysisViewModel::sync() {
-    // A project that declares a scan fits one template experiment at a time: joint is offered only without one.
-    const bool scan = project_.sequential_fit.declared();
-    if (fitting_mode_options_->count() == 0 || scan != scan_declared_) {
-        scan_declared_ = scan;
-        std::vector<std::string> modes = edi::supported_fitting_modes();
-        if (scan) {
-            std::erase(modes, std::string("joint"));
+    // Only the modes that apply are offered, by their descriptive names (the owner, 2026-10-11): a scan's two and
+    // single (a fit of the shown dataset), joint for several experiments, single for one. A mode that no longer applies (an experiment added or removed) gives way
+    // to the one that does, after this sync.
+    const std::vector<std::string> modes = edi::applicable_fitting_modes(project_);
+    if (modes != fitting_modes_) {
+        fitting_modes_ = modes;
+        std::vector<std::string> labels;
+        for (const std::string& token : modes) {
+            labels.push_back(edi::fitting_mode_label(token));
         }
-        fitting_mode_options_->setOptions(modes, "single");
+        fitting_mode_options_->setOptions(modes, modes.front(), labels);
+    }
+    if (std::find(modes.begin(), modes.end(), edi::effective_fitting_mode(project_)) == modes.end()) {
+        QMetaObject::invokeMethod(
+            this,
+            [this] {
+                const std::vector<std::string> now = edi::applicable_fitting_modes(project_);
+                if (std::find(now.begin(), now.end(), edi::effective_fitting_mode(project_)) == now.end()) {
+                    setFittingMode(QString::fromStdString(now.front()));
+                }
+            },
+            Qt::QueuedConnection);
     }
     const QString mode = QString::fromStdString(edi::effective_fitting_mode(project_));
     if (mode != fitting_mode_) {

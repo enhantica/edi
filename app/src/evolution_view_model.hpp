@@ -101,6 +101,8 @@ class EvolutionViewModel : public QObject {
     }
 
    signals:
+    // A reread of the results refused (the path is no longer a regular file): no point is drawn.
+    void refused(const QString& message);
     void currentParameterChanged();
     void xModeChanged();
     void pickingChanged();
@@ -126,6 +128,8 @@ class EvolutionViewModel : public QObject {
         int dataset = -1;
     };
     void rebuild();
+    // The points of the current parameter's column, read from the results (throws when the read refuses).
+    void readPoints();
     void draw();
 
     EvolutionParameterListModel* parameters_;

@@ -20,29 +20,31 @@ Column {
 
     spacing: AppSizes.groupContentSpacing
 
-    EaComponents.TableView {
+    DataTable {
         objectName: "scatteringLengths.list"
         defaultInfoText: qsTr("No custom scattering lengths: the built-in table applies")
-        model: group.lengths
+        sourceModel: group.lengths
 
-        header: EaComponents.TableViewHeader {
+        columnWidths: [numberColumnWidth, textColumnWidth("typeSymbol", qsTr("type")), -1, AppSizes.iconColumnWidth]
+
+        header: EaComponents.ListViewHeader {
             EaComponents.TableViewLabel {
-                width: AppSizes.indexColumnWidth
+                horizontalAlignment: Text.AlignHCenter
             }
             EaComponents.TableViewLabel {
-                flexibleWidth: true
+                horizontalAlignment: Text.AlignLeft
                 text: qsTr("type")
             }
             EaComponents.TableViewLabel {
-                width: EaStyle.Sizes.fontPixelSize * 10
+                horizontalAlignment: Text.AlignHCenter
                 text: qsTr("b (fm)")
             }
             EaComponents.TableViewLabel {
-                width: AppSizes.iconColumnWidth
+                horizontalAlignment: Text.AlignHCenter
             }
         }
 
-        delegate: EaComponents.TableViewDelegate {
+        delegate: EaComponents.ListViewDelegate {
             id: row
 
             required property int index
@@ -50,24 +52,25 @@ Column {
             required property real lengthFm
 
             EaComponents.TableViewLabel {
-                width: AppSizes.indexColumnWidth
+                horizontalAlignment: Text.AlignHCenter
                 color: EaStyle.Colors.themeForegroundMinor
                 text: row.index + 1
             }
             TextCell {
                 objectName: `scatteringLength.typeSymbol.${row.index}`
-                width: EaStyle.Sizes.fontPixelSize * 10
+                horizontalAlignment: Text.AlignLeft
                 value: row.typeSymbol
                 onCommitted: text => group.lengths.setTypeSymbol(row.index, text)
             }
             TextCell {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `scatteringLength.lengthFm.${row.index}`
-                width: EaStyle.Sizes.fontPixelSize * 10
                 value: row.lengthFm
                 accepts: "number"
                 onCommitted: text => group.lengths.setLengthFm(row.index, Number(text))
             }
             EaComponents.TableViewButton {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `scatteringLength.remove.${row.index}`
                 fontIcon: "minus-circle"
                 ToolTip.text: qsTr("Remove this scattering length")

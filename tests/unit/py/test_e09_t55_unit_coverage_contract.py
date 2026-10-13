@@ -20,7 +20,7 @@ CPP_GATE = ROOT / 'tools' / 'ci' / 'cpp-coverage-unit.sh'
 
 ASSERTION_CALLS = {'fail', 'raises', 'warns'}
 CPP_ASSERTION = re.compile(r'\b(?:CHECK|REQUIRE|FAIL|SUCCEED)[A-Z_]*\s*\(')
-CPP_CALL = re.compile(r'\b([A-Za-z_]\w*)\s*\(')
+CPP_CALL = re.compile(r'\b([A-Za-z_]\w*)\s*(?:<[^;{}()]*>)?\s*\(')
 CPP_TOKEN = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|//[^\n]*|/\*.*?\*/', re.DOTALL)
 
 
@@ -162,6 +162,49 @@ def _cpp_cases_and_asserting_helpers(path: Path) -> tuple[list[tuple[str, str]],
                 asserting.add(name)
                 changed = True
     return cases, asserting
+
+
+@pytest.mark.parametrize(
+    ('call', 'helper', 'expected'),
+    [
+        ('check_rows()', 'void check_rows() { REQUIRE(true); }', True),
+        (
+            'check_rows<Record>()',
+            'template <typename T> void check_rows() { REQUIRE(true); }',
+            True,
+        ),
+        (
+            'check_rows<std::vector<Record>>()',
+            'template <typename T> void check_rows() { REQUIRE(true); }',
+            True,
+        ),
+        (
+            'check_rows<Record>()',
+            (
+                'template <typename T> void inner() { REQUIRE(true); } '
+                '\ntemplate <typename T> void check_rows() { inner<T>(); }'
+            ),
+            True,
+        ),
+        ('check_rows<Record>()', 'template <typename T> void check_rows() {}', False),
+        (
+            'check_rows<Record>()',
+            'void unused() { REQUIRE(true); } \ntemplate <typename T> void check_rows() {}',
+            False,
+        ),
+    ],
+    ids=['direct', 'template', 'nested-template', 'transitive-template', 'empty', 'unreached'],
+)
+def test_cpp_assertion_census_follows_explicit_template_calls(tmp_path, call, helper, expected):
+    fixture = tmp_path / 'cases.cpp'
+    fixture.write_text(helper + '\nTEST_CASE("case") { ' + call + '; }\n')
+    cases, helpers = _cpp_cases_and_asserting_helpers(fixture)
+    assert len(cases) == 1, 'The assertion census control must reach one actual case body'
+    body = cases[0][1]
+    reached = bool(CPP_ASSERTION.search(body) or set(CPP_CALL.findall(body)) & helpers)
+    assert reached is expected, (
+        'Explicit template calls must reach local assertions, while empty or unused helpers refuse'
+    )
 
 
 def _task_text(task: object) -> str:

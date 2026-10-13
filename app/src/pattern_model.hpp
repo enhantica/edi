@@ -66,7 +66,7 @@ class PatternModel : public QAbstractListModel {
    public:
     enum AxisKind { TwoTheta, TimeOfFlight };
     Q_ENUM(AxisKind)
-    enum Role { XRole = Qt::UserRole + 1, IntensityMeasRole, IntensityMeasSuRole, IntensityCalcRole };
+    enum Role { XRole = Qt::UserRole + 1, IntensityMeasRole, IntensityMeasSuRole, IntensityCalcRole, DSpacingRole, IntensityBkgRole, CalcStatusRole, ResidualRole };
 
     PatternModel(const edi::ExperimentBase& experiment, QObject* parent);
     int count() const { return count_; }
@@ -102,6 +102,8 @@ class PatternModel : public QAbstractListModel {
     AxisKind axis_kind_ = TwoTheta;
     QString calculation_error_;
     bool stale_ = true;
+    std::vector<double> published_d_, published_bkg_, published_residual_;
+    std::vector<std::string> published_status_;
     std::vector<double> published_calc_;  // the intensities the views were last told about
 };
 

@@ -18,6 +18,8 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from tests.fixtures.loop_parameter_ids.reference_paths import reference_paths
+
 ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / 'tests/fixtures/c09_t6_ncaf_5bank_absorption'
 
@@ -65,7 +67,7 @@ def _oracle() -> dict[str, Any]:
     return json.loads(ORACLE.read_text(encoding='utf-8'))
 
 
-def _edi_path(label: str) -> str:
+def _edi_path(label: str, reference) -> str:
     bank_match = re.fullmatch(r'([^.]*)\.(.*)', label)
     if bank_match is not None and bank_match.group(1) in BANKS:
         bank, field = bank_match.groups()
@@ -73,12 +75,13 @@ def _edi_path(label: str) -> str:
             'calib_d_to_tof_offset': 'instrument.calib_d_to_tof_offset',
             'calib_d_to_tof_linear': 'instrument.calib_d_to_tof_linear',
             'calib_d_to_tof_quadratic': 'instrument.calib_d_to_tof_quadratic',
-            'scale': 'linked_structure.scale',
+            'scale': f'linked_structures[{reference[bank]["structure"]}].scale',
             'abscor1': 'absorption.abscor1',
         }
         background = re.fullmatch(r'background\[(\d+)\]', field)
         if background is not None:
-            field = f'background[{background.group(1)}].intensity'
+            identity = reference[bank]['background'][int(background.group(1))]
+            field = f'background[{identity}].intensity'
         elif field in aliases:
             field = aliases[field]
         elif not field.startswith((
@@ -158,11 +161,12 @@ def _frec_expected() -> dict[str, dict[str, float]]:
     from conftest import frec_golden_record
 
     record = frec_golden_record('ncaf-wish-3bank-s5', 'joint-default')
+    reference = reference_paths(_project())
     expected: dict[str, dict[str, float]] = {}
     for key, value in record.items():
         if key.startswith('param.') and key.endswith('.value'):
             label = key.removeprefix('param.').removesuffix('.value')
-            expected[_edi_path(label)] = {
+            expected[_edi_path(label, reference)] = {
                 'value': float(value),
                 'esd': float(record[f'param.{label}.esd']),
             }
@@ -238,9 +242,9 @@ def test_c09_t6_joint_refit_matches_the_full_value_set_from_the_shared_producer(
         if line.startswith('ncaf ')
     )
     declared_scale = float(scale_line.split()[1].split('(')[0])
-    assert outcome.values['experiments[wish_5_6].linked_structure.scale'] != declared_scale, (
-        'the shared refit must actually move the independently declared scale'
-    )
+    assert (
+        outcome.values['experiments[wish_5_6].linked_structures[ncaf].scale'] != declared_scale
+    ), 'the shared refit must actually move the independently declared scale'
 
 
 def _run(

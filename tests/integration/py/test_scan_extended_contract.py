@@ -34,11 +34,11 @@ def test_scan_worker_routes_both_modes_to_existing_driver(tmp_path):
     )
     actual = [row.split(':') for row in worker_dispatch(text, tmp_path)]
     assert [row[:1] + row[3:] for row in actual] == [
-        ['sequential', '33', '55', '44'],
-        ['independent', '33', '55', '44'],
+        ['sequential', '33', '55', '44', '66'],
+        ['independent', '33', '55', '44', '66'],
     ], (
         'Scan worker wiring: each scan mode reaches its own driver with cancellation, '
-        'scan-start and per-file completion subscribers'
+        'scan-start, per-file completion and fitted-project subscribers'
     )
     assert all(row[1] in {'0', '11'} and row[2] in {'0', '22'} for row in actual), (
         'Scan worker wiring: optional iteration and fit-preamble callbacks may be absent; '
@@ -180,49 +180,74 @@ def test_scan_explorer_header_has_declared_columns_in_order():
     qml = source('qml/Pages/Experiment/ExperimentsGroup.qml')
     header = block(qml, 'header:')
     labels = re.findall(r'text:\s*qsTr\("([^\"]+)"\)', header)
-    assert labels[:3] == ['Fit', 'Datablock', 'File'], (
+    assert labels[:3] == ['Fit', 'Datablock', 'Data file'], (
         'Dataset list labels: the unlabelled number column precedes fit, datablock and file'
     )
     number_column = block(header, 'EaComponents.TableViewLabel {')
-    assert 'width: AppSizes.indexColumnWidth' in number_column and 'text:' not in number_column, (
+    assert 'text:' not in number_column, (
         'Dataset list labels: the first number column stays present with an empty header'
     )
     repeater = block(header, 'Repeater {')
-    table = block(qml, 'EaComponents.TableView {')
+    table = block(qml, 'DataTable {')
+    common = source('qml/Components/DataTable.qml')
     table_id = property_value(table, 'id')
     context = (
         'const project={experiments:{columns:["temperature (K)","field '
         '(T)"],extractColumns:["temperature (K)","field (T)"]}};const group={project};const '
         + table_id
-        + '={model:('
-        + property_value(table, 'model')
-        + ')};'
-    )
-    assert evaluate(table_id + '.model === project.experiments', context), (
-        'Dataset list wiring: displayed extract headers belong to the dataset table actually shown'
+        + '={sourceModel:('
+        + property_value(table, 'sourceModel')
+        + ')};const sourceModel='
+        + table_id
+        + '.sourceModel;'
+        + table_id
+        + '.model=('
+        + property_value(common, 'model')
+        + ');'
     )
     model = property_value(repeater, 'model')
-    if model == 'group.scanColumns':
-        columns = property_value(qml, 'scanColumns')
-        context += 'group.scanColumns=(' + columns + ');'
-    assert evaluate(model, context) == ['temperature (K)', 'field (T)'], (
+    refresh = (
+        'group.scanColumns=(' + property_value(qml, 'scanColumns') + ');'
+        if model == 'group.scanColumns'
+        else ''
+    )
+    label = block(repeater, 'EaComponents.TableViewLabel {')
+    program = (
+        context + 'group.scan=true;'
+        'const AppSizes={fieldSpacing:4,iconColumnWidth:16,dataColumnWidth:32};'
+        'const count=29;const metrics={advanceWidth:s=>s==="29"?12.25:99};'
+        'const numberColumnWidth=(' + property_value(common, 'numberColumnWidth') + ');'
+        'const textColumnWidth=()=>30;const qsTr=s=>s;'
+        'const column={modelData:"field (T)"};const modelData=column.modelData;'
+        + refresh
+        + 'const observed={connected:('
+        + table_id
+        + '.model===project.experiments),'
+        'width:(' + property_value(table, 'columnWidths') + ')[0],'
+        'columns:(' + model + '),label:(' + property_value(label, 'text') + ')};'
+        'project.experiments.columns=["pressure (bar)"];'
+        'project.experiments.extractColumns=["pressure (bar)"];'
+        + refresh
+        + 'observed.changed=('
+        + model
+        + ');'
+        'console.log(JSON.stringify(observed));'
+    )
+    observed = javascript(program)
+    assert observed['connected'], (
+        'Dataset list wiring: displayed extract headers belong to the dataset table actually shown'
+    )
+    assert observed['width'] == 21, (
+        'The empty number header retains the measured row-number width and both field spacings'
+    )
+    assert observed['columns'] == ['temperature (K)', 'field (T)'], (
         'Dataset list wiring: the displayed header uses every extract rule '
         'label and unit in model order'
     )
-    label = block(repeater, 'EaComponents.TableViewLabel {')
-    label_context = (
-        context + 'const column={modelData:"field (T)"};const modelData=column.modelData;'
-    )
-    assert evaluate(property_value(label, 'text'), label_context) == 'field (T)', (
+    assert observed['label'] == 'field (T)', (
         'Dataset list wiring: each repeated extract header displays its own label and unit'
     )
-    context += (
-        'project.experiments.columns=["pressure (bar)"];'
-        'project.experiments.extractColumns=["pressure (bar)"];'
-    )
-    if model == 'group.scanColumns':
-        context += 'group.scanColumns=(' + columns + ');'
-    assert evaluate(model, context) == ['pressure (bar)'], (
+    assert observed['changed'] == ['pressure (bar)'], (
         'Dataset list wiring: changing the selected table model changes its '
         'displayed extract headers'
     )
@@ -233,11 +258,11 @@ def evolution_component():
     items = re.search(r'mainItems:\s*\[([\s\S]*?)\n\s*\]', page)
     assert items, 'Evolution wiring: the analysis main view declares its tab content'
     components = re.findall(r'(?m)^\s*(\w+)\s*\{', items.group(1))
-    assert len(components) >= 2, (
-        'Evolution wiring: the second main-view tab has its own actual content'
+    assert components.count('EvolutionChart') == 1, (
+        'Evolution wiring: the main view mounts exactly one evolution chart beside correlations'
     )
-    paths = list((APP / 'qml').rglob(components[1] + '.qml'))
-    assert len(paths) == 1, 'Evolution wiring: the second content component resolves uniquely'
+    paths = list((APP / 'qml').rglob('EvolutionChart.qml'))
+    assert len(paths) == 1, 'Evolution wiring: the mounted evolution chart resolves uniquely'
     return source(paths[0].relative_to(APP))
 
 
@@ -438,6 +463,8 @@ def test_parameter_evolution_connects_rendered_errors_axis_and_point_selection()
 
 
 def assert_stale_marker(consumer, results=None):
+    # Comments may contain apostrophes; they cannot open string literals.
+    consumer = re.sub(r'//[^\n]*|/\*.*?\*/', '', consumer, flags=re.DOTALL)
     if results is None:
         model = re.search(r'(?m)^\s*model:\s*(\w+\.\w+)\.(?:points|series|rows)\s*$', consumer)
         results = (
@@ -492,7 +519,13 @@ def test_old_scan_results_are_retained_with_out_of_date_state():
 
 def test_bundled_project_load_and_save_as_use_the_writable_copy_routes():
     session = source('src/session.cpp')
-    loader = block(session, 'bool Session::openExample(')
+    wrapper = block(session, 'bool Session::openExample(')
+    require(
+        wrapper,
+        r'openExampleNamed\(exampleId\)',
+        'Working-copy wiring: the public example loader reaches its actual copy worker',
+    )
+    loader = block(session, 'bool Session::openExampleNamed(')
     require(
         loader,
         r'extracted_ = std::make_unique<QTemporaryDir>\(\)',
@@ -616,6 +649,16 @@ foreach(command include configure_file qt_add_library
  function(${{command}})
  endfunction()
 endforeach()
+function(target_sources target)
+ foreach(source IN LISTS ARGN)
+  if(source MATCHES "^(PRIVATE|PUBLIC|INTERFACE)$")
+   continue()
+  endif()
+  if(NOT source MATCHES "[.](cpp|c|h|hpp|mm)$")
+   message(FATAL_ERROR "Examples: unobserved non-compilation target source ${{source}}")
+  endif()
+ endforeach()
+endfunction()
 function(target_link_libraries target)
  set(scope PUBLIC)
  foreach(edge IN LISTS ARGN)
@@ -916,6 +959,20 @@ def test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden
         assert_web_exclusion(hidden, index)
 
 
+@pytest.mark.parametrize(
+    'sources', ['resource.dat', 'resource.qrc', '"$<IF:$<BOOL:1>,resource.dat,source.cpp>"']
+)
+def test_resource_observer_refuses_non_compilation_target_sources(
+    tmp_path, bundle_control, sources
+):
+    cmake, _, _ = bundle_control
+    good, index = resource_inventory(tmp_path / 'positive', True, cmake)
+    assert_web_exclusion(good, index)
+    unsupported = cmake + '\ntarget_sources(edi_app PRIVATE ' + sources + ')\n'
+    with pytest.raises(AssertionError, match='unobserved non-compilation target source'):
+        resource_inventory(tmp_path / 'unsupported', True, unsupported)
+
+
 def test_user_page_and_scale_adr_document_approved_limits():
     nav = (ROOT / 'mkdocs.yml').read_text()
     pages = [
@@ -969,7 +1026,7 @@ def worker_dispatch(text, tmp_path):
 #include <stdexcept>
 using IterationCallback=int; using PreambleCallback=int; using CancelCallback=int;
 
- using FileCompleteCallback=int; using ScanStartCallback=int;
+ using FileCompleteCallback=int; using ScanStartCallback=int; using FileFittedCallback=int;
 using FitResultBase=std::string;
 std::string receipt(std::string mode,std::initializer_list<int> args){
 
@@ -981,80 +1038,55 @@ std::string fit(int a,int b,int c){return receipt("single",{a,b,c});
 std::string fit_joint(int a,int b,int c){return receipt("joint",{a,
 b,c});
 }
-std::string fit_sequential(int a,int b,int scan,int d,int c){
-return receipt("sequential",{a,b,c,scan,d});
+std::string fit_sequential(int a,int b,int scan,int d,int c,int fitted){
+return receipt("sequential",{a,b,c,scan,d,fitted});
 }
-std::string fit_independent(int a,int b,int scan,int d,int c){
-return receipt("independent",{a,b,c,scan,d});
+std::string fit_independent(int a,int b,int scan,int d,int c,int fitted){
+return receipt("independent",{a,b,c,scan,d,fitted});
 }};
 std::string effective_fitting_mode(Project& p){return p.mode;}
 BODY
 int main(){for(auto mode:{"sequential","independent"}){Project p{mode}
 
-;try{std::cout<<fit_by_mode(p,11,22,33,55,44)<<"\\n";}catch(std::exception&
+;try{std::cout<<fit_by_mode(p,11,22,33,55,44,66)<<"\\n";}catch(std::exception&
 e){std::cout<<"REFUSED\\n";}}}""".replace('BODY', dispatch)
     if 'ScanStartCallback' not in dispatch:
-        program = program.replace('{a,b,c,scan,d}', '{a,b,c,d}')
-        program = program.replace('fit_by_mode(p,11,22,33,55,44)', 'fit_by_mode(p,11,22,33,44)')
+        program = program.replace('{a,b,c,scan,d,fitted}', '{a,b,c,d,fitted}')
+        program = program.replace(
+            'fit_by_mode(p,11,22,33,55,44,66)', 'fit_by_mode(p,11,22,33,44,66)'
+        )
     return cpp_probe(program, tmp_path)
 
 
-def joint_options(text, tmp_path):
+def joint_options(text, tmp_path, *, selector_text=None):
     producer = block(text, 'void AnalysisViewModel::sync(')
+    require(
+        producer,
+        r'const std::vector<std::string> modes = edi::applicable_fitting_modes\(project_\)',
+        'Scan mode wiring: the consumed options producer reads the project applicability rule',
+    )
+    require(
+        producer,
+        r'fitting_mode_options_->setOptions\(modes,',
+        'Scan mode wiring: the selector receives those exact applicable modes',
+    )
+    rule = block(
+        selector_text
+        if selector_text is not None
+        else (ROOT / 'core/src/selectors.cpp').read_text(),
+        'std::vector<std::string> applicable_fitting_modes(',
+    )
     program = """#include <algorithm>
 #include <cstdio>
 #include <string>
 #include <vector>
-#define emit
-struct QString:std::string {using std::string::string;QString(std::string
-x):std::string(x){}static QString fromStdString(std::string x){return QString(x);
-
-}};
 struct Scan{bool value=false;bool declared()const{return value;}};
-struct Project{Scan sequential_fit;std::string descent;int minimizer_max_iterations=1;
-
-double minimizer_chi_square_tolerance=0;};
-namespace edi {std::string effective_fitting_mode(Project&){return "single";
-
-}std::string default_descent(){return "lm";}int analysis_categories(Project&){
-
-return 0;}std::vector<std::string> supported_fitting_modes(){return {
-
-"single","joint","sequential","independent"};}}
-struct Options{std::vector<std::string> tokens=edi::supported_fitting_modes();
-
-void setOptions(std::vector<std::string> x,std::string ={}){tokens=x;
-
-}void sync(){}void setCategories(int){}int count(){return tokens.size();
-}bool joint(){return std::find(tokens.begin(),
-
-tokens.end(),"joint")!=tokens.end();}};
-struct AnalysisViewModel {Project project_;QString fitting_mode_,descent_;
-
-int max_iterations_=0;double chi_square_tolerance_=0;bool scan_declared_=false;
-Options options,other;Options* fitting_mode_options_=&options;Options*
-joint_weights_=&other;Options* sequential_fit_=&other;Options* sequential_extract_=&other;
-
-Options* fit_start_=&other;Options* aliases_=&other;Options* constraints_=&other;
-
-Options* categories_=&other;
-bool hasMaxIterations(){return max_iterations_!=0;}bool hasChiSquareTolerance(){
-
-return chi_square_tolerance_!=0;}
-void fittingModeChanged(){}void descentChanged(){}void maxIterationsChanged(){
-
-}void hasMaxIterationsChanged(){}void chiSquareToleranceChanged(){}
-
-void hasChiSquareToleranceChanged(){}
-void sync();};
+struct Project{Scan sequential_fit;std::vector<int> experiments{1,2};};
 BODY
-int main(){AnalysisViewModel model;for(bool declared:{false,true,false}){
-model.project_.sequential_fit.value=declared;
-model.sync();
-std::printf("%d\\n",model.options.joint());
-
-
-}}""".replace('BODY', producer)
+int main(){Project project;for(bool declared:{false,true,false}){
+project.sequential_fit.value=declared;const auto modes=applicable_fitting_modes(project);
+std::printf("%d\\n",std::find(modes.begin(),modes.end(),"joint")!=modes.end());}}
+""".replace('BODY', rule)
     return cpp_probe(program, tmp_path)
 
 

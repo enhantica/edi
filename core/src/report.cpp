@@ -162,6 +162,9 @@ std::string machine_report(const Project& project, const FitResultBase& outcome,
     for (const BankMetric& bank : outcome.banks) {
         report.banks.push_back({bank.name, bank.n_points, bank.rwp, bank.chi_square});
     }
+    // edi's own key: how many parameter pairs the fit's correlations hold (analysis.edi's
+    // `_fit_parameter_correlation` rows).
+    report.extra.emplace_back("x-edi.correlations", std::to_string(outcome.correlations.size()));
     return crysta::format_fit_report(report, to_engine(verbosity));
 }
 

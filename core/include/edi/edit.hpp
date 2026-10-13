@@ -139,6 +139,28 @@ class Edit {
     static Edit assign(detail::Written<bool>& field, bool value) {
         return Edit([&field, value] { field = value; });
     }
+    // Free or fix several parameters, by unique name, all or none (the parameter table's "free" header; the owner,
+    // 2026-10-11): every name is resolved before any flag is written. Its undo is the same edit with the flags as
+    // they were.
+    static Edit set_free(Project& project, std::vector<std::pair<std::string, bool>> flags) {
+        return Edit([&project, flags = std::move(flags)] {
+            std::map<std::string, Parameter*> by_name;
+            for (const NamedSlot& slot : named_slots(project)) {
+                by_name.emplace(slot.unique_name, slot.parameter);
+            }
+            std::vector<std::pair<Parameter*, bool>> resolved;
+            for (const auto& [name, free] : flags) {
+                const auto found = by_name.find(name);
+                if (found == by_name.end()) {
+                    throw std::invalid_argument("'" + name + "' is not a refinable parameter of this project");
+                }
+                resolved.emplace_back(found->second, free);
+            }
+            for (const auto& [parameter, free] : resolved) {
+                parameter->free = free;
+            }
+        });
+    }
     static Edit assign(double& field, double value) {
         return Edit([&field, value] { field = value; });
     }
@@ -196,6 +218,27 @@ class Edit {
     }
     static Edit absorption(ExperimentBase& experiment, std::string token) {
         return Edit([&experiment, token = std::move(token)] { select_absorption(experiment, token); });
+    }
+    // The background model, the old type's rows and constants removed (select_background_type).
+    static Edit background_type(ExperimentBase& experiment, std::string token) {
+        return Edit([&experiment, token = std::move(token)] { select_background_type(experiment, token); });
+    }
+    // A polynomial or Chebyshev background's terms: one appended at the lowest free order, a term's order, the
+    // polynomial's origin and an end of the Chebyshev domain, each under its rule.
+    static Edit background_point_ids(ExperimentBase& experiment, std::vector<std::string> ids) {
+        return Edit([&experiment, ids = std::move(ids)] { set_background_point_ids(experiment, ids); });
+    }
+    static Edit append_background_term(ExperimentBase& experiment) {
+        return Edit([&experiment] { experiment.background_terms.push_back(next_background_term(experiment)); });
+    }
+    static Edit background_term_order(ExperimentBase& experiment, PolynomialTerm& term, int order) {
+        return Edit([&experiment, &term, order] { set_background_term_order(experiment, term, order); });
+    }
+    static Edit background_origin(ExperimentBase& experiment, double origin) {
+        return Edit([&experiment, origin] { set_background_origin(experiment, origin); });
+    }
+    static Edit background_domain(ExperimentBase& experiment, bool end, double value) {
+        return Edit([&experiment, end, value] { set_background_domain(experiment, end, value); });
     }
     static Edit scattering_source(ExperimentBase& experiment, ScatteringSourceItem item, std::string token) {
         return Edit(
@@ -328,6 +371,7 @@ class Edit {
         });
     }
     static Edit erase(ItemVec<LineSegment>& rows, std::size_t index) { return erasing(rows, index); }
+    static Edit erase(ItemVec<PolynomialTerm>& rows, std::size_t index) { return erasing(rows, index); }
     static Edit erase(ItemVec<PrefOrient>& rows, std::size_t index) { return erasing(rows, index); }
     static Edit erase(ItemVec<LinkedStructure>& rows, std::size_t index) { return erasing(rows, index); }
     static Edit erase(ItemVec<ParameterAlias>& rows, std::size_t index) { return erasing(rows, index); }
@@ -336,29 +380,25 @@ class Edit {
     // A row-level removal cannot see the project's scan declaration: the app removes experiments through
     // erase_experiment, which keeps a scan's one template experiment.
     static Edit erase(ItemVec<BraggPdExperiment>& rows, std::size_t index) { return erasing(rows, index); }
-    // An excluded region: its row added at the end, removed, or one of its two bounds assigned. The
-    // regions are one recorded field (ADR-0018), written through its `modify`, which records a write
-    // even when its callback throws: a missing row is therefore refused before it.
-    using Regions = std::vector<std::pair<double, double>>;
+    /// Rename a background row under its collection's uniqueness rule.
+    static Edit background_id(LineSegment& point, std::string id) {
+        return Edit([&point, id = std::move(id)] { point.id = id; });
+    }
+    /// Rename an exclusion row under its collection's uniqueness rule.
+    static Edit excluded_region_id(ExcludedRegion& region, std::string id) {
+        return Edit([&region, id = std::move(id)] { region.id = id; });
+    }
     static Edit append_excluded_region(ExperimentBase& experiment, double start, double end) {
-        return Edit([&experiment, start, end] {
-            experiment.excluded_regions.modify([start, end](Regions& regions) { regions.emplace_back(start, end); });
-        });
+        return Edit([&experiment, start, end] { experiment.excluded_regions.push_back(ExcludedRegion(start, end)); });
     }
     static Edit erase_excluded_region(ExperimentBase& experiment, std::size_t row) {
-        return Edit([&experiment, row] {
-            require_region(experiment, row);
-            experiment.excluded_regions.modify(
-                [row](Regions& regions) { regions.erase(regions.begin() + static_cast<std::ptrdiff_t>(row)); });
-        });
+        return Edit([&experiment, row] { require_region(experiment, row); experiment.excluded_regions.erase_at(row); });
     }
     static Edit excluded_region_bound(ExperimentBase& experiment, std::size_t row, bool end, double value) {
         return Edit([&experiment, row, end, value] {
             require_region(experiment, row);
-            experiment.excluded_regions.modify([row, end, value](Regions& regions) {
-                auto& region = regions[row];
-                (end ? region.second : region.first) = value;
-            });
+            auto& region = *experiment.excluded_regions[row];
+            (end ? region.second : region.first) = value;
         });
     }
     // A space-group setting chosen whole (assign_space_group_setting): name, code and IT number never contradict

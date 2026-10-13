@@ -143,6 +143,18 @@ QString registered_family(const char* file) {
                    QStringLiteral(":/qt/qml/EasyApplication/Gui/Resources/Fonts/") + QString::fromUtf8(file)))
         .value(0);
 }
+#if defined(Q_OS_WASM)
+// The browser's settings file and the text last written to the page's storage.
+QString& browser_settings_file() {
+    static QString path;
+    return path;
+}
+QByteArray& browser_settings_stored() {
+    static QByteArray text;
+    return text;
+}
+#endif
+
 // Set by use_fresh_settings(): the process-lifetime directory a demo or a test run keeps its settings in.
 QString& fresh_config_dir() {
     static QString dir;
@@ -180,26 +192,35 @@ void configure_engine(QQmlEngine& engine) {
             std::free(stored);
         }
         // The base's Settings write the file on their own schedule; a check per second keeps the stored copy
-        // at most a second behind it.
+        // at most a second behind it, and a preference that must survive a reload stores it at once
+        // (store_settings_now).
+        browser_settings_file() = settings_file;
         auto* timer = new QTimer(&engine);
         timer->setInterval(1000);
-        QObject::connect(timer, &QTimer::timeout, timer, [settings_file, last = QByteArray()]() mutable {
-            QFile file(settings_file);
-            if (!file.open(QIODevice::ReadOnly)) {
-                return;
-            }
-            const QByteArray text = file.readAll();
-            if (text != last) {
-                edi_settings_store(text.constData());
-                last = text;
-            }
-        });
+        QObject::connect(timer, &QTimer::timeout, timer, [] { store_settings_now(); });
         timer->start();
     }
 #endif
     engine.rootContext()->setContextProperty(QStringLiteral("pySettingsPath"),
                                              QUrl::fromLocalFile(settings_file).toString());
     engine.rootContext()->setContextProperty(QStringLiteral("pyIsTestMode"), false);
+}
+
+void store_settings_now() {
+#if defined(Q_OS_WASM)
+    if (browser_settings_file().isEmpty()) {
+        return;  // a demo or a test run, or the engine is not configured yet
+    }
+    QFile file(browser_settings_file());
+    if (!file.open(QIODevice::ReadOnly)) {
+        return;
+    }
+    const QByteArray text = file.readAll();
+    if (text != browser_settings_stored()) {
+        edi_settings_store(text.constData());
+        browser_settings_stored() = text;
+    }
+#endif
 }
 
 void use_design_font() {

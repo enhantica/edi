@@ -3085,3 +3085,7 @@ _data.intensity_meas_su
 135528.7670492404 2995 0.0037494260418074266 0.0037315086406173696
 135560.62093563325 2996 1.254304567681278 1.2543045676812783
 135592.47482202607 2997 0.013095969806812045 0.013095969806812045
+_experiment_type.sample_form "powder"
+_experiment_type.beam_mode "time-of-flight"
+_experiment_type.radiation_probe "neutron"
+_experiment_type.scattering_type "bragg"

@@ -2,6 +2,7 @@
 import QtQuick
 import QtQuick.Controls
 
+import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
@@ -23,12 +24,17 @@ EaElements.ParamTextField {
     readonly property bool refinable: item === null || item.refinable
     // A fixed setting is edited but never fitted: no fit toggle.
     readonly property bool canFit: refinable && (item === null || item.fittable)
+    // A value outside its range (a fit writes its values unchecked) is red with the range, as in a table cell.
+    readonly property bool outsideRange: item !== null && item.outsideRange
+    readonly property string warningText: refusal !== "" ? refusal : outsideRange ? qsTr("Outside its range, %1 to %2").arg(item.minimum).arg(item.maximum) : ""
+
+    color: warned ? EaStyle.Colors.red : !enabled || readOnly ? EaStyle.Colors.themeForegroundMinor : item && item.free && canFit ? EaStyle.Colors.chartForegroundsExtra[1] : EaStyle.Colors.themeForeground
 
     enabled: refinable
     // The value and its uncertainty as text, by the app's one rule for numbers (NumberText).
     parameter: item ? {
-        "value": NumberText.parameter(item.value, item.hasUncertainty ? item.uncertainty : 0, 10),
-        "error": item.hasUncertainty ? NumberText.error(item.uncertainty) : "",
+        "value": NumberText.parameter(item.value, item.hasUncertainty ? item.uncertainty : 0),
+        "error": item.hasUncertainty ? NumberText.error(item.uncertainty, 0, item.value) : "",
         "enabled": field.refinable,
         "fittable": field.canFit,
         "fit": item.free && field.canFit,
@@ -38,26 +44,44 @@ EaElements.ParamTextField {
         "units": item.displayUnits
     } : ({})
 
-    warned: refusal !== ""
+    // The value as edited: in full, where the cell shows it rounded (NumberText).
+    readonly property string editText: item !== null ? NumberText.full(item.value) : value
+
+    onActiveFocusChanged: {
+        if (activeFocus && text === value)
+            text = editText;
+        else if (!activeFocus)
+            commit();
+    }
+
+    warned: warningText !== ""
     // Its title as every field's: left, inset as a combo box's, ending in "…" (edi ADR-0017 §5).
     Component.onCompleted: FieldTitles.align(field)
-    ToolTip.text: refusal
-    ToolTip.visible: refusal !== "" && (hovered || activeFocus)
+    ToolTip.text: warningText
+    WarningToolTip {
+        text: field.warningText
+        visible: field.warned && (field.hovered || field.activeFocus)
+    }
 
     onValueChanged: typedRefusal = ""
     onAccepted: commit()
     onEditingFinished: commit()
 
-    // Return and leaving the field both commit; the second of the two finds nothing new.
+    // Return and leaving the field both commit; the second of the two finds nothing new. Text left as shown, rounded or
+    // in full, changes nothing.
     function commit() {
-        if (item !== null && text !== field.value) {
+        if (item === null)
+            return;
+        if (text !== field.value && text !== field.editText) {
             typedRefusal = TypedInput.refusal(text, "number");
             if (typedRefusal === "") {
                 item.value = Number(text);
             }
-            text = Qt.binding(() => field.value);
         }
+        text = Qt.binding(() => field.value);
     }
-    fitCheckBox.onToggled: if (item !== null)
-        item.free = fitCheckBox.checked
+    onFitToggled: checked => {
+        if (item !== null)
+            item.free = checked;
+    }
 }

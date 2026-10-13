@@ -19,11 +19,11 @@ from pathlib import Path
 import pytest
 import yaml
 
+from tests.fixtures.table_display import gui_base
 from tests.integration.py.ci_runner_contract import self_hosted_runners
 
 ROOT = Path(__file__).resolve().parents[3]
 SCREENSHOTS = ROOT / 'docs/dev/design/app-screenshots'
-PIN = 'a573a9695e53a0807de197785e12f9facd06da05'
 FORBIDDEN = {
     'QVariant',
     'QVariantMap',
@@ -95,6 +95,21 @@ def test_shipped_view_model_api_is_typed():
         ), f'I2: no dictionary round trips or JsonListModel in {file.relative_to(ROOT)}'
 
 
+def assert_gui_pin(source):
+    source = re.sub(r'#[^\n]*', '', source)
+    for name, value in (
+        ('SHA', gui_base.PIN),
+        ('ARCHIVE_SHA256', gui_base.ARCHIVE_SHA256),
+        ('SRC_SHA256', gui_base.SOURCE_SHA256),
+    ):
+        values = re.findall(
+            r'set\s*\(\s*EDI_GUI_COMPONENTS_' + name + r'\s+([^\s)]+)\s*\)', source
+        )
+        assert values == [value], (
+            'The selected upstream GUI commit and both independently frozen digests must be exact'
+        )
+
+
 def test_shipped_qml_imports_and_base_pin():
     # Before: LGPL modules only. 's GPL app decision and 's
     # accepted plan admit QtGraphs and QtQuick3D; the other exclusions stay.
@@ -109,11 +124,30 @@ def test_shipped_qml_imports_and_base_pin():
     assert cmake.is_file(), (
         'I11: gui-components must be acquired through the checked pinned base adapter'
     )
-    assert PIN in cmake.read_text(), (
-        'I11: the configured gui-components input is the accepted v0.9.1 commit'
-    )
+    assert_gui_pin(cmake.read_text())
     host = (ROOT / 'app/main.cpp').read_text()
     assert 'QTest::' not in host, 'I16: the shipped demo uses real events without linking QtTest'
+
+
+@pytest.mark.parametrize('damage', ['commit', 'archive', 'source', 'comment', 'duplicate'])
+def test_gui_pin_rejects_identity_digest_and_declaration_escapes(damage):
+    source = (ROOT / 'cmake/EdiGuiBase.cmake').read_text()
+    assert_gui_pin(source)
+    selected = {
+        'commit': gui_base.PIN,
+        'archive': gui_base.ARCHIVE_SHA256,
+        'source': gui_base.SOURCE_SHA256,
+    }
+    if damage in selected:
+        source = source.replace(selected[damage], '0' * len(selected[damage]))
+    elif damage == 'comment':
+        source = re.sub(
+            r'(?m)^set\(EDI_GUI_COMPONENTS_SHA ', '# set(EDI_GUI_COMPONENTS_SHA ', source
+        )
+    else:
+        source += f'\nset(EDI_GUI_COMPONENTS_SHA {gui_base.PIN})\n'
+    with pytest.raises(AssertionError, match='upstream GUI commit'):
+        assert_gui_pin(source)
 
 
 def dependency_commands(manifest, name, seen=None):

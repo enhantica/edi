@@ -2059,3 +2059,7 @@ _data.intensity_meas_su
 66445.6885 1998 0.630244 0.038538
 66474.6898 1999 0.672737 0.041057
 66503.6911 2000 0.713385 0.042236
+_experiment_type.sample_form "powder"
+_experiment_type.beam_mode "time-of-flight"
+_experiment_type.radiation_probe "neutron"
+_experiment_type.scattering_type "bragg"

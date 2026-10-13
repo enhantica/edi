@@ -128,6 +128,7 @@ def test_existing_projects_open_and_populate_pages(existing_projects_run):
             .split('var frozen = ', 1)[1]
             .removesuffix(';\n')
         )['projects']
+        if project['metadata']['_metadata.purpose'] != 'verification'
     ],
 )
 def test_existing_project_receipts_cover_every_registered_example(existing_projects_run, example):
@@ -195,4 +196,29 @@ def test_missing_property_fails_the_production_qmllint_import_context():
     assert 'e04MissingProperty' in output, 'I10: lint failure names the missing member'
     assert 'Failed to import edi.app' not in output, (
         'I10: the negative control must resolve the actual app module'
+    )
+
+
+@pytest.mark.parametrize(
+    'example',
+    [
+        project['id']
+        for project in json.loads(
+            (ROOT / 'tests/fixtures/e04_t1/oracle.js')
+            .read_text()
+            .split('var frozen = ', 1)[1]
+            .removesuffix(';\n')
+        )['projects']
+        if project['metadata']['_metadata.purpose'] == 'verification'
+    ],
+)
+def test_verification_directory_receipt_retains_every_original_project(
+    existing_projects_run, example
+):
+    output = existing_projects_run.stdout + existing_projects_run.stderr
+    assert (
+        'PASS   : edi_app::E04T1ExistingProjects::'
+        f'test_verification_directories_keep_their_independent_project_population({example})'
+    ) in output, (
+        'every verification directory reaches all of its independent population assertions'
     )

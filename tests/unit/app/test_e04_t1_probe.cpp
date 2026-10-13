@@ -12,6 +12,8 @@
 #include <QQmlEngine>
 #include <QSignalSpy>
 #include <QQuickItem>
+#include <QQuickWindow>
+#include <QCursor>
 #include <QRegularExpression>
 #include <QStandardPaths>
 #include <QTextDocument>
@@ -20,8 +22,12 @@
 #include <vector>
 #include <iostream>
 #include <sstream>
+#include <filesystem>
+#include <edi/scan.hpp>
+#include "evolution_view_model.hpp"
 #include <edi/io.hpp>
 #include "experiment_view_model.hpp"
+#include "project_view_model.hpp"
 
 class AcceptanceProbe final : public QObject {
     Q_OBJECT
@@ -36,6 +42,36 @@ class AcceptanceProbe final : public QObject {
     }
 public:
     using QObject::QObject;
+    Q_INVOKABLE QVariantList objectsWithProperty(QObject *root, const QString &name) const {
+        QVariantList result;
+        if (!root) return result;
+        auto objects = root->findChildren<QObject *>();
+        objects.prepend(root);
+        for (auto *object : objects)
+            if (object->property(name.toUtf8().constData()).isValid()) result.append(QVariant::fromValue(object));
+        return result;
+    }
+    Q_INVOKABLE int cursorShape(QObject *object) const {
+        const auto *item = qobject_cast<QQuickItem *>(object);
+        return item && item->window() ? static_cast<int>(item->window()->cursor().shape()) : -1;
+    }
+    Q_INVOKABLE QVariantList visiblePopups(QObject *root) const {
+        QVariantList result;
+        if (!root) return result;
+        for (auto *object : root->findChildren<QObject *>()) {
+            if (object->property("opened").isValid() && object->property("visible").toBool())
+                result.append(QVariant::fromValue(object));
+        }
+        return result;
+    }
+    Q_INVOKABLE QVariantList visibleDialogs(QObject *root) const {
+        QVariantList result;
+        for (const auto &entry : visiblePopups(root)) {
+            auto *object = entry.value<QObject *>();
+            if (object && object->property("standardButtons").isValid()) result.append(entry);
+        }
+        return result;
+    }
     Q_INVOKABLE bool nativeText(QObject *object) const {
         return object && (object->inherits("QQuickTextEdit") || object->inherits("QQuickText"));
     }
@@ -81,6 +117,56 @@ public:
     Q_INVOKABLE QUrl repoUrl(const QString &path) const {
         return QUrl::fromLocalFile(QDir(root()).absoluteFilePath(path));
     }
+    Q_INVOKABLE bool appendNotes(const QUrl &url, const QString &text) const {
+        if (!url.isLocalFile() || !QFileInfo(url.toLocalFile()).isFile()) return false;
+        QFile file(url.toLocalFile());
+        if (!file.open(QIODevice::WriteOnly | QIODevice::Append)) return false;
+        const QByteArray bytes = text.toUtf8();
+        return file.write(bytes) == bytes.size() && file.flush();
+    }
+    Q_INVOKABLE QString scanIndexError(QObject *object) const {
+        const auto *project = qobject_cast<edi_app::ProjectViewModel *>(object);
+        if (!project || !project->scanSession()) return QStringLiteral("not a scan project");
+        return QString::fromStdString(project->scanSession()->index().error);
+    }
+    Q_INVOKABLE bool datasetReady(QObject *object) const {
+        const auto *project = qobject_cast<edi_app::ProjectViewModel *>(object);
+        return project && project->pendingRefusal().isEmpty();
+    }
+    Q_INVOKABLE bool scanLastSingle(QObject *object) const {
+        const auto *project = qobject_cast<edi_app::ProjectViewModel *>(object);
+        return project && project->scanSession() && project->scanSession()->run().last_single;
+    }
+    Q_INVOKABLE bool replaceState(const QUrl &target, const QUrl &replacement) const {
+        if (!target.isLocalFile() || !replacement.isLocalFile()) return false;
+        const std::filesystem::path path(target.toLocalFile().toStdString());
+        std::error_code error;
+        std::filesystem::rename(path, path.string() + ".retained", error);
+        if (error) return false;
+        std::filesystem::rename(replacement.toLocalFile().toStdString(), path, error);
+        return !error;
+    }
+    Q_INVOKABLE QString scanReread(QObject *object, const QString &reader) const {
+        auto *project = qobject_cast<edi_app::ProjectViewModel *>(object);
+        if (!project || !project->scanSession()) return QStringLiteral("not a scan project");
+        const auto *session = project->scanSession();
+        try {
+            if (reader == "offset") {
+                (void)edi::read_scan_row(project->project(), session->index().rows.at(0).offset);
+            } else if (reader == "row") {
+                (void)session->row(project->project(), 0);
+            } else if (reader == "evolution") {
+                project->evolution()->setCurrentParameter(1 - project->evolution()->currentParameter());
+                // Evolution catches stream errors and publishes the project error channel.
+                return project->lastError();
+            } else {
+                return QStringLiteral("unknown reader");
+            }
+        } catch (const std::exception &error) {
+            return QString::fromUtf8(error.what());
+        }
+        return {};
+    }
     Q_INVOKABLE QString readFile(const QString &path) const {
         QFile file(QDir(root()).absoluteFilePath(path));
         if (!file.open(QIODevice::ReadOnly)) {
@@ -93,6 +179,9 @@ public:
         const QString base = qEnvironmentVariable(
             "EDI_ACCEPTANCE_REFERENCE", QDir(root()).filePath("tests/fixtures/e04_t1/reference"));
         return QUrl::fromLocalFile(QDir(base).absoluteFilePath(path));
+    }
+    Q_INVOKABLE QString readReferenceFile(const QString &path) const {
+        return readFile(referenceUrl(path).toLocalFile());
     }
     Q_INVOKABLE QVariantList reference() const {
         QFile file(referenceUrl("reference.json").toLocalFile());

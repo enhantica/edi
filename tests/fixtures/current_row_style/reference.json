@@ -1,0 +1,26 @@
+{
+  "gui_pin": "3897d339b60f5707bfe952fed59a20f73340e236",
+  "source_tree_sha256": "5e6ee5d998c030c0517a0b8adb19f13d22f63e1ea8c199bb5ec2076081db5888",
+  "sources": [
+    "Elements/TabBar.qml",
+    "Style/Colors.qml"
+  ],
+  "width": 2,
+  "move_duration": 250,
+  "accent": {
+    "dark": "#4ec1ef",
+    "light": "#00a3e3"
+  },
+  "odd": {
+    "dark": "#353535",
+    "light": "#fefefe"
+  },
+  "even": {
+    "dark": "#3a3a3a",
+    "light": "#f7f7f7"
+  },
+  "hover": {
+    "dark": "#394247",
+    "light": "#e6f5fc"
+  }
+}

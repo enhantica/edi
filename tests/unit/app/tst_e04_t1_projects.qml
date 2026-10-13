@@ -18,6 +18,10 @@ TestCase {
         verify(appWindow !== null, "I19: existing-project tests load production Main");
         verify(waitForRendering(appWindow.contentItem), "I19: the real window is ready for input");
     }
+    function appProjects() {
+        // Frozen file purposes and the owner's catalogue rule select the expected set.
+        return Oracle.frozen.projects.filter(p => p.metadata["_metadata.purpose"] !== "verification");
+    }
     function init() {
         // Qt Graphs probes a temporary GLES2 context once per process, even
         // with the software backend. Only this first Graphs user may lack GL.
@@ -27,6 +31,9 @@ TestCase {
             ? /\A(?!QRhiGles2: Failed to create (?:temporary context|context)\z)[\s\S]*\z/
             : /.*/);
         Session.closeProject();
+        Session.examples.searchText = "";
+        Session.examples.filterValue = "";
+        Session.examples.filterProperty = "purpose";
         click("appBar.tab.home");
         click("home.start");
     }
@@ -40,6 +47,25 @@ TestCase {
     function visibleControl(name) { return Ui.control(Probe, appWindow, name); }
     function click(name) { Ui.click(test, Probe, appWindow, name); }
     function openExample(id) {
+        click("appBar.tab.project");
+        click("sideBar.tab.basic");
+        Ui.expandGroup(test, Probe, appWindow, "group.examples");
+        tryVerify(() => visibleControl("examples.list") !== null, 2000,
+                  "The unfiltered catalogue is exposed after group expansion");
+        const list = visibleControl("examples.list");
+        compare(list.count, appProjects().length + 1,
+                "Every app example and the independent LiF example reach the catalogue");
+        const index = Probe.rows(Session.examples).map(row => row.exampleId).indexOf(id);
+        verify(index >= 0, "The requested example retains its own catalogue identity: " + id);
+        list.positionViewAtIndex(index, ListView.Contain);
+        list.forceLayout();
+        tryVerify(() => list.itemAtIndex(index) !== null, 2000,
+                  "Positioning materializes the row with the requested identity: " + id);
+        const row = list.itemAtIndex(index);
+        compare(row.exampleId, id, "The materialized catalogue row belongs to the requested example");
+        Ui.scrollIntoView(row);
+        tryVerify(() => visibleControl("examples.open." + id) !== null, 2000,
+                  "The requested example's own row is visible for real input: " + id);
         click("examples.open." + id);
         // Rendering a frame does not prove that a deferred row press opened its
         // project. Observe the result, including identity, before reading it.
@@ -171,29 +197,15 @@ TestCase {
         verify(text.includes("crysta"), "owner final report record: fit summary names the effective engine");
     }
     function test_examples_registry_is_complete() {
-        same(Probe.rows(Session.examples).map(r => r.exampleId), Oracle.frozen.projects.map(p => p.id).concat(["pd-xray-cwl_lif"]),
-             "I19/owner X-ray record: Examples follows the whole registry plus the independent LiF example");
+        same(Probe.rows(Session.examples).map(r => r.exampleId), appProjects().map(p => p.id).concat(["pd-xray-cwl_lif"]),
+             "The catalogue contains exactly the app examples and independent LiF, excluding verification projects");
     }
     function test_every_example_opens_through_its_page_row_data() {
-        return Oracle.frozen.projects.map((p, index) => ({tag: p.id, expected: p, index: index}));
+        return appProjects().map(p => ({tag: p.id, expected: p}));
     }
     function test_every_example_opens_through_its_page_row(data) {
         compare(Probe.libraryLoadWarning(Probe.repoUrl(data.expected.path)), data.expected.loaderWarning,
                 "review-4 F1: frozen warning expectation is observed on the library's actual cerr channel");
-        click("appBar.tab.project");
-        click("sideBar.tab.basic");
-        Ui.expandGroup(test, Probe, appWindow, "group.examples");
-        tryVerify(() => visibleControl("examples.list") !== null, 2000,
-                  "I19: the Examples table is exposed after expansion");
-        const list = visibleControl("examples.list");
-        verify(list !== null, "I19: Project Examples exposes the base TableView");
-        compare(list.count, Oracle.frozen.projects.length + 1, "I19/owner X-ray record: every registry entry and LiF reach the visible list");
-        list.positionViewAtIndex(data.index, ListView.Center);
-        tryVerify(() => list.itemAtIndex(data.index) !== null, 2000,
-                  "I19: positioning instantiates the requested Example row");
-        Ui.scrollIntoView(list.itemAtIndex(data.index));
-        tryVerify(() => visibleControl("examples.open." + data.expected.id) !== null,
-                  2000, "I19: scrolling materializes each selectable example row");
         openExample(data.expected.id);
         // The CLI adds its "Warning: " envelope; the typed sink carries the
         // diagnostic body specified by plan 15.1. Keep both channel checks exact.
@@ -211,6 +223,18 @@ TestCase {
             dialog.close();
             tryCompare(dialog, "opened", false, 2000, " idea 24: central dialog finishes closing before workflow input");
         }
+        populated(data.expected);
+    }
+    function test_verification_directories_keep_their_independent_project_population_data() {
+        return Oracle.frozen.projects.filter(p => p.metadata["_metadata.purpose"] === "verification")
+            .map(p => ({tag: p.id, expected: p}));
+    }
+    function test_verification_directories_keep_their_independent_project_population(data) {
+        verify(!Probe.rows(Session.examples).some(row => row.exampleId === data.expected.id),
+               "A verification project remains outside the app catalogue");
+        Session.openProject(Probe.repoUrl(data.expected.path));
+        verify(Session.hasProject, "The retained verification directory remains loadable");
+        compare(Session.openedExample, "", "A directory load cannot claim an example row selection");
         populated(data.expected);
     }
     function test_directory_warning_is_forwarded_without_special_casing_data() {
@@ -235,17 +259,6 @@ TestCase {
         dialog.close();
     }
     function test_bundled_xray_example_opens_by_real_input() {
-        click("appBar.tab.project");
-        click("sideBar.tab.basic");
-        Ui.expandGroup(test, Probe, appWindow, "group.examples");
-        tryVerify(() => visibleControl("examples.list") !== null, 2000,
-                  "owner X-ray record: the Examples table is exposed after expansion");
-        const list = visibleControl("examples.list");
-        verify(list !== null, "owner X-ray record: the bundled X-ray example is user-reachable");
-        list.positionViewAtIndex(Oracle.frozen.projects.length, ListView.Center);
-        tryVerify(() => list.itemAtIndex(Oracle.frozen.projects.length) !== null, 2000,
-                  "owner X-ray record: positioning instantiates the final Example row");
-        Ui.scrollIntoView(list.itemAtIndex(Oracle.frozen.projects.length));
         openExample("pd-xray-cwl_lif");
         verify(Session.hasProject, "owner X-ray record: selecting the bundled LiF example opens it");
         const s = Session.project.currentStructure, e = Session.project.currentExperiment;
@@ -267,10 +280,16 @@ TestCase {
     }
     function test_arbitrary_directory_keeps_legacy_type_inference() {
         const expected = Oracle.frozen.projects.find(p => p.id === "pd-neut-tof_diamond-dream_basic");
-        verify(!Probe.readFile(expected.path + "/experiments/dream.edi").includes("_experiment_type."),
+        const legacy = Probe.readReferenceFile("unlisted legacy project/project/experiments/dream.edi");
+        verify(!legacy.includes("_experiment_type.") && !legacy.includes("_type."),
                "I19: legacy witness genuinely declares no type axes");
+        const source = Probe.readReferenceFile("unlisted legacy project/project/project.edi");
+        const title = source.match(/^_metadata\.title[ \t]+"([^"\n]+)"[ \t]*$/m);
+        verify(title !== null, "The archived directory declares its independent quoted title");
+        const legacyExpected = JSON.parse(JSON.stringify(expected));
+        legacyExpected.metadata["_metadata.title"] = title[1];
         Session.openProject(Probe.referenceUrl("unlisted legacy project/project"));
-        populated(expected);
+        populated(legacyExpected);
         compare(Session.project.currentExperiment.beamModeToken, "time-of-flight",
                 "I19: arbitrary project directories retain the loader-derived TOF type");
     }

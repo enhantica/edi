@@ -1,5 +1,10 @@
 _edi.schema_version 3
 
 _metadata.name             pd_neut_tof_cecoal_polaris_chebyshev
-_metadata.title            "CeCoAl3, POLARIS (ISIS), Chebyshev background"
-_metadata.description      ?
+_metadata.title "CeCoAl₃ [Pmma] · POLARIS @ ISIS"
+_metadata.description "Structure and TOF profile refinement · 24-term Chebyshev background"
+_metadata.purpose "refinement"
+_metadata.dimensionality "1D"
+_metadata.instrument "POLARIS"
+_metadata.facility "ISIS"
+_metadata.polarisation "none"

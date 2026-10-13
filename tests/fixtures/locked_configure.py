@@ -17,6 +17,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from tests.fixtures.locked_gui import gui_source
+
 
 def configure(root, scratch, system, extra=()):
     prefix = Path(os.environ.get('CONDA_PREFIX', sys.prefix)).resolve()
@@ -36,8 +38,7 @@ def configure(root, scratch, system, extra=()):
     ]
     sdk = None
     if (root / 'core/CMakeLists.txt').is_file():
-        sdk_name = 'crysta-prefix-app' if '-DEDI_BUILD_APP=ON' in extra else 'crysta-prefix'
-        sdk = Path(os.environ.get('CRYSTA_SDK_DIR', root / 'build' / sdk_name)).resolve()
+        sdk = Path(os.environ.get('CRYSTA_SDK_DIR', root / 'build/crysta-prefix')).resolve()
         args += ['-DCMAKE_PREFIX_PATH=' + str(sdk) + ';' + str(prefix)]
     else:
         args += ['-DCRYSTA_CXX_PACKAGE=ON', '-DCMAKE_PREFIX_PATH=' + str(prefix)]
@@ -45,6 +46,13 @@ def configure(root, scratch, system, extra=()):
         args += ['-DEigen3_DIR=' + str(system_eigen(prefix, scratch))]
     if not system:
         args += ['-DCMAKE_IGNORE_PREFIX_PATH=/usr;/usr/local;/opt/homebrew;/opt/local']
+    if (
+        (root / 'cmake/EdiGuiBase.cmake').is_file()
+        and '-DEDI_BUILD_APP=ON' in extra
+        and not any(arg.startswith('-DFETCHCONTENT_SOURCE_DIR_GUI_COMPONENTS=') for arg in extra)
+    ):
+        selected = gui_source(root, root / 'build/locked-gui-configure', prefix)
+        args += ['-DFETCHCONTENT_SOURCE_DIR_GUI_COMPONENTS=' + str(selected)]
     args.extend(extra)
     result = subprocess.run(
         args, env=os.environ.copy(), text=True, capture_output=True, check=False

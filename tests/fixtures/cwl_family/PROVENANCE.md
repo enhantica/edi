@@ -43,3 +43,22 @@ asymmetry coefficient/codeword pairs. The pinned upstream category metadata
 defines the four coefficients and exposes no limit entry; it is not claimed to
 contain an explicit false flag for an absent entry. Switch gates preserve the
 non-default limit value, keep it fixed, and retain every coefficient's free-state.
+
+## Native dispatch adaptation
+
+The retained pre-rename Linux and Darwin captures remain unchanged.
+`capture_dispatch_pins.py` records a separately labelled native regression pin
+for the reviewed default-dispatch arithmetic, from identical physical inputs.
+`tch-dispatch-Linux.json` records the actual selected SDK, native module and
+capture digests, complete production source objects, and before/after byte
+identities. TCH moves by one sample and one ulp; FCJ is unchanged on Linux.
+The unchanged value norm holds independently against the retained capture.
+
+A test-only SDK descendant may provide the same reviewed production objects;
+its actual linked source identity is retained rather than relabelled.
+The Darwin sidecar recovers both complete native byte arrays from finished
+macOS job `114621652629`, run `38190315930`, and verifies its logged before
+arrays against the retained Darwin capture. Its SDK manifest comes from the
+actual `osx-arm64` producer artifact `11719509241`. The log and job-context
+digests are recorded. No Linux output supplies a Darwin pin. Same-platform
+comparisons stay exact; the cross-platform rounding comparison remains separate.

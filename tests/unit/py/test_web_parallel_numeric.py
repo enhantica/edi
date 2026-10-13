@@ -23,10 +23,10 @@ from tests.fixtures.web_parallel.numeric import compare_scientific
     ],
 )
 def test_saved_parameter_components_use_numeric_units_and_native_bounds(actual, expected):
-    compare_scientific(
+    assert compare_scientific(
         {'experiment.edi': [['_scale.value', actual]]},
         {'experiment.edi': [['_scale.value', expected]]},
-    )
+    ), 'Saved parameter components must agree in physical units and native conformance bounds'
 
 
 @pytest.mark.parametrize(

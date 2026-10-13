@@ -9,6 +9,10 @@ namespace edi_app {
 // The engine setup the host and the Qt Quick Test runner share: the values the gui-components base
 // reads from its host — a writable settings file and "not a test run".
 void configure_engine(QQmlEngine& engine);
+// In the browser, writes the settings file's current text to the page's storage at once, rather than at the next
+// check (configure_engine), so a reload soon after a change finds it; nothing to do on the desktop, where the file
+// is the store.
+void store_settings_now();
 // The application's default font, before any QML loads: the base's bundled design font (PT Sans), without hinting, drawn by Qt Quick's own text
 // rendering on every platform; every character PT Sans lacks comes from the bundled Noto Sans, every one PT Mono lacks from Noto Sans Mono. Call it
 // once the QGuiApplication exists; the app uses only its bundled fonts.

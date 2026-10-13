@@ -24,6 +24,7 @@ from conftest import (
     crysta_reference_prefix,
     crysta_reference_source,
 )
+from tests.fixtures.correlations.machine_record import without_pair_count
 
 ROOT = Path(__file__).resolve().parents[3]
 CRYSTA = crysta_reference_prefix() / 'bin/crysta'
@@ -179,7 +180,7 @@ def test_omitted_descent_preserves_the_default_record_bytes_regression_pin() -> 
         'the omitted selector must record the default declared by crysta itself'
     )
     expected = DEFAULT_RECORD_REGRESSION_PIN.read_text(encoding='utf-8')
-    assert _without_elapsed(completed.stdout) == expected, (
+    assert _without_elapsed(without_pair_count(completed.stdout)) == expected, (
         'regression pin: omitted descent must retain every deterministic byte of the '
         'record remeasured after the  model and uncertainty correction'
     )

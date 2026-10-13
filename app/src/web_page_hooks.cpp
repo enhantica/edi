@@ -150,9 +150,22 @@ extern "C" EMSCRIPTEN_KEEPALIVE const char* edi_fit_progress() {
             ? QJsonObject{{QStringLiteral("error"), QStringLiteral("the status bar's fit progress was not found")}}
             : QJsonObject{{QStringLiteral("text"), bar->property("text").toString()},
                           {QStringLiteral("visible"), bar->isVisible()},
-                          {QStringLiteral("running"), fit->property("running").toBool()}};
+                          {QStringLiteral("running"), fit->property("running").toBool()},
+                          {QStringLiteral("scanPatternUpdates"), fit->property("scanPatternUpdates").toInt()},
+                          {QStringLiteral("scanShownFile"), fit->property("scanShownFile").toString()}};
     result = QJsonDocument(state).toJson(QJsonDocument::Compact).toStdString();
     return result.c_str();
+}
+
+// The pattern-update preference set to `mode`: the mode the status bar's fit then has, or -1 without one.
+extern "C" EMSCRIPTEN_KEEPALIVE int edi_pattern_updates(int mode) {
+    QObject* preferences = g_engine != nullptr ? g_engine->singletonInstance<QObject*>("edi.app", "Preferences") : nullptr;
+    QObject* fit = named("statusBar.fit");
+    if (preferences == nullptr || fit == nullptr) {
+        return -1;
+    }
+    preferences->setProperty("scanPatternUpdates", mode);
+    return fit->property("patternUpdates").toInt();
 }
 
 // Session::openExample(id) on Qt's main thread: 1 opened, 0 refused (Session names why), -1 no Session.
@@ -207,6 +220,13 @@ EM_JS(void, edi_install_web_page_hooks, (), {
             throw new Error(`ediFitProgress: ${state.error}`);
         }
         return state;
+    };
+    globalThis.ediPatternUpdates = (mode) => {
+        const taken = _edi_pattern_updates(Number(mode));
+        if (taken < 0) {
+            throw new Error("ediPatternUpdates: no preferences or no open project");
+        }
+        return taken;
     };
     globalThis.ediOpenExample = (exampleId) => {
         const opened = withStackSave(() => _edi_open_example(stringToUTF8OnStack(String(exampleId))));

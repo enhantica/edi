@@ -169,10 +169,11 @@ MEMBERS = [
         'ExperimentBase',
         'excluded_regions',
         'std::vector<std::pair<double, double>>',
-        'edi::detail::Written<std::vector<std::pair<double, double>>>',
+        'edi::ItemVec<edi::ExcludedRegion>',
         (
-            'o.M = std::vector<std::pair<double, double>>{{1.25, 4.5}}; const '
-            'std::vector<std::pair<double, double>>& v = o.M; (void)v; '
+            'o.M = edi::excluded_region_rows({{1.25, 4.5}}); '
+            'const std::vector<std::pair<double, double>> v = '
+            'edi::excluded_region_ranges(o.M); (void)v; '
             '(void)o.M.front(); (void)o.M.back(); (void)o.M[0];'
         ),
     ),
@@ -274,6 +275,13 @@ for _owner, _member, _old, _new, _kept in MEMBERS:
         ESCAPES.append((_owner, _member, 'optional-write', f'*o.{_member} = 2.5;'))
     elif _old.startswith('std::optional<'):
         ESCAPES.append((_owner, _member, 'optional-write', f'o.{_member}->push_back(2.5);'))
+    elif _member == 'excluded_regions':
+        ESCAPES.append((
+            _owner,
+            _member,
+            'unchecked-bound-write',
+            f'o.{_member}[0]->first.get() = 2.5;',
+        ))
     elif _old.startswith(('std::vector<', 'std::map<')):
         ESCAPES.append((_owner, _member, 'in-place-clear', f'o.{_member}.clear();'))
     elif _old == 'std::string':
@@ -288,6 +296,24 @@ for _owner, _member, _old, _new, _kept in MEMBERS:
 def test_no_mutable_reference_can_escape_a_retyped_member(
     owner, member, route, expression, standard_headers
 ):
+    if route == 'unchecked-bound-write':
+        # One compilation resolves the controlled write and its read door,
+        # then asks the compiler whether the exact unchecked write is viable.
+        # A missing declaration fails the positive control in the same unit.
+        read_door = expression.removesuffix(' = 2.5;')
+        probe = (
+            '#include "edi/model.hpp"\n'
+            'template<class T> concept unchecked = requires(T& o) { ' + expression + ' };\n'
+            f'static_assert(!unchecked<edi::{owner}>, "Unchecked bound writes must be refused");\n'
+            f'void control(edi::{owner}& o) {{ o.{member}[0]->first = 2.5; '
+            f'const double& value = {read_door}; (void)value; }}\n'
+        )
+        result = compile_probe(probe, standard_headers)
+        assert result.returncode == 0, (
+            'Stored bounds must admit controlled writes and reads while refusing the exact '
+            'unchecked assignment expression: ' + result.stderr
+        )
+        return
     control = compile_probe(source(owner, f'(void)o.{member};'), standard_headers)
     assert control.returncode == 0, (
         ' T8 a negative compilation requires the same actual member to resolve: ' + control.stderr

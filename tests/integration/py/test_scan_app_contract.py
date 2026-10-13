@@ -20,24 +20,33 @@ def source(path):
 
 
 def spans(text):
+    # Mask complete lexical tokens before balancing: quoted braces and comment
+    # apostrophes are not QML delimiters. Preserve offsets for caller slices.
+    masked = re.sub(
+        r'//[^\n]*|/\*.*?\*/|"(?:\\.|[^"\\])*"|'
+        r"'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`",
+        lambda match: ' ' * len(match.group()),
+        text,
+        flags=re.DOTALL,
+    )
     stack, found = [], []
-    quote = ''
-    escaped = False
-    for position, character in enumerate(text):
-        if quote:
-            if character == quote and not escaped:
-                quote = ''
-            escaped = character == '\\' and not escaped
-        elif character in '"\'`':
-            quote = character
-            escaped = False
-        elif character == '{':
+    for position, character in enumerate(masked):
+        if character == '{':
             stack.append(position)
         elif character == '}':
             assert stack, 'Scan wiring: source blocks must balance before inspection'
             found.append((stack.pop(), position + 1))
     assert not stack, 'Scan wiring: source blocks must close before inspection'
     return found
+
+
+def test_qml_spans_ignore_comment_apostrophes_and_quoted_braces():
+    text = 'Item { // owner\'s } comment\n text: "{fake}"; Child { value: 3 } /* } */ }'
+    blocks = [text[a:b] for a, b in spans(text)]
+    assert blocks == ['{ value: 3 }', text[text.index('{') :]], (
+        'QML observers must ignore comment and string delimiters '
+        'while retaining real nested objects'
+    )
 
 
 def block(text, marker):
@@ -147,7 +156,9 @@ def evaluate(expression, context=''):
 def require_availability(text):
     control = item(text, 'experiments.loadData.${row.index}')
     visible = property_value(control, 'visible')
-    enabled = property_value(control, 'enabled')
+    enabled = (
+        property_value(control, 'enabled') if re.search(r'(?m)^\s*enabled:', control) else 'true'
+    )
     contexts = [
         (False, {'canLoadData': True, 'calculationOnly': True}, True),
         (False, {'canLoadData': True, 'calculationOnly': False}, True),
@@ -488,9 +499,9 @@ def assert_scan_status(text):
 const FitOutcomes={separator:' | '};
 const bar={fit:{running:true,scanning:true,ok:7,fail:2,scanOk:7,scanFailed:2,elapsed:'TIME',
 
-eta:'ETA',chi:'CHI',goodnessOfFit:'CHI',completed:9,total:24,fraction:0.375,
+eta:'ETA',chi:'CHI',goodnessOfFit:'CHI',completed:12,total:24,fraction:0.5,
 
-percent:37.5,scanFitted:9,scanTotal:24,iterations:'13',outcome:'success'}};
+percent:50,scanFitted:9,scanSkipped:3,scanProcessed:12,scanTotal:24,iterations:'13',outcome:'success'}};
 const fitArea={};const EaStyle={Colors:{red:'red'}};"""
     running = property_value(area, 'running')
     states = [(True, True), (True, False), (False, True)]
@@ -523,8 +534,11 @@ const fitArea={};const EaStyle={Colors:{red:'red'}};"""
                 'Status bar wiring: single fits stripe and scans have determinate fill'
             )
             if scan:
-                assert fill / maximum == 3 / 8, (
-                    'Status bar wiring: the displayed fill is completed datasets '
+                assert isinstance(fill, (int, float)) and isinstance(maximum, (int, float)), (
+                    'Status bar wiring: processed count division produces a numeric fill'
+                )
+                assert maximum > 0 and fill / maximum == 1 / 2, (
+                    'Status bar wiring: the displayed fill includes fitted and skipped datasets '
                     'divided by their total'
                 )
     # Execute the text that is actually displayed, not an unused facts array.
@@ -651,8 +665,10 @@ def test_type_selectors_live_in_explorer_and_follow_selected_row():
 def test_data_free_experiment_type_has_a_write_boundary(axis):
     text = source('qml/Pages/Experiment/ExperimentTypeGroup.qml')
     control = item(text, 'experimentType.' + axis)
-    assert property_value(control, 'enabled') == 'row.editable', (
-        'Type wiring: each actual selector follows the data-free guard'
+    expected_guard = 'false' if axis in {'sampleForm', 'scatteringType'} else 'row.editable'
+    assert property_value(control, 'enabled') == expected_guard, (
+        'Type wiring: unsupported sample/scattering choices stay disabled; '
+        'supported axes follow the data-free guard'
     )
     require(
         text,
@@ -1099,3 +1115,11 @@ def test_status_observer_rejects_wrong_progress_polarity_fill_producer_and_unuse
         )
         with pytest.raises(AssertionError):
             assert_scan_status(bad)
+
+        if channel == 'fill':
+            fitted = good.replace('bar.fit.scanProcessed', 'bar.fit.scanFitted')
+            assert fitted != good, (
+                'Status bar wiring: the fitted-only escape reaches the processed numerator'
+            )
+            with pytest.raises(AssertionError):
+                assert_scan_status(fitted)

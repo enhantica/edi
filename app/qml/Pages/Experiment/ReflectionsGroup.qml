@@ -11,8 +11,8 @@ import edi.app
 // `refln`: the reflections the loaded file carries — written by the calculation that saved it
 // (diffraction-lib); edi does not model reflections, so they are shown read-only, as read, and a save
 // does not write them ("loop in .edi — table in gui"): Miller indices, d-spacing, position and F²calc,
-// at six significant digits.
-EaComponents.TableView {
+// with the same numeric-column sizing as the measured-data table (ADR-0029).
+DataTable {
     id: table
 
     property ExperimentViewModel experiment: null
@@ -25,55 +25,57 @@ EaComponents.TableView {
 
     objectName: "reflections.list"
     defaultInfoText: qsTr("No reflections")
-    model: experiment ? experiment.reflections : null
+    sourceModel: experiment ? experiment.reflections : null
 
-    header: EaComponents.TableViewHeader {
+    columnWidths: [numberColumnWidth, -1, -1, -1, -1]
+
+    header: EaComponents.ListViewHeader {
         EaComponents.TableViewLabel {
-            width: AppSizes.dataIndexColumnWidth
+            horizontalAlignment: Text.AlignHCenter
         }
         EaComponents.TableViewLabel {
-            flexibleWidth: true
+            horizontalAlignment: Text.AlignHCenter
             text: qsTr("h k l")
         }
         EaComponents.TableViewLabel {
-            width: AppSizes.dataColumnWidth
+            horizontalAlignment: Text.AlignHCenter
             text: qsTr("d (Å)")
         }
         EaComponents.TableViewLabel {
-            width: AppSizes.dataColumnWidth
+            horizontalAlignment: Text.AlignHCenter
             text: table.timeOfFlight ? qsTr("TOF (µs)") : qsTr("2θ (°)")
         }
         EaComponents.TableViewLabel {
-            width: AppSizes.dataColumnWidth
+            horizontalAlignment: Text.AlignHCenter
             text: qsTr("F² calc")
         }
     }
 
-    delegate: EaComponents.TableViewDelegate {
+    delegate: EaComponents.ListViewDelegate {
         id: row
 
         required property int index
         required property var model
 
         EaComponents.TableViewLabel {
-            width: AppSizes.dataIndexColumnWidth
+            horizontalAlignment: Text.AlignHCenter
             color: EaStyle.Colors.themeForegroundMinor
             text: row.index + 1
         }
         EaComponents.TableViewLabel {
-            width: table.headerLabelItems.length > 1 ? table.headerLabelItems[1].width : 0
+            horizontalAlignment: Text.AlignHCenter
             text: row.model.hkl
         }
         EaComponents.TableViewLabel {
-            width: AppSizes.dataColumnWidth
+            horizontalAlignment: Text.AlignHCenter
             text: table.shown(row.model.dSpacing)
         }
         EaComponents.TableViewLabel {
-            width: AppSizes.dataColumnWidth
+            horizontalAlignment: Text.AlignHCenter
             text: table.shown(row.model.position)
         }
         EaComponents.TableViewLabel {
-            width: AppSizes.dataColumnWidth
+            horizontalAlignment: Text.AlignHCenter
             text: table.shown(row.model.fSquaredCalc)
         }
     }

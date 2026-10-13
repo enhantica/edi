@@ -1,8 +1,8 @@
 _edi.schema_version 3
 
 _metadata.name             latp_scan
-_metadata.title            "LATP synchrotron X-ray sequential scan, three phases"
-_metadata.description      "Li1.3Al0.3Ti1.7(PO4)3 with two AlPO4 phases; model from latp.pcr (FullProf chi2 7.05 on s13_150_z20_xrd_sum.dat)"
+_metadata.title "LATP [R-3c] / AlPO₄ [C222₁] / AlPO₄ [P6₃mc] · Unknown instrument @ SNBL"
+_metadata.description "3 phases · 4 synchrotron patterns · Linked displacement parameters"
 _metadata.created          "07 Oct 2026 11:30:00"
 _metadata.last_modified    "07 Oct 2026 11:30:00"
 _metadata.timestamp        2026-10-07T09:30:00+00:00
@@ -34,3 +34,7 @@ _structure_style.adp_probability 0.99
 _structure_style.atom_scale 0.3
 
 _verbosity.fit short
+_metadata.purpose "refinement"
+_metadata.dimensionality "1D"
+_metadata.instrument ?
+_metadata.facility "SNBL"

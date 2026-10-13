@@ -44,7 +44,11 @@ a cross-environment dependency, so the default environment stays Qt-free.
   The named irreducible residual is the macOS leg.
 - CI on PR runs `group-quick`; `group-full` runs on merge (`push: main`) — a two-platform
   double-check on top of the local cadence, never a different cadence. Both groups select the
-  same tiers (`tests/test-groups.json`).
+  same tiers (`tests/test-groups.json`). CI runs that selection as parallel jobs per platform
+  (owner, 2026-10-08): the C++ unit tests, `unit` and `integration` in the `core` job
+  (`core-tests`), and `system` in three `system` jobs (`system-tests-part <part>`), which
+  pytest-split balances by the test times recorded on `main`; a test with no recorded time counts
+  as the average, so nothing is listed by hand.
 
 ## The fitting corpus: edi is a consumer, never a home
 

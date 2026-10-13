@@ -1,8 +1,13 @@
 _edi.schema_version 3
 
 _metadata.name             pd_neut_tof_diamond_dream
-_metadata.title            "Diamond, DREAM (ESS) McStas-simulated TOF data"
-_metadata.description      ?
+_metadata.title "Diamond [Fd-3m] · DREAM @ ESS"
+_metadata.description "McStas-simulated 90° bank · Jorgensen profile · Scale-only refinement"
 _metadata.created          "24 Sep 2026 18:42:48"
 _metadata.last_modified    "24 Sep 2026 18:42:49"
 _metadata.timestamp        ?
+_metadata.purpose "verification"
+_metadata.dimensionality "1D"
+_metadata.instrument "DREAM"
+_metadata.facility "ESS"
+_metadata.polarisation "none"

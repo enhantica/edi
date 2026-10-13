@@ -12,8 +12,10 @@ namespace edi_app {
 
 // A chart's legend (edi ADR-0017 §15): one row per presented series, in the order the core's presentation
 // lists them. Roles `label` (the series' name, or a structure's for its ticks), `color` (the series' colour
-// in the current theme), `mark` (the line or tick glyph before the name) and `bragg` (the row is a
-// structure's Bragg ticks).
+// in the current theme), `mark` (what is drawn before the name: a "line" or a "tick", in the series' width,
+// or an element's "atom" icon), `markWidth` (a line's or tick's width in pixels, the series' own) and `bragg`
+// (the row is a structure's Bragg ticks). Line marks are drawn shapes, never characters, so they look the same
+// on every platform (edi ADR-0033).
 class ChartLegendModel : public QAbstractListModel {
     Q_OBJECT
     QML_ELEMENT
@@ -21,12 +23,13 @@ class ChartLegendModel : public QAbstractListModel {
     Q_PROPERTY(int count READ count NOTIFY countChanged)
 
    public:
-    enum Role { LabelRole = Qt::UserRole + 1, ColorRole, MarkRole, BraggRole };
+    enum Role { LabelRole = Qt::UserRole + 1, ColorRole, MarkRole, BraggRole, MarkWidthRole };
     struct Entry {
         QString label;
         QColor color;
         QString mark;
         bool bragg = false;
+        double markWidth = 0.0;
         friend bool operator==(const Entry&, const Entry&) = default;
     };
 

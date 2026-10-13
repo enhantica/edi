@@ -14,16 +14,18 @@ from pathlib import Path
 
 def fingerprint(root):
     paths = sorted({
-        *root.glob('app/src/*'),
-        *root.glob('app/qml/**/*.qml'),
-        *root.glob('core/src/*'),
-        *root.glob('core/include/edi/*'),
+        *root.glob('app/src/**/*'),
+        *root.glob('app/qml/**/*'),
+        *root.glob('core/src/**/*'),
+        *root.glob('core/include/edi/**/*'),
+        *root.glob('cmake/**/*'),
+        root / 'app/main.cpp',
         root / 'CMakeLists.txt',
         root / 'app/CMakeLists.txt',
         root / 'core/CMakeLists.txt',
         root / 'pixi.toml',
         root / 'pixi.lock',
-        *root.glob('data/*'),
+        *root.glob('data/**/*'),
         *root.glob('app/resources/**/*'),
         *root.glob('docs/user/cli/*/project/**/*'),
     })
@@ -47,6 +49,50 @@ def fingerprint_headers(root):
         str(path.relative_to(root)): hashlib.sha256(path.read_bytes()).hexdigest()
         for path in sorted(root.rglob('*.hpp'))
     }
+
+
+def sdk_inputs(sdk, engine_source):
+    sdk, engine_source = Path(sdk).resolve(), Path(engine_source).resolve()
+    manifest = json.loads((sdk / 'share/crysta-sdk/manifest.json').read_text())
+    identity = (sdk / '.crysta-sha').read_text().strip()
+    if identity != manifest['source_sha']:
+        raise RuntimeError('App receipts require the selected SDK manifest and linked identity')
+    sources = {
+        str(path.relative_to(engine_source)): hashlib.sha256(path.read_bytes()).hexdigest()
+        for part in ('src', 'include', 'data', 'cmake', 'lib')
+        for path in sorted((engine_source / part).rglob('*'))
+        if path.is_file()
+    }
+    for name in ('CMakeLists.txt', 'pyproject.toml'):
+        path = engine_source / name
+        sources[name] = hashlib.sha256(path.read_bytes()).hexdigest()
+    if not any(name.startswith('src/') for name in sources):
+        raise RuntimeError('App receipts require actual source inputs for the selected SDK')
+    return {
+        'identity': identity,
+        'manifest': manifest,
+        'headers': fingerprint_headers(sdk / 'include'),
+        'library': hashlib.sha256((sdk / 'lib/libcrysta_core.a').read_bytes()).hexdigest(),
+        'sources': sources,
+    }
+
+
+def validate_current_inputs(receipt, root, sdk, engine_source):
+    actual = {'production': fingerprint(root), 'sdk': sdk_inputs(sdk, engine_source)}
+    if receipt.get('compiled_inputs') != actual:
+        raise RuntimeError('App receipts refuse stale current production or selected SDK inputs')
+    if receipt['engine_sha'] != actual['sdk']['identity']:
+        raise RuntimeError('App receipts require the currently selected engine identity')
+
+
+def validate_fixture(receipt, fixture):
+    actual = {
+        p.name: hashlib.sha256(p.read_bytes()).hexdigest()
+        for p in fixture.iterdir()
+        if p.is_file()
+    }
+    if actual != receipt['fixture']:
+        raise RuntimeError('App receipt refuses changed compiled observer or build inputs')
 
 
 def run(command, **kwargs):
@@ -164,6 +210,10 @@ def observed_object(sdk, build, fixture):
     ]
     if len(optimizer) != 1 or len(driver) != 1:
         raise RuntimeError('Scan execution: compiled native boundaries must resolve uniquely')
+    if optimizer[0] not in wrapper_names:
+        raise RuntimeError(
+            'Scan optimizer observer must match the actual compiled callback signature'
+        )
     real = next(name for name in wrapper_names if 'scan_contract_real_sequential' in name)
     reader = [name for name in wrapper_names if 'read_sequential_scan_data' in name]
     if len(reader) != 1:
@@ -178,16 +228,24 @@ def observed_object(sdk, build, fixture):
         '--redefine-sym=' + optimizer[0] + '=' + entry,
         str(native_object),
     ])
+    fit_object = observe_entry(
+        library,
+        build,
+        optimizer[0],
+        next(name for name in wrapper_names if 'scan_contract_real_fit' in name),
+        'observed_fit.o',
+        objcopy,
+    )
+    if not any(
+        ' U ' in line and line.split()[-1] == driver[0]
+        for line in subprocess.check_output(
+            ['llvm-nm', '-g', str(fit_object)], text=True
+        ).splitlines()
+    ):
+        raise RuntimeError('Scan completion observer must reach the actual compiled fit dispatch')
     return (
         native_object,
-        observe_entry(
-            library,
-            build,
-            optimizer[0],
-            next(name for name in wrapper_names if 'scan_contract_real_fit' in name),
-            'observed_fit.o',
-            objcopy,
-        ),
+        fit_object,
         observe_entry(
             library,
             build,
@@ -211,6 +269,7 @@ def main():
     root = args.root.resolve()
     build = args.build.resolve()
     fixture = Path(__file__).resolve().parent
+    compiled_sdk = sdk_inputs(args.sdk, args.engine_source)
     source, hashes = snapshot(root, build, fixture)
     objects = observed_object(args.sdk, build, fixture)
     command = [
@@ -246,13 +305,12 @@ def main():
     if args.gui_source:
         command.append('-DFETCHCONTENT_SOURCE_DIR_GUI_COMPONENTS=' + str(args.gui_source))
     run(command)
-    expected = (args.sdk / 'lib/libcrysta_core.a').resolve()
     for record in ('scan-core-sdk.txt', 'scan-reference-sdk.txt'):
         lines = (build / 'cmake' / record).read_text().splitlines()
         # Published SDK prefixes expose their headers through a symlink.
         includes = [Path(path).resolve() for path in lines[1].split(';')]
         if (
-            Path(lines[0]).resolve() != expected
+            Path(lines[0]).resolve() != (args.sdk / 'lib/libcrysta_core.a').resolve()
             or (args.sdk / 'include').resolve() not in includes
         ):
             raise RuntimeError('Scan execution: effective CMake SDK library/header paths differ')
@@ -274,6 +332,7 @@ def main():
     ])
     receipt = {
         'production': hashes,
+        'compiled_inputs': {'production': hashes, 'sdk': compiled_sdk},
         'fixture': fixture_fingerprint(fixture),
         'sdk_headers': fingerprint_headers(args.sdk / 'include'),
         'engine_sha': subprocess.check_output(
@@ -304,6 +363,7 @@ def main():
         'path': str(io_library),
         'sha256': hashlib.sha256(io_library.read_bytes()).hexdigest(),
     }
+    validate_current_inputs(receipt, root, args.sdk, args.engine_source)
     (build / 'receipt.json').write_text(json.dumps(receipt, indent=2) + '\n')
 
 

@@ -61,6 +61,8 @@ std::ofstream work_stream, trace_stream;
 std::string stage;
 edi_app::ProjectViewModel* active = nullptr;
 std::atomic<int> completed{0};
+std::atomic<int> file_results{0};
+std::atomic<int> file_fitted{0};
 int stop_after = 0;
 bool exercise_follow = false;
 QJsonArray events;
@@ -183,6 +185,8 @@ QJsonObject run(edi_app::ProjectViewModel& view, const std::string& label, int l
                 bool follow = false) {
     stage = label;
     completed = 0;
+    file_results = 0;
+    file_fitted = 0;
     worker_off_owner = true;
     stop_after = limit;
     exercise_follow = follow;
@@ -210,7 +214,10 @@ QJsonObject run(edi_app::ProjectViewModel& view, const std::string& label, int l
             {"ended", ended},
             {"projected", projected},
             {"refusal", refusal},
+            {"afterPattern", pattern(view)},
             {"completed", completed.load()},
+            {"fileResults", file_results.load()},
+            {"fileFitted", file_fitted.load()},
             {"workerOffOwner", worker_off_owner.load()}};
 }
 
@@ -702,6 +709,10 @@ void scan_contract_work_receipt(const std::string& file) {
         work_stream << "receipt\t" << stage << '\t' << work_index << '\t' << file << std::endl;
 }
 
+void scan_contract_file_fitted_observed(const std::string&) { ++file_fitted; }
+
+void scan_contract_file_result_observed(const std::string&) { ++file_results; }
+
 void scan_contract_file_completed(const std::string& file) {
     const int count = ++completed;
     if (const char* progress = std::getenv("SCAN_CONTRACT_PROGRESS_LOG"))
@@ -726,13 +737,12 @@ void scan_contract_file_completed(const std::string& file) {
         qApp,
         [file, count] {
             if (!active) return;
-            // F3 publishes measured data asynchronously. A calculated frame may
-            // require the worker's next iteration, so this functional actor waits
-            // only for the measured columns its Follow assertions actually judge.
+            // ADR-0029 delays followed patterns until the worker can publish a frame.
+            // Holding that worker while waiting for the same frame would obstruct it.
             const bool projection_ready = until(
                 [&] {
                     if (active->fit()->scanFitted() < count) return false;
-                    if (!exercise_follow) return true;
+                    if (!exercise_follow || active->fit()->following()) return true;
                     const QString selected = active->experiments()
                                                  ->get(active->currentExperimentIndex(), "file")
                                                  .toString();
@@ -740,11 +750,26 @@ void scan_contract_file_completed(const std::string& file) {
                     return !expected.isEmpty() && measured_pattern_hash(*active) == expected;
                 },
                 5000);
+            QString pattern_file;
+            if (exercise_follow) {
+                const QString hash = measured_pattern_hash(*active);
+                if (expected_measurements.value("_template").toString() == hash) {
+                    pattern_file = QStringLiteral("_template");
+                } else {
+                    for (auto it = expected_measurements.begin();
+                         it != expected_measurements.end(); ++it)
+                        if (it.value().toString() == hash) {
+                            pattern_file = it.key();
+                            break;
+                        }
+                }
+            }
             if (completed <= 162)
                 events.append(QJsonObject{{"file", QString::fromStdString(file)},
                                           {"stage", QString::fromStdString(stage)},
                                           {"state", state(*active)},
                                           {"projectionReady", projection_ready},
+                                          {"patternFile", pattern_file},
                                           {"pattern", pattern(*active)}});
             if (completion_action) completion_action(count);
             if (exercise_follow && count == 13) active->setCurrentExperimentIndex(17);

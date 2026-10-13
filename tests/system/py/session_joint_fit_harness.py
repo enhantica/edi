@@ -12,13 +12,18 @@ from __future__ import annotations
 
 import json
 import sys
+from pathlib import Path
 
 import edi
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from tests.fixtures.loop_parameter_ids.reference_paths import reference_paths
 
-def _model_parameters(project: object) -> dict[str, list[float]]:
+
+def _model_parameters(project: object, source: Path) -> dict[str, list[float]]:
     """The post-fit model parameter table, keyed by the outcome's own path grammar."""
     mapped: dict[str, list[float]] = {}
+    reference = reference_paths(source)
 
     def record(path: str, parameter: object) -> None:
         mapped[path] = [float(parameter.value), float(parameter.uncertainty)]
@@ -53,9 +58,11 @@ def _model_parameters(project: object) -> dict[str, list[float]]:
             'calib_d_to_tof_quadratic',
         ):
             record(f'{prefix}.instrument.{field}', getattr(experiment.instrument, field))
-        record(f'{prefix}.linked_structure.scale', experiment.linked_structure.scale)
+        for link in experiment.linked_structures:
+            record(f'{prefix}.linked_structures[{link.structure_id}].scale', link.scale)
         for index, point in enumerate(experiment.background):
-            record(f'{prefix}.background[{index}].intensity', point.intensity)
+            identity = reference[experiment.name]['background'][index]
+            record(f'{prefix}.background[{identity}].intensity', point.intensity)
         for field in ('abscor1', 'abscor2'):
             parameter = getattr(experiment.absorption, field)
             if parameter is not None:
@@ -94,7 +101,7 @@ def main() -> int:
             for bank in outcome.banks
         ],
         'callback_history': history,
-        'model_parameters': _model_parameters(project),
+        'model_parameters': _model_parameters(project, Path(sys.argv[1])),
     }
     json.dump(payload, sys.stdout)
     return 0

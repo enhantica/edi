@@ -106,6 +106,12 @@ std::vector<std::string> supported_background_types();
 std::vector<std::string> supported_minimizer_types();
 // The declared fitting modes (model.hpp is_declared_fitting_mode), in `.edi` order.
 std::vector<std::string> supported_fitting_modes();
+// The fitting modes that apply to a project (model.hpp's definitions; the owner, 2026-10-11): a declared scan's two
+// modes and `single`, which fits the shown dataset and makes it the template; `joint` for several experiments;
+// else `single`.
+std::vector<std::string> applicable_fitting_modes(const Project& project);
+// What a fitting-mode selector shows for a token (the owner, 2026-10-11); `.edi` keeps the token.
+std::string fitting_mode_label(const std::string& token);
 // The registered descent flows (model.hpp descent_ids, crysta's registration order).
 std::vector<std::string> supported_descents();
 
@@ -122,6 +128,27 @@ void conform_peak_slots(PeakBase& peak, const std::string& token);
 // AbsorptionBase.type setter's vocabulary and messages (a TOF "cylinder-hewat" is its "cylinder"),
 // then apply the family contract (apply_absorption_family).
 void select_absorption(ExperimentBase& experiment, const std::string& token);
+// Switch the background model as diffraction-lib's `_replace_background` does: the new type starts empty, and the
+// old type's points or terms and its constants are removed. The constants the new type needs start from the measured
+// axis: the polynomial origin at the middle of its range, the Chebyshev domain at its ends (1, and 0..1, without
+// data). Refuses a type edi does not compute.
+void select_background_type(ExperimentBase& experiment, const std::string& token);
+// A new term for a polynomial or Chebyshev background: the lowest order the experiment does not hold, coefficient 0.
+// Refused for a line-segment background and when every order the type admits is held.
+PolynomialTerm next_background_term(const ExperimentBase& experiment);
+// Ids for a line-segment background's points from their positions (the owner, 2026-10-11): each position rounded to
+// whole units (2θ 24.873 → `25`), one more decimal only for the points that would share an id, until they differ.
+std::vector<std::string> position_point_ids(const ExperimentBase& experiment);
+// The background points renamed to `ids`, in their order; each rename carries the aliases and correlations that
+// name the point (the rename-propagation rule). Refused, with nothing renamed, when the count differs or two ids are
+// equal or empty.
+void set_background_point_ids(ExperimentBase& experiment, const std::vector<std::string>& ids);
+// A term's order, refused outside 0..background_max_order of the experiment's type or when another term holds it.
+void set_background_term_order(ExperimentBase& experiment, PolynomialTerm& term, int order);
+// The polynomial background's origin: finite and not zero (crysta's rule).
+void set_background_origin(ExperimentBase& experiment, double origin);
+// One end of the Chebyshev background's domain (`end`: x_max, else x_min): finite, x_min below x_max.
+void set_background_domain(ExperimentBase& experiment, bool end, double value);
 // Set one scattering-source item under scattering_source_refusal (the loader's rule and message).
 // An empty token clears the item back to its default.
 void select_scattering_source(ExperimentBase& experiment, ScatteringSourceItem item,

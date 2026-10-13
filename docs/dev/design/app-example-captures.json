@@ -145,7 +145,7 @@
     "checks": {
       "8": "the main tab reads the microscope icon in the experiment colour and the experiment name, no word (hrpt)",
       "18": "withdrawn; final feedback: the profile list opens over a group with no subheading",
-      "3": "the profile list names each profile in full: Gaussian, Lorentzian, Pseudo-Voigt, Pseudo-Voigt + Bérar–Baldinozzi asymmetry, Thompson–Cox–Hastings pseudo-Voigt (TCH), and the TCH with Finger–Cox–Jephcoat asymmetry (FCJ)"
+      "3": "the profile list names each profile in full: Gaussian, Lorentzian, Pseudo-Voigt, Pseudo-Voigt + Bérar-Baldinozzi asymmetry, Thompson-Cox-Hastings pseudo-Voigt (TCH), and the TCH with Finger-Cox-Jephcoat asymmetry (FCJ)"
     }
   },
   {

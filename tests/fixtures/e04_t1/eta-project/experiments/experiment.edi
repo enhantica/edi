@@ -28,10 +28,11 @@ _scattering_source.xray_form_factor it1992
 _scattering_source.xray_dispersion sasaki1989
 _background.type line-segment
 loop_
+_background.id
 _background.position
 _background.intensity
-20.25 0
-80.25 0
+1 20.25 0
+2 80.25 0
 _instrument.setup_polarization_coefficient 0.4
 _instrument.setup_monochromator_twotheta 20
 _peak.mixing_eta_0 0.37

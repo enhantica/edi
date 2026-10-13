@@ -1,5 +1,10 @@
 _edi.schema_version 2
 
 _metadata.name             cosio_d20_s4
-_metadata.title            " graded start s4 of refine-cosio-d20"
-_metadata.description      ?
+_metadata.title "Co₂SiO₄ [Pnma] · D20 @ ILL"
+_metadata.description "Olivine structure and profile refinement · Starting model 4"
+_metadata.purpose "refinement"
+_metadata.dimensionality "1D"
+_metadata.instrument "D20"
+_metadata.facility "ILL"
+_metadata.polarisation "none"

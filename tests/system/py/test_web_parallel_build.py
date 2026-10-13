@@ -90,15 +90,13 @@ def test_each_kit_selects_its_own_engine_backend_and_simd(build_calls):
     for flags in core:
         threaded = any('/multithread/' in flag for flag in flags)
         assert '-DCRYSTA_OPENMP=OFF' in flags, 'Both web kits must keep native OpenMP disabled'
-        assert '-DCRYSTA_SLEEF=' + ('ON' if threaded else 'OFF') in flags, (
-            'The multithread web kit must select the vectorised maths layer; '
-            'the serial kit stays scalar'
-        )
+        assert '-DCRYSTA_SLEEF=ON' in flags, 'Every shipped web kit must select vector maths'
         assert '-DCRYSTA_WASM_THREADS=' + ('ON' if threaded else 'OFF') in flags, (
             'Only the multithread kit may require pthreads and shared memory'
         )
-        assert '-DCRYSTA_WASM_SIMD=' + ('ON' if threaded else 'OFF') in flags, (
-            'Multithread engine must enable wasm SIMD; serial fallback must stay scalar compatible'
+        assert '-DCRYSTA_WASM_SIMD=ON' in flags, 'Every shipped web kit must enable wasm SIMD'
+        assert '-DCRYSTA_REQUIRE_SIMD=ON' in flags, (
+            'Both shipped web kits must refuse configuration without their required SIMD backend'
         )
 
 

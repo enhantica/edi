@@ -1,0 +1,32 @@
+{
+  "claim": "REGRESSION PIN: pre-change saved bytes",
+  "reference": "bd72193898d2dc6fefb1d692703d1f7a4137c731",
+  "cases": {
+    "single": {
+      "source": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project",
+      "input_sha256": {
+        "README.md": "2b43d862288ef2a7c00de6c43bacb9d366e3ac781fd4bd08f6fbb01ad5243031",
+        "analysis/analysis.edi": "06acc049b2fdfd16e06af5c03634f364d62a2819d2bb2b0ea456cd4b79ba5061",
+        "experiments/hrpt.edi": "5063e9ea674694f4ba201a2b7f77b985ae7a8c74111091912f6f9999e15ee2df",
+        "project.edi": "7107a399b8957d188924ecf263a72bc7470df50a0e5cd08f031181ad368f762f",
+        "structures/lbco.edi": "1c8421e95c44cad8dce012f78e57ed2bcabd783c76443eddf0d5d16873cba5c3"
+      },
+      "analysis_sha256": "840b997b834fe3214d3c2dc48d65aff25c343d8a561468d370114242fbef9d7d",
+      "loop_sha256": "48a02a24ad47a4e2f6781be06bbd92f2043376e76b22d4809f84632c70ef392b"
+    },
+    "scan": {
+      "source": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project",
+      "input_sha256": {
+        "analysis/analysis.edi": "c3fc2efceae884aafdc40b1c2a16a32be229014aea09a54bbebe3194c13f9bd2",
+        "experiments/d20.edi": "0c97d871957341359beee76e7029f77d1bf0ed4eb8e4709733fe794fe3516a1c",
+        "experiments/d20_scan/all594687.dat": "13d209575f8ddfeaa32183cbfe6ee457cdbff505763cdca09be1d7c801e8415d",
+        "experiments/d20_scan/all594791.dat": "0ec0607b473b3f618d3f56d494eca9184e8f38751ffaabdb77172a45f3b3999f",
+        "experiments/d20_scan/all594842.dat": "95656a5ee8468c3a012010831a05889c093d08d7779b1ac77d4918cb0e823590",
+        "project.edi": "68642f4fd5414a02d78192314bcdce905f87d547dac58346e49ca911bbec06fe",
+        "structures/cosio.edi": "1b3afde2d3a8184d6cb9789fa3fc8fa5dd026756a51e44a2cca6b80b9df8103a"
+      },
+      "analysis_sha256": "00b0eb222ab29db35b47bfc6faf9ef8f7d72b05d92b5ed11446ad672a0a7472d",
+      "loop_sha256": "af0cdea65cffcf04d83b04a7769a1780adf1f40815e3ec44749e93aff7f114c0"
+    }
+  }
+}

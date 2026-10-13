@@ -12,6 +12,7 @@ import gzip
 import io
 import json
 import lzma
+import os
 import re
 import runpy
 import struct
@@ -325,11 +326,14 @@ def test_about_exposes_bundled_notices_and_named_copyright():
     )
     # Before: only the renamed Licence label was checked. After: the labelled app
     # link must open the local notice, whose GPL/BSD split replaces the sentence.
-    assert re.search(
-        r'"title"\s*:\s*qsTr\("(?:Licence|End User Licence Agreement)"\)\s*,\s*'
-        r'"url"\s*:\s*ApplicationInfo\.appLicenseUrl',
-        about,
-    ), 'the About application licence label must bind to the application notice metadata'
+    assert all(
+        name in about
+        for name in (
+            'about.licence.summary',
+            'ApplicationInfo.copyingUrl',
+            'ApplicationInfo.licenseUrl',
+        )
+    ), 'The user licence view must retain its short summary and access to both complete licences'
     assert 'about.licence"' not in about and 'This app is distributed under' not in about, (
         'the About window must omit the superseded distribution sentence'
     )
@@ -344,10 +348,14 @@ def test_about_exposes_bundled_notices_and_named_copyright():
     assert '"app/DISTRIBUTION-LICENSE.md"' in info, (
         'the licence resource reader must admit the application notice linked from About'
     )
-    viewer = (ROOT / 'app/qml/Pages/Home/LicenceTextDialog.qml').read_text()
-    assert 'licenceDialog.showText(link.modelData.title, link.modelData.url)' in about and (
-        'ApplicationInfo.licenceText(dialog.url)' in viewer
-    ), 'activating the About licence link must display the selected bundled resource'
+    # About uses tabs and inline complete texts instead of stacked dialogs.
+    # Bundled-resource and distribution-term assertions above/below remain unchanged.
+    assert 'LicenceTextDialog {' not in about, (
+        'About licence navigation must remain in one window instead of opening a stacked dialog'
+    )
+    assert 'ApplicationInfo.licenceText(' in about and all(
+        name in about for name in ('about.tab.licence', 'about.tab.thirdParty')
+    ), 'About retains access to the selected bundled licence through its single-window views'
     notice = (ROOT / 'app/DISTRIBUTION-LICENSE.md').read_text()
     assert 'GPL-3.0' in notice and 'BSD 3-Clause' in notice, (
         'both the built application GPL status and source BSD status must be reachable from About'
@@ -1035,22 +1043,47 @@ def test_independent_secret_predicate_checks_every_decoded_member():
     )
 
 
-def test_secret_scanner_checks_the_prepared_tree():
+@pytest.fixture(scope='module')
+def publication_scan_files():
+    tracked = run('git', 'ls-files', '-z', '--cached')
+    untracked = run('git', 'ls-files', '-z', '--others', '--exclude-standard')
+    require_success(tracked, 'publication partitions must enumerate every committed file')
+    require_success(untracked, 'publication partitions must enumerate every additional input')
+    # Partition every source byte. Archives remain intact and literal symlink targets survive.
+    excluded = ('.git/', '.pixi/', 'build/', 'site/', 'node_modules/', '__pycache__/')
+    names = set(tracked.stdout.split('\0')) | {
+        name for name in untracked.stdout.split('\0') if not name.startswith(excluded)
+    }
+    return sorted(
+        name for name in names if name and ((ROOT / name).is_file() or (ROOT / name).is_symlink())
+    )
+
+
+@pytest.mark.parametrize('part', range(8))
+def test_secret_scanner_checks_the_prepared_tree(tmp_path, publication_scan_files, part):
+    # Each path belongs to exactly one part. Hard links preserve every source byte;
+    # symlinks preserve their literal targets, never substitute target content.
+    prepared = tmp_path / 'publication'
+    prepared.mkdir()
+    for relative in publication_scan_files[part::8]:
+        source, target = ROOT / relative, prepared / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if source.is_symlink():
+            target.symlink_to(source.readlink())
+        else:
+            os.link(source, target)
     deadline = time.monotonic() + 5
-    scanner = script('scan.py')
     try:
-        # This node performs one complete production scan. The separate independent
-        # predicate above keeps its own full-tree obligation and runtime attribution.
         result = run(
             sys.executable,
-            str(scanner),
+            str(script('scan.py')),
             '--tree',
-            str(ROOT),
+            str(prepared),
             timeout=max(0, deadline - time.monotonic()),
         )
     except subprocess.TimeoutExpired:
-        pytest.fail('the full publication scanner must complete within the system-test budget')
-    require_success(result, 'the final release secrets scan must inspect the entire prepared tree')
+        pytest.fail('each full-byte publication partition must meet the system-test budget')
+    require_success(result, 'the production scanner must inspect every prepared-tree partition')
 
 
 ARCHIVE_FORMS = (

@@ -7,6 +7,7 @@ from pathlib import Path
 import numpy as np
 
 from tests.conftest import corpus_case_dir
+from tests.fixtures.table_display.metadata_bytes import pre_catalogue_bytes
 
 LENGTHS = {'alpha': (2.2, 3.1, 4.3), 'beta': (3.3, 4.6, 5.7)}
 SCALES = {'alpha': 2.75, 'beta': 0.375}
@@ -130,14 +131,16 @@ def stage_delivered_corpus_project(delivered, case_id, destination):
     corpus = corpus_case_dir(case_id) / 'project'
     for child in ('experiments', 'structures', 'analysis'):
 
-        def contents(root):
+        def contents(root, *, descriptive=False):
             return {
-                file.relative_to(root).as_posix(): file.read_bytes()
+                file.relative_to(root).as_posix(): (
+                    pre_catalogue_bytes(file) if descriptive else file.read_bytes()
+                )
                 for file in root.rglob('*')
                 if file.is_file()
             }
 
-        assert contents(delivered / child) == contents(corpus / child), (
+        assert contents(delivered / child, descriptive=True) == contents(corpus / child), (
             'FullProf agreement must keep the delivered data and recipe equal to its pinned case'
         )
     shutil.copytree(delivered, destination)

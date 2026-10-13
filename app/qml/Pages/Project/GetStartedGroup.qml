@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
+import QtQuick.Controls
 import QtQuick.Dialogs
+import QtCore
 
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Elements as EaElements
 import EasyApplication.Gui.Components as EaComponents
+import EasyApplication.Gui.Logic as EaLogic
 
 import edi.app
 
@@ -64,12 +67,36 @@ EaElements.GroupBox {
 
     EaComponents.ProjectDescriptionDialog {
         id: createDialog
-        // The base's own dialog, placed on whole pixels as AppDialog is.
+        // The base's dialog (edi's copy joins the location cleanly), placed on whole pixels as AppDialog is.
         x: Math.round((parent.width - width) / 2)
         y: Math.round((parent.height - height) / 2)
         visible: EaGlobals.Vars.showProjectDescriptionDialog
         onClosed: EaGlobals.Vars.showProjectDescriptionDialog = false
-        onAccepted: Session.createProject(createDialog.projectName, createDialog.projectDescription)
+        // A new project's folder is under the user's documents unless one was chosen before; it is saved there at
+        // once (the owner, 2026-10-08). The browser has no folder to save into: Save As downloads it.
+        defaultProjectParentDirectory: EaLogic.Utils.urlToLocalFile(String(StandardPaths.writableLocation(StandardPaths.DocumentsLocation)))
+        onAccepted: {
+            if (!Session.createProject(createDialog.projectName, createDialog.projectDescription, WebFiles.available ? "" : createDialog.projectLocation))
+                createError.open();
+        }
+    }
+
+    // A created project that could not be saved at its location stays open, unsaved; this says why.
+    AppDialog {
+        id: createError
+        objectName: "create.error"
+        parent: Overlay.overlay
+        title: qsTr("The project was not saved")
+        standardButtons: Dialog.Ok
+        contentWidth: AppSizes.messagesDialogContentWidth
+        contentHeight: createErrorText.implicitHeight
+
+        EaElements.Label {
+            id: createErrorText
+            width: createError.contentWidth
+            wrapMode: Text.Wrap
+            text: Session.lastError
+        }
     }
 
     // The folder request and the project open when it was made: a folder that arrives after another project was

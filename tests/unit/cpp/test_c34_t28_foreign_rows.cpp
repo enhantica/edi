@@ -23,7 +23,7 @@ struct crysta::detail::ForeignTable<C34ForeignRow> {
 };
 
 namespace {
-using Row = edi::LineSegment;
+using Row = C34ForeignRow;
 using Rows = edi::ItemVec<Row>;
 template <class R>
 void write_all(R& row, std::vector<edi::ItemVec<R>*> holders) {
@@ -53,7 +53,7 @@ void write_all(R& row, std::vector<edi::ItemVec<R>*> holders) {
     }
 }
 }  // namespace
-TEST_CASE("C34-T28 F19 every foreign background admission route observes its cells") {
+TEST_CASE("C34-T28 F19 every foreign unkeyed admission route observes its cells") {
     for (int admission = 0; admission != 3; ++admission) {
         for (int removal = 0; removal != 6; ++removal) {
             INFO(admission, removal);
@@ -106,7 +106,7 @@ TEST_CASE("C34-T28 F19 every foreign background admission route observes its cel
         }
     }
 }
-TEST_CASE("C34-T28 F19 duplicate background survivors remain stored after every replacement") {
+TEST_CASE("C34-T28 F19 duplicate unkeyed survivors remain stored after every replacement") {
     for (int admission = 0; admission != 3; ++admission)
         for (int removal = 0; removal != 4; ++removal) {
             INFO(admission, removal);
@@ -142,10 +142,22 @@ void keyed_controls(std::type_identity<RowType>) {
     const auto before = first.category_stamp();
     CHECK_THROWS_AS_MESSAGE(second.push_back(item), std::invalid_argument,
                             " F19 keyed foreign admission still refuses before mutation");
+    CHECK_THROWS_AS_MESSAGE(second.assign({item}), std::invalid_argument,
+                            " F19 keyed foreign assignment still refuses before mutation");
     CHECK_THROWS_AS_MESSAGE(first.assign({item, item}), std::invalid_argument,
                             " F19 keyed duplicate admission still refuses before mutation");
     CHECK_MESSAGE((second.empty() && first.size() == 1 && first.category_stamp() == before),
                   " F19 failed keyed controls preserve both holders and generation");
+    Collection replacement;
+    replacement.push_back(RowType{});
+    const auto kept = replacement.front();
+    const auto replacement_stamp = replacement.category_stamp();
+    CHECK_THROWS_AS_MESSAGE(replacement.replace_at(0, item), std::invalid_argument,
+                            " F19 keyed foreign replacement still refuses before mutation");
+    CHECK_MESSAGE((replacement.size() == 1 && replacement.front() == kept &&
+                   replacement.category_stamp() == replacement_stamp && first.front() == item &&
+                   first.category_stamp() == before),
+                  " F19 refused replacement preserves both rows and generations");
 }
 TEST_CASE("C34-T28 F19 all keyed families retain foreign and duplicate refusal") {
     keyed_controls(std::type_identity<edi::AtomSite>{});
@@ -153,6 +165,8 @@ TEST_CASE("C34-T28 F19 all keyed families retain foreign and duplicate refusal")
     keyed_controls(std::type_identity<edi::SequentialExtractRule>{});
     keyed_controls(std::type_identity<edi::Structure>{});
     keyed_controls(std::type_identity<edi::BraggPdExperiment>{});
+    keyed_controls(std::type_identity<edi::LineSegment>{});
+    keyed_controls(std::type_identity<edi::ExcludedRegion>{});
 }
 
 TEST_CASE("C34-T28 F19 caller-defined unkeyed schemas retain shared surviving storage") {

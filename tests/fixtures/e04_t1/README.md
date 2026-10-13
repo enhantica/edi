@@ -13,6 +13,15 @@ Regenerate both with `python tests/fixtures/e04_t1/generate.py` and
 from the committed `.edi` files; CeCoAl's `P m m a` display identity is ITA 51,
 orthorhombic (also independently frozen in crysta's space-group oracle).
 
+Descriptive catalogue updates use
+`python -m tests.fixtures.e04_t1.adapt_descriptive_inputs`. The source-only
+`table_display/metadata-inputs.zip` archive proves whole before/after files and
+admits only declared descriptive/type fields. The generator preserves the old
+scientific values, warnings, datasets, case order and every displayed value;
+only exact source hashes and input-derived descriptors change. Repeating the
+same adaptation is stable. Unrecognised source hashes, changed scientific bytes,
+duplicate declarations and inconsistent old scalar witnesses refuse.
+
 The app acceptance tier is `tests/unit/app`. Build its `test_*.cpp` support sources
 into the Qt Quick Test runner (AUTOMOC), linked to the same registered `edi.app`
 module and engine setup the production host uses. Run its `tst_*.qml` files with
@@ -204,3 +213,21 @@ The three separate profile inputs declare the saved LiF example's nontrivial
 X-ray polarization pair (coefficient 0.4, monochromator two-theta 20 degrees),
 so its displayed fields and values are witnessed by explicit input rather than
 an inferred engine default.
+
+The LATP scan addition is captured separately with
+`generate.py --add-project pd-xray-cwl_latp_scan-4f` and
+`generate_display.py --add-project pd-xray-cwl_latp_scan-4f`. These modes preserve
+every prior project, category, display value and source hash. Registry order
+comes from `docs/user/cli/projects.yml`; model values and scan samples come from
+the owner's committed LATP project and its four measured ASCII inputs, never
+from a newly calculated app output. Two-column scan uncertainties use the independent Poisson square-root rule
+from `scan_template/REFERENCE.md`, with tiny sigma replaced by one. Negative
+points are skipped under the owner rule, before deriving uncertainty; the
+single-pattern importer has a distinct clamped uncertainty rule.
+The full category corpus retains CR as an in-record whitespace separator.
+The phase symbols are retained from the owner's FullProf PCR; independent
+space-group identities are C2221, number 20, orthorhombic and P63mc, number 186,
+hexagonal (the [cctbx asymmetric-unit table](https://cci.lbl.gov/asu_gallery/asu_020.html)
+and [CCP4 symmetry table](https://www.ccp4.ac.uk/html/symmetry.html)).
+The expected `ex-pd-xray-cwl_latp_scan-4f.png` remains an explicitly labelled
+regression image; the unchanged inventory gate requires its real capture.

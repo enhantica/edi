@@ -3,8 +3,11 @@
 #define EDI_APP_EXPERIMENT_VIEW_MODEL_HPP
 
 #include <QObject>
+#include <QSet>
+#include <QtNumeric>
 #include <QString>
 #include <QtQml/qqmlregistration.h>
+#include <cstdint>
 
 #include "block_text.hpp"
 #include "category_list_model.hpp"
@@ -44,14 +47,19 @@ class ExperimentViewModel : public QObject {
     Q_PROPERTY(edi_app::OptionListModel* peakTypeOptions READ peakTypeOptions CONSTANT)
     Q_PROPERTY(QString absorptionType READ absorptionType WRITE setAbsorptionType NOTIFY absorptionTypeChanged)
     Q_PROPERTY(edi_app::OptionListModel* absorptionTypeOptions READ absorptionTypeOptions CONSTANT)
-    Q_PROPERTY(QString backgroundType READ backgroundType CONSTANT)
+    // The background model; another type replaces the background (edi::select_background_type).
+    Q_PROPERTY(QString backgroundType READ backgroundType WRITE setBackgroundType NOTIFY backgroundTypeChanged)
+    // The polynomial's origin and the Chebyshev domain's ends; NaN when the type has none.
+    Q_PROPERTY(double backgroundOrigin READ backgroundOrigin WRITE setBackgroundOrigin NOTIFY backgroundOriginChanged)
+    Q_PROPERTY(double backgroundXMin READ backgroundXMin WRITE setBackgroundXMin NOTIFY backgroundXMinChanged)
+    Q_PROPERTY(double backgroundXMax READ backgroundXMax WRITE setBackgroundXMax NOTIFY backgroundXMaxChanged)
     Q_PROPERTY(edi_app::OptionListModel* backgroundTypeOptions READ backgroundTypeOptions CONSTANT)
     Q_PROPERTY(double cutoffFwhm READ cutoffFwhm WRITE setCutoffFwhm NOTIFY cutoffFwhmChanged)
     Q_PROPERTY(QString linkedStructureId READ linkedStructureId WRITE setLinkedStructureId NOTIFY linkedStructureIdChanged)
     Q_PROPERTY(double datasetWeight READ datasetWeight WRITE setDatasetWeight NOTIFY datasetWeightChanged)
     Q_PROPERTY(bool calculationOnly READ calculationOnly CONSTANT)
-    // Load data… reads a plain-data file into this experiment: only one made with Create experiment (an
-    // experiment loaded from `.edi` has its data). `dataFile`: the plain-data file its data came from, or empty.
+    // Load data… reads a plain-data file into this experiment, in place of any data it has: every experiment but a
+    // scan's (the owner, 2026-10-11). `dataFile`: the plain-data file its data came from, or empty.
     Q_PROPERTY(bool canLoadData READ canLoadData NOTIFY canLoadDataChanged)
     Q_PROPERTY(QString dataFile READ dataFile CONSTANT)
     Q_PROPERTY(edi_app::CategoryListModel* categories READ categories CONSTANT)
@@ -68,6 +76,7 @@ class ExperimentViewModel : public QObject {
     Q_PROPERTY(edi_app::ParameterListModel* absorption READ absorption CONSTANT)
     Q_PROPERTY(edi_app::ParameterItem* scale READ scale NOTIFY scaleChanged)
     Q_PROPERTY(edi_app::BackgroundListModel* background READ background CONSTANT)
+    Q_PROPERTY(edi_app::BackgroundTermListModel* backgroundTerms READ backgroundTerms CONSTANT)
     Q_PROPERTY(edi_app::ExcludedRegionListModel* excludedRegions READ excludedRegions CONSTANT)
     Q_PROPERTY(edi_app::ReflectionListModel* reflections READ reflections CONSTANT)
     Q_PROPERTY(edi_app::PrefOrientListModel* preferredOrientation READ preferredOrientation CONSTANT)
@@ -112,7 +121,14 @@ class ExperimentViewModel : public QObject {
     QString absorptionType() const { return absorption_type_; }
     void setAbsorptionType(const QString& token);
     OptionListModel* absorptionTypeOptions() const { return absorption_type_options_; }
-    QString backgroundType() const;
+    QString backgroundType() const { return background_type_; }
+    void setBackgroundType(const QString& token);
+    double backgroundOrigin() const { return background_origin_; }
+    void setBackgroundOrigin(double origin);
+    double backgroundXMin() const { return background_x_min_; }
+    void setBackgroundXMin(double value);
+    double backgroundXMax() const { return background_x_max_; }
+    void setBackgroundXMax(double value);
     OptionListModel* backgroundTypeOptions() const { return background_type_options_; }
     double cutoffFwhm() const { return cutoff_fwhm_; }
     void setCutoffFwhm(double cutoff);
@@ -136,6 +152,7 @@ class ExperimentViewModel : public QObject {
     ParameterListModel* absorption() const { return absorption_; }
     ParameterItem* scale() const { return scale_; }
     BackgroundListModel* background() const { return background_; }
+    BackgroundTermListModel* backgroundTerms() const { return background_terms_; }
     ExcludedRegionListModel* excludedRegions() const { return excluded_regions_; }
     ReflectionListModel* reflections() const { return reflections_; }
     PrefOrientListModel* preferredOrientation() const { return preferred_orientation_; }
@@ -154,6 +171,15 @@ class ExperimentViewModel : public QObject {
     // reports stale and the chart's source reports that it no longer describes the model, until the newest
     // request's publication captures the pattern again.
     void markPatternStale();
+    // Pattern charts showing this experiment's pattern register here while they are shown (on the page and the tab
+    // the window shows): a followed scan file counts as drawn only while one is (edi ADR-0029).
+    bool patternShown() const { return !shown_charts_.isEmpty(); }
+    void setChartShown(const QObject* chart, bool shown);
+    // Each new pattern source has the next generation; a shown chart notes the one it drew, so a followed file's
+    // receipt can tell that its own pattern reached the screen.
+    std::uint64_t patternGeneration() const { return pattern_generation_; }
+    std::uint64_t presentedGeneration() const { return presented_generation_; }
+    void notePresented() { presented_generation_ = pattern_generation_; }
     BlockText* text() const { return text_; }
     QString lastError() const { return last_error_; }
 
@@ -166,6 +192,10 @@ class ExperimentViewModel : public QObject {
     void fitOutcomeChanged();
     void peakTypeChanged();
     void absorptionTypeChanged();
+    void backgroundTypeChanged();
+    void backgroundOriginChanged();
+    void backgroundXMinChanged();
+    void backgroundXMaxChanged();
     void cutoffFwhmChanged();
     void linkedStructureIdChanged();
     void datasetWeightChanged();
@@ -173,6 +203,7 @@ class ExperimentViewModel : public QObject {
     void lastErrorChanged();
     void patternSourceChanged();
     void patternWentStale();
+    void patternShownChanged();
 
    private:
     edi::Category category(const char* id) const;
@@ -180,10 +211,14 @@ class ExperimentViewModel : public QObject {
 
     edi::Project& project_;
     edi::ExperimentBase& experiment_;
+    QSet<const QObject*> shown_charts_;
+    std::uint64_t pattern_generation_ = 0;
+    std::uint64_t presented_generation_ = 0;
     ProjectEditor& editor_;
     bool can_load_data_ = false;
     ParameterRegistry& registry_;
-    QString name_, peak_type_, absorption_type_, linked_structure_id_, last_error_, fit_outcome_;
+    QString name_, peak_type_, absorption_type_, background_type_, linked_structure_id_, last_error_, fit_outcome_;
+    double background_origin_ = qQNaN(), background_x_min_ = qQNaN(), background_x_max_ = qQNaN();
     double cutoff_fwhm_ = 0.0, dataset_weight_ = 1.0;
     OptionListModel* peak_type_options_;
     OptionListModel* absorption_type_options_;
@@ -196,6 +231,7 @@ class ExperimentViewModel : public QObject {
     ParameterListModel* absorption_;
     ParameterItem* scale_ = nullptr;
     BackgroundListModel* background_;
+    BackgroundTermListModel* background_terms_;
     ExcludedRegionListModel* excluded_regions_;
     ReflectionListModel* reflections_;
     PrefOrientListModel* preferred_orientation_;

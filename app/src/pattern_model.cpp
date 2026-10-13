@@ -93,6 +93,12 @@ QVariant PatternModel::data(const QModelIndex& index, int role) const {
         case IntensityMeasRole: return at(data.intensity_meas);
         case IntensityMeasSuRole: return at(data.intensity_meas_su);
         case IntensityCalcRole: return at(published_calc_);  // gated when published (calculated())
+        case DSpacingRole: return at(published_d_);
+        case IntensityBkgRole: return at(published_bkg_);
+        case ResidualRole: return at(published_residual_);
+        case CalcStatusRole:
+            return static_cast<std::size_t>(index.row()) < published_status_.size()
+                       ? QVariant(QString::fromStdString(published_status_[index.row()])) : QVariant();
         default: return {};
     }
 }
@@ -101,7 +107,11 @@ QHash<int, QByteArray> PatternModel::roleNames() const {
     return {{XRole, "x"},
             {IntensityMeasRole, "intensityMeas"},
             {IntensityMeasSuRole, "intensityMeasSu"},
-            {IntensityCalcRole, "intensityCalc"}};
+            {IntensityCalcRole, "intensityCalc"},
+            {DSpacingRole, "dSpacing"},
+            {IntensityBkgRole, "intensityBkg"},
+            {CalcStatusRole, "calcStatus"},
+            {ResidualRole, "residual"}};
 }
 
 void PatternModel::markStale() {
@@ -129,12 +139,24 @@ void PatternModel::calculated(const QString& error) {
     // Published before the views are told, since they read it back (data()).
     const bool calc_changed = calc != published_calc_;
     published_calc_ = calc;
+    const edi::PdDataBase* current = experiment_.data.has_value() && experiment_.computed_current()
+                                       ? &*experiment_.data : nullptr;
+    const auto d = current ? current->d_spacing.values() : std::vector<double>();
+    const auto bkg = current ? current->intensity_bkg.values() : std::vector<double>();
+    const auto residual = current ? current->residual.values() : std::vector<double>();
+    const auto status = current ? current->calc_status.values() : std::vector<std::string>();
+    const bool fields_changed = d != published_d_ || bkg != published_bkg_ ||
+                                residual != published_residual_ || status != published_status_;
+    published_d_ = d;
+    published_bkg_ = bkg;
+    published_residual_ = residual;
+    published_status_ = status;
     if (count_ != previous_count) {
         beginResetModel();  // only when the data node itself changed (a load), never on an edit
         endResetModel();
         emit countChanged();
-    } else if (count_ > 0 && calc_changed) {
-        emit dataChanged(index(0), index(count_ - 1), {IntensityCalcRole});
+    } else if (count_ > 0 && (calc_changed || fields_changed)) {
+        emit dataChanged(index(0), index(count_ - 1), {IntensityCalcRole, DSpacingRole, IntensityBkgRole, CalcStatusRole, ResidualRole});
     }
     if (x_min_ != previous_min) {
         emit xMinChanged();

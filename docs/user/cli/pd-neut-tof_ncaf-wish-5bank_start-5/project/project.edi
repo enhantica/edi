@@ -1,5 +1,10 @@
 _edi.schema_version 2
 
 _metadata.name             ncaf_wish_5bank_s5
-_metadata.title            "5-bank NCAF WISH joint fit, free set and exclusions of FullProf tmpl_five_banks_p1.pcr"
-_metadata.description      ?
+_metadata.title "Na₂Ca₃Al₂F₁₄ [I2₁3] · WISH @ ISIS"
+_metadata.description "5 banks · FullProf free parameters and exclusions · Starting model 5"
+_metadata.purpose "refinement"
+_metadata.dimensionality "1D"
+_metadata.instrument "WISH"
+_metadata.facility "ISIS"
+_metadata.polarisation "none"

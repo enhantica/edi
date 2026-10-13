@@ -49,3 +49,26 @@ a long experiment.
 | Keep each dataset's fitted model in memory | Rejected: memory grows with the scan, 1,000,000 models do not fit. |
 | Read every file when the project opens | Rejected: minutes of reading before anything shows, for files most users never select. |
 | A database beside `results.csv` | Deferred: one more store to keep in step, for queries nobody asks yet. |
+
+## Amendment, 2026-10: skipped and refused files
+
+crysta writes no `results.csv` row for a file with no intensity above zero, records a file whose fit was refused
+after the solver ran as a failed row, and lists both, with each file's skipped negative points, in
+`analysis/scan-notes.csv`. edi reads that file by one rule wherever it reads it (the results index, the live index
+as rows arrive, and `edi fit`): the header, complete lines of four cells, `negative_points` a decimal integer of at
+most 12 digits, `skipped_dataset` `True` or `False`, each scan file named once. A file that breaks the rule is an
+explicit refusal of the index, not a silently different state. A dataset is **processed** when it has a row or is
+skipped; Start, Continue, Reset, the live count and the scan summary count processed datasets, so a scan whose
+remaining files are all skipped is complete.
+
+A skipped file sends no event of its own, so the live index reads the notes appended before each new row, and the
+app indexes the files on disk again when the run returns, before the running bar closes: files skipped after the
+last row count for every ending (complete, stopped, failed). A refusal while a run writes refuses the whole index,
+as a full read would, and is shown at once; nothing more is published until the full read at the end succeeds.
+When that read refuses too, the datasets, evolution and counts stay as last accepted, the run keeps its own
+outcome (Failed, Stopped, else Refused), and no summary is built from the refused read.
+A scan whose processed files were all skipped is still a scan that ran: it has a scan summary and run provenance,
+and a single fit after it is recorded as the last run. `results.csv`, `results-provenance.csv` and
+`scan-notes.csv` may be absent, but a path that exists must be a regular file (`edi::scan_state_present`, asked by
+every reader before it opens one): a directory there is refused, never read as no results or as an empty file,
+and a fresh run or Reset that sets the result files aside refuses it too.

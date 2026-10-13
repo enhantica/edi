@@ -91,3 +91,12 @@ For a publication-only metadata update, run
 `python tests/fixtures/e05_t1/generate_model_counts.py --public-metadata`.
 It removes private citations while retaining every scientific case byte and
 the independent reference commit and source digest.
+
+The registered YAP single-fit example is appended with the same visible
+`generate.py --only` CLI capture and `generate_model_counts.py --only` independent
+selection. Every previous CLI case, full record, native-header row and selected
+parameter row is retained. The new case records its actual linked SDK, input
+digests and authoring CLI head; the count retains the frozen external source and
+raw selected names alongside the existing model projection. The inventory gate
+requires the registered single/joint set in all three inventories, and refuses
+omissions and duplicate CLI rows. No numerical tolerance changes.

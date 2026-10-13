@@ -250,17 +250,44 @@ AppDialog {
                 text: qsTr("Logging level") + ":"
             }
             EaElements.ComboBox {
+                id: loggingLevel
+
                 model: ["Debug", "Info", "Error", "Disabled"]
                 currentIndex: model.indexOf(EaGlobals.Vars.loggingLevel)
                 onActivated: EaGlobals.Vars.loggingLevel = currentValue
+            }
+
+            // The engine's threads for every fill: Auto (the engine's policy) or a count, saved per machine.
+            EaElements.Label {
+                text: qsTr("Engine threads") + ":"
+            }
+            EaElements.ComboBox {
+                objectName: "preferences.engineThreads"
+                enabled: ApplicationInfo.engineThreadsSelectable
+                model: {
+                    if (!ApplicationInfo.engineThreadsSelectable)
+                        return [qsTr("1 (single-thread build)")];
+                    const counts = [qsTr("Auto")];
+                    for (let count = 1; count <= ApplicationInfo.engineThreadsMaximum; ++count)
+                        counts.push(String(count));
+                    return counts;
+                }
+                currentIndex: ApplicationInfo.engineThreadsSelectable ? Math.min(Preferences.engineThreads, ApplicationInfo.engineThreadsMaximum) : 0
+                onActivated: index => {
+                    if (ApplicationInfo.engineThreadsSelectable)
+                        Preferences.engineThreads = index;
+                }
             }
 
             // What the app runs on and with, to read and to copy (the owner, 2026-10-06).
             EaElements.Label {
                 text: qsTr("Diagnostics") + ":"
             }
-            EaElements.Button {
+            // A button, as the sidebar's, the Logging level box's size (the owner, 2026-10-08).
+            EaElements.SideBarButton {
                 objectName: "preferences.diagnostics"
+                width: loggingLevel.width
+                height: loggingLevel.height
                 text: qsTr("Show")
                 onClicked: diagnostics.open()
             }

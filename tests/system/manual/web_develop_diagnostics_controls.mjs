@@ -6,7 +6,7 @@ const fields = ['Threads (ideal): 4', 'Threads (OpenMP team): no OpenMP',
   'Browser cores (hardwareConcurrency): 4'];
 const text = mode => [...fields, `Engine backend: ${mode === 'singlethread' ? 'serial' : 'std::thread pool'}`,
   `Engine workers: ${mode === 'singlethread' ? 1 : 4}`,
-  `WebAssembly SIMD: ${mode === 'singlethread' ? 'off' : 'on'}`].join('\n');
+  'WebAssembly SIMD: on'].join('\n');
 async function exercise(mode, change = value => value, missing = false, brokenClose = false) {
   let visible = false;
   const calls = [];
@@ -42,8 +42,9 @@ const controls = [
   ['missing old line', () => exercise('multithread', v => { const text = v.text.replace(fields[1], ''); return {...v, text, providerText: text}; }), /retain the existing/],
   ['missing backend', () => exercise('multithread', v => { const text = v.text.replace(/Engine backend:[^\n]+/, ''); return {...v, text, providerText: text}; }), /must show engine backend/],
   ['serial advertised as threaded', () => exercise('multithread', v => ({...v, text: text('singlethread'), providerText: text('singlethread')})), /active thread backend and SIMD/],
-  ['threaded advertised as serial', () => exercise('singlethread', v => ({...v, text: text('multithread'), providerText: text('multithread')})), /serial scalar engine/],
+  ['threaded advertised as serial', () => exercise('singlethread', v => ({...v, text: text('multithread'), providerText: text('multithread')})), /one serial engine worker with SIMD/],
   ['one threaded worker', () => exercise('multithread', v => { const text = v.text.replace('workers: 4', 'workers: 1'); return {...v, text, providerText: text}; }), /active thread backend and SIMD/],
+  ['serial SIMD off', () => exercise('singlethread', v => { const text = v.text.replace('SIMD: on', 'SIMD: off'); return {...v, text, providerText: text}; }), /one serial engine worker with SIMD/],
   ['threaded SIMD off', () => exercise('shim', v => { const text = v.text.replace('SIMD: on', 'SIMD: off'); return {...v, text, providerText: text}; }), /active thread backend and SIMD/],
   ['broken close', () => exercise('multithread', undefined, false, true), /close both actual Qt dialogs/],
 ];

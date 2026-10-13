@@ -1,5 +1,9 @@
 _edi.schema_version 3
 
 _metadata.name             lif_xray
-_metadata.title            "LiF, X-ray powder diffraction (calculation)"
-_metadata.description      "The app's X-ray example: the constants of docs/dev/verification/pd-xray-cwl_LiF_single.py (its FullProf reference), on a calculation grid"
+_metadata.title "LiF [Fm-3m] · Calculated example"
+_metadata.description "Cu Kα₁ calculated profile · X-ray scattering factors and dispersion"
+_metadata.purpose "simulation"
+_metadata.dimensionality "1D"
+_metadata.instrument ?
+_metadata.facility ?

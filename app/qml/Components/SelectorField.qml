@@ -2,6 +2,7 @@
 import QtQuick
 import QtQuick.Controls
 
+import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
@@ -21,6 +22,9 @@ EaElements.ParamComboBox {
     property string refusal: ""
     signal selected(string token)
 
+    // Shares the row's width with its siblings at the input spacing, as ParamTextField does (the base's
+    // ParamComboBox assumes a wider gap).
+    width: (EaStyle.Sizes.sideBarContentWidth - (parent.children.length - 1) * AppSizes.inputSpacing) / parent.children.length
     parameter: ({
             "value": selector.token,
             "shortPrettyName": selector.label
@@ -31,7 +35,10 @@ EaElements.ParamComboBox {
     enabled: writable && options !== null && options.count > 0
     currentIndex: options ? options.indexOf(token) : -1
     ToolTip.text: refusal
-    ToolTip.visible: refusal !== "" && hovered
+    WarningToolTip {
+        text: selector.refusal
+        visible: text !== "" && selector.hovered
+    }
 
     onTokenChanged: refusal = ""
     // Its title as every field's: left, inset as a combo box's, ending in "…" (edi ADR-0017 §5).

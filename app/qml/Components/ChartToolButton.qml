@@ -33,6 +33,8 @@ Rectangle {
     }
     HoverHandler {
         id: hover
+
+        cursorShape: Qt.PointingHandCursor
     }
     TapHandler {
         onTapped: button.clicked()

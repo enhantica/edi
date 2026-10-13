@@ -142,6 +142,10 @@ def experiment() -> str:
         '_data.intensity_meas',
         '_data.intensity_meas_su',
         *data(),
+        # The example catalogue's explicit experiment type (ADR-0031).
+        '_experiment_type.sample_form "powder"',
+        '_experiment_type.radiation_probe "neutron"',
+        '_experiment_type.scattering_type "bragg"',
     ]
     return '\n'.join(lines) + '\n'
 
@@ -155,7 +159,13 @@ def main() -> int:
     (TARGET / 'analysis').mkdir()
     (TARGET / 'project.edi').write_text(
         '_edi.schema_version 3\n_metadata.name pd_neut_cwl_yap_spodi_3k\n'
-        '_metadata.title "YAlO3 and Al2O3, SPODI (FRM II), two phases"\n'
+        '_metadata.title "YAlO₃ [Pbnm] / Al₂O₃ [R-3c] · SPODI @ FRM II"\n'
+        '_metadata.description "2 phases at 3 K · Shared Bérar-Baldinozzi profile · '
+        'Cylinder absorption"\n'
+        # The example catalogue's tags (ADR-0031).
+        '_metadata.purpose "refinement"\n_metadata.dimensionality "1D"\n'
+        '_metadata.instrument "SPODI"\n'
+        '_metadata.facility "FRM II"\n_metadata.polarisation "none"\n'
     )
     cell = [
         f'_cell.length_a {free(5.172418)}',
@@ -182,7 +192,7 @@ def main() -> int:
     (TARGET / 'experiments' / 'spodi.edi').write_text(experiment())
     (TARGET / 'analysis' / 'analysis.edi').write_text(
         '_edi.schema_version 3\n_minimizer.max_iterations 150\n'
-        '_minimizer.chi_square_tolerance 1e-8\n'
+        '_minimizer.chi_square_tolerance 1e-8\n_fitting_mode.type single\n'
     )
     edi.Project.load(str(TARGET))  # the loader's refusals, before anything is kept
     return 0

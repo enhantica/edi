@@ -18,6 +18,7 @@ from tests.fixtures.scan_app.build_probe import (
     fingerprint,
     fingerprint_headers,
     fixture_fingerprint,
+    validate_current_inputs,
 )
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -69,10 +70,36 @@ def measured(path):
     return columns
 
 
-def measured_hash(path):
-    columns = measured(path)
+def template_measured(path):
+    lines = path.read_text().split('loop_\n_data.two_theta\n', 1)[1].splitlines()
+    tags = ['_data.two_theta']
+    while lines and lines[0].startswith('_data.'):
+        tags.append(lines.pop(0))
+    wanted = [
+        tags.index(name)
+        for name in ('_data.two_theta', '_data.intensity_meas', '_data.intensity_meas_su')
+    ]
+    columns = []
+    for line in lines:
+        if not line.strip():
+            break
+        values = list(map(float, line.split()))
+        if len(values) != len(tags):
+            raise ValueError('Follow: saved template data must match their declared columns')
+        x, y, sigma = [values[index] for index in wanted]
+        columns.append((round(x, 4), y, max(1.0, sigma) if sigma < 0.0001 else sigma))
+    if not columns:
+        raise ValueError('Follow: the independent saved template must contain measured data')
+    return columns
+
+
+def columns_hash(columns):
     flattened = [point[column] for column in range(3) for point in columns]
     return hashlib.sha256(struct.pack('=' + 'd' * len(flattened), *flattened)).hexdigest()
+
+
+def measured_hash(path):
+    return columns_hash(measured(path))
 
 
 def files(path):
@@ -155,6 +182,7 @@ class Harness:
             )
         sdk_override = os.environ.get('EDI_SCAN_APP_SDK')
         sdk = Path(sdk_override) if sdk_override else crysta_reference_prefix()
+        validate_current_inputs(self.receipt, ROOT, sdk, crysta_reference_source())
         if self.receipt['sdk_headers'] != fingerprint_headers(sdk / 'include'):
             raise RuntimeError('Scan execution: observer headers differ from the declared SDK')
         if (

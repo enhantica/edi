@@ -402,11 +402,30 @@ def fetch(platform: str) -> Path:
 
 
 def listing(url: str, key: str) -> list[dict]:
-    """Return the ``key`` rows of one REST listing; one that does not fit a page refuses."""
-    page = json.loads(curl(f'{url}{"&" if "?" in url else "?"}per_page=100', accept=JSON))
-    rows = page.get(key) or []
-    if page.get('total_count', len(rows)) != len(rows):
-        refuse(f'GET {url} lists {page.get("total_count")} {key}, more than one page holds')
+    """Return every ``key`` row of a REST listing, page by page; a crysta run can exceed 100 jobs.
+
+    Each page must carry the rows and the listing's total, the total must not change between pages,
+    and the rows read must be exactly that many; read over several pages, each row once (a listing
+    that moved while read repeats one). Anything else refuses.
+    """
+    joiner = '&' if '?' in url else '?'
+    rows: list[dict] = []
+    total = None
+    for number in range(1, 1000):
+        page = json.loads(curl(f'{url}{joiner}per_page=100&page={number}', accept=JSON))
+        found, count = page.get(key), page.get('total_count')
+        if not isinstance(found, list) or not isinstance(count, int):
+            refuse(f'GET {url} page {number} has no {key} list with its total_count')
+        if total is not None and count != total:
+            refuse(f'GET {url} changed from {total} to {count} {key} while it was read')
+        total = count
+        rows += found
+        if len(rows) >= total or not found:
+            break
+    ids = [row.get('id') for row in rows]
+    if len(rows) != total or (number > 1 and len(set(ids)) != len(ids)):
+        distinct = len(set(ids))
+        refuse(f'GET {url} returned {len(rows)} {key} ({distinct} distinct) of {total} listed')
     return rows
 
 

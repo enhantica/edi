@@ -43,14 +43,15 @@ _background.type polynomial
 _background.origin 80.0
 
 loop_
+_background.id
 _background.order
 _background.coef
-0 781.932()
-1 75.473()
-2 292.094()
-3 -3.451()
-4 -326.104()
-5 0.0
+1 0 781.932()
+2 1 75.473()
+3 2 292.094()
+4 3 -3.451()
+5 4 -326.104()
+6 5 0.0
 
 loop_
 _data.two_theta

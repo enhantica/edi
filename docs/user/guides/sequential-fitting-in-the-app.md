@@ -21,6 +21,10 @@ been fitted, it shows that dataset's fitted values from `analysis/results.csv` o
 and Structure pages, and the pattern calculated from them. A file is read only when it is shown
 or fitted.
 
+The Correlations tab shows the chosen dataset's parameter correlations from its last fit. A save
+keeps only the template dataset's, so after the project is opened again the other datasets' tabs
+say their correlations are kept only for the template.
+
 ## Running a scan
 
 Set the fitting mode to `sequential` or `independent` and press **Start fitting** on the Analysis

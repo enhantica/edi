@@ -10,15 +10,38 @@ import argparse
 import hashlib
 import inspect
 import json
+import math
 import re
 import shutil
 import subprocess
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 
-def load_reference_project(path):
+def load_reference_project(path, retained_ranges=None):
+    from cryspy.A_functions_base.function_2_space_group import (  # noqa: PLC0415
+        get_name_hm_extended_by_it_number_it_coordinate_system_code,
+    )
     from easydiffraction import Project  # noqa: PLC0415 - independent reference environment only
+    from easydiffraction.core.validation import RangeValidator  # noqa: PLC0415
+    from easydiffraction.datablocks.experiment.item.enums import (  # noqa: PLC0415
+        PeakProfileTypeEnum,
+    )
+
+    # Counting must retain saved values, including a fit's out-of-range result.
+    # Type and membership validation remain active; only finite range violations
+    # are retained during the private load. No fit or calculation is performed.
+    original_range = RangeValidator.validated
+
+    def saved_range(validator, value, name, default=None, current=None):
+        if math.isfinite(value) and not (
+            validator.ge <= value <= validator.le and validator.gt < value < validator.lt
+        ):
+            if retained_ranges is not None:
+                retained_ranges.append({'name': name, 'value': value})
+            return value
+        return original_range(validator, value, name, default=default, current=current)
 
     # Adapt reader/backend labels only; no fit or calculation is performed.
     # All parameter tags and the original committed inputs stay intact.
@@ -38,6 +61,32 @@ def load_reference_project(path):
                     '_experiment_type.radiation_probe neutron\n'
                     '_experiment_type.scattering_type bragg\n'
                 )
+            if re.search(r'^_space_group.name_h_m "P b n m"$', text, re.MULTILINE):
+                # The reference reader requires a standard short name plus its
+                # axis qualifier. Cryspy's own IT table proves the equivalence.
+                if (
+                    get_name_hm_extended_by_it_number_it_coordinate_system_code(62, 'cab')
+                    != 'P b n m'
+                ):
+                    raise RuntimeError(
+                        'reference space-group table must preserve the saved setting'
+                    )
+                if '_space_group.coord_system_code' in text:
+                    raise RuntimeError(
+                        'alternate space-group adaptation requires an implicit setting'
+                    )
+                text = text.replace(
+                    '_space_group.name_h_m "P b n m"', '_space_group.name_h_m "P n m a"'
+                )
+                text += '\n_space_group.coord_system_code cab\n'
+            # Keep the current native tag in this source; the frozen external
+            # reader supplies its own canonical spelling through its enum.
+            text = re.sub(
+                r'^_peak.type cwl-pseudo-voigt-berar-baldinozzi$',
+                '_peak.type ' + PeakProfileTypeEnum.CWL_PSEUDO_VOIGT_BERAR_BALDINOZZI_ASYMMETRY,
+                text,
+                flags=re.MULTILINE,
+            )
             # The reference exposes Chebyshev coefficient storage. For count-only
             # selection, plain powers have the same independent coefficient set;
             # no reference fit/calculation or basis conversion is performed.
@@ -63,7 +112,8 @@ def load_reference_project(path):
                 .replace('_calculator.type crysta', '_calculator.type cryspy')
                 .replace('_minimizer.type crysta', '_minimizer.type "lmfit (leastsq)"')
             )
-        return Project.load(str(private))
+        with patch.object(RangeValidator, 'validated', saved_range):
+            return Project.load(str(private))
 
 
 def project_model_names(reference_names, experiments, path):
@@ -154,6 +204,11 @@ def main():
             '_minimizer.type crysta -> "lmfit (leastsq)"; missing legacy TOF family supplied '
             'from the declared tof-* peak tag; parameter tags unchanged; no fit run'
         ),
+        'reader_label_adaptation': (
+            'private P b n m -> reference P n m a with cab, verified by Cryspy IT table; '
+            'coordinates/cell values retained; native BeBa peak tag -> external canonical '
+            'asymmetry tag; no fit/calculation or selected-parameter method changes'
+        ),
         'model_projection': {
             'tof_geometry': (
                 'bank angle is fixed geometry (Cryspy TOFParameters.ATTR_REF excludes it)'
@@ -186,10 +241,17 @@ def main():
         for relative, expected in case['inputs_sha256'].items():
             if hashlib.sha256((path / relative).read_bytes()).hexdigest() != expected:
                 raise RuntimeError('independent count input changed: ' + case['id'])
-        project = load_reference_project(path)
+        retained_ranges = []
+        project = load_reference_project(path, retained_ranges)
         experiments = list(project.experiments.values())
         if case['mode'] == 'single' and len(experiments) != 1:
             raise RuntimeError('single fit fixture must name its sole experiment')
+        if retained_ranges:
+            output.setdefault('saved_range_adaptation', {})[case['id']] = {
+                'scope': 'finite numeric range checks during private load only; saved values '
+                'retained; type/membership checks and external model selection unchanged; no fit',
+                'retained': retained_ranges,
+            }
         parameters = project.analysis._selected_parameters_for_fit(experiments)
         reference_names = [parameter.unique_name for parameter in parameters]
         names = list(reference_names)

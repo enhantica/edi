@@ -1,3 +1,9 @@
 _edi.schema_version 3
 _metadata.name beer_mcstas
-_metadata.title "Ferrite and austenite, BEER (ESS, McStas), two phases in two banks"
+_metadata.title "Ferrite [Im-3m] / Austenite [Fm-3m] · BEER @ ESS"
+_metadata.description "2 iron phases · 2 McStas-simulated banks · Separate phase scales"
+_metadata.purpose "refinement"
+_metadata.dimensionality "1D"
+_metadata.instrument "BEER"
+_metadata.facility "ESS"
+_metadata.polarisation "none"

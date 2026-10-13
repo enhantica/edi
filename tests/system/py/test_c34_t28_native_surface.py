@@ -275,11 +275,19 @@ def frozen_surface(tmp_path_factory, standard_headers):
     return compiler_surface(directory, frozen_headers(directory), standard_headers)
 
 
+@pytest.fixture(scope='module')
+def current_surface(tmp_path_factory, standard_headers):
+    # The unmodified header graph is immutable during this module; attempted
+    # callback changes still receive their own complete compiler read below.
+    directory = tmp_path_factory.mktemp('current-native-surface')
+    return compiler_surface(directory, ROOT / PREFIX, standard_headers)
+
+
 def test_every_preserved_public_declaration_keeps_its_compiler_type(
-    tmp_path, standard_headers, frozen_surface
+    frozen_surface, current_surface
 ):
     baseline = frozen_surface
-    actual = compiler_surface(tmp_path, ROOT / PREFIX, standard_headers)
+    actual = current_surface
     assert baseline, ' T7 the compiler must expose a nonempty frozen public API'
     allowed = allowed_changes()
     transitions, _ = multiphase_declaration_transition()
@@ -294,14 +302,65 @@ def test_every_preserved_public_declaration_keeps_its_compiler_type(
     assert optional_after <= actual, (
         'The lifetime amendment permits only the exact optional parameter storage transition'
     )
+    fitted_before, fitted_after = fitted_file_declaration_transition()
+    assert fitted_before <= baseline, (
+        'The fitted-file amendment must reach all three immutable original scan signatures'
+    )
+    assert fitted_after <= actual, (
+        'The fitted-file amendment permits only the exact additional callback after cancellation'
+    )
     missing = sorted(
         row
         for row in baseline - actual
-        if row[:2] not in allowed and row not in transitions and row not in optional_before
+        if row[:2] not in allowed
+        and row not in transitions
+        and row not in optional_before
+        and row not in fitted_before
     )
     assert not missing, (
         ' I20/T7 every preserved field, base, alias, overload, reference return and '
         'noexcept signature must retain its frozen compiler type: ' + repr(missing)
+    )
+
+
+def fitted_file_declaration_transition():
+    # Before: five original callback arguments. After: the same five, followed
+    # by the optional fitted-pattern subscriber. No method-name-wide exemption.
+    signature = (
+        'FitResultBase (const IterationCallback &, const PreambleCallback &, '
+        'const ScanStartCallback &, const FileCompleteCallback &, const CancelCallback &)'
+    )
+    before = {
+        ('edi::Project', method, 'CXXMethodDecl', signature)
+        for method in ('fit_scan', 'fit_sequential', 'fit_independent')
+    }
+    after = {(*row[:3], row[3][:-1] + ', const FileFittedCallback &)') for row in before}
+    return before, after
+
+
+@pytest.mark.parametrize('method', ['fit_scan', 'fit_sequential', 'fit_independent'])
+def test_fitted_file_transition_refuses_other_callback_changes(method, tmp_path, standard_headers):
+    include = tmp_path / 'include'
+    shutil.copytree(ROOT / PREFIX, include)
+    header = include / 'edi/model.hpp'
+    text = header.read_text()
+    matches = list(re.finditer(r'FitResultBase\s+' + method + r'\s*\([^;]*\);', text))
+    assert len(matches) == 1, (
+        'Each fitted-file callback control must mutate its one actual public declaration'
+    )
+    declaration = matches[0]
+    replacement = declaration[0].replace('FileFittedCallback', 'FileCompleteCallback')
+    assert replacement != declaration[0], (
+        'Each callback control must reach the actual additional fitted-pattern argument'
+    )
+    header.write_text(text[: declaration.start()] + replacement + text[declaration.end() :])
+    actual = compiler_surface(tmp_path, include, standard_headers)
+    before, after = fitted_file_declaration_transition()
+    assert not after <= actual, (
+        'The fitted-file transition must refuse a wrong callback type on each scan entry'
+    )
+    assert len(before) == 3, (
+        'The fitted-file transition must retain all three distinct original scan declarations'
     )
 
 

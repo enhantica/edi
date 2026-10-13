@@ -1,0 +1,538 @@
+{
+ "characters": [
+  {
+   "char": "©",
+   "code": "U+00A9",
+   "font": "PT Sans",
+   "sites": [
+    "app/qml/Pages/Home/AboutDialog.qml"
+   ],
+   "drawn_by": "PT Sans",
+   "weight": 400
+  },
+  {
+   "char": "°",
+   "code": "U+00B0",
+   "font": "PT Sans",
+   "sites": [
+    "app/qml/Pages/Experiment/MeasuredRangeGroup.qml",
+    "app/qml/Pages/Experiment/ReflectionsGroup.qml",
+    "app/src/report_view_model.cpp",
+    "core/src/adapter.cpp",
+    "core/src/presentation.cpp"
+   ],
+   "drawn_by": "PT Sans",
+   "weight": 400
+  },
+  {
+   "char": "²",
+   "code": "U+00B2",
+   "font": "PT Mono",
+   "sites": [
+    "app/qml/Components/StatusBar.qml",
+    "app/src/fit_view_model.cpp"
+   ],
+   "drawn_by": "PT Mono",
+   "weight": 400
+  },
+  {
+   "char": "²",
+   "code": "U+00B2",
+   "font": "PT Sans",
+   "sites": [
+    "app/qml/Components/StatusBar.qml",
+    "app/qml/Pages/Experiment/ReflectionsGroup.qml",
+    "app/qml/Pages/Structure/AtomSiteAdpGroup.qml",
+    "app/src/fit_view_model.cpp",
+    "core/include/edi/parameter_spec.hpp"
+   ],
+   "drawn_by": "PT Sans",
+   "weight": 400
+  },
+  {
+   "char": "µ",
+   "code": "U+00B5",
+   "font": "PT Sans",
+   "sites": [
+    "app/qml/Pages/Experiment/MeasuredRangeGroup.qml",
+    "app/qml/Pages/Experiment/ReflectionsGroup.qml",
+    "core/src/adapter.cpp",
+    "core/src/presentation.cpp"
+   ],
+   "drawn_by": "PT Sans",
+   "weight": 400
+  },
+  {
+   "char": "·",
+   "code": "U+00B7",
+   "font": "PT Mono",
+   "sites": [
+    "app/qml/Globals/FitOutcomes.qml",
+    "app/src/fit_view_model.cpp"
+   ],
+   "drawn_by": "PT Mono",
+   "weight": 400
+  },
+  {
+   "char": "·",
+   "code": "U+00B7",
+   "font": "PT Sans",
+   "sites": [
+    "app/qml/Globals/FitOutcomes.qml",
+    "app/qml/Pages/Analysis/FreeHeaderMenu.qml",
+    "app/qml/Pages/Project/ExamplesGroup.qml",
+    "app/src/demo_driver.cpp",
+    "app/src/example_list_model.cpp",
+    "app/src/fit_view_model.cpp",
+    "app/src/project_view_model.cpp",
+    "core/include/edi/parameter_spec.hpp"
+   ],
+   "drawn_by": "PT Sans",
+   "weight": 400
+  },
+  {
+   "char": "¼",
+   "code": "U+00BC",
+   "font": "Noto Sans",
+   "sites": [
+    "app/src/structure_view_model.cpp"
+   ],
+   "drawn_by": "Noto Sans",
+   "weight": 400
+  },
+  {
+   "char": "½",
+   "code": "U+00BD",
+   "font": "Noto Sans",
+   "sites": [
+    "app/src/structure_view_model.cpp"
+   ],
+   "drawn_by": "Noto Sans",
+   "weight": 400
+  },
+  {
+   "char": "¾",
+   "code": "U+00BE",
+   "font": "Noto Sans",
+   "sites": [
+    "app/src/structure_view_model.cpp"
+   ],
+   "drawn_by": "Noto Sans",
+   "weight": 400
+  },
+  {
+   "char": "Å",
+   "code": "U+00C5",
+   "font": "PT Sans",
+   "sites": [
+    "app/qml/Pages/Experiment/MeasuredRangeGroup.qml",
+    "app/qml/Pages/Experiment/ReflectionsGroup.qml",
+    "app/qml/Pages/Structure/AppearanceGroup.qml",
+    "app/qml/Pages/Structure/AtomSiteAdpGroup.qml",
+    "app/src/parameter_item.cpp",
+    "app/src/report_view_model.cpp",
+    "core/include/edi/parameter_spec.hpp"
+   ],
+   "drawn_by": "PT Sans",
+   "weight": 400
+  },
+  {
+   "char": "×",
+   "code": "U+00D7",
+   "font": "PT Sans",
+   "sites": [
+    "app/src/structure_view_controller.cpp"
+   ],
+   "drawn_by": "PT Sans",
+   "weight": 400
+  },
+  {
+   "char": "é",
+   "code": "U+00E9",
+   "font": "PT Sans",
+   "sites": [
+    "core/src/selectors.cpp"
+   ],
+   "drawn_by": "PT Sans",
+   "weight": 400
+  },
+  {
+   "char": "α",
+   "code": "U+03B1",
+   "font": "PT Sans",
+   "sites": [
+    "app/qml/Pages/Structure/CellGroup.qml",
+    "app/src/parameter_item.cpp",
+    "app/src/report_view_model.cpp",
+    "core/include/edi/parameter_spec.hpp"
+   ],
+   "drawn_by": "Noto Sans",
+   "weight": 400
+  },
+  {
+   "char": "β",
+   "code": "U+03B2",
+   "font": "PT Sans",
+   "sites": [
+    "app/qml/Pages/Structure/CellGroup.qml",
+    "app/src/parameter_item.cpp",
+    "app/src/report_view_model.cpp",
+    "core/include/edi/parameter_spec.hpp"
+   ],
+   "drawn_by": "Noto Sans",
+   "weight": 400
+  },
+  {
+   "char": "γ",
+   "code": "U+03B3",
+   "font": "PT Sans",
+   "sites": [
+    "app/qml/Pages/Structure/CellGroup.qml",
+    "app/src/parameter_item.cpp",
+    "app/src/report_view_model.cpp"
+   ],
+   "drawn_by": "Noto Sans",
+   "weight": 400
+  },
+  {
+   "char": "θ",
+   "code": "U+03B8",
+   "font": "PT Sans",
+   "sites": [
+    "app/qml/Components/PatternChart.qml",
+    "app/qml/Pages/Experiment/MeasuredRangeGroup.qml",
+    "app/qml/Pages/Experiment/ReflectionsGroup.qml",
+    "app/src/parameter_item.cpp",
+    "app/src/report_view_model.cpp",
+    "core/src/adapter.cpp",
+    "core/src/presentation.cpp",
+    "core/include/edi/parameter_spec.hpp"
+   ],
+   "drawn_by": "Noto Sans",
+   "weight": 400
+  },
+  {
+   "char": "μ",
+   "code": "U+03BC",
+   "font": "PT Sans",
+   "sites": [
+    "app/src/parameter_item.cpp",
+    "app/src/report_view_model.cpp",
+    "core/include/edi/parameter_spec.hpp"
+   ],
+   "drawn_by": "PT Sans",
+   "weight": 400
+  },
+  {
+   "char": "σ",
+   "code": "U+03C3",
+   "font": "PT Sans",
+   "sites": [
+    "app/src/parameter_item.cpp",
+    "app/src/project_view_model.cpp"
+   ],
+   "drawn_by": "Noto Sans",
+   "weight": 400
+  },
+  {
+   "char": "χ",
+   "code": "U+03C7",
+   "font": "PT Mono",
+   "sites": [
+    "app/qml/Components/StatusBar.qml",
+    "app/src/fit_view_model.cpp"
+   ],
+   "drawn_by": "Noto Sans Mono",
+   "weight": 400
+  },
+  {
+   "char": "χ",
+   "code": "U+03C7",
+   "font": "PT Sans",
+   "sites": [
+    "app/qml/Components/StatusBar.qml",
+    "app/src/fit_view_model.cpp"
+   ],
+   "drawn_by": "Noto Sans",
+   "weight": 400
+  },
+  {
+   "char": "–",
+   "code": "U+2013",
+   "font": "PT Mono",
+   "sites": [
+    "app/src/fit_view_model.cpp"
+   ],
+   "drawn_by": "PT Mono",
+   "weight": 400
+  },
+  {
+   "char": "–",
+   "code": "U+2013",
+   "font": "PT Sans",
+   "sites": [
+    "app/qml/Pages/Experiment/MeasuredRangeGroup.qml",
+    "app/src/fit_view_model.cpp"
+   ],
+   "drawn_by": "PT Sans",
+   "weight": 400
+  },
+  {
+   "char": "—",
+   "code": "U+2014",
+   "font": "PT Sans",
+   "sites": [
+    "core/src/adapter.cpp",
+    "core/src/io.cpp",
+    "core/include/edi/model.hpp",
+    "core/include/edi/selectors.hpp"
+   ],
+   "drawn_by": "PT Sans",
+   "weight": 400
+  },
+  {
+   "char": "•",
+   "code": "U+2022",
+   "font": "PT Sans",
+   "sites": [
+    "app/qml/Main.qml"
+   ],
+   "drawn_by": "PT Sans",
+   "weight": 400
+  },
+  {
+   "char": "…",
+   "code": "U+2026",
+   "font": "PT Sans",
+   "sites": [
+    "app/qml/Pages/Experiment/ExperimentsGroup.qml",
+    "app/qml/Pages/Project/BlockNames.qml",
+    "app/qml/Pages/Project/GetStartedGroup.qml"
+   ],
+   "drawn_by": "PT Sans",
+   "weight": 400
+  },
+  {
+   "char": "₀",
+   "code": "U+2080",
+   "font": "PT Sans",
+   "sites": [
+    "core/include/edi/parameter_spec.hpp"
+   ],
+   "drawn_by": "Noto Sans",
+   "weight": 400
+  },
+  {
+   "char": "₁",
+   "code": "U+2081",
+   "font": "PT Sans",
+   "sites": [
+    "core/include/edi/parameter_spec.hpp"
+   ],
+   "drawn_by": "PT Sans",
+   "weight": 400
+  },
+  {
+   "char": "⅓",
+   "code": "U+2153",
+   "font": "Noto Sans",
+   "sites": [
+    "app/src/structure_view_model.cpp"
+   ],
+   "drawn_by": "Noto Sans",
+   "weight": 400
+  },
+  {
+   "char": "⅔",
+   "code": "U+2154",
+   "font": "Noto Sans",
+   "sites": [
+    "app/src/structure_view_model.cpp"
+   ],
+   "drawn_by": "Noto Sans",
+   "weight": 400
+  },
+  {
+   "char": "⅙",
+   "code": "U+2159",
+   "font": "Noto Sans",
+   "sites": [
+    "app/src/structure_view_model.cpp"
+   ],
+   "drawn_by": "Noto Sans",
+   "weight": 400
+  },
+  {
+   "char": "⅚",
+   "code": "U+215A",
+   "font": "Noto Sans",
+   "sites": [
+    "app/src/structure_view_model.cpp"
+   ],
+   "drawn_by": "Noto Sans",
+   "weight": 400
+  },
+  {
+   "char": "⅛",
+   "code": "U+215B",
+   "font": "Noto Sans",
+   "sites": [
+    "app/src/structure_view_model.cpp"
+   ],
+   "drawn_by": "Noto Sans",
+   "weight": 400
+  },
+  {
+   "char": "⅜",
+   "code": "U+215C",
+   "font": "Noto Sans",
+   "sites": [
+    "app/src/structure_view_model.cpp"
+   ],
+   "drawn_by": "Noto Sans",
+   "weight": 400
+  },
+  {
+   "char": "⅝",
+   "code": "U+215D",
+   "font": "Noto Sans",
+   "sites": [
+    "app/src/structure_view_model.cpp"
+   ],
+   "drawn_by": "Noto Sans",
+   "weight": 400
+  },
+  {
+   "char": "⅞",
+   "code": "U+215E",
+   "font": "Noto Sans",
+   "sites": [
+    "app/src/structure_view_model.cpp"
+   ],
+   "drawn_by": "Noto Sans",
+   "weight": 400
+  },
+  {
+   "char": "→",
+   "code": "U+2192",
+   "font": "Encode Sans",
+   "sites": [
+    "app/qml/Components/StatusBar.qml",
+    "app/src/fit_view_model.cpp"
+   ],
+   "drawn_by": "Encode Sans",
+   "weight": 400
+  },
+  {
+   "char": "−",
+   "code": "U+2212",
+   "font": "Noto Sans",
+   "sites": [
+    "app/src/structure_view_model.cpp"
+   ],
+   "drawn_by": "Noto Sans",
+   "weight": 400
+  },
+  {
+   "char": "−",
+   "code": "U+2212",
+   "font": "PT Sans",
+   "sites": [
+    "core/src/presentation.cpp"
+   ],
+   "drawn_by": "PT Sans",
+   "weight": 400
+  },
+  {
+   "char": "√",
+   "code": "U+221A",
+   "font": "PT Sans",
+   "sites": [
+    "app/src/project_view_model.cpp"
+   ],
+   "drawn_by": "PT Sans",
+   "weight": 400
+  },
+  {
+   "char": "≤",
+   "code": "U+2264",
+   "font": "PT Sans",
+   "sites": [
+    "app/src/project_view_model.cpp"
+   ],
+   "drawn_by": "PT Sans",
+   "weight": 400
+  },
+  {
+   "char": "",
+   "code": "U+F074",
+   "font": "Font Awesome",
+   "sites": [
+    "app/src/example_list_model.cpp"
+   ],
+   "drawn_by": "Font Awesome",
+   "weight": 900
+  },
+  {
+   "char": "",
+   "code": "U+F0C1",
+   "font": "Font Awesome",
+   "sites": [
+    "app/src/example_list_model.cpp"
+   ],
+   "drawn_by": "Font Awesome",
+   "weight": 900
+  },
+  {
+   "char": "",
+   "code": "U+F0D7",
+   "font": "Font Awesome",
+   "sites": [
+    "app/qml/Pages/Analysis/ParametersGroup.qml"
+   ],
+   "drawn_by": "Font Awesome",
+   "weight": 900
+  },
+  {
+   "char": "",
+   "code": "U+F101",
+   "font": "Font Awesome",
+   "sites": [
+    "app/src/example_list_model.cpp"
+   ],
+   "drawn_by": "Font Awesome",
+   "weight": 900
+  },
+  {
+   "char": "",
+   "code": "U+F140",
+   "font": "Font Awesome",
+   "sites": [
+    "app/src/example_list_model.cpp"
+   ],
+   "drawn_by": "Font Awesome",
+   "weight": 900
+  },
+  {
+   "char": "",
+   "code": "U+F192",
+   "font": "Font Awesome",
+   "sites": [
+    "app/src/example_list_model.cpp"
+   ],
+   "drawn_by": "Font Awesome",
+   "weight": 900
+  },
+  {
+   "char": "",
+   "code": "U+F83E",
+   "font": "Font Awesome",
+   "sites": [
+    "app/src/example_list_model.cpp"
+   ],
+   "drawn_by": "Font Awesome",
+   "weight": 900
+  }
+ ],
+ "icon_metrics": []
+}

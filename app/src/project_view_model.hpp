@@ -29,6 +29,7 @@
 #include "edi/model.hpp"
 #include "edi/scan.hpp"
 #include "edi/worker.hpp"
+#include "correlation_view_model.hpp"
 #include "evolution_view_model.hpp"
 #include "scan_session.hpp"
 #include "experiment_view_model.hpp"
@@ -148,6 +149,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_PROPERTY(int templateIndex READ templateIndex NOTIFY templateIndexChanged)
     // The Evolution tab: a fitted parameter across the scan's datasets (scan projects).
     Q_PROPERTY(edi_app::EvolutionViewModel* evolution READ evolution CONSTANT)
+    // The Correlations tab: the last fit's parameter correlations for the shown experiment.
+    Q_PROPERTY(edi_app::CorrelationViewModel* correlations READ correlations CONSTANT)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
     // The app bar's Undo (edi ADR-0024): the newest recorded change — an edit of the aliases or
     // constraints, or a fit — is undone, so they undo in the order they were made.
@@ -195,6 +198,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool scan() const { return scan_; }
     QStringList scanColumns() const { return scan_columns_; }
     EvolutionViewModel* evolution() const { return evolution_; }
+    CorrelationViewModel* correlations() const { return correlations_; }
     int templateIndex() const;
     QString lastError() const { return last_error_; }
     bool calculating() const { return calculating_; }
@@ -221,10 +225,22 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // (P b n m, a = 10, b = 6, c = 5 Å, one O site at the origin), selected and linked to no experiment. One
     // undoable step.
     Q_INVOKABLE bool createStructure();
+    // Duplicate structure: a copy of the current structure (edi::structure_copy) named `<name>_copy`, selected and
+    // linked to no experiment. One undoable step.
+    Q_INVOKABLE bool duplicateStructure();
+    // The parameter table's "free" header: free or fix every one of `parameters` (the rows the filters show) that can
+    // be fitted, as one edit with one Undo step (the owner, 2026-10-11).
+    Q_INVOKABLE bool setParametersFree(const QList<ParameterItem*>& parameters, bool free);
+    // Name points by position: the current experiment's line-segment points take ids from their positions
+    // (edi::position_point_ids), every reference following, as one edit with one Undo step (the owner, 2026-10-11).
+    Q_INVOKABLE bool namePointsByPosition();
     Q_INVOKABLE void removeExperiment(int index);
     // A new experiment without data (edi::simulation_experiment), selected: powder, constant wavelength,
     // neutron, Bragg, linked to every structure. One undoable step, as a load of experiments is.
     Q_INVOKABLE bool createExperiment();
+    // Duplicate experiment: a copy of the current experiment with its data (edi::experiment_copy) named
+    // `<name>_copy`, selected. Refused in a scan project, as Create experiment is. One undoable step.
+    Q_INVOKABLE bool duplicateExperiment();
     // Load data…: the plain-data file's rows (crysta's reader) become the measured data of experiment `index`, one
     // made with Create experiment; its type then locks and its range shows the data's. An experiment still named
     // experiment1, experiment2, … takes the file's name. A second load replaces the data. One undoable step, and
@@ -242,6 +258,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
 
     QString apply(const edi::Edit& change, bool structural) override;
     QString apply_relation_edit(const edi::Edit& change) override;
+    QString rename_structure(edi::Structure& structure, const std::string& name) override;
+    QString rename_experiment(edi::Project& project, edi::ExperimentBase& experiment, const std::string& name) override;
     bool canUndo() const { return can_undo_; }
     Q_INVOKABLE void undo();
 
@@ -264,8 +282,28 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     const edi::Project* scanTemplate() const { return scan_template_ ? &*scan_template_ : nullptr; }
     // The place of the file's dataset in the scan, or -1 when its row could not be indexed.
     int scanFileFitted(const edi::ScanFileRecord& record);
-    void showScanFrame(const std::string& file, const edi::FitFrame& frame);
-    void followScanFile(const std::string& file);
+    // A followed file handed over with its receipt token: FitViewModel accepts the receipt only for the token it
+    // handed over last.
+    void followScanFile(const std::string& file, std::uint64_t token);
+    // A followed file with its pattern as the fit left it: shown like followScanFile, its pattern not calculated
+    // again (edi ADR-0029).
+    void followScanFrame(const std::string& file, const edi::FitFrame& frame, std::uint64_t token);
+    // Drops a followed file's pending receipt without counting it (Follow off, a new scan).
+    void releaseFollow() { followRendered(false); }
+    // A followed scan's newest finished file becomes the current dataset at once (the evolution's line, the list,
+    // the selectors), with no read; its pattern follows when the view is ready (edi ADR-0029).
+    void markScanFile(const std::string& file);
+    // No dataset read is in flight: the last one asked for has been shown (or refused).
+    // A followed scan asks for its next pattern once the last view asked for is applied and a pattern chart of the
+    // current experiment is shown: a file put on a chart no one sees would be drawn first when it is shown again,
+    // older than the files finished meanwhile (edi ADR-0029).
+    bool followReady() const { return !view_reading_ && view_applied_ == view_request_ && patternShown(); }
+    bool patternShown() const;
+    // The run's driver returned: the rows and notes on disk are indexed again, the files skipped after the last
+    // row included (a skipped file sends no event). Comes before scanEnded.
+    void settleScan();
+    // Whether the scan's results hold any processed file (a row, or a skipped file).
+    bool scanProcessed() const;
     // The run ended: its status, seconds and outcome key (the worst file's, Stopped or Failed).
     void scanEnded(edi::FitStatus status, double seconds);
     // Why the scan modes cannot run here (no single template experiment, no datasets), or empty.
@@ -350,13 +388,29 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         const edi::ExperimentBase* experiment = nullptr;
         std::shared_ptr<const edi::BraggPdExperiment> before;
     };
-    using UndoRecord =
-        std::variant<std::monostate, edi::RelationsUndo, AddedExperiments, ScanRun, LoadedData, edi::StructuresUndo>;
-    // The experiments made with Create experiment (they take Load data…), kept by identity: a replaced experiment
-    // (Load data, a type change, their undo) passes its entry on.
-    std::set<const edi::ExperimentBase*> created_;
-    void experimentReplaced(const edi::ExperimentBase* before, const edi::ExperimentBase* after, bool created);
-    // Each experiment view's Load data… state, from the set above.
+    // The table header's free or fixed: each parameter's flag as it was, by unique name.
+    struct FreeFlags {
+        std::vector<std::pair<std::string, bool>> before;
+    };
+    // Name points by position: the experiment's background point ids as they were, in order.
+    struct PointIds {
+        const edi::ExperimentBase* experiment = nullptr;
+        std::vector<std::string> before;
+    };
+    // A structure's or an experiment's rename: the block by its new name, and the name it had. The scan's results
+    // before and after it, so its Undo puts back the same shared results rather than renamed copies.
+    struct BlockName {
+        bool structure = true;
+        std::string name;
+        std::string before;
+        decltype(edi::FitResultRecord::scan_results) results_before;
+        decltype(edi::FitResultRecord::scan_results) results_after;
+    };
+    using UndoRecord = std::variant<std::monostate, edi::RelationsUndo, AddedExperiments, ScanRun, LoadedData,
+                                    edi::StructuresUndo, FreeFlags, PointIds, BlockName>;
+    // An experiment replaced by Load data, a type change or their undo: the undo records follow it.
+    void experimentReplaced(const edi::ExperimentBase* before, const edi::ExperimentBase* after);
+    // Each experiment view's Load data… state: every experiment but a scan's.
     void syncLoadState();
     // Applies an experiment's replacement by Load data or its undo; the refusal, if any.
     QString replaceData(int index, edi::BraggPdExperiment replacement);
@@ -375,6 +429,11 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         std::optional<edi::Project> stash;
         std::optional<std::string> run_file;  // the scan's provenance file as it was (which fit came last)
         bool run_file_known = false;          // false: it could not be read, so its Undo leaves it alone
+        // The fitted dataset's file, and the scan's results and file-named correlation rows as they were (ADR-0034:
+        // the results are shared, so this holds pointers).
+        std::string pairs_file;
+        std::map<std::string, std::shared_ptr<const edi::ScanFileResult>> results;
+        std::vector<edi::FitParameterCorrelation> rows;
     };
     std::optional<TemplateState> fit_template_before_, fit_template_undo_;
     std::vector<UndoRecord> undo_history_;
@@ -395,6 +454,12 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool scan_ = false;
     QString scan_refusal_;
     EvolutionViewModel* evolution_ = nullptr;
+    CorrelationViewModel* correlations_ = nullptr;
+    // ADR-0034: each file's results as the run reports them go into the fit record (the model's, and the template's
+    // while a dataset is shown), where the Correlations tab, Undo and a save find them; nothing keeps a second copy.
+    void adoptScanFileResult(const std::string& file, const std::shared_ptr<const edi::ScanFileResult>& result);
+    // The Correlations tab follows the last fit and the shown experiment.
+    void syncCorrelations();
     QStringList scan_columns_;
     ScanSession* scan_session_ = nullptr;
     int current_dataset_ = -1;
@@ -406,6 +471,27 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     int view_wanted_ = -1;       // the dataset of the newest request
     int projected_dataset_ = -1;  // the dataset the model holds now (a failed read leaves the one before)
     bool view_reading_ = false;  // a read is in flight
+    // A followed file's pattern from the scan's fit (its dataset and the frame), until its dataset is shown.
+    std::optional<std::pair<int, edi::FitFrame>> follow_frame_;
+    // A followed file handed over while a scan runs, its dataset and name, until the chart is drawn with it: once
+    // its dataset is applied, the main window's second frame swap after that (the first may already have been
+    // under way); or never, when the read or the application fails, or the read or the drawing takes longer than
+    // kRenderWaitMs (edi ADR-0029).
+    // The receipt is bound to what was drawn: the followed dataset still in the model, and a shown chart that has
+    // presented the pattern generation its application set (or a later one). Any other view request releases it.
+    int follow_index_ = -1;
+    std::string follow_file_;
+    std::uint64_t follow_token_ = 0;
+    std::uint64_t follow_before_ = 0;  // the pattern generation when it was handed over
+    std::uint64_t follow_generation_ = 0;
+    bool follow_issuing_ = false;  // the followed file's own view request is being made
+    int render_swaps_ = -1;  // frame swaps still to see, -1 while nothing waits for one
+    QTimer render_wait_;
+    QMetaObject::Connection render_connection_;
+    void handFollowed(int index, const std::string& file, std::uint64_t token);
+    void awaitRender();
+    bool presentedFollowed() const;
+    void followRendered(bool drawn);
     // Reads the newest requested dataset off the GUI thread; its delivery applies it, or reads a newer one.
     void startViewRead();
     // Shows a dataset at once: the one a project opens on (`reread`: its file is read), or the shown one again from

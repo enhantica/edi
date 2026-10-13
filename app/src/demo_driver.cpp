@@ -4,6 +4,9 @@
 #include <algorithm>
 
 #include <QCoreApplication>
+#include <QDir>
+#include <QDirIterator>
+#include <QFileInfo>
 #include <QFile>
 #include <QGuiApplication>
 #include <QKeyEvent>
@@ -12,10 +15,17 @@
 #include <QQmlEngine>
 #include <QQuickItem>
 #include <QQuickWindow>
+#include <QThread>
 #include <QUrl>
 #include <cstdio>
 
+#include "analysis_view_model.hpp"
+#include "edi/categories.hpp"
+#include "fit_view_model.hpp"
+#include "project_view_model.hpp"
+#include "scan_session.hpp"
 #include "session.hpp"
+#include "structure_view_model.hpp"
 
 namespace edi_app {
 namespace {
@@ -26,6 +36,8 @@ constexpr int kSettleIntervalMs = 100;
 constexpr int kSettleMaxAttempts = 30;
 // A fit the demo starts ends within this, or the run fails; `capture-now` captures this long after its actions.
 constexpr int kFitWaitMs = 300000;
+// The timed scenario's idle poll: fine enough not to blur a measured interval.
+constexpr int kIdlePollMs = 5;
 constexpr int kUnsettledCaptureMs = 150;
 
 // Open a bundled example from the Project page: scroll its row into view, click it.
@@ -40,6 +52,8 @@ QStringList open_example(const QString& id) {
 
 DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QString& only, QObject* parent)
     : QObject(parent), window_(window), output_dir_(output_dir) {
+    // A new atom is random (edi::new_atom_site): the demo draws it from one seed, so its images repeat.
+    AtomSiteListModel::fixRandomSeed(17);
     const QString experiment = QStringLiteral("appBar.tab.experiment");
     const QString basic = QStringLiteral("sideBar.tab.basic");
     const QString extras = QStringLiteral("sideBar.tab.extras");
@@ -73,7 +87,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"17-experiment-profile-selector", QStringList{"choose:OK"}  // close the Preferences dialog
                                                             + open_example("pd-neut-cwl_lbco-hrpt_start-2")
                                                             + QStringList{experiment, basic, "group.peak", "peak.type"}});
-    steps_.push_back({"18-experiment-tch", {"choose:Thompson–Cox–Hastings pseudo-Voigt (TCH) + Finger–Cox–Jephcoat asymmetry (FCJ)"}});
+    steps_.push_back({"18-experiment-tch", {"choose:Thompson-Cox-Hastings pseudo-Voigt (TCH) + Finger-Cox-Jephcoat asymmetry (FCJ)"}});
     steps_.push_back({"19-experiment-extras", {extras}});
     steps_.push_back({"20-experiment-tof", open_example("pd-neut-tof_si-sepd_start-2")
                                                + QStringList{experiment, basic, "group.peak"}});
@@ -173,7 +187,8 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // bundled project is refused, so another project's experiment is loaded: its preferred orientation
     // names a structure this project does not have. The project is not a scan, which keeps its one
     // template experiment and refuses a second.
-    steps_.push_back({"t4-03-messages-not-viewed", open_example("pd-neut-tof_fe_pseudo-voigt")});
+    // The example that always has messages is a verification project, which the app does not bundle (ADR-0031).
+    steps_.push_back({"t4-03-messages-not-viewed", {"appBar.tab.project", "open-cli-project:pd-neut-tof_fe_pseudo-voigt"}});
     steps_.push_back({"t4-04-messages-list", {"statusBar.warnings"}});
     steps_.push_back({"t4-05-messages-viewed", {"choose:OK"}});
     steps_.push_back({"t4-06-messages-error",
@@ -247,10 +262,12 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // After the scan: the single mode (a setting: the results stay current); a single fit on the shown dataset makes
     // it the template dataset, tagged in the lists, and marks the results out of date on the status bar.
     steps_.push_back({"t16-67-single-mode", {analysis, extras, "expand:group.fitting_mode", "fittingMode.type",
-                                              "choose:single", basic, "mainArea.analysis.tab.evolution"}});
+                                              "choose:Single experiment", basic, "mainArea.analysis.tab.evolution"}});
     steps_.push_back({"t16-68-single-fit-on-dataset",
                       {"mainArea.analysis.tab.fitting", "reveal:fitting.start", "fitting.start", "wait-fit"}});
-    steps_.push_back({"t16-69-template-dataset", {"choose:OK", experiment, basic, "show:experiments.list:161"}});
+    // The single fit's correlations are the fitted dataset's, shown on its Correlations tab.
+    steps_.push_back({"t16-68b-single-fit-correlations", {"choose:OK", "mainArea.analysis.tab.correlations"}});
+    steps_.push_back({"t16-69-template-dataset", {experiment, basic, "show:experiments.list:161"}});
     // The scan's buttons follow its fits (owner, 2026-10-06): all fitted, Start fitting is disabled and Reset fits
     // enabled; Reset clears them (Start again); a stop leaves Continue. The Evolution chart zooms to a dragged box
     // and resets with a right click; the Project page shortens a long dataset list.
@@ -275,10 +292,126 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                                      "mainArea.analysis.tab.evolution", "fitting.start",
                                                                      "wait-files:200", "capture-now"}});
     steps_.push_back({"t16-78-evolution-stopped", {"fitting.start", "wait-fit", "choose:OK"}});
+    // LiF is a verification project, which the app does not bundle (ADR-0031): it opens from the CLI projects.
     steps_.push_back({"t16-40-created-saved-reopened",
-                      QStringList{"resize:1280x768"} + start + open_example("pd-xray-cwl_lif") + QStringList{experiment, basic, "expand:group.experiments",
+                      QStringList{"resize:1280x768"} + start
+                          + QStringList{"appBar.tab.project", "open-cli-project:pd-xray-cwl_lif_single", experiment, basic, "expand:group.experiments",
                       "experiments.create", "save-as:created", "open-project:created", experiment, "mainArea.blocks.box",
                        "choose:experiment1 · experiment1.edi", text, "scroll-to:text.view:_data_range"}});
+    // The Correlations tab: empty before a fit, the fitted matrix, a correlation level and a parameter
+    // count typed into the toolbar, and a joint fit's two experiments.
+    const QString correlations = QStringLiteral("mainArea.analysis.tab.correlations");
+    steps_.push_back({"t17-01-correlations-empty",
+                      QStringList{"resize:1280x768"} + start + open_example("pd-neut-cwl_cosio-d20_start-1")
+                          + QStringList{analysis, basic, correlations}});
+    steps_.push_back({"t17-02-correlations-fitted", {"fitting.start", "wait-fit", "choose:OK"}});
+    steps_.push_back({"t17-03-correlations-ten", {"correlations.toolbar.parameters.number", "key:Ctrl+A", "type:10", "key:Return"}});
+    steps_.push_back({"t17-04-correlations-level", {"correlations.toolbar.level.number", "key:Ctrl+A", "type:0.5", "key:Return"}});
+    steps_.push_back({"t17-07-correlations-all", {"correlations.toolbar.parameters.number", "key:Ctrl+A", "type:43", "key:Return"}});
+    steps_.push_back({"t17-05-beer-correlations", start + open_example("pd-neut-tof_ferrite-austenite-beer_joint")
+                                                      + QStringList{analysis, basic, "fitting.start", "wait-fit",
+                                                                    "choose:OK", correlations}});
+    steps_.push_back({"t17-06-beer-second-experiment", {"mainArea.blocks.down"}});
+    // The main-view chart toolbars centred in one line (owner, 2026-10-11): the structure view and the pattern chart.
+    steps_.push_back({"t17-08-structure-toolbar", {"appBar.tab.structure", basic}});
+    steps_.push_back({"t17-09-pattern-toolbar", {analysis, "mainArea.analysis.tab.fitting"}});
+    // The owner's app findings (2026-10-08): 9, Diagnostics' Show a button the Logging level box's size; 7, the sample
+    // form and scattering type disabled while one choice is supported.
+    steps_.push_back({"t17-20-diagnostics-show", {"appBar.button.preferences", "preferences.tab.develop"}});
+    steps_.push_back({"t17-21-experiment-type", QStringList{"key:Escape"} + start + open_example("pd-neut-cwl_cosio-d20_start-1")
+                                                    + QStringList{experiment, basic, "expand:group.experiments"}});
+    // 5 and 6: without an experiment Analysis and Summary are disabled; without a structure Experiment too.
+    steps_.push_back({"t17-22-no-experiment", {"experiments.remove.0"}});
+    steps_.push_back({"t17-23-no-structure", {"appBar.tab.structure", basic, "expand:group.structures", "structures.remove.0"}});
+    // 1: Create project's location, one separator between the folder and the name (not accepted: the demo writes
+    // no project into the user's documents).
+    steps_.push_back({"t17-25-create-project", {"key:Escape", "appBar.tab.project", basic, "expand:group.getStarted", "project.create", "createProject.name", "type:Corr"}});
+    // 3 and 4: the Wyckoff position column and its list; a new atom on position a, and the structure's Text with no
+    // error.
+    steps_.push_back({"t17-27-wyckoff-column", QStringList{"key:Escape"} + start + open_example("pd-neut-cwl_lbco-hrpt_start-2")
+                                                   + QStringList{"appBar.tab.structure", basic, "expand:group.atom_site"}});
+    steps_.push_back({"t17-28-wyckoff-list", {"atomSite.wyckoffLetter.0"}});
+    steps_.push_back({"t17-29-new-atom", {"key:Escape", "atomSites.append"}});
+    steps_.push_back({"t17-29b-new-atom-text", {text}});
+    // A sequential scan keeps each dataset's correlations from its own fit, and the Correlations tab follows the
+    // shown dataset (owner, 2026-10-11).
+    steps_.push_back({"t17-40-scan-correlations", QStringList{"key:Escape"} + start
+                                                      + open_example("pd-neut-cwl_cosio-d20_scan-3f")
+                                                      + QStringList{analysis, basic, "fitting.start", "wait-fit",
+                                                                    "choose:OK", "mainArea.analysis.tab.correlations"}});
+    steps_.push_back({"t17-41-scan-second-dataset", {"mainArea.blocks.up"}});
+    steps_.push_back({"t17-42-scan-first-dataset", {"mainArea.blocks.up"}});
+    // A save keeps every dataset's correlations in analysis.edi, and the reopened project shows them.
+    steps_.push_back({"t17-43-scan-reopened", {"save-as:scan", "open-project:scan", analysis,
+                                               "mainArea.analysis.tab.correlations"}});
+    steps_.push_back({"t17-44-scan-reopened-other-dataset", {"mainArea.blocks.down"}});
+    // Large intensities on the y axes in NumberText's scientific form, clear of the titles (owner, 2026-10-11): the
+    // example's experiment loaded again with its scale raised, so the calculated pattern reaches about 1e9.
+    steps_.push_back({"t17-50-axis-scientific",
+                      QStringList{"key:Escape"} + start + open_example("pd-neut-cwl_lbco-hrpt_start-2")
+                          + QStringList{experiment, basic,
+                                        "load-experiments:pd-neut-cwl_lbco-hrpt_start-2/project/experiments/"
+                                        "hrpt.edi|data_hrpt=data_large|lbco 10.0()=lbco 30000000()",
+                                        analysis, "mainArea.analysis.tab.fitting"}});
+    // The fitting modes that apply, by their names (owner, 2026-10-11): one experiment, single only; several, joint
+    // with its weights; a scan, its two modes and single.
+    steps_.push_back({"t17-72-mode-single", QStringList{"key:Escape"} + start + open_example("pd-neut-cwl_lbco-hrpt_start-2")
+                                                + QStringList{analysis, extras, "expand:group.fitting_mode"}});
+    steps_.push_back({"t17-73-mode-joint", start + open_example("pd-neut-tof_ferrite-austenite-beer_joint")
+                                               + QStringList{analysis, extras, "expand:group.fitting_mode",
+                                                             "expand:group.joint_fit"}});
+    steps_.push_back({"t17-74-mode-scan", start + open_example("pd-neut-cwl_cosio-d20_scan-3f")
+                                              + QStringList{analysis, extras, "expand:group.fitting_mode", "fittingMode.type"}});
+    // A click on the parameter table's "free" title: the shown rows' state, then all of them fixed at once.
+    steps_.push_back({"t17-75-free-header", start + open_example("pd-neut-cwl_lbco-hrpt_start-2")
+                                                + QStringList{analysis, basic, "parameters.freeHeader"}});
+    steps_.push_back({"t17-76-free-header-fixed", {"parameters.freeHeader.fixed"}});
+    // Reset to the initial state lands on the Project page (owner, 2026-10-11).
+    steps_.push_back({"t17-77-reset", {"appBar.button.reset"}});
+    // 8: a created experiment's Load data… button, left-aligned under Data file.
+    steps_.push_back({"t17-24-load-data", start + open_example("pd-neut-cwl_cosio-d20_start-1")
+                                              + QStringList{experiment, basic, "expand:group.experiments", "experiments.create"}});
+    steps_.push_back({"t17-24b-load-data-dark", {"theme:dark"}});
+    // Duplicate experiment and Duplicate structure, and the disabled Load from COD (the owner, 2026-10-11).
+    steps_.push_back({"t17-60-duplicate-experiment", {"theme:light", "mainArea.blocks.up", "experiments.duplicate"}});
+    steps_.push_back({"t17-61-duplicate-structure",
+                      {"appBar.tab.structure", basic, "expand:group.structures", "structures.duplicate"}});
+    // The polynomial and Chebyshev backgrounds' terms, and a type switch that asks before it removes the points.
+    const QString background = QStringLiteral("expand:group.background");
+    steps_.push_back({"t17-10-polynomial-terms",
+                      QStringList{"theme:light"} + start + open_example("pd-neut-cwl_lab6-11b-echidna_tch-fcj")
+                          + QStringList{experiment, basic, background}});
+    steps_.push_back({"t17-11-polynomial-term-removed", {"background.removeTerm.2"}});
+    steps_.push_back({"t17-12-polynomial-term-appended", {"background.appendTerm"}});
+    steps_.push_back({"t17-13-chebyshev-terms", start + open_example("pd-neut-tof_cecoal-polaris_chebyshev")
+                                                    + QStringList{experiment, basic, background}});
+    steps_.push_back({"t17-14-type-question", start + open_example("pd-neut-cwl_cosio-d20_start-1")
+                                                  + QStringList{experiment, basic, background, "background.type",
+                                                                "choose:chebyshev"}});
+    steps_.push_back({"t17-15-type-chebyshev", {"choose:OK"}});
+    steps_.push_back({"t17-16-chebyshev-term-appended", {"background.appendTerm", "background.appendTerm"}});
+    // Name points by position (owner, 2026-10-11): the line-segment points' ids from their positions, and the
+    // parameter table naming them so.
+    steps_.push_back({"t17-80-name-points", start + open_example("pd-neut-cwl_lbco-hrpt_start-2")
+                                                + QStringList{experiment, basic, "expand:group.background",
+                                                              "background.namePoints"}});
+    steps_.push_back({"t17-81-named-points-in-table",
+                      {analysis, basic, "parameters.nameFilter", "type:background"}});
+    // Every loop row is named by its id in the parameter table (owner, 2026-10-11): the Chebyshev terms here.
+    steps_.push_back({"t17-17-term-ids-in-table", start + open_example("pd-neut-tof_cecoal-polaris_chebyshev")
+                                                      + QStringList{analysis, basic, "parameters.nameFilter",
+                                                                    "type:background"}});
+    // Timing: the 162-file scan fitted and reset, each interval on a monotonic clock with its work checked. Run only
+    // when asked (`--demo-only perf-`); the two controls must fail.
+    if (only.startsWith(QLatin1String("perf-"))) {
+        // EDI_DEMO_PERF_PROJECT names a prepared copy to open in place, so two builds time the same input.
+        const QString prepared = qEnvironmentVariable("EDI_DEMO_PERF_PROJECT");
+        const QString scan = prepared.isEmpty() ? QStringLiteral("open-cli-project:pd-neut-cwl_cosio-d20_scan-162f")
+                                                : QStringLiteral("open-project:") + prepared;
+        steps_.push_back({"perf-162f", {scan, "timed-fit:162", "timed-reset"}});
+        steps_.push_back({"perf-control-partial", {scan, "timed-fit:162:40"}});
+        steps_.push_back({"perf-control-refused", {scan, "remove-scan-data", "timed-fit:162"}});
+    }
     if (!only.isEmpty()) {
         std::erase_if(steps_, [&only](const Step& step) { return !step.image.startsWith(only); });
     }
@@ -319,6 +452,17 @@ void DemoDriver::next_action() {
         // A running scan keeps the worker busy, so its step is captured unsettled (capture-now).
         if (action.startsWith(QLatin1String("wait-files:"))) {
             wait_fit_then([this] { next_action(); }, 0, action.mid(11).toInt());
+            return;
+        }
+        if (action.startsWith(QLatin1String("timed-fit:"))) {
+            const QStringList parts = action.split(QLatin1Char(':'));
+            timed_fit_then([this] { next_action(); }, parts.value(1).toInt(), parts.size() > 2 ? parts.at(2).toInt() : -1);
+            return;
+        }
+        if (action == QLatin1String("timed-reset")) {
+            if (timed_reset()) {
+                next_action();
+            }
             return;
         }
         if (!perform(action)) {
@@ -482,12 +626,45 @@ bool DemoDriver::perform(const QString& action) {
         flickable->setProperty("contentY", content != nullptr ? view->mapToItem(content, line.topLeft()).y() : line.y());
         return true;
     }
+    if (action.startsWith(QLatin1String("open-cli-project:"))) {
+        // open-cli-project:<id> opens a copy of the CLI project docs/user/cli/<id>/project from this build's
+        // source tree, so the image shows a temporary location as an example's does.
+        QQmlEngine* engine = qmlEngine(window_.contentItem());
+        auto* session = engine ? engine->singletonInstance<Session*>("edi.app", "Session") : nullptr;
+        const QString id = action.section(QLatin1Char(':'), 1);
+        const QDir source(QStringLiteral(EDI_CLI_PROJECTS_DIR "/") + id + QStringLiteral("/project"));
+        const QDir target(loaded_files_.filePath(id + QStringLiteral("/project")));
+        bool copied = loaded_files_.isValid() && source.exists();
+        for (QDirIterator files(source.path(), QDir::Files, QDirIterator::Subdirectories); copied && files.hasNext();) {
+            const QString file = files.next();
+            const QString copy = target.filePath(source.relativeFilePath(file));
+            copied = QDir().mkpath(QFileInfo(copy).path()) && QFile::copy(file, copy);
+        }
+        loaded_cli_project_ = target.path();
+        if (!copied || session == nullptr || !session->openProject(QUrl::fromLocalFile(target.path()))) {
+            fail(QStringLiteral("step %1: %2 failed: %3")
+                     .arg(steps_[current_].image, action, session ? session->lastError() : QStringLiteral("no session")));
+            return false;
+        }
+        return true;
+    }
+    if (action == QLatin1String("remove-scan-data")) {
+        const QDir data(loaded_cli_project_ + QStringLiteral("/experiments/d20_scan"));
+        if (loaded_cli_project_.isEmpty() || !QDir(data).removeRecursively()) {
+            fail(QStringLiteral("step %1: the scan's data could not be removed").arg(steps_[current_].image));
+            return false;
+        }
+        return true;
+    }
     if (action.startsWith(QLatin1String("save-as:")) || action.startsWith(QLatin1String("open-project:"))) {
         QQmlEngine* engine = qmlEngine(window_.contentItem());
         auto* session = engine ? engine->singletonInstance<Session*>("edi.app", "Session") : nullptr;
         const bool save = action.startsWith(QLatin1String("save-as:"));
         const QString name = action.section(QLatin1Char(':'), 1);
         const QUrl directory = QUrl::fromLocalFile(QDir::isAbsolutePath(name) ? name : loaded_files_.filePath(name));
+        if (!save) {
+            loaded_cli_project_ = directory.toLocalFile();
+        }
         if (session == nullptr || !(save ? session->saveAs(directory) : session->openProject(directory))) {
             fail(QStringLiteral("step %1: %2 refused: %3")
                      .arg(steps_[current_].image, action, session ? session->lastError() : QStringLiteral("no session")));
@@ -715,6 +892,189 @@ void DemoDriver::settle_then(std::function<void()> next) {
         QTimer::singleShot(kSettleIntervalMs, this, *poll);
     };
     QTimer::singleShot(kSettleIntervalMs, this, *poll);
+}
+
+namespace {
+
+ProjectViewModel* open_project(QQuickWindow& window) {
+    QQmlEngine* engine = qmlEngine(window.contentItem());
+    auto* session = engine ? engine->singletonInstance<Session*>("edi.app", "Session") : nullptr;
+    return session != nullptr ? session->project() : nullptr;
+}
+
+std::vector<double> parameter_values(const edi::Project& project) {
+    std::vector<double> values;
+    for (const edi::NamedParameter& named : edi::named_parameters(project)) {
+        values.push_back(named.parameter->value.get());
+    }
+    return values;
+}
+
+// Whether a fit record still holds correlations; a build whose record has none has none left.
+template <typename Record>
+bool correlations_left(const Record& record) {
+    if constexpr (requires { record.correlations.empty(); }) {
+        return !record.correlations.empty();
+    } else {
+        return false;
+    }
+}
+
+bool delay_from_environment() {
+    const int ms = qEnvironmentVariableIntValue("EDI_DEMO_DELAY_MS");
+    if (ms > 0) {
+        QThread::msleep(static_cast<unsigned long>(ms));
+    }
+    return ms > 0;
+}
+
+}  // namespace
+
+void DemoDriver::record_time(const QString& label, qint64 ms) {
+    QFile file(output_dir_.filePath(QStringLiteral("timings.tsv")));
+    if (file.open(QIODevice::Append | QIODevice::Text)) {
+        file.write(QStringLiteral("%1\t%2\t%3\n").arg(steps_[current_].image, label).arg(ms).toUtf8());
+    }
+}
+
+void DemoDriver::delay_then_record() {
+    // The delay's start and end on the interval's clock, so a control can show the interval ends after it.
+    const qint64 from = timer_.elapsed();
+    if (delay_from_environment()) {
+        record_time(QStringLiteral("delay from %1 to").arg(from), timer_.elapsed());
+    }
+}
+
+QString DemoDriver::scan_work(int files) const {
+    ProjectViewModel* project = open_project(window_);
+    const ScanSession* scan = project != nullptr ? project->scanSession() : nullptr;
+    if (scan == nullptr) {
+        return QStringLiteral("no scan is open");
+    }
+    if (project->analysis() == nullptr || project->analysis()->fittingMode() != QLatin1String("sequential")) {
+        return QStringLiteral("the scan does not run in its declared sequential mode");
+    }
+    if (static_cast<int>(scan->datasets().files.size()) != files ||
+        static_cast<int>(scan->index().rows.size()) != files) {
+        return QStringLiteral("the scan lists %1 files, not %2").arg(scan->datasets().files.size()).arg(files);
+    }
+    for (std::size_t i = 0; i < scan->index().rows.size(); ++i) {
+        const auto& row = scan->index().rows[i];
+        if (row.offset < 0 || row.skipped || !row.converged) {
+            return QStringLiteral("file %1 (%2) was not fitted to convergence")
+                .arg(i + 1)
+                .arg(QString::fromStdString(scan->datasets().files[i]));
+        }
+    }
+    return {};
+}
+
+void DemoDriver::idle_then(std::function<void()> next, int waited_ms) {
+    ProjectViewModel* project = open_project(window_);
+    if (project == nullptr || !project->calculating()) {
+        next();
+        return;
+    }
+    if (waited_ms > kFitWaitMs) {
+        fail(QStringLiteral("step %1: a calculation did not end").arg(steps_[current_].image));
+        return;
+    }
+    QTimer::singleShot(kIdlePollMs, this, [this, next, waited_ms] { idle_then(next, waited_ms + kIdlePollMs); });
+}
+
+void DemoDriver::timed_fit_then(std::function<void()> next, int files, int stop_after) {
+    ProjectViewModel* project = open_project(window_);
+    FitViewModel* fit = project != nullptr ? project->fit() : nullptr;
+    if (fit == nullptr || fit->running()) {
+        fail(QStringLiteral("step %1: no idle fit to start").arg(steps_[current_].image));
+        return;
+    }
+    pre_fit_values_ = parameter_values(project->project());
+    auto refusal = std::make_shared<QString>();
+    auto done = std::make_shared<bool>(false);
+    auto connections = std::make_shared<std::vector<QMetaObject::Connection>>();
+    const auto finish = [this, next, files, refusal, done, connections] {
+        if (*done) {
+            return;
+        }
+        *done = true;
+        for (const QMetaObject::Connection& connection : *connections) {
+            QObject::disconnect(connection);
+        }
+        idle_then([this, next, files, refusal] {
+            const qint64 ms = timer_.elapsed();
+            QString problem = refusal->isEmpty() ? scan_work(files) : QStringLiteral("refused: ") + *refusal;
+            if (!problem.isEmpty()) {
+                fail(QStringLiteral("step %1: the timed fit did not do its work: %2").arg(steps_[current_].image, problem));
+                return;
+            }
+            record_time(QStringLiteral("fit"), ms);
+            next();
+        });
+    };
+    connections->push_back(connect(fit, &FitViewModel::scanFinished, this, [this] { delay_then_record(); }));
+    connections->push_back(connect(fit, &FitViewModel::scanFinished, this, finish));
+    connections->push_back(connect(fit, &FitViewModel::refused, this, [refusal, finish](const QString& reason) {
+        *refusal = reason.isEmpty() ? QStringLiteral("the fit was refused") : reason;
+        finish();
+    }));
+    if (stop_after >= 0) {
+        connections->push_back(connect(fit, &FitViewModel::scanFittedChanged, this, [fit, stop_after] {
+            if (fit->running() && fit->scanFitted() >= stop_after) {
+                fit->cancel();
+            }
+        }));
+    }
+    timer_.start();
+    fit->start();
+    if (!fit->running() && !*done) {
+        *refusal = QStringLiteral("the fit did not start");
+        finish();
+    }
+}
+
+bool DemoDriver::timed_reset() {
+    ProjectViewModel* project = open_project(window_);
+    if (project == nullptr || project->fit() == nullptr) {
+        fail(QStringLiteral("step %1: no project to reset").arg(steps_[current_].image));
+        return false;
+    }
+    const QMetaObject::Connection delay =
+        connect(project->fit(), &FitViewModel::scanSummaryChanged, this, [this] { delay_then_record(); });
+    timer_.start();
+    const QString refusal = project->resetScan();
+    QObject::disconnect(delay);
+    idle_then([this, project, refusal] {
+        const qint64 ms = timer_.elapsed();
+        QString problem = refusal;
+        const ScanSession* scan = project->scanSession();
+        if (problem.isEmpty() && scan != nullptr) {
+            for (const auto& row : scan->index().rows) {
+                if (row.offset >= 0) {
+                    problem = QStringLiteral("a result row is left");
+                }
+            }
+        }
+        if (problem.isEmpty() && project->project().fit_result.held()) {
+            problem = QStringLiteral("a fit result is left");
+        }
+        if (problem.isEmpty() && correlations_left(project->project().fit_result)) {
+            problem = QStringLiteral("correlations are left");
+        }
+        if (problem.isEmpty() && parameter_values(project->project()) != pre_fit_values_) {
+            problem = QStringLiteral("the model does not hold its pre-fit values");
+        }
+        if (problem.isEmpty() && !project->canUndo()) {
+            problem = QStringLiteral("Undo is not available");
+        }
+        if (!problem.isEmpty()) {
+            fail(QStringLiteral("step %1: the timed reset did not do its work: %2").arg(steps_[current_].image, problem));
+            return;
+        }
+        record_time(QStringLiteral("reset"), ms);
+        next_action();
+    });
+    return false;
 }
 
 void DemoDriver::fail(const QString& message) {

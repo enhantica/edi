@@ -2,10 +2,11 @@
 #include "edi/fit_job.hpp"
 
 #include <atomic>
-#include <filesystem>
-#include <fstream>
+#include <chrono>
+#include <condition_variable>
 #include <exception>
 #include <map>
+#include <mutex>
 #include <stdexcept>
 #include <iomanip>
 #include <locale>
@@ -72,7 +73,7 @@ struct Outcome {
 // Worker thread: the project's own fit entry for its mode, as the CLI's fit takes it (edi.Analysis.fit).
 FitResultBase fit_by_mode(Project& project, const IterationCallback& on_iteration, const PreambleCallback& on_start,
                           const CancelCallback& should_cancel, const ScanStartCallback& on_scan_start,
-                          const FileCompleteCallback& on_file_complete) {
+                          const FileCompleteCallback& on_file_complete, const FileFittedCallback& on_file_fitted) {
     const std::string mode = effective_fitting_mode(project);
     if (mode == "single") {
         return project.fit(on_iteration, on_start, should_cancel);
@@ -81,10 +82,10 @@ FitResultBase fit_by_mode(Project& project, const IterationCallback& on_iteratio
         return project.fit_joint(on_iteration, on_start, should_cancel);
     }
     if (mode == "sequential") {
-        return project.fit_sequential({}, {}, on_scan_start, on_file_complete, should_cancel);
+        return project.fit_sequential({}, {}, on_scan_start, on_file_complete, should_cancel, on_file_fitted);
     }
     if (mode == "independent") {
-        return project.fit_independent({}, {}, on_scan_start, on_file_complete, should_cancel);
+        return project.fit_independent({}, {}, on_scan_start, on_file_complete, should_cancel, on_file_fitted);
     }
     throw std::invalid_argument("Start fitting runs the single, joint, sequential and independent fitting modes; this "
                                 "project's is '" + mode + "'");
@@ -120,52 +121,6 @@ FitFrame frame_of(Project& preview, const std::map<std::string, double>& values)
     }
     return frame;
 }
-// Worker thread: the scan's file just fitted, drawn on the preview copy: its measured data from the file, every
-// parameter at the values of the row the driver appended for it (the event's own cells, never the file's moving
-// tail), the pattern calculated. `header` is read from results.csv once. Empty when anything refuses.
-FitFrame scan_frame_of(Project& preview, const std::string& directory, const ScanFileRecord& record,
-                       std::vector<std::string>& header) {
-    FitFrame frame;
-    try {
-        if (header.empty()) {
-            std::ifstream input(std::filesystem::path(preview.path) / "analysis" / "results.csv");
-            std::string line;
-            if (!std::getline(input, line)) {
-                return {};
-            }
-            std::stringstream cells(line);
-            for (std::string cell; std::getline(cells, cell, ',');) {
-                header.push_back(cell);
-            }
-        }
-        if (record.cells.size() != header.size()) {
-            return {};
-        }
-        std::map<std::string, std::size_t> column;
-        for (std::size_t i = 0; i < header.size(); ++i) {
-            column.emplace(header[i], i);
-        }
-        for (const NamedSlot& slot : named_slots(preview)) {
-            const auto found = column.find(scan_results_column(slot.unique_name));
-            double value = 0.0;
-            if (found != column.end()) {
-                if (!parse_scan_number(record.cells[found->second], value)) {
-                    return {};
-                }
-                slot.parameter->value = value;
-            }
-        }
-        preview.experiment().data =
-            read_scan_dataset(directory, record.file_name, preview.experiment().effective_beam_mode());
-        preview.experiment().calculation_only = false;
-        apply_relations(preview);
-        preview.calculate();
-        frame.push_back(capture_pattern(preview, 0));
-    } catch (const std::exception&) {
-        return {};
-    }
-    return frame;
-}
 }  // namespace
 
 // Shared with the job and the deliveries on their way, so a delivery that arrives after the FitJob is
@@ -184,6 +139,11 @@ struct FitJob::State {
     std::atomic<bool> frame_wanted{true};
     // A scan draws each file it fits (Follow).
     std::atomic<bool> following{true};
+    // A followed scan waits after each file until its pattern is shown (`wait_for_patterns`); the worker sleeps
+    // on `shown`, which `frame_shown` signals.
+    std::atomic<bool> wait_patterns{false};
+    std::mutex shown_mutex;
+    std::condition_variable shown;
 
     // Owner thread: the fit has ended. The live project takes its result only if nothing it depends on
     // was written since the snapshot; then the fitted parameters and the fitted pattern, together.
@@ -248,20 +208,11 @@ bool FitJob::start(const Project* scan_template) {
             outcome->stamps = snapshot->stamps;
             outcome->inputs = *inputs;
             outcome->scan = is_scan_fitting_mode(effective_fitting_mode(snapshot->project));
-            // The frames are drawn on a second copy, so the fit's own copy is touched by the fit alone. A scan
-            // fits other files' data than the template's, so it draws none.
+            // A single or joint fit's frames are drawn on a second copy, so the fit's own copy is touched by the
+            // fit alone. A scan's frame is the pattern crysta's fit left for the file (edi ADR-0029).
             std::shared_ptr<Project> preview;
-            if ((self->hooks.frame && !outcome->scan) || (self->hooks.file_frame && outcome->scan)) {
+            if (self->hooks.frame && !outcome->scan) {
                 preview = std::make_shared<Project>(snapshot->project);
-            }
-            // The scan's data directory, resolved once, for the files it draws.
-            std::string directory;
-            if (outcome->scan && preview) {
-                try {
-                    directory = scan_datasets(snapshot->project).directory;
-                } catch (const std::exception&) {
-                    preview.reset();
-                }
             }
             const PreambleCallback on_start = [&self, &emit](const FitPreamble& preamble) {
                 emit([self, preamble] {
@@ -295,26 +246,50 @@ bool FitJob::start(const Project* scan_template) {
                     }
                 });
             };
-            std::vector<std::string> header;
-            const FileCompleteCallback on_file_complete = [&self, &emit, &preview, &directory,
-                                                           &header](const ScanFileRecord& record) {
+            // A followed file's pattern waits here for its completion event, and goes right after it.
+            std::optional<std::pair<std::string, FitFrame>> file_frame;
+            FileFittedCallback on_file_fitted;
+            if (self->hooks.file_frame && outcome->scan) {
+                on_file_fitted = [&self, &file_frame](const std::string& file,
+                                                      const std::function<PatternSource()>& pattern) {
+                    if (!self->following.load(std::memory_order_acquire) ||
+                        !self->frame_wanted.load(std::memory_order_acquire)) {
+                        return;
+                    }
+                    try {
+                        file_frame.emplace(file, FitFrame{pattern()});
+                    } catch (const std::exception&) {
+                        file_frame.reset();
+                    }
+                };
+            }
+            const FileCompleteCallback on_file_complete = [&self, &emit, &file_frame,
+                                                           &token](const ScanFileRecord& record) {
                 emit([self, record] {
                     if (self->open && self->hooks.file_completed) {
                         self->hooks.file_completed(record);
                     }
                 });
-                if (preview && self->following.load(std::memory_order_acquire) &&
-                    self->frame_wanted.load(std::memory_order_acquire)) {
-                    FitFrame frame = scan_frame_of(*preview, directory, record, header);
-                    if (!frame.empty()) {
-                        self->frame_wanted.store(false, std::memory_order_release);
-                        emit([self, file = record.file_name, frame = std::move(frame)] {
-                            if (self->open && self->hooks.file_frame) {
-                                self->hooks.file_frame(file, frame);
-                            }
-                        });
+                if (file_frame && file_frame->first == record.file_name) {
+                    self->frame_wanted.store(false, std::memory_order_release);
+                    emit([self, file = std::move(file_frame->first), frame = std::move(file_frame->second)] {
+                        if (self->open && self->hooks.file_frame) {
+                            self->hooks.file_frame(file, frame);
+                        }
+                    });
+#if !EDI_WORKER_OWNER_THREAD
+                    if (self->wait_patterns.load(std::memory_order_acquire)) {
+                        // Every pattern: the next file starts once this one is shown, or after a second.
+                        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(1);
+                        std::unique_lock lock(self->shown_mutex);
+                        while (!self->frame_wanted.load(std::memory_order_acquire) && !token.cancelled() &&
+                               std::chrono::steady_clock::now() < deadline) {
+                            self->shown.wait_for(lock, std::chrono::milliseconds(20));
+                        }
                     }
+#endif
                 }
+                file_frame.reset();
             };
             int polls = 0;
             const CancelCallback should_cancel = [&self, &token, &polls] {
@@ -326,7 +301,7 @@ bool FitJob::start(const Project* scan_template) {
             };
             try {
                 outcome->result = fit_by_mode(snapshot->project, on_iteration, on_start, should_cancel, on_scan_start,
-                                              on_file_complete);
+                                              on_file_complete, on_file_fitted);
                 outcome->fitted = std::shared_ptr<Project>(snapshot, &snapshot->project);
             } catch (const std::exception& refusal) {
                 outcome->refusal = refusal.what();
@@ -344,9 +319,17 @@ void FitJob::cancel() {
     }
 }
 
-void FitJob::frame_shown() { state_->frame_wanted.store(true, std::memory_order_release); }
+void FitJob::frame_shown() {
+    {
+        const std::scoped_lock lock(state_->shown_mutex);
+        state_->frame_wanted.store(true, std::memory_order_release);
+    }
+    state_->shown.notify_all();
+}
 
 void FitJob::follow(bool on) { state_->following.store(on, std::memory_order_release); }
+
+void FitJob::wait_for_patterns(bool on) { state_->wait_patterns.store(on, std::memory_order_release); }
 
 bool FitJob::running() const noexcept { return state_->ticket != 0; }
 

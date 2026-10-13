@@ -176,6 +176,7 @@ IterationRecord.iteration	other-public
 IterationRecord.reduced_chi_square	other-public
 IterationRecord.rwp	other-public
 LeastSquaresFitResult	other-public
+LeastSquaresFitResult.correlations	other-public
 LeastSquaresFitResult.banks	other-public
 LeastSquaresFitResult.converged	other-public
 LeastSquaresFitResult.fitting_time	other-public
@@ -682,3 +683,10 @@ LinkedStructures.names	other-public
 LinkedStructures.remove	other-public
 LinkedStructures.values	other-public
 Structure.atom_site_aniso	other-public
+FitParameterCorrelationItem	other-public
+FitParameterCorrelationItem.correlation	other-public
+FitParameterCorrelationItem.id	other-public
+FitParameterCorrelationItem.parameter_unique_name_i	other-public
+FitParameterCorrelationItem.parameter_unique_name_j	other-public
+FitParameterCorrelationItem.source_kind	other-public
+FitResultBase.correlations	other-public

@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[3]
 MATERIALIZE = runpy.run_path(str(ROOT / 'tests/fixtures/constraint_expressions/project.py'))[
     'materialize'
 ]
-SOURCES = ['background.1.intensity', 'peak.broad_gauss_w', 'instrument.setup_wavelength']
+SOURCES = ['background.left.intensity', 'peak.broad_gauss_w', 'instrument.setup_wavelength']
 
 
 def source_model(directory, source, family, route):

@@ -48,9 +48,10 @@ QtObject {
                 "icon": item.categoryIcon,
                 "color": categoryColor
             });
+        // A loop row by its id, as the file names it (the owner, 2026-10-11).
         if (item.rowLabel !== "")
             pieces.push({
-                "text": /^[0-9]+$/.test(item.rowLabel) ? String(Number(item.rowLabel) + 1) : item.rowLabel,
+                "text": item.rowLabel,
                 "color": categoryColor
             });
         const parameterIcon = names.parameterIcon(item.name);

@@ -3,7 +3,7 @@
 The cooling run of [`pd-neut-cwl_cosio-d20_scan-324f`](../pd-neut-cwl_cosio-d20_scan-324f/PROVENANCE.md): its first
 162 D20 patterns of Co2SiO4, `01_001` to `01_162`, measured from 497.379 K down to 50.414 K, copied byte-identical from
 that project's `project/experiments/d20_scan/`, with the same structure, experiment and analysis files. Only
-`project.edi`'s name, title and description are this project's own. The 324-file project is unchanged.
+`project.edi`'s name, title and description are this project's own. The 324-file project's data files are unchanged.
 
 Every data file below matches the SHA-256 that `tests/fixtures/c11_t62/scan-inputs.json` records for the same file of
 the 324-file scan.
@@ -179,3 +179,9 @@ driver stays with its own references (the 3-file and 324-file projects' provenan
 | `01_160_051p7720.dat` | `f7de52240ea61be6602658e7ba18202c11c469cebb1c8cedca0b2184262d3b02` |
 | `01_161_051p3070.dat` | `180edbe3e0f475f2238d43739ab946bacec6475c3e9286a81d66679128754cad` |
 | `01_162_050p4140.dat` | `145b3d0e82b0324eca2fc3da02ee15b890114e41a7883c7f70e0058a430f00f3` |
+
+## Catalogue metadata
+
+`project/project.edi` carries the app's example metadata (ADR-0031, the owner's enrichment of 2026-10-09): its
+title and description name the sample and scan, and `_metadata.purpose`, `.dimensionality`, `.instrument`,
+`.facility` and `.polarisation` were added. Every other file is unchanged.

@@ -12,8 +12,10 @@ import math
 import re
 import shlex
 import shutil
+import sys
 from operator import itemgetter
 from pathlib import Path
+from types import SimpleNamespace
 
 import edi
 import pytest
@@ -87,8 +89,8 @@ def test_cli_fixture_inventory():
         if str(edi.Project.load(ROOT / 'docs/user/cli' / row['id'] / 'project').fitting_mode)
         in {'single', 'joint'}
     }
-    assert {row['id'] for row in CASES} == expected, (
-        ' gate 1 every registered single and joint project has a CLI fixture; '
+    assert len(CASES) == len(expected) and {row['id'] for row in CASES} == expected, (
+        ' gate 1 every registered single and joint project has exactly one CLI fixture; '
         f'missing={sorted(expected - {row["id"] for row in CASES})}'
     )
     assert set(MODEL_COUNTS) == expected, (
@@ -225,3 +227,62 @@ def test_result_descent_provenance_survives_current_setting_change(status, tmp_p
     assert scalars((again / 'analysis/analysis.edi').read_text()) == actual, (
         ' gate 8 repeated reopen never reconstructs historical descent from mutable settings'
     )
+
+
+@pytest.mark.parametrize(
+    'escape', ['cli-omission', 'cli-duplicate', 'count-omission', 'native-omission']
+)
+def test_registered_fit_inventory_refuses_missing_or_duplicate_witnesses(escape, monkeypatch):
+    module = sys.modules[__name__]
+    project_id = 'pd-neut-cwl_yap-spodi_3k'
+    original_project = edi.Project
+    observed_modes = {}
+
+    def observed_load(path):
+        project = original_project.load(path)
+        observed_modes[path] = str(project.fitting_mode)
+        return project
+
+    # The positive caller loads every real registered input once. The negative
+    # caller reuses those observed modes while changing only its fixture witness;
+    # this avoids repeating unrelated scientific parsing for each escape.
+    monkeypatch.setattr(
+        module, 'edi', SimpleNamespace(Project=SimpleNamespace(load=observed_load))
+    )
+    test_cli_fixture_inventory()
+    monkeypatch.setattr(
+        module,
+        'edi',
+        SimpleNamespace(
+            Project=SimpleNamespace(
+                load=lambda path: SimpleNamespace(fitting_mode=observed_modes[path])
+            )
+        ),
+    )
+    if escape == 'cli-omission':
+        monkeypatch.setattr(module, 'CASES', [row for row in CASES if row['id'] != project_id])
+    elif escape == 'cli-duplicate':
+        monkeypatch.setattr(
+            module, 'CASES', [*CASES, next(r for r in CASES if r['id'] == project_id)]
+        )
+    elif escape == 'count-omission':
+        monkeypatch.setattr(
+            module, 'MODEL_COUNTS', {k: v for k, v in MODEL_COUNTS.items() if k != project_id}
+        )
+    else:
+        original_read = Path.read_text
+        header = ROOT / 'tests/fixtures/e05_t1/cli.hpp'
+
+        def without_native_case(path, *args, **kwargs):
+            content = original_read(path, *args, **kwargs)
+            if path == header:
+                content = '\n'.join(
+                    line
+                    for line in content.splitlines()
+                    if not line.startswith('{"' + project_id + '"')
+                )
+            return content
+
+        monkeypatch.setattr(Path, 'read_text', without_native_case)
+    with pytest.raises(AssertionError, match=r'gate [18]'):
+        test_cli_fixture_inventory()

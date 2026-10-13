@@ -1,0 +1,183 @@
+{
+  "reference_revision": "0d9f10e412a0cd08d4dd0af95845dd9bb597dcdf",
+  "reference_sources": {
+    "src/easydiffraction/analysis/analysis.py": "b9c80be741bfc4cd149e0d95b8fb5a4eea6f75756a4db28a9a78a75baaf5e2e2",
+    "src/easydiffraction/display/plotters/plotly.py": "6c76e1e620daa1b7d5e285500cbf0b9783cedb48460218be0d6738ec00e79f3e",
+    "src/easydiffraction/display/plotting.py": "7a837a5cad937fb77b7b154ba8d46ce37f694f9026e61392801559e8af8ec132"
+  },
+  "method": "Unit-weight polynomial least squares: inverse(X.T @ X), normalized by diffraction-lib; no product engine imported.",
+  "cases": [
+    {
+      "file": "01.xy",
+      "names": [
+        "bank.background.base.coef",
+        "bank.background.ramp.coef",
+        "bank.background.curve.coef"
+      ],
+      "matrix": [
+        [
+          1.0000000000000002,
+          -0.8026876195935865,
+          0.6543199191335395
+        ],
+        [
+          -0.802687619593586,
+          1.0,
+          -0.962157652424786
+        ],
+        [
+          0.6543199191335392,
+          -0.962157652424786,
+          1.0000000000000002
+        ]
+      ],
+      "rows": [
+        {
+          "source_kind": "deterministic",
+          "parameter_unique_name_i": "bank.background.base.coef",
+          "parameter_unique_name_j": "bank.background.ramp.coef",
+          "correlation": -0.8026876195935865
+        },
+        {
+          "source_kind": "deterministic",
+          "parameter_unique_name_i": "bank.background.base.coef",
+          "parameter_unique_name_j": "bank.background.curve.coef",
+          "correlation": 0.6543199191335395
+        },
+        {
+          "source_kind": "deterministic",
+          "parameter_unique_name_i": "bank.background.ramp.coef",
+          "parameter_unique_name_j": "bank.background.curve.coef",
+          "correlation": -0.962157652424786
+        }
+      ],
+      "coefficients": [
+        5,
+        2,
+        3
+      ],
+      "observations": [
+        [
+          40.0,
+          5.048484848484849
+        ],
+        [
+          44.0,
+          5.108787878787879
+        ],
+        [
+          48.0,
+          5.620432900432901
+        ],
+        [
+          52.0,
+          5.7834199134199125
+        ],
+        [
+          56.0,
+          6.397748917748918
+        ],
+        [
+          60.0,
+          6.663419913419913
+        ],
+        [
+          64.0,
+          7.380432900432901
+        ],
+        [
+          68.0,
+          7.748787878787879
+        ],
+        [
+          72.0,
+          8.568484848484848
+        ]
+      ]
+    },
+    {
+      "file": "02.xy",
+      "names": [
+        "bank.background.base.coef",
+        "bank.background.ramp.coef",
+        "bank.background.curve.coef"
+      ],
+      "matrix": [
+        [
+          1.0000000000000002,
+          0.29637680436705977,
+          -0.6948100447970609
+        ],
+        [
+          0.2963768043670598,
+          1.0,
+          -0.6650990713458592
+        ],
+        [
+          -0.6948100447970609,
+          -0.6650990713458592,
+          0.9999999999999998
+        ]
+      ],
+      "rows": [
+        {
+          "source_kind": "deterministic",
+          "parameter_unique_name_i": "bank.background.base.coef",
+          "parameter_unique_name_j": "bank.background.ramp.coef",
+          "correlation": 0.29637680436705977
+        },
+        {
+          "source_kind": "deterministic",
+          "parameter_unique_name_i": "bank.background.base.coef",
+          "parameter_unique_name_j": "bank.background.curve.coef",
+          "correlation": -0.6948100447970609
+        },
+        {
+          "source_kind": "deterministic",
+          "parameter_unique_name_i": "bank.background.ramp.coef",
+          "parameter_unique_name_j": "bank.background.curve.coef",
+          "correlation": -0.6650990713458592
+        }
+      ],
+      "coefficients": [
+        5.3,
+        0.8,
+        1.7
+      ],
+      "observations": [
+        [
+          12.000000000000002,
+          5.643887721208217
+        ],
+        [
+          20.0,
+          5.204850472688491
+        ],
+        [
+          36.0,
+          5.332109812590955
+        ],
+        [
+          40.0,
+          5.198369196929469
+        ],
+        [
+          48.0,
+          5.6322214248419735
+        ],
+        [
+          64.0,
+          6.305259717608895
+        ],
+        [
+          80.0,
+          7.918743126298366
+        ],
+        [
+          84.0,
+          8.156558527833631
+        ]
+      ]
+    }
+  ]
+}

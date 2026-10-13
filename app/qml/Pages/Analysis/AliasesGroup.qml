@@ -21,32 +21,32 @@ Column {
 
     spacing: AppSizes.groupContentSpacing
 
-    EaComponents.TableView {
+    DataTable {
         id: table
         objectName: "aliases.list"
         defaultInfoText: qsTr("No aliases")
-        model: group.aliases
+        sourceModel: group.aliases
 
-        header: EaComponents.TableViewHeader {
+        columnWidths: [numberColumnWidth, EaStyle.Sizes.fontPixelSize * 7, -1, AppSizes.iconColumnWidth]
+
+        header: EaComponents.ListViewHeader {
             EaComponents.TableViewLabel {
-                width: AppSizes.indexColumnWidth
+                horizontalAlignment: Text.AlignHCenter
             }
             EaComponents.TableViewLabel {
-                width: EaStyle.Sizes.fontPixelSize * 7
                 horizontalAlignment: Text.AlignLeft
                 text: qsTr("alias")
             }
             EaComponents.TableViewLabel {
-                flexibleWidth: true
                 horizontalAlignment: Text.AlignLeft
                 text: qsTr("parameter")
             }
             EaComponents.TableViewLabel {
-                width: AppSizes.iconColumnWidth
+                horizontalAlignment: Text.AlignHCenter
             }
         }
 
-        delegate: EaComponents.TableViewDelegate {
+        delegate: EaComponents.ListViewDelegate {
             id: row
 
             required property int index
@@ -54,31 +54,36 @@ Column {
             required property var model
 
             EaComponents.TableViewLabel {
-                width: AppSizes.indexColumnWidth
+                horizontalAlignment: Text.AlignHCenter
                 color: EaStyle.Colors.themeForegroundMinor
                 text: row.index + 1
             }
             TextCell {
                 objectName: `alias.id.${row.index}`
-                width: EaStyle.Sizes.fontPixelSize * 7
                 horizontalAlignment: Text.AlignLeft
                 value: row.model.id
                 onCommitted: text => group.aliases.setText(row.index, "id", text)
             }
             // The base's table combo box (TableViewComboBox), searchable: a project has many parameters.
-            SearchableComboBox {
-                objectName: `alias.parameter.${row.index}`
-                anchors.verticalCenter: parent.verticalCenter
-                borderColor: "transparent"
-                backgroundColor: "transparent"
-                width: table.headerLabelItems.length > 2 ? table.headerLabelItems[2].width : 0
-                model: group.aliases ? group.aliases.parameterNames : []
-                currentIndex: group.aliases ? group.aliases.parameterNames.indexOf(row.model.parameter) : -1
-                displayText: row.model.parameter
-                ToolTip.text: row.model.parameter
-                onActivated: index => group.aliases.setText(row.index, "parameter", group.aliases.parameterNames[index])
+            Item {
+                property int horizontalAlignment: Text.AlignLeft
+                height: parent.height
+                SearchableComboBox {
+                    width: Math.min(parent.width, implicitWidth)
+                    x: parent.horizontalAlignment === Text.AlignRight ? parent.width - width : parent.horizontalAlignment === Text.AlignLeft ? 0 : (parent.width - width) / 2
+                    inTable: true
+                    horizontalAlignment: Text.AlignLeft
+                    objectName: `alias.parameter.${row.index}`
+                    anchors.verticalCenter: parent.verticalCenter
+                    model: group.aliases ? group.aliases.parameterNames : []
+                    currentIndex: group.aliases ? group.aliases.parameterNames.indexOf(row.model.parameter) : -1
+                    displayText: row.model.parameter
+                    ToolTip.text: row.model.parameter
+                    onActivated: index => group.aliases.setText(row.index, "parameter", group.aliases.parameterNames[index])
+                }
             }
             EaComponents.TableViewButton {
+                horizontalAlignment: Text.AlignHCenter
                 objectName: `alias.remove.${row.index}`
                 fontIcon: "minus-circle"
                 ToolTip.text: qsTr("Remove this alias")

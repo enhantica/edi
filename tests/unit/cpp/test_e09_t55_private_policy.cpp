@@ -76,8 +76,10 @@ TEST_CASE("E09-T55 parameter paths resolve the documented engine label grammar")
     edi::ExperimentBase experiment;
     experiment.background.push_back(edi::LineSegment{});
     experiment.background.push_back(edi::LineSegment{});
+    experiment.background[0]->id = "left_point";
     experiment.background[0]->position = 10.0;
     experiment.background[0]->intensity = edi::Parameter{4.0};
+    experiment.background[1]->id = "right_point";
     experiment.background[1]->position = 20.0;
     experiment.background[1]->intensity = edi::Parameter{5.0};
 
@@ -113,8 +115,9 @@ TEST_CASE("E09-T55 parameter paths resolve the documented engine label grammar")
     REQUIRE_MESSAGE(background.has_value(), "an in-range background label must resolve");
     CHECK_MESSAGE(background->target == &experiment.background[1]->intensity,
                   "a background label must target the indexed intensity");
-    CHECK_MESSAGE(background->path == "experiment.background[1].intensity",
-                  "a background label must use the documented indexed identity path");
+    // The engine label selects an index; the resolved public path names that row by id.
+    CHECK_MESSAGE(background->path == "experiment.background[right_point].intensity",
+                  "a background label must resolve to the declared row-id identity path");
     CHECK_MESSAGE(!edi::detail::resolve_label(structure, experiment, "background[2]"),
                   "an out-of-range background label must fail closed");
 
@@ -372,12 +375,12 @@ TEST_CASE("E09-T55 canonical encoding detects calculation-affecting mutations") 
             p.experiments[0]->instrument.setup_wavelength = edi::Parameter{1.54};
         }),
         "engaging an optional instrument parameter must invalidate the canonical source encoding");
-    CHECK_MESSAGE(distinct_after([](edi::Project& p) {
-                      auto values = static_cast<const std::vector<std::pair<double, double>>&>(
-                          p.experiments[0]->excluded_regions);
+    CHECK_MESSAGE((distinct_after([](edi::Project& p) {
+                      auto values =
+                          edi::excluded_region_ranges(p.experiments[0]->excluded_regions);
                       values.emplace_back(1.0, 2.0);
-                      p.experiments[0]->excluded_regions = std::move(values);
-                  }),
+                      p.experiments[0]->excluded_regions = edi::excluded_region_rows(values);
+                  })),
                   "an excluded-region mutation must invalidate the canonical source encoding");
     CHECK_MESSAGE(distinct_after([](edi::Project& p) { p.fitting_mode = "joint"; }),
                   "a fitting-mode mutation must invalidate the canonical source encoding");

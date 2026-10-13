@@ -162,7 +162,7 @@ def test_availability_observer_rejects_retired_or_overbroad_rules(damage):
     text = source(PATH)
     require_availability(text)
     control = item(text, 'experiments.loadData.${row.index}')
-    property_name = 'visible' if damage == 'simulation-only' else 'enabled'
+    property_name = 'visible'  # The actual ownership/availability guard moved onto visibility.
     replacement = (
         'row.experiment !== null && row.experiment.calculationOnly'
         if damage == 'simulation-only'

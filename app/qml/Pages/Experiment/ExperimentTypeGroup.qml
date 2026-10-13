@@ -2,6 +2,7 @@
 import QtQuick
 
 import EasyApplication.Gui.Style as EaStyle
+import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
@@ -34,22 +35,36 @@ Grid {
 
     objectName: "experimentType"
     columns: 3
-    columnSpacing: AppSizes.fieldSpacing
+    columnSpacing: AppSizes.inputSpacing
     rowSpacing: AppSizes.groupContentSpacing
 
-    EaElements.ParamComboBox {
-        id: sampleForm
-        objectName: "experimentType.sampleForm"
+    // Disabled while edi computes one choice only, with a tool tip saying so (the owner, 2026-10-08, note 44);
+    // the tool tip is the cell's, since a disabled box takes no hover.
+    Item {
         width: row.cellWidth
-        Component.onCompleted: FieldTitles.align(sampleForm)
-        enabled: row.editable
-        currentIndex: permittedValues.indexOf(value)
-        parameter: ({
-                "value": row.experiment ? row.experiment.sampleFormToken : "",
-                "shortPrettyName": qsTr("sample form"),
-                "permittedValues": ["powder", "single crystal"]
-            })
-        onActivated: index => row.choose(sampleForm, "sampleForm", index)
+        height: sampleForm.height
+
+        EaElements.ParamComboBox {
+            id: sampleForm
+            objectName: "experimentType.sampleForm"
+            width: row.cellWidth
+            Component.onCompleted: FieldTitles.align(sampleForm)
+            enabled: false
+            currentIndex: permittedValues.indexOf(value)
+            parameter: ({
+                    "value": row.experiment ? row.experiment.sampleFormToken : "",
+                    "shortPrettyName": qsTr("sample form"),
+                    "permittedValues": ["powder", "single crystal"]
+                })
+            onActivated: index => row.choose(sampleForm, "sampleForm", index)
+        }
+        HoverHandler {
+            id: sampleFormHover
+        }
+        EaElements.ToolTip {
+            text: qsTr("Only powder samples are supported for now")
+            visible: sampleFormHover.hovered && EaGlobals.Vars.showToolTips
+        }
     }
     EaElements.ParamComboBox {
         id: beamMode
@@ -79,19 +94,33 @@ Grid {
             })
         onActivated: index => row.choose(radiationProbe, "radiationProbe", index)
     }
-    EaElements.ParamComboBox {
-        id: scatteringType
-        objectName: "experimentType.scatteringType"
+    // Disabled while edi computes one choice only, with a tool tip saying so (the owner, 2026-10-08, note 44);
+    // the tool tip is the cell's, since a disabled box takes no hover.
+    Item {
         width: row.cellWidth
-        Component.onCompleted: FieldTitles.align(scatteringType)
-        enabled: row.editable
-        currentIndex: permittedValues.indexOf(value)
-        parameter: ({
-                "value": row.experiment ? row.experiment.scatteringTypeToken : "",
-                "shortPrettyName": qsTr("scattering type"),
-                "permittedValues": ["bragg", "total"]
-            })
-        onActivated: index => row.choose(scatteringType, "scatteringType", index)
+        height: scatteringType.height
+
+        EaElements.ParamComboBox {
+            id: scatteringType
+            objectName: "experimentType.scatteringType"
+            width: row.cellWidth
+            Component.onCompleted: FieldTitles.align(scatteringType)
+            enabled: false
+            currentIndex: permittedValues.indexOf(value)
+            parameter: ({
+                    "value": row.experiment ? row.experiment.scatteringTypeToken : "",
+                    "shortPrettyName": qsTr("scattering type"),
+                    "permittedValues": ["bragg", "total"]
+                })
+            onActivated: index => row.choose(scatteringType, "scatteringType", index)
+        }
+        HoverHandler {
+            id: scatteringTypeHover
+        }
+        EaElements.ToolTip {
+            text: qsTr("Only Bragg scattering is supported for now")
+            visible: scatteringTypeHover.hovered && EaGlobals.Vars.showToolTips
+        }
     }
     EaElements.ParamComboBox {
         id: dimensionality

@@ -69,23 +69,25 @@ std::optional<ResolvedParameter> resolve_instrument_label(ExperimentBase& experi
     if (label.rfind("background[", 0) == 0 && !label.empty() && label.back() == ']') {
         const std::size_t index = static_cast<std::size_t>(
             std::stoul(label.substr(11, label.size() - 12)));  // "background[<i>]"
-        // The label names a row of the declared model's table.
+        // The label names a row of the declared model's table by position; its path names the row by its id, as
+        // every loop row is named (the owner, 2026-10-11).
         if (experiment.background_type != "line-segment") {
             if (index >= experiment.background_terms.size()) return std::nullopt;
-            return ResolvedParameter{&experiment.background_terms[index]->coef,
-                                     path_prefix + "background[" + std::to_string(index) + "].coef"};
+            PolynomialTerm& term = *experiment.background_terms[index];
+            return ResolvedParameter{&term.coef, path_prefix + "background[" + term.id.value() + "].coef"};
         }
         if (index >= experiment.background.size()) return std::nullopt;
-        return ResolvedParameter{&experiment.background[index]->intensity,
-                                 path_prefix + "background[" + std::to_string(index) + "].intensity"};
+        LineSegment& point = *experiment.background[index];
+        return ResolvedParameter{&point.intensity, path_prefix + "background[" + point.id.value() + "].intensity"};
     }
     // An unprefixed scale or texture label names the bank's one link and its one row; a bank of
     // several phases is addressed through `<structure>.scale` / `<structure>.march_*` only, so a
     // bare label never lands on the first phase.
     if (label == "scale") {
         if (experiment.linked_structures.size() != 1) return std::nullopt;
-        return ResolvedParameter{&experiment.linked_structure().scale,
-                                 path_prefix + "linked_structure.scale"};
+        LinkedStructure& link = experiment.linked_structure();
+        return ResolvedParameter{&link.scale,
+                                 path_prefix + "linked_structures[" + link.structure_id.value() + "].scale"};
     }
     if (label == "march_r" || label == "march_random_fract") {
         if (experiment.preferred_orientation.size() != 1 || experiment.linked_structures.size() != 1) {
@@ -93,7 +95,7 @@ std::optional<ResolvedParameter> resolve_instrument_label(ExperimentBase& experi
         }
         PrefOrient& row = *experiment.preferred_orientation[0];
         return ResolvedParameter{label == "march_r" ? &row.march_r : &row.march_random_fract,
-                                 path_prefix + "preferred_orientation[0]." + label};
+                                 path_prefix + "preferred_orientation[" + row.structure_id.value() + "]." + label};
     }
     // ONE flat label table: the seam rename made the TOF and CW label sets disjoint (crysta's CW 2θ
     // zero-shift is now "calib_twotheta_offset", its TOF calibration zero "calib_d_to_tof_offset"),
@@ -330,11 +332,10 @@ std::optional<ResolvedParameter> resolve_phase_label(Project& project, Experimen
         }
     }
     if (rest == "march_r" || rest == "march_random_fract") {
-        for (std::size_t row = 0; row < experiment.preferred_orientation.size(); ++row) {
-            PrefOrient& texture = *experiment.preferred_orientation[row];
-            if (datablock_key(texture.structure_id, "structure") == key) {
-                return ResolvedParameter{rest == "march_r" ? &texture.march_r : &texture.march_random_fract,
-                                         root + "preferred_orientation[" + std::to_string(row) + "]." + rest};
+        for (const auto& texture : experiment.preferred_orientation) {
+            if (datablock_key(texture->structure_id, "structure") == key) {
+                return ResolvedParameter{rest == "march_r" ? &texture->march_r : &texture->march_random_fract,
+                                         root + "preferred_orientation[" + texture->structure_id.value() + "]." + rest};
             }
         }
     }
@@ -558,25 +559,25 @@ std::vector<ParameterEntry> parameter_entries(Project& project) {
                                      field.refinable, field.fittable};
                 std::string label = field.name;
                 std::string spelled = prefix + category.id + "." + field.name;
+                // A loop row is named by its id, never its position (the owner, 2026-10-11); the engine's label
+                // still counts rows.
                 if (category.id == "background") {
-                    entry.row_label = std::to_string(i);
-                    label = "background[" + entry.row_label + "]";
+                    entry.row_label = experiment->background_type == "line-segment"
+                                          ? experiment->background[i]->id.value()
+                                          : experiment->background_terms[i]->id.value();
+                    label = "background[" + std::to_string(i) + "]";
                     spelled = prefix + "background[" + entry.row_label + "]." + field.name;
                 } else if (category.id == "preferred_orientation") {
-                    entry.row_label = std::to_string(i / 2);
+                    entry.row_label = experiment->preferred_orientation[i / 2]->structure_id.value();
                     spelled = prefix + "preferred_orientation[" + entry.row_label + "]." + field.name;
                 } else if (category.id == "linked_structure") {
-                    // A loop category as the two above: its one field per row is that row's scale (the
-                    // app names a loop row's parameter by its row, edi ADR-0017 §8). In a project of
-                    // several structures each row, and its path, is named by its structure.
+                    // A loop category as the two above: its one field per row is that row's scale, named by
+                    // its structure (the app names a loop row's parameter by its row, edi ADR-0017 §8).
                     label = "scale";
-                    if (project.structures.size() > 1) {
-                        entry.row_label = experiment->linked_structures[i]->structure_id.value();
-                        entry.path = prefix + "linked_structures[" + entry.row_label + "].scale";
-                        entries.push_back(entry);
-                        continue;
-                    }
-                    entry.row_label = std::to_string(i);
+                    entry.row_label = experiment->linked_structures[i]->structure_id.value();
+                    entry.path = prefix + "linked_structures[" + entry.row_label + "].scale";
+                    entries.push_back(entry);
+                    continue;
                 }
                 entry.path = path_of(detail::resolve_instrument_label(*experiment, label, prefix), field.parameter,
                                      spelled);

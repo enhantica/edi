@@ -57,6 +57,15 @@ nav:
           - dev/adrs/0025-several-structures-and-linked-structures.md
           - dev/adrs/0026-scan-datasets-and-scale.md
           - dev/adrs/0027-anisotropic-displacement-parameters.md
+          - dev/adrs/0028-uncertainty-bound-from-fit-conditioning.md
+          - dev/adrs/0029-listview-tables.md
+          - dev/adrs/0029-following-a-scan-latest-finished-file.md
+          - dev/adrs/0030-parameter-filter-subsets.md
+          - dev/adrs/0030-browser-files-in-wasmfs.md
+          - dev/adrs/0031-example-metadata-and-filters.md
+          - dev/adrs/0031-application-settings-and-per-page-settings.md
+          - dev/adrs/0033-display-glyphs-from-bundled-fonts.md
+          - dev/adrs/0034-fit-correlations-computed-once-and-shared.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md

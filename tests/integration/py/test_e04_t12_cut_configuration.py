@@ -11,7 +11,7 @@ import subprocess
 import sys
 from itertools import starmap
 from pathlib import Path
-from urllib.parse import unquote
+from urllib.parse import unquote, urlsplit
 
 import pytest
 import yaml
@@ -34,6 +34,10 @@ def load_cutover():
 class RepositoryAPI:
     def __init__(self):
         self.created = False
+        self.listing_fault = None
+        self.open_prs = []
+        self.rulesets = [{'id': 9}, {'id': 10}]
+        self.reads = []
         self.mutations = []
         self.wanted = [
             {'name': 'bug', 'color': '123456', 'description': 'A defect'},
@@ -61,7 +65,7 @@ class RepositoryAPI:
         }
         self.real_run = subprocess.run
 
-    def run(self, argv, *, input=None, **kwargs):  # noqa: PLR0912 - explicit API state machine
+    def run(self, argv, *, input=None, **kwargs):  # noqa: PLR0912, PLR0914, PLR0915 - explicit API state machine
         argv = list(argv)
         if argv[:2] != ['gh', 'api']:
             if 'push' in argv:
@@ -69,22 +73,26 @@ class RepositoryAPI:
                 return subprocess.CompletedProcess(argv, 0, '', '')
             return self.real_run(argv, input=input, **kwargs)
         method = argv[argv.index('-X') + 1] if '-X' in argv else 'GET'
-        path = argv[argv.index('-X') + 2] if '-X' in argv else argv[2]
+        paged = argv[2:4] == ['--paginate', '--slurp']
+        path = argv[4] if paged else (argv[argv.index('-X') + 2] if '-X' in argv else argv[2])
+        endpoint = urlsplit(path).path
         body = json.loads(input) if input else None
         code, data, error = 0, {}, ''
         if method == 'GET':
+            self.reads.append((path, paged))
             if 'edi-archive-' in path:
                 code, error = 1, 'Not Found'
             elif path.endswith('/pulls?state=open&per_page=100'):
-                data = []
+                data = copy.deepcopy(self.open_prs)
             elif path.endswith('/labels?per_page=100'):
                 data = list(self.labels.values()) if self.created else copy.deepcopy(self.wanted)
-            elif path.endswith('/rulesets/9'):
-                data = copy.deepcopy(self.ruleset)
-            elif path.endswith('/rulesets'):
-                data = [{'id': 9}]
-            elif path.endswith('/runner-groups'):
+            elif endpoint.endswith(('/rulesets/9', '/rulesets/10')):
+                data = {**copy.deepcopy(self.ruleset), 'id': int(endpoint.rsplit('/', 1)[-1])}
+            elif path.endswith('/rulesets?per_page=100'):
+                data = copy.deepcopy(self.rulesets)
+            elif path.endswith('/runner-groups?per_page=100'):
                 data = {
+                    'total_count': 1,
                     'runner_groups': [
                         {
                             'id': 4,
@@ -92,7 +100,7 @@ class RepositoryAPI:
                             'visibility': 'selected',
                             'allows_public_repositories': True,
                         }
-                    ]
+                    ],
                 }
             elif '/actions/secrets/' in path or '/actions/variables/' in path:
                 data = {'name': path.rsplit('/', 1)[-1], 'visibility': 'selected'}
@@ -129,6 +137,21 @@ class RepositoryAPI:
                     self.labels[renamed] = {**self.labels.pop(name), **fields, 'name': renamed}
                 else:
                     code, error = 1, 'Unexpected label operation'
+        if paged and code == 0:
+            # gh --paginate --slurp returns an array of page arrays, including empty lists.
+            size = 100 if len(data) > 100 else 1
+            data = [data[start : start + size] for start in range(0, len(data), size)] or [[]]
+        if method == 'GET' and self.listing_fault is not None:
+            resource, fault = self.listing_fault
+            if endpoint.endswith('/' + resource):
+                if fault == 'unreadable':
+                    code, error = 1, 'Later page cannot be read'
+                elif fault == 'malformed':
+                    data = [data[0], {'message': 'Not a list page'}]
+                elif fault == 'short':
+                    data['total_count'] = 2
+                elif fault == 'untotalled':
+                    data.pop('total_count')
         return subprocess.CompletedProcess(argv, code, json.dumps(data), error)
 
 
@@ -329,3 +352,59 @@ def observe_jobs(doc, *, admitted, fork, event):
             assert name in active, (
                 'the event control must reach every trusted SDK consumer job: ' + name
             )
+
+
+@pytest.mark.parametrize(
+    ('resource', 'fault'),
+    [
+        (resource, fault)
+        for resource in ('pulls', 'labels', 'rulesets')
+        for fault in ('malformed', 'unreadable')
+    ]
+    + [('runner-groups', fault) for fault in ('short', 'untotalled', 'unreadable')],
+)
+def test_e04_t12_cut_refuses_unreadable_or_incomplete_listing(cut_replay, resource, fault):
+    tool, api, arguments = cut_replay
+    assert tool.main(arguments) == 0, 'the complete paged listing must admit the check-only cut'
+    api.listing_fault = (resource, fault)
+    assert tool.main([*arguments, '--apply']) != 0, (
+        'an unreadable or incomplete configuration listing must refuse before any cut mutation'
+    )
+    assert not api.mutations and not api.created, (
+        'listing refusal must retain the original repository and all of its configuration'
+    )
+
+
+@pytest.mark.parametrize('resource', ['pulls', 'labels', 'rulesets'])
+def test_e04_t12_cut_reads_every_configuration_page(cut_replay, resource):
+    tool, api, arguments = cut_replay
+    assert tool.main(arguments) == 0, 'the complete paged lists must admit check-only planning'
+    rows = (
+        [{'number': n} for n in range(101)]
+        if resource == 'pulls'
+        else (
+            [{'name': 'Label ' + str(n), 'color': '123456', 'description': ''} for n in range(101)]
+            if resource == 'labels'
+            else [{'id': n} for n in range(101)]
+        )
+    )
+    if resource == 'pulls':
+        api.open_prs = rows
+    elif resource == 'labels':
+        api.wanted = rows
+    else:
+        api.rulesets = rows
+    query = '?state=open&per_page=100' if resource == 'pulls' else '?per_page=100'
+    assert tool._gh_list('repos/enhantica/edi/' + resource + query) == rows, (
+        'configuration inventory must retain every record in order beyond the first page'
+    )
+    assert all(
+        paged
+        for path, paged in api.reads
+        if urlsplit(path).path.endswith(('/pulls', '/labels', '/rulesets'))
+    ), 'each array listing must request the complete slurped page stream'
+    if resource == 'pulls':
+        assert tool.main([*arguments, '--apply']) != 0, (
+            'the complete open-pull listing must block the cut'
+        )
+        assert not api.mutations, 'open pull requests must block every repository mutation'

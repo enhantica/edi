@@ -8,7 +8,11 @@ project(edi_tsan CXX)
 find_package(crysta CONFIG REQUIRED)
 find_package(Threads REQUIRED)
 file(GLOB EDI_CORE_SOURCES ${EDI_ROOT}/core/src/*.cpp)
-add_library(edi_core_tsan STATIC ${EDI_CORE_SOURCES})
+# The element table, embedded as core/CMakeLists.txt embeds it (ADR-0022).
+file(READ ${EDI_ROOT}/data/elements/element-styles.tsv EDI_ELEMENT_STYLES)
+configure_file(${EDI_ROOT}/core/src/element_styles_data.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/element_styles_data.cpp
+               @ONLY)
+add_library(edi_core_tsan STATIC ${EDI_CORE_SOURCES} ${CMAKE_CURRENT_BINARY_DIR}/element_styles_data.cpp)
 target_compile_features(edi_core_tsan PUBLIC cxx_std_20)
 target_include_directories(edi_core_tsan PUBLIC ${EDI_ROOT}/core/include ${EDI_ROOT}/core/src
                                                 ${EDI_ROOT}/tests/fixtures)

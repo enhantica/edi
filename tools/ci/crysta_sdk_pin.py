@@ -153,7 +153,9 @@ def write_pin(sha: str) -> None:
             at = next(
                 k for k in range(h + 1, len(lines)) if lines[k].startswith('CRYSTA_SDK_SHA256')
             )
-            lines.insert(at + 1, f'{note} {"; ".join(failed)}')
+            # Each step's name without its parenthesised detail (it can carry crysta's references).
+            names = [re.sub(r'\s*\([^)]*\)', '', step) for step in failed]
+            lines.insert(at + 1, f'{note} {"; ".join(names)}')
     (ROOT / 'pixi.toml').write_text('\n'.join(lines), encoding='utf-8')
     print(f'crysta-sdk-pin: pixi.toml pins {tag} for {", ".join(PLATFORMS)}')
 

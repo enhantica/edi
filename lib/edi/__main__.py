@@ -408,26 +408,19 @@ def _run_human(project: edi.Project, verbosity, project_name: str, *, clock=time
 
 
 def _skipped_line(project: edi.Project) -> str:
-    """What crysta noted about the scan's files, from analysis/scan-notes.csv."""
-    directory = getattr(getattr(project, 'metadata', None), 'path', None)
-    if directory is None:
+    """What the scan's results index says about its skipped and refused files.
+
+    The index reads analysis/scan-notes.csv by the rule the app and crysta's resume apply, so a
+    file that breaks it is reported as a diagnostic, never as some other state.
+    """
+    notes = getattr(project, '_scan_notes', None)
+    if notes is None or getattr(getattr(project, 'metadata', None), 'path', None) is None:
         return ''
     try:
-        lines = (Path(directory) / 'analysis' / 'scan-notes.csv').read_text('utf-8').splitlines()
-    except OSError:
-        return ''
-    if not lines or lines[0] != 'file_path,negative_points,skipped_dataset,refusal':
-        return ''
-    files = points = 0
-    refused = []
-    for line in lines[1:]:
-        cells = line.split(',')
-        if len(cells) != 4 or not cells[1].isdigit():
-            continue
-        points += int(cells[1])
-        files += cells[2] == 'True'
-        if cells[3]:
-            refused.append(f'  {cells[0].rsplit("/", 1)[-1]}: {cells[3]}')
+        report = notes()
+    except ValueError as error:
+        return f'Scan notes: {error}'
+    files, points, refused = report['skipped'], report['negative_points'], report['refused']
     out = []
     if files or points:
         out.append(
@@ -436,7 +429,7 @@ def _skipped_line(project: edi.Project) -> str:
         )
     if refused:
         out.append(f'Refused: {len(refused)} file(s), recorded as failed')
-        out.extend(refused[:10])
+        out.extend(f'  {name}: {why}' for name, why in refused[:10])
         if len(refused) > 10:
             out.append(f'  ... and {len(refused) - 10} more')
     if out:

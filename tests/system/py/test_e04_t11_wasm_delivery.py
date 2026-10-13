@@ -22,6 +22,7 @@ import pytest
 import yaml
 
 from tests.fixtures.cwl_family.historical import original_tokens
+from tests.fixtures.table_display.metadata_bytes import pre_catalogue_bytes
 
 ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / 'tests/fixtures/e04_t11_wasm'
@@ -109,7 +110,7 @@ def test_native_fixture_is_bound_to_the_committed_nontrivial_project():
     for path in sorted((ROOT / oracle['project']).rglob('*')):
         if path.is_file():
             digest.update(path.relative_to(ROOT / oracle['project']).as_posix().encode() + b'\0')
-            digest.update(original_tokens(path.read_bytes()))
+            digest.update(original_tokens(pre_catalogue_bytes(path)))
     assert digest.hexdigest() == oracle['project_sha256'], (
         'numeric oracle must describe the identical committed CLI input project'
     )
