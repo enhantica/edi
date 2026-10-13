@@ -9,8 +9,8 @@ import EasyApplication.Gui.Elements as EaElements
 import edi.app
 
 // What the report holds besides what it always does (the owner, 2026-10-13): a box for each optional group, the
-// charts, the correlations, the reflections, the measured data and, for a scan, the evolution. The correlation level
-// and the x axis come from the Analysis page.
+// charts, the correlations, the reflections, the data (left out by default) and, for a scan, the evolution. The
+// correlation level and the x axis come from the Analysis page.
 EaElements.GroupBox {
     id: group
 
