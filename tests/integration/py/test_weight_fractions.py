@@ -10,14 +10,16 @@ import pytest
 from tests.fixtures.multiphase import support as case
 
 
-def weighted_project(path):
+def weighted_project(path, *, free_scales=True):
     case.write_project(path)
     beta = path / 'structures/beta.edi'
     beta.write_text(beta.read_text() + 'Y a Gd Biso 0.23 0.31 0.47 0.35 0.8\n')
     project = engine.Project.load(path)
     rows = case.links(project.experiments[0])
-    rows['alpha'].scale.uncertainty = 0.03
-    rows['beta'].scale.uncertainty = 0.012
+    for name, uncertainty in (('alpha', 0.03), ('beta', 0.012)):
+        rows[name].scale.free = free_scales
+        if free_scales:
+            rows[name].scale.uncertainty = uncertainty
     return project
 
 
@@ -70,8 +72,9 @@ def test_hill_howard_values_uncertainties_and_warm_scale_changes(tmp_path):
         )
 
 
-def test_derived_weight_fraction_and_su_are_written_to_edi(tmp_path):
-    project = weighted_project(tmp_path / 'input')
+@pytest.mark.parametrize('free_scales', [False, True])
+def test_derived_weight_fraction_and_su_are_written_to_edi(tmp_path, free_scales):
+    project = weighted_project(tmp_path / 'input', free_scales=free_scales)
     before = [(item.value, item.uncertainty) for item in fractions(project)]
     saved = tmp_path / 'saved'
     project.save_as(saved)
@@ -91,14 +94,35 @@ def test_derived_weight_fraction_and_su_are_written_to_edi(tmp_path):
     column = headers.index('_linked_structure.weight_fraction')
     rows = [line.split() for line in lines[start:] if line.strip()][:2]
     assert len(rows) == 2, 'Saved weight fractions must cover both linked structures'
-    assert all(re.fullmatch(r'[-+\d.eE]+\(\d+\)', row[column]) for row in rows), (
-        'Each saved weight fraction must include a numeric standard uncertainty'
-    )
+    if free_scales:
+        assert all(re.fullmatch(r'[-+\d.eE]+\(\d+\)', row[column]) for row in rows), (
+            'Each fraction built from free scales must save a numeric standard uncertainty'
+        )
+    else:
+        assert all(re.fullmatch(r'[-+\d.eE]+', row[column]) for row in rows), (
+            'Fractions built only from fixed scales must save bare derived values'
+        )
+        assert all(error is None or error == 0 for _value, error in before), (
+            'Fractions built only from fixed scales must have no uncertainty in memory'
+        )
     restored = engine.Project.load(saved)
+    after = [(item.value, item.uncertainty) for item in fractions(restored)]
     np.testing.assert_allclose(
-        [(item.value, item.uncertainty) for item in fractions(restored)],
-        before,
+        [value for value, _error in after],
+        [value for value, _error in before],
         rtol=5e-5,
         atol=1e-9,
-        err_msg='Reopened derived fractions must retain their values and nonzero uncertainties',
+        err_msg='Reopened derived fractions must retain their values from the persisted scales',
     )
+    if free_scales:
+        np.testing.assert_allclose(
+            [error for _value, error in after],
+            [error for _value, error in before],
+            rtol=5e-5,
+            atol=1e-9,
+            err_msg='Reopened free-scale fractions must recompute their nonzero uncertainties',
+        )
+    else:
+        assert all(error is None or error == 0 for _value, error in after), (
+            'Reopened fractions built only from fixed scales must have no uncertainty'
+        )
