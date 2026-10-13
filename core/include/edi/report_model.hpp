@@ -17,25 +17,25 @@ class Project;
 /// The schema version every model carries; a reader refuses another.
 inline constexpr int kReportSchemaVersion = 1;
 
-/// The report's sections, in the order they appear (ADR-0035 §3).
-enum class ReportSection : std::uint8_t { Summary, Analysis, Parameters, Correlations, Evolution, Structures, Experiments };
+/// The report's sections, in the order they appear (ADR-0035 §3; the owner's Contents tree, 2026-10-13).
+enum class ReportSection : std::uint8_t { Summary, Analysis, Structures, Experiments, Correlations, Evolution };
 
 /// Every section, in order.
 const std::vector<ReportSection>& report_sections();
-/// "summary", "analysis", "parameters", "correlations", "evolution", "structures" or "experiments".
+/// "summary", "analysis", "structures", "experiments", "correlations" or "evolution".
 const char* report_section_name(ReportSection section);
 std::optional<ReportSection> report_section_from_name(std::string_view name);
 
-/// What a report holds; the Report page's Contents and Charts groups.
+/// What a report holds. The app takes the correlation level and the x axis from the Analysis page; the CLI and Python
+/// take them as options.
 struct ReportOptions {
-    std::vector<ReportSection> sections = report_sections();  ///< included; the order is always report_sections()
-    bool free_parameters_only = false;                         ///< the Parameters section: free ones, or all
-    std::optional<double> correlation_level;                   ///< absent: the five most correlated parameters
-    std::vector<std::string> experiments;                      ///< the experiments drawn; empty: all
-    bool d_spacing = false;                                    ///< charts on d instead of 2θ or TOF
-    bool residual = true;                                      ///< the residual pane
-    bool bragg_ticks = true;                                   ///< the Bragg tick rows
-    std::string generated;                                     ///< the report's time; empty: now, in UTC
+    /// The contents left out, each by its key (ReportContentsItem::key), with everything under it.
+    std::vector<std::string> hidden;
+    std::optional<double> correlation_level;  ///< absent: the five most correlated parameters
+    bool d_spacing = false;                   ///< charts on d instead of 2θ or TOF
+    bool residual = true;                     ///< the residual pane
+    bool bragg_ticks = true;                  ///< the Bragg tick rows
+    std::string generated;                    ///< the report's time; empty: now, in UTC
 };
 
 /// A number as the report shows it: its value, its s.u. when it has one, and its text (the project's s.u. rule).
@@ -58,14 +58,22 @@ struct ReportTable {
     std::vector<std::vector<std::string>> rows;
 };
 
-/// One parameter of the Parameters section.
-struct ReportParameter {
-    std::string name;   ///< the unique name, e.g. "cosio.cell.length_a"
-    std::string label;  ///< the display name, e.g. "a"
-    std::string units;
-    ReportValue value;
-    std::optional<double> start;  ///< the value before the last fit, when recorded
-    bool free = false;
+/// One subsection of the report: an analysis category, or a structure's or an experiment's `.edi` category as its
+/// page shows it (the reference report's subsections): its labelled values, then its table.
+struct ReportCategory {
+    std::string id;     ///< e.g. "software", "cell", "atom_site", "peak"
+    std::string title;  ///< e.g. "Software", "Cell", "Atom sites", "Peak profile"
+    std::vector<ReportRow> rows;
+    ReportTable table;
+};
+
+/// One entry of the report's contents: every section, analysis category, structure, experiment and their categories,
+/// whether or not it is included, in the report's order.
+struct ReportContentsItem {
+    std::string key;  ///< "analysis", "analysis/fit_result", "structures/<id>", "experiments/<id>/peak", ...
+    std::string title;
+    int depth = 0;  ///< 0 a section, 1 an analysis category, a structure or an experiment, 2 their categories
+    bool included = true;
 };
 
 /// The correlation chart: the shown parameters and the lower triangle of their matrix, row by row (NaN above the
@@ -80,20 +88,12 @@ struct ReportCorrelations {
 
 struct ReportStructure {
     std::string id;
-    std::vector<ReportRow> space_group;
-    std::vector<ReportRow> cell;
-    ReportTable atom_sites;
-    ReportTable aniso;  ///< empty when no site is anisotropic
+    std::vector<ReportCategory> categories;
 };
 
 struct ReportExperiment {
     std::string id;
-    std::vector<ReportRow> type;
-    std::vector<ReportRow> instrument;
-    std::vector<ReportRow> peak;
-    ReportTable background;
-    ReportTable excluded_regions;
-    ReportTable linked_structures;
+    std::vector<ReportCategory> categories;
 };
 
 /// A project's report (ADR-0035).
@@ -101,15 +101,13 @@ struct ReportModel {
     int schema_version = kReportSchemaVersion;
     std::string generated;
     std::vector<ReportSection> sections;
+    std::vector<ReportContentsItem> contents;
     // Project summary
     std::string name, title, authors, description;
     std::vector<std::string> structure_ids, experiment_ids;
-    // Analysis
-    std::vector<ReportRow> software;
-    std::string fitting_mode;
+    // Analysis: software, minimizer, fitting mode and fit result
+    std::vector<ReportCategory> analysis;
     bool fitted = false;
-    std::vector<ReportRow> fit_result;
-    std::vector<ReportParameter> parameters;
     std::optional<ReportCorrelations> correlations;
     // Structures and experiments
     std::vector<ReportStructure> structures;
