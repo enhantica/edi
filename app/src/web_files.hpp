@@ -47,6 +47,11 @@ class WebFiles : public QObject {
     Q_INVOKABLE QUrl saveLocation(const QString& name);
     // Packs the project directory into `<directory name>.zip` and hands it to the browser to download.
     Q_INVOKABLE bool downloadProject(const QString& directory);
+    // Hands `data` to the browser to download as `name`. False on the desktop.
+    static bool download(const QByteArray& data, const QString& name);
+    // A file of the app's site, by its path relative to the page (the report's chart libraries, which the site
+    // carries so the app does not). Empty when it cannot be read, and on the desktop.
+    static QByteArray siteFile(const QString& path);
 
     // The archive format, on every platform (the unit tier proves it natively). `pack` stores every file
     // under `directory`, with paths relative to its parent: one top-level folder named as the directory.

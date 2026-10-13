@@ -5,6 +5,7 @@
 #include <QObject>
 #include <QString>
 #include <QStringList>
+#include <QUrl>
 #include <QVariantMap>
 #include <string>
 #include <QtQml/qqmlregistration.h>
@@ -56,6 +57,12 @@ class ReportViewModel : public QObject {
 
     // A Contents box: includes or leaves out the item of `key`.
     Q_INVOKABLE void setIncluded(const QString& key, bool included);
+    // Export (edi ADR-0035): the report as one HTML file, the chart libraries in it when embedLibraries is set. The
+    // desktop writes it to `file`; the browser downloads it under htmlFileName() and fetches the libraries from the
+    // site. Answers with saved or saveFailed.
+    Q_INVOKABLE void saveHtml(const QUrl& file);
+    // The name a saved report is offered under: the project's short name and .html.
+    Q_INVOKABLE QString htmlFileName() const;
     // Builds the model again from the project; the project calls it once per coalesced change, and when the Analysis
     // page's correlation level changes.
     void refresh();
@@ -65,6 +72,8 @@ class ReportViewModel : public QObject {
     void hiddenChanged();
     void embedLibrariesChanged();
     void activeChanged();
+    void saved(const QString& location);
+    void saveFailed(const QString& message);
 
    private:
     // Builds the model from the project; whether it changed.
