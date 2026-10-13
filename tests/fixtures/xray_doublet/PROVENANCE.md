@@ -76,3 +76,23 @@ then again after calculation and after save/reopen. The complete original
 ordinary fixed/free/inactive/foreign-component matrix remains unchanged.
 The symbolic cases include single, shared-structure and connected multiphase
 models, with the anchor in the other bank and reversed bank ordering.
+
+At a zero effective ratio the superposition derivative is
+`dy/dt = dy1/dt + ratio_prime*y2`; the term `ratio*y2_prime` vanishes.
+The authored first line co-dilates with its cubic cell, so its Bragg response is
+zero. Relations `ratio=0.25*(line1-1.54)` and `ratio=0.25*(active_a-2.2)`
+instead have positive slopes 0.385 and 0.55 and paint a first-order second-line
+signal. A two-relation wavelength chain checks dependency propagation.
+Constant, disabled and squared stationary relations have zero ratio slope.
+An independently free second wavelength can cancel either driving term while
+its own motion is unobservable at ratio zero. Declaring a relation alone is
+therefore not an anchor; independent free-ratio and compensating controls refuse.
+
+Phase participation is independently authored from enabled links, as in the
+phase-plan contract: a retained unlinked or entirely disabled cell has no solved
+column, even when its stored free flag is true. Its scalar relation into a
+participating second wavelength has zero trial slope. The source phase is also
+tested active in the same bank, active in another unanchored component, and
+active in another bank with a fixed first wavelength. Active cells can co-dilate;
+the fixed bank forbids that move and transmits the anchor through the relation.
+All cases cover cold, calculated and reopened models and both public fit routes.
