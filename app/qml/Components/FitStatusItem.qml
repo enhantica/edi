@@ -25,15 +25,20 @@ Control {
     property bool showKey: true
     property bool clickable: false
     property bool shown: valueText !== ""
+    // The hover frame's height, which the fit's progress bar shares (the owner, 2026-10-13).
+    readonly property real frameHeight: Math.round(font.pixelSize * 1.8)
     // The item's width with its key shown, whether or not it is, and with its icon and value only: what the bar
     // measures.
-    readonly property real labelledWidth: iconLabel.implicitWidth + keyLabel.implicitWidth + value.implicitWidth + 2 * contentRow.spacing
-    readonly property real compactWidth: iconLabel.implicitWidth + value.implicitWidth + contentRow.spacing
+    readonly property real labelledWidth: iconLabel.implicitWidth + keyLabel.implicitWidth + value.implicitWidth + 2 * contentRow.spacing + leftPadding + rightPadding
+    readonly property real compactWidth: iconLabel.implicitWidth + value.implicitWidth + contentRow.spacing + leftPadding + rightPadding
     signal clicked
 
     visible: shown
     anchors.verticalCenter: parent ? parent.verticalCenter : undefined
     padding: 0
+    // A clickable item keeps its hover frame clear of its icon and text (the owner, 2026-10-13).
+    leftPadding: clickable ? Math.round(font.pixelSize * 0.5) : 0
+    rightPadding: leftPadding
     font.family: EaStyle.Fonts.fontFamily
     font.pixelSize: EaStyle.Sizes.fontPixelSize
 
@@ -81,8 +86,9 @@ Control {
     // A clickable item highlights on hover, as the bar's Messages item does.
     background: Item {
         Rectangle {
-            anchors.fill: parent
-            anchors.margins: -control.font.pixelSize * 0.25
+            anchors.verticalCenter: parent.verticalCenter
+            width: parent.width
+            height: control.frameHeight
             radius: 2
             visible: control.clickable && hover.hovered
             color: AppColors.hoverHighlight
