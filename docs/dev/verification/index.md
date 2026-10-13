@@ -89,6 +89,9 @@ produced by edi or crysta.
 - [pd-xray-cwl LiF single absorption](pd-xray-cwl_LiF_single_absorption.ipynb)
   – the same pattern with the Hewat cylinder **absorption** correction
   (`cylinder-hewat`, `mu_r` 0.9; FullProf `muR`), applied per reflection.
+- [pd-xray-cwl LiF doublet](pd-xray-cwl_LiF_doublet.ipynb) – the same pattern with the
+  Cu **Kα doublet** (`setup_wavelength_2` 1.5444 Å, `setup_wavelength_2_to_1_ratio` 0.5;
+  FullProf `Lambda2`, `Ratio`).
 
 ## Powder, Neutron, Time-Of-Flight
 

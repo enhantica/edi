@@ -98,6 +98,7 @@ nav:
           - dev/verification/pd-neut-tof_Si_jorgensen-von-dreele.ipynb
           - dev/verification/pd-neut-tof_Si_jorgensen.ipynb
           - dev/verification/pd-neut-tof_diamond_dream.ipynb
+          - dev/verification/pd-xray-cwl_LiF_doublet.ipynb
           - dev/verification/pd-xray-cwl_LiF_single.ipynb
           - dev/verification/pd-xray-cwl_LiF_single_absorption.ipynb
           - dev/verification/pd-xray-cwl_LiF_single_polarization.ipynb
