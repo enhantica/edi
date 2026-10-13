@@ -12,9 +12,8 @@ import edi.app
 
 // The status bar of the workflow pages (easydiffractionbeta Components/StatusBar.qml); hidden on Home. The
 // first item, always present, counts the messages (warnings and errors) and opens them (edi ADR-0017 §14).
-// The fit area on the right follows the running fit and then summarises the last one (§17): the live values (time,
-// then χ², every item separated by FitOutcomes.separator) with the progress bar at the far right, which stays put while
-// their width changes.
+// The fit area on the right follows the running fit and then summarises the last one (§17), as status items like the
+// ones on the left: the live values with the progress bar at the far right, then the outcome and the values.
 EaElements.StatusBar {
     id: bar
 
@@ -37,14 +36,14 @@ EaElements.StatusBar {
             }
         }
         const spacing = EaStyle.Sizes.fontPixelSize * 1.2;
-        const fitWidth = fitArea.visible ? fitArea.width + spacing : 0;
+        const fitWidth = fitArea.visible ? fitArea.labelledWidth + spacing : 0;
         return width + Math.max(0, shown - 1) * spacing + fitWidth <= bar.width - 2 * EaStyle.Sizes.fontPixelSize;
     }
     // How many of the items, in their order, fit beside the fit area with their icons and values only: the
     // rest give way, the last first (owner, 2026-10-05: the items never run into the fit area).
     readonly property int roomFor: {
         const spacing = EaStyle.Sizes.fontPixelSize * 1.2;
-        const available = bar.width - 2 * EaStyle.Sizes.fontPixelSize - (fitArea.visible ? fitArea.width + spacing : 0);
+        const available = bar.width - 2 * EaStyle.Sizes.fontPixelSize - (fitArea.visible ? fitArea.compactWidth + spacing : 0);
         let width = 0;
         for (let i = 0; i < items.length; ++i) {
             if (!items[i].shown)
@@ -133,185 +132,153 @@ EaElements.StatusBar {
         valueText: bar.project ? qsTr("%1 (%2 free, %3 fixed)").arg(bar.project.parameters.count).arg(bar.project.parameters.freeCount).arg(bar.project.parameters.fixedCount) : ""
         ToolTip.text: qsTr("Number of parameters: total, free and fixed")
     }
-    // The fit area, right-aligned outside the base's row of items: the running fit's bar and live values, then
-    // the last fit's summary, which opens its results.
+    // The fit area, right-aligned outside the base's row of items: the last fit's status and values as status items like
+    // the ones on the left (the owner, 2026-10-13), and while a fit runs its live values with the progress bar at the
+    // far right, which stays put while their width changes. The status opens the last fit's results.
     Row {
         id: fitArea
-
-        readonly property bool running: bar.fit !== null && bar.fit.running
-        readonly property bool scanning: bar.fit !== null && bar.fit.scanning
-        // The pattern-update mode, the patterns a scan has drawn and the file drawn last (the browser checks read
-        // them).
-        readonly property int patternUpdates: bar.fit !== null ? bar.fit.patternUpdates : -1
-        readonly property int scanPatternUpdates: bar.fit !== null ? bar.fit.scanPatternUpdates : 0
-        readonly property string scanShownFile: bar.fit !== null ? bar.fit.scanShownFile : ""
-        // The ok and fail counts: an ok count above zero in green, a fail count above zero in red.
-        function counts() {
-            const ok = qsTr("%1 ok").arg(bar.fit.scanOk);
-            const fail = qsTr("%1 fail").arg(bar.fit.scanFailed);
-            return [bar.fit.scanOk > 0 ? `<font color="${EaStyle.Colors.green}">${ok}</font>` : ok, bar.fit.scanFailed > 0 ? `<font color="${EaStyle.Colors.red}">${fail}</font>` : fail];
-        }
-        readonly property string chi: bar.fit && bar.fit.goodnessOfFit !== "" ? `χ² ${bar.fit.goodnessOfFit}` : ""
-        readonly property string iterations: bar.fit && bar.fit.iterations !== "" ? qsTr("it %1").arg(bar.fit.iterations) : ""
-
-        function joined(parts) {
-            return parts.filter(part => part !== "").join(FitOutcomes.separator);
-        }
 
         objectName: "statusBar.fit"
         parent: bar
         anchors.right: parent.right
         anchors.rightMargin: EaStyle.Sizes.fontPixelSize
         anchors.verticalCenter: parent.verticalCenter
-        spacing: EaStyle.Sizes.fontPixelSize * 0.75
+        spacing: EaStyle.Sizes.fontPixelSize * 1.2
         visible: bar.fit !== null && (running || bar.fit.outcome !== "")
 
+        readonly property bool running: bar.fit !== null && bar.fit.running
+        readonly property bool scanning: bar.fit !== null && bar.fit.scanning
+        readonly property bool summary: bar.fit !== null && !running
+        readonly property bool scanSummary: summary && bar.fit.scanSummary
+        // The pattern-update mode, the patterns a scan has drawn and the file drawn last (the browser checks read
+        // them).
+        readonly property int patternUpdates: bar.fit !== null ? bar.fit.patternUpdates : -1
+        readonly property int scanPatternUpdates: bar.fit !== null ? bar.fit.scanPatternUpdates : 0
+        readonly property string scanShownFile: bar.fit !== null ? bar.fit.scanShownFile : ""
+        readonly property list<FitStatusItem> items: [statusItem, filesItem, okItem, failedItem, iterationsItem, timeItem, etaItem, chiItem]
+        // The area's width with every key shown and with none: what the bar measures, whatever it shows now.
+        readonly property real labelledWidth: widthWith(item => item.labelledWidth)
+        readonly property real compactWidth: widthWith(item => item.compactWidth)
+
+        function widthWith(itemWidth) {
+            let width = rule.width;
+            let shown = 1;
+            for (const item of items) {
+                if (item.shown) {
+                    width += itemWidth(item);
+                    shown += 1;
+                }
+            }
+            for (const extra of [outOfDate, progress]) {
+                if (extra.visible) {
+                    width += extra.width;
+                    shown += 1;
+                }
+            }
+            return width + (shown - 1) * spacing;
+        }
+
         Rectangle {
+            id: rule
             width: EaStyle.Sizes.borderThickness
             height: EaStyle.Sizes.fontPixelSize * 1.5
             anchors.verticalCenter: parent.verticalCenter
             color: EaStyle.Colors.appBarBorder
         }
-        FitOutcomeLabel {
+        // The last fit's outcome, in its colour.
+        FitStatusItem {
+            id: statusItem
             objectName: "statusBar.fit.outcome"
-            visible: !fitArea.running && bar.fit !== null && bar.fit.outcome !== ""
-            anchors.verticalCenter: parent.verticalCenter
-            outcome: bar.fit ? bar.fit.outcome : ""
+            readonly property string outcome: bar.fit ? bar.fit.outcome : ""
+            shown: fitArea.summary && outcome !== ""
+            showKey: bar.keysFit
+            keyIcon: FitOutcomes.icon(outcome)
+            keyText: qsTr("Status")
+            valueText: FitOutcomes.word(outcome)
+            iconColor: FitOutcomes.color(outcome)
+            valueColor: FitOutcomes.color(outcome)
             // The last fit's results table, also for a project opened with one.
             clickable: bar.fit !== null && bar.fit.results.count > 0
-            toolTipText: clickable ? qsTr("%1: click to see the results").arg(FitOutcomes.meaning(outcome)) : FitOutcomes.meaning(outcome)
+            ToolTip.text: clickable ? qsTr("%1: click to see the results").arg(FitOutcomes.meaning(outcome)) : FitOutcomes.meaning(outcome)
             onClicked: fitResultsDialog.open()
         }
-        Item {
-            id: fitValues
+        Row {
             objectName: "statusBar.fit.values"
             anchors.verticalCenter: parent.verticalCenter
-            implicitWidth: valuePieces.implicitWidth
-            implicitHeight: valuePieces.implicitHeight
-            readonly property string text: {
-                if (!bar.fit)
-                    return "";
-                // One order everywhere: progress, the ok and fail counts, time, χ².
-                if (fitArea.scanning)
-                    return fitArea.joined(fitArea.counts().concat([bar.fit.elapsed, bar.fit.eta !== "" ? qsTr("eta %1").arg(bar.fit.eta) : "", fitArea.chi]));
-                if (fitArea.running)
-                    return fitArea.joined([bar.fit.elapsed, fitArea.chi]);
-                // A scan's summary: files, then the ok and fail counts, time, χ².
-                const rest = bar.fit.scanSummary ? fitArea.joined([bar.fit.scanFiles].concat(fitArea.counts(), [bar.fit.elapsed, fitArea.chi])) : fitArea.joined([fitArea.iterations, bar.fit.elapsed, fitArea.chi]);
-                return rest === "" ? "" : FitOutcomes.separator.trim() + " " + rest;
+            spacing: fitArea.spacing
+            // The values shown, for what reads them.
+            readonly property string text: fitArea.items.slice(1).filter(item => item.shown).map(item => item.valueText).join(" ")
+
+            FitStatusItem {
+                id: filesItem
+                shown: fitArea.scanSummary
+                showKey: bar.keysFit
+                keyIcon: "copy"
+                keyText: qsTr("Files")
+                valueText: bar.fit ? bar.fit.scanFiles : ""
+                ToolTip.text: qsTr("Files fitted out of the scan's files")
             }
-            FontMetrics {
-                id: fitValueMetrics
-                // The left items' font and size (the owner, 2026-10-13).
-                font.family: EaStyle.Fonts.fontFamily
-                font.pixelSize: EaStyle.Sizes.fontPixelSize
+            FitStatusItem {
+                id: okItem
+                shown: fitArea.scanning || fitArea.scanSummary
+                showKey: bar.keysFit
+                keyIcon: "check"
+                keyText: qsTr("OK")
+                valueText: bar.fit ? String(bar.fit.scanOk) : ""
+                iconColor: bar.fit && bar.fit.scanOk > 0 ? EaStyle.Colors.green : EaStyle.Colors.statusBarIconForeground
+                valueColor: bar.fit && bar.fit.scanOk > 0 ? EaStyle.Colors.green : EaStyle.Colors.themeForeground
+                ToolTip.text: qsTr("Files whose fit converged")
             }
-            // The widest digit of the app's font, which has no tabular digits: every digit is drawn centred in a cell
-            // that wide, as tabular figures are, so the live counters keep a steady width (the owner, 2026-10-13).
-            readonly property real digitWidth: {
-                let widest = 0;
-                for (let digit = 0; digit <= 9; ++digit)
-                    widest = Math.max(widest, fitValueMetrics.advanceWidth(String(digit)));
-                return Math.ceil(widest);
+            FitStatusItem {
+                id: failedItem
+                shown: fitArea.scanning || fitArea.scanSummary
+                showKey: bar.keysFit
+                keyIcon: "times"
+                keyText: qsTr("Failed")
+                valueText: bar.fit ? String(bar.fit.scanFailed) : ""
+                iconColor: bar.fit && bar.fit.scanFailed > 0 ? EaStyle.Colors.red : EaStyle.Colors.statusBarIconForeground
+                valueColor: bar.fit && bar.fit.scanFailed > 0 ? EaStyle.Colors.red : EaStyle.Colors.themeForeground
+                ToolTip.text: qsTr("Files whose fit did not converge")
             }
-            // A piece of the values as runs of text, each with its colour (the counts' <font color> markup) and whether it
-            // is a number.
-            function runs(text: string): var {
-                const out = [];
-                const coloured = /<font color="([^"]+)">(.*?)<\/font>/g;
-                let at = 0;
-                const split = (part, color) => {
-                    for (const token of part.split(/([0-9][0-9.:,]*)/)) {
-                        if (token !== "")
-                            out.push({
-                                "text": token,
-                                "color": color,
-                                "number": /^[0-9]/.test(token)
-                            });
-                    }
-                };
-                for (let match = coloured.exec(text); match !== null; match = coloured.exec(text)) {
-                    split(text.slice(at, match.index), "");
-                    split(match[2], match[1]);
-                    at = coloured.lastIndex;
-                }
-                split(text.slice(at), "");
-                return out;
+            FitStatusItem {
+                id: iterationsItem
+                shown: fitArea.summary && !fitArea.scanSummary && valueText !== ""
+                showKey: bar.keysFit
+                keyIcon: "sync-alt"
+                keyText: qsTr("Iterations")
+                valueText: bar.fit ? bar.fit.iterations : ""
+                ToolTip.text: qsTr("Iterations of the last fit")
             }
-            Row {
-                id: valuePieces
-                Repeater {
-                    model: fitValues.text.split(" → ")
-                    delegate: Item {
-                        id: valuePart
-                        required property string modelData
-                        required property int index
-                        readonly property bool hasArrow: index < fitValues.text.split(" → ").length - 1
-                        readonly property real gap: EaStyle.Sizes.fontPixelSize * 0.5
-                        implicitWidth: numberText.implicitWidth + (hasArrow ? changeArrow.width + 2 * gap : 0)
-                        implicitHeight: fitValueMetrics.height
-                        Row {
-                            id: numberText
-                            objectName: `statusBar.fit.valuePart.${valuePart.index}`
-                            readonly property font font: fitValueMetrics.font
-                            readonly property color color: EaStyle.Colors.themeForeground
-                            // The piece's plain text, for what reads it.
-                            readonly property string text: valuePart.modelData.replace(/<[^>]*>/g, "")
-                            Repeater {
-                                model: fitValues.runs(valuePart.modelData)
-                                delegate: Row {
-                                    id: run
-                                    required property var modelData
-                                    Repeater {
-                                        // A number one character at a time, so each digit takes its own cell.
-                                        model: run.modelData.number ? run.modelData.text.split("") : [run.modelData.text]
-                                        delegate: Text {
-                                            required property string modelData
-                                            width: /^[0-9]$/.test(modelData) ? fitValues.digitWidth : implicitWidth
-                                            y: fitValueMetrics.ascent - baselineOffset
-                                            horizontalAlignment: Text.AlignHCenter
-                                            font: numberText.font
-                                            textFormat: Text.PlainText
-                                            color: run.modelData.color !== "" ? run.modelData.color : numberText.color
-                                            text: modelData
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        TextMetrics {
-                            id: digitInk
-                            font: numberText.font
-                            text: "0"
-                        }
-                        Text {
-                            id: changeArrow
-                            objectName: "statusBar.fit.changeArrow"
-                            x: numberText.implicitWidth + valuePart.gap
-                            y: fitValueMetrics.ascent + digitInk.tightBoundingRect.y + digitInk.tightBoundingRect.height / 2 - (baselineOffset + arrowInk.tightBoundingRect.y + arrowInk.tightBoundingRect.height / 2)
-                            font.family: EaStyle.Fonts.encodeSansRegular.name
-                            font.pixelSize: fitValueMetrics.font.pixelSize
-                            color: numberText.color
-                            text: "→"
-                            visible: valuePart.hasArrow
-                        }
-                        TextMetrics {
-                            id: arrowInk
-                            font: changeArrow.font
-                            text: changeArrow.text
-                        }
-                    }
-                }
+            FitStatusItem {
+                id: timeItem
+                shown: bar.fit !== null && valueText !== ""
+                showKey: bar.keysFit
+                keyIcon: "stopwatch"
+                keyText: qsTr("Time")
+                valueText: bar.fit ? bar.fit.elapsed : ""
+                ToolTip.text: fitArea.running ? qsTr("Time since the fit started") : qsTr("Time the fit took")
+            }
+            FitStatusItem {
+                id: etaItem
+                shown: fitArea.scanning && valueText !== ""
+                showKey: bar.keysFit
+                keyIcon: "hourglass-half"
+                keyText: qsTr("ETA")
+                valueText: bar.fit ? bar.fit.eta : ""
+                ToolTip.text: qsTr("Time the scan's remaining files will take")
+            }
+            FitStatusItem {
+                id: chiItem
+                shown: bar.fit !== null && valueText !== ""
+                showKey: bar.keysFit
+                keyIcon: "thumbs-up"
+                keyText: qsTr("χ²")
+                // The values before and after the fit with no spaces round the arrow (the owner, 2026-10-13).
+                valueText: bar.fit ? bar.fit.goodnessOfFit.replace(/\s*→\s*/g, "→") : ""
+                ToolTip.text: fitArea.scanSummary ? qsTr("Reduced χ² over the scan's files, least to greatest") : qsTr("Reduced χ², before and after the fit")
             }
         }
         // Scan results the template has changed since stay, marked out of date until the next run replaces them.
-        Text {
-            anchors.verticalCenter: parent.verticalCenter
-            visible: outOfDate.visible
-            font: outOfDate.font
-            color: EaStyle.Colors.themeForeground
-            text: FitOutcomes.separator.trim()
-        }
         Text {
             id: outOfDate
             objectName: "statusBar.fit.outOfDate"
@@ -324,6 +291,7 @@ EaElements.StatusBar {
         }
         // Last, at the far right: the live values before it change width, and the bar stays where it is.
         FitProgressBar {
+            id: progress
             objectName: "statusBar.fit.progress"
             visible: fitArea.running
             width: EaStyle.Sizes.fontPixelSize * 20
@@ -332,7 +300,7 @@ EaElements.StatusBar {
             indeterminate: bar.fit === null || !bar.fit.scanning
             fraction: bar.fit !== null && bar.fit.scanning && bar.fit.scanTotal > 0 ? bar.fit.scanProcessed / bar.fit.scanTotal : 0
             fontFamily: EaStyle.Fonts.ptMono.name
-            text: fitArea.scanning ? bar.fit.scanText : fitArea.joined([qsTr("fitting"), fitArea.iterations])
+            text: fitArea.scanning ? bar.fit.scanText : [qsTr("fitting"), bar.fit && bar.fit.iterations !== "" ? qsTr("it %1").arg(bar.fit.iterations) : ""].filter(part => part !== "").join(FitOutcomes.separator)
         }
     }
 
