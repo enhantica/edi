@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-13T05:34:03Z
+# measured_utc = 2026-10-13T06:16:47Z
 #
-# Recorded from: measured test run (6 node(s) measured once, 10335 banked, 0 stale row(s) dropped)
-# Collected tests: 11159; with a reported duration: 6108
+# Recorded from: measured test run (96 node(s) measured once, 10283 banked, 0 stale row(s) dropped)
+# Collected tests: 11197; with a reported duration: 6111
 # Module-scoped fixture costs recorded: 42
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 11159
+# inventory_python = 11197
 # inventory_cpp = 312
-# inventory_measured = 10341
+# inventory_measured = 10379
 # inventory_unmeasured = 1130
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
@@ -5827,8 +5827,30 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.p
 0.250	tests/integration/py/test_scan_template.py::test_template_setter_selects_scan_data_without_changing_parameters[all594842.dat]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_actual_native_builds_require_matching_release_configuration[CMAKE_BUILD_TYPE-Debug]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_actual_native_builds_require_matching_release_configuration[compiler-different]
-0.070	tests/integration/py/test_scan_timing_contract.py::test_actual_scratch_copies_hash_identically_without_fit_starts_or_resume_files
-0.160	tests/integration/py/test_scan_timing_contract.py::test_comparison_process_exits_nonzero_for_a_slow_fixed_build
+0.080	tests/integration/py/test_scan_timing_contract.py::test_actual_scratch_copies_hash_identically_without_fit_starts_or_resume_files
+0.170	tests/integration/py/test_scan_timing_contract.py::test_comparison_process_exits_nonzero_for_a_slow_fixed_build
+0.010	tests/integration/py/test_scan_timing_contract.py::test_contained_delay_accepts_worker_overlap_on_its_own_clock[at-endpoint]
+0.010	tests/integration/py/test_scan_timing_contract.py::test_contained_delay_accepts_worker_overlap_on_its_own_clock[inside]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[early-endpoint-fit]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[early-endpoint-reset]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[failed-fit]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[failed-reset]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[inf-end-fit]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[inf-end-reset]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[missing-start-fit]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[missing-start-reset]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[nan-endpoint-fit]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[nan-endpoint-reset]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[nan-start-fit]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[nan-start-reset]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[negative-fit]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[negative-reset]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[reversed-fit]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[reversed-reset]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[short-fit]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[short-reset]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[unassociated-fit]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_delay_control_refuses_excluded_or_invalid_clock_records[unassociated-reset]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_each_actual_reset_condition_is_required_before_timing_credit[calculation_pending]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_each_actual_reset_condition_is_required_before_timing_credit[dataset_correlations]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_each_actual_reset_condition_is_required_before_timing_credit[dataset_fit_outcomes]
@@ -5852,6 +5874,22 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.p
 0.000	tests/integration/py/test_scan_timing_contract.py::test_incomplete_work_never_gets_a_fast_time[cli-settings-value2]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_incomplete_work_never_gets_a_fast_time[cli-skipped-value4]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_incomplete_work_never_gets_a_fast_time[cli-unfinished-value6]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_native_clock_parser_keeps_each_slot_with_its_interval
+0.000	tests/integration/py/test_scan_timing_contract.py::test_native_clock_parser_refuses_malformed_or_unassociated_records[duplicate-delay]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_native_clock_parser_refuses_malformed_or_unassociated_records[duplicate-endpoint]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_native_clock_parser_refuses_malformed_or_unassociated_records[early-endpoint]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_native_clock_parser_refuses_malformed_or_unassociated_records[inf-end]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_native_clock_parser_refuses_malformed_or_unassociated_records[missing]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_native_clock_parser_refuses_malformed_or_unassociated_records[nan-endpoint]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_native_clock_parser_refuses_malformed_or_unassociated_records[nan-start]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_native_clock_parser_refuses_malformed_or_unassociated_records[negative]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_native_clock_parser_refuses_malformed_or_unassociated_records[out-of-order]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_native_clock_parser_refuses_malformed_or_unassociated_records[reversed]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_native_clock_parser_refuses_malformed_or_unassociated_records[short]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_native_clock_parser_refuses_malformed_or_unassociated_records[unassociated]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_native_clock_parser_refuses_malformed_or_unassociated_records[unexpected-delay]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_native_clock_parser_refuses_malformed_or_unassociated_records[unknown]
+0.000	tests/integration/py/test_scan_timing_contract.py::test_native_clock_parser_refuses_malformed_or_unassociated_records[wrong-scenario]
 0.010	tests/integration/py/test_scan_timing_contract.py::test_owner_bound_rejects_each_slow_interval_and_keeps_boundary[1.05-True-fit_ms]
 0.010	tests/integration/py/test_scan_timing_contract.py::test_owner_bound_rejects_each_slow_interval_and_keeps_boundary[1.05-True-process_ms]
 0.010	tests/integration/py/test_scan_timing_contract.py::test_owner_bound_rejects_each_slow_interval_and_keeps_boundary[1.05-True-reset_ms]
@@ -5880,7 +5918,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.p
 0.000	tests/integration/py/test_scan_timing_contract.py::test_provenance_ordering_and_negative_controls_fail_closed[nan-time]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_provenance_ordering_and_negative_controls_fail_closed[passing-slow-control]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_provenance_ordering_and_negative_controls_fail_closed[reorder]
-0.000	tests/integration/py/test_scan_timing_contract.py::test_provenance_ordering_and_negative_controls_fail_closed[short-delay]
+0.010	tests/integration/py/test_scan_timing_contract.py::test_provenance_ordering_and_negative_controls_fail_closed[short-delay]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_provenance_ordering_and_negative_controls_fail_closed[wrong-baseline]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_provenance_ordering_and_negative_controls_fail_closed[wrong-compiled-source]
 0.580	tests/integration/py/test_shared_correlation_saved_bytes.py::test_fitted_correlation_loop_matches_pre_change_regression_pin[scan]

@@ -16,6 +16,7 @@ from pathlib import Path
 from contract import (
     BOUND,
     compare,
+    parse_app_timings,
     source_hashes,
     subject,
     validate_builds,
@@ -85,19 +86,18 @@ def invoke_app(build, project, directory, control, spec):
     work.setdefault('skipped', [])
     work.setdefault('refused', [])
     work.setdefault('unfinished', [])
-    intervals = {}
+    intervals, slots = {}, {}
     timing_file = output / 'timings.tsv'
     if timing_file.exists():
-        for line in timing_file.read_text().splitlines():
-            _, key, value = line.split('\t')
-            if key + '_ms' in intervals:
-                raise ValueError('a native timing interval must be recorded only once')
-            intervals[key + '_ms'] = float(value)
+        intervals, slots = parse_app_timings(
+            timing_file.read_text(), scenario, expect_delay=control == 'delayed'
+        )
     native = {
         'path': 'app',
         'returncode': rc,
         'work': work,
         'intervals': intervals,
+        'delay_slots': slots,
         'command_sha256': digest(Path(build['app_binary'])),
     }
     (directory / 'native.json').write_text(json.dumps(native, indent=2) + '\n')
@@ -260,8 +260,7 @@ def run_controls(builds, project, output, spec):
             'real_timing_path': True,
             'command_sha256': delayed['command_sha256'],
             'returncode': delayed['returncode'],
-            'normal_ms': normal['intervals'][key + '_ms'],
-            'delayed_ms': delayed['intervals'][key + '_ms'],
+            **delayed['delay_slots'][key],
         })
     # This control comes from the same fit-only comparator, called on raw real CLI runs.
     slow = []
@@ -269,6 +268,7 @@ def run_controls(builds, project, output, spec):
         for name in ['baseline', 'slow']:
             row = invoke_cli(builds[name], project, output / f'control-slow-{rep}-{name}', spec)
             slow.append({'build': name, **row})
+            (output / 'control-slow-runs.json').write_text(json.dumps(slow, indent=2) + '\n')
     import statistics  # noqa: PLC0415 - measurement path only
 
     medians = {
@@ -288,6 +288,7 @@ def run_controls(builds, project, output, spec):
         'baseline_fit_ms': medians['baseline'],
         'fixed_fit_ms': medians['slow'],
     })
+    (output / 'control-observations.json').write_text(json.dumps(controls, indent=2) + '\n')
     validate_controls(controls)
     return controls
 
@@ -322,6 +323,7 @@ def measure(config, output):
                 )
                 validate_work(row, spec)
                 rows.append(row)
+                print('Completed ' + directory.name, flush=True)
                 (output / 'partial-runs.json').write_text(json.dumps(rows, indent=2) + '\n')
     receipt = {'schema': 1, 'host': host, 'builds': identity, 'runs': rows, 'controls': controls}
     (output / 'measurement.json').write_text(json.dumps(receipt, indent=2) + '\n')

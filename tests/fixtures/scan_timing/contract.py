@@ -176,6 +176,58 @@ def validate_machine(work):
         raise ValueError('the command must publish a terminal status=done machine record')
 
 
+def validate_delay_slot(row, interval):
+    values = [row.get(key) for key in ['delay_start_ms', 'delay_end_ms', 'interval_ms']]
+    if row.get('interval') != interval or any(
+        type(value) not in {int, float} or not math.isfinite(value) or value < 0
+        for value in values
+    ):
+        raise ValueError('delay records must belong to a finite nonnegative interval clock')
+    start, end, endpoint = values
+    if end - start < 2000 or endpoint < end:
+        raise ValueError('the measured endpoint must contain its real two-second signal slot')
+
+
+def parse_app_timings(text, scenario, *, expect_delay=False):
+    """Associate each recorded slot with the next endpoint on that same native clock."""
+    intervals, slots = {}, {}
+    pending = None
+    for line in text.splitlines():
+        fields = line.split('\t')
+        if len(fields) != 3 or fields[0] != scenario:
+            raise ValueError('each native timing record must name its actual scenario')
+        _, label, raw = fields
+        try:
+            value = float(raw)
+        except ValueError as error:
+            raise ValueError('native clock records must be numeric') from error
+        if not math.isfinite(value) or value < 0:
+            raise ValueError('native clock records must be finite and nonnegative')
+        if label.startswith('delay from ') and label.endswith(' to'):
+            if not expect_delay or pending is not None:
+                raise ValueError('unexpected or duplicate native delay record')
+            try:
+                start = float(label[len('delay from ') : -len(' to')])
+            except ValueError as error:
+                raise ValueError('native delay clock records must be numeric') from error
+            pending = {'delay_start_ms': start, 'delay_end_ms': value}
+            continue
+        expected = 'fit' if not intervals else 'reset'
+        if label != expected or label + '_ms' in intervals or value <= 0:
+            raise ValueError('native endpoints must record one fit then one reset interval')
+        if expect_delay:
+            if pending is None:
+                raise ValueError('each delayed endpoint requires its own native slot record')
+            slot = {**pending, 'interval': label, 'interval_ms': value}
+            validate_delay_slot(slot, label)
+            slots[label] = slot
+            pending = None
+        intervals[label + '_ms'] = value
+    if pending is not None or set(intervals) != {'fit_ms', 'reset_ms'}:
+        raise ValueError('native timing requires two complete intervals and associated records')
+    return intervals, slots
+
+
 def validate_controls(controls):
     required = {'refused-start', 'cancel-after-40', 'delay-fit', 'delay-reset', 'slow-fit'}
     if {row['name'] for row in controls} != required or len(controls) != len(required):
@@ -191,10 +243,9 @@ def validate_controls(controls):
             if row['returncode'] == 0 or row['timing_credit'] or row['completed_files'] != count:
                 raise ValueError('refused and partial scenarios must fail without timing credit')
         elif name in {'delay-fit', 'delay-reset'}:
-            if row['returncode'] != 0 or row['delayed_ms'] - row['normal_ms'] < 2000:
-                raise ValueError(
-                    'each measured endpoint must include its real two-second signal slot'
-                )
+            if row['returncode'] != 0:
+                raise ValueError('a failed delay control cannot prove its measured slot')
+            validate_delay_slot(row, name.removeprefix('delay-'))
         elif (
             row['fixed_source'] != 'bd72193898d2dc6fefb1d692703d1f7a4137c731'
             or row['comparator_returncode'] == 0
