@@ -3591,6 +3591,69 @@ void publish_fit_state(Project& project, crysta::Project& converted) {
 // The fit's parameter correlations as crysta computes them over the project it fitted (crysta::fit_correlations:
 // diffraction-lib's pairs from the covariance, by unique name, in crysta's shortest form), as edi's rows. One
 // computation serves the app, Python and both CLIs.
+// ADR-0034: what a scan run makes of its files' results: each file's bundle by file, the files this run fitted, the
+// rows read with a file, and the last file's columns with their resolved names.
+struct ScanRunResults {
+    std::map<std::string, std::shared_ptr<const ScanFileResult>> results;
+    std::set<std::string> fitted;
+    std::vector<FitParameterCorrelation> read_rows;
+    std::vector<std::string> labels;
+    std::shared_ptr<const std::vector<std::string>> names;
+};
+
+// ADR-0034: a scan file's results from its fit. The correlations are numbers (I1 to I4); the names are resolved only
+// when the file's columns differ from the previous file's, and are otherwise shared (I5).
+std::shared_ptr<const ScanFileResult> scan_file_result(crysta::Project& project, const crysta::FitResultBase& result,
+                                                       ScanRunResults& scan) {
+    auto bundle = std::make_shared<ScanFileResult>();
+    std::optional<std::vector<double>> values = crysta::correlation_values(result);
+    if (!values) {
+        return bundle;
+    }
+    if (!scan.names || scan.labels != result.covariance_labels) {
+        std::optional<std::vector<std::string>> names = crysta::covariance_unique_names(project, result.covariance_labels);
+        if (!names) {
+            return bundle;
+        }
+        scan.names = std::make_shared<const std::vector<std::string>>(std::move(*names));
+        scan.labels = result.covariance_labels;
+    }
+    auto table = std::make_shared<CorrelationTable>();
+    table->names = scan.names;
+    table->values = std::make_shared<const std::vector<double>>(std::move(*values));
+    bundle->correlations = std::move(table);
+    return bundle;
+}
+
+// ADR-0034: the record after a scan run. Its results by file are the run's. When this run fitted the template, the
+// saved loop holds the template's rows made from its table (I6), and the other files' read rows move into their bundles
+// as read (I7); otherwise the loop keeps the rows read with the files this run did not fit.
+void settle_scan_results(FitResultRecord& record, ScanRunResults& scan, const std::string& template_file) {
+    record.scan_results = std::move(scan.results);
+    if (!template_file.empty() && scan.fitted.contains(template_file)) {
+        std::vector<FitParameterCorrelation> template_rows;
+        const auto found = record.scan_results.find(template_file);
+        if (found != record.scan_results.end() && found->second && found->second->correlations) {
+            template_rows = correlation_rows(*found->second->correlations, template_file);
+        }
+        std::vector<FitParameterCorrelation> others;
+        for (const FitParameterCorrelation& row : scan.read_rows) {
+            if (!scan.fitted.contains(row.file_path.value())) {
+                others.push_back(row);
+            }
+        }
+        hold_template_rows(record, std::move(template_rows), others, template_file);
+        return;
+    }
+    std::vector<ItemVec<FitParameterCorrelation>::Ptr> rows;
+    for (const FitParameterCorrelation& row : scan.read_rows) {
+        if (!scan.fitted.contains(row.file_path.value())) {
+            rows.push_back(std::make_shared<FitParameterCorrelation>(row));
+        }
+    }
+    record.correlations.assign(std::move(rows));
+}
+
 std::vector<FitParameterCorrelation> crysta_correlations(crysta::Project& fitted, const crysta::FitResultBase& result) {
     std::vector<FitParameterCorrelation> rows;
     for (const crysta::FitParameterCorrelation& pair : crysta::fit_correlations(fitted, result)) {
@@ -3685,6 +3748,59 @@ void record_fit_result(Project& project, FitResultBase& outcome, std::size_t con
 }
 
 }  // namespace
+
+void adopt_scan_file_result(FitResultRecord& record, const std::string& file,
+                            std::shared_ptr<const ScanFileResult> result, const std::string& template_file) {
+    record.scan_results[file] = std::move(result);
+    if (!template_file.empty() && file == template_file) {
+        const std::shared_ptr<const ScanFileResult>& adopted = record.scan_results[file];
+        std::vector<FitParameterCorrelation> template_rows;
+        if (adopted && adopted->correlations) {
+            template_rows = correlation_rows(*adopted->correlations, file);
+        }
+        std::vector<FitParameterCorrelation> others;
+        others.reserve(record.correlations.size());
+        for (const auto& row : record.correlations) {
+            others.push_back(*row);
+        }
+        hold_template_rows(record, std::move(template_rows), others, template_file);
+        return;
+    }
+    // Another file's fit replaces the rows read with it; the rest stay as they are.
+    const auto named = [&file](const auto& row) { return row->file_path.value() == file; };
+    if (std::none_of(record.correlations.begin(), record.correlations.end(), named)) {
+        return;
+    }
+    std::vector<ItemVec<FitParameterCorrelation>::Ptr> kept;
+    for (const auto& row : record.correlations) {
+        if (!named(row)) {
+            kept.push_back(row);
+        }
+    }
+    record.correlations.assign(std::move(kept));
+}
+
+std::vector<FitParameterCorrelation> correlation_rows(const CorrelationTable& table, const std::string& file) {
+    std::vector<FitParameterCorrelation> rows;
+    if (!table.names || !table.values) {
+        return rows;
+    }
+    const std::vector<std::string>& names = *table.names;
+    const std::vector<double>& values = *table.values;
+    rows.reserve(values.size());
+    for (std::size_t i = 0; i + 1 < names.size(); ++i) {
+        for (std::size_t j = i + 1; j < names.size() && rows.size() < values.size(); ++j) {
+            FitParameterCorrelation& row = rows.emplace_back();
+            row.id = std::to_string(rows.size());
+            row.source_kind = std::string("deterministic");
+            row.parameter_unique_name_i = names[i];
+            row.parameter_unique_name_j = names[j];
+            row.correlation = crysta::correlation_text(values[rows.size() - 1]);
+            row.file_path = file;
+        }
+    }
+    return rows;
+}
 
 std::vector<std::string> descent_ids() { return crysta::descent_ids(); }
 
@@ -4332,18 +4448,19 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
             };
         const std::filesystem::path ledger_path = project_root / "analysis" / "results-provenance.csv";
         auto completed_files = std::make_shared<std::size_t>(0);
-        // Every file's pairs, in the order the files were fitted: those an earlier run recorded (a resume fits only
-        // the rest), then this run's. They become the scan's record, whoever runs it.
-        auto scan_pairs = std::make_shared<std::vector<FitParameterCorrelation>>();
+        // ADR-0034: each file's results, by file: those an earlier run kept (a resume fits only the rest), then this
+        // run's, each made once by its file's fit and shared from then on. The rows read with a file stay as read.
+        auto scan = std::make_shared<ScanRunResults>();
+        scan->results = fit_result.scan_results;
         for (const auto& pair : fit_result.correlations) {
             if (!pair->file_path.empty()) {
-                scan_pairs->push_back(*pair);
+                scan->read_rows.push_back(*pair);
             }
         }
         // Each file's event carries its own fit result, so its correlations are crysta's from its covariance, as a
         // single fit's are, over the template project its labels name.
         const crysta::FileResultCallback engine_file_result =
-            [this, file_history, last_file_history, ledger_path, completed_files, scan_pairs, &on_file_complete,
+            [this, file_history, last_file_history, ledger_path, completed_files, scan, &on_file_complete,
              &cproject](const std::vector<std::string>& row, const crysta::FitResultBase& file_result) {
                 ++*completed_files;
                 std::swap(*last_file_history, *file_history);
@@ -4352,14 +4469,9 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
                 if (!record.has_value()) {
                     return;
                 }
-                record->correlations = crysta_correlations(cproject, file_result);
-                std::erase_if(*scan_pairs, [&](const FitParameterCorrelation& pair) {
-                    return pair.file_path.value() == record->file_name;
-                });
-                for (FitParameterCorrelation pair : record->correlations) {
-                    pair.file_path = record->file_name;
-                    scan_pairs->push_back(std::move(pair));
-                }
+                record->result = scan_file_result(cproject, file_result, *scan);
+                scan->results[record->file_name] = record->result;
+                scan->fitted.insert(record->file_name);
                 if (on_file_complete) {
                     // The driver wrote this file's ledger row just before its results row and waits
                     // here, so the ledger's last line is this file's.
@@ -4451,12 +4563,12 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
             detail::write_back(refined);
             publish_fit_state(*this, cproject);
             clear_fit_result(*this);  // A scan records no `_fit_result`; an earlier fit's would be stale
-            fit_result.correlations.assign(numbered_correlations(*scan_pairs, sequential_fit.template_file));
+            settle_scan_results(fit_result, *scan, sequential_fit.template_file);
         } else if (*completed_files > 0) {
-            // Each file this run completed has its row in results.csv, so its pairs are kept as well; a resume
+            // Each file this run completed has its row in results.csv, so its results are kept as well; a resume
             // skips that file and could not make them again. The unfinished file has none, and the rest of the
             // record stays as it was.
-            fit_result.correlations.assign(numbered_correlations(*scan_pairs, sequential_fit.template_file));
+            settle_scan_results(fit_result, *scan, sequential_fit.template_file);
         }
         return outcome;
     } catch (const std::invalid_argument&) {

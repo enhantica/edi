@@ -7,6 +7,9 @@
 #include <QString>
 #include <QStringList>
 #include <QtQml/qqmlregistration.h>
+#include <cstdint>
+#include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -48,9 +51,12 @@ class CorrelationViewModel : public QObject {
     // The project's last fit and the shown experiment (its index, and whether the last fit included it), after
     // every publication and every change of the shown experiment.
     void setRecord(const edi::Project& project, int experiment, bool fitted);
-    // A scan dataset's own correlations, from its file's fit (all its parameters are the template experiment's), and
-    // why there are none when `absent` says so.
-    void setPairs(const std::vector<edi::FitParameterCorrelation>& pairs, const QString& absent = {});
+    // A scan dataset's correlations as rows, those read with its file (all its parameters are the template
+    // experiment's), and why there are none when `absent` says so.
+    void setRows(const std::string& file, const std::vector<std::shared_ptr<const edi::FitParameterCorrelation>>& rows,
+                 const QString& absent = {});
+    // A scan dataset's correlations as its fit made them (ADR-0034): the matrix comes from the numbers.
+    void setTable(const edi::CorrelationTable& table);
 
     QStringList labels() const { return labels_; }
     QList<qreal> values() const { return values_; }
@@ -72,9 +78,18 @@ class CorrelationViewModel : public QObject {
    private:
     // The level and the count, which edit each other, then the matrix they show.
     void apply(double level, int count);
-    // The matrix of `pairs` without the parameters named under `hidden` prefixes; `reason` when fewer than two remain.
-    void show(const std::vector<edi::FitParameterCorrelation>& pairs, const std::vector<std::string>& hidden,
-              const QString& reason);
+    // The matrix of `rows` without the parameters named under `hidden` prefixes; `reason` when fewer than two remain.
+    // `file` names the rows for their numbers (`""` for a single or joint fit's).
+    void show(const std::string& file, const std::vector<std::shared_ptr<const edi::FitParameterCorrelation>>& rows,
+              const std::vector<std::string>& hidden, const QString& reason);
+    // ADR-0034 I8: the rows' coefficients as numbers, in the rows' order, parsed when these rows are first shown and
+    // kept while the same rows are shown again: each the same row object, its coefficient unwritten since. A write
+    // gives the coefficient a new write identity, never reused, so a changed coefficient is parsed again. A rename
+    // changes only names, which are read when shown.
+    const std::vector<double>& numbers(const std::string& file,
+                                       const std::vector<std::shared_ptr<const edi::FitParameterCorrelation>>& rows);
+    // The strengths, the level and the count over the matrix just made; `reason` when it has fewer than two rows.
+    void settle(const QString& reason);
     void rebuild();
 
     // The shown experiment's correlations: the parameters in the fit's order and the full matrix over them
@@ -91,6 +106,12 @@ class CorrelationViewModel : public QObject {
     int available_ = 0;
     double level_ = 0.0;
     int max_parameters_ = kDefaultMaxParameters;
+    struct Numbers {
+        std::vector<const edi::FitParameterCorrelation*> rows;
+        std::vector<std::uint64_t> written;  // each row's coefficient write identity when parsed
+        std::vector<double> values;
+    };
+    std::map<std::string, Numbers> numbers_;
 };
 
 }  // namespace edi_app

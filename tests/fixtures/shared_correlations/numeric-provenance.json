@@ -1,0 +1,13 @@
+{
+  "claim": "REGRESSION INPUT: frozen pre-change fitted numeric tables",
+  "cases": {
+    "single": {
+      "producer_loop_sha256": "48a02a24ad47a4e2f6781be06bbd92f2043376e76b22d4809f84632c70ef392b",
+      "numeric_sha256": "7c96ad8e0f27e92eace0ee6f38e8858aba816bde19ace701713931e6d8bb33a5"
+    },
+    "scan": {
+      "producer_loop_sha256": "af0cdea65cffcf04d83b04a7769a1780adf1f40815e3ec44749e93aff7f114c0",
+      "numeric_sha256": "6ced3e3be560c2d3737a98f3e4022a112d64ed7a32e56744712722084d0d33cf"
+    }
+  }
+}
