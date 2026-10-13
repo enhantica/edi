@@ -10,8 +10,8 @@ import EasyApplication.Gui.Elements as EaElements
 import edi.app
 
 // A table of the report preview, set as the HTML report's tables (the owner's reference report, 2026-10-13): a thin
-// border, a shaded header and alternating rows in the app tables' colours, the app tables' hover tint, rows one line
-// apart, and the numbers of a column aligned on their decimal point. Without `columns` it is a key-value table, its
+// border, a shaded header and alternating rows in the app tables' colours, rows one line apart, and the numbers of a
+// column aligned on their decimal point. No row tints on hover: the preview is a document. Without `columns` it is a key-value table, its
 // keys set apart from their values. A table wider than its place scrolls sideways.
 Flickable {
     id: table
@@ -26,10 +26,16 @@ Flickable {
     readonly property real padding: Math.round(em * 6 / 10.04)
     readonly property real keyGap: Math.round(em * 2)
     readonly property real border: EaStyle.Sizes.borderThickness
-    readonly property real dotWidth: Math.ceil(metrics.advanceWidth("."))
+    // Every width is measured with the cells' own font, and again when it changes: a font that loads after the table
+    // is made (macOS) would otherwise leave the columns measured with the fallback one, and clip their text.
+    readonly property real dotWidth: {
+        metrics.font;  // re-measured when the font changes
+        return Math.ceil(metrics.advanceWidth("."));
+    }
     // Per column: whether its cells are numbers, the widths of their parts before and after the decimal point, and
     // the column's width.
     readonly property var layout: {
+        metrics.font;  // re-measured when the font changes
         const out = [];
         for (let column = 0; column < columnCount; ++column) {
             let numbers = 0, others = 0, left = 0, right = 0, plain = 0;
@@ -194,20 +200,6 @@ Flickable {
                 height: table.rowHeight
                 color: index % 2 ? EaStyle.Colors.themeBackgroundHovered2 : EaStyle.Colors.themeBackgroundHovered1
 
-                // The app tables' hover tint.
-                Rectangle {
-                    anchors.fill: parent
-                    color: EaStyle.Colors.themeRowHovered
-                    opacity: hover.hovered ? 1 : 0
-                    Behavior on opacity {
-                        NumberAnimation {
-                            duration: EaStyle.Sizes.tableHighlightMoveDuration
-                        }
-                    }
-                }
-                HoverHandler {
-                    id: hover
-                }
                 Row {
                     Repeater {
                         model: table.columnCount
