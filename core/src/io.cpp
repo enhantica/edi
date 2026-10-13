@@ -26,6 +26,7 @@
 #include <cctype>
 #include <charconv>
 #include <cmath>
+#include <cstdlib>
 #include <cstdint>
 #include <cstdio>
 #include <ctime>
@@ -451,13 +452,32 @@ double to_double(const std::string& text, const std::string& where) {
 // FULL reference mantissa — and still rejects an in-bracket exponent `1.2e3(4)` (the reference
 // rejects it too), which misses the mantissa and falls through to the fixed-value parse (which
 // rejects the trailing bracket). The BRACKET carries three forms:
-//   * all-digit su -> esd in units of the mantissa's last decimal (last-digit-scaled, UNCHANGED):
-//     `3.89(2)` -> 0.02; `18.(1)` -> 1*10^0 -> 1.0; `.5(3)` -> 3*10^-1 -> 0.3;
+//   * all-digit su -> esd in units of the mantissa's last decimal, read as the one decimal number
+//     `<digits>e-<decimals>` (scaled_uncertainty): `3.89(2)` -> 0.02; `18.(1)` -> 1.0; `.5(3)` -> 0.3;
 //   * a su containing a '.' -> ABSOLUTE standard uncertainty (`383.2(1.2)` -> 1.2);
 //   * empty bracket `value()` -> refinable (free) with no prior esd (std::nullopt), distinct from a
 //     fixed value (esd 0.0, not free) and a zero-esd refined `value(0)`.
 // A bare token (no bracket) is fixed: present esd 0.0, not free — preserving the public esd==0.0
 // save->load fixed point. `to_double` rejects non-finite at the boundary.
+// An integer s.u. in units of the mantissa's last decimal place, read as the decimal number
+// `<digits>e-<decimals>` (crysta ADR-0089). strtod rounds it correctly on every platform, subnormals
+// included, and the text has no radix character for a locale to change. Dividing by pow(10, decimals)
+// gave zero past 308 decimals; digits that underflow even a subnormal are refused naming the token.
+double scaled_uncertainty(const std::string& digits, int decimals, const std::string& token,
+                          const std::string& where) {
+    const std::string text = digits + "e-" + std::to_string(decimals);
+    char* end = nullptr;
+    const double value = std::strtod(text.c_str(), &end);
+    if (end != text.c_str() + text.size() || !std::isfinite(value)) {
+        fail_schema(where, "invalid-number", "invalid number '" + token + "'");
+    }
+    if (value == 0.0 && digits.find_first_not_of('0') != std::string::npos) {
+        fail_domain(where, "uncertainty-underflow",
+                    "the uncertainty of '" + token + "' is below the smallest double");
+    }
+    return value;
+}
+
 Parameter parse_parameter(const std::string& token, const std::string& where) {
     static const std::regex pattern(R"(^([+-]?(?:\d+\.?\d*|\.\d+))\((\d+|\d*\.\d+|\d+\.)?\)$)");
     std::smatch match;
@@ -468,12 +488,9 @@ Parameter parse_parameter(const std::string& token, const std::string& where) {
         if (uncertainty.empty()) {
             return Parameter(value, std::nullopt, true);  // refinable, no prior esd
         }
-        // Integer su: DIVIDE by 10^ndec (not multiply by 10^-ndec) so a single correctly-rounded op
-        // matches crysta/the reference bit-for-bit ('.5(3)' -> 3/10 = 0.3, not 3*0.1 = 0.3000...04).
         const double esd = uncertainty.find('.') != std::string::npos
                                ? to_double(uncertainty, where)  // decimal su -> absolute
-                               : to_double(uncertainty, where) /
-                                     std::pow(10.0, fractional_digits(mantissa));  // last-digit-scaled
+                               : scaled_uncertainty(uncertainty, fractional_digits(mantissa), token, where);
         return Parameter(value, esd, true);
     }
     // No (well-formed) bracket: a bare fixed value; a malformed bracket also lands here and to_double
@@ -3703,18 +3720,21 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
                    (line.size() == tag.size() || line[tag.size()] == ' ' ||
                     line[tag.size()] == '\t' || line[tag.size()] == '\r');
         };
-        static const char* const kMetadataFields[6] = {
-            "name", "title", "description", "created", "last_modified", "timestamp"};
+        static const char* const kMetadataFields[7] = {
+            "name", "title", "description", "authors", "created", "last_modified", "timestamp"};
         std::optional<std::string> declared_version;
         // ADR-0017 §14: the plot renderer diffraction-lib declares in the record - an engine
         // choice, beside the calculator and the minimizer, that edi does not make.
         std::optional<std::string> declared_plot_renderer;
+        // crysta ADR-0089: how the project writes values with a standard uncertainty.
+        std::optional<std::string> declared_su_rule;
         std::map<std::string, std::string> restored;
         {
             std::istringstream record_lines(record_text);
             std::string line;
             const std::string version_tag = "_edi.schema_version";
             const std::string renderer_tag = "_rendering_plot.type";
+            const std::string su_rule_tag = "_su_format.rule";
             while (std::getline(record_lines, line)) {
                 if (is_tag_line(line, version_tag) && !declared_version.has_value()) {
                     declared_version = lexical_value(line, version_tag.size(), version_tag);
@@ -3722,6 +3742,14 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
                 }
                 if (is_tag_line(line, renderer_tag) && !declared_plot_renderer.has_value()) {
                     declared_plot_renderer = lexical_value(line, renderer_tag.size(), renderer_tag);
+                    continue;
+                }
+                if (is_tag_line(line, su_rule_tag)) {
+                    if (declared_su_rule.has_value()) {
+                        throw IoError("project.edi declares " + su_rule_tag +
+                                      " more than once: " + record_where);
+                    }
+                    declared_su_rule = lexical_value(line, su_rule_tag.size(), su_rule_tag);
                     continue;
                 }
                 for (const char* field : kMetadataFields) {
@@ -3784,6 +3812,14 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
         restore("name", project.metadata.name);
         restore("title", project.metadata.title);
         restore("description", project.metadata.description);
+        restore("authors", project.metadata.authors);
+        if (declared_su_rule.has_value()) {
+            if (*declared_su_rule != "iucr_19" && *declared_su_rule != "iucr_99") {
+                throw IoError("project.edi _su_format.rule is '" + *declared_su_rule +
+                              "', expected iucr_19 or iucr_99: " + record_where);
+            }
+            project.su_rule = *declared_su_rule;
+        }
         restore("created", project.metadata.created);
         restore("last_modified", project.metadata.last_modified);
         restore("timestamp", project.metadata.timestamp);

@@ -8,7 +8,8 @@ import EasyApplication.Gui.Components as EaComponents
 import edi.app
 
 // The Project page (easydiffractionbeta Pages/Project): the project's description in the main area;
-// Get started, Examples and Recent projects in the sidebar; the project block's `.edi` in Text.
+// Get started, Examples and Recent projects in the sidebar; how standard uncertainties are written in Extra;
+// the project block's `.edi` in Text.
 WorkflowPage {
     id: page
 
@@ -29,11 +30,19 @@ WorkflowPage {
         }
     ]
     textEnabled: project !== null
+    extrasEnabled: project !== null
     basicItem: Component {
         EaComponents.SideBarColumn {
             GetStartedGroup {}
             ExamplesGroup {}
             RecentProjectsGroup {}
+        }
+    }
+    extrasItem: Component {
+        EaComponents.SideBarColumn {
+            StandardUncertaintiesGroup {
+                project: page.project
+            }
         }
     }
     textItem: Component {

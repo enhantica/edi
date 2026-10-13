@@ -2019,7 +2019,7 @@ void save_project_via_crysta(const Project& model, const std::string& directory)
     cproject.path = model.path;
     // Scan data read in place (a temporary copy of a read-only project) are carried into the saved one.
     cproject.scan_data_root = model.scan_data_root;
-    // The project identity rides the delegated save. Copy the six persisted metadata fields
+    // The project identity rides the delegated save. Copy the persisted metadata fields
     // across (the two ProjectMetadata mirrors are distinct C++ types; `path` is engine
     // bookkeeping the record never carries) and ENGAGE persistence — crysta's writer then merges
     // the `_metadata.*` block into a carried project.edi, or creates the record when none
@@ -2029,10 +2029,17 @@ void save_project_via_crysta(const Project& model, const std::string& directory)
     cproject.metadata.name = model.metadata.name;
     cproject.metadata.title = model.metadata.title;
     cproject.metadata.description = model.metadata.description;
+#if __has_include("crysta/su_format.hpp")  // crysta ADR-0089's SDK; drop the guard when the pin moves
+    cproject.metadata.authors = model.metadata.authors;
+#endif
     cproject.metadata.created = model.metadata.created;
     cproject.metadata.last_modified = model.metadata.last_modified;
     cproject.metadata.timestamp = model.metadata.timestamp;
     cproject.persist_metadata = true;
+#if __has_include("crysta/su_format.hpp")  // drop the guard when the pin moves
+    // crysta ADR-0089: the delegated writer spells every value with an s.u. by the project's rule.
+    cproject.su_rule = model.su_rule;
+#endif
     // Review-9 F1: ONE persisted snapshot row per basic. In memory every free tied axis may
     // carry its own prior state (lossless undo), but the persisted _fit_parameter loop keeps
     // only the designated axis's row — the representative when free, else the first free

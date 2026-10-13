@@ -153,7 +153,8 @@ AppDialog {
             }
         }
 
-        // Appearance: the theme, the sidebar's side, auto collapse; no 1D plotting row.
+        // Appearance: the theme, the sidebar's side, auto collapse, the rule a new project writes standard uncertainties
+        // by (crysta ADR-0089; a project keeps its own, on the Project page's Extra tab); no 1D plotting row.
         Grid {
             columns: 2
             columnSpacing: EaStyle.Sizes.fontPixelSize
@@ -194,6 +195,17 @@ AppDialog {
                 checked: Preferences.autoCollapse
                 onToggled: Preferences.autoCollapse = checked
                 ToolTip.text: qsTr("Auto collapse for side bar groups")
+            }
+
+            EaElements.Label {
+                text: qsTr("New projects' uncertainties") + ":"
+            }
+            EaElements.ComboBox {
+                objectName: "preferences.newProjectSuRule"
+                model: [qsTr("IUCr recommendation"), qsTr("Always 2 digits")]
+                currentIndex: Preferences.newProjectSuRule === "iucr_99" ? 1 : 0
+                onActivated: index => Preferences.newProjectSuRule = index === 1 ? "iucr_99" : "iucr_19"
+                ToolTip.text: qsTr("How a new project writes values with a standard uncertainty: 1 digit, or 2 from 10 to 19, or always 2")
             }
         }
 

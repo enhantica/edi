@@ -119,6 +119,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged)
     Q_PROPERTY(QString title READ title WRITE setTitle NOTIFY titleChanged)
     Q_PROPERTY(QString description READ description WRITE setDescription NOTIFY descriptionChanged)
+    // The project's authors, one text separated by "; " (project.edi `_metadata.authors`).
+    Q_PROPERTY(QString authors READ authors WRITE setAuthors NOTIFY authorsChanged)
+    // How values with a standard uncertainty are written and shown: "iucr_19" or "iucr_99" (crysta ADR-0089).
+    Q_PROPERTY(QString suRule READ suRule WRITE setSuRule NOTIFY suRuleChanged)
     Q_PROPERTY(QString path READ path NOTIFY pathChanged)
     // True after any edit since the project was opened or last saved (edi ADR-0017 §13).
     Q_PROPERTY(bool modified READ modified NOTIFY modifiedChanged)
@@ -172,6 +176,13 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void setTitle(const QString& title);
     QString description() const;
     void setDescription(const QString& description);
+    QString authors() const;
+    void setAuthors(const QString& authors);
+    QString suRule() const;
+    void setSuRule(const QString& rule);
+    // A value and its standard uncertainty as the project's rule writes them: `value`, `su` and `bracket`
+    // texts; empty for a non-finite value or a zero or non-finite s.u.
+    Q_INVOKABLE QVariantMap suText(double value, double su) const;
     QString path() const { return QString::fromStdString(project_->path); }
     bool modified() const { return modified_; }
     // Save the project into `directory` through the core (edi::save_project_as), which then is the
@@ -316,6 +327,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void nameChanged();
     void titleChanged();
     void descriptionChanged();
+    void authorsChanged();
+    void suRuleChanged();
     void lastModifiedChanged();
     void currentStructureIndexChanged();
     void currentStructureChanged();
@@ -544,6 +557,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool modified_ = false;
     QString last_error_;
     QString published_name_, published_title_, published_description_, published_last_modified_;
+    QString published_authors_, published_su_rule_;
     StructureViewModel* published_structure_ = nullptr;
     ExperimentViewModel* published_experiment_ = nullptr;
     int published_structure_index_ = -1;
