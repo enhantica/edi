@@ -14,12 +14,15 @@ import edi.app
 EaElements.GroupBox {
     id: group
 
+    // Only the top group opens on first view, as on the other pages; each remembers its state.
+    readonly property string openKey: "Main:reportExport"
     property ReportViewModel report: null
 
     objectName: "group.reportExport"
     title: qsTr("Export")
     icon: "download"
-    collapsed: false
+    collapsed: !SideBarGroups.isOpen(openKey)
+    onCollapsedChanged: SideBarGroups.setOpen(openKey, !collapsed)
     last: SideBarGroups.isLast(group)
 
     Column {

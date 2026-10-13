@@ -13,6 +13,8 @@ import edi.app
 EaElements.GroupBox {
     id: group
 
+    // Only the top group opens on first view, as on the other pages; each remembers its state.
+    readonly property string openKey: "Main:reportCharts"
     property ReportViewModel report: null
     readonly property var ids: report && report.model.experiment_ids ? report.model.experiment_ids : []
 
@@ -28,7 +30,8 @@ EaElements.GroupBox {
     objectName: "group.reportCharts"
     title: qsTr("Charts")
     icon: "chart-line"
-    collapsed: false
+    collapsed: !SideBarGroups.isOpen(openKey)
+    onCollapsedChanged: SideBarGroups.setOpen(openKey, !collapsed)
     last: SideBarGroups.isLast(group)
     enabled: report !== null
 
