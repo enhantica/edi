@@ -2037,7 +2037,7 @@ void save_project_via_crysta(const Project& model, const std::string& directory)
     cproject.metadata.timestamp = model.metadata.timestamp;
     cproject.persist_metadata = true;
 #if __has_include("crysta/su_format.hpp")  // drop the guard when the pin moves
-    // crysta: the delegated writer spells every value with an s.u. by the project's rule.
+    // The delegated writer spells every value with an s.u. by the project's rule.
     cproject.su_rule = model.su_rule;
 #endif
     // Review-9 F1: ONE persisted snapshot row per basic. In memory every free tied axis may

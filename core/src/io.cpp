@@ -3726,7 +3726,7 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
         // ADR-0017 §14: the plot renderer diffraction-lib declares in the record - an engine
         // choice, beside the calculator and the minimizer, that edi does not make.
         std::optional<std::string> declared_plot_renderer;
-        // crysta: how the project writes values with a standard uncertainty.
+        // How the project writes values with a standard uncertainty.
         std::optional<std::string> declared_su_rule;
         std::map<std::string, std::string> restored;
         {
