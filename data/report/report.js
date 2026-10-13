@@ -68,6 +68,8 @@ function trace(pattern, series, index) {
     };
   }
   if (series.kind === 'bragg') {
+    // Named as the app's legend names a structure's ticks.
+    out.name = `Bragg peaks · ${series.label}`;
     out.text = pattern.hover[index];
     out.hovertemplate = '%{text}<extra>%{fullData.name}</extra>';
   }
@@ -85,8 +87,9 @@ function drawPattern(figure, pattern) {
   }
   const font = page.getPropertyValue('--head-font');
   const grid = page.getPropertyValue('--tableborder').trim();
-  // The plot starts no closer to the frame's top than to its sides.
-  const margin = { l: 16, r: 16, t: 16, b: 16 };
+  // The plot starts no closer to the frame's top than to its sides, and plotly's toolbar sits above it, clear of the
+  // legend.
+  const margin = { l: 16, r: 16, t: 36, b: 16 };
   const domains = paneDomains(pattern.layout, figure.clientHeight - margin.t - margin.b);
   const bottom = 'residual' in domains ? 'y3' : 'bragg' in domains ? 'y2' : 'y';
   const excluded = patternStyle('excluded');
