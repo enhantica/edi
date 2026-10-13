@@ -31,7 +31,7 @@ std::vector<double> correlation_strengths(const CorrelationMatrix& matrix);
 /// diffraction-lib's DEFAULT_CORRELATION_MAX_PARAMETERS: the chart's size with no level set.
 inline constexpr std::size_t kDefaultCorrelatedParameters = 5;
 
-/// The level a count sets (plan amendment 4, after diffraction-lib's _resolve_correlation_filter): the lowest strength
+/// The level a count sets (ADR-0035 §7, after diffraction-lib's _resolve_correlation_filter): the lowest strength
 /// that keeps at most `count` parameters, a tie kept whole; when a tie keeps more at every strength, the count-th
 /// strength, which keeps that tie whole. `count` is at least 1; with fewer strengths, the least of them (0 with none).
 double correlation_level_for_count(const std::vector<double>& strengths, std::size_t count);

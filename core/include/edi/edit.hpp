@@ -167,6 +167,16 @@ class Edit {
     static Edit assign(std::string& field, std::string value) {
         return Edit([&field, value = std::move(value)] { field = value; });
     }
+    // The project's report settings (ADR-0035 §7), each absent until stated.
+    static Edit assign(std::optional<bool>& field, std::optional<bool> value) {
+        return Edit([&field, value] { field = value; });
+    }
+    static Edit assign(std::optional<double>& field, std::optional<double> value) {
+        return Edit([&field, value] { field = value; });
+    }
+    static Edit assign(std::optional<std::string>& field, std::optional<std::string> value) {
+        return Edit([&field, value = std::move(value)] { field = value; });
+    }
     static Edit assign(std::optional<int>& field, std::optional<int> value) {
         return Edit([&field, value] { field = value; });
     }

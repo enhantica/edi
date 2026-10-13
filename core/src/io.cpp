@@ -3254,6 +3254,36 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
         project.experiments.push_back(std::move(experiment));
     }
 
+    // ADR-0035 §7: reports/report.edi, the report's settings and its saved-report rows, each checked by crysta's rules:
+    // a value an item does not take, an item the category does not have and a row without a known format are refused,
+    // naming them.
+    const fs::path report_settings = root / "reports" / "report.edi";
+    if (fs::is_regular_file(report_settings)) {
+        const std::string where = report_settings.string();
+        const Block block = parse_block(read_file(where), where, false);
+        try {
+            for (const auto& [tag, value] : block.items) {
+                if (tag.rfind("_report.", 0) == 0) {
+                    detail::read_report_item(std::string_view(tag).substr(std::string_view("_report.").size()), value,
+                                             project);
+                }
+            }
+            if (const Loop* files = block.loop_with("_report_file.name")) {
+                for (const auto& row : files->rows) {
+                    ReportFile file;
+                    file.name = loop_cell(*files, row, "_report_file.name", where);
+                    file.format = detail::read_report_file_format(loop_cell(*files, row, "_report_file.format", where));
+                    file.saved = loop_cell(*files, row, "_report_file.saved", where);
+                    file.project_last_modified = loop_cell(*files, row, "_report_file.project_last_modified", where);
+                    file.digest = loop_cell(*files, row, "_report_file.digest", where);
+                    project.report_files.push_back(std::move(file));
+                }
+            }
+        } catch (const std::invalid_argument& error) {
+            throw IoError(std::string(error.what()) + ": " + where);
+        }
+    }
+
     const fs::path analysis_file = root / "analysis" / "analysis.edi";
     if (fs::is_regular_file(analysis_file)) {
         const Block block =
@@ -3268,6 +3298,17 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
                               declared_fitting_modes() + ": " + analysis_file.string());
             }
             project.fitting_mode = *mode;
+        }
+        // ADR-0035 §7: the correlation chart's threshold and the pattern chart's x axis, each checked by crysta's rules.
+        try {
+            if (const std::string* threshold = block.find("_correlation_chart.threshold")) {
+                project.correlation_threshold = detail::read_correlation_threshold(*threshold);
+            }
+            if (const std::string* axis = block.find("_pattern_chart.x_axis")) {
+                project.pattern_x_axis = detail::read_pattern_x_axis(*axis);
+            }
+        } catch (const std::invalid_argument& error) {
+            throw IoError(std::string(error.what()) + ": " + analysis_file.string());
         }
         // The declared iteration bound. The tag has ridden in analysis files since the
         // diffraction-lib ports; honoring it makes the project data the ONE place a bounded fit

@@ -4301,6 +4301,25 @@ struct KeyTraits<ParameterConstraint> {
     static const char* category() { return "constraint"; }
 };
 
+// One `_report_file` row of `reports/report.edi` (ADR-0035 §7), a report Save report wrote: its file's name in
+// `reports/` (the row's key), its format (`html`, `pdf` or `cif`), when it was written (UTC), the project's
+// last-modified time it was made from, and the digest of what was written, by which it is current or out of date.
+struct ReportFile {
+    ItemKey name;
+    detail::WrittenText format;
+    detail::WrittenText saved;
+    detail::WrittenText project_last_modified;
+    detail::WrittenText digest;
+};
+
+template <>
+struct KeyTraits<ReportFile> {
+    static ItemKey& key(ReportFile& file) { return file.name; }
+    static const ItemKey& key(const ReportFile& file) { return file.name; }
+    static std::string canonical(const std::string& name) { return name; }
+    static const char* category() { return "report file"; }
+};
+
 }  // namespace edi
 
 namespace crysta {
@@ -4320,6 +4339,13 @@ struct RowSchema<edi::ParameterAlias> {
     static constexpr const char* name = "_alias";
     static constexpr auto fields = std::tuple{&edi::ParameterAlias::id, &edi::ParameterAlias::parameter_unique_name};
     static constexpr std::array items{"id", "parameter_unique_name"};
+};
+template <>
+struct RowSchema<edi::ReportFile> {
+    static constexpr const char* name = "_report_file";
+    static constexpr auto fields = std::tuple{&edi::ReportFile::format, &edi::ReportFile::name, &edi::ReportFile::saved,
+                                              &edi::ReportFile::project_last_modified, &edi::ReportFile::digest};
+    static constexpr std::array items{"format", "name", "saved", "project_last_modified", "digest"};
 };
 template <>
 struct RowSchema<edi::ParameterConstraint> {
@@ -4610,9 +4636,21 @@ class Project : public detail::ProjectAnchor {
     ItemVec<BraggPdExperiment> experiments;
     std::string fitting_mode;
     // `project.edi` `_su_format.rule`: how every value with a standard uncertainty is written,
-    // `iucr_19` (IUCr recommendation 12, the default) or `iucr_99` (always two digits); crysta
-    // ADR-0089.
+    // `iucr_19` (IUCr recommendation 12, the default) or `iucr_99` (always two digits), by crysta's
+    // rule.
     std::string su_rule = "iucr_19";
+    // `reports/report.edi` `_report` (ADR-0035 §7): the report's settings, each absent until the file or the app
+    // states it: whether Save report writes the HTML, the PDF and the CIF report, whether the HTML embeds its chart
+    // libraries, and the groups the report leaves out (their keys separated by spaces; empty leaves out none). Its
+    // `_report_file` rows: one per report Save report wrote.
+    std::optional<bool> report_html, report_pdf, report_cif, report_html_offline;
+    std::optional<std::string> report_excluded;
+    ItemVec<ReportFile> report_files;
+    // `analysis/analysis.edi` (ADR-0035 §7): the correlation chart's threshold (absent: the five most correlated
+    // parameters) and the pattern chart's x axis (`native` or `d_spacing`; absent: native). effective_report_options
+    // turns these and the settings above into a report's options.
+    std::optional<double> correlation_threshold;
+    std::optional<std::string> pattern_x_axis;
     // The directory this project was loaded from / last saved to:
     // `save()` writes here and fails closed when empty; load and save_as set it.
     std::string path;
@@ -5123,6 +5161,31 @@ struct SuFormatCategory {
     static constexpr std::array items{"rule"};
 };
 static_assert(detail::one_entry_per_column(SuFormatCategory::columns, SuFormatCategory::items));
+
+struct ReportSettingsCategory {
+    using Owner = Project;
+    static constexpr const char* name = "_report";
+    static constexpr auto columns = std::tuple{&Project::report_html, &Project::report_pdf, &Project::report_cif,
+                                               &Project::report_html_offline, &Project::report_excluded};
+    static constexpr std::array items{"html", "pdf", "cif", "html_offline", "excluded"};
+};
+static_assert(detail::one_entry_per_column(ReportSettingsCategory::columns, ReportSettingsCategory::items));
+
+struct CorrelationChartCategory {
+    using Owner = Project;
+    static constexpr const char* name = "_correlation_chart";
+    static constexpr auto columns = std::tuple{&Project::correlation_threshold};
+    static constexpr std::array items{"threshold"};
+};
+static_assert(detail::one_entry_per_column(CorrelationChartCategory::columns, CorrelationChartCategory::items));
+
+struct PatternChartCategory {
+    using Owner = Project;
+    static constexpr const char* name = "_pattern_chart";
+    static constexpr auto columns = std::tuple{&Project::pattern_x_axis};
+    static constexpr std::array items{"x_axis"};
+};
+static_assert(detail::one_entry_per_column(PatternChartCategory::columns, PatternChartCategory::items));
 
 struct FittingModeCategory {
     using Owner = Project;

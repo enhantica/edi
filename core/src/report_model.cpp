@@ -9,6 +9,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <sstream>
 #include <stdexcept>
 #include <utility>
 
@@ -701,6 +702,24 @@ std::optional<ReportSection> report_section_from_name(std::string_view name) {
         }
     }
     return std::nullopt;
+}
+
+ReportOptions effective_report_options(const Project& project, const ReportOverrides& overrides) {
+    ReportOptions options;
+    if (overrides.excluded) {
+        options.hidden = *overrides.excluded;
+    } else if (project.report_excluded) {
+        options.hidden.clear();
+        std::istringstream keys(*project.report_excluded);
+        for (std::string key; keys >> key;) {
+            options.hidden.push_back(key);
+        }
+    }
+    options.correlation_level =
+        overrides.correlation_threshold ? overrides.correlation_threshold : project.correlation_threshold;
+    options.d_spacing = overrides.x_axis.value_or(project.pattern_x_axis.value_or("native")) == "d_spacing";
+    options.embed_libraries = overrides.html_offline.value_or(project.report_html_offline.value_or(false));
+    return options;
 }
 
 ReportModel build_report(const Project& input, const ReportOptions& options) {

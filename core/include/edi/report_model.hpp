@@ -43,7 +43,23 @@ struct ReportOptions {
     bool residual = true;                     ///< the residual pane
     bool bragg_ticks = true;                  ///< the Bragg tick rows
     std::string generated;                    ///< the report's time; empty: now, in UTC
+    /// The HTML writer's choice, not the model's: whether a saved file carries the chart libraries.
+    bool embed_libraries = false;
 };
+
+/// One run's choices over a project's report settings (the CLI's flags, Python's keywords): an absent one keeps the
+/// stored setting, a given one replaces it for the run. Nothing is written to the project.
+struct ReportOverrides {
+    std::optional<bool> html_offline;
+    std::optional<double> correlation_threshold;
+    std::optional<std::string> x_axis;  ///< "native" or "d_spacing"
+    std::optional<std::vector<std::string>> excluded;
+};
+
+/// The options a report of `project` is made with (ADR-0035 §7): its report settings (`reports/report.edi`) and the
+/// correlation threshold and x axis (`analysis/analysis.edi`), each replaced by a given override. With no `excluded` the data are left out; with no threshold the correlations follow diffraction-lib's
+/// automatic rule; with no x axis the charts are on their own.
+ReportOptions effective_report_options(const Project& project, const ReportOverrides& overrides = {});
 
 /// A number as the report shows it: its value, its s.u. when it has one, and its text (the project's s.u. rule).
 struct ReportValue {

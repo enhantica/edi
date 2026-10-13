@@ -44,6 +44,9 @@
 #include "crysta/peak.hpp"
 #include "crysta/recompute.hpp"
 #include "crysta/residual.hpp"
+#if __has_include("crysta/report_settings.hpp")
+#include "crysta/report_settings.hpp"
+#endif
 #include "crysta/scattering.hpp"
 #include "crysta/structure_geometry.hpp"
 #include "crysta/symmetry.hpp"
@@ -1924,7 +1927,43 @@ void raise_coded(const std::exception& error) {
     }
 }
 
+#if __has_include("crysta/report_settings.hpp")  // drop the guard when the pin moves
+// ADR-0035 §7: the report's settings, its saved-report rows and the two Analysis view items, as crysta writes them.
+void copy_report_settings(const Project& model, crysta::Project& cproject) {
+    cproject.report_html = model.report_html;
+    cproject.report_pdf = model.report_pdf;
+    cproject.report_cif = model.report_cif;
+    cproject.report_html_offline = model.report_html_offline;
+    cproject.report_excluded = model.report_excluded;
+    cproject.report_files.clear();
+    for (const auto& file : model.report_files) {
+        crysta::ReportFile row;
+        row.name = file->name.value();
+        row.format = file->format.value();
+        row.saved = file->saved.value();
+        row.project_last_modified = file->project_last_modified.value();
+        row.digest = file->digest.value();
+        cproject.report_files.push_back(row);
+    }
+    cproject.correlation_threshold = model.correlation_threshold;
+    cproject.pattern_x_axis = model.pattern_x_axis;
+}
+#endif
+
 }  // namespace
+
+bool save_report_settings(const Project& model, const std::string& directory) {
+#if __has_include("crysta/report_settings.hpp")  // drop the guard when the pin moves
+    // Only the report's settings cross: a project of nothing else carries them to crysta's writer.
+    const crysta::Project carrier(std::vector<crysta::Structure>{}, std::vector<crysta::BraggPdExperiment>{},
+                                  [&model](crysta::Project& project) { copy_report_settings(model, project); });
+    return crysta::write_report_settings(carrier, directory);
+#else
+    (void)model;
+    (void)directory;
+    throw std::invalid_argument("saving the report settings needs a newer crysta");
+#endif
+}
 
 void save_project_via_crysta(const Project& model, const std::string& directory) {
     // Edi does not write — it asks crysta to. Build the full engine project from the model
@@ -2039,6 +2078,10 @@ void save_project_via_crysta(const Project& model, const std::string& directory)
 #if __has_include("crysta/su_format.hpp")  // drop the guard when the pin moves
     // The delegated writer spells every value with an s.u. by the project's rule.
     cproject.su_rule = model.su_rule;
+#endif
+#if __has_include("crysta/report_settings.hpp")  // drop the guard when the pin moves
+    // And writes the report's settings and saved-report rows, and the two Analysis view items.
+    copy_report_settings(model, cproject);
 #endif
     // Review-9 F1: ONE persisted snapshot row per basic. In memory every free tied axis may
     // carry its own prior state (lossless undo), but the persisted _fit_parameter loop keeps
@@ -2159,6 +2202,36 @@ std::string cell_domain_message(double a, double b, double c, double alpha_deg, 
 std::string wavelength_domain_message(double wavelength) {
     return crysta::wavelength_domain_message(wavelength);
 }
+
+#if __has_include("crysta/report_settings.hpp")  // drop the guard when the pin moves
+void read_report_item(std::string_view item, const std::string& value, Project& project) {
+    const crysta::ReportItemValue read = crysta::read_report_item(item, value);
+    if (item == "html") {
+        project.report_html = read.flag;
+    } else if (item == "pdf") {
+        project.report_pdf = read.flag;
+    } else if (item == "cif") {
+        project.report_cif = read.flag;
+    } else if (item == "html_offline") {
+        project.report_html_offline = read.flag;
+    } else {
+        project.report_excluded = read.keys;
+    }
+}
+double read_correlation_threshold(const std::string& value) { return crysta::read_correlation_threshold(value); }
+std::string read_pattern_x_axis(const std::string& value) { return crysta::read_pattern_x_axis(value); }
+std::string read_report_file_format(const std::string& value) { return crysta::read_report_file_format(value); }
+#else
+namespace {
+[[noreturn]] void needs_newer_crysta() {
+    throw std::invalid_argument("the report settings need a newer crysta");
+}
+}  // namespace
+void read_report_item(std::string_view, const std::string&, Project&) { needs_newer_crysta(); }
+double read_correlation_threshold(const std::string&) { needs_newer_crysta(); }
+std::string read_pattern_x_axis(const std::string&) { needs_newer_crysta(); }
+std::string read_report_file_format(const std::string&) { needs_newer_crysta(); }
+#endif
 
 // Edi's refusals spell an id exactly as crysta's do (edi/model.hpp).
 std::string printable_id(const std::string& id) { return crysta::printable_id(id); }
