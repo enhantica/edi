@@ -37,7 +37,8 @@ AppDialog {
     standardButtons: Dialog.Ok
 
     contentWidth: bar.implicitWidth
-    contentHeight: bar.implicitHeight + implicitHeaderHeight + topPadding + bottomPadding + EaStyle.Sizes.fontPixelSize * 9
+    // As tall as the tallest tab's rows need, so no tab's last row is cut (the owner, 2026-10-13).
+    contentHeight: bar.implicitHeight + pages.topPadding + pages.bottomPadding + pages.contentChildren.reduce((tallest, page) => Math.max(tallest, page.implicitHeight), 0)
 
     EaElements.TabBar {
         id: bar
@@ -78,6 +79,8 @@ AppDialog {
     }
 
     SwipeView {
+        id: pages
+
         anchors.top: bar.bottom
         anchors.bottom: parent.bottom
         anchors.left: parent.left
