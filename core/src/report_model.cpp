@@ -53,6 +53,16 @@ std::string utc_now() {
     return buffer;
 }
 
+// A computed number in a table column: a fixed number of decimals for the whole column, no exponent; one that rounds
+// to nothing reads 0 (the owner, 2026-10-13).
+std::string column_text(double value, int decimals) {
+    if (!std::isfinite(value)) {
+        return shortest(value);
+    }
+    const std::string text = fixed(value, decimals);
+    return text.find_first_not_of("-0.") == std::string::npos ? "0" : text;
+}
+
 // A number as the app's tables show one without an s.u. (NumberText): six significant digits without trailing
 // zeros, and from a million up or below 1e-4 four in scientific notation (`2.290e7`).
 std::string display_text(double value) {
@@ -484,19 +494,22 @@ ReportExperiment experiment_of(const BraggPdExperiment& experiment, const std::s
             out.categories.push_back(std::move(next));
         }
     }
-    // The reflections the calculation made, as the reference report lists them, six significant digits each.
+    // The reflections the calculation made, as the reference report lists them, each column to the decimals its
+    // quantity is worth: d and sinθ/λ to 4, F and F² to 3, 2θ to 3 and TOF to 1.
     const PowderReflnDataBase& refln = experiment.refln;
     if (experiment.computed_current() && refln.size() > 0 && experiment.data.has_value()) {
         ReportCategory next = category("refln");
         const auto [name, units] = axis_of(*experiment.data);
+        const int position_decimals = experiment.data->two_theta.has_value() ? 3 : 1;
         next.table.columns = {"Structure", "d (Å)", "sinθ/λ (Å⁻¹)", "h", "k", "l", "F calc", "F² calc",
                               name + " (" + units + ")"};
         for (std::size_t row = 0; row < refln.size(); ++row) {
             next.table.rows.push_back(
-                {refln.structure_id[row], display_text(refln.d_spacing[row]),
-                 display_text(refln.sin_theta_over_lambda[row]), std::to_string(refln.index_h[row]),
-                 std::to_string(refln.index_k[row]), std::to_string(refln.index_l[row]), display_text(refln.f_calc[row]),
-                 display_text(refln.f_squared_calc[row]), display_text(refln.position[row])});
+                {refln.structure_id[row], column_text(refln.d_spacing[row], 4),
+                 column_text(refln.sin_theta_over_lambda[row], 4), std::to_string(refln.index_h[row]),
+                 std::to_string(refln.index_k[row]), std::to_string(refln.index_l[row]),
+                 column_text(refln.f_calc[row], 3), column_text(refln.f_squared_calc[row], 3),
+                 column_text(refln.position[row], position_decimals)});
         }
         out.categories.push_back(std::move(next));
     }
