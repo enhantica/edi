@@ -4227,6 +4227,7 @@ struct ProjectMetadata {
     std::string name = "untitled_project";
     std::string title = "Untitled Project";
     std::string description;
+    std::string authors;        // the project's authors, separated by "; "
     std::string path;           // kept in step with Project.path by load / save_as
     std::string created;        // construction time (UTC)
     std::string last_modified;  // construction time; update_last_modified() refreshes
@@ -4608,6 +4609,10 @@ class Project : public detail::ProjectAnchor {
     ItemVec<Structure> structures;      // Shared items, deep-copied with the project
     ItemVec<BraggPdExperiment> experiments;
     std::string fitting_mode;
+    // `project.edi` `_su_format.rule`: how every value with a standard uncertainty is written,
+    // `iucr_19` (IUCr recommendation 12, the default) or `iucr_99` (always two digits); crysta
+    // ADR-0089.
+    std::string su_rule = "iucr_19";
     // The directory this project was loaded from / last saved to:
     // `save()` writes here and fails closed when empty; load and save_as set it.
     std::string path;
@@ -5111,6 +5116,14 @@ struct DataRangeCategory {
 static_assert(detail::one_entry_per_column(DataRangeCategory::columns, DataRangeCategory::items));
 
 // The project.
+struct SuFormatCategory {
+    using Owner = Project;
+    static constexpr const char* name = "_su_format";
+    static constexpr auto columns = std::tuple{&Project::su_rule};
+    static constexpr std::array items{"rule"};
+};
+static_assert(detail::one_entry_per_column(SuFormatCategory::columns, SuFormatCategory::items));
+
 struct FittingModeCategory {
     using Owner = Project;
     static constexpr const char* name = "_fitting_mode";
@@ -5168,8 +5181,8 @@ static_assert(detail::one_entry_per_column(SequentialFitCategory::columns, Seque
 struct MetadataCategory {
     using Owner = ProjectMetadata;
     static constexpr const char* name = "_metadata";
-    static constexpr auto columns = std::tuple{&ProjectMetadata::name, &ProjectMetadata::title, &ProjectMetadata::description, &ProjectMetadata::path, &ProjectMetadata::created, &ProjectMetadata::last_modified, &ProjectMetadata::timestamp};
-    static constexpr std::array items{"name", "title", "description", "path", "created", "last_modified", "timestamp"};
+    static constexpr auto columns = std::tuple{&ProjectMetadata::name, &ProjectMetadata::title, &ProjectMetadata::description, &ProjectMetadata::authors, &ProjectMetadata::path, &ProjectMetadata::created, &ProjectMetadata::last_modified, &ProjectMetadata::timestamp};
+    static constexpr std::array items{"name", "title", "description", "authors", "path", "created", "last_modified", "timestamp"};
 };
 static_assert(detail::one_entry_per_column(MetadataCategory::columns, MetadataCategory::items));
 

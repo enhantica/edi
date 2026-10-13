@@ -466,6 +466,7 @@ template class OneRow<JointFitCategory>;
 template class OneRow<DataSourceCategory>;
 template class OneRow<DataRangeCategory>;
 template class OneRow<FittingModeCategory>;
+template class OneRow<SuFormatCategory>;
 template class OneRow<MinimizerCategory>;
 template class OneRow<SequentialFitCategory>;
 template class OneRow<FitResultCategory>;

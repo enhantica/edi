@@ -22,6 +22,7 @@
 #include "edi/presentation.hpp"
 #include "edi/scan.hpp"
 #include "edi/selectors.hpp"
+#include "edi/su_text.hpp"
 #include "parameter_item.hpp"
 #include "parameter_registry.hpp"
 #include "report_view_model.hpp"
@@ -313,6 +314,18 @@ QString ProjectViewModel::name() const { return QString::fromStdString(project_-
 QString ProjectViewModel::title() const { return QString::fromStdString(project_->metadata.title); }
 QString ProjectViewModel::description() const { return QString::fromStdString(project_->metadata.description); }
 QString ProjectViewModel::lastModified() const { return QString::fromStdString(project_->metadata.last_modified); }
+QString ProjectViewModel::authors() const { return QString::fromStdString(project_->metadata.authors); }
+QString ProjectViewModel::suRule() const { return QString::fromStdString(project_->su_rule); }
+
+QVariantMap ProjectViewModel::suText(double value, double su) const {
+    if (!std::isfinite(value) || !std::isfinite(su) || su == 0.0) {
+        return {};
+    }
+    const edi::SuText text = edi::su_text(value, su, project_->su_rule);
+    return {{QStringLiteral("value"), QString::fromStdString(text.value)},
+            {QStringLiteral("su"), QString::fromStdString(text.su)},
+            {QStringLiteral("bracket"), QString::fromStdString(text.bracket)}};
+}
 
 void ProjectViewModel::setName(const QString& name) {
     edi::Project& project = *project_;
@@ -327,6 +340,19 @@ void ProjectViewModel::setTitle(const QString& title) {
 void ProjectViewModel::setDescription(const QString& description) {
     edi::Project& project = *project_;
     apply_setting(edi::Edit::assign(project.metadata.description, description.toStdString()));
+}
+
+void ProjectViewModel::setAuthors(const QString& authors) {
+    edi::Project& project = *project_;
+    apply_setting(edi::Edit::assign(project.metadata.authors, authors.toStdString()));
+}
+
+void ProjectViewModel::setSuRule(const QString& rule) {
+    if (rule != QStringLiteral("iucr_19") && rule != QStringLiteral("iucr_99")) {
+        return;
+    }
+    edi::Project& project = *project_;
+    apply_setting(edi::Edit::assign(project.su_rule, rule.toStdString()));
 }
 
 void ProjectViewModel::setCurrentStructureIndex(int index) {
@@ -383,6 +409,8 @@ void ProjectViewModel::publishMetadata() {
     update(published_name_, name(), &ProjectViewModel::nameChanged);
     update(published_title_, title(), &ProjectViewModel::titleChanged);
     update(published_description_, description(), &ProjectViewModel::descriptionChanged);
+    update(published_authors_, authors(), &ProjectViewModel::authorsChanged);
+    update(published_su_rule_, suRule(), &ProjectViewModel::suRuleChanged);
     update(published_last_modified_, lastModified(), &ProjectViewModel::lastModifiedChanged);
 }
 

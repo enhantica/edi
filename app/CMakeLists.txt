@@ -166,6 +166,7 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Project/GetStartedGroup.qml
         qml/Pages/Project/ProjectPage.qml
         qml/Pages/Project/RecentProjectsGroup.qml
+        qml/Pages/Project/StandardUncertaintiesGroup.qml
         qml/Pages/Report/ExportSummaryGroup.qml
         qml/Pages/Report/ReportPage.qml
         qml/Pages/Structure/AppearanceGroup.qml

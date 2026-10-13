@@ -3231,6 +3231,17 @@ NB_MODULE(_edi, m) {
             },
             "The project description, sanitized to single spaces.")
         .def_prop_rw(
+            "authors", [](const edi::ProjectMetadata& self) { return self.authors; },
+            [](edi::ProjectMetadata& self, const std::string& value) {
+                // The project record keeps one line per field and no double quote inside one.
+                if (value.find_first_of("\n\r\"") != std::string::npos) {
+                    throw std::invalid_argument(
+                        "the authors cannot hold a line break or a double quote");
+                }
+                self.authors = value;
+            },
+            "The project's authors as one text, separated by '; ' (project.edi _metadata.authors).")
+        .def_prop_rw(
             "path",
             [](const edi::ProjectMetadata& self) -> nb::object {
                 if (self.path.empty()) {
@@ -3378,6 +3389,17 @@ NB_MODULE(_edi, m) {
                 }
                 self.fitting_mode = value;
             })
+        .def_prop_rw(
+            "su_rule", [](const edi::Project& self) { return self.su_rule; },
+            [](edi::Project& self, const std::string& value) {
+                if (value != "iucr_19" && value != "iucr_99") {
+                    throw std::invalid_argument("_su_format.rule is '" + value +
+                                                "', expected iucr_19 or iucr_99");
+                }
+                self.su_rule = value;
+            },
+            "How values with a standard uncertainty are written: 'iucr_19' (IUCr recommendation "
+            "12, the default) or 'iucr_99' (always two digits) (project.edi _su_format.rule).")
         // The declared `_minimizer.max_iterations` (0 = absent -> 50). Underscored:
         // engine-internal model state set by the loader (crysta parity — the internal budget
         // seam for tooling that pins its own bound).

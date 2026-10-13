@@ -7,6 +7,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <algorithm>
+#include <utility>
 #include <filesystem>
 
 #include "app_info.hpp"
@@ -274,10 +275,15 @@ bool Session::openExampleNamed(const QString& exampleId) {
     return open(target, exampleId);
 }
 
-bool Session::createProject(const QString& name, const QString& description, const QString& location) {
+bool Session::createProject(const QString& name, const QString& description, const QString& location,
+                            const QString& suRule) {
     ProjectViewModel* created = nullptr;
     try {
-        created = new ProjectViewModel(edi::empty_project(name.toStdString(), description.toStdString()), this);
+        edi::Project project = edi::empty_project(name.toStdString(), description.toStdString());
+        if (suRule == QStringLiteral("iucr_19") || suRule == QStringLiteral("iucr_99")) {
+            project.su_rule = suRule.toStdString();
+        }
+        created = new ProjectViewModel(std::move(project), this);
     } catch (const std::exception& refusal) {
         setLastError(QString::fromUtf8(refusal.what()));
         return false;
