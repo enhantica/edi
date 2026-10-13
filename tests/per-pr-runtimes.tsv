@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-13T08:09:26Z
+# measured_utc = 2026-10-13T09:04:38Z
 #
-# Recorded from: measured test run (22 node(s) measured once, 10374 banked, 0 stale row(s) dropped)
-# Collected tests: 11212; with a reported duration: 6114
-# Module-scoped fixture costs recorded: 42
+# Recorded from: measured test run (26 node(s) measured once, 10396 banked, 0 stale row(s) dropped)
+# Collected tests: 11238; with a reported duration: 6140
+# Module-scoped fixture costs recorded: 43
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 11212
+# inventory_python = 11238
 # inventory_cpp = 312
-# inventory_measured = 10396
+# inventory_measured = 10422
 # inventory_unmeasured = 1128
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
@@ -5272,6 +5272,32 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_fitting_mode_weights.py:
 0.000	tests/integration/py/test_legacy_project_load.py::test_old_engine_start_state_is_refused_with_its_name[chebyshev]
 0.000	tests/integration/py/test_legacy_project_load.py::test_old_engine_start_state_is_refused_with_its_name[line-segment]
 0.000	tests/integration/py/test_legacy_project_load.py::test_old_engine_start_state_is_refused_with_its_name[polynomial]
+0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[alias-reorder-record]
+0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[alias-reorder-rows]
+0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[alias-replace-record]
+0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[alias-replace-rows]
+0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[clear-undo-record]
+0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[clear-undo-rows]
+0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[clear-write-undo-record]
+0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[clear-write-undo-rows]
+0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[coefficient-write-record]
+0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[coefficient-write-rows]
+0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[file-switch-record]
+0.030	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[file-switch-rows]
+0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[name-rename-record]
+0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[name-rename-rows]
+0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[owner-replace-record]
+0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[owner-replace-rows]
+0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[repeat-record]
+0.024	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[repeat-rows]
+0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[replace-undo-record]
+0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[replace-undo-rows]
+0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[same-value-write-record]
+0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[same-value-write-rows]
+0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[second-coefficient-write-record]
+0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[second-coefficient-write-rows]
+0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[tail-alias-replace-record]
+0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[tail-alias-replace-rows]
 0.000	tests/integration/py/test_locked_gui_fixture.py::test_locked_consumer_stages_only_a_missing_app_gui_prerequisite[cold-app]
 0.000	tests/integration/py/test_locked_gui_fixture.py::test_locked_consumer_stages_only_a_missing_app_gui_prerequisite[core]
 0.000	tests/integration/py/test_locked_gui_fixture.py::test_locked_consumer_stages_only_a_missing_app_gui_prerequisite[explicit-app]
@@ -11572,6 +11598,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 # module-cost: 0.258	tests/integration/app/test_phase_scan_state.py
 # module-cost: 1.914	tests/integration/py/test_e04_t12_name_allowance.py
 # module-cost: 0.192	tests/integration/py/test_e09_t75_sdk_consumer.py
+# module-cost: 23.486	tests/integration/py/test_loaded_correlation_cache.py
 # module-cost: 1.780	tests/integration/py/test_scan_app_contract.py
 # module-cost: 0.361	tests/integration/py/test_scan_extended_contract.py
 # module-cost: 0.257	tests/integration/py/test_scan_notes_diagnostics.py
