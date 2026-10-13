@@ -345,6 +345,68 @@ async function drawStructure(figure, structure) {
     });
     return mesh;
   };
+  // The sites several atoms share, as the app draws them: each site's sphere cut into wedges about the home view's
+  // direction, each wedge its part's fraction of the turn in the part's colour, the first starting at the plane through
+  // that direction and the home view's up. A part of fraction 0 has no wedge.
+  const wedgeMaterial = material.clone();
+  wedgeMaterial.vertexColors = true;
+  const sharedSites = sites => {
+    const segments = 32;
+    const rings = 16;
+    const axis = new THREE.Vector3().fromArray(scene.frame.view_direction).normalize();
+    const up = new THREE.Vector3().fromArray(scene.frame.view_up).normalize();
+    const right = new THREE.Vector3().crossVectors(up, axis).normalize();
+    const positions = [];
+    const normals = [];
+    const colours = [];
+    const indices = [];
+    const normal = new THREE.Vector3();
+    const colour = new THREE.Color();
+    for (const site of sites) {
+      const atom = scene.atoms[site];
+      const centre = new THREE.Vector3().fromArray(atom.centre);
+      let start = 0;
+      for (const part of atom.parts) {
+        const fraction = Number.isFinite(part.fraction) ? Math.min(Math.max(part.fraction, 0), 1) : 0;
+        if (fraction <= 0) {
+          continue;
+        }
+        const span = fraction * 2 * Math.PI;
+        const steps = Math.max(1, Math.ceil(fraction * segments));
+        colour.set(part.color);
+        const base = positions.length / 3;
+        for (let i = 0; i <= rings; ++i) {
+          const theta = (Math.PI * i) / rings; // from the axis, towards the viewer at 0
+          for (let j = 0; j <= steps; ++j) {
+            const phi = start + (span * j) / steps; // from up, towards right
+            normal
+              .copy(axis)
+              .multiplyScalar(Math.cos(theta))
+              .addScaledVector(up, Math.sin(theta) * Math.cos(phi))
+              .addScaledVector(right, Math.sin(theta) * Math.sin(phi));
+            normals.push(normal.x, normal.y, normal.z);
+            positions.push(...normal.clone().multiplyScalar(atom.radius).add(centre).toArray());
+            colours.push(colour.r, colour.g, colour.b);
+          }
+        }
+        const row = steps + 1;
+        for (let i = 0; i < rings; ++i) {
+          for (let j = 0; j < steps; ++j) {
+            const a = base + i * row + j;
+            const b = a + row;
+            indices.push(a, a + 1, b, a + 1, b + 1, b);
+          }
+        }
+        start += span;
+      }
+    }
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colours, 3));
+    geometry.setIndex(indices);
+    return new THREE.Mesh(geometry, wedgeMaterial);
+  };
   // The cylinders are the half-bonds, two per bond in the scene's order, then the cell edges.
   const halves = 2 * scene.bonds.length;
   let meshes = new THREE.Group();
@@ -352,13 +414,7 @@ async function drawStructure(figure, structure) {
     world.remove(meshes);
     meshes = new THREE.Group();
     meshes.add(instanced(sphere, drawing.spheres.filter(item => atomShown(item.atom))));
-    // A site several atoms share, as a sphere in its main part's colour.
-    meshes.add(instanced(sphere, drawing.shared.filter(atomShown).map(index => {
-      const atom = scene.atoms[index];
-      const radius = atom.radius;
-      const color = atom.parts[atom.major].color;
-      return { position: atom.centre, scale: [radius, radius, radius], rotation: [1, 0, 0, 0], color };
-    })));
+    meshes.add(sharedSites(drawing.shared.filter(atomShown)));
     const bonds = shown.bonds ? drawing.cylinders.slice(0, halves).filter((_, i) => {
       const bond = scene.bonds[Math.floor(i / 2)];
       return atomShown(bond.atom_1) && atomShown(bond.atom_2);
