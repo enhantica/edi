@@ -96,16 +96,16 @@ class CorrelationViewModel : public QObject {
     // (row-major, 1 on the diagonal).
     std::vector<std::string> names_;
     std::vector<double> matrix_;
-    // Each parameter's strongest correlation with another, in the fit's order, and from the strongest down.
+    // Each parameter's strongest correlation with another, in the fit's order.
     std::vector<double> strength_;
-    std::vector<double> ranked_;
     QString reason_;
     QStringList labels_;
     QList<qreal> values_;
     QString empty_text_;
     int available_ = 0;
     double level_ = 0.0;
-    int max_parameters_ = kDefaultMaxParameters;
+    int max_parameters_ = kDefaultMaxParameters;  // how many the level keeps
+    int wanted_ = kDefaultMaxParameters;          // the count asked for, kept for the next matrix
     struct Numbers {
         std::vector<const edi::FitParameterCorrelation*> rows;
         std::vector<std::uint64_t> written;  // each row's coefficient write identity when parsed

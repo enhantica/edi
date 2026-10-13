@@ -7,6 +7,7 @@
 #include <cmath>
 #include <functional>
 #include <limits>
+#include <optional>
 
 namespace edi {
 
@@ -33,7 +34,31 @@ double correlation_level_for_count(const std::vector<double>& strengths, std::si
     }
     std::vector<double> ranked = strengths;
     std::sort(ranked.begin(), ranked.end(), std::greater<>());
-    return ranked[std::min(std::max<std::size_t>(count, 1), ranked.size()) - 1];
+    count = std::min(std::max<std::size_t>(count, 1), ranked.size());
+    // The lowest strength that keeps at most `count`, every parameter at that strength included.
+    std::optional<double> lowest;
+    for (std::size_t i = 0; i < ranked.size(); ++i) {
+        if (i + 1 < ranked.size() && ranked[i + 1] == ranked[i]) {
+            continue;  // the last of a tie tells how many its strength keeps
+        }
+        if (i + 1 > count) {
+            break;
+        }
+        lowest = ranked[i];
+    }
+    // A tie that keeps more than `count` at every strength is kept whole, at the count-th strength.
+    return lowest.value_or(ranked[count - 1]);
+}
+
+std::optional<double> correlation_default_level(const std::vector<double>& strengths) {
+    if (strengths.size() <= kDefaultCorrelatedParameters) {
+        return 0.0;
+    }
+    const double level = correlation_level_for_count(strengths, kDefaultCorrelatedParameters);
+    if (correlation_count_for_level(strengths, level) > kDefaultCorrelatedParameters) {
+        return std::nullopt;
+    }
+    return level;
 }
 
 std::size_t correlation_count_for_level(const std::vector<double>& strengths, double level) {
