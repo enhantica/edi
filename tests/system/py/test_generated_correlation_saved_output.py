@@ -5,13 +5,20 @@ import shutil
 import edi
 import pytest
 
-from tests.fixtures.shared_correlations.freeze_saved import HERE, loop_bytes
+from tests.conftest import corpus_case_dir
+from tests.fixtures.shared_correlations.freeze_saved import HERE, hashes, loop_bytes
 
 
 @pytest.mark.parametrize('case', ['single', 'scan'])
 def test_real_fit_emits_every_pinned_single_or_template_correlation_row(tmp_path, case):
     source = tmp_path / 'source'
     shutil.copytree(HERE / (case + '-input'), source)
+    corpus_id = {'single': 'lbco-hrpt-s2', 'scan': 'cosio-d20-scan-3f'}[case]
+    corpus_project = corpus_case_dir(corpus_id) / 'project'
+    for directory in ['structures', 'experiments']:
+        assert hashes(source / directory) == hashes(corpus_project / directory), (
+            'The declared disposable fit site must retain its pinned corpus physical inputs'
+        )
     assert b'_fit_parameter_correlation.' not in (source / 'analysis/analysis.edi').read_bytes(), (
         'The real generated-output witness must start without saved expected correlation rows'
     )

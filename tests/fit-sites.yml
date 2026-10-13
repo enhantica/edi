@@ -126,3 +126,9 @@ sites:
   - file: tests/integration/py/test_shared_correlation_saved_bytes.py
     case: cosio-d20-scan-3f
     why: Frozen pre-change single and scan inputs isolate serialization compatibility.
+
+  # Exact saved-output site: frozen disposable copies of lbco-hrpt-s2 and
+  # cosio-d20-scan-3f. The gate verifies both physical inputs against the pinned corpus.
+  - file: tests/system/py/test_generated_correlation_saved_output.py
+    case: cosio-d20-scan-3f
+    why: Disposable pinned corpus copies must fit to prove complete generated saved rows.

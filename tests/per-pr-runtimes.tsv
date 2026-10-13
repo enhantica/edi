@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-13T12:14:33Z
+# measured_utc = 2026-10-13T12:15:18Z
 #
-# Recorded from: measured test run (1 node(s) measured once, 10422 banked, 0 stale row(s) dropped)
+# Recorded from: measured test run (2 node(s) measured once, 10420 banked, 0 stale row(s) dropped)
 # Collected tests: 11239; with a reported duration: 6139
 # Module-scoped fixture costs recorded: 43
 #
@@ -8916,8 +8916,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_executi
 0.030	tests/system/py/test_fit_participants_native.py::test_native_explicit_pattern_atom_check_matches_its_selected_banks[reverse-selected-empty-explicit-single]
 0.050	tests/system/py/test_fit_participants_native.py::test_native_explicit_pattern_atom_check_matches_its_selected_banks[reverse-unused-empty-first-explicit-joint]
 0.040	tests/system/py/test_fit_participants_native.py::test_native_explicit_pattern_atom_check_matches_its_selected_banks[reverse-unused-empty-first-explicit-single]
-0.380	tests/system/py/test_generated_correlation_saved_output.py::test_real_fit_emits_every_pinned_single_or_template_correlation_row[scan]
-0.290	tests/system/py/test_generated_correlation_saved_output.py::test_real_fit_emits_every_pinned_single_or_template_correlation_row[single]
+0.710	tests/system/py/test_generated_correlation_saved_output.py::test_real_fit_emits_every_pinned_single_or_template_correlation_row[scan]
+0.430	tests/system/py/test_generated_correlation_saved_output.py::test_real_fit_emits_every_pinned_single_or_template_correlation_row[single]
 UNMEASURED:failed-in-this-run	tests/system/py/test_linear_row_admission.py::test_admission_comparison_budget_is_proportional_to_rows[copy]
 UNMEASURED:failed-in-this-run	tests/system/py/test_linear_row_admission.py::test_admission_comparison_budget_is_proportional_to_rows[default-ids]
 UNMEASURED:failed-in-this-run	tests/system/py/test_linear_row_admission.py::test_admission_comparison_budget_is_proportional_to_rows[keyed]
