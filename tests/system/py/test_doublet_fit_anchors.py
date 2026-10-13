@@ -96,3 +96,85 @@ def invoke_relation(project, mode, entry):
         else project.fit_joint
     )
     return call(should_cancel=lambda: True)
+
+
+@pytest.mark.parametrize('key', anchoring.RELATION_GRAPHS)
+@pytest.mark.parametrize('relation', anchoring.ZERO_BOUNDARY_RELATIONS)
+@pytest.mark.parametrize('stage', ['cold', 'calculated', 'reopened'])
+@pytest.mark.parametrize('entry', ['direct', 'analysis'])
+def test_zero_ratio_admission_retains_observable_relation_derivative(
+    tmp_path, key, relation, stage, entry
+):
+    root = tmp_path / 'input'
+    mode = anchoring.write_zero_boundary(root, key, relation, reverse=entry == 'analysis')
+    project = engine.Project.load(root)
+    project = prepare_stage(project, stage, tmp_path)
+    for bank in anchoring.GRAPHS[key][2]:
+        assert project.experiments[bank].instrument.setup_wavelength_2_to_1_ratio.value == 0, (
+            'The boundary witness must retain an exactly zero ratio at every lifecycle stage'
+        )
+    ratio_slope, compensator_slope = anchoring.zero_boundary_slopes(relation)
+    # At ratio zero, dy/dt = dy1/dt + ratio_prime*y2; ratio*y2_prime vanishes.
+    first_bragg_slope = (1.54 - 1.54) / (2.2 * math.sqrt(1 - (1.54 / 4.4) ** 2))
+    assert first_bragg_slope == 0, 'The first-line cell/wavelength dilation must remain null'
+    if relation.startswith('compensated'):
+        master_slope = 2.2 if relation.endswith('cell') else 1.54
+        assert math.isclose(0.25 * master_slope - compensator_slope, 0, abs_tol=1e-14), (
+            'An independent second wavelength can compensate the zero-boundary ratio slope'
+        )
+    admitted = ratio_slope != 0
+    if admitted:
+        assert ratio_slope > 0, (
+            'A positive-domain step must create a nonzero first-order unit second-component signal'
+        )
+    assert_boundary(project, mode, entry, admitted)
+
+
+@pytest.mark.parametrize('key', anchoring.RELATION_GRAPHS)
+@pytest.mark.parametrize('source', anchoring.IDLE_SOURCES)
+@pytest.mark.parametrize('stage', ['cold', 'calculated', 'reopened'])
+@pytest.mark.parametrize('entry', ['direct', 'analysis'])
+def test_idle_phase_geometry_does_not_create_solver_dilation_direction(
+    tmp_path, key, source, stage, entry
+):
+    root = tmp_path / 'input'
+    mode = anchoring.write_idle_source(root, key, source, reverse=entry == 'analysis')
+    project = engine.Project.load(root)
+    project = prepare_stage(project, stage, tmp_path)
+    assert project.structures['gamma'].cell.length_a.free == (source != 'unlinked-fixed'), (
+        'Retaining idle geometry must preserve its independently authored free flag'
+    )
+    source_slope = 3.3 if anchoring.idle_source_is_solved(source) else 0.0
+    if source == 'active-fixed-bank':
+        source_slope = 0.0
+    wavelength = 0.5 * 3.3
+    response = (0.5 * source_slope - wavelength) / (2.2 * math.sqrt(1 - (wavelength / 4.4) ** 2))
+    admitted = anchoring.idle_source_admits(source)
+    assert (response != 0) == admitted, (
+        'Only enabled phase-plan cell columns may co-dilate the relation-defined second line'
+    )
+    assert_boundary(project, mode, entry, admitted)
+
+
+def prepare_stage(project, stage, tmp_path):
+    if stage == 'calculated':
+        project.analysis.calculate()
+    elif stage == 'reopened':
+        saved = tmp_path / 'saved'
+        project.save_as(saved)
+        project = engine.Project.load(saved)
+    return project
+
+
+def assert_boundary(project, mode, entry, admitted):
+    if admitted:
+        result = invoke_relation(project, mode, entry)
+        assert result is not None, (
+            'An observable participating anchor must admit the requested fit'
+        )
+        assert result.status == engine.FitStatus.CANCELLED, (
+            'The admitted consumer fit must reach its public cancellation status'
+        )
+    else:
+        with pytest.raises(ValueError, match=r'dilation|null direction'):
+            invoke_relation(project, mode, entry)

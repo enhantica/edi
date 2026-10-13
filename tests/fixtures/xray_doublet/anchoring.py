@@ -138,3 +138,174 @@ def relation_geometry(relation):
     )
     ratio = 0.0 if relation in {'disabled-ratio', 'zero-ratio'} else 0.375
     return (line1, line2), slopes, ratio
+
+
+ZERO_BOUNDARY_RELATIONS = (
+    'wavelength-driven',
+    'cell-driven',
+    'chained-wavelength',
+    'constant-zero',
+    'stationary-wavelength',
+    'stationary-cell',
+    'disabled-wavelength',
+    'free-ratio',
+    'compensated-wavelength',
+    'compensated-cell',
+)
+IDLE_SOURCES = (
+    'unlinked',
+    'disabled',
+    'active-connected',
+    'active-foreign',
+    'active-fixed-bank',
+    'unlinked-fixed',
+)
+
+
+def append_relations(root, aliases, constraints):
+    path = root / 'analysis/analysis.edi'
+    path.write_text(
+        path.read_text()
+        + '\nloop_\n_alias.id\n_alias.parameter_unique_name\n'
+        + '\n'.join(aliases)
+        + '\n\nloop_\n_constraint.id\n_constraint.expression\n_constraint.enabled\n'
+        + '\n'.join(constraints)
+        + '\n'
+    )
+
+
+def write_zero_boundary(root, key, relation, *, reverse=False):
+    mode, _ = write(root, key, 'inactive', reverse=reverse)
+    aliases = ['active_a alpha.cell.length_a']
+    constraints = []
+    for bank in GRAPHS[key][2]:
+        aliases.extend([
+            f'{bank}_line1 {bank}.instrument.setup_wavelength',
+            f'{bank}_line2 {bank}.instrument.setup_wavelength_2',
+            f'{bank}_ratio {bank}.instrument.setup_wavelength_2_to_1_ratio',
+        ])
+        source = f'{bank}_line1 - 1.54'
+        if relation in {'cell-driven', 'stationary-cell', 'compensated-cell'}:
+            source = 'active_a - 2.2'
+        if relation == 'chained-wavelength':
+            constraints.append(f'{bank}_line_relation "{bank}_line2 = 1.6732 + ({source})" true')
+            source = f'{bank}_line2 - 1.6732'
+        expression = f'0.25 * ({source})'
+        if relation == 'constant-zero':
+            expression = '0'
+        elif relation.startswith('stationary'):
+            expression = f'0.25 * ({source}) * ({source})'
+        elif relation.startswith('compensated'):
+            expression += f' - ({bank}_line2 - 1.6732)'
+        if relation != 'free-ratio':
+            constraints.append(
+                f'{bank}_ratio_relation "{bank}_ratio = {expression}" '
+                + ('false' if relation == 'disabled-wavelength' else 'true')
+            )
+        set_boundary_independent(root, bank, relation)
+    append_relations(root, aliases, constraints)
+    return mode
+
+
+def set_boundary_independent(root, bank, relation):
+    for path in (root / 'experiments').glob('*.edi'):
+        text = path.read_text()
+        if text.splitlines()[0] != f'data_{bank}':
+            continue
+        if relation.startswith('compensated'):
+            text = text.replace(
+                '_instrument.setup_wavelength_2 1.6732',
+                '_instrument.setup_wavelength_2 1.6732()',
+            )
+        elif relation == 'free-ratio':
+            text = text.replace(
+                '_instrument.setup_wavelength_2_to_1_ratio 0',
+                '_instrument.setup_wavelength_2_to_1_ratio 0()',
+            )
+        path.write_text(text)
+
+
+def zero_boundary_slopes(relation):
+    master_slope = 2.2 if relation.endswith('cell') or relation == 'cell-driven' else 1.54
+    ratio_slope = 0.25 * master_slope
+    if relation not in {'wavelength-driven', 'cell-driven', 'chained-wavelength'}:
+        ratio_slope = 0.0
+    compensator_slope = 0.25 * master_slope if relation.startswith('compensated') else 0.0
+    return ratio_slope, compensator_slope
+
+
+def write_idle_source(root, key, source, *, reverse=False):
+    mode, _ = write(root, key, 'fixed-second', reverse=reverse)
+    gamma = (root / 'structures/beta.edi').read_text().replace('data_beta', 'data_gamma')
+    if source == 'unlinked-fixed':
+        gamma = gamma.replace('_cell.length_a 3.3()', '_cell.length_a 3.3')
+    (root / 'structures/gamma.edi').write_text(gamma)
+    anchor_bank = GRAPHS[key][2][0]
+    if source in {'disabled', 'active-connected'}:
+        for path in (root / 'experiments').glob('*.edi'):
+            text = path.read_text()
+            if text.splitlines()[0] == f'data_{anchor_bank}':
+                text = text.replace(
+                    '\n\nloop_\n_data.two_theta',
+                    '\ngamma 1.125() '
+                    + ('true' if source == 'active-connected' else 'false')
+                    + '\n\nloop_\n_data.two_theta',
+                )
+                path.write_text(text)
+    elif source in {'active-foreign', 'active-fixed-bank'}:
+        first = next((root / 'experiments').glob('*.edi'))
+        text = first.read_text()
+        prefix = text[: text.index('loop_')]
+        prefix = prefix.replace(prefix.splitlines()[0], 'data_r')
+        prefix = (
+            '\n'.join(
+                line
+                for line in prefix.splitlines()
+                if not line.startswith((
+                    '_instrument.setup_wavelength_2 ',
+                    '_instrument.setup_wavelength_2_to_1_ratio ',
+                ))
+            )
+            + '\n'
+        )
+        if source == 'active-fixed-bank':
+            prefix = prefix.replace(
+                '_instrument.setup_wavelength 1.54()', '_instrument.setup_wavelength 1.54'
+            )
+        suffix = (
+            '\n'.join(
+                line
+                for line in text[text.index('loop_\n_data.two_theta') :].splitlines()
+                if not line.startswith((
+                    '_instrument.setup_wavelength_2 ',
+                    '_instrument.setup_wavelength_2_to_1_ratio ',
+                ))
+            )
+            + '\n'
+        )
+        (root / 'experiments/02-r.edi').write_text(
+            prefix + 'loop_\n_linked_structure.structure_id\n_linked_structure.scale\n'
+            '_linked_structure.enabled\ngamma 1.125() true\n\n' + suffix
+        )
+        mode = 'joint'
+        path = root / 'analysis/analysis.edi'
+        path.write_text(
+            path.read_text().replace('_fitting_mode.type single', '_fitting_mode.type joint')
+        )
+    append_relations(
+        root,
+        [
+            'source_a gamma.cell.length_a',
+            f'anchor_line2 {anchor_bank}.instrument.setup_wavelength_2',
+        ],
+        ['source_relation "anchor_line2 = 0.5 * source_a" true'],
+    )
+    return mode
+
+
+def idle_source_is_solved(source):
+    return source in {'active-connected', 'active-foreign', 'active-fixed-bank'}
+
+
+def idle_source_admits(source):
+    return not idle_source_is_solved(source) or source == 'active-fixed-bank'
