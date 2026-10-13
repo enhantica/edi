@@ -340,9 +340,16 @@ ScanTemplate scan_template_of(const Project& scan) {
 
 // The structure view as the app's opens: the default scene options, the home view, the report's viewport.
 void add_scene(ReportStructure& out, const Structure& structure) {
-    out.scene = present_structure(capture_scene(structure), SceneOptions{});
+    const SceneSource source = capture_scene(structure);
+    out.scene = present_structure(source, SceneOptions{});
     out.view = default_view(out.scene);
     out.drawing = scene_drawing(out.scene, kReportViewport);
+    for (int axis = 0; axis != 3; ++axis) {
+        out.along.push_back(view_along(out.scene, axis));
+    }
+    SceneOptions labelled;
+    labelled.labels = true;
+    out.labels = present_structure(source, labelled).labels;
 }
 
 // The pattern chart over the full range, undecimated and linear. The Charts options act on the source, so the panes

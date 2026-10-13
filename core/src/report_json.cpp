@@ -627,11 +627,21 @@ std::string report_to_json(const ReportModel& model) {
     }
     Array structures;
     for (const ReportStructure& structure : model.structures) {
+        Array along, labels;
+        for (const SceneView& view : structure.along) {
+            along.push_back(view_json(view));
+        }
+        for (const SceneLabel& label : structure.labels) {
+            labels.emplace_back(
+                Object{{"atom", whole(label.atom)}, {"anchor", vec_json(label.anchor)}, {"text", label.text}});
+        }
         structures.emplace_back(Object{{"id", structure.id},
                                        {"categories", categories(structure.categories)},
                                        {"scene", scene_json(structure.scene)},
                                        {"view", view_json(structure.view)},
-                                       {"drawing", drawing_json(structure.drawing)}});
+                                       {"drawing", drawing_json(structure.drawing)},
+                                       {"along", std::move(along)},
+                                       {"labels", std::move(labels)}});
     }
     Array experiments;
     for (const ReportExperiment& experiment : model.experiments) {
@@ -698,8 +708,17 @@ ReportModel report_from_json(const std::string& text) {
         model.correlations = std::move(matrix);
     }
     for (const Value& item : document.at("structures").array("structures")) {
-        model.structures.push_back({item.at("id").string("id"), categories_of(item.at("categories"), "categories"),
-                                    scene_of(item.at("scene")), view_of(item.at("view")), drawing_of(item.at("drawing"))});
+        ReportStructure structure{item.at("id").string("id"), categories_of(item.at("categories"), "categories"),
+                                  scene_of(item.at("scene")),  view_of(item.at("view")),
+                                  drawing_of(item.at("drawing")), {}, {}};
+        for (const Value& view : item.at("along").array("along")) {
+            structure.along.push_back(view_of(view));
+        }
+        for (const Value& label : item.at("labels").array("labels")) {
+            structure.labels.push_back(
+                {index_of(label.at("atom"), "atom"), vec_of(label.at("anchor")), label.at("text").string("text")});
+        }
+        model.structures.push_back(std::move(structure));
     }
     for (const Value& item : document.at("experiments").array("experiments")) {
         model.experiments.push_back(

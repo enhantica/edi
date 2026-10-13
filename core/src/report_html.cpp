@@ -165,6 +165,33 @@ table.correlations td {
   pointer-events: none;
   font: 700 18px/1 var(--head-font);
 }
+.atom-label {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  font: 12px/1 var(--head-font);
+  text-shadow: 0 0 2px #fff, 0 0 2px #fff;
+}
+/* The structure view's toolbar, as the app's Structure page has it. */
+.viewer-toolbar { position: absolute; top: 10px; right: 10px; display: flex; gap: 4px; }
+.viewer-toolbar .gap { width: 8px; }
+.viewer-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid #dcdcdc;
+  background: #f4f4f4;
+  color: #333;
+  cursor: pointer;
+  font: 700 16px/1 var(--head-font);
+}
+.viewer-button:hover { background: #e9e9e9; }
+.viewer-button[aria-pressed="true"] { color: #00a3e3; }
+.viewer-button svg { width: 15px; height: 15px; fill: currentColor; }
+.viewer-snapshot { position: absolute; right: 10px; bottom: 10px; }
 @media (max-width: 700px) {
   html, body { background: var(--paper); }
   body { padding: 0; }
