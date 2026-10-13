@@ -3,6 +3,7 @@ import QtQuick
 import QtTest
 import edi.app
 import EdiAcceptance 1.0
+import ReportAcceptance 1.0
 import "RenderedTable.js" as Render
 
 Rectangle {
@@ -17,11 +18,24 @@ Rectangle {
         name: "ReportLiveFigures"
         when: windowShown
         property var page
+        function init() {
+            verify(SettingsProof.beginConsoleCapture(), "The console observer forwards the real QtTest handler while capturing warnings and critical messages");
+        }
         function cleanup() {
             if (page)
                 page.destroy();
             page = null;
             Session.closeProject();
+            wait(0);
+            compare(SettingsProof.consoleMessages().length, 0, "Report figure construction, layout and teardown remain free of plot-width loops and missing-window critical messages");
+        }
+        function test_console_observer_qualifies_both_message_severities() {
+            SettingsProof.qualifyConsoleCapture();
+            const messages = SettingsProof.consoleMessages();
+            compare(messages.length, 2, "The console observer reaches independently emitted warning and critical escape controls");
+            verify(messages.some(row => row.severity === "warning" && row.text.includes("plotWidth")), "The console observer captures the actual binding-loop warning channel");
+            verify(messages.some(row => row.severity === "critical" && row.category === "qt.graphs2d" && row.text.includes("window doesn't exist")), "The console observer captures the actual Qt Graphs critical channel");
+            verify(SettingsProof.beginConsoleCapture(), "Synthetic console controls are cleared before observing real report teardown");
         }
         function open(path) {
             verify(Session.openProject(Probe.repoUrl(path)), "The live-report witness opens an independently committed project: " + Session.lastError);

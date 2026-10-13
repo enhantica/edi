@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include <memory>
+#include <atomic>
 #include <vector>
 #include <QTemporaryDir>
 #include <QDirIterator>
@@ -10,6 +11,10 @@
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QtTest/qtestkeyboard.h>
+#include <QtTest/qtestcase.h>
+#include <QLoggingCategory>
+#include <QMutex>
+#include <QMutexLocker>
 #include "measured_layer.hpp"
 #include "project_view_model.hpp"
 #include "fit_view_model.hpp"
@@ -28,10 +33,46 @@
 #include <QtQml/qqml.h>
 #include "engine_setup.hpp"
 
+namespace {
+QMutex report_console_mutex;
+QVariantList report_console_messages;
+std::atomic<QtMessageHandler> report_previous_handler{nullptr};
+void report_console_handler(QtMsgType type, const QMessageLogContext& context, const QString& message) {
+    if ((type == QtWarningMsg || type == QtCriticalMsg) &&
+        ((message.contains("Binding loop detected") && message.contains("plotWidth")) ||
+         message.contains("window doesn't exist"))) {
+        QMutexLocker guard(&report_console_mutex);
+        report_console_messages.append(QVariantMap{
+            {"severity", type == QtCriticalMsg ? "critical" : "warning"},
+            {"category", QString::fromUtf8(context.category ? context.category : "")},
+            {"text", message}});
+    }
+    if (const auto previous = report_previous_handler.load()) previous(type, context, message);
+}
+}
+
 class ReportSettingsProof : public QObject {
     Q_OBJECT
 public:
     using QObject::QObject;
+    Q_INVOKABLE bool beginConsoleCapture() const {
+        const auto previous = qInstallMessageHandler(report_console_handler);
+        if (previous != report_console_handler) report_previous_handler.store(previous);
+        QMutexLocker guard(&report_console_mutex);
+        report_console_messages.clear();
+        return report_previous_handler.load() != nullptr;
+    }
+    Q_INVOKABLE QVariantList consoleMessages() const {
+        QMutexLocker guard(&report_console_mutex);
+        return report_console_messages;
+    }
+    Q_INVOKABLE void qualifyConsoleCapture() const {
+        QTest::ignoreMessage(QtWarningMsg, "Binding loop detected for property \"plotWidth\"");
+        qWarning("Binding loop detected for property \"plotWidth\"");
+        QTest::ignoreMessage(QtCriticalMsg, "window doesn't exist.");
+        const QLoggingCategory graphs("qt.graphs2d");
+        qCCritical(graphs, "window doesn't exist.");
+    }
     Q_INVOKABLE bool type(QObject* object, const QString& text) const {
         auto* field = qobject_cast<QQuickItem*>(object);
         if (!field || !field->window() || field->window()->activeFocusItem() != field) return false;

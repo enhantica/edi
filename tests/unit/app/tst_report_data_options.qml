@@ -34,7 +34,7 @@ Rectangle {
         function test_optional_groups_and_data_defaults(data) {
             const url = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/loop_parameter_ids/line-segment"));
             if (data.empty)
-                verify(SettingsProof.write(url, "project.edi", SettingsProof.text(url, "project.edi") + "\n_report.excluded ''\n"), "The explicit-empty witness declares include-all independently of the absent default");
+                verify(SettingsProof.write(url, "project.edi", SettingsProof.text(url, "project.edi") + "\n_report.excluded \"\"\n"), "The canonical double-quoted empty witness declares include-all independently of the absent default");
             verify(Session.openProject(url), "The Data option witness opens a real project through Session");
             tryCompare(Session.project, "calculating", false, 10000, "The Data option witness finishes loading its experiment");
             const page = createTemporaryObject(pageFactory, parent, {
@@ -64,6 +64,8 @@ Rectangle {
             verify(match !== null, "A user-edited Data choice is persisted as an explicit report exclusion item");
             const token = match[1].trim().replace(/^(['"])(.*)\1$/, "$2");
             compare(token, data.empty ? "data" : "", "The writer preserves the final data key or an explicit empty include-all value");
+            if (!data.empty)
+                compare(match[1].trim(), "\"\"", "An explicit empty exclusion is written in the accepted double-quoted record form");
             Session.project.undo();
             tryCompare(box, "checked", data.empty, 1000, "Undo restores the original Data checkbox state");
             Session.closeProject();
