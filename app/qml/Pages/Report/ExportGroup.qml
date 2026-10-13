@@ -10,13 +10,12 @@ import EasyApplication.Gui.Elements as EaElements
 import edi.app
 
 // Saving the report, the sidebar's top group (the owner, 2026-10-13): the interactive HTML with, beside it, whether it
-// embeds plotly.js and three.js (online by default); then the static PDF and the CIF report (waits for the CIF report
-// task). Each is disabled until its writer exists.
+// embeds plotly.js and three.js (online by default); below it the static PDF and the CIF report (waits for the CIF
+// report task). Each is disabled until its writer exists.
 EaElements.GroupBox {
     id: group
 
     property ReportViewModel report: null
-    readonly property real half: (EaStyle.Sizes.sideBarContentWidth - AppSizes.inputSpacing) / 2
 
     objectName: "group.reportExport"
     title: qsTr("Export")
@@ -24,31 +23,34 @@ EaElements.GroupBox {
     collapsed: false
     last: SideBarGroups.isLast(group)
 
-    Grid {
-        columns: 2
-        spacing: AppSizes.inputSpacing
-        verticalItemAlignment: Grid.AlignVCenter
+    // One column of buttons at the sidebar buttons' own size and spacing, as the Project page's Get started has them
+    // (the owner, 2026-10-13), the Embed checkbox beside the first.
+    Column {
+        spacing: EaStyle.Sizes.fontPixelSize
 
-        EaElements.SideBarButton {
-            objectName: "report.saveHtml"
-            width: group.half
-            enabled: false
-            fontIcon: "file-code"
-            text: qsTr("Save interactive HTML")
-            ToolTip.text: qsTr("Not available yet")
-        }
-        EaElements.CheckBox {
-            objectName: "report.embedLibraries"
-            width: group.half
-            enabled: group.report !== null
-            text: qsTr("Embed the chart libraries")
-            checked: group.report ? group.report.embedLibraries : false
-            onToggled: group.report.embedLibraries = checked
-            ToolTip.text: qsTr("Include plotly.js and three.js in the file, so the report opens offline")
+        Row {
+            spacing: EaStyle.Sizes.fontPixelSize
+
+            EaElements.SideBarButton {
+                id: saveHtml
+                objectName: "report.saveHtml"
+                enabled: false
+                fontIcon: "file-code"
+                text: qsTr("Save interactive HTML")
+                ToolTip.text: qsTr("Not available yet")
+            }
+            EaElements.CheckBox {
+                objectName: "report.embedLibraries"
+                anchors.verticalCenter: saveHtml.verticalCenter
+                enabled: group.report !== null
+                text: qsTr("Embed the chart libraries")
+                checked: group.report ? group.report.embedLibraries : false
+                onToggled: group.report.embedLibraries = checked
+                ToolTip.text: qsTr("Include plotly.js and three.js in the file, so the report opens offline")
+            }
         }
         EaElements.SideBarButton {
             objectName: "report.savePdf"
-            width: group.half
             enabled: false
             fontIcon: "file-pdf"
             text: qsTr("Save static PDF")
@@ -56,7 +58,6 @@ EaElements.GroupBox {
         }
         EaElements.SideBarButton {
             objectName: "report.saveCif"
-            width: group.half
             enabled: false
             fontIcon: "file-alt"
             text: qsTr("Save static CIF")
