@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-13T11:50:49Z
+# measured_utc = 2026-10-13T13:09:10Z
 #
-# Recorded from: measured test run (4 node(s) measured once, 10269 banked, 0 stale row(s) dropped)
-# Collected tests: 11109; with a reported duration: 6093
+# Recorded from: measured test run (92 node(s) measured once, 10195 banked, 0 stale row(s) dropped)
+# Collected tests: 11123; with a reported duration: 6128
 # Module-scoped fixture costs recorded: 40
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 11109
+# inventory_python = 11123
 # inventory_cpp = 309
-# inventory_measured = 10273
-# inventory_unmeasured = 1145
+# inventory_measured = 10285
+# inventory_unmeasured = 1147
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -66,6 +66,7 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::tes
 0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_si-sepd_start-2]
 0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_si-sepd_start-5]
 0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-xray-cwl_latp_scan-4f]
+UNMEASURED:not-completed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-xray-cwl_pbso4-lab_round-robin]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_existing_projects_open_and_populate_pages
 0.000	tests/integration/app/test_e04_t1_projects.py::test_verification_directory_executes_in_the_production_host[pd-neut-cwl_lab6-echidna_fcj-asymmetry]
 0.000	tests/integration/app/test_e04_t1_projects.py::test_verification_directory_executes_in_the_production_host[pd-neut-cwl_y2o3_beta-adp]
@@ -92,6 +93,7 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_si-sepd_start-2]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_si-sepd_start-5]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-xray-cwl_latp_scan-4f]
+UNMEASURED:not-completed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-xray-cwl_pbso4-lab_round-robin]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_projects_open_and_populate_pages
 0.430	tests/integration/app/test_e04_t1_runtime_escapes.py::test_missing_property_fails_the_production_qmllint_import_context
 0.070	tests/integration/app/test_e04_t1_runtime_escapes.py::test_owner_amendment_receipts_cover_every_original_gui_boundary[test_library_settable_scalars_and_derived_readonly]
@@ -4327,7 +4329,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_datablock_rename.py::tes
 0.000	tests/integration/py/test_e04_t1_app_contract.py::test_adr_records_the_decision_and_comparison_plan
 0.010	tests/integration/py/test_e04_t1_app_contract.py::test_app_reachability_observer_rejects_missing_group_or_checker[empty-checker]
 0.010	tests/integration/py/test_e04_t1_app_contract.py::test_app_reachability_observer_rejects_missing_group_or_checker[missing-edge]
-0.140	tests/integration/py/test_e04_t1_app_contract.py::test_existing_projects_oracle_covers_the_registry_without_filters
+0.130	tests/integration/py/test_e04_t1_app_contract.py::test_existing_projects_oracle_covers_the_registry_without_filters
 0.040	tests/integration/py/test_e04_t1_app_contract.py::test_frozen_oracle_inputs_are_the_committed_fixture_bytes
 0.000	tests/integration/py/test_e04_t1_app_contract.py::test_gui_pin_rejects_identity_digest_and_declaration_escapes[archive]
 0.000	tests/integration/py/test_e04_t1_app_contract.py::test_gui_pin_rejects_identity_digest_and_declaration_escapes[comment]
@@ -4372,70 +4374,78 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e04_t1_app_contract.py::
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/experiments/d20.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/structures/cosio.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project/analysis/analysis.edi]
-0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project/experiments/d20.edi]
+0.010	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project/experiments/d20.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project/structures/cosio.edi]
-0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project/experiments/d20.edi]
+0.010	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project/experiments/d20.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project/structures/cosio.edi]
-0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project/experiments/d20.edi]
+0.010	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project/experiments/d20.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project/structures/cosio.edi]
-0.050	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project/experiments/echidna.edi]
+0.010	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project/experiments/echidna.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project/structures/lab6.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project/analysis/analysis.edi]
-0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project/experiments/echidna.edi]
+0.420	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project/experiments/echidna.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project/structures/lab6.edi]
-0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project/experiments/hrpt.edi]
+0.010	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project/experiments/hrpt.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project/structures/lbco.edi]
-0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project/experiments/hrpt.edi]
+0.010	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project/experiments/hrpt.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project/structures/lbco.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project/analysis/analysis.edi]
-0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project/experiments/d1a.edi]
+0.230	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project/experiments/d1a.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project/structures/pbso4.edi]
-0.060	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project/experiments/polaris.edi]
+0.010	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project/experiments/polaris.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project/structures/cecoal.edi]
-0.040	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project/experiments/pearl.edi]
+0.010	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project/experiments/pearl.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project/structures/ceo2.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_diamond-dream_basic/project/analysis/analysis.edi]
-0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_diamond-dream_basic/project/experiments/dream.edi]
+0.170	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_diamond-dream_basic/project/experiments/dream.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_diamond-dream_basic/project/structures/diamond.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project/analysis/analysis.edi]
-0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project/experiments/beer.edi]
+0.420	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project/experiments/beer.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project/structures/fe.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/analysis/analysis.edi]
-0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/experiments/wish_4_7.edi]
-0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/experiments/wish_5_6.edi]
+0.010	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/experiments/wish_4_7.edi]
+0.020	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/experiments/wish_5_6.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/structures/ncaf.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/analysis/analysis.edi]
-0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_2_9.edi]
-0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_4_7.edi]
-0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_5_6.edi]
+0.010	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_2_9.edi]
+0.010	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_4_7.edi]
+0.010	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_5_6.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/structures/ncaf.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/analysis/analysis.edi]
-0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_1_10.edi]
-0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_2_9.edi]
-0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_3_8.edi]
-0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_4_7.edi]
-0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_5_6.edi]
+0.010	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_1_10.edi]
+0.010	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_2_9.edi]
+0.010	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_3_8.edi]
+0.010	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_4_7.edi]
+0.010	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_5_6.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/structures/ncaf.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/analysis/analysis.edi]
-0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_1_10.edi]
-0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_2_9.edi]
-0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_3_8.edi]
-0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_4_7.edi]
-0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_5_6.edi]
+0.010	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_1_10.edi]
+0.010	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_2_9.edi]
+0.010	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_3_8.edi]
+0.010	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_4_7.edi]
+0.010	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_5_6.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/structures/ncaf.edi]
-0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_si-sepd_start-2/project/experiments/sepd.edi]
+0.010	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_si-sepd_start-2/project/experiments/sepd.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_si-sepd_start-2/project/structures/si.edi]
-0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_si-sepd_start-5/project/experiments/sepd.edi]
+0.010	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_si-sepd_start-5/project/experiments/sepd.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-neut-tof_si-sepd_start-5/project/structures/si.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-xray-cwl_lif_single/project/analysis/analysis.edi]
-0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-xray-cwl_lif_single/project/experiments/cu_ka.edi]
+0.010	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-xray-cwl_lif_single/project/experiments/cu_ka.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-xray-cwl_lif_single/project/structures/lif.edi]
-0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[tests/fixtures/e04_t1/editable-project/experiments/hrpt.edi]
+0.010	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/experiments/pbsox.edi]
+0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/structures/pbso4.edi]
+0.010	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[tests/fixtures/e04_t1/editable-project/experiments/hrpt.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[tests/fixtures/e04_t1/editable-project/structures/lbco.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[tests/fixtures/e04_t1/warning-project/experiments/experiment.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[tests/fixtures/e04_t1/warning-project/structures/structure.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[tests/fixtures/e04_t1/xray-project/experiments/experiment.edi]
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_expectations_cover_fixture_bytes[tests/fixtures/e04_t1/xray-project/structures/structure.edi]
+0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_row_count_preserves_unquoted_quoted_comment_and_escape_boundaries[commented]
+0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_row_count_preserves_unquoted_quoted_comment_and_escape_boundaries[escaped]
+0.010	tests/integration/py/test_e04_t2_build_contract.py::test_loop_row_count_preserves_unquoted_quoted_comment_and_escape_boundaries[plain]
+0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_row_count_preserves_unquoted_quoted_comment_and_escape_boundaries[quoted]
+0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_row_count_rejects_incomplete_or_extra_columns[a 1 extra]
+0.000	tests/integration/py/test_e04_t2_build_contract.py::test_loop_row_count_rejects_incomplete_or_extra_columns[a]
 0.040	tests/integration/py/test_e04_t2_build_contract.py::test_native_cli_placeholder_is_dispatch_only_and_honest
 0.000	tests/integration/py/test_e04_t2_build_contract.py::test_owner_note_captures_are_registered_in_the_shared_image_set
 0.080	tests/integration/py/test_e04_t2_build_contract.py::test_qt_check_reads_committed_expectations_without_python_or_build
@@ -4504,7 +4514,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e04_t5_calculator_save.p
 0.000	tests/integration/py/test_e05_t1_bank_identity.py::test_named_bank_oracle_refuses_field_identity_escapes[swapped-metrics]
 0.000	tests/integration/py/test_e05_t1_bank_identity.py::test_named_bank_oracle_refuses_field_identity_escapes[wrong-identity]
 0.000	tests/integration/py/test_e05_t1_bank_identity.py::test_named_bank_oracle_refuses_field_identity_escapes[wrong-points]
-0.530	tests/integration/py/test_e05_t1_fit_result.py::test_cli_fixture_inventory
+0.500	tests/integration/py/test_e05_t1_fit_result.py::test_cli_fixture_inventory
 0.000	tests/integration/py/test_e05_t1_fit_result.py::test_legacy_project_without_fit_result_keeps_model_state[pd-neut-cwl_cosio-d20_start-1]
 0.000	tests/integration/py/test_e05_t1_fit_result.py::test_legacy_project_without_fit_result_keeps_model_state[pd-neut-cwl_cosio-d20_start-4]
 0.000	tests/integration/py/test_e05_t1_fit_result.py::test_legacy_project_without_fit_result_keeps_model_state[pd-neut-cwl_lab6-11b-echidna_tch-fcj]
@@ -4525,7 +4535,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e04_t5_calculator_save.p
 0.010	tests/integration/py/test_e05_t1_fit_result.py::test_legacy_project_without_fit_result_keeps_model_state[pd-neut-tof_ncaf-wish-5bank_start-fullprof]
 0.000	tests/integration/py/test_e05_t1_fit_result.py::test_legacy_project_without_fit_result_keeps_model_state[pd-neut-tof_si-sepd_start-2]
 0.000	tests/integration/py/test_e05_t1_fit_result.py::test_legacy_project_without_fit_result_keeps_model_state[pd-neut-tof_si-sepd_start-5]
-0.000	tests/integration/py/test_e05_t1_fit_result.py::test_legacy_project_without_fit_result_keeps_model_state[pd-xray-cwl_lif_single]
+0.010	tests/integration/py/test_e05_t1_fit_result.py::test_legacy_project_without_fit_result_keeps_model_state[pd-xray-cwl_lif_single]
+0.010	tests/integration/py/test_e05_t1_fit_result.py::test_legacy_project_without_fit_result_keeps_model_state[pd-xray-cwl_pbso4-lab_round-robin]
 0.010	tests/integration/py/test_e05_t1_fit_result.py::test_persisted_cli_projection_survives_load_and_save[pd-neut-cwl_cosio-d20_start-1]
 0.010	tests/integration/py/test_e05_t1_fit_result.py::test_persisted_cli_projection_survives_load_and_save[pd-neut-cwl_cosio-d20_start-4]
 0.010	tests/integration/py/test_e05_t1_fit_result.py::test_persisted_cli_projection_survives_load_and_save[pd-neut-cwl_lab6-11b-echidna_tch-fcj]
@@ -4547,10 +4558,13 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e04_t5_calculator_save.p
 0.010	tests/integration/py/test_e05_t1_fit_result.py::test_persisted_cli_projection_survives_load_and_save[pd-neut-tof_si-sepd_start-2]
 0.010	tests/integration/py/test_e05_t1_fit_result.py::test_persisted_cli_projection_survives_load_and_save[pd-neut-tof_si-sepd_start-5]
 0.010	tests/integration/py/test_e05_t1_fit_result.py::test_persisted_cli_projection_survives_load_and_save[pd-xray-cwl_lif_single]
-0.500	tests/integration/py/test_e05_t1_fit_result.py::test_registered_fit_inventory_refuses_missing_or_duplicate_witnesses[cli-duplicate]
-0.540	tests/integration/py/test_e05_t1_fit_result.py::test_registered_fit_inventory_refuses_missing_or_duplicate_witnesses[cli-omission]
+0.010	tests/integration/py/test_e05_t1_fit_result.py::test_persisted_cli_projection_survives_load_and_save[pd-xray-cwl_pbso4-lab_round-robin]
+0.510	tests/integration/py/test_e05_t1_fit_result.py::test_registered_fit_inventory_refuses_missing_or_duplicate_witnesses[cli-duplicate]
+0.520	tests/integration/py/test_e05_t1_fit_result.py::test_registered_fit_inventory_refuses_missing_or_duplicate_witnesses[cli-omission]
 0.480	tests/integration/py/test_e05_t1_fit_result.py::test_registered_fit_inventory_refuses_missing_or_duplicate_witnesses[count-omission]
-0.470	tests/integration/py/test_e05_t1_fit_result.py::test_registered_fit_inventory_refuses_missing_or_duplicate_witnesses[native-omission]
+0.480	tests/integration/py/test_e05_t1_fit_result.py::test_registered_fit_inventory_refuses_missing_or_duplicate_witnesses[native-omission]
+0.480	tests/integration/py/test_e05_t1_fit_result.py::test_registered_fit_inventory_refuses_missing_or_duplicate_witnesses[record-change]
+0.460	tests/integration/py/test_e05_t1_fit_result.py::test_registered_fit_inventory_refuses_missing_or_duplicate_witnesses[record-omission]
 0.060	tests/integration/py/test_e05_t1_fit_result.py::test_result_descent_provenance_survives_current_setting_change[cancelled]
 0.060	tests/integration/py/test_e05_t1_fit_result.py::test_result_descent_provenance_survives_current_setting_change[done]
 0.060	tests/integration/py/test_e05_t1_fit_result.py::test_result_descent_provenance_survives_current_setting_change[maxiter]

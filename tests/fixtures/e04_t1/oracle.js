@@ -1,4 +1,4 @@
-// Independent source oracle; newest-name changes use adapt_input_oracles.py.
+// Independent category oracle. Regenerate only with generate.py.
 var frozen = {
   "source": "diffraction-lib 0ffba46f declarations +  §2b D-a..D-j + CLI files",
   "profiles": {
@@ -7661,11 +7661,11 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "pd_xray_cwl_lif_single",
+        "_metadata.title": "LiF [Fm-3m] · Calculated reference",
+        "_metadata.description": "Cu Kα doublet FullProf reference · Doublet ratio and absorption refinement",
         "_metadata.created": "02 Oct 2026 14:28:55",
         "_metadata.last_modified": "02 Oct 2026 14:28:56",
         "_metadata.timestamp": "?",
-        "_metadata.title": "LiF [Fm-3m] · Calculated reference",
-        "_metadata.description": "Cu Kα₁ FullProf reference · Monochromator correction refinement",
         "_metadata.purpose": "verification",
         "_metadata.dimensionality": "1D",
         "_metadata.instrument": "?",
@@ -7701,9 +7701,9 @@ var frozen = {
       "datasets": [],
       "loaderWarning": "",
       "files": {
-        "project.edi": "7d2e40fbcd7071804f6301006785f843e3f0396a6fe3d81ebf7aa20f3e558858",
+        "project.edi": "889a03d5f93dd1b479515d59b53eec51e417433901ce122fb805c8d056db7bab",
         "structures/lif.edi": "b68e864053c85ea3bb0e7a14b37131c7319cd2cd047b89d4dc4d8b30ff4033fe",
-        "experiments/cu_ka.edi": "5be14a0525ce8a09124e9f1beaa52fc12f3b49d9bf8201f19b6ac2c68948de5b",
+        "experiments/cu_ka.edi": "5b084a1364f4fbe8afc90fa44dc785eb0b674ad2954d8e66dce50e7a0194f9ad",
         "analysis/analysis.edi": "76917b3672c7268e7fee9fb901c0ed8ffdd5ffcf29c6fc1083d470ad5b501e72"
       }
     },
@@ -7844,6 +7844,62 @@ var frozen = {
         "structures/y2o3.edi": "dcacdbe2ddd6490b390aa7b4b36eeaf7e09d43b62f6b31b25a52121ffa295382",
         "experiments/y2o3.edi": "caa9b49442b995beef7b830e8709e1b62dfd015bc140fdf7a96c4719b62ed72d",
         "analysis/analysis.edi": "64a5254af5f390f3c3a49e84affc9bd4a6a074d2fe50ea5f97e5864c444c7f71"
+      }
+    },
+    {
+      "id": "pd-xray-cwl_pbso4-lab_round-robin",
+      "path": "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project",
+      "metadata": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_metadata.name": "pd_xray_cwl_pbso4_lab_round_robin",
+        "_metadata.title": "PbSO₄ [Pnma] · Laboratory X-ray",
+        "_metadata.description": "Rietveld round-robin data · Kα doublet and Bérar-Baldinozzi asymmetry refinement",
+        "_metadata.created": "13 Oct 2026 09:12:02",
+        "_metadata.last_modified": "13 Oct 2026 09:12:03",
+        "_metadata.timestamp": "?",
+        "_metadata.purpose": "refinement",
+        "_metadata.dimensionality": "1D",
+        "_metadata.instrument": "?",
+        "_metadata.facility": "?"
+      },
+      "analysis": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_fitting_mode.type": "single"
+      },
+      "structures": [
+        {
+          "name": "pbso4",
+          "atoms": 5,
+          "cellA": 8.4859,
+          "spaceGroup": "P n m a",
+          "cell": [
+            8.4859,
+            5.402259,
+            6.964587,
+            90.0,
+            90.0,
+            90.0
+          ]
+        }
+      ],
+      "experiments": [
+        "pbsox"
+      ],
+      "datasets": [],
+      "loaderWarning": "",
+      "files": {
+        "project.edi": "fa9e6fa39a75c1ab54504fea9930132d76ea1df515175ce9225a486eabe24c6b",
+        "structures/pbso4.edi": "177c342c60fd3a0b087cb542e5aa7c31209fda745816cd21fd512fab0a780401",
+        "experiments/pbsox.edi": "d627c625dad4ae24a482d344cf706c77a94c8cdcbaa531f45ee3acbc988603a9",
+        "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab"
       }
     }
   ],
@@ -13296,7 +13352,7 @@ var frozen = {
     {
       "project": "docs/user/cli/pd-xray-cwl_lif_single/project",
       "experiment": "cu_ka",
-      "sha256": "5be14a0525ce8a09124e9f1beaa52fc12f3b49d9bf8201f19b6ac2c68948de5b",
+      "sha256": "5b084a1364f4fbe8afc90fa44dc785eb0b674ad2954d8e66dce50e7a0194f9ad",
       "peakType": "cwl-tch-pseudo-voigt",
       "mode": "cwl",
       "peakFields": [
@@ -13312,7 +13368,9 @@ var frozen = {
         "setup_wavelength",
         "calib_twotheta_offset",
         "setup_polarization_coefficient",
-        "setup_monochromator_twotheta"
+        "setup_monochromator_twotheta",
+        "setup_wavelength_2",
+        "setup_wavelength_2_to_1_ratio"
       ],
       "range": [
         10.0,
@@ -13375,16 +13433,31 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_instrument.setup_polarization_coefficient": {
+          "value": 0.5,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_monochromator_twotheta": {
+          "value": 26.5650511771,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_wavelength_2": {
+          "value": 1.5444,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_wavelength_2_to_1_ratio": {
           "value": 0.4,
           "free": true,
           "uncertainty": null
         },
-        "_instrument.setup_monochromator_twotheta": {
-          "value": 20.0,
+        "_absorption.type": "cylinder-hewat",
+        "_absorption.mu_r": {
+          "value": 0.7,
           "free": true,
           "uncertainty": null
         },
-        "_absorption.type": "none",
         "_background.type": "line-segment"
       },
       "loops": {}
@@ -13408,7 +13481,9 @@ var frozen = {
         "setup_wavelength",
         "calib_twotheta_offset",
         "setup_polarization_coefficient",
-        "setup_monochromator_twotheta"
+        "setup_monochromator_twotheta",
+        "setup_wavelength_2",
+        "setup_wavelength_2_to_1_ratio"
       ],
       "range": [
         20.25,
@@ -13479,6 +13554,16 @@ var frozen = {
           "value": 0.0023,
           "free": false,
           "uncertainty": 0.0
+        },
+        "_instrument.setup_wavelength_2": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        },
+        "_instrument.setup_wavelength_2_to_1_ratio": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
         }
       },
       "loops": {}
@@ -13500,7 +13585,9 @@ var frozen = {
         "setup_wavelength",
         "calib_twotheta_offset",
         "setup_polarization_coefficient",
-        "setup_monochromator_twotheta"
+        "setup_monochromator_twotheta",
+        "setup_wavelength_2",
+        "setup_wavelength_2_to_1_ratio"
       ],
       "range": [
         20.25,
@@ -13561,6 +13648,16 @@ var frozen = {
           "value": 20.0,
           "free": false,
           "uncertainty": 0.0
+        },
+        "_instrument.setup_wavelength_2": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        },
+        "_instrument.setup_wavelength_2_to_1_ratio": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
         }
       },
       "loops": {}
@@ -13582,7 +13679,9 @@ var frozen = {
         "setup_wavelength",
         "calib_twotheta_offset",
         "setup_polarization_coefficient",
-        "setup_monochromator_twotheta"
+        "setup_monochromator_twotheta",
+        "setup_wavelength_2",
+        "setup_wavelength_2_to_1_ratio"
       ],
       "range": [
         20.25,
@@ -13643,6 +13742,16 @@ var frozen = {
           "value": 20.0,
           "free": false,
           "uncertainty": 0.0
+        },
+        "_instrument.setup_wavelength_2": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        },
+        "_instrument.setup_wavelength_2_to_1_ratio": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
         }
       },
       "loops": {}
@@ -13664,7 +13773,9 @@ var frozen = {
       "peakDefaults": {},
       "instrumentFields": [
         "setup_wavelength",
-        "calib_twotheta_offset"
+        "calib_twotheta_offset",
+        "setup_wavelength_2",
+        "setup_wavelength_2_to_1_ratio"
       ],
       "range": [
         1.0041,
@@ -13727,7 +13838,160 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_absorption.type": "none",
-        "_background.type": "line-segment"
+        "_background.type": "line-segment",
+        "_instrument.setup_wavelength_2": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        },
+        "_instrument.setup_wavelength_2_to_1_ratio": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        }
+      },
+      "loops": {}
+    },
+    {
+      "project": "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project",
+      "experiment": "pbsox",
+      "sha256": "d627c625dad4ae24a482d344cf706c77a94c8cdcbaa531f45ee3acbc988603a9",
+      "peakType": "cwl-pseudo-voigt-berar-baldinozzi",
+      "mode": "cwl",
+      "peakFields": [
+        "broad_gauss_u",
+        "broad_gauss_v",
+        "broad_gauss_w",
+        "mixing_eta_0",
+        "mixing_eta_1",
+        "asym_beba_a0",
+        "asym_beba_b0",
+        "asym_beba_a1",
+        "asym_beba_b1",
+        "asym_beba_limit"
+      ],
+      "unusedFreeFields": [],
+      "peakDefaults": {},
+      "instrumentFields": [
+        "setup_wavelength",
+        "calib_twotheta_offset",
+        "setup_polarization_coefficient",
+        "setup_monochromator_twotheta",
+        "setup_wavelength_2",
+        "setup_wavelength_2_to_1_ratio"
+      ],
+      "range": [
+        10.0,
+        160.0,
+        0.025,
+        6001
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.beam_mode": "constant wavelength",
+        "_experiment_type.radiation_probe": "xray",
+        "_experiment_type.scattering_type": "bragg",
+        "_scattering_source.xray_form_factor": "it1992",
+        "_scattering_source.xray_dispersion": "sasaki1989",
+        "_calculator.type": "crysta",
+        "_peak.broad_gauss_u": {
+          "value": 0.065374,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_v": {
+          "value": -0.102354,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_w": {
+          "value": 0.047897,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.mixing_eta_0": {
+          "value": 0.625,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.mixing_eta_1": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.asym_beba_a0": {
+          "value": 0.41356,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.asym_beba_b0": {
+          "value": -0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.asym_beba_a1": {
+          "value": -1.26777,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.asym_beba_b1": {
+          "value": -0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.asym_beba_limit": {
+          "value": 160.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.cutoff_fwhm": {
+          "value": 48.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.type": "cwl-pseudo-voigt-berar-baldinozzi",
+        "_instrument.setup_wavelength": {
+          "value": 1.54056,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_twotheta_offset": {
+          "value": 0.00363,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_polarization_coefficient": {
+          "value": 0.5,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_monochromator_twotheta": {
+          "value": 26.5650511771,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_wavelength_2": {
+          "value": 1.5444,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_wavelength_2_to_1_ratio": {
+          "value": 0.5,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_absorption.type": "none",
+        "_background.type": "polynomial",
+        "_background.origin": {
+          "value": 50.0,
+          "free": false,
+          "uncertainty": 0.0
+        }
       },
       "loops": {}
     }

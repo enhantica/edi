@@ -231,3 +231,12 @@ hexagonal (the [cctbx asymmetric-unit table](https://cci.lbl.gov/asu_gallery/asu
 and [CCP4 symmetry table](https://www.ccp4.ac.uk/html/symmetry.html)).
 The expected `ex-pd-xray-cwl_latp_scan-4f.png` remains an explicitly labelled
 regression image; the unchanged inventory gate requires its real capture.
+
+C15-T4 updates only the registered LiF project with `generate.py --update-project
+pd-xray-cwl_lif_single` and adds the round-robin project with `--add-project`
+(the display generator accepts the same selection). All other project and display
+witnesses remain unchanged. Every X-ray category gains the two declared doublet
+slots; absent declarations have exact fixed-zero defaults (ADR-0086). Input hashes,
+original profile witnesses and all other saved values remain intact. The scoped
+update refuses a changed experiment/display-witness population. No app output
+supplies a number.

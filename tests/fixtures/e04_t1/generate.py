@@ -244,13 +244,14 @@ def profile_fixtures():
     return projects
 
 
-def generate(warning_project=None, added_project=None):  # noqa: PLR0914 - one capture retains old witnesses
+def generate(warning_project=None, added_project=None, updated_project=None):  # noqa: PLR0914 - one capture retains old witnesses
+    selected_project = added_project or updated_project
     projects = []
     registry = yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text())['projects']
     selected = [
-        entry for entry in registry if added_project is None or entry['id'] == added_project
+        entry for entry in registry if selected_project is None or entry['id'] == selected_project
     ]
-    if added_project is not None and len(selected) != 1:
+    if selected_project is not None and len(selected) != 1:
         raise ValueError('Project addition requires exactly one registered project')
     for entry in selected:
         project = ROOT / 'docs/user/cli' / entry['id'] / 'project'
@@ -300,8 +301,8 @@ def generate(warning_project=None, added_project=None):  # noqa: PLR0914 - one c
         })
     corpus = []
     corpus_projects = (
-        [ROOT / 'docs/user/cli' / added_project / 'project']
-        if added_project is not None
+        [ROOT / 'docs/user/cli' / selected_project / 'project']
+        if selected_project is not None
         else [*sorted((ROOT / 'docs/user/cli').glob('*/project')), *profile_fixtures()]
     )
     for project in corpus_projects:
@@ -460,11 +461,52 @@ def generate(warning_project=None, added_project=None):  # noqa: PLR0914 - one c
         retained['projects'] = [by_id[entry['id']] for entry in registry]
         retained['corpus'].extend(corpus)
         data = retained
+    data = update_project_oracle(output, projects, corpus, updated_project, data)
+    extend_xray_instrument_oracle(data)
     output.write_text(
         '// Independent category oracle. Regenerate only with generate.py.\nvar frozen = '
         + json.dumps(data, indent=2, ensure_ascii=False)
         + ';\n'
     )
+
+
+def update_project_oracle(output, projects, corpus, project_id, data):
+    if project_id is None:
+        return data
+    retained = json.loads(output.read_text().split('var frozen = ', 1)[1].rsplit(';', 1)[0])
+    if sum(row['id'] == project_id for row in retained['projects']) != 1:
+        raise ValueError('Project update requires exactly one existing oracle row')
+    retained['projects'] = [
+        projects[0] if row['id'] == project_id else row for row in retained['projects']
+    ]
+    target = projects[0]['path']
+    fresh = {row['experiment']: row for row in corpus}
+    previous = {row['experiment'] for row in retained['corpus'] if row['project'] == target}
+    if previous != set(fresh):
+        raise ValueError('Project update must preserve the declared experiment population')
+    retained['corpus'] = [
+        fresh[row['experiment']] if row['project'] == target else row for row in retained['corpus']
+    ]
+    return retained
+
+
+def extend_xray_instrument_oracle(data):
+    # ADR-0086 adds two X-ray slots, with exact fixed-zero defaults when absent.
+    # This declaration view changes no original input digest or numerical output.
+    for row in data['corpus']:
+        fields = row['scalars']
+        if fields.get('_experiment_type.radiation_probe') == 'xray':
+            for name in ('setup_wavelength_2', 'setup_wavelength_2_to_1_ratio'):
+                if name not in row['instrumentFields']:
+                    row['instrumentFields'].append(name)
+                fields.setdefault(
+                    '_instrument.' + name,
+                    {
+                        'value': 0.0,
+                        'free': False,
+                        'uncertainty': None,
+                    },
+                )
 
 
 def warning_only_oracle(output, projects, project_id):
@@ -515,7 +557,14 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--loader-warning-only', metavar='PROJECT_ID')
     parser.add_argument('--add-project', metavar='PROJECT_ID')
+    parser.add_argument('--update-project', metavar='PROJECT_ID')
     args = parser.parse_args()
-    if args.loader_warning_only and args.add_project:
+    if (
+        sum(
+            bool(value)
+            for value in (args.loader_warning_only, args.add_project, args.update_project)
+        )
+        > 1
+    ):
         parser.error('warning adaptation and project addition are separate operations')
-    generate(args.loader_warning_only, args.add_project)
+    generate(args.loader_warning_only, args.add_project, args.update_project)

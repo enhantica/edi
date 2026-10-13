@@ -100,3 +100,22 @@ digests and authoring CLI head; the count retains the frozen external source and
 raw selected names alongside the existing model projection. The inventory gate
 requires the registered single/joint set in all three inventories, and refuses
 omissions and duplicate CLI rows. No numerical tolerance changes.
+
+C15-T4 updates the LiF capture with `generate.py --update pd-xray-cwl_lif_single`
+and adds `pd-xray-cwl_pbso4-lab_round-robin` with `--only`. These are explicitly
+labelled CLI wiring regression pins from an actual private-copy CLI fit, not
+physics oracles. The update requires changed complete input hashes and retains
+every other case and full record. The authoring artifact is a DEV-only diagnostic
+linked to Crysta `8b0c8c81`; it does not establish published-SDK qualification.
+
+`generate_model_counts.py` uses the same frozen diffraction-lib `0d9f10e4`
+selection method, with native CW profile labels adapted to that reader's enum and
+existing background IDs preserved. Its declared-model projection includes all
+eight X-ray instrument slots: the prior polarization pair and the doublet pair
+beyond the external reader's four CW slots. The plain Npr5 shape projects X/Y
+identities to eta0/eta1 for counting only, without a coefficient conversion or a
+fit. Selected active-model counts are LiF 31 and PbSO4 56; the raw external counts
+are 27 and 52. The full all-profile `Project.parameters` walk is not this selection.
+These values come from the committed count generator and its frozen external
+source, never a native parameter walk. All twenty unrelated CLI/count rows and
+full records remain intact.
