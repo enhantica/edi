@@ -49,14 +49,43 @@ std::string utc_now() {
     return buffer;
 }
 
-// A parameter's number: with its s.u. in the project's spelling when it is free and has one, else as it is.
+// A number as the app's tables show one without an s.u. (NumberText): six significant digits without trailing
+// zeros, and from a million up or below 1e-4 four in scientific notation (`2.290e7`).
+std::string display_text(double value) {
+    if (!std::isfinite(value)) {
+        return shortest(value);
+    }
+    char buffer[64];
+    if (value != 0.0 && (std::abs(value) >= 1e6 || std::abs(value) < 1e-4)) {
+        const auto end = std::to_chars(buffer, buffer + sizeof(buffer), value, std::chars_format::scientific, 3).ptr;
+        std::string text(buffer, end);
+        const std::size_t e = text.find('e');
+        std::string exponent = text.substr(e + 1);
+        const bool negative = exponent.front() == '-';
+        exponent.erase(0, exponent.find_first_not_of("+-0"));
+        return text.substr(0, e + 1) + (negative ? "-" : "") + (exponent.empty() ? "0" : exponent);
+    }
+    const auto end = std::to_chars(buffer, buffer + sizeof(buffer), value, std::chars_format::general, 6).ptr;
+    std::string text(buffer, end);
+    // Just under a million rounds up to one: written whole, as the app writes it.
+    return text.find('e') == std::string::npos ? text : fixed(value, 0);
+}
+
+// A parameter's number: with its s.u. in the project's spelling when it is free, or set from others (a symmetry
+// tie or a constraint, whose s.u. the fit propagates), and has one. A dependent without one is written as the app's
+// tables write it, never at full double precision (the owner, 2026-10-13); any other is written as it is.
 ReportValue value_of(const Parameter& parameter, const std::string& rule) {
     ReportValue out;
     out.value = parameter.value.get();
+    const bool dependent =
+        parameter.dependence == Dependence::SymmetryTied || parameter.dependence == Dependence::Constrained;
     const std::optional<double>& su = parameter.uncertainty.get();
-    if (parameter.free.get() && su.has_value() && std::isfinite(*su) && *su != 0.0 && std::isfinite(out.value)) {
+    if ((parameter.free.get() || dependent) && su.has_value() && std::isfinite(*su) && *su != 0.0 &&
+        std::isfinite(out.value)) {
         out.su = *su;
         out.text = value_su_text(out.value, *su, rule);
+    } else if (dependent) {
+        out.text = display_text(out.value);
     } else {
         out.text = shortest(out.value);
     }
