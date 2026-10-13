@@ -168,6 +168,11 @@ function paneDomains(layout, plotHeight) {
   return domains;
 }
 
+// A text in a colour, as plotly writes a styled span.
+function inColour(text, colour) {
+  return `<span style="color:${colour}">${text}</span>`;
+}
+
 // A series as a plotly trace: a null point is a gap, the measured bars are error bars to their ends (a missing lower
 // end reaches the bottom of the pane), and a Bragg tick hovers with its Miller indices.
 function trace(pattern, series, index) {
@@ -175,7 +180,8 @@ function trace(pattern, series, index) {
   const marks = (look.mark ?? 'line').split('+');
   const out = {
     type: 'scatter',
-    name: series.label,
+    // The legend names each series in its colour, as the app's chart legend does.
+    name: inColour(series.label, look.light),
     x: series.x,
     y: series.y,
     xaxis: 'x',
@@ -203,7 +209,7 @@ function trace(pattern, series, index) {
   }
   if (series.kind === 'bragg') {
     // Named as the app's legend names a structure's ticks.
-    out.name = `Bragg peaks · ${series.label}`;
+    out.name = inColour(`Bragg peaks · ${series.label}`, look.light);
     out.text = pattern.hover[index];
     out.hovertemplate = '%{text}<extra>%{fullData.name}</extra>';
   }
