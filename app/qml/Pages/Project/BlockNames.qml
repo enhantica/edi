@@ -7,36 +7,44 @@ import EasyApplication.Gui.Style as EaStyle
 
 import edi.app
 
-// A block list's names in a Description row, comma-separated, each after its icon in its colour on one centre
-// line (IconLine; edi ADR-0017 §8–§10). Wraps when the names do not fit one line. A long list (a scan's datasets)
-// shows its first and last few names with "…" between, so the row stays short and reads only those rows.
-Flow {
+// A block list in a Description row, one line per block (the owner, 2026-10-13): its icon in its colour, then the
+// datablock name, " · " and its file, a structure's `.edi` file or an experiment's data file (a scan's listed file),
+// on one centre line (IconLine; edi ADR-0017 §8–§10). More than 11 blocks (a scan's datasets) show the first 5, a "…"
+// line and the last 5, so the row stays short and reads only those rows.
+Column {
     id: names
 
     property var blocks: null
     property string blockKind: ""
-    // At most this many names; more show the first and last half of it.
-    readonly property int limit: 14
     readonly property int count: blocks ? blocks.count : 0
     // Bumped by every change of the rows' values, so a renamed block reads again.
     property int revision: 0
     // The rows shown, -1 for the "…" between the two ends.
     readonly property var shown: {
         const rows = [];
-        if (count <= limit + 1) {
+        if (count <= 11) {
             for (let row = 0; row < count; ++row)
                 rows.push(row);
             return rows;
         }
-        for (let row = 0; row < limit / 2; ++row)
+        for (let row = 0; row < 5; ++row)
             rows.push(row);
         rows.push(-1);
-        for (let row = count - limit / 2; row < count; ++row)
+        for (let row = count - 5; row < count; ++row)
             rows.push(row);
         return rows;
     }
 
-    spacing: EaStyle.Sizes.fontPixelSize * 0.5
+    // A block's line: a structure's label is already "name · name.edi"; an experiment's data file is its `file`.
+    function line(row: int): string {
+        if (names.revision < 0 || !names.blocks || row < 0)
+            return "";
+        if (names.blockKind === "experiment")
+            return names.blocks.text(row, "name") + " · " + names.blocks.text(row, "file");
+        return names.blocks.text(row, "label");
+    }
+
+    spacing: EaStyle.Sizes.fontPixelSize * 0.25
 
     Connections {
         target: names.blocks
@@ -51,11 +59,10 @@ Flow {
             id: entry
 
             required property int modelData
-            readonly property string name: names.revision >= 0 && names.blocks && modelData >= 0 ? names.blocks.text(modelData, "name") : ""
 
             segments: entry.modelData < 0 ? [
                 {
-                    "text": "…,"
+                    "text": "…"
                 }
             ] : [
                 {
@@ -63,8 +70,7 @@ Flow {
                     "color": AppColors.block(names.blockKind, entry.modelData)
                 },
                 {
-                    // The list can go before its rows do (a reset closes the project): no comma then.
-                    "text": entry.modelData < names.count - 1 ? `${entry.name},` : entry.name
+                    "text": names.line(entry.modelData)
                 }
             ]
         }
