@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-13T17:29:21Z
+# measured_utc = 2026-10-13T18:30:54Z
 #
-# Recorded from: measured test run (25 node(s) measured once, 10269 banked, 0 stale row(s) dropped)
-# Collected tests: 11130; with a reported duration: 6138
+# Recorded from: measured test run (56 node(s) measured once, 10294 banked, 0 stale row(s) dropped)
+# Collected tests: 11186; with a reported duration: 6182
 # Module-scoped fixture costs recorded: 40
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 11130
+# inventory_python = 11186
 # inventory_cpp = 309
-# inventory_measured = 10294
-# inventory_unmeasured = 1145
+# inventory_measured = 10338
+# inventory_unmeasured = 1157
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -5907,6 +5907,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.p
 0.070	tests/integration/py/test_weight_fractions.py::test_derived_weight_fraction_and_su_are_written_to_edi[False]
 0.050	tests/integration/py/test_weight_fractions.py::test_derived_weight_fraction_and_su_are_written_to_edi[True]
 0.080	tests/integration/py/test_weight_fractions.py::test_hill_howard_values_uncertainties_and_warm_scale_changes
+0.150	tests/integration/py/test_weight_fractions.py::test_stored_cross_scale_correlation_matches_closed_form_quotient[-0.375]
+0.130	tests/integration/py/test_weight_fractions.py::test_stored_cross_scale_correlation_matches_closed_form_quotient[0.625]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_xray_doublet.py::test_doublet_roundtrip_and_reached_serialization_escape[False]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_xray_doublet.py::test_doublet_roundtrip_and_reached_serialization_escape[True]
 0.050	tests/integration/py/test_xray_doublet.py::test_fixed_fullprof_profile_and_reached_correction_escape[absorption]
@@ -7884,6 +7886,60 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_cwl_cli.py::test_each_cw_prof
 0.000	tests/system/py/test_cwl_token_migration.py::test_retained_capture_exception_requires_exact_bytes_and_location[copied-path]
 0.000	tests/system/py/test_cwl_token_migration.py::test_retained_capture_exception_requires_exact_bytes_and_location[extra-token]
 0.000	tests/system/py/test_cwl_token_migration.py::test_retired_token_scan_detects_each_planted_spelling
+0.070	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[analysis-fixed-second-disabled-bridge]
+UNMEASURED:failed-in-this-run	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[analysis-fixed-second-each-component]
+0.070	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[analysis-fixed-second-foreign-component]
+0.070	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[analysis-fixed-second-inactive-bank]
+UNMEASURED:failed-in-this-run	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[analysis-fixed-second-multiphase]
+UNMEASURED:failed-in-this-run	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[analysis-fixed-second-remote-connected]
+UNMEASURED:failed-in-this-run	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[analysis-fixed-second-shared-first]
+UNMEASURED:failed-in-this-run	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[analysis-fixed-second-shared-second]
+UNMEASURED:failed-in-this-run	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[analysis-fixed-second-single]
+0.160	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[analysis-free-second-disabled-bridge]
+0.120	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[analysis-free-second-each-component]
+0.100	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[analysis-free-second-foreign-component]
+0.090	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[analysis-free-second-inactive-bank]
+0.070	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[analysis-free-second-multiphase]
+0.170	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[analysis-free-second-remote-connected]
+0.060	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[analysis-free-second-shared-first]
+0.170	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[analysis-free-second-shared-second]
+0.060	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[analysis-free-second-single]
+0.080	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[analysis-inactive-disabled-bridge]
+0.070	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[analysis-inactive-each-component]
+0.070	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[analysis-inactive-foreign-component]
+0.110	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[analysis-inactive-inactive-bank]
+0.080	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[analysis-inactive-multiphase]
+0.070	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[analysis-inactive-remote-connected]
+0.060	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[analysis-inactive-shared-first]
+0.070	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[analysis-inactive-shared-second]
+0.070	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[analysis-inactive-single]
+0.040	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[direct-fixed-second-disabled-bridge]
+UNMEASURED:failed-in-this-run	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[direct-fixed-second-each-component]
+0.040	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[direct-fixed-second-foreign-component]
+0.040	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[direct-fixed-second-inactive-bank]
+UNMEASURED:failed-in-this-run	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[direct-fixed-second-multiphase]
+UNMEASURED:failed-in-this-run	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[direct-fixed-second-remote-connected]
+UNMEASURED:failed-in-this-run	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[direct-fixed-second-shared-first]
+UNMEASURED:failed-in-this-run	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[direct-fixed-second-shared-second]
+UNMEASURED:failed-in-this-run	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[direct-fixed-second-single]
+0.040	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[direct-free-second-disabled-bridge]
+0.040	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[direct-free-second-each-component]
+0.040	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[direct-free-second-foreign-component]
+0.040	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[direct-free-second-inactive-bank]
+0.040	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[direct-free-second-multiphase]
+0.040	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[direct-free-second-remote-connected]
+0.110	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[direct-free-second-shared-first]
+0.040	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[direct-free-second-shared-second]
+0.050	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[direct-free-second-single]
+0.040	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[direct-inactive-disabled-bridge]
+0.050	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[direct-inactive-each-component]
+0.040	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[direct-inactive-foreign-component]
+0.040	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[direct-inactive-inactive-bank]
+0.040	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[direct-inactive-multiphase]
+0.040	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[direct-inactive-remote-connected]
+0.060	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[direct-inactive-shared-first]
+0.430	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[direct-inactive-shared-second]
+0.040	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[direct-inactive-single]
 0.000	tests/system/py/test_e02_fullprof_parity.py::test_corpus_fullprof_loader_follows_manifest_hash_not_directory_order
 1.520	tests/system/py/test_e02_fullprof_parity.py::test_e02_fitted_corpus_project_agrees_with_independent_fullprof_profile
 0.110	tests/system/py/test_e02_product_core.py::test_e02_cpp_adapter_conversion_probe
