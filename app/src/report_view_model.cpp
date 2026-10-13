@@ -2,14 +2,18 @@
 #include "report_view_model.hpp"
 
 #include <QByteArray>
+#include <QFile>
 #include <QJsonDocument>
+#include <QSaveFile>
 #include <algorithm>
 #include <exception>
 #include <string>
 #include <utility>
 
 #include "correlation_view_model.hpp"
+#include "edi/report_html.hpp"
 #include "project_view_model.hpp"
+#include "web_files.hpp"
 
 namespace edi_app {
 
@@ -140,6 +144,59 @@ void ReportViewModel::setEmbedLibraries(bool on) {
         embed_libraries_ = on;
         emit embedLibrariesChanged();
     }
+}
+
+QString ReportViewModel::htmlFileName() const {
+    ensureBuilt();
+    const QString name = QString::fromStdString(report_.name);
+    return (name.isEmpty() ? QStringLiteral("report") : name) + QStringLiteral(".html");
+}
+
+void ReportViewModel::saveHtml(const QUrl& file) {
+    ensureBuilt();
+    const bool browser = WebFiles::available();
+    // The vendored libraries: the app's own copies on the desktop, the site's in the browser, so the web app's
+    // download stays small.
+    edi::ReportLibraries libraries;
+    if (embed_libraries_) {
+        std::string* texts[] = {&libraries.plotly, &libraries.three, &libraries.orbit_controls};
+        const auto& files = edi::report_library_files();
+        for (std::size_t i = 0; i < files.size(); ++i) {
+            const QString path = QString::fromLatin1(files[i]);
+            QByteArray text;
+            if (browser) {
+                text = WebFiles::siteFile(path);
+            } else {
+                QFile resource(QStringLiteral(":/edi/") + path);
+                if (resource.open(QIODevice::ReadOnly)) {
+                    text = resource.readAll();
+                }
+            }
+            if (text.isEmpty()) {
+                emit saveFailed(tr("The chart library %1 could not be read").arg(path));
+                return;
+            }
+            *texts[i] = text.toStdString();
+        }
+    }
+    QByteArray html;
+    try {
+        html = QByteArray::fromStdString(edi::report_html(report_, libraries));
+    } catch (const std::exception& error) {
+        emit saveFailed(QString::fromUtf8(error.what()));
+        return;
+    }
+    if (browser) {
+        WebFiles::download(html, htmlFileName());
+        emit saved(htmlFileName());
+        return;
+    }
+    QSaveFile out(file.toLocalFile());
+    if (!out.open(QIODevice::WriteOnly) || out.write(html) != html.size() || !out.commit()) {
+        emit saveFailed(tr("The report could not be written to %1").arg(file.toLocalFile()));
+        return;
+    }
+    emit saved(file.toLocalFile());
 }
 
 }  // namespace edi_app

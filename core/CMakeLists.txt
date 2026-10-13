@@ -19,6 +19,7 @@ add_library(edi_core STATIC
     src/json.cpp
     src/report_model.cpp
     src/report_json.cpp
+    src/report_html.cpp
     src/category_title.cpp
     src/duration_text.cpp
     src/correlation_matrix.cpp
@@ -31,6 +32,7 @@ add_library(edi_core STATIC
     src/presentation.cpp
     src/structure_scene.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/element_styles_data.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/report_js_data.cpp
 )
 add_library(edi::core ALIAS edi_core)
 
@@ -41,6 +43,13 @@ set(EDI_ELEMENT_STYLES_TSV ${CMAKE_SOURCE_DIR}/data/elements/element-styles.tsv)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${EDI_ELEMENT_STYLES_TSV})
 file(READ ${EDI_ELEMENT_STYLES_TSV} EDI_ELEMENT_STYLES)
 configure_file(src/element_styles_data.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/element_styles_data.cpp @ONLY)
+
+# ADR-0035: the HTML report's script (data/report/report.js) is embedded the same way, so every surface writes the same
+# file with no lookup; a change to the script reconfigures.
+set(EDI_REPORT_JS_FILE ${CMAKE_SOURCE_DIR}/data/report/report.js)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${EDI_REPORT_JS_FILE})
+file(READ ${EDI_REPORT_JS_FILE} EDI_REPORT_JS)
+configure_file(src/report_js_data.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/report_js_data.cpp @ONLY)
 
 target_include_directories(edi_core
     PUBLIC

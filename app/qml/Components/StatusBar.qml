@@ -295,6 +295,8 @@ EaElements.StatusBar {
             objectName: "statusBar.fit.progress"
             visible: fitArea.running
             width: EaStyle.Sizes.fontPixelSize * 20
+            // As tall as the status item's hover frame (the owner, 2026-10-13).
+            height: statusItem.frameHeight
             anchors.verticalCenter: parent.verticalCenter
             // A scan fills the bar by its files (S3); a single fit, whose length is unknown, with stripes.
             indeterminate: bar.fit === null || !bar.fit.scanning

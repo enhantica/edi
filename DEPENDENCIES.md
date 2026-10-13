@@ -35,6 +35,22 @@ bundles and shows in its About window; the Python package carries the binding li
 | diffraction-lib |  | BSD-3-Clause | the Python API design edi follows, example data, and the element colour and radius table |
 | pymatgen |  | MIT | VESTA element colours and Shannon ionic radii in the element table, compiled into edi |
 
+## HTML report libraries
+
+A saved HTML report loads these from their pinned web addresses, or carries them when the report embeds its chart
+libraries. The vendored copies are in `data/report/vendor/`, unchanged from the npm releases.
+
+| Component | Version | Licence | In edi |
+| --- | --- | --- | --- |
+| plotly.js | 3.7.0 | MIT | the report's pattern charts: `plotly-cartesian.min.js` of `plotly.js-cartesian-dist-min` |
+| three.js | 0.160.0 | MIT | the report's structure views: `build/three.module.min.js` and `examples/jsm/controls/OrbitControls.js` of `three` |
+
+| Vendored file | From the npm tarball (registry integrity) | sha256 |
+| --- | --- | --- |
+| `plotly-cartesian-3.7.0.min.js` | `plotly.js-cartesian-dist-min-3.7.0.tgz` (`sha512-kfQjcAXXByRlskP8JsrlGYRPOvB+kOehZk/qBNewgr9SOMEnBN5nwEnUGOAQ0EEgYdQX51z3VZ81aBnDgSr9Bw==`) | `7c593b9eda0e74a1d07335cf89cbf7a55ffc114909980c3729af835453bdb02a` |
+| `three-0.160.0.module.min.js` | `three-0.160.0.tgz` (`sha512-DLU8lc0zNIPkM7rH5/e1Ks1Z8tWCGRq6g8mPowdDJpw1CFBJMU7UoJjC6PefXW7z//SSl0b2+GCw14LB+uDhng==`) | `3e690ac7d180b0aadf0891bea39eec643e29e2d3e75c99b18689518665f69ba6` |
+| `three-0.160.0-OrbitControls.js` | `three-0.160.0.tgz`, as above | `5a44a9e86a2a0fb11933eed69bc2cd33c76a496854c1aed6ed776efa87d7b064` |
+
 ## Libraries Qt links (application builds)
 
 | Component | Version | Licence | In edi |

@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Dialogs
 
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
@@ -34,10 +35,22 @@ EaElements.GroupBox {
             EaElements.SideBarButton {
                 id: saveHtml
                 objectName: "report.saveHtml"
-                enabled: false
+                enabled: group.report !== null
                 fontIcon: "file-code"
                 text: qsTr("Save interactive HTML")
-                ToolTip.text: qsTr("Not available yet")
+                ToolTip.text: qsTr("Save the report as one HTML file with interactive charts")
+                // The browser downloads the file; the desktop asks where to write it.
+                onClicked: {
+                    if (WebFiles.available) {
+                        group.report.saveHtml("");
+                        return;
+                    }
+                    // Offered in the project's folder, under the project's name.
+                    if (Session.projectLocation !== "")
+                        htmlDialog.currentFolder = Session.projectDirectoryUrl(Session.projectLocation);
+                    htmlDialog.selectedFile = htmlDialog.currentFolder + "/" + group.report.htmlFileName();
+                    htmlDialog.open();
+                }
             }
             EaElements.CheckBox {
                 objectName: "report.embedLibraries"
@@ -62,6 +75,40 @@ EaElements.GroupBox {
             fontIcon: "file-alt"
             text: qsTr("Save static CIF")
             ToolTip.text: qsTr("The CIF report is not available yet")
+        }
+    }
+
+    FileDialog {
+        id: htmlDialog
+        title: qsTr("Save the report as HTML")
+        fileMode: FileDialog.SaveFile
+        defaultSuffix: "html"
+        nameFilters: [qsTr("HTML files (*.html)")]
+        onAccepted: group.report.saveHtml(selectedFile)
+    }
+
+    // A report that could not be saved says why, as a project that could not.
+    Connections {
+        target: group.report
+        function onSaveFailed(message) {
+            saveError.message = message;
+            saveError.open();
+        }
+    }
+    AppDialog {
+        id: saveError
+        objectName: "report.saveError"
+        property string message: ""
+        title: qsTr("The report was not saved")
+        standardButtons: Dialog.Ok
+        contentWidth: AppSizes.messagesDialogContentWidth
+        contentHeight: saveErrorText.implicitHeight
+
+        EaElements.Label {
+            id: saveErrorText
+            width: saveError.contentWidth
+            wrapMode: Text.Wrap
+            text: saveError.message
         }
     }
 }
