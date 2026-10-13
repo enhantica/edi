@@ -108,6 +108,13 @@
       "lif_single_polarized.pcr": "sha256:ee0ccb367617e839ddfc2ae6c3a9904e1daba03e2d0cb8aab7c95233ae5bde4f",
       "lif_single_polarized.prf": "sha256:1b1186880704ddbdae5b6e39b0444bdb177d9b5c13ad99dd0b7f5463d1b7d849",
       "lif_single_polarized.sum": "sha256:d2b25204f6853cab5bc2b64fc931595f0b8803e8ae0f73383fd91937434a3e67"
+    },
+    "pd-xray-cwl_pbso4-lab_round-robin": {
+      "pbsox.bac": "sha256:d3b8a079bdc75063650ee7365dbd6c47a6c5bda85e15a28125ebba9115ae138d",
+      "pbsox.dat": "sha256:ee2d5d38e9d44f68734605360b6fe1f40b3a5492cd839ad9db8617b9a30ae143",
+      "pbsox.pcr": "sha256:08036035bd6025c64db57d58ceccd95cbb85ad2cc9c69484ee8db2ec9e2f4c84",
+      "pbsox.prf": "sha256:8e46b904360a9d1bd61d39c093cf3a06ef53a37354e37b599289901950ffc0d5",
+      "pbsox.sum": "sha256:b904aa92dfd24f2474ccf3984885f404891285e102735c81b999aaa4ebc6660e"
     }
   },
   "corpus_root": "docs/docs/verification",
