@@ -7,6 +7,9 @@
 #include <string_view>
 #include <vector>
 
+#include "edi/presentation.hpp"
+#include "edi/structure_scene.hpp"
+
 // The report model (edi ADR-0035): one versioned description of a project's report, free of Qt and HTML. Only
 // build_report reads a project; the HTML writer, the Report page and the Python display read the model or its JSON.
 
@@ -85,14 +88,31 @@ struct ReportCorrelations {
     std::string empty_text; ///< why nothing is shown; empty when the matrix is
 };
 
+/// The viewport a report's structure drawing is prepared for (ADR-0035 §1), in logical pixels.
+inline constexpr Viewport kReportViewport{800.0, 600.0, 0.0};
+
 struct ReportStructure {
     std::string id;
     std::vector<ReportCategory> categories;
+    // The structure view (ADR-0022): present_structure's scene with the default options, its default_view, and
+    // scene_drawing for kReportViewport. A renderer with another viewport runs scene_drawing on `scene` again.
+    StructureScene scene;
+    SceneView view;
+    SceneDrawing drawing;
+};
+
+/// An experiment's pattern chart (ADR-0021): present_pattern's output over the full range with no decimation and a
+/// linear y scale, and the core's hover text of each Bragg tick.
+struct ReportPattern {
+    PatternPresentation presentation;
+    /// Per series, per point: hover_text for a Bragg tick series, empty for every other series.
+    std::vector<std::vector<std::string>> hover;
 };
 
 struct ReportExperiment {
     std::string id;
     std::vector<ReportCategory> categories;
+    ReportPattern pattern;
 };
 
 /// A project's report (ADR-0035).
@@ -111,6 +131,9 @@ struct ReportModel {
     // Structures and experiments
     std::vector<ReportStructure> structures;
     std::vector<ReportExperiment> experiments;
+    // The core's style tables, which the charts' and scenes' style keys name (I5).
+    std::vector<SeriesStyle> pattern_styles;
+    std::vector<SceneStyle> structure_styles;
 };
 
 /// The report of `project` as `options` ask: the only function that reads a project (ADR-0035 §2).

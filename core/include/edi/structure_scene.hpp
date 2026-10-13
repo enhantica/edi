@@ -12,14 +12,14 @@
 #include <utility>
 #include <vector>
 
-#include "edi/model.hpp"
-
 // ADR-0022: the structure scene — the one description every structure renderer draws (the app's Qt
 // Quick 3D view now). crysta computes every position, bond and distance; this file groups the rows
 // into atoms, looks up colours and radii, and describes the view, and computes no geometry.
 // `present_structure` is a pure function of its two arguments. Qt-free, and no crysta type.
 
 namespace edi {
+
+struct Structure;
 
 struct Rgb {
     std::uint8_t r = 0, g = 0, b = 0;

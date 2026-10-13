@@ -18,7 +18,9 @@
 #include "edi/edit.hpp"
 #include "edi/io.hpp"
 #include "edi/model.hpp"
+#include "edi/presentation.hpp"
 #include "edi/scan.hpp"
+#include "edi/structure_scene.hpp"
 #include "edi/su_text.hpp"
 #include "edi/symmetry.hpp"
 #include "edi/version.hpp"
@@ -317,6 +319,39 @@ ScanTemplate scan_template_of(const Project& scan) {
     return out;
 }
 
+// The structure view as the app's opens: the default scene options, the home view, the report's viewport.
+void add_scene(ReportStructure& out, const Structure& structure) {
+    out.scene = present_structure(capture_scene(structure), SceneOptions{});
+    out.view = default_view(out.scene);
+    out.drawing = scene_drawing(out.scene, kReportViewport);
+}
+
+// The pattern chart over the full range, undecimated and linear. The Charts options act on the source, so the panes
+// stay present_pattern's: no residual column without the residual, no phases without the ticks.
+ReportPattern pattern_of(const Project& project, std::size_t index, const ReportOptions& options) {
+    PatternSource source =
+        capture_pattern(project, index, options.d_spacing ? PatternAxis::DSpacing : PatternAxis::Native);
+    if (!options.residual) {
+        source.resid = nullptr;
+    }
+    if (!options.bragg_ticks) {
+        source.phases.clear();
+    }
+    ReportPattern out;
+    out.presentation = present_pattern(source, PatternView{});
+    for (const PatternSeries& series : out.presentation.series) {
+        std::vector<std::string> texts;
+        if (series.kind == SeriesKind::BraggTicks) {
+            texts.reserve(series.points.size());
+            for (std::size_t point = 0; point < series.points.size(); ++point) {
+                texts.push_back(hover_text(source, series, point));
+            }
+        }
+        out.hover.push_back(std::move(texts));
+    }
+    return out;
+}
+
 // A subsection of the report: a category and the title its page shows.
 ReportCategory category(const std::string& id) { return {id, category_title(id), {}, {}}; }
 
@@ -609,7 +644,7 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
         model.experiment_ids.push_back(experiment->name.value());
     }
     model.fitted = scan_mode ? scan && scan->row.has_value() : project.fit_result.held();
-    group("charts", "Charts");
+    const bool charts = group("charts", "Charts");
     const bool correlations = group("correlations", "Correlations");
     const bool reflections = group("reflections", "Reflections");
     const bool measured = group("measured_data", "Measured data");
@@ -618,13 +653,20 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
                       ReportSection::Experiments};
     model.analysis = analysis_of(project, scan, model.fitted);
     for (const auto& structure : project.structures) {
-        model.structures.push_back(structure_of(*structure, rule));
+        ReportStructure built = structure_of(*structure, rule);
+        if (charts) {
+            add_scene(built, *structure);
+        }
+        model.structures.push_back(std::move(built));
     }
-    for (const auto& experiment : project.experiments) {
-        ReportExperiment built = experiment_of(*experiment, rule);
+    for (std::size_t index = 0; index < project.experiments.size(); ++index) {
+        ReportExperiment built = experiment_of(*project.experiments[index], rule);
         std::erase_if(built.categories, [reflections, measured](const ReportCategory& part) {
             return (part.id == "refln" && !reflections) || (part.id == "data" && !measured);
         });
+        if (charts) {
+            built.pattern = pattern_of(project, index, options);
+        }
         model.experiments.push_back(std::move(built));
     }
     if (correlations) {
@@ -638,6 +680,8 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
     if (evolution) {
         model.sections.push_back(ReportSection::Evolution);
     }
+    model.pattern_styles = pattern_style_table();
+    model.structure_styles = structure_style_table();
     return model;
 }
 
