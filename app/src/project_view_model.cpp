@@ -11,6 +11,7 @@
 #include <QTemporaryDir>
 #include <QFile>
 #include <algorithm>
+#include <memory>
 #include <cctype>
 #include <map>
 #include <fstream>
@@ -370,6 +371,33 @@ void ProjectViewModel::setReportExcluded(const QString& keys) {
     if (value != project.report_excluded) {
         apply_setting(edi::Edit::assign(project.report_excluded, value));
     }
+}
+
+void ProjectViewModel::setReportFormat(const QString& format, bool on) {
+    edi::Project& project = *project_;
+    std::optional<bool>* field = format == QLatin1String("html")  ? &project.report_html
+                                 : format == QLatin1String("pdf") ? &project.report_pdf
+                                 : format == QLatin1String("cif") ? &project.report_cif
+                                                                  : nullptr;
+    if (field != nullptr && std::optional<bool>(on) != *field) {
+        apply_setting(edi::Edit::assign(*field, std::optional<bool>(on)));
+    }
+}
+
+void ProjectViewModel::recordReportFiles(std::vector<edi::ReportFile> rows) {
+    edi::Project& project = *project_;
+    for (edi::ReportFile& row : rows) {
+        const std::string key = row.name.value();
+        const auto found = std::find_if(project.report_files.begin(), project.report_files.end(),
+                                        [&key](const auto& file) { return file->name.value() == key; });
+        if (found != project.report_files.end()) {
+            project.report_files.replace_at(static_cast<std::size_t>(found - project.report_files.begin()),
+                                            std::make_shared<edi::ReportFile>(std::move(row)));
+        } else {
+            project.report_files.push_back(std::move(row));
+        }
+    }
+    edi::save_report_settings(project, project.path);
 }
 
 void ProjectViewModel::setReportHtmlOffline(bool embedded) {
