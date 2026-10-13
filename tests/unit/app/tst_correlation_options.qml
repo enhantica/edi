@@ -57,10 +57,14 @@ Item {
             });
             verify(reference !== null, "The existing pattern toolbar button supplies its production style");
             for (const button of result) {
+                verify(button.visible && button.opacity === 1, "Both correlation toggles are visibly drawn");
                 compare(button.width, reference.width, "Correlation toggles share the pattern toolbar button width");
                 compare(button.height, reference.height, "Correlation toggles share the pattern toolbar button height");
                 compare(button.color, reference.color, "Correlation toggles share the pattern toolbar button background");
                 compare(button.border.color, reference.border.color, "Correlation toggles share the pattern toolbar button border");
+                compare(button.border.width, reference.border.width, "Correlation toggles share the pattern toolbar border thickness");
+                verify(waitForRendering(button), "The actual toggle renders before its background is compared");
+                compare(grabImage(button).pixel(1, 1), grabImage(reference).pixel(1, 1), "The drawn toggle background matches the existing pattern toolbar button");
             }
             return result;
         }
