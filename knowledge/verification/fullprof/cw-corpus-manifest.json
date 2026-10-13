@@ -88,6 +88,13 @@
       "lif_single_unpolarized.prf": "sha256:a8bb9b01ffe9b7a7cf66e875f1b1fd152cbbe2ff861b2fcd36c166059e447103",
       "lif_single_unpolarized.sum": "sha256:14edb1a0ef4b45816d46f5e927a1b801f96ce007bc6077a79b762aa193098121"
     },
+    "pd-xray-cwl_lif_single-absorption": {
+      "lif_single_absorption.bac": "sha256:9de1c5f5c110ee85ddce094f66e657c2b352f3dd8742daa936ab1dfb5abde6f0",
+      "lif_single_absorption.dat": "sha256:06ba190e26656de021c199beef857cdf61acf5e05ca62564cb325d40d9628cae",
+      "lif_single_absorption.pcr": "sha256:b5b183b0fb8123453bbe13246ddbb22aad335361866cd0f57cf2c3099365e7c0",
+      "lif_single_absorption.prf": "sha256:3d5cea5e4e181e68481ffcdafae9191fa89e8bd5994a4e56470b02fb6492b7e4",
+      "lif_single_absorption.sum": "sha256:979cf26e51652b0b548109496de5901a10e2d293867b58f57d268e6196d993b8"
+    },
     "pd-xray-cwl_lif_single-polarization": {
       "lif_single_polarized.bac": "sha256:423eabac3ebd8ea65c5761f79594adc82fc79ba24c7b63313292ac8c76b974c2",
       "lif_single_polarized.dat": "sha256:06ba190e26656de021c199beef857cdf61acf5e05ca62564cb325d40d9628cae",

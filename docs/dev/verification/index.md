@@ -86,6 +86,9 @@ produced by edi or crysta.
   – the same pattern with the monochromator **polarization** factor
   (`setup_polarization_coefficient` 0.5, `setup_monochromator_twotheta` 26.565°;
   FullProf `Rpolarz`, `Cthm` 0.8).
+- [pd-xray-cwl LiF single absorption](pd-xray-cwl_LiF_single_absorption.ipynb)
+  – the same pattern with the Hewat cylinder **absorption** correction
+  (`cylinder-hewat`, `mu_r` 0.9; FullProf `muR`), applied per reflection.
 
 ## Powder, Neutron, Time-Of-Flight
 
