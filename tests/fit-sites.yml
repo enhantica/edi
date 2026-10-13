@@ -126,3 +126,7 @@ sites:
   - file: tests/system/py/test_doublet_fit_anchors.py
     case: multiphase-scales
     why: Active-graph variants assert Bragg dilation admission only, with immediate cancellation and no numerical fitted-value oracle.
+
+  - file: tests/system/py/test_positional_trial_domains.py
+    case: multiphase-scales
+    why: Authored coordinate-dependent domains and drive-only pattern inputs exercise real single and joint fit rejection; no fitted number supplies a correctness oracle.
