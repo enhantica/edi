@@ -2,6 +2,7 @@
 
 import copy
 import csv
+import hashlib
 import io
 import json
 import subprocess
@@ -10,9 +11,82 @@ from pathlib import Path
 
 import pytest
 
-from tests.fixtures.scan_timing.contract import compare
+from tests.fixtures.scan_timing.contract import (
+    RESUME_FILES,
+    compare,
+    prepare_input,
+    prepared_analysis,
+    subject,
+)
 
 ROOT = Path(__file__).resolve().parents[3]
+
+
+@pytest.mark.parametrize('saved_name', ['d20.scale', 'd20.cosio.scale'])
+@pytest.mark.parametrize('boundary', [b'\n', b'loop_\n', b'_another.scalar 2.75\n'])
+def test_prepared_analysis_omits_only_saved_fit_starts(saved_name, boundary):
+    before = b'_fitting_mode.type sequential\n_minimizer.max_iterations 1000\n'
+    saved = (
+        b'loop_\n_fit_parameter.unique_name\n_fit_parameter.value\n'
+        + saved_name.encode()
+        + b' 1.25\n'
+    )
+    after = b'_fit_parameter_correlation.id\n_fit_parameter_correlation.correlation\npair17 0.50\n'
+    expected_boundary = b'' if boundary == b'\n' else boundary
+    assert (
+        prepared_analysis(before + saved + boundary + after) == before + expected_boundary + after
+    ), 'Preparing either historical saved-start spelling must preserve all other exact input bytes'
+    untouched = before + b'loop_\n' + after
+    assert prepared_analysis(untouched) == untouched, (
+        'The fit-start projection must leave correlation rows and unrelated loops byte-identical'
+    )
+
+
+def test_actual_scratch_copies_hash_identically_without_fit_starts_or_resume_files(tmp_path):
+    declared = (
+        b'_fitting_mode.type sequential\n_minimizer.max_iterations 1000\n'
+        b'_sequential_fit.data_dir experiments/bank\n_sequential_fit.file_pattern *.dat\n'
+    )
+    hashes = []
+    for version, name in [('baseline', b'd20.scale'), ('fixed', b'd20.cosio.scale')]:
+        source = tmp_path / version
+        (source / 'analysis').mkdir(parents=True)
+        (source / 'experiments/bank').mkdir(parents=True)
+        (source / 'model.edi').write_bytes(b'_model.start 2.75\n')
+        for index in range(162):
+            (source / 'experiments/bank' / f'{index:03}.dat').write_bytes(b'1.25 31.75 0.5\n')
+        (source / 'analysis/analysis.edi').write_bytes(
+            declared
+            + b'loop_\n_fit_parameter.unique_name\n_fit_parameter.value\n'
+            + name
+            + b' 9.5\n'
+        )
+        for filename in RESUME_FILES:
+            (source / 'analysis' / filename).write_bytes(b'previous run\n')
+        target = tmp_path / (version + '-scratch')
+        observed = prepare_input(source, target)
+        physical = {
+            path.relative_to(target).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+            for path in target.rglob('*')
+            if path.is_file()
+        }
+        assert physical == observed['input_sha256'] == subject(source)['input_sha256'], (
+            'Each actual scratch hash must cover its exact bytes '
+            'after the allowed fit-start projection'
+        )
+        assert (target / 'analysis/analysis.edi').read_bytes() == declared, (
+            'Both loaders must receive the same declared settings with no saved fit-start loop'
+        )
+        assert (target / 'model.edi').read_bytes() == b'_model.start 2.75\n', (
+            'Preparing fresh input must retain the actual model start values byte-for-byte'
+        )
+        assert not any((target / 'analysis' / name).exists() for name in RESUME_FILES), (
+            'Every actual scratch must remove all declared resume records before dispatch'
+        )
+        hashes.append(physical)
+    assert hashes[0] == hashes[1], (
+        'Different saved-start spellings must produce identical physical input for both builds'
+    )
 
 
 def authored_receipt():
@@ -79,6 +153,7 @@ def authored_receipt():
             'crysta_source': 'fb153aeb' + '0' * 32,
             'command_sha256': 'b' * 64,
             'configuration': {'CMAKE_BUILD_TYPE': 'Release', 'compiler': 'authored'},
+            'native_configuration': {'CMAKE_BUILD_TYPE': 'Release', 'compiler': 'authored'},
         }
     rows = []
     for rep in range(1, 6):
@@ -232,12 +307,20 @@ def test_provenance_ordering_and_negative_controls_fail_closed(escape):
         compare(receipt, spec)
 
 
+@pytest.mark.parametrize(
+    ('field', 'value'), [('CMAKE_BUILD_TYPE', 'Debug'), ('compiler', 'different')]
+)
+def test_actual_native_builds_require_matching_release_configuration(field, value):
+    receipt, spec = authored_receipt()
+    receipt['builds']['fixed']['native_configuration'][field] = value
+    with pytest.raises(ValueError, match='same actual Release configuration'):
+        compare(receipt, spec)
+
+
 def test_comparison_process_exits_nonzero_for_a_slow_fixed_build(tmp_path):
     receipt, _ = authored_receipt()
     # The real CLI boundary must fail, not merely print a table with a red ratio.
     project = ROOT / 'docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project'
-    from tests.fixtures.scan_timing.contract import subject  # noqa: PLC0415
-
     spec = subject(project)
     for row in receipt['runs']:
         row['work']['input_sha256'] = spec['input_sha256']

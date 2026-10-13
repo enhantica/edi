@@ -32,6 +32,35 @@ def main():
     cmake = source / 'CMakeLists.txt'
     cmake.write_text(cmake.read_text() + '\nadd_subdirectory(tests/fixtures/plain_data)\n')
     if args.timing_observer:
+        revision = subprocess.check_output(
+            ['git', '-C', str(args.root), 'rev-parse', 'HEAD'], text=True
+        ).strip()
+        objects = subprocess.check_output(
+            [
+                'git',
+                '-C',
+                str(args.root),
+                'rev-parse',
+                '--path-format=absolute',
+                '--git-path',
+                'objects',
+            ],
+            text=True,
+        ).strip()
+        subprocess.run(['git', 'init', '-q', str(source)], check=True)
+        (source / '.git/objects/info/alternates').write_text(objects + '\n')
+        subprocess.run(
+            ['git', '-C', str(source), 'update-ref', 'refs/heads/observation', revision],
+            check=True,
+        )
+        subprocess.run(
+            ['git', '-C', str(source), 'symbolic-ref', 'HEAD', 'refs/heads/observation'],
+            check=True,
+        )
+        subprocess.run(['git', '-C', str(source), 'read-tree', revision], check=True)
+        # The accepted baseline includes this production timing scenario as a scratch overlay.
+        for name in ['demo_driver.cpp', 'demo_driver.hpp']:
+            shutil.copy2(args.root / 'app/src' / name, source / 'app/src' / name)
         shutil.copytree(
             fixture.parent / 'scan_timing',
             source / 'tests/fixtures/scan_timing',

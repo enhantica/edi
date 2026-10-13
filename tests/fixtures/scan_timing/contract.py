@@ -6,11 +6,49 @@ import io
 import json
 import math
 import shlex
+import shutil
 import statistics
 from pathlib import Path
 
 BOUND = 1.05
 RESUME_FILES = ('results.csv', 'results-provenance.csv', 'scan-notes.csv')
+
+
+def prepared_analysis(data):
+    """Omit saved fit starts; preserve all model and declared fitting input bytes."""
+    lines = data.splitlines(keepends=True)
+    output = []
+    index = 0
+    while index < len(lines):
+        if (
+            lines[index].strip() == b'loop_'
+            and index + 1 < len(lines)
+            and lines[index + 1].strip().startswith(b'_fit_parameter.')
+        ):
+            index += 1
+            while index < len(lines) and lines[index].strip().startswith(b'_fit_parameter.'):
+                index += 1
+            while index < len(lines):
+                token = lines[index].strip()
+                if not token or token.startswith((b'_', b'loop_', b'data_', b'save_')):
+                    break
+                index += 1
+            while index < len(lines) and not lines[index].strip():
+                index += 1
+            continue
+        output.append(lines[index])
+        index += 1
+    return b''.join(output)
+
+
+def prepare_input(project, destination):
+    """Make the same fresh, fit-start-free input for every actual runner."""
+    shutil.copytree(project, destination)
+    for filename in RESUME_FILES:
+        (destination / 'analysis' / filename).unlink(missing_ok=True)
+    analysis = destination / 'analysis/analysis.edi'
+    analysis.write_bytes(prepared_analysis(analysis.read_bytes()))
+    return subject(destination)
 
 
 def source_hashes(root):
@@ -53,7 +91,11 @@ def subject(project):
             key: value for key, value in declared.items() if key.startswith('_minimizer.')
         },
         'input_sha256': {
-            path.relative_to(project).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+            path.relative_to(project).as_posix(): hashlib.sha256(
+                prepared_analysis(path.read_bytes())
+                if path == project / 'analysis/analysis.edi'
+                else path.read_bytes()
+            ).hexdigest()
             for path in sorted(project.rglob('*'))
             if path.is_file() and path.name not in RESUME_FILES
         },
@@ -172,6 +214,9 @@ def validate_builds(builds):
             raise ValueError('every compared build must use Release configuration')
         if build['configuration'] != baseline['configuration']:
             raise ValueError('both builds must use the same compiler and build configuration')
+        native = build['native_configuration']
+        if native['CMAKE_BUILD_TYPE'] != 'Release' or native != baseline['native_configuration']:
+            raise ValueError('both native apps must use the same actual Release configuration')
         if build['compiled_edi_source'] != build['edi_source'] or not build['command_sha256']:
             raise ValueError('timings must identify the actual compiled command source and bytes')
 
