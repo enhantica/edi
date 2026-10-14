@@ -6,6 +6,7 @@ import ast
 import copy
 import hashlib
 import json
+import re
 from collections import Counter
 from pathlib import Path
 
@@ -17,7 +18,12 @@ from tests.system.py.ci_execution_contract import (
     render,
     value,
 )
-from tests.system.py.ci_shipped_cadence import cadence_errors, suite_steps
+from tests.system.py.ci_shipped_cadence import (
+    cadence_errors,
+    linux_closure_errors,
+    linux_gate_errors,
+    suite_steps,
+)
 
 ROOT = Path(__file__).resolve().parents[3]
 BASE = json.loads((ROOT / 'tests/fixtures/ci_cadence/baseline.json').read_text())
@@ -561,4 +567,107 @@ def test_shipped_nightly_has_clock_and_manual_triggers_separate_from_pr_requests
         groups[event] = rendered(workflow['concurrency']['group'], ctx)
     assert len(set(groups.values())) == len(groups), (
         'E09-T79 the accepted fast path separates PR, push and scheduled concurrency identities'
+    )
+
+
+@pytest.mark.parametrize('event', ['pull_request', 'push'])
+def test_linux_keeps_frozen_groups_and_gate_commands(event):
+    baseline = yaml.safe_load(SHIPPED['files']['.github/workflows/ci.yml'])
+    assert not linux_gate_errors(
+        baseline, document(ROOT / '.github/workflows/ci.yml'), event, BASE['repo']
+    ), (
+        'E09-T79 F4 every accepted Linux job and required non-suite command remains '
+        'executable on PR and landed head'
+    )
+
+
+@pytest.mark.parametrize('event', ['pull_request', 'push'])
+def test_linux_task_closure_cannot_reduce_the_frozen_execution(event):
+    assert not linux_closure_errors(
+        SHIPPED, (ROOT / 'pixi.toml').read_text(), lambda path: (ROOT / path).read_text(), event
+    ), (
+        'E09-T79 F4 accepted Linux task dependencies and previously protected source '
+        'closures remain executable on both events'
+    )
+
+
+@pytest.mark.parametrize('event', ['pull_request', 'push'])
+@pytest.mark.parametrize(
+    'damage',
+    [
+        'no-op',
+        'file-conditioned',
+        'missing',
+        'duplicate',
+        'skipped',
+        'advisory',
+        'wrong-runner',
+        'job-skipped',
+        'job-advisory',
+    ],
+)
+def test_linux_non_suite_guard_refuses_each_same_named_execution_escape(event, damage):
+    baseline = yaml.safe_load(SHIPPED['files']['.github/workflows/ci.yml'])
+    assert not linux_gate_errors(baseline, baseline, event, BASE['repo']), (
+        'E09-T79 F4 non-suite controls begin at independently accepted required execution'
+    )
+    damaged = copy.deepcopy(baseline)
+    title = (
+        'cppcheck'
+        if BASE['repo'] == 'crysta'
+        else 'Static policy checks (weakref, tutorial exclusions, generated regions)'
+    )
+    job = next(
+        job
+        for job in damaged['jobs'].values()
+        if any(s.get('name') == title for s in job.get('steps', []))
+    )
+    step = next(s for s in job['steps'] if s.get('name') == title)
+    if damage == 'no-op':
+        step['run'] = 'true'
+    elif damage == 'file-conditioned':
+        step['if'] = "hashFiles('absent-ci-permission-marker') != ''"
+    elif damage == 'missing':
+        job['steps'].remove(step)
+    elif damage == 'duplicate':
+        job['steps'].append(copy.deepcopy(step))
+    elif damage == 'skipped':
+        step['if'] = '${{ false }}'
+    elif damage == 'advisory':
+        step['continue-on-error'] = True
+    elif damage == 'wrong-runner':
+        job['runs-on'] = 'macos-15'
+    elif damage == 'job-skipped':
+        job['if'] = '${{ false }}'
+    else:
+        job['continue-on-error'] = True
+    assert linux_gate_errors(baseline, damaged, event, BASE['repo']), (
+        'E09-T79 F4 same-named non-suite gates cannot lose their command, required '
+        'status, execution condition or Linux runner'
+    )
+
+
+@pytest.mark.parametrize('event', ['pull_request', 'push'])
+@pytest.mark.parametrize('damage', ['task-no-op', 'task-dependency', 'source-no-op'])
+def test_linux_source_guard_reaches_task_and_script_replacement(event, damage):
+    manifest = SHIPPED['files']['pixi.toml']
+    sources = dict(SHIPPED['execution_sources'])
+    assert not linux_closure_errors(SHIPPED, manifest, sources.__getitem__, event), (
+        'E09-T79 F4 task/source controls begin at the accepted executable closure'
+    )
+    task = 'cpp-cppcheck' if BASE['repo'] == 'crysta' else 'weakref-policy'
+    if damage == 'task-no-op':
+        manifest, count = re.subn(
+            r'^' + task + r' = .*$', task + ' = "true"', manifest, count=1, flags=re.MULTILINE
+        )
+        assert count == 1, 'E09-T79 F4 the control replaces the actual selected task declaration'
+    elif damage == 'task-dependency':
+        pattern = r'^(per-pr-audit = .*depends-on = )\[[^\n]*?\]'
+        manifest, count = re.subn(pattern, r'\g<1>[]', manifest, count=1, flags=re.MULTILINE)
+        assert count == 1, 'E09-T79 F4 the control drops a selected task dependency edge'
+    else:
+        sources['tools/ci/cpp-test.sh'] = '#!/bin/bash\ntrue\n'
+    assert linux_closure_errors(SHIPPED, manifest, sources.__getitem__, event), (
+        'E09-T79 F4 preserving a workflow task name cannot conceal a replaced '
+        'dependency command or protected script'
     )

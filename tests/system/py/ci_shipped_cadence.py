@@ -4,14 +4,20 @@ from __future__ import annotations
 
 import json
 import os
+import re
+import shlex
 import subprocess
 import sys
+import tomllib
+
+import yaml
 
 from tests.system.py.ci_execution_contract import (
     contexts,
     prerequisites_ready,
     render,
     run_settings,
+    task_commands,
     value,
 )
 
@@ -125,3 +131,136 @@ def cadence_errors(tmp_path, baseline, actual, event, platform, repo):
             if not task or not failed_rc:
                 errors.append('masked suite failure ' + str(key))
     return errors
+
+
+def linux_jobs(workflow, event):
+    return {
+        (
+            name,
+            json.dumps({k: v for k, v in ctx.items() if k.startswith('matrix.')}, sort_keys=True),
+        ): (job, ctx, platform)
+        for name, job, ctx, platform in contexts(workflow, event, names=False)
+        if not job.get('name', name).startswith((
+            'performance',
+            'wheels',
+            'publish',
+            'cli-native',
+        ))
+        and value(job.get('if'), ctx)
+        and prerequisites_ready(workflow, job, ctx)
+    }
+
+
+def linux_condition(condition, ctx):
+    # The accepted Darwin-only bootstrap consults committed fixture files. Assign
+    # their presence here; neither value can enable that step on the Linux axis.
+    condition = (
+        re.sub(r'hashFiles\([^)]*\)', "'fixture-present'", str(condition))
+        if isinstance(condition, str)
+        else condition
+    )
+    return value(condition, ctx)
+
+
+def non_suite_gates(job, ctx, repo):
+    for step in job.get('steps', []):
+        title = step.get('name', '')
+        if not title:
+            continue
+        if (
+            title not in SUITE_STEPS[repo]
+            and not title.startswith((
+                'Report',
+                'Compiler cache',
+                'ccache',
+                'Python harness',
+                'Coverage job summary',
+                'Prepare',
+            ))
+            and 'pixi run' in step.get('run', '')
+            and not step.get('continue-on-error')
+            and linux_condition(step.get('if'), ctx)
+        ):
+            yield step
+
+
+def command_text(script):
+    return '\n'.join(
+        line.strip()
+        for line in script.splitlines()
+        if line.strip() and not line.lstrip().startswith('#')
+    )
+
+
+def linux_gate_errors(baseline, actual, event, repo):
+    expected = linux_jobs(baseline, event)
+    observed = linux_jobs(actual, event)
+    errors = []
+    for key, (old_job, old_ctx, platform) in expected.items():
+        if platform != 'linux-64':
+            continue
+        if key not in observed:
+            errors.append('missing Linux job ' + str(key))
+            continue
+        job, ctx, current_platform = observed[key]
+        if current_platform != 'linux-64' or job.get('continue-on-error'):
+            errors.append('nonrequired Linux job ' + str(key))
+        for step in non_suite_gates(old_job, old_ctx, repo):
+            matches = [s for s in job.get('steps', []) if s.get('name') == step['name']]
+            if len(matches) != 1:
+                errors.append('missing or duplicated non-suite gate ' + step['name'])
+                continue
+            live = matches[0]
+            if (
+                live.get('if') != step.get('if')
+                or not linux_condition(live.get('if'), ctx)
+                or live.get('continue-on-error')
+            ):
+                errors.append('changed, skipped or advisory non-suite gate ' + step['name'])
+            if command_text(render(live.get('run', ''), ctx)) != command_text(
+                render(step['run'], old_ctx)
+            ):
+                errors.append('changed non-suite gate command ' + step['name'])
+            if run_settings(actual, job, live, ctx) != run_settings(
+                baseline, old_job, step, old_ctx
+            ):
+                errors.append('changed non-suite execution settings ' + step['name'])
+    return errors
+
+
+def linux_closure_errors(snapshot, actual_manifest, read_source, event):
+    baseline = yaml.safe_load(snapshot['files']['.github/workflows/ci.yml'])
+    manifest = snapshot['files']['pixi.toml']
+    environments = {'default', *tomllib.loads(manifest).get('environments', {})}
+    errors = []
+    selected = selected_linux_tasks(baseline, event)
+    # Preserve each accepted task's actual dependency commands, including feature
+    # environments. Activation pins are separately governed and are not task code.
+    for environment in sorted(environments):
+        old = task_commands(manifest, environment)
+        actual = task_commands(actual_manifest, environment)
+        for task, commands in old.items():
+            if task in selected and actual.get(task) != commands:
+                errors.append('changed Linux task closure ' + environment + ':' + task)
+    for path, source in snapshot['execution_sources'].items():
+        if read_source(path) != source:
+            errors.append('changed frozen execution source ' + path)
+    return errors
+
+
+def selected_linux_tasks(workflow, event):
+    tasks = set()
+    for job, ctx, platform in linux_jobs(workflow, event).values():
+        if platform != 'linux-64':
+            continue
+        for step in job.get('steps', []):
+            if 'pixi run' not in step.get('run', '') or not linux_condition(step.get('if'), ctx):
+                continue
+            source = render(step.get('run', ''), ctx)
+            if 'pixi run' not in source:
+                continue
+            tasks.update(
+                task_name(shlex.split(match[1]))
+                for match in re.finditer(r'\bpixi\s+(run\s+[^\n]+)', source)
+            )
+    return tasks

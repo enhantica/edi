@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-14T00:44:43Z
+# measured_utc = 2026-10-14T04:38:16Z
 #
-# Recorded from: measured test run (50 node(s) measured once, 11173 banked, 49 stale row(s) dropped)
-# Collected tests: 12039; with a reported duration: 6748
+# Recorded from: measured test run (28 node(s) measured once, 11223 banked, 0 stale row(s) dropped)
+# Collected tests: 12067; with a reported duration: 6776
 # Module-scoped fixture costs recorded: 44
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 12039
+# inventory_python = 12067
 # inventory_cpp = 312
-# inventory_measured = 11223
+# inventory_measured = 11251
 # inventory_unmeasured = 1128
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
@@ -8042,6 +8042,34 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_value_expressions.py:
 0.000	tests/system/py/test_ci_cadence.py::test_cadence_eligibility_and_rendering_use_the_actions_model[pull_request]
 0.000	tests/system/py/test_ci_cadence.py::test_cadence_eligibility_and_rendering_use_the_actions_model[push]
 0.070	tests/system/py/test_ci_cadence.py::test_deferred_scale_assertions_and_regular_small_scan_are_preserved
+0.110	tests/system/py/test_ci_cadence.py::test_linux_keeps_frozen_groups_and_gate_commands[pull_request]
+0.120	tests/system/py/test_ci_cadence.py::test_linux_keeps_frozen_groups_and_gate_commands[push]
+0.060	tests/system/py/test_ci_cadence.py::test_linux_non_suite_guard_refuses_each_same_named_execution_escape[advisory-pull_request]
+0.060	tests/system/py/test_ci_cadence.py::test_linux_non_suite_guard_refuses_each_same_named_execution_escape[advisory-push]
+0.060	tests/system/py/test_ci_cadence.py::test_linux_non_suite_guard_refuses_each_same_named_execution_escape[duplicate-pull_request]
+0.060	tests/system/py/test_ci_cadence.py::test_linux_non_suite_guard_refuses_each_same_named_execution_escape[duplicate-push]
+0.070	tests/system/py/test_ci_cadence.py::test_linux_non_suite_guard_refuses_each_same_named_execution_escape[file-conditioned-pull_request]
+0.060	tests/system/py/test_ci_cadence.py::test_linux_non_suite_guard_refuses_each_same_named_execution_escape[file-conditioned-push]
+0.070	tests/system/py/test_ci_cadence.py::test_linux_non_suite_guard_refuses_each_same_named_execution_escape[job-advisory-pull_request]
+0.060	tests/system/py/test_ci_cadence.py::test_linux_non_suite_guard_refuses_each_same_named_execution_escape[job-advisory-push]
+0.170	tests/system/py/test_ci_cadence.py::test_linux_non_suite_guard_refuses_each_same_named_execution_escape[job-skipped-pull_request]
+0.060	tests/system/py/test_ci_cadence.py::test_linux_non_suite_guard_refuses_each_same_named_execution_escape[job-skipped-push]
+0.060	tests/system/py/test_ci_cadence.py::test_linux_non_suite_guard_refuses_each_same_named_execution_escape[missing-pull_request]
+0.060	tests/system/py/test_ci_cadence.py::test_linux_non_suite_guard_refuses_each_same_named_execution_escape[missing-push]
+0.060	tests/system/py/test_ci_cadence.py::test_linux_non_suite_guard_refuses_each_same_named_execution_escape[no-op-pull_request]
+0.220	tests/system/py/test_ci_cadence.py::test_linux_non_suite_guard_refuses_each_same_named_execution_escape[no-op-push]
+0.060	tests/system/py/test_ci_cadence.py::test_linux_non_suite_guard_refuses_each_same_named_execution_escape[skipped-pull_request]
+0.070	tests/system/py/test_ci_cadence.py::test_linux_non_suite_guard_refuses_each_same_named_execution_escape[skipped-push]
+0.050	tests/system/py/test_ci_cadence.py::test_linux_non_suite_guard_refuses_each_same_named_execution_escape[wrong-runner-pull_request]
+0.060	tests/system/py/test_ci_cadence.py::test_linux_non_suite_guard_refuses_each_same_named_execution_escape[wrong-runner-push]
+0.140	tests/system/py/test_ci_cadence.py::test_linux_source_guard_reaches_task_and_script_replacement[source-no-op-pull_request]
+0.140	tests/system/py/test_ci_cadence.py::test_linux_source_guard_reaches_task_and_script_replacement[source-no-op-push]
+0.150	tests/system/py/test_ci_cadence.py::test_linux_source_guard_reaches_task_and_script_replacement[task-dependency-pull_request]
+0.140	tests/system/py/test_ci_cadence.py::test_linux_source_guard_reaches_task_and_script_replacement[task-dependency-push]
+0.140	tests/system/py/test_ci_cadence.py::test_linux_source_guard_reaches_task_and_script_replacement[task-no-op-pull_request]
+0.140	tests/system/py/test_ci_cadence.py::test_linux_source_guard_reaches_task_and_script_replacement[task-no-op-push]
+0.080	tests/system/py/test_ci_cadence.py::test_linux_task_closure_cannot_reduce_the_frozen_execution[pull_request]
+0.080	tests/system/py/test_ci_cadence.py::test_linux_task_closure_cannot_reduce_the_frozen_execution[push]
 0.010	tests/system/py/test_ci_cadence.py::test_main_sdk_token_adaptation_preserves_the_frozen_qualification_closure[accepted-token]
 0.000	tests/system/py/test_ci_cadence.py::test_main_sdk_token_adaptation_preserves_the_frozen_qualification_closure[changed-pin]
 0.000	tests/system/py/test_ci_cadence.py::test_main_sdk_token_adaptation_preserves_the_frozen_qualification_closure[changed-sdk-output]

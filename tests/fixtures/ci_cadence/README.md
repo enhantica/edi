@@ -42,3 +42,24 @@ concurrency; preserving PR work is the coalescing requester's responsibility.
 The bounded Actions model uses the documented loose numeric equality, case-insensitive string comparison and lowercase boolean rendering. Single-quoted literal contents are preserved, and `&&`/`||` retain the selected operand. Unsupported syntax, values and string conversions refuse explicitly. Runner-label arrays resolve structurally; they are not converted as expression strings. The cadence, prerequisite, execution-environment and SDK qualification consumers share this model. Concurrency compares case-insensitive group identities and distinguishes actual job keys and matrix instances independently of display names. Expectations come from the [Actions expression specification](https://docs.github.com/en/actions/reference/workflows-and-actions/expressions) and [concurrency specification](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency), with edi's existing `e09_t75_workflow.py::actions_equal` as prior art; candidate workflows supply no expected semantic values.
 
 The numeric-string boundary follows the [runner's `ParseNumber` behavior](https://github.com/actions/runner/blob/main/src/Sdk/DTExpressions2/Expressions2/Sdk/ExpressionUtility.cs): supported finite decimal forms include whitespace, a leading sign, leading zeros, decimal points and exponents. Hexadecimal/octal strings and nonfinite conversions explicitly refuse. Case identity is bounded to ASCII, avoiding Python Unicode folding as a substitute for the [runner's ordinal case comparison](https://github.com/actions/runner/blob/main/src/Sdk/DTExpressions2/Expressions2/EvaluationResult.cs). Unicode expression comparison and concurrency groups explicitly refuse; literal rendering preserves their contents.
+
+## Review 18: retained Linux non-suite checks
+
+Before this repair, `test_linux_keeps_frozen_groups_and_gate_commands` and
+`test_linux_task_closure_cannot_reduce_the_frozen_execution` had been removed.
+Their suite-only replacement admitted an unchanged step name with `run: true`.
+Both named checks are restored for `pull_request` and the landed-head `push`.
+They use the independently accepted shipped workflow and Pixi declarations;
+the visible shipped-policy generator now also captures exactly the executable
+source closure previously protected by the original baseline. The original
+baseline remains unchanged. Declared nightly deferrals keep their shipped
+policy; activation SDK pins are separately governed, not executable task code.
+
+The restored gates preserve Linux job/matrix identities, required status,
+step eligibility, shell/environment, non-suite commands, selected task
+dependency commands, and the previously protected script bodies. Controls
+replace the same-named cppcheck gate (crysta) or static-policy gate (edi) with
+`true`, omit/duplicate/skip/weaken it, add a file-dependent execution condition,
+move its runner, replace a selected
+Pixi task, drop its build dependency, and replace the protected C++ driver.
+These are bounded contract controls, not executions of the expensive gates.

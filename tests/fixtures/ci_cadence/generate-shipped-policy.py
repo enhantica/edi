@@ -31,5 +31,6 @@ snapshot = {
         if line and not line.startswith('#')
     ],
     'files': {p: read(p) for p in FILES},
+    'execution_sources': {p: read(p) for p in BASE['execution_sources']},
 }
 Path(__file__).with_name('shipped-policy.json').write_text(json.dumps(snapshot, indent=2) + '\n')
