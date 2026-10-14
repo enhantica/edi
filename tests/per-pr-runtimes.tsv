@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-14T06:48:20Z
+# measured_utc = 2026-10-14T07:15:06Z
 #
-# Recorded from: measured test run (4 node(s) measured once, 10471 banked, 0 stale row(s) dropped)
-# Collected tests: 11373; with a reported duration: 6151
+# Recorded from: measured test run (1 node(s) measured once, 10479 banked, 0 stale row(s) dropped)
+# Collected tests: 11377; with a reported duration: 6151
 # Module-scoped fixture costs recorded: 43
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 11373
+# inventory_python = 11377
 # inventory_cpp = 328
-# inventory_measured = 10475
-# inventory_unmeasured = 1226
+# inventory_measured = 10480
+# inventory_unmeasured = 1225
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -10504,8 +10504,12 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_c09_t17_seeded_scale_no_fit.py:
 UNMEASURED:failed-in-this-run	tests/unit/py/test_c11_t43_fit_status_contract.py::test_edi_enum_conversions_binding_and_crysta_contract_share_one_status_set
 0.010	tests/unit/py/test_c11_t43_single_sequential_writer.py::test_analysis_fit_body_has_no_python_csv_implementation
 0.010	tests/unit/py/test_c11_t43_single_sequential_writer.py::test_analysis_fit_routes_sequential_mode_to_one_native_entry_point
-0.090	tests/unit/py/test_c11_t43_single_sequential_writer.py::test_edi_production_inventory_contains_no_results_csv_writer
+0.060	tests/unit/py/test_c11_t43_single_sequential_writer.py::test_edi_production_inventory_contains_no_results_csv_writer
 0.000	tests/unit/py/test_c11_t43_single_sequential_writer.py::test_sequential_route_rejects_literal_only_and_single_fit_escape
+0.000	tests/unit/py/test_c11_t43_single_sequential_writer.py::test_writer_inventory_distinguishes_documentation_from_executable_contracts[None]
+0.000	tests/unit/py/test_c11_t43_single_sequential_writer.py::test_writer_inventory_distinguishes_documentation_from_executable_contracts[getattr(routine, '__doc__')]
+0.000	tests/unit/py/test_c11_t43_single_sequential_writer.py::test_writer_inventory_distinguishes_documentation_from_executable_contracts[inspect.getdoc(routine)]
+0.000	tests/unit/py/test_c11_t43_single_sequential_writer.py::test_writer_inventory_distinguishes_documentation_from_executable_contracts[routine.__doc__]
 0.000	tests/unit/py/test_c11_t48_cif_metadata_behavior.py::test_c11_t48_experiment_cif_factories_parse_reference_values[from_cif_path]
 0.000	tests/unit/py/test_c11_t48_cif_metadata_behavior.py::test_c11_t48_experiment_cif_factories_parse_reference_values[from_cif_str]
 0.000	tests/unit/py/test_c11_t48_cif_metadata_behavior.py::test_c11_t48_project_metadata_timestamps_are_utc_datetimes
@@ -11611,7 +11615,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e04_t9_sanitizer.py::test_sanit
 0.030	tests/unit/py/test_e09_t58_project_only_inputs.py::test_declared_grid_is_the_grid_that_is_calculated
 0.030	tests/unit/py/test_e09_t58_project_only_inputs.py::test_declared_scattering_map_and_default_lookup_both_reach_calculation
 0.010	tests/unit/py/test_e09_t58_project_only_inputs.py::test_project_calculation_accepts_no_second_source_of_truth
-UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t58_project_only_inputs.py::test_survey_is_complete_and_model_state_cannot_reenter_signatures
+0.000	tests/unit/py/test_e09_t58_project_only_inputs.py::test_survey_is_complete_and_model_state_cannot_reenter_signatures
 0.020	tests/unit/py/test_e09_t58_start_state_roundtrip.py::test_start_value_and_uncertainty_round_trip_through_the_single_loader
 0.010	tests/unit/py/test_e09_t58_writer_delegation.py::test_e09_t58_edi_project_save_has_one_delegating_writer_and_no_local_serializer
 0.030	tests/unit/py/test_e09_t74_ci_source_wiring.py::test_crysta_app_tokens_request_only_contents_read
