@@ -8,8 +8,8 @@ FitJob result supplies an expectation. Elapsed times are provenance, never parit
 expectations. Comparison uses the existing machine-record parity tolerance:
 absolute 5e-10 and relative 5e-9 (`test_c09_t9_output_contract_and_cli.py`).
 
-The core fit-stream gates expect the packet's FitJob next to LivePreview. The
-initial executable interface follows LivePreview's owner-thread pattern:
+The core fit-stream tests exercise FitJob next to LivePreview. The
+initial executable interface follows LivePreview's calling-thread pattern:
 `FitJob(Project&, work::Worker&, Hooks, Seams = {})`, `start()`, `cancel()` and
 `running()`. Hooks carry `started(const FitPreamble&)`,
 `iterated(const IterationRecord&)`, optional `frame(const FitFrame&)`, and
@@ -29,7 +29,7 @@ and parameters retain the machine parity tolerance. The CLI capture trace reads
 parameters at the CLI's own `_fit` return boundary, before the writer rounds
 values; it invokes the normal CLI entry point and performs no additional fit.
 
-Gate 8's codec input is independent: `_fit_result` names come from diffraction-lib
+The codec input is independent: `_fit_result` names come from diffraction-lib
 `develop`, `src/easydiffraction/analysis/categories/fit_result/{base,lsq}.py`;
 `analysis.py` defines objective chi_square and degrees of freedom. Synthetic time
 123.375 tests the seconds conversion away from identity. CLI/app saves require
@@ -70,12 +70,12 @@ All CLI values, uncertainties and the original project input bytes are retained.
 
 `generate.py --only <new-project-id>` appends a newly registered single/joint
 CLI oracle while retaining every existing case byte for byte. The appended case
-names the actual imported artifact's linked engine source. Tests adds
-`pd-xray-cwl_lif_single` after ; its two free polarization parameters are
+names the actual imported artifact's linked engine source. The generator adds
+`pd-xray-cwl_lif_single`; its two free polarization parameters are
 fitted using the current engine. The independent selected-model count comes from
 the same diffraction-lib selection and documented projection as the earlier cases.
 
-'s registered Chebyshev CeCoAl, polynomial PEARL and polynomial LaB6
+The registered Chebyshev CeCoAl, polynomial PEARL and polynomial LaB6
 examples append their author-time CLI records and native references without
 replacing earlier oracles. The count generator's `--only` mode preserves prior
 rows. Its external diffraction-lib selection maps the plain-power coefficient
