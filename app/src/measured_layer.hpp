@@ -6,7 +6,6 @@
 #include <QList>
 #include <QPointF>
 #include <QQuickItem>
-#include <QVariantList>
 #include <QtQml/qqmlregistration.h>
 
 namespace edi_app {
@@ -40,9 +39,9 @@ class MeasuredLayer : public QQuickItem {
 
     // The points, and per point the bar's low and high ends (a NaN low end runs to the bottom).
     void setData(const QList<QPointF>& points, const QList<double>& low, const QList<double>& high);
-    // The same from QML: each point a map with `x`, `y` and `su`, the bar running from y - su to y + su; a point with
-    // no finite s.u. has no bar. The report preview's evolution chart draws the model's points this way.
-    Q_INVOKABLE void setPoints(const QVariantList& points);
+    // The same from QML as three equal-length lists: each point's x and y, and its s.u., the bar running from y - su to
+    // y + su; a point with no finite s.u. has no bar. The report preview's evolution chart draws the model's points so.
+    Q_INVOKABLE void setPoints(const QList<double>& x, const QList<double>& y, const QList<double>& su);
     const QList<QPointF>& points() const { return points_; }
 
    signals:

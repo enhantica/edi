@@ -43,6 +43,22 @@
 
 namespace edi_app {
 
+// A value and its standard uncertainty as the project's rule writes them, for QML: the value's text, the s.u.'s text
+// in the value's last digits, and the bracket; all empty when there is no s.u. to write.
+struct UncertaintyText {
+    Q_GADGET
+    QML_VALUE_TYPE(uncertaintyText)
+    Q_PROPERTY(QString value MEMBER value CONSTANT)
+    Q_PROPERTY(QString su MEMBER su CONSTANT)
+    Q_PROPERTY(QString bracket MEMBER bracket CONSTANT)
+
+   public:
+    QString value;
+    QString su;
+    QString bracket;
+    bool operator==(const UncertaintyText&) const = default;
+};
+
 class ParameterRegistry;
 
 // The project's structures: roles `name`, `label` (`name · file`, the file the structure is saved as),
@@ -200,9 +216,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void setReportCorrelationThreshold(double threshold);
     bool patternDSpacing() const;
     void setPatternDSpacing(bool on);
-    // A value and its standard uncertainty as the project's rule writes them: `value`, `su` and `bracket`
-    // texts; empty for a non-finite value or a zero or non-finite s.u.
-    Q_INVOKABLE QVariantMap suText(double value, double su) const;
+    // A value and its standard uncertainty as the project's rule writes them; empty texts for a non-finite value or a
+    // zero or non-finite s.u.
+    Q_INVOKABLE edi_app::UncertaintyText suText(double value, double su) const;
     QString path() const { return QString::fromStdString(project_->path); }
     bool modified() const { return modified_; }
     // Save the project into `directory` through the core (edi::save_project_as), which then is the

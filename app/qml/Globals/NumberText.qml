@@ -53,7 +53,7 @@ QtObject {
         if (!project || project.suRule === "" || typeof value !== "number" || !isFinite(value) || typeof error !== "number" || !isFinite(error) || error <= 0)
             return null;
         const text = project.suText(value, error);
-        return text.value !== undefined ? text : null;
+        return text.value !== "" ? text : null;
     }
 
     // `value` rounded by its uncertainty `error` and to the cell, as the comment at the top says.

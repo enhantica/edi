@@ -34,9 +34,13 @@ EaElements.GroupBox {
         }
         group.savePending = false;
         if (report.writesPdf)
-            group.preview.grabFigures(figures => report.saveReport(figures, EaStyle.Fonts.fontFamily));
+            group.preview.grabFigures(figures => {
+                for (const name in figures)
+                    report.setFigure(name, figures[name]);
+                report.saveReport(EaStyle.Fonts.fontFamily);
+            });
         else
-            report.saveReport({}, EaStyle.Fonts.fontFamily);
+            report.saveReport(EaStyle.Fonts.fontFamily);
     }
 
     // In the browser Save report also downloads the files, and a saved file lasts until the page is reloaded.

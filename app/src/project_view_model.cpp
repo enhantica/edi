@@ -367,14 +367,12 @@ QString ProjectViewModel::lastModified() const { return QString::fromStdString(p
 QString ProjectViewModel::authors() const { return QString::fromStdString(project_->metadata.authors); }
 QString ProjectViewModel::suRule() const { return QString::fromStdString(project_->su_rule); }
 
-QVariantMap ProjectViewModel::suText(double value, double su) const {
+UncertaintyText ProjectViewModel::suText(double value, double su) const {
     if (!std::isfinite(value) || !std::isfinite(su) || su == 0.0) {
         return {};
     }
     const edi::SuText text = edi::su_text(value, su, project_->su_rule);
-    return {{QStringLiteral("value"), QString::fromStdString(text.value)},
-            {QStringLiteral("su"), QString::fromStdString(text.su)},
-            {QStringLiteral("bracket"), QString::fromStdString(text.bracket)}};
+    return {QString::fromStdString(text.value), QString::fromStdString(text.su), QString::fromStdString(text.bracket)};
 }
 
 void ProjectViewModel::setName(const QString& name) {
