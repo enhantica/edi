@@ -6,6 +6,7 @@ import EasyApplication.Gui.Style as EaStyle
 import edi.app
 import EdiAcceptance 1.0
 import ReportAcceptance 1.0
+import ReportBoundaryAcceptance 1.0
 import "RenderedTable.js" as Render
 
 Rectangle {
@@ -35,6 +36,7 @@ Rectangle {
         }
         property var reference: JSON.parse(SettingsProof.repoText("tests/fixtures/report_storage/reference.json"))
         function cleanup() {
+            BoundaryProof.clearFailure();
             if (webGroup)
                 webGroup.destroy();
             webGroup = null;
@@ -122,6 +124,137 @@ Rectangle {
                 item = item.parent;
             }
             return value;
+        }
+
+        SignalSpy {
+            id: publicationFailed
+            signalName: "saveFailed"
+        }
+        function browserBoundary() {
+            const desktop = findChild(page, "group.reportExport");
+            verify(desktop !== null, "The browser witness starts at the actual Export group");
+            desktop.visible = false;
+            webGroup = SettingsProof.webExport(page, Session.project.report, findChild(page, "report.preview"));
+            verify(webGroup !== null && waitForPolish(webGroup), "The actual Export resource reaches its browser capability branch: " + SettingsProof.webExportError);
+        }
+        function test_named_report_paths_follow_current_output_identity_data() {
+            const cases = [];
+            for (const browser of [false, true])
+                for (const format of ["html", "pdf", "cif"])
+                    cases.push({
+                        tag: (browser ? "browser-" : "desktop-") + format,
+                        browser,
+                        format
+                    });
+            return cases;
+        }
+        function test_named_report_paths_follow_current_output_identity(data) {
+            prepare("_edi.schema_version 3\n_report.html true\n_report.pdf false\n_report.html_offline false\n");
+            const report = Session.project.report;
+            Session.project.name = "former";
+            tryVerify(() => BoundaryProof.fullModel(report).name === "former", 2000, "The actual project rename reaches the report model before adding history");
+            for (const name of ["former", "middle"])
+                verify(SettingsProof.write(location, "reports/" + name + "." + data.format, "independent retained bytes " + name) && BoundaryProof.referenceRow(Session.project, data.format, name + "." + data.format), "The row-identity witness retains two distinct names of one typed format");
+            if (data.browser)
+                browserBoundary();
+            const failures = [];
+            function expected(label, name) {
+                const field = pathField(data.format), text = String(field.text);
+                const wanted = name ? (data.browser ? name : "reports/" + name) : "";
+                if (text !== wanted || (!name && !/not saved yet/i.test(field.placeholderText)))
+                    failures.push(label + " path=" + text + "; expected=" + wanted);
+            }
+            Session.project.name = "current";
+            tryVerify(() => BoundaryProof.fullModel(report).name === "current", 2000, "The renamed project changes the filename this Save report would write");
+            expected("rename before save", null);
+            if (data.format === "cif") {
+                verify(!box("CIF").enabled, "The retained CIF row gate preserves the unavailable writer's disabled control");
+                verify(SettingsProof.write(location, "reports/current.cif", "independent future-format bytes") && BoundaryProof.referenceRow(Session.project, "cif", "current.cif"), "A valid stored CIF row reaches the same selector without enabling its writer");
+            } else {
+                report.writesPdf = data.format === "pdf";
+                group().saveReport();
+                tryVerify(() => report.savedReports.some(row => row.name === "current." + data.format), 15000, "The actual Save report adds the current filename's row beside the older names");
+            }
+            expected("after save with several rows", "current." + data.format);
+            verify(SettingsProof.remove(location, "reports/former." + data.format), "The historical file is genuinely removed beside the saved current report");
+            report.active = false;
+            report.active = true;
+            expected("missing old file beside current new", "current." + data.format);
+            if (pathIsRed(data.format))
+                failures.push("A missing old row marks the present current output red");
+            const selected = report.savedReports.find(row => row.name === "current." + data.format);
+            if (!String(pathField(data.format).ToolTip.text).includes(selected.saved))
+                failures.push("The path tooltip shows another named row's time");
+            Session.project.name = "next";
+            tryVerify(() => BoundaryProof.fullModel(report).name === "next", 2000, "Rename after save changes the current output identity again");
+            expected("rename after save", null);
+            for (const name of ["former", "middle", "current"])
+                if (!report.savedReports.some(row => row.name === name + "." + data.format))
+                    failures.push("A retained named row was deleted: " + name);
+            compare(failures.length, 0, "Every format and platform selects by the current output name across both renames, multiple retained rows, missing history and the current tooltip; actual " + failures.join("; "));
+        }
+        function test_app_failed_publication_preserves_bytes_and_successful_rows_data() {
+            const cases = [];
+            for (const browser of [false, true])
+                for (const kind of ["html", "pdf", "settings"])
+                    cases.push({
+                        tag: (browser ? "browser-" : "desktop-") + kind,
+                        browser,
+                        kind
+                    });
+            return cases;
+        }
+        function test_app_failed_publication_preserves_bytes_and_successful_rows(data) {
+            const scheme = Preferences.colourScheme;
+            Preferences.colourScheme = "default";
+            prepare("_edi.schema_version 3\n_report.html true\n_report.pdf true\n_report.html_offline false\n");
+            const report = Session.project.report;
+            if (data.browser)
+                browserBoundary();
+            group().saveReport();
+            tryVerify(() => ["html", "pdf"].every(format => SettingsProof.fileFacts(location, reportName(format)).bytes > 100), 15000, "The failure witness starts with actually saved HTML and PDF bytes");
+            const html = SettingsProof.fileFacts(location, reportName("html")), pdf = SettingsProof.fileFacts(location, reportName("pdf"));
+            const original = report.savedReports.map(row => ({
+                        name: row.name,
+                        state: row.state
+                    }));
+            Session.project.title = "Changed content before a late publication failure";
+            tryVerify(() => BoundaryProof.fullModel(report).title === Session.project.title, 2000, "The unsaved change reaches the actual report before the failure is armed");
+            verify(Session.save(), "The changed report input is persisted before comparing live and reopened tracking states");
+            tryCompare(Session.project, "calculating", false, 15000, "Save adoption settles before the late publication failure");
+            const settings = SettingsProof.text(location, "reports/report.edi");
+            publicationFailed.target = report;
+            publicationFailed.clear();
+            BoundaryProof.armFailure(location, data.kind);
+            group().saveReport();
+            tryCompare(publicationFailed, "count", 1, 15000, "The real Export action reports the forced late failure");
+            BoundaryProof.clearFailure();
+            const receipt = SettingsProof.text(location, "failure-receipt");
+            verify(receipt.includes(data.kind === "settings" ? "settings-rename" : "write-after-open"), "The app failure reaches its actual post-open write or staged settings rename: " + receipt);
+            const afterHtml = SettingsProof.fileFacts(location, reportName("html")), afterPdf = SettingsProof.fileFacts(location, reportName("pdf"));
+            const disk = BoundaryProof.reopenedStates(location);
+            const failures = [];
+            if (data.kind === "html" && (afterHtml.sha256 !== html.sha256 || afterPdf.sha256 !== pdf.sha256))
+                failures.push("A failed first-format replacement changed prior report bytes");
+            if (data.kind === "pdf") {
+                if (afterPdf.sha256 !== pdf.sha256)
+                    failures.push("A failed PDF replacement changed its old bytes");
+                if (afterHtml.sha256 !== html.sha256 && !disk.some(row => row.name === reportName("html").split('/').pop() && row.state === "current"))
+                    failures.push("Successful HTML before failed PDF has no current persisted row");
+            }
+            if (data.kind === "settings" && SettingsProof.text(location, "reports/report.edi") !== settings)
+                failures.push("Failed row publication changed the prior settings bytes");
+            const live = report.savedReports.map(row => ({
+                        name: row.name,
+                        state: row.state
+                    }));
+            if (JSON.stringify(live) !== JSON.stringify(disk))
+                failures.push("Live and reopened row states differ: " + JSON.stringify(live) + " versus " + JSON.stringify(disk));
+            if (live.length !== original.length)
+                failures.push("A failure duplicated or dropped named tracking rows");
+            Preferences.colourScheme = scheme;
+            publicationFailed.target = null;
+            compare(failures.length, 0, "Desktop and browser export preserve failed-format bytes, retain each successful format's row or roll back, and keep live/persisted state coherent on tracking failure; actual " + failures.join("; "));
         }
         function test_export_path_rows_show_the_saved_file_state_data() {
             return ["not-saved", "current", "out-of-date", "missing", "unticked"].map(state => ({
