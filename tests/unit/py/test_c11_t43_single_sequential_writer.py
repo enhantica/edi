@@ -47,15 +47,34 @@ def _analysis_fit_node() -> ast.FunctionDef:
 
 
 def _python_module_owns_results_writer(text: str) -> bool:
+    if 'results.csv' not in text and 'fit_result.reduced_chi_square' not in text:
+        return False
     tree = ast.parse(text)
+    nodes = tuple(ast.walk(tree))
+    documents = {
+        id(node.body[0].value)
+        for node in nodes
+        if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))
+        and node.body
+        and isinstance(node.body[0], ast.Expr)
+        and isinstance(node.body[0].value, ast.Constant)
+        and isinstance(node.body[0].value.value, str)
+    }
+    reads_documents = any(
+        (isinstance(node, ast.Attribute) and node.attr in {'__doc__', 'getdoc'})
+        or (isinstance(node, ast.Constant) and node.value == '__doc__')
+        for node in nodes
+    )
     literals = {
         node.value
-        for node in ast.walk(tree)
-        if isinstance(node, ast.Constant) and isinstance(node.value, str)
+        for node in nodes
+        if isinstance(node, ast.Constant)
+        and isinstance(node.value, str)
+        and (reads_documents or id(node) not in documents)
     }
     writer_calls = {
         node.func.attr
-        for node in ast.walk(tree)
+        for node in nodes
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
     }
     owns_contract = any(
@@ -63,6 +82,26 @@ def _python_module_owns_results_writer(text: str) -> bool:
         for literal in literals
     )
     return owns_contract and bool(writer_calls & WRITER_METHODS)
+
+
+@pytest.mark.parametrize(
+    'doc_access',
+    [None, 'routine.__doc__', "getattr(routine, '__doc__')", 'inspect.getdoc(routine)'],
+)
+def test_writer_inventory_distinguishes_documentation_from_executable_contracts(doc_access):
+    text = '''
+def routine():
+    """The native fit writes results.csv; this facade delegates."""
+    return native.fit()
+def save_html(path, html):
+    path.write_text(html)
+'''
+    if doc_access is not None:
+        text += 'filename = ' + doc_access + '\n'
+    assert _python_module_owns_results_writer(text) == (doc_access is not None), (
+        'Documentation of the native CSV delegate cannot turn an unrelated HTML writer into '
+        'a second CSV writer, but reading that documentation as runtime data retains detection'
+    )
 
 
 def _assert_sequential_native_delegate(node: ast.FunctionDef) -> str:
