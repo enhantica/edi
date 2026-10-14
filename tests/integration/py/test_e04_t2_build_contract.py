@@ -24,7 +24,7 @@ from tests.fixtures.table_display.metadata_bytes import pre_catalogue_bytes
 ROOT = Path(__file__).resolve().parents[3]
 MANIFEST = tomllib.loads((ROOT / 'pixi.toml').read_text())
 CHECKS = ('app-lint', 'app-format-check', 'app-test', 'app-ui-test', 'group-app')
-# Owner decisions 2026-10-02: retain manual check nodes, omit both tiers automatically.
+# Local aggregators omit both app tiers; desktop CI runs them on schedule/manual only.
 AUTOMATIC_CHECKS = ('app-lint', 'app-format-check', 'group-app')
 
 
@@ -393,7 +393,7 @@ def test_owner_note_captures_are_registered_in_the_shared_image_set():
     # This inventory does NOT certify appearance; reviewer/conductor inspect these images.
 
 
-def sequence_sandbox(tmp_path):
+def sequence_sandbox(tmp_path, *, copy_fixtures=True):
     """Execute real orchestration scripts, substituting only builders and terminal tools."""
     env = sandbox(tmp_path)
     for key in tuple(env):
@@ -472,7 +472,8 @@ def sequence_sandbox(tmp_path):
             }
         ])
     )
-    shutil.copytree(ROOT / 'tests/fixtures', tmp_path / 'tests/fixtures')
+    if copy_fixtures:
+        shutil.copytree(ROOT / 'tests/fixtures', tmp_path / 'tests/fixtures')
     return env
 
 
@@ -560,23 +561,48 @@ def test_full_sequence_builds_once_before_checks(tmp_path, name):
 
 
 @pytest.mark.parametrize('platform', ['Linux', 'macOS'])
-def test_desktop_ci_sequence_builds_once_before_checks(tmp_path, platform):
-    env = sequence_sandbox(tmp_path)
+@pytest.mark.parametrize(
+    ('event', 'enabled'),
+    [('pull_request', False), ('push', False), ('schedule', True), ('workflow_dispatch', True)],
+)
+def test_desktop_ci_sequence_builds_once_before_checks(tmp_path, platform, event, enabled):
+    env = sequence_sandbox(tmp_path, copy_fixtures=False)
     job = next(job for _, name, job in expanded_jobs() if name == f'app · {platform}')
     # Actions stringifies YAML env values (EDI_NATIVE_ARTIFACT is declared as 1).
     env.update({key: str(value) for key, value in job.get('env', {}).items()})
+    nightly_condition = (
+        "${{ !cancelled() && (github.event_name == 'schedule' || "
+        "github.event_name == 'workflow_dispatch') }}"
+    )
     for step in job['steps']:
-        if step.get('if') is False:
-            continue
         cmd = step.get('run', '')
-        # Recovery is a separate change-scoped rebuild exercise (note 21).
         if not re.search(
             r'\b(?:app-build|core-build|app-lint|app-format-check|app-test|app-ui-test)'
             r'(?:\.sh)?(?:\s|$)|\bgroup-app(?:\s|$)|pytest tests/integration/app',
             cmd,
         ):
             continue
-        step_env = {**env, **{key: str(value) for key, value in step.get('env', {}).items()}}
+        is_tier = bool(re.search(r'\bapp-(?:ui-)?test(?:\s|$)', cmd))
+        condition = step.get('if')
+        if is_tier:
+            assert condition == nightly_condition, (
+                'Owner decision: desktop app tiers use the schedule/manual condition; '
+                f'platform={platform}, event={event}, actual condition={condition!r}'
+            )
+            if not enabled:
+                continue
+        elif condition is False:
+            continue
+        else:
+            assert condition is None, (
+                'Build and ordinary app checks remain unconditional within the desktop job; '
+                f'platform={platform}, command={cmd}, actual condition={condition!r}'
+            )
+        step_env = {
+            **env,
+            'GITHUB_EVENT_NAME': event,
+            **{key: str(value) for key, value in step.get('env', {}).items()},
+        }
         result = subprocess.run(
             ['bash', '-c', cmd],
             cwd=tmp_path,
@@ -587,11 +613,14 @@ def test_desktop_ci_sequence_builds_once_before_checks(tmp_path, platform):
             check=False,
         )
         assert result.returncode == 0, (
-            f'corrected note 20: CI {platform} completes its declared step {cmd}: {result.stderr}'
+            f'CI {platform}/{event} completes its declared step {cmd}: {result.stderr}'
         )
-    assert_sequence(calls(tmp_path))
-    assert not {'check:app-test', 'check:app-ui-test'} & set(calls(tmp_path)), (
-        ' owner decisions: both desktop CI sequences execute neither disabled app tier'
+    observed = calls(tmp_path)
+    assert_sequence(observed, CHECKS if enabled else AUTOMATIC_CHECKS)
+    app_calls = {'check:app-test', 'check:app-ui-test'} & set(observed)
+    assert app_calls == ({'check:app-test', 'check:app-ui-test'} if enabled else set()), (
+        'Owner decision: both desktop tiers execute on schedule/manual, neither on PR/push; '
+        f'platform={platform}, event={event}, actual calls={observed}'
     )
 
 
