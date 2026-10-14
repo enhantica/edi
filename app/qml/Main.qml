@@ -398,11 +398,14 @@ EaComponents.ApplicationWindow {
     onWidthChanged: storeGeometry()
     onHeightChanged: storeGeometry()
 
-    // edi's preferences go to the base once everything, the base's hidden dialog and its settings
-    // included, is complete (Preferences.apply).
-    Component.onCompleted: Qt.callLater(() => {
+    // The window takes its kept geometry as it is created, after the base's own settings have loaded; edi's
+    // preferences go to the base once everything, the base's hidden dialog and its settings included, is complete
+    // (Preferences.apply).
+    Component.onCompleted: {
         restoreGeometry();
-        Preferences.apply();
-        RecentProjects.refresh();
-    })
+        Qt.callLater(() => {
+            Preferences.apply();
+            RecentProjects.refresh();
+        });
+    }
 }

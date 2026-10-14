@@ -157,17 +157,14 @@ QByteArray& browser_settings_stored() {
 }
 #endif
 
-// ADR-0031 §3, §6: today's settings.ini carried over once into the one store. A key the store already holds is never
-// overwritten, the old file is left as it is, and a marker in the store keeps a later start (or one after a reset) from
-// carrying anything again. The keys that moved go to their new groups.
+// ADR-0031 §3, §6: today's settings.ini carried over into the one store. Only a key the store does not hold is copied,
+// so a key is carried once and never overwritten, and the old file is left as it is. The keys that moved go to their new
+// groups.
 void carry_over_settings(const QString& old_file, const QString& store_file) {
     if (!QFile::exists(old_file)) {
         return;
     }
     QSettings store(store_file, QSettings::IniFormat);
-    if (store.value(QStringLiteral("Edi/carriedOver")).toBool()) {
-        return;
-    }
     const QSettings old(old_file, QSettings::IniFormat);
     for (const QString& key : old.allKeys()) {
         QString to = key;
@@ -188,7 +185,6 @@ void carry_over_settings(const QString& old_file, const QString& store_file) {
             store.setValue(to, value);
         }
     }
-    store.setValue(QStringLiteral("Edi/carriedOver"), true);
     store.sync();
 }
 
@@ -218,17 +214,14 @@ void configure_engine(QQmlEngine& engine) {
                                    : fresh_config_dir();
     QDir().mkpath(config_dir);
     // ADR-0031 §3: the one store, QSettings' ini file of the user scope (organisation EasyScience, application
-    // EasyDiffraction); a demo or a test run keeps its fresh folder, and the browser its storage.
+    // EasyDiffraction), with today's settings.ini carried over once; a demo or a test run's user scope is its fresh
+    // folder (use_fresh_settings), and the browser keeps its storage.
     QString settings_file = QDir(config_dir).filePath(QStringLiteral("settings.ini"));
 #if !defined(Q_OS_WASM)
-    if (fresh_config_dir().isEmpty()) {
-        const QString legacy = settings_file;
-        settings_file = settings_store_path();
-        QDir().mkpath(QFileInfo(settings_file).absolutePath());
-        carry_over_settings(legacy, settings_file);
-    } else {
-        settings_file = QDir(config_dir).filePath(QStringLiteral("EasyDiffraction.ini"));
-    }
+    const QString legacy = settings_file;
+    settings_file = settings_store_path();
+    QDir().mkpath(QFileInfo(settings_file).absolutePath());
+    carry_over_settings(legacy, settings_file);
 #endif
 #if defined(Q_OS_WASM)
     // Once per process: touchpad scrolling as the desktop's (WheelGestures above).
