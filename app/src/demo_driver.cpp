@@ -417,6 +417,16 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
             steps_.push_back({name + "6-develop", {"preferences.tab.develop"}});
         }
     }
+    // The Report page's sidebar, Main and Text, in both themes. Run only when asked (`--demo-only report-sidebar-`).
+    if (only.startsWith(QLatin1String("report-sidebar-"))) {
+        const QString report = QStringLiteral("appBar.tab.report");
+        steps_.push_back({"report-sidebar-1-light", QStringList{"resize:1280x960", "theme:light"} + start +
+                                                        open_example("pd-neut-cwl_lbco-hrpt_start-2") +
+                                                        QStringList{report, basic}});
+        steps_.push_back({"report-sidebar-2-light-text", {text}});
+        steps_.push_back({"report-sidebar-3-dark-text", {"theme:dark"}});
+        steps_.push_back({"report-sidebar-4-dark", {basic}});
+    }
     // A fitted scan's report, its preview at the evolution charts. Run only when asked (`--demo-only report-scan-`).
     if (only.startsWith(QLatin1String("report-scan-"))) {
         // EDI_DEMO_REPORT_PROJECT names a fitted scan to open instead of fitting the bundled one.
