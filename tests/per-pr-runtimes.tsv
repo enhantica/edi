@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-14T01:21:27Z
+# measured_utc = 2026-10-14T02:55:22Z
 #
-# Recorded from: measured test run (20 node(s) measured once, 10449 banked, 0 stale row(s) dropped)
-# Collected tests: 11369; with a reported duration: 6148
+# Recorded from: measured test run (6 node(s) measured once, 10471 banked, 0 stale row(s) dropped)
+# Collected tests: 11369; with a reported duration: 6151
 # Module-scoped fixture costs recorded: 43
 #
 # Breaches are decided PER TIER against the table
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 11369
 # inventory_cpp = 328
-# inventory_measured = 10469
-# inventory_unmeasured = 1228
+# inventory_measured = 10471
+# inventory_unmeasured = 1226
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -5545,7 +5545,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_rename_namespace.py::tes
 0.000	tests/integration/py/test_report_builder_seams.py::test_core_correlation_filter_keeps_top_five_and_threshold_pairs[1.0-0]
 0.000	tests/integration/py/test_report_builder_seams.py::test_core_correlation_filter_keeps_top_five_and_threshold_pairs[None-5]
 0.000	tests/integration/py/test_report_builder_seams.py::test_cw_d_axis_uses_bragg_law_and_ascending_points
-0.000	tests/integration/py/test_report_builder_seams.py::test_scan_evolution_keeps_extracted_x_numeric_su_and_core_text
+0.010	tests/integration/py/test_report_builder_seams.py::test_scan_evolution_keeps_extracted_x_numeric_su_and_core_text
 0.000	tests/integration/py/test_report_builder_seams.py::test_tof_d_axis_uses_linear_calibration_with_nonzero_offset
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_chart_amendments.py::test_default_pattern_titles_are_coloured_segments_with_unstyled_separators
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_chart_amendments.py::test_palette_rows_are_data_with_default_first_colour_and_valid_hex[False]
@@ -5628,8 +5628,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_report_project_options.p
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_project_options.py::test_invalid_report_tokens_refuse_at_load_naming_the_item[x_axis-tof]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_project_options.py::test_report_threshold_accepts_both_closed_interval_endpoints[0.0]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_project_options.py::test_report_threshold_accepts_both_closed_interval_endpoints[1.0]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_renderer_seams.py::test_drawing_quaternion_order_unit_geometry_and_camera_frame
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_renderer_seams.py::test_pattern_traces_preserve_gaps_asymmetric_errors_and_pane_shares
+0.240	tests/integration/py/test_report_renderer_seams.py::test_drawing_quaternion_order_unit_geometry_and_camera_frame
+0.190	tests/integration/py/test_report_renderer_seams.py::test_pattern_traces_preserve_gaps_asymmetric_errors_and_pane_shares
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_save_workflow.py::test_check_uses_digest_and_file_existence_instead_of_save_timestamps[cell]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_save_workflow.py::test_check_uses_digest_and_file_existence_instead_of_save_timestamps[data]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_save_workflow.py::test_check_uses_digest_and_file_existence_instead_of_save_timestamps[embed]

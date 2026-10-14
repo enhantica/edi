@@ -120,19 +120,40 @@ def test_scan_evolution_keeps_extracted_x_numeric_su_and_core_text(tmp_path):
         'file_path,fit_result.reduced_chi_square,fit_result.success,fit_result.iterations,'
         'diffrn.ambient_temperature,bank.background.pA.intensity,'
         'bank.background.pA.intensity.uncertainty\n'
-        'scan/point.dat,1,true,1,52.345,10.30925,0.00157\n'
+        'scan/point.dat,1,True,1,52.345,10.30925,0.00157\n'
     )
     loaded = built(source)
     model = json.loads(loaded.report.model().to_json())
-    assert 'evolution' in model, 'A scan report exposes its numeric evolution series in the model'
-    series = model['evolution']
-    assert series, 'A scan report must carry the existing results ledger evolution series'
-    points = [point for row in series for point in row['points']]
-    assert any(
-        (point['x'], point['y'], point['su']) == (52.345, 10.30925, 0.00157) for point in points
-    ), 'Evolution must retain the first extracted x and the exact independent results value and su'
-    assert any(point.get('text') == '10.3093(16)' for point in points), (
-        'Evolution report text must use the same core IUCr spelling as the GUI and writer'
+    series = model.get('evolution')
+    assert isinstance(series, list) and series, (
+        'A scan report exposes a nonempty root evolution list of parameter series; '
+        f'root keys={sorted(model)}, evolution={series!r}'
+    )
+    assert all(isinstance(row, dict) for row in series), (
+        f'Root evolution entries are named parameter objects; evolution={series!r}'
+    )
+    name = 'bank.background.pA.intensity'
+    selected = [row for row in series if row.get('name') == name]
+    assert len(selected) == 1 and isinstance(selected[0].get('points'), list), (
+        'Evolution exposes one named parameter series with a points list; '
+        f'wanted={name!r}, evolution={series!r}'
+    )
+    points = selected[0]['points']
+    assert all(
+        isinstance(point, dict) and {'x', 'y', 'su', 'text'} <= point.keys() for point in points
+    ), f'Each evolution point exposes x, y, su and text; parameter={name!r}, points={points!r}'
+    matching = [
+        point
+        for point in points
+        if (point['x'], point['y'], point['su']) == (52.345, 10.30925, 0.00157)
+    ]
+    assert matching, (
+        'Evolution retains extracted T=52.345, value=10.30925 and su=0.00157 '
+        f'in its named series; parameter={name!r}, points={points!r}'
+    )
+    assert all(point['text'] == '10.3093(16)' for point in matching), (
+        'The same numeric evolution point carries the core IUCr spelling 10.3093(16); '
+        f'parameter={name!r}, matching points={matching!r}'
     )
 
 
