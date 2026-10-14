@@ -13,11 +13,17 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 OBSERVER = r"""<script>
+const errors = [];
+window.addEventListener('error', e => errors.push(String(e.message)));
+window.addEventListener('unhandledrejection', e => errors.push(String(e.reason)));
 window.addEventListener('load', () => {
   const report = () => {
     const plots = [...document.querySelectorAll('.evolution-figure .js-plotly-plot')];
     const result = {selectors: document.querySelectorAll('.evolution-figure select').length,
-      viewport: innerWidth, plots: plots.map(plot => {
+      viewport: innerWidth, errors,
+      figures: [...document.querySelectorAll('.evolution-figure')].map(f => ({
+        className: f.className, text: f.textContent,
+        children: [...f.children].map(c => c.className)})), plots: plots.map(plot => {
         const b = plot.getBoundingClientRect();
         return {box: [b.x, b.y, b.width, b.height], traces: plot.data,
           svgCount: plot.querySelectorAll("svg,canvas").length,
@@ -25,7 +31,9 @@ window.addEventListener('load', () => {
       })};
     fetch('/proof?case=CASE', {method: 'POST', body: JSON.stringify(result)});
   };
-  requestAnimationFrame(() => requestAnimationFrame(report));
+  // A bounded clock gives deferred modules and asynchronous Plotly draws time
+  // in both included and excluded controls; completion never depends on success.
+  setTimeout(() => requestAnimationFrame(() => requestAnimationFrame(report)), 5000);
 });
 </script>"""
 

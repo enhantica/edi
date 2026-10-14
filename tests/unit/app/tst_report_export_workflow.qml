@@ -20,8 +20,12 @@ Rectangle {
         when: windowShown
         property var page
         property var location
+        property var webGroup
         property var reference: JSON.parse(SettingsProof.repoText("tests/fixtures/report_storage/reference.json"))
         function cleanup() {
+            if (webGroup)
+                webGroup.destroy();
+            webGroup = null;
             Session.closeProject();
             if (page)
                 page.destroy();
@@ -41,7 +45,7 @@ Rectangle {
             verify(page !== null && waitForPolish(page), "The real Report page lays out its export controls");
         }
         function group() {
-            const value = findChild(page, "group.reportExport");
+            const value = webGroup || findChild(page, "group.reportExport");
             verify(value !== null, "The Report page exposes its actual Export group");
             if (value.collapsed)
                 mouseClick(value.titleArea, value.titleArea.width / 2, value.titleArea.height / 2);
@@ -89,7 +93,10 @@ Rectangle {
             fields.sort((a, b) => Math.abs(a.mapToItem(group(), 0, a.height / 2).y - targetY) - Math.abs(b.mapToItem(group(), 0, b.height / 2).y - targetY));
             const field = fields[0], point = field.mapToItem(group(), 0, field.height / 2);
             verify(Math.abs(point.y - targetY) <= Math.max(field.height, checkbox.height) / 2, "Each report path is on its own format's checkbox row: " + format + " actual y=" + point.y + " checkbox y=" + targetY);
-            verify(point.x >= checkbox.mapToItem(group(), checkbox.width, 0).x - 1, "Each format's read-only path follows its checkbox: " + format);
+            const indicator = checkbox.indicator;
+            const labels = Render.descendants(checkbox).filter(item => item.text === format.toUpperCase() && item.paintedWidth !== undefined);
+            const inkRight = Math.max(indicator ? indicator.mapToItem(group(), indicator.width, 0).x : 0, ...labels.map(label => label.mapToItem(group(), label.paintedWidth, 0).x));
+            verify(point.x >= inkRight - 1, "Each report path follows the visible checkbox indicator and format label; logical checkbox width may extend farther: " + format + " actual field x=" + point.x + " indicator/label right=" + inkRight + " checkbox width=" + checkbox.width + " enabled=" + checkbox.enabled + " opacity=" + field.opacity);
             return field;
         }
         function pathIsRed(format) {
@@ -162,6 +169,35 @@ Rectangle {
             saveReport();
             tryVerify(() => ["html", "pdf"].every(format => String(pathField(format).color) === String(EaStyle.Colors.themeForeground)), 15000, "Save report rewrites missing or stale files and returns both path rows to normal text");
         }
+        function test_browser_path_rows_use_the_session_file_state_data() {
+            return ["not-saved", "current", "out-of-date"].map(state => ({tag: state, state: state}));
+        }
+        function test_browser_path_rows_use_the_session_file_state(data) {
+            prepare(undefined, "tests/fixtures/report_options/pairs");
+            Session.project.report.setIncluded("charts", false);
+            const desktop = findChild(page, "group.reportExport");
+            verify(desktop !== null, "The browser capability seam starts with the actual app's Report group and model");
+            desktop.visible = false;
+            webGroup = SettingsProof.webExport(page, Session.project.report, findChild(page, "report.preview"));
+            verify(webGroup !== null && SettingsProof.webAvailable, "The browser UI gate compiles the real resource with only its WebFiles.available capability operand set true");
+            verify(waitForPolish(webGroup), "The actual Export resource lays out under the browser capability seam");
+            const html = pathField("html");
+            compare(String(html.text), "", "A fresh browser session reads no saved path before an actual report save");
+            verify(/not saved yet/i.test(html.placeholderText), "The fresh browser session displays the grey not-saved placeholder");
+            if (data.state === "not-saved")
+                return;
+            webGroup.saveReport();
+            tryVerify(() => SettingsProof.fileFacts(location, reportName("html")).bytes > 100, 15000, "The web UI capability gate still runs the real report writer and observes its session file");
+            compare(String(html.text), reportName("html").split('/').pop(), "The browser field shows the report file name rather than a desktop-relative path");
+            compare(String(html.color), String(EaStyle.Colors.themeForeground), "The amended web saving rule shows a current session file in normal text");
+            const row = Session.project.report.savedReports.find(value => value.format === "html");
+            verify(row !== undefined && /downloaded at/i.test(html.ToolTip.text) && String(html.ToolTip.text).includes(row.saved), "The browser path tooltip names the actual download time; actual=" + html.ToolTip.text);
+            if (data.state === "out-of-date") {
+                Session.project.title = "Changed in the browser after its actual report save";
+                tryVerify(() => pathIsRed("html"), 2000, "The amended web rule colours a stale in-browser file red like the desktop");
+                verify(SettingsProof.fileFacts(location, reportName("html")).bytes > 100, "A stale browser report remains in the session folder");
+            }
+        }
         function evolutionWitness(included) {
             prepare(undefined, "tests/fixtures/report_evolution/project");
             const reference = JSON.parse(SettingsProof.repoText("tests/fixtures/report_evolution/reference.json"));
@@ -212,19 +248,21 @@ Rectangle {
                 verify(waitForPolish(page), "The narrow preview lays out its actual text column before checking one chart per row");
             }
             const preview = witness.preview;
-            const charts = Render.descendants(preview).filter(item => item.visible && item.fromReport === true && item.reportShown !== undefined);
+            const allCharts = Render.descendants(preview).filter(item => item.objectName === "report.evolution");
+            const charts = allCharts.filter(item => item.visible);
             const failures = [];
             if (charts.length !== (data.included ? witness.order.length : 0))
-                failures.push("chart count=" + charts.length + "; expected=" + (data.included ? witness.order.length : 0));
+                failures.push("recursive report.evolution items=" + allCharts.length + "; visible charts=" + charts.length + "; expected=" + (data.included ? witness.order.length : 0) + "; records=" + JSON.stringify(allCharts.map(item => ({visible: item.visible, width: item.width, height: item.height, series: item.reportSeries || item.reportShown}))));
             for (let i = 0; i < charts.length; ++i) {
                 const chart = charts[i];
-                if (!chart.reportShown || chart.reportShown.name !== witness.order[i])
-                    failures.push("chart " + i + " parameter=" + JSON.stringify(chart.reportShown));
+                const series = chart.reportSeries || chart.reportShown;
+                if (!series || series.name !== witness.order[i])
+                    failures.push("chart " + i + " actual reportSeries parameter=" + JSON.stringify(series));
                 const points = chart.reportPoints;
                 const expected = witness.reference.points[i];
                 if (!points || !expected || points.length !== expected.length || expected.some((row, index) => ["x", "y", "su"].some(key => Math.abs(points[index][key] - row[key]) > 1e-9)))
                     failures.push("chart " + i + " numeric points and uncertainties=" + JSON.stringify(points));
-                const yTitle = findChild(chart, "evolution.title.y"), xTitle = findChild(chart, "evolution.title.x");
+                const yTitle = findChild(chart, "report.evolution.title") || findChild(chart, "evolution.title.y"), xTitle = findChild(chart, "evolution.title.x");
                 if (!yTitle || yTitle.text !== witness.titles[i] || !xTitle || xTitle.text !== Session.project.evolution.xTitle)
                     failures.push("chart " + i + " native title/units=" + (yTitle ? yTitle.text : null) + "; x=" + (xTitle ? xTitle.text : null));
                 const at = chart.mapToItem(preview.contentItem, 0, 0);
@@ -291,7 +329,7 @@ Rectangle {
                     for (const trace of plot.traces)
                         names.push(trace.name);
                 if (JSON.stringify(names) !== JSON.stringify(data.included ? witness.order : []))
-                    failures.push(view + " drawn parameter order=" + JSON.stringify(names));
+                    failures.push(view + " actual browser Plotly trace order=" + JSON.stringify(names) + "; DOM figures=" + JSON.stringify(facts.figures) + "; runtime diagnostics=" + JSON.stringify(facts.errors));
                 for (let i = 0; i < plots.length; ++i) {
                     const plot = plots[i], trace = plot.traces[0], expected = witness.reference.points[i];
                     if (plot.traces.length !== 1 || !expected || expected.some((point, index) => ["x", "y"].some(key => Math.abs(trace[key][index] - point[key]) > 1e-9) || Math.abs((trace.error_y.array || [])[index] - point.su) > 1e-9) || !trace.error_y.visible)

@@ -4,6 +4,7 @@
 #include <QPdfWriter>
 #include <QPainter>
 #include <QProcess>
+#include <QProcessEnvironment>
 #include <QStandardPaths>
 #include <QJsonDocument>
 #include <QCryptographicHash>
@@ -74,8 +75,10 @@ private:
 
 class ReportSettingsProof : public QObject {
     Q_OBJECT
+    Q_PROPERTY(bool webAvailable READ webAvailable CONSTANT)
 public:
     using QObject::QObject;
+    bool webAvailable() const { return true; }
     Q_INVOKABLE QObject* creationDialog(QObject* root) const {
         if (!root) return nullptr;
         for (auto* object : root->findChildren<QObject*>())
@@ -83,6 +86,31 @@ public:
                 object->metaObject()->indexOfProperty("projectParentDirectory") >= 0)
                 return object;
         return nullptr;
+    }
+    // Capability-only seam: compile the application's actual resource unchanged
+    // except for the native/browser availability operand. No path/state output
+    // is supplied by this observer, and this is not a browser-download proof.
+    Q_INVOKABLE QObject* webExport(QQuickItem* parent, QObject* report, QObject* preview) const {
+        auto* engine = parent ? qmlEngine(parent) : nullptr;
+        if (!engine) return nullptr;
+        const QUrl origin("qrc:/qt/qml/edi/app/Pages/Report/ExportGroup.qml");
+        QFile file(":/qt/qml/edi/app/Pages/Report/ExportGroup.qml");
+        if (!file.open(QIODevice::ReadOnly)) return nullptr;
+        auto source = file.readAll();
+        source.replace("import edi.app", "import edi.app\nimport ReportAcceptance 1.0 as Platform");
+        source.replace("WebFiles.available", "Platform.SettingsProof.webAvailable");
+        QQmlComponent component(engine);
+        component.setData(source, origin);
+        auto* object = component.createWithInitialProperties({
+            {"report", QVariant::fromValue(report)}, {"preview", QVariant::fromValue(preview)}},
+            engine->rootContext());
+        if (!object) {
+            for (const auto& error : component.errors()) qWarning().noquote() << error.toString();
+            return nullptr;
+        }
+        object->setParent(parent);
+        if (auto* item = qobject_cast<QQuickItem*>(object)) item->setParentItem(parent);
+        return object;
     }
     Q_INVOKABLE QVariantMap htmlFigureFacts(const QString& html) const {
         const QRegularExpression shared("const sharedSites = sites => \\{[\\s\\S]*?\n  \\};");
@@ -141,6 +169,16 @@ public:
         const auto python = QStandardPaths::findExecutable("python");
         if (python.isEmpty()) return {{"error", "Report surface observer needs Python"}};
         QProcess process;
+        auto environment = QProcessEnvironment::systemEnvironment();
+        // Local app diagnostics use the task engine's consumer artifact when
+        // present. A replay can explicitly select its sealed matching artifact.
+        QString extension = environment.value("EDI_REPORT_ACCEPTANCE_EXTENSION_DIR");
+        if (extension.isEmpty() && QDir(root.filePath("build/ci-consumer/python/edi")).exists())
+            extension = root.filePath("build/ci-consumer/python/edi");
+        if (!extension.isEmpty()) environment.insert("EDI_EXTENSION_DIR", extension);
+        environment.insert("PYTHONPATH", root.filePath("lib") + QDir::listSeparator() +
+                           root.path() + QDir::listSeparator() + environment.value("PYTHONPATH"));
+        process.setProcessEnvironment(environment);
         process.start(python, {root.filePath("tests/fixtures/report_effective_template/observe_html.py"), location.toLocalFile()});
         if (!process.waitForFinished(25000)) { process.kill(); return {{"error", "Python and CLI HTML observers did not finish"}}; }
         const auto json = QJsonDocument::fromJson(process.readAllStandardOutput());
