@@ -21,12 +21,27 @@ CASE = next(
     for row in json.loads((ROOT / 'tests/fixtures/e05_t1/cli.json').read_text())['cases']
     if row['id'] == 'pd-neut-tof_ncaf-wish-3bank_start-5'
 )
-REFERENCE = CASE['record']
+REFERENCE = dict(CASE['record'])
+for index, bank_name in enumerate(
+    sorted(key[5:-4] for key in REFERENCE if key.startswith('bank.') and key.endswith('.rwp'))
+):
+    for metric, value in {
+        'rp': 0.071 + index * 0.019,
+        'rexp': 0.039 + index * 0.017,
+        'crp': 0.171 + index * 0.021,
+        'cwrp': 0.291 + index * 0.023,
+    }.items():
+        REFERENCE['bank.' + bank_name + '.' + metric] = str(value)
+
 TAGS = [
     '_fit_result_bank.experiment_id',
     '_fit_result_bank.n_data_points',
     '_fit_result_bank.prof_wr_factor',
     '_fit_result_bank.chi_square',
+    '_fit_result_bank.prof_r_factor',
+    '_fit_result_bank.prof_wr_expected',
+    '_fit_result_bank.prof_cr_factor',
+    '_fit_result_bank.prof_cwr_factor',
 ]
 
 
@@ -40,6 +55,10 @@ def bank_rows():
             REFERENCE['bank.' + name + '.n_points'],
             REFERENCE['bank.' + name + '.rwp'],
             REFERENCE['bank.' + name + '.chi_square'],
+            *[
+                REFERENCE['bank.' + name + '.' + metric]
+                for metric in ('rp', 'rexp', 'crp', 'cwrp')
+            ],
         ]
         for name in names
     ]

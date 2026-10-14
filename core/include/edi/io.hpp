@@ -139,15 +139,37 @@ void save_project(const Project& project, const std::string& directory);
 // Save and Save as go through it.
 void save_project_as(Project& project, const std::string& directory);
 
+// After a save, the open project takes what its saved files hold, exactly what a reopen of `directory` reads: each
+// parameter's value and s.u., which the IUCr rule rounds, and the coefficients of the correlation rows the save wrote,
+// rounded too; a scan's template then reads its pairs from those rows. Nothing is recalculated; whether anything
+// changed. A report saved next stays current after the project is reopened. A project the loader refuses (one
+// without a structure) is left as it is.
+bool adopt_saved_values(Project& project, const std::string& directory);
+
 // The delegated write — converts the model and calls crysta::save_project. Implemented in
 // the adapter (the one crysta-touching TU); edi-only signature (ADR-0003).
 void save_project_via_crysta(const Project& project, const std::string& directory);
 
+// Save report's write (ADR-0036 §7): `reports/report.edi` of `directory` alone, from the project's report settings and
+// saved-report rows, when its text changes, through crysta's writer; whether it wrote.
+bool save_report_settings(const Project& project, const std::string& directory);
+
+// The report settings as `reports/report.edi` states them, each one the project leaves at its default written out with
+// that value, and the saved-report rows: what the Report page's Text tab shows, never empty. crysta writes the text.
+std::string report_settings_text(const Project& project);
+
+// A report setting's value checked by crysta's rules, as a file states it (ADR-0036 §7): `tag` is `_report.<item>`,
+// `_correlation_chart.threshold` or `_pattern_chart.x_axis`, `value` its text. Throws std::invalid_argument naming the
+// item for a value it does not take, or for a tag that is not a report setting.
+void check_report_setting(const std::string& tag, const std::string& value);
+
 // The project's relations checked by crysta (a refusal is a DomainValidationError carrying crysta's
 // `crysta.domain.constraint_*` codes), every parameter marked with its dependence, and a dependent's
 // free flag cleared with crysta's `crysta.domain.dependent_free_ignored` warning to `warn`. The loader
-// runs it; so does every edit of the relations.
-void refresh_relations(Project& project, const WarningSink& warn = {});
+// runs it with `from_file`, where a constrained dependent's bracket is the uncertainty crysta saved
+// with it, so one holding a nonzero s.u. loses its free flag without the warning; so does every edit
+// of the relations, without `from_file`.
+void refresh_relations(Project& project, const WarningSink& warn = {}, bool from_file = false);
 
 // Every dependent (a cell sibling, a special-position follower, a constrained parameter) set from
 // its relation at the model's current independent values by crysta's one applier, values only.
@@ -161,8 +183,9 @@ bool apply_relations(Project& project);
 void complete_relations(Project& project);
 
 // Undo's half: apply_relations, then each dependent's e.s.d. back to the one it held before the
-// fit (kept in memory by the fit's write-back, or seeded by the loader from a legacy file).
-void restore_dependents(Project& project);
+// fit (kept in memory by the fit's write-back, or seeded by the loader from a legacy file); one in
+// `restored`, which its own start row gave back, keeps that.
+void restore_dependents(Project& project, const std::set<const Parameter*>& restored = {});
 
 // Review-9 F1 — the lossless prior-state property on edi's own paths (implemented in the
 // adapter, ADR-0003). rebalance_positional_fit_state runs between write_back and the
@@ -221,6 +244,10 @@ UndoFitOutcome restore_fit_start(Project& project);
 // `copy_fit_result` writes `from`'s onto `to`, a project `from` was copied from (experiments by position);
 // `clear_fit_result` leaves none. An undo clears it (restore_fit_start), as diffraction-lib's undo does.
 void copy_fit_result(Project& to, const Project& from);
+// One experiment's share of the last fit (its `_fit_result_bank` row and its phases' `_fit_result_phase` rows),
+// from its counterpart in another copy of the project.
+void copy_fit_share(ExperimentBase& to, const ExperimentBase& from);
+void clear_fit_share(ExperimentBase& experiment);
 void clear_fit_result(Project& project);
 // A correlation row's coefficient as a number (its text, read in the C locale); NaN when it is not one.
 double correlation_value(const FitParameterCorrelation& row);

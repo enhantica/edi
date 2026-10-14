@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "action": ["--test-observer", "scan-cycle"],
+  "switch": "EDI_TEST_OBSERVERS",
+  "operations": ["resume"],
+  "performance_action": ["--demo", "--demo-only", "perf-162f"],
+  "baseline": {"edi": "2e04556f", "crysta": "fb153aeb"},
+  "pairs": 5,
+  "ratio_bound": 1.05,
+  "spread_bound": 0.03,
+  "file_count": 162,
+  "mode": "adaptive",
+  "timeout_seconds": 180
+}

@@ -25,13 +25,18 @@ HERE = Path(__file__).resolve().parent
 
 def arguments():
     args = argparse.ArgumentParser(description=__doc__)
-    args.add_argument(
+    selection = args.add_mutually_exclusive_group()
+    selection.add_argument(
         '--only', help='append one newly registered project; retain existing oracles'
+    )
+    selection.add_argument(
+        '--update', help='update one changed registered project; retain other oracles'
     )
     args.add_argument(
         '--input-project', help='author one new registered case from its independent fixture input'
     )
     args = args.parse_args()
+    args.case_id = args.only or args.update
     if args.input_project and not args.only:
         raise ValueError('an independent authoring input requires exactly one new registered case')
     authored = (ROOT / args.input_project).resolve() if args.input_project else None
@@ -59,15 +64,17 @@ def main():
         'crysta_sdk': linked_engine_source,
         'cases': [],
     }
-    if args.only:
+    if args.case_id:
         manifest = json.loads((HERE / 'cli.json').read_text())
-        if args.only in {row['id'] for row in manifest['cases']}:
+        if args.only and args.only in {row['id'] for row in manifest['cases']}:
             raise RuntimeError('append-only generation refuses replacing an existing CLI oracle')
     with tempfile.TemporaryDirectory(prefix='cli-fit-reference-') as temporary:
         for entry in registry['projects']:
-            if args.only and entry['id'] != args.only:
+            if args.case_id and entry['id'] != args.case_id:
                 continue
             source = args.input_path or ROOT / 'docs/user/cli' / entry['id'] / 'project'
+            if args.update:
+                require_changed_input(manifest, args.update, source)
             mode = str(edi.Project.load(str(source)).fitting_mode)
             if mode not in {'single', 'joint'}:
                 continue
@@ -119,7 +126,7 @@ runpy.run_module('edi', run_name='__main__')
                 if p.is_file()
             }
             (HERE / (entry['id'] + '.record')).write_text(run.stdout)
-            manifest['cases'].append({
+            row = {
                 'id': entry['id'],
                 'path': source.relative_to(ROOT).as_posix(),
                 'mode': mode,
@@ -135,16 +142,39 @@ runpy.run_module('edi', run_name='__main__')
                         ).strip(),
                         'crysta_build_commit': linked_engine_source,
                     }
-                    if args.only
+                    if args.case_id
                     else {}
                 ),
-            })
-    write_artifacts(manifest, args.only, args.input_path)
+            }
+            if args.update:
+                row['classification'] = (
+                    'CLI wiring regression pin, not an independent physics oracle'
+                )
+                manifest['cases'] = [
+                    row if old['id'] == args.update else old for old in manifest['cases']
+                ]
+            else:
+                manifest['cases'].append(row)
+    write_artifacts(manifest, args.case_id, args.input_path)
     print(f'CLI oracle complete: {len(manifest["cases"])} projects', flush=True)
+
+
+def require_changed_input(manifest, case_id, source):
+    original = [row for row in manifest['cases'] if row['id'] == case_id]
+    inputs = {
+        path.relative_to(source).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in sorted(source.rglob('*'))
+        if path.is_file()
+    }
+    if len(original) != 1 or original[0]['inputs_sha256'] == inputs:
+        raise ValueError('CLI update requires exactly one existing case with changed inputs')
 
 
 def write_artifacts(manifest, case_id=None, authoring_input=None):
     """Write captured records; validate a new independent input without another fit."""
+    if case_id is not None:
+        row = next(row for row in manifest['cases'] if row['id'] == case_id)
+        row['classification'] = 'CLI wiring regression pin, not an independent physics oracle'
     if authoring_input is not None:
         row = next(row for row in manifest['cases'] if row['id'] == case_id)
         inputs = {

@@ -78,7 +78,7 @@ def native_resume(tmp_path_factory):
     prefix = crysta_reference_prefix()
     source = crysta_reference_source()
     native = (source / 'src/core/sequential.cpp').read_text()
-    call = 'last_result = fit_project(working, on_iteration, should_cancel);'
+    call = 'last_result = fit_scan_file(working, on_iteration, should_cancel);'
     assert native.count(call) == 1, (
         'Stop and continue: the observer must intercept the real scan optimizer boundary once'
     )
@@ -87,7 +87,7 @@ def native_resume(tmp_path_factory):
         'if (observing && escape_enabled && index == existing.size() && '
         '!existing.empty()) {\n            Project duplicate(working);\n    '
         '        duplicate.experiment().data = read_scan_data(scan_dir / '
-        'file_names.front());\n            fit_project(duplicate, {}, '
+        'file_names.front());\n            fit_scan_file(duplicate, {}, '
         '{});\n        }\n        ' + call
     )
     (root / 'observed_sequential.cpp').write_text(native.replace(call, injection))

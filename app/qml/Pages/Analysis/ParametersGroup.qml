@@ -175,6 +175,7 @@ EaElements.GroupBox {
                 id: filter
                 sourceModel: group.project ? group.project.parameters : null
             }
+            marksCurrentRow: true
             currentRow: group.selectedRow
 
             columnWidths: [numberColumnWidth, -1, EaStyle.Sizes.fontPixelSize * 5, textColumnWidth("units", ""), EaStyle.Sizes.fontPixelSize * 3.5, EaStyle.Sizes.fontPixelSize * 3, EaStyle.Sizes.fontPixelSize * 3, group.freeColumnWidth]

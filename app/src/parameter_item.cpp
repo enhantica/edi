@@ -1,55 +1,14 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "parameter_item.hpp"
 
-#include <QRegularExpression>
 #include <algorithm>
 #include <cmath>
 
 #include "category_list_model.hpp"
+#include "edi/parameter_spec.hpp"
 #include "project_editor.hpp"
 
 namespace edi_app {
-namespace {
-
-// A spec's LaTeX name as plain text (`$\sigma_1$` -> "σ₁", `$B_{\mathrm{iso}}$` -> "B iso"), or empty
-// when it uses anything this does not spell.
-QString plain_symbol(const char* latex) {
-    if (latex == nullptr) {
-        return {};
-    }
-    QString text = QString::fromUtf8(latex);
-    text.remove(QLatin1Char('$'));
-    text.replace(QRegularExpression(QStringLiteral(R"(\\mathrm\{([^{}]*)\})")), QStringLiteral("\\1"));
-    const std::pair<const char*, const char*> symbols[] = {
-        {"\\alpha", "α"}, {"\\beta", "β"}, {"\\gamma", "γ"}, {"\\sigma", "σ"},
-        {"\\theta", "θ"}, {"\\mu", "μ"},   {"\\AA", "Å"},    {"\\,", " "}};
-    for (const auto& [from, to] : symbols) {
-        text.replace(QString::fromUtf8(from), QString::fromUtf8(to));
-    }
-    // A subscript: digits become subscript digits, anything else follows after a space.
-    static const QRegularExpression subscript(QStringLiteral(R"(_\{?([0-9A-Za-z]+)\}?)"));
-    QRegularExpressionMatch match;
-    while ((match = subscript.match(text)).hasMatch()) {
-        QString tail = match.captured(1);
-        bool digits = true;
-        for (const QChar c : tail) {
-            digits = digits && c.isDigit();
-        }
-        if (digits) {
-            for (QChar& c : tail) {
-                c = QChar(0x2080 + c.digitValue());
-            }
-        } else {
-            tail.prepend(QLatin1Char(' '));
-        }
-        text.replace(match.capturedStart(), match.capturedLength(), tail);
-    }
-    return text.contains(QLatin1Char('\\')) || text.contains(QLatin1Char('{')) || text.contains(QLatin1Char('^'))
-               ? QString()
-               : text;
-}
-
-}  // namespace
 
 ParameterItem::ParameterItem(const edi::ParameterEntry& entry, ProjectEditor& editor, QObject* parent)
     : QObject(parent),
@@ -71,15 +30,10 @@ ParameterItem::ParameterItem(const edi::ParameterEntry& entry, ProjectEditor& ed
                            : category_ + QLatin1Char('.') + name_;
     display_name_ = spec != nullptr ? QString::fromUtf8(spec->display_name) : name_;
     display_units_ = spec != nullptr ? QString::fromUtf8(spec->display_units) : QString();
-    short_name_ = spec != nullptr ? plain_symbol(spec->latex_name) : QString();
-    if (short_name_.isEmpty()) {
-        short_name_ = display_name_;
-    }
-    // The FCJ asymmetry under FullProf's names (owner, 2026-10-06); its spec keeps diffraction-lib's.
-    if (spec == &edi::spec::peak_asym_fcj_1) {
-        short_name_ = QStringLiteral("S/L");
-    } else if (spec == &edi::spec::peak_asym_fcj_2) {
-        short_name_ = QStringLiteral("D/L");
+    short_name_ = spec != nullptr ? QString::fromStdString(edi::parameter_symbol(spec)) : name_;
+    if (spec == &edi::spec::instrument_wavelength_2_to_1_ratio) {
+        // The doublet's ratio by what it scales (owner, 2026-10-13); its spec keeps diffraction-lib's name.
+        short_name_ = QStringLiteral("Intensity ratio 2/1");
     }
     minimum_ = spec != nullptr ? spec->range.min : -std::numeric_limits<double>::infinity();
     maximum_ = spec != nullptr ? spec->range.max : std::numeric_limits<double>::infinity();
@@ -97,6 +51,17 @@ void ParameterItem::setElementSymbol(const QString& symbol) {
     if (element_symbol_ != symbol) {
         element_symbol_ = symbol;
         emit elementSymbolChanged();
+    }
+}
+
+void ParameterItem::setLabel(const QString& short_name, const QString& units) {
+    if (short_name_ != short_name) {
+        short_name_ = short_name;
+        emit shortNameChanged();
+    }
+    if (display_units_ != units) {
+        display_units_ = units;
+        emit displayUnitsChanged();
     }
 }
 

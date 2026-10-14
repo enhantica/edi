@@ -25,6 +25,9 @@ EaComponents.ContentPage {
     property alias basicItem: basicLoader.sourceComponent
     property alias extrasItem: extrasLoader.sourceComponent
     property alias textItem: textLoader.sourceComponent
+    // The page's Settings tab (edi ADR-0031 §2): its view options, kept in the app's settings under the page's name,
+    // never in the project. A page with none has the tab disabled, as an empty Extra tab is.
+    property Component settingsItem: null
     property bool extrasEnabled: false
     property bool textEnabled: false
     property alias continueText: sideBar.continueButton.text
@@ -43,8 +46,6 @@ EaComponents.ContentPage {
     // The blocks' fit-outcome role and the shown block's outcome (experiments; BlockSelector).
     property string blockOutcomeRole: ""
     property string blockCurrentOutcome: ""
-    // Every entry in the first block's colour (a scan's datasets).
-    property bool blockOneColour: false
     // The role marking the template dataset, and whether the shown block is it (BlockSelector).
     property string blockTemplateRole: ""
     property bool blockCurrentTemplate: false
@@ -126,7 +127,6 @@ EaComponents.ContentPage {
             blockIndex: page.blockIndex
             outcomeRole: page.blockOutcomeRole
             currentOutcome: page.blockCurrentOutcome
-            oneColour: page.blockOneColour
             templateRole: page.blockTemplateRole
             currentTemplate: page.blockCurrentTemplate
             onBlockActivated: index => page.blockActivated(index)
@@ -158,6 +158,11 @@ EaComponents.ContentPage {
                 objectName: "sideBar.tab.text"
                 text: qsTr("Text")
                 enabled: page.textEnabled
+            },
+            EaElements.TabButton {
+                objectName: "sideBar.tab.settings"
+                text: qsTr("Settings")
+                enabled: page.settingsItem !== null
             }
         ]
 
@@ -172,6 +177,10 @@ EaComponents.ContentPage {
             Loader {
                 id: textLoader
                 active: SwipeView.isCurrentItem
+            },
+            Loader {
+                id: settingsLoader
+                sourceComponent: page.settingsItem
             }
         ]
 

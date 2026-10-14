@@ -24,7 +24,7 @@ from tests.fixtures.table_display.metadata_bytes import pre_catalogue_bytes
 ROOT = Path(__file__).resolve().parents[3]
 MANIFEST = tomllib.loads((ROOT / 'pixi.toml').read_text())
 CHECKS = ('app-lint', 'app-format-check', 'app-test', 'app-ui-test', 'group-app')
-# Owner decisions 2026-10-02: retain manual check nodes, omit both tiers automatically.
+# Local aggregators omit both app tiers; desktop CI runs them on schedule/manual only.
 AUTOMATIC_CHECKS = ('app-lint', 'app-format-check', 'group-app')
 
 
@@ -211,11 +211,15 @@ def test_ci_job_names_state_area_and_platform_and_share_matrices():
     if public:
         # Parallel system parts and their push-only duration collector identify
         # the same area/platform, with a concrete part suffix on every test job.
-        required |= {
-            f'system · {platform} · {part}/3'
-            for platform in ('Linux', 'macOS')
-            for part in (1, 2, 3)
-        } | {f'system durations · {platform}' for platform in ('Linux', 'macOS')}
+        required |= (
+            {'system time'}
+            | {
+                f'system · {platform} · {part}/3'
+                for platform in ('Linux', 'macOS')
+                for part in (1, 2, 3)
+            }
+            | {f'system durations · {platform}' for platform in ('Linux', 'macOS')}
+        )
         pages = yaml.safe_load((ROOT / '.github/workflows/pages.yml').read_text())
         assert {job.get('name') for job in pages['jobs'].values()} == {
             'build the site',
@@ -265,12 +269,19 @@ def test_loop_expectations_cover_fixture_bytes(source):
     assert len(cases) == len(parsed), (
         'gate 3: no input-file loop is omitted from the frozen inventory'
     )
+    modes = {case.get('source_bytes') for case in cases}
+    assert len(modes) == 1 and modes <= {None, 'current'}, (
+        'Gate 3 all loops in one file must share one exact current or archived input identity'
+    )
+    # Read and authenticate the complete source once, not once per loop. The
+    # archived data is still checked in full; large ASCII tables are not omitted.
+    contents = (
+        path.read_bytes() if modes == {'current'} else original_tokens(pre_catalogue_bytes(path))
+    )
+    actual_digest = hashlib.sha256(contents).hexdigest()
+    replacement = json.loads((ROOT / 'tests/fixtures/e04_t2/replacement-input.json').read_text())
     for case in cases:
         digest = case['sha256']
-        contents = original_tokens(pre_catalogue_bytes(path))
-        replacement = json.loads(
-            (ROOT / 'tests/fixtures/e04_t2/replacement-input.json').read_text()
-        )
         if source == replacement['file']:
             assert replacement['before_sha256'] == digest, (
                 'Gate 3 retains the exact original retired-model input receipt'
@@ -281,7 +292,7 @@ def test_loop_expectations_cover_fixture_bytes(source):
                 re.MULTILINE,
             ), 'Gate 3 replacement input must declare the owner-selected Npr5 shape'
             digest = replacement['after_sha256']
-        assert hashlib.sha256(contents).hexdigest() == digest, (
+        assert actual_digest == digest, (
             'Gate 3 frozen loop oracle retains exact input provenance at the selector seam'
         )
         assert {k: case[k] for k in ('category', 'columns', 'rows')} in parsed, (
@@ -389,7 +400,7 @@ def test_owner_note_captures_are_registered_in_the_shared_image_set():
     # This inventory does NOT certify appearance; reviewer/conductor inspect these images.
 
 
-def sequence_sandbox(tmp_path):
+def sequence_sandbox(tmp_path, *, copy_fixtures=True):
     """Execute real orchestration scripts, substituting only builders and terminal tools."""
     env = sandbox(tmp_path)
     for key in tuple(env):
@@ -468,7 +479,8 @@ def sequence_sandbox(tmp_path):
             }
         ])
     )
-    shutil.copytree(ROOT / 'tests/fixtures', tmp_path / 'tests/fixtures')
+    if copy_fixtures:
+        shutil.copytree(ROOT / 'tests/fixtures', tmp_path / 'tests/fixtures')
     return env
 
 
@@ -556,23 +568,48 @@ def test_full_sequence_builds_once_before_checks(tmp_path, name):
 
 
 @pytest.mark.parametrize('platform', ['Linux', 'macOS'])
-def test_desktop_ci_sequence_builds_once_before_checks(tmp_path, platform):
-    env = sequence_sandbox(tmp_path)
+@pytest.mark.parametrize(
+    ('event', 'enabled'),
+    [('pull_request', False), ('push', False), ('schedule', True), ('workflow_dispatch', True)],
+)
+def test_desktop_ci_sequence_builds_once_before_checks(tmp_path, platform, event, enabled):
+    env = sequence_sandbox(tmp_path, copy_fixtures=False)
     job = next(job for _, name, job in expanded_jobs() if name == f'app · {platform}')
     # Actions stringifies YAML env values (EDI_NATIVE_ARTIFACT is declared as 1).
     env.update({key: str(value) for key, value in job.get('env', {}).items()})
+    nightly_condition = (
+        "${{ !cancelled() && (github.event_name == 'schedule' || "
+        "github.event_name == 'workflow_dispatch') }}"
+    )
     for step in job['steps']:
-        if step.get('if') is False:
-            continue
         cmd = step.get('run', '')
-        # Recovery is a separate change-scoped rebuild exercise (note 21).
         if not re.search(
             r'\b(?:app-build|core-build|app-lint|app-format-check|app-test|app-ui-test)'
             r'(?:\.sh)?(?:\s|$)|\bgroup-app(?:\s|$)|pytest tests/integration/app',
             cmd,
         ):
             continue
-        step_env = {**env, **{key: str(value) for key, value in step.get('env', {}).items()}}
+        is_tier = bool(re.search(r'\bapp-(?:ui-)?test(?:\s|$)', cmd))
+        condition = step.get('if')
+        if is_tier:
+            assert condition == nightly_condition, (
+                'Owner decision: desktop app tiers use the schedule/manual condition; '
+                f'platform={platform}, event={event}, actual condition={condition!r}'
+            )
+            if not enabled:
+                continue
+        elif condition is False:
+            continue
+        else:
+            assert condition is None, (
+                'Build and ordinary app checks remain unconditional within the desktop job; '
+                f'platform={platform}, command={cmd}, actual condition={condition!r}'
+            )
+        step_env = {
+            **env,
+            'GITHUB_EVENT_NAME': event,
+            **{key: str(value) for key, value in step.get('env', {}).items()},
+        }
         result = subprocess.run(
             ['bash', '-c', cmd],
             cwd=tmp_path,
@@ -583,11 +620,14 @@ def test_desktop_ci_sequence_builds_once_before_checks(tmp_path, platform):
             check=False,
         )
         assert result.returncode == 0, (
-            f'corrected note 20: CI {platform} completes its declared step {cmd}: {result.stderr}'
+            f'CI {platform}/{event} completes its declared step {cmd}: {result.stderr}'
         )
-    assert_sequence(calls(tmp_path))
-    assert not {'check:app-test', 'check:app-ui-test'} & set(calls(tmp_path)), (
-        ' owner decisions: both desktop CI sequences execute neither disabled app tier'
+    observed = calls(tmp_path)
+    assert_sequence(observed, CHECKS if enabled else AUTOMATIC_CHECKS)
+    app_calls = {'check:app-test', 'check:app-ui-test'} & set(observed)
+    assert app_calls == ({'check:app-test', 'check:app-ui-test'} if enabled else set()), (
+        'Owner decision: both desktop tiers execute on schedule/manual, neither on PR/push; '
+        f'platform={platform}, event={event}, actual calls={observed}'
     )
 
 
@@ -674,3 +714,31 @@ def test_sequence_retains_the_source_checker_failure_barrier(tmp_path):
         'The real lint sequence must build first, execute the source checker and '
         'refuse Qt lint after that checker fails'
     )
+
+
+@pytest.mark.parametrize(
+    'rows',
+    [
+        'a 1\nb 2\n',
+        '"a b" 1\n\'c d\' 2\n',
+        'a 1 # ignored words\nb 2 # ignored words\n',
+        'a\\ b 1\nc\\ d 2\n',
+    ],
+    ids=['plain', 'quoted', 'commented', 'escaped'],
+)
+def test_loop_row_count_preserves_unquoted_quoted_comment_and_escape_boundaries(rows, tmp_path):
+    path = tmp_path / 'input.edi'
+    path.write_text('data_input\nloop_\n_sample.id\n_sample.value\n' + rows)
+    producer = runpy.run_path(str(ROOT / 'tests/fixtures/e04_t2/generate.py'))
+    assert producer['loops'](path) == [
+        {'category': 'sample', 'columns': ['id', 'value'], 'rows': 2}
+    ], 'Gate 3 loop row counting must preserve quoting, escaped whitespace and comment arity'
+
+
+@pytest.mark.parametrize('row', ['a', 'a 1 extra'])
+def test_loop_row_count_rejects_incomplete_or_extra_columns(row, tmp_path):
+    path = tmp_path / 'input.edi'
+    path.write_text('data_input\nloop_\n_sample.id\n_sample.value\n' + row + '\n')
+    producer = runpy.run_path(str(ROOT / 'tests/fixtures/e04_t2/generate.py'))
+    with pytest.raises(ValueError, match='malformed fixture loop'):
+        producer['loops'](path)

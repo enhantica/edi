@@ -5,8 +5,12 @@
 #include <cmath>
 #include <cstdint>
 #include <exception>
+#include <functional>
 #include <limits>
 #include <map>
+
+#include "edi/categories.hpp"
+#include "edi/scan.hpp"
 
 namespace edi_app {
 
@@ -57,15 +61,37 @@ void EvolutionViewModel::setScan(const ScanSession* session, const edi::Project*
         emit xTitleChanged();
     }
     syncNames();
+    syncFitted();
     rebuild();
 }
 
+void EvolutionViewModel::syncParameters() {
+    if (syncNames()) {
+        rebuild();
+    }
+}
+
+void EvolutionViewModel::syncFitted() {
+    bool fitted = false;
+    if (session_ != nullptr && session_->index().error.empty()) {
+        const auto& rows = session_->index().rows;
+        fitted = std::any_of(rows.begin(), rows.end(), [](const auto& row) { return row.offset >= 0; });
+    }
+    if (fitted != fitted_) {
+        fitted_ = fitted;
+        emit fittedChanged();
+    }
+}
+
 bool EvolutionViewModel::syncNames() {
-    // The parameters results.csv records, the shown one kept, else the first (every recorded parameter is free).
+    // The core's list (edi::evolution_parameters), the report's too: every free parameter, listed before any dataset
+    // is fitted, then the ones results.csv records that are no longer free; the shown one kept, else the first.
     QStringList names;
-    if (session_ != nullptr) {
-        for (const edi::ScanParameterColumns& parameter : session_->index().parameters) {
-            names.append(QString::fromStdString(parameter.name));
+    if (project_ != nullptr) {
+        static const edi::ScanResultIndex kNoResults;
+        for (const std::string& name :
+             edi::evolution_parameters(*project_, session_ != nullptr ? session_->index() : kNoResults)) {
+            names.append(QString::fromStdString(name));
         }
     }
     const QString shown = current_ >= 0 && current_ < names_.size() ? names_[current_] : QString();
@@ -99,10 +125,11 @@ void EvolutionViewModel::addRow(int dataset, const std::vector<std::string>& cel
     if (session_ == nullptr) {
         return;
     }
-    // A fresh run's first row brings the header, and with it the parameters: they are listed then, and the points
-    // read once; every later row adds its own point.
-    if (current_ < 0 || names_.size() != static_cast<qsizetype>(session_->index().parameters.size())) {
+    // A fresh run's first row brings the header, and with it the axes and any recorded parameter not listed yet: the
+    // points are read once then; every later row adds its own point.
+    if (!fitted_ || current_ < 0) {
         syncNames();
+        syncFitted();
         rebuild();
         return;
     }
@@ -184,38 +211,31 @@ void EvolutionViewModel::rebuild() {
 
 void EvolutionViewModel::readPoints() {
     if (session_ != nullptr && project_ != nullptr && current_ >= 0) {
-        // Two reads of the column. The first finds the drawable points' x range and count; above the drawing limit
-        // the second keeps per bucket of that range only the lowest and the highest point: the points thinning the
-        // whole column keeps, without ever holding it. A value, an uncertainty or an x that is not a finite
-        // number, or an error bar that leaves the finite numbers, leaves its point out.
+        // The core's points (edi::evolution_series), the report's too, read twice. The first read finds their x range
+        // and count; above the drawing limit the second keeps per bucket of that range only the lowest and the
+        // highest point: the points thinning the whole column keeps, without ever holding it.
         const std::string name = names_[current_].toStdString();
+        const bool by_value = x_mode_ == 0 && !extracted_title_.isEmpty();
+        const auto points = [&](const std::function<void(const edi::EvolutionPoint&)>& visit) {
+            edi::evolution_series(*project_, session_->places(), session_->index(), name, by_value, visit);
+        };
         double low = std::numeric_limits<double>::infinity(), high = -low;
         std::size_t count = 0;
-        session_->column(*project_, name, [&](int dataset, double value, double error) {
-            const std::optional<double> x = xOf(dataset, session_->extracted(dataset));
-            if (x && drawable(*x, value, error)) {
-                low = std::min(low, *x);
-                high = std::max(high, *x);
-                ++count;
-            }
+        points([&](const edi::EvolutionPoint& point) {
+            low = std::min(low, point.x);
+            high = std::max(high, point.x);
+            ++count;
         });
         if (count <= static_cast<std::size_t>(kThinningLimit)) {
-            session_->column(*project_, name, [this](int dataset, double value, double error) {
-                const std::optional<double> x = xOf(dataset, session_->extracted(dataset));
-                if (x && drawable(*x, value, error)) {
-                    points_.push_back({*x, value, error, dataset});
-                }
+            points([this](const edi::EvolutionPoint& point) {
+                points_.push_back({point.x, point.y, point.su, static_cast<int>(point.dataset)});
             });
         } else {
             const int buckets = kThinningLimit / 2;
             const double x0 = low / 2.0, span = high / 2.0 - low / 2.0;
             std::vector<std::optional<Point>> lowest(buckets), highest(buckets);
-            session_->column(*project_, name, [&](int dataset, double value, double error) {
-                const std::optional<double> x = xOf(dataset, session_->extracted(dataset));
-                if (!x || !drawable(*x, value, error)) {
-                    return;
-                }
-                const Point point{*x, value, error, dataset};
+            points([&](const edi::EvolutionPoint& found) {
+                const Point point{found.x, found.y, found.su, static_cast<int>(found.dataset)};
                 const int bucket = bucket_of(point.x, x0, span, buckets);
                 if (!lowest[bucket] || point.y < lowest[bucket]->y) {
                     lowest[bucket] = point;

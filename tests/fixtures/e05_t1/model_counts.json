@@ -9174,70 +9174,6 @@
       ]
     },
     {
-      "id": "pd-xray-cwl_lif_single",
-      "n_parameters": 26,
-      "diffraction_lib_n_parameters": 26,
-      "diffraction_lib_parameter_names": [
-        "lif.cell.length_a",
-        "lif.cell.length_b",
-        "lif.cell.length_c",
-        "lif.cell.angle_alpha",
-        "lif.cell.angle_beta",
-        "lif.cell.angle_gamma",
-        "lif.atom_site.Li1.fract_x",
-        "lif.atom_site.Li1.fract_y",
-        "lif.atom_site.Li1.fract_z",
-        "lif.atom_site.Li1.occupancy",
-        "lif.atom_site.Li1.adp_iso",
-        "lif.atom_site.F1.fract_x",
-        "lif.atom_site.F1.fract_y",
-        "lif.atom_site.F1.fract_z",
-        "lif.atom_site.F1.occupancy",
-        "lif.atom_site.F1.adp_iso",
-        "cu_ka.linked_structure.lif.scale",
-        "cu_ka.peak.broad_gauss_u",
-        "cu_ka.peak.broad_gauss_v",
-        "cu_ka.peak.broad_gauss_w",
-        "cu_ka.peak.broad_lorentz_x",
-        "cu_ka.peak.broad_lorentz_y",
-        "cu_ka.instrument.wavelength",
-        "cu_ka.instrument.twotheta_offset",
-        "cu_ka.instrument.sample_displacement",
-        "cu_ka.instrument.sample_transparency"
-      ],
-      "parameter_names": [
-        "lif.cell.length_a",
-        "lif.cell.length_b",
-        "lif.cell.length_c",
-        "lif.cell.angle_alpha",
-        "lif.cell.angle_beta",
-        "lif.cell.angle_gamma",
-        "lif.atom_site.Li1.fract_x",
-        "lif.atom_site.Li1.fract_y",
-        "lif.atom_site.Li1.fract_z",
-        "lif.atom_site.Li1.occupancy",
-        "lif.atom_site.Li1.adp_iso",
-        "lif.atom_site.F1.fract_x",
-        "lif.atom_site.F1.fract_y",
-        "lif.atom_site.F1.fract_z",
-        "lif.atom_site.F1.occupancy",
-        "lif.atom_site.F1.adp_iso",
-        "cu_ka.linked_structure.lif.scale",
-        "cu_ka.peak.broad_gauss_u",
-        "cu_ka.peak.broad_gauss_v",
-        "cu_ka.peak.broad_gauss_w",
-        "cu_ka.peak.broad_lorentz_x",
-        "cu_ka.peak.broad_lorentz_y",
-        "cu_ka.instrument.wavelength",
-        "cu_ka.instrument.twotheta_offset",
-        "cu_ka.instrument.sample_displacement",
-        "cu_ka.instrument.sample_transparency"
-      ],
-      "experiments": [
-        "cu_ka"
-      ]
-    },
-    {
       "id": "pd-neut-tof_cecoal-polaris_chebyshev",
       "n_parameters": 76,
       "diffraction_lib_n_parameters": 75,
@@ -10118,6 +10054,195 @@
       "experiments": [
         "spodi"
       ]
+    },
+    {
+      "id": "pd-xray-cwl_lif_single",
+      "n_parameters": 31,
+      "diffraction_lib_n_parameters": 27,
+      "diffraction_lib_parameter_names": [
+        "lif.cell.length_a",
+        "lif.cell.length_b",
+        "lif.cell.length_c",
+        "lif.cell.angle_alpha",
+        "lif.cell.angle_beta",
+        "lif.cell.angle_gamma",
+        "lif.atom_site.Li1.fract_x",
+        "lif.atom_site.Li1.fract_y",
+        "lif.atom_site.Li1.fract_z",
+        "lif.atom_site.Li1.occupancy",
+        "lif.atom_site.Li1.adp_iso",
+        "lif.atom_site.F1.fract_x",
+        "lif.atom_site.F1.fract_y",
+        "lif.atom_site.F1.fract_z",
+        "lif.atom_site.F1.occupancy",
+        "lif.atom_site.F1.adp_iso",
+        "cu_ka.linked_structure.lif.scale",
+        "cu_ka.peak.broad_gauss_u",
+        "cu_ka.peak.broad_gauss_v",
+        "cu_ka.peak.broad_gauss_w",
+        "cu_ka.peak.broad_lorentz_x",
+        "cu_ka.peak.broad_lorentz_y",
+        "cu_ka.instrument.wavelength",
+        "cu_ka.instrument.twotheta_offset",
+        "cu_ka.instrument.sample_displacement",
+        "cu_ka.instrument.sample_transparency",
+        "cu_ka.absorption.mu_r"
+      ],
+      "parameter_names": [
+        "lif.cell.length_a",
+        "lif.cell.length_b",
+        "lif.cell.length_c",
+        "lif.cell.angle_alpha",
+        "lif.cell.angle_beta",
+        "lif.cell.angle_gamma",
+        "lif.atom_site.Li1.fract_x",
+        "lif.atom_site.Li1.fract_y",
+        "lif.atom_site.Li1.fract_z",
+        "lif.atom_site.Li1.occupancy",
+        "lif.atom_site.Li1.adp_iso",
+        "lif.atom_site.F1.fract_x",
+        "lif.atom_site.F1.fract_y",
+        "lif.atom_site.F1.fract_z",
+        "lif.atom_site.F1.occupancy",
+        "lif.atom_site.F1.adp_iso",
+        "cu_ka.linked_structure.lif.scale",
+        "cu_ka.peak.broad_gauss_u",
+        "cu_ka.peak.broad_gauss_v",
+        "cu_ka.peak.broad_gauss_w",
+        "cu_ka.peak.broad_lorentz_x",
+        "cu_ka.peak.broad_lorentz_y",
+        "cu_ka.instrument.wavelength",
+        "cu_ka.instrument.twotheta_offset",
+        "cu_ka.instrument.sample_displacement",
+        "cu_ka.instrument.sample_transparency",
+        "cu_ka.absorption.mu_r",
+        "cu_ka.instrument.setup_polarization_coefficient",
+        "cu_ka.instrument.setup_monochromator_twotheta",
+        "cu_ka.instrument.setup_wavelength_2",
+        "cu_ka.instrument.setup_wavelength_2_to_1_ratio"
+      ],
+      "experiments": [
+        "cu_ka"
+      ]
+    },
+    {
+      "id": "pd-xray-cwl_pbso4-lab_round-robin",
+      "n_parameters": 56,
+      "diffraction_lib_n_parameters": 51,
+      "diffraction_lib_parameter_names": [
+        "pbso4.cell.length_a",
+        "pbso4.cell.length_b",
+        "pbso4.cell.length_c",
+        "pbso4.cell.angle_alpha",
+        "pbso4.cell.angle_beta",
+        "pbso4.cell.angle_gamma",
+        "pbso4.atom_site.Pb.fract_x",
+        "pbso4.atom_site.Pb.fract_y",
+        "pbso4.atom_site.Pb.fract_z",
+        "pbso4.atom_site.Pb.occupancy",
+        "pbso4.atom_site.Pb.adp_iso",
+        "pbso4.atom_site.S.fract_x",
+        "pbso4.atom_site.S.fract_y",
+        "pbso4.atom_site.S.fract_z",
+        "pbso4.atom_site.S.occupancy",
+        "pbso4.atom_site.S.adp_iso",
+        "pbso4.atom_site.O1.fract_x",
+        "pbso4.atom_site.O1.fract_y",
+        "pbso4.atom_site.O1.fract_z",
+        "pbso4.atom_site.O1.occupancy",
+        "pbso4.atom_site.O1.adp_iso",
+        "pbso4.atom_site.O2.fract_x",
+        "pbso4.atom_site.O2.fract_y",
+        "pbso4.atom_site.O2.fract_z",
+        "pbso4.atom_site.O2.occupancy",
+        "pbso4.atom_site.O2.adp_iso",
+        "pbso4.atom_site.O3.fract_x",
+        "pbso4.atom_site.O3.fract_y",
+        "pbso4.atom_site.O3.fract_z",
+        "pbso4.atom_site.O3.occupancy",
+        "pbso4.atom_site.O3.adp_iso",
+        "pbsox.linked_structure.pbso4.scale",
+        "pbsox.peak.asym_beba_a0",
+        "pbsox.peak.asym_beba_b0",
+        "pbsox.peak.asym_beba_a1",
+        "pbsox.peak.asym_beba_b1",
+        "pbsox.peak.broad_gauss_u",
+        "pbsox.peak.broad_gauss_v",
+        "pbsox.peak.broad_gauss_w",
+        "pbsox.peak.broad_lorentz_x",
+        "pbsox.peak.broad_lorentz_y",
+        "pbsox.instrument.wavelength",
+        "pbsox.instrument.twotheta_offset",
+        "pbsox.instrument.sample_displacement",
+        "pbsox.instrument.sample_transparency",
+        "pbsox.background.1.coef",
+        "pbsox.background.2.coef",
+        "pbsox.background.3.coef",
+        "pbsox.background.4.coef",
+        "pbsox.background.5.coef",
+        "pbsox.background.6.coef"
+      ],
+      "parameter_names": [
+        "pbso4.cell.length_a",
+        "pbso4.cell.length_b",
+        "pbso4.cell.length_c",
+        "pbso4.cell.angle_alpha",
+        "pbso4.cell.angle_beta",
+        "pbso4.cell.angle_gamma",
+        "pbso4.atom_site.Pb.fract_x",
+        "pbso4.atom_site.Pb.fract_y",
+        "pbso4.atom_site.Pb.fract_z",
+        "pbso4.atom_site.Pb.occupancy",
+        "pbso4.atom_site.Pb.adp_iso",
+        "pbso4.atom_site.S.fract_x",
+        "pbso4.atom_site.S.fract_y",
+        "pbso4.atom_site.S.fract_z",
+        "pbso4.atom_site.S.occupancy",
+        "pbso4.atom_site.S.adp_iso",
+        "pbso4.atom_site.O1.fract_x",
+        "pbso4.atom_site.O1.fract_y",
+        "pbso4.atom_site.O1.fract_z",
+        "pbso4.atom_site.O1.occupancy",
+        "pbso4.atom_site.O1.adp_iso",
+        "pbso4.atom_site.O2.fract_x",
+        "pbso4.atom_site.O2.fract_y",
+        "pbso4.atom_site.O2.fract_z",
+        "pbso4.atom_site.O2.occupancy",
+        "pbso4.atom_site.O2.adp_iso",
+        "pbso4.atom_site.O3.fract_x",
+        "pbso4.atom_site.O3.fract_y",
+        "pbso4.atom_site.O3.fract_z",
+        "pbso4.atom_site.O3.occupancy",
+        "pbso4.atom_site.O3.adp_iso",
+        "pbsox.linked_structure.pbso4.scale",
+        "pbsox.peak.asym_beba_a0",
+        "pbsox.peak.asym_beba_b0",
+        "pbsox.peak.asym_beba_a1",
+        "pbsox.peak.asym_beba_b1",
+        "pbsox.peak.broad_gauss_u",
+        "pbsox.peak.broad_gauss_v",
+        "pbsox.peak.broad_gauss_w",
+        "pbsox.instrument.wavelength",
+        "pbsox.instrument.twotheta_offset",
+        "pbsox.instrument.sample_displacement",
+        "pbsox.instrument.sample_transparency",
+        "pbsox.background.1.coef",
+        "pbsox.background.2.coef",
+        "pbsox.background.3.coef",
+        "pbsox.background.4.coef",
+        "pbsox.background.5.coef",
+        "pbsox.background.6.coef",
+        "pbsox.peak.asym_beba_limit",
+        "pbsox.instrument.setup_polarization_coefficient",
+        "pbsox.instrument.setup_monochromator_twotheta",
+        "pbsox.instrument.setup_wavelength_2",
+        "pbsox.instrument.setup_wavelength_2_to_1_ratio",
+        "pbsox.peak.mixing_eta_0",
+        "pbsox.peak.mixing_eta_1"
+      ],
+      "experiments": [
+        "pbsox"
+      ]
     }
   ],
   "previous_provenance": {
@@ -10125,6 +10250,7 @@
     "diffraction_lib_sha": "0d9f10e412a0cd08d4dd0af95845dd9bb597dcdf",
     "analysis_sha256": "b9c80be741bfc4cd149e0d95b8fb5a4eea6f75756a4db28a9a78a75baaf5e2e2",
     "input_adaptation": "private copies: _edi.schema_version 2/3 -> 1; _calculator.type crysta -> cryspy; _minimizer.type crysta -> \"lmfit (leastsq)\"; missing legacy TOF family supplied from the declared tof-* peak tag; parameter tags unchanged; no fit run",
+    "reader_label_adaptation": "private P b n m -> reference P n m a with cab, verified by Cryspy IT table; coordinates/cell values retained; native BeBa peak tag -> external canonical asymmetry tag; no fit/calculation or selected-parameter method changes",
     "model_projection": {
       "tof_geometry": "bank angle is fixed geometry (Cryspy TOFParameters.ATTR_REF excludes it)",
       "tof_peak": "14 coefficient slots, including zero Lorentzian/rate limits",
@@ -10136,6 +10262,7 @@
       "diffraction_lib_sha": "0d9f10e412a0cd08d4dd0af95845dd9bb597dcdf",
       "analysis_sha256": "b9c80be741bfc4cd149e0d95b8fb5a4eea6f75756a4db28a9a78a75baaf5e2e2",
       "input_adaptation": "private copies: _edi.schema_version 2/3 -> 1; _calculator.type crysta -> cryspy; _minimizer.type crysta -> \"lmfit (leastsq)\"; missing legacy TOF family supplied from the declared tof-* peak tag; parameter tags unchanged; no fit run",
+      "reader_label_adaptation": "private P b n m -> reference P n m a with cab, verified by Cryspy IT table; coordinates/cell values retained; native BeBa peak tag -> external canonical asymmetry tag; no fit/calculation or selected-parameter method changes",
       "model_projection": {
         "tof_geometry": "bank angle is fixed geometry (Cryspy TOFParameters.ATTR_REF excludes it)",
         "tof_peak": "14 coefficient slots, including zero Lorentzian/rate limits",
@@ -10147,6 +10274,7 @@
         "diffraction_lib_sha": "0d9f10e412a0cd08d4dd0af95845dd9bb597dcdf",
         "analysis_sha256": "b9c80be741bfc4cd149e0d95b8fb5a4eea6f75756a4db28a9a78a75baaf5e2e2",
         "input_adaptation": "private copies: _edi.schema_version 2/3 -> 1; _calculator.type crysta -> cryspy; _minimizer.type crysta -> \"lmfit (leastsq)\"; missing legacy TOF family supplied from the declared tof-* peak tag; parameter tags unchanged; no fit run",
+        "reader_label_adaptation": "private P b n m -> reference P n m a with cab, verified by Cryspy IT table; coordinates/cell values retained; native BeBa peak tag -> external canonical asymmetry tag; no fit/calculation or selected-parameter method changes",
         "model_projection": {
           "tof_geometry": "bank angle is fixed geometry (Cryspy TOFParameters.ATTR_REF excludes it)",
           "tof_peak": "14 coefficient slots, including zero Lorentzian/rate limits",
@@ -10158,12 +10286,104 @@
           "diffraction_lib_sha": "0d9f10e412a0cd08d4dd0af95845dd9bb597dcdf",
           "analysis_sha256": "b9c80be741bfc4cd149e0d95b8fb5a4eea6f75756a4db28a9a78a75baaf5e2e2",
           "input_adaptation": "private copies: _edi.schema_version 2/3 -> 1; _calculator.type crysta -> cryspy; _minimizer.type crysta -> \"lmfit (leastsq)\"; missing legacy TOF family supplied from the declared tof-* peak tag; parameter tags unchanged; no fit run",
+          "reader_label_adaptation": "private P b n m -> reference P n m a with cab, verified by Cryspy IT table; coordinates/cell values retained; native BeBa peak tag -> external canonical asymmetry tag; no fit/calculation or selected-parameter method changes",
           "model_projection": {
             "tof_geometry": "bank angle is fixed geometry (Cryspy TOFParameters.ATTR_REF excludes it)",
             "tof_peak": "14 coefficient slots, including zero Lorentzian/rate limits",
             "tof_absorption": "cylinder abscor1/abscor2 are model parameters",
             "cw_asymmetry": "FCJ two slots and BeBa limit angle are model parameters"
-          }
+          },
+          "previous_provenance": {
+            "reference": "Analysis._selected_parameters_for_fit(selected experiments)",
+            "diffraction_lib_sha": "0d9f10e412a0cd08d4dd0af95845dd9bb597dcdf",
+            "analysis_sha256": "b9c80be741bfc4cd149e0d95b8fb5a4eea6f75756a4db28a9a78a75baaf5e2e2",
+            "input_adaptation": "private copies: _edi.schema_version 2/3 -> 1; _calculator.type crysta -> cryspy; _minimizer.type crysta -> \"lmfit (leastsq)\"; missing legacy TOF family supplied from the declared tof-* peak tag; parameter tags unchanged; no fit run",
+            "reader_label_adaptation": "private P b n m -> reference P n m a with cab, verified by Cryspy IT table; coordinates/cell values retained; native BeBa peak tag -> external canonical asymmetry tag; no fit/calculation or selected-parameter method changes",
+            "model_projection": {
+              "tof_geometry": "bank angle is fixed geometry (Cryspy TOFParameters.ATTR_REF excludes it)",
+              "tof_peak": "14 coefficient slots, including zero Lorentzian/rate limits",
+              "tof_absorption": "cylinder abscor1/abscor2 are model parameters",
+              "cw_asymmetry": "FCJ two slots and BeBa limit angle are model parameters"
+            },
+            "previous_provenance": {
+              "reference": "Analysis._selected_parameters_for_fit(selected experiments)",
+              "diffraction_lib_sha": "0d9f10e412a0cd08d4dd0af95845dd9bb597dcdf",
+              "analysis_sha256": "b9c80be741bfc4cd149e0d95b8fb5a4eea6f75756a4db28a9a78a75baaf5e2e2",
+              "input_adaptation": "private copies: _edi.schema_version 2/3 -> 1; _calculator.type crysta -> cryspy; _minimizer.type crysta -> \"lmfit (leastsq)\"; missing legacy TOF family supplied from the declared tof-* peak tag; parameter tags unchanged; no fit run",
+              "reader_label_adaptation": "private P b n m -> reference P n m a with cab, verified by Cryspy IT table; coordinates/cell values retained; native BeBa peak tag -> external canonical asymmetry tag; no fit/calculation or selected-parameter method changes",
+              "model_projection": {
+                "tof_geometry": "bank angle is fixed geometry (Cryspy TOFParameters.ATTR_REF excludes it)",
+                "tof_peak": "14 coefficient slots, including zero Lorentzian/rate limits",
+                "tof_absorption": "cylinder abscor1/abscor2 are model parameters",
+                "cw_asymmetry": "FCJ two slots and BeBa limit angle are model parameters"
+              },
+              "previous_provenance": {
+                "reference": "Analysis._selected_parameters_for_fit(selected experiments)",
+                "diffraction_lib_sha": "0d9f10e412a0cd08d4dd0af95845dd9bb597dcdf",
+                "analysis_sha256": "b9c80be741bfc4cd149e0d95b8fb5a4eea6f75756a4db28a9a78a75baaf5e2e2",
+                "input_adaptation": "private copies: _edi.schema_version 2/3 -> 1; _calculator.type crysta -> cryspy; _minimizer.type crysta -> \"lmfit (leastsq)\"; missing legacy TOF family supplied from the declared tof-* peak tag; parameter tags unchanged; no fit run",
+                "model_projection": {
+                  "tof_geometry": "bank angle is fixed geometry (Cryspy TOFParameters.ATTR_REF excludes it)",
+                  "tof_peak": "14 coefficient slots, including zero Lorentzian/rate limits",
+                  "tof_absorption": "cylinder abscor1/abscor2 are model parameters",
+                  "cw_asymmetry": "FCJ two slots and BeBa limit angle are model parameters"
+                },
+                "previous_provenance": {
+                  "reference": "Analysis._selected_parameters_for_fit(selected experiments)",
+                  "diffraction_lib_sha": "0d9f10e412a0cd08d4dd0af95845dd9bb597dcdf",
+                  "analysis_sha256": "b9c80be741bfc4cd149e0d95b8fb5a4eea6f75756a4db28a9a78a75baaf5e2e2",
+                  "input_adaptation": "private copies: _edi.schema_version 2/3 -> 1; _calculator.type crysta -> cryspy; _minimizer.type crysta -> \"lmfit (leastsq)\"; missing legacy TOF family supplied from the declared tof-* peak tag; parameter tags unchanged; no fit run",
+                  "model_projection": {
+                    "tof_geometry": "bank angle is fixed geometry (Cryspy TOFParameters.ATTR_REF excludes it)",
+                    "tof_peak": "14 coefficient slots, including zero Lorentzian/rate limits",
+                    "tof_absorption": "cylinder abscor1/abscor2 are model parameters",
+                    "cw_asymmetry": "FCJ two slots and BeBa limit angle are model parameters"
+                  },
+                  "previous_provenance": {
+                    "reference": "Analysis._selected_parameters_for_fit(selected experiments)",
+                    "diffraction_lib_sha": "0d9f10e412a0cd08d4dd0af95845dd9bb597dcdf",
+                    "analysis_sha256": "b9c80be741bfc4cd149e0d95b8fb5a4eea6f75756a4db28a9a78a75baaf5e2e2",
+                    "input_adaptation": "private copies: _edi.schema_version 2/3 -> 1; _calculator.type crysta -> cryspy; _minimizer.type crysta -> \"lmfit (leastsq)\"; missing legacy TOF family supplied from the declared tof-* peak tag; parameter tags unchanged; no fit run",
+                    "model_projection": {
+                      "tof_geometry": "bank angle is fixed geometry (Cryspy TOFParameters.ATTR_REF excludes it)",
+                      "tof_peak": "14 coefficient slots, including zero Lorentzian/rate limits",
+                      "tof_absorption": "cylinder abscor1/abscor2 are model parameters",
+                      "cw_asymmetry": "FCJ two slots and BeBa limit angle are model parameters"
+                    },
+                    "previous_provenance": {
+                      "reference": "Analysis._selected_parameters_for_fit(selected experiments)",
+                      "diffraction_lib_sha": "0d9f10e412a0cd08d4dd0af95845dd9bb597dcdf",
+                      "analysis_sha256": "b9c80be741bfc4cd149e0d95b8fb5a4eea6f75756a4db28a9a78a75baaf5e2e2",
+                      "input_adaptation": "private copies: _edi.schema_version 2/3 -> 1; _calculator.type crysta -> cryspy; _minimizer.type crysta -> \"lmfit (leastsq)\"; missing legacy TOF family supplied from the declared tof-* peak tag; parameter tags unchanged; no fit run",
+                      "model_projection": {
+                        "tof_geometry": "bank angle is fixed geometry (Cryspy TOFParameters.ATTR_REF excludes it)",
+                        "tof_peak": "14 coefficient slots, including zero Lorentzian/rate limits",
+                        "tof_absorption": "cylinder abscor1/abscor2 are model parameters",
+                        "cw_asymmetry": "FCJ two slots and BeBa limit angle are model parameters"
+                      }
+                    },
+                    "coefficient_count_adaptation": "private polynomial declarations -> reference Chebyshev coefficient storage; explicit term_<order> IDs supplied; coefficients/free flags retained; count-only selection, no basis evaluation or fit; native polynomial and Chebyshev have one model parameter per authored coefficient (ADR-0077)"
+                  },
+                  "coefficient_count_adaptation": "private polynomial declarations -> reference Chebyshev coefficient storage; explicit term_<order> IDs supplied; coefficients/free flags retained; count-only selection, no basis evaluation or fit; native polynomial and Chebyshev have one model parameter per authored coefficient (ADR-0077)"
+                },
+                "coefficient_count_adaptation": "private polynomial declarations -> reference Chebyshev coefficient storage; explicit term_<order> IDs supplied; coefficients/free flags retained; count-only selection, no basis evaluation or fit; native polynomial and Chebyshev have one model parameter per authored coefficient (ADR-0077)"
+              },
+              "coefficient_count_adaptation": "private polynomial declarations -> reference Chebyshev coefficient storage; explicit term_<order> IDs supplied; coefficients/free flags retained; count-only selection, no basis evaluation or fit; native polynomial and Chebyshev have one model parameter per authored coefficient (ADR-0077)",
+              "saved_range_adaptation": {
+                "pd-neut-cwl_yap-spodi_3k": {
+                  "scope": "finite numeric range checks during private load only; saved values retained; type/membership checks and external model selection unchanged; no fit",
+                  "retained": [
+                    {
+                      "name": "Al2O3.atom_site.Al1.adp_iso",
+                      "value": -0.13591
+                    }
+                  ]
+                }
+              }
+            },
+            "coefficient_count_adaptation": "private polynomial declarations -> reference Chebyshev coefficient storage; explicit term_<order> IDs supplied; coefficients/free flags retained; count-only selection, no basis evaluation or fit; native polynomial and Chebyshev have one model parameter per authored coefficient (ADR-0077)"
+          },
+          "coefficient_count_adaptation": "private polynomial declarations -> reference Chebyshev coefficient storage; explicit term_<order> IDs supplied; coefficients/free flags retained; count-only selection, no basis evaluation or fit; native polynomial and Chebyshev have one model parameter per authored coefficient (ADR-0077)"
         },
         "coefficient_count_adaptation": "private polynomial declarations -> reference Chebyshev coefficient storage; explicit term_<order> IDs supplied; coefficients/free flags retained; count-only selection, no basis evaluation or fit; native polynomial and Chebyshev have one model parameter per authored coefficient (ADR-0077)"
       },
@@ -10171,16 +10391,5 @@
     },
     "coefficient_count_adaptation": "private polynomial declarations -> reference Chebyshev coefficient storage; explicit term_<order> IDs supplied; coefficients/free flags retained; count-only selection, no basis evaluation or fit; native polynomial and Chebyshev have one model parameter per authored coefficient (ADR-0077)"
   },
-  "coefficient_count_adaptation": "private polynomial declarations -> reference Chebyshev coefficient storage; explicit term_<order> IDs supplied; coefficients/free flags retained; count-only selection, no basis evaluation or fit; native polynomial and Chebyshev have one model parameter per authored coefficient (ADR-0077)",
-  "saved_range_adaptation": {
-    "pd-neut-cwl_yap-spodi_3k": {
-      "scope": "finite numeric range checks during private load only; saved values retained; type/membership checks and external model selection unchanged; no fit",
-      "retained": [
-        {
-          "name": "Al2O3.atom_site.Al1.adp_iso",
-          "value": -0.13591
-        }
-      ]
-    }
-  }
+  "coefficient_count_adaptation": "private polynomial declarations -> reference Chebyshev coefficient storage; explicit term_<order> IDs supplied; coefficients/free flags retained; count-only selection, no basis evaluation or fit; native polynomial and Chebyshev have one model parameter per authored coefficient (ADR-0077)"
 }

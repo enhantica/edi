@@ -15,7 +15,7 @@ function extract(source, name) {
     return source.slice(start, end);
 }
 const source = fs.readFileSync(request.source, "utf8");
-const context = vm.createContext({bar: {fit: request.fit}, EaStyle: {Colors: {red: "#cc0000", green: "#009900", orange: "#cc9900", themeForeground: "#111111", themeForegroundMinor: "#666666", chartForegroundsExtra: ["#000000", "#009900"]}}});
+const context = vm.createContext({Session: {project: null}, bar: {fit: request.fit}, EaStyle: {Colors: {red: "#cc0000", green: "#009900", orange: "#cc9900", themeForeground: "#111111", themeForegroundMinor: "#666666", chartForegroundsExtra: ["#000000", "#009900"]}}});
 vm.runInContext('String.prototype.arg = function(value) { return this.replace("%1", value); }; function qsTr(text) { return text; }; this.NumberText = this;', context);
 const names = new Set([...request.functions, ...Array.from(source.matchAll(/^\s*function (\w+)\(/gm), match => match[1])]);
 vm.runInContext(Array.from(names, name => extract(source, name)).join("\n"), context);

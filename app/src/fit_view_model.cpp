@@ -4,8 +4,10 @@
 #include <QFileInfo>
 #include <algorithm>
 #include <cmath>
+#include <optional>
 
 #include "analysis_view_model.hpp"
+#include "edi/duration_text.hpp"
 #include "edi/edit.hpp"
 #include "edi/selectors.hpp"
 #include "project_view_model.hpp"
@@ -54,18 +56,9 @@ QString status_text(edi::FitStatus status) {
     return FitViewModel::tr("Failed");
 }
 
-// A fit's time as the status bar shows it: tenths under a second, whole seconds under a minute, then
-// minutes and seconds.
-QString duration(double seconds) {
-    if (seconds < 1.0) {
-        return QStringLiteral("%1s").arg(seconds, 0, 'f', 1);
-    }
-    const auto whole = static_cast<qint64>(seconds + 0.5);
-    if (whole < 60) {
-        return QStringLiteral("%1s").arg(whole);
-    }
-    return QStringLiteral("%1m %2s").arg(whole / 60).arg(whole % 60, 2, 10, QLatin1Char('0'));
-}
+// A fit's time as the status bar shows it: two significant digits, never fewer than the whole seconds (0.41s, 3.2s,
+// 127s; edi::duration_text).
+QString duration(double seconds) { return QString::fromStdString(edi::duration_text(seconds)) + QStringLiteral("s"); }
 
 }  // namespace
 
@@ -79,7 +72,7 @@ FitResultListModel::FitResultListModel(QObject* parent) : RowTableModel({"icon",
 
 void FitResultListModel::setRecord(const edi::Project& project) {
     // diffraction-lib's rows (analysis/fit_helpers/reporting.py, _build_fit_results_rows), from the result the
-    // project records: crysta computes χ² and Rwp, so its R-factors are those.
+    // project records: crysta computes χ² and the R factors, the powder ones in place of diffraction-lib's.
     const edi::FitResultRecord& result = project.fit_result;
     if (!result.held()) {
         clear();
@@ -99,16 +92,45 @@ void FitResultListModel::setRecord(const edi::Project& project) {
         descent.isEmpty() ? QStringLiteral("crysta") : QStringLiteral("crysta (%1)").arg(descent));
     const edi::FitStatus status = status_of(result);
     row(QString(), tr("Overall status"), status_text(status), outcome_key(status));
-    row(QStringLiteral("stopwatch"), tr("Fitting time (seconds)"), QString::number(result.fitting_time, 'f', 2));
+    row(QStringLiteral("stopwatch"), tr("Fitting time (seconds)"), QString::fromStdString(edi::duration_text(result.fitting_time)));
     row(QStringLiteral("redo"), tr("Iterations"), QString::number(result.iterations));
     row(QStringLiteral("ruler"), tr("Goodness-of-fit (reduced χ²)"), chi(result.reduced_chi_square));
-    // crysta's Rwp is a fraction; diffraction-lib's table shows its R-factors in per cent.
-    row(QStringLiteral("ruler"), tr("Weighted profile R-factor (Rwp, %)"),
-        QString::number(result.prof_wr_factor * 100.0, 'f', 2));
+    // crysta's R factors are fractions; diffraction-lib's table shows its R-factors in per cent. Rwp comes first; a
+    // factor a result written before it does not hold has no row.
+    const auto percent = [&row](const QString& metric, const std::optional<double>& value) {
+        if (value.has_value()) {
+            row(QStringLiteral("ruler"), metric, QString::number(*value * 100.0, 'f', 2));
+        }
+    };
+    percent(tr("Weighted profile R-factor (Rwp, %)"), result.prof_wr_factor);
+    percent(tr("Profile R-factor (Rp, %)"), result.prof_r_factor);
+    percent(tr("Expected R-factor (Rexp, %)"), result.prof_wr_expected);
+    percent(tr("Background-corrected Rwp (cRwp, %)"), result.prof_cwr_factor);
+    percent(tr("Background-corrected Rp (cRp, %)"), result.prof_cr_factor);
+    // Each experiment's own factors when the fit covered several; one experiment's are the ones above.
+    const auto fitted =
+        std::count_if(project.experiments.begin(), project.experiments.end(),
+                      [](const auto& experiment) { return experiment->fit_prof_wr_factor.has_value(); });
     for (const auto& experiment : project.experiments) {
-        if (experiment->fit_prof_wr_factor.has_value()) {
-            row(QStringLiteral("ruler"), tr("Rwp, %1 (%)").arg(QString::fromStdString(experiment->name)),
-                QString::number(*experiment->fit_prof_wr_factor * 100.0, 'f', 2));
+        const QString name = QString::fromStdString(experiment->name);
+        if (fitted > 1) {
+            percent(tr("Rwp, %1 (%)").arg(name), experiment->fit_prof_wr_factor);
+            percent(tr("Rp, %1 (%)").arg(name), experiment->fit_prof_r_factor);
+            percent(tr("Rexp, %1 (%)").arg(name), experiment->fit_prof_wr_expected);
+            percent(tr("cRwp, %1 (%)").arg(name), experiment->fit_prof_cwr_factor);
+            percent(tr("cRp, %1 (%)").arg(name), experiment->fit_prof_cr_factor);
+            if (experiment->fit_chi_square.has_value()) {  // its own χ², dimensionless, beside the global reduced one
+                row(QStringLiteral("ruler"), tr("χ², %1").arg(name), chi(*experiment->fit_chi_square));
+            }
+        }
+        // Each phase's, named by its structure (and its experiment when there are several).
+        for (const auto& link : experiment->linked_structures) {
+            const std::string& linked = link->structure_id.value();
+            const QString phase = QString::fromStdString(
+                linked.empty() && !project.structures.empty() ? project.structures.front()->name.value() : linked);
+            const QString label = fitted > 1 ? QStringLiteral("%1 / %2").arg(name, phase) : phase;
+            percent(tr("Bragg R-factor (R_Bragg), %1 (%)").arg(label), link->fit_bragg_r_factor);
+            percent(tr("Structure-factor R-factor (R_F), %1 (%)").arg(label), link->fit_f_r_factor);
         }
     }
     setTableRows(rows);
@@ -150,7 +172,7 @@ void FitResultListModel::setScan(const ScanSummary& summary) {
     row(QString(), tr("Overall status"), outcome_word(summary.outcome), summary.outcome);
     // The run's time when this app ran it; the driver's results record none.
     if (summary.seconds >= 0.0) {
-        row(QStringLiteral("stopwatch"), tr("Fitting time (seconds)"), QString::number(summary.seconds, 'f', 2));
+        row(QStringLiteral("stopwatch"), tr("Fitting time (seconds)"), QString::fromStdString(edi::duration_text(summary.seconds)));
     }
     row(QStringLiteral("copy"), tr("Files fitted"), QStringLiteral("%1/%2").arg(summary.fitted).arg(summary.files));
     row(QStringLiteral("check-circle"), tr("Converged"), QString::number(summary.ok));

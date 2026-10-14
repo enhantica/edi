@@ -16,6 +16,7 @@ from tests.fixtures.scan_app.build_probe import (
     validate_current_inputs,
     validate_fixture,
 )
+from tests.fixtures.scan_screen import normal_app
 
 ROOT = Path(__file__).resolve().parents[3]
 MODES = ('adaptive', 'every', 'second', 'end')
@@ -55,9 +56,9 @@ def observation(backend, scratch):
     if receipt_path:
         receipt_path = Path(receipt_path)
     else:
+        directory = scratch / backend
         if backend == 'browser':
             prepare_browser_toolchain(env)
-        directory = scratch / backend
         command = [
             'pixi',
             'run',
@@ -79,6 +80,10 @@ def observation(backend, scratch):
         ]
 
         def prepare():
+            if backend == 'desktop':  # the normal app observes itself; nothing is compiled
+                return normal_app.receipt(
+                    ROOT, directory, crysta_reference_prefix(), crysta_reference_source()
+                )
             subprocess.run(command, cwd=ROOT, check=True)
             return directory / 'receipt.json'
 
@@ -157,11 +162,11 @@ def capture(receipt, scratch, env):
         plan = {'executable': str(executable), 'output': str(output), 'scratch': str(scratch)}
         plan_path = scratch / 'desktop-plan.json'
         plan_path.write_text(json.dumps(plan))
+        # Not --as-is: where the app came without its environment (a system job), pixi installs it.
         subprocess.run(
             [
                 'pixi',
                 'run',
-                '--as-is',
                 '-e',
                 'app',
                 'bash',
@@ -197,11 +202,13 @@ def desktop(plan):
             XDG_CONFIG_HOME=str(config),
             SCAN_SCREEN_SETTINGS_FILE=str(settings),
             SCAN_SCREEN_OUTPUT=plan['output'],
+            EDI_TEST_OBSERVERS='1',
         )
 
         def invoke(choice, settings_only, env=env):
             env.update(SCAN_SCREEN_MODE=choice, SCAN_SCREEN_SETTINGS_ONLY=str(int(settings_only)))
-            subprocess.run([plan['executable']], env=env, check=True, timeout=150)
+            command = [plan['executable'], '--test-observer', 'scan-screen']
+            subprocess.run(command, env=env, check=True, timeout=150)
             return json.loads(Path(plan['output']).read_text(encoding='utf-8'))
 
         item = invoke(mode, False)

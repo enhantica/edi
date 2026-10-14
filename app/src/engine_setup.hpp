@@ -2,6 +2,8 @@
 #ifndef EDI_APP_ENGINE_SETUP_HPP
 #define EDI_APP_ENGINE_SETUP_HPP
 
+#include <QString>
+
 class QQmlEngine;
 
 namespace edi_app {
@@ -9,6 +11,12 @@ namespace edi_app {
 // The engine setup the host and the Qt Quick Test runner share: the values the gui-components base
 // reads from its host — a writable settings file and "not a test run".
 void configure_engine(QQmlEngine& engine);
+// ADR-0031 §3: the one app-settings store's file on the desktop, QSettings' ini file of the user scope
+// (`~/.config/EasyScience/EasyDiffraction.ini` on Linux and macOS).
+QString settings_store_path();
+// The settings file the engine was configured with (the store, a demo or test run's fresh file, or the browser's
+// copy); empty before configure_engine.
+QString settings_file_path();
 // In the browser, writes the settings file's current text to the page's storage at once, rather than at the next
 // check (configure_engine), so a reload soon after a change finds it; nothing to do on the desktop, where the file
 // is the store.

@@ -1,6 +1,6 @@
 {
   "source": "THIRD-PARTY-NOTICES",
-  "sha256": "91c85ff152d6a7146df670ea1e2c6b54e2109ee0ac6bf89df31a337ccb9abeea",
+  "sha256": "23441fbbc47008ecec495b090cca56c0324c90254b4b9529464b8765ab029758",
   "rows": [
     {
       "component": "crysta",
@@ -91,6 +91,18 @@
       "version": "",
       "licence": "MIT",
       "use": "VESTA element colours and Shannon ionic radii in the element table, compiled into edi"
+    },
+    {
+      "component": "plotly.js",
+      "version": "3.7.0",
+      "licence": "MIT",
+      "use": "the report's pattern charts, its cartesian bundle"
+    },
+    {
+      "component": "three.js",
+      "version": "0.160.0",
+      "licence": "MIT",
+      "use": "the report's structure views, with its OrbitControls"
     },
     {
       "component": "ICU",

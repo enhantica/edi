@@ -1,0 +1,77 @@
+// SPDX-License-Identifier: BSD-3-Clause
+#define _GNU_SOURCE
+#include <dlfcn.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/uio.h>
+#include <unistd.h>
+
+static void receipt(const char* event, const char* path) {
+    const char* log = getenv("EDI_REPORT_FAULT_LOG");
+    if (!log) return;
+    int fd = open(log, O_WRONLY | O_CREAT | O_APPEND, 0600);
+    if (fd < 0) return;
+    ssize_t (*real_write)(int, const void*, size_t) = dlsym(RTLD_NEXT, "write");
+    real_write(fd, event, strlen(event));
+    real_write(fd, " ", 1);
+    real_write(fd, path, strlen(path));
+    real_write(fd, "\n", 1);
+    close(fd);
+}
+static int target(int fd, char* path, const void* buffer, size_t size) {
+    const char* directory = getenv("EDI_REPORT_FAULT_DIR");
+    const char* kind = getenv("EDI_REPORT_FAULT_KIND");
+    if (!directory || !kind || !strcmp(kind, "settings")) return 0;
+#ifdef __APPLE__
+    if (fcntl(fd, F_GETPATH, path) != 0) return 0;
+#else
+    char link[64];
+    snprintf(link, sizeof(link), "/proc/self/fd/%d", fd);
+    ssize_t n = readlink(link, path, PATH_MAX - 1);
+    if (n < 0) return 0;
+    path[n] = 0;
+#endif
+    if (strncmp(path, directory, strlen(directory)) || path[strlen(directory)] != '/') return 0;
+    const char* base = path + strlen(directory) + 1;
+    if (!strcmp(kind, "pdf")) return strstr(base, ".pdf") != NULL || (size >= 4 && !memcmp(buffer, "%PDF", 4));
+    return !strstr(base, "report.edi") && !strstr(base, ".pdf") && !strstr(base, ".cif");
+}
+ssize_t write(int fd, const void* buffer, size_t size) {
+    ssize_t (*real_write)(int, const void*, size_t) = dlsym(RTLD_NEXT, "write");
+    char path[PATH_MAX];
+    if (size && target(fd, path, buffer, size)) {
+        real_write(fd, buffer, size < 64 ? size : 64);
+        receipt("write-after-open", path);
+        errno = ENOSPC;
+        return -1;
+    }
+    return real_write(fd, buffer, size);
+}
+ssize_t writev(int fd, const struct iovec* vectors, int count) {
+    ssize_t (*real_writev)(int, const struct iovec*, int) = dlsym(RTLD_NEXT, "writev");
+    char path[PATH_MAX];
+    if (count && target(fd, path, vectors[0].iov_base, vectors[0].iov_len)) {
+        ssize_t (*real_write)(int, const void*, size_t) = dlsym(RTLD_NEXT, "write");
+        real_write(fd, vectors[0].iov_base, vectors[0].iov_len < 64 ? vectors[0].iov_len : 64);
+        receipt("write-after-open", path);
+        errno = ENOSPC;
+        return -1;
+    }
+    return real_writev(fd, vectors, count);
+}
+int rename(const char* from, const char* to) {
+    int (*real_rename)(const char*, const char*) = dlsym(RTLD_NEXT, "rename");
+    const char* directory = getenv("EDI_REPORT_FAULT_DIR");
+    const char* kind = getenv("EDI_REPORT_FAULT_KIND");
+    if (directory && kind && !strcmp(kind, "settings") &&
+        !strncmp(to, directory, strlen(directory)) && !strcmp(to + strlen(directory), "/report.edi")) {
+        receipt("settings-rename", to);
+        errno = EACCES;
+        return -1;
+    }
+    return real_rename(from, to);
+}

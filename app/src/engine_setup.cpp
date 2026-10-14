@@ -9,7 +9,9 @@
 #include <QQmlContext>
 #include <QQmlEngine>
 #include <QQuickWindow>
+#include <QFileInfo>
 #include <QSettings>
+#include <QVariant>
 #include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QPointer>
@@ -155,6 +157,43 @@ QByteArray& browser_settings_stored() {
 }
 #endif
 
+// ADR-0031 §3, §6: today's settings.ini carried over into the one store. Only a key the store does not hold is copied,
+// so a key is carried once and never overwritten, and the old file is left as it is. The keys that moved go to their new
+// groups.
+void carry_over_settings(const QString& old_file, const QString& store_file) {
+    if (!QFile::exists(old_file)) {
+        return;
+    }
+    QSettings store(store_file, QSettings::IniFormat);
+    const QSettings old(old_file, QSettings::IniFormat);
+    for (const QString& key : old.allKeys()) {
+        QString to = key;
+        QVariant value = old.value(key);
+        if (key == QLatin1String("Edi.Preferences/newProjectSuRule")) {
+            to = QStringLiteral("Projects/newProjectSuRule");
+        } else if (key == QLatin1String("Edi.Preferences/newReportLibraries")) {
+            to = QStringLiteral("Projects/newReportLibraries");
+            if (value.toString() == QLatin1String("true") || value.toString() == QLatin1String("false")) {
+                value = value.toBool() ? QStringLiteral("embedded") : QStringLiteral("online");
+            }
+        } else if (key == QLatin1String("Edi.RecentProjects/projectPaths")) {
+            to = QStringLiteral("Projects/recent");
+        } else if (key == QLatin1String("analysis/scanPatternUpdates")) {
+            to = QStringLiteral("Analysis/scanPatternUpdates");
+        }
+        if (!store.contains(to)) {
+            store.setValue(to, value);
+        }
+    }
+    store.sync();
+}
+
+// The settings file configure_engine chose, which the app's own C++ settings read and write too.
+QString& configured_settings_file() {
+    static QString file;
+    return file;
+}
+
 // Set by use_fresh_settings(): the process-lifetime directory a demo or a test run keeps its settings in.
 QString& fresh_config_dir() {
     static QString dir;
@@ -174,7 +213,16 @@ void configure_engine(QQmlEngine& engine) {
                                    ? QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation)
                                    : fresh_config_dir();
     QDir().mkpath(config_dir);
-    const QString settings_file = QDir(config_dir).filePath(QStringLiteral("settings.ini"));
+    // ADR-0031 §3: the one store, QSettings' ini file of the user scope (organisation EasyScience, application
+    // EasyDiffraction), with today's settings.ini carried over once; a demo or a test run's user scope is its fresh
+    // folder (use_fresh_settings), and the browser keeps its storage.
+    QString settings_file = QDir(config_dir).filePath(QStringLiteral("settings.ini"));
+#if !defined(Q_OS_WASM)
+    const QString legacy = settings_file;
+    settings_file = settings_store_path();
+    QDir().mkpath(QFileInfo(settings_file).absolutePath());
+    carry_over_settings(legacy, settings_file);
+#endif
 #if defined(Q_OS_WASM)
     // Once per process: touchpad scrolling as the desktop's (WheelGestures above).
     static WheelGestures* const gestures = [] {
@@ -201,9 +249,18 @@ void configure_engine(QQmlEngine& engine) {
         timer->start();
     }
 #endif
+    configured_settings_file() = settings_file;
     engine.rootContext()->setContextProperty(QStringLiteral("pySettingsPath"),
                                              QUrl::fromLocalFile(settings_file).toString());
     engine.rootContext()->setContextProperty(QStringLiteral("pyIsTestMode"), false);
+}
+
+QString settings_file_path() { return configured_settings_file(); }
+
+QString settings_store_path() {
+    const QSettings store(QSettings::IniFormat, QSettings::UserScope, QStringLiteral("EasyScience"),
+                          QStringLiteral("EasyDiffraction"));
+    return store.fileName();
 }
 
 void store_settings_now() {

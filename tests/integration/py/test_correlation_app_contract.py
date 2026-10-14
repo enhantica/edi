@@ -222,15 +222,31 @@ def test_experiment_data_header_and_link_are_declared():
     )
 
 
-def test_diagnostics_uses_a_button_with_a_declared_combobox_width():
+def test_diagnostics_uses_the_preferences_shared_control_width():
+    # Before: the Logging level box supplied the width. After: the dialog's
+    # common control column supplies every full-width button and box.
     source = text('Components/AppPreferencesDialog.qml')
     match = re.search(
-        r'(?:EaElements\.)?Button\s*\{\s*objectName:\s*"preferences.diagnostics"([^}]+)', source
+        r'(?P<kind>(?:EaElements\.)?Button|RowButton)\s*\{\s*'
+        r'objectName:\s*"preferences.diagnostics"(?P<body>[^}]+)',
+        source,
     )
-    assert match and 'qsTr("Show")' in match[1], 'Diagnostics Show must be an actual button'
-    assert re.search(r'\bwidth:\s*loggingLevel\.width\b', match[1]), (
-        'The diagnostics button must explicitly take the Logging level combobox width'
+    assert match and 'qsTr("Show")' in match['body'], (
+        'Diagnostics Show remains the actual preferences.diagnostics button'
     )
+    declaration = (
+        body(source, 'component RowButton:') if match['kind'] == 'RowButton' else match['body']
+    )
+    assert 'dialog.controlWidth' in declaration and not re.search(
+        r'\bwidth:\s*loggingLevel\.width\b', declaration
+    ), (
+        'The actual Diagnostics button uses the dialog shared control column; '
+        f'actual width declaration: {declaration}'
+    )
+    if match['kind'] == 'RowButton':
+        assert not re.search(r'\bhalf:\s*true\b', match['body']), (
+            'Diagnostics occupies the full Preferences control width, not a paired half row'
+        )
 
 
 @pytest.mark.parametrize(

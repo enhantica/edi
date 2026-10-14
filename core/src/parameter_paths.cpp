@@ -181,6 +181,13 @@ std::optional<ResolvedParameter> resolve_instrument_label(ExperimentBase& experi
         {"setup_monochromator_twotheta",
          {+[](ExperimentBase& e) -> OptionalParameter& { return e.instrument.setup_monochromator_twotheta; },
           "instrument.setup_monochromator_twotheta"}},
+        // The X-ray K-alpha doublet, crysta's instrument[6]/[7].
+        {"setup_wavelength_2",
+         {+[](ExperimentBase& e) -> OptionalParameter& { return e.instrument.setup_wavelength_2; },
+          "instrument.setup_wavelength_2"}},
+        {"setup_wavelength_2_to_1_ratio",
+         {+[](ExperimentBase& e) -> OptionalParameter& { return e.instrument.setup_wavelength_2_to_1_ratio; },
+          "instrument.setup_wavelength_2_to_1_ratio"}},
         {"broad_gauss_u",
          {+[](ExperimentBase& e) -> OptionalParameter& { return e.peak.broad_gauss_u; },
           "peak.broad_gauss_u"}},

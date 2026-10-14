@@ -18,8 +18,9 @@
 
 namespace edi_app {
 
-// The parameters a scan's results record, for the Evolution tab's selector: roles `name` (the results column,
-// a diffraction-lib unique name) and `label` (the same, as the selector shows it).
+// The parameters of the Evolution tab's selector: every free parameter, then any other one the scan's results
+// record; roles `name` (the results column, a diffraction-lib unique name) and `label` (the same, as the selector
+// shows it).
 class EvolutionParameterListModel : public RowTableModel {
     Q_OBJECT
     QML_ELEMENT
@@ -55,6 +56,8 @@ class EvolutionViewModel : public QObject {
     Q_PROPERTY(int count READ count NOTIFY countChanged)
     // The template changed after these results were written (FitViewModel::outOfDate).
     Q_PROPERTY(bool outOfDate READ outOfDate NOTIFY outOfDateChanged)
+    // Some dataset of the scan has a row in its results: until then the chart has no axes.
+    Q_PROPERTY(bool fitted READ fitted NOTIFY fittedChanged)
     // The layer the points are drawn on (the chart's).
     Q_PROPERTY(edi_app::MeasuredLayer* layer READ layer WRITE setLayer NOTIFY layerChanged)
 
@@ -68,6 +71,8 @@ class EvolutionViewModel : public QObject {
     void setScan(const ScanSession* session, const edi::Project* project, const QString& extracted_title);
     // A row a run just appended: its point joins the chart without reading the file again.
     void addRow(int dataset, const std::vector<std::string>& cells);
+    // After an edit: a parameter freed or fixed joins or leaves the selector.
+    void syncParameters();
 
     EvolutionParameterListModel* parameters() const { return parameters_; }
     int currentParameter() const { return current_; }
@@ -83,6 +88,7 @@ class EvolutionViewModel : public QObject {
     double yMax() const { return y_max_; }
     int count() const { return static_cast<int>(points_.size()); }
     bool outOfDate() const { return out_of_date_; }
+    bool fitted() const { return fitted_; }
     void setOutOfDate(bool out_of_date);
     MeasuredLayer* layer() const { return layer_; }
     void setLayer(MeasuredLayer* layer);
@@ -114,11 +120,13 @@ class EvolutionViewModel : public QObject {
     void yMaxChanged();
     void countChanged();
     void outOfDateChanged();
+    void fittedChanged();
     void layerChanged();
 
    private:
-    // Lists the recorded parameters again; whether the list changed. The shown one stays, else the first.
+    // Lists the parameters again; whether the list changed. The shown one stays, else the first.
     bool syncNames();
+    void syncFitted();
     // Thins the points above the drawing limit (per x bucket the lowest and the highest).
     void thin();
     int published_count_ = 0;
@@ -145,6 +153,7 @@ class EvolutionViewModel : public QObject {
     int current_ = -1;
     int x_mode_ = 0;
     bool out_of_date_ = false;
+    bool fitted_ = false;
     double x_min_ = 0.0, x_max_ = 1.0, y_min_ = 0.0, y_max_ = 1.0;
 };
 

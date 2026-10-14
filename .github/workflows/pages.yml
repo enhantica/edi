@@ -36,20 +36,23 @@ jobs:
           repositories: crysta
           permission-contents: read
           permission-actions: read
-      - name: Build the native code
-        run: pixi run core-build
-        env:
-          GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
-      - name: Execute notebooks for rendering
-        run: pixi run notebook-exec-ci
-        env:
-          GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
+      # Preview build: crysta from source at the branch's paired commit, no native build, so the notebooks are
+      # published unexecuted.
+      - name: Check out crysta for the web app
+        uses: actions/checkout@v5
+        with:
+          repository: enhantica/crysta
+          ref: ac13e75e04fdb5b0ae2a104b8a419ba8045c45e3
+          token: ${{ steps.crysta-token.outputs.token }}
+          path: crysta-source
       - name: Strict docs build
         run: pixi run docs-build
       - name: Install the WebAssembly toolchain  # Emscripten, Qt's wasm kits, Eigen, Chrome
         run: pixi run -e app wasm-toolchain
       - name: Build both kits and pack the web app
         run: pixi run -e app --skip-deps wasm-build
+        env:
+          EDI_WASM_CRYSTA_SRC: ${{ github.workspace }}/crysta-source
       - name: Place the web app at /webapp/
         run: bash tools/ci/docs-webapp.sh build/wasm/site site
       - name: Upload the site

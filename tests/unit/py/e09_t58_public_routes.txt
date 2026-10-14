@@ -690,3 +690,30 @@ FitParameterCorrelationItem.parameter_unique_name_i	other-public
 FitParameterCorrelationItem.parameter_unique_name_j	other-public
 FitParameterCorrelationItem.source_kind	other-public
 FitResultBase.correlations	other-public
+
+# Report presentation, serialization and metadata; none calculates or fits model inputs.
+Project.report	other-public
+Project.su_rule	other-public
+ProjectMetadata.authors	other-public
+Report	other-public
+Report.as_html	other-public
+Report.check	other-public
+Report.cif	other-public
+Report.correlation_threshold	other-public
+Report.excluded	other-public
+Report.html	other-public
+Report.html_offline	other-public
+Report.model	other-public
+Report.pdf	other-public
+Report.save	other-public
+Report.save_html	other-public
+Report.x_axis	other-public
+ReportModel	other-public
+ReportModel.from_json	other-public
+ReportModel.to_json	other-public
+CwlPdXrayInstrument.setup_wavelength_2	other-public
+CwlPdXrayInstrument.setup_wavelength_2_to_1_ratio	other-public
+LinkedStructure.weight_fraction	other-public
+WeightFraction	other-public
+WeightFraction.uncertainty	other-public
+WeightFraction.value	other-public

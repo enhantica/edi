@@ -55,6 +55,7 @@ EaElements.GroupBox {
             objectName: "experiments.list"
             defaultInfoText: qsTr("No experiments defined")
             sourceModel: group.project ? group.project.experiments : null
+            marksCurrentRow: true
             currentRow: group.project ? group.project.currentExperimentIndex : -1
 
             columnWidths: [numberColumnWidth, group.scan ? 0.001 : AppSizes.iconOnlyColumnWidth, group.scan ? AppSizes.iconOnlyColumnWidth : group.fitColumnWidth, textColumnWidth("name", qsTr("Datablock")), -1, group.scanColumns.length ? group.scanColumns.length * AppSizes.dataColumnWidth * 1.4 : 0.001, group.scan ? 0.001 : AppSizes.iconColumnWidth]

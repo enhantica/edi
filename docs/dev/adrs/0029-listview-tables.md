@@ -111,7 +111,10 @@ outside the opening area; missing projects stay visible without opening.
 A parameter's value is rounded to its uncertainty's first digit, or to six
 significant digits without one (`NumberText`). The width of its cell never
 changes the text: a long value starts at the left and clips at the cell's edge,
-without an ellipsis, and editing shows the full value.
+without an ellipsis, and editing shows the full value. The sidebar's parameter
+fields follow the same rule. A derived, read-only value such as a linked
+structure's weight fraction is shown the same way, with its uncertainty in the
+value's menu rather than in the cell.
 
 A value at or above 1e6, or below 1e-4 and not zero, is written in scientific
 notation with four significant digits, and its uncertainty in the same exponent

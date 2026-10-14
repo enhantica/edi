@@ -81,12 +81,20 @@ def load_reference_project(path, retained_ranges=None):
                 text += '\n_space_group.coord_system_code cab\n'
             # Keep the current native tag in this source; the frozen external
             # reader supplies its own canonical spelling through its enum.
-            text = re.sub(
-                r'^_peak.type cwl-pseudo-voigt-berar-baldinozzi$',
-                '_peak.type ' + PeakProfileTypeEnum.CWL_PSEUDO_VOIGT_BERAR_BALDINOZZI_ASYMMETRY,
-                text,
-                flags=re.MULTILINE,
-            )
+            for native, external in (
+                ('cwl-tch-pseudo-voigt', PeakProfileTypeEnum.CWL_PSEUDO_VOIGT),
+                ('cwl-tch-pseudo-voigt-fcj', PeakProfileTypeEnum.CWL_THOMPSON_COX_HASTINGS),
+                (
+                    'cwl-pseudo-voigt-berar-baldinozzi',
+                    PeakProfileTypeEnum.CWL_PSEUDO_VOIGT_BERAR_BALDINOZZI_ASYMMETRY,
+                ),
+            ):
+                text = re.sub(
+                    r'^_peak.type ' + native + r'$',
+                    '_peak.type ' + external,
+                    text,
+                    flags=re.MULTILINE,
+                )
             # The reference exposes Chebyshev coefficient storage. For count-only
             # selection, plain powers have the same independent coefficient set;
             # no reference fit/calculation or basis conversion is performed.
@@ -94,16 +102,17 @@ def load_reference_project(path, retained_ranges=None):
                 text = text.replace('_background.type polynomial', '_background.type chebyshev')
                 lines = text.splitlines()
                 index = lines.index('_background.order')
-                lines.insert(index, '_background.id')
-                first = index + 3
-                while (
-                    first < len(lines)
-                    and lines[first].strip()
-                    and not lines[first].startswith(('_', 'loop_', 'data_'))
-                ):
-                    tokens = lines[first].split()
-                    lines[first] = 'term_' + tokens[0] + ' ' + lines[first]
-                    first += 1
+                if '_background.id' not in lines:
+                    lines.insert(index, '_background.id')
+                    first = index + 3
+                    while (
+                        first < len(lines)
+                        and lines[first].strip()
+                        and not lines[first].startswith(('_', 'loop_', 'data_'))
+                    ):
+                        tokens = lines[first].split()
+                        lines[first] = 'term_' + tokens[0] + ' ' + lines[first]
+                        first += 1
                 text = '\n'.join(lines) + '\n'
             model_file.write_text(
                 text
@@ -150,6 +159,33 @@ def project_model_names(reference_names, experiments, path):
             names.extend(prefix + 'peak.' + name for name in ('asym_fcj_1', 'asym_fcj_2'))
         elif '_peak.asym_beba_limit' in original:
             names.append(prefix + 'peak.asym_beba_limit')
+        names = xray_model_names(names, original, prefix)
+    return names
+
+
+def xray_model_names(names, original, prefix):
+    # X-ray CW has the prior polarization pair and the two doublet
+    # slots beyond the external reader's four CW parameters. The fixed-zero
+    # defaults are still part of the declared model; no native walk supplies them.
+    if not re.search(
+        r'^_experiment_type.radiation_probe ["\']?xray["\']?$', original, re.MULTILINE
+    ):
+        return names
+    for field in (
+        'setup_polarization_coefficient',
+        'setup_monochromator_twotheta',
+        'setup_wavelength_2',
+        'setup_wavelength_2_to_1_ratio',
+    ):
+        name = prefix + 'instrument.' + field
+        if name not in names:
+            names.append(name)
+    # The declared Npr5 BeBa shape uses eta0/eta1, not the external TCH X/Y
+    # storage. This is count/identity projection only, never a coefficient map.
+    if re.search(r'^_peak.type cwl-pseudo-voigt(?:-berar-baldinozzi)?$', original, re.MULTILINE):
+        for field in ('broad_lorentz_x', 'broad_lorentz_y'):
+            names.remove(prefix + 'peak.' + field)
+        names.extend(prefix + 'peak.' + field for field in ('mixing_eta_0', 'mixing_eta_1'))
     return names
 
 
@@ -158,6 +194,7 @@ def arguments():
     parser.add_argument('reference', type=Path, nargs='?')
     selection = parser.add_mutually_exclusive_group()
     selection.add_argument('--only', action='append', default=[])
+    selection.add_argument('--update', action='append', default=[])
     selection.add_argument('--public-metadata', action='store_true')
     args = parser.parse_args()
     if args.reference is None and not args.public_metadata:
@@ -220,11 +257,14 @@ def main():
         'cases': [],
     }
     cases = json.loads((here / 'cli.json').read_text())['cases']
-    if args.only:
+    args.selected = args.only or args.update
+    if args.selected:
         retained = json.loads((here / 'model_counts.json').read_text())
-        if set(args.only) & {row['id'] for row in retained['cases']}:
+        if args.only and set(args.only) & {row['id'] for row in retained['cases']}:
             raise RuntimeError('append-only count generation refuses replacing an existing oracle')
-        output['cases'] = retained['cases']
+        if args.update and not set(args.update) <= {row['id'] for row in retained['cases']}:
+            raise ValueError('Count update requires existing declared cases')
+        output['cases'] = [row for row in retained['cases'] if row['id'] not in args.update]
         output['previous_provenance'] = {
             key: value for key, value in retained.items() if key != 'cases'
         }
@@ -234,8 +274,10 @@ def main():
             'count-only selection, no basis evaluation or fit; native polynomial and '
             'Chebyshev have one model parameter per authored coefficient (ADR-0077)'
         )
+    if args.selected and not set(args.selected) <= {case['id'] for case in cases}:
+        raise ValueError('Count generation requires every selected CLI capture to exist')
     for case in cases:
-        if args.only and case['id'] not in args.only:
+        if args.selected and case['id'] not in args.selected:
             continue
         path = root / case.get('authoring_input', case['path'])
         for relative, expected in case['inputs_sha256'].items():

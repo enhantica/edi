@@ -102,6 +102,7 @@ PatternChartController::PatternChartController(QObject* parent)
 PatternChartController::~PatternChartController() {
     if (experiment_) {
         experiment_->setChartShown(this, false);
+        experiment_->setChartAxis(this, edi::PatternAxis::Native);
     }
 }
 
@@ -190,10 +191,12 @@ void PatternChartController::setExperiment(ExperimentViewModel* experiment) {
     if (experiment_) {
         disconnect(experiment_, nullptr, this, nullptr);
         experiment_->setChartShown(this, false);
+        experiment_->setChartAxis(this, edi::PatternAxis::Native);
     }
     experiment_ = experiment;
     if (experiment_) {
         experiment_->setChartShown(this, active_);
+        experiment_->setChartAxis(this, axis());
         connect(experiment_, &ExperimentViewModel::patternSourceChanged, this, &PatternChartController::invalidate);
         // An admitted edit: the frame stays, and it no longer describes the model.
         connect(experiment_, &ExperimentViewModel::patternWentStale, this, [this] {
@@ -209,6 +212,34 @@ void PatternChartController::setExperiment(ExperimentViewModel* experiment) {
     y_max_.reset();
     emit experimentChanged();
     invalidate();
+}
+
+void PatternChartController::setReport(ReportViewModel* report) {
+    if (report == report_) {
+        return;
+    }
+    if (report_) {
+        disconnect(report_, nullptr, this, nullptr);
+    }
+    report_ = report;
+    if (report_) {
+        // A new model can bring other styles (another colour scheme) under the same keys.
+        connect(report_, &ReportViewModel::modelChanged, this, [this] {
+            publishColors();
+            invalidate();
+        });
+    }
+    emit reportChanged();
+    publishColors();
+    invalidate();
+}
+
+void PatternChartController::setReportExperiment(const QString& experiment) {
+    if (experiment != report_experiment_) {
+        report_experiment_ = experiment;
+        emit reportExperimentChanged();
+        invalidate();
+    }
 }
 
 void PatternChartController::setActive(bool active) {
@@ -238,11 +269,36 @@ void PatternChartController::setDark(bool dark) {
     }
 }
 
+void PatternChartController::setColourScheme(const QString& scheme) {
+    if (scheme != colour_scheme_) {
+        colour_scheme_ = scheme;
+        emit colourSchemeChanged();
+        publishColors();
+        invalidate();  // the legend's colours
+    }
+}
+
+std::vector<edi::SeriesStyle> PatternChartController::styles() const {
+    if (report_) {
+        return report_->reportModel().pattern_styles;
+    }
+    const std::size_t experiments = experiment_ ? experiment_->colourCount() : 1;
+    return edi::pattern_style_table(
+        edi::colour_scheme_from_name(colour_scheme_.toStdString()).value_or(edi::ColourScheme::Default), experiments);
+}
+
 void PatternChartController::setPlotWidth(qreal width) {
     if (width != plot_width_) {
         plot_width_ = width;
         emit plotWidthChanged();
-        invalidate();
+        // Drawn after the binding that set the width has returned: a drawing relabels the axes, which moves the plot
+        // area that binding reads, and doing it inside the binding made a binding loop.
+        dirty_ = true;
+        QMetaObject::invokeMethod(this, [this] {
+            if (dirty_ && active_) {
+                refresh();
+            }
+        }, Qt::QueuedConnection);
     }
 }
 
@@ -298,13 +354,29 @@ void PatternChartController::setYScale(YScale scale) {
     }
 }
 
+void PatternChartController::setDSpacing(bool on) {
+    if (on != d_spacing_) {
+        finishAnimation();
+        d_spacing_ = on;
+        x_min_.reset();  // another axis: the view starts over
+        x_max_.reset();
+        y_min_.reset();
+        y_max_.reset();
+        if (experiment_) {
+            experiment_->setChartAxis(this, axis());
+        }
+        emit dSpacingChanged();
+        invalidate();
+    }
+}
+
 void PatternChartController::cycleYScale() {
     setYScale(y_scale_ == Linear ? Sqrt : y_scale_ == Sqrt ? Log10 : Linear);
 }
 
 QColor PatternChartController::color(const QString& styleKey) const {
     const std::string key = styleKey.toStdString();
-    for (const edi::SeriesStyle& style : edi::pattern_style_table()) {
+    for (const edi::SeriesStyle& style : styles()) {
         if (style.key == key) {
             QColor out(QString::fromStdString(dark_ ? style.dark : style.light));
             out.setAlphaF(static_cast<float>(style.opacity));
@@ -332,11 +404,17 @@ edi::PatternView PatternChartController::view() const {
 
 void PatternChartController::refresh() {
     dirty_ = false;
-    static const edi::PatternSource kNothing;
-    const edi::PatternSource& source = experiment_ ? experiment_->patternSource() : kNothing;
-    shown_ = edi::present_pattern(source, view());
-    if (experiment_ && active_) {
-        experiment_->notePresented();
+    if (report_) {
+        // The report's presentation as the model holds it; none for an experiment the model does not hold.
+        const edi::ReportPattern* pattern = report_->pattern(report_experiment_);
+        shown_ = pattern != nullptr ? pattern->presentation : edi::PatternPresentation{};
+    } else {
+        static const edi::PatternSource kNothing;
+        const edi::PatternSource& source = experiment_ ? experiment_->patternSource(axis()) : kNothing;
+        shown_ = edi::present_pattern(source, view());
+        if (experiment_ && active_) {
+            experiment_->notePresented();
+        }
     }
 
     const edi::PatternSeries* measured = nullptr;
@@ -348,7 +426,7 @@ void PatternChartController::refresh() {
     const auto entry = [&](const edi::PatternSeries& series) {
         const bool bragg = series.kind == edi::SeriesKind::BraggTicks;
         double width = 1.0;
-        for (const edi::SeriesStyle& style : edi::pattern_style_table()) {
+        for (const edi::SeriesStyle& style : styles()) {
             if (style.key == series.style) {
                 width = style.width_px;
             }
@@ -477,9 +555,34 @@ void PatternChartController::refresh() {
     publish(has_data_, measured != nullptr || calculated != nullptr, &PatternChartController::hasDataChanged);
     publish(current_, shown_.current, &PatternChartController::currentChanged);
     publish(x_title_, QString::fromStdString(shown_.x.title), &PatternChartController::xTitleChanged);
-    publish(y_title_, QString::fromStdString(shown_.y_main.title), &PatternChartController::yTitleChanged);
-    publish(residual_title_, QString::fromStdString(shown_.y_residual.title),
-            &PatternChartController::residualTitleChanged);
+    // A y title as its coloured pieces, each series' word in its colour (the legend box being hidden by default);
+    // the plain title when it has none.
+    const auto styled = [this](const edi::AxisDescription& axis) {
+        if (axis.segments.empty()) {
+            return QString::fromStdString(axis.title).toHtmlEscaped();
+        }
+        QString text;
+        for (const edi::TitleSegment& segment : axis.segments) {
+            const QString piece = QString::fromStdString(segment.text).toHtmlEscaped();
+            text += segment.style.empty() ? piece
+                                          : QStringLiteral("<font color=\"%1\">%2</font>")
+                                                .arg(color(QString::fromStdString(segment.style)).name(QColor::HexRgb), piece);
+        }
+        return text;
+    };
+    publish(y_title_, styled(shown_.y_main), &PatternChartController::yTitleChanged);
+    publish(residual_title_, styled(shown_.y_residual), &PatternChartController::residualTitleChanged);
+    // Each Bragg row's label at its left: the structure's name in its colour, at the row's centre.
+    QList<BraggLabel> labels;
+    for (const edi::BraggRowLabel& label : shown_.bragg_labels) {
+        labels.append({QString::fromStdString(label.text), color(QString::fromStdString(label.style)), label.centre});
+    }
+    publish(bragg_labels_, labels, &PatternChartController::braggLabelsChanged);
+    // Past the palette's own colours the count sets every experiment's colour, the measured key's too.
+    if (const std::size_t count = experiment_ ? experiment_->colourCount() : 1; count != colour_count_) {
+        colour_count_ = count;
+        emit measuredColorChanged();
+    }
     publish(measured_style_,
             measured != nullptr ? QString::fromStdString(measured->style) : QStringLiteral("meas.0"),
             &PatternChartController::measuredColorChanged);
@@ -492,7 +595,7 @@ double PatternChartController::xOf(double pixel) const {
 }
 
 void PatternChartController::zoomTo(double x0, double x1, double y0, double y1) {
-    if (plot_width_ <= 0.0 || plot_height_ <= 0.0 || x0 == x1 || y0 == y1) {
+    if (report_ || plot_width_ <= 0.0 || plot_height_ <= 0.0 || x0 == x1 || y0 == y1) {
         return;
     }
     const double left = xOf(std::min(x0, x1)), right = xOf(std::max(x0, x1));
@@ -505,7 +608,7 @@ void PatternChartController::zoomTo(double x0, double x1, double y0, double y1) 
 }
 
 void PatternChartController::wheelAt(double x, int angleDelta) {
-    if (plot_width_ <= 0.0 || angleDelta == 0) {
+    if (report_ || plot_width_ <= 0.0 || angleDelta == 0) {
         return;
     }
     // From where a running animation is going, so notches in quick succession add up.
@@ -516,7 +619,7 @@ void PatternChartController::wheelAt(double x, int angleDelta) {
 }
 
 void PatternChartController::panBy(double dx) {
-    if (plot_width_ <= 0.0 || dx == 0.0) {
+    if (report_ || plot_width_ <= 0.0 || dx == 0.0) {
         return;
     }
     finishAnimation();
@@ -530,7 +633,7 @@ void PatternChartController::reset() { animateTo(std::nullopt, std::nullopt, std
 
 QString PatternChartController::hoverAt(double x, double y, int pane, double height) const {
     const auto found = nearest(x, y, pane, height, std::numeric_limits<double>::infinity());
-    return found ? QString::fromStdString(edi::hover_text(experiment_->patternSource(), *found->series, found->point))
+    return found ? QString::fromStdString(edi::hover_text(experiment_->patternSource(axis()), *found->series, found->point))
                  : QString();
 }
 
@@ -541,7 +644,7 @@ QString PatternChartController::hoverReadout(double x, double y, int pane, doubl
     }
     QStringList lines;
     for (const edi::HoverLine& line :
-         edi::hover_readout(experiment_->patternSource(), *found->series, found->point)) {
+         edi::hover_readout(experiment_->patternSource(axis()), *found->series, found->point)) {
         const QString text = QString::fromStdString(line.text).toHtmlEscaped();
         lines.append(line.style.empty() ? text
                                         : QStringLiteral("<span style=\"color:%1\">%2</span>")

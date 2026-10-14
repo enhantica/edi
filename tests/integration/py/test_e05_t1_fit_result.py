@@ -93,6 +93,14 @@ def test_cli_fixture_inventory():
         ' gate 1 every registered single and joint project has exactly one CLI fixture; '
         f'missing={sorted(expected - {row["id"] for row in CASES})}'
     )
+    for row in CASES:
+        record = ROOT / 'tests/fixtures/e05_t1' / (row['id'] + '.record')
+        assert record.is_file(), (
+            ' gate 1 every CLI fixture must retain its complete machine record'
+        )
+        assert (
+            dict(line.split('=', 1) for line in record.read_text().splitlines()) == row['record']
+        ), ' gate 1 the complete CLI record must match its frozen manifest witness'
     assert set(MODEL_COUNTS) == expected, (
         ' gate 8 every CLI fixture has an independent selected-model count'
     )
@@ -230,7 +238,15 @@ def test_result_descent_provenance_survives_current_setting_change(status, tmp_p
 
 
 @pytest.mark.parametrize(
-    'escape', ['cli-omission', 'cli-duplicate', 'count-omission', 'native-omission']
+    'escape',
+    [
+        'cli-omission',
+        'cli-duplicate',
+        'count-omission',
+        'native-omission',
+        'record-omission',
+        'record-change',
+    ],
 )
 def test_registered_fit_inventory_refuses_missing_or_duplicate_witnesses(escape, monkeypatch):
     module = sys.modules[__name__]
@@ -269,6 +285,22 @@ def test_registered_fit_inventory_refuses_missing_or_duplicate_witnesses(escape,
         monkeypatch.setattr(
             module, 'MODEL_COUNTS', {k: v for k, v in MODEL_COUNTS.items() if k != project_id}
         )
+    elif escape.startswith('record-'):
+        record = ROOT / 'tests/fixtures/e05_t1' / (project_id + '.record')
+        if escape == 'record-omission':
+            original_is_file = Path.is_file
+            monkeypatch.setattr(
+                Path, 'is_file', lambda path: False if path == record else original_is_file(path)
+            )
+        else:
+            original_read = Path.read_text
+            monkeypatch.setattr(
+                Path,
+                'read_text',
+                lambda path, *a, **kw: (
+                    'mode=wrong\n' if path == record else original_read(path, *a, **kw)
+                ),
+            )
     else:
         original_read = Path.read_text
         header = ROOT / 'tests/fixtures/e05_t1/cli.hpp'
