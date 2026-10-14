@@ -68,7 +68,12 @@ void ReportViewModel::refresh() {
     publish(published_writes_pdf_, writesPdf(), &ReportViewModel::writesPdfChanged);
     publish(published_writes_cif_, writesCif(), &ReportViewModel::writesCifChanged);
     dirty_ = true;
-    if (active_ && build()) {
+    // A hidden page waits: its saved reports' states need the model, and building it for every change of a running
+    // scan made each fitted dataset rebuild the whole report. The page builds once when shown (setActive).
+    if (!active_) {
+        return;
+    }
+    if (build()) {
         emit modelChanged();
     }
     emit savedReportsChanged();
