@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-14T07:10:26Z
+# measured_utc = 2026-10-14T07:15:06Z
 #
-# Recorded from: measured test run (5 node(s) measured once, 10474 banked, 0 stale row(s) dropped)
+# Recorded from: measured test run (1 node(s) measured once, 10479 banked, 0 stale row(s) dropped)
 # Collected tests: 11377; with a reported duration: 6151
 # Module-scoped fixture costs recorded: 43
 #
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 11377
 # inventory_cpp = 328
-# inventory_measured = 10479
-# inventory_unmeasured = 1226
+# inventory_measured = 10480
+# inventory_unmeasured = 1225
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -11615,7 +11615,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e04_t9_sanitizer.py::test_sanit
 0.030	tests/unit/py/test_e09_t58_project_only_inputs.py::test_declared_grid_is_the_grid_that_is_calculated
 0.030	tests/unit/py/test_e09_t58_project_only_inputs.py::test_declared_scattering_map_and_default_lookup_both_reach_calculation
 0.010	tests/unit/py/test_e09_t58_project_only_inputs.py::test_project_calculation_accepts_no_second_source_of_truth
-UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t58_project_only_inputs.py::test_survey_is_complete_and_model_state_cannot_reenter_signatures
+0.000	tests/unit/py/test_e09_t58_project_only_inputs.py::test_survey_is_complete_and_model_state_cannot_reenter_signatures
 0.020	tests/unit/py/test_e09_t58_start_state_roundtrip.py::test_start_value_and_uncertainty_round_trip_through_the_single_loader
 0.010	tests/unit/py/test_e09_t58_writer_delegation.py::test_e09_t58_edi_project_save_has_one_delegating_writer_and_no_local_serializer
 0.030	tests/unit/py/test_e09_t74_ci_source_wiring.py::test_crysta_app_tokens_request_only_contents_read
