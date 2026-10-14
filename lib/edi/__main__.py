@@ -221,9 +221,29 @@ def build_parser() -> argparse.ArgumentParser:
     )
     report.add_argument(
         '--colour-scheme',
-        choices=('default', 'colourBlindSafe', 'tableau', 'paulTol', 'vivid'),
+        choices=(
+            'coast',
+            'garden',
+            'peaceful',
+            'fogForest',
+            'sage',
+            'okabeIto',
+            'paulTolBright',
+            'paulTolMuted',
+            'tableau',
+            'observable',
+            'carbon',
+            'dark2',
+            'petroff',
+            'vivid',
+            'nord',
+            'solarized',
+            'catppuccin',
+            'apple',
+        ),
         default=None,
-        help="the colour scheme whose light colours the report's charts take (default: default)",
+        metavar='NAME',
+        help="the colour scheme whose light colours the report's charts take (default: coast)",
     )
     report.add_argument(
         '--correlation-experiment',

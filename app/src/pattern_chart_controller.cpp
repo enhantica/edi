@@ -284,7 +284,7 @@ std::vector<edi::SeriesStyle> PatternChartController::styles() const {
     }
     const std::size_t experiments = experiment_ ? experiment_->colourCount() : 1;
     return edi::pattern_style_table(
-        edi::colour_scheme_from_name(colour_scheme_.toStdString()).value_or(edi::ColourScheme::Default), experiments);
+        edi::colour_scheme_from_name(colour_scheme_.toStdString()).value_or(edi::kDefaultColourScheme), experiments);
 }
 
 void PatternChartController::setPlotWidth(qreal width) {

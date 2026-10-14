@@ -149,7 +149,7 @@ QStringList ApplicationInfo::elementSymbols() const {
 
 namespace {
 edi::ColourScheme colour_scheme(const QString& name) {
-    return edi::colour_scheme_from_name(name.toStdString()).value_or(edi::ColourScheme::Default);
+    return edi::colour_scheme_from_name(name.toStdString()).value_or(edi::kDefaultColourScheme);
 }
 }  // namespace
 

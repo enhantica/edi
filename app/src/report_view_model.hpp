@@ -164,7 +164,7 @@ class ReportViewModel : public QObject {
     bool published_writes_html_ = true, published_writes_pdf_ = false, published_writes_cif_ = false;
     mutable std::optional<edi::ReportLibraries> libraries_;
     bool active_ = false;
-    QString colour_scheme_ = QStringLiteral("default");
+    QString colour_scheme_ = QStringLiteral("coast");
     // The model, rebuilt on a read when a change arrived while the page was hidden (`dirty_`).
     mutable bool dirty_ = true;
     mutable edi::ReportModel report_;
