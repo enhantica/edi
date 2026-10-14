@@ -65,13 +65,13 @@ void replace_file(const fs::path& path, const std::string& text) {
 }  // namespace
 
 ReportOptions report_file_options(ReportOptions options) {
-    options.colour_scheme = ColourScheme::Default;
+    options.colour_scheme = kDefaultColourScheme;
     options.correlation_experiment = 0;
     return options;
 }
 
 bool chooses_presentation(const ReportOptions& options) {
-    return options.colour_scheme != ColourScheme::Default || options.correlation_experiment != 0;
+    return options.colour_scheme != kDefaultColourScheme || options.correlation_experiment != 0;
 }
 
 std::string iso_utc_from_star(const std::string& stamp) {

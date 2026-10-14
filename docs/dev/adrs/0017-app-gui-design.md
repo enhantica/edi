@@ -267,15 +267,15 @@ and `stepMaximum`.
 ### 8. Datablock colours and iconified names
 
 Every datablock has a colour and an icon, as in easydiffractionbeta (ideas 12 and 20), from
-`Style/AppColors.qml`. The colours are the colour scheme's (Preferences, Appearance: Default, Colour-blind safe,
-Tableau, Paul Tol or Vivid), read from the palettes in `data/palettes` (PROVENANCE.md there) through the core's
+`Style/AppColors.qml`. The colours are the colour scheme's (Preferences, Appearance: Coast, the default, or one of
+seventeen more), read from the palettes in `data/palettes` (PROVENANCE.md there) through the core's
 `pattern_colour` and `structure_colour`, which the charts' style table and the report read too. Each colour has at
 least 3:1 contrast against its theme's chart background (`#FFFFFF`, `#444444`); a report always takes the light ones:
 
-| Block | Icon | Colour by its place in the project's list (light / dark theme), Default scheme |
+| Block | Icon | Colour by its place in the project's list (light / dark theme), Coast scheme |
 |---|---|---|
-| structure | `layer-group` | orange `#D78000` / `#FF9800`, teal `#009688` / `#1BA092`, pink `#E91E63` / `#FF4979`, then round again |
-| experiment | `microscope` | light blue `#039DE4` / `#03A9F4` (easydiffractionbeta's measured-data colour), then brown `#795548` / `#AE8678`, green `#45A84A` / `#4CAF50` and five more; past the set's eight, viridis along the order, trimmed to the part that keeps 3:1 |
+| structure | `layer-group` | wheat `#94846A` / `#AD9C82`, plum `#916678` / `#D0A2B5`, stone `#5C4F4D` / `#E3D4D0`, sage `#38482A` / `#DEF3CE`, then round again |
+| experiment | `microscope` | sea blue `#2C90D7` / `#71BFFF`, then teal `#079E92` / `#44D0C1`, green `#3CA059` / `#87D999`, violet `#8978D7` / `#B6AAFF` and cyan `#01869D` / `#57DBF8`; past the set's five, a gradient from indigo `#39336F` / `#8A88CC` to green `#03A97A` / `#8EFFD0` along the order |
 
 An element's colour is the Jmol colour of the core's element table (`data/elements/element-styles.tsv`, ADR-0022
 §4, the same values as easydiffractionbeta's `Logic/Tables.py`), of the type symbol's element: its first capital
@@ -377,10 +377,11 @@ limit off, since a row is shorter than a tab. It appears on, and leaves, a row i
   Appearance, Projects, Experimental, Develop. The base's `PreferencesDialog` offers no way to hide or add a row, and the base's
   window always creates it; it stays hidden, as the app bar's Preferences button opens edi's dialog
   (`Preferences.dialogShown`) instead of setting the base's flag.
-- **Appearance**: Theme; **Colour scheme — Default, Colour-blind safe, Tableau, Paul Tol or Vivid** (the
-  experiments' and structures' colours, §8, in every chart, icon and report the app draws); **Sidebar — Left or Right** (the owner,
-  2026-09-29); Auto collapse. **The 1D plotting row is removed** (the owner, 2026-09-29): edi has no choice of
-  chart library.
+- **Appearance**: Theme; **Colour scheme — Coast (the default), Garden, Peaceful, Fog forest, Sage, Okabe-Ito, Paul Tol
+  bright, Paul Tol muted, Tableau 10, Observable 10, IBM Carbon, ColorBrewer Dark2, Petroff, Vivid, Nord, Solarized,
+  Catppuccin or Apple** (the experiments' and structures' colours, §8, in every chart, icon and report the app draws);
+  **Sidebar — Left or Right** (the owner, 2026-09-29); Auto collapse. **The 1D plotting row is removed** (the owner,
+  2026-09-29): edi has no choice of chart library.
 - **Projects**: only the defaults a new project takes. New projects' uncertainties (the IUCr recommendation or
   always 2 digits; a project's own rule is on its Project page's Extra tab) and new reports' libraries (online, the
   default, or embedded; a project's own is the Report page's Embed box).
@@ -601,11 +602,11 @@ code (`QtCharts1dTab.qml` and the base's `QtCharts1dBase.qml`; the owner, 2026-1
 
 | Series | Colours | Mark |
 |---|---|---|
-| Measured, by the experiment's place (Default scheme) | `#039DE4` / `#03A9F4`, then `#795548` / `#AE8678`, then `#45A84A` / `#4CAF50` | 2 px line, 5 px markers, 1 px bars |
+| Measured, by the experiment's place (Coast scheme) | `#2C90D7` / `#71BFFF`, then `#079E92` / `#44D0C1`, then `#3CA059` / `#87D999` | 2 px line, 5 px markers, 1 px bars |
 | Calculated | `#F44336` / `#EF9A9A` | 2 px line |
 | Background | `#607D8B` / `#B0BEC5` | 1 px line |
 | Residual | `#8BC34A` / `#C5E1A5` | 1 px line (the owner, 2026-10-02) |
-| Bragg ticks, by the structure's place (Default scheme) | `#D78000` / `#FF9800`, then `#009688` / `#1BA092`, then `#E91E63` / `#FF4979` | 1 px ticks (the owner, 2026-10-02) |
+| Bragg ticks, by the structure's place (Coast scheme) | `#94846A` / `#AD9C82`, then `#916678` / `#D0A2B5`, then `#5C4F4D` / `#E3D4D0` | 1 px ticks (the owner, 2026-10-02) |
 | Excluded band | `#8C8C8C` at opacity 0.15, both themes | a filled rectangle in each pane's plot area, under its grid and border (the owner, 2026-10-02: no band crosses the gaps between the panes) |
 
   An experiment's block colour (§8) is its measured series' colour, and a structure's is its ticks' colour.

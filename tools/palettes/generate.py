@@ -1,16 +1,17 @@
 # SPDX-License-Identifier: BSD-3-Clause
-"""Write data/palettes/*.tsv from the published palettes (data/palettes/PROVENANCE.md).
+"""Write data/palettes/*.tsv from the schemes' sources (data/palettes/PROVENANCE.md).
 
-Every data colour has at least 3:1 WCAG 2.x contrast against its theme's chart background.
-A distinct set keeps each published hue and moves only its Oklab lightness, by the smallest
-step that passes, to the 8-bit colour that keeps the hue and chroma within its rounding; a
-colour that would sit too close to an earlier one of its set moves further. Measured data must
-not look like the calculated pattern: a set colour too close to it in either theme goes to the
-end of its set and takes the smallest lightness shift, either way, that keeps it apart, and a
-gradient keeps the longest run of its published table that passes both rules, at evenly
-spaced stops. matplotlib supplies the
-viridis, cividis, plasma and magma tables. The script is run by hand and its output is
-committed:
+Every data colour has at least 3:1 WCAG 2.x contrast against its theme's chart background. A
+measured-data set keeps each source hue and moves only its Oklab lightness, by the smallest step
+that passes, to the 8-bit colour that keeps the hue and chroma within its rounding; a colour that
+would sit too close to an earlier one of its set moves further. Measured data must not look like
+the calculated pattern: a set colour in the calculated curve's hue range, or too close to its
+colour, goes to the end of its set, and one that is still too close takes the smallest lightness
+shift, either way, that keeps it apart. A set keeps at most seven colours. Past them, a two-colour
+gradient whose lightness rises from the first dataset to the last, every colour along it keeping
+3:1 and out of the calculated hue range. The structure colours are muted, each at its own
+lightness, hue and place apart from the others and from the measured colours. The script is run by
+hand and its output is committed:
 
     python tools/palettes/generate.py [--check]
 """
@@ -23,8 +24,6 @@ from collections.abc import Callable
 from functools import partial
 from pathlib import Path
 
-import matplotlib as mpl
-
 BACKGROUND = {'light': '#FFFFFF', 'dark': '#444444'}
 MIN_CONTRAST = 3.0
 # The smallest Oklab distance between two colours of one set in one theme.
@@ -33,61 +32,216 @@ MIN_DISTANCE = 0.08
 # Oklab distance a pattern colour keeps from it.
 CALCULATED = {'light': '#F44336', 'dark': '#EF9A9A'}
 MIN_CALCULATED_DISTANCE = 0.10
+# The calculated curve's hue range: Oklab hues within this many degrees of its colour's hue in
+# either theme. A colour of lower chroma than NEUTRAL_CHROMA has no hue and is never in it.
+CALCULATED_HUE_WIDTH = 45.0
+NEUTRAL_CHROMA = 0.04
+# The most colours a measured-data set keeps before the gradient takes over.
+MAX_PATTERN = 7
+# The structure colours: at most five, muted to this chroma, each at its own step of this
+# lightness ladder (from the background's side, the softest, outwards), and this many degrees apart
+# in hue.
+MAX_STRUCTURE = 5
+STRUCTURE_CHROMA = 0.06
+STRUCTURE_LIGHTNESS = {
+    'light': [0.62, 0.56, 0.50, 0.44, 0.38],
+    'dark': [0.70, 0.76, 0.82, 0.88, 0.94],
+}
+STRUCTURE_HUE_STEP = 25.0
+# Earth tones from the Design Seeds nature palettes (stone, wheat, plum, slate, sage, lichen, rose,
+# artichoke), tried after a scheme's own candidates for its structure colours.
+EARTH_TONES = [
+    '#A49693',
+    '#B09F85',
+    '#97667B',
+    '#5C6670',
+    '#9DB18E',
+    '#CEC88A',
+    '#A57B7C',
+    '#6A4D83',
+]
+# A gradient's ends: the first dataset at this lightness in the light theme and the last at the
+# lightest that keeps 3:1; in the dark theme the first at the darkest that keeps 3:1 and the last
+# at this lightness.
+GRADIENT_FIRST_LIGHT = 0.36
+GRADIENT_LAST_DARK = 0.92
 # The step of the search for the smallest passing lightness shift; a passing range can be narrow.
 LIGHTNESS_STEP = 0.0005
-GRADIENT_STOPS = 17
 
-# Paul Tol's iridescent scheme, as published (pale to dark).
-TOL_IRIDESCENT = [
-    '#FEFBE9', '#FCF7D5', '#F5F3C1', '#EAF0B5', '#DDECBF', '#D0E7CA', '#C2E3D2', '#B5DDD8',
-    '#A8D8DC', '#9BD2E1', '#8DCBE4', '#81C4E7', '#7BBCE7', '#7EB2E4', '#88A5DD', '#9398D2',
-    '#9B8AC4', '#9D7DB2', '#9A709E', '#906388', '#805770', '#684957', '#46353A',
-]  # fmt: skip
+# A source colour is one value for both themes, or a (light, dark) pair where the source gives
+# its own dark colours.
+Source = str | tuple[str, str]
 
-SCHEMES = {
-    'default': {
-        # Material Design colours, as edi has used them, the light blue first.
+SCHEMES: dict[str, dict] = {
+    # edi's own, after the Design Seeds nature palettes (Jessica Colaluca), akulakreative's garden
+    # greenery and paperheartdesign's peaceful palettes; PROVENANCE.md names each inspiration.
+    'coast': {
+        'title': 'Coast',
         'pattern': [
-            '#03A9F4', '#795548', '#4CAF50', '#9C27B0', '#FFC107', '#3F51B5', '#00BCD4', '#CDDC39',
+            ('#2C90D7', '#71BFFF'), ('#079E92', '#44D0C1'), ('#3CA059', '#7CCD8E'),
+            ('#8978D7', '#B6AAFF'), ('#0999B2', '#43CAE7'),
         ],
-        'gradient': 'viridis',
-        'structure': ['#FF9800', '#009688', '#E91E63'],
+        'structure': [
+            '#B09F85', '#97667B', '#A57B7C', '#A49693', '#9DB18E', '#5C6670', '#DCC7AC', '#6A4D83',
+            '#CEC88A',
+        ],
+        'gradient': ('#3E3875', '#2DC08E'),
     },
-    'colour-blind-safe': {
-        # Okabe and Ito, in the order edi has used them.
+    'garden': {
+        'title': 'Garden',
+        'pattern': [
+            ('#3D84A0', '#7CC3E0'), ('#3D8984', '#7CC7C2'), ('#668558', '#A2C393'),
+            ('#896BA4', '#C7A8E5'), ('#527FA4', '#8EBDE4'),
+        ],
+        'structure': [
+            '#756E51', '#DBAD93', '#A67969', '#A49693', '#B9A88E', '#CEC88A', '#5C6670', '#97667B',
+            '#9DB18E',
+        ],
+        'gradient': ('#35536B', '#7E9A72'),
+    },
+    'peaceful': {
+        'title': 'Peaceful',
+        'pattern': [
+            ('#3E7EBC', '#7CBDFF'), ('#42897C', '#80C8B9'), ('#7172B6', '#ACAFF8'),
+            ('#3B888A', '#7BC7C9'), ('#9F6683', '#E0A2C1'),
+        ],
+        'structure': [
+            '#B7946A', '#948D71', '#9389BD', '#707978', '#D9AE8E', '#97667B', '#B09F85', '#5C6670',
+            '#9DB18E',
+        ],
+        'gradient': ('#6768AB', '#5E8D83'),
+    },
+    'fog-forest': {
+        'title': 'Fog forest',
+        'pattern': ['#6495A3', '#46653C', '#7BA9A9', '#A78FA9', '#BCB096'],
+        'structure': [
+            '#587175', '#9DB18E', '#A49693', '#B9C5D5', '#CEC88A', '#97667B', '#DCC7AC', '#A57B7C',
+            '#6A4D83',
+        ],
+        'gradient': ('#32444E', '#9DB18E'),
+    },
+    'sage': {
+        'title': 'Sage',
+        'pattern': ['#66D795', '#5C7FA3', '#889F8E', '#8C7BA8', '#4A9A96', '#C2A15F'],
+        'structure': [
+            '#A49693', '#B09F85', '#97667B', '#7A8B99', '#CEC88A', '#A57B7C', '#DCC7AC', '#6A4D83',
+            '#5C6670',
+        ],
+        'gradient': ('#2F5D6B', '#66D795'),
+    },
+    # Published palettes designed for data, in their published order.
+    'okabe-ito': {
+        'title': 'Okabe-Ito',
         'pattern': [
             '#0072B2', '#E69F00', '#009E73', '#CC79A7', '#56B4E9', '#D55E00', '#F0E442', '#000000',
         ],
-        'gradient': 'cividis',
-        # Paul Tol's muted wine, green and indigo.
-        'structure': ['#882255', '#117733', '#332288'],
+        'gradient': ('#0072B2', '#009E73'),
+    },
+    'paul-tol-bright': {
+        'title': 'Paul Tol bright',
+        'pattern': ['#4477AA', '#EE6677', '#228833', '#CCBB44', '#66CCEE', '#AA3377', '#BBBBBB'],
+        'gradient': ('#4477AA', '#228833'),
+    },
+    'paul-tol-muted': {
+        'title': 'Paul Tol muted',
+        'pattern': [
+            '#CC6677', '#332288', '#DDCC77', '#117733', '#88CCEE', '#882255', '#44AA99', '#999933',
+            '#AA4499',
+        ],
+        'gradient': ('#332288', '#44AA99'),
     },
     'tableau': {
-        # Tableau 10, as matplotlib's tab10.
+        'title': 'Tableau 10',
         'pattern': [
-            '#1F77B4', '#FF7F0E', '#2CA02C', '#D62728', '#9467BD', '#8C564B', '#E377C2', '#7F7F7F',
-            '#BCBD22', '#17BECF',
+            '#4E79A7', '#F28E2B', '#E15759', '#76B7B2', '#59A14F', '#EDC948', '#B07AA1', '#FF9DA7',
+            '#9C755F', '#BAB0AC',
         ],
-        'gradient': 'plasma',
-        # The first colours of matplotlib's tab20b indigo, red and gold groups.
-        'structure': ['#393B79', '#843C39', '#8C6D31'],
+        'gradient': ('#4E79A7', '#59A14F'),
     },
-    'paul-tol': {
-        # Paul Tol's bright scheme.
-        'pattern': ['#4477AA', '#EE6677', '#228833', '#CCBB44', '#66CCEE', '#AA3377', '#BBBBBB'],
-        'gradient': TOL_IRIDESCENT,
-        # Paul Tol's high-contrast scheme.
-        'structure': ['#004488', '#DDAA33', '#BB5566'],
+    'observable': {
+        'title': 'Observable 10',
+        'pattern': [
+            '#4269D0', '#EFB118', '#FF725C', '#6CC5B0', '#3CA951', '#FF8AB7', '#A463F2', '#97BBF5',
+            '#9C6B4E', '#9498A0',
+        ],
+        'gradient': ('#4269D0', '#3CA951'),
+    },
+    'carbon': {
+        'title': 'IBM Carbon',
+        # The light and dark categorical sequences, place by place.
+        'pattern': [
+            ('#6929C4', '#8A3FFC'), ('#1192E8', '#33B1FF'), ('#005D5D', '#007D79'),
+            ('#9F1853', '#FF7EB6'), ('#FA4D56', '#FA4D56'), ('#570408', '#FFF1F1'),
+            ('#198038', '#6FDC8C'), ('#002D9C', '#4589FF'), ('#EE538B', '#D12771'),
+            ('#B28600', '#D2A106'), ('#009D9A', '#08BDBA'), ('#012749', '#BAE6FF'),
+            ('#8A3800', '#BA4E00'), ('#A56EFF', '#D4BBFF'),
+        ],
+        'gradient': (('#6929C4', '#8A3FFC'), ('#009D9A', '#08BDBA')),
+    },
+    'dark2': {
+        'title': 'ColorBrewer Dark2',
+        'pattern': [
+            '#1B9E77', '#D95F02', '#7570B3', '#E7298A', '#66A61E', '#E6AB02', '#A6761D', '#666666',
+        ],
+        'gradient': ('#7570B3', '#1B9E77'),
+    },
+    'petroff': {
+        'title': 'Petroff',
+        'pattern': [
+            '#3F90DA', '#FFA90E', '#BD1F01', '#94A4A2', '#832DB6', '#A96B59', '#E76300', '#B9AC70',
+            '#717581', '#92DADD',
+        ],
+        'gradient': ('#832DB6', '#92DADD'),
     },
     'vivid': {
-        # ColorBrewer Set1.
+        'title': 'Vivid',
         'pattern': [
             '#E41A1C', '#377EB8', '#4DAF4A', '#984EA3', '#FF7F00', '#FFFF33', '#A65628', '#F781BF',
             '#999999',
         ],
-        'gradient': 'magma',
-        # ColorBrewer Dark2's first three.
-        'structure': ['#1B9E77', '#D95F02', '#7570B3'],
+        'gradient': ('#377EB8', '#4DAF4A'),
+    },
+    # App themes, their accent colours.
+    'nord': {
+        'title': 'Nord',
+        # nord10, nord14, nord15, nord8, nord13, nord7, nord9, nord12, nord11
+        'pattern': [
+            '#5E81AC', '#A3BE8C', '#B48EAD', '#88C0D0', '#EBCB8B', '#8FBCBB', '#81A1C1', '#D08770',
+            '#BF616A',
+        ],
+        'gradient': ('#5E81AC', '#A3BE8C'),
+    },
+    'solarized': {
+        'title': 'Solarized',
+        # blue, green, violet, cyan, yellow, magenta, orange, red
+        'pattern': [
+            '#268BD2', '#859900', '#6C71C4', '#2AA198', '#B58900', '#D33682', '#CB4B16', '#DC322F',
+        ],
+        'gradient': ('#268BD2', '#859900'),
+    },
+    'catppuccin': {
+        'title': 'Catppuccin',
+        # Latte in the light theme, Mocha in the dark: blue, green, mauve, teal, yellow, sapphire,
+        # lavender, peach, pink, red, maroon, flamingo, rosewater, sky
+        'pattern': [
+            ('#1E66F5', '#89B4FA'), ('#40A02B', '#A6E3A1'), ('#8839EF', '#CBA6F7'),
+            ('#179299', '#94E2D5'), ('#DF8E1D', '#F9E2AF'), ('#209FB5', '#74C7EC'),
+            ('#7287FD', '#B4BEFE'), ('#FE640B', '#FAB387'), ('#EA76CB', '#F5C2E7'),
+            ('#D20F39', '#F38BA8'), ('#E64553', '#EBA0AC'), ('#DD7878', '#F2CDCD'),
+            ('#DC8A78', '#F5E0DC'), ('#04A5E5', '#89DCEB'),
+        ],
+        'gradient': (('#8839EF', '#CBA6F7'), ('#179299', '#94E2D5')),
+    },
+    'apple': {
+        'title': 'Apple',
+        # blue, green, indigo, cyan, purple, mint, yellow, teal, orange, pink, red, brown
+        'pattern': [
+            ('#0088FF', '#0091FF'), ('#34C759', '#30D158'), ('#6155F5', '#6D7CFF'),
+            ('#00C0E8', '#3CD3FE'), ('#CB30E0', '#DB34F2'), ('#00C8B3', '#00DAC3'),
+            ('#FFCC00', '#FFD600'), ('#00C3D0', '#00D2E0'), ('#FF8D28', '#FF9230'),
+            ('#FF2D55', '#FF375F'), ('#FF383C', '#FF4245'), ('#AC7F5E', '#B78A66'),
+        ],
+        'gradient': (('#6155F5', '#6D7CFF'), ('#00C8B3', '#00DAC3')),
     },
 }  # fmt: skip
 
@@ -285,27 +439,28 @@ def passes_8_bit(colour: str, background: str, earlier: list[Lab], calculated: L
     )
 
 
-def adapt_set(colours: list[str], theme: str, moved: frozenset[str] = frozenset()) -> list[str]:
+def adapt_set(colours: list[str], theme: str, moved: list[bool] | None = None) -> list[str]:
     """Adapt each colour by the smallest lightness shift that passes.
 
     A colour passes with 3:1 contrast and MIN_DISTANCE from the set's earlier colours, so it
-    shifts away from the background. A colour in `moved`, at the end of its set, must also keep
-    apart from the calculated colour, and takes the smaller shift of the two directions.
+    shifts away from the background. A moved colour, at the end of its set, must also keep apart
+    from the calculated colour, and takes the smaller shift of the two directions.
     """
     background = BACKGROUND[theme]
     away = -LIGHTNESS_STEP if theme == 'light' else LIGHTNESS_STEP
+    moved = moved or [False] * len(colours)
     out: list[str] = []
-    for colour in colours:
+    for colour, data in zip(colours, moved, strict=True):
         rules = {
             'background': background,
             'earlier': [oklab(c) for c in out],
-            'calculated': oklab(CALCULATED[theme]) if colour in moved else None,
+            'calculated': oklab(CALCULATED[theme]) if data else None,
         }
         passes = partial(passes_8_bit, **rules)
         adapted = colour
         if not passes(colour):
             published = oklab(colour)
-            steps = (away, -away) if colour in moved else (away,)
+            steps = (away, -away) if data else (away,)
             exact = [
                 nearest_passing(published, step, partial(passes_exact, **rules)) for step in steps
             ]
@@ -319,46 +474,140 @@ def adapt_set(colours: list[str], theme: str, moved: frozenset[str] = frozenset(
     return out
 
 
-def table_of(gradient: str | list[str]) -> list[str]:
-    if isinstance(gradient, list):
-        return gradient
-    cmap = mpl.colormaps[gradient]
-    out = []
-    for index in range(256):
-        red, green, blue = (round(c * 255) for c in cmap(index / 255)[:3])
-        out.append(f'#{red:02X}{green:02X}{blue:02X}')
-    return out
+def side(source: Source, theme: str) -> str:
+    """Return a source's colour in a theme: its own dark colour where it gives one."""
+    return source if isinstance(source, str) else source[0 if theme == 'light' else 1]
 
 
-def passing_range(table: list[str], theme: str) -> tuple[int, int]:
-    """Return the first and last entry of the longest run of entries that pass."""
-    passes = [passes_for_data(c, theme) for c in table]
-    best, start = (0, -1), None
-    for index, good in enumerate([*passes, False]):
-        if good and start is None:
-            start = index
-        elif not good and start is not None:
-            if index - 1 - start > best[1] - best[0]:
-                best = (start, index - 1)
-            start = None
-    if best[1] < best[0] + 1:
-        sys.exit('a gradient keeps fewer than two passing entries')
-    return best
+def chroma_hue(colour: str) -> tuple[float, float]:
+    _, a, b = oklab(colour)
+    return math.hypot(a, b), math.degrees(math.atan2(b, a)) % 360
+
+
+def in_calculated_hue_range(colour: str) -> bool:
+    chroma, hue = chroma_hue(colour)
+    return chroma >= NEUTRAL_CHROMA and any(
+        hue_difference(hue, chroma_hue(c)[1]) <= CALCULATED_HUE_WIDTH for c in CALCULATED.values()
+    )
+
+
+def passing_colour(target: Lab, theme: str, step: float) -> str:
+    """Return the 8-bit colour nearest `target` with 3:1, shifted towards `step` if needed.
+
+    `target`'s chroma shrinks to the gamut's edge at each lightness, its hue kept.
+    """
+    rules = {'background': BACKGROUND[theme], 'earlier': [], 'calculated': None}
+    lab = on_gamut(target)
+    if not passes_exact(lab, **rules):
+        lab = nearest_passing(target, step, partial(passes_exact, **rules))
+        if lab is None:
+            sys.exit(f'{hex_clamped(target)} ({theme}): no lightness keeps 3:1')
+    colour = nearest_8_bit(lab, hex_clamped(lab), partial(passes_8_bit, **rules))
+    if colour is None:
+        sys.exit(f'{hex_clamped(lab)} ({theme}): no 8-bit colour keeps 3:1')
+    return colour
+
+
+def set_order(pattern: list[Source]) -> tuple[list[Source], list[bool]]:
+    """Return the set in order and which of its colours are moved to its end.
+
+    A colour in the calculated hue range or near the calculated colour goes to the end, and the set
+    is cut to MAX_PATTERN colours.
+    """
+    moved = {
+        i
+        for i, s in enumerate(pattern)
+        if any(in_calculated_hue_range(side(s, t)) for t in BACKGROUND)
+    }
+    while True:
+        order = [i for i in range(len(pattern)) if i not in moved]
+        order = (order + [i for i in range(len(pattern)) if i in moved])[:MAX_PATTERN]
+        failing = {
+            i
+            for theme in BACKGROUND
+            for i, colour in zip(
+                order, adapt_set([side(pattern[i], theme) for i in order], theme), strict=True
+            )
+            if not apart_from_calculated(colour, theme)
+        }
+        if failing <= moved:
+            return [pattern[i] for i in order], [i in moved for i in order]
+        moved |= failing
+
+
+def structure_set(
+    candidates: list[Source], measured: dict[str, list[str]]
+) -> tuple[dict[str, list[str]], list[Source]]:
+    """Return up to MAX_STRUCTURE muted structure colours, from the candidates in order.
+
+    Each takes its candidate's hue at STRUCTURE_CHROMA at most and the first free step of
+    STRUCTURE_LIGHTNESS where it keeps MIN_DISTANCE from every measured colour and earlier
+    structure colour in both themes, shifted only to keep 3:1. A candidate is skipped when its hue
+    is within STRUCTURE_HUE_STEP of an earlier structure colour's (one neutral colour at most), or
+    when no free step keeps it apart. Also returns the candidates taken.
+    """
+    out: dict[str, list[str]] = {theme: [] for theme in BACKGROUND}
+    taken_from: list[Source] = []
+    hues: list[float | None] = []
+    taken: set[int] = set()
+    for source in candidates:
+        if len(hues) == MAX_STRUCTURE:
+            break
+        chroma, hue = chroma_hue(side(source, 'light'))
+        neutral = chroma < NEUTRAL_CHROMA
+        if neutral and None in hues:
+            continue
+        if not neutral and any(
+            h is not None and hue_difference(hue, h) < STRUCTURE_HUE_STEP for h in hues
+        ):
+            continue
+        for step in range(len(STRUCTURE_LIGHTNESS['light'])):
+            if step in taken:
+                continue
+            made = {}
+            for theme in BACKGROUND:
+                _, a, b = oklab(side(source, theme))
+                own = math.hypot(a, b)
+                scale = min(1.0, STRUCTURE_CHROMA / own) if own > 0 else 0.0
+                target = (STRUCTURE_LIGHTNESS[theme][step], a * scale, b * scale)
+                away = -LIGHTNESS_STEP if theme == 'light' else LIGHTNESS_STEP
+                made[theme] = passing_colour(target, theme, away)
+            if all(
+                distance(made[theme], c) >= MIN_DISTANCE
+                for theme in BACKGROUND
+                for c in measured[theme] + out[theme]
+            ):
+                taken.add(step)
+                taken_from.append(source)
+                hues.append(None if neutral else hue)
+                for theme in BACKGROUND:
+                    out[theme].append(made[theme])
+                break
+    if not hues:
+        sys.exit('a scheme keeps no structure colour')
+    return out, taken_from
+
+
+def gradient_of(first: Source, last: Source, theme: str) -> list[str]:
+    """Return a gradient's two stops, the first the darker.
+
+    Each is its source's hue and chroma, within the gamut, at its theme's end of the gradient.
+    """
+    _, a0, b0 = oklab(side(first, theme))
+    _, a1, b1 = oklab(side(last, theme))
+    if theme == 'light':
+        start = passing_colour((GRADIENT_FIRST_LIGHT, a0, b0), theme, -LIGHTNESS_STEP)
+        # The lightest that keeps 3:1: from white down.
+        end = passing_colour((0.98, a1, b1), theme, -LIGHTNESS_STEP)
+    else:
+        start = passing_colour((0.30, a0, b0), theme, LIGHTNESS_STEP)
+        end = passing_colour((GRADIENT_LAST_DARK, a1, b1), theme, LIGHTNESS_STEP)
+    return [start, end]
 
 
 def mix(first: str, second: str, t: float) -> str:
     lab_first, lab_second = oklab(first), oklab(second)
     return hex_clamped(tuple(x + (y - x) * t for x, y in zip(lab_first, lab_second, strict=True)))
-
-
-def stops_of(table: list[str], first: int, last: int) -> list[str]:
-    """Return GRADIENT_STOPS stops evenly spaced along entries first..last."""
-    out = []
-    for k in range(GRADIENT_STOPS):
-        position = first + (last - first) * k / (GRADIENT_STOPS - 1)
-        below = min(math.floor(position), last - 1)
-        out.append(mix(table[below], table[below + 1], position - below))
-    return out
 
 
 def sample(stops: list[str], t: float) -> str:
@@ -368,47 +617,42 @@ def sample(stops: list[str], t: float) -> str:
     return mix(stops[below], stops[below + 1], position - below)
 
 
-def set_order(colours: list[str]) -> tuple[list[str], frozenset[str]]:
-    """Return the published set with those near the calculated colour at its end, and those."""
-    moved: set[str] = set()
-    while True:
-        order = [c for c in colours if c not in moved] + [c for c in colours if c in moved]
-        adapted = {theme: adapt_set(order, theme) for theme in BACKGROUND}
-        failing = {
-            published
-            for theme, final in adapted.items()
-            for published, colour in zip(order, final, strict=True)
-            if not apart_from_calculated(colour, theme)
-        }
-        if failing <= moved:
-            return order, frozenset(moved)
-        moved |= failing
+def check_gradient(name: str, theme: str, stops: list[str], first_count: int) -> None:
+    """Exit unless the gradient gets lighter and every colour along it meets the rules.
+
+    Its lightness rises from stop to stop, so along the Oklab mix between them; every colour the
+    core can give along it is checked.
+    """
+    if any(oklab(a)[0] >= oklab(b)[0] for a, b in itertools.pairwise(stops)):
+        sys.exit(f'{name} {theme}: the gradient {" ".join(stops)} does not get lighter')
+    for count in range(first_count, 400):
+        for place in range(count):
+            colour = sample(stops, place / (count - 1))
+            if not passes_for_data(colour, theme) or in_calculated_hue_range(colour):
+                sys.exit(f'{name} {theme}: gradient colour {colour} fails at {place}/{count}')
 
 
 def build(
     name: str,
-) -> tuple[dict[str, tuple[list[str], ...]], dict[str, tuple[int, int]], list[str], list[str]]:
+) -> tuple[dict[str, tuple[list[str], ...]], list[Source], list[bool], list[Source]]:
     scheme = SCHEMES[name]
-    table = table_of(scheme['gradient'])
     order, moved = set_order(scheme['pattern'])
-    rows, ranges = {}, {}
+    rows = {}
+    pattern = {
+        theme: adapt_set([side(s, theme) for s in order], theme, moved) for theme in BACKGROUND
+    }
+    # The structure colours take a published scheme's hues from its last colour back, then the
+    # earth tones.
+    candidates = (scheme.get('structure') or list(reversed(scheme['pattern']))) + EARTH_TONES
+    structure, structure_sources = structure_set(candidates, pattern)
     for theme in BACKGROUND:
-        first, last = passing_range(table, theme)
-        gradient = stops_of(table, first, last)
-        # Every colour the core can give between the stops passes too.
-        for count in range(2, 400):
-            for place in range(count):
-                colour = sample(gradient, place / (count - 1))
-                if not passes_for_data(colour, theme):
-                    sys.exit(f'{name} {theme}: gradient colour {colour} fails at {place}/{count}')
-        pattern = adapt_set(order, theme, moved)
-        # Every stored pattern colour passes, those moved to the end of the set included.
-        for colour in pattern:
+        for colour in pattern[theme]:
             if not passes_for_data(colour, theme):
                 sys.exit(f'{name} {theme}: pattern colour {colour} fails a rule')
-        rows[theme] = (pattern, gradient, adapt_set(scheme['structure'], theme))
-        ranges[theme] = (first, last)
-    return rows, ranges, order, [c for c in order if c in moved]
+        stops = gradient_of(*scheme['gradient'], theme)
+        check_gradient(name, theme, stops, len(order) + 1)
+        rows[theme] = (pattern[theme], stops, structure[theme])
+    return rows, order, moved, structure_sources
 
 
 def tsv(rows: dict[str, tuple[list[str], ...]]) -> str:
@@ -424,17 +668,22 @@ def tsv(rows: dict[str, tuple[list[str], ...]]) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('--check', action='store_true', help='compare, write nothing')
+    parser.add_argument('--out', type=Path, default=None, help='write the tables here instead')
     args = parser.parse_args()
-    out_dir = Path(__file__).resolve().parents[2] / 'data' / 'palettes'
+    out_dir = args.out or Path(__file__).resolve().parents[2] / 'data' / 'palettes'
     stale = []
     for name in SCHEMES:
-        rows, ranges, _order, moved = build(name)
-        for theme, (first, last) in ranges.items():
+        rows, order, moved, _ = build(name)
+        for theme in BACKGROUND:
             pattern = rows[theme][0]
             closest = min(distance(a, b) for i, a in enumerate(pattern) for b in pattern[i + 1 :])
-            print(f'{name} {theme}: gradient entries {first}..{last}; closest pair {closest:.3f}')
-        if moved:
-            print(f'{name}: moved to the end, near the calculated colour: {", ".join(moved)}')
+            print(
+                f'{name} {theme}: {len(pattern)} colours, closest pair {closest:.3f}, '
+                f'gradient {" ".join(rows[theme][1])}, {len(rows[theme][2])} structures'
+            )
+        moved_colours = [side(s, 'light') for s, m in zip(order, moved, strict=True) if m]
+        if moved_colours:
+            print(f'{name}: moved to the end: {", ".join(moved_colours)}')
         path = out_dir / f'{name}.tsv'
         if not args.check:
             path.write_text(tsv(rows), encoding='utf-8')

@@ -43,7 +43,7 @@ struct ReportOptions {
     bool residual = true;                     ///< the residual pane
     bool bragg_ticks = true;                  ///< the Bragg tick rows
     std::string generated;                    ///< the report's time; empty: now, in UTC
-    ColourScheme colour_scheme = ColourScheme::Default;  ///< the experiments' and structures' colours
+    ColourScheme colour_scheme = kDefaultColourScheme;  ///< the experiments' and structures' colours
     /// The HTML writer's choice, not the model's: whether a saved file carries the chart libraries.
     bool embed_libraries = false;
 };
