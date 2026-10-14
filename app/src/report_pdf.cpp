@@ -4,6 +4,7 @@
 #include <QAbstractTextDocumentLayout>
 #include <QBuffer>
 #include <QFont>
+#include <QImage>
 #include <QMarginsF>
 #include <QPageLayout>
 #include <QPageSize>
@@ -25,16 +26,30 @@ namespace edi_app {
 namespace {
 
 // The page is laid out at 1800 to the inch, where the body's 10.04 pt is a whole number of pixels (251): Qt sets a font
-// in whole pixels, so at 96 to the inch the body would be 13 px, 9.75 pt. The document takes the static HTML's px as
-// 1/96 inch at any resolution, so the figures' width is given in those px; the text stays vector and the figures keep
+// in whole pixels, so at 96 to the inch the body would be 13 px, 9.75 pt. The text stays vector and the figures keep
 // their own resolution in the file.
 constexpr int kDpi = 1800;
-constexpr double kPxScale = kDpi / 96.0;
 constexpr double kMarginMm = 25.0;
 constexpr double kBodyPoints = 10.04;
+// The figure's frame, its table's borders and edge, in the HTML's px: the figure is that much narrower than the column.
+constexpr double kFigureFrame = 3.0;
 
-// Where pages break: a table shorter than a third of a page is kept whole, on the next page if it does not fit, and a
-// heading never ends its page: one whose next block starts on a later page moves there too, taking along what moved
+// How many of the device's pixels the document gives one px of its HTML. Qt takes a px as one dot of the screen's
+// logical resolution, 1/96 inch on Linux and Windows but 1/72 inch on macOS, where figures sized in 96ths ran a third
+// past the column; so it is measured on this device, from one image of a known width.
+double documentPixel(QPaintDevice* device) {
+    QTextDocument probe;
+    probe.documentLayout()->setPaintDevice(device);
+    probe.setDocumentMargin(0);
+    QImage dot(1, 1, QImage::Format_ARGB32);
+    dot.fill(Qt::transparent);
+    probe.addResource(QTextDocument::ImageResource, QUrl(QStringLiteral("dot")), dot);
+    probe.setHtml(QStringLiteral("<img src=\"dot\" width=\"100\">"));
+    return probe.documentLayout()->documentSize().width() / 100.0;
+}
+
+// Where pages break: a figure, or a table shorter than a third of a page, is kept whole, on the next page if it does not
+// fit, and a heading never ends its page: one whose next block starts on a later page moves there too, taking along what moved
 // below it, and so does a heading right above it. Each move lays the document out again, so the walk starts over
 // after it.
 void breakPages(QTextDocument& document, double page_height) {
@@ -47,7 +62,9 @@ void breakPages(QTextDocument& document, double page_height) {
             auto* table = qobject_cast<QTextTable*>(frame);
             const QRectF box = layout->frameBoundingRect(frame);
             QTextFrameFormat format = frame->frameFormat();
-            if (table == nullptr || box.height() >= page_height / 3 ||
+            // A figure is its table's one cell, kept whole at any height a page holds.
+            const bool figure = table != nullptr && table->rows() == 1 && table->columns() == 1;
+            if (table == nullptr || box.height() >= (figure ? page_height : page_height / 3) ||
                 (format.pageBreakPolicy() & QTextFormat::PageBreak_AlwaysBefore) != 0 ||
                 page_at(box.top()) == page_at(box.bottom() - 1)) {
                 continue;
@@ -116,7 +133,8 @@ QByteArray reportPdf(const edi::ReportModel& model, const QHash<QString, QImage>
         document.addResource(QTextDocument::ImageResource, QUrl(it.key()), it.value());
     }
     try {
-        document.setHtml(QString::fromStdString(edi::report_static_html(model, body.width() / kPxScale)));
+        const double column = body.width() / documentPixel(&writer);
+        document.setHtml(QString::fromStdString(edi::report_static_html(model, column - kFigureFrame)));
     } catch (const std::exception&) {
         return {};
     }
