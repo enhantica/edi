@@ -92,6 +92,8 @@ void write_value(std::string& out, const Value& value) {
     } else if (const double* number = std::get_if<double>(&value.data)) {
         if (!std::isfinite(*number)) {
             out += "null";
+        } else if (*number == 0.0 && std::signbit(*number)) {
+            out += "-0.0";  // "-0" would read back as the integer 0 in a reader that tells integers from floats
         } else {
             char buffer[64];
             const auto result = std::to_chars(buffer, buffer + sizeof(buffer), *number);
