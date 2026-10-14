@@ -34,8 +34,6 @@ Row {
     // The blocks' fit-outcome role (experiments: `fitOutcome`) and the shown block's outcome; empty: no slot.
     property string outcomeRole: ""
     property string currentOutcome: ""
-    // Every entry in the first block's colour: a scan's datasets are one experiment's.
-    property bool oneColour: false
     // The blocks' role that marks the template dataset (a scan's `isTemplate`) and whether the shown one is it: its
     // line carries the word "template" in the accent blue after its name, which the line elides when long.
     property string templateRole: ""
@@ -77,7 +75,7 @@ Row {
             };
             const icon = {
                 "icon": ParameterNames.blockIcon(selector.blockKind),
-                "color": AppColors.block(selector.blockKind, row.oneColour ? 0 : index)
+                "color": AppColors.block(selector.blockKind, index)
             };
             const label = {
                 "text": name,

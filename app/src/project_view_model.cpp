@@ -187,6 +187,7 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     loadScan();
     correlations_ = new CorrelationViewModel(this);
     connect(this, &ProjectViewModel::currentExperimentIndexChanged, this, &ProjectViewModel::syncCorrelations);
+    connect(this, &ProjectViewModel::currentExperimentIndexChanged, this, &ProjectViewModel::syncPatternColours);
     syncBlocks();
     report_ = new ReportViewModel(*this, this);
     // The report filters its correlations by the Analysis page's level, and in a fit of several experiments shows the
@@ -1087,6 +1088,7 @@ void ProjectViewModel::syncDatasets() {
     if (!scan_) {
         experiment_list_->setColumns({});
         experiment_list_->setExperiments(experiment_models_, *project_);
+        syncPatternColours();
         return;
     }
     const int count = static_cast<int>(scan_session_->datasets().files.size());
@@ -1100,6 +1102,20 @@ void ProjectViewModel::syncDatasets() {
     if (experiment != nullptr) {
         experiment->setFitOutcome(current_dataset_ >= 0 && current_dataset_ < count ? datasetRow(current_dataset_).outcome
                                                                                     : QString());
+    }
+    syncPatternColours();
+}
+
+void ProjectViewModel::syncPatternColours() {
+    // One colour per experiment on every page (edi::pattern_colour by place and count): a scan's template shows one
+    // dataset at a time, in that dataset's colour among the scan's datasets.
+    for (int i = 0; i < experiment_models_.size(); ++i) {
+        if (scan_ && i == 0) {
+            experiment_models_[i]->setColourPlace(static_cast<std::size_t>(std::max(current_dataset_, 0)),
+                                                  scan_session_->datasets().files.size());
+        } else {
+            experiment_models_[i]->setColourPlace(std::nullopt, 0);
+        }
     }
 }
 

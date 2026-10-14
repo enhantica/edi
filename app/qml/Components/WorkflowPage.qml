@@ -46,8 +46,6 @@ EaComponents.ContentPage {
     // The blocks' fit-outcome role and the shown block's outcome (experiments; BlockSelector).
     property string blockOutcomeRole: ""
     property string blockCurrentOutcome: ""
-    // Every entry in the first block's colour (a scan's datasets).
-    property bool blockOneColour: false
     // The role marking the template dataset, and whether the shown block is it (BlockSelector).
     property string blockTemplateRole: ""
     property bool blockCurrentTemplate: false
@@ -129,7 +127,6 @@ EaComponents.ContentPage {
             blockIndex: page.blockIndex
             outcomeRole: page.blockOutcomeRole
             currentOutcome: page.blockCurrentOutcome
-            oneColour: page.blockOneColour
             templateRole: page.blockTemplateRole
             currentTemplate: page.blockCurrentTemplate
             onBlockActivated: index => page.blockActivated(index)

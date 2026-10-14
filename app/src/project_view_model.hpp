@@ -507,6 +507,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void adoptScanFileResult(const std::string& file, const std::shared_ptr<const edi::ScanFileResult>& result);
     // The Correlations tab follows the last fit and the shown experiment.
     void syncCorrelations();
+    // Each experiment's pattern colour: its place and count (a scan's template: the shown dataset's).
+    void syncPatternColours();
     QStringList scan_columns_;
     ScanSession* scan_session_ = nullptr;
     int current_dataset_ = -1;

@@ -101,7 +101,6 @@ WorkflowPage {
     blockKind: "experiment"
     blockOutcomeRole: "fitOutcome"
     blockCurrentOutcome: experiment ? experiment.fitOutcome : ""
-    blockOneColour: project !== null && project.scan
     blockTemplateRole: project !== null && project.scan ? "isTemplate" : ""
     blockCurrentTemplate: project !== null && project.scan && project.currentExperimentIndex === project.templateIndex
     blockIndex: project ? project.currentExperimentIndex : -1
