@@ -68,6 +68,8 @@ nav:
           - dev/adrs/0034-fit-correlations-computed-once-and-shared.md
           - dev/adrs/0035-powder-r-factors.md
           - dev/adrs/0036-the-report-model.md
+          - dev/adrs/0037-exact-fractions-and-constrained-values-on-screen.md
+          - dev/adrs/0038-colour-schemes-and-their-rules.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md
