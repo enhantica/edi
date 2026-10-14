@@ -26,7 +26,7 @@ EaComponents.ContentPage {
     property alias extrasItem: extrasLoader.sourceComponent
     property alias textItem: textLoader.sourceComponent
     // The page's Settings tab (edi ADR-0031 §2): its view options, kept in the app's settings under the page's name,
-    // never in the project. A page with none says so.
+    // never in the project. A page with none has the tab disabled, as an empty Extra tab is.
     property Component settingsItem: null
     property bool extrasEnabled: false
     property bool textEnabled: false
@@ -162,6 +162,7 @@ EaComponents.ContentPage {
             EaElements.TabButton {
                 objectName: "sideBar.tab.settings"
                 text: qsTr("Settings")
+                enabled: page.settingsItem !== null
             }
         ]
 
@@ -179,7 +180,7 @@ EaComponents.ContentPage {
             },
             Loader {
                 id: settingsLoader
-                sourceComponent: page.settingsItem ? page.settingsItem : noSettings
+                sourceComponent: page.settingsItem
             }
         ]
 
@@ -203,17 +204,6 @@ EaComponents.ContentPage {
             property: "bottomMargin"
             when: textLoader.SwipeView.isCurrentItem
             value: page.continueShown ? -(sideBar.continueButton.height + sideBar.continueButton.anchors.bottomMargin) : 0
-        }
-    }
-
-    Component {
-        id: noSettings
-        EaElements.Label {
-            objectName: "sideBar.settings.none"
-            topPadding: EaStyle.Sizes.fontPixelSize
-            leftPadding: EaStyle.Sizes.fontPixelSize
-            color: EaStyle.Colors.themeForegroundMinor
-            text: qsTr("This page has no settings yet")
         }
     }
 }
