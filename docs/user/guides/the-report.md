@@ -46,8 +46,9 @@ python -m edi report path/to/project --check
 
 The first writes the ticked formats but the PDF, which the app writes, into `reports/`, as Save report does. Flags
 change a setting for that run only: `--offline` or `--online`, `--x-axis native` or `d_spacing`,
-`--correlation-threshold X`, `--exclude KEY` (repeated) or `--include-all`. `--check` lists each saved report as
-current, out of date or missing, writes nothing, and exits with 1 when one is not current.
+`--correlation-threshold X`, `--exclude KEY` (repeated) or `--include-all`. `--output PATH` writes the HTML report to
+that file instead, leaving the saved reports alone. `--check` lists each saved report as current, out of date or
+missing, writes nothing, and exits with 1 when one is not current.
 
 ## From Python
 

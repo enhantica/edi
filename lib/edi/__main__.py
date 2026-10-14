@@ -4,8 +4,9 @@
     python -m edi fit <project-dir> [--dry] [--verbosity ...] [--report ...] [--stream]
     python -m edi calc <project-dir> [--dry] [--verbosity ...] [--report machine|human]
     python -m edi undo <project-dir> [--dry] [--verbosity ...] [--report machine|human]
-    python -m edi report <project-dir> [--check] [--offline|--online] [--x-axis ...]
-                         [--correlation-threshold X] [--exclude KEY ... | --include-all]
+    python -m edi report <project-dir> [--check] [--output PATH] [--offline|--online]
+                         [--x-axis ...] [--correlation-threshold X]
+                         [--exclude KEY ... | --include-all]
 
 This exists because an example script was doing the job: ``examples/fit_ncaf.py`` had accreted
 argument parsing, verbosity handling and two output formats, which made it an undeclared
@@ -167,6 +168,13 @@ def build_parser() -> argparse.ArgumentParser:
         action='store_true',
         help='list each saved report as current, out of date or missing, writing nothing; '
         'exit 1 when one is not current',
+    )
+    report.add_argument(
+        '--output',
+        metavar='PATH',
+        default=None,
+        help="write the HTML report to PATH instead of saving the ticked formats; the project's "
+        'saved reports and their rows are left as they are',
     )
     libraries = report.add_mutually_exclusive_group()
     libraries.add_argument(
@@ -695,6 +703,16 @@ def run_report(args: argparse.Namespace) -> int:
             print(f'{name} {state}')
         return 0 if all(state == 'current' for _name, state in states) else 1
     excluded = [] if args.include_all else args.exclude
+    if args.output is not None:
+        path = project.report.save_html(
+            args.output,
+            offline=args.offline,
+            x_axis=args.x_axis,
+            correlation_threshold=args.correlation_threshold,
+            excluded=excluded,
+        )
+        print(f'Wrote {path}')
+        return 0
     written = project.report.save(
         offline=args.offline,
         x_axis=args.x_axis,

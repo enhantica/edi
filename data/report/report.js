@@ -4,7 +4,9 @@
 // views all come from the model; this file only places them.
 
 const model = JSON.parse(document.getElementById('edi-report-model').textContent);
-const page = getComputedStyle(document.documentElement);
+// A value of the page's stylesheet; empty where no stylesheet is computed, and the chart keeps plotly's own.
+const pageStyle = name =>
+  typeof getComputedStyle === 'function' ? getComputedStyle(document.documentElement).getPropertyValue(name).trim() : '';
 
 const patternStyle = key => model.pattern_styles.find(row => row.key === key) ?? {};
 const sceneStyle = key => model.structure_styles.find(row => row.key === key) ?? {};
@@ -234,10 +236,10 @@ function drawPattern(figure, pattern) {
     notice(figure, 'No pattern to show');
     return;
   }
-  const font = page.getPropertyValue('--head-font');
+  const font = pageStyle('--head-font');
   // diffraction-lib's report's lines: a light grid, the frame in the tables' border colour, no zero lines.
-  const grid = page.getPropertyValue('--rowshade').trim();
-  const frame = page.getPropertyValue('--tableborder').trim();
+  const grid = pageStyle('--rowshade');
+  const frame = pageStyle('--tableborder');
   // The plot starts no closer to the frame's top than to its sides, and plotly's toolbar sits above it, clear of the
   // legend.
   const margin = { l: 16, r: 16, t: 36, b: 16 };
