@@ -16,6 +16,7 @@ committed:
 import argparse
 import math
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
 import matplotlib as mpl
@@ -164,19 +165,38 @@ def distance(first: str, second: str) -> float:
     return math.dist(oklab(first), oklab(second))
 
 
+def nearest_passing(lab: Lab, step: float, passes: Callable[[str], bool]) -> str | None:
+    """Return the colour at the smallest lightness shift, in the direction of `step`, that passes.
+
+    The shift is found by coarse steps, then halved between the last failing and the first passing
+    lightness, so it is exact to well under one unit of the 8-bit colour.
+    """
+    lightness, a, b = lab
+    failing = lightness
+    while 0.0 <= lightness + step <= 1.0:
+        lightness += step
+        if passes(hex_of((lightness, a, b))):
+            for _ in range(40):
+                middle = (failing + lightness) / 2
+                if passes(hex_of((middle, a, b))):
+                    lightness = middle
+                else:
+                    failing = middle
+            return hex_of((lightness, a, b))
+        failing = lightness
+    return None
+
+
 def adapt(colour: str, theme: str) -> str:
     """Return the colour if it passes, else its hue and chroma at the nearest passing lightness."""
     background = BACKGROUND[theme]
     if contrast(colour, background) >= MIN_CONTRAST:
         return colour
-    lightness, a, b = oklab(colour)
-    step = -0.001 if theme == 'light' else 0.001
-    while 0.0 <= lightness <= 1.0:
-        lightness += step
-        candidate = hex_of((lightness, a, b))
-        if contrast(candidate, background) >= MIN_CONTRAST:
-            return candidate
-    sys.exit(f'{colour}: no lightness reaches {MIN_CONTRAST}:1 on {background}')
+    step = -0.01 if theme == 'light' else 0.01
+    found = nearest_passing(oklab(colour), step, lambda c: contrast(c, background) >= MIN_CONTRAST)
+    if found is None:
+        sys.exit(f'{colour}: no lightness reaches {MIN_CONTRAST}:1 on {background}')
+    return found
 
 
 def apart_from_calculated(colour: str, theme: str) -> bool:
@@ -189,18 +209,40 @@ def passes_for_data(colour: str, theme: str) -> bool:
     )
 
 
-def adapt_set(colours: list[str], theme: str) -> list[str]:
-    """Adapt each colour; one too close to an earlier one moves on, away from the background."""
+def adapt_set(colours: list[str], theme: str, moved: frozenset[str] = frozenset()) -> list[str]:
+    """Adapt each colour; one too close to an earlier one moves on, away from the background.
+
+    A colour in `moved`, at the end of its set, also takes the smallest lightness shift away from
+    the background that keeps it apart from the calculated colour, with 3:1 contrast and its
+    distance from the set's earlier colours kept.
+    """
     out: list[str] = []
     for colour in colours:
         candidate = adapt(colour, theme)
-        lightness, a, b = oklab(candidate)
-        step = -0.005 if theme == 'light' else 0.005
-        while any(distance(candidate, earlier) < MIN_DISTANCE for earlier in out):
-            lightness += step
-            if not 0.0 <= lightness <= 1.0:
+        if any(distance(candidate, earlier) < MIN_DISTANCE for earlier in out):
+            step = -0.005 if theme == 'light' else 0.005
+            found = nearest_passing(
+                oklab(candidate),
+                step,
+                lambda c: all(distance(c, earlier) >= MIN_DISTANCE for earlier in out),
+            )
+            if found is None:
                 sys.exit(f'{colour} ({theme}): cannot keep {MIN_DISTANCE} from its set')
-            candidate = hex_of((lightness, a, b))
+            candidate = found
+        if colour in moved and not apart_from_calculated(candidate, theme):
+            found = nearest_passing(
+                oklab(candidate),
+                -0.01 if theme == 'light' else 0.01,
+                lambda c: (
+                    passes_for_data(c, theme)
+                    and all(distance(c, earlier) >= MIN_DISTANCE for earlier in out)
+                ),
+            )
+            if found is None:
+                sys.exit(
+                    f'{colour} ({theme}): no lightness keeps it apart from the calculated colour'
+                )
+            candidate = found
         if contrast(candidate, BACKGROUND[theme]) < MIN_CONTRAST:
             sys.exit(f'{colour} ({theme}): moved below {MIN_CONTRAST}:1')
         out.append(candidate)
@@ -256,8 +298,8 @@ def sample(stops: list[str], t: float) -> str:
     return mix(stops[below], stops[below + 1], position - below)
 
 
-def set_order(colours: list[str]) -> list[str]:
-    """Return the published set with those too close to the calculated colour at its end."""
+def set_order(colours: list[str]) -> tuple[list[str], frozenset[str]]:
+    """Return the published set with those near the calculated colour at its end, and those."""
     moved: set[str] = set()
     while True:
         order = [c for c in colours if c not in moved] + [c for c in colours if c in moved]
@@ -269,16 +311,16 @@ def set_order(colours: list[str]) -> list[str]:
             if not apart_from_calculated(colour, theme)
         }
         if failing <= moved:
-            return order
+            return order, frozenset(moved)
         moved |= failing
 
 
 def build(
     name: str,
-) -> tuple[dict[str, tuple[list[str], ...]], dict[str, tuple[int, int]], list[str]]:
+) -> tuple[dict[str, tuple[list[str], ...]], dict[str, tuple[int, int]], list[str], list[str]]:
     scheme = SCHEMES[name]
     table = table_of(scheme['gradient'])
-    order = set_order(scheme['pattern'])
+    order, moved = set_order(scheme['pattern'])
     rows, ranges = {}, {}
     for theme in BACKGROUND:
         first, last = passing_range(table, theme)
@@ -289,9 +331,14 @@ def build(
                 colour = sample(gradient, place / (count - 1))
                 if not passes_for_data(colour, theme):
                     sys.exit(f'{name} {theme}: gradient colour {colour} fails at {place}/{count}')
-        rows[theme] = (adapt_set(order, theme), gradient, adapt_set(scheme['structure'], theme))
+        pattern = adapt_set(order, theme, moved)
+        # Every stored pattern colour passes, those moved to the end of the set included.
+        for colour in pattern:
+            if not passes_for_data(colour, theme):
+                sys.exit(f'{name} {theme}: pattern colour {colour} fails a rule')
+        rows[theme] = (pattern, gradient, adapt_set(scheme['structure'], theme))
         ranges[theme] = (first, last)
-    return rows, ranges, order
+    return rows, ranges, order, [c for c in order if c in moved]
 
 
 def tsv(rows: dict[str, tuple[list[str], ...]]) -> str:
@@ -311,16 +358,11 @@ def main() -> int:
     out_dir = Path(__file__).resolve().parents[2] / 'data' / 'palettes'
     stale = []
     for name in SCHEMES:
-        rows, ranges, order = build(name)
+        rows, ranges, _order, moved = build(name)
         for theme, (first, last) in ranges.items():
             pattern = rows[theme][0]
             closest = min(distance(a, b) for i, a in enumerate(pattern) for b in pattern[i + 1 :])
             print(f'{name} {theme}: gradient entries {first}..{last}; closest pair {closest:.3f}')
-        moved = [
-            published
-            for k, published in enumerate(order)
-            if not all(apart_from_calculated(rows[theme][0][k], theme) for theme in BACKGROUND)
-        ]
         if moved:
             print(f'{name}: moved to the end, near the calculated colour: {", ".join(moved)}')
         path = out_dir / f'{name}.tsv'

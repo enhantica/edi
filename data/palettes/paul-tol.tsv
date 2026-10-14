@@ -4,8 +4,8 @@ pattern	1	#228833	#41A24C
 pattern	2	#A79506	#CCBB44
 pattern	3	#35A0C1	#66CCEE
 pattern	4	#AA3377	#DE64A5
-pattern	5	#949494	#BBBBBB
-pattern	6	#EE6677	#F56C7D
+pattern	5	#959494	#BBBBBB
+pattern	6	#C54156	#FFC1C4
 gradient	0	#9B8AC4	#FEFBE9
 gradient	1	#9C85BD	#FCF7D5
 gradient	2	#9D80B6	#F5F3C1
@@ -23,6 +23,6 @@ gradient	13	#6B4B5A	#7EB2E4
 gradient	14	#5F4450	#88A5DD
 gradient	15	#533C45	#9398D2
 gradient	16	#46353A	#9B8AC4
-structure	0	#004488	#5691DC
+structure	0	#004488	#5591DC
 structure	1	#BE8D00	#DDAA33
 structure	2	#BB5566	#D86F7E
