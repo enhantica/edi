@@ -455,10 +455,14 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                  "choose:OK", "mainArea.analysis.tab.evolution"}});
         steps_.push_back({"evolution-4-fitted-parameters", {"evolution.parameters"}});
     }
-    // Every colour scheme in both themes: a three-file scan's own colours, then a 162-file scan's gradient, on the
-    // Experiment page with the experiments listed. Run only when asked (`--demo-only schemes-`).
+    // Every colour scheme in both themes, on the Analysis page's chart of a two-structure example. Run only when asked
+    // (`--demo-only schemes-`).
     if (only.startsWith(QLatin1String("schemes-"))) {
-        const QStringList schemes{"Default", "Colour-blind safe", "Tableau", "Paul Tol", "Vivid"};
+        const QStringList schemes{"Coast",          "Garden",         "Peaceful",   "Fog forest",
+                                  "Sage",           "Okabe-Ito",      "Paul Tol bright", "Paul Tol muted",
+                                  "Tableau 10",     "Observable 10",  "IBM Carbon", "ColorBrewer Dark2",
+                                  "Petroff",        "Vivid",          "Nord",       "Solarized",
+                                  "Catppuccin",     "Apple"};
         const auto pick = [](const QString& scheme) {
             return QStringList{"appBar.button.preferences", "preferences.tab.appearance", "preferences.colourScheme",
                                "choose:" + scheme, "choose:OK"};
@@ -466,17 +470,19 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"schemes-0-list", QStringList{"resize:1280x960", "theme:light"} + start
                                                 + QStringList{"appBar.button.preferences", "preferences.tab.appearance",
                                                               "preferences.colourScheme"}});
-        for (const QString example : {QStringLiteral("scan-3f"), QStringLiteral("scan-162f")}) {
-            for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
-                for (int i = 0; i < schemes.size(); ++i) {
-                    QStringList actions = i == 0 && theme == QLatin1String("light")
-                                              ? QStringList{"key:Escape", "key:Escape"} + start
-                                                    + open_example("pd-neut-cwl_cosio-d20_" + example)
-                                                    + QStringList{experiment, basic, "expand:group.experiments"}
-                                              : QStringList{};
-                    actions += QStringList{"theme:" + theme} + pick(schemes[i]);
-                    steps_.push_back({QStringLiteral("schemes-%1-%2-%3").arg(example, theme).arg(i + 1), actions});
-                }
+        for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
+            for (int i = 0; i < schemes.size(); ++i) {
+                QStringList actions = i == 0 && theme == QLatin1String("light")
+                                          ? QStringList{"key:Escape", "key:Escape"} + start
+                                                + open_example("pd-neut-tof_ferrite-austenite-beer_joint")
+                                                + QStringList{analysis, basic}
+                                          : QStringList{};
+                actions += QStringList{"theme:" + theme} + pick(schemes[i]);
+                QString name = schemes[i].toLower();
+                name.replace(QLatin1Char(' '), QLatin1Char('-'));
+                steps_.push_back(
+                    {QStringLiteral("schemes-%1-%2-%3").arg(theme).arg(i + 1, 2, 10, QLatin1Char('0')).arg(name),
+                     actions});
             }
         }
     }
