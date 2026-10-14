@@ -13,6 +13,8 @@
 #include <QSignalSpy>
 #include <QQuickItem>
 #include <QQuickWindow>
+#include <QGuiApplication>
+#include <QOpenGLContext>
 #include <QCursor>
 #include <QRegularExpression>
 #include <QStandardPaths>
@@ -42,6 +44,12 @@ class AcceptanceProbe final : public QObject {
     }
 public:
     using QObject::QObject;
+    Q_INVOKABLE bool softwareOffscreenWithoutGl() const {
+        if (QGuiApplication::platformName() != "offscreen" ||
+            qEnvironmentVariable("QT_QUICK_BACKEND") != "software") return false;
+        QOpenGLContext context;
+        return !context.create();
+    }
     Q_INVOKABLE QVariantList objectsWithProperty(QObject *root, const QString &name) const {
         QVariantList result;
         if (!root) return result;
