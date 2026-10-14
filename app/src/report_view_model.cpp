@@ -279,7 +279,9 @@ void ReportViewModel::saveReport(const QVariantMap& figures, const QString& font
         return;
     }
     QStringList written;
-    // Each ticked format: its bytes, written into reports/ (the browser also downloads them), then its row.
+    // In the browser the saved files are also downloaded, together once all are written.
+    QList<QPair<QString, QByteArray>> downloads;
+    // Each ticked format: its bytes, written into reports/, then its row.
     std::vector<edi::ReportFile> rows;
     const auto write = [&](const char* format, const QByteArray& bytes, const std::string& digest) {
         const QString name = base + QLatin1Char('.') + QLatin1String(format);
@@ -288,9 +290,7 @@ void ReportViewModel::saveReport(const QVariantMap& figures, const QString& font
             emit saveFailed(tr("The report could not be written to %1").arg(reports.filePath(name)));
             return false;
         }
-        if (WebFiles::available()) {
-            WebFiles::download(bytes, name);
-        }
+        downloads.append({name, bytes});
         edi::ReportFile row;
         row.name = name.toStdString();
         row.format = std::string(format);
@@ -337,6 +337,17 @@ void ReportViewModel::saveReport(const QVariantMap& figures, const QString& font
     } catch (const std::exception& error) {
         emit saveFailed(QString::fromUtf8(error.what()));
         return;
+    }
+    // One format downloads as its file, several as <project name>-reports.zip holding reports/<name>.<ext>, as the
+    // project save hands the browser a zip (the owner, 2026-10-14). The files also stay in the in-browser reports/.
+    if (WebFiles::available() && downloads.size() == 1) {
+        WebFiles::download(downloads.front().second, downloads.front().first);
+    } else if (WebFiles::available() && downloads.size() > 1) {
+        QList<QPair<QString, QByteArray>> entries;
+        for (const auto& [name, bytes] : downloads) {
+            entries.append({QStringLiteral("reports/") + name, bytes});
+        }
+        WebFiles::download(WebFiles::packFiles(entries), base + QStringLiteral("-reports.zip"));
     }
     emit savedReportsChanged();
     emit saved(written.join(QStringLiteral(", ")));

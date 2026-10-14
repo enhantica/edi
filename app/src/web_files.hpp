@@ -6,6 +6,7 @@
 #include <QHash>
 #include <QList>
 #include <QObject>
+#include <QPair>
 #include <QString>
 #include <QUrl>
 #include <QtQml/qqmlregistration.h>
@@ -56,6 +57,8 @@ class WebFiles : public QObject {
     // The archive format, on every platform (the unit tier proves it natively). `pack` stores every file
     // under `directory`, with paths relative to its parent: one top-level folder named as the directory.
     static QByteArray pack(const QString& directory);
+    // An archive of the given files, each stored under its path (e.g. reports/<name>.html), in the order given.
+    static QByteArray packFiles(const QList<QPair<QString, QByteArray>>& files);
     // Unpacks `archive` into the empty directory `target` and returns the project directory in it — the one
     // holding project.edi, at the top or in the one top-level folder — or an empty string with `error` set.
     // An entry whose path climbs out of `target` (a `..` component) refuses the whole archive; Qt's reader itself

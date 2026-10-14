@@ -153,6 +153,19 @@ QByteArray WebFiles::pack(const QString& directory) {
     return writer.status() == QZipWriter::NoError ? archive : QByteArray();
 }
 
+QByteArray WebFiles::packFiles(const QList<QPair<QString, QByteArray>>& files) {
+    QByteArray archive;
+    QBuffer buffer(&archive);
+    buffer.open(QIODevice::WriteOnly);
+    QZipWriter writer(&buffer);
+    writer.setCompressionPolicy(QZipWriter::AutoCompress);
+    for (const auto& [path, data] : files) {
+        writer.addFile(path, data);
+    }
+    writer.close();
+    return writer.status() == QZipWriter::NoError ? archive : QByteArray();
+}
+
 QString WebFiles::unpack(const QByteArray& archive, const QString& target, QString& error) {
     QByteArray bytes = archive;
     QBuffer buffer(&bytes);
