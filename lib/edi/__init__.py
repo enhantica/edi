@@ -545,6 +545,9 @@ class Report:
     changes a setting.
     """
 
+    # A setting it does not have is refused rather than kept as a stray attribute.
+    __slots__ = ('_project',)
+
     def __init__(self, project: Project) -> None:
         self._project = project
 

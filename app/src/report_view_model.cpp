@@ -129,7 +129,7 @@ const edi::ReportPattern* ReportViewModel::pattern(const QString& experiment) co
 
 QString ReportViewModel::reliability(const QString& experiment) const {
     const edi::ReportPattern* found = pattern(experiment);
-    return found != nullptr ? QString::fromStdString(found->reliability) : QString();
+    return found != nullptr ? QString::fromStdString(found->title) : QString();
 }
 
 const edi::ReportStructure* ReportViewModel::structure(const QString& id) const {
