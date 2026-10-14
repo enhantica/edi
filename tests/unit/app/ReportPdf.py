@@ -4,8 +4,10 @@ This observer is qualified against a separate Qt-written multipage witness. It r
 unsupported text/font structures instead of silently accepting an unextractable report.
 """
 
+import hashlib
 import json
 import math
+import os
 import re
 import sys
 import zlib
@@ -81,6 +83,15 @@ def inspect(path):  # noqa: PLR0912, PLR0914, PLR0915 - explicit PDF grammar bou
             name.decode(): glyph_map(int(font))
             for name, font in re.findall(rb'/((?:F|f)\w*)\s+(\d+)\s+0\s+R', resource)
         }
+        images = {}
+        for name, reference in re.findall(rb'/(\w+)\s+(\d+)\s+0\s+R', resource):
+            image = objects[int(reference)]
+            if re.search(rb'/Subtype\s*/Image\b', image):
+                width = re.search(rb'/Width\s+(\d+)', image)
+                height = re.search(rb'/Height\s+(\d+)', image)
+                if not width or not height:
+                    raise ValueError('Every drawn PDF image must declare its pixel dimensions')
+                images[name.decode()] = (int(width[1]), int(height[1]))
         contents = re.search(rb'/Contents\s+(\d+)\s+0\s+R', obj)
         if not contents:
             raise ValueError('Every PDF page must expose an actual content stream')
@@ -99,8 +110,12 @@ def inspect(path):  # noqa: PLR0912, PLR0914, PLR0915 - explicit PDF grammar bou
             if all(0 <= value <= 255 for value in channels):
                 colours.add('#' + ''.join(f'{value:02x}' for value in channels))
         token = re.compile(r'<[0-9a-fA-F\s]*>|/\w+|[-+]?\d+(?:\.\d+)?|\b[A-Za-z]+\b|[\[\]]')
-        operands, stack, fragments = [], [], []
+        operands, stack, fragments, image_draws = [], [], [], []
         ctm = (1, 0, 0, 1, 0, 0)
+        page_box = list(map(float, box[1].split()))
+        clip = page_box.copy()
+        rectangle = None
+        path_points = []
         tm = ctm
         font, size = None, 0
         array = False
@@ -115,11 +130,77 @@ def inspect(path):  # noqa: PLR0912, PLR0914, PLR0915 - explicit PDF grammar bou
                 raise ValueError('Unsupported token inside a PDF text array')
             else:
                 if word == 'q':
-                    stack.append((ctm, font, size))
+                    stack.append((ctm, font, size, clip.copy()))
                 elif word == 'Q':
-                    ctm, font, size = stack.pop()
+                    ctm, font, size, clip = stack.pop()
                 elif word == 'cm':
                     ctm = multiply(ctm, tuple(map(float, operands[-6:])))
+                elif word in {'m', 'l'}:
+                    if word == 'm':
+                        path_points = []
+                        rectangle = None
+                    point = multiply(ctm, (1, 0, 0, 1, *map(float, operands[-2:])))[4:]
+                    path_points.append(point)
+                elif word == 'h':
+                    xs = {point[0] for point in path_points}
+                    ys = {point[1] for point in path_points}
+                    if len(xs) == len(ys) == 2 and set(path_points) == {
+                        (x, y) for x in xs for y in ys
+                    }:
+                        rectangle = [min(xs), min(ys), max(xs), max(ys)]
+                elif word == 're':
+                    x, y, width, height = map(float, operands[-4:])
+                    corners = [
+                        multiply(ctm, (1, 0, 0, 1, px, py))[4:]
+                        for px, py in (
+                            (x, y),
+                            (x + width, y),
+                            (x, y + height),
+                            (x + width, y + height),
+                        )
+                    ]
+                    rectangle = [
+                        min(p[0] for p in corners),
+                        min(p[1] for p in corners),
+                        max(p[0] for p in corners),
+                        max(p[1] for p in corners),
+                    ]
+                elif word == 'W':
+                    if rectangle is None:
+                        raise ValueError('The PDF image observer requires rectangular clip paths')
+                    clip = [
+                        max(clip[0], rectangle[0]),
+                        max(clip[1], rectangle[1]),
+                        min(clip[2], rectangle[2]),
+                        min(clip[3], rectangle[3]),
+                    ]
+                elif word == 'Do':
+                    name = operands[-1][1:]
+                    if name not in images:
+                        raise ValueError('Every PDF figure must resolve an actual image XObject')
+                    corners = [
+                        multiply(ctm, (1, 0, 0, 1, x, y))[4:]
+                        for x, y in ((0, 0), (1, 0), (0, 1), (1, 1))
+                    ]
+                    bounds = [
+                        min(p[0] for p in corners),
+                        min(p[1] for p in corners),
+                        max(p[0] for p in corners),
+                        max(p[1] for p in corners),
+                    ]
+                    image_draws.append({
+                        'name': name,
+                        'pixels': list(images[name]),
+                        'bounds': [
+                            bounds[0],
+                            page_box[3] - bounds[3],
+                            bounds[2],
+                            page_box[3] - bounds[1],
+                        ],
+                        'clip': [clip[0], page_box[3] - clip[3], clip[2], page_box[3] - clip[1]],
+                        'edge_width': math.hypot(ctm[0], ctm[1]),
+                        'edge_height': math.hypot(ctm[2], ctm[3]),
+                    })
                 elif word == 'Tm':
                     tm = tuple(map(float, operands[-6:]))
                 elif word == 'Td':
@@ -170,6 +251,7 @@ def inspect(path):  # noqa: PLR0912, PLR0914, PLR0915 - explicit PDF grammar bou
             for line in lines.values()
         ]
         pages.append({
+            'image_draws': image_draws,
             'lines': line_facts,
             'box': list(map(float, box[1].split())),
             'fragments': fragments,
@@ -185,9 +267,21 @@ def inspect(path):  # noqa: PLR0912, PLR0914, PLR0915 - explicit PDF grammar bou
     }
 
 
+def main():
+    result = inspect(sys.argv[1])
+    if os.environ.get('EDI_PDF_PROOF_DIR'):
+        directory = Path(os.environ['EDI_PDF_PROOF_DIR'])
+        directory.mkdir(parents=True, exist_ok=True)
+        document = Path(sys.argv[1]).read_bytes()
+        name = hashlib.sha256(document).hexdigest()
+        (directory / (name + '.pdf')).write_bytes(document)
+        (directory / (name + '.json')).write_text(json.dumps(result, indent=2) + '\n')
+    print(json.dumps(result))
+
+
 if __name__ == '__main__':
     try:
-        print(json.dumps(inspect(sys.argv[1])))
+        main()
     except (ValueError, KeyError, IndexError, zlib.error) as error:
         print(json.dumps({'error': str(error)}))
         sys.exit(1)
