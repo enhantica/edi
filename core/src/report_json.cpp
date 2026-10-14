@@ -172,12 +172,27 @@ constexpr std::array<std::pair<Projection, const char*>, 2> kProjections{
 // --- the pattern (ADR-0021)
 
 Value axis_json(const AxisDescription& axis) {
-    return Object{{"title", axis.title}, {"min", axis.min}, {"max", axis.max}, {"scale", name_of(axis.scale, kScales)}};
+    Array segments;
+    for (const TitleSegment& segment : axis.segments) {
+        segments.emplace_back(Object{{"text", segment.text}, {"style", segment.style}});
+    }
+    return Object{{"title", axis.title},
+                  {"segments", std::move(segments)},
+                  {"min", axis.min},
+                  {"max", axis.max},
+                  {"scale", name_of(axis.scale, kScales)}};
 }
 
 AxisDescription axis_of(const Value& value) {
-    return {value.at("title").string("title"), value.at("min").number("min"), value.at("max").number("max"),
-            enum_of(value.at("scale"), kScales, "scale")};
+    AxisDescription axis;
+    axis.title = value.at("title").string("title");
+    for (const Value& item : value.at("segments").array("segments")) {
+        axis.segments.push_back({item.at("text").string("text"), item.at("style").string("style")});
+    }
+    axis.min = value.at("min").number("min");
+    axis.max = value.at("max").number("max");
+    axis.scale = enum_of(value.at("scale"), kScales, "scale");
+    return axis;
 }
 
 Value series_json(const PatternSeries& series) {
@@ -237,10 +252,15 @@ Value pattern_json(const ReportPattern& pattern) {
     for (const std::vector<std::string>& texts : pattern.hover) {
         hover.push_back(strings(texts));
     }
+    Array labels;
+    for (const BraggRowLabel& label : shown.bragg_labels) {
+        labels.emplace_back(Object{{"text", label.text}, {"style", label.style}, {"centre", label.centre}});
+    }
     return Object{{"current", shown.current},   {"x", axis_json(shown.x)},
                   {"y_main", axis_json(shown.y_main)}, {"y_residual", axis_json(shown.y_residual)},
                   {"series", std::move(series)}, {"excluded", std::move(excluded)},
-                  {"layout", std::move(layout)}, {"hover", std::move(hover)}};
+                  {"layout", std::move(layout)}, {"hover", std::move(hover)},
+                  {"bragg_labels", std::move(labels)}, {"reliability", pattern.reliability}};
 }
 
 ReportPattern pattern_of(const Value& value) {
@@ -267,6 +287,11 @@ ReportPattern pattern_of(const Value& value) {
     for (const Value& item : value.at("hover").array("hover")) {
         pattern.hover.push_back(strings_of(item, "hover"));
     }
+    for (const Value& item : value.at("bragg_labels").array("bragg_labels")) {
+        shown.bragg_labels.push_back(
+            {item.at("text").string("text"), item.at("style").string("style"), item.at("centre").number("centre")});
+    }
+    pattern.reliability = value.at("reliability").string("reliability");
     return pattern;
 }
 

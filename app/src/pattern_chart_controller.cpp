@@ -264,6 +264,24 @@ void PatternChartController::setDark(bool dark) {
     }
 }
 
+void PatternChartController::setColourScheme(const QString& scheme) {
+    if (scheme != colour_scheme_) {
+        colour_scheme_ = scheme;
+        emit colourSchemeChanged();
+        publishColors();
+        invalidate();  // the legend's colours
+    }
+}
+
+std::vector<edi::SeriesStyle> PatternChartController::styles() const {
+    if (report_) {
+        return report_->reportModel().pattern_styles;
+    }
+    const std::size_t experiments = experiment_ ? experiment_->experimentCount() : 1;
+    return edi::pattern_style_table(
+        edi::colour_scheme_from_name(colour_scheme_.toStdString()).value_or(edi::ColourScheme::Default), experiments);
+}
+
 void PatternChartController::setPlotWidth(qreal width) {
     if (width != plot_width_) {
         plot_width_ = width;
@@ -353,7 +371,7 @@ void PatternChartController::cycleYScale() {
 
 QColor PatternChartController::color(const QString& styleKey) const {
     const std::string key = styleKey.toStdString();
-    for (const edi::SeriesStyle& style : edi::pattern_style_table()) {
+    for (const edi::SeriesStyle& style : styles()) {
         if (style.key == key) {
             QColor out(QString::fromStdString(dark_ ? style.dark : style.light));
             out.setAlphaF(static_cast<float>(style.opacity));
@@ -403,7 +421,7 @@ void PatternChartController::refresh() {
     const auto entry = [&](const edi::PatternSeries& series) {
         const bool bragg = series.kind == edi::SeriesKind::BraggTicks;
         double width = 1.0;
-        for (const edi::SeriesStyle& style : edi::pattern_style_table()) {
+        for (const edi::SeriesStyle& style : styles()) {
             if (style.key == series.style) {
                 width = style.width_px;
             }
@@ -532,9 +550,31 @@ void PatternChartController::refresh() {
     publish(has_data_, measured != nullptr || calculated != nullptr, &PatternChartController::hasDataChanged);
     publish(current_, shown_.current, &PatternChartController::currentChanged);
     publish(x_title_, QString::fromStdString(shown_.x.title), &PatternChartController::xTitleChanged);
-    publish(y_title_, QString::fromStdString(shown_.y_main.title), &PatternChartController::yTitleChanged);
-    publish(residual_title_, QString::fromStdString(shown_.y_residual.title),
-            &PatternChartController::residualTitleChanged);
+    // A y title as its coloured pieces, each series' word in its colour (the legend box being hidden by default);
+    // the plain title when it has none.
+    const auto styled = [this](const edi::AxisDescription& axis) {
+        if (axis.segments.empty()) {
+            return QString::fromStdString(axis.title).toHtmlEscaped();
+        }
+        QString text;
+        for (const edi::TitleSegment& segment : axis.segments) {
+            const QString piece = QString::fromStdString(segment.text).toHtmlEscaped();
+            text += segment.style.empty() ? piece
+                                          : QStringLiteral("<font color=\"%1\">%2</font>")
+                                                .arg(color(QString::fromStdString(segment.style)).name(QColor::HexRgb), piece);
+        }
+        return text;
+    };
+    publish(y_title_, styled(shown_.y_main), &PatternChartController::yTitleChanged);
+    publish(residual_title_, styled(shown_.y_residual), &PatternChartController::residualTitleChanged);
+    // Each Bragg row's label at its left: the structure's name in its colour, at the row's centre.
+    QVariantList labels;
+    for (const edi::BraggRowLabel& label : shown_.bragg_labels) {
+        labels.append(QVariantMap{{QStringLiteral("text"), QString::fromStdString(label.text)},
+                                  {QStringLiteral("color"), color(QString::fromStdString(label.style))},
+                                  {QStringLiteral("centre"), label.centre}});
+    }
+    publish(bragg_labels_, labels, &PatternChartController::braggLabelsChanged);
     publish(measured_style_,
             measured != nullptr ? QString::fromStdString(measured->style) : QStringLiteral("meas.0"),
             &PatternChartController::measuredColorChanged);

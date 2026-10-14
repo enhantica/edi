@@ -267,12 +267,14 @@ and `stepMaximum`.
 ### 8. Datablock colours and iconified names
 
 Every datablock has a colour and an icon, as in easydiffractionbeta (ideas 12 and 20), from
-`Style/AppColors.qml`:
+`Style/AppColors.qml`. The colours are the colour scheme's (Preferences, Appearance: Default or Colour-blind safe),
+read from the palettes in `data/palettes` (PROVENANCE.md there) through the core's `pattern_colour` and
+`structure_colour`, which the charts' style table and the report read too:
 
-| Block | Icon | Colour by its place in the project's list (light / dark theme) |
+| Block | Icon | Colour by its place in the project's list (light / dark theme), Default scheme |
 |---|---|---|
-| structure | `layer-group` | the base's `models`: orange `#FF9800` / `#FFCC80`, teal `#009688` / `#80CBC4`, pink `#E91E63` / `#F48FB1`, then round again |
-| experiment | `microscope` | light blue `#03A9F4` / `#81D4FA` (easydiffractionbeta's measured-data colour, `chartForegroundsExtra[2]`), then brown `#795548` / `#BCAAA4` (`[3]`), green `#4CAF50` / `#A5D6A7` (`[1]`), then round again |
+| structure | `layer-group` | orange `#FF9800` / `#FFCC80`, teal `#009688` / `#80CBC4`, pink `#E91E63` / `#F48FB1`, then round again |
+| experiment | `microscope` | light blue `#03A9F4` / `#81D4FA` (easydiffractionbeta's measured-data colour), then brown `#795548` / `#BCAAA4`, green `#4CAF50` / `#A5D6A7` and seven more; past the palette's ten, a gradient along the order between its last two |
 
 An element's colour is the Jmol colour of the core's element table (`data/elements/element-styles.tsv`, ADR-0022
 §4, the same values as easydiffractionbeta's `Logic/Tables.py`), of the type symbol's element: its first capital
@@ -370,12 +372,17 @@ limit off, since a row is shorter than a tab. It appears on, and leaves, a row i
 ### 12. Preferences, and the sidebar's side
 
 - **edi shows its own Preferences dialog** (`Components/AppPreferencesDialog.qml`), rebuilt from the base's
-  pieces as the About dialog is, with the base's five tabs and layout: Prompts, Updates, Appearance,
-  Experimental, Develop. The base's `PreferencesDialog` offers no way to hide or add a row, and the base's
+  pieces as the About dialog is, with the base's tabs and layout and one of edi's own: Prompts, Updates,
+  Appearance, Projects, Experimental, Develop. The base's `PreferencesDialog` offers no way to hide or add a row, and the base's
   window always creates it; it stays hidden, as the app bar's Preferences button opens edi's dialog
   (`Preferences.dialogShown`) instead of setting the base's flag.
-- **Appearance**: Theme; **Sidebar — Left or Right** (the owner, 2026-09-29); Auto collapse. **The 1D plotting
-  row is removed** (the owner, 2026-09-29): edi has no choice of chart library.
+- **Appearance**: Theme; **Colour scheme — Default or Colour-blind safe** (the experiments' and structures'
+  colours, §8, in every chart, icon and report the app draws); **Sidebar — Left or Right** (the owner,
+  2026-09-29); Auto collapse. **The 1D plotting row is removed** (the owner, 2026-09-29): edi has no choice of
+  chart library.
+- **Projects**: only the defaults a new project takes. New projects' uncertainties (the IUCr recommendation or
+  always 2 digits; a project's own rule is on its Project page's Extra tab) and new reports' libraries (online, the
+  default, or embedded; a project's own is the Report page's Embed box).
 - **Updates and Experimental**: shown disabled (§4).
 - **Develop — Engine threads** (the owner, 2026-10-10): "Auto", the engine's own thread policy,
   or a count from 1 to twice the cores the platform reports (at least 16, at most 64; a browser can report fewer

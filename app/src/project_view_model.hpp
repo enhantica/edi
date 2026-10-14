@@ -77,6 +77,7 @@ class ExperimentListModel : public RowTableModel {
         QString outcome;
         QStringList extracted;
         bool is_template = false;
+        QString reliability;  // its fit's χ², as the selector's line shows it; empty before it is fitted
     };
     // A scan's `count` datasets. The rows hold only their keys: a row's values are built from `row` when it is read,
     // so a scan of many files keeps no text per file (the session holds its facts).

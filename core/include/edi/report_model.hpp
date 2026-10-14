@@ -43,6 +43,7 @@ struct ReportOptions {
     bool residual = true;                     ///< the residual pane
     bool bragg_ticks = true;                  ///< the Bragg tick rows
     std::string generated;                    ///< the report's time; empty: now, in UTC
+    ColourScheme colour_scheme = ColourScheme::Default;  ///< the experiments' and structures' colours
     /// The HTML writer's choice, not the model's: whether a saved file carries the chart libraries.
     bool embed_libraries = false;
 };
@@ -132,6 +133,8 @@ struct ReportPattern {
     PatternPresentation presentation;
     /// Per series, per point: hover_text for a Bragg tick series, empty for every other series.
     std::vector<std::vector<std::string>> hover;
+    /// The experiment's reliability text (reliability_text), which the chart's title carries; empty with no fit.
+    std::string reliability;
 };
 
 struct ReportExperiment {
@@ -160,6 +163,11 @@ struct ReportModel {
     std::vector<SeriesStyle> pattern_styles;
     std::vector<SceneStyle> structure_styles;
 };
+
+/// The reliability of the experiment at `experiment` in the project's last fit, as every pattern plot shows it:
+/// "Rwp 16.35 % · χ² 75.62", the weighted-profile R factor in per cent and the reduced χ², both with two decimals,
+/// as the fit results show them. A joint fit gives each bank its own Rwp. Empty when the project holds no fit.
+std::string reliability_text(const Project& project, std::size_t experiment);
 
 /// The report of `project` as `options` ask: the only function that reads a project (ADR-0035 §2).
 ReportModel build_report(const Project& project, const ReportOptions& options);

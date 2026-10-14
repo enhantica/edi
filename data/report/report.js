@@ -168,6 +168,15 @@ function paneDomains(layout, plotHeight) {
   return domains;
 }
 
+// An axis title as its coloured pieces, each series' word in its colour, as the app draws it; the plain title when it
+// has none.
+function axisTitle(axis) {
+  const segments = axis.segments ?? [];
+  return segments.length === 0
+    ? axis.title
+    : segments.map(segment => (segment.style ? inColour(segment.text, patternStyle(segment.style).light) : segment.text)).join('');
+}
+
 // A text in a colour, as plotly writes a styled span.
 function inColour(text, colour) {
   return `<span style="color:${colour}">${text}</span>`;
@@ -243,8 +252,13 @@ function drawPattern(figure, pattern) {
     showlegend: true,
     legend: { x: 1, xanchor: 'right', y: 1, yanchor: 'top', bgcolor: 'rgba(255,255,255,0.8)' },
     hovermode: 'closest',
+    // The experiment's reliability in its last fit, above the plot's top left, as the app's selector shows it.
+    annotations: pattern.reliability
+      ? [{ text: pattern.reliability, xref: 'paper', yref: 'paper', x: 0, y: 1, xanchor: 'left', yanchor: 'bottom',
+           showarrow: false, font: { family: font } }]
+      : [],
     xaxis: { ...axis, title: { text: pattern.x.title }, range: [pattern.x.min, pattern.x.max], anchor: bottom },
-    yaxis: { ...axis, title: { text: pattern.y_main.title }, domain: domains.main ?? [0, 1] },
+    yaxis: { ...axis, title: { text: axisTitle(pattern.y_main) }, domain: domains.main ?? [0, 1] },
     shapes: pattern.excluded.map(([x0, x1]) => ({
       type: 'rect',
       xref: 'x',
@@ -271,7 +285,7 @@ function drawPattern(figure, pattern) {
     };
   }
   if ('residual' in domains) {
-    layout.yaxis3 = { ...axis, title: { text: pattern.y_residual.title }, domain: domains.residual };
+    layout.yaxis3 = { ...axis, title: { text: axisTitle(pattern.y_residual) }, domain: domains.residual };
   }
   const traces = pattern.series.map((series, index) => trace(pattern, series, index));
   window.Plotly.newPlot(figure, traces, layout, { responsive: true, displaylogo: false });

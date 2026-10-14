@@ -51,6 +51,14 @@ WorkflowPage {
     }
     continueVisible: false
 
+    // The report's charts take the app's colour scheme.
+    Binding {
+        target: page.report
+        property: "colourScheme"
+        value: Preferences.colourScheme
+        when: page.report !== null
+    }
+
     // The report rebuilds at once only while this page is shown.
     Binding {
         target: page.report

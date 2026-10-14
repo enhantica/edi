@@ -12,6 +12,8 @@
 #include <string>
 #include <vector>
 
+#include "edi/palette.hpp"
+
 // ADR-0021: the pattern presentation — the one description every renderer
 // draws (the app's chart now).
 // crysta computes every number; this file selects, decimates for the screen and maps to a display
@@ -92,7 +94,7 @@ struct PatternSeries {
     Pane pane{};
     std::string id;     // "meas", "calc", "bkg", "resid", "bragg/<structure id>"
     std::string label;  // the legend text
-    std::string style;  // a key of pattern_style_table()
+    std::string style;  // a key of pattern_style_table(): `meas.<experiment place>`, `bragg.<structure place mod 3>`
     std::vector<PresentedPoint> points;
     // Per point: its `_data` row, or its `_refln` row; kNoRow for a gap or a tick's end.
     std::vector<std::size_t> rows;
@@ -101,8 +103,16 @@ struct PatternSeries {
     std::vector<double> bar_low, bar_high;
 };
 
+// A piece of an axis title in a series' colour: `style` names its style row; empty, it is plain (a separator).
+struct TitleSegment {
+    std::string text, style;
+};
+
 struct AxisDescription {
     std::string title;
+    // The title as coloured pieces, each series' word in its colour: the main pane's "meas, calc, bkg" and the
+    // residual's "meas − calc", of the series presented. Empty for the x axis.
+    std::vector<TitleSegment> segments;
     double min = 0.0, max = 0.0;  // of what is presented, in the display scale
     YScale scale = YScale::Linear;
 };
@@ -114,10 +124,18 @@ struct PaneLayout {
     double fixed_px = 0.0;
 };
 
+// A Bragg tick row's label, drawn at the row's left in its colour: the structure's name, its style row and the
+// row's centre in the Bragg pane's units (row k from the bottom spans k to k + 1).
+struct BraggRowLabel {
+    std::string text, style;
+    double centre = 0.0;
+};
+
 struct PatternPresentation {
     bool current = false;  // the calculated series describe the model now
     AxisDescription x, y_main, y_residual;
     std::vector<PatternSeries> series;
+    std::vector<BraggRowLabel> bragg_labels;
     std::vector<ExcludedBand> excluded;
     std::vector<PaneLayout> layout;  // top to bottom
 };
@@ -131,7 +149,11 @@ struct SeriesStyle {
     double opacity = 1.0;
     double marker_px = 0.0;
 };
-const std::vector<SeriesStyle>& pattern_style_table();
+// The style table of a project of `experiments` experiments in `scheme`: a `meas.<place>` row per experiment (at
+// least three) and three `bragg.<place>` rows (a structure past the third shares its place's row), each colour the
+// palette's (edi::pattern_colour, edi::structure_colour), and the role rows, the calculated, background, residual and
+// excluded-region styles. With the defaults it is the table the app always drew.
+std::vector<SeriesStyle> pattern_style_table(ColourScheme scheme = ColourScheme::Default, std::size_t experiments = 3);
 
 // The display scales. Linear: the value. Sqrt: sign(y) × sqrt(|y|). Log10: log10(y) for y > 0,
 // NaN otherwise.
