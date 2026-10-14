@@ -79,7 +79,9 @@ are notebook calls, not report sections; the owner asked for all three in edi's 
    saved. The Preferences give a new project's `html_offline` only. A `_report` line in `project.edi`,
    diffraction-lib's, is not read. The Export group shows one row per format, its box and the saved report's path
    (`reports/<name>.<ext>`, read-only): normal while the file matches what Save report would write now, red when it
-   does not or is gone, dimmed while its box is unticked. In the browser Save report also downloads the files, one
+   does not or is gone, dimmed while its box is unticked. After a project save the open project takes the values its
+   files hold, as a reopen reads them (rounded by the IUCr rule), and is calculated once from them, so a report saved
+   then is still current when the project is reopened. In the browser Save report also downloads the files, one
    file as itself and several as `<name>-reports.zip`, and they stay in the in-browser `reports/` until a reload.
 
 ## Consequences

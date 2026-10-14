@@ -139,6 +139,13 @@ void save_project(const Project& project, const std::string& directory);
 // Save and Save as go through it.
 void save_project_as(Project& project, const std::string& directory);
 
+// After a save, the open project takes what its saved files hold, exactly what a reopen of `directory` reads: each
+// parameter's value and s.u., which the IUCr rule rounds, and the coefficients of the correlation rows the save wrote,
+// rounded too; a scan's template then reads its pairs from those rows. Nothing is recalculated; whether anything
+// changed. A report saved next stays current after the project is reopened. A project the loader refuses (one
+// without a structure) is left as it is.
+bool adopt_saved_values(Project& project, const std::string& directory);
+
 // The delegated write — converts the model and calls crysta::save_project. Implemented in
 // the adapter (the one crysta-touching TU); edi-only signature (ADR-0003).
 void save_project_via_crysta(const Project& project, const std::string& directory);

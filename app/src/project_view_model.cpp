@@ -2194,6 +2194,24 @@ QString ProjectViewModel::saveTo(const QString& directory) {
         project_->metadata = scan_template_->metadata;
         project_->scan_data_root = scan_template_->scan_data_root;
     }
+    // The saved project then holds what its files hold, as a reopen reads them (values and correlations rounded by
+    // the IUCr rule), and is calculated once from that: not an edit, so it stays unmodified with nothing to undo.
+    try {
+        if (edi::adopt_saved_values(scan_template_ ? *scan_template_ : *project_, directory.toStdString())) {
+            if (scan_template_) {
+                scan_template_->refresh_calculated_pattern();
+            } else {
+                preview_->recalculate();
+            }
+            publish(false);
+            publishCalculating();
+        }
+    } catch (const std::exception& error) {
+        const QString message =
+            tr("The project was saved, but reading it back failed: %1").arg(QString::fromUtf8(error.what()));
+        setLastError(message);
+        return message;
+    }
     setLastError({});
     emit pathChanged();
     // The results came along with the tree; their provenance is kept with them, and the datasets are listed
