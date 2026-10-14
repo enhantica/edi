@@ -40,7 +40,37 @@ def without_comments(source):
     return re.sub(r'//[^\n]*|/\*.*?\*/', '', source, flags=re.DOTALL)
 
 
-def api_violations(source):
+def report_model_exception_spans(source, relative_path):
+    # OWNER DECISION 2026-10-14, hub 3f2ce1cf6, decision-records.md:
+    # "the report model crosses into the Report page untyped for now".
+    # the planned report-schema successor removes this sole temporary exception by describing the report once.
+    if relative_path != 'app/src/report_view_model.hpp':
+        return set()
+    classes = []
+    for match in re.finditer(r'\b(?:class|struct)\s+(\w+)[^;{}]*\{', source):
+        depth, end = 1, match.end()
+        while end < len(source) and depth:
+            depth += (source[end] == '{') - (source[end] == '}')
+            end += 1
+        if depth:
+            return set()
+        classes.append((match[1], match.end(), end))
+    properties = list(re.finditer(r'Q_PROPERTY\s*\((.*?)\)', source, re.DOTALL))
+    named = [
+        m
+        for m in properties
+        if re.fullmatch(r'\s*QVariantMap\s+model\s+READ\s+model\s+NOTIFY\s+modelChanged\s*', m[1])
+    ]
+    if len(named) != 1:
+        return set()
+    prop = named[0]
+    owners = [entry for entry in classes if entry[1] <= prop.start() < entry[2]]
+    if not owners or min(owners, key=lambda entry: entry[2] - entry[1])[0] != 'ReportViewModel':
+        return set()
+    return {prop.span()}
+
+
+def api_violations(source, relative_path=None):
     source = without_comments(source)
     forbidden = set(FORBIDDEN)
     aliases = re.findall(r'using\s+(\w+)\s*=\s*([^;]+);|typedef\s+([^;]+)\s+(\w+)\s*;', source)
@@ -48,8 +78,13 @@ def api_violations(source):
         for name, value, old_value, old_name in aliases:
             if set(re.findall(r'\w+', value or old_value)) & forbidden:
                 forbidden.add(name or old_name)
-    surfaces = re.findall(r'Q_PROPERTY\s*\((.*?)\)|Q_INVOKABLE\s+([^;{]+)', source, re.DOTALL)
-    fragments = [' '.join(parts) for parts in surfaces]
+    allowed = report_model_exception_spans(source, relative_path)
+    surfaces = re.finditer(r'Q_PROPERTY\s*\((.*?)\)|Q_INVOKABLE\s+([^;{]+)', source, re.DOTALL)
+    fragments = [
+        ' '.join(part or '' for part in match.groups())
+        for match in surfaces
+        if match.span() not in allowed
+    ]
     fragments += re.findall(
         r'(?:Q_SIGNALS|signals|(?:public|protected|private)\s+(?:Q_SLOTS|slots))\s*:(.*?)(?=\n\s*(?:public|private|protected|signals|Q_SIGNALS)\s*:|\Z)',
         source,
@@ -85,7 +120,7 @@ def test_shipped_view_model_api_is_typed():
     files = list((ROOT / 'app/src').rglob('*.hpp')) + list((ROOT / 'app/src').rglob('*.h'))
     assert files, 'gate 4: the app must declare the typed QObject view-model contract'
     for file in files:
-        assert not api_violations(file.read_text()), (
+        assert not api_violations(file.read_text(), file.relative_to(ROOT).as_posix()), (
             f'I2: no JSON/dictionary state crosses the API in {file.relative_to(ROOT)}'
         )
     for file in (ROOT / 'app/qml').rglob('*.qml'):
@@ -93,6 +128,81 @@ def test_shipped_view_model_api_is_typed():
             r'JSON\s*\.\s*(?:parse|stringify)\s*\(|\bJsonListModel\b',
             without_comments(file.read_text()),
         ), f'I2: no dictionary round trips or JsonListModel in {file.relative_to(ROOT)}'
+
+
+REPORT_EXCEPTION = (
+    'class ReportViewModel : public QObject { '
+    'Q_PROPERTY(QVariantMap model READ model NOTIFY modelChanged) };'
+)
+REPORT_HEADER = 'app/src/report_view_model.hpp'
+
+
+def test_report_model_owner_exception_is_exactly_one_named_property():
+    assert not api_violations(REPORT_EXCEPTION, REPORT_HEADER), (
+        'I2 owner decision 3f2ce1cf6 / the planned report-schema successor admits only ReportViewModel.model QVariantMap'
+    )
+
+
+@pytest.mark.parametrize(
+    'escape',
+    [
+        'second',
+        'renamed',
+        'other-class',
+        'other-file',
+        'duplicate',
+        'list',
+        'hash',
+        'json',
+        'alias',
+        'nested',
+        'method',
+        'signal',
+        'savedReports',
+        'figures',
+        'suText',
+        'setPoints',
+    ],
+)
+def test_report_model_owner_exception_cannot_widen(escape):
+    source, path = REPORT_EXCEPTION, REPORT_HEADER
+    if escape == 'second':
+        source = source.replace('};', 'Q_PROPERTY(QVariantMap second READ second) };')
+    elif escape == 'renamed':
+        source = source.replace('QVariantMap model', 'QVariantMap payload')
+    elif escape == 'other-class':
+        source = source.replace('ReportViewModel', 'OtherViewModel')
+    elif escape == 'other-file':
+        path = 'app/src/other.hpp'
+    elif escape == 'duplicate':
+        source += REPORT_EXCEPTION
+    elif escape in {'list', 'hash', 'json'}:
+        source = source.replace(
+            'QVariantMap',
+            {'list': 'QVariantList', 'hash': 'QVariantHash', 'json': 'QJsonObject'}[escape],
+        )
+    elif escape == 'alias':
+        source = 'using Payload = QVariantMap;' + source.replace(
+            'QVariantMap model', 'Payload model'
+        )
+    elif escape == 'nested':
+        source = source.replace('Q_PROPERTY', 'class OtherViewModel { Q_PROPERTY').replace(
+            ' };', ' }; };'
+        )
+    else:
+        added = {
+            'method': 'Q_INVOKABLE QVariantMap payload();',
+            'signal': 'signals:\n void changed(QVariantList values);',
+            'savedReports': 'Q_PROPERTY(QVariantList savedReports READ savedReports)',
+            'figures': 'Q_INVOKABLE void saveReport(QVariantMap figures);',
+            'suText': 'Q_PROPERTY(QVariantMap suText READ suText)',
+            'setPoints': 'Q_INVOKABLE void setPoints(QVariantList points);',
+        }[escape]
+        source = source.replace('};', added + ' };')
+    assert api_violations(source, path), (
+        'I2 / the planned report-schema successor: the single named model exception refuses second/renamed/foreign '
+        f'properties and every other dictionary, list or JSON crossing; escape={escape}'
+    )
 
 
 def assert_gui_pin(source):

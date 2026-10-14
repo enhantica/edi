@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-14T14:23:44Z
+# measured_utc = 2026-10-14T15:26:43Z
 #
-# Recorded from: canonical completed Python nodes plus direct C++ integer census: tests-seq59-isolated.xml and tests-seq59-native.xml; expected reds remain declared unmeasured
-# Collected tests: 11937; with a reported duration: 6478
+# Recorded from: measured test run (74 node(s) measured once, 10933 banked, 0 stale row(s) dropped)
+# Collected tests: 11960; with a reported duration: 6479
 # Module-scoped fixture costs recorded: 47
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 11937
+# inventory_python = 11960
 # inventory_cpp = 333
-# inventory_measured = 10973
-# inventory_unmeasured = 1297
+# inventory_measured = 10997
+# inventory_unmeasured = 1296
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -4388,18 +4388,35 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_datablock_rename.py::tes
 0.000	tests/integration/py/test_e04_t1_app_contract.py::test_adr_records_the_decision_and_comparison_plan
 0.010	tests/integration/py/test_e04_t1_app_contract.py::test_app_reachability_observer_rejects_missing_group_or_checker[empty-checker]
 0.010	tests/integration/py/test_e04_t1_app_contract.py::test_app_reachability_observer_rejects_missing_group_or_checker[missing-edge]
-0.140	tests/integration/py/test_e04_t1_app_contract.py::test_existing_projects_oracle_covers_the_registry_without_filters
+0.120	tests/integration/py/test_e04_t1_app_contract.py::test_existing_projects_oracle_covers_the_registry_without_filters
 0.040	tests/integration/py/test_e04_t1_app_contract.py::test_frozen_oracle_inputs_are_the_committed_fixture_bytes
 0.000	tests/integration/py/test_e04_t1_app_contract.py::test_gui_pin_rejects_identity_digest_and_declaration_escapes[archive]
 0.000	tests/integration/py/test_e04_t1_app_contract.py::test_gui_pin_rejects_identity_digest_and_declaration_escapes[comment]
 0.000	tests/integration/py/test_e04_t1_app_contract.py::test_gui_pin_rejects_identity_digest_and_declaration_escapes[commit]
 0.000	tests/integration/py/test_e04_t1_app_contract.py::test_gui_pin_rejects_identity_digest_and_declaration_escapes[duplicate]
 0.000	tests/integration/py/test_e04_t1_app_contract.py::test_gui_pin_rejects_identity_digest_and_declaration_escapes[source]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_e04_t1_app_contract.py::test_local_and_ci_gates_reach_app_tests
-UNMEASURED:failed-in-this-run	tests/integration/py/test_e04_t1_app_contract.py::test_one_shared_labelled_regression_baseline_and_pairs
-0.090	tests/integration/py/test_e04_t1_app_contract.py::test_originals_remain_byte_identical
+0.070	tests/integration/py/test_e04_t1_app_contract.py::test_local_and_ci_gates_reach_app_tests
+0.020	tests/integration/py/test_e04_t1_app_contract.py::test_one_shared_labelled_regression_baseline_and_pairs
+0.030	tests/integration/py/test_e04_t1_app_contract.py::test_originals_remain_byte_identical
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_report_model_owner_exception_cannot_widen[alias]
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_report_model_owner_exception_cannot_widen[duplicate]
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_report_model_owner_exception_cannot_widen[figures]
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_report_model_owner_exception_cannot_widen[hash]
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_report_model_owner_exception_cannot_widen[json]
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_report_model_owner_exception_cannot_widen[list]
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_report_model_owner_exception_cannot_widen[method]
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_report_model_owner_exception_cannot_widen[nested]
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_report_model_owner_exception_cannot_widen[other-class]
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_report_model_owner_exception_cannot_widen[other-file]
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_report_model_owner_exception_cannot_widen[renamed]
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_report_model_owner_exception_cannot_widen[savedReports]
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_report_model_owner_exception_cannot_widen[second]
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_report_model_owner_exception_cannot_widen[setPoints]
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_report_model_owner_exception_cannot_widen[signal]
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_report_model_owner_exception_cannot_widen[suText]
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_report_model_owner_exception_is_exactly_one_named_property
 0.010	tests/integration/py/test_e04_t1_app_contract.py::test_shipped_qml_imports_and_base_pin
-0.020	tests/integration/py/test_e04_t1_app_contract.py::test_shipped_view_model_api_is_typed
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e04_t1_app_contract.py::test_shipped_view_model_api_is_typed
 0.000	tests/integration/py/test_e04_t1_app_contract.py::test_typed_api_allows_model_internal_variants
 0.000	tests/integration/py/test_e04_t1_app_contract.py::test_typed_api_escape_rehearsals[Q_INVOKABLE QJsonObject snapshot() const;]
 0.000	tests/integration/py/test_e04_t1_app_contract.py::test_typed_api_escape_rehearsals[Q_PROPERTY(QVariantMap state READ state NOTIFY changed)]
@@ -5445,17 +5462,23 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_source
 0.000	tests/integration/py/test_palette_published_sources.py::test_gradient_endpoints_trim_the_full_published_contrast_range[paulTol]
 0.020	tests/integration/py/test_palette_published_sources.py::test_gradient_endpoints_trim_the_full_published_contrast_range[tableau]
 0.020	tests/integration/py/test_palette_published_sources.py::test_gradient_endpoints_trim_the_full_published_contrast_range[vivid]
-0.350	tests/integration/py/test_palette_published_sources.py::test_oklab_observer_reaches_independent_black_white_and_hue_controls
+0.470	tests/integration/py/test_palette_published_sources.py::test_oklab_observer_reaches_independent_black_white_and_hue_controls
+0.000	tests/integration/py/test_palette_published_sources.py::test_one_sided_quantisation_matches_exhaustive_independent_lattice[Default#03A9F4light]
+0.000	tests/integration/py/test_palette_published_sources.py::test_one_sided_quantisation_matches_exhaustive_independent_lattice[Default#4CAF50light]
+0.000	tests/integration/py/test_palette_published_sources.py::test_one_sided_quantisation_matches_exhaustive_independent_lattice[Default#FFC107light]
+0.000	tests/integration/py/test_palette_published_sources.py::test_one_sided_quantisation_matches_exhaustive_independent_lattice[Okabe-Ito#009E73dark]
+0.000	tests/integration/py/test_palette_published_sources.py::test_one_sided_quantisation_matches_exhaustive_independent_lattice[Tol#CCBB44light]
+0.000	tests/integration/py/test_palette_published_sources.py::test_one_sided_quantisation_matches_exhaustive_independent_lattice[Vivid#4DAF4Alight]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_keep_the_theme_calculated_colour_distance[colourBlindSafe]
 0.000	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_keep_the_theme_calculated_colour_distance[default]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_keep_the_theme_calculated_colour_distance[paulTol]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_keep_the_theme_calculated_colour_distance[tableau]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_keep_the_theme_calculated_colour_distance[vivid]
-0.220	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[colourBlindSafe]
-0.350	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[default]
-0.270	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[paulTol]
-0.390	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[tableau]
-0.340	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[vivid]
+0.270	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[colourBlindSafe]
+0.440	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[default]
+0.360	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[paulTol]
+0.500	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[tableau]
+0.440	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[vivid]
 0.000	tests/integration/py/test_palette_published_sources.py::test_published_curve_observer_reaches_numeric_interpolation_controls[#010100-True]
 0.000	tests/integration/py/test_palette_published_sources.py::test_published_curve_observer_reaches_numeric_interpolation_controls[#808080-True]
 0.000	tests/integration/py/test_palette_published_sources.py::test_published_curve_observer_reaches_numeric_interpolation_controls[#FF0000-False]

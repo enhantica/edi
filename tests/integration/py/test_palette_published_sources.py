@@ -12,10 +12,13 @@ import pytest
 from tests.fixtures.palette_sources.oklab_reference import (
     contrast,
     distance,
+    full_step_lightness_tolerance,
     gamut_hue_chroma_preserved,
     hue_chroma_preserved,
     lightness_quantisation_tolerance,
     linear_rgb,
+    nearest_passing_lightness,
+    nearest_passing_lightness_error,
     oklab,
     polar,
     quantisation_tolerance,
@@ -142,10 +145,10 @@ def test_each_palette_retains_its_cited_published_source_coordinates(scheme):  #
             if (
                 gamut_hue_chroma_preserved(source, actual)
                 and all(math.dist(ideal, oklab(other)) >= 0.08 for other in other_colours)
-                and abs(oklab(actual)[0] - minimum) > lightness_quantisation_tolerance(actual)
+                and not nearest_passing_lightness(source, actual, background, calculated)
             ):
                 mismatches.append((
-                    'smallest Oklab lightness shift',
+                    'nearest passing one-sided 8-bit lightness',
                     source,
                     actual,
                     theme,
@@ -393,4 +396,39 @@ def test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes(scheme
         'A hue too close to calc in either theme goes after every safer hue in the shared '
         f'light/dark set order, without changing its identity; scheme={scheme["id"]}, '
         f'actual places/colours={rows}, nearby in either theme={nearby}'
+    )
+
+
+@pytest.mark.parametrize(
+    'witness',
+    json.loads((ROOT / 'tests/fixtures/palette_sources/quantisation-proof.json').read_text())[
+        'witnesses'
+    ],
+    ids=lambda w: w['scheme'] + w['source'] + w['theme'],
+)
+def test_one_sided_quantisation_matches_exhaustive_independent_lattice(witness):
+    background = '#FFFFFF' if witness['theme'] == 'light' else '#444444'
+    calculated = '#F44336' if witness['theme'] == 'light' else '#EF9A9A'
+    colour, error, half = witness['nearest_passing_within_full_step']
+    assert witness['half_step_passing'] == [], (
+        'The independent exhaustive 8-bit census found no passing half-step colour'
+    )
+    assert error > half and error <= full_step_lightness_tolerance(colour), (
+        'Each independently impossible half-step projection has a passing full-step lattice point'
+    )
+    assert nearest_passing_lightness_error(
+        witness['source'], background, calculated
+    ) == pytest.approx(error, abs=1e-10), (
+        'The bounded nearest-passing observer agrees with the independent exhaustive RGB lattice'
+    )
+    assert nearest_passing_lightness(witness['source'], colour, background, calculated), (
+        'The quantisation correction admits the nearest passing one-sided colour'
+    )
+    assert not nearest_passing_lightness(
+        witness['source'], witness['source'], background, calculated
+    ), 'The wrong side of each strict projection boundary stays refused'
+    ideal = smallest_adaptation(witness['source'], background, calculated)[0]
+    bad = '#000000' if ideal < oklab(witness['source'])[0] else '#FFFFFF'
+    assert not nearest_passing_lightness(witness['source'], bad, background, calculated), (
+        'A passing-side overshoot beyond one full quantisation step stays refused'
     )
