@@ -344,6 +344,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     QString apply_setting(const edi::Edit& change) override;
     // A report setting's edit (ADR-0035 §7): the settings as they were kept for Undo.
     QString apply_report_setting(const edi::Edit& change);
+    // Writes report settings through the preview's settings door and publishes what they change.
+    QString write_report_settings(const edi::Edit& change);
     // The scan's results (null outside a scan project).
     const ScanSession* scanSession() const { return scan_session_; }
 

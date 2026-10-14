@@ -332,8 +332,8 @@ QString ScanSession::writeRun(const edi::Project& project, const Run& run) {
 }
 
 std::string ScanSession::templateIdentity(const edi::Project& project) {
-    // The name, title and description (project.edi) and the fitting mode are not the template: changing them leaves
-    // the results current. Neither are the fits' parameter correlations, a scan's own included (the
+    // The name, title and description (project.edi), the fitting mode and the report's settings (reports/report.edi
+    // and analysis.edi's two chart items) are not the template: changing them leaves the results current. Neither are the fits' parameter correlations, a scan's own included (the
     // `_fit_parameter_correlation` loop, its last category). The minimizer's settings are part of it: rows fitted under
     // another bound or descent are another generation.
     QCryptographicHash hash(QCryptographicHash::Sha256);
@@ -342,7 +342,7 @@ std::string ScanSession::templateIdentity(const edi::Project& project) {
         hash.addData(QByteArrayView("\n", 1));
     };
     for (const auto& [path, body] : edi::project_edi_files(project)) {
-        if (path == "project.edi") {
+        if (path == "project.edi" || path == "reports/report.edi") {
             continue;
         }
         hash.addData(QByteArrayView(path.data(), static_cast<qsizetype>(path.size())));
@@ -357,6 +357,11 @@ std::string ScanSession::templateIdentity(const edi::Project& project) {
             start = end + 1;
             if (line.starts_with("_fit_parameter_correlation.")) {
                 correlations = true;
+                pending.clear();
+                continue;
+            }
+            // A chart item takes the blank lines before it along, so a project hashes as it did without one.
+            if (line.starts_with("_correlation_chart.") || line.starts_with("_pattern_chart.")) {
                 pending.clear();
                 continue;
             }
