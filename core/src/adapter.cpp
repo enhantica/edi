@@ -2113,6 +2113,27 @@ bool save_report_settings(const Project& model, const std::string& directory) {
 #endif
 }
 
+std::string report_settings_text(const Project& model) {
+#if __has_include("crysta/report_settings.hpp")  // drop the guard when the pin moves
+    const crysta::Project carrier(std::vector<crysta::Structure>{}, std::vector<crysta::BraggPdExperiment>{},
+                                  [&model](crysta::Project& project) {
+                                      copy_report_settings(model, project);
+                                      // The defaults effective_report_options takes for a setting left unstated.
+                                      project.report_html = std::optional<bool>(model.report_html.value_or(true));
+                                      project.report_pdf = std::optional<bool>(model.report_pdf.value_or(false));
+                                      project.report_cif = std::optional<bool>(model.report_cif.value_or(false));
+                                      project.report_html_offline =
+                                          std::optional<bool>(model.report_html_offline.value_or(false));
+                                      project.report_excluded =
+                                          std::optional<std::string>(model.report_excluded.value_or("data"));
+                                  });
+    return crysta::report_settings_text(carrier);
+#else
+    (void)model;
+    throw std::invalid_argument("showing the report settings needs a newer crysta");
+#endif
+}
+
 void save_project_via_crysta(const Project& model, const std::string& directory) {
     // Edi does not write — it asks crysta to. Build the full engine project from the model
     // through the one conversion choke point (completed cell, start-carrying parameters),

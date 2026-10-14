@@ -173,7 +173,7 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     analysis_ = new AnalysisViewModel(*project_, *this, saved, this);
     (void)model;
     metadata_text_ = new BlockText([this] { return savedFile("project.edi"); }, this);
-    report_text_ = new BlockText([this] { return savedFile("reports/report.edi"); }, this);
+    report_text_ = new BlockText([this] { return edi::report_settings_text(*project_); }, this);
     project_text_ = new BlockText(
         [this] {
             std::string text;

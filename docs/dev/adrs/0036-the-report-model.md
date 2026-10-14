@@ -93,9 +93,11 @@ are notebook calls, not report sections; the owner asked for all three in edi's 
    while the file matches what Save report would write now, red when it does not or is gone, "not saved yet" while no
    row has that name (a renamed project's older reports keep their rows and files), dimmed while its box is unticked.
    After a project save the open project takes the values its files hold, as a reopen reads them (rounded by the IUCr
-   rule), and is calculated once from them, so a report saved then is still current when the project is reopened. In the
-   browser Save report also downloads the files, one file as itself and several as `<name>-reports.zip`, and they stay
-   in the in-browser `reports/` until a reload.
+   rule), and is calculated once from them, so a report saved then is still current when the project is reopened. The
+   Report page's Text tab shows `reports/report.edi` with every setting the project leaves at its default written out
+   with that value (`report_settings_text`), so it shows the report settings before any is changed, as the file is left
+   out until one is. In the browser Save report also downloads the files, one file as itself and several as
+   `<name>-reports.zip`, and they stay in the in-browser `reports/` until a reload.
 
 ## Consequences
 
