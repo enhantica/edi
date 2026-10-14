@@ -651,6 +651,17 @@ std::string report_to_json(const ReportModel& model) {
                               {"available", matrix.available},
                               {"empty_text", matrix.empty_text}};
     }
+    Array parameters;
+    for (const ReportParameter& parameter : model.parameters) {
+        parameters.emplace_back(Object{{"unique_name", parameter.unique_name},
+                                       {"label", parameter.label},
+                                       {"value", parameter.value},
+                                       {"su", parameter.su ? Value(*parameter.su) : Value(nullptr)},
+                                       {"text", parameter.text},
+                                       {"units", parameter.units},
+                                       {"start", parameter.start ? Value(*parameter.start) : Value(nullptr)},
+                                       {"free", parameter.free}});
+    }
     Value evolution;
     if (model.evolution.has_value()) {
         Array series;
@@ -700,6 +711,7 @@ std::string report_to_json(const ReportModel& model) {
                           {"structure_ids", strings(model.structure_ids)},
                           {"experiment_ids", strings(model.experiment_ids)},
                           {"analysis_categories", categories(model.analysis)},
+                          {"parameters", std::move(parameters)},
                           {"fitted", model.fitted},
                           {"correlations", std::move(correlations)},
                           {"evolution", std::move(evolution)},
@@ -737,6 +749,15 @@ ReportModel report_from_json(const std::string& text) {
     model.structure_ids = strings_of(document.at("structure_ids"), "structure_ids");
     model.experiment_ids = strings_of(document.at("experiment_ids"), "experiment_ids");
     model.analysis = categories_of(document.at("analysis_categories"), "analysis_categories");
+    for (const Value& item : document.at("parameters").array("parameters")) {
+        const auto optional_number = [](const Value& value) {
+            return value.is_null() ? std::optional<double>() : std::optional<double>(value.number("number"));
+        };
+        model.parameters.push_back({item.at("unique_name").string("unique_name"), item.at("label").string("label"),
+                                    item.at("value").number("value"), optional_number(item.at("su")),
+                                    item.at("text").string("text"), item.at("units").string("units"),
+                                    optional_number(item.at("start")), item.at("free").boolean("free")});
+    }
     model.fitted = document.at("fitted").boolean("fitted");
     const Value& evolution = document.at("evolution");
     if (!evolution.is_null()) {

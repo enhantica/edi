@@ -109,6 +109,20 @@ struct ReportCorrelations {
     std::string empty_text; ///< why nothing is shown; empty when the matrix is
 };
 
+/// A parameter of the project as the report's list holds it: its unique name, its label, its value and s.u. as stored
+/// (a non-finite or absent s.u. is null), its text in the project's s.u. rule, its units, the value its last fit
+/// started from, and whether it is free.
+struct ReportParameter {
+    std::string unique_name;
+    std::string label;
+    double value = 0.0;
+    std::optional<double> su;
+    std::string text;
+    std::string units;
+    std::optional<double> start;
+    bool free = false;
+};
+
 /// One parameter's evolution over a scan (evolution_series): its points, each with the value's text in the project's
 /// s.u. rule, as the Evolution tab draws them.
 struct ReportEvolutionPoint {
@@ -172,6 +186,7 @@ struct ReportModel {
     // Analysis: software, minimizer, fitting mode and fit result (the JSON's `analysis_categories`); the correlation
     // chart and, for a scan, the parameters' evolution.
     std::vector<ReportCategory> analysis;
+    std::vector<ReportParameter> parameters;
     bool fitted = false;
     std::optional<ReportCorrelations> correlations;
     std::optional<std::vector<ReportEvolution>> evolution;

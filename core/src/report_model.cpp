@@ -518,6 +518,15 @@ ReportTable data_table(const BraggPdExperiment& experiment) {
 
 // An experiment's categories in its page's order, filled as the page shows them, and its calculated reflections when
 // they describe the model; a loop without rows is left out.
+// The experiment's own file in the project, as a save names it; its name alone when a save would refuse it.
+std::string own_file(const BraggPdExperiment& experiment) {
+    try {
+        return std::filesystem::path(entity_path("", "experiment", experiment.name.value())).generic_string();
+    } catch (const std::exception&) {
+        return experiment.name.value();
+    }
+}
+
 ReportExperiment experiment_of(const BraggPdExperiment& experiment, const std::string& rule) {
     auto& walked = const_cast<BraggPdExperiment&>(experiment);  // NOLINT(cppcoreguidelines-pro-type-const-cast)
     ReportExperiment out;
@@ -536,12 +545,7 @@ ReportExperiment experiment_of(const BraggPdExperiment& experiment, const std::s
             const auto [name, units] = axis_of(data);
             // Where the observations are: their data file, or the experiment's own file that holds them.
             if (listed.id == "data") {
-                next.rows.push_back({"File",
-                                     experiment.data_file.empty()
-                                         ? std::filesystem::path(entity_path("", "experiment", experiment.name.value()))
-                                               .generic_string()
-                                         : experiment.data_file,
-                                     ""});
+                next.rows.push_back({"File", experiment.data_file.empty() ? own_file(experiment) : experiment.data_file, ""});
             }
             next.rows.push_back({"Points", std::to_string(axis.size()), ""});
             if (!axis.empty()) {
@@ -823,6 +827,13 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
     model.sections = {ReportSection::Summary, ReportSection::Analysis, ReportSection::Structures,
                       ReportSection::Experiments};
     model.analysis = analysis_of(project, scan, model.fitted);
+    for (const NamedParameter& named : named_parameters(project)) {
+        const Parameter& parameter = *named.parameter;
+        const std::optional<double>& su = parameter.uncertainty.get();
+        model.parameters.push_back({named.unique_name, label_of(parameter, named.unique_name), parameter.value.get(),
+                                    su && std::isfinite(*su) ? su : std::nullopt, value_of(parameter, rule).text,
+                                    units_of(parameter), parameter.start_value.get(), parameter.free.get()});
+    }
     for (const auto& structure : project.structures) {
         ReportStructure built = structure_of(*structure, rule);
         if (charts) {
