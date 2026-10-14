@@ -10,6 +10,9 @@
 #include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QFile>
+#include <QFileInfo>
+#include <QSettings>
+#include <QUrl>
 #include <algorithm>
 #include <memory>
 #include <cctype>
@@ -18,6 +21,7 @@
 #include <filesystem>
 
 #include "background.hpp"
+#include "engine_setup.hpp"
 #include "edi/edits.hpp"
 #include "edi/io.hpp"
 #include "edi/presentation.hpp"
@@ -293,11 +297,34 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     if (scan_session_ != nullptr) {
         showScanResults();
     }
-    // A scan project opens on its template dataset, else on its first, read before the project is shown.
+    // ADR-0031 §1: the project opens on the structure and experiment last selected in it (the app's settings, keyed
+    // by its folder); a scan on the dataset last selected, found by its file name, else on its template dataset.
+    // Restoring never changes the template.
+    const QStringList selection = storedSelection();
+    for (int i = 0; i < structure_models_.size() && !selection.value(0).isEmpty(); ++i) {
+        if (structure_models_[i]->name() == selection.value(0)) {
+            setCurrentStructureIndex(i);
+        }
+    }
     if (scan_) {
         scan_template_ = *project_;
-        viewDatasetNow(std::max(0, templateIndex()), true);
+        int shown = std::max(0, templateIndex());
+        const std::vector<std::string>& files = scan_session_ ? scan_session_->datasets().files : std::vector<std::string>();
+        for (std::size_t i = 0; i < files.size() && !selection.value(2).isEmpty(); ++i) {
+            if (QString::fromStdString(files[i]) == selection.value(2)) {
+                shown = static_cast<int>(i);
+            }
+        }
+        viewDatasetNow(shown, true);
+    } else {
+        for (int i = 0; i < experiment_models_.size() && !selection.value(1).isEmpty(); ++i) {
+            if (experiment_models_[i]->name() == selection.value(1)) {
+                setCurrentExperimentIndex(i);
+            }
+        }
     }
+    selection_restored_ = true;
+    storeSelection();
     preview_->recalculate();
     publishCalculating();
 }
@@ -447,7 +474,40 @@ void ProjectViewModel::setCurrentExperimentIndex(int index) {
     }
 }
 
+QStringList ProjectViewModel::storedSelection() const {
+    if (project_->path.empty() || settings_file_path().isEmpty()) {
+        return {};
+    }
+    QSettings store(settings_file_path(), QSettings::IniFormat);
+    store.beginGroup(QStringLiteral("Selections"));
+    return store.value(selectionKey()).toStringList();
+}
+
+void ProjectViewModel::storeSelection() const {
+    if (!selection_restored_ || project_->path.empty() || settings_file_path().isEmpty()) {
+        return;
+    }
+    const StructureViewModel* structure = currentStructure();
+    const ExperimentViewModel* experiment = scan_ ? nullptr : currentExperiment();
+    QString dataset;
+    if (scan_ && scan_session_ != nullptr && current_dataset_ >= 0 &&
+        current_dataset_ < static_cast<int>(scan_session_->datasets().files.size())) {
+        dataset = QString::fromStdString(scan_session_->datasets().files[static_cast<std::size_t>(current_dataset_)]);
+    }
+    QSettings store(settings_file_path(), QSettings::IniFormat);
+    store.beginGroup(QStringLiteral("Selections"));
+    store.setValue(selectionKey(), QStringList{structure ? structure->name() : QString(),
+                                               experiment ? experiment->name() : QString(), dataset});
+}
+
+QString ProjectViewModel::selectionKey() const {
+    // The project's folder, percent-encoded so its slashes do not make groups of the ini file.
+    return QString::fromLatin1(
+        QUrl::toPercentEncoding(QFileInfo(QString::fromStdString(project_->path)).absoluteFilePath()));
+}
+
 void ProjectViewModel::publishCurrent() {
+    storeSelection();
     if (current_structure_ != published_structure_index_) {
         published_structure_index_ = current_structure_;
         emit currentStructureIndexChanged();

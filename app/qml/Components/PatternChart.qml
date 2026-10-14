@@ -30,6 +30,11 @@ Item {
     // Set: the x axis is this project's `_pattern_chart.x_axis` (the Analysis page's chart, which the report follows),
     // an undoable edit saved with the project; else the chart's own choice.
     property ProjectViewModel axisProject: null
+    // The page whose settings keep the chart's view options (edi ADR-0031 §2): "analysis" (the y scale) or
+    // "experiment" (the y scale and the x axis); none for a report figure, whose options are its own.
+    property string settingsPage: ""
+    // The y scale's tokens as the settings keep them, in PatternChartController.YScale's order.
+    readonly property var scaleTokens: ["linear", "sqrt", "log"]
     // The chart is on the page and the tab the window shows: its page binds it (the owner's one-redraw
     // rule). A chart not shown keeps its last drawing and refreshes once, with the latest result, when it
     // is shown again; a chart no page hides is shown.
@@ -309,8 +314,9 @@ Item {
         active: chart.shown && chart.visible && chart.Window.window !== null
         experiment: chart.experiment
         report: chart.report
-        // The Analysis chart follows the project's x axis.
-        dSpacing: chart.axisProject ? chart.axisProject.patternDSpacing : false
+        // The Analysis chart follows the project's x axis, the Experiment chart its page's setting.
+        dSpacing: chart.axisProject ? chart.axisProject.patternDSpacing : chart.settingsPage === "experiment" ? Preferences.experimentXAxis === "d_spacing" : false
+        yScale: chart.settingsPage === "analysis" ? Math.max(0, chart.scaleTokens.indexOf(Preferences.analysisYScale)) : chart.settingsPage === "experiment" ? Math.max(0, chart.scaleTokens.indexOf(Preferences.experimentYScale)) : PatternChartController.Linear
         reportExperiment: chart.reportExperiment
         dark: chart.colors.isDarkPalette
         plotWidth: mainView.plotArea.width
@@ -426,7 +432,14 @@ Item {
                 // The closed box names its axis (owner, 2026-10-05).
                 closedTexts: [qsTr("y: linear"), qsTr("y: square root"), qsTr("y: log")]
                 currentIndex: controller.yScale
-                onActivated: index => controller.yScale = index
+                onActivated: index => {
+                    if (chart.settingsPage === "analysis")
+                        Preferences.analysisYScale = chart.scaleTokens[index];
+                    else if (chart.settingsPage === "experiment")
+                        Preferences.experimentYScale = chart.scaleTokens[index];
+                    else
+                        controller.yScale = index;
+                }
             }
             ToolbarComboBox {
                 objectName: "chart.toolbar.xaxis"
@@ -438,6 +451,8 @@ Item {
                 onActivated: index => {
                     if (chart.axisProject)
                         chart.axisProject.patternDSpacing = index === 1;
+                    else if (chart.settingsPage === "experiment")
+                        Preferences.experimentXAxis = index === 1 ? "d_spacing" : "native";
                     else
                         controller.dSpacing = index === 1;
                 }

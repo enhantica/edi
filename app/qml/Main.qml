@@ -4,6 +4,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Dialogs
+import QtCore
 
 import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Elements as EaElements
@@ -356,9 +357,51 @@ EaComponents.ApplicationWindow {
         }
     }
 
+    // ADR-0031: the window's size and position, in logical pixels, in the store's Window group. Restored at start, after
+    // the base's own; a position on no screen now comes back onto the primary screen's available area. The browser's
+    // page fills its window and keeps none.
+    Settings {
+        id: windowSettings
+        location: EaGlobals.Vars.settingsFile
+        category: "Window"
+        property int x: 0
+        property int y: 0
+        property int width: 0
+        property int height: 0
+    }
+    // Stored only once restored, so the window's first size at start never replaces the kept one.
+    property bool geometryRestored: false
+    function storeGeometry() {
+        if (!window.geometryRestored || WebFiles.available || window.visibility === Window.Maximized || window.visibility === Window.FullScreen)
+            return;
+        windowSettings.x = window.x;
+        windowSettings.y = window.y;
+        windowSettings.width = window.width;
+        windowSettings.height = window.height;
+    }
+    function restoreGeometry() {
+        if (WebFiles.available || windowSettings.width <= 0 || windowSettings.height <= 0) {
+            window.geometryRestored = true;
+            window.storeGeometry();
+            return;
+        }
+        window.width = windowSettings.width;
+        window.height = windowSettings.height;
+        const position = ApplicationInfo.onScreenPosition(windowSettings.x, windowSettings.y, window.width, window.height);
+        window.x = position.x;
+        window.y = position.y;
+        window.geometryRestored = true;
+        window.storeGeometry();
+    }
+    onXChanged: storeGeometry()
+    onYChanged: storeGeometry()
+    onWidthChanged: storeGeometry()
+    onHeightChanged: storeGeometry()
+
     // edi's preferences go to the base once everything, the base's hidden dialog and its settings
     // included, is complete (Preferences.apply).
     Component.onCompleted: Qt.callLater(() => {
+        restoreGeometry();
         Preferences.apply();
         RecentProjects.refresh();
     })
