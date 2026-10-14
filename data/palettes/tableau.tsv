@@ -2,10 +2,10 @@ role	index	light	dark
 pattern	0	#1F77B4	#4295D4
 pattern	1	#2CA02C	#31A430
 pattern	2	#9467BD	#A97CD3
-pattern	3	#8C564B	#BA8174
+pattern	3	#8C564B	#BA8175
 pattern	4	#DB6FBA	#E377C2
-pattern	5	#7F7F7F	#9B9B9A
-pattern	6	#9A9A00	#BCBD22
+pattern	5	#7F7F7F	#9B9B9B
+pattern	6	#999A02	#BCBD22
 pattern	7	#00A4B4	#17BECF
 pattern	8	#C96200	#FF7F0E
 pattern	9	#CD1A20	#FD524A
