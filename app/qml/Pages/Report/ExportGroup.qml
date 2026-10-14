@@ -49,11 +49,15 @@ EaElements.GroupBox {
     // The format boxes share one width, so the path fields line up.
     readonly property real boxWidth: Math.max(htmlBox.implicitWidth, pdfBox.implicitWidth, cifBox.implicitWidth)
 
-    // A format's saved report, its row of savedReports, or null before the first save.
+    // The row of savedReports for the file Save report would write in a format now, by its name, or null when that
+    // file has not been saved (before the first save, or after the project is renamed). Rows of other names keep
+    // their files.
     function savedRow(format) {
-        const rows = group.report ? group.report.savedReports : [];
-        for (const row of rows) {
-            if (row.format === format)
+        if (!group.report)
+            return null;
+        const name = group.report.fileStem + "." + format;
+        for (const row of group.report.savedReports) {
+            if (row.name === name && row.format === format)
                 return row;
         }
         return null;

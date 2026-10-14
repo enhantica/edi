@@ -64,25 +64,27 @@ are notebook calls, not report sections; the owner asked for all three in edi's 
    figures as images of copies of the preview's figures in the light colours, whatever the app's theme, as a PDF is
    for print, grabbed at twice their size. The CLI and Python do not write it, as edi's core has no Qt.
 
-7. **The report's settings are project data, kept with the page that sets them.** `reports/report.edi` holds what
-   Save report writes: the formats (`_report.html`, `pdf`, `cif`; absent, the HTML only), whether the HTML embeds its
+7. **The report's settings are project data, kept with the page that sets them.** `reports/report.edi` holds what Save
+   report writes: the formats (`_report.html`, `pdf`, `cif`; absent, the HTML only), whether the HTML embeds its
    libraries (`html_offline`; absent, online) and the groups the report leaves out (`excluded`; absent, the data are
    left out, as they are usually long; an empty list includes everything), with a `_report_file` row for each report
    Save report wrote: its format, its name, when it was saved, the project's last-modified time and the digest of what
    was written. `analysis/analysis.edi` holds the correlation threshold (`_correlation_chart.threshold`; absent,
    diffraction-lib's automatic rule) and the charts' x axis (`_pattern_chart.x_axis`, `native` or `d_spacing`). crysta
    checks every value, reads and writes both files; a project save writes `reports/report.edi` only when its text
-   changes and writes no report. `effective_report_options(project, overrides)` makes a report's options from them,
-   each replaced by a given override for one run, writing nothing. In the app the Report page's Contents boxes and
-   Embed checkbox, the Analysis page's correlation level and its chart's x axis write them as undoable edits; a count
-   sets the lowest threshold that keeps at most that many parameters, a tie kept whole, and only the threshold is
-   saved. The Preferences give a new project's `html_offline` only. A `_report` line in `project.edi`,
-   diffraction-lib's, is not read. The Export group shows one row per format, its box and the saved report's path
-   (`reports/<name>.<ext>`, read-only): normal while the file matches what Save report would write now, red when it
-   does not or is gone, dimmed while its box is unticked. After a project save the open project takes the values its
-   files hold, as a reopen reads them (rounded by the IUCr rule), and is calculated once from them, so a report saved
-   then is still current when the project is reopened. In the browser Save report also downloads the files, one
-   file as itself and several as `<name>-reports.zip`, and they stay in the in-browser `reports/` until a reload.
+   changes and writes no report. `effective_report_options(project, overrides)` makes a report's options from them, each
+   replaced by a given override for one run, writing nothing. In the app the Report page's Contents boxes and Embed
+   checkbox, the Analysis page's correlation level and its chart's x axis write them as undoable edits; a count sets the
+   lowest threshold that keeps at most that many parameters, a tie kept whole, and only the threshold is saved. The
+   Preferences give a new project's `html_offline` only. A `_report` line in `project.edi`, diffraction-lib's, is not
+   read. The Export group shows one row per format, its box and the path of the file Save report would write now
+   (`reports/<name>.<ext>`, read-only; the file name alone in the browser), found by that name among the rows: normal
+   while the file matches what Save report would write now, red when it does not or is gone, "not saved yet" while no
+   row has that name (a renamed project's older reports keep their rows and files), dimmed while its box is unticked.
+   After a project save the open project takes the values its files hold, as a reopen reads them (rounded by the IUCr
+   rule), and is calculated once from them, so a report saved then is still current when the project is reopened. In the
+   browser Save report also downloads the files, one file as itself and several as `<name>-reports.zip`, and they stay
+   in the in-browser `reports/` until a reload.
 
 ## Consequences
 
