@@ -5,6 +5,7 @@ import QtCore
 import QtTest
 import edi.app
 import ReportAcceptance 1.0
+import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Globals as Globals
 import "RenderedTable.js" as Render
 import EdiAcceptance 1.0
@@ -13,6 +14,9 @@ Item {
     id: surface
     width: 1300
     height: 900
+    FontMetrics {
+        id: fontMeasure
+    }
     Component {
         id: mainFactory
         Main {}
@@ -50,8 +54,107 @@ Item {
             surface.Window.window.height = surface.height;
         }
         function cleanup() {
+            SettingsProof.endAnimationClock();
             Preferences.dialogShown = false;
             Session.closeProject();
+        }
+        function test_preferences_share_columns_without_truncating_any_item_data() {
+            return [
+                {
+                    tag: "light",
+                    dark: false
+                },
+                {
+                    tag: "dark",
+                    dark: true
+                }
+            ];
+        }
+        function test_preferences_share_columns_without_truncating_any_item(data) {
+            const oldTheme = EaStyle.Colors.theme;
+            EaStyle.Colors.theme = data.dark ? EaStyle.Colors.DarkTheme : EaStyle.Colors.LightTheme;
+            const dialog = createTemporaryObject(dialogFactory, surface);
+            verify(dialog !== null, "The layout gate creates the actual Preferences dialog");
+            Preferences.dialogShown = true;
+            tryCompare(dialog, "opened", true, 2000, "The real Preferences dialog opens before measuring its tabs");
+            verify(SettingsProof.beginAnimationClock(), "The public Qt animation clock settles each actual Preferences slide before geometric measurements");
+            const tabs = ["Prompts", "Updates", "Appearance", "Projects", "Experimental", "Develop"];
+            const labels = [["Enable tool tips:", "Enable user guides:"], ["Check on application start:"], ["Theme:", "Colour scheme:", "Sidebar:", "Auto collapse:"], ["New projects' uncertainties:", "New reports' libraries:"], ["Zoom:", "Language:"], ["Logging to:", "Logging level:", "Engine threads:", "Diagnostics:", "Settings:"]];
+            const failures = [], labelWidths = [], boxWidths = [], boxXs = [], labelXs = [];
+            function inkTop(item) {
+                const at = item.mapToItem(dialog.contentItem, 0, 0);
+                const top = item.topPadding || 0, bottom = item.bottomPadding || 0;
+                const ink = typeof item.paintedHeight === "number" ? item.paintedHeight : item.height - top - bottom;
+                const extra = Math.max(0, item.height - top - bottom - ink);
+                return at.y + top + (item.verticalAlignment === Text.AlignVCenter ? extra / 2 : item.verticalAlignment === Text.AlignBottom ? extra : 0);
+            }
+            for (let t = 0; t < tabs.length; ++t) {
+                const buttons = Render.descendants(dialog.contentItem).filter(item => item.text === tabs[t] && typeof item.checked === "boolean" && typeof item.clicked === "function");
+                compare(buttons.length, 1, "The actual Preferences tab button is found uniquely by its visible title " + tabs[t]);
+                mouseClick(buttons[0], buttons[0].width / 2, buttons[0].height / 2);
+                tryCompare(buttons[0], "checked", true, 2000, "Pointer input opens the Preferences " + tabs[t] + " tab");
+                wait(0);
+                verify(SettingsProof.stepAnimationClock(2000), "The actual Preferences tab slide completes on the controlled Qt clock");
+                wait(0);
+                verify(SettingsProof.stepAnimationClock(2000), "The public Qt clock also settles slides queued after the click event");
+                wait(0);
+                verify(waitForPolish(dialog.contentItem), "The settled Preferences tab geometry is polished before observing widths and text tops");
+                function inside(item) {
+                    const at = item.mapToItem(dialog.contentItem, 0, 0);
+                    return item.visible && at.x >= 0 && at.y >= 0 && at.x + item.width <= dialog.contentItem.width + 0.5 && at.y + item.height <= dialog.contentItem.height + 0.5;
+                }
+                tryVerify(() => labels[t].every(text => Render.texts(dialog.contentItem).some(item => item.text === text && inside(item))), 2500, "Every declared row of " + tabs[t] + " finishes sliding wholly into the actual popup; actual " + JSON.stringify(Render.texts(dialog.contentItem).filter(item => labels[t].includes(item.text)).map(item => ({
+                            text: item.text,
+                            visible: item.visible,
+                            point: item.mapToItem(dialog.contentItem, 0, 0),
+                            width: item.width,
+                            height: item.height,
+                            popup: [dialog.contentItem.width, dialog.contentItem.height]
+                        }))));
+                const all = Render.descendants(dialog.contentItem).filter(inside);
+                const combos = all.filter(item => typeof item.textAt === "function" && item.popup && typeof item.count === "number");
+                for (const combo of combos) {
+                    const textItem = combo.contentItemLabel || combo.contentItem;
+                    fontMeasure.font = textItem.font;
+                    let needed = 0;
+                    for (let i = 0; i < combo.count; ++i)
+                        needed = Math.max(needed, fontMeasure.advanceWidth(combo.textAt(i)));
+                    const available = textItem.width - (textItem.leftPadding || 0) - (textItem.rightPadding || 0);
+                    if (available + 0.5 < needed)
+                        failures.push(tabs[t] + " " + combo.objectName + " longest item needs " + needed + " text pixels, has " + available + "; control=" + combo.width + "; arrow=" + combo.indicator.width);
+                    boxWidths.push(combo.width);
+                    boxXs.push(combo.mapToItem(dialog.contentItem, 0, 0).x);
+                }
+                const sideButtons = all.filter(item => typeof item.clicked === "function" && ["Check now", "Show", "Open folder", "Reset to defaults"].includes(item.text));
+                for (const button of sideButtons)
+                    boxWidths.push(button.width);
+                for (const title of labels[t]) {
+                    const label = Render.texts(dialog.contentItem).find(item => item.text === title && inside(item));
+                    labelWidths.push(label.width);
+                    labelXs.push(label.mapToItem(dialog.contentItem, 0, 0).x);
+                    let parent = label.parent;
+                    const siblings = parent.children.filter(item => item !== label && item.mapToItem(parent, 0, 0).x >= label.x + label.width - 0.5);
+                    const control = siblings.sort((a, b) => Math.abs(a.y - label.y) - Math.abs(b.y - label.y))[0];
+                    if (!control) {
+                        failures.push(tabs[t] + " has no right-hand control for " + title);
+                        continue;
+                    }
+                    const first = control.contentItemLabel || control.contentItem || control.indicator || Render.texts(control)[0] || control;
+                    if (Math.abs(inkTop(label) - inkTop(first)) > 1)
+                        failures.push(tabs[t] + " " + title + " text top=" + inkTop(label) + "; control first line=" + inkTop(first));
+                }
+            }
+            function same(values, name) {
+                if (values.length === 0 || Math.max(...values) - Math.min(...values) > 1)
+                    failures.push(name + " actual=" + JSON.stringify(values));
+            }
+            same(labelWidths, "One label-column width across every tab");
+            same(boxWidths, "Every combo box and row button shares one control width");
+            same(boxXs, "The control column starts at the same place on every tab");
+            same(labelXs, "The label column starts at the same place on every tab");
+            SettingsProof.endAnimationClock();
+            EaStyle.Colors.theme = oldTheme;
+            compare(failures.length, 0, "Preferences keeps one label/control layout across all tabs, displays every longest item plus its arrow, and top-aligns labels with the control first line; actual " + failures.join("; "));
         }
         function test_store_uses_the_named_ini_inside_an_isolated_root() {
             compare(SettingsProof.fileName(location), "EasyDiffraction.ini", "The one desktop app store has the declared application name and INI format");
@@ -190,7 +293,8 @@ Item {
             tryVerify(() => SettingsProof.value(location, "Analysis", "scanPatternUpdates") === 0, 2000, "Preferences.scanPatternUpdates=0 reads zero at QSettings Analysis/scanPatternUpdates in " + SettingsProof.localPath(location) + "; initial read " + JSON.stringify(SettingsProof.settingFacts(location, "Analysis", "scanPatternUpdates")));
             compare(Session.project.analysis.text.text, original, "Changing page settings leaves the analysis model text unchanged");
             compare(Session.project.modified, modified, "Changing y scale and scan redraw policy never modifies the project");
-            const restored = SettingsProof.restart('import QtQuick; import QtCore; import EasyApplication.Gui.Globals as Globals; QtObject { property Settings settings: Settings { location: Globals.Vars.settingsFile; category: "Analysis"; property string yScale: "linear" }; property string axis: settings.yScale }');
+            const restored = SettingsProof.restart('import QtQuick; import QtCore; import EasyApplication.Gui.Style as EaStyle
+import EasyApplication.Gui.Globals as Globals; QtObject { property Settings settings: Settings { location: Globals.Vars.settingsFile; category: "Analysis"; property string yScale: "linear" }; property string axis: settings.yScale }');
             verify(!restored.error, "A fresh configured engine reads the saved page group");
             compare(restored.axis, "log", "A fresh engine reads QSettings Analysis/yScale after selecting settings.chart.yScale index 2; actual token " + restored.axis);
         }

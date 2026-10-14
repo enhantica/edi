@@ -123,6 +123,18 @@ public:
         if (json.isNull()) return {{"error", QString::fromUtf8(process.readAllStandardError())}};
         return json.toVariant().toMap();
     }
+    Q_INVOKABLE QVariantMap htmlEvolutionFacts(const QUrl& location) const {
+        QDir root(QFileInfo(QString::fromUtf8(__FILE__)).absolutePath());
+        root.cd("../../..");
+        const auto python = QStandardPaths::findExecutable("python");
+        if (python.isEmpty()) return {{"error", "Browser observer requires the runner's Python"}};
+        QProcess process;
+        process.start(python, {root.filePath("tests/fixtures/report_evolution/observe_browser.py"), location.toLocalFile()});
+        if (!process.waitForFinished(20000)) { process.kill(); return {{"error", "Actual HTML browser did not finish"}}; }
+        const auto json = QJsonDocument::fromJson(process.readAllStandardOutput());
+        if (json.isNull()) return {{"error", QString::fromUtf8(process.readAllStandardError())}};
+        return json.toVariant().toMap();
+    }
     Q_INVOKABLE QVariantMap pdfWitness() {
         auto directory = std::make_unique<QTemporaryDir>(QDir::tempPath() + "/edi-pdf-proof-XXXXXX");
         if (!directory->isValid()) return {{"error", "PDF witness has no temporary directory"}};

@@ -74,6 +74,207 @@ Rectangle {
         function reportName(extension) {
             return "reports/" + Session.project.name + "." + extension;
         }
+        function evolutionWitness(included) {
+            prepare(undefined, "tests/fixtures/report_evolution/project");
+            const reference = JSON.parse(SettingsProof.repoText("tests/fixtures/report_evolution/reference.json"));
+            const model = Session.project.evolution.parameters;
+            const order = [], titles = [];
+            compare(model.count, reference.names.length, "The scan's actual Evolution tab lists all six independently declared free parameters");
+            for (let i = 0; i < model.count; ++i) {
+                order.push(model.text(i, "name"));
+                Session.project.evolution.currentParameter = i;
+                titles.push(Session.project.evolution.yTitle);
+            }
+            compare(JSON.stringify(order), JSON.stringify(reference.names), "The prior Evolution tab's parameter order matches the independent scan ledger");
+            for (const group of ["charts", "correlations", "reflections", "data"])
+                Session.project.report.setIncluded(group, false);
+            Session.project.report.setIncluded("evolution", included);
+            const preview = findChild(page, "report.preview");
+            verify(preview !== null && waitForPolish(preview), "The report evolution gate reaches the actual native preview");
+            return {
+                reference: reference,
+                order: order,
+                titles: titles,
+                preview: preview
+            };
+        }
+        function test_preview_shows_every_evolution_chart_in_order_data() {
+            return [
+                {
+                    tag: "wide",
+                    included: true,
+                    narrow: false
+                },
+                {
+                    tag: "narrow",
+                    included: true,
+                    narrow: true
+                },
+                {
+                    tag: "excluded",
+                    included: false,
+                    narrow: false
+                }
+            ];
+        }
+        function test_preview_shows_every_evolution_chart_in_order(data) {
+            const witness = evolutionWitness(data.included);
+            if (data.narrow) {
+                page.width = 650;
+                verify(waitForPolish(page), "The narrow preview lays out its actual text column before checking one chart per row");
+            }
+            const preview = witness.preview;
+            const charts = Render.descendants(preview).filter(item => item.visible && item.fromReport === true && item.reportShown !== undefined);
+            const failures = [];
+            if (charts.length !== (data.included ? witness.order.length : 0))
+                failures.push("chart count=" + charts.length + "; expected=" + (data.included ? witness.order.length : 0));
+            for (let i = 0; i < charts.length; ++i) {
+                const chart = charts[i];
+                if (!chart.reportShown || chart.reportShown.name !== witness.order[i])
+                    failures.push("chart " + i + " parameter=" + JSON.stringify(chart.reportShown));
+                const points = chart.reportPoints;
+                const expected = witness.reference.points[i];
+                if (!points || !expected || points.length !== expected.length || expected.some((row, index) => ["x", "y", "su"].some(key => Math.abs(points[index][key] - row[key]) > 1e-9)))
+                    failures.push("chart " + i + " numeric points and uncertainties=" + JSON.stringify(points));
+                const yTitle = findChild(chart, "evolution.title.y"), xTitle = findChild(chart, "evolution.title.x");
+                if (!yTitle || yTitle.text !== witness.titles[i] || !xTitle || xTitle.text !== Session.project.evolution.xTitle)
+                    failures.push("chart " + i + " native title/units=" + (yTitle ? yTitle.text : null) + "; x=" + (xTitle ? xTitle.text : null));
+                const at = chart.mapToItem(preview.contentItem, 0, 0);
+                if (i > 0) {
+                    const previous = charts[i - 1].mapToItem(preview.contentItem, 0, 0);
+                    if (data.narrow && !(at.y >= previous.y + charts[i - 1].height - 1))
+                        failures.push("narrow chart " + i + " is not on the next whole row");
+                    if (!data.narrow && i % 2 === 1 && (Math.abs(at.y - previous.y) > 1 || at.x < previous.x + charts[i - 1].width - 1 || Math.abs(chart.width - charts[i - 1].width) > 1))
+                        failures.push("wide chart pair " + i + " does not share a row with equal half-column widths");
+                    if (!data.narrow && i % 2 === 0 && at.y <= previous.y)
+                        failures.push("wide chart " + i + " does not start the next row");
+                }
+            }
+            compare(failures.length, 0, "The scan preview shows every free parameter's evolution in tab order, retains titles, axes, points and s.u. bars, uses two charts per wide row or one per narrow row, and leaves Evolution out only when excluded; actual " + failures.join("; "));
+        }
+        function test_browser_observer_reaches_independent_plot_geometry() {
+            const reference = JSON.parse(SettingsProof.repoText("tests/fixtures/report_evolution/reference.json"));
+            const observed = SettingsProof.htmlEvolutionFacts(Probe.repoUrl("tests/fixtures/report_evolution/browser-positive.html"));
+            verify(!observed.error, "The browser observer reaches the independent six-box HTML control: " + observed.error);
+            for (const view of ["wide", "narrow"]) {
+                const facts = observed[view];
+                compare(facts.plots.length, 6, "The actual browser observer sees all six independently declared plot boxes");
+                compare(facts.selectors, 0, "The independent hand document contains no parameter selector");
+                const columns = view === "wide" ? 2 : 1;
+                const expectedWidth = (facts.viewport - 16 - (columns - 1) * 10) / columns;
+                for (let i = 0; i < 6; ++i) {
+                    const plot = facts.plots[i];
+                    compare(plot.traces[0].name, reference.names[i], "The browser observer retains each independent named plot in actual DOM order");
+                    fuzzyCompare(plot.box[0], 8 + (i % columns) * (expectedWidth + 10), 0.1, "The browser observer measures the independently declared column x coordinate");
+                    fuzzyCompare(plot.box[1], 8 + Math.floor(i / columns) * 170, 0.1, "The browser observer measures the independently declared row y coordinate");
+                    fuzzyCompare(plot.box[2], expectedWidth, 0.1, "The browser observer measures actual CSS half widths and the narrow single width");
+                    compare(plot.box[3], 160, "The browser observer measures the independent chart height");
+                    verify(plot.svgCount > 0, "The browser observer reaches each actual independent vector drawing element");
+                }
+            }
+        }
+        function test_saved_html_draws_all_evolution_charts_without_a_selector_data() {
+            return [
+                {
+                    tag: "included",
+                    included: true
+                },
+                {
+                    tag: "excluded",
+                    included: false
+                }
+            ];
+        }
+        function test_saved_html_draws_all_evolution_charts_without_a_selector(data) {
+            const witness = evolutionWitness(data.included);
+            setChecked(box("Embed the chart libraries"), true);
+            saveReport();
+            tryVerify(() => SettingsProof.fileFacts(location, reportName("html")).bytes > 100, 15000, "The evolution HTML gate reaches the actual saved offline app report");
+            const observed = SettingsProof.htmlEvolutionFacts(SettingsProof.childUrl(location, reportName("html")));
+            verify(!observed.error, "An actual browser loads both wide and narrow copies of the saved HTML: " + observed.error);
+            const failures = [];
+            for (const view of ["wide", "narrow"]) {
+                const facts = observed[view];
+                verify(facts !== undefined && typeof facts.plots.length === "number", "The browser proves the " + view + " saved report's actual DOM and Plotly plot inventory");
+                if (facts.selectors !== 0)
+                    failures.push(view + " parameter selectors=" + facts.selectors);
+                const plots = facts.plots, names = [];
+                for (const plot of plots)
+                    for (const trace of plot.traces)
+                        names.push(trace.name);
+                if (JSON.stringify(names) !== JSON.stringify(data.included ? witness.order : []))
+                    failures.push(view + " drawn parameter order=" + JSON.stringify(names));
+                for (let i = 0; i < plots.length; ++i) {
+                    const plot = plots[i], trace = plot.traces[0], expected = witness.reference.points[i];
+                    if (plot.traces.length !== 1 || !expected || expected.some((point, index) => ["x", "y"].some(key => Math.abs(trace[key][index] - point[key]) > 1e-9) || Math.abs((trace.error_y.array || [])[index] - point.su) > 1e-9) || !trace.error_y.visible)
+                        failures.push(view + " chart " + i + " numeric coordinates/s.u. bars=" + JSON.stringify(plot.traces));
+                    if (!plot.xTitle || !plot.xTitle.includes("K") || !plot.yTitle)
+                        failures.push(view + " chart " + i + " axis name/temperature units=" + JSON.stringify([plot.xTitle, plot.yTitle]));
+                    const box = plot.box;
+                    if (box[2] <= 0 || box[3] <= 0 || plot.svgCount <= 0)
+                        failures.push(view + " chart " + i + " has no nonempty actual vector/canvas drawing");
+                    if (box[0] < -1 || box[0] + box[2] > facts.viewport + 1)
+                        failures.push(view + " chart " + i + " leaves the actual text viewport " + JSON.stringify(box));
+                    if (i > 0) {
+                        const previous = plots[i - 1].box;
+                        if (view === "narrow" && box[1] < previous[1] + previous[3] - 1)
+                            failures.push("narrow chart " + i + " does not occupy its own row");
+                        if (view === "wide" && i % 2 === 1 && (Math.abs(box[1] - previous[1]) > 1 || box[0] < previous[0] + previous[2] - 1 || Math.abs(box[2] - previous[2]) > 1))
+                            failures.push("wide chart pair " + i + " does not occupy equal half columns");
+                        if (view === "wide" && i % 2 === 0 && box[1] <= previous[1])
+                            failures.push("wide chart " + i + " does not start the next row");
+                    }
+                }
+            }
+            compare(failures.length, 0, "The real saved HTML shows every included scan parameter in Evolution tab order with named axes and uncertainty bars, no parameter selector, two equal wide columns or one narrow column, and no excluded charts; actual " + failures.join("; "));
+        }
+        function test_pdf_keeps_all_evolution_charts_whole_data() {
+            return [
+                {
+                    tag: "included",
+                    included: true
+                },
+                {
+                    tag: "excluded",
+                    included: false
+                }
+            ];
+        }
+        function test_pdf_keeps_all_evolution_charts_whole(data) {
+            const witness = evolutionWitness(data.included);
+            setChecked(box("PDF"), true);
+            saveReport();
+            tryVerify(() => SettingsProof.fileFacts(location, reportName("pdf")).bytes > 100, 15000, "The scan evolution gate reaches a real saved app PDF");
+            const facts = SettingsProof.pdfFacts(SettingsProof.childUrl(location, reportName("pdf")));
+            verify(!facts.error && facts.pages.length > 0, "The actual evolution PDF is independently readable and nonempty: " + facts.error);
+            const draws = [];
+            for (let p = 0; p < facts.pages.length; ++p)
+                for (const image of facts.pages[p].image_draws)
+                    draws.push({
+                        page: p,
+                        box: facts.pages[p].box,
+                        image: image
+                    });
+            const failures = [], mm = 72 / 25.4;
+            if (draws.length !== (data.included ? witness.order.length : 0))
+                failures.push("drawn evolution images=" + draws.length + "; expected=" + (data.included ? witness.order.length : 0));
+            for (let i = 0; i < draws.length; ++i) {
+                const draw = draws[i], image = draw.image, b = image.bounds, clip = image.clip;
+                if (b[0] < 25 * mm - 1 || b[2] > 185 * mm + 1 || b[1] < 25 * mm - 1 || b[3] > draw.box[3] - 25 * mm + 1 || b[0] < clip[0] - 0.1 || b[1] < clip[1] - 0.1 || b[2] > clip[2] + 0.1 || b[3] > clip[3] + 0.1)
+                    failures.push("chart " + i + " is cut across a page/body clip: " + JSON.stringify(draw));
+                if (image.edge_width > 80 * mm + 1)
+                    failures.push("chart " + i + " exceeds its half of the 160 mm column");
+                const pixel = Math.max(image.edge_width / image.pixels[0], image.edge_height / image.pixels[1]);
+                if (Math.abs(image.edge_width - image.edge_height * image.pixels[0] / image.pixels[1]) > 2 * pixel)
+                    failures.push("chart " + i + " lost its actual raster aspect");
+                if (i % 2 === 1) {
+                    const previous = draws[i - 1];
+                    if (draw.page !== previous.page || Math.abs(b[1] - previous.image.bounds[1]) > 1 || b[0] < previous.image.bounds[2] - 1)
+                        failures.push("chart pair " + i + " is not kept whole together in two half-width columns");
+                }
+            }
+            compare(failures.length, 0, "The saved scan PDF contains every included evolution chart, two per row, each whole within its page, preserving aspect, and no evolution images when excluded; actual " + failures.join("; "));
+        }
         function test_export_rows_default_formats_and_disabled_actions() {
             prepare();
             const html = box("HTML"), pdf = box("PDF"), cif = box("CIF"), embed = box("Embed the chart libraries");
