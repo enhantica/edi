@@ -568,11 +568,9 @@ void PatternChartController::refresh() {
     publish(y_title_, styled(shown_.y_main), &PatternChartController::yTitleChanged);
     publish(residual_title_, styled(shown_.y_residual), &PatternChartController::residualTitleChanged);
     // Each Bragg row's label at its left: the structure's name in its colour, at the row's centre.
-    QVariantList labels;
+    QList<BraggLabel> labels;
     for (const edi::BraggRowLabel& label : shown_.bragg_labels) {
-        labels.append(QVariantMap{{QStringLiteral("text"), QString::fromStdString(label.text)},
-                                  {QStringLiteral("color"), color(QString::fromStdString(label.style))},
-                                  {QStringLiteral("centre"), label.centre}});
+        labels.append({QString::fromStdString(label.text), color(QString::fromStdString(label.style)), label.centre});
     }
     publish(bragg_labels_, labels, &PatternChartController::braggLabelsChanged);
     // Past the palette's own colours the count sets every experiment's colour, the measured key's too.
