@@ -242,6 +242,11 @@ QString ReportViewModel::reportsDirectory() const {
     return QDir(QString::fromStdString(project_.project().path)).filePath(QStringLiteral("reports"));
 }
 
+QString ReportViewModel::fileStem() const {
+    ensureBuilt();
+    return QString::fromStdString(report_.name.empty() ? std::string("report") : report_.name);
+}
+
 QList<SavedReport> ReportViewModel::savedReports() const {
     ensureBuilt();
     const edi::Project& project = project_.project();
@@ -284,7 +289,7 @@ void ReportViewModel::saveReport(const QString& fontFamily) {
     const QHash<QString, QImage> images = std::exchange(figures_, {});
     ensureBuilt();
     const edi::Project& project = project_.project();
-    const QString base = QString::fromStdString(report_.name.empty() ? std::string("report") : report_.name);
+    const QString base = fileStem();
     const QDir reports(reportsDirectory());
     if (project.path.empty() || !QDir().mkpath(reports.path())) {
         emit saveFailed(tr("The report folder %1 could not be made").arg(reports.path()));

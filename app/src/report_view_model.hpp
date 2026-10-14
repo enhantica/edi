@@ -63,6 +63,8 @@ class ReportViewModel : public QObject {
     Q_PROPERTY(bool writesCif READ writesCif WRITE setWritesCif NOTIFY writesCifChanged)
     // The reports Save report wrote, one per `_report_file` row.
     Q_PROPERTY(QList<edi_app::SavedReport> savedReports READ savedReports NOTIFY savedReportsChanged)
+    // The name Save report gives its files, without the format's extension: the project's short name, else "report".
+    Q_PROPERTY(QString fileStem READ fileStem NOTIFY modelChanged)
     // The Report page is shown. Only then does a change rebuild the model at once; otherwise the next read of the
     // model rebuilds it, so a reader never sees a stale one and a hidden page costs nothing per change.
     Q_PROPERTY(bool active READ active WRITE setActive NOTIFY activeChanged)
@@ -103,6 +105,7 @@ class ReportViewModel : public QObject {
     bool writesCif() const { return writes("cif"); }
     void setWritesCif(bool on) { setWrites("cif", on); }
     QList<SavedReport> savedReports() const;
+    QString fileStem() const;
 
     // A Contents box: includes or leaves out the item of `key`.
     Q_INVOKABLE void setIncluded(const QString& key, bool included);
