@@ -260,7 +260,7 @@ Value pattern_json(const ReportPattern& pattern) {
                   {"y_main", axis_json(shown.y_main)}, {"y_residual", axis_json(shown.y_residual)},
                   {"series", std::move(series)}, {"excluded", std::move(excluded)},
                   {"layout", std::move(layout)}, {"hover", std::move(hover)},
-                  {"bragg_labels", std::move(labels)}, {"reliability", pattern.reliability}};
+                  {"bragg_labels", std::move(labels)}, {"title", pattern.title}, {"legend", pattern.legend}};
 }
 
 ReportPattern pattern_of(const Value& value) {
@@ -291,7 +291,8 @@ ReportPattern pattern_of(const Value& value) {
         shown.bragg_labels.push_back(
             {item.at("text").string("text"), item.at("style").string("style"), item.at("centre").number("centre")});
     }
-    pattern.reliability = value.at("reliability").string("reliability");
+    pattern.title = value.at("title").string("title");
+    pattern.legend = value.at("legend").boolean("legend");
     return pattern;
 }
 
@@ -650,6 +651,20 @@ std::string report_to_json(const ReportModel& model) {
                               {"available", matrix.available},
                               {"empty_text", matrix.empty_text}};
     }
+    Value evolution;
+    if (model.evolution.has_value()) {
+        Array series;
+        for (const ReportEvolution& one : *model.evolution) {
+            Array points;
+            for (const ReportEvolutionPoint& point : one.points) {
+                points.emplace_back(
+                    Object{{"x", point.x}, {"y", point.y}, {"su", point.su}, {"text", point.text}});
+            }
+            series.emplace_back(
+                Object{{"name", one.name}, {"x_title", one.x_title}, {"points", std::move(points)}});
+        }
+        evolution = std::move(series);
+    }
     Array structures;
     for (const ReportStructure& structure : model.structures) {
         Array along, labels;
@@ -684,9 +699,10 @@ std::string report_to_json(const ReportModel& model) {
                           {"description", model.description},
                           {"structure_ids", strings(model.structure_ids)},
                           {"experiment_ids", strings(model.experiment_ids)},
-                          {"analysis", categories(model.analysis)},
+                          {"analysis_categories", categories(model.analysis)},
                           {"fitted", model.fitted},
                           {"correlations", std::move(correlations)},
+                          {"evolution", std::move(evolution)},
                           {"structures", std::move(structures)},
                           {"experiments", std::move(experiments)},
                           {"pattern_styles", pattern_styles_json(model.pattern_styles)},
@@ -720,8 +736,21 @@ ReportModel report_from_json(const std::string& text) {
     model.description = document.at("description").string("description");
     model.structure_ids = strings_of(document.at("structure_ids"), "structure_ids");
     model.experiment_ids = strings_of(document.at("experiment_ids"), "experiment_ids");
-    model.analysis = categories_of(document.at("analysis"), "analysis");
+    model.analysis = categories_of(document.at("analysis_categories"), "analysis_categories");
     model.fitted = document.at("fitted").boolean("fitted");
+    const Value& evolution = document.at("evolution");
+    if (!evolution.is_null()) {
+        std::vector<ReportEvolution> series;
+        for (const Value& item : evolution.array("evolution")) {
+            ReportEvolution one{item.at("name").string("name"), item.at("x_title").string("x_title"), {}};
+            for (const Value& point : item.at("points").array("points")) {
+                one.points.push_back({point.at("x").number("x"), point.at("y").number("y"),
+                                      point.at("su").number("su"), point.at("text").string("text")});
+            }
+            series.push_back(std::move(one));
+        }
+        model.evolution = std::move(series);
+    }
     const Value& correlations = document.at("correlations");
     if (!correlations.is_null()) {
         ReportCorrelations matrix;

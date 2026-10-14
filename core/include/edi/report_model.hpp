@@ -109,6 +109,20 @@ struct ReportCorrelations {
     std::string empty_text; ///< why nothing is shown; empty when the matrix is
 };
 
+/// One parameter's evolution over a scan (evolution_series): its points, each with the value's text in the project's
+/// s.u. rule, as the Evolution tab draws them.
+struct ReportEvolutionPoint {
+    double x = 0.0;
+    double y = 0.0;
+    double su = 0.0;
+    std::string text;
+};
+struct ReportEvolution {
+    std::string name;     ///< the parameter's unique name, or its results column
+    std::string x_title;  ///< the first extract rule's column heading, or "file index"
+    std::vector<ReportEvolutionPoint> points;
+};
+
 /// The viewport a report's structure drawing is prepared for (ADR-0035 §1), in logical pixels, with room at the sides
 /// for the element legend.
 inline constexpr Viewport kReportViewport{800.0, 600.0, 0.0, 120.0};
@@ -133,8 +147,11 @@ struct ReportPattern {
     PatternPresentation presentation;
     /// Per series, per point: hover_text for a Bragg tick series, empty for every other series.
     std::vector<std::vector<std::string>> hover;
-    /// The experiment's reliability text (reliability_text), which the chart's title carries; empty with no fit.
-    std::string reliability;
+    /// The chart's title: the experiment's reliability text (reliability_text); empty with no fit.
+    std::string title;
+    /// Whether the chart opens with its legend box; by default it does not, its y titles naming the series in their
+    /// colours.
+    bool legend = false;
 };
 
 struct ReportExperiment {
@@ -152,10 +169,12 @@ struct ReportModel {
     // Project summary
     std::string name, title, authors, description;
     std::vector<std::string> structure_ids, experiment_ids;
-    // Analysis: software, minimizer, fitting mode and fit result
+    // Analysis: software, minimizer, fitting mode and fit result (the JSON's `analysis_categories`); the correlation
+    // chart and, for a scan, the parameters' evolution.
     std::vector<ReportCategory> analysis;
     bool fitted = false;
     std::optional<ReportCorrelations> correlations;
+    std::optional<std::vector<ReportEvolution>> evolution;
     // Structures and experiments
     std::vector<ReportStructure> structures;
     std::vector<ReportExperiment> experiments;

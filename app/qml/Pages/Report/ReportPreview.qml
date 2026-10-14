@@ -339,7 +339,7 @@ Flickable {
                 text: `${preview.number("analysis")}.  ` + qsTr("Analysis")
             }
             Repeater {
-                model: preview.shown("analysis") ? (preview.model.analysis ?? []) : []
+                model: preview.shown("analysis") ? (preview.model.analysis_categories ?? []) : []
                 delegate: CategoryBlock {
                     required property var modelData
                     required property int index

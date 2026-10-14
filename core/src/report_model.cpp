@@ -5,6 +5,7 @@
 #include <charconv>
 #include <cmath>
 #include <ctime>
+#include <filesystem>
 #include <limits>
 #include <map>
 #include <memory>
@@ -533,8 +534,14 @@ ReportExperiment experiment_of(const BraggPdExperiment& experiment, const std::s
             const PdDataBase& data = *experiment.data;
             const std::vector<double>& axis = data.axis();
             const auto [name, units] = axis_of(data);
-            if (listed.id == "data" && !experiment.data_file.empty()) {
-                next.rows.push_back({"File", experiment.data_file, ""});
+            // Where the observations are: their data file, or the experiment's own file that holds them.
+            if (listed.id == "data") {
+                next.rows.push_back({"File",
+                                     experiment.data_file.empty()
+                                         ? std::filesystem::path(entity_path("", "experiment", experiment.name.value()))
+                                               .generic_string()
+                                         : experiment.data_file,
+                                     ""});
             }
             next.rows.push_back({"Points", std::to_string(axis.size()), ""});
             if (!axis.empty()) {
@@ -734,6 +741,39 @@ std::string reliability_text(const Project& project, std::size_t experiment) {
            fixed(project.fit_result.reduced_chi_square, 2);
 }
 
+namespace {
+
+// A scan's parameters across its datasets, as the Evolution tab draws them (evolution_series): each listed
+// parameter's points at the first extract rule's value, else at the file's place, each value's text in the
+// project's s.u. rule. No series when the scan's datasets or results cannot be read.
+std::vector<ReportEvolution> evolution_of(const Project& scan, const std::string& rule) {
+    std::vector<ReportEvolution> out;
+    try {
+        const ScanDatasets datasets = scan_datasets(scan);
+        const ScanPlaces places = scan_places(datasets);
+        const ScanResultIndex index = index_scan_results(scan, datasets, places);
+        std::string x_title = "file index";
+        for (const auto& extract : scan.sequential_fit.extract) {
+            const std::string unit = scan_target_unit(extract->target);
+            x_title = unit.empty() ? extract->id.value() : extract->id.value() + " (" + unit + ")";
+            break;
+        }
+        for (const std::string& name : evolution_parameters(scan, index)) {
+            ReportEvolution series{name, x_title, {}};
+            evolution_series(scan, places, index, name, true, [&series, &rule](const EvolutionPoint& point) {
+                series.points.push_back({point.x, point.y, point.su,
+                                         point.su > 0.0 ? value_su_text(point.y, point.su, rule) : shortest(point.y)});
+            });
+            out.push_back(std::move(series));
+        }
+    } catch (const std::exception&) {
+        out.clear();
+    }
+    return out;
+}
+
+}  // namespace
+
 ReportModel build_report(const Project& input, const ReportOptions& options) {
     // A scan's report is its template dataset's, fitted (ADR-0035 §3); one whose datasets or results cannot be read
     // reports the template as it is.
@@ -797,7 +837,7 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
         });
         if (charts) {
             built.pattern = pattern_of(project, index, options);
-            built.pattern.reliability = reliability_text(project, index);
+            built.pattern.title = reliability_text(project, index);
         }
         model.experiments.push_back(std::move(built));
     }
@@ -811,6 +851,7 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
     // A scan's parameters across its datasets.
     if (evolution) {
         model.sections.push_back(ReportSection::Evolution);
+        model.evolution = evolution_of(input, rule);
     }
     model.pattern_styles = pattern_style_table(options.colour_scheme, project.experiments.size());
     model.structure_styles = structure_style_table();

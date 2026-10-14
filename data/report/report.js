@@ -8,8 +8,8 @@ const model = JSON.parse(document.getElementById('edi-report-model').textContent
 const pageStyle = name =>
   typeof getComputedStyle === 'function' ? getComputedStyle(document.documentElement).getPropertyValue(name).trim() : '';
 
-const patternStyle = key => model.pattern_styles.find(row => row.key === key) ?? {};
-const sceneStyle = key => model.structure_styles.find(row => row.key === key) ?? {};
+const patternStyle = key => (model.pattern_styles ?? []).find(row => row.key === key) ?? {};
+const sceneStyle = key => (model.structure_styles ?? []).find(row => row.key === key) ?? {};
 
 // The Structure page's toolbar icons: Font Awesome Free 5 solid glyphs as SVG paths, [width, height, path] (icons CC
 // BY 4.0, https://fontawesome.com/license/free).
@@ -147,7 +147,7 @@ const ICONS = {
 
 // A figure that cannot be drawn says why.
 function notice(figure, text) {
-  figure.classList.add('figure-note');
+  figure.classList?.add('figure-note');
   figure.textContent = text;
 }
 
@@ -255,8 +255,8 @@ function drawPattern(figure, pattern) {
     legend: { x: 1, xanchor: 'right', y: 1, yanchor: 'top', bgcolor: 'rgba(255,255,255,0.8)' },
     hovermode: 'closest',
     // The experiment's reliability in its last fit, above the plot's top left, as the app's selector shows it.
-    annotations: pattern.reliability
-      ? [{ text: pattern.reliability, xref: 'paper', yref: 'paper', x: 0, y: 1, xanchor: 'left', yanchor: 'bottom',
+    annotations: pattern.title
+      ? [{ text: pattern.title, xref: 'paper', yref: 'paper', x: 0, y: 1, xanchor: 'left', yanchor: 'bottom',
            showarrow: false, font: { family: font } }]
       : [],
     xaxis: { ...axis, title: { text: pattern.x.title }, range: [pattern.x.min, pattern.x.max], anchor: bottom },
@@ -293,6 +293,65 @@ function drawPattern(figure, pattern) {
   window.Plotly.newPlot(figure, traces, layout, { responsive: true, displaylogo: false });
 }
 
+// The Evolution tab's chart (edi ADR-0035): a scan's parameter, chosen from a list, at each fitted dataset with its
+// s.u. as an error bar; "No fitted results yet" before any dataset is fitted.
+function drawEvolution(figure, evolution) {
+  const select = document.createElement('select');
+  for (const [index, series] of evolution.entries()) {
+    const option = document.createElement('option');
+    option.value = String(index);
+    option.textContent = series.name;
+    select.appendChild(option);
+  }
+  const plot = document.createElement('div');
+  plot.className = 'evolution-plot';
+  figure.appendChild(select);
+  figure.appendChild(plot);
+  const font = pageStyle('--head-font');
+  const grid = pageStyle('--rowshade');
+  const frame = pageStyle('--tableborder');
+  const axis = { automargin: true, showline: true, mirror: true, linecolor: frame, gridcolor: grid, zeroline: false };
+  const show = () => {
+    const series = evolution[Number(select.value)];
+    window.Plotly?.purge(plot);
+    plot.classList?.remove('figure-note');
+    plot.textContent = '';
+    if (series.points.length === 0) {
+      notice(plot, 'No fitted results yet');
+      return;
+    }
+    if (!window.Plotly) {
+      notice(plot, 'The chart needs plotly.js, which could not be loaded.');
+      return;
+    }
+    const style = patternStyle('meas.0');
+    const trace = {
+      type: 'scatter',
+      mode: 'lines+markers',
+      name: series.name,
+      x: series.points.map(point => point.x),
+      y: series.points.map(point => point.y),
+      error_y: { type: 'data', array: series.points.map(point => point.su), visible: true, thickness: 1 },
+      text: series.points.map(point => point.text),
+      hovertemplate: '%{x}: %{text}<extra></extra>',
+      line: { color: style.light, width: 1 },
+      marker: { color: style.light, size: 6 },
+    };
+    const layout = {
+      height: plot.clientHeight,
+      margin: { l: 16, r: 16, t: 16, b: 16 },
+      font: { family: font },
+      showlegend: false,
+      hovermode: 'closest',
+      xaxis: { ...axis, title: { text: series.x_title } },
+      yaxis: { ...axis, title: { text: series.name } },
+    };
+    window.Plotly.newPlot(plot, [trace], layout, { responsive: true, displaylogo: false });
+  };
+  select.addEventListener('change', show);
+  show();
+}
+
 // --- The structure views (edi ADR-0022) ---
 
 // A toolbar button with an icon (or a letter), its tooltip, and whether it is on.
@@ -312,10 +371,12 @@ function button(icon, title, onClick) {
 }
 
 async function drawStructure(figure, structure) {
+  // three.js as the page provides it: already loaded, else imported through the page's import map.
   let THREE, OrbitControls;
   try {
-    THREE = await import('three');
-    ({ OrbitControls } = await import('three/addons/controls/OrbitControls.js'));
+    THREE = globalThis.THREE ?? (await import('three'));
+    OrbitControls =
+      globalThis.OrbitControls ?? (await import('three/addons/controls/OrbitControls.js')).OrbitControls;
   } catch {
     notice(figure, 'The structure view needs three.js, which could not be loaded.');
     return;
@@ -602,8 +663,20 @@ async function drawStructure(figure, structure) {
 }
 
 for (const figure of document.querySelectorAll('.pattern-figure')) {
-  drawPattern(figure, model.experiments[Number(figure.dataset.index)].pattern);
+  const experiment = model.experiments?.[Number(figure.dataset.index)];
+  if (experiment) {
+    drawPattern(figure, experiment.pattern);
+  }
 }
 for (const figure of document.querySelectorAll('.structure-figure')) {
-  drawStructure(figure, model.structures[Number(figure.dataset.index)]);
+  const structure = model.structures?.[Number(figure.dataset.index)];
+  if (structure) {
+    drawStructure(figure, structure);
+  }
+}
+const evolution = model.evolution ?? [];
+if (evolution.length > 0) {
+  for (const figure of document.querySelectorAll('.evolution-figure')) {
+    drawEvolution(figure, evolution);
+  }
 }

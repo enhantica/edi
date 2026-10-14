@@ -1541,6 +1541,16 @@ std::string report_number_text(double value) {
     return {buffer.data(), result.ptr};
 }
 
+// The report shows the calculated pattern and reflections, as the app's project holds them; a calculation the core
+// refuses leaves the report's pattern not current.
+void calculate_for_report(edi::Project& project) {
+    try {
+        nb::gil_scoped_release nogil;
+        project.calculate();
+    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — the report then says the pattern is not current
+    }
+}
+
 // ADR-0035 §7: one run's overrides of the report's settings, each checked by crysta's rules as a file states it.
 edi::ReportOverrides report_overrides(std::optional<bool> offline, std::optional<std::string> x_axis,
                                       std::optional<double> correlation_threshold,
@@ -3529,8 +3539,9 @@ NB_MODULE(_edi, m) {
             })
         .def(
             "_report_model",
-            [](const edi::Project& self, std::optional<bool> offline, std::optional<std::string> x_axis,
+            [](edi::Project& self, std::optional<bool> offline, std::optional<std::string> x_axis,
                std::optional<double> correlation_threshold, std::optional<std::vector<std::string>> excluded) {
+                calculate_for_report(self);
                 const edi::ReportOverrides overrides =
                     report_overrides(offline, std::move(x_axis), correlation_threshold, std::move(excluded));
                 return edi::build_report(self, edi::effective_report_options(self, overrides));
@@ -3539,9 +3550,10 @@ NB_MODULE(_edi, m) {
             "excluded"_a = nb::none())
         .def(
             "_report_html_text",
-            [](const edi::Project& self, const std::filesystem::path& data_dir, std::optional<bool> offline,
+            [](edi::Project& self, const std::filesystem::path& data_dir, std::optional<bool> offline,
                std::optional<std::string> x_axis, std::optional<double> correlation_threshold,
                std::optional<std::vector<std::string>> excluded) {
+                calculate_for_report(self);
                 const edi::ReportOverrides overrides =
                     report_overrides(offline, std::move(x_axis), correlation_threshold, std::move(excluded));
                 const edi::ReportModel model = edi::build_report(self, edi::effective_report_options(self, overrides));
@@ -3554,6 +3566,7 @@ NB_MODULE(_edi, m) {
             [](edi::Project& self, const std::filesystem::path& data_dir, std::optional<bool> offline,
                std::optional<std::string> x_axis, std::optional<double> correlation_threshold,
                std::optional<std::vector<std::string>> excluded) {
+                calculate_for_report(self);
                 const edi::ReportOverrides overrides =
                     report_overrides(offline, std::move(x_axis), correlation_threshold, std::move(excluded));
                 const edi::ReportSaveResult result =
@@ -3564,7 +3577,8 @@ NB_MODULE(_edi, m) {
             "excluded"_a = nb::none())
         .def(
             "_report_states",
-            [](const edi::Project& self, const std::filesystem::path& data_dir) {
+            [](edi::Project& self, const std::filesystem::path& data_dir) {
+                calculate_for_report(self);
                 std::vector<std::tuple<std::string, std::string, std::string>> states;
                 for (const edi::ReportFileState& state :
                      edi::report_file_states(self, report_libraries(self, {}, data_dir))) {

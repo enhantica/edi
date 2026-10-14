@@ -67,7 +67,7 @@ body {
   flex-direction: column;
   align-items: stretch;
 }
-.report-title, h2, h3, h4 { margin: 0; font-family: var(--head-font); font-weight: 400; line-height: 1.2; }
+.report-title, h1, h2, h3, h4 { margin: 0; font-family: var(--head-font); font-weight: 400; line-height: 1.2; }
 .report-title { margin: 0 0 22.8pt; }
 .report-title .t1 { margin: 0 0 14pt; font-size: 14.35pt; line-height: 1.15; }
 .report-title .t2 { margin: 0; font-size: 17.22pt; line-height: 1.15; }
@@ -130,6 +130,9 @@ table.correlations td {
 /* A figure is framed and spaced as a table is (the owner, 2026-10-13). */
 .figure { margin: 1.55pt 0 9.5pt; border: var(--bw) solid var(--tableborder); }
 .pattern-figure { width: 100%; height: 440px; }
+.evolution-figure { width: 100%; }
+.evolution-figure select { margin: 8px; font: inherit; }
+.evolution-figure .evolution-plot { width: 100%; height: 360px; }
 .structure-figure { position: relative; width: 100%; aspect-ratio: 4 / 3; overflow: hidden; }
 /* A long table, such as an experiment's data points, scrolls in a window of rows. */
 .table-scroll.long { max-height: calc(21 * var(--lead)); overflow-y: auto; }
@@ -467,6 +470,10 @@ public:
                 case ReportSection::Evolution:
                     heading(2, number(), "Evolution");
                     note("The fitted parameters across the scan\xE2\x80\x99s datasets");
+                    // The Evolution tab's chart: one parameter at a time, chosen from a list (report.js).
+                    if (!document() && model_.evolution && !model_.evolution->empty()) {
+                        out_ += "<div class=\"figure evolution-figure\"></div>\n";
+                    }
                     break;
             }
             if (!document()) {
@@ -513,7 +520,7 @@ private:
             return;
         }
         out_ += "<header class=\"report-title\">\n<div class=\"t1\">EasyDiffraction Report</div>\n";
-        out_ += "<div class=\"t2\">" + escaped(model_.title.empty() ? model_.name : model_.title) + "</div>\n";
+        out_ += "<h1 class=\"t2\">" + escaped(model_.title.empty() ? model_.name : model_.title) + "</h1>\n";
         if (!model_.authors.empty()) {
             out_ += "<div class=\"authors\">" + escaped(model_.authors) + "</div>\n";
         }
@@ -863,8 +870,12 @@ std::string report_html(const ReportModel& model, const ReportLibraries& librari
            module_url(libraries.orbit_controls, kReportOrbitControlsUrl) + "\"}}</script>\n";
     out += "</head>\n<body>\n";
     out += Writer(model).body();
-    // The model's JSON has no literal <, > or &, so it cannot end this element.
-    out += "<script type=\"application/json\" id=\"edi-report-model\">" + report_to_json(model) + "</script>\n";
+    // The model's JSON has no literal <, > or &, so it cannot end this element. A group the report leaves out is not
+    // named in the file at all: its contents entry stays with the app's Contents boxes.
+    ReportModel embedded_model = model;
+    std::erase_if(embedded_model.contents, [](const ReportContentsItem& item) { return !item.included; });
+    out += "<script type=\"application/json\" id=\"edi-report-model\">" + report_to_json(embedded_model) +
+           "</script>\n";
     if (embedded) {
         out += "<script>" + script_text(libraries.plotly) + "</script>\n";
     } else {
