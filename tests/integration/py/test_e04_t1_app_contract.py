@@ -40,10 +40,11 @@ def without_comments(source):
     return re.sub(r'//[^\n]*|/\*.*?\*/', '', source, flags=re.DOTALL)
 
 
-def report_model_exception_spans(source, relative_path):
+def report_model_exception_spans(source, relative_path):  # noqa: PLR0911 - each failed identity check refuses independently
     # OWNER DECISION 2026-10-14, hub 3f2ce1cf6, decision-records.md:
     # "the report model crosses into the Report page untyped for now".
-    # the planned report-schema successor removes this sole temporary exception by describing the report once.
+    # The planned schema successor removes this sole temporary exception.
+    # Its exact task identity and the owner citation live in the hub acceptance receipt.
     if relative_path != 'app/src/report_view_model.hpp':
         return set()
     classes = []
@@ -55,6 +56,17 @@ def report_model_exception_spans(source, relative_path):
         if depth:
             return set()
         classes.append((match[1], match.end(), end))
+    if sum(name == 'ReportViewModel' for name, _, _ in classes) != 1:
+        return set()
+    namespaces = []
+    for match in re.finditer(r'\bnamespace\s*(\w+(?:::\w+)*)?\s*\{', source):
+        depth, end = 1, match.end()
+        while end < len(source) and depth:
+            depth += (source[end] == '{') - (source[end] == '}')
+            end += 1
+        if depth:
+            return set()
+        namespaces.append((match[1], match.end(), end))
     properties = list(re.finditer(r'Q_PROPERTY\s*\((.*?)\)', source, re.DOTALL))
     named = [
         m
@@ -64,6 +76,9 @@ def report_model_exception_spans(source, relative_path):
     if len(named) != 1:
         return set()
     prop = named[0]
+    enclosing = [name for name, start, end in namespaces if start <= prop.start() < end]
+    if enclosing != ['edi_app']:
+        return set()
     owners = [entry for entry in classes if entry[1] <= prop.start() < entry[2]]
     if not owners or min(owners, key=lambda entry: entry[2] - entry[1])[0] != 'ReportViewModel':
         return set()
@@ -131,21 +146,25 @@ def test_shipped_view_model_api_is_typed():
 
 
 REPORT_EXCEPTION = (
-    'class ReportViewModel : public QObject { '
-    'Q_PROPERTY(QVariantMap model READ model NOTIFY modelChanged) };'
+    'namespace edi_app { class ReportViewModel : public QObject { '
+    'Q_PROPERTY(QVariantMap model READ model NOTIFY modelChanged) }; }'
 )
 REPORT_HEADER = 'app/src/report_view_model.hpp'
 
 
 def test_report_model_owner_exception_is_exactly_one_named_property():
     assert not api_violations(REPORT_EXCEPTION, REPORT_HEADER), (
-        'I2 owner decision 3f2ce1cf6 / the planned report-schema successor admits only ReportViewModel.model QVariantMap'
+        'I2 owner decision 3f2ce1cf6 admits only ReportViewModel.model QVariantMap; '
+        'the planned schema successor removes the exception'
     )
 
 
 @pytest.mark.parametrize(
     'escape',
     [
+        'anonymous-namespace',
+        'foreign-namespace',
+        'nested-namespace',
         'second',
         'renamed',
         'other-class',
@@ -166,7 +185,15 @@ def test_report_model_owner_exception_is_exactly_one_named_property():
 )
 def test_report_model_owner_exception_cannot_widen(escape):
     source, path = REPORT_EXCEPTION, REPORT_HEADER
-    if escape == 'second':
+    if escape == 'anonymous-namespace':
+        source = source.replace('namespace edi_app {', 'namespace edi_app { namespace {') + '}'
+    elif escape == 'foreign-namespace':
+        source = source.replace('namespace edi_app', 'namespace other')
+    elif escape == 'nested-namespace':
+        source = (
+            source.replace('namespace edi_app {', 'namespace edi_app { namespace other {') + '}'
+        )
+    elif escape == 'second':
         source = source.replace('};', 'Q_PROPERTY(QVariantMap second READ second) };')
     elif escape == 'renamed':
         source = source.replace('QVariantMap model', 'QVariantMap payload')
@@ -200,7 +227,7 @@ def test_report_model_owner_exception_cannot_widen(escape):
         }[escape]
         source = source.replace('};', added + ' };')
     assert api_violations(source, path), (
-        'I2 / the planned report-schema successor: the single named model exception refuses second/renamed/foreign '
+        'I2: the single temporary model exception refuses second/renamed/foreign '
         f'properties and every other dictionary, list or JSON crossing; escape={escape}'
     )
 

@@ -22,6 +22,7 @@ Rectangle {
     TestCase {
         name: "ReportContextBoundary"
         when: windowShown
+        property var reference: JSON.parse(SettingsProof.repoText("tests/fixtures/palette_sources/reference.json"))
         property var page
         property var frozen
         property var browserExport
@@ -69,7 +70,7 @@ Rectangle {
         function test_all_report_surfaces_use_identical_stored_inputs_data() {
             const cases = [];
             for (const browser of [false, true])
-                for (const scheme of ["default", "colourBlindSafe", "tableau", "paulTol", "vivid"])
+                for (const scheme of reference.schemes.map(row => row.id))
                     for (const shown of [0, 1])
                         cases.push({
                             tag: (browser ? "browser-" : "desktop-") + scheme + "-bank" + shown,
@@ -102,22 +103,28 @@ Rectangle {
                 verify(resource !== null, "The browser Export resource receives the same actual report model");
                 resource.saveReport();
             } else
-                Session.project.report.saveReport({}, "PT Sans");
+                Session.project.report.saveReport("PT Sans");
             const name = Session.project.name + ".html";
             tryVerify(() => SettingsProof.fileFacts(location, "reports/" + name).bytes > 100 && Session.project.report.savedReports.length === 2, 15000, "The app really publishes HTML and PDF and their tracking rows");
             const app = normalized(SettingsProof.htmlModel(SettingsProof.childUrl(location, "reports/" + name)));
-            const facts = BoundaryProof.surfaceFacts(location);
+            const facts = BoundaryProof.surfaceFacts(location, data.scheme, Session.project.currentExperiment.name);
             verify(!facts.error, "The actual Python and CLI observers complete in the pinned binding context: " + facts.error);
             const expected = normalized(facts.python_model), failures = [];
+            const canonical = normalized(facts.canonical_model);
+            canonical.contents = canonical.contents.filter(item => item.included);
+            if (!same(normalized(facts.python_display), canonical))
+                failures.push("The implicit notebook display differs from its documented default inputs");
+            if (BoundaryProof.reportDigest(Session.project.report) !== BoundaryProof.jsonDigest(facts.python_model_json))
+                failures.push("Explicit report inputs produce different app and Python digests");
             expected.contents = expected.contents.filter(item => item.included);
-            for (const route of ["python_html", "python_display", "python_save_html", "python_save", "cli_output", "cli_save"])
+            for (const route of ["python_html", "python_save_html", "python_save", "cli_output", "cli_save"])
                 if (!same(normalized(facts[route]), expected))
                     failures.push(route + " differs from the Python model");
             if (!same(app, expected))
                 failures.push("App report differs from Python/CLI at scheme=" + data.scheme + ", shown=" + data.shown);
             if (!facts.python_check.every(row => row[1] === "current") || facts.cli_check.code !== 0)
                 failures.push("The same app-saved rows are stale through Python/CLI check: " + JSON.stringify(facts.python_check) + "; " + JSON.stringify(facts.cli_check));
-            compare(failures.length, 0, "The app, display, Python model/writers/check and CLI writers/check reproduce one report from identical stored inputs for every Preferences scheme and shown bank, including browser Export; actual " + failures.join("; "));
+            compare(failures.length, 0, "The app, display, Python model/writers/check and CLI writers/check reproduce one report from identical stored settings and explicit scheme/bank inputs for every Preferences scheme and shown bank, including browser Export; actual " + failures.join("; "));
         }
         function test_native_evolution_and_pdf_read_only_the_supplied_report_styles_data() {
             return [
@@ -151,11 +158,11 @@ Rectangle {
             for (const input of ["tests/fixtures/report_options/pairs", "tests/fixtures/report_context/long-scan"]) {
                 verify(Session.openProject(Probe.repoUrl(input)), "The live Session changes independently of the fixed report renderer");
                 tryCompare(Session.project, "calculating", false, 15000, "The unrelated project finishes opening");
-                for (const scheme of ["default", "colourBlindSafe", "tableau", "paulTol", "vivid"]) {
+                for (const scheme of reference.schemes.map(row => row.id)) {
                     Preferences.colourScheme = scheme;
                     const charts = Render.descendants(frozen).filter(item => item.objectName === "report.evolution");
                     compare(charts.length, 6, "The native observer reaches every actual report evolution chart");
-                    const expected = String(data.theme === Style.Colors.DarkTheme ? style.dark : style.light).toLowerCase();
+                    const expected = String(style.light).toLowerCase();
                     for (const chart of charts) {
                         const layer = findChild(chart, "evolution.points");
                         verify(layer !== null, "The style gate observes the actual MeasuredLayer drawing the supplied report");

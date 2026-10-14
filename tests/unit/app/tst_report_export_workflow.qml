@@ -204,6 +204,18 @@ Rectangle {
                     });
             return cases;
         }
+        function modelDifferences(left, right, path = "") {
+            if (path === ".generated")
+                return [];
+            if (left !== null && right !== null && typeof left === "object" && typeof right === "object") {
+                const keys = Array.from(new Set([...Object.keys(left), ...Object.keys(right)]));
+                let differences = [];
+                for (const key of keys)
+                    differences = differences.concat(modelDifferences(left[key], right[key], path + "." + key));
+                return differences;
+            }
+            return left === right ? [] : [path + ": " + JSON.stringify(left) + " -> " + JSON.stringify(right)];
+        }
         function test_app_failed_publication_preserves_bytes_and_successful_rows(data) {
             const scheme = Preferences.colourScheme;
             Preferences.colourScheme = "default";
@@ -222,6 +234,8 @@ Rectangle {
             tryVerify(() => BoundaryProof.fullModel(report).title === Session.project.title, 2000, "The unsaved change reaches the actual report before the failure is armed");
             verify(Session.save(), "The changed report input is persisted before comparing live and reopened tracking states");
             tryCompare(Session.project, "calculating", false, 15000, "Save adoption settles before the late publication failure");
+            const beforeDifferences = modelDifferences(BoundaryProof.fullModel(report), BoundaryProof.reopenedModel(location));
+            compare(beforeDifferences.length, 0, "The failure witness has identical live and freshly loaded report inputs after project Save; actual " + beforeDifferences.slice(0, 5).join("; "));
             const settings = SettingsProof.text(location, "reports/report.edi");
             publicationFailed.target = report;
             publicationFailed.clear();
@@ -233,7 +247,10 @@ Rectangle {
             verify(receipt.includes(data.kind === "settings" ? "settings-rename" : "write-after-open"), "The app failure reaches its actual post-open write or staged settings rename: " + receipt);
             const afterHtml = SettingsProof.fileFacts(location, reportName("html")), afterPdf = SettingsProof.fileFacts(location, reportName("pdf"));
             const disk = BoundaryProof.reopenedStates(location);
+            const changedInputs = modelDifferences(BoundaryProof.fullModel(report), BoundaryProof.reopenedModel(location));
             const failures = [];
+            if (changedInputs.length)
+                failures.push("After publication, live -> reopened input differences: " + changedInputs.slice(0, 5).join("; "));
             if (data.kind === "html" && (afterHtml.sha256 !== html.sha256 || afterPdf.sha256 !== pdf.sha256))
                 failures.push("A failed first-format replacement changed prior report bytes");
             if (data.kind === "pdf") {

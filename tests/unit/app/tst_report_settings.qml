@@ -267,8 +267,14 @@ Item {
             verify(page !== null && waitForPolish(page), "The actual workflow page lays out before checking its fourth sidebar tab");
             const tab = findChild(page, "sideBar.tab.settings");
             verify(tab !== null, "The actual " + data.page + " page exposes sideBar.tab.settings beside Main, Extras and Text; actual " + tab);
+            const populated = data.page === "experiment" || data.page === "analysis";
+            compare(tab.enabled, populated, "Owner decision 55c4dbd07: each empty Settings tab is disabled and each populated tab stays actionable; page=" + data.page);
+            const checked = tab.checked;
             mouseClick(tab, tab.width / 2, tab.height / 2);
-            tryCompare(tab, "checked", true, 1000, "The Settings tab accepts actual pointer input");
+            if (populated)
+                tryCompare(tab, "checked", true, 1000, "A populated Settings tab accepts actual pointer input");
+            else
+                compare(tab.checked, checked, "Pointer input cannot activate an empty Settings tab");
         }
         function choose(control, index) {
             verify(control !== undefined && control.enabled, "The real page setting is enabled before actual pointer input");
