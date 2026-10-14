@@ -175,8 +175,12 @@ class ExperimentViewModel : public QObject {
     // A chart's x axis: while one chart is on d, the pattern is captured on d as well.
     void setChartAxis(const QObject* chart, edi::PatternAxis axis);
     bool dSpacingWanted() const { return !d_charts_.isEmpty(); }
-    // How many experiments the project holds (the colour of this one's pattern depends on it past the palette's own).
-    std::size_t experimentCount() const { return project_.experiments.size(); }
+    // The colour of this experiment's pattern (edi::pattern_colour) is its place among a count: by default among the
+    // project's experiments; a scan's template shows one dataset at a time and takes that dataset's place among the
+    // scan's datasets, as the Project page lists them (setColourPlace).
+    std::size_t colourPlace() const { return colour_place_.value_or(place()); }
+    std::size_t colourCount() const { return colour_place_ ? colour_count_ : project_.experiments.size(); }
+    void setColourPlace(std::optional<std::size_t> place, std::size_t count);
     // An edit was admitted: what the pattern shows was calculated before it. The frame stays; the pattern
     // reports stale and the chart's source reports that it no longer describes the model, until the newest
     // request's publication captures the pattern again.
@@ -226,6 +230,8 @@ class ExperimentViewModel : public QObject {
     QSet<const QObject*> shown_charts_;
     QSet<const QObject*> d_charts_;
     std::uint64_t pattern_generation_ = 0;
+    std::optional<std::size_t> colour_place_;
+    std::size_t colour_count_ = 0;
     std::uint64_t presented_generation_ = 0;
     ProjectEditor& editor_;
     bool can_load_data_ = false;

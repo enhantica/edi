@@ -277,7 +277,7 @@ std::vector<edi::SeriesStyle> PatternChartController::styles() const {
     if (report_) {
         return report_->reportModel().pattern_styles;
     }
-    const std::size_t experiments = experiment_ ? experiment_->experimentCount() : 1;
+    const std::size_t experiments = experiment_ ? experiment_->colourCount() : 1;
     return edi::pattern_style_table(
         edi::colour_scheme_from_name(colour_scheme_.toStdString()).value_or(edi::ColourScheme::Default), experiments);
 }
@@ -575,6 +575,11 @@ void PatternChartController::refresh() {
                                   {QStringLiteral("centre"), label.centre}});
     }
     publish(bragg_labels_, labels, &PatternChartController::braggLabelsChanged);
+    // Past the palette's own colours the count sets every experiment's colour, the measured key's too.
+    if (const std::size_t count = experiment_ ? experiment_->colourCount() : 1; count != colour_count_) {
+        colour_count_ = count;
+        emit measuredColorChanged();
+    }
     publish(measured_style_,
             measured != nullptr ? QString::fromStdString(measured->style) : QStringLiteral("meas.0"),
             &PatternChartController::measuredColorChanged);

@@ -315,6 +315,7 @@ class PatternChartController : public QObject {
     int bragg_rows_ = 0, revision_ = 0;
     bool has_residual_ = false, has_data_ = false, current_ = false;
     QString x_title_, y_title_, residual_title_, measured_style_ = QStringLiteral("meas.0");
+    std::size_t colour_count_ = 0;
     QVariantList bragg_labels_;
     ChartLegendModel* legend_;
     ChartBandModel* excluded_bands_;
