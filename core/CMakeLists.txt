@@ -47,13 +47,16 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${EDI_ELEMENT_STY
 file(READ ${EDI_ELEMENT_STYLES_TSV} EDI_ELEMENT_STYLES)
 configure_file(src/element_styles_data.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/element_styles_data.cpp @ONLY)
 
-# The colour palettes (data/palettes, PROVENANCE.md beside them) are embedded the same way; a change reconfigures.
-foreach(scheme IN ITEMS default colour-blind-safe tableau paul-tol vivid)
-    string(TOUPPER ${scheme} palette_name)
-    string(REPLACE "-" "_" palette_name ${palette_name})
+# The colour palettes (data/palettes, PROVENANCE.md beside them) are embedded the same way, one per edi::ColourScheme
+# in its order; a change reconfigures.
+set(EDI_PALETTES coast garden peaceful fog-forest sage okabe-ito paul-tol-bright paul-tol-muted tableau observable
+    carbon dark2 petroff vivid nord solarized catppuccin apple)
+set(EDI_PALETTE_TABLES "")
+foreach(scheme IN LISTS EDI_PALETTES)
     set(palette_tsv ${CMAKE_SOURCE_DIR}/data/palettes/${scheme}.tsv)
     set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${palette_tsv})
-    file(READ ${palette_tsv} EDI_${palette_name}_PALETTE)
+    file(READ ${palette_tsv} palette)
+    string(APPEND EDI_PALETTE_TABLES "    R\"edi_palette(${palette})edi_palette\",\n")
 endforeach()
 configure_file(src/palette_data.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/palette_data.cpp @ONLY)
 

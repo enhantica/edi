@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 
@@ -11,10 +12,38 @@
 
 namespace edi {
 
-/// The schemes, each a published set of distinct colours and a published gradient (PROVENANCE.md).
-enum class ColourScheme { Default, ColourBlindSafe, Tableau, PaulTol, Vivid };
+/// The schemes (PROVENANCE.md): edi's own, published palettes designed for data and app themes' accents. Each has light
+/// and dark colours for measured data, a two-colour gradient for more datasets than its set holds, and structure colours.
+enum class ColourScheme {
+    Coast,
+    Garden,
+    Peaceful,
+    FogForest,
+    Sage,
+    OkabeIto,
+    PaulTolBright,
+    PaulTolMuted,
+    Tableau,
+    Observable,
+    Carbon,
+    Dark2,
+    Petroff,
+    Vivid,
+    Nord,
+    Solarized,
+    Catppuccin,
+    Apple,
+};
 
-/// "default", "colourBlindSafe", "tableau", "paulTol" or "vivid" (the preference's tokens); nullopt for any other name.
+/// The scheme of a new user, and of a preference naming none.
+inline constexpr ColourScheme kDefaultColourScheme = ColourScheme::Coast;
+
+/// The schemes' preference tokens, in ColourScheme's order: "coast", "garden", "peaceful", "fogForest", "sage",
+/// "okabeIto", "paulTolBright", "paulTolMuted", "tableau", "observable", "carbon", "dark2", "petroff", "vivid", "nord",
+/// "solarized", "catppuccin", "apple".
+std::span<const std::string_view> colour_scheme_names();
+
+/// The scheme a token names; nullopt for any other name.
 std::optional<ColourScheme> colour_scheme_from_name(std::string_view name);
 
 /// The colour, `#RRGGBB`, of the experiment at `place` among `count`: up to the scheme's number of pattern colours,

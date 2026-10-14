@@ -153,7 +153,7 @@ struct SeriesStyle {
 // least three) and three `bragg.<place>` rows (a structure past the third shares its place's row), each colour the
 // palette's (edi::pattern_colour, edi::structure_colour), and the role rows, the calculated, background, residual and
 // excluded-region styles. With the defaults it is the table the app always drew.
-std::vector<SeriesStyle> pattern_style_table(ColourScheme scheme = ColourScheme::Default, std::size_t experiments = 3);
+std::vector<SeriesStyle> pattern_style_table(ColourScheme scheme = kDefaultColourScheme, std::size_t experiments = 3);
 
 // The display scales. Linear: the value. Sqrt: sign(y) × sqrt(|y|). Log10: log10(y) for y > 0,
 // NaN otherwise.
