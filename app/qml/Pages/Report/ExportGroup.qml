@@ -61,8 +61,8 @@ EaElements.GroupBox {
 
     // A format's report path, read-only: normal when the saved file is current, red when the project changed since
     // or the file is gone, "not saved yet" before the first save; the saved time as its tooltip; dimmed while its
-    // format is unticked, and disabled with its box. In the browser a file is gone only after a reload, and reads as
-    // not saved then.
+    // format is unticked, and disabled with its box. In the browser it is the file's name alone, as downloaded, and a
+    // file is gone only after a reload, and reads as not saved then.
     component ReportPath: EaElements.TextField {
         id: path
 
@@ -77,7 +77,7 @@ EaElements.GroupBox {
         horizontalAlignment: TextInput.AlignLeft
         enabled: box.enabled
         opacity: box.checked ? 1 : 0.5
-        text: shown ? "reports/" + saved.name : ""
+        text: shown ? (group.inBrowser ? saved.name : "reports/" + saved.name) : ""
         placeholderText: qsTr("not saved yet")
         color: shown && saved.state !== "current" ? EaStyle.Colors.red : EaStyle.Colors.themeForeground
         ToolTip.text: shown ? (group.inBrowser ? qsTr("Downloaded at %1") : qsTr("Saved %1")).arg(saved.saved) : ""
