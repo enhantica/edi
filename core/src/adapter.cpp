@@ -1952,6 +1952,20 @@ void copy_report_settings(const Project& model, crysta::Project& cproject) {
 
 }  // namespace
 
+void check_report_setting(const std::string& tag, const std::string& value) {
+    const std::string_view name(tag);
+    if (name.starts_with("_report.")) {
+        Project scratch;
+        detail::read_report_item(name.substr(std::string_view("_report.").size()), value, scratch);
+    } else if (name == "_correlation_chart.threshold") {
+        (void)detail::read_correlation_threshold(value);
+    } else if (name == "_pattern_chart.x_axis") {
+        (void)detail::read_pattern_x_axis(value);
+    } else {
+        throw std::invalid_argument(tag + " is not a report setting");
+    }
+}
+
 bool save_report_settings(const Project& model, const std::string& directory) {
 #if __has_include("crysta/report_settings.hpp")  // drop the guard when the pin moves
     // Only the report's settings cross: a project of nothing else carries them to crysta's writer.

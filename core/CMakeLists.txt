@@ -20,6 +20,7 @@ add_library(edi_core STATIC
     src/report_model.cpp
     src/report_json.cpp
     src/report_html.cpp
+    src/report_save.cpp
     src/category_title.cpp
     src/duration_text.cpp
     src/correlation_matrix.cpp
