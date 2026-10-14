@@ -20,7 +20,7 @@ Flickable {
     property ReportViewModel report: null
     readonly property var model: report ? report.model : ({})
     readonly property var sections: model.sections ?? []
-    // The narrowest an evolution chart is drawn, here and in the HTML report (report.js's grid): narrower, one to a row.
+    // The narrowest column that takes two evolution charts to a row, here and in the HTML report's grid; narrower, one.
     readonly property real evolutionMinWidth: 300
     readonly property real em: EaStyle.Sizes.fontPixelSize
     // The reference's sizes and margins are in points over its 10.04 pt body.
@@ -416,14 +416,20 @@ Flickable {
                 text: `${preview.number("evolution")}.  ` + qsTr("Evolution")
             }
             // One chart per parameter the Evolution tab lists, in its order, as the HTML report draws them: two to a
-            // row while each is at least the minimum width, else one (the owner, 2026-10-14).
-            Flow {
+            // row at half the column, one when the column is narrower than the minimum width (the owner, 2026-10-14).
+            // Placed by bindings rather than a Flow, so the grid follows a width change at once, not at the next
+            // layout pass.
+            Item {
                 id: evolutionCharts
 
-                readonly property real chartWidth: (width - spacing) / 2 >= preview.evolutionMinWidth ? (width - spacing) / 2 : width
+                readonly property int columns: width >= preview.evolutionMinWidth ? 2 : 1
+                readonly property real spacing: EaStyle.Sizes.fontPixelSize
+                readonly property real chartWidth: columns === 2 ? (width - spacing) / 2 : width
+                readonly property real chartHeight: Math.round(chartWidth * 0.75)
+                readonly property int rows: Math.ceil(evolutionRecords.count / columns)
 
                 width: parent.width
-                spacing: EaStyle.Sizes.fontPixelSize
+                height: rows > 0 ? rows * chartHeight + (rows - 1) * spacing : 0
 
                 Repeater {
                     id: evolutionRecords
@@ -431,10 +437,13 @@ Flickable {
                     model: preview.shown("evolution") ? (preview.model.evolution ?? []) : []
                     delegate: EvolutionChart {
                         required property var modelData
+                        required property int index
 
                         objectName: "report.evolution"
+                        x: (index % evolutionCharts.columns) * (evolutionCharts.chartWidth + evolutionCharts.spacing)
+                        y: Math.floor(index / evolutionCharts.columns) * (evolutionCharts.chartHeight + evolutionCharts.spacing)
                         width: evolutionCharts.chartWidth
-                        height: Math.round(width * 0.75)
+                        height: evolutionCharts.chartHeight
                         reportSeries: modelData
                     }
                 }
