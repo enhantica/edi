@@ -123,6 +123,21 @@ inline StructuresUndo capture_structures(const Project& project) {
     return before;
 }
 
+/// The project's report settings (ADR-0035 §7) as one value: what an edit of one of them changes, and what its Undo
+/// puts back.
+struct ReportSettingsState {
+    std::optional<bool> html, pdf, cif, html_offline;
+    std::optional<std::string> excluded;
+    std::optional<double> correlation_threshold;
+    std::optional<std::string> pattern_x_axis;
+    bool operator==(const ReportSettingsState&) const = default;
+};
+
+inline ReportSettingsState report_settings_state(const Project& project) {
+    return {project.report_html,    project.report_pdf,           project.report_cif,     project.report_html_offline,
+            project.report_excluded, project.correlation_threshold, project.pattern_x_axis};
+}
+
 class Edit {
    public:
     // Runs the operation: its refusal, with nothing written, or the whole write.
@@ -166,6 +181,18 @@ class Edit {
     }
     static Edit assign(std::string& field, std::string value) {
         return Edit([&field, value = std::move(value)] { field = value; });
+    }
+    // Every report setting at once, as `state` holds them (an Undo of one of them).
+    static Edit report_settings(Project& project, ReportSettingsState state) {
+        return Edit([&project, state = std::move(state)] {
+            project.report_html = state.html;
+            project.report_pdf = state.pdf;
+            project.report_cif = state.cif;
+            project.report_html_offline = state.html_offline;
+            project.report_excluded = state.excluded;
+            project.correlation_threshold = state.correlation_threshold;
+            project.pattern_x_axis = state.pattern_x_axis;
+        });
     }
     // The project's report settings (ADR-0035 §7), each absent until stated.
     static Edit assign(std::optional<bool>& field, std::optional<bool> value) {

@@ -4274,6 +4274,8 @@ std::vector<std::string> saved_file_order(const Project& project) {
             fs::path(entity_path("", "experiment", experiment->name)).generic_string());
     }
     files.emplace_back("analysis/analysis.edi");
+    // The report's own settings and saved-report rows (ADR-0035 §7), when the project states any.
+    files.emplace_back("reports/report.edi");
     return files;
 }
 

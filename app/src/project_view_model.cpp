@@ -172,6 +172,7 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     analysis_ = new AnalysisViewModel(*project_, *this, saved, this);
     (void)model;
     metadata_text_ = new BlockText([this] { return savedFile("project.edi"); }, this);
+    report_text_ = new BlockText([this] { return savedFile("reports/report.edi"); }, this);
     project_text_ = new BlockText(
         [this] {
             std::string text;
@@ -406,7 +407,7 @@ void ProjectViewModel::setReportExcluded(const QString& keys) {
     edi::Project& project = *project_;
     const std::optional<std::string> value = keys.simplified().toStdString();
     if (value != project.report_excluded) {
-        apply_setting(edi::Edit::assign(project.report_excluded, value));
+        apply_report_setting(edi::Edit::assign(project.report_excluded, value));
     }
 }
 
@@ -417,7 +418,7 @@ void ProjectViewModel::setReportFormat(const QString& format, bool on) {
                                  : format == QLatin1String("cif") ? &project.report_cif
                                                                   : nullptr;
     if (field != nullptr && std::optional<bool>(on) != *field) {
-        apply_setting(edi::Edit::assign(*field, std::optional<bool>(on)));
+        apply_report_setting(edi::Edit::assign(*field, std::optional<bool>(on)));
     }
 }
 
@@ -440,7 +441,7 @@ void ProjectViewModel::recordReportFiles(std::vector<edi::ReportFile> rows) {
 void ProjectViewModel::setReportHtmlOffline(bool embedded) {
     edi::Project& project = *project_;
     if (std::optional<bool>(embedded) != project.report_html_offline) {
-        apply_setting(edi::Edit::assign(project.report_html_offline, std::optional<bool>(embedded)));
+        apply_report_setting(edi::Edit::assign(project.report_html_offline, std::optional<bool>(embedded)));
     }
 }
 
@@ -448,14 +449,14 @@ void ProjectViewModel::setReportCorrelationThreshold(double threshold) {
     edi::Project& project = *project_;
     const std::optional<double> value = std::clamp(threshold, 0.0, 1.0);
     if (value != project.correlation_threshold) {
-        apply_setting(edi::Edit::assign(project.correlation_threshold, value));
+        apply_report_setting(edi::Edit::assign(project.correlation_threshold, value));
     }
 }
 
 void ProjectViewModel::setPatternDSpacing(bool on) {
     edi::Project& project = *project_;
     if (on != patternDSpacing()) {
-        apply_setting(edi::Edit::assign(project.pattern_x_axis,
+        apply_report_setting(edi::Edit::assign(project.pattern_x_axis,
                                         std::optional<std::string>(on ? "d_spacing" : "native")));
     }
 }
@@ -1916,6 +1917,16 @@ QString ProjectViewModel::apply_setting(const edi::Edit& change) {
     return refusal;
 }
 
+QString ProjectViewModel::apply_report_setting(const edi::Edit& change) {
+    edi::ReportSettingsState before = edi::report_settings_state(*project_);
+    const QString refusal = apply_setting(change);
+    if (refusal.isEmpty() && edi::report_settings_state(*project_) != before) {
+        undo_history_.emplace_back(std::move(before));
+        syncUndo();
+    }
+    return refusal;
+}
+
 QString ProjectViewModel::apply_relation_edit(const edi::Edit& change) {
     edi::RelationsUndo before = edi::capture_relations(*project_);
     const QString refusal = apply(change, true);
@@ -1983,6 +1994,8 @@ void ProjectViewModel::undo() {
         }
     } else if (const auto* structures = std::get_if<edi::StructuresUndo>(&undo_history_.back())) {
         undone = apply(edi::Edit::restore_structures(*project_, *structures), true).isEmpty();
+    } else if (const auto* report = std::get_if<edi::ReportSettingsState>(&undo_history_.back())) {
+        undone = apply_setting(edi::Edit::report_settings(*project_, *report)).isEmpty();
     } else if (const auto* flags = std::get_if<FreeFlags>(&undo_history_.back())) {
         undone = apply(edi::Edit::set_free(*project_, flags->before), false).isEmpty();
     } else if (const auto* block = std::get_if<BlockName>(&undo_history_.back())) {
@@ -2318,6 +2331,7 @@ void ProjectViewModel::invalidateTexts() {
     }
     analysis_->text()->invalidate();
     metadata_text_->invalidate();
+    report_text_->invalidate();
     project_text_->invalidate();
 }
 
