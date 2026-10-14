@@ -113,7 +113,8 @@ class ReportViewModel : public QObject {
     // `.pdf` (the browser also downloads it), then its `_report_file` row, through crysta's writer of
     // `reports/report.edi` alone. The HTML carries the chart libraries when embedLibraries is set; the PDF's figures
     // are the images setFigure gave since the last save, and its text is in `fontFamily`. Unticked formats' files and
-    // rows are left as they are. Answers with saved or saveFailed.
+    // rows are left as they are. A format that cannot be written leaves its old file and stops the formats after it;
+    // the files written before it keep their rows. Answers with saved, or saveFailed for each failure.
     Q_INVOKABLE void saveReport(const QString& fontFamily);
     // One of the preview's figures for the next save's PDF, by its name in the static text (structure-0, pattern-1,
     // ...); a null image is left out.

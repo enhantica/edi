@@ -323,30 +323,37 @@ void ReportViewModel::saveReport(const QString& fontFamily) {
         written.append(reports.filePath(name));
         return true;
     };
+    // Each format is written whole or not at all; a failure stops the formats after it, and the files written before
+    // it keep their rows and, in the browser, are downloaded.
+    bool failed = false;
     try {
         if (writes("html")) {
             const edi::ReportLibraries* embedded = embedLibraries() ? libraries() : nullptr;
             if (embedLibraries() && embedded == nullptr) {
                 emit saveFailed(tr("The chart libraries could not be read"));
-                return;
-            }
-            static const edi::ReportLibraries kOnline;
-            const edi::ReportLibraries& used = embedded != nullptr ? *embedded : kOnline;
-            if (!write("html", QByteArray::fromStdString(edi::report_html(report_, used)),
-                       edi::report_digest(report_, "html", used))) {
-                return;
-            }
-        }
-        if (writes("pdf")) {
-            if (!write("pdf", reportPdf(report_, images, fontFamily), edi::report_digest(report_, "pdf"))) {
-                return;
+                failed = true;
+            } else {
+                static const edi::ReportLibraries kOnline;
+                const edi::ReportLibraries& used = embedded != nullptr ? *embedded : kOnline;
+                failed = !write("html", QByteArray::fromStdString(edi::report_html(report_, used)),
+                                edi::report_digest(report_, "html", used));
             }
         }
-        // The rows, in reports/report.edi alone; the project's other files are left as they are.
-        project_.recordReportFiles(std::move(rows));
+        if (!failed && writes("pdf")) {
+            failed = !write("pdf", reportPdf(report_, images, fontFamily), edi::report_digest(report_, "pdf"));
+        }
     } catch (const std::exception& error) {
         emit saveFailed(QString::fromUtf8(error.what()));
-        return;
+        failed = true;
+    }
+    // The rows, in reports/report.edi alone; the project's other files are left as they are.
+    if (!rows.empty()) {
+        try {
+            project_.recordReportFiles(std::move(rows));
+        } catch (const std::exception& error) {
+            emit saveFailed(QString::fromUtf8(error.what()));
+            failed = true;
+        }
     }
     // One format downloads as its file, several as <project name>-reports.zip holding reports/<name>.<ext>, as the
     // project save hands the browser a zip (the owner, 2026-10-14). The files also stay in the in-browser reports/.
@@ -360,7 +367,9 @@ void ReportViewModel::saveReport(const QString& fontFamily) {
         WebFiles::download(WebFiles::packFiles(entries), base + QStringLiteral("-reports.zip"));
     }
     emit savedReportsChanged();
-    emit saved(written.join(QStringLiteral(", ")));
+    if (!failed) {
+        emit saved(written.join(QStringLiteral(", ")));
+    }
 }
 
 }  // namespace edi_app

@@ -211,7 +211,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void setReportFormat(const QString& format, bool on);
     // Save report's record (ADR-0036 §7): the rows of the reports it wrote, each replacing the row of the same name,
     // then `reports/report.edi` written alone. Not an edit: no model value changes and nothing is marked modified.
-    // Throws when the file cannot be written.
+    // Throws when the file cannot be written, the open project's rows then as they were.
     void recordReportFiles(std::vector<edi::ReportFile> rows);
     void setReportCorrelationThreshold(double threshold);
     bool patternDSpacing() const;

@@ -424,6 +424,8 @@ void ProjectViewModel::setReportFormat(const QString& format, bool on) {
 
 void ProjectViewModel::recordReportFiles(std::vector<edi::ReportFile> rows) {
     edi::Project& project = *project_;
+    // The open project's rows change with reports/report.edi, or not at all.
+    const edi::ItemVec<edi::ReportFile> before = project.report_files;
     for (edi::ReportFile& row : rows) {
         const std::string key = row.name.value();
         const auto found = std::find_if(project.report_files.begin(), project.report_files.end(),
@@ -435,7 +437,12 @@ void ProjectViewModel::recordReportFiles(std::vector<edi::ReportFile> rows) {
             project.report_files.push_back(std::move(row));
         }
     }
-    edi::save_report_settings(project, project.path);
+    try {
+        edi::save_report_settings(project, project.path);
+    } catch (...) {
+        project.report_files = before;
+        throw;
+    }
 }
 
 void ProjectViewModel::setReportHtmlOffline(bool embedded) {
