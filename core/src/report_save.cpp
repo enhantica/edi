@@ -9,6 +9,7 @@
 #include <memory>
 #include <sstream>
 #include <stdexcept>
+#include <system_error>
 
 #include "edi/io.hpp"
 #include "edi/model.hpp"
@@ -38,6 +39,28 @@ const ReportLibraries& html_libraries(const ReportOptions& options, const Report
     return options.embed_libraries ? libraries : kOnline;
 }
 
+// Writes `text` to `path` through a file beside it, renamed over it once whole, so a failed write leaves the file
+// that was there as it was.
+void replace_file(const fs::path& path, const std::string& text) {
+    const fs::path part = path.parent_path() / ("." + path.filename().string() + ".part");
+    {
+        std::ofstream out(part, std::ios::binary | std::ios::trunc);
+        out << text;
+        out.close();
+        if (!out) {
+            std::error_code ignored;
+            fs::remove(part, ignored);
+            throw std::runtime_error("cannot write " + path.string());
+        }
+    }
+    std::error_code error;
+    fs::rename(part, path, error);
+    if (error) {
+        fs::remove(part, error);
+        throw std::runtime_error("cannot write " + path.string());
+    }
+}
+
 }  // namespace
 
 std::string iso_utc_from_star(const std::string& stamp) {
@@ -60,17 +83,14 @@ ReportSaveResult save_report(Project& project, const ReportOverrides& overrides,
     if (project.report_pdf.value_or(false)) {
         result.pdf_left = true;
     }
+    // The open project's rows change with reports/report.edi, or not at all.
+    const ItemVec<ReportFile> before = project.report_files;
     if (project.report_html.value_or(true)) {
         const ReportLibraries& used = html_libraries(options, libraries);
         const std::string name = (model.name.empty() ? std::string("report") : model.name) + ".html";
         const fs::path path = reports / name;
-        {
-            std::ofstream out(path, std::ios::binary | std::ios::trunc);
-            out << report_html(model, used);
-            if (!out) {
-                throw std::runtime_error("cannot write " + path.string());
-            }
-        }
+        replace_file(path, report_html(model, used));
+        result.written.push_back(path.string());
         ReportFile row;
         row.name = name;
         row.format = std::string("html");
@@ -89,9 +109,13 @@ ReportSaveResult save_report(Project& project, const ReportOverrides& overrides,
         } else {
             project.report_files.push_back(std::move(row));
         }
-        result.written.push_back(path.string());
     }
-    save_report_settings(project, project.path);
+    try {
+        save_report_settings(project, project.path);
+    } catch (...) {
+        project.report_files = before;
+        throw;
+    }
     return result;
 }
 

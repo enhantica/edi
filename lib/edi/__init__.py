@@ -656,7 +656,7 @@ class Report:
     ) -> _Path:
         """Write the HTML report to ``path``, by default ``<project>/reports/<name>.html``.
 
-        Returns the path written.
+        A failed write leaves the file already at ``path`` as it was. Returns the path written.
         """
         if path is None:
             folder = self._project.metadata.path
@@ -664,16 +664,21 @@ class Report:
                 raise ValueError('the project has no folder: save it first, or give a path')
             path = _Path(folder) / 'reports' / f'{self._project.name or "report"}.html'
         path = _Path(path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(
-            self.as_html(
-                offline=offline,
-                x_axis=x_axis,
-                correlation_threshold=correlation_threshold,
-                excluded=excluded,
-            ),
-            encoding='utf-8',
+        text = self.as_html(
+            offline=offline,
+            x_axis=x_axis,
+            correlation_threshold=correlation_threshold,
+            excluded=excluded,
         )
+        path.parent.mkdir(parents=True, exist_ok=True)
+        # Written beside the old file and renamed over it, so a failed write leaves the old file.
+        part = path.with_name(f'.{path.name}.part')
+        try:
+            part.write_text(text, encoding='utf-8')
+            part.replace(path)
+        except BaseException:
+            part.unlink(missing_ok=True)
+            raise
         return path
 
     def save(
