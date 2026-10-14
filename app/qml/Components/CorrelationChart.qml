@@ -30,6 +30,9 @@ Item {
     // Whether the shown experiment has correlations to show; the toolbar is disabled without them (owner, 2026-10-11). A
     // level that hides every pair keeps it enabled, so the level can be lowered again.
     readonly property bool available: correlations !== null && correlations.available >= 2
+    // The two toggles change only how shown correlations look: disabled whenever the filter shows none (owner,
+    // 2026-10-13).
+    readonly property bool showsAny: available && count >= 2
     // The toolbar's two toggles.
     property bool namesShown: false
     property bool fullMatrix: false
@@ -126,7 +129,7 @@ Item {
         }
         ChartToolButton {
             objectName: "correlations.toolbar.names"
-            enabled: chart.available
+            enabled: chart.showsAny
             fontIcon: "font"
             toolTip: chart.namesShown ? qsTr("Hide the parameter names along the axes") : qsTr("Show the parameter names along the axes")
             checked: chart.namesShown
@@ -134,7 +137,7 @@ Item {
         }
         ChartToolButton {
             objectName: "correlations.toolbar.fullMatrix"
-            enabled: chart.available
+            enabled: chart.showsAny
             fontIcon: "th"
             toolTip: chart.fullMatrix ? qsTr("Show the lower triangle only") : qsTr("Show the full matrix")
             checked: chart.fullMatrix
